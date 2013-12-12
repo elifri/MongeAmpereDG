@@ -1,0 +1,96 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<HTML>
+<HEAD>
+   <TITLE></TITLE>
+   <META NAME="Author" CONTENT="">
+   <META NAME="GENERATOR" CONTENT="Mozilla/3.01Gold (Win95; I) [Netscape]">
+</HEAD>
+<BODY TEXT="#000000" BGCOLOR="#C0C0C0" LINK="#0000EE" VLINK="#551A8B" ALINK="#FF0000">
+
+<CENTER><P><B><FONT COLOR="#000080"><FONT SIZE=+4>ShowMesh<BR>
+</FONT></FONT><FONT SIZE=+2>version 1.0</FONT></B><BR>
+</P></CENTER>
+
+<CENTER><P><IMG SRC="example7.gif" HEIGHT=425 WIDTH=545></P></CENTER>
+
+<P>
+<HR WIDTH="100%"><B><FONT COLOR="#000080"><FONT SIZE=+2>Compiling ShowMesh</FONT></FONT></B></P>
+
+<P>So far, <B><FONT COLOR="#000080">ShowMesh</FONT></B> has been compiled
+and run on the following computing platforms:</P>
+
+<UL>
+<LI>PC 486/586 running Red Hat Linux version 4.1</LI>
+
+<LI>PC 586 running Linux Caldera version</LI>
+</UL>
+
+<P>When compiling <B><FONT COLOR="#000080">ShowMesh</FONT></B>, the option
+for including the X library should be added:<BR>
+<TT><FONT COLOR="#000080">cc -o ShowMesh -O3 showmesh.c -lX11</FONT></TT></P>
+
+<P>On some machines you should specify the path to the X libraries and
+include files. This is achieved with the <TT><FONT COLOR="#000080"><FONT SIZE=+1>-I</FONT></FONT></TT>
+and <TT><FONT COLOR="#000080"><FONT SIZE=+1>-L</FONT></FONT></TT> options.
+For example, when I compile <B>ShowMesh</B> on the Red Hat Linux, I have
+to type:<BR>
+<TT><FONT COLOR="#000080">gcc -o ShowMesh -O3 -I/xxx -L/xxx showmesh.c
+-lX11</FONT></TT></P>
+
+<P>If you have problems compiling it on your machine, the best thing you
+can do is to ask your local system administrator (sometimes called guru).</P>
+
+<P>
+<HR WIDTH="100%"><B><FONT COLOR="#000080"><FONT SIZE=+2>Using ShowMesh</FONT></FONT></B></P>
+
+<P>To visualise the mesh with <B><FONT COLOR="#000080">ShowMesh</FONT></B>,
+you must have the node file (<TT><FONT COLOR="#000080">NAME.n</FONT></TT>),
+the element file (<TT><FONT COLOR="#000080">NAME.e</FONT></TT>), and the
+side file (<TT><FONT COLOR="#000080">NAME.s</FONT></TT>). These three files
+are created with <B><FONT COLOR="#000080">EasyMesh</FONT></B>. If you have
+these files, you can run <B><FONT COLOR="#000080">ShowMesh</FONT></B> with
+the following command:<BR>
+<BR>
+<TT><FONT COLOR="#000080">ShowMesh NAME</FONT></TT></P>
+
+<P><TT><FONT COLOR="#000080">NAME</FONT></TT> has to be entered withot
+extensions, as it was for <B><FONT COLOR="#000080">EasyMesh</FONT></B>.
+No command line options are available with this version.</P>
+
+<P><B><FONT COLOR="#000080">ShowMesh</FONT></B> has only ten functions,
+and they are all accessible through the buttons shown in the application
+window. You can see these commands on the figure at the top of this page.
+</P>
+
+<P><TT><FONT COLOR="#000080">Delaunay</FONT></TT> and <TT><FONT COLOR="#000080">Voronoi</FONT></TT>
+buttons are used for drawing the Delaunay and the Voronoi mesh. Voronoi
+mesh is drawn with dotted lines. <TT><FONT COLOR="#000080">Nodes</FONT></TT>
+and <TT><FONT COLOR="#000080">Elements</FONT></TT> buttons are for writting
+node and element numbers respectively. Node numbers can be shown only when
+the Delaunay or Voronoi mesh is also shown. Element numbers can be written
+only when the Delaunay mesh is shown. <TT><FONT COLOR="#000080">Materials</FONT></TT>
+and <TT><FONT COLOR="#000080">Boundary</FONT></TT> buttons are used to
+draw the material and boundary condition marks. The boundary condition
+marks are written on both the boundary nodes and on the sides. (I believe
+that some users will place boundary conditions on the sides.) Material
+marks and element numbers cannot be shown in the same time. </P>
+
+<P><TT><FONT COLOR="#000080">Zoom</FONT></TT> and <TT><FONT COLOR="#000080">Move</FONT></TT>
+buttons are used to zoom the region of the mesh and to move the mesh around
+the window. The only thing which has to be noted about these functions
+is that when using them, you must <B>not drag</B> to draw the zoomed region
+or displacement, but <B>click twice</B>. You will undestand that as soon
+as you try it. To fit the whole mesh in the actual window size, you must
+use the <TT><FONT COLOR="#000080">Fit</FONT></TT> command. You will probably
+have to use <TT><FONT COLOR="#000080">Fit</FONT></TT> even after the resizing
+of the application window. </P>
+
+<P>The <TT><FONT COLOR="#000080">Quit</FONT></TT> command exits the program.</P>
+
+<P>
+<HR WIDTH="100%">Return to <B><FONT COLOR="#000080">EasyMesh</FONT></B>
+<A HREF="easymesh.html">home</A> page. 
+<HR WIDTH="100%"><A HREF="mailto:niceno@univ.trieste.it">niceno@univ.trieste.it</A></P>
+
+</BODY>
+</HTML>
