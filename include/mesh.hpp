@@ -53,20 +53,8 @@ public:
     Fdim      = grid_type::config_type::Fdim
   };
 
-#if(EQUATION==POISSON_PREC_EQ)
-  igpm::tvector<double,shapedim> d, norm;
-
- // TODO: Fix tvector so that length 0 is allowed
- // Workaround: increase size by 1.
-  igpm::tvector<igpm::tvector<double,degreedim-1+1>,Fdim> d_edge, norm_edge, b_edge;
-#endif
 
  tmycommoncelldata(){
-#if(EQUATION==POISSON_PREC_EQ)
-   d_edge=0.0;
-   norm_edge=0.0;
-   b_edge=0.0;
-#endif
  }
 
 };
@@ -126,12 +114,6 @@ public:
     os << "0 0 0 0 0 0 0 0 0";
   }
 
-#if(EQUATION==POISSON_PREC_EQ)
-  int base_offset;
-  igpm::tvector<igpm::tvector<int,degreedim-1+1>,Fdim> base_edge_offset;
-  igpm::tvector<double,4> diffusion_a;
-  double localgamma;
-#endif
 };
 
 //------------------------------------------------------------------------------
@@ -188,13 +170,6 @@ public:
   typedef typename grid_type::config_type::Tphase_type     Tphase_type;
 
 
-#if(EQUATION==POISSON_PREC_EQ)
-  igpm::tmatrix < double, shapedim, shapedim > Bilinear_B;
-  igpm::tmatrix < double, 3*degreedim, 3*degreedim > Bilinear_B_short;
-  typename igpm::tmatrix < double, shapedim, shapedim >::Choleskydecomposed_type Bilinear_B_Choleskydec;
-  typename igpm::tmatrix < double, 3*degreedim, 3*degreedim >::Choleskydecomposed_type Bilinear_B_Choleskydec_short;
-#endif
-
   ////////////////////////////
 
 protected:
@@ -215,9 +190,6 @@ public:
 
 #if(EQUATION==POISSON_EQ || EQUATION==IMPLICIT_HEAT_EQ)
   unsigned int m_offset, n_offset, m_block_size, n_block_size;
-#endif
-#if(EQUATION==POISSON_PREC_EQ)
-  unsigned int offset, blocksize;
 #endif
 
   tmyleafcell() { ++m_nCountAllLeafs; }
@@ -305,128 +277,5 @@ protected:
 };
 
 //------------------------------------------------------------------------------
-
-#if (EQUATION == POISSON_PREC_EQ)
-
-//------------------------------------------------------------------------------
-// node data, for instance
-//------------------------------------------------------------------------------
-template <typename CONFIG_TYPE>
-struct assoccell_data
-{
-
-  typedef typename CONFIG_TYPE::id_type id_type;
-
-  assoccell_data(const id_type newid, const unsigned newnodenumber) : id(newid), nodenumber(newnodenumber) {}
-
-  id_type id;
-  unsigned nodenumber;
-
-};
-
-template <typename CONFIG_TYPE>
-struct nodekey_type
-{
-
-  typedef typename CONFIG_TYPE::node_type node_type;
-
-  bool operator==(const nodekey_type &k) const
-  {
-    return (this->node==k.node) && (this->level==k.level);
-  }
-
-  nodekey_type() {}
-  nodekey_type(const node_type &n, const unsigned &l) : node(n), level(l) {}
-
-  node_type node;       ///< position of node
-  unsigned level;       ///< level of node
-
-
-  friend ostream& operator << (ostream& s, const nodekey_type<CONFIG_TYPE>& n)
-  {       // Ausgabe
-
-    s << "(" << n.id.level << ",[" << FFmt(9, 6) << n.node << "])";
-    return s;
-  }
-
-};
-
-
-
-
-
-template <typename CONFIG_TYPE>
-struct mynode
-{
-
-  typedef typename CONFIG_TYPE::value_type value_type;
-
-  typedef enum { REGULAR, BOUNDARY, HANGING, DISABLED } nodemode_type;
-
-  mynode() : base_offset(-1), mode(REGULAR), norm(0.0), b(0.0), d(0.0)  { }
-
-  const nodekey_type<CONFIG_TYPE>& key()  const { return id; }
-  nodekey_type<CONFIG_TYPE>& key()              { return id; }
-
-
-  friend ostream& operator << (ostream& s, const mynode<CONFIG_TYPE>& n)
-  {       // Ausgabe
-
-    s << "node (" << n.id.level << ",[" << FFmt(9, 6) << n.id.node << "])";
-    if(n.mode==mynode<CONFIG_TYPE>::BOUNDARY)
-      s << " (boundary)";
-    if(n.mode==mynode<CONFIG_TYPE>::HANGING)
-      s << " (hanging)";
-    if(n.mode==mynode<CONFIG_TYPE>::DISABLED)
-      s << " (disabled)";
-
-    return s;
-  }
-
-  int base_offset; ///< position in the coarse level matrix
-  nodemode_type mode;   ///< mode of node: REGULAR, BOUNDARY or HANGING
-  nodekey_type<CONFIG_TYPE> id;
-
-  value_type norm; // triplenorm of corresponding ansatz function (tent function)
-  value_type b;    // normalisation b(phi,phi)
-  value_type d;    // value for preconditioner
-
-};
-
-
-template <typename CONFIG_TYPE>
-struct nodekeytraitclass : public
-      igpm::thashcontainer_convert_base<nodekey_type<CONFIG_TYPE>, mynode<CONFIG_TYPE> >
-{
-
-  static unsigned int hashdouble(const double *pd)
-  {
-    // extract 14 bits from double: 1 bit sign, 3 bit exponent, 10 bit mantissa
-
-    unsigned long long int *i = (unsigned long long int *) pd;
-    const unsigned long long int one = 1;
-
-    return (unsigned int)((((*i) & (one << 63)) >> 50)
-                          + (((((*i) & (((one << 11) - one) << 52)) >> 52) & ((one << 3) - one)) << 10)
-                          + (((*i) & ((one << 52) - one)) >> 42));
-  }
-
-  static unsigned int hash(const nodekey_type<CONFIG_TYPE>& key)
-  {
-    return (key.level << (2 * 14)) + (hashdouble(&key.node[0]) << 14) + hashdouble(&key.node[1]);
-    //    return (unsigned int)(key.level+key.node[0]+key.node[1]);
-  }
-
-  static unsigned int link(const nodekey_type<CONFIG_TYPE>& key)
-  {
-    return key.level;
-  }
-
-};
-
-
-#endif
-
-//------------------------------
 
 #endif

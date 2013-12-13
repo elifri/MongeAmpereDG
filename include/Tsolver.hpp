@@ -9,14 +9,6 @@
 #include "utility.hpp"
 #include "Tmatrix.hpp"
 
-#if (EQUATION == POISSON_EQ || EQUATION == POISSON_PREC_EQ)
-  // #include "ConditionEstimator.hpp"
-#endif
-#if (EQUATION == POISSON_PREC_EQ)
-  #include<stack>
-  #include "k_mesh.hpp"
-#endif
-
 
 class Tsolver {
 public:
@@ -94,45 +86,6 @@ public:
 
    typedef grid_config_type::Fvaluevector_type       Fvaluevector_type;
    typedef grid_config_type::Fnormalvector_type      Fnormalvector_type;
-
-#if (EQUATION == ENTHALPY_EQ)
-   //////////////////////////////////////////////////////////////////////////
-   // type only for enthalpy/interface
-   typedef grid_config_type::Tphase_type Tphase_type;
-
-   typedef struct {
-     id_type    id;
-     int        nodemelt[2];
-     Nvector_type x;// ''left''[0] and ''right''[1] end-point of interface part
-     value_type slightmin; // min. parameter from [0,1] of lighted part
-     value_type slightmax; // max. parameter from [0,1] of lighted part
-     unsigned int imin;
-     unsigned int imax;
-     } interface_data_type;
-
-   typedef multimap<double, interface_data_type> intfacdatmap_type;
-   //////////////////
-   typedef struct {
-     id_type    id;
-     space_type xrec; // mid-point of reconstructed interface
-     space_type x;    // old iteration value (to improve xrec)
-     space_type xnew; // new iteration value
-     space_type n;
-     bool ignore;
-     int        nodemelt[2];
-     // value_type slightmin; // min. parameter from [0,1] of lighted part
-     // value_type slightmax; // max. parameter from [0,1] of lighted part
-     // unsigned int imin;
-     // unsigned int imax;
-     } interface_data2_type;
-   ////////////////////////////////////////////////////////////////////////
-#endif
-
-#if (EQUATION == POISSON_PREC_EQ)
-   typedef igpm::thashcontainer<nodekey_type<grid_config_type>, mynode<grid_config_type>, grid_config_type::id_type::maxLevels, true, nodekeytraitclass<grid_config_type> > nodemap_type;
-
-   nodemap_type nodemap;
-#endif
 
    grid_type grid;
    std::string output_directory;
@@ -244,11 +197,6 @@ public:
    void visit_neighbors ();
    void visit_faces ();
 
-#if (EQUATION!=POISSON_EQ && EQUATION!=POISSON_PREC_EQ)
-   //////////////    CFL CONDITION    ///////////////
-   void update_dt_CFL ();
-#endif
-
    //////////////    ADAPTIVITY    ///////////////
    void assemble_indicator_and_limiting ();
 
@@ -258,30 +206,6 @@ public:
    //////////          PARAMETER            ///////////
    //////////                               ///////////
    ////////////////////////////////////////////////////
-
-#if (EQUATION!=POISSON_EQ && EQUATION!=POISSON_PREC_EQ)
-   double dt,CFL,tend;
-   unsigned int Ntimesteps;
-#endif
-
-#if (EQUATION==POISSON_PREC_EQ)
-
-      double atol,rtol; // absolute and relative tolerances
-      double dtol;      // tolerances for divergence
-      int maxits;       // maximum number of iterations
-
-      double eta;       // absolute tolerance from estimated error factor
-
-      bool use_preconditioner;
-      char type_preconditioner;
-      bool use_preconditioner_multileaf;
-      bool use_preconditioner_short;
-      bool use_preconditioner_nodal;
-      bool use_nested_iteration;
-      int  auxiliary_b_local, auxiliary_b_nodal;
-      typedef Tkmesh<Fdim,degreedim> kmesh_type;
-      kmesh_type kmesh;
-#endif
 
    unsigned int levelmax;
 
@@ -293,150 +217,6 @@ public:
    //////////                                  ///////////
    ///////////////////////////////////////////////////////
 
-#if (EQUATION == EULER_EQ)
-   ///////////////       EULER       ///////////////
-   static const double gamma_air = 1.4;
-   // compiler problem with the following definiton:
-   // static const double kappa_VL = 0.5*gamma_air*gamma_air/(gamma_air*gamma_air-1);
-   static const double kappa_VL = 0.5*1.4*1.4/(1.4*1.4 - 1.0);
-   state_type inflowState, outflowState;
-
-   void read_problem_parameters_EULER ();
-   void initializeLeafCellData_homogeneous ();
-   void initializeLeafCellData_shocktube ();
-   void refine_bump ();
-   void local_dt_EULER (const grid_type::leafcell_type* pLC,
-                        const value_type & lengthmin, value_type & dt_element);
-   void get_flux_solidWall (const state_type & ul, const space_type & normal,
-			    state_type & flux);
-   void get_flux_vanleer (const state_type & ul, const state_type & ur, 		                              const space_type & normal, state_type & flux);
-   void assemble_flux (const double & length, const state_type & flux,
-		       leafcell_type* pcl,
-                       leafcell_type* pcr);
-   void assemble_flux (const double & length,
-                       const state_type & flux,
-		       leafcell_type* pcl);
-   void update_flux ();
-   void assemble_EULER ();
-   void time_stepping_EULER ();
-#endif
-#if (EQUATION == HEAT_EQ)
-   ///////////////      HEAT      ///////////////
-   void read_problem_parameters_HEAT ();
-   void initializeLeafCellData_HEAT (const value_type & time);
-   void assemble_HEAT (const value_type & time);
-   void get_exacttemperature_HEAT (const value_type & t,
-                         const space_type & x,
-			 state_type & u); // state_type ???
-   void get_exacttemperaturenormalderivative_HEAT (const value_type & t,
-        const space_type & x, const space_type & normal, state_type & u_n);
-	// state_type ???
-   void local_dt_HEAT (const value_type & lengthmin, value_type & dt_element);
-   void time_stepping_HEAT ();
-   void write_exactsolution_HEAT (const value_type & time);
-#endif
-#if (EQUATION == ENTHALPY_EQ)
-   ///////////////     ENTHALPY     ///////////////
-   value_type hms,hml,caps,capl,kappas,kappal,temp_melt,h_melt;
-   #if (PROBLEM == LASER)
-   value_type rho_LASER,cap_LASER,kappa_LASER,temp_melt_LASER,
-              temp_infty_LASER,hms_LASER,hml_LASER,d_LASER,v_LASER,
-	      w_LASER,I_LASER,Imean_LASER,eps_LASER,qabscoeff_LASER,peclet;
-   static const double interface_newfrac = -0.66;
-   #endif
-   #if (PROBLEM == BOUNDARYLAYER)
-   value_type v_BOUNDARYLAYER;
-   #endif
-
-   void read_problem_parameters_ENTHALPY ();
-   void update_phase (const value_type & enthalpy, Tphase_type & phase);
-   inline double enthalpy (const state_type & temperature);
-   inline double temperature (const value_type & enthalpy);
-   inline double temperature (const state_type & enthalpy);
-   inline double temperature (const Tphase_type & phase,
-                              const state_type & enthalpy);
-   inline double heat_conduction (const value_type & enthalpy);
-   inline double heat_conduction (const Tphase_type & phase);
-   inline double Dtemperature (const Tphase_type & phase);
-   inline double Denthalpy (const Tphase_type & phase);
-   inline double fraction (const state_type & enthalpy);
-   inline double newfraction (const value_type & enthalpy);
-   void update_newfraction (const Tphase_type & phase,
-                            Enodevalue_type & recenthalpy);
-   void initializeLeafCellData_ENTHALPY (const value_type & time);
-   void initializeLeafCellData_subshape_ENTHALPY (const value_type & time);
-   void initializeLeafCellData_linearmush_ENTHALPY (const value_type & time);
-   void initializeLeafCellData_constant_ENTHALPY (const value_type & time);
-   void get_initialenthalpy_ENTHALPY (const space_type & x, value_type & u);
-   void get_source_ENTHALPY (const value_type & time, const space_type & x,
-                             state_type & source); // state_type ???
-   void get_qabs_normal_ENTHALPY (const value_type & time, const space_type & x,
-                                  const space_type & normal, value_type & qabs_n);
-   void assemble_source_ENTHALPY (const value_type & detjacabs,
-                                  const unsigned int & level,
-				  const grid_type::id_type& idLC,
-	                          const value_type & time, Estate_type & rhs);
-   void get_exacttemperature_ENTHALPY (const value_type & t, const space_type & x,
-                                       state_type & u);
-   void get_exactnormalheatflux_ENTHALPY (const value_type & t,
-                                          const space_type & x,
-					  const space_type & normal,
-					  state_type & u_n);
-   void write_exactsolution_ENTHALPY (const value_type & time);
-   void write_numericalsolution_ENTHALPY ();
-   void update_histenthalpy_ENTHALPY ();
-   void local_dt_ENTHALPY (const value_type & lengthmin, value_type & dt_element);
-   void time_stepping_ENTHALPY ();
-   void invert_mass_ENTHALPY ();
-   void assemble_ENTHALPY (const value_type & time);
-   #if (PROBLEM == LASER)
-   void read_problem_parameters_LASER ();
-   void time_stepping_LASER ();
-   void assemble_LASER (const value_type & time, const unsigned int & iteration,
-                        const bool & lasttime, grid_type::idset_type & idsmushyleaf);
-   void assemble_absorbed_heatflux_SPLINE_SHADOW (const value_type & time,
-                                     const grid_type::idset_type & idsmushyante);
-   void write_lighted_interface (intfacdatmap_type & map_intfacdat);
-   void assemble_qabs_ante (const value_type & time,
-                           interface_data_type & intfacdat, value_type & qabs_ante);
-   void assemble_smooth_interface (const value_type & time,
-                           const grid_type::idset_type & idsmushyante);
-   void assemble_smooth_accurate_interface (const value_type & time,
-                           const grid_type::idset_type & idsmushyante);
-   void Pkenth_to_P1newfrac (leafcell_type *pLC);
-   void P1newfrac_coarsen_leaf_to_ante (const leafcellptrvector_type & pvLC,
-               antecell_type *pAC);
-   void P1newfrac_coarsen_mixed_to_ante (const leafmarker_type & leafmarker,
-                                         const antecellptrvector_type & pvAC1,
-	                                 const leafcellptrvector_type & pvLC1,
-					 antecell_type *pAC);
-   void Pkenth_to_P0newfrac (leafcell_type *pLC);
-   void P1newfrac_restrict (const leafmarker_type & leafmarker,
-                            const antecell_type *pAC,
-                            antecellptrvector_type & pvAC,
-	                    leafcellptrvector_type & pvLC);
-   void P1newfrac_restrict_to_leaf (const antecell_type *pAC,
-	                            leafcellptrvector_type & pvLC);
-   void leafcell_enthalpy_to_antecell_fraction (
-                            const grid_type::idset_type & idsmushyante,
-                            grid_type::idset_type & idsmushyleaf);
-   void Tsolver::leafcell_enthalpy_to_antecell_fraction_increasemush (
-                            grid_type::idset_type & idsmushyante,
-                            grid_type::idset_type & idsmushyleaf);
-   void get_interface_center (antecell_type *pAC, space_type & center);
-   double write_energy_content ();
-   int write_solid_mushy ();
-   void write_interface_movie (const value_type & time,
-                               const grid_type::idset_type & idsmushyante);
-   #endif
-   void phase_limitation ();
-   void phase_flagging ();
-   void phase_limitation_linearmush ();
-   ////////////////////////
-   void adapt_interface ();
-   void adapt_interface (grid_type::idset_type & idsmushyleaf);
-   void refine_onelevel_interface ();
-#endif
 #if (EQUATION == POISSON_EQ)
    ///////////////      POISSON      ///////////////
 
@@ -458,91 +238,6 @@ public:
    void write_exactsolution_POISSON (const unsigned int i);
    void write_exactrhs_POISSON (const unsigned int i);
 
-   void adapt(const double refine_eps, const double coarsen_eps);
-   void setleafcellflags(unsigned int flag, bool value);
-#endif
-#if (EQUATION == POISSON_PREC_EQ)
-   ///////////////      POISSON_PREC      ///////////////
-
-   void addnodes(const grid_type::id_type & id);
-
-   void assignViews_POISSON_PREC(PetscInt& DOF, PetscInt& baeDOF);
-   void assignViewCell_POISSON_PREC(const id_type & id, const unsigned int &blocksize,  const unsigned int &base_blocksize, PetscInt &offset, PetscInt &base_offset);
-// void assignViewLeafCell_POISSON_PREC(const id_type & id, const unsigned int &blocksize, PetscInt &offset);
-
-   void read_problem_parameters_POISSON_PREC ();
-   void initializeBaseCells_POISSON_PREC(const double gamma);
-   void initializeLeafCellData_POISSON_PREC ();
-   void initializeNorms_POISSON_PREC(const double &beta);
-   void initializeBilinearB_POISSON_PREC(const double &beta, PetscInt &baseDOF, Mat &baseB);
-   void synchronize_edges_POISSON_PREC(const bool initial);
-   void initializeBaseConforming_POISSON_PREC(const int & stabsign, const double & penalty, Mat & Mbas, Vec & b);
-
-   void assemble_POISSON_PREC(const int & STABSIGN, const double & PENALTY, Mat & LM, Vec & Lrhs);
-
-   void applyOperator_POISSON_PREC(const int & stabsign, const double & penalty, const Vec & x, Vec & y);
-   double tnorm_POISSON_PREC(const double & penalty);
-   void applyRHS_POISSON_PREC(const int & stabsign, const double & penalty, Vec & y);
-   void applyPreconditionerA1_POISSON_PREC(const int & stabsign, const double & penalty, const Vec & x, Vec & y);
-
-   void applyPreconditionerAk_POISSON_PREC(const int & stabsign, const double & penalty, const PetscInt &baseDOF, Mat &baseB, const Vec & x, Vec & y);
-
-//   void applyPreconditionedOperator_POISSON_PREC(const bool &use_prec,const int & stabsign, const double & penalty, const Vec & x, Vec & y);
-//   void applyPreconditionedRHS_POISSON_PREC(const int & stabsign, const double & penalty, Vec & y);
-
-   void save_POISSON_PREC(Vec & solution);
-   void restore_POISSON_PREC (Vec &solution);
-   void get_exacttemperature_POISSON_PREC (const space_type & x, state_type & u); // state_type ???
-   void get_exacttemperaturenormalderivative_POISSON_PREC (const space_type & x, const space_type & normal, state_type & u_n);
-	// state_type ???
-   void get_rhs_POISSON_PREC (const space_type & x, state_type & u_rhs);  // state_type ???
-   void local_dt_POISSON_PREC (const value_type & lengthmin, value_type & dt_element);
-   void time_stepping_POISSON_PREC ();
-
-   void write_numericalsolution_POISSON_PREC (const unsigned int i);
-   void write_exactsolution_POISSON_PREC (const unsigned int i);
-   void write_exactrhs_POISSON_PREC (const unsigned int i);
-   void write_grid_POISSON_PREC(const unsigned int i);
-
-   void adapt(const double refine_eps, const double coarsen_eps);
-   void adapt_point();
-   void setcellflags(unsigned int flag, bool value);
-   void setleafcellflags(unsigned int flag, bool value);
-   void resetleafcellerror();
-   void resetcelld();
-
-   void save_matrix_binary_POISSON_PREC (const Mat &M, const std::string filename);
-   void extractMatrix_POISSON_PREC(const int & stabsign, const double & penalty, unsigned M_size,const PetscInt &baseDOF, Mat &baseB, Mat &M, Mat &P);
-   void analyze_matrix_POISSON_PREC (const unsigned matrix_size, const int stabsign, const double penalty, const PetscInt &baseDOF, Mat &baseB, int number=-1);
-
-   void statistics_POISSON_PREC(bool showboundary=true);
-
-   void adapt_aposteriori(double &total_error);
-   double assemble_aposteriori();
-
-
-#endif
-#if (EQUATION == IMPLICIT_HEAT_EQ)
-   ///////////////      IMPLICIT_HEAT      ///////////////
-
-   void assignViews_IMPLICIT_HEAT (unsigned int &LM_size);
-
-   void read_problem_parameters_IMPLICIT_HEAT ();
-   void initializeLeafCellData_IMPLICIT_HEAT (const value_type & time);
-   void assemble_IMPLICIT_HEAT (const value_type & time, const int & stabsign, const double & penalty, Mat &LM, Vec &Lrhs);
-   void restore_IMPLICIT_HEAT (Vec &solution);
-   void get_exacttemperature_IMPLICIT_HEAT (const value_type & time, const space_type & x, state_type & u); // state_type ???
-   void get_exacttemperaturenormalderivative_IMPLICIT_HEAT (const value_type & t, const space_type & x, const space_type & normal, state_type & u_n);
-	// state_type ???
-   void get_rhs_IMPLICIT_HEAT (const space_type & x, state_type & u_rhs);  // state_type ???
-   void local_dt_IMPLICIT_HEAT (const value_type & lengthmin, value_type & dt_element);
-
-   void update_u();
-
-   void time_stepping_IMPLICIT_HEAT ();
-
-   void write_numericalsolution_IMPLICIT_HEAT (const value_type & time, int count = -1);
-   void write_exactsolution_IMPLICIT_HEAT (const value_type & time, int count = -1);
    void adapt(const double refine_eps, const double coarsen_eps);
    void setleafcellflags(unsigned int flag, bool value);
 #endif
