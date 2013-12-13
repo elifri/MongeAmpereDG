@@ -97,30 +97,30 @@ void Tsolver::assignViews_POISSON (unsigned int & offset) {
 
 // void Tsolver::assignViews_POISSON(unsigned int &LM_size)
 // {
-// 
+//
 //     PetscInt offset = 0;
-// 
+//
 //     const int LM_blocksize = statedim * shapedim;
 //     LM_size = grid.leafCells().size() * LM_blocksize;
-// 
+//
 //     for (grid_type::leafcellmap_type::const_iterator
 // 	 it = grid.leafCells().begin(); it != grid.leafCells().end();
 // 	 ++it) {
-// 
+//
 // 	const grid_type::id_type & idLC = grid_type::id(it);
-// 
+//
 // 	leafcell_type * pLC = NULL;
 // 	grid.findLeafCell(idLC, pLC);
-// 
+//
 // 	pLC->m_offset = offset;
 // 	pLC->n_offset = offset;
-// 
+//
 // 	pLC->m_block_size = LM_blocksize;
 // 	pLC->n_block_size = LM_blocksize;
-// 
+//
 // 	offset += LM_blocksize;
 //     }
-// 
+//
 //     cout << "  LM_size=" << LM_size
 // 	<< ", LM_blocksize=" << LM_blocksize
 // 	<< ", matrix size: " << offset << " x " << offset << endl;
@@ -200,7 +200,8 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty, Eig
 
 
 	    // bilinear form b (average of normal derivative u * jump phi)
-	    grid.faceIds(idLC, vF);	// bool bFoundAll = grid.faceIds (idLC, vF);
+	    grid_type::facehandlevector_type vFh, vOh;   // neighbor face number and orientation
+	    grid.faceIds(idLC, vF, vFh, vOh);	// bool bFoundAll = grid.faceIds (idLC, vF);
 	    for (unsigned int i = 0; i < idLC.countFaces(); i++) {
 		if (vF[i].isValid()) {
 
@@ -459,19 +460,19 @@ double phi(const double x, const double y)
 // double w(const double r)
 // {
 //     double d = 0.0;
-// 
+//
 //     if (r > 0.0) {
 //      d = exp(-1.0 / sqr(r));
 //     }
-// 
+//
 //     return d;
 // }
-// 
+//
 // double zeta(const double r)
 // {
 //     double   w1 = w(99.0 / 100.0 - r);
 //     double   w2 = w(r - 1.0 / 100.0);
-// 
+//
 //     return w1 / (w1 + w2);
 // }
 
@@ -679,7 +680,7 @@ void Tsolver::time_stepping_POISSON()
 //       cerr << "Error opening output file " << fname << "." << endl;
 //       exit(1);
 //     }
-// 
+//
 //     fname=output_directory+"/temp_exacthistory.dat";
 //     std::ofstream outexacthistory(fname.c_str());
 //     if( !outexacthistory ) {
@@ -787,18 +788,18 @@ void Tsolver::time_stepping_POISSON()
 
 /*  std::string dir;
   cfg.getValue ("general", "outputdir", dir, "");
-  
+
   std::string filename;
   cfg.getValue ("poisson", "analyze_filename", filename, "matrix.dat");
-  
+
   filename=dir+"/"+filename;
   if(loop>0) {
     filename+="."+NumberToString(loop);
   }
   filename+=".dat";
-  
+
   cout << "Save Matrix in binary format to file "<< filename <<"..." << endl;
-  
+
   PetscViewer viewer;
   PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename.c_str(),FILE_MODE_WRITE,&viewer);
   MatView(LM,viewer);
@@ -982,7 +983,7 @@ void Tsolver::write_numericalsolution_POISSON(const unsigned int i)
     std::string fname(output_directory);
     fname+="/grid_numericalsolution."+NumberToString(i)+".dat";
     std::ofstream fC(fname.c_str());
-    
+
     // global header
     fC << "TITLE     = \"" << "numerical solution" << "\"" << std::endl;
     fC << "VARIABLES = ";

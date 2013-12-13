@@ -252,12 +252,12 @@ void Tsolver::update_baseGeometry ()
     det = pBC->jac[0][0]*pBC->jac[1][1] - pBC->jac[1][0]*pBC->jac[0][1];
     for (unsigned int i=0; i<shapedim; i++)
       for (unsigned int iq=0; iq<shape.Fquadraturedim; iq++) {
-      
+
         // gradient
 	pBC->grad[i][iq][0] = (shape.Fquads_x[i][iq]*pBC->jac[1][1] - shape.Fquads_y[i][iq]*pBC->jac[1][0])/det;
 	pBC->grad[i][iq][1] = (shape.Fquads_y[i][iq]*pBC->jac[0][0] - shape.Fquads_x[i][iq]*pBC->jac[0][1])/det;
 
-        // calculate face number 
+        // calculate face number
         unsigned int in=0;
 	if (iq < Fdim*Fquadgaussdim)
 	  in = iq/Fquadgaussdim;
@@ -276,8 +276,8 @@ void Tsolver::update_baseGeometry ()
     double sum,c,s;
     space_type rn,rc,x,xc;
     Fidvector_type vF;
-
-    grid.faceIds (idBC, vF);
+    grid_type::facehandlevector_type vFh, vOh;   // neighbor face number and orientation
+    grid.faceIds (idBC, vF, vFh, vOh);
     get_center (vN, xc);
     for (unsigned int iface=0; iface<idBC.countFaces(); ++iface) {
       if (vF[iface].isValid()) {
@@ -1392,7 +1392,9 @@ void Tsolver::visit_neighbors ()
      // find neighbors
      Fidvector_type vF;
      leafcell_type *pnc;    // neighbor cell
-     bool bFoundAll = idLC.faceIds (vF); // is not grid.faceIds (idLC, vF) !!!
+     grid_type::facehandlevector_type vFh, vOh;   // neighbor face number and orientation
+
+     bool bFoundAll = idLC.faceIds (vF,vFh, vOh); // is not grid.faceIds (idLC, vF) !!!
      if (bFoundAll) cerr << "found all" << endl;
      else cerr << "did not find all" << endl;
 
@@ -1443,7 +1445,8 @@ void Tsolver::visit_faces ()
 
        // idLC.faceIds (vF); // we get neighbours of same level
        // bool bFoundAll = grid.faceIds (idLC, vF);
-       grid.faceIds (idLC, vF);
+       grid_type::facehandlevector_type vFh, vOh;   // neighbor face number and orientation
+       grid.faceIds (idLC, vF, vFh, vOh);
        bool writedata = (cellcounter < cellcountermax);
 
        for (unsigned int i=0; i<idLC.countFaces(); i++) {
@@ -1712,7 +1715,8 @@ void Tsolver::assemble_indicator_and_limiting ()
        grid.findBaseCellOf (idLC, pBC);
        const grid_type::basecell_type* pNBC;
 
-       grid.faceIds (idLC, vF); // bool bFoundAll = grid.faceIds (idLC, vF);
+       grid_type::facehandlevector_type vFh, vOh;   // neighbor face number and orientation
+       grid.faceIds (idLC, vF, vFh, vOh); // bool bFoundAll = grid.faceIds (idLC, vF);
        for (unsigned int i=0; i<idLC.countFaces(); i++) {
          if (vF[i].isValid()) {
            // if (grid.existLeafCell(vF[i])) {
