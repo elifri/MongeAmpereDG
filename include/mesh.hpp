@@ -16,10 +16,6 @@
 #include "utility.hpp"
 #include "Tmatrix.hpp"
 
-#ifdef USE_PETSC
-#include "petsc.h"
-#endif
-
 //------------------------------------------------------------------------------
 
 template <class CONFIG_TYPE> class tmycommoncelldata;

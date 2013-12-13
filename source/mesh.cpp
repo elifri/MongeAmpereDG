@@ -238,12 +238,6 @@ static char help[] = "Using PETSc\n\n";
 //------------------------------------------------------------------------------
 int main(int argc, char **argv) {
 
-#ifdef USE_PETSC
-  PetscInitialize(&argc, &argv, (char *)0, help);
-  PetscGetTime(&t1);
-
-  PetscViewerSetFormat(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_ASCII_MATLAB);
-#endif
   cout << "This is mesh, revision ???"<< "." << endl;
   if (argc<2) {  // argc
     cerr << "Please give name of config file as argument!" << endl;
@@ -386,12 +380,6 @@ int main(int argc, char **argv) {
   cerr << "grid writing time = " << pt << endl;
   */
 
-#ifdef USE_PETSC
-  PetscGetTime(&t2);
-  cout << "Program end: " << FFmt( 6 , 3 ) << t2-t1 << " s." << endl;
-
-  PetscFinalize();
-#endif
 
   return 0;
 
