@@ -85,8 +85,11 @@ inline double Tsolver::bilin_laplace (const double & u0_x, const double & u0_y,
                                         const double & u1_x, const double & u1_y,
                                         const Ejacobian_type & J, const double & d_abs)
 {
-    const double phi_i_x=J[1][1]*u0_x - J[1][0]*u0_y, phi_i_y=J[1][1]*u1_x - J[1][0]*u1_y;
-    const double phi_j_x=J[0][0]*u0_y - J[0][1]*u0_x, phi_j_y=J[0][0]*u1_y - J[0][1]*u1_x;
+	// calculate gradient of local shape function
+	// by multiplication of transposed inverse of Jacobian of affine transformation
+	// with gradient from shape function on reference cell
+    const double phi_i_x=  J[1][1]*u0_x - J[1][0]*u0_y, phi_i_y= -J[0][1]*u0_x + J[0][0]*u0_y ;
+    const double phi_j_x=  J[1][1]*u1_x - J[1][0]*u1_y, phi_j_y= -J[0][1]*u1_x + J[0][0]*u1_y ;
 
     return ( phi_i_x * phi_j_x + phi_i_y * phi_j_y ) / d_abs;
 };
@@ -95,8 +98,11 @@ inline double Tsolver::bilin_alaplace (const double & u0_x, const double & u0_y,
                                         const double & u1_x, const double & u1_y,
                                         const Ejacobian_type & J, const double & d_abs,const igpm::tvector<double,4> & a)
 {
-    const double phi_i_x=(J[1][1]*u0_x - J[1][0]*u0_y), phi_i_y=(J[0][0]*u0_y - J[0][1]*u0_x);
-    const double phi_j_x=(J[1][1]*u1_x - J[1][0]*u1_y), phi_j_y=(J[0][0]*u1_y - J[0][1]*u1_x);
+	// calculate gradient of local shape function
+	// by multiplication of transposed inverse of Jacobian of affine transformation
+	// with gradient from shape function on reference cell
+    const double phi_i_x=  J[1][1]*u0_x - J[1][0]*u0_y, phi_i_y= -J[0][1]*u0_x + J[0][0]*u0_y ;
+    const double phi_j_x=  J[1][1]*u1_x - J[1][0]*u1_y, phi_j_y= -J[0][1]*u1_x + J[0][0]*u1_y ;
 
     return (    ( a[0]*phi_i_x + a[1]*phi_i_y) * phi_j_x
               + ( a[2]*phi_i_x + a[3]*phi_i_y) * phi_j_y ) / d_abs;
@@ -230,10 +236,10 @@ void Tsolver::update_baseGeometry ()
     for (unsigned int i=0; i<shapedim; i++)
       for (unsigned int j=0; j<=i; j++)
         for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
-          pBC->laplace[i][j] +=
-	    shape.Equadw[iq]*bilin_laplace (shape.Equads_x[i][iq], shape.Equads_y[i][iq],
-                                     shape.Equads_x[j][iq], shape.Equads_y[j][iq],
-				     pBC->jac, pBC->detjacabs);
+        	double func=bilin_laplace (shape.Equads_x[i][iq], shape.Equads_y[i][iq],
+        			shape.Equads_x[j][iq], shape.Equads_y[j][iq],
+        			pBC->jac, pBC->detjacabs);
+          pBC->laplace[i][j] += shape.Equadw[iq]*func;
 	}
 #endif
 
