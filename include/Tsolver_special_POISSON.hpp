@@ -4,6 +4,8 @@
 ///////////////             ///////////////
 ///////////////////////////////////////////
 
+#include <Eigen/Sparse>
+
 void Tsolver::read_problem_parameters_POISSON()
 {
 }
@@ -126,7 +128,7 @@ void Tsolver::assignViews_POISSON (unsigned int & offset) {
 
 ////////////////////////////////////////////////////
 
-void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty, Mat & LM, Vec & Lrhs)
+void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty, Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs)
 {
     unsigned int gaussbaseLC = 0;
     unsigned int gaussbaseNC = 0;
@@ -169,10 +171,10 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty, Mat
 	    // Copy entries for element laplace operator into Laplace-matrix
 	    for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-		    PetscInt row = (PetscInt) (pLC->m_offset + ieq);
-		    PetscInt col = (PetscInt) (pLC->n_offset + ishape);
-		    PetscReal val = (PetscReal) pBC->laplace[ieq][ishape];
-		    MatSetValues(LM, 1, &row, 1, &col, &val, ADD_VALUES);
+		    int row = (pLC->m_offset + ieq);
+		    int col = (pLC->n_offset + ishape);
+		    double val = pBC->laplace[ieq][ishape];
+		    LM.coeffRef(row, col) +=  val;
 		}
 	    }
 
@@ -187,10 +189,10 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty, Mat
 		for (unsigned int istate = 0; istate < statedim; ++istate) {
 		    for (unsigned int ishape = 0; ishape < shapedim;
 			 ++ishape) {
-			PetscInt row  = (PetscInt) (pLC->n_offset + ishape);
-			PetscReal val = (PetscReal) (shape.Equadw[iq] * pBC->detjacabs * facLevelVolume[level] * uLC[istate] * shape.Equads[ishape][iq]);
+			int row  = pLC->n_offset + ishape;
+			double val = shape.Equadw[iq] * pBC->detjacabs * facLevelVolume[level] * uLC[istate] * shape.Equads[ishape][iq];
 
-			VecSetValue(Lrhs, row, val, ADD_VALUES);
+			Lrhs(row) +=  val;
 		    }
 		}
 
@@ -251,54 +253,40 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty, Mat
 			    for (unsigned int ishape = 0;
 				 ishape < shapedim; ++ishape) {
 				for (unsigned int j = 0; j < shapedim; ++j) {
-				    PetscInt row_LC = (PetscInt) (pLC->m_offset + ishape);
-				    PetscInt row_NC = (PetscInt) (pNC->m_offset + ishape);
-				    PetscInt col_LC = (PetscInt) (pLC->n_offset + j);
-				    PetscInt col_NC = (PetscInt) (pNC->n_offset + j);
-
-				    PetscReal val;
+				    int row_LC = pLC->m_offset + ishape;
+				    int row_NC = pNC->m_offset + ishape;
+				    int col_LC = pLC->n_offset + j;
+				    int col_NC = pNC->n_offset + j;
 
 				    // b(u, phi)
-				    val = (PetscReal) (-0.5 * shape.Fquadw[iqLC] * length * shape.Fquads[ishape][iqLC] * pBC->normalderi[j][iqLC] / facLevelLength[level]);
-				    MatSetValue(LM, row_LC, col_LC, val, ADD_VALUES);
+				    LM.coeffRef(row_LC, col_LC) += -0.5 * shape.Fquadw[iqLC] * length * shape.Fquads[ishape][iqLC] * pBC->normalderi[j][iqLC] / facLevelLength[level];
 
-				    val = (PetscReal) ( 0.5 * shape.Fquadw[iqLC] * length * shape.Fquads[ishape][iqLC] * pNBC->normalderi[j][iqNC] / facLevelLength[levelNC]);
-				    MatSetValue(LM, row_LC, col_NC, val, ADD_VALUES);
+				    LM.coeffRef(row_LC, col_NC) += 0.5 * shape.Fquadw[iqLC] * length * shape.Fquads[ishape][iqLC] * pNBC->normalderi[j][iqNC] / facLevelLength[levelNC];
 
-				    val = (PetscReal) ( 0.5 * shape.Fquadw[iqLC] * length * shape.Fquads[ishape][iqNC] * pBC->normalderi[j][iqLC] / facLevelLength[level]);
-				    MatSetValue(LM, row_NC, col_LC, val, ADD_VALUES);
+				    LM.coeffRef(row_NC, col_LC) += 0.5 * shape.Fquadw[iqLC] * length * shape.Fquads[ishape][iqNC] * pBC->normalderi[j][iqLC] / facLevelLength[level];
 
-				    val = (PetscReal) (-0.5 * shape.Fquadw[iqLC] * length * shape.Fquads[ishape][iqNC] * pNBC->normalderi[j][iqNC] / facLevelLength[levelNC]);
-				    MatSetValue(LM, row_NC, col_NC, val, ADD_VALUES);
+				    LM.coeffRef(row_NC, col_NC) += -0.5 * shape.Fquadw[iqLC] * length * shape.Fquads[ishape][iqNC] * pNBC->normalderi[j][iqNC] / facLevelLength[levelNC];
 
 
 				    // b(phi, u)
-				    val = (PetscReal) ( 0.5 * shape.Fquadw[iqLC] * length * pBC->normalderi[ishape][iqLC] / facLevelLength[level] * shape.Fquads[j][iqLC]);
-				    MatSetValue(LM, row_LC, col_LC, stabsign * val, ADD_VALUES);
+				    LM.coeffRef(row_LC, col_LC) += stabsign * 0.5 * shape.Fquadw[iqLC] * length * pBC->normalderi[ishape][iqLC] / facLevelLength[level] * shape.Fquads[j][iqLC];
 
-				    val = (PetscReal) (-0.5 * shape.Fquadw[iqLC] * length * pBC->normalderi[ishape][iqLC] / facLevelLength[level] * shape.Fquads[j][iqNC]);
-				    MatSetValue(LM, row_LC, col_NC, stabsign * val, ADD_VALUES);
+				    LM.coeffRef(row_LC, col_NC) += stabsign * -0.5 * shape.Fquadw[iqLC] * length * pBC->normalderi[ishape][iqLC] / facLevelLength[level] * shape.Fquads[j][iqNC];
 
-				    val = (PetscReal) (-0.5 * shape.Fquadw[iqLC] * length * pNBC->normalderi[ishape][iqNC] / facLevelLength[levelNC] * shape.Fquads[j][iqLC]);
-				    MatSetValue(LM, row_NC, col_LC, stabsign * val, ADD_VALUES);
+				    LM.coeffRef(row_NC, col_LC) +=  stabsign * -0.5 * shape.Fquadw[iqLC] * length * pNBC->normalderi[ishape][iqNC] / facLevelLength[levelNC] * shape.Fquads[j][iqLC];
 
-				    val = (PetscReal) ( 0.5 * shape.Fquadw[iqLC] * length * pNBC->normalderi[ishape][iqNC] / facLevelLength[levelNC] * shape.Fquads[j][iqNC]);
-				    MatSetValue(LM, row_NC, col_NC, stabsign * val, ADD_VALUES);
+				    LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.Fquadw[iqLC] * length * pNBC->normalderi[ishape][iqNC] / facLevelLength[levelNC] * shape.Fquads[j][iqNC];
 
 
                                     // b_sigma(u, phi)
                                     if(penalty!=0.0) {
-					val = (PetscReal) ( penalty * shape.Fquadw[iqLC] * shape.Fquads[j][iqLC] * shape.Fquads[ishape][iqLC]);
-					MatSetValue(LM, row_LC, col_LC, val, ADD_VALUES);
+				    LM.coeffRef(row_LC, col_LC) += penalty * shape.Fquadw[iqLC] * shape.Fquads[j][iqLC] * shape.Fquads[ishape][iqLC];
 
-					val = (PetscReal) (-penalty * shape.Fquadw[iqLC] * shape.Fquads[j][iqNC] * shape.Fquads[ishape][iqLC]);
-					MatSetValue(LM, row_LC, col_NC, val, ADD_VALUES);
+				    LM.coeffRef(row_LC, col_NC) += -penalty * shape.Fquadw[iqLC] * shape.Fquads[j][iqNC] * shape.Fquads[ishape][iqLC];
 
-					val = (PetscReal) (-penalty * shape.Fquadw[iqLC] * shape.Fquads[j][iqLC] * shape.Fquads[ishape][iqNC]);
-					MatSetValue(LM, row_NC, col_LC, val, ADD_VALUES);
+				    LM.coeffRef(row_NC, col_LC) += -penalty * shape.Fquadw[iqLC] * shape.Fquads[j][iqLC] * shape.Fquads[ishape][iqNC];
 
-					val = (PetscReal) ( penalty * shape.Fquadw[iqLC] * shape.Fquads[j][iqNC] * shape.Fquads[ishape][iqNC]);
-					MatSetValue(LM, row_NC, col_NC, val, ADD_VALUES);
+				    LM.coeffRef(row_NC, col_NC) += penalty * shape.Fquadw[iqLC] * shape.Fquads[j][iqNC] * shape.Fquads[ishape][iqNC];
 
                                     }
 				}
@@ -329,9 +317,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty, Mat
 			    // Copy entries for Neumann boundary conditions into right hand side
 			    for (unsigned int ishape = 0;
 				 ishape < shapedim; ++ishape) {
-				PetscInt row  = (PetscInt) (pLC->n_offset + ishape);
-				PetscReal val = (PetscReal) (shape.Fquadw[iqLC] * length * uLC[0] * shape.Fquads[ishape][iqLC]);
-				VecSetValue(Lrhs, row, val, ADD_VALUES);
+				Lrhs(pLC->n_offset + ishape) += shape.Fquadw[iqLC] * length * uLC[0] * shape.Fquads[ishape][iqLC];
 			    }
 			}
 			break;
@@ -350,35 +336,34 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty, Mat
 			    // Copy entries for Dirichlet boundary conditions into right hand side
 			    for (unsigned int ishape = 0;
 				 ishape < shapedim; ++ishape) {
-				PetscInt row  = (PetscInt) (pLC->n_offset + ishape);
-				PetscReal val = (PetscReal) (stabsign*shape.Fquadw[iqLC] * length * uLC[0] * pBC->normalderi[ishape][iqLC] / facLevelLength[level]);
+				double val = stabsign*shape.Fquadw[iqLC] * length * uLC[0] * pBC->normalderi[ishape][iqLC] / facLevelLength[level];
 
                                 if(penalty!=0.0) {
-				  val += (PetscReal) (penalty * shape.Fquadw[iqLC] * uLC[0] * shape.Fquads[ishape][iqLC]);
+				  val += penalty * shape.Fquadw[iqLC] * uLC[0] * shape.Fquads[ishape][iqLC];
                                 }
 
-				VecSetValue(Lrhs, row, val, ADD_VALUES);
+				Lrhs(pLC->n_offset + ishape) += val;
 			    }
 
 			    // Copy entries into Laplace-matrix
 			    for (unsigned int ishape = 0;
 				 ishape < shapedim; ++ishape) {
 				for (unsigned int j = 0; j < shapedim; ++j) {
-				    PetscInt row = (PetscInt) (pLC->m_offset + ishape);
-				    PetscInt col = (PetscInt) (pLC->n_offset + j);
-				    PetscReal val;
+				    int row = pLC->m_offset + ishape;
+				    int col = pLC->n_offset + j;
+				    double val;
 
 				    // b(u, phi)
-				    val = (PetscReal) (-shape.Fquadw[iqLC] * length * shape.Fquads[ishape][iqLC] * pBC->normalderi[j][iqLC] / facLevelLength[level]);
+				    val = -shape.Fquadw[iqLC] * length * shape.Fquads[ishape][iqLC] * pBC->normalderi[j][iqLC] / facLevelLength[level];
 
 				    // b(phi, u)
-				    val += (PetscReal) (stabsign * shape.Fquadw[iqLC] * length * pBC->normalderi[ishape][iqLC] / facLevelLength[level] * shape.Fquads[j][iqLC]);
+				    val += stabsign * shape.Fquadw[iqLC] * length * pBC->normalderi[ishape][iqLC] / facLevelLength[level] * shape.Fquads[j][iqLC];
 
                                     if(penalty!=0.0) {
-  	                                val += (PetscReal) (penalty * shape.Fquadw[iqLC] * shape.Fquads[ishape][iqLC] * shape.Fquads[j][iqLC]);
+  	                                val += penalty * shape.Fquadw[iqLC] * shape.Fquads[ishape][iqLC] * shape.Fquads[j][iqLC];
                                     }
 
-				    MatSetValue(LM, row, col, val, ADD_VALUES);
+				    LM.coeffRef(row, col) += val;
 				}
 			    }
 
@@ -405,7 +390,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty, Mat
 
 //////////////////////////////////////////////////////
 
-void Tsolver::restore_POISSON(Vec & solution)
+void Tsolver::restore_POISSON(Eigen::VectorXd & solution)
 {
 
     leafcell_type *pLC = NULL;
@@ -420,13 +405,7 @@ void Tsolver::restore_POISSON(Vec & solution)
 
 	// Copy solution entries back into u
 	for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-
-	    PetscInt row = (PetscInt) (pLC->m_offset + ishape);
-	    PetscScalar val;
-
-	    VecGetValues(solution, 1, &row, &val);
-
-	    pLC->u[ishape][0] = (double) val;
+	    pLC->u[ishape][0] = solution(pLC->m_offset + ishape);
 	}
     }
 
@@ -649,8 +628,6 @@ inline double Tsolver::heat_conduction (const value_type & t,
 void Tsolver::time_stepping_POISSON()
 {
 
-    PetscLogDouble t2, t3;
-
     // sign of stbilization term: +1: Bauman-Oden/NIPG, -1: GEM/SIPG
     int    stabsign;
     double gamma, refine_eps, coarsen_eps;
@@ -722,20 +699,19 @@ void Tsolver::time_stepping_POISSON()
     for (int loop = 1; loop <= maxloops; ++loop) {
 
 	unsigned int LM_size;
-	PetscGetTime(&t2);
 
 	cout << "Assign matrix coordinates..." << endl;
 	assignViews_POISSON(LM_size);
 
-	PetscGetTime(&t3);
 	cout << "done. " << fixed << setprecision(3) << t3 -
 	    t2 << "s." << endl;
 
 	Mat LM;
 	Vec Lrhs, Lsolution;
-	PetscErrorCode ierr;
+//	PetscErrorCode ierr;
 
 	//    ierr = MatCreate(PETSC_COMM_WORLD, &LM);
+/*
 	ierr =
 	    MatCreateSeqAIJ(PETSC_COMM_WORLD, LM_size, LM_size, 6 * 4,
 			    PETSC_NULL, &LM);
@@ -758,52 +734,49 @@ void Tsolver::time_stepping_POISSON()
 
 	ierr = VecDuplicate(Lrhs, &Lsolution);
 
+*/
 	//  for (unsigned int itime=0; itime<Ntimesteps; itime++) {
 	//    update_dt_CFL ();
 	//    cerr << "itime = " << itime << endl;
 	cout << "Assemble linear System..." << flush;
 
-	PetscGetTime(&t2);
-
 	assemble_POISSON(stabsign, gamma, LM, Lrhs);
 
-	PetscGetTime(&t3);
-	cout << "done. " << fixed << setprecision(3) << t3 -
-	    t2 << "s." << endl;
+	cout << "done. " << fixed <<  " ? s." << endl;
 
 	//    invert_mass ();
 	//    t += dt;
 
-	cout << "Final matrix assemble..." << flush;
-
-	PetscGetTime(&t2);
-
-	ierr = MatAssemblyBegin(LM, MAT_FINAL_ASSEMBLY);
-	check_petsc_error(ierr);
-
-	ierr = MatAssemblyEnd(LM, MAT_FINAL_ASSEMBLY);
-	check_petsc_error(ierr);
-
-	PetscGetTime(&t3);
-	cout << "done. " << fixed << setprecision(3) << t3 -
-	    t2 << "s." << endl;
-
-	ierr = VecAssemblyBegin(Lrhs);
-	check_petsc_error(ierr);
-
-	ierr = VecAssemblyEnd(Lrhs);
-	check_petsc_error(ierr);
-
-	ierr = VecAssemblyBegin(Lsolution);
-	check_petsc_error(ierr);
-
-	ierr = VecAssemblyEnd(Lsolution);
-	check_petsc_error(ierr);
-
-	PetscViewerSetFormat(PETSC_VIEWER_STDOUT_WORLD,
-			     PETSC_VIEWER_ASCII_MATLAB);
-
-      cout << "loop=" << loop << endl;
+//	cout << "Final matrix assemble..." << flush;
+//
+//	PetscGetTime(&t2);
+//
+//	ierr = MatAssemblyBegin(LM, MAT_FINAL_ASSEMBLY);
+//	check_petsc_error(ierr);
+//
+//	ierr = MatAssemblyEnd(LM, MAT_FINAL_ASSEMBLY);
+//	check_petsc_error(ierr);
+//
+//	PetscGetTime(&t3);
+//	cout << "done. " << fixed << setprecision(3) << t3 -
+//	    t2 << "s." << endl;
+//
+//	ierr = VecAssemblyBegin(Lrhs);
+//	check_petsc_error(ierr);
+//
+//	ierr = VecAssemblyEnd(Lrhs);
+//	check_petsc_error(ierr);
+//
+//	ierr = VecAssemblyBegin(Lsolution);
+//	check_petsc_error(ierr);
+//
+//	ierr = VecAssemblyEnd(Lsolution);
+//	check_petsc_error(ierr);
+//
+//	PetscViewerSetFormat(PETSC_VIEWER_STDOUT_WORLD,
+//			     PETSC_VIEWER_ASCII_MATLAB);
+//
+//      cout << "loop=" << loop << endl;
 //      cout << "LM=" << endl;
 //      MatView(LM,PETSC_VIEWER_STDOUT_WORLD);
 
@@ -813,7 +786,7 @@ void Tsolver::time_stepping_POISSON()
 
 
 
-  std::string dir;
+/*  std::string dir;
   cfg.getValue ("general", "outputdir", dir, "");
   
   std::string filename;
@@ -830,7 +803,7 @@ void Tsolver::time_stepping_POISSON()
   PetscViewer viewer;
   PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename.c_str(),FILE_MODE_WRITE,&viewer);
   MatView(LM,viewer);
-  PetscViewerDestroy(viewer);
+  PetscViewerDestroy(viewer);*/
 
 
 
@@ -846,7 +819,7 @@ void Tsolver::time_stepping_POISSON()
 	//if(DLM(i,j)!=0.0)
 	//cout << "M(" << i << "," << j << ") = " << DLM(i,j) << ";" << endl;
 
-	KSP ksp;
+/*	KSP ksp;
 
 	ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);
 	check_petsc_error(ierr);
@@ -855,11 +828,12 @@ void Tsolver::time_stepping_POISSON()
 	check_petsc_error(ierr);
 
 	ierr = KSPSetOperators(ksp, LM, LM, DIFFERENT_NONZERO_PATTERN);
-	check_petsc_error(ierr);
+	check_petsc_error(ierr);*/
 	//
 	//     ierr =   KSPSetTolerances(ksp,1.e-8,1.e-50,PETSC_DEFAULT,PETSC_DEFAULT);
 	//     check_petsc_error(ierr);
 	//
+/*
 	ierr = KSPSetFromOptions(ksp);
 	check_petsc_error(ierr);
 
@@ -872,17 +846,25 @@ void Tsolver::time_stepping_POISSON()
 	KSPSetTolerances(ksp, 1.e-8, PETSC_DEFAULT, PETSC_DEFAULT,
 			 PETSC_DEFAULT);
 
+*/
 	cout << "Solving linear System..." << endl;
 
-	PetscGetTime(&t2);
+	SimplicialLDLT<SparseMatrix<double> > solver;
+	solver.compute(LM);
+	if(solver.info()!=Success) {
+		std::cerr << "Decomposition of stiffness matrix failed" << endl;
+	}
+	Eigen::VectorXd Lsolution = solver.solve(Lrhs);
+	if(solver.info()!=Success) {
+		std::cerr << "Solving of FEM system failed" << endl;
+	}
 
-	ierr = KSPSolve(ksp, Lrhs, Lsolution);
-	check_petsc_error(ierr);
+//	ierr = KSPSolve(ksp, Lrhs, Lsolution);
+//	check_petsc_error(ierr);
 
-	PetscGetTime(&t3);
-	cout << "done. " << fixed << setprecision(3) << t3 -
-	    t2 << "s." << endl;
+	cout << "done. " << fixed << "? s." << endl;
 
+/*
 	KSPConvergedReason reason;
 	PetscInt its;
 
@@ -900,6 +882,7 @@ void Tsolver::time_stepping_POISSON()
 	    printf("\nConvergence in %d iterations.\n", (int) its);
 	}
 	printf("\n");
+*/
 
 
 	//     int iterations;
@@ -949,12 +932,12 @@ void Tsolver::time_stepping_POISSON()
 	// reset flag 0
 	setleafcellflags(0, false);
 
-	ierr = KSPDestroy(ksp);
-
-	ierr = VecDestroy(Lsolution);
-	ierr = VecDestroy(Lrhs);
-
-	ierr = MatDestroy(LM);
+//	ierr = KSPDestroy(ksp);
+//
+//	ierr = VecDestroy(Lsolution);
+//	ierr = VecDestroy(Lrhs);
+//
+//	ierr = MatDestroy(LM);
 
     }
 }
