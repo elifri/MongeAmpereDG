@@ -7,7 +7,7 @@
 #include <iostream>
 using namespace std;
 
-#include "../svn_version.h"
+//#include "../svn_version.h"
 #include "igpm_t2_lib.hpp"
 
 //------------------------------------------------------------------------------
@@ -34,6 +34,8 @@ using namespace std;
 #define POISSON_PREC_EQ 4
 #define IMPLICIT_HEAT_EQ 5
 
+#define EQUATION POISSON_EQ
+
 #ifndef EQUATION
  #error No EQUATION defined!
 #endif
@@ -42,7 +44,6 @@ using namespace std;
  #error This EQUATION is undefined!
 #endif
 
-//#define EQUATION POISSON_EQ
 
 // Euler-Problems
 #define SHOCKTUBE 1
@@ -231,7 +232,7 @@ void createRefinement(grid_type& grid, unsigned int nRefine, bool bVerbose, bool
 
 #if (EQUATION == POISSON_EQ || EQUATION == POISSON_PREC_EQ || EQUATION == IMPLICIT_HEAT_EQ)
 static char help[] = "Using PETSc\n\n";
-PetscLogDouble t1, t2;
+
 #endif
 
 //------------------------------------------------------------------------------
@@ -243,7 +244,7 @@ int main(int argc, char **argv) {
 
   PetscViewerSetFormat(PETSC_VIEWER_STDOUT_WORLD, PETSC_VIEWER_ASCII_MATLAB);
 #endif
-  cout << "This is mesh, revision " << svn_revision << "." << endl;
+  cout << "This is mesh, revision ???"<< "." << endl;
   if (argc<2) {  // argc
     cerr << "Please give name of config file as argument!" << endl;
     exit(1);

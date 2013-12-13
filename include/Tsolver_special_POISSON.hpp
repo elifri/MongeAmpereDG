@@ -703,11 +703,10 @@ void Tsolver::time_stepping_POISSON()
 	cout << "Assign matrix coordinates..." << endl;
 	assignViews_POISSON(LM_size);
 
-	cout << "done. " << fixed << setprecision(3) << t3 -
-	    t2 << "s." << endl;
+	cout << "done. " << fixed << "? s." << endl;
 
-	Mat LM;
-	Vec Lrhs, Lsolution;
+	Eigen::SparseMatrix<double> LM;
+	Eigen::VectorXd Lrhs, Lsolution;
 //	PetscErrorCode ierr;
 
 	//    ierr = MatCreate(PETSC_COMM_WORLD, &LM);
@@ -849,13 +848,13 @@ void Tsolver::time_stepping_POISSON()
 */
 	cout << "Solving linear System..." << endl;
 
-	SimplicialLDLT<SparseMatrix<double> > solver;
+	Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > solver;
 	solver.compute(LM);
-	if(solver.info()!=Success) {
+	if(solver.info() != Eigen::Success) {
 		std::cerr << "Decomposition of stiffness matrix failed" << endl;
 	}
-	Eigen::VectorXd Lsolution = solver.solve(Lrhs);
-	if(solver.info()!=Success) {
+	Lsolution = solver.solve(Lrhs);
+	if(solver.info() != Eigen::Success) {
 		std::cerr << "Solving of FEM system failed" << endl;
 	}
 

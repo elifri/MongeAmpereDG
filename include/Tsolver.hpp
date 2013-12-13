@@ -4,6 +4,8 @@
 #include <assert.h>
 #include <iomanip>
 
+#include <Eigen/Sparse>
+
 #if USE_PETSC
 #include "petscksp.h"
 #endif
@@ -447,8 +449,8 @@ public:
 
    void read_problem_parameters_POISSON ();
    void initializeLeafCellData_POISSON ();
-   void assemble_POISSON(const int & STABSIGN, const double & PENALTY, Mat & LM, Vec & Lrhs); 
-   void restore_POISSON (Vec &solution); 
+   void assemble_POISSON(const int & STABSIGN, const double & PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs);
+   void restore_POISSON (Eigen::VectorXd &solution);
    void get_exacttemperature_POISSON (const space_type & x, state_type & u); // state_type ???
    void get_exacttemperaturenormalderivative_POISSON (const space_type & x, const space_type & normal, state_type & u_n); 
 	// state_type ???

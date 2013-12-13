@@ -1,7 +1,6 @@
 # Notice name prefix of this variable, set by CMake according
 # to value given with "project()" in the root CMakeLists.txt.
 include_directories(../include)
-add_library(LibProject test.cpp)
 
 add_executable(Mesh mesh.cpp)
 
