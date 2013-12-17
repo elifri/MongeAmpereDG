@@ -155,41 +155,46 @@ void Tsolver::update_baseGeometry ()
     grid.nodes (idBC,vN);
     // cerr << "Nodes" << endl; writeNvector_type (vN);
 
-    for (unsigned int i=0; i<idBC.countFaces(); i++) {
-      node0 = i+1;
-      if (node0 == idBC.countFaces()) node0 = 0;
-      node1 = node0+1;
-      if (node1 == idBC.countFaces()) node1 = 0;
+    for (unsigned int f=0; f<idBC.countFaces(); f++) {
 
-      // normal on face i
-      pBC->normal[i][0]  = vN[node1][1] - vN[node0][1];
-      pBC->normal[i][1]  = vN[node0][0] - vN[node1][0];
-      pBC->length[i]     = sqrt(pBC->normal[i][0]*pBC->normal[i][0] +
-                                pBC->normal[i][1]*pBC->normal[i][1]);
-      pBC->normal[i][0] /= pBC->length[i];
-      pBC->normal[i][1] /= pBC->length[i];
-      }
+    	// face f is the line segment [node(f+1 mod countFaces()), node(f+2 mod countFaces())]
+    	node0 = f+1;     if (node0 == idBC.countFaces()) node0 = 0;
+    	node1 = node0+1; if (node1 == idBC.countFaces()) node1 = 0;
 
-    // volume of pBC
+    	// initialize face length and unit normal of of pBC
+    	pBC->normal[f][0]  = vN[node1][1] - vN[node0][1];
+    	pBC->normal[f][1]  = vN[node0][0] - vN[node1][0];
+    	pBC->length[f]     = sqrt(pBC->normal[f][0]*pBC->normal[f][0] +
+    			pBC->normal[f][1]*pBC->normal[f][1]);
+    	pBC->normal[f][0] /= pBC->length[f];
+    	pBC->normal[f][1] /= pBC->length[f];
+
+    	cout << " outer unit normal at face " << f << ": (" << pBC->normal[f][0] << ", " << pBC->normal[f][1] << ")" << endl;
+
+    }
+
+    // initialize volume of pBC
     pBC->volume = ((vN[1][0] - vN[0][0])*(vN[2][1] - vN[0][1]) -
-                  (vN[2][0] - vN[0][0])*(vN[1][1] - vN[0][1]))*0.5;
+    		(vN[2][0] - vN[0][0])*(vN[1][1] - vN[0][1]))*0.5;
 
     // jacobian of transformation from reference element
     for (unsigned int i=0; i<spacedim; i++)
-      for (unsigned int j=0; j<spacedim; j++) pBC->jac[i][j] = 0.0;
+    	for (unsigned int j=0; j<spacedim; j++) pBC->jac[i][j] = 0.0;
 
     for (unsigned int i=0; i<spacedim; i++)
-      for (unsigned int inode=0; inode<idBC.countNodes(); inode++) {
-        pBC->jac[i][0] += vN[inode][i]*lag_x[inode];
-        pBC->jac[i][1] += vN[inode][i]*lag_y[inode];
-	}
+    	for (unsigned int inode=0; inode<idBC.countNodes(); inode++) {
+    		pBC->jac[i][0] += vN[inode][i]*lag_x[inode];
+    		pBC->jac[i][1] += vN[inode][i]*lag_y[inode];
+    	}
 
     // absolute value of determinant of jacobian
     get_detJacAbs (pBC, pBC->detjacabs); // detjacabs = 2*pBC->volume;
+    assert(pBC->detjacabs == 2*pBC->volume);
+
     for (unsigned int i=0; i<shapedim; i++)
-      for (unsigned int j=0; j<=i; j++) {
-        pBC->laplace[i][j] = 0.0;
-	}
+    	for (unsigned int j=0; j<=i; j++) {
+    		pBC->laplace[i][j] = 0.0;
+    	}
 
     // Laplace-matrix
 #if (EQUATION==POISSON_PREC_EQ)
@@ -198,82 +203,86 @@ void Tsolver::update_baseGeometry ()
 
     if(string_contains_true(jumping_string)) {
 
-      debugoutput(1, "Using jumping coefficients!" << endl);
+    	debugoutput(1, "Using jumping coefficients!" << endl);
 
-      // get entry "diffusion_a[xxx]" in section "scaling functions"
-      std::string line, entryname=entryname1d < 3 > ("diffusion_a",pBC->id().cell());
-      if (!cfg.getValue("jumping coefficients", entryname, line)) {
-          cerr << "Error while reading [jumping coefficients] " << entryname1d < 3 > ("a",pBC->id().cell()) << " from configfile." << endl;
-          abort();
-      }
+    	// get entry "diffusion_a[xxx]" in section "scaling functions"
+    	std::string line, entryname=entryname1d < 3 > ("diffusion_a",pBC->id().cell());
+    	if (!cfg.getValue("jumping coefficients", entryname, line)) {
+    		cerr << "Error while reading [jumping coefficients] " << entryname1d < 3 > ("a",pBC->id().cell()) << " from configfile." << endl;
+    		abort();
+    	}
 
-      std::stringstream strs(line);
-      for (int ientry = 0; ientry < sqr(spacedim); ++ientry) {
-          /// interpret entries of this line, fill with zeros for nonexistent entries
-          if (!(strs >> pBC->diffusion_a[ientry]))
-              pBC->diffusion_a[ientry] = 0;
-      }
+    	std::stringstream strs(line);
+    	for (int ientry = 0; ientry < sqr(spacedim); ++ientry) {
+    		/// interpret entries of this line, fill with zeros for nonexistent entries
+    		if (!(strs >> pBC->diffusion_a[ientry]))
+    			pBC->diffusion_a[ientry] = 0;
+    	}
 
-      for (unsigned int i=0; i<shapedim; i++)
-        for (unsigned int j=0; j<=i; j++)
-          for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
-            pBC->laplace[i][j] +=
-              shape.Equadw[iq]*bilin_alaplace (shape.Equads_x[i][iq], shape.Equads_y[i][iq],
-                                      shape.Equads_x[j][iq], shape.Equads_y[j][iq],
-                                      pBC->jac, pBC->detjacabs, pBC->diffusion_a);
-          }
+    	for (unsigned int i=0; i<shapedim; i++)
+    		for (unsigned int j=0; j<=i; j++)
+    			for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
+    				pBC->laplace[i][j] +=
+    						shape.Equadw[iq]*bilin_alaplace (shape.Equads_x[i][iq], shape.Equads_y[i][iq],
+    								shape.Equads_x[j][iq], shape.Equads_y[j][iq],
+    								pBC->jac, pBC->detjacabs, pBC->diffusion_a);
+    			}
     } else {
-      for (unsigned int i=0; i<shapedim; i++)
-        for (unsigned int j=0; j<=i; j++)
-          for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
-            pBC->laplace[i][j] +=
-              shape.Equadw[iq]*bilin_laplace (shape.Equads_x[i][iq], shape.Equads_y[i][iq],
-                                      shape.Equads_x[j][iq], shape.Equads_y[j][iq],
-                                      pBC->jac, pBC->detjacabs);
-          }
+    	for (unsigned int i=0; i<shapedim; i++)
+    		for (unsigned int j=0; j<=i; j++)
+    			for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
+    				pBC->laplace[i][j] +=
+    						shape.Equadw[iq]*bilin_laplace (shape.Equads_x[i][iq], shape.Equads_y[i][iq],
+    								shape.Equads_x[j][iq], shape.Equads_y[j][iq],
+    								pBC->jac, pBC->detjacabs);
+    			}
     }
 #else
-    for (unsigned int i=0; i<shapedim; i++)
-      for (unsigned int j=0; j<=i; j++)
-        for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
-        	double func=bilin_laplace (shape.Equads_x[i][iq], shape.Equads_y[i][iq],
-        			shape.Equads_x[j][iq], shape.Equads_y[j][iq],
-        			pBC->jac, pBC->detjacabs);
-          pBC->laplace[i][j] += shape.Equadw[iq]*func;
-	}
+	for (unsigned int i=0; i<shapedim; i++)
+		for (unsigned int j=0; j<=i; j++)
+			for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
+				double func=bilin_laplace (shape.Equads_x[i][iq], shape.Equads_y[i][iq],
+						shape.Equads_x[j][iq], shape.Equads_y[j][iq],
+						pBC->jac, pBC->detjacabs);
+				pBC->laplace[i][j] += shape.Equadw[iq]*func;
+			}
 #endif
 
-    // Laplace-matrix is symmetric:
-    for (unsigned int i=0; i<shapedim; i++)
-      for (unsigned int j=0; j<i; j++)
-        pBC->laplace[j][i] = pBC->laplace[i][j];
+// Laplace-matrix is symmetric:
+	for (unsigned int i=0; i<shapedim; i++)
+		for (unsigned int j=0; j<i; j++)
+			pBC->laplace[j][i] = pBC->laplace[i][j];
 
 
-    cout << "display Laplace-matrix for " << pBC->id() <<endl;
-    for (unsigned int i=0; i<shapedim; i++)
-      for (unsigned int j=0; j<shapedim; j++)
-        cout << " pBC->laplace["<<i<<"]["<<j<<"]="<< pBC->laplace[i][j] << endl;
+	cout << "display Laplace-matrix for " << pBC->id() <<endl;
+	for (unsigned int i=0; i<shapedim; i++)
+		for (unsigned int j=0; j<shapedim; j++)
+			cout << " pBC->laplace["<<i<<"]["<<j<<"]="<< pBC->laplace[i][j] << endl;
 
-    // normal derivatives of shapes at face-quadrature-points
-    det = pBC->jac[0][0]*pBC->jac[1][1] - pBC->jac[1][0]*pBC->jac[0][1];
-    for (unsigned int i=0; i<shapedim; i++)
-      for (unsigned int iq=0; iq<shape.Fquadraturedim; iq++) {
+	// normal derivatives of shapes at face-quadrature-points
+	det = pBC->jac[0][0]*pBC->jac[1][1] - pBC->jac[1][0]*pBC->jac[0][1];
+	for (unsigned int i=0; i<shapedim; i++)
+		for (unsigned int iq=0; iq<shape.Fquadraturedim; iq++) {
 
-        // gradient
-	pBC->grad[i][iq][0] = (shape.Fquads_x[i][iq]*pBC->jac[1][1] - shape.Fquads_y[i][iq]*pBC->jac[1][0])/det;
-	pBC->grad[i][iq][1] = (shape.Fquads_y[i][iq]*pBC->jac[0][0] - shape.Fquads_x[i][iq]*pBC->jac[0][1])/det;
+			// gradient
+			pBC->grad[i][iq][0] = (shape.Fquads_x[i][iq]*pBC->jac[1][1] - shape.Fquads_y[i][iq]*pBC->jac[1][0])/det;
+			pBC->grad[i][iq][1] = (shape.Fquads_y[i][iq]*pBC->jac[0][0] - shape.Fquads_x[i][iq]*pBC->jac[0][1])/det;
 
-        // calculate face number
-        unsigned int in=0;
-	if (iq < Fdim*Fquadgaussdim)
-	  in = iq/Fquadgaussdim;
-	else
-	  in = (iq-Fdim*Fquadgaussdim)/(Fchilddim*Fquadgaussdim);
+			cout << " grad of shape function " << i << ": (" << pBC->grad[i][iq][0] << ", " << pBC->grad[i][iq][1] << ")" << endl;
 
-        // normal derivative
-	pBC->normalderi[i][iq] = pBC->grad[i][iq][0] *pBC->normal[in][0] + pBC->grad[i][iq][1]*pBC->normal[in][1];
+			// calculate face number
+			unsigned int in=0;
+			if (iq < Fdim*Fquadgaussdim)
+				in = iq/Fquadgaussdim;
+			else
+				in = (iq-Fdim*Fquadgaussdim)/(Fchilddim*Fquadgaussdim);
 
-	}
+			// normal derivative
+			pBC->normalderi[i][iq] = pBC->grad[i][iq][0] *pBC->normal[in][0] + pBC->grad[i][iq][1]*pBC->normal[in][1];
+
+			cout << " normal derivative of shape function " << i << " at q-point " << iq << ": " << pBC->normalderi[i][iq] << endl;
+
+		}
 
     // barycentric coordinates of edge-intersection-points for Serror,
     // intersection of edge with connection of element-centers
