@@ -135,8 +135,8 @@ struct grid_config_type
 #endif
 #if (EQUATION == POISSON_EQ || EQUATION == POISSON_PREC_EQ)
     statedim        = 1,
-    degreedim       = 2,        // polynomial degree
-    shapedim        = 6,        // no. of basis functions per element
+    degreedim       = 1,        // polynomial degree
+    shapedim        = 3,        // no. of basis functions per element
 #endif
     lagshapedim     = 3,        // no. of Lagrange-shapes, e.g. for continuous reconstruction
     lagstatedim     = 1,

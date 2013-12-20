@@ -142,6 +142,7 @@ public:
 
    ///////////////   WRITE MESH DATA    ///////////////
    void write_problem_parameters_GENERAL ();
+   void writeLeafCellVTK(std::string, grid_type&, unsigned int, bool);
    void write_numericalsolution ();
    void write_idset (const grid_type::idset_type & idset);
 
