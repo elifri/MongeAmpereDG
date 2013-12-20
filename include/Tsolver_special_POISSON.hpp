@@ -291,9 +291,6 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 
 						}
 
-						for (int i2 = 0; i2 < 4; i2++)
-							cout << idLC << ":   " << face_term[i2] << endl;
-
 						assembleInnerFace = false;
 					}
 
@@ -916,6 +913,7 @@ void Tsolver::time_stepping_POISSON() {
 
 		write_exactsolution_POISSON(loop);
 		write_numericalsolution_POISSON(loop);
+		write_numericalsolution_VTK_POISSON(loop);
 		write_exactrhs_POISSON(loop);
 
 		adapt(refine_eps, coarsen_eps);
@@ -1203,10 +1201,9 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 	file << "\t\t<Piece NumberOfPoints=\"" << Nnodes << "\" NumberOfCells=\""
 			<< Nelements << "\">\n";
 
-/*
 	// write error
-	file << "\t\t\t<PointData Scalars=”solution”>\n"
-			<< "\t\t\t\t<DataArray  Name=”solution” type=\"Float32\" format=\"ascii\">\n";
+	file << "\t\t\t<PointData Scalars=\"error\">\n"
+			<< "\t\t\t\t<DataArray  Name=\"error\" type=\"Float32\" format=\"ascii\">\n";
 
 	// loop over all leaf cells
 	for (unsigned int i = 0; i < grid.countBlocks(); ++i) {
@@ -1232,7 +1229,7 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 
 		}
 	}
-*/
+
 	file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
 
 	// write points
@@ -1285,8 +1282,7 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 			grid.block(v[i][j].block()).prepareTecplotNode(vCH, nNodes);
 			file << "\t\t\t\t\t";
 			for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
-				file << vCH[k] << " ";
-			file << endl;
+				file << vCH[k]-1 << " ";
 		}
 	}
 
@@ -1294,12 +1290,12 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 	file
 			<< "\t\t\t\t<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n\t\t\t\t\t";
 	for (unsigned int i = 1; i <= Nelements; ++i)
-		file << i * 4 << " ";
+		file << i * 3 << " ";
 	file << "\n\t\t\t\t</DataArray>";
 	file
 			<< "\n\t\t\t\t<DataArray type=\"Int32\" Name=\"types\" format=\"ascii\">\n\t\t\t\t\t";
 	for (unsigned int i = 1; i <= Nelements; ++i)
-		file << "9 ";
+		file << "5 ";  // 5: triangle, 9: quad
 	file << "\n\t\t\t\t</DataArray>";
 	file << "\n\t\t\t</Cells>\n";
 
@@ -1307,7 +1303,85 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 	file << "\n\t</UnstructuredGrid>" << "\n</VTKFile>";
 }
 
-void Tsolver::write_numericalsolution_POISSON(const unsigned int i) {
+void Tsolver::write_numericalsolution_POISSON(const unsigned int i)
+{
+
+	std::vector < std::vector < id_type > >v;
+	v.resize(grid.countBlocks());
+
+	Nvector_type nv;
+	state_type state;
+
+	// collect points
+	for (grid_type::leafcellmap_type::const_iterator
+			it = grid.leafCells().begin(); it != grid.leafCells().end();
+			++it) {
+		const grid_type::id_type & id = grid_type::id(it);
+		grid.nodes(id, nv);
+		v[id.block()].push_back(id);
+	}
+
+	std::string fname(output_directory);
+	fname+="/grid_numericalsolution."+NumberToString(i)+".dat";
+	std::ofstream fC(fname.c_str());
+
+	// global header
+	fC << "TITLE     = \"" << "numerical solution" << "\"" << std::endl;
+	fC << "VARIABLES = ";
+	for (unsigned int i = 1; i <= N_type::dim; ++i)
+		fC << "\"x" << i << "\" ";
+	for (unsigned int i = 1; i <= statedim; ++i)
+		fC << "\"u" << i << "\" ";
+	fC << "\"Serror" << "\" ";
+	fC << std::endl;
+
+	// over all blocks
+	for (unsigned int i = 0; i < grid.countBlocks(); ++i) {
+		if (v[i].size() == 0)
+			continue;
+
+		grid.block(i).writeTecplotHeader(fC, "zone",
+				v[i].size() *
+				id_type::countNodes(grid.block(i).
+						type()),
+						v[i].size());
+
+		fC << endl;
+
+		// over all ids inside this block
+		for (unsigned int j = 0; j < v[i].size(); ++j) {
+			const grid_type::id_type & id = v[i][j];
+			grid_type::leafcell_type * pLC = NULL;
+			grid.findLeafCell(id, pLC);
+
+			grid.nodes(id, nv);
+			for (unsigned int k = 0; k < id.countNodes(); ++k) {
+				shape.assemble_state_N(pLC->u, k, state);
+				fC << nv[k]
+				         << " " << state << " " << pLC->Serror << endl;
+			}
+		}
+
+		fC << endl;
+
+		// make connectivity
+		for (unsigned int N = 1, j = 0; j < v[i].size(); ++j) {
+			Nhandlevector_type vCH;
+			for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
+				vCH[k] = (N++);
+
+			unsigned int nNodes = v[i][j].countNodes();
+			grid.block(v[i][j].block()).prepareTecplotNode(vCH, nNodes);
+			for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
+				fC << vCH[k] << " ";
+			fC << endl;
+		}
+	}
+
+}
+
+
+void Tsolver::write_numericalsolution_VTK_POISSON(const unsigned int i) {
 
 	std::string fname(output_directory);
 	fname += "/grid_numericalsolution." + NumberToString(i) + ".vtu";
@@ -1318,56 +1392,7 @@ void Tsolver::write_numericalsolution_POISSON(const unsigned int i) {
 	fname2 += "/grid_numsol.vtu";
 
 	writeVTK("example", fname2, grid, grid.baseCells());
-// global header
-	/*	fC << "TITLE     = \"" << "numerical solution" << "\"" << std::endl;
-	 fC << "VARIABLES = ";
-	 for (unsigned int i = 1; i <= N_type::dim; ++i)
-	 fC << "\"x" << i << "\" ";
-	 for (unsigned int i = 1; i <= statedim; ++i)
-	 fC << "\"u" << i << "\" ";
-	 fC << "\"Serror" << "\" ";
-	 fC << std::endl;
 
-	 // over all blocks
-	 for (unsigned int i = 0; i < grid.countBlocks(); ++i) {
-	 if (v[i].size() == 0)
-	 continue;
-
-	 grid.block(i).writeTecplotHeader(fC, "zone",
-	 v[i].size() * id_type::countNodes(grid.block(i).type()),
-	 v[i].size());
-
-	 fC << endl;
-
-	 // over all ids inside this block
-	 for (unsigned int j = 0; j < v[i].size(); ++j) {
-	 const grid_type::id_type & id = v[i][j];
-	 grid_type::leafcell_type * pLC = NULL;
-	 grid.findLeafCell(id, pLC);
-
-	 grid.nodes(id, nv);
-	 for (unsigned int k = 0; k < id.countNodes(); ++k) {
-	 shape.assemble_state_N(pLC->u, k, state);
-	 fC << nv[k] << " " << state << " " << pLC->Serror << endl;
-	 }
-	 }
-
-	 fC << endl;
-
-	 // make connectivity
-	 for (unsigned int N = 1, j = 0; j < v[i].size(); ++j) {
-	 Nhandlevector_type vCH;
-	 for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
-	 vCH[k] = (N++);
-
-	 unsigned int nNodes = v[i][j].countNodes();
-	 grid.block(v[i][j].block()).prepareTecplotNode(vCH, nNodes);
-	 for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
-	 fC << vCH[k] << " ";
-	 fC << endl;
-	 }
-	 }
-	 */
 }
 
 //////////////////////////////////////////////////////////

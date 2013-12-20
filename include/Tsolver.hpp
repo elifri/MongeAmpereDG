@@ -236,6 +236,7 @@ public:
    void time_stepping_POISSON ();
 
    void write_numericalsolution_POISSON (const unsigned int i);
+   void write_numericalsolution_VTK_POISSON (const unsigned int i);
    void write_exactsolution_POISSON (const unsigned int i);
    void write_exactrhs_POISSON (const unsigned int i);
 
