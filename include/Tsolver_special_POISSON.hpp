@@ -713,7 +713,9 @@ void Tsolver::time_stepping_POISSON() {
 		cout << "done. " << fixed << "? s." << endl;
 
 		Eigen::SparseMatrix<double> LM(LM_size, LM_size);
-		Eigen::VectorXd Lrhs(LM_size), Lsolution(LM_size);
+		Eigen::VectorXd Lrhs, Lsolution;
+		Lrhs.setZero(LM_size);
+		Lsolution.setZero(LM_size);
 //	PetscErrorCode ierr;
 
 		//    ierr = MatCreate(PETSC_COMM_WORLD, &LM);

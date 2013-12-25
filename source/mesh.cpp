@@ -176,7 +176,7 @@ struct grid_config_type
   typedef shape_type::Emass_type     Emass_type;
   typedef shape_type::mass_type      mass_type;
 
-  typedef value_type  grad_type[shapedim][Fquadraturedim][statedim];
+  typedef value_type  grad_type[shapedim][Fquadraturedim][spacedim];
   typedef value_type  Fnormalderivative_type[shapedim][Fquadraturedim];
   typedef value_type  Ejacobian_type[spacedim][spacedim];
 
