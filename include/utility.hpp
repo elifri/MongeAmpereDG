@@ -6,9 +6,14 @@
 #include <iostream>
 #include <string>
 
+#include <Eigen/Core>
+#include <Eigen/Sparse>
+
 #ifdef USE_PETSC
 #include "petscksp.h"
 #endif
+
+typedef Eigen::SparseMatrix<double> SparseMatrixD;
 
 /**
  * Macro for debugging output

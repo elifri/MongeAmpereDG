@@ -32,8 +32,8 @@ void Tsolver::initializeLeafCellData_POISSON() {
 
 		for (unsigned int istate = 0; istate < statedim; istate++)
 			for (unsigned int ishape = 0; ishape < shapedim; ishape++) {
-				pLC->u[ishape][istate] = 0.0;
-				pLC->unew[ishape][istate] = 0.0;
+				pLC->u(ishape,istate) = 0.0;
+				pLC->unew(ishape,istate) = 0.0;
 			}
 
 		for (unsigned int iq = 0; iq < shape.Equadraturedim; iq++) {
@@ -41,7 +41,7 @@ void Tsolver::initializeLeafCellData_POISSON() {
 			get_exacttemperature_POISSON(x, v);
 			for (unsigned int istate = 0; istate < statedim; istate++)
 				for (unsigned int ishape = 0; ishape < shapedim; ishape++)
-					pLC->u[ishape][istate] += shape.Equadw[iq] * v[istate]
+					pLC->u(ishape,istate) += shape.Equadw[iq] * v[istate]
 							* shape.Equads[ishape][iq];
 		}
 
@@ -129,6 +129,11 @@ void Tsolver::assignViews_POISSON(unsigned int & offset) {
 
 ////////////////////////////////////////////////////
 
+/* @brief initializes the stiffness matrix and lhs for the poisson problem
+ *
+ *
+ */
+
 void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs) {
 	unsigned int gaussbaseLC = 0;
@@ -174,7 +179,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 					int row = (pLC->m_offset + ieq);
 					int col = (pLC->n_offset + ishape);
-					double val = pBC->laplace[ieq][ishape];
+					double val = pBC->laplace.coeffRef(ieq,ishape);
 					LM.coeffRef(row, col) += val;
 				}
 			}
@@ -415,7 +420,7 @@ void Tsolver::restore_POISSON(Eigen::VectorXd & solution) {
 
 		// Copy solution entries back into u
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-			pLC->u[ishape][0] = solution(pLC->m_offset + ishape);
+			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
 		}
 	}
 
@@ -540,7 +545,7 @@ void Tsolver::get_exacttemperaturenormalderivative_POISSON(const space_type & x,
 	u_n = ( 2 * a * x[0] + b * x[1]) * normal[0]
 	+ (-2 * a * x[1] + b * x[0]) * normal[1];
 #elif (PROBLEM == CONST_RHS)
-	u_n = 0; // exact solution not explicitly known
+	u_n.setZero(); // exact solution not explicitly known
 #else
 	// normal derivative not implemented for this problem
 	throw("normal derivative not implemented for this problem");
@@ -1016,137 +1021,6 @@ void base64_from_vector(
 	base64_from_string(text, file);
 }
 
-/*!
- *
- */
-template<class CELLS, class grid_type>
-void writeVTK(const std::string dataname, std::string filename,
-		const grid_type& grid, const CELLS& cells, const int element_type =
-				Triangle, const bool binary = true) {
-
-//	typedef Eigen::Matrix< grid_type::id_type, Eigen::Dynamic, 1 > VectorXid;
-	typedef Eigen::Matrix<unsigned int, Eigen::Dynamic, 1> VectorXui;
-
-	std::vector < std::vector<typename grid_type::id_type>
-			> v(grid.countBlocks());
-	VectorXui vSize = VectorXui::Zero(grid.countBlocks());
-
-	// collect points
-	unsigned int Nnodes = 0, Nelements = 0;
-	typename grid_type::nodevector_type vC;
-	for (typename CELLS::const_iterator it = cells.begin(); it != cells.end();
-			++it) {
-		const typename grid_type::id_type& id = grid.id(it);
-		v[id.block()].push_back(id);
-		vSize(id.block()) += id.countNodes();
-	}
-
-	// count nodes
-	for (unsigned int j = 0; j < v[0].size(); ++j) {
-		Nnodes += v[0][j].countNodes();
-	}
-	Nelements += v[0].size();
-
-	// open file
-	check_file_extension(filename, ".vtu");
-	std::ofstream file(filename.c_str(), std::ios::out);
-	if (file.rdstate()) {
-		std::cerr << "Error: Couldn't open '" << filename << "'!\n";
-		return;
-	}
-
-	file << "<?xml version=\"1.0\"?>\n"
-			<< "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">\n"
-			<< "\t<UnstructuredGrid>\n";
-
-	file << "\t\t<Piece NumberOfPoints=\"" << Nnodes << "\" NumberOfCells=\""
-			<< Nelements << "\">\n";
-
-	// write points
-	file << "\t\t\t<Points>\n"
-			<< "\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\""
-			<< "ascii" << "\">\n";
-	for (unsigned int j = 0; j < v[0].size(); ++j) {
-		const typename grid_type::id_type& id = v[0][j];
-
-		typename grid_type::nodevector_type vC;
-		grid.nodes(id, vC);
-		for (unsigned int k = 0; k < id.countNodes(); ++k) {
-			Eigen::Vector3f point;
-			point << vC[k][0], vC[k][1], 0.0;
-			if (binary) {
-				base64_from_vector(point, file);
-			} else {
-				file << "\t\t\t\t\t" << point(0) << " " << point(1) << " "
-						<< point(2) << "\n";
-			}
-		}
-	}
-
-	file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
-
-	// write cells
-	file << "\t\t\t<Cells>\n"
-			<< "\t\t\t\t<DataArray type=\"Int32\" Name=\"connectivity\" format=\"";
-	file << "ascii\">";
-	// make connectivity
-	for (unsigned int N = 0, j = 0; j < v[0].size(); ++j) {
-		file << "\n\t\t\t\t\t";
-		typename grid_type::nodehandlevector_type vCH;
-		for (unsigned int k = 0; k < v[0][j].countNodes(); ++k)
-			vCH[k] = (N++);
-
-		unsigned int nNodes = v[0][j].countNodes();
-		grid.block(v[0][j].block()).prepareTecplotNode(vCH, nNodes);
-		for (unsigned int k = 0; k < nNodes; ++k)
-			file << vCH[k] << " ";
-	}
-	file << "\n\t\t\t\t</DataArray>\n";
-	file
-			<< "\t\t\t\t<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n\t\t\t\t\t";
-	for (unsigned int i = 1; i <= Nelements; ++i) {
-		switch (element_type) {
-		case Triangle:
-			file << i * 3 << " ";
-			break;
-		case Rectangle:
-			file << i * 4 << " ";
-			break;
-		default:
-			std::cerr << "Error: Unknown element type." << std::endl;
-			exit(1);
-		}
-	}
-	file << "\n\t\t\t\t</DataArray>";
-	file
-			<< "\n\t\t\t\t<DataArray type=\"Int32\" Name=\"types\" format=\"ascii\">\n\t\t\t\t\t";
-	for (unsigned int i = 1; i <= Nelements; ++i) {
-		switch (element_type) {
-		case Triangle:
-			file << "5 ";
-			break;
-		case Rectangle:
-			file << "9 ";
-			break;
-		default:
-			std::cerr << "Error: Unknown element type." << std::endl;
-			exit(1);
-		}
-	}
-	file << "\n\t\t\t\t</DataArray>";
-	file << "\n\t\t\t</Cells>\n";
-
-	// write pointData
-	//file <<"\t\t\t<PointData>\n";
-	//file <<"\t\t\t</PointData>\n";
-
-	// write cellData
-	//file <<"\t\t\t<CellData>\n";
-	//file <<"\t\t\t</CellData>\n";
-
-	file << "\n\t\t</Piece>";
-	file << "\n\t</UnstructuredGrid>" << "\n</VTKFile>";
-}
 
 /** Checks if name has correct file extension, if not file extension will be added */
 void check_file_extension(std::string &name, std::string extension) {
@@ -1291,12 +1165,12 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 	file << "\n\t\t\t\t</DataArray>\n";
 	file
 			<< "\t\t\t\t<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n\t\t\t\t\t";
-	for (unsigned int i = 1; i <= Nelements; ++i)
+	for (int i = 1; i <= Nelements; ++i)
 		file << i * 3 << " ";
 	file << "\n\t\t\t\t</DataArray>";
 	file
 			<< "\n\t\t\t\t<DataArray type=\"Int32\" Name=\"types\" format=\"ascii\">\n\t\t\t\t\t";
-	for (unsigned int i = 1; i <= Nelements; ++i)
+	for (int i = 1; i <= Nelements; ++i)
 		file << "5 ";  // 5: triangle, 9: quad
 	file << "\n\t\t\t\t</DataArray>";
 	file << "\n\t\t\t</Cells>\n";
@@ -1389,11 +1263,6 @@ void Tsolver::write_numericalsolution_VTK_POISSON(const unsigned int i) {
 	fname += "/grid_numericalsolution." + NumberToString(i) + ".vtu";
 
 	writeLeafCellVTK(fname, grid);
-
-	std::string fname2(output_directory);
-	fname2 += "/grid_numsol.vtu";
-
-	writeVTK("example", fname2, grid, grid.baseCells());
 
 }
 
@@ -1563,7 +1432,7 @@ void Tsolver::adapt(const double refine_eps, const double coarsen_eps) {
 	const leafcell_type *pLC = NULL;
 
 // for (unsigned int level = grid.leafCells().countLinks()-1;
-	for (unsigned int level = levelmax; level >= 1; --level) {
+	for (int level = levelmax; level >= 1; --level) {
 		if (0 == grid.leafCells().size(level))
 			continue;
 

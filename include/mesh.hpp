@@ -242,7 +242,7 @@ public:
     {
       pvLC[i]->id().setFlag (0,false);
       for (int j=0; j<statedim; j++)
-        for (int k=0; k<shapedim; k++) pvLC[i]->unew[k][j] = 0.0;
+        for (int k=0; k<shapedim; k++) pvLC[i]->unew(k,j) = 0.0;
     }
   }
 
@@ -269,7 +269,7 @@ public:
 
     pLC->id().setFlag (0,false);
     for (int j=0; j<statedim; j++)
-      for (int k=0; k<shapedim; k++) pLC->unew[k][j] = 0.0;
+      for (int k=0; k<shapedim; k++) pLC->unew(k,j) = 0.0;
   }
 
 protected:

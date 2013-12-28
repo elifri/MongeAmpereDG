@@ -3,14 +3,14 @@
 
 template <typename CONFIG_TYPE, typename Tshape>
 class Tmass { // call this class Tmass, if M and G are incorporated
-public:  
+public:
 
-   enum {     
-     statedim       = Tshape::statedim, 
-     shapedim       = Tshape::shapedim, 
-     childdim       = CONFIG_TYPE::childdim  
+   enum {
+     statedim       = Tshape::statedim,
+     shapedim       = Tshape::shapedim,
+     childdim       = CONFIG_TYPE::childdim
      };
-     
+
    typedef typename CONFIG_TYPE::value_type              value_type;
    typedef typename CONFIG_TYPE::space_type              space_type;
    typedef typename CONFIG_TYPE::leafcell_type           leafcell_type;
@@ -26,42 +26,41 @@ public:
 
    Emass_type A, A_full; // call it M_no_details
    Emask_type B; // call it G_no_details
-   
-   // typedef double test_type[9]; 
-   
+
+   // typedef double test_type[9];
+
    /* incorporate in this class, or call this class Tmass and inherit Tmass from Tmass
    typedef value_type MSAmatrix_type[childdim*shapedim][childdim*shapedim];
-  
+
    MSAmatrix_typ M;
    MSAmatrix_typ G;
    */
-   
+
    void set_massmatrix (const Tmass & m);
    void Cholesky_decomp ();
    void Cholesky_solve (Estate_type & w);
-   void Cholesky_solve (Eshape_type & w);
    void Cholesky_solve (Estate_type & w, const unsigned int & istate);
    void Cholesky_subsolve (const int & subshapedim, Estate_type & w);
    void Cholesky_multiply (Estate_type & w);
    void Cholesky_submultiply (const int & subshapedim, Estate_type & w);
-   void Cholesky_multiply (const Estate_type & v, 
+   void Cholesky_multiply (const Estate_type & v,
                            Estate_type & w);
-   void Cholesky_submultiply (const int & subshapedim, 
-                              const Estate_type & v, 
+   void Cholesky_submultiply (const int & subshapedim,
+                              const Estate_type & v,
 			      Estate_type & w);
-   void Cholesky_multiply (const Estate_type & v, const unsigned int & istate, 
+   void Cholesky_multiply (const Estate_type & v, const unsigned int & istate,
                            Eshape_type & w);
    void Matrix_multiply (const Estate_type & v, Estate_type & w);
-   void write (); 
-   void coarse_to_fine (const Estate_type & v, 
+   void write ();
+   void coarse_to_fine (const Estate_type & v,
                         leafcellptrCV_type & pvLC);
-   void coarse_to_fine_cv (const Estate_type & v, 
+   void coarse_to_fine_cv (const Estate_type & v,
                            EstateCV_type & w);
-   void fine_to_coarse (const leafcellptrCV_type & pvLC, 
+   void fine_to_coarse (const leafcellptrCV_type & pvLC,
                         Estate_type & v);
-   void fine_to_coarse_cv (const EstateCV_type & w, 
+   void fine_to_coarse_cv (const EstateCV_type & w,
                            Estate_type & v);
-   void fine_to_coarse_max_cv (const EstateCV_type & w, 
+   void fine_to_coarse_max_cv (const EstateCV_type & w,
                                Estate_type & v);
 };
 
@@ -69,12 +68,12 @@ public:
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::set_massmatrix (const Tmass & m) 
+::set_massmatrix (const Tmass & m)
 {
    int i,j,k;
-   for (k=0;k<shapedim;k++) 
-     for (i=0;i<shapedim;i++) { 
-       A[k][i]    = m.A[k][i];
+   for (k=0;k<shapedim;k++)
+     for (i=0;i<shapedim;i++) {
+       A(k,i)    = m.A(k,i);
        for (j=0; j<childdim; j++) B[j][k][i]    = m.B[j][k][i];
        }
 };
@@ -83,14 +82,14 @@ void Tmass<CONFIG_TYPE, Tshape>
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::Cholesky_decomp () 
+::Cholesky_decomp ()
 {
    int i,j,k;
    for (k=0;k<shapedim;k++) {
-     for (j=0;j<k;j++) A[k][k] -= A[k][j]*A[k][j]*A[j][j];
+     for (j=0;j<k;j++) A(k,k) -= A(k,j)*A(k,j)*A(j,j);
      for (i=k+1;i<shapedim;i++) {
-       for (j=0;j<k;j++) A[i][k] -= A[i][j]*A[j][j]*A[k][j];
-       A[i][k]    /= A[k][k];
+       for (j=0;j<k;j++) A(i,k) -= A(i,j)*A(j,j)*A(k,j);
+       A(i,k) /= A(k,k);
        }
      }
 };
@@ -99,16 +98,16 @@ void Tmass<CONFIG_TYPE, Tshape>
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::Cholesky_solve (Estate_type & w) 
+::Cholesky_solve (Estate_type & w)
 {
    int i,j,k;
    for (i=0; i<statedim; i++) {
      for (k=1;k<shapedim;k++) {
-       for (j=0;j<k;j++) w[k][i] -= A[k][j]*w[j][i];
+       for (j=0;j<k;j++) w(k,i) -= A.coeff(k,j)*w(j,i);
        }
-     for (k=0;k<shapedim;k++) w[k][i] /= A[k][k];
+     for (k=0;k<shapedim;k++) w(k,i) /= A.coeff(k,k);
      for (k=shapedim-2;k>-1;k--) {
-       for (j=k+1;j<shapedim;j++) w[k][i] -= A[j][k]*w[j][i];
+       for (j=k+1;j<shapedim;j++) w(k,i) -= A.coeff(j,k)*w(j,i);
      }
    }
 };
@@ -117,23 +116,7 @@ void Tmass<CONFIG_TYPE, Tshape>
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::Cholesky_solve (Eshape_type & w) 
-{
-   int j,k;
-   for (k=1;k<shapedim;k++) {
-     for (j=0;j<k;j++) w[k] -= A[k][j]*w[j];
-     }
-   for (k=0;k<shapedim;k++) w[k] /= A[k][k];
-   for (k=shapedim-2;k>-1;k--) {
-     for (j=k+1;j<shapedim;j++) w[k] -= A[j][k]*w[j];
-     }
-};
-
-//////////////////////////////////////////////////////
-
-template <typename CONFIG_TYPE, typename Tshape>
-void Tmass<CONFIG_TYPE, Tshape>
-::Cholesky_solve (Estate_type & w, const unsigned int & istate) 
+::Cholesky_solve (Estate_type & w, const unsigned int & istate)
 {
    int j,k;
    for (k=1;k<shapedim;k++) {
@@ -149,7 +132,7 @@ void Tmass<CONFIG_TYPE, Tshape>
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::Cholesky_subsolve (const int & subshapedim, Estate_type & w) 
+::Cholesky_subsolve (const int & subshapedim, Estate_type & w)
 {
    int i,j,k;
    for (i=0; i<statedim; i++) {
@@ -160,7 +143,7 @@ void Tmass<CONFIG_TYPE, Tshape>
      for (k=subshapedim-2;k>-1;k--) {
        for (j=k+1;j<subshapedim;j++) w[k][i] -= A[j][k]*w[j][i];
      }
-     
+
      for (k=subshapedim;k<shapedim;k++) w[k][i] = 0.0;
    }
 };
@@ -169,7 +152,7 @@ void Tmass<CONFIG_TYPE, Tshape>
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::Cholesky_multiply (Estate_type & w) 
+::Cholesky_multiply (Estate_type & w)
 {
    int i,j,k;
    for (i=0; i<statedim; i++) {
@@ -187,7 +170,7 @@ void Tmass<CONFIG_TYPE, Tshape>
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::Cholesky_submultiply (const int & subshapedim, Estate_type & w) 
+::Cholesky_submultiply (const int & subshapedim, Estate_type & w)
 {
    int i,j,k;
    for (i=0; i<statedim; i++) {
@@ -205,7 +188,7 @@ void Tmass<CONFIG_TYPE, Tshape>
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::Cholesky_multiply (const Estate_type & v, Estate_type & w) 
+::Cholesky_multiply (const Estate_type & v, Estate_type & w)
 {
    int i,j,k;
    for (i=0; i<statedim; i++) {
@@ -224,7 +207,7 @@ void Tmass<CONFIG_TYPE, Tshape>
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::Cholesky_multiply (const Estate_type & v, const unsigned int & istate, Eshape_type & w) 
+::Cholesky_multiply (const Estate_type & v, const unsigned int & istate, Eshape_type & w)
 {
    int j,k;
    for (k=0;k<shapedim;k++) w[k] = v[k][istate];
@@ -241,8 +224,8 @@ void Tmass<CONFIG_TYPE, Tshape>
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::Cholesky_submultiply (const int & subshapedim, const Estate_type & v, 
-                       Estate_type & w) 
+::Cholesky_submultiply (const int & subshapedim, const Estate_type & v,
+                       Estate_type & w)
 {
    int i,j,k;
    for (i=0; i<statedim; i++) {
@@ -261,12 +244,12 @@ void Tmass<CONFIG_TYPE, Tshape>
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::Matrix_multiply (const Estate_type & v, Estate_type & w) 
+::Matrix_multiply (const Estate_type & v, Estate_type & w)
 {
    int i,j,k;
    for (i=0; i<statedim; i++) {
      for (k=0;k<shapedim;k++) w[k][i] = 0.0;
-     for (k=0;k<shapedim;k++) 
+     for (k=0;k<shapedim;k++)
        for (j=0;j<shapedim;j++) w[k][i] += A[k][j]*v[j][i];
      }
 };
@@ -275,15 +258,15 @@ void Tmass<CONFIG_TYPE, Tshape>
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::write () 
+::write ()
 {
    int j,k;
-   
+
    cerr << "A_full: " << endl;
    for (k=0;k<shapedim;k++) {
      for (j=0;j<shapedim;j++) cerr <<  A_full[k][j] << "   ";
      cerr << endl;
-     }     
+     }
    cerr << "A: " << endl;
    for (k=0;k<shapedim;k++) {
      for (j=0;j<shapedim;j++) cerr <<  A[k][j] << "   ";
@@ -295,99 +278,99 @@ void Tmass<CONFIG_TYPE, Tshape>
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::coarse_to_fine (const Estate_type & v, 
+::coarse_to_fine (const Estate_type & v,
                  leafcellptrCV_type & pvLC)
 {
    int i,k,l,j;
-   for (j=0; j<childdim; j++) 
-     for (i=0; i<statedim; i++) 
+   for (j=0; j<childdim; j++)
+     for (i=0; i<statedim; i++)
        for (l=0; l<shapedim; l++) {
-         pvLC[j]->u[l][i] = 0.0; 
-         for (k=0;k<shapedim;k++) 
-           pvLC[j]->u[l][i] += B[j][k][l]*v[k][i];
+         pvLC[j]->u(l,i) = 0.0;
+         for (k=0;k<shapedim;k++)
+           pvLC[j]->u(l,i) += B[j][k][l]*v(k,i);
        }
-       
+
    for (j=0; j<childdim; j++) {
      Cholesky_solve (pvLC[j]->u);
-     for (i=0; i<statedim; i++) 
-       for (l=0; l<shapedim; l++) pvLC[j]->u[l][i] *= childdim; // Generalize the 4.0 !!!
-     }  
-};	
+     for (i=0; i<statedim; i++)
+       for (l=0; l<shapedim; l++) pvLC[j]->u(l,i) *= childdim; // Generalize the 4.0 !!!
+     }
+};
 
 //////////////////////////////////////////////////////
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::coarse_to_fine_cv (const Estate_type & v, 
+::coarse_to_fine_cv (const Estate_type & v,
                      EstateCV_type & w)
 {
    int i,k,l,j;
-   for (j=0; j<childdim; j++) 
-     for (i=0; i<statedim; i++) 
+   for (j=0; j<childdim; j++)
+     for (i=0; i<statedim; i++)
        for (l=0; l<shapedim; l++) {
-         w[j][l][i] = 0.0; 
-         for (k=0;k<shapedim;k++) 
+         w[j][l][i] = 0.0;
+         for (k=0;k<shapedim;k++)
            w[j][l][i] += B[j][k][l]*v[k][i];
        }
-       
+
    for (j=0; j<childdim; j++) {
      Cholesky_solve (w[j]);
-     for (i=0; i<statedim; i++) 
+     for (i=0; i<statedim; i++)
        for (l=0; l<shapedim; l++) w[j][l][i] *= childdim; // Generalize the 4.0 !!!
-     }  
-};	
+     }
+};
 
 //////////////////////////////////////////////////////
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::fine_to_coarse (const leafcellptrCV_type & pvLC, 
+::fine_to_coarse (const leafcellptrCV_type & pvLC,
                  Estate_type & v)
 {
    int i,k,l,j;
-   for (i=0; i<statedim; i++) 
+   for (i=0; i<statedim; i++)
      for (k=0;k<shapedim;k++) {
-       v[k][i] = 0.0;
-       for (j=0; j<childdim; j++) 
-         for (l=0; l<shapedim; l++) 
-           v[k][i] += B[j][k][l]*pvLC[j]->u[l][i];
+       v(k,i) = 0.0;
+       for (j=0; j<childdim; j++)
+         for (l=0; l<shapedim; l++)
+           v(k,i) += B[j][k][l]*pvLC[j]->u(l,i);
        }
-   
+
    Cholesky_solve (v);
-};	
+};
 
 //////////////////////////////////////////////////////
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::fine_to_coarse_cv (const EstateCV_type & w, 
+::fine_to_coarse_cv (const EstateCV_type & w,
                     Estate_type & v)
 {
    int i,k,l,j;
-   for (i=0; i<statedim; i++) 
+   for (i=0; i<statedim; i++)
      for (k=0;k<shapedim;k++) {
        v[k][i] = 0.0;
-       for (j=0; j<childdim; j++) 
-         for (l=0; l<shapedim; l++) 
+       for (j=0; j<childdim; j++)
+         for (l=0; l<shapedim; l++)
            v[k][i] += B[j][k][l]*w[j][l][i];
        }
-   
+
    Cholesky_solve (v);
-};	
+};
 
 //////////////////////////////////////////////////////
 
-// Only for linear Lagrange-shapes at the moment, 
+// Only for linear Lagrange-shapes at the moment,
 // this fine to coarse is meant to maintain maxima !!!
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::fine_to_coarse_max_cv (const EstateCV_type & w, 
+::fine_to_coarse_max_cv (const EstateCV_type & w,
                     Estate_type & v)
 {
    v[0][0] = w[1][0][0];
    v[1][0] = w[2][1][0];
    v[2][0] = w[3][2][0];
-};	
+};
 
 #endif

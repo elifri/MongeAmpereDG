@@ -20,12 +20,7 @@
 
 void Tsolver::Matrix_multiply (const Emass_type & A, const Estate_type & v, Estate_type & w)
 {
-   int i,j,k;
-   for (i=0; i<statedim; i++) {
-     for (k=0;k<shapedim;k++) w[k][i] = 0.0;
-     for (k=0;k<shapedim;k++)
-       for (j=0;j<shapedim;j++) w[k][i] += A[k][j]*v[j][i];
-     }
+	w = A*v;
 };
 /*
 ////////////////////////////////////////////////////
@@ -193,7 +188,7 @@ void Tsolver::update_baseGeometry ()
 
     for (unsigned int i=0; i<shapedim; i++)
     	for (unsigned int j=0; j<=i; j++) {
-    		pBC->laplace[i][j] = 0.0;
+    		pBC->laplace.coeffRef(i,j) = 0.0;
     	}
 
     // Laplace-matrix
@@ -244,20 +239,20 @@ void Tsolver::update_baseGeometry ()
 				double func=bilin_laplace (shape.Equads_x[i][iq], shape.Equads_y[i][iq],
 						shape.Equads_x[j][iq], shape.Equads_y[j][iq],
 						pBC->jac, pBC->detjacabs);
-				pBC->laplace[i][j] += shape.Equadw[iq]*func;
+				pBC->laplace.coeffRef(i,j) += shape.Equadw[iq]*func;
 			}
 #endif
 
 // Laplace-matrix is symmetric:
 	for (unsigned int i=0; i<shapedim; i++)
 		for (unsigned int j=0; j<i; j++)
-			pBC->laplace[j][i] = pBC->laplace[i][j];
+			pBC->laplace.coeffRef(j,i) = pBC->laplace.coeffRef(i,j);
 
 
 	cout << "display Laplace-matrix for " << pBC->id() <<endl;
 	for (unsigned int i=0; i<shapedim; i++)
 		for (unsigned int j=0; j<shapedim; j++)
-			cout << " pBC->laplace["<<i<<"]["<<j<<"]="<< pBC->laplace[i][j] << endl;
+			cout << " pBC->laplace["<<i<<"]["<<j<<"]="<< pBC->laplace.coeffRef(i,j) << endl;
 
 	// normal derivatives of shapes at face-quadrature-points
 	det = pBC->jac[0][0]*pBC->jac[1][1] - pBC->jac[1][0]*pBC->jac[0][1];
@@ -1106,7 +1101,7 @@ void Tsolver::refine_all ()
 
   grid.copyIds(grid.leafCells(),ids);
 
-  for (unsigned int i=1; i<levelmax; ++i) {
+  for (int i=1; i<levelmax; ++i) {
     idsNew.reserve(ids.size()+10); // approx. a number of cells
 
     Nvector_type cv;
@@ -1200,7 +1195,7 @@ void Tsolver::refine_circle (const double radius)
 
   grid.copyIds(grid.leafCells(),ids);
 
-  for (unsigned int i=1; i<levelmax; ++i) {
+  for (int i=1; i<levelmax; ++i) {
     // cout << "loop  " << i << "  " << ids.size()
     // << " " << idsNew.size() << endl;
     idsNew.reserve(ids.size()); // approx. a number of cells
@@ -1255,7 +1250,7 @@ void Tsolver::refine_band (const double radius1, const double radius2)
 
   grid.copyIds(grid.leafCells(),ids);
 
-  for (unsigned int i=1; i<levelmax; ++i) {
+  for (int i=1; i<levelmax; ++i) {
     // cout << "loop  " << i << "  " << ids.size()
     // << " " << idsNew.size() << endl;
     idsNew.reserve(ids.size()); // approx. a number of cells
@@ -1471,7 +1466,7 @@ void Tsolver::visit_faces ()
 	     if (!pnc->id().flag(0)) {
 	       // flux_function (pLC->u, pnc->u, flux);
 	       // add edge flux to cell flux
-	       pLC->u[0][0] += 1.0; pnc->u[0][0] += 1.0;
+	       pLC->u(0,0) += 1.0; pnc->u(0,0) += 1.0;
                }
 	     }
 	   else {
@@ -1485,7 +1480,7 @@ void Tsolver::visit_faces ()
              if (grid.findLeafCell (iddad, pnc)) {
 	       // flux_function (pLC->u, pnc->u, flux);
 	       // add edge flux to cell flux
-	       pLC->u[0][0] += 1.0; pnc->u[0][0] += 1.0;
+	       pLC->u(0,0) += 1.0; pnc->u(0,0) += 1.0;
 	       }
 	     }
 	   }
@@ -1561,8 +1556,8 @@ void Tsolver::invert_volume ()
       volume = facLevelVolume[level]*pBC->volume;
 
       for (unsigned int i=0; i<statedim; i++) {
-        pLC->u[0][i]    = (volume*pLC->u[0][i] + pLC->unew[0][i])/volume;
-	pLC->unew[0][i] = 0.0;
+        pLC->u(0,i) = (volume*pLC->u(0,i) + pLC->unew(0,i))/volume;
+	pLC->unew(0,i) = 0.0;
 	}
 
      pLC->id().setFlag (0,false);
@@ -1597,8 +1592,8 @@ void Tsolver::invert_mass ()
       shape.mass.Cholesky_solve (pLC->unew);
       for (unsigned int i=0; i<shapedim; i++)
         for (unsigned int j=0; j<statedim; j++) {
-	  pLC->u[i][j] = pLC->unew[i][j]/fac;
-          pLC->unew[i][j] = 0.0;
+	  pLC->u(i,j) = pLC->unew(i,j)/fac;
+          pLC->unew(i,j) = 0.0;
           }
 
       pLC->Serror = 0.0;
@@ -1621,7 +1616,7 @@ void Tsolver::assemble_state_normalderivative_Fquad
   for (unsigned int istate=0; istate<statedim; istate++) {
     v[istate] = 0.0;
     for (unsigned int j=0; j<shapedim; j++)
-      v[istate] += u[j][istate]
+      v[istate] += u(j,istate)
                    *pBC->normalderi[j][iquad]/facLevelLength[level];
     }
 };
