@@ -1,6 +1,8 @@
 #ifndef TMASS_HPP
 #define TMASS_HPP
 
+#include<Eigen/Dense>
+
 template <typename CONFIG_TYPE, typename Tshape>
 class Tmass { // call this class Tmass, if M and G are incorporated
 public:
@@ -38,8 +40,10 @@ public:
 
    void set_massmatrix (const Tmass & m);
    void Cholesky_decomp ();
+   void Cholesky_solve_old (Estate_type & w);
    void Cholesky_solve (Estate_type & w);
    void Cholesky_solve (Estate_type & w, const unsigned int & istate);
+   void Cholesky_solve_old (Estate_type & w, const unsigned int & istate);
    void Cholesky_subsolve (const int & subshapedim, Estate_type & w);
    void Cholesky_multiply (Estate_type & w);
    void Cholesky_submultiply (const int & subshapedim, Estate_type & w);
@@ -95,10 +99,20 @@ void Tmass<CONFIG_TYPE, Tshape>
 };
 
 //////////////////////////////////////////////////////
-
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
 ::Cholesky_solve (Estate_type & w)
+ {
+	Eigen::LDLT<Emass_type> chol_decom(A);
+	for (int i = 0; i< statedim; i++)
+		w.col(i) = chol_decom.solve(w.col(i));
+ }
+
+
+
+template <typename CONFIG_TYPE, typename Tshape>
+void Tmass<CONFIG_TYPE, Tshape>
+::Cholesky_solve_old (Estate_type & w)
 {
    int i,j,k;
    for (i=0; i<statedim; i++) {
@@ -117,6 +131,15 @@ void Tmass<CONFIG_TYPE, Tshape>
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
 ::Cholesky_solve (Estate_type & w, const unsigned int & istate)
+{
+	assert (0 < istate && istate < w.cols() && "istate is not within the permitted range!");
+	Eigen::LDLT<Emass_type> chol_decom(A);
+	w.col(istate) = chol_decom.solve(w.col(istate));
+};
+
+template <typename CONFIG_TYPE, typename Tshape>
+void Tmass<CONFIG_TYPE, Tshape>
+::Cholesky_solve_old (Estate_type & w, const unsigned int & istate)
 {
    int j,k;
    for (k=1;k<shapedim;k++) {

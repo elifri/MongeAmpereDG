@@ -8,6 +8,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/Sparse>
+#include <Eigen/Dense>
 
 #ifdef USE_PETSC
 #include "petscksp.h"
