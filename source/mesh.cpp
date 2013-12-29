@@ -166,7 +166,8 @@ struct grid_config_type
 
   /// basic types
   typedef double                             value_type;
-  typedef igpm::tvector<value_type, spacedim>  space_type;
+  //typedef Eigen::Matrix<value_type, spacedim, 1>  space_type;
+  typedef igpm::tvector<value_type, spacedim> space_type;
 
   /// shape of principal unknown
   typedef Tshape<grid_config_type, statedim, shapedim, degreedim> shape_type;
@@ -177,16 +178,12 @@ struct grid_config_type
   typedef shape_type::mass_type      mass_type;
 
   typedef value_type  grad_type[shapedim][Fquadraturedim][spacedim];
-  typedef value_type  Fnormalderivative_type[shapedim][Fquadraturedim];
-  typedef value_type  Ejacobian_type[spacedim][spacedim];
+  typedef Eigen::Matrix<value_type, shapedim, Fquadraturedim>  Fnormalderivative_type;
+  typedef Eigen::Matrix<value_type, spacedim, spacedim> Ejacobian_type;
 
-  typedef igpm::tvector<value_type, id_type::maxFaces> Fvaluevector_type;
-  typedef igpm::tvector<node_type, id_type::maxFaces>  Fnormalvector_type;
+  typedef Eigen::Matrix<value_type, id_type::maxFaces, 1> Fvaluevector_type;
+  typedef Eigen::Matrix<node_type, id_type::maxFaces, 1>  Fnormalvector_type;
 
-  // only for ENTHALPY_EQ:
-  typedef value_type  Enodevalue_type[Ndim];
-  typedef int Tphase_type;
-  //////////////////////////////////////////////////////////////////////////
 
   // Where to put these ??? 4=?, 3=? .......
   typedef unsigned int NeighbOrient_type[4][3][4];
@@ -231,7 +228,6 @@ void determineHangingNodes(grid_type& grid, bool bVerbose, bool bWriteData);
 void createRefinement(grid_type& grid, unsigned int nRefine, bool bVerbose, bool bWriteData);
 
 #if (EQUATION == POISSON_EQ || EQUATION == POISSON_PREC_EQ || EQUATION == IMPLICIT_HEAT_EQ)
-static char help[] = "Using PETSc\n\n";
 
 #endif
 

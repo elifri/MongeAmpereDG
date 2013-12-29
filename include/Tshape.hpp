@@ -33,7 +33,7 @@ public:
   typedef Eigen::Matrix<value_type, statedim, 1>  state_type;
   typedef Eigen::Matrix<value_type, shapedim, 1>  Eshape_type;
   typedef Eigen::Matrix<value_type, shapedim, statedim>  Estate_type;
-  typedef Estate_type EstateCV_type[childdim]; // child vector
+  typedef Eigen::Matrix<value_type, childdim, 1> EstateCV_type; // child vector
   typedef Eigen::Matrix<value_type, shapedim, shapedim>  Emass_type;
   typedef value_type  Emask_type[childdim][shapedim][shapedim];
 
@@ -45,27 +45,22 @@ public:
 
   // quadr.-weights, quadrature points
   // and shape-values/derivatives at quadrature points
-  typedef value_type Enodevalue_type[Ndim];
-  typedef value_type Equadratureshape_type[shapedim][Equadraturedim];
-  typedef value_type Equadraturepoint_type[Equadraturedim][barycdim];
+  typedef Eigen::Matrix<value_type, Ndim, 1> Enodevalue_type;
+  typedef Eigen::Matrix<value_type, shapedim, Equadraturedim> Equadratureshape_type;
+  typedef Eigen::Matrix<value_type, Equadraturedim, barycdim> Equadraturepoint_type;
   typedef value_type Emaskquadpoint_type[childdim][Equadraturedim][barycdim];
-  typedef value_type Equadratureweight_type[Equadraturedim];
-  typedef value_type Fquadratureshape_type[shapedim][Fquadraturedim];
-  typedef value_type Fquadraturepoint_type[Fquadraturedim][barycdim];
-  typedef value_type Fquadratureweight_type[Fquadraturedim];
+  typedef Eigen::Matrix<value_type, Equadraturedim, 1> Equadratureweight_type;
+  typedef Eigen::Matrix<value_type, shapedim, Fquadraturedim> Fquadratureshape_type;
+  typedef Eigen::Matrix<value_type, Fquadraturedim, barycdim> Fquadraturepoint_type;
+  typedef Eigen::Matrix<value_type, Fquadraturedim, 1> Fquadratureweight_type;
 
-  typedef value_type Fmidshape_type[shapedim][Fmiddim];
-  typedef value_type Fmidpoint_type[Fmiddim][barycdim];
+  typedef Eigen::Matrix<value_type, shapedim, Fmiddim> Fmidshape_type;
+  typedef Eigen::Matrix<value_type, Fmiddim, barycdim> Fmidpoint_type;
 
-  typedef value_type Scentershape_type[shapedim][childdim];
-  typedef value_type Scenterpoint_type[childdim][barycdim];
-
+  typedef Eigen::Matrix<value_type, shapedim, childdim> Scentershape_type;
+  typedef Eigen::Matrix<value_type, childdim, barycdim> Scenterpoint_type;
 
    mass_type mass;
-
-
-   // double msaM[childdim*shapedim][childdim*shapedim];
-   // double msaG[childdim*shapedim][childdim*shapedim];
 
    Nvalueshape_type       Nvalues;  // values of shapes at nodes
                                     // Not for quadrature !!!
@@ -98,9 +93,9 @@ public:
    private:
    igpm::tvector<igpm::tvector<double,shapedim>,shapedim> sc; // shape coefficients in monomial basis (better name???)
 
-   igpm::tvector<igpm::tvector<igpm::tvector<double,shapedim>,shapedim>,childdim> refinement_rules; // double refinement_rules[childdim][shapedim][shapedim];
+   igpm::tvector<igpm::tvector<igpm::tvector<double,shapedim>,shapedim>,childdim> refinement_rules; // double refinement_rules(childdim,shapedim)[shapedim];
    igpm::tvector<igpm::tvector<double,Ndim>,shapedim> nodal_contrib; // double nodal_contrib[shapedim][Ndim];
-//
+
    public:
 
   void read_sc_msa (const std::string data_filename);
@@ -733,13 +728,13 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
     const double d = (9.0 + 2.0*sqrt(15.0))/21.0;
 
     // baryzentric coordinates of quadrature points
-    Equadx[0][0] = 1.0/3.0;  Equadx[0][1] = 1.0/3.0;  Equadx[0][2] = 1.0/3.0;
-    Equadx[1][0] = 1.0-a-a;  Equadx[1][1] = a;        Equadx[1][2] = a;
-    Equadx[2][0] = 1.0-a-b;  Equadx[2][1] = b;        Equadx[2][2] = a;
-    Equadx[3][0] = 1.0-b-a;  Equadx[3][1] = a;        Equadx[3][2] = b;
-    Equadx[4][0] = 1.0-c-c;  Equadx[4][1] = c;        Equadx[4][2] = c;
-    Equadx[5][0] = 1.0-d-c;  Equadx[5][1] = d;        Equadx[5][2] = c;
-    Equadx[6][0] = 1.0-c-d;  Equadx[6][1] = c;        Equadx[6][2] = d;
+    Equadx(0,0) = 1.0/3.0;  Equadx(0,1) = 1.0/3.0;  Equadx(0,2) = 1.0/3.0;
+    Equadx(1,0) = 1.0-a-a;  Equadx(1,1) = a;        Equadx(1,2) = a;
+    Equadx(2,0) = 1.0-a-b;  Equadx(2,1) = b;        Equadx(2,2) = a;
+    Equadx(3,0) = 1.0-b-a;  Equadx(3,1) = a;        Equadx(3,2) = b;
+    Equadx(4,0) = 1.0-c-c;  Equadx(4,1) = c;        Equadx(4,2) = c;
+    Equadx(5,0) = 1.0-d-c;  Equadx(5,1) = d;        Equadx(5,2) = c;
+    Equadx(6,0) = 1.0-c-d;  Equadx(6,1) = c;        Equadx(6,2) = d;
     // the sum of all weights is 0.5 = area of reference triangle
     Equadw[0] = 9.0/80.0;
     Equadw[1] = (155.0 + sqrt(15.0))/2400.0;
@@ -770,9 +765,9 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
       unsigned int ibase = i*4;
       for (unsigned int j=0; j<4; ++j) {
         unsigned int k = ibase+j;
-	Equadx[k][1] = s[j];
-	Equadx[k][2] = r[i]*(1.0-s[j]);
-	Equadx[k][0] = 1.0 - Equadx[k][1] - Equadx[k][2];
+	Equadx(k,1) = s[j];
+	Equadx(k,2) = r[i]*(1.0-s[j]);
+	Equadx(k,0) = 1.0 - Equadx(k,1) - Equadx(k,2);
 	Equadw[k]    = a[i]*b[j];
         } }
     }
@@ -783,12 +778,12 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
     break;
     }
 
-  // value_type Emaskx[4][Equadraturedim][3];
+  // value_type Emaskx(4,Equadraturedim)[3];
   // baryzentric coordinates of quadrature points on
   // refined reference element for determination of mask matrix
   for (unsigned int i=0; i<Equadraturedim; i++) {
-    Emaskx[1][i][1] = 0.5*Equadx[i][1];
-    Emaskx[1][i][2] = 0.5*Equadx[i][2];
+    Emaskx[1][i][1] = 0.5*Equadx(i,1);
+    Emaskx[1][i][2] = 0.5*Equadx(i,2);
     Emaskx[1][i][0] = 1.0 - Emaskx[1][i][1] - Emaskx[1][i][2];
     }
   for (unsigned int i=0; i<Equadraturedim; i++) {
@@ -808,19 +803,19 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
     }
 
   for (int j=0; j<Equadraturedim; j++) {
-    x[0] = Equadx[j][1];
-    x[1] = Equadx[j][2];
+    x[0] = Equadx(j,1);
+    x[1] = Equadx(j,2);
     for (int i=0; i<shapedim; i++) {
-      Equads[i][j]   = shape   (i, x);
+      Equads(i,j)   = shape   (i, x);
 
-      Equads_x[i][j] = shape_x (i, x);
-      Equads_y[i][j] = shape_y (i, x);
+      Equads_x(i,j) = shape_x (i, x);
+      Equads_y(i,j) = shape_y (i, x);
 
-      Equads_xx[i][j] = shape_xx (i, x);
-      Equads_xy[i][j] = shape_xy (i, x);
-      Equads_yy[i][j] = shape_yy (i, x);
+      Equads_xx(i,j) = shape_xx (i, x);
+      Equads_xy(i,j) = shape_xy (i, x);
+      Equads_yy(i,j) = shape_yy (i, x);
 
-      // EquadL[i][j]   = shapeL   (i, x);
+      // EquadL(i,j)   = shapeL   (i, x);
       }
     }
 
@@ -837,32 +832,32 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
     const double b = 1.0/2.0+sqrt(3.0)/6.0; // approximately 0.788675
 
     // 2 quadrature points for each of the 3 unrefined faces (barycentric coordinates, a+b=1)
-    Fquadx[0][0] = 0.0;     Fquadx[0][1] = b;       Fquadx[0][2] = a;
-    Fquadx[1][0] = 0.0;     Fquadx[1][1] = a;       Fquadx[1][2] = b;
-    Fquadx[2][0] = a;       Fquadx[2][1] = 0.0;     Fquadx[2][2] = b;
-    Fquadx[3][0] = b;       Fquadx[3][1] = 0.0;     Fquadx[3][2] = a;
-    Fquadx[4][0] = b;       Fquadx[4][1] = a;       Fquadx[4][2] = 0.0;
-    Fquadx[5][0] = a;       Fquadx[5][1] = b;       Fquadx[5][2] = 0.0;
+    Fquadx(0,0) = 0.0;     Fquadx(0,1) = b;       Fquadx(0,2) = a;
+    Fquadx(1,0) = 0.0;     Fquadx(1,1) = a;       Fquadx(1,2) = b;
+    Fquadx(2,0) = a;       Fquadx(2,1) = 0.0;     Fquadx(2,2) = b;
+    Fquadx(3,0) = b;       Fquadx(3,1) = 0.0;     Fquadx(3,2) = a;
+    Fquadx(4,0) = b;       Fquadx(4,1) = a;       Fquadx(4,2) = 0.0;
+    Fquadx(5,0) = a;       Fquadx(5,1) = b;       Fquadx(5,2) = 0.0;
 
     // 2 quadrature points for each of the 6 refined faces (barycentric coordinates)
     const double c = 0.5*a;
     const double d = 0.5*b;
     const double e = 0.5+c;
     const double f = 0.5+d;
-    Fquadx[6][0]  = 0.0;    Fquadx[6][1]  = 1.0-c;  Fquadx[6][2]  = c;
-    Fquadx[7][0]  = 0.0;    Fquadx[7][1]  = 1.0-d;  Fquadx[7][2]  = d;
-    Fquadx[8][0]  = 0.0;    Fquadx[8][1]  = 1.0-e;  Fquadx[8][2]  = e;
-    Fquadx[9][0]  = 0.0;    Fquadx[9][1]  = 1.0-f;  Fquadx[9][2]  = f;
-    Fquadx[10][0] = c;      Fquadx[10][1] = 0.0;    Fquadx[10][2] = 1.0-c;
-    Fquadx[11][0] = d;      Fquadx[11][1] = 0.0;    Fquadx[11][2] = 1.0-d;
-    Fquadx[12][0] = e;      Fquadx[12][1] = 0.0;    Fquadx[12][2] = 1.0-e;
-    Fquadx[13][0] = f;      Fquadx[13][1] = 0.0;    Fquadx[13][2] = 1.0-f;
-    Fquadx[14][0] = 1.0-c;  Fquadx[14][1] = c;      Fquadx[14][2] = 0.0;
-    Fquadx[15][0] = 1.0-d;  Fquadx[15][1] = d;      Fquadx[15][2] = 0.0;
-    Fquadx[16][0] = 1.0-e;  Fquadx[16][1] = e;      Fquadx[16][2] = 0.0;
-    Fquadx[17][0] = 1.0-f;  Fquadx[17][1] = f;      Fquadx[17][2] = 0.0;
+    Fquadx(6,0)  = 0.0;    Fquadx(6,1)  = 1.0-c;  Fquadx(6,2)  = c;
+    Fquadx(7,0)  = 0.0;    Fquadx(7,1)  = 1.0-d;  Fquadx(7,2)  = d;
+    Fquadx(8,0)  = 0.0;    Fquadx(8,1)  = 1.0-e;  Fquadx(8,2)  = e;
+    Fquadx(9,0)  = 0.0;    Fquadx(9,1)  = 1.0-f;  Fquadx(9,2)  = f;
+    Fquadx(10,0) = c;      Fquadx(10,1) = 0.0;    Fquadx(10,2) = 1.0-c;
+    Fquadx(11,0) = d;      Fquadx(11,1) = 0.0;    Fquadx(11,2) = 1.0-d;
+    Fquadx(12,0) = e;      Fquadx(12,1) = 0.0;    Fquadx(12,2) = 1.0-e;
+    Fquadx(13,0) = f;      Fquadx(13,1) = 0.0;    Fquadx(13,2) = 1.0-f;
+    Fquadx(14,0) = 1.0-c;  Fquadx(14,1) = c;      Fquadx(14,2) = 0.0;
+    Fquadx(15,0) = 1.0-d;  Fquadx(15,1) = d;      Fquadx(15,2) = 0.0;
+    Fquadx(16,0) = 1.0-e;  Fquadx(16,1) = e;      Fquadx(16,2) = 0.0;
+    Fquadx(17,0) = 1.0-f;  Fquadx(17,1) = f;      Fquadx(17,2) = 0.0;
 
-    for (int j=0; j<Fquadraturedim; j++) Fquadw[j] = 0.5;
+    for (int j=0; j<Fquadraturedim; j++) Fquadw(j) = 0.5;
     }
     break;
 
@@ -873,45 +868,45 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
     const double c = (1.0+sqrt(3.0/5.0))/2.0; // approximately 0.887298
 
     // 3 quadrature points for each of the 3 unrefined faces (barycentric coordinates, a+c=1, 2*b=1)
-    Fquadx[0][0] = 0.0;        Fquadx[0][1] = c;          Fquadx[0][2] = a;
-    Fquadx[1][0] = 0.0;        Fquadx[1][1] = b;          Fquadx[1][2] = b;
-    Fquadx[2][0] = 0.0;        Fquadx[2][1] = a;          Fquadx[2][2] = c;
+    Fquadx(0,0) = 0.0;        Fquadx(0,1) = c;          Fquadx(0,2) = a;
+    Fquadx(1,0) = 0.0;        Fquadx(1,1) = b;          Fquadx(1,2) = b;
+    Fquadx(2,0) = 0.0;        Fquadx(2,1) = a;          Fquadx(2,2) = c;
 
-    Fquadx[3][0] = a;          Fquadx[3][1] = 0.0;        Fquadx[3][2] = c;
-    Fquadx[4][0] = b;          Fquadx[4][1] = 0.0;        Fquadx[4][2] = b;
-    Fquadx[5][0] = c;          Fquadx[5][1] = 0.0;        Fquadx[5][2] = a;
+    Fquadx(3,0) = a;          Fquadx(3,1) = 0.0;        Fquadx(3,2) = c;
+    Fquadx(4,0) = b;          Fquadx(4,1) = 0.0;        Fquadx(4,2) = b;
+    Fquadx(5,0) = c;          Fquadx(5,1) = 0.0;        Fquadx(5,2) = a;
 
-    Fquadx[6][0] = c;          Fquadx[6][1] = a;          Fquadx[6][2] = 0.0;
-    Fquadx[7][0] = b;          Fquadx[7][1] = b;          Fquadx[7][2] = 0.0;
-    Fquadx[8][0] = a;          Fquadx[8][1] = c;          Fquadx[8][2] = 0.0;
+    Fquadx(6,0) = c;          Fquadx(6,1) = a;          Fquadx(6,2) = 0.0;
+    Fquadx(7,0) = b;          Fquadx(7,1) = b;          Fquadx(7,2) = 0.0;
+    Fquadx(8,0) = a;          Fquadx(8,1) = c;          Fquadx(8,2) = 0.0;
 
     // 3 quadrature points for each of the 6 refined faces (barycentric coordinates)
-    Fquadx[9][0]  = 0.0;       Fquadx[9][1]  = 1.0-0.5*a; Fquadx[9][2]  = 0.5*a;
-    Fquadx[10][0] = 0.0;       Fquadx[10][1] = 1.0-0.5*b; Fquadx[10][2] = 0.5*b;
-    Fquadx[11][0] = 0.0;       Fquadx[11][1] = 0.5+0.5*a; Fquadx[11][2] = 0.5-0.5*a;
-    Fquadx[12][0] = 0.0;       Fquadx[12][1] = 0.5-0.5*a; Fquadx[12][2] = 0.5+0.5*a;
-    Fquadx[13][0] = 0.0;       Fquadx[13][1] = 0.5-0.5*b; Fquadx[13][2] = 0.5+0.5*b;
-    Fquadx[14][0] = 0.0;       Fquadx[14][1] = 0.5*a;     Fquadx[14][2] = 1.0-0.5*a;
+    Fquadx(9,0)  = 0.0;       Fquadx(9,1)  = 1.0-0.5*a; Fquadx(9,2)  = 0.5*a;
+    Fquadx(10,0) = 0.0;       Fquadx(10,1) = 1.0-0.5*b; Fquadx(10,2) = 0.5*b;
+    Fquadx(11,0) = 0.0;       Fquadx(11,1) = 0.5+0.5*a; Fquadx(11,2) = 0.5-0.5*a;
+    Fquadx(12,0) = 0.0;       Fquadx(12,1) = 0.5-0.5*a; Fquadx(12,2) = 0.5+0.5*a;
+    Fquadx(13,0) = 0.0;       Fquadx(13,1) = 0.5-0.5*b; Fquadx(13,2) = 0.5+0.5*b;
+    Fquadx(14,0) = 0.0;       Fquadx(14,1) = 0.5*a;     Fquadx(14,2) = 1.0-0.5*a;
 
-    Fquadx[15][0] = 0.5*a;     Fquadx[15][1] = 0.0;       Fquadx[15][2] = 1.0-0.5*a;
-    Fquadx[16][0] = 0.5*b;     Fquadx[16][1] = 0.0;       Fquadx[16][2] = 1.0-0.5*b;
-    Fquadx[17][0] = 0.5-0.5*a; Fquadx[17][1] = 0.0;       Fquadx[17][2] = 0.5+0.5*a;
-    Fquadx[18][0] = 0.5+0.5*a; Fquadx[18][1] = 0.0;       Fquadx[18][2] = 0.5-0.5*a;
-    Fquadx[19][0] = 0.5+0.5*b; Fquadx[19][1] = 0.0;       Fquadx[19][2] = 0.5-0.5*b;
-    Fquadx[20][0] = 1.0-0.5*a; Fquadx[20][1] = 0.0;       Fquadx[20][2] = 0.5*a;
+    Fquadx(15,0) = 0.5*a;     Fquadx(15,1) = 0.0;       Fquadx(15,2) = 1.0-0.5*a;
+    Fquadx(16,0) = 0.5*b;     Fquadx(16,1) = 0.0;       Fquadx(16,2) = 1.0-0.5*b;
+    Fquadx(17,0) = 0.5-0.5*a; Fquadx(17,1) = 0.0;       Fquadx(17,2) = 0.5+0.5*a;
+    Fquadx(18,0) = 0.5+0.5*a; Fquadx(18,1) = 0.0;       Fquadx(18,2) = 0.5-0.5*a;
+    Fquadx(19,0) = 0.5+0.5*b; Fquadx(19,1) = 0.0;       Fquadx(19,2) = 0.5-0.5*b;
+    Fquadx(20,0) = 1.0-0.5*a; Fquadx(20,1) = 0.0;       Fquadx(20,2) = 0.5*a;
 
-    Fquadx[21][0] = 1.0-0.5*a; Fquadx[21][1] = 0.5*a;     Fquadx[21][2] = 0.0;
-    Fquadx[22][0] = 1.0-0.5*b; Fquadx[22][1] = 0.5*b;     Fquadx[22][2] = 0.0;
-    Fquadx[23][0] = 0.5+0.5*a; Fquadx[23][1] = 0.5-0.5*a; Fquadx[23][2] = 0.0;
-    Fquadx[24][0] = 0.5-0.5*a; Fquadx[24][1] = 0.5+0.5*a; Fquadx[24][2] = 0.0;
-    Fquadx[25][0] = 0.5-0.5*b; Fquadx[25][1] = 0.5+0.5*b; Fquadx[25][2] = 0.0;
-    Fquadx[26][0] = 0.5*a;     Fquadx[26][1] = 1.0-0.5*a; Fquadx[26][2] = 0.0;
+    Fquadx(21,0) = 1.0-0.5*a; Fquadx(21,1) = 0.5*a;     Fquadx(21,2) = 0.0;
+    Fquadx(22,0) = 1.0-0.5*b; Fquadx(22,1) = 0.5*b;     Fquadx(22,2) = 0.0;
+    Fquadx(23,0) = 0.5+0.5*a; Fquadx(23,1) = 0.5-0.5*a; Fquadx(23,2) = 0.0;
+    Fquadx(24,0) = 0.5-0.5*a; Fquadx(24,1) = 0.5+0.5*a; Fquadx(24,2) = 0.0;
+    Fquadx(25,0) = 0.5-0.5*b; Fquadx(25,1) = 0.5+0.5*b; Fquadx(25,2) = 0.0;
+    Fquadx(26,0) = 0.5*a;     Fquadx(26,1) = 1.0-0.5*a; Fquadx(26,2) = 0.0;
 
     for (int jface=0; jface<Fdim+Fchilddim*Fdim; jface++) {
       int jbase = jface*Fquadgaussdim;
-      Fquadw[jbase]   = 5.0/18.0;
-      Fquadw[jbase+1] = 4.0/9.0;
-      Fquadw[jbase+2] = 5.0/18.0;
+      Fquadw(jbase)   = 5.0/18.0;
+      Fquadw(jbase+1) = 4.0/9.0;
+      Fquadw(jbase+2) = 5.0/18.0;
       }
     }
     break;
@@ -924,48 +919,48 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
     const double d = (1.0 + sqrt( ( 3.0 + 2 * sqrt( 6.0/5.0 ) ) / 7.0 ) ) / 2.0;  // approximately 0.930568
 
     // 4 quadrature points for each of the 3 unrefined faces (barycentric coordinates, a+d=1, b+c=1)
-    Fquadx[ 0][0] = 0.0;       Fquadx[ 0][1] = d;         Fquadx[ 0][2] = a;
-    Fquadx[ 1][0] = 0.0;       Fquadx[ 1][1] = c;         Fquadx[ 1][2] = b;
-    Fquadx[ 2][0] = 0.0;       Fquadx[ 2][1] = b;         Fquadx[ 2][2] = c;
-    Fquadx[ 3][0] = 0.0;       Fquadx[ 3][1] = a;         Fquadx[ 3][2] = d;
+    Fquadx(0,0) = 0.0;       Fquadx(0,1) = d;         Fquadx(0,2) = a;
+    Fquadx(1,0) = 0.0;       Fquadx(1,1) = c;         Fquadx(1,2) = b;
+    Fquadx(2,0) = 0.0;       Fquadx(2,1) = b;         Fquadx(2,2) = c;
+    Fquadx(3,0) = 0.0;       Fquadx(3,1) = a;         Fquadx(3,2) = d;
 
-    Fquadx[ 4][0] = a;         Fquadx[ 4][1] = 0.0;       Fquadx[ 4][2] = d;
-    Fquadx[ 5][0] = b;         Fquadx[ 5][1] = 0.0;       Fquadx[ 5][2] = c;
-    Fquadx[ 6][0] = c;         Fquadx[ 6][1] = 0.0;       Fquadx[ 6][2] = b;
-    Fquadx[ 7][0] = d;         Fquadx[ 7][1] = 0.0;       Fquadx[ 7][2] = a;
+    Fquadx(4,0) = a;         Fquadx(4,1) = 0.0;       Fquadx(4,2) = d;
+    Fquadx(5,0) = b;         Fquadx(5,1) = 0.0;       Fquadx(5,2) = c;
+    Fquadx(6,0) = c;         Fquadx(6,1) = 0.0;       Fquadx(6,2) = b;
+    Fquadx(7,0) = d;         Fquadx(7,1) = 0.0;       Fquadx(7,2) = a;
 
-    Fquadx[ 8][0] = d;         Fquadx[ 8][1] = a;         Fquadx[ 8][2] = 0.0;
-    Fquadx[ 9][0] = c;         Fquadx[ 9][1] = b;         Fquadx[ 9][2] = 0.0;
-    Fquadx[10][0] = b;         Fquadx[10][1] = c;         Fquadx[10][2] = 0.0;
-    Fquadx[11][0] = a;         Fquadx[11][1] = d;         Fquadx[11][2] = 0.0;
+    Fquadx(8,0) = d;         Fquadx(8,1) = a;         Fquadx(8,2) = 0.0;
+    Fquadx(9,0) = c;         Fquadx(9,1) = b;         Fquadx(9,2) = 0.0;
+    Fquadx(10,0) = b;         Fquadx(10,1) = c;         Fquadx(10,2) = 0.0;
+    Fquadx(11,0) = a;         Fquadx(11,1) = d;         Fquadx(11,2) = 0.0;
 
     // 4 quadrature points for each of the 6 refined faces (barycentric coordinates)
-    Fquadx[12][0] = 0.0;       Fquadx[12][1] = 1.0-0.5*a; Fquadx[12][2] = 0.5*a;
-    Fquadx[13][0] = 0.0;       Fquadx[13][1] = 1.0-0.5*b; Fquadx[13][2] = 0.5*b;
-    Fquadx[14][0] = 0.0;       Fquadx[14][1] = 1.0-0.5*c; Fquadx[14][2] = 0.5*c;
-    Fquadx[15][0] = 0.0;       Fquadx[15][1] = 1.0-0.5*d; Fquadx[15][2] = 0.5*d;
-    Fquadx[16][0] = 0.0;       Fquadx[16][1] = 0.5-0.5*a; Fquadx[16][2] = 0.5+0.5*a;
-    Fquadx[17][0] = 0.0;       Fquadx[17][1] = 0.5-0.5*b; Fquadx[17][2] = 0.5+0.5*b;
-    Fquadx[18][0] = 0.0;       Fquadx[18][1] = 0.5-0.5*c; Fquadx[18][2] = 0.5+0.5*c;
-    Fquadx[19][0] = 0.0;       Fquadx[19][1] = 0.5-0.5*d; Fquadx[19][2] = 0.5+0.5*d;
+    Fquadx(12,0) = 0.0;       Fquadx(12,1) = 1.0-0.5*a; Fquadx(12,2) = 0.5*a;
+    Fquadx(13,0) = 0.0;       Fquadx(13,1) = 1.0-0.5*b; Fquadx(13,2) = 0.5*b;
+    Fquadx(14,0) = 0.0;       Fquadx(14,1) = 1.0-0.5*c; Fquadx(14,2) = 0.5*c;
+    Fquadx(15,0) = 0.0;       Fquadx(15,1) = 1.0-0.5*d; Fquadx(15,2) = 0.5*d;
+    Fquadx(16,0) = 0.0;       Fquadx(16,1) = 0.5-0.5*a; Fquadx(16,2) = 0.5+0.5*a;
+    Fquadx(17,0) = 0.0;       Fquadx(17,1) = 0.5-0.5*b; Fquadx(17,2) = 0.5+0.5*b;
+    Fquadx(18,0) = 0.0;       Fquadx(18,1) = 0.5-0.5*c; Fquadx(18,2) = 0.5+0.5*c;
+    Fquadx(19,0) = 0.0;       Fquadx(19,1) = 0.5-0.5*d; Fquadx(19,2) = 0.5+0.5*d;
 
-    Fquadx[20][0] = 0.5*a;     Fquadx[20][1] = 0.0;       Fquadx[20][2] = 1.0-0.5*a;
-    Fquadx[21][0] = 0.5*b;     Fquadx[21][1] = 0.0;       Fquadx[21][2] = 1.0-0.5*b;
-    Fquadx[22][0] = 0.5*c;     Fquadx[22][1] = 0.0;       Fquadx[22][2] = 1.0-0.5*c;
-    Fquadx[23][0] = 0.5*d;     Fquadx[23][1] = 0.0;       Fquadx[23][2] = 1.0-0.5*d;
-    Fquadx[24][0] = 0.5+0.5*a; Fquadx[24][1] = 0.0;       Fquadx[24][2] = 0.5-0.5*a;
-    Fquadx[25][0] = 0.5+0.5*b; Fquadx[25][1] = 0.0;       Fquadx[25][2] = 0.5-0.5*b;
-    Fquadx[26][0] = 0.5+0.5*c; Fquadx[26][1] = 0.0;       Fquadx[26][2] = 0.5-0.5*c;
-    Fquadx[27][0] = 0.5+0.5*d; Fquadx[27][1] = 0.0;       Fquadx[27][2] = 0.5-0.5*d;
+    Fquadx(20,0) = 0.5*a;     Fquadx(20,1) = 0.0;       Fquadx(20,2) = 1.0-0.5*a;
+    Fquadx(21,0) = 0.5*b;     Fquadx(21,1) = 0.0;       Fquadx(21,2) = 1.0-0.5*b;
+    Fquadx(22,0) = 0.5*c;     Fquadx(22,1) = 0.0;       Fquadx(22,2) = 1.0-0.5*c;
+    Fquadx(23,0) = 0.5*d;     Fquadx(23,1) = 0.0;       Fquadx(23,2) = 1.0-0.5*d;
+    Fquadx(24,0) = 0.5+0.5*a; Fquadx(24,1) = 0.0;       Fquadx(24,2) = 0.5-0.5*a;
+    Fquadx(25,0) = 0.5+0.5*b; Fquadx(25,1) = 0.0;       Fquadx(25,2) = 0.5-0.5*b;
+    Fquadx(26,0) = 0.5+0.5*c; Fquadx(26,1) = 0.0;       Fquadx(26,2) = 0.5-0.5*c;
+    Fquadx(27,0) = 0.5+0.5*d; Fquadx(27,1) = 0.0;       Fquadx(27,2) = 0.5-0.5*d;
 
-    Fquadx[28][0] = 1.0-0.5*a; Fquadx[28][1] = 0.5*a;     Fquadx[28][2] = 0.0;
-    Fquadx[29][0] = 1.0-0.5*b; Fquadx[29][1] = 0.5*b;     Fquadx[29][2] = 0.0;
-    Fquadx[30][0] = 1.0-0.5*c; Fquadx[30][1] = 0.5*c;     Fquadx[30][2] = 0.0;
-    Fquadx[31][0] = 1.0-0.5*d; Fquadx[31][1] = 0.5*d;     Fquadx[31][2] = 0.0;
-    Fquadx[32][0] = 0.5-0.5*a; Fquadx[32][1] = 0.5+0.5*a; Fquadx[32][2] = 0.0;
-    Fquadx[33][0] = 0.5-0.5*b; Fquadx[33][1] = 0.5+0.5*b; Fquadx[33][2] = 0.0;
-    Fquadx[34][0] = 0.5-0.5*c; Fquadx[34][1] = 0.5+0.5*c; Fquadx[34][2] = 0.0;
-    Fquadx[35][0] = 0.5-0.5*d; Fquadx[35][1] = 0.5+0.5*d; Fquadx[35][2] = 0.0;
+    Fquadx(28,0) = 1.0-0.5*a; Fquadx(28,1) = 0.5*a;     Fquadx(28,2) = 0.0;
+    Fquadx(29,0) = 1.0-0.5*b; Fquadx(29,1) = 0.5*b;     Fquadx(29,2) = 0.0;
+    Fquadx(30,0) = 1.0-0.5*c; Fquadx(30,1) = 0.5*c;     Fquadx(30,2) = 0.0;
+    Fquadx(31,0) = 1.0-0.5*d; Fquadx(31,1) = 0.5*d;     Fquadx(31,2) = 0.0;
+    Fquadx(32,0) = 0.5-0.5*a; Fquadx(32,1) = 0.5+0.5*a; Fquadx(32,2) = 0.0;
+    Fquadx(33,0) = 0.5-0.5*b; Fquadx(33,1) = 0.5+0.5*b; Fquadx(33,2) = 0.0;
+    Fquadx(34,0) = 0.5-0.5*c; Fquadx(34,1) = 0.5+0.5*c; Fquadx(34,2) = 0.0;
+    Fquadx(35,0) = 0.5-0.5*d; Fquadx(35,1) = 0.5+0.5*d; Fquadx(35,2) = 0.0;
 
     const double w1 = ( 18.0 - sqrt( 30.0 ) ) / 72.0;  // approximately 0.173927
     const double w2 = ( 18.0 + sqrt( 30.0 ) ) / 72.0;  // approximately 0.326073
@@ -987,57 +982,57 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
     const double e = (1.0 + 1.0 / 3.0 * sqrt( 5.0 + 2 * sqrt( 10.0 / 7.0 ) ) ) / 2.0;  // approximately 0.953090
 
     // 5 quadrature points for each of the 3 unrefined faces (barycentric coordinates, a+e=1, b+d=1, 2*c=1)
-    Fquadx[ 0][0] = 0.0;       Fquadx[ 0][1] = e;         Fquadx[ 0][2] = a;
-    Fquadx[ 1][0] = 0.0;       Fquadx[ 1][1] = d;         Fquadx[ 1][2] = b;
-    Fquadx[ 2][0] = 0.0;       Fquadx[ 2][1] = c;         Fquadx[ 2][2] = c;
-    Fquadx[ 3][0] = 0.0;       Fquadx[ 3][1] = b;         Fquadx[ 3][2] = d;
-    Fquadx[ 4][0] = 0.0;       Fquadx[ 4][1] = a;         Fquadx[ 4][2] = e;
+    Fquadx(0,0) = 0.0;       Fquadx(0,1) = e;         Fquadx(0,2) = a;
+    Fquadx(1,0) = 0.0;       Fquadx(1,1) = d;         Fquadx(1,2) = b;
+    Fquadx(2,0) = 0.0;       Fquadx(2,1) = c;         Fquadx(2,2) = c;
+    Fquadx(3,0) = 0.0;       Fquadx(3,1) = b;         Fquadx(3,2) = d;
+    Fquadx(4,0) = 0.0;       Fquadx(4,1) = a;         Fquadx(4,2) = e;
 
-    Fquadx[ 5][0] = a;         Fquadx[ 5][1] = 0.0;       Fquadx[ 5][2] = e;
-    Fquadx[ 6][0] = b;         Fquadx[ 6][1] = 0.0;       Fquadx[ 6][2] = d;
-    Fquadx[ 7][0] = c;         Fquadx[ 7][1] = 0.0;       Fquadx[ 7][2] = c;
-    Fquadx[ 8][0] = d;         Fquadx[ 8][1] = 0.0;       Fquadx[ 8][2] = b;
-    Fquadx[ 9][0] = e;         Fquadx[ 9][1] = 0.0;       Fquadx[ 9][2] = a;
+    Fquadx(5,0) = a;         Fquadx(5,1) = 0.0;       Fquadx(5,2) = e;
+    Fquadx(6,0) = b;         Fquadx(6,1) = 0.0;       Fquadx(6,2) = d;
+    Fquadx(7,0) = c;         Fquadx(7,1) = 0.0;       Fquadx(7,2) = c;
+    Fquadx(8,0) = d;         Fquadx(8,1) = 0.0;       Fquadx(8,2) = b;
+    Fquadx(9,0) = e;         Fquadx(9,1) = 0.0;       Fquadx(9,2) = a;
 
-    Fquadx[10][0] = e;         Fquadx[10][1] = a;         Fquadx[10][2] = 0.0;
-    Fquadx[11][0] = d;         Fquadx[11][1] = b;         Fquadx[11][2] = 0.0;
-    Fquadx[12][0] = c;         Fquadx[12][1] = c;         Fquadx[12][2] = 0.0;
-    Fquadx[13][0] = b;         Fquadx[13][1] = d;         Fquadx[13][2] = 0.0;
-    Fquadx[14][0] = a;         Fquadx[14][1] = e;         Fquadx[14][2] = 0.0;
+    Fquadx(10,0) = e;         Fquadx(10,1) = a;         Fquadx(10,2) = 0.0;
+    Fquadx(11,0) = d;         Fquadx(11,1) = b;         Fquadx(11,2) = 0.0;
+    Fquadx(12,0) = c;         Fquadx(12,1) = c;         Fquadx(12,2) = 0.0;
+    Fquadx(13,0) = b;         Fquadx(13,1) = d;         Fquadx(13,2) = 0.0;
+    Fquadx(14,0) = a;         Fquadx(14,1) = e;         Fquadx(14,2) = 0.0;
 
     // 5 quadrature points for each of the 6 refined faces (barycentric coordinates)
-    Fquadx[15][0] = 0.0;       Fquadx[15][1] = 1.0-0.5*a; Fquadx[15][2] = 0.5*a;
-    Fquadx[16][0] = 0.0;       Fquadx[16][1] = 1.0-0.5*b; Fquadx[16][2] = 0.5*b;
-    Fquadx[17][0] = 0.0;       Fquadx[17][1] = 1.0-0.5*c; Fquadx[17][2] = 0.5*c;
-    Fquadx[18][0] = 0.0;       Fquadx[18][1] = 1.0-0.5*d; Fquadx[18][2] = 0.5*d;
-    Fquadx[19][0] = 0.0;       Fquadx[19][1] = 1.0-0.5*e; Fquadx[19][2] = 0.5*e;
-    Fquadx[20][0] = 0.0;       Fquadx[20][1] = 0.5-0.5*a; Fquadx[20][2] = 0.5+0.5*a;
-    Fquadx[21][0] = 0.0;       Fquadx[21][1] = 0.5-0.5*b; Fquadx[21][2] = 0.5+0.5*b;
-    Fquadx[22][0] = 0.0;       Fquadx[22][1] = 0.5-0.5*c; Fquadx[22][2] = 0.5+0.5*c;
-    Fquadx[23][0] = 0.0;       Fquadx[23][1] = 0.5-0.5*d; Fquadx[23][2] = 0.5+0.5*d;
-    Fquadx[24][0] = 0.0;       Fquadx[24][1] = 0.5-0.5*e; Fquadx[24][2] = 0.5+0.5*e;
+    Fquadx(15,0) = 0.0;       Fquadx(15,1) = 1.0-0.5*a; Fquadx(15,2) = 0.5*a;
+    Fquadx(16,0) = 0.0;       Fquadx(16,1) = 1.0-0.5*b; Fquadx(16,2) = 0.5*b;
+    Fquadx(17,0) = 0.0;       Fquadx(17,1) = 1.0-0.5*c; Fquadx(17,2) = 0.5*c;
+    Fquadx(18,0) = 0.0;       Fquadx(18,1) = 1.0-0.5*d; Fquadx(18,2) = 0.5*d;
+    Fquadx(19,0) = 0.0;       Fquadx(19,1) = 1.0-0.5*e; Fquadx(19,2) = 0.5*e;
+    Fquadx(20,0) = 0.0;       Fquadx(20,1) = 0.5-0.5*a; Fquadx(20,2) = 0.5+0.5*a;
+    Fquadx(21,0) = 0.0;       Fquadx(21,1) = 0.5-0.5*b; Fquadx(21,2) = 0.5+0.5*b;
+    Fquadx(22,0) = 0.0;       Fquadx(22,1) = 0.5-0.5*c; Fquadx(22,2) = 0.5+0.5*c;
+    Fquadx(23,0) = 0.0;       Fquadx(23,1) = 0.5-0.5*d; Fquadx(23,2) = 0.5+0.5*d;
+    Fquadx(24,0) = 0.0;       Fquadx(24,1) = 0.5-0.5*e; Fquadx(24,2) = 0.5+0.5*e;
 
-    Fquadx[25][0] = 0.5*a;     Fquadx[25][1] = 0.0;       Fquadx[25][2] = 1.0-0.5*a;
-    Fquadx[26][0] = 0.5*b;     Fquadx[26][1] = 0.0;       Fquadx[26][2] = 1.0-0.5*b;
-    Fquadx[27][0] = 0.5*c;     Fquadx[27][1] = 0.0;       Fquadx[27][2] = 1.0-0.5*c;
-    Fquadx[28][0] = 0.5*d;     Fquadx[28][1] = 0.0;       Fquadx[28][2] = 1.0-0.5*d;
-    Fquadx[29][0] = 0.5*e;     Fquadx[29][1] = 0.0;       Fquadx[29][2] = 1.0-0.5*e;
-    Fquadx[30][0] = 0.5+0.5*a; Fquadx[30][1] = 0.0;       Fquadx[30][2] = 0.5-0.5*a;
-    Fquadx[31][0] = 0.5+0.5*b; Fquadx[31][1] = 0.0;       Fquadx[31][2] = 0.5-0.5*b;
-    Fquadx[32][0] = 0.5+0.5*c; Fquadx[32][1] = 0.0;       Fquadx[32][2] = 0.5-0.5*c;
-    Fquadx[33][0] = 0.5+0.5*d; Fquadx[33][1] = 0.0;       Fquadx[33][2] = 0.5-0.5*d;
-    Fquadx[34][0] = 0.5+0.5*e; Fquadx[34][1] = 0.0;       Fquadx[34][2] = 0.5-0.5*e;
+    Fquadx(25,0) = 0.5*a;     Fquadx(25,1) = 0.0;       Fquadx(25,2) = 1.0-0.5*a;
+    Fquadx(26,0) = 0.5*b;     Fquadx(26,1) = 0.0;       Fquadx(26,2) = 1.0-0.5*b;
+    Fquadx(27,0) = 0.5*c;     Fquadx(27,1) = 0.0;       Fquadx(27,2) = 1.0-0.5*c;
+    Fquadx(28,0) = 0.5*d;     Fquadx(28,1) = 0.0;       Fquadx(28,2) = 1.0-0.5*d;
+    Fquadx(29,0) = 0.5*e;     Fquadx(29,1) = 0.0;       Fquadx(29,2) = 1.0-0.5*e;
+    Fquadx(30,0) = 0.5+0.5*a; Fquadx(30,1) = 0.0;       Fquadx(30,2) = 0.5-0.5*a;
+    Fquadx(31,0) = 0.5+0.5*b; Fquadx(31,1) = 0.0;       Fquadx(31,2) = 0.5-0.5*b;
+    Fquadx(32,0) = 0.5+0.5*c; Fquadx(32,1) = 0.0;       Fquadx(32,2) = 0.5-0.5*c;
+    Fquadx(33,0) = 0.5+0.5*d; Fquadx(33,1) = 0.0;       Fquadx(33,2) = 0.5-0.5*d;
+    Fquadx(34,0) = 0.5+0.5*e; Fquadx(34,1) = 0.0;       Fquadx(34,2) = 0.5-0.5*e;
 
-    Fquadx[35][0] = 1.0-0.5*a; Fquadx[35][1] = 0.5*a;     Fquadx[35][2] = 0.0;
-    Fquadx[36][0] = 1.0-0.5*b; Fquadx[36][1] = 0.5*b;     Fquadx[36][2] = 0.0;
-    Fquadx[37][0] = 1.0-0.5*c; Fquadx[37][1] = 0.5*c;     Fquadx[37][2] = 0.0;
-    Fquadx[38][0] = 1.0-0.5*d; Fquadx[38][1] = 0.5*d;     Fquadx[38][2] = 0.0;
-    Fquadx[39][0] = 1.0-0.5*e; Fquadx[39][1] = 0.5*e;     Fquadx[39][2] = 0.0;
-    Fquadx[40][0] = 0.5-0.5*a; Fquadx[40][1] = 0.5+0.5*a; Fquadx[40][2] = 0.0;
-    Fquadx[41][0] = 0.5-0.5*b; Fquadx[41][1] = 0.5+0.5*b; Fquadx[41][2] = 0.0;
-    Fquadx[42][0] = 0.5-0.5*c; Fquadx[42][1] = 0.5+0.5*c; Fquadx[42][2] = 0.0;
-    Fquadx[43][0] = 0.5-0.5*d; Fquadx[43][1] = 0.5+0.5*d; Fquadx[43][2] = 0.0;
-    Fquadx[44][0] = 0.5-0.5*e; Fquadx[44][1] = 0.5+0.5*e; Fquadx[44][2] = 0.0;
+    Fquadx(35,0) = 1.0-0.5*a; Fquadx(35,1) = 0.5*a;     Fquadx(35,2) = 0.0;
+    Fquadx(36,0) = 1.0-0.5*b; Fquadx(36,1) = 0.5*b;     Fquadx(36,2) = 0.0;
+    Fquadx(37,0) = 1.0-0.5*c; Fquadx(37,1) = 0.5*c;     Fquadx(37,2) = 0.0;
+    Fquadx(38,0) = 1.0-0.5*d; Fquadx(38,1) = 0.5*d;     Fquadx(38,2) = 0.0;
+    Fquadx(39,0) = 1.0-0.5*e; Fquadx(39,1) = 0.5*e;     Fquadx(39,2) = 0.0;
+    Fquadx(40,0) = 0.5-0.5*a; Fquadx(40,1) = 0.5+0.5*a; Fquadx(40,2) = 0.0;
+    Fquadx(41,0) = 0.5-0.5*b; Fquadx(41,1) = 0.5+0.5*b; Fquadx(41,2) = 0.0;
+    Fquadx(42,0) = 0.5-0.5*c; Fquadx(42,1) = 0.5+0.5*c; Fquadx(42,2) = 0.0;
+    Fquadx(43,0) = 0.5-0.5*d; Fquadx(43,1) = 0.5+0.5*d; Fquadx(43,2) = 0.0;
+    Fquadx(44,0) = 0.5-0.5*e; Fquadx(44,1) = 0.5+0.5*e; Fquadx(44,2) = 0.0;
 
     const double w1 = ( 322.0 - 13 * sqrt( 70.0 ) ) / 1800.0;  // approximately 0.118463
     const double w2 = ( 322.0 + 13 * sqrt( 70.0 ) ) / 1800.0;  // approximately 0.239314
@@ -1061,12 +1056,12 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
 
   // preevaluate shapes at quadrature points
   for (int j=0; j<Fquadraturedim; j++) {
-    x[0] = Fquadx[j][1];
-    x[1] = Fquadx[j][2];
+    x[0] = Fquadx(j,1);
+    x[1] = Fquadx(j,2);
     for (int i=0; i<shapedim; i++) {
-      Fquads[i][j]   = shape   (i, x);
-      Fquads_x[i][j] = shape_x (i, x);
-      Fquads_y[i][j] = shape_y (i, x);
+      Fquads(i,j)   = shape   (i, x);
+      Fquads_x(i,j) = shape_x (i, x);
+      Fquads_y(i,j) = shape_y (i, x);
       }
     }
 
@@ -1084,38 +1079,38 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
   ////////////////////////////////////////////
   {
   // mid points for each of the 3 unrefined faces
-  Fmidx[0][0] = 0.0;     Fmidx[0][1] = 0.5;     Fmidx[0][2] = 0.5;
-  Fmidx[1][0] = 0.5;     Fmidx[1][1] = 0.0;     Fmidx[1][2] = 0.5;
-  Fmidx[2][0] = 0.5;     Fmidx[2][1] = 0.5;     Fmidx[2][2] = 0.0;
+  Fmidx(0,0) = 0.0;     Fmidx(0,1) = 0.5;     Fmidx(0,2) = 0.5;
+  Fmidx(1,0) = 0.5;     Fmidx(1,1) = 0.0;     Fmidx(1,2) = 0.5;
+  Fmidx(2,0) = 0.5;     Fmidx(2,1) = 0.5;     Fmidx(2,2) = 0.0;
   // 2 mid points for each of the 6 refined faces
-  Fmidx[3][0] = 0.0;     Fmidx[3][1] = 0.75;    Fmidx[3][2] = 0.25;
-  Fmidx[4][0] = 0.0;     Fmidx[4][1] = 0.25;    Fmidx[4][2] = 0.75;
-  Fmidx[5][0] = 0.25;    Fmidx[5][1] = 0.0;     Fmidx[5][2] = 0.75;
-  Fmidx[6][0] = 0.75;    Fmidx[6][1] = 0.0;     Fmidx[6][2] = 0.25;
-  Fmidx[7][0] = 0.75;    Fmidx[7][1] = 0.25;    Fmidx[7][2] = 0.0;
-  Fmidx[8][0] = 0.25;    Fmidx[8][1] = 0.75;    Fmidx[8][2] = 0.0;
+  Fmidx(3,0) = 0.0;     Fmidx(3,1) = 0.75;    Fmidx(3,2) = 0.25;
+  Fmidx(4,0) = 0.0;     Fmidx(4,1) = 0.25;    Fmidx(4,2) = 0.75;
+  Fmidx(5,0) = 0.25;    Fmidx(5,1) = 0.0;     Fmidx(5,2) = 0.75;
+  Fmidx(6,0) = 0.75;    Fmidx(6,1) = 0.0;     Fmidx(6,2) = 0.25;
+  Fmidx(7,0) = 0.75;    Fmidx(7,1) = 0.25;    Fmidx(7,2) = 0.0;
+  Fmidx(8,0) = 0.25;    Fmidx(8,1) = 0.75;    Fmidx(8,2) = 0.0;
 
   for (int j=0; j<Fmiddim; j++) {
-    x[0] = Fmidx[j][1];
-    x[1] = Fmidx[j][2];
+    x[0] = Fmidx(j,1);
+    x[1] = Fmidx(j,2);
     for (int i=0; i<shapedim; i++)
-      Fmids[i][j] = shape   (i, x);
+      Fmids(i,j) = shape   (i, x);
     }
   }
 
   // kidcenters (for smoothness indicator)
   ////////////////////////////////////////////
   {
-  Scenterx[0][0] = 1.0/3.0; Scenterx[0][1] = 1.0/3.0; Scenterx[0][2] = 1.0/3.0;
-  Scenterx[1][0] = 2.0/3.0; Scenterx[1][1] = 1.0/6.0; Scenterx[1][2] = 1.0/6.0;
-  Scenterx[2][0] = 1.0/6.0; Scenterx[2][1] = 2.0/3.0; Scenterx[2][2] = 1.0/6.0;
-  Scenterx[3][0] = 1.0/6.0; Scenterx[3][1] = 1.0/6.0; Scenterx[3][2] = 2.0/3.0;
+  Scenterx(0,0) = 1.0/3.0; Scenterx(0,1) = 1.0/3.0; Scenterx(0,2) = 1.0/3.0;
+  Scenterx(1,0) = 2.0/3.0; Scenterx(1,1) = 1.0/6.0; Scenterx(1,2) = 1.0/6.0;
+  Scenterx(2,0) = 1.0/6.0; Scenterx(2,1) = 2.0/3.0; Scenterx(2,2) = 1.0/6.0;
+  Scenterx(3,0) = 1.0/6.0; Scenterx(3,1) = 1.0/6.0; Scenterx(3,2) = 2.0/3.0;
 
   for (int j=0; j<childdim; j++) {
-    x[0] = Scenterx[j][1];
-    x[1] = Scenterx[j][2];
+    x[0] = Scenterx(j,1);
+    x[1] = Scenterx(j,2);
     for (int i=0; i<shapedim; i++)
-      Scenters[i][j] = shape   (i, x);
+      Scenters(i,j) = shape   (i, x);
     }
   }
 
@@ -1127,22 +1122,22 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
   // corresponding to Fmidx[0] ... Fmidx[2]
   for (int i=0; i<3; i++)
     for (int j=0; j<barycdim; j++)
-      Squadx[i][j] = 0.5*(Fmidx[i][j] + Equadx[0][j]);
+      Squadx(i,j) = 0.5*(Fmidx(i,j) + Equadx(0,j));
   // corresponding to Fmidx[3] ... Fmidx[8]
   for (int j=0; j<barycdim; j++) {
-    Squadx[3][j] = 0.5*(Fmidx[3][j] + Scenterx[2][j]);
-    Squadx[4][j] = 0.5*(Fmidx[4][j] + Scenterx[3][j]);
-    Squadx[5][j] = 0.5*(Fmidx[5][j] + Scenterx[3][j]);
-    Squadx[6][j] = 0.5*(Fmidx[6][j] + Scenterx[1][j]);
-    Squadx[7][j] = 0.5*(Fmidx[7][j] + Scenterx[1][j]);
-    Squadx[8][j] = 0.5*(Fmidx[8][j] + Scenterx[2][j]);
+    Squadx(3,j) = 0.5*(Fmidx(3,j) + Scenterx(2,j));
+    Squadx(4,j) = 0.5*(Fmidx(4,j) + Scenterx(3,j));
+    Squadx(5,j) = 0.5*(Fmidx(5,j) + Scenterx(3,j));
+    Squadx(6,j) = 0.5*(Fmidx(6,j) + Scenterx(1,j));
+    Squadx(7,j) = 0.5*(Fmidx(7,j) + Scenterx(1,j));
+    Squadx(8,j) = 0.5*(Fmidx(8,j) + Scenterx(2,j));
     }
 
   for (int j=0; j<Fmiddim; j++) {
-    x[0] = Squadx[j][1];
-    x[1] = Squadx[j][2];
+    x[0] = Squadx(j,1);
+    x[1] = Squadx(j,2);
     for (int i=0; i<shapedim; i++)
-      Squads[i][j] = shape   (i, x);
+      Squads(i,j) = shape   (i, x);
     }
   }
 
@@ -1171,7 +1166,7 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
 
       for (unsigned int iq=0; iq<Equadraturedim; iq++) {
         mass.A_full(i,j) +=
-	  Equadw[iq]*bilin_mass (Equads[i][iq], Equads[j][iq], detjacabs);
+	  Equadw[iq]*bilin_mass (Equads(i,iq), Equads(j,iq), detjacabs);
       }
 
       if(j<=i)
@@ -1196,10 +1191,10 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
       x[1] = Emaskx[i][iq][2];
       for (int ish=0; ish<shapedim; ish++) {
         phi = shape (ish, x);  // shape on reference element
-	// value of shape on child is Equads[j][iq]
+	// value of shape on child is Equads(j,iq)
         for (unsigned int jsh=0; jsh<shapedim; jsh++)
           mass.B[i][ish][jsh] +=
-	    Equadw[iq]*bilin_mass (phi, Equads[jsh][iq], detjacabs);
+	    Equadw[iq]*bilin_mass (phi, Equads(jsh,iq), detjacabs);
 	}
       }
   }
@@ -1222,8 +1217,8 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
 /*    for (int c = 0; c < childdim; ++c)
       for (int j = 0; j < shapedim; ++j) // number of parent shape function
         for (int i = 0; i < shapedim; ++i) { // number of child shape function
-          cout << "refinement_rules["<<c<<"]["<<j<<"]["<<i<<"]=" << refinement_rules[c][j][i] << ", refinement_rules_load["<<c<<"]["<<i<<"]["<<j<<"]=" << refinement_rules_load[c][i][j] << endl;
-          assert(fabs(refinement_rules[c][i][j]-refinement_rules_load[c][j][i])<1e-10);
+          cout << "refinement_rules["<<c<<"]["<<j<<"]["<<i<<"]=" << refinement_rules(c,j)[i] << ", refinement_rules_load["<<c<<"]["<<i<<"]["<<j<<"]=" << refinement_rules_load(c,i)[j] << endl;
+          assert(fabs(refinement_rules(c,i)[j]-refinement_rules_load(c,j)[i])<1e-10);
     }*/
 };
 
@@ -1290,8 +1285,8 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
 
 	//  for (int i=0; i<spacedim; ++i) grad[i] = 0.0;
 //  for (int j=0; j<shapedim; ++j) {
-//     grad[0] += u[j][istate]*shape_x(j, xref);
-//     grad[1] += u[j][istate]*shape_y(j, xref);
+//     grad[0] += u(j,istate)*shape_x(j, xref);
+//     grad[1] += u(j,istate)*shape_y(j, xref);
 //     }
 
   Eigen::VectorXd x (shapedim);
@@ -1371,7 +1366,7 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
   for (unsigned int istate=0; istate<statedim; istate++) {
     v[istate] = 0.0;
     for (unsigned int j=0; j<shapedim; j++)
-      v[istate] += u.coeff(j,istate)*Equads[j][iquad];
+      v[istate] += u.coeff(j,istate)*Equads(j,iquad);
     }
 };
 
@@ -1386,7 +1381,7 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
   for (unsigned int istate=0; istate<statedim; istate++) {
     v[istate] = 0.0;
     for (unsigned int j=0; j<shapedim; j++)
-      v[istate] += u.coeff(j, istate)*Fquads[j][iquad];
+      v[istate] += u.coeff(j, istate)*Fquads(j,iquad);
     }
 };
 
@@ -1399,7 +1394,7 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
                        const unsigned int & iquad, value_type & v)
 {
   v = 0.0;
-  for (unsigned int j=0; j<shapedim; j++) v += u.coeff(j,istate)*Fquads[j][iquad];
+  for (unsigned int j=0; j<shapedim; j++) v += u.coeff(j,istate)*Fquads(j,iquad);
 };
 
 ////////////////////////////////////////////////////
@@ -1413,7 +1408,7 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
   for (unsigned int istate=0; istate<statedim; istate++) {
     v[istate] = 0.0;
     for (unsigned int j=0; j<shapedim; j++)
-      v[istate] += u.coeff(j, istate)*Fmids[j][iquad];
+      v[istate] += u.coeff(j, istate)*Fmids(j,iquad);
     }
 };
 
@@ -1426,7 +1421,7 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
                             const unsigned int & iquad, value_type & v)
 {
   v = 0.0;
-  for (unsigned int j=0; j<shapedim; j++) v += u.coeff(j, istate)*Fmids[j][iquad];
+  for (unsigned int j=0; j<shapedim; j++) v += u.coeff(j, istate)*Fmids(j,iquad);
 };
 
 ////////////////////////////////////////////////////
@@ -1440,7 +1435,7 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
   for (unsigned int istate=0; istate<statedim; istate++) {
     v[istate] = 0.0;
     for (unsigned int j=0; j<shapedim; j++)
-      v[istate] += u.coeff(j,istate)*Squads[j][iquad];
+      v[istate] += u.coeff(j,istate)*Squads(j,iquad);
     }
 };
 
@@ -1453,7 +1448,7 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
                              const unsigned int & iquad, value_type & v)
 {
   v = 0.0;
-  for (unsigned int j=0; j<shapedim; j++) v += u.coeff(j,istate)*Squads[j][iquad];
+  for (unsigned int j=0; j<shapedim; j++) v += u.coeff(j,istate)*Squads(j,iquad);
 };
 
 ////////////////////////////////////////////////////
@@ -1466,7 +1461,7 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
   for (unsigned int istate=0; istate<statedim; istate++) {
     v[istate] = 0.0;
     for (unsigned int j=0; j<shapedim; j++)
-      v[istate] += u.coeff(j, istate)*Scenters[j][iquad];
+      v[istate] += u.coeff(j, istate)*Scenters(j,iquad);
     }
 };
 
@@ -1478,7 +1473,7 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
                           const unsigned int & iquad, value_type & v)
 {
   v = 0.0;
-  for (unsigned int j=0; j<shapedim; j++) v += u.coeff(j, istate)*Scenters[j][iquad];
+  for (unsigned int j=0; j<shapedim; j++) v += u.coeff(j, istate)*Scenters(j,iquad);
 };
 
 /////////////////////////////////////////////////////
@@ -1521,8 +1516,8 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
   x(k,istate) = b(perm[k],istate)/A[perm[k]][k]; // backward-substitution
   for (k=shapedim-2; k>=0; --k) {
     sum = 0.0;
-    for (int j=k+1; j<shapedim; ++j) sum += A[perm[k]][j]*x[j][istate];
-    x[k][istate] = (b[perm[k]][istate]-sum)/A[perm[k]][k];
+    for (int j=k+1; j<shapedim; ++j) sum += A[perm[k]][j]*x(j,istate);
+    x(k,istate) = (b[perm[k]][istate]-sum)/A[perm[k]][k];
     }
 };
 
@@ -1531,7 +1526,7 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
 template <typename CONFIG_TYPE, int STATEDIM, int SHAPEDIM, int DEGREEDIM>
 inline const double Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>::
 refine_factor(const unsigned int child_num, const unsigned int ansatzfct_num, const unsigned int parentansatzfct_num) {
-  return refinement_rules[child_num][parentansatzfct_num][ansatzfct_num];
+  return refinement_rules(child_num,parentansatzfct_num)[ansatzfct_num];
 }
 
 /////////////////////////////////////////////////////

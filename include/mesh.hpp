@@ -132,10 +132,6 @@ public:
     shapedim = grid_type::config_type::shapedim
   };
 
-  // only for ENTHALPY_EQ: ///
-  typedef typename config_type::Enodevalue_type        Enodevalue_type;
-  Enodevalue_type  recenthalpy;
-  ////////////////////////////
 
   tmyantecell() { }}
 ;
@@ -165,10 +161,6 @@ public:
   typedef typename grid_type::config_type::Estate_type     Estate_type;
   typedef typename grid_type::config_type::mass_type       mass_type;
 
-  // only for ENTHALPY_EQ: ///
-  typedef typename grid_type::config_type::Enodevalue_type Enodevalue_type;
-  typedef typename grid_type::config_type::Tphase_type     Tphase_type;
-
 
   ////////////////////////////
 
@@ -178,11 +170,7 @@ protected:
 
 public:
   static mass_type    mass;
-  // only for ENTHALPY_EQ: ///
-  Tphase_type      phase;
-  Enodevalue_type  recenthalpy;
-  value_type       histenthalpy;
-  ////////////////////////////
+
   Estate_type      u;
   Estate_type      unew;
   value_type       limiter;

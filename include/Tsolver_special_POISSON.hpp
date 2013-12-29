@@ -42,7 +42,7 @@ void Tsolver::initializeLeafCellData_POISSON() {
 			for (unsigned int istate = 0; istate < statedim; istate++)
 				for (unsigned int ishape = 0; ishape < shapedim; ishape++)
 					pLC->u(ishape,istate) += shape.Equadw[iq] * v[istate]
-							* shape.Equads[ishape][iq];
+							* shape.Equads(ishape,iq);
 		}
 
 		shape.mass.Cholesky_solve(pLC->u);
@@ -196,8 +196,8 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 					for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 						int row = pLC->n_offset + ishape;
 						double val = shape.Equadw[iq] * pBC->detjacabs
-								* facLevelVolume[level] * uLC[istate]
-								* shape.Equads[ishape][iq];
+								* facLevelVolume[level] * uLC(istate)
+								* shape.Equads(ishape,iq);
 
 						Lrhs(row) += val;
 					}
@@ -259,36 +259,36 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 
 									// b(u, phi)
 									LM.coeffRef(row_LC, col_LC) += -0.5 // to average
-											* shape.Fquadw[iqLC] //quadratur weights
+											* shape.Fquadw(iqLC) //quadratur weights
 											* length
-											* shape.Fquads[ishape][iqLC] //jump
-											* pBC->normalderi[j][iqLC]
+											* shape.Fquads(ishape,iqLC) //jump
+											* pBC->normalderi(j,iqLC)
 											/ facLevelLength[level]; //gradient times normal
 
-									LM.coeffRef(row_LC, col_NC) += 0.5 * shape.Fquadw[iqLC] * length * shape.Fquads[ishape][iqLC] * pNBC->normalderi[j][iqNC] / facLevelLength[levelNC];
+									LM.coeffRef(row_LC, col_NC) += 0.5 * shape.Fquadw(iqLC) * length * shape.Fquads(ishape,iqLC) * pNBC->normalderi(j,iqNC) / facLevelLength[levelNC];
 
-									LM.coeffRef(row_NC, col_LC) += 0.5 * shape.Fquadw[iqLC] * length * shape.Fquads[ishape][iqNC]* pBC->normalderi[j][iqLC]	/ facLevelLength[level];
+									LM.coeffRef(row_NC, col_LC) += 0.5 * shape.Fquadw(iqLC) * length * shape.Fquads(ishape,iqNC)* pBC->normalderi(j,iqLC)	/ facLevelLength[level];
 
-									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.Fquadw[iqLC] * length * shape.Fquads[ishape][iqNC] * pNBC->normalderi[j][iqNC] / facLevelLength[levelNC];
+									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.Fquadw(iqLC) * length * shape.Fquads(ishape,iqNC) * pNBC->normalderi(j,iqNC) / facLevelLength[levelNC];
 
 									// b(phi, u)
-									LM.coeffRef(row_LC, col_LC) += stabsign	* 0.5 * shape.Fquadw[iqLC] * length	* pBC->normalderi[ishape][iqLC]	/ facLevelLength[level]	* shape.Fquads[j][iqLC];
+									LM.coeffRef(row_LC, col_LC) += stabsign	* 0.5 * shape.Fquadw(iqLC) * length	* pBC->normalderi(ishape,iqLC)	/ facLevelLength[level]	* shape.Fquads(j,iqLC);
 
-									LM.coeffRef(row_LC, col_NC) += stabsign	* -0.5 * shape.Fquadw[iqLC] * length * pBC->normalderi[ishape][iqLC] / facLevelLength[level] * shape.Fquads[j][iqNC];
+									LM.coeffRef(row_LC, col_NC) += stabsign	* -0.5 * shape.Fquadw(iqLC) * length * pBC->normalderi(ishape,iqLC) / facLevelLength[level] * shape.Fquads(j,iqNC);
 
-									LM.coeffRef(row_NC, col_LC) += stabsign * -0.5 * shape.Fquadw[iqLC] * length * pNBC->normalderi[ishape][iqNC] / facLevelLength[levelNC] * shape.Fquads[j][iqLC];
+									LM.coeffRef(row_NC, col_LC) += stabsign * -0.5 * shape.Fquadw(iqLC) * length * pNBC->normalderi(ishape,iqNC) / facLevelLength[levelNC] * shape.Fquads(j,iqLC);
 
-									LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.Fquadw[iqLC] * length * pNBC->normalderi[ishape][iqNC] / facLevelLength[levelNC] * shape.Fquads[j][iqNC];
+									LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.Fquadw(iqLC) * length * pNBC->normalderi(ishape,iqNC) / facLevelLength[levelNC] * shape.Fquads(j,iqNC);
 
 									// b_sigma(u, phi)
 									if (penalty != 0.0) {
-										LM.coeffRef(row_LC, col_LC) += penalty * shape.Fquadw[iqLC] * shape.Fquads[j][iqLC] * shape.Fquads[ishape][iqLC];
+										LM.coeffRef(row_LC, col_LC) += penalty * shape.Fquadw(iqLC) * shape.Fquads(j,iqLC) * shape.Fquads(ishape,iqLC);
 
-										LM.coeffRef(row_LC, col_NC) += -penalty * shape.Fquadw[iqLC] * shape.Fquads[j][iqNC] * shape.Fquads[ishape][iqLC];
+										LM.coeffRef(row_LC, col_NC) += -penalty * shape.Fquadw(iqLC) * shape.Fquads(j,iqNC) * shape.Fquads(ishape,iqLC);
 
-										LM.coeffRef(row_NC, col_LC) += -penalty * shape.Fquadw[iqLC] * shape.Fquads[j][iqLC] * shape.Fquads[ishape][iqNC];
+										LM.coeffRef(row_NC, col_LC) += -penalty * shape.Fquadw(iqLC) * shape.Fquads(j,iqLC) * shape.Fquads(ishape,iqNC);
 
-										LM.coeffRef(row_NC, col_NC) += penalty * shape.Fquadw[iqLC] * shape.Fquads[j][iqNC] * shape.Fquads[ishape][iqNC];
+										LM.coeffRef(row_NC, col_NC) += penalty * shape.Fquadw(iqLC) * shape.Fquads(j,iqNC) * shape.Fquads(ishape,iqNC);
 
 									}
 								}
@@ -314,14 +314,14 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 									pBC->normal[i], uLC); // determine uLC
 
 							//                 for (unsigned int ishape=0; ishape<shapedim; ishape++)
-							//                   pLC->unew[ishape][0] += Fquadw[iqLC]*length*uLC[0]*Fquads[ishape][iqLC];
+							//                   pLC->unew[ishape][0] += Fquadw(iqLC)*length*uLC(0)*Fquads(ishape,iqLC);
 
 							// Copy entries for Neumann boundary conditions into right hand side
 							for (unsigned int ishape = 0; ishape < shapedim;
 									++ishape) {
 								Lrhs(pLC->n_offset + ishape) +=
-										shape.Fquadw[iqLC] * length * uLC[0]
-												* shape.Fquads[ishape][iqLC];
+										shape.Fquadw(iqLC) * length * uLC(0)
+												* shape.Fquads(ishape,iqLC);
 							}
 						}
 						break;
@@ -340,14 +340,14 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 							// Copy entries for Dirichlet boundary conditions into right hand side
 							for (unsigned int ishape = 0; ishape < shapedim;
 									++ishape) {
-								double val = stabsign * shape.Fquadw[iqLC]
-										* length * uLC[0]
-										* pBC->normalderi[ishape][iqLC]
+								double val = stabsign * shape.Fquadw(iqLC)
+										* length * uLC(0)
+										* pBC->normalderi(ishape,iqLC)
 										/ facLevelLength[level];
 
 								if (penalty != 0.0) {
-									val += penalty * shape.Fquadw[iqLC] * uLC[0]
-											* shape.Fquads[ishape][iqLC];
+									val += penalty * shape.Fquadw(iqLC) * uLC(0)
+											* shape.Fquads(ishape,iqLC);
 								}
 
 								Lrhs(pLC->n_offset + ishape) += val;
@@ -362,22 +362,22 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 									double val;
 
 									// b(u, phi)
-									val = -shape.Fquadw[iqLC] * length
-											* shape.Fquads[ishape][iqLC]
-											* pBC->normalderi[j][iqLC]
+									val = -shape.Fquadw(iqLC) * length
+											* shape.Fquads(ishape,iqLC)
+											* pBC->normalderi(j,iqLC)
 											/ facLevelLength[level];
 
 									// b(phi, u)
-									val += stabsign * shape.Fquadw[iqLC]
+									val += stabsign * shape.Fquadw(iqLC)
 											* length
-											* pBC->normalderi[ishape][iqLC]
+											* pBC->normalderi(ishape,iqLC)
 											/ facLevelLength[level]
-											* shape.Fquads[j][iqLC];
+											* shape.Fquads(j,iqLC);
 
 									if (penalty != 0.0) {
 										val += penalty * shape.Fquadw[iqLC]
-												* shape.Fquads[ishape][iqLC]
-												* shape.Fquads[j][iqLC];
+												* shape.Fquads(ishape,iqLC)
+												* shape.Fquads(j,iqLC);
 									}
 
 									LM.coeffRef(row, col) += val;
@@ -531,7 +531,7 @@ void Tsolver::get_exacttemperature_POISSON(const space_type & x, state_type & u)
 //////////////////////////////////////////////////////////
 
 void Tsolver::get_exacttemperaturenormalderivative_POISSON(const space_type & x,
-		const space_type & normal, state_type & u_n) // state_type ???
+		const igpm::tvector<double, 2u, true> & normal, state_type & u_n) // state_type ???
 		{
 #if (PROBLEM == SIMPLEPOISSON)
 	const double a = 0.3, b = 0.5;

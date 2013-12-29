@@ -74,7 +74,6 @@ public:
    //////////////////////////////////////////////////////////////
    typedef grid_config_type::Fnormalderivative_type  Fnormalderivative_type;
    typedef grid_config_type::Ejacobian_type          Ejacobian_type;
-   typedef grid_config_type::Enodevalue_type         Enodevalue_type;
 
    ///////////////////////////////////////////////////////////////
    typedef bool       leafmarker_type[childdim];
@@ -229,7 +228,7 @@ public:
    void assemble_POISSON(const int & STABSIGN, const double & PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs);
    void restore_POISSON (Eigen::VectorXd &solution);
    void get_exacttemperature_POISSON (const space_type & x, state_type & u); // state_type ???
-   void get_exacttemperaturenormalderivative_POISSON (const space_type & x, const space_type & normal, state_type & u_n);
+   void get_exacttemperaturenormalderivative_POISSON (const space_type & x, const igpm::tvector<double, 2u, true> & normal, state_type & u_n);
 	// state_type ???
    void get_rhs_POISSON (const space_type & x, state_type & u_rhs);  // state_type ???
    void local_dt_POISSON (const value_type & lengthmin, value_type & dt_element);

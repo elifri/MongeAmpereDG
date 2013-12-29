@@ -33,7 +33,7 @@ void Tsolver::writeEmass_type (const Emass_type & A)
 {
    int j,k;
    for (k=0;k<shapedim;k++) {
-     for (j=0;j<shapedim;j++) cerr <<  A[k][j] << "   ";
+     for (j=0;j<shapedim;j++) cerr <<  A(k,j) << "   ";
      cerr << endl;
      }
 };
@@ -60,20 +60,20 @@ inline double Tsolver::bilin_mass (double & u0, double & u1, double & d_abs)
 inline double Tsolver::bilin_adv_x (double & a, double & u_x, double & u_y,
                                       Ejacobian_type &J, double & d_sgn)
 {
-    return a*(J[1][1]*u_x - J[1][0]*u_y)*d_sgn;
+    return a*(J(1,1)*u_x - J(1,0)*u_y)*d_sgn;
 };
 
 inline double Tsolver::bilin_adv_y (double & b, double & u_x, double & u_y,
                                       Ejacobian_type & J, double & d_sgn)
 {
-    return b*(J[0][0]*u_y - J[0][1]*u_x)*d_sgn;
+    return b*(J(0,0)*u_y - J(0,1)*u_x)*d_sgn;
 };
 
 inline double Tsolver::bilin_adv_2d (double & a, double & b,
                                        double & u_x, double & u_y,
 				       Ejacobian_type & J, double & d_sgn)
 {
-    return ( a*(J[1][1]*u_x - J[1][0]*u_y) + b*(J[0][0]*u_y - J[0][1]*u_x) )*d_sgn;
+    return ( a*(J(1,1)*u_x - J(1,0)*u_y) + b*(J(0,0)*u_y - J(0,1)*u_x) )*d_sgn;
 };
 
 inline double Tsolver::bilin_laplace (const double & u0_x, const double & u0_y,
@@ -83,8 +83,8 @@ inline double Tsolver::bilin_laplace (const double & u0_x, const double & u0_y,
 	// calculate gradient of local shape function
 	// by multiplication of transposed inverse of Jacobian of affine transformation
 	// with gradient from shape function on reference cell
-    const double phi_i_x=  J[1][1]*u0_x - J[1][0]*u0_y, phi_i_y= -J[0][1]*u0_x + J[0][0]*u0_y ;
-    const double phi_j_x=  J[1][1]*u1_x - J[1][0]*u1_y, phi_j_y= -J[0][1]*u1_x + J[0][0]*u1_y ;
+    const double phi_i_x=  J(1,1)*u0_x - J(1,0)*u0_y, phi_i_y= -J(0,1)*u0_x + J(0,0)*u0_y ;
+    const double phi_j_x=  J(1,1)*u1_x - J(1,0)*u1_y, phi_j_y= -J(0,1)*u1_x + J(0,0)*u1_y ;
 
     return ( phi_i_x * phi_j_x + phi_i_y * phi_j_y ) / d_abs;
 };
@@ -96,8 +96,8 @@ inline double Tsolver::bilin_alaplace (const double & u0_x, const double & u0_y,
 	// calculate gradient of local shape function
 	// by multiplication of transposed inverse of Jacobian of affine transformation
 	// with gradient from shape function on reference cell
-    const double phi_i_x=  J[1][1]*u0_x - J[1][0]*u0_y, phi_i_y= -J[0][1]*u0_x + J[0][0]*u0_y ;
-    const double phi_j_x=  J[1][1]*u1_x - J[1][0]*u1_y, phi_j_y= -J[0][1]*u1_x + J[0][0]*u1_y ;
+    const double phi_i_x=  J(1,1)*u0_x - J(1,0)*u0_y, phi_i_y= -J(0,1)*u0_x + J(0,0)*u0_y ;
+    const double phi_j_x=  J(1,1)*u1_x - J(1,0)*u1_y, phi_j_y= -J(0,1)*u1_x + J(0,0)*u1_y ;
 
     return (    ( a[0]*phi_i_x + a[1]*phi_i_y) * phi_j_x
               + ( a[2]*phi_i_x + a[3]*phi_i_y) * phi_j_y ) / d_abs;
@@ -157,14 +157,14 @@ void Tsolver::update_baseGeometry ()
     	node1 = node0+1; if (node1 == idBC.countFaces()) node1 = 0;
 
     	// initialize face length and unit normal of of pBC
-    	pBC->normal[f][0]  = vN[node1][1] - vN[node0][1];
-    	pBC->normal[f][1]  = vN[node0][0] - vN[node1][0];
-    	pBC->length[f]     = sqrt(pBC->normal[f][0]*pBC->normal[f][0] +
-    			pBC->normal[f][1]*pBC->normal[f][1]);
-    	pBC->normal[f][0] /= pBC->length[f];
-    	pBC->normal[f][1] /= pBC->length[f];
+    	pBC->normal(f)[0]  = vN[node1][1] - vN[node0][1];
+    	pBC->normal(f)[1]  = vN[node0][0] - vN[node1][0];
+    	pBC->length[f]     = sqrt(pBC->normal(f)[0]*pBC->normal(f)[0] +
+    			pBC->normal(f)[1]*pBC->normal(f)[1]);
+    	pBC->normal(f)[0] /= pBC->length[f];
+    	pBC->normal(f)[1] /= pBC->length[f];
 
-    	cout << " outer unit normal at face " << f << ": (" << pBC->normal[f][0] << ", " << pBC->normal[f][1] << ")" << endl;
+    	cout << " outer unit normal at face " << f << ": (" << pBC->normal(f)[0] << ", " << pBC->normal(f)[1] << ")" << endl;
 
     }
 
@@ -174,12 +174,12 @@ void Tsolver::update_baseGeometry ()
 
     // jacobian of transformation from reference element
     for (unsigned int i=0; i<spacedim; i++)
-    	for (unsigned int j=0; j<spacedim; j++) pBC->jac[i][j] = 0.0;
+    	for (unsigned int j=0; j<spacedim; j++) pBC->jac(i,j) = 0.0;
 
     for (unsigned int i=0; i<spacedim; i++)
     	for (unsigned int inode=0; inode<idBC.countNodes(); inode++) {
-    		pBC->jac[i][0] += vN[inode][i]*lag_x[inode];
-    		pBC->jac[i][1] += vN[inode][i]*lag_y[inode];
+    		pBC->jac(i,0) += vN[inode][i]*lag_x[inode];
+    		pBC->jac(i,1) += vN[inode][i]*lag_y[inode];
     	}
 
     // absolute value of determinant of jacobian
@@ -217,18 +217,18 @@ void Tsolver::update_baseGeometry ()
     	for (unsigned int i=0; i<shapedim; i++)
     		for (unsigned int j=0; j<=i; j++)
     			for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
-    				pBC->laplace[i][j] +=
-    						shape.Equadw[iq]*bilin_alaplace (shape.Equads_x[i][iq], shape.Equads_y[i][iq],
-    								shape.Equads_x[j][iq], shape.Equads_y[j][iq],
+    				pBC->laplace(i,j) +=
+    						shape.Equadw[iq]*bilin_alaplace (shape.Equads_x(i,iq), shape.Equads_y(i,iq),
+    								shape.Equads_x(j,iq), shape.Equads_y(j,iq),
     								pBC->jac, pBC->detjacabs, pBC->diffusion_a);
     			}
     } else {
     	for (unsigned int i=0; i<shapedim; i++)
     		for (unsigned int j=0; j<=i; j++)
     			for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
-    				pBC->laplace[i][j] +=
-    						shape.Equadw[iq]*bilin_laplace (shape.Equads_x[i][iq], shape.Equads_y[i][iq],
-    								shape.Equads_x[j][iq], shape.Equads_y[j][iq],
+    				pBC->laplace(i,j) +=
+    						shape.Equadw[iq]*bilin_laplace (shape.Equads_x(i,iq), shape.Equads_y(i,iq),
+    								shape.Equads_x(j,iq), shape.Equads_y(j,iq),
     								pBC->jac, pBC->detjacabs);
     			}
     }
@@ -236,8 +236,8 @@ void Tsolver::update_baseGeometry ()
 	for (unsigned int i=0; i<shapedim; i++)
 		for (unsigned int j=0; j<=i; j++)
 			for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
-				double func=bilin_laplace (shape.Equads_x[i][iq], shape.Equads_y[i][iq],
-						shape.Equads_x[j][iq], shape.Equads_y[j][iq],
+				double func=bilin_laplace (shape.Equads_x(i,iq), shape.Equads_y(i,iq),
+						shape.Equads_x(j,iq), shape.Equads_y(j,iq),
 						pBC->jac, pBC->detjacabs);
 				pBC->laplace.coeffRef(i,j) += shape.Equadw[iq]*func;
 			}
@@ -255,13 +255,13 @@ void Tsolver::update_baseGeometry ()
 			cout << " pBC->laplace["<<i<<"]["<<j<<"]="<< pBC->laplace.coeffRef(i,j) << endl;
 
 	// normal derivatives of shapes at face-quadrature-points
-	det = pBC->jac[0][0]*pBC->jac[1][1] - pBC->jac[1][0]*pBC->jac[0][1];
+	det = pBC->jac(0,0)*pBC->jac(1,1) - pBC->jac(1,0)*pBC->jac(0,1);
 	for (unsigned int i=0; i<shapedim; i++)
 		for (unsigned int iq=0; iq<shape.Fquadraturedim; iq++) {
 
 			// gradient
-			pBC->grad[i][iq][0] = (shape.Fquads_x[i][iq]*pBC->jac[1][1] - shape.Fquads_y[i][iq]*pBC->jac[1][0])/det;
-			pBC->grad[i][iq][1] = (shape.Fquads_y[i][iq]*pBC->jac[0][0] - shape.Fquads_x[i][iq]*pBC->jac[0][1])/det;
+			pBC->grad[i][iq][0] = (shape.Fquads_x(i,iq)*pBC->jac(1,1) - shape.Fquads_y(i,iq)*pBC->jac(1,0))/det;
+			pBC->grad[i][iq][1] = (shape.Fquads_y(i,iq)*pBC->jac(0,0) - shape.Fquads_x(i,iq)*pBC->jac(0,1))/det;
 
 			cout << " grad of shape function " << i << ": (" << pBC->grad[i][iq][0] << ", " << pBC->grad[i][iq][1] << ")" << endl;
 
@@ -273,9 +273,10 @@ void Tsolver::update_baseGeometry ()
 				in = (iq-Fdim*Fquadgaussdim)/(Fchilddim*Fquadgaussdim);
 
 			// normal derivative
-			pBC->normalderi[i][iq] = pBC->grad[i][iq][0] *pBC->normal[in][0] + pBC->grad[i][iq][1]*pBC->normal[in][1];
+			double x = pBC->grad[i][iq][0] * pBC->normal[in][0] + pBC->grad[i][iq][1]*pBC->normal[in][1];
+			pBC->normalderi(i,iq) = x;
 
-			cout << " normal derivative of shape function " << i << " at q-point " << iq << ": " << pBC->normalderi[i][iq] << endl;
+			cout << " normal derivative of shape function " << i << " at q-point " << iq << ": " << pBC->normalderi(i,iq) << endl;
 
 		}
 
@@ -404,7 +405,7 @@ tableNeighbOrient[3][2][1] = undefined;
 tableNeighbOrient[3][2][2] = undefined;
 tableNeighbOrient[3][2][3] = undefined;
 
-  // tableCoarseNeighbGaussbase[4][3][3]
+  // tableCoarseNeighbGaussbase(4,3)[3]
   //////////////////////////////////////////////////////////////
   // tableCoarseNeighbGaussbase[type_idLC][orientation of lc][orientation of nc]
   // Let Gaussbase be the base-number of the Gauss-points in the
@@ -705,7 +706,7 @@ void Tsolver::get_Fcoordinates (const grid_type::id_type& idLC,
   x[0] = 0.0; x[1] = 0.0;
   for (unsigned int ibary = 0; ibary<3; ibary++)
     for (unsigned int j=0; j<spacedim; j++)
-      x[j] += shape.Fquadx[iq][ibary]*nv[ibary][j];
+      x[j] += shape.Fquadx(iq,ibary)*nv[ibary][j];
 };
 
 ////////////////////////////////////////////////////
@@ -719,7 +720,7 @@ void Tsolver::get_Ecoordinates (const grid_type::id_type& idLC,
   x[0] = 0.0; x[1] = 0.0;
   for (unsigned int ibary = 0; ibary<3; ibary++)
     for (unsigned int j=0; j<spacedim; j++)
-      x[j] += shape.Equadx[iq][ibary]*nv[ibary][j];
+      x[j] += shape.Equadx(iq,ibary)*nv[ibary][j];
 };
 
 ////////////////////////////////////////////////////
@@ -731,7 +732,7 @@ void Tsolver::get_Ecoordinates (const Nvector_type & nv,
   x[0] = 0.0; x[1] = 0.0;
   for (unsigned int ibary = 0; ibary<3; ibary++)
     for (unsigned int j=0; j<spacedim; j++)
-      x[j] += shape.Equadx[iq][ibary]*nv[ibary][j];
+      x[j] += shape.Equadx(iq,ibary)*nv[ibary][j];
 };
 
 ////////////////////////////////////////////////////
@@ -1617,7 +1618,7 @@ void Tsolver::assemble_state_normalderivative_Fquad
     v[istate] = 0.0;
     for (unsigned int j=0; j<shapedim; j++)
       v[istate] += u(j,istate)
-                   *pBC->normalderi[j][iquad]/facLevelLength[level];
+                   *pBC->normalderi(j,iquad)/facLevelLength[level];
     }
 };
 
