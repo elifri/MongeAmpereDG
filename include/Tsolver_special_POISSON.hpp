@@ -96,39 +96,6 @@ void Tsolver::assignViews_POISSON(unsigned int & offset) {
 	write_exactsolution_POISSON(0);
 }
 
-// void Tsolver::assignViews_POISSON(unsigned int &LM_size)
-// {
-//
-//     PetscInt offset = 0;
-//
-//     const int LM_blocksize = statedim * shapedim;
-//     LM_size = grid.leafCells().size() * LM_blocksize;
-//
-//     for (grid_type::leafcellmap_type::const_iterator
-// 	 it = grid.leafCells().begin(); it != grid.leafCells().end();
-// 	 ++it) {
-//
-// 	const grid_type::id_type & idLC = grid_type::id(it);
-//
-// 	leafcell_type * pLC = NULL;
-// 	grid.findLeafCell(idLC, pLC);
-//
-// 	pLC->m_offset = offset;
-// 	pLC->n_offset = offset;
-//
-// 	pLC->m_block_size = LM_blocksize;
-// 	pLC->n_block_size = LM_blocksize;
-//
-// 	offset += LM_blocksize;
-//     }
-//
-//     cout << "  LM_size=" << LM_size
-// 	<< ", LM_blocksize=" << LM_blocksize
-// 	<< ", matrix size: " << offset << " x " << offset << endl;
-// }
-
-////////////////////////////////////////////////////
-
 /* @brief initializes the stiffness matrix and lhs for the poisson problem
  *
  *
@@ -141,11 +108,9 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 	unsigned int levelNC = 0;
 	unsigned int iqLC, iqNC, orderLC, orderNC, orientNC;
 	id_type iddad;
-	//   Estate_type w;
-	//   state_type uLC, uNC;
+
 	space_type x, normal;
 	double length;
-	//   , fac;
 
 	leafcell_type *pLC = NULL; // leaf cell
 
@@ -153,8 +118,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 	leafcell_type *pNC = NULL; // neighbor cell
 
 	// loop over all levels from fine to coarse
-	for (unsigned int level = grid.leafCells().countLinks() - 1; level >= 1;
-			--level) {
+	for (unsigned int level = grid.leafCells().countLinks() - 1; level >= 1; --level) {
 
 		// if there is no cell at this level, take next level
 		if (0 == grid.leafCells().size(level))
@@ -207,12 +171,13 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 
 			// bilinear form b (average of normal derivative u * jump phi)
 			grid_type::facehandlevector_type vFh, vOh; // neighbor face number and orientation
-			grid.faceIds(idLC, vF, vFh, vOh); // bool bFoundAll = grid.faceIds (idLC, vF);
+			grid.faceIds(idLC, vF, vFh, vOh);
 			for (unsigned int i = 0; i < idLC.countFaces(); i++) { // loop over faces
 				if (vF[i].isValid()) {
 
 					bool assembleInnerFace = false;
 
+					 //search for neighbour at face i
 					if (grid.findLeafCell(vF[i], pNC)) {
 						if (!pNC->id().flag(0)) { //neighbour cell has not been processed
 							gaussbaseLC = Fquadgaussdim * i;
@@ -470,24 +435,6 @@ double phi(const double x, const double y) {
 
 }
 
-// double w(const double r)
-// {
-//     double d = 0.0;
-//
-//     if (r > 0.0) {
-//      d = exp(-1.0 / sqr(r));
-//     }
-//
-//     return d;
-// }
-//
-// double zeta(const double r)
-// {
-//     double   w1 = w(99.0 / 100.0 - r);
-//     double   w2 = w(r - 1.0 / 100.0);
-//
-//     return w1 / (w1 + w2);
-// }
 
 void Tsolver::get_exacttemperature_POISSON(const space_type & x, state_type & u) // state_type ???
 		{
@@ -527,11 +474,18 @@ void Tsolver::get_exacttemperature_POISSON(const space_type & x, state_type & u)
 	throw("solution not implemented for this problem");
 #endif
 }
+void Tsolver::get_exacttemperature_POISSON(const N_type & x, state_type & u)
+{
+	space_type x2;
+	for (int i = 0; i< x2.size(); ++i)
+		x2(i) = x[i];
+	get_exacttemperature_POISSON(x2,u);
+}
 
 //////////////////////////////////////////////////////////
 
 void Tsolver::get_exacttemperaturenormalderivative_POISSON(const space_type & x,
-		const igpm::tvector<double, 2u, true> & normal, state_type & u_n) // state_type ???
+		const space_type & normal, state_type & u_n) // state_type ???
 		{
 #if (PROBLEM == SIMPLEPOISSON)
 	const double a = 0.3, b = 0.5;
@@ -620,6 +574,14 @@ void Tsolver::get_rhs_POISSON(const space_type & x, state_type & u_rhs) // state
 #else
 	u_rhs[0] = 0;
 #endif
+}
+
+void Tsolver::get_rhs_POISSON(const N_type & x, state_type & u_rhs)
+{
+	space_type x2;
+	for (int i = 0; i< x2.size(); ++i)
+		x2(i) = x[i];
+	get_rhs_POISSON(x2,u_rhs);
 }
 
 //////////////////////////////////////////////////////////
@@ -721,133 +683,13 @@ void Tsolver::time_stepping_POISSON() {
 		Eigen::VectorXd Lrhs, Lsolution;
 		Lrhs.setZero(LM_size);
 		Lsolution.setZero(LM_size);
-//	PetscErrorCode ierr;
 
-		//    ierr = MatCreate(PETSC_COMM_WORLD, &LM);
-		/*
-		 ierr =
-		 MatCreateSeqAIJ(PETSC_COMM_WORLD, LM_size, LM_size, 6 * 4,
-		 PETSC_NULL, &LM);
-		 check_petsc_error(ierr);
-
-		 //    ierr = MatSetSizes(LM, PETSC_DECIDE, PETSC_DECIDE, LM_size, LM_size);
-		 check_petsc_error(ierr);
-
-		 ierr = MatSetFromOptions(LM);
-		 check_petsc_error(ierr);
-
-		 ierr = VecCreate(PETSC_COMM_WORLD, &Lrhs);
-		 check_petsc_error(ierr);
-
-		 ierr = VecSetSizes(Lrhs, PETSC_DECIDE, LM_size);
-		 check_petsc_error(ierr);
-
-		 ierr = VecSetFromOptions(Lrhs);
-		 check_petsc_error(ierr);
-
-		 ierr = VecDuplicate(Lrhs, &Lsolution);
-
-		 */
-		//  for (unsigned int itime=0; itime<Ntimesteps; itime++) {
-		//    update_dt_CFL ();
-		//    cerr << "itime = " << itime << endl;
 		cout << "Assemble linear System..." << flush;
 
 		assemble_POISSON(stabsign, gamma, LM, Lrhs);
 
 		cout << "done. " << fixed << " ? s." << endl;
 
-		//    invert_mass ();
-		//    t += dt;
-
-//	cout << "Final matrix assemble..." << flush;
-//
-//	PetscGetTime(&t2);
-//
-//	ierr = MatAssemblyBegin(LM, MAT_FINAL_ASSEMBLY);
-//	check_petsc_error(ierr);
-//
-//	ierr = MatAssemblyEnd(LM, MAT_FINAL_ASSEMBLY);
-//	check_petsc_error(ierr);
-//
-//	PetscGetTime(&t3);
-//	cout << "done. " << fixed << setprecision(3) << t3 -
-//	    t2 << "s." << endl;
-//
-//	ierr = VecAssemblyBegin(Lrhs);
-//	check_petsc_error(ierr);
-//
-//	ierr = VecAssemblyEnd(Lrhs);
-//	check_petsc_error(ierr);
-//
-//	ierr = VecAssemblyBegin(Lsolution);
-//	check_petsc_error(ierr);
-//
-//	ierr = VecAssemblyEnd(Lsolution);
-//	check_petsc_error(ierr);
-//
-//	PetscViewerSetFormat(PETSC_VIEWER_STDOUT_WORLD,
-//			     PETSC_VIEWER_ASCII_MATLAB);
-//
-//      cout << "loop=" << loop << endl;
-//      cout << "LM=" << endl;
-//      MatView(LM,PETSC_VIEWER_STDOUT_WORLD);
-
-//      cout << "Lrhs=" << endl;
-//      VecView(Lrhs,PETSC_VIEWER_STDOUT_WORLD);
-
-		/*  std::string dir;
-		 cfg.getValue ("general", "outputdir", dir, "");
-
-		 std::string filename;
-		 cfg.getValue ("poisson", "analyze_filename", filename, "matrix.dat");
-
-		 filename=dir+"/"+filename;
-		 if(loop>0) {
-		 filename+="."+NumberToString(loop);
-		 }
-		 filename+=".dat";
-
-		 cout << "Save Matrix in binary format to file "<< filename <<"..." << endl;
-
-		 PetscViewer viewer;
-		 PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename.c_str(),FILE_MODE_WRITE,&viewer);
-		 MatView(LM,viewer);
-		 PetscViewerDestroy(viewer);*/
-
-		//    cout << DLM << endl << Lrhs << endl;
-		//for(int i=1;i<=DLM.numRows();++i)
-		//for(int j=1;j<=DLM.numCols();++j)
-		//if(DLM(i,j)!=0.0)
-		//cout << "M(" << i << "," << j << ") = " << DLM(i,j) << ";" << endl;
-		/*	KSP ksp;
-
-		 ierr = KSPCreate(PETSC_COMM_WORLD, &ksp);
-		 check_petsc_error(ierr);
-
-		 ierr = KSPSetType(ksp, KSPBCGS);
-		 check_petsc_error(ierr);
-
-		 ierr = KSPSetOperators(ksp, LM, LM, DIFFERENT_NONZERO_PATTERN);
-		 check_petsc_error(ierr);*/
-		//
-		//     ierr =   KSPSetTolerances(ksp,1.e-8,1.e-50,PETSC_DEFAULT,PETSC_DEFAULT);
-		//     check_petsc_error(ierr);
-		//
-		/*
-		 ierr = KSPSetFromOptions(ksp);
-		 check_petsc_error(ierr);
-
-		 PC prec;
-
-		 KSPGetPC(ksp, &prec);
-		 PCSetType(prec, PCILU);
-		 PCFactorSetUseDropTolerance(prec, 1e-6, 0.05, 100);
-
-		 KSPSetTolerances(ksp, 1.e-8, PETSC_DEFAULT, PETSC_DEFAULT,
-		 PETSC_DEFAULT);
-
-		 */
 		cout << "Solving linear System..." << endl;
 
 		Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
@@ -859,9 +701,6 @@ void Tsolver::time_stepping_POISSON() {
 		if (solver.info() != Eigen::Success) {
 			std::cerr << "Solving of FEM system failed" << endl;
 		}
-
-//	ierr = KSPSolve(ksp, Lrhs, Lsolution);
-//	check_petsc_error(ierr);
 
 		cout << "done. " << fixed << "? s." << endl;
 
@@ -975,11 +814,6 @@ inline std::string data_encoding(bool binary) {
  */
 void check_file_extension(std::string &name, std::string extension = ".vtu");
 
-/*!
- *
- */
-void base64_from_string(std::string &text, std::ofstream &file);
-
 void base64_from_string(string &text, ofstream &file) {
 
 	typedef insert_linebreaks<base64_from_binary< // convert binary values ot base64 characters
@@ -1020,7 +854,6 @@ void base64_from_vector(
 
 	base64_from_string(text, file);
 }
-
 
 /** Checks if name has correct file extension, if not file extension will be added */
 void check_file_extension(std::string &name, std::string extension) {

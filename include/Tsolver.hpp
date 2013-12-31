@@ -121,9 +121,39 @@ public:
    inline double bilin_adv_2d (double & a, double & b,
                                  double & u_x, double & u_y,
 				 Ejacobian_type &J, double &d_sgn);
+
+   /*! \brief calculates the bilinearform on the lhs of the laplace eq
+    *
+    *\param grad0 gradient of the first function
+    *\param grad1 gradient of the second function
+    *\param J	  Jacobian of the transformation to the reference element
+    *\param d_abs the absolute value of the determinant of J
+    */
+   inline double bilin_laplace (const Eigen::Vector2d &grad0, const Eigen::Vector2d &grad1, const Ejacobian_type &J, const double &d_abs);
+
+   /*! \brief calculates the bilinearform on the lhs of the laplace eq
+    *
+    *\param u0_x  x derivative of the first function
+    *\param u0_y  y derivative of the first function
+    *\param u1_x  x derivative of the second function
+    *\param u1_y  y derivative of the second function
+    *\param J	  Jacobian of the transformation to the reference element
+    *\param d_abs the absolute value of the determinant of J
+    */
    inline double bilin_laplace (const double & u0_x, const double & u0_y,
                                   const double & u1_x, const double & u1_y,
                                   const Ejacobian_type &J, const double &d_abs);
+
+   /*! \brief calculates the bilinearform on the lhs of the eq: \nabla(A*\nabla) = ... where A is a 2x2 matrix
+    *
+    *\param u0_x  x derivative of the first function
+    *\param u0_y  y derivative of the first function
+    *\param u1_x  x derivative of the second function
+    *\param u1_y  y derivative of the second function
+    *\param J	  Jacobian of the transformation to the reference element
+    *\param d_abs the absolute value of the determinant of J
+    *\param a     the matrix A as a vector
+    */
    inline double bilin_alaplace (const double & u0_x, const double & u0_y,
                                         const double & u1_x, const double & u1_y,
                                         const Ejacobian_type & J, const double & d_abs,const igpm::tvector<double,4> & a);
@@ -141,6 +171,15 @@ public:
 
    ///////////////   WRITE MESH DATA    ///////////////
    void write_problem_parameters_GENERAL ();
+
+
+   /*! \brief writes the solution in a vtu file
+    *
+    * \param (string) the name of the file the solution should be written into
+    * \param grid 	  grid
+    * \param int	  ??
+    * \param bool 	  should switch between binary and asccii format is NOT working yet
+    */
    void writeLeafCellVTK(std::string, grid_type&, unsigned int, bool);
    void write_numericalsolution ();
    void write_idset (const grid_type::idset_type & idset);
@@ -172,6 +211,8 @@ public:
                           const unsigned int & iq, space_type & x);
    void get_Ecoordinates (const Nvector_type & nv, const unsigned int & iq,
 			  space_type & x);
+   void get_Ecoordinates (const Nvector_type & nv, const unsigned int & iq,
+			  N_type & x);
 
    ///////////////          IDS         ///////////////
    void writeIds (const int maxids);
@@ -228,9 +269,11 @@ public:
    void assemble_POISSON(const int & STABSIGN, const double & PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs);
    void restore_POISSON (Eigen::VectorXd &solution);
    void get_exacttemperature_POISSON (const space_type & x, state_type & u); // state_type ???
-   void get_exacttemperaturenormalderivative_POISSON (const space_type & x, const igpm::tvector<double, 2u, true> & normal, state_type & u_n);
+   void get_exacttemperature_POISSON (const N_type & x, state_type & u); // state_type ???
+   void get_exacttemperaturenormalderivative_POISSON (const space_type & x, const space_type & normal, state_type & u_n);
 	// state_type ???
    void get_rhs_POISSON (const space_type & x, state_type & u_rhs);  // state_type ???
+   void get_rhs_POISSON (const N_type & x, state_type & u_rhs);  // state_type ???
    void local_dt_POISSON (const value_type & lengthmin, value_type & dt_element);
    void time_stepping_POISSON ();
 

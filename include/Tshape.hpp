@@ -66,23 +66,26 @@ public:
                                     // Not for quadrature !!!
 				    // To get u at nodes, e.g.
 				    // to produce tecplot-datafile.
+
+   //quadrature data for elements
    Equadraturepoint_type  Equadx;   // quadrature points in baryc. coord.
    Emaskquadpoint_type    Emaskx;   // baryc. coord. of quadrature points on
                                     // childs of reference element
    Equadratureweight_type Equadw;   // quadrature weight
    Equadratureshape_type  Equads;   // value of shapes at quadrature points
 
-   Equadratureshape_type  Equads_x, Equads_y;
-                                    // first derivatives of shapes at quadrature points
+   Equadratureshape_type  Equads_x, Equads_y;  // first derivatives of shapes at quadrature points
 
    Equadratureshape_type  Equads_xx, Equads_xy, Equads_yy;
                                     // second derivatives of shapes at quadrature points
 
+   //quadrature data for faces
    Fquadraturepoint_type  Fquadx;   // quadrature points in baryc. coord.
    Fquadratureweight_type Fquadw;   // quadrature weight
    Fquadratureshape_type  Fquads;   // value of shapes at quadrature points
-   Fquadratureshape_type  Fquads_x; // x-der. of shapes at quadrature points
-   Fquadratureshape_type  Fquads_y; // y-der. of shapes at quadrature points
+   Fquadratureshape_type  Fquads_x; // x-der. of shapes at quadrature points in reference element
+   Fquadratureshape_type  Fquads_y; // y-der. of shapes at quadrature points in reference element
+
    Fmidshape_type         Fmids;
    Fmidpoint_type         Fmidx;
    Fmidshape_type         Squads;
@@ -101,8 +104,16 @@ public:
   void read_sc_msa (const std::string data_filename);
   void read_sc (const std::string data_filename);
 
+  /*
+   * ! calculates all powers up to degreedim of x
+   * @parameter x given bases
+   * @parameter xpower xpower(i,j) = x_i ^j
+   */
   inline void get_xpower(const space_type & x, double xpower[spacedim][degreedim+1]);
 
+  /*@brief calculates x value at reference element
+   *
+   */
   inline double shape (int & ishape, const space_type & x);    // x on reference element
   inline double shape_x (int & ishape, const space_type & x);
   inline double shape_y (int & ishape, const space_type & x);
@@ -111,12 +122,6 @@ public:
   inline double shape_xx (int & ishape, const space_type & x);
   inline double shape_xy (int & ishape, const space_type & x);
   inline double shape_yy (int & ishape, const space_type & x);
-
-  /*
-  inline double shape (int & ishape, baryc_type & x);
-  inline double shape_x (int & ishape, baryc_type & x);
-  inline double shape_y (int & ishape, baryc_type & x);
-  */
 
   void initialize_quadrature ();
   void initialize_mass ();
@@ -471,6 +476,7 @@ inline double Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
     }
 };
 */
+
 
 template <typename CONFIG_TYPE, int STATEDIM, int SHAPEDIM, int DEGREEDIM>
 inline void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
@@ -1165,8 +1171,7 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
       mass.A_full(i,j) = 0.0;
 
       for (unsigned int iq=0; iq<Equadraturedim; iq++) {
-        mass.A_full(i,j) +=
-	  Equadw[iq]*bilin_mass (Equads(i,iq), Equads(j,iq), detjacabs);
+        mass.A_full(i,j) +=	  Equadw[iq]*bilin_mass (Equads(i,iq), Equads(j,iq), detjacabs);
       }
 
       if(j<=i)
@@ -1174,11 +1179,12 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
 
     }
   }
-  mass.Cholesky_decomp ();
+//  mass.Cholesky_decomp ();
 
   // mask matrix on reference element:
   ////////////////////////////////////
   {
+
   for (unsigned int i=0; i<4; i++)
     for (unsigned int ish=0; ish<shapedim; ish++)
       for (unsigned int jsh=0; jsh<shapedim; jsh++) mass.B[i][ish][jsh] = 0.0;
@@ -1214,12 +1220,6 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
           refinement_rules[c][j][i] = alpha_cj[i]*childdim;
       }
     }
-/*    for (int c = 0; c < childdim; ++c)
-      for (int j = 0; j < shapedim; ++j) // number of parent shape function
-        for (int i = 0; i < shapedim; ++i) { // number of child shape function
-          cout << "refinement_rules["<<c<<"]["<<j<<"]["<<i<<"]=" << refinement_rules(c,j)[i] << ", refinement_rules_load["<<c<<"]["<<i<<"]["<<j<<"]=" << refinement_rules_load(c,i)[j] << endl;
-          assert(fabs(refinement_rules(c,i)[j]-refinement_rules_load(c,j)[i])<1e-10);
-    }*/
 };
 
 ////////////////////////////////////////////////////
@@ -1268,7 +1268,7 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
 
   Eigen::VectorXd shape_x(shapedim);
 
-  for (int j = 0; j < shapedim; j++)	shape_x.coeffRef(j) = shape(j,xref);
+  for (int j = 0; j < shapedim; j++)	shape_x(j) = shape(j,xref);
 
   v = (u*shape_x).col(istate).sum();
 //  for (int j=0; j<shapedim; j++) v += u.coeff(j,istate)*shape(j, xref);
@@ -1364,11 +1364,14 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
                        state_type & v)
 {
   for (unsigned int istate=0; istate<statedim; istate++) {
-    v[istate] = 0.0;
-    for (unsigned int j=0; j<shapedim; j++)
-      v[istate] += u.coeff(j,istate)*Equads(j,iquad);
-    }
+    v[istate] = u.col(istate).dot(Equads.col(iquad));
+
+// 		old code
+//    for (unsigned int j=0; j<shapedim; j++)
+//      v[istate] += u.coeff(j,istate)*Equads(j,iquad);
+  }
 };
+
 
 ////////////////////////////////////////////////////
 
@@ -1407,8 +1410,7 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
 {
   for (unsigned int istate=0; istate<statedim; istate++) {
     v[istate] = 0.0;
-    for (unsigned int j=0; j<shapedim; j++)
-      v[istate] += u.coeff(j, istate)*Fmids(j,iquad);
+    assemble_state_Fmid(u, istate, iquad, v[istate]);
     }
 };
 
@@ -1482,43 +1484,10 @@ template <typename CONFIG_TYPE, int STATEDIM, int SHAPEDIM, int DEGREEDIM>
 void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
 ::matrix_solve (Emass_type & A, Estate_type & x,
                 Estate_type & b, const int & istate)
-{ // solve the system A*x[istate] = b[istate] with Gauss
-  int perm[shapedim];
-  double sum,q;
-  int k,i_help,i_pivot;
-  for (int i=0; i<shapedim; ++i) { // scale
-    perm[i] = i;
-    sum = 0.0;
-    for (int j=0; j<shapedim; ++j) sum += fabs(A.coeffRef(i,j));//TODO use eigeniterator over non zeros
-    for (int j=0; j<shapedim; ++j) A.coeffRef(i,j) /= sum;
-    b(i, istate) /= sum;
-    }
+{ // solve the system A*x[istate] = b[istate] with Eigen's LU decomposition
 
-  for (k=0; k<shapedim; ++k) { // gauss-reduction
-    i_pivot = k;
-    for (int i=k+1; i<shapedim; ++i)
-      if (fabs(A[perm[i]][k]) > fabs(A[perm[i_pivot]][k])) i_pivot = i;
-
-    i_help = perm[k];
-    perm[k] = perm[i_pivot];
-    perm[i_pivot] = i_help;
-
-    for (int i=k+1; i<shapedim; ++i) {
-      q = A[perm[i]][k]/A[perm[k]][k];
-      for (int j=k+1; j<shapedim; ++j) {
-        A[perm[i]][j] -= q*A[perm[k]][j];
-	}
-      b[perm[i]][istate] -= q*b[perm[k]][istate];
-      }
-    }
-
-  k = shapedim-1;
-  x(k,istate) = b(perm[k],istate)/A[perm[k]][k]; // backward-substitution
-  for (k=shapedim-2; k>=0; --k) {
-    sum = 0.0;
-    for (int j=k+1; j<shapedim; ++j) sum += A[perm[k]][j]*x(j,istate);
-    x(k,istate) = (b[perm[k]][istate]-sum)/A[perm[k]][k];
-    }
+	Eigen::FullPivLU<Emass_type> dec(A);
+	b.col(istate) = dec.sol(x.col(istate));
 };
 
 /////////////////////////////////////////////////////

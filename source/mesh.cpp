@@ -166,8 +166,8 @@ struct grid_config_type
 
   /// basic types
   typedef double                             value_type;
-  //typedef Eigen::Matrix<value_type, spacedim, 1>  space_type;
-  typedef igpm::tvector<value_type, spacedim> space_type;
+  typedef Eigen::Matrix<value_type, spacedim, 1>  space_type;
+//  typedef igpm::tvector<value_type, spacedim> space_type;
 
   /// shape of principal unknown
   typedef Tshape<grid_config_type, statedim, shapedim, degreedim> shape_type;
@@ -177,12 +177,14 @@ struct grid_config_type
   typedef shape_type::Emass_type     Emass_type;
   typedef shape_type::mass_type      mass_type;
 
-  typedef value_type  grad_type[shapedim][Fquadraturedim][spacedim];
+
+  typedef Eigen::Matrix < space_type, Fquadraturedim, 1> gauss_grad_type;
+  typedef Eigen::Matrix< gauss_grad_type, shapedim, 1 >  grad_type; //stores for every shape function at every (face) quadrature node the gradient
   typedef Eigen::Matrix<value_type, shapedim, Fquadraturedim>  Fnormalderivative_type;
   typedef Eigen::Matrix<value_type, spacedim, spacedim> Ejacobian_type;
 
   typedef Eigen::Matrix<value_type, id_type::maxFaces, 1> Fvaluevector_type;
-  typedef Eigen::Matrix<node_type, id_type::maxFaces, 1>  Fnormalvector_type;
+  typedef Eigen::Matrix<space_type, id_type::maxFaces, 1>  Fnormalvector_type;
 
 
   // Where to put these ??? 4=?, 3=? .......

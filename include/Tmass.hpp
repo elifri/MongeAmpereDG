@@ -38,8 +38,11 @@ public:
    MSAmatrix_typ G;
    */
 
+   //sets mass matrix
    void set_massmatrix (const Tmass & m);
+
    void Cholesky_decomp ();
+
    void Cholesky_solve_old (Estate_type & w);
    void Cholesky_solve (Estate_type & w);
    void Cholesky_solve (Estate_type & w, const unsigned int & istate);
@@ -269,12 +272,7 @@ template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
 ::Matrix_multiply (const Estate_type & v, Estate_type & w)
 {
-   int i,j,k;
-   for (i=0; i<statedim; i++) {
-     for (k=0;k<shapedim;k++) w[k][i] = 0.0;
-     for (k=0;k<shapedim;k++)
-       for (j=0;j<shapedim;j++) w[k][i] += A[k][j]*v[j][i];
-     }
+   w = A*v;
 };
 
 //////////////////////////////////////////////////////

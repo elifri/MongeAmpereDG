@@ -76,6 +76,19 @@ inline double Tsolver::bilin_adv_2d (double & a, double & b,
     return ( a*(J(1,1)*u_x - J(1,0)*u_y) + b*(J(0,0)*u_y - J(0,1)*u_x) )*d_sgn;
 };
 
+inline double Tsolver::bilin_laplace (const Eigen::Vector2d &grad0, const Eigen::Vector2d &grad1, const Ejacobian_type &J, const double &d_abs)
+{
+	// calculate gradient of local shape function
+	// by multiplication of transposed inverse of Jacobian of affine transformation
+	// with gradient from shape function on reference cell
+
+	Eigen::MatrixXd J_inv_t = J.transpose().inverse();
+	Eigen::Vector2d phi_i = J_inv_t*grad0;
+	Eigen::Vector2d phi_j = J_inv_t*grad1;
+
+	return phi_i.dot(phi_j);
+}
+
 inline double Tsolver::bilin_laplace (const double & u0_x, const double & u0_y,
                                         const double & u1_x, const double & u1_y,
                                         const Ejacobian_type & J, const double & d_abs)
@@ -83,10 +96,16 @@ inline double Tsolver::bilin_laplace (const double & u0_x, const double & u0_y,
 	// calculate gradient of local shape function
 	// by multiplication of transposed inverse of Jacobian of affine transformation
 	// with gradient from shape function on reference cell
-    const double phi_i_x=  J(1,1)*u0_x - J(1,0)*u0_y, phi_i_y= -J(0,1)*u0_x + J(0,0)*u0_y ;
-    const double phi_j_x=  J(1,1)*u1_x - J(1,0)*u1_y, phi_j_y= -J(0,1)*u1_x + J(0,0)*u1_y ;
 
-    return ( phi_i_x * phi_j_x + phi_i_y * phi_j_y ) / d_abs;
+//	const double phi_i_x=  J(1,1)*u0_x - J(1,0)*u0_y, phi_i_y= -J(0,1)*u0_x + J(0,0)*u0_y ;
+//    const double phi_j_x=  J(1,1)*u1_x - J(1,0)*u1_y, phi_j_y= -J(0,1)*u1_x + J(0,0)*u1_y ;
+//
+//    return ( phi_i_x * phi_j_x + phi_i_y * phi_j_y ) / d_abs;
+
+	return bilin_laplace((Eigen::Vector2d() << u0_x, u0_y).finished(),
+						 (Eigen::Vector2d() << u1_x, u1_y).finished(),
+						 J, d_abs);
+
 };
 
 inline double Tsolver::bilin_alaplace (const double & u0_x, const double & u0_y,
@@ -183,7 +202,7 @@ void Tsolver::update_baseGeometry ()
     	}
 
     // absolute value of determinant of jacobian
-    get_detJacAbs (pBC, pBC->detjacabs); // detjacabs = 2*pBC->volume;
+    get_detJacAbs (pBC, pBC->detjacabs);
     assert(pBC->detjacabs == 2*pBC->volume);
 
     for (unsigned int i=0; i<shapedim; i++)
@@ -233,6 +252,7 @@ void Tsolver::update_baseGeometry ()
     			}
     }
 #else
+    //write laplace matrix: first top half
 	for (unsigned int i=0; i<shapedim; i++)
 		for (unsigned int j=0; j<=i; j++)
 			for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
@@ -243,41 +263,40 @@ void Tsolver::update_baseGeometry ()
 			}
 #endif
 
-// Laplace-matrix is symmetric:
+	// Laplace-matrix is symmetric:
 	for (unsigned int i=0; i<shapedim; i++)
 		for (unsigned int j=0; j<i; j++)
 			pBC->laplace.coeffRef(j,i) = pBC->laplace.coeffRef(i,j);
 
 
-	cout << "display Laplace-matrix for " << pBC->id() <<endl;
-	for (unsigned int i=0; i<shapedim; i++)
-		for (unsigned int j=0; j<shapedim; j++)
-			cout << " pBC->laplace["<<i<<"]["<<j<<"]="<< pBC->laplace.coeffRef(i,j) << endl;
-
 	// normal derivatives of shapes at face-quadrature-points
-	det = pBC->jac(0,0)*pBC->jac(1,1) - pBC->jac(1,0)*pBC->jac(0,1);
-	for (unsigned int i=0; i<shapedim; i++)
-		for (unsigned int iq=0; iq<shape.Fquadraturedim; iq++) {
+	det = pBC->jac(0,0)*pBC->jac(1,1) - pBC->jac(1,0)*pBC->jac(0,1); //determinant of jacobian
+	for (unsigned int i=0; i<shapedim; i++) //loop over all ansatzfcts
+		for (unsigned int iq=0; iq<shape.Fquadraturedim; iq++) { //loop over all quadrature points
 
-			// gradient
-			pBC->grad[i][iq][0] = (shape.Fquads_x(i,iq)*pBC->jac(1,1) - shape.Fquads_y(i,iq)*pBC->jac(1,0))/det;
-			pBC->grad[i][iq][1] = (shape.Fquads_y(i,iq)*pBC->jac(0,0) - shape.Fquads_x(i,iq)*pBC->jac(0,1))/det;
+			// gradient (calculated after chainrule \div phi_ref = J^-1 \div \phi
+			Eigen::Matrix<value_type, 2, 2> J_inv_tr;
+			J_inv_tr << pBC->jac(1,1), -pBC->jac(1,0), -pBC->jac(0,1), pBC->jac(0,0);
+			Eigen::Vector2d grad_ref_cell (shape.Fquads_x(i,iq), shape.Fquads_y(i,iq));
 
-			cout << " grad of shape function " << i << ": (" << pBC->grad[i][iq][0] << ", " << pBC->grad[i][iq][1] << ")" << endl;
+			pBC->grad[i][iq] = J_inv_tr * grad_ref_cell / det;
+
+//			cout << "grad of shape function " << i << ": (" << pBC->grad[i][iq][0] << ", " << pBC->grad[i][iq][1] << ")" << endl;
 
 			// calculate face number
-			unsigned int in=0;
+			unsigned int in = 0;
 			if (iq < Fdim*Fquadgaussdim)
 				in = iq/Fquadgaussdim;
 			else
 				in = (iq-Fdim*Fquadgaussdim)/(Fchilddim*Fquadgaussdim);
 
 			// normal derivative
+			pBC->normalderi(i,iq) = pBC->grad[i][iq].dot( pBC->normal[in]);
+			cout << " new normal derivative of shape function " << i << " at q-point " << iq << ": " << pBC->normalderi(i,iq) << endl;
 			double x = pBC->grad[i][iq][0] * pBC->normal[in][0] + pBC->grad[i][iq][1]*pBC->normal[in][1];
 			pBC->normalderi(i,iq) = x;
 
 			cout << " normal derivative of shape function " << i << " at q-point " << iq << ": " << pBC->normalderi(i,iq) << endl;
-
 		}
 
     // barycentric coordinates of edge-intersection-points for Serror,
@@ -734,6 +753,15 @@ void Tsolver::get_Ecoordinates (const Nvector_type & nv,
     for (unsigned int j=0; j<spacedim; j++)
       x[j] += shape.Equadx(iq,ibary)*nv[ibary][j];
 };
+void Tsolver::get_Ecoordinates (const Nvector_type & nv,
+                               const unsigned int & iq,
+			       N_type & x)
+{
+	space_type n;
+	for (int i = 0;  i < n.size(); ++i)
+		n(i) = x[i];
+	return get_Ecoordinates (nv, iq, n);
+}
 
 ////////////////////////////////////////////////////
 ///////////////                      ///////////////
@@ -1615,10 +1643,10 @@ void Tsolver::assemble_state_normalderivative_Fquad
      const Estate_type & u, state_type & v)
 {
   for (unsigned int istate=0; istate<statedim; istate++) {
-    v[istate] = 0.0;
-    for (unsigned int j=0; j<shapedim; j++)
-      v[istate] += u(j,istate)
-                   *pBC->normalderi(j,iquad)/facLevelLength[level];
+    v[istate] = u.col(istate).dot(pBC->normalderi.col(iquad))/facLevelLength[level];
+    //    for (unsigned int j=0; j<shapedim; j++)
+//      v[istate] += u(j,istate)
+//                   *pBC->normalderi(j,iquad)/facLevelLength[level];
     }
 };
 
