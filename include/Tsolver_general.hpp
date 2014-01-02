@@ -166,10 +166,9 @@ void Tsolver::update_baseGeometry ()
     	node1 = node0+1; if (node1 == idBC.countFaces()) node1 = 0;
 
     	// initialize face length and unit normal of of pBC
-    	pBC->normal_coeffRef(f)[0]  = vN[node1][1] - vN[node0][1];
-    	pBC->normal_coeffRef(f)[1]  = vN[node0][0] - vN[node1][0];
-
-    	pBC->normal_coeffRef(f).normalize();
+    	value_type diff_x = vN[node0][0] - vN[node1][0];
+    	value_type diff_y = vN[node1][1] - vN[node0][1];
+    	pBC->set_normal(f,diff_y,diff_x);
 
     	cout << " outer unit normal at face " << f << ": (" << pBC->get_normal(f)[0] << ", " << pBC->get_normal(f)[1] << ")" << endl;
 

@@ -142,6 +142,13 @@ public:
 	const Fnormalvector_type& get_normal() const { return normal;}
 	const space_type& get_normal(const int i) const{return normal(i);}
 	space_type& normal_coeffRef(const int i) {return normal(i);}
+	void set_normal(const int f, const value_type diff_x, const value_type diff_y)
+	{
+		normal(f)[0] = diff_x;
+		normal(f)[1] = diff_y;
+		length(f) = normal(f).norm();
+		normal(f) /= length(f);
+	}
 
 	const Fnormalderivative_type& get_normalderi() const { return normalderi;}
 	const value_type& get_normalderi(const int i, const int j) const { return normalderi(i,j);}
