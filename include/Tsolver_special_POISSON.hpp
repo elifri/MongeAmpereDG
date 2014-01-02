@@ -143,7 +143,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 					int row = (pLC->m_offset + ieq);
 					int col = (pLC->n_offset + ishape);
-					double val = pBC->laplace.coeffRef(ieq,ishape);
+					double val = pBC->get_laplace(ieq,ishape);
 					LM.coeffRef(row, col) += val;
 				}
 			}
@@ -159,7 +159,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 				for (unsigned int istate = 0; istate < statedim; ++istate) {
 					for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 						int row = pLC->n_offset + ishape;
-						double val = shape.get_Equadw(iq) * pBC->detjacabs
+						double val = shape.get_Equadw(iq) * pBC->get_detjacabs()
 								* facLevelVolume[level] * uLC(istate)
 								* shape.get_Equads(ishape,iq);
 
@@ -208,7 +208,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 
 					if (assembleInnerFace) {
 
-						length = facLevelLength[level] * pBC->length[i]; //calculate actual face length
+						length = facLevelLength[level] * pBC->get_length(i); //calculate actual face length
 						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over gauss nodes
 							iqLC = gaussbaseLC + iq; //index of next gauss node to be processed
 							iqNC = gaussbaseNC + Fquadgaussdim - 1 - iq; //index of next gauss node in neighbour cell to be processed
@@ -227,23 +227,23 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 											* shape.get_Fquadw(iqLC) //quadratur weights
 											* length
 											* shape.get_Fquads(ishape,iqLC) //jump
-											* pBC->normalderi(j,iqLC)
+											* pBC->get_normalderi(j,iqLC)
 											/ facLevelLength[level]; //gradient times normal
 
-									LM.coeffRef(row_LC, col_NC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * pNBC->normalderi(j,iqNC) / facLevelLength[levelNC];
+									LM.coeffRef(row_LC, col_NC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * pNBC->get_normalderi(j,iqNC) / facLevelLength[levelNC];
 
-									LM.coeffRef(row_NC, col_LC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* pBC->normalderi(j,iqLC)	/ facLevelLength[level];
+									LM.coeffRef(row_NC, col_LC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* pBC->get_normalderi(j,iqLC)	/ facLevelLength[level];
 
-									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * pNBC->normalderi(j,iqNC) / facLevelLength[levelNC];
+									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * pNBC->get_normalderi(j,iqNC) / facLevelLength[levelNC];
 
 									// b(phi, u)
-									LM.coeffRef(row_LC, col_LC) += stabsign	* 0.5 * shape.get_Fquadw(iqLC) * length	* pBC->normalderi(ishape,iqLC)	/ facLevelLength[level]	* shape.get_Fquads(j,iqLC);
+									LM.coeffRef(row_LC, col_LC) += stabsign	* 0.5 * shape.get_Fquadw(iqLC) * length	* pBC->get_normalderi(ishape,iqLC)	/ facLevelLength[level]	* shape.get_Fquads(j,iqLC);
 
-									LM.coeffRef(row_LC, col_NC) += stabsign	* -0.5 * shape.get_Fquadw(iqLC) * length * pBC->normalderi(ishape,iqLC) / facLevelLength[level] * shape.get_Fquads(j,iqNC);
+									LM.coeffRef(row_LC, col_NC) += stabsign	* -0.5 * shape.get_Fquadw(iqLC) * length * pBC->get_normalderi(ishape,iqLC) / facLevelLength[level] * shape.get_Fquads(j,iqNC);
 
-									LM.coeffRef(row_NC, col_LC) += stabsign * -0.5 * shape.get_Fquadw(iqLC) * length * pNBC->normalderi(ishape,iqNC) / facLevelLength[levelNC] * shape.get_Fquads(j,iqLC);
+									LM.coeffRef(row_NC, col_LC) += stabsign * -0.5 * shape.get_Fquadw(iqLC) * length * pNBC->get_normalderi(ishape,iqNC) / facLevelLength[levelNC] * shape.get_Fquads(j,iqLC);
 
-									LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.get_Fquadw(iqLC) * length * pNBC->normalderi(ishape,iqNC) / facLevelLength[levelNC] * shape.get_Fquads(j,iqNC);
+									LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.get_Fquadw(iqLC) * length * pNBC->get_normalderi(ishape,iqNC) / facLevelLength[levelNC] * shape.get_Fquads(j,iqNC);
 
 									// b_sigma(u, phi)
 									if (penalty != 0.0) {
@@ -269,14 +269,14 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 					switch (pBC->faceHandles()[i]) {
 					case -1: // Neumann boundary
 						gaussbaseLC = Fquadgaussdim * i;
-						length = facLevelLength[level] * pBC->length[i];
+						length = facLevelLength[level] * pBC->get_length(i);
 						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) {
 							iqLC = gaussbaseLC + iq;
 							get_Fcoordinates(idLC, iqLC, x); // determine x
 
 							state_type uLC;
 							get_exacttemperaturenormalderivative_POISSON(x,
-									pBC->normal[i], uLC); // determine uLC
+									pBC->get_normal(i), uLC); // determine uLC
 
 							//                 for (unsigned int ishape=0; ishape<shapedim; ishape++)
 							//                   pLC->unew[ishape][0] += get_Fquadw(iqLC)*length*uLC(0)*get_Fquads(ishape,iqLC);
@@ -294,7 +294,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 					case -2: // Dirichlet boundary
 						gaussbaseLC = Fquadgaussdim * i;
 						//         length = dt*facLevelLength[level]*pBC->length[i];
-						length = facLevelLength[level] * pBC->length[i];
+						length = facLevelLength[level] * pBC->get_length(i);
 						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) {
 							iqLC = gaussbaseLC + iq;
 							get_Fcoordinates(idLC, iqLC, x); // determine x
@@ -307,7 +307,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 									++ishape) {
 								double val = stabsign * shape.get_Fquadw(iqLC)
 										* length * uLC(0)
-										* pBC->normalderi(ishape,iqLC)
+										* pBC->get_normalderi(ishape,iqLC)
 										/ facLevelLength[level];
 
 								if (penalty != 0.0) {
@@ -329,13 +329,13 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 									// b(u, phi)
 									val = -shape.get_Fquadw(iqLC) * length
 											* shape.get_Fquads(ishape,iqLC)
-											* pBC->normalderi(j,iqLC)
+											* pBC->get_normalderi(j,iqLC)
 											/ facLevelLength[level];
 
 									// b(phi, u)
 									val += stabsign * shape.get_Fquadw(iqLC)
 											* length
-											* pBC->normalderi(ishape,iqLC)
+											* pBC->get_normalderi(ishape,iqLC)
 											/ facLevelLength[level]
 											* shape.get_Fquads(j,iqLC);
 

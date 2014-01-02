@@ -70,6 +70,7 @@ public:
   typedef typename config_type::grid_type              grid_type;
   typedef typename config_type::id_type                id_type;
   typedef typename config_type::value_type             value_type;
+  typedef typename config_type::space_type             space_type;
   typedef typename config_type::leafcellptrvector_type leafcellptrvector_type;
 
   typedef typename config_type::Fvaluevector_type      Fvaluevector_type;
@@ -87,6 +88,7 @@ public:
     degreedim= grid_type::config_type::degreedim
   };
 
+private:
   value_type             volume;
   value_type             detjacabs;
   Fvaluevector_type      length;
@@ -97,6 +99,7 @@ public:
   Ejacobian_type         jac;
   Emass_type             laplace;
 
+public:
   // cstr, id not set yet!!!
   tmybasecell() { }
 
@@ -114,6 +117,41 @@ public:
     os << "0 0 0 0 0 0 0 0 0";
   }
 
+	const value_type& get_detjacabs() const { return detjacabs;}
+	value_type& get_detjacabs() { return detjacabs;}
+
+	const grad_type& get_grad() const {	return grad;}
+	const space_type& get_grad(const int i, const int j) const {return grad(i)(j);}
+	space_type& get_grad(const int i, const int j){return grad(i)(j);}
+
+	const Ejacobian_type& get_jac() const {	return jac;	}
+	const value_type& get_jac(const int i, const int j)const {return jac(i,j);}
+	value_type& get_jac(const int i, const int j) {return jac(i,j);}
+
+	const Emass_type& get_laplace() const { return laplace;}
+	const value_type& get_laplace(const int i, const int j)const {return laplace(i,j);}
+	value_type& get_laplace(const int i, const int j) {return laplace(i,j);}
+
+	void setLaplace(const Emass_type& laplace) { this->laplace = laplace;}
+
+	const Fvaluevector_type& get_length() const { return length;}
+	const value_type& get_length(const int f) const { return length(f);}
+	value_type& get_length(const int f) { return length(f);}
+
+	const Fnormalvector_type& get_normal() const { return normal;}
+	const space_type& get_normal(const int i) const{return normal(i);}
+	space_type& get_normal(const int i) {return normal(i);}
+
+	const Fnormalderivative_type& get_normalderi() const { return normalderi;}
+	const value_type& get_normalderi(const int i, const int j) const { return normalderi(i,j);}
+	value_type& get_normalderi(const int i, const int j) { return normalderi(i,j);}
+
+	const Fvaluevector_type& get_Spoint() const { return Spoint;}
+	const value_type& get_Spoint(const int f) const { return Spoint(f);}
+	value_type& get_Spoint(const int f) { return Spoint(f);}
+
+	const value_type& get_volume() const { return volume;}
+	value_type& get_volume() { return volume;}
 };
 
 //------------------------------------------------------------------------------

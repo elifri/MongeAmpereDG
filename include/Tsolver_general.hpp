@@ -166,38 +166,38 @@ void Tsolver::update_baseGeometry ()
     	node1 = node0+1; if (node1 == idBC.countFaces()) node1 = 0;
 
     	// initialize face length and unit normal of of pBC
-    	pBC->normal(f)[0]  = vN[node1][1] - vN[node0][1];
-    	pBC->normal(f)[1]  = vN[node0][0] - vN[node1][0];
-    	pBC->length[f]     = sqrt(pBC->normal(f)[0]*pBC->normal(f)[0] +
-    			pBC->normal(f)[1]*pBC->normal(f)[1]);
-    	pBC->normal(f)[0] /= pBC->length[f];
-    	pBC->normal(f)[1] /= pBC->length[f];
+    	pBC->get_normal(f)[0]  = vN[node1][1] - vN[node0][1];
+    	pBC->get_normal(f)[1]  = vN[node0][0] - vN[node1][0];
+    	pBC->get_length(f)     = sqrt(pBC->get_normal(f)[0]*pBC->get_normal(f)[0] +
+    			pBC->get_normal(f)[1]*pBC->get_normal(f)[1]); //TODO use eigen to calc length
+    	pBC->get_normal(f)[0] /= pBC->get_length(f);
+    	pBC->get_normal(f)[1] /= pBC->get_length(f);
 
-    	cout << " outer unit normal at face " << f << ": (" << pBC->normal(f)[0] << ", " << pBC->normal(f)[1] << ")" << endl;
+    	cout << " outer unit normal at face " << f << ": (" << pBC->get_normal(f)[0] << ", " << pBC->get_normal(f)[1] << ")" << endl;
 
     }
 
     // initialize volume of pBC
-    pBC->volume = ((vN[1][0] - vN[0][0])*(vN[2][1] - vN[0][1]) -
+    pBC->get_volume() = ((vN[1][0] - vN[0][0])*(vN[2][1] - vN[0][1]) -
     		(vN[2][0] - vN[0][0])*(vN[1][1] - vN[0][1]))*0.5;
 
     // jacobian of transformation from reference element
     for (unsigned int i=0; i<spacedim; i++)
-    	for (unsigned int j=0; j<spacedim; j++) pBC->jac(i,j) = 0.0;
+    	for (unsigned int j=0; j<spacedim; j++) pBC->get_jac(i,j) = 0.0;
 
     for (unsigned int i=0; i<spacedim; i++)
     	for (unsigned int inode=0; inode<idBC.countNodes(); inode++) {
-    		pBC->jac(i,0) += vN[inode][i]*lag_x[inode];
-    		pBC->jac(i,1) += vN[inode][i]*lag_y[inode];
+    		pBC->get_jac(i,0) += vN[inode][i]*lag_x[inode];
+    		pBC->get_jac(i,1) += vN[inode][i]*lag_y[inode];
     	}
 
     // absolute value of determinant of jacobian
-    get_detJacAbs (pBC, pBC->detjacabs);
-    assert(pBC->detjacabs == 2*pBC->volume);
+    get_detJacAbs (pBC, pBC->get_detjacabs());
+    assert(pBC->get_detjacabs() == 2*pBC->get_volume());
 
     for (unsigned int i=0; i<shapedim; i++)
     	for (unsigned int j=0; j<=i; j++) {
-    		pBC->laplace.coeffRef(i,j) = 0.0;
+    		pBC->get_laplace(i,j) = 0.0;
     	}
 
     // Laplace-matrix
@@ -248,28 +248,28 @@ void Tsolver::update_baseGeometry ()
 			for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
 				double func=bilin_laplace (shape.get_Equads_x(i,iq), shape.get_Equads_y(i,iq),
 						shape.get_Equads_x(j,iq), shape.get_Equads_y(j,iq),
-						pBC->jac, pBC->detjacabs);
-				pBC->laplace.coeffRef(i,j) += shape.get_Equadw(iq)*func;
+						pBC->get_jac(), pBC->get_detjacabs());
+				pBC->get_laplace(i,j) += shape.get_Equadw(iq)*func;
 			}
 #endif
 
 	// Laplace-matrix is symmetric:
 	for (unsigned int i=0; i<shapedim; i++)
 		for (unsigned int j=0; j<i; j++)
-			pBC->laplace.coeffRef(j,i) = pBC->laplace.coeffRef(i,j);
+			pBC->get_laplace(j,i) = pBC->get_laplace(i,j);
 
 
 	// normal derivatives of shapes at face-quadrature-points
-	det = pBC->jac(0,0)*pBC->jac(1,1) - pBC->jac(1,0)*pBC->jac(0,1); //determinant of jacobian
+	det = pBC->get_jac(0,0)*pBC->get_jac(1,1) - pBC->get_jac(1,0)*pBC->get_jac(0,1); //determinant of jacobian
 	for (unsigned int i=0; i<shapedim; i++) //loop over all ansatzfcts
 		for (unsigned int iq=0; iq<shape.Fquadraturedim; iq++) { //loop over all quadrature points
 
 			// gradient (calculated after chainrule \div phi_ref = J^-1 \div \phi
 			Eigen::Matrix<value_type, 2, 2> J_inv_tr;
-			J_inv_tr << pBC->jac(1,1), -pBC->jac(1,0), -pBC->jac(0,1), pBC->jac(0,0);
+			J_inv_tr << pBC->get_jac(1,1), -pBC->get_jac(1,0), -pBC->get_jac(0,1), pBC->get_jac(0,0);
 			Eigen::Vector2d grad_ref_cell (shape.get_Fquads_x(i,iq), shape.get_Fquads_y(i,iq));
 
-			pBC->grad[i][iq] = J_inv_tr * grad_ref_cell / det;
+			pBC->get_grad(i,iq) = J_inv_tr * grad_ref_cell / det;
 
 //			cout << "grad of shape function " << i << ": (" << pBC->grad[i][iq][0] << ", " << pBC->grad[i][iq][1] << ")" << endl;
 
@@ -281,9 +281,9 @@ void Tsolver::update_baseGeometry ()
 				in = (iq-Fdim*Fquadgaussdim)/(Fchilddim*Fquadgaussdim);
 
 			// normal derivative
-			pBC->normalderi(i,iq) = pBC->grad[i][iq].dot( pBC->normal[in]);
+			pBC->get_normalderi(i,iq) = pBC->get_grad(i,iq).dot( pBC->get_normal(in));
 
-			cout << " normal derivative of shape function " << i << " at q-point " << iq << ": " << pBC->normalderi(i,iq) << endl;
+//			cout << " normal derivative of shape function " << i << " at q-point " << iq << ": " << pBC->get_normalderi(i,iq) << endl;
 		}
 
     // barycentric coordinates of edge-intersection-points for Serror,
@@ -317,9 +317,9 @@ void Tsolver::update_baseGeometry ()
 
 	// barycentric coordinate associated with inode = iface-1,
 	// for a point lying on iface
-	pBC->Spoint[iface] = 1.0 - rc[0]/rc[1];
+	pBC->get_Spoint(iface) = 1.0 - rc[0]/rc[1];
         }
-      else pBC->Spoint[iface] = -1.0; // ???
+      else pBC->get_Spoint(iface) = -1.0; // ???
       }
     }
 
@@ -698,7 +698,7 @@ void Tsolver::update_centerleaf (id_type& idcenter, leafcell_type* & pcenter,
 
 void Tsolver::get_detJacAbs (const basecell_type* pBC, value_type & detjacabs)
 {
-  detjacabs = 2*pBC->volume;
+  detjacabs = 2*pBC->get_volume();
 };
 
 ////////////////////////////////////////////////////
@@ -1569,7 +1569,7 @@ void Tsolver::invert_volume ()
       const grid_type::basecell_type* pBC = NULL;
       grid.findBaseCellOf (idLC, pBC);
 
-      volume = facLevelVolume[level]*pBC->volume;
+      volume = facLevelVolume[level]*pBC->get_volume();
 
       for (unsigned int i=0; i<statedim; i++) {
         pLC->u(0,i) = (volume*pLC->u(0,i) + pLC->unew(0,i))/volume;
@@ -1603,7 +1603,7 @@ void Tsolver::invert_mass ()
       const grid_type::basecell_type* pBC;
       grid.findBaseCellOf (idLC, pBC);
 
-      fac = pBC->detjacabs*facLevelVolume[level];
+      fac = pBC->get_detjacabs()*facLevelVolume[level];
 
       shape.get_mass().Cholesky_solve (pLC->unew);
       for (unsigned int i=0; i<shapedim; i++)
@@ -1630,7 +1630,7 @@ void Tsolver::assemble_state_normalderivative_Fquad
      const Estate_type & u, state_type & v)
 {
   for (unsigned int istate=0; istate<statedim; istate++) {
-    v[istate] = u.col(istate).dot(pBC->normalderi.col(iquad))/facLevelLength[level];
+    v[istate] = u.col(istate).dot(pBC->get_normalderi().col(iquad))/facLevelLength[level];
     //    for (unsigned int j=0; j<shapedim; j++)
 //      v[istate] += u(j,istate)
 //                   *pBC->normalderi(j,iquad)/facLevelLength[level];
@@ -1796,9 +1796,9 @@ void Tsolver::assemble_indicator_and_limiting ()
 	   else {
 	     // LC:
 	     inode = i-1; if (inode < 0) inode = idLC.countNodes() - 1;
-	     b[inode] = pBC->Spoint[i];
+	     b[inode] = pBC->get_Spoint(i);
 	     inode--; if (inode < 0) inode = idLC.countNodes() - 1;
-	     b[inode] = 1.0 - pBC->Spoint[i];
+	     b[inode] = 1.0 - pBC->get_Spoint(i);
 	     inode--; if (inode < 0) inode = idLC.countNodes() - 1;
 	     b[inode] = 0.0;
 	     xref[0] = b[1];
@@ -1820,7 +1820,7 @@ void Tsolver::assemble_indicator_and_limiting ()
 
 	     // NC:
 	     inode = orientNC-1; if (inode < 0) inode = idLC.countNodes() - 1;
-	     distNC = pNBC->Spoint[orientNC];
+	     distNC = pNBC->get_Spoint(orientNC);
 	     if (level != pNC->id().level()) {
 	       distNC *= 0.5;
 	       if (j % 2 != 0) distNC += 0.5;
