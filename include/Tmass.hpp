@@ -26,9 +26,11 @@ public:
    typedef typename Tshape::Emass_type                   Emass_type;// needed in other class?
    typedef typename Tshape::Emask_type                   Emask_type;// needed in other class?
 
+private:
    Emass_type A, A_full; // call it M_no_details
    Emask_type B; // call it G_no_details
 
+public:
    // typedef double test_type[9];
 
    /* incorporate in this class, or call this class Tmass and inherit Tmass from Tmass
@@ -38,14 +40,22 @@ public:
    MSAmatrix_typ G;
    */
 
+   const Emass_type& get_A() const{return A;}
+   const Emass_type& get_A_full() const{return A_full;}
+   const Emass_type& get_B() const{return B;}
+
+   value_type& A_coeffRef(const int i, const int j){ return A.coeffRef(i,j);}
+   value_type& A_full_coeffRef(const int i, const int j){ return A.coeffRef(i,j);}
+   value_type& B_coeffRef(const int i, const int j, const int k){ return B[i][j][k];}
+
    //sets mass matrix
    void set_massmatrix (const Tmass & m);
 
    void Cholesky_decomp ();
 
    void Cholesky_solve_old (Estate_type & w);
-   void Cholesky_solve (Estate_type & w);
-   void Cholesky_solve (Estate_type & w, const unsigned int & istate);
+   void Cholesky_solve (Estate_type & w) const;
+   void Cholesky_solve (Estate_type & w, const unsigned int & istate) const;
    void Cholesky_solve_old (Estate_type & w, const unsigned int & istate);
    void Cholesky_subsolve (const int & subshapedim, Estate_type & w);
    void Cholesky_multiply (Estate_type & w);
@@ -69,6 +79,7 @@ public:
                            Estate_type & v);
    void fine_to_coarse_max_cv (const EstateCV_type & w,
                                Estate_type & v);
+
 };
 
 //////////////////////////////////////////////////////
@@ -104,7 +115,7 @@ void Tmass<CONFIG_TYPE, Tshape>
 //////////////////////////////////////////////////////
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::Cholesky_solve (Estate_type & w)
+::Cholesky_solve (Estate_type & w) const
  {
 	Eigen::LDLT<Emass_type> chol_decom(A);
 	for (int i = 0; i< statedim; i++)
@@ -133,7 +144,7 @@ void Tmass<CONFIG_TYPE, Tshape>
 
 template <typename CONFIG_TYPE, typename Tshape>
 void Tmass<CONFIG_TYPE, Tshape>
-::Cholesky_solve (Estate_type & w, const unsigned int & istate)
+::Cholesky_solve (Estate_type & w, const unsigned int & istate) const
 {
 	assert (0 < istate && istate < w.cols() && "istate is not within the permitted range!");
 	Eigen::LDLT<Emass_type> chol_decom(A);

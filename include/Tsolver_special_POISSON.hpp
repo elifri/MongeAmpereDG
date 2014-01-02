@@ -41,11 +41,11 @@ void Tsolver::initializeLeafCellData_POISSON() {
 			get_exacttemperature_POISSON(x, v);
 			for (unsigned int istate = 0; istate < statedim; istate++)
 				for (unsigned int ishape = 0; ishape < shapedim; ishape++)
-					pLC->u(ishape,istate) += shape.Equadw[iq] * v[istate]
-							* shape.Equads(ishape,iq);
+					pLC->u(ishape,istate) += shape.get_Equadw(iq) * v[istate]
+							* shape.get_Equads(ishape,iq);
 		}
 
-		shape.mass.Cholesky_solve(pLC->u);
+		shape.get_mass().Cholesky_solve(pLC->u);
 
 		pLC->id().setFlag(0, false);
 	}
@@ -159,9 +159,9 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 				for (unsigned int istate = 0; istate < statedim; ++istate) {
 					for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 						int row = pLC->n_offset + ishape;
-						double val = shape.Equadw[iq] * pBC->detjacabs
+						double val = shape.get_Equadw(iq) * pBC->detjacabs
 								* facLevelVolume[level] * uLC(istate)
-								* shape.Equads(ishape,iq);
+								* shape.get_Equads(ishape,iq);
 
 						Lrhs(row) += val;
 					}
@@ -224,36 +224,36 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 
 									// b(u, phi)
 									LM.coeffRef(row_LC, col_LC) += -0.5 // to average
-											* shape.Fquadw(iqLC) //quadratur weights
+											* shape.get_Fquadw(iqLC) //quadratur weights
 											* length
-											* shape.Fquads(ishape,iqLC) //jump
+											* shape.get_Fquads(ishape,iqLC) //jump
 											* pBC->normalderi(j,iqLC)
 											/ facLevelLength[level]; //gradient times normal
 
-									LM.coeffRef(row_LC, col_NC) += 0.5 * shape.Fquadw(iqLC) * length * shape.Fquads(ishape,iqLC) * pNBC->normalderi(j,iqNC) / facLevelLength[levelNC];
+									LM.coeffRef(row_LC, col_NC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * pNBC->normalderi(j,iqNC) / facLevelLength[levelNC];
 
-									LM.coeffRef(row_NC, col_LC) += 0.5 * shape.Fquadw(iqLC) * length * shape.Fquads(ishape,iqNC)* pBC->normalderi(j,iqLC)	/ facLevelLength[level];
+									LM.coeffRef(row_NC, col_LC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* pBC->normalderi(j,iqLC)	/ facLevelLength[level];
 
-									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.Fquadw(iqLC) * length * shape.Fquads(ishape,iqNC) * pNBC->normalderi(j,iqNC) / facLevelLength[levelNC];
+									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * pNBC->normalderi(j,iqNC) / facLevelLength[levelNC];
 
 									// b(phi, u)
-									LM.coeffRef(row_LC, col_LC) += stabsign	* 0.5 * shape.Fquadw(iqLC) * length	* pBC->normalderi(ishape,iqLC)	/ facLevelLength[level]	* shape.Fquads(j,iqLC);
+									LM.coeffRef(row_LC, col_LC) += stabsign	* 0.5 * shape.get_Fquadw(iqLC) * length	* pBC->normalderi(ishape,iqLC)	/ facLevelLength[level]	* shape.get_Fquads(j,iqLC);
 
-									LM.coeffRef(row_LC, col_NC) += stabsign	* -0.5 * shape.Fquadw(iqLC) * length * pBC->normalderi(ishape,iqLC) / facLevelLength[level] * shape.Fquads(j,iqNC);
+									LM.coeffRef(row_LC, col_NC) += stabsign	* -0.5 * shape.get_Fquadw(iqLC) * length * pBC->normalderi(ishape,iqLC) / facLevelLength[level] * shape.get_Fquads(j,iqNC);
 
-									LM.coeffRef(row_NC, col_LC) += stabsign * -0.5 * shape.Fquadw(iqLC) * length * pNBC->normalderi(ishape,iqNC) / facLevelLength[levelNC] * shape.Fquads(j,iqLC);
+									LM.coeffRef(row_NC, col_LC) += stabsign * -0.5 * shape.get_Fquadw(iqLC) * length * pNBC->normalderi(ishape,iqNC) / facLevelLength[levelNC] * shape.get_Fquads(j,iqLC);
 
-									LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.Fquadw(iqLC) * length * pNBC->normalderi(ishape,iqNC) / facLevelLength[levelNC] * shape.Fquads(j,iqNC);
+									LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.get_Fquadw(iqLC) * length * pNBC->normalderi(ishape,iqNC) / facLevelLength[levelNC] * shape.get_Fquads(j,iqNC);
 
 									// b_sigma(u, phi)
 									if (penalty != 0.0) {
-										LM.coeffRef(row_LC, col_LC) += penalty * shape.Fquadw(iqLC) * shape.Fquads(j,iqLC) * shape.Fquads(ishape,iqLC);
+										LM.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(j,iqLC) * shape.get_Fquads(ishape,iqLC);
 
-										LM.coeffRef(row_LC, col_NC) += -penalty * shape.Fquadw(iqLC) * shape.Fquads(j,iqNC) * shape.Fquads(ishape,iqLC);
+										LM.coeffRef(row_LC, col_NC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(j,iqNC) * shape.get_Fquads(ishape,iqLC);
 
-										LM.coeffRef(row_NC, col_LC) += -penalty * shape.Fquadw(iqLC) * shape.Fquads(j,iqLC) * shape.Fquads(ishape,iqNC);
+										LM.coeffRef(row_NC, col_LC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(j,iqLC) * shape.get_Fquads(ishape,iqNC);
 
-										LM.coeffRef(row_NC, col_NC) += penalty * shape.Fquadw(iqLC) * shape.Fquads(j,iqNC) * shape.Fquads(ishape,iqNC);
+										LM.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(j,iqNC) * shape.get_Fquads(ishape,iqNC);
 
 									}
 								}
@@ -279,14 +279,14 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 									pBC->normal[i], uLC); // determine uLC
 
 							//                 for (unsigned int ishape=0; ishape<shapedim; ishape++)
-							//                   pLC->unew[ishape][0] += Fquadw(iqLC)*length*uLC(0)*Fquads(ishape,iqLC);
+							//                   pLC->unew[ishape][0] += get_Fquadw(iqLC)*length*uLC(0)*get_Fquads(ishape,iqLC);
 
 							// Copy entries for Neumann boundary conditions into right hand side
 							for (unsigned int ishape = 0; ishape < shapedim;
 									++ishape) {
 								Lrhs(pLC->n_offset + ishape) +=
-										shape.Fquadw(iqLC) * length * uLC(0)
-												* shape.Fquads(ishape,iqLC);
+										shape.get_Fquadw(iqLC) * length * uLC(0)
+												* shape.get_Fquads(ishape,iqLC);
 							}
 						}
 						break;
@@ -305,14 +305,14 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 							// Copy entries for Dirichlet boundary conditions into right hand side
 							for (unsigned int ishape = 0; ishape < shapedim;
 									++ishape) {
-								double val = stabsign * shape.Fquadw(iqLC)
+								double val = stabsign * shape.get_Fquadw(iqLC)
 										* length * uLC(0)
 										* pBC->normalderi(ishape,iqLC)
 										/ facLevelLength[level];
 
 								if (penalty != 0.0) {
-									val += penalty * shape.Fquadw(iqLC) * uLC(0)
-											* shape.Fquads(ishape,iqLC);
+									val += penalty * shape.get_Fquadw(iqLC) * uLC(0)
+											* shape.get_Fquads(ishape,iqLC);
 								}
 
 								Lrhs(pLC->n_offset + ishape) += val;
@@ -327,22 +327,22 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 									double val;
 
 									// b(u, phi)
-									val = -shape.Fquadw(iqLC) * length
-											* shape.Fquads(ishape,iqLC)
+									val = -shape.get_Fquadw(iqLC) * length
+											* shape.get_Fquads(ishape,iqLC)
 											* pBC->normalderi(j,iqLC)
 											/ facLevelLength[level];
 
 									// b(phi, u)
-									val += stabsign * shape.Fquadw(iqLC)
+									val += stabsign * shape.get_Fquadw(iqLC)
 											* length
 											* pBC->normalderi(ishape,iqLC)
 											/ facLevelLength[level]
-											* shape.Fquads(j,iqLC);
+											* shape.get_Fquads(j,iqLC);
 
 									if (penalty != 0.0) {
-										val += penalty * shape.Fquadw[iqLC]
-												* shape.Fquads(ishape,iqLC)
-												* shape.Fquads(j,iqLC);
+										val += penalty * shape.get_Fquadw(iqLC)
+												* shape.get_Fquads(ishape,iqLC)
+												* shape.get_Fquads(j,iqLC);
 									}
 
 									LM.coeffRef(row, col) += val;
@@ -613,7 +613,9 @@ void Tsolver::time_stepping_POISSON() {
 	cout << "Using refine_eps=" << refine_eps << " and coarsen_eps="
 			<< coarsen_eps << "." << endl;
 
+	igpm::processtimer pt;
 	cout << "Starting time_stepping_POISSON" << endl;
+
 	//  int refine_count = 0;
 	//  value_type t = 0.0;
 	//  dt = 1e10;
@@ -675,9 +677,10 @@ void Tsolver::time_stepping_POISSON() {
 		unsigned int LM_size;
 
 		cout << "Assign matrix coordinates..." << endl;
+		pt.start();
 		assignViews_POISSON(LM_size);
-
-		cout << "done. " << fixed << "? s." << endl;
+		pt.stop();
+		cout << "done. " << pt << " s." << endl;
 
 		Eigen::SparseMatrix<double> LM(LM_size, LM_size);
 		Eigen::VectorXd Lrhs, Lsolution;
@@ -685,13 +688,14 @@ void Tsolver::time_stepping_POISSON() {
 		Lsolution.setZero(LM_size);
 
 		cout << "Assemble linear System..." << flush;
-
+		pt.start();
 		assemble_POISSON(stabsign, gamma, LM, Lrhs);
-
-		cout << "done. " << fixed << " ? s." << endl;
+		pt.stop();
+		cout << "done. " << pt << " s." << endl;
 
 		cout << "Solving linear System..." << endl;
 
+		pt.start();
 		Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
 		solver.compute(LM);
 		if (solver.info() != Eigen::Success) {
@@ -701,8 +705,8 @@ void Tsolver::time_stepping_POISSON() {
 		if (solver.info() != Eigen::Success) {
 			std::cerr << "Solving of FEM system failed" << endl;
 		}
-
-		cout << "done. " << fixed << "? s." << endl;
+		pt.stop();
+		cout << "done. " << pt << " s." << endl;
 
 		/*
 		 KSPConvergedReason reason;

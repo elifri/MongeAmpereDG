@@ -165,8 +165,8 @@ struct grid_config_type
   typedef grid_config_type::antecellptrvector_type antecellptrvector_type;
 
   /// basic types
-  typedef double                             value_type;
-  typedef Eigen::Matrix<value_type, spacedim, 1>  space_type;
+  typedef double                                   value_type;
+  typedef Eigen::Matrix<value_type, spacedim, 1>   space_type;
 //  typedef igpm::tvector<value_type, spacedim> space_type;
 
   /// shape of principal unknown

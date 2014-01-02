@@ -60,7 +60,8 @@ public:
   typedef Eigen::Matrix<value_type, shapedim, childdim> Scentershape_type;
   typedef Eigen::Matrix<value_type, childdim, barycdim> Scenterpoint_type;
 
-   mass_type mass;
+private:
+  mass_type mass;
 
    Nvalueshape_type       Nvalues;  // values of shapes at nodes
                                     // Not for quadrature !!!
@@ -93,7 +94,6 @@ public:
    Scentershape_type      Scenters;
    Scenterpoint_type      Scenterx;
 
-   private:
    igpm::tvector<igpm::tvector<double,shapedim>,shapedim> sc; // shape coefficients in monomial basis (better name???)
 
    igpm::tvector<igpm::tvector<igpm::tvector<double,shapedim>,shapedim>,childdim> refinement_rules; // double refinement_rules(childdim,shapedim)[shapedim];
@@ -175,6 +175,47 @@ public:
   inline const double nodal_factor(const unsigned int shape, const unsigned int node);
   inline const double cobLagrange_factor(const unsigned int shape1, const unsigned int shape2);
 
+  const mass_type& get_mass() const { return mass;}
+
+	Equadratureshape_type get_Equads() const { return Equads;}
+	const value_type& get_Equads(const int i, const int j) const{	return Equads(i,j);}
+	value_type& set_Equads(const int i, const int j){	return Equads(i,j);}
+
+	Equadratureshape_type get_Equads_x() const { return Equads_x;}
+	const value_type& get_Equads_x(const int i, const int j) const{	return Equads_x(i,j);}
+	value_type& set_Equads_x(const int i, const int j){	return Equads_x(i,j);}
+
+	Equadratureshape_type get_Equads_y() const { return Equads_y;}
+	const value_type& get_Equads_y(const int i, const int j) const{	return Equads_y(i,j);}
+	value_type& set_Equads_y(const int i, const int j){	return Equads_y(i,j);}
+
+	Equadratureshape_type get_Equadw() const { return Equadw;}
+	const value_type& get_Equadw(const int i) const{	return Equadw(i);}
+	value_type& set_Equadw(const int i){	return Equadw(i);}
+
+	Equadraturepoint_type getEquadx() const { return Equadx;}
+	const value_type& get_Equadx(const int i, const int j) const{	return Equadx(i,j);}
+	value_type& set_Equadx(const int i, const int j){	return Equadx(i,j);}
+
+	Fquadratureshape_type getFquads() const { return Fquads;}
+	const value_type& get_Fquads(const int i, const int j) const{	return Fquads(i,j);}
+	value_type& set_Fquads(const int i, const int j){	return Fquads(i,j);}
+
+	Fquadratureshape_type getFquads_x() const { return Fquads_x;}
+	const value_type& get_Fquads_x(const int i, const int j) const{	return Fquads_x(i,j);}
+	value_type& set_Fquads_x(const int i, const int j){	return Fquads_x(i,j);}
+
+	Fquadratureshape_type getFquads_y() const { return Fquads_y;}
+	const value_type& get_Fquads_y(const int i, const int j) const{	return Fquads_y(i,j);}
+	value_type& set_Fquads_y(const int i, const int j){	return Fquads_y(i,j);}
+
+	Fquadratureweight_type getFquadw() const { return Fquadw;}
+	const value_type& get_Fquadw(const int i) const{	return Fquadw(i);}
+	value_type& set_Fquadw(const int i){	return Fquadw(i);}
+
+	Fquadraturepoint_type getFquadx() const { return Fquadx;}
+	const value_type& get_Fquadx(const int i, const int j) const{	return Fquadx(i,j);}
+	value_type& set_Fquadx(const int i, const int j){	return Fquadx(i,j);}
 };
 
 
@@ -1167,15 +1208,15 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
   for (unsigned int i=0; i<shapedim; i++) {
     for (unsigned int j=0; j<shapedim; j++) {
 
-      mass.A.coeffRef(i,j) = 0.0;
-      mass.A_full(i,j) = 0.0;
+      mass.A_coeffRef(i,j) = 0.0;
+      mass.A_full_coeffRef(i,j) = 0.0;
 
       for (unsigned int iq=0; iq<Equadraturedim; iq++) {
-        mass.A_full(i,j) +=	  Equadw[iq]*bilin_mass (Equads(i,iq), Equads(j,iq), detjacabs);
+        mass.A_full_coeffRef(i,j) +=	  Equadw[iq]*bilin_mass (Equads(i,iq), Equads(j,iq), detjacabs);
       }
 
       if(j<=i)
-        mass.A(i,j)=mass.A_full(i,j);
+        mass.A_coeffRef(i,j)=mass.A_full_coeffRef(i,j);
 
     }
   }
@@ -1187,7 +1228,7 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
 
   for (unsigned int i=0; i<4; i++)
     for (unsigned int ish=0; ish<shapedim; ish++)
-      for (unsigned int jsh=0; jsh<shapedim; jsh++) mass.B[i][ish][jsh] = 0.0;
+      for (unsigned int jsh=0; jsh<shapedim; jsh++) mass.B_coeffRef(i,ish,jsh) = 0.0;
 
   detjacabs = 1.0/double(childdim); // because child_volume = reference_volume/childdim
   value_type phi;
@@ -1199,13 +1240,11 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
         phi = shape (ish, x);  // shape on reference element
 	// value of shape on child is Equads(j,iq)
         for (unsigned int jsh=0; jsh<shapedim; jsh++)
-          mass.B[i][ish][jsh] +=
+          mass.B_coeffRef(i,ish,jsh) +=
 	    Equadw[iq]*bilin_mass (phi, Equads(jsh,iq), detjacabs);
 	}
       }
   }
-
-
 
       /// calculate refinement rules
     for (int j = 0; j < shapedim; ++j) // number of parent shape function
@@ -1214,7 +1253,7 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
       {
         Eshape_type alpha_cj;
         for (int i = 0; i < shapedim; ++i)  // number of child shape function
-          alpha_cj[i]=mass.B[c][j][i];
+          alpha_cj[i]=mass.B_coeffRef(c,j,i);
         mass.Cholesky_solve(alpha_cj);
         for (int i = 0; i < shapedim; ++i)  // number of child shape function
           refinement_rules[c][j][i] = alpha_cj[i]*childdim;

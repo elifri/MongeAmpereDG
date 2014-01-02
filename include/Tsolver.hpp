@@ -158,10 +158,6 @@ public:
                                         const double & u1_x, const double & u1_y,
                                         const Ejacobian_type & J, const double & d_abs,const igpm::tvector<double,4> & a);
 
-   ///////////////    LINEAR ALGEBRA    ///////////////
-   void Matrix_multiply (const Emass_type & A, const Estate_type & v,
-                         Estate_type & w);
-
    ///////////////    WRITE_TYPES    ///////////////
    void write_space_type (const space_type & x);
 

@@ -12,16 +12,6 @@
    }
 */
 
-////////////////////////////////////////////////////
-///////////////                      ///////////////
-///////////////    LINEAR ALGEBRA    ///////////////
-///////////////                      ///////////////
-////////////////////////////////////////////////////
-
-void Tsolver::Matrix_multiply (const Emass_type & A, const Estate_type & v, Estate_type & w)
-{
-	w = A*v;
-};
 /*
 ////////////////////////////////////////////////////
 ///////////////                      ///////////////
@@ -256,10 +246,10 @@ void Tsolver::update_baseGeometry ()
 	for (unsigned int i=0; i<shapedim; i++)
 		for (unsigned int j=0; j<=i; j++)
 			for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
-				double func=bilin_laplace (shape.Equads_x(i,iq), shape.Equads_y(i,iq),
-						shape.Equads_x(j,iq), shape.Equads_y(j,iq),
+				double func=bilin_laplace (shape.get_Equads_x(i,iq), shape.get_Equads_y(i,iq),
+						shape.get_Equads_x(j,iq), shape.get_Equads_y(j,iq),
 						pBC->jac, pBC->detjacabs);
-				pBC->laplace.coeffRef(i,j) += shape.Equadw[iq]*func;
+				pBC->laplace.coeffRef(i,j) += shape.get_Equadw(iq)*func;
 			}
 #endif
 
@@ -277,7 +267,7 @@ void Tsolver::update_baseGeometry ()
 			// gradient (calculated after chainrule \div phi_ref = J^-1 \div \phi
 			Eigen::Matrix<value_type, 2, 2> J_inv_tr;
 			J_inv_tr << pBC->jac(1,1), -pBC->jac(1,0), -pBC->jac(0,1), pBC->jac(0,0);
-			Eigen::Vector2d grad_ref_cell (shape.Fquads_x(i,iq), shape.Fquads_y(i,iq));
+			Eigen::Vector2d grad_ref_cell (shape.get_Fquads_x(i,iq), shape.get_Fquads_y(i,iq));
 
 			pBC->grad[i][iq] = J_inv_tr * grad_ref_cell / det;
 
@@ -479,7 +469,7 @@ void Tsolver::set_leafcellmassmatrix ()
 {
   grid_type::leafcellmap_type::iterator it=grid.leafCells().begin();
   grid_type::leafcell_type * const pLC = &grid_type::cell(it);
-  pLC->set_mass (shape.mass);
+  pLC->set_mass (shape.get_mass());
 };
 
 ////////////////////////////////////////////////////
@@ -722,7 +712,7 @@ void Tsolver::get_Fcoordinates (const grid_type::id_type& idLC,
   x[0] = 0.0; x[1] = 0.0;
   for (unsigned int ibary = 0; ibary<3; ibary++)
     for (unsigned int j=0; j<spacedim; j++)
-      x[j] += shape.Fquadx(iq,ibary)*nv[ibary][j];
+      x[j] += shape.get_Fquadx(iq,ibary)*nv[ibary][j];
 };
 
 ////////////////////////////////////////////////////
@@ -736,7 +726,7 @@ void Tsolver::get_Ecoordinates (const grid_type::id_type& idLC,
   x[0] = 0.0; x[1] = 0.0;
   for (unsigned int ibary = 0; ibary<3; ibary++)
     for (unsigned int j=0; j<spacedim; j++)
-      x[j] += shape.Equadx(iq,ibary)*nv[ibary][j];
+      x[j] += shape.get_Equadx(iq,ibary)*nv[ibary][j];
 };
 
 ////////////////////////////////////////////////////
@@ -748,7 +738,7 @@ void Tsolver::get_Ecoordinates (const Nvector_type & nv,
   x[0] = 0.0; x[1] = 0.0;
   for (unsigned int ibary = 0; ibary<3; ibary++)
     for (unsigned int j=0; j<spacedim; j++)
-      x[j] += shape.Equadx(iq,ibary)*nv[ibary][j];
+      x[j] += shape.get_Equadx(iq,ibary)*nv[ibary][j];
 };
 void Tsolver::get_Ecoordinates (const Nvector_type & nv,
                                const unsigned int & iq,
@@ -1615,7 +1605,7 @@ void Tsolver::invert_mass ()
 
       fac = pBC->detjacabs*facLevelVolume[level];
 
-      shape.mass.Cholesky_solve (pLC->unew);
+      shape.get_mass().Cholesky_solve (pLC->unew);
       for (unsigned int i=0; i<shapedim; i++)
         for (unsigned int j=0; j<statedim; j++) {
 	  pLC->u(i,j) = pLC->unew(i,j)/fac;
