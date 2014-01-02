@@ -168,10 +168,8 @@ void Tsolver::update_baseGeometry ()
     	// initialize face length and unit normal of of pBC
     	pBC->normal_coeffRef(f)[0]  = vN[node1][1] - vN[node0][1];
     	pBC->normal_coeffRef(f)[1]  = vN[node0][0] - vN[node1][0];
-    	pBC->set_length(f, sqrt(pBC->get_normal(f)[0]*pBC->get_normal(f)[0] +
-    			pBC->get_normal(f)[1]*pBC->get_normal(f)[1])); //TODO use eigen to calc length
-    	pBC->normal_coeffRef(f)[0] /= pBC->get_length(f);
-    	pBC->normal_coeffRef(f)[1] /= pBC->get_length(f);
+
+    	pBC->normal_coeffRef(f).normalize();
 
     	cout << " outer unit normal at face " << f << ": (" << pBC->get_normal(f)[0] << ", " << pBC->get_normal(f)[1] << ")" << endl;
 
