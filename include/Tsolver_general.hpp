@@ -166,38 +166,38 @@ void Tsolver::update_baseGeometry ()
     	node1 = node0+1; if (node1 == idBC.countFaces()) node1 = 0;
 
     	// initialize face length and unit normal of of pBC
-    	pBC->get_normal(f)[0]  = vN[node1][1] - vN[node0][1];
-    	pBC->get_normal(f)[1]  = vN[node0][0] - vN[node1][0];
-    	pBC->get_length(f)     = sqrt(pBC->get_normal(f)[0]*pBC->get_normal(f)[0] +
-    			pBC->get_normal(f)[1]*pBC->get_normal(f)[1]); //TODO use eigen to calc length
-    	pBC->get_normal(f)[0] /= pBC->get_length(f);
-    	pBC->get_normal(f)[1] /= pBC->get_length(f);
+    	pBC->normal_coeffRef(f)[0]  = vN[node1][1] - vN[node0][1];
+    	pBC->normal_coeffRef(f)[1]  = vN[node0][0] - vN[node1][0];
+    	pBC->set_length(f, sqrt(pBC->get_normal(f)[0]*pBC->get_normal(f)[0] +
+    			pBC->get_normal(f)[1]*pBC->get_normal(f)[1])); //TODO use eigen to calc length
+    	pBC->normal_coeffRef(f)[0] /= pBC->get_length(f);
+    	pBC->normal_coeffRef(f)[1] /= pBC->get_length(f);
 
     	cout << " outer unit normal at face " << f << ": (" << pBC->get_normal(f)[0] << ", " << pBC->get_normal(f)[1] << ")" << endl;
 
     }
 
     // initialize volume of pBC
-    pBC->get_volume() = ((vN[1][0] - vN[0][0])*(vN[2][1] - vN[0][1]) -
-    		(vN[2][0] - vN[0][0])*(vN[1][1] - vN[0][1]))*0.5;
+    pBC->set_volume(((vN[1][0] - vN[0][0])*(vN[2][1] - vN[0][1]) -
+    		(vN[2][0] - vN[0][0])*(vN[1][1] - vN[0][1]))*0.5);
 
     // jacobian of transformation from reference element
     for (unsigned int i=0; i<spacedim; i++)
-    	for (unsigned int j=0; j<spacedim; j++) pBC->get_jac(i,j) = 0.0;
+    	for (unsigned int j=0; j<spacedim; j++) pBC->jac_coeffRef(i,j) = 0.0;
 
     for (unsigned int i=0; i<spacedim; i++)
     	for (unsigned int inode=0; inode<idBC.countNodes(); inode++) {
-    		pBC->get_jac(i,0) += vN[inode][i]*lag_x[inode];
-    		pBC->get_jac(i,1) += vN[inode][i]*lag_y[inode];
+    		pBC->jac_coeffRef(i,0) += vN[inode][i]*lag_x[inode];
+    		pBC->jac_coeffRef(i,1) += vN[inode][i]*lag_y[inode];
     	}
 
     // absolute value of determinant of jacobian
-    get_detJacAbs (pBC, pBC->get_detjacabs());
+    get_detJacAbs (pBC, pBC->detjacabs_Ref());
     assert(pBC->get_detjacabs() == 2*pBC->get_volume());
 
     for (unsigned int i=0; i<shapedim; i++)
     	for (unsigned int j=0; j<=i; j++) {
-    		pBC->get_laplace(i,j) = 0.0;
+    		pBC->laplace_coeffRef(i,j) = 0.0;
     	}
 
     // Laplace-matrix
@@ -249,14 +249,14 @@ void Tsolver::update_baseGeometry ()
 				double func=bilin_laplace (shape.get_Equads_x(i,iq), shape.get_Equads_y(i,iq),
 						shape.get_Equads_x(j,iq), shape.get_Equads_y(j,iq),
 						pBC->get_jac(), pBC->get_detjacabs());
-				pBC->get_laplace(i,j) += shape.get_Equadw(iq)*func;
+				pBC->laplace_coeffRef(i,j) += shape.get_Equadw(iq)*func;
 			}
 #endif
 
 	// Laplace-matrix is symmetric:
 	for (unsigned int i=0; i<shapedim; i++)
 		for (unsigned int j=0; j<i; j++)
-			pBC->get_laplace(j,i) = pBC->get_laplace(i,j);
+			pBC->laplace_coeffRef(j,i) = pBC->get_laplace(i,j);
 
 
 	// normal derivatives of shapes at face-quadrature-points
@@ -269,7 +269,7 @@ void Tsolver::update_baseGeometry ()
 			J_inv_tr << pBC->get_jac(1,1), -pBC->get_jac(1,0), -pBC->get_jac(0,1), pBC->get_jac(0,0);
 			Eigen::Vector2d grad_ref_cell (shape.get_Fquads_x(i,iq), shape.get_Fquads_y(i,iq));
 
-			pBC->get_grad(i,iq) = J_inv_tr * grad_ref_cell / det;
+			pBC->grad_coeffRef(i,iq) = J_inv_tr * grad_ref_cell / det;
 
 //			cout << "grad of shape function " << i << ": (" << pBC->grad[i][iq][0] << ", " << pBC->grad[i][iq][1] << ")" << endl;
 
@@ -281,7 +281,7 @@ void Tsolver::update_baseGeometry ()
 				in = (iq-Fdim*Fquadgaussdim)/(Fchilddim*Fquadgaussdim);
 
 			// normal derivative
-			pBC->get_normalderi(i,iq) = pBC->get_grad(i,iq).dot( pBC->get_normal(in));
+			pBC->normalderi_coeffRef(i,iq) = pBC->get_grad(i,iq).dot( pBC->get_normal(in));
 
 //			cout << " normal derivative of shape function " << i << " at q-point " << iq << ": " << pBC->get_normalderi(i,iq) << endl;
 		}
@@ -317,9 +317,9 @@ void Tsolver::update_baseGeometry ()
 
 	// barycentric coordinate associated with inode = iface-1,
 	// for a point lying on iface
-	pBC->get_Spoint(iface) = 1.0 - rc[0]/rc[1];
+	pBC->set_Spoint(iface, 1.0 - rc[0]/rc[1]);
         }
-      else pBC->get_Spoint(iface) = -1.0; // ???
+      else pBC->set_Spoint(iface, -1.0); // ???
       }
     }
 

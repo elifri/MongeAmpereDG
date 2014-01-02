@@ -118,40 +118,41 @@ public:
   }
 
 	const value_type& get_detjacabs() const { return detjacabs;}
-	value_type& get_detjacabs() { return detjacabs;}
+	value_type& detjacabs_Ref() { return detjacabs;}
+	void set_detjacabs(const value_type detjacabs) { this->detjacabs = detjacabs;}
 
 	const grad_type& get_grad() const {	return grad;}
 	const space_type& get_grad(const int i, const int j) const {return grad(i)(j);}
-	space_type& get_grad(const int i, const int j){return grad(i)(j);}
+	space_type& grad_coeffRef(const int i, const int j){return grad(i)(j);}
 
 	const Ejacobian_type& get_jac() const {	return jac;	}
 	const value_type& get_jac(const int i, const int j)const {return jac(i,j);}
-	value_type& get_jac(const int i, const int j) {return jac(i,j);}
+	value_type& jac_coeffRef(const int i, const int j) {return jac(i,j);}
 
 	const Emass_type& get_laplace() const { return laplace;}
 	const value_type& get_laplace(const int i, const int j)const {return laplace(i,j);}
-	value_type& get_laplace(const int i, const int j) {return laplace(i,j);}
+	value_type& laplace_coeffRef(const int i, const int j) {return laplace(i,j);}
 
 	void setLaplace(const Emass_type& laplace) { this->laplace = laplace;}
 
 	const Fvaluevector_type& get_length() const { return length;}
 	const value_type& get_length(const int f) const { return length(f);}
-	value_type& get_length(const int f) { return length(f);}
+	void set_length(const int f, value_type length) { this->length(f) = length;}
 
 	const Fnormalvector_type& get_normal() const { return normal;}
 	const space_type& get_normal(const int i) const{return normal(i);}
-	space_type& get_normal(const int i) {return normal(i);}
+	space_type& normal_coeffRef(const int i) {return normal(i);}
 
 	const Fnormalderivative_type& get_normalderi() const { return normalderi;}
 	const value_type& get_normalderi(const int i, const int j) const { return normalderi(i,j);}
-	value_type& get_normalderi(const int i, const int j) { return normalderi(i,j);}
+	value_type& normalderi_coeffRef(const int i, const int j) { return normalderi(i,j);}
 
 	const Fvaluevector_type& get_Spoint() const { return Spoint;}
 	const value_type& get_Spoint(const int f) const { return Spoint(f);}
-	value_type& get_Spoint(const int f) { return Spoint(f);}
+	void set_Spoint(const int f, value_type spoint) { this->Spoint(f) = spoint;}
 
 	const value_type& get_volume() const { return volume;}
-	value_type& get_volume() { return volume;}
+	void set_volume(const value_type volume) { this->volume = volume;}
 };
 
 //------------------------------------------------------------------------------
