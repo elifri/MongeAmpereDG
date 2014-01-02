@@ -189,6 +189,10 @@ public:
    void set_leafcellmassmatrix ();
    void get_normal_length (const Nvector_type & nv, const unsigned int & i,
                           space_type & normal, double & length);
+
+   /*! \brief determine physical coordinates of barycebtric coordinates in cell idLC
+    *
+    */
    void get_coordinates (const grid_type::id_type& idLC,
                          const baryc_type& baryc, space_type & x);
    void get_center (const Nvector_type & nv, space_type & center);
@@ -197,13 +201,25 @@ public:
                             grid_type::id_type & idcenter, space_type & center);
    void get_closest_basecenter (const space_type & x, grid_type::id_type & idbase);
    //////////
-   void get_closest_basecenter (const space_type & x, grid_type::id_type & idcenter,                                 space_type & center);
+   void get_closest_basecenter (const space_type & x, grid_type::id_type & idcenter, space_type & center);
+   /*!  idcenter is a base or ante cell, and we search the center-child which is a leafcell
+    *
+    */
    void find_centerleaf (id_type& idcenter, leafcell_type* & pc, space_type & xc);
+
+   /*!idcenter is a base or ante cell, and we search the center-child which is a leafcell
+    */
    void find_centerleaf_of_base (const id_type& idbase, leafcell_type* & pc,
                                  space_type & xc);
+
+   /*! idcenter has been a leafcell before adaptation,
+    * and we search the center-child/dad which is a leafcell
+    */
    void update_centerleaf (id_type& idcenter, leafcell_type* & pcenter,
                            space_type & xc);
    //////////
+   /*! \brief calculates the determinant of the Jacobian of the transformation to ref element
+   */
    void get_detJacAbs (const basecell_type* pBC, value_type & detjacabs);
    void get_Fcoordinates (const grid_type::id_type& idLC,
                           const unsigned int & iq, space_type & x);

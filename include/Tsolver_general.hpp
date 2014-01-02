@@ -292,9 +292,6 @@ void Tsolver::update_baseGeometry ()
 
 			// normal derivative
 			pBC->normalderi(i,iq) = pBC->grad[i][iq].dot( pBC->normal[in]);
-			cout << " new normal derivative of shape function " << i << " at q-point " << iq << ": " << pBC->normalderi(i,iq) << endl;
-			double x = pBC->grad[i][iq][0] * pBC->normal[in][0] + pBC->grad[i][iq][1]*pBC->normal[in][1];
-			pBC->normalderi(i,iq) = x;
 
 			cout << " normal derivative of shape function " << i << " at q-point " << iq << ": " << pBC->normalderi(i,iq) << endl;
 		}
