@@ -189,7 +189,7 @@ private:
 	const value_type& get_Equads_y(const int i, const int j) const{	return Equads_y(i,j);}
 	value_type& set_Equads_y(const int i, const int j){	return Equads_y(i,j);}
 
-	Equadratureshape_type get_Equadw() const { return Equadw;}
+	Equadratureweight_type get_Equadw() const { return Equadw;}
 	const value_type& get_Equadw(const int i) const{	return Equadw(i);}
 	value_type& set_Equadw(const int i){	return Equadw(i);}
 

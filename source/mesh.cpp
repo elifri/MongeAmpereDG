@@ -176,6 +176,8 @@ struct grid_config_type
   typedef shape_type::Estate_type    Estate_type;
   typedef shape_type::Emass_type     Emass_type;
   typedef shape_type::mass_type      mass_type;
+  typedef shape_type::Equadratureshape_type  Equadratureshape_type;
+  typedef shape_type::Equadratureweight_type Equadratureweight_type;
 
 
   typedef Eigen::Matrix < space_type, Fquadraturedim, 1> gauss_grad_type;

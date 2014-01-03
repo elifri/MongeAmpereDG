@@ -190,71 +190,13 @@ void Tsolver::update_baseGeometry ()
 
     // absolute value of determinant of jacobian
     get_detJacAbs (pBC, pBC->detjacabs_Ref());
-    assert(pBC->get_detjacabs() == 2*pBC->get_volume());
+    assert(pBC->get_detjacabs() == 2*pBC->get_volume()); //this is exactly what get_detJacAbs does !??
 
-    for (unsigned int i=0; i<shapedim; i++)
-    	for (unsigned int j=0; j<=i; j++) {
-    		pBC->laplace_coeffRef(i,j) = 0.0;
-    	}
+    cout << "Equadw " << shape.get_Equadw() << endl;
+    pBC->assemble_laplace(shape.get_Equadw(), shape.get_Equads_x(), shape.get_Equads_y(), shape.Equadraturedim);
 
-    // Laplace-matrix
-#if (EQUATION==POISSON_PREC_EQ)
-    std::string jumping_string;
-    cfg.getValue ("jumping coefficients", "jumping", jumping_string, "NO");
-
-    if(string_contains_true(jumping_string)) {
-
-    	debugoutput(1, "Using jumping coefficients!" << endl);
-
-    	// get entry "diffusion_a[xxx]" in section "scaling functions"
-    	std::string line, entryname=entryname1d < 3 > ("diffusion_a",pBC->id().cell());
-    	if (!cfg.getValue("jumping coefficients", entryname, line)) {
-    		cerr << "Error while reading [jumping coefficients] " << entryname1d < 3 > ("a",pBC->id().cell()) << " from configfile." << endl;
-    		abort();
-    	}
-
-    	std::stringstream strs(line);
-    	for (int ientry = 0; ientry < sqr(spacedim); ++ientry) {
-    		/// interpret entries of this line, fill with zeros for nonexistent entries
-    		if (!(strs >> pBC->diffusion_a[ientry]))
-    			pBC->diffusion_a[ientry] = 0;
-    	}
-
-    	for (unsigned int i=0; i<shapedim; i++)
-    		for (unsigned int j=0; j<=i; j++)
-    			for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
-    				pBC->laplace(i,j) +=
-    						shape.Equadw[iq]*bilin_alaplace (shape.Equads_x(i,iq), shape.Equads_y(i,iq),
-    								shape.Equads_x(j,iq), shape.Equads_y(j,iq),
-    								pBC->jac, pBC->detjacabs, pBC->diffusion_a);
-    			}
-    } else {
-    	for (unsigned int i=0; i<shapedim; i++)
-    		for (unsigned int j=0; j<=i; j++)
-    			for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
-    				pBC->laplace(i,j) +=
-    						shape.Equadw[iq]*bilin_laplace (shape.Equads_x(i,iq), shape.Equads_y(i,iq),
-    								shape.Equads_x(j,iq), shape.Equads_y(j,iq),
-    								pBC->jac, pBC->detjacabs);
-    			}
-    }
-#else
-    //write laplace matrix: first top half
-	for (unsigned int i=0; i<shapedim; i++)
-		for (unsigned int j=0; j<=i; j++)
-			for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
-				double func=bilin_laplace (shape.get_Equads_x(i,iq), shape.get_Equads_y(i,iq),
-						shape.get_Equads_x(j,iq), shape.get_Equads_y(j,iq),
-						pBC->get_jac(), pBC->get_detjacabs());
-				pBC->laplace_coeffRef(i,j) += shape.get_Equadw(iq)*func;
-			}
-#endif
-
-	// Laplace-matrix is symmetric:
-	for (unsigned int i=0; i<shapedim; i++)
-		for (unsigned int j=0; j<i; j++)
-			pBC->laplace_coeffRef(j,i) = pBC->get_laplace(i,j);
-
+    cout << "laplace "<< pBC->get_laplace() << endl;
+    cout << "det " << pBC->detjacabs_Ref() << endl;
 
 	// normal derivatives of shapes at face-quadrature-points
 	det = pBC->get_jac(0,0)*pBC->get_jac(1,1) - pBC->get_jac(1,0)*pBC->get_jac(0,1); //determinant of jacobian

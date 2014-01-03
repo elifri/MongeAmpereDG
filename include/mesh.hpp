@@ -73,6 +73,9 @@ public:
   typedef typename config_type::space_type             space_type;
   typedef typename config_type::leafcellptrvector_type leafcellptrvector_type;
 
+  typedef typename config_type::Equadratureshape_type  Equadratureshape_type;
+  typedef typename config_type::Equadratureweight_type Equadratureweight_type;
+
   typedef typename config_type::Fvaluevector_type      Fvaluevector_type;
   typedef typename config_type::Fnormalvector_type     Fnormalvector_type;
   typedef typename config_type::grad_type              grad_type;
@@ -160,6 +163,93 @@ public:
 
 	const value_type& get_volume() const { return volume;}
 	void set_volume(const value_type volume) { this->volume = volume;}
+
+
+private:
+	/*! \brief calculates the bilinearform on the lhs of the laplace eq
+	    *
+	    *\param u0_x  x derivative of the first function
+	    *\param u0_y  y derivative of the first function
+	    *\param u1_x  x derivative of the second function
+	    *\param u1_y  y derivative of the second function
+	    *\param J	  Jacobian of the transformation to the reference element
+	    *\param d_abs the absolute value of the determinant of J
+	    */
+	double bilin_laplace (const double & u0_x, const double & u0_y,
+	                      const double & u1_x, const double & u1_y)
+	{
+		const double phi_i_x=  jac(1,1)*u0_x - jac(1,0)*u0_y, phi_i_y= -jac(0,1)*u0_x + jac(0,0)*u0_y ;
+		const double phi_j_x=  jac(1,1)*u1_x - jac(1,0)*u1_y, phi_j_y= -jac(0,1)*u1_x + jac(0,0)*u1_y ;
+
+		return ( phi_i_x * phi_j_x + phi_i_y * phi_j_y ) / detjacabs;
+	   }
+
+public:
+	void assemble_laplace(const Equadratureweight_type &Equadw, const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y, const int Equadraturedim)
+	{
+		laplace.setZero();
+
+		// Laplace-matrix
+	#if (EQUATION==POISSON_PREC_EQ)
+		std::string jumping_string;
+		cfg.getValue ("jumping coefficients", "jumping", jumping_string, "NO");
+
+		if(string_contains_true(jumping_string)) {
+
+			debugoutput(1, "Using jumping coefficients!" << endl);
+
+			// get entry "diffusion_a[xxx]" in section "scaling functions"
+			std::string line, entryname=entryname1d < 3 > ("diffusion_a",pBC->id().cell());
+			if (!cfg.getValue("jumping coefficients", entryname, line)) {
+				cerr << "Error while reading [jumping coefficients] " << entryname1d < 3 > ("a",pBC->id().cell()) << " from configfile." << endl;
+				abort();
+			}
+
+			std::stringstream strs(line);
+			for (int ientry = 0; ientry < sqr(spacedim); ++ientry) {
+				/// interpret entries of this line, fill with zeros for nonexistent entries
+				if (!(strs >> pBC->diffusion_a[ientry]))
+					pBC->diffusion_a[ientry] = 0;
+			}
+
+			for (unsigned int i=0; i<shapedim; i++)
+				for (unsigned int j=0; j<=i; j++)
+					for (unsigned int iq=0; iq<Equadraturedim; iq++) {
+						pBC->laplace(i,j) +=
+								shape.Equadw[iq]*bilin_alaplace (shape.Equads_x(i,iq), shape.Equads_y(i,iq),
+										shape.Equads_x(j,iq), shape.Equads_y(j,iq),
+										pBC->jac, pBC->detjacabs, pBC->diffusion_a);
+					}
+		} else {
+			for (unsigned int i=0; i<shapedim; i++)
+				for (unsigned int j=0; j<=i; j++)
+					for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
+						pBC->laplace(i,j) +=
+								shape.Equadw[iq]*bilin_laplace (shape.Equads_x(i,iq), shape.Equads_y(i,iq),
+										shape.Equads_x(j,iq), shape.Equads_y(j,iq),
+										pBC->jac, pBC->detjacabs);
+					}
+		}
+	#else
+		double test = 0;
+		//write laplace matrix: first top half
+		for (unsigned int i=0; i<shapedim; i++)
+			for (unsigned int j=0; j<=i; j++)
+				for (int iq=0; iq<Equadraturedim; iq++) {
+					double func = bilin_laplace (Equads_x(i,iq), Equads_y(i,iq),
+							Equads_x(j,iq), Equads_y(j,iq));
+					laplace(i,j) += Equadw(iq)*func;
+					test += Equadw(iq);
+					cout << "func " << func << "*weight " << Equadw(iq)*func << endl;
+					cout << "test " << test << endl;
+				}
+	#endif
+
+		// Laplace-matrix is symmetric:
+		for (unsigned int i=0; i<shapedim; i++)
+			for (unsigned int j=0; j<i; j++)
+				laplace(j,i) = laplace(i,j);
+	}
 };
 
 //------------------------------------------------------------------------------
