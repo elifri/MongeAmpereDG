@@ -193,27 +193,27 @@ private:
 	const value_type& get_Equadw(const int i) const{	return Equadw(i);}
 	value_type& set_Equadw(const int i){	return Equadw(i);}
 
-	Equadraturepoint_type getEquadx() const { return Equadx;}
+	Equadraturepoint_type get_Equadx() const { return Equadx;}
 	const value_type& get_Equadx(const int i, const int j) const{	return Equadx(i,j);}
 	value_type& set_Equadx(const int i, const int j){	return Equadx(i,j);}
 
-	Fquadratureshape_type getFquads() const { return Fquads;}
+	Fquadratureshape_type get_Fquads() const { return Fquads;}
 	const value_type& get_Fquads(const int i, const int j) const{	return Fquads(i,j);}
 	value_type& set_Fquads(const int i, const int j){	return Fquads(i,j);}
 
-	Fquadratureshape_type getFquads_x() const { return Fquads_x;}
+	Fquadratureshape_type get_Fquads_x() const { return Fquads_x;}
 	const value_type& get_Fquads_x(const int i, const int j) const{	return Fquads_x(i,j);}
 	value_type& set_Fquads_x(const int i, const int j){	return Fquads_x(i,j);}
 
-	Fquadratureshape_type getFquads_y() const { return Fquads_y;}
+	Fquadratureshape_type get_Fquads_y() const { return Fquads_y;}
 	const value_type& get_Fquads_y(const int i, const int j) const{	return Fquads_y(i,j);}
 	value_type& set_Fquads_y(const int i, const int j){	return Fquads_y(i,j);}
 
-	Fquadratureweight_type getFquadw() const { return Fquadw;}
+	Fquadratureweight_type get_Fquadw() const { return Fquadw;}
 	const value_type& get_Fquadw(const int i) const{	return Fquadw(i);}
 	value_type& set_Fquadw(const int i){	return Fquadw(i);}
 
-	Fquadraturepoint_type getFquadx() const { return Fquadx;}
+	Fquadraturepoint_type get_Fquadx() const { return Fquadx;}
 	const value_type& get_Fquadx(const int i, const int j) const{	return Fquadx(i,j);}
 	value_type& set_Fquadx(const int i, const int j){	return Fquadx(i,j);}
 };

@@ -8,7 +8,7 @@
 
 #include "utility.hpp"
 #include "Tmatrix.hpp"
-
+#include "tmybasecell.hpp"
 
 class Tsolver {
 public:

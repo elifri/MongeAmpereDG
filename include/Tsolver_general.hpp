@@ -134,7 +134,6 @@ inline double Tsolver::bilin_alaplace (const double & u0_x, const double & u0_y,
 // And: level-volume factors, level-length factors
 void Tsolver::update_baseGeometry ()
 {
-  double det;
   unsigned int node0, node1;
   Nvector_type vN;
   // define derivatives of linear Lagrange shapes for element transformation
@@ -198,35 +197,10 @@ void Tsolver::update_baseGeometry ()
     cout << "laplace "<< pBC->get_laplace() << endl;
     cout << "det " << pBC->detjacabs_Ref() << endl;
 
-	// normal derivatives of shapes at face-quadrature-points
-	det = pBC->get_jac(0,0)*pBC->get_jac(1,1) - pBC->get_jac(1,0)*pBC->get_jac(0,1); //determinant of jacobian
-	for (unsigned int i=0; i<shapedim; i++) //loop over all ansatzfcts
-		for (unsigned int iq=0; iq<shape.Fquadraturedim; iq++) { //loop over all quadrature points
-
-			// gradient (calculated after chainrule \div phi_ref = J^-1 \div \phi
-			Eigen::Matrix<value_type, 2, 2> J_inv_tr;
-			J_inv_tr << pBC->get_jac(1,1), -pBC->get_jac(1,0), -pBC->get_jac(0,1), pBC->get_jac(0,0);
-			Eigen::Vector2d grad_ref_cell (shape.get_Fquads_x(i,iq), shape.get_Fquads_y(i,iq));
-
-			pBC->grad_coeffRef(i,iq) = J_inv_tr * grad_ref_cell / det;
-
-//			cout << "grad of shape function " << i << ": (" << pBC->grad[i][iq][0] << ", " << pBC->grad[i][iq][1] << ")" << endl;
-
-			// calculate face number
-			unsigned int in = 0;
-			if (iq < Fdim*Fquadgaussdim)
-				in = iq/Fquadgaussdim;
-			else
-				in = (iq-Fdim*Fquadgaussdim)/(Fchilddim*Fquadgaussdim);
-
-			// normal derivative
-			pBC->normalderi_coeffRef(i,iq) = pBC->get_grad(i,iq).dot( pBC->get_normal(in));
-
-//			cout << " normal derivative of shape function " << i << " at q-point " << iq << ": " << pBC->get_normalderi(i,iq) << endl;
-		}
+    pBC->assemble_normalderi(shape.get_Fquads_x(), shape.get_Fquads_y(), shape.Fquadraturedim, Fquadgaussdim, Fchilddim);
 
     // barycentric coordinates of edge-intersection-points for Serror,
-    // intersection of edge with connection of element-centers
+    // intersect3ion of edge with connection of element-centers
     {
     int inode,inode2;
     double sum,c,s;
