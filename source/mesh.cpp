@@ -14,6 +14,7 @@ using namespace std;
 ////////////////////
 #include "tmycommencelldata.hpp"
 #include "tmybasecell.hpp"
+#include "tmyleafcell.hpp"
 
 //------------------------------------------------------------------------------
 // define template-classes (mass, msa, shape)
