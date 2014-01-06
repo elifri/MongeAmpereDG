@@ -92,9 +92,6 @@ public:
 	value_type& detjacabs_Ref() {
 		return detjacabs;
 	}
-	void set_detjacabs(const value_type detjacabs) {
-		this->detjacabs = detjacabs;
-	}
 
 	const grad_type& get_grad() const {
 		return grad;
@@ -102,17 +99,11 @@ public:
 	const space_type& get_grad(const int i, const int j) const {
 		return grad(i)(j);
 	}
-	space_type& grad_coeffRef(const int i, const int j) {
-		return grad(i)(j);
-	}
 
 	const Ejacobian_type& get_jac() const {
 		return jac;
 	}
 	const value_type& get_jac(const int i, const int j) const {
-		return jac(i, j);
-	}
-	value_type& jac_coeffRef(const int i, const int j) {
 		return jac(i, j);
 	}
 
@@ -126,18 +117,11 @@ public:
 		return laplace(i, j);
 	}
 
-	void setLaplace(const Emass_type& laplace) {
-		this->laplace = laplace;
-	}
-
 	const Fvaluevector_type& get_length() const {
 		return length;
 	}
 	const value_type& get_length(const int f) const {
 		return length(f);
-	}
-	void set_length(const int f, value_type length) {
-		this->length(f) = length;
 	}
 
 	const Fnormalvector_type& get_normal() const {
@@ -146,9 +130,7 @@ public:
 	const space_type& get_normal(const int i) const {
 		return normal(i);
 	}
-	space_type& normal_coeffRef(const int i) {
-		return normal(i);
-	}
+
 	void set_normal(const int f, const value_type diff_x,
 			const value_type diff_y) {
 		normal(f)[0] = diff_x;
@@ -163,9 +145,6 @@ public:
 	const value_type& get_normalderi(const int i, const int j) const {
 		return normalderi(i, j);
 	}
-	value_type& normalderi_coeffRef(const int i, const int j) {
-		return normalderi(i, j);
-	}
 
 	const Fvaluevector_type& get_Spoint() const {
 		return Spoint;
@@ -173,15 +152,9 @@ public:
 	const value_type& get_Spoint(const int f) const {
 		return Spoint(f);
 	}
-	void set_Spoint(const int f, value_type spoint) {
-		this->Spoint(f) = spoint;
-	}
 
 	const value_type& get_volume() const {
 		return volume;
-	}
-	void set_volume(const value_type volume) {
-		this->volume = volume;
 	}
 
 private:
@@ -223,7 +196,7 @@ private:
 
 		return phi_i.dot(phi_j);
 	}
-public:
+
 	void assemble_laplace(const Equadratureweight_type &Equadw,
 			const Equadratureshape_type &Equads_x,
 			const Equadratureshape_type &Equads_y, const int Equadraturedim) {
@@ -329,18 +302,8 @@ public:
 	}
 
 	void get_center(const Nvector_type & nv, space_type & center) {
-//		center = nv(0) + nv(1) + nv(2);
-//		center /= 3.0;
-
-		  center[0] = 0.0;
-		  center[1] = 0.0;
-		  for (unsigned int i=0; i<3; i++) {
-		    center[0] += nv[i][0];
-		    center[1] += nv[i][1];
-		    }
-		  center[0] /= 3.0;
-		  center[1] /= 3.0;
-
+		center = nv(0) + nv(1) + nv(2);
+		center /= 3.0;
 	}
 
 	void get_center (const grid_type &grid, const id_type& idLC,
@@ -391,8 +354,6 @@ public:
 			value_type diff_x = vN[node0][0] - vN[node1][0];
 			value_type diff_y = vN[node1][1] - vN[node0][1];
 			set_normal(f,diff_y,diff_x);
-//			normal(f)(0) = diff_y;
-//			normal(f)(1) = diff_x;
 
 //	    	cout << " outer unit normal at face " << f << ": (" << get_normal(f)[0] << ", " << get_normal(f)[1] << ")" << endl;
 		}
@@ -459,9 +420,9 @@ public:
 
 					// barycentric coordinate associated with inode = iface-1,
 					// for a point lying on iface
-					set_Spoint(iface, 1.0 - rc[0] / rc[1]);
+					Spoint(iface) = 1.0 - rc[0] / rc[1];
 				} else
-					set_Spoint(iface, -1.0); // ???
+					Spoint(iface) = -1.0; // ???
 			}
 		}
 
