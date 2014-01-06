@@ -34,7 +34,10 @@ public:
   typedef Eigen::Matrix<value_type, shapedim, 1>  Eshape_type;
   typedef Eigen::Matrix<value_type, shapedim, statedim>  Estate_type;
   typedef Eigen::Matrix<value_type, childdim, 1> EstateCV_type; // child vector
+
   typedef Eigen::Matrix<value_type, shapedim, shapedim>  Emass_type;
+  typedef Eigen::LDLT<Emass_type> Emass_dec_type;
+
   typedef value_type  Emask_type[childdim][shapedim][shapedim];
 
   // mass
@@ -94,6 +97,7 @@ private:
    Scentershape_type      Scenters;
    Scenterpoint_type      Scenterx;
 
+public:
    igpm::tvector<igpm::tvector<double,shapedim>,shapedim> sc; // shape coefficients in monomial basis (better name???)
 
    igpm::tvector<igpm::tvector<igpm::tvector<double,shapedim>,shapedim>,childdim> refinement_rules; // double refinement_rules(childdim,shapedim)[shapedim];
@@ -109,12 +113,12 @@ private:
    * @parameter x given bases
    * @parameter xpower xpower(i,j) = x_i ^j
    */
-  inline void get_xpower(const space_type & x, double xpower[spacedim][degreedim+1]);
+  inline void get_xpower(const space_type & x, double xpower[spacedim][degreedim+1]) const;
 
   /*@brief calculates x value at reference element
    *
    */
-  inline double shape (int & ishape, const space_type & x);    // x on reference element
+  inline double shape (int & ishape, const space_type & x) const;    // x on reference element
   inline double shape_x (int & ishape, const space_type & x);
   inline double shape_y (int & ishape, const space_type & x);
   void shape_grad (int & ishape, const space_type & x, space_type & grad);
@@ -131,7 +135,6 @@ private:
   // void set_quadrature_data (char *data_file);
 
   //////////////     bilinear forms     ///////////////
-  inline double bilin_mass (double & u0, double & u1, double &detjacabs);
 
   //////////////    ASSEMBLING STATES    ///////////////
   void assemble_state_x (const Estate_type & u, const space_type & xref,
@@ -176,6 +179,9 @@ private:
   inline const double cobLagrange_factor(const unsigned int shape1, const unsigned int shape2);
 
   const mass_type& get_mass() const { return mass;}
+
+    const Emaskquadpoint_type& get_Emaskx() const { return Emaskx;}
+	const value_type& get_Emaskx(const int i, const int j, const int k) const{	return Emaskx[i][j][k];}
 
 	Equadratureshape_type get_Equads() const { return Equads;}
 	const value_type& get_Equads(const int i, const int j) const{	return Equads(i,j);}
@@ -521,7 +527,7 @@ inline double Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
 
 template <typename CONFIG_TYPE, int STATEDIM, int SHAPEDIM, int DEGREEDIM>
 inline void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
-::get_xpower(const space_type & x, double xpower[spacedim][degreedim+1])
+::get_xpower(const space_type & x, double xpower[spacedim][degreedim+1]) const
 {
   for (int i=0; i<spacedim; ++i)
   {
@@ -533,7 +539,7 @@ inline void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
 
 template <typename CONFIG_TYPE, int STATEDIM, int SHAPEDIM, int DEGREEDIM>
 inline double Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
-::shape (int & ishape, const space_type & x)
+::shape (int & ishape, const space_type & x) const
 { // x on reference element
   int ic = 0; // index of coefficient
   double s = 0.0;
@@ -1202,79 +1208,9 @@ void Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
   // possible as long as we have x-independent
   // transformation-jacobians (non-curved triangles)
 
-  space_type x;
-  double detjacabs = 1.0;
+	mass.initialize(*this);
 
-  for (unsigned int i=0; i<shapedim; i++) {
-    for (unsigned int j=0; j<shapedim; j++) {
-
-      mass.A_coeffRef(i,j) = 0.0;
-      mass.A_full_coeffRef(i,j) = 0.0;
-
-      for (unsigned int iq=0; iq<Equadraturedim; iq++) {
-        mass.A_full_coeffRef(i,j) +=	  Equadw[iq]*bilin_mass (Equads(i,iq), Equads(j,iq), detjacabs);
-      }
-
-      if(j<=i)
-        mass.A_coeffRef(i,j)=mass.A_full_coeffRef(i,j);
-
-    }
-  }
-//  mass.Cholesky_decomp ();
-
-  // mask matrix on reference element:
-  ////////////////////////////////////
-  {
-
-  for (unsigned int i=0; i<4; i++)
-    for (unsigned int ish=0; ish<shapedim; ish++)
-      for (unsigned int jsh=0; jsh<shapedim; jsh++) mass.B_coeffRef(i,ish,jsh) = 0.0;
-
-  detjacabs = 1.0/double(childdim); // because child_volume = reference_volume/childdim
-  value_type phi;
-  for (unsigned int i=0; i<4; i++) // run through children
-    for (unsigned int iq=0; iq<Equadraturedim; iq++) {
-      x[0] = Emaskx[i][iq][1];
-      x[1] = Emaskx[i][iq][2];
-      for (int ish=0; ish<shapedim; ish++) {
-        phi = shape (ish, x);  // shape on reference element
-	// value of shape on child is Equads(j,iq)
-        for (unsigned int jsh=0; jsh<shapedim; jsh++)
-          mass.B_coeffRef(i,ish,jsh) +=
-	    Equadw[iq]*bilin_mass (phi, Equads(jsh,iq), detjacabs);
-	}
-      }
-  }
-
-      /// calculate refinement rules
-    for (int j = 0; j < shapedim; ++j) // number of parent shape function
-    {
-      for (int c = 0; c < childdim; ++c)
-      {
-        Eshape_type alpha_cj;
-        for (int i = 0; i < shapedim; ++i)  // number of child shape function
-          alpha_cj[i]=mass.B_coeffRef(c,j,i);
-        mass.Cholesky_solve(alpha_cj);
-        for (int i = 0; i < shapedim; ++i)  // number of child shape function
-          refinement_rules[c][j][i] = alpha_cj[i]*childdim;
-      }
-    }
 };
-
-////////////////////////////////////////////////////
-///////////////                      ///////////////
-///////////////    BILINEAR FORMS    ///////////////
-///////////////                      ///////////////
-////////////////////////////////////////////////////
-
-template <typename CONFIG_TYPE,
-int STATEDIM, int SHAPEDIM, int DEGREEDIM>
-inline double Tshape<CONFIG_TYPE, STATEDIM, SHAPEDIM, DEGREEDIM>
-::bilin_mass (double & u0, double & u1, double & detjacabs)
-{
-    return u0*u1*detjacabs;
-};
-
 
 //////////////////////////////////////////////////////
 //////////////                         ///////////////

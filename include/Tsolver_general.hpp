@@ -134,7 +134,6 @@ inline double Tsolver::bilin_alaplace (const double & u0_x, const double & u0_y,
 // And: level-volume factors, level-length factors
 void Tsolver::update_baseGeometry ()
 {
-  unsigned int node0, node1;
   Nvector_type vN2;
 
   for (grid_type::basecellmap_type::iterator
