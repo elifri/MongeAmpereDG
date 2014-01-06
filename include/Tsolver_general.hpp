@@ -135,18 +135,7 @@ inline double Tsolver::bilin_alaplace (const double & u0_x, const double & u0_y,
 void Tsolver::update_baseGeometry ()
 {
   unsigned int node0, node1;
-  Nvector_type vN;
-  // define derivatives of linear Lagrange shapes for element transformation
-  double lag_x[3];
-  double lag_y[3];
-
-  lag_x[0] = -1;
-  lag_x[1] = 1;
-  lag_x[2] = 0;
-
-  lag_y[0] = -1;
-  lag_y[1] = 0;
-  lag_y[2] = 1;
+  Nvector_type vN2;
 
   for (grid_type::basecellmap_type::iterator
       it=grid.baseCells().begin();
@@ -155,87 +144,10 @@ void Tsolver::update_baseGeometry ()
     const grid_type::id_type& idBC = grid_type::id(it);
     basecell_type * const pBC=&grid_type::cell(it);
 
-    grid.nodes (idBC,vN);
+    grid.nodes (idBC,vN2);
     // cerr << "Nodes" << endl; writeNvector_type (vN);
 
-    for (unsigned int f=0; f<idBC.countFaces(); f++) {
-
-    	// face f is the line segment [node(f+1 mod countFaces()), node(f+2 mod countFaces())]
-    	node0 = f+1;     if (node0 == idBC.countFaces()) node0 = 0;
-    	node1 = node0+1; if (node1 == idBC.countFaces()) node1 = 0;
-
-    	// initialize face length and unit normal of of pBC
-    	value_type diff_x = vN[node0][0] - vN[node1][0];
-    	value_type diff_y = vN[node1][1] - vN[node0][1];
-    	pBC->set_normal(f,diff_y,diff_x);
-
-    	cout << " outer unit normal at face " << f << ": (" << pBC->get_normal(f)[0] << ", " << pBC->get_normal(f)[1] << ")" << endl;
-
-    }
-
-    // initialize volume of pBC
-    pBC->set_volume(((vN[1][0] - vN[0][0])*(vN[2][1] - vN[0][1]) -
-    		(vN[2][0] - vN[0][0])*(vN[1][1] - vN[0][1]))*0.5);
-
-    // jacobian of transformation from reference element
-    for (unsigned int i=0; i<spacedim; i++)
-    	for (unsigned int j=0; j<spacedim; j++) pBC->jac_coeffRef(i,j) = 0.0;
-
-    for (unsigned int i=0; i<spacedim; i++)
-    	for (unsigned int inode=0; inode<idBC.countNodes(); inode++) {
-    		pBC->jac_coeffRef(i,0) += vN[inode][i]*lag_x[inode];
-    		pBC->jac_coeffRef(i,1) += vN[inode][i]*lag_y[inode];
-    	}
-
-    // absolute value of determinant of jacobian
-    get_detJacAbs (pBC, pBC->detjacabs_Ref());
-    assert(pBC->get_detjacabs() == 2*pBC->get_volume()); //this is exactly what get_detJacAbs does !??
-
-    cout << "Equadw " << shape.get_Equadw() << endl;
-    pBC->assemble_laplace(shape.get_Equadw(), shape.get_Equads_x(), shape.get_Equads_y(), shape.Equadraturedim);
-
-    cout << "laplace "<< pBC->get_laplace() << endl;
-    cout << "det " << pBC->detjacabs_Ref() << endl;
-
-    pBC->assemble_normalderi(shape.get_Fquads_x(), shape.get_Fquads_y(), shape.Fquadraturedim, Fquadgaussdim, Fchilddim);
-
-    // barycentric coordinates of edge-intersection-points for Serror,
-    // intersect3ion of edge with connection of element-centers
-    {
-    int inode,inode2;
-    double sum,c,s;
-    space_type rn,rc,x,xc;
-    Fidvector_type vF;
-    grid_type::facehandlevector_type vFh, vOh;   // neighbor face number and orientation
-    grid.faceIds (idBC, vF, vFh, vOh);
-    get_center (vN, xc);
-    for (unsigned int iface=0; iface<idBC.countFaces(); ++iface) {
-      if (vF[iface].isValid()) {
-        inode = iface-1; if (inode < 0) inode = idBC.countNodes()-1;
-	inode2 = inode-1; if (inode2 < 0) inode2 = idBC.countNodes()-1;
-	get_center (vF[iface], rc);
-	sum = 0.0;
-	for (int ispace=0; ispace<spacedim; ++ispace) {
-	  rc[ispace] -= xc[ispace];
-	  rn[ispace]  = vN[inode][ispace] - vN[inode2][ispace];
-	  x[ispace]   = vN[inode][ispace] - xc[ispace];
-	  sum        += sqr(rc[ispace]);
-	  }
-	// We have the linear system  x = [rc, rn]*(ac, an)^T,
-	// solve for an with Givens, and pBC->Spoint[iface] = 1.0 - an
-	sum = sqrt(sum);
-	c = rc[0]/sum;  s = rc[1]/sum;
-	rc[0] = -s*x[0]  + c*x[1];
-	rc[1] = -s*rn[0] + c*rn[1];
-
-	// barycentric coordinate associated with inode = iface-1,
-	// for a point lying on iface
-	pBC->set_Spoint(iface, 1.0 - rc[0]/rc[1]);
-        }
-      else pBC->set_Spoint(iface, -1.0); // ???
-      }
-    }
-
+    pBC->initialize(shape, grid, idBC);
     }
 
   facLevelVolume.resize (grid.leafCells().countLinks()+1);

@@ -185,7 +185,7 @@ struct grid_config_type
   typedef shape_type::Equadratureshape_type  Equadratureshape_type;
   typedef shape_type::Equadratureweight_type Equadratureweight_type;
   typedef shape_type::Fquadratureshape_type  Fquadratureshape_type;
-  typedef grid_type::nodevector_type Nvector_type;
+
 
   typedef Eigen::Matrix < space_type, Fquadraturedim, 1> gauss_grad_type;
   typedef Eigen::Matrix< gauss_grad_type, shapedim, 1 >  grad_type; //stores for every shape function at every (face) quadrature node the gradient

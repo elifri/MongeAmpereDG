@@ -19,113 +19,170 @@
 
 igpm::configfile cfg;
 
-
 //------------------------------------------------------------------------------
 // BASECELL
 //------------------------------------------------------------------------------
-template <typename CONFIG_TYPE>
-class tmybasecell : public igpm::tidcell_base<CONFIG_TYPE>, public tmycommoncelldata<CONFIG_TYPE>
-{
+template<typename CONFIG_TYPE>
+class tmybasecell: public igpm::tidcell_base<CONFIG_TYPE>,
+		public tmycommoncelldata<CONFIG_TYPE> {
 public:
-  typedef CONFIG_TYPE                                     config_type;
-  typedef typename config_type::grid_type              grid_type;
-  typedef typename config_type::id_type                id_type;
-  typedef typename config_type::value_type             value_type;
-  typedef typename config_type::space_type             space_type;
-  typedef typename config_type::leafcellptrvector_type leafcellptrvector_type;
+	typedef CONFIG_TYPE config_type;
+	typedef typename config_type::grid_type grid_type;
+	typedef typename config_type::id_type id_type;
 
-  typedef typename config_type::Equadratureshape_type  Equadratureshape_type;
-  typedef typename config_type::Equadratureweight_type Equadratureweight_type;
-  typedef typename config_type::Fquadratureshape_type  Fquadratureshape_type;
+	typedef typename config_type::shape_type shape_type;
 
-  typedef typename config_type::Fvaluevector_type      Fvaluevector_type;
-  typedef typename config_type::Fnormalvector_type     Fnormalvector_type;
-  typedef typename config_type::grad_type              grad_type;
-  typedef typename config_type::Fnormalderivative_type Fnormalderivative_type;
-  typedef typename config_type::Emass_type             Emass_type;
-  typedef typename config_type::Ejacobian_type         Ejacobian_type;
+	typedef typename config_type::value_type value_type;
+	typedef typename config_type::space_type space_type;
+	typedef typename config_type::leafcellptrvector_type leafcellptrvector_type;
 
-  enum {
-    spacedim = grid_type::config_type::spacedim,
-    statedim = grid_type::config_type::statedim,
-    shapedim = grid_type::config_type::shapedim,
-    Fdim     = grid_type::config_type::Fdim,
-    degreedim= grid_type::config_type::degreedim
-  };
+	typedef typename config_type::Equadratureshape_type Equadratureshape_type;
+	typedef typename config_type::Equadratureweight_type Equadratureweight_type;
+	typedef typename config_type::Fquadratureshape_type Fquadratureshape_type;
+
+	typedef typename config_type::Fvaluevector_type Fvaluevector_type;
+	typedef typename config_type::Fnormalvector_type Fnormalvector_type;
+	typedef typename config_type::grad_type grad_type;
+	typedef typename config_type::Fnormalderivative_type Fnormalderivative_type;
+	typedef typename config_type::Emass_type Emass_type;
+	typedef typename config_type::Ejacobian_type Ejacobian_type;
+
+	typedef Eigen::Matrix<space_type, 3, 1> Nvector_type;
+	typedef typename grid_type::nodevector_type grid_nvector_type;
+
+	enum {
+		spacedim = grid_type::config_type::spacedim,
+		statedim = grid_type::config_type::statedim,
+		shapedim = grid_type::config_type::shapedim,
+		Fdim = grid_type::config_type::Fdim,
+		degreedim = grid_type::config_type::degreedim
+	};
 
 private:
-  value_type             volume;
-  value_type             detjacabs;
-  Fvaluevector_type      length;
-  Fvaluevector_type      Spoint;
-  Fnormalvector_type     normal;
-  grad_type              grad;
-  Fnormalderivative_type normalderi;
-  Ejacobian_type         jac;
-  Emass_type             laplace;
+	value_type volume;
+	value_type detjacabs;
+	Fvaluevector_type length;
+	Fvaluevector_type Spoint;
+	Fnormalvector_type normal;
+	grad_type grad;
+	Fnormalderivative_type normalderi;
+	Ejacobian_type jac;
+	Emass_type laplace;
 
 public:
-  // cstr, id not set yet!!!
-  tmybasecell() { }
+	// cstr, id not set yet!!!
+	tmybasecell() {
+	}
 
-  // is called from finalize
-  void refineTo(leafcellptrvector_type& pvLC)
-  {
-  }
+	// is called from finalize
+	void refineTo(leafcellptrvector_type& pvLC) {
+	}
 
-  // you have to (!!!) provide 9 values ... otherwise Tecplot cannot read the data!!!
-  static void writeData(std::ostream& os,
-                        const grid_type& grid, const id_type& id)
-  {
-    const tmybasecell* pBC = NULL;
-    grid.findBaseCell(id,pBC);
-    os << "0 0 0 0 0 0 0 0 0";
-  }
+	// you have to (!!!) provide 9 values ... otherwise Tecplot cannot read the data!!!
+	static void writeData(std::ostream& os, const grid_type& grid,
+			const id_type& id) {
+		const tmybasecell* pBC = NULL;
+		grid.findBaseCell(id, pBC);
+		os << "0 0 0 0 0 0 0 0 0";
+	}
 
-	const value_type& get_detjacabs() const { return detjacabs;}
-	value_type& detjacabs_Ref() { return detjacabs;}
-	void set_detjacabs(const value_type detjacabs) { this->detjacabs = detjacabs;}
+	const value_type& get_detjacabs() const {
+		return detjacabs;
+	}
+	value_type& detjacabs_Ref() {
+		return detjacabs;
+	}
+	void set_detjacabs(const value_type detjacabs) {
+		this->detjacabs = detjacabs;
+	}
 
-	const grad_type& get_grad() const {	return grad;}
-	const space_type& get_grad(const int i, const int j) const {return grad(i)(j);}
-	space_type& grad_coeffRef(const int i, const int j){return grad(i)(j);}
+	const grad_type& get_grad() const {
+		return grad;
+	}
+	const space_type& get_grad(const int i, const int j) const {
+		return grad(i)(j);
+	}
+	space_type& grad_coeffRef(const int i, const int j) {
+		return grad(i)(j);
+	}
 
-	const Ejacobian_type& get_jac() const {	return jac;	}
-	const value_type& get_jac(const int i, const int j)const {return jac(i,j);}
-	value_type& jac_coeffRef(const int i, const int j) {return jac(i,j);}
+	const Ejacobian_type& get_jac() const {
+		return jac;
+	}
+	const value_type& get_jac(const int i, const int j) const {
+		return jac(i, j);
+	}
+	value_type& jac_coeffRef(const int i, const int j) {
+		return jac(i, j);
+	}
 
-	const Emass_type& get_laplace() const { return laplace;}
-	const value_type& get_laplace(const int i, const int j)const {return laplace(i,j);}
-	value_type& laplace_coeffRef(const int i, const int j) {return laplace(i,j);}
+	const Emass_type& get_laplace() const {
+		return laplace;
+	}
+	const value_type& get_laplace(const int i, const int j) const {
+		return laplace(i, j);
+	}
+	value_type& laplace_coeffRef(const int i, const int j) {
+		return laplace(i, j);
+	}
 
-	void setLaplace(const Emass_type& laplace) { this->laplace = laplace;}
+	void setLaplace(const Emass_type& laplace) {
+		this->laplace = laplace;
+	}
 
-	const Fvaluevector_type& get_length() const { return length;}
-	const value_type& get_length(const int f) const { return length(f);}
-	void set_length(const int f, value_type length) { this->length(f) = length;}
+	const Fvaluevector_type& get_length() const {
+		return length;
+	}
+	const value_type& get_length(const int f) const {
+		return length(f);
+	}
+	void set_length(const int f, value_type length) {
+		this->length(f) = length;
+	}
 
-	const Fnormalvector_type& get_normal() const { return normal;}
-	const space_type& get_normal(const int i) const{return normal(i);}
-	space_type& normal_coeffRef(const int i) {return normal(i);}
-	void set_normal(const int f, const value_type diff_x, const value_type diff_y)
-	{
+	const Fnormalvector_type& get_normal() const {
+		return normal;
+	}
+	const space_type& get_normal(const int i) const {
+		return normal(i);
+	}
+	space_type& normal_coeffRef(const int i) {
+		return normal(i);
+	}
+	void set_normal(const int f, const value_type diff_x,
+			const value_type diff_y) {
 		normal(f)[0] = diff_x;
 		normal(f)[1] = diff_y;
 		length(f) = normal(f).norm();
 		normal(f) /= length(f);
 	}
 
-	const Fnormalderivative_type& get_normalderi() const { return normalderi;}
-	const value_type& get_normalderi(const int i, const int j) const { return normalderi(i,j);}
-	value_type& normalderi_coeffRef(const int i, const int j) { return normalderi(i,j);}
+	const Fnormalderivative_type& get_normalderi() const {
+		return normalderi;
+	}
+	const value_type& get_normalderi(const int i, const int j) const {
+		return normalderi(i, j);
+	}
+	value_type& normalderi_coeffRef(const int i, const int j) {
+		return normalderi(i, j);
+	}
 
-	const Fvaluevector_type& get_Spoint() const { return Spoint;}
-	const value_type& get_Spoint(const int f) const { return Spoint(f);}
-	void set_Spoint(const int f, value_type spoint) { this->Spoint(f) = spoint;}
+	const Fvaluevector_type& get_Spoint() const {
+		return Spoint;
+	}
+	const value_type& get_Spoint(const int f) const {
+		return Spoint(f);
+	}
+	void set_Spoint(const int f, value_type spoint) {
+		this->Spoint(f) = spoint;
+	}
 
-	const value_type& get_volume() const { return volume;}
-	void set_volume(const value_type volume) { this->volume = volume;}
-
+	const value_type& get_volume() const {
+		return volume;
+	}
+	void set_volume(const value_type volume) {
+		this->volume = volume;
+	}
 
 private:
 	/*! \brief calculates the bilinearform on the lhs of the laplace eq
@@ -146,9 +203,30 @@ private:
 		return ( phi_i_x * phi_j_x + phi_i_y * phi_j_y ) / sqr(detjacabs);
 	   }
 
+	/*! \brief calculates the bilinearform on the lhs of the laplace eq
+	 *
+	 *\param grad0  gradient of the first function
+	 *\param grad1  gradient of the second function
+	 */
+
+	value_type bilin_laplace(const Eigen::Vector2d &grad0,
+			const Eigen::Vector2d &grad1) {
+		// calculate gradient of local shape function
+		// by multiplication of transposed inverse of Jacobian of affine transformation
+		// with gradient from shape function on reference cell
+
+		Eigen::MatrixXd J_inv_t(2, 2);
+		J_inv_t << jac(1, 1), -jac(1, 0), -jac(0, 1), jac(0, 0);
+		J_inv_t /= detjacabs;
+		Eigen::Vector2d phi_i = J_inv_t * grad0;
+		Eigen::Vector2d phi_j = J_inv_t * grad1;
+
+		return phi_i.dot(phi_j);
+	}
 public:
-	void assemble_laplace(const Equadratureweight_type &Equadw, const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y, const int Equadraturedim)
-	{
+	void assemble_laplace(const Equadratureweight_type &Equadw,
+			const Equadratureshape_type &Equads_x,
+			const Equadratureshape_type &Equads_y, const int Equadraturedim) {
 		laplace.setZero();
 
 		// Laplace-matrix
@@ -202,54 +280,193 @@ public:
 							Equads_x(j,iq), Equads_y(j,iq));
 					laplace(i,j) += Equadw(iq)*detjacabs*func;
 					test += Equadw(iq);
-					cout << "func " << func << "*weight " << Equadw(iq)*func << endl;
+					cout << "func " << func << "*weight " << Equadw(iq) * func
+							<< endl;
 					cout << "test " << test << endl;
 				}
 //	#endif
 
 		// Laplace-matrix is symmetric:
-		for (unsigned int i=0; i<shapedim; i++)
-			for (unsigned int j=0; j<i; j++)
-				laplace(j,i) = laplace(i,j);
+		for (unsigned int i = 0; i < shapedim; i++)
+			for (unsigned int j = 0; j < i; j++)
+				laplace(j, i) = laplace(i, j);
 	}
 
-/*!
- * calculates normalderitaves at the faces quadrature points
- */
-	void assemble_normalderi(const Fquadratureshape_type  &Fquads_x, const Fquadratureshape_type Fquads_y,
-							const int Fquadraturedim, const int Fquadgaussdim, const int Fchilddim)
-	{
+	/*!
+	 * calculates normalderitaves at the faces quadrature points
+	 */
+	void assemble_normalderi(const Fquadratureshape_type &Fquads_x,
+			const Fquadratureshape_type Fquads_y, const int Fquadraturedim,
+			const int Fquadgaussdim, const int Fchilddim) {
 		// normal derivatives of shapes at face-quadrature-points
-		value_type det = jac(0,0)*jac(1,1) - jac(1,0)*jac(0,1); //determinant of jacobian
-		for (unsigned int i=0; i<shapedim; i++) //loop over all ansatzfcts
-			for (int iq=0; iq<Fquadraturedim; iq++) { //loop over all quadrature points
+		value_type det = jac(0, 0) * jac(1, 1) - jac(1, 0) * jac(0, 1); //determinant of jacobian
+		for (unsigned int i = 0; i < shapedim; i++) //loop over all ansatzfcts
+			for (int iq = 0; iq < Fquadraturedim; iq++) { //loop over all quadrature points
 
 				// gradient (calculated after chainrule \div phi_ref = J^-1 \div \phi
-				Eigen::Matrix<value_type, 2, 2> J_inv_tr;
-				J_inv_tr << jac(1,1), -jac(1,0), -jac(0,1), jac(0,0);
-				Eigen::Vector2d grad_ref_cell (Fquads_x(i,iq), Fquads_y(i,iq));
+				Eigen::Matrix < value_type, 2, 2 > J_inv_tr;
+				J_inv_tr << jac(1, 1), -jac(1, 0), -jac(0, 1), jac(0, 0);
+				Eigen::Vector2d grad_ref_cell(Fquads_x(i, iq), Fquads_y(i, iq));
 
 				grad(i)(iq) = J_inv_tr * grad_ref_cell / det;
 
-	//			cout << "grad of shape function " << i << ": (" << pBC->grad[i][iq][0] << ", " << pBC->grad[i][iq][1] << ")" << endl;
+				//			cout << "grad of shape function " << i << ": (" << pBC->grad[i][iq][0] << ", " << pBC->grad[i][iq][1] << ")" << endl;
 
 				// calculate face number
 				unsigned int in = 0;
-				if (iq < Fdim*Fquadgaussdim)
-					in = iq/Fquadgaussdim;
+				if (iq < Fdim * Fquadgaussdim)
+					in = iq / Fquadgaussdim;
 				else
-					in = (iq-Fdim*Fquadgaussdim)/(Fchilddim*Fquadgaussdim);
+					in = (iq - Fdim * Fquadgaussdim)
+							/ (Fchilddim * Fquadgaussdim);
 
 				// normal derivative
-				normalderi(i,iq) = grad(i)(iq).dot(normal(in));
+				normalderi(i, iq) = grad(i)(iq).dot(normal(in));
 
-	//			cout << " normal derivative of shape function " << i << " at q-point " << iq << ": " << pBC->get_normalderi(i,iq) << endl;
+				//			cout << " normal derivative of shape function " << i << " at q-point " << iq << ": " << pBC->get_normalderi(i,iq) << endl;
 			}
 
 	}
 
+	void get_center(const Nvector_type & nv, space_type & center) {
+//		center = nv(0) + nv(1) + nv(2);
+//		center /= 3.0;
+
+		  center[0] = 0.0;
+		  center[1] = 0.0;
+		  for (unsigned int i=0; i<3; i++) {
+		    center[0] += nv[i][0];
+		    center[1] += nv[i][1];
+		    }
+		  center[0] /= 3.0;
+		  center[1] /= 3.0;
+
+	}
+
+	void get_center (const grid_type &grid, const id_type& idLC,
+	                          space_type & center)
+	{
+		grid_nvector_type vN_temp;
+		grid.nodes(idLC, vN_temp);
+
+		//transform nodes to Eigenvectors
+		Nvector_type vN;
+
+		for (int i = 0; i < 3; ++i) {
+			vN(i)(0) = vN_temp[i][0];
+			vN(i)(1) = vN_temp[i][1];
+		}
+		get_center(vN, center);
+	}
+
+public:
+	void initialize(const shape_type &shape, const grid_type &grid,
+			const id_type idBC) {
+		grid_nvector_type vN_temp;
+		grid.nodes(idBC, vN_temp);
+		// cerr << "Nodes" << endl; writeNvector_type (vN);
+
+		//transform nodes to Eigenvectors
+		Nvector_type vN;
+
+		for (int i = 0; i < 3; ++i) {
+			vN(i)(0) = vN_temp[i][0];
+			vN(i)(1) = vN_temp[i][1];
+		}
+
+		//calculate normals
+		for (unsigned int f = 0; f < idBC.countFaces(); f++) {
+
+			unsigned int node0, node1;
+
+			// face f is the line segment [node(f+1 mod countFaces()), node(f+2 mod countFaces())]
+			node0 = f + 1;
+			if (node0 == idBC.countFaces())
+				node0 = 0;
+			node1 = node0 + 1;
+			if (node1 == idBC.countFaces())
+				node1 = 0;
+
+			// initialize face length and unit normal of of pBC
+			value_type diff_x = vN[node0][0] - vN[node1][0];
+			value_type diff_y = vN[node1][1] - vN[node0][1];
+			set_normal(f,diff_y,diff_x);
+//			normal(f)(0) = diff_y;
+//			normal(f)(1) = diff_x;
+
+//	    	cout << " outer unit normal at face " << f << ": (" << get_normal(f)[0] << ", " << get_normal(f)[1] << ")" << endl;
+		}
+
+		// initialize volume
+		volume = ((vN[1][0] - vN[0][0]) * (vN[2][1] - vN[0][1])
+				- (vN[2][0] - vN[0][0]) * (vN[1][1] - vN[0][1])) * 0.5;
+
+		// jacobian of transformation from reference element
+		jac(0, 0) = vN[1][0] - vN[0][0];
+		jac(0, 1) = vN[2][0] - vN[0][0];
+		jac(1, 0) = vN[1][1] - vN[0][1];
+		jac(1, 1) = vN[2][1] - vN[0][1];
+
+		// absolute value of determinant of jacobian
+		detjacabs = std::abs(jac(0, 0) * jac(1, 1) - jac(1, 0) * jac(0, 1));
+		assert(detjacabs == 2 * volume);
+
+		cout << "Equadw " << shape.get_Equadw() << endl;
+		assemble_laplace(shape.get_Equadw(), shape.get_Equads_x(),
+				shape.get_Equads_y(), shape.Equadraturedim);
+
+		cout << "laplace " << get_laplace() << endl;
+		cout << "det " << detjacabs_Ref() << endl;
+
+		assemble_normalderi(shape.get_Fquads_x(), shape.get_Fquads_y(),
+				shape.Fquadraturedim, shape.Fquadgaussdim, shape.Fchilddim);
+
+		// barycentric coordinates of edge-intersection-points for Serror,
+		// intersect3ion of edge with connection of element-centers
+		{
+			int inode, inode2;
+			double sum, c, s;
+			space_type rn, rc, x, xc;
+			typename grid_type::faceidvector_type vF;
+			typename grid_type::facehandlevector_type vFh, vOh; // neighbor face number and orientation
+			grid.faceIds(idBC, vF, vFh, vOh);
+			get_center(vN, xc);
+			for (unsigned int iface = 0; iface < idBC.countFaces(); ++iface) {
+				if (vF[iface].isValid()) {
+					inode = iface - 1;
+					if (inode < 0)
+						inode = idBC.countNodes() - 1;
+					inode2 = inode - 1;
+					if (inode2 < 0)
+						inode2 = idBC.countNodes() - 1;
+
+					get_center(grid, vF[iface], rc);
+
+					sum = 0.0;
+					for (int ispace = 0; ispace < spacedim; ++ispace) {
+						rc[ispace] -= xc[ispace];
+						rn[ispace] = vN[inode][ispace] - vN[inode2][ispace];
+						x[ispace] = vN[inode][ispace] - xc[ispace];
+						sum += sqr(rc[ispace]);
+					}
+					// We have the linear system  x = [rc, rn]*(ac, an)^T,
+					// solve for an with Givens, and pBC->Spoint[iface] = 1.0 - an
+					sum = sqrt(sum);
+					c = rc[0] / sum;
+					s = rc[1] / sum;
+					rc[0] = -s * x[0] + c * x[1];
+					rc[1] = -s * rn[0] + c * rn[1];
+
+					// barycentric coordinate associated with inode = iface-1,
+					// for a point lying on iface
+					set_Spoint(iface, 1.0 - rc[0] / rc[1]);
+				} else
+					set_Spoint(iface, -1.0); // ???
+			}
+		}
+
+	}
+
 };
-
-
 
 #endif /* TMYBASECELL_HPP_ */
