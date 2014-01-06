@@ -143,7 +143,7 @@ private:
 		const double phi_i_x=  jac(1,1)*u0_x - jac(1,0)*u0_y, phi_i_y= -jac(0,1)*u0_x + jac(0,0)*u0_y ;
 		const double phi_j_x=  jac(1,1)*u1_x - jac(1,0)*u1_y, phi_j_y= -jac(0,1)*u1_x + jac(0,0)*u1_y ;
 
-		return ( phi_i_x * phi_j_x + phi_i_y * phi_j_y ) / detjacabs;
+		return ( phi_i_x * phi_j_x + phi_i_y * phi_j_y ) / sqr(detjacabs);
 	   }
 
 public:
@@ -178,7 +178,7 @@ public:
 //				for (unsigned int j=0; j<=i; j++)
 //					for (unsigned int iq=0; iq<Equadraturedim; iq++) {
 //						pBC->laplace(i,j) +=
-//								shape.Equadw[iq]*bilin_alaplace (shape.Equads_x(i,iq), shape.Equads_y(i,iq),
+//								shape.Equadw[iq]*detjacabs*bilin_alaplace (shape.Equads_x(i,iq), shape.Equads_y(i,iq),
 //										shape.Equads_x(j,iq), shape.Equads_y(j,iq),
 //										pBC->jac, pBC->detjacabs, pBC->diffusion_a);
 //					}
@@ -187,7 +187,7 @@ public:
 //				for (unsigned int j=0; j<=i; j++)
 //					for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
 //						pBC->laplace(i,j) +=
-//								shape.Equadw[iq]*bilin_laplace (shape.Equads_x(i,iq), shape.Equads_y(i,iq),
+//								shape.Equadw[iq]*detjacabs*bilin_laplace (shape.Equads_x(i,iq), shape.Equads_y(i,iq),
 //										shape.Equads_x(j,iq), shape.Equads_y(j,iq),
 //										pBC->jac, pBC->detjacabs);
 //					}
@@ -200,7 +200,7 @@ public:
 				for (int iq=0; iq<Equadraturedim; iq++) {
 					double func = bilin_laplace (Equads_x(i,iq), Equads_y(i,iq),
 							Equads_x(j,iq), Equads_y(j,iq));
-					laplace(i,j) += Equadw(iq)*func;
+					laplace(i,j) += Equadw(iq)*detjacabs*func;
 					test += Equadw(iq);
 					cout << "func " << func << "*weight " << Equadw(iq)*func << endl;
 					cout << "test " << test << endl;
