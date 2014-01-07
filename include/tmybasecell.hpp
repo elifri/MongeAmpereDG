@@ -11,7 +11,6 @@
 #include <iostream>
 #include <valarray>
 #include "utility.hpp"
-#include "Tmatrix.hpp"
 #include <Eigen/Core>
 
 #include "tmycommencelldata.hpp"
