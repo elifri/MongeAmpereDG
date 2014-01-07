@@ -10,7 +10,10 @@
 
 #include <iostream>
 
+#include "config.hpp"
 #include "tmycommencelldata.hpp"
+
+using namespace config;
 
 //------------------------------------------------------------------------------
 // LEAFCELL
@@ -27,15 +30,8 @@ public:
   typedef typename config_type::leafcell_type          leafcell_type;
   typedef typename config_type::leafcellptrvector_type leafcellptrvector_type;
 
-  // 17.12.04
-  enum {
-    spacedim = grid_type::config_type::spacedim,
-    statedim = grid_type::config_type::statedim,
-    shapedim = grid_type::config_type::shapedim,
-    degreedim = grid_type::config_type::degreedim
-  };
-  typedef typename grid_type::config_type::Estate_type     Estate_type;
-  typedef typename grid_type::config_type::mass_type       mass_type;
+  typedef typename config::Estate_type     Estate_type;
+  typedef typename config::mass_type       mass_type;
 
 
   ////////////////////////////

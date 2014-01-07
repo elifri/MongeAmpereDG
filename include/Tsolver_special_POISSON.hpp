@@ -36,7 +36,7 @@ void Tsolver::initializeLeafCellData_POISSON() {
 				pLC->unew(ishape,istate) = 0.0;
 			}
 
-		for (unsigned int iq = 0; iq < shape.Equadraturedim; iq++) {
+		for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
 			get_Ecoordinates(nv, iq, x);
 			get_exacttemperature_POISSON(x, v);
 			for (unsigned int istate = 0; istate < statedim; istate++)
@@ -149,7 +149,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 			}
 
 			// Copy entries for right hand side into right hand side
-			for (unsigned int iq = 0; iq < shape.Equadraturedim; iq++) {
+			for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
 
 				state_type uLC;
 
@@ -604,11 +604,12 @@ void Tsolver::time_stepping_POISSON() {
 	// sign of stbilization term: +1: Bauman-Oden/NIPG, -1: GEM/SIPG
 	int stabsign;
 	double gamma, refine_eps, coarsen_eps;
-	cfg.getValue("method", "stabsign", stabsign, 1);
-	cfg.getValue("method", "gamma", gamma, 0.0);
 
-	cfg.getValue("adaptation", "refine_eps", refine_eps, 1.0e-9);
-	cfg.getValue("adaptation", "coarsen_eps", coarsen_eps, 1.0e-6);
+	singleton_config_file::instance().getValue("method", "stabsign", stabsign, 1);
+	singleton_config_file::instance().getValue("method", "gamma", gamma, 0.0);
+
+	singleton_config_file::instance().getValue("adaptation", "refine_eps", refine_eps, 1.0e-9);
+	singleton_config_file::instance().getValue("adaptation", "coarsen_eps", coarsen_eps, 1.0e-6);
 
 	cout << "Using refine_eps=" << refine_eps << " and coarsen_eps="
 			<< coarsen_eps << "." << endl;
@@ -626,7 +627,7 @@ void Tsolver::time_stepping_POISSON() {
 	// refine_circle (1.0); refine_band (0.85, 1.05);
 
 	int level;
-	cfg.getValue("poisson", "startlevel", level, 2);
+	singleton_config_file::instance().getValue("poisson", "startlevel", level, 2);
 	if (levelmax < level)
 		level = levelmax;
 
@@ -670,7 +671,7 @@ void Tsolver::time_stepping_POISSON() {
 	////////////////////////////////////////////////////////////
 
 	int maxloops;
-	cfg.getValue("poisson", "loops", maxloops, 3);
+	singleton_config_file::instance().getValue("poisson", "loops", maxloops, 3);
 
 	for (int loop = 1; loop <= maxloops; ++loop) {
 

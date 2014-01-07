@@ -146,7 +146,9 @@ void Tsolver::update_baseGeometry ()
     grid.nodes (idBC,vN2);
     // cerr << "Nodes" << endl; writeNvector_type (vN);
 
-    pBC->initialize(shape, grid, idBC);
+    pBC->initialize(shape.get_Equadw(), shape.get_Equads_x(), shape.get_Equads_y(),
+			shape.get_Fquads_x(), shape.get_Fquads_y(),
+			grid, idBC);
     }
 
   facLevelVolume.resize (grid.leafCells().countLinks()+1);
@@ -249,12 +251,12 @@ tableNeighbOrient[3][2][3] = undefined;
 for (unsigned int i=0; i<4; i++)
   for (unsigned int j=0; j<3; j++)
     for (unsigned int k=0; k<3; k++)
-      tableCoarseNeighbGaussbase[i][j][k] = 3*shape.Fquadgaussdim + 2*shape.Fquadgaussdim*k;
+      tableCoarseNeighbGaussbase[i][j][k] = 3*Fquadgaussdim + 2*Fquadgaussdim*k;
 
 for (unsigned int k=0; k<3; k++) {
-  tableCoarseNeighbGaussbase[2][0][k] += shape.Fquadgaussdim;
-  tableCoarseNeighbGaussbase[1][2][k] += shape.Fquadgaussdim;
-  tableCoarseNeighbGaussbase[3][1][k] += shape.Fquadgaussdim;
+  tableCoarseNeighbGaussbase[2][0][k] += Fquadgaussdim;
+  tableCoarseNeighbGaussbase[1][2][k] += Fquadgaussdim;
+  tableCoarseNeighbGaussbase[3][1][k] += Fquadgaussdim;
   }
 // After Gaussbase is determined via
 // Gaussbase = shape.Fquadgaussdim*(orientation in nc)
@@ -612,7 +614,7 @@ void Tsolver::read_problem_parameters_GENERAL (const std::string data_directory)
   output_directory = data_directory;
   // levelmax   = input<int>   ("levelmax           [default=   10] =? ",10);
   int lmax;
-  cfg.getValue ("general", "levelmax", lmax, 10);
+  igpm::configfile().getValue ("general", "levelmax", lmax, 10);
   levelmax=lmax;
 
 #if (EQUATION!=POISSON_EQ && EQUATION!=POISSON_PREC_EQ)

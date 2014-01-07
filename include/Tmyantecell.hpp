@@ -1,40 +1,29 @@
 /*
- * tmycommencelldata.hpp
+ * Tmyantecell.hpp
  *
- *  Created on: 05.01.2014
+ *  Created on: 07.01.2014
  *      Author: elisa
  */
-
-#ifndef TMYCOMMENCELLDATA_HPP_
-#define TMYCOMMENCELLDATA_HPP_
 
 #include "config.hpp"
 
 //------------------------------------------------------------------------------
-// common cell data, for instance
+// ANTECELL
 //------------------------------------------------------------------------------
 template <typename CONFIG_TYPE>
-class tmycommoncelldata
+class tmyantecell : public igpm::tidcell_ante<CONFIG_TYPE>, public tmycommoncelldata<CONFIG_TYPE>
 {
 public:
   typedef CONFIG_TYPE                                    config_type;
   typedef typename config_type::grid_type              grid_type;
 
   enum {
-    spacedim  = config::spacedim,
-    statedim  = config::statedim,
-    shapedim  = config::shapedim,
-    degreedim = config::degreedim,
-    Fdim      = config::Fdim
+    spacedim = config::spacedim,
+//    statedim = grid_type::config_type::statedim,
+//    shapedim = grid_type::config_type::shapedim
   };
 
 
- tmycommoncelldata(){
- }
+  tmyantecell() { }}
+;
 
-};
-
-
-
-
-#endif /* TMYCOMMENCELLDATA_HPP_ */

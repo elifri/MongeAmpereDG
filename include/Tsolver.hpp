@@ -6,84 +6,34 @@
 
 #include <Eigen/Sparse>
 
-#include "utility.hpp"
 #include "tmybasecell.hpp"
+#include "config.hpp"
+#include "grid_config.hpp"
+
+#include "Tshape.hpp"
+
+#include "utility.hpp"
+
+using namespace config;
 
 class Tsolver {
 public:
-   typedef igpm::tgrid<grid_config_type> grid_type;
+	typedef grid_config_type::basecell_type basecell_type;
+	typedef grid_config_type::leafcell_type leafcell_type;
+	typedef grid_config_type::antecell_type antecell_type;
 
-   typedef grid_type::id_type                id_type;
-   typedef grid_type::leafcell_type          leafcell_type;
-   typedef grid_type::antecell_type          antecell_type;
-   typedef grid_type::basecell_type          basecell_type;
-   typedef grid_type::leafcellptrvector_type leafcellptrvector_type;
-   typedef grid_type::antecellptrvector_type antecellptrvector_type;
-   typedef grid_type::node_type              N_type;
-   typedef grid_type::gridblockhandle_type   gridblockhandle_type;
-   typedef grid_type::nodevector_type        Nvector_type;
-   typedef grid_type::nodehandle_type        Nhandle_type;
-   typedef grid_type::nodehandlevector_type  Nhandlevector_type;
-   typedef grid_type::faceidvector_type      Fidvector_type;
-
-   enum {
-     spacedim       = grid_config_type::spacedim,
-     barycdim       = grid_config_type::barycdim,
-     statedim       = grid_config_type::statedim,
-     degreedim      = grid_config_type::degreedim,
-     shapedim       = grid_config_type::shapedim,
-     lagshapedim    = grid_config_type::lagshapedim,
-     lagstatedim    = grid_config_type::lagstatedim,
-     Ndim           = grid_config_type::Ndim,
-     childdim       = grid_config_type::childdim,
-     Equadraturedim = grid_config_type::Equadraturedim,
-     Fquadgaussdim  = grid_config_type::Fquadgaussdim,
-     Fdim           = grid_config_type::Fdim,
-     Fchilddim      = grid_config_type::Fchilddim,
-     Fquadraturedim = grid_config_type::Fquadraturedim,
-     Fmiddim        = grid_config_type::Fmiddim,
-     maxBaseCells = grid_config_type::maxBaseCells,
-     maxAnteCells = grid_config_type::maxAnteCells,
-     maxLeafCells = grid_config_type::maxLeafCells,
-     solid   = grid_config_type::solid,
-     mushy   = grid_config_type::mushy,
-     liquid  = grid_config_type::liquid,
-     mQR = grid_config_type::mQR,
-     nQR = grid_config_type::nQR
-     };
+	typedef grid_type::gridblockhandle_type   gridblockhandle_type;
+	typedef grid_type::nodehandle_type        Nhandle_type;
+	typedef grid_type::nodehandlevector_type  Nhandlevector_type;
+	typedef grid_type::faceidvector_type      Fidvector_type;
 
 
-   typedef grid_config_type::value_type              value_type;
-   typedef grid_config_type::space_type              space_type;
+
+	typedef double            Fcoeff_type[childdim][shapedim];
 
    //////////////////////////////////////////////////////////////
-   typedef grid_config_type::shape_type              shape_type;
-   typedef shape_type::baryc_type                    baryc_type;
-   typedef shape_type::state_type                    state_type;
-   typedef shape_type::Estate_type                   Estate_type;
-   typedef shape_type::EstateCV_type                 EstateCV_type;
-   typedef shape_type::Emass_type                    Emass_type;
-   typedef shape_type::Emask_type                    Emask_type;
-   typedef shape_type::mass_type                     mass_type;
-   typedef double            Fcoeff_type[childdim][shapedim];
 
-   //////////////////////////////////////////////////////////////
-   typedef Tshape<grid_config_type, 1, 3, 1> shapelag_type;
-
-   //////////////////////////////////////////////////////////////
-   typedef grid_config_type::Fnormalderivative_type  Fnormalderivative_type;
-   typedef grid_config_type::Ejacobian_type          Ejacobian_type;
-
-   ///////////////////////////////////////////////////////////////
    typedef bool       leafmarker_type[childdim];
-
-   typedef grid_config_type::NeighbOrient_type       NeighbOrient_type;
-   typedef grid_config_type::CoarseNeighbGaussbase_type
-                                                  CoarseNeighbGaussbase_type;
-   typedef grid_config_type::CoarseNeighbMid_type    CoarseNeighbMid_type;
-
-   typedef grid_config_type::Fvaluevector_type       Fvaluevector_type;
-   typedef grid_config_type::Fnormalvector_type      Fnormalvector_type;
 
    grid_type grid;
    std::string output_directory;
@@ -94,9 +44,9 @@ public:
    CoarseNeighbGaussbase_type   tableCoarseNeighbGaussbase;
    CoarseNeighbMid_type         tableCoarseNeighbMid;
 
-   shape_type shape; // shape for primal unknown (must have the name shape!!!)
+   Tshape shape; // shape for primal unknown (must have the name shape!!!)
 
-   shapelag_type shapelag; // shape for linear Lagrange unknowns
+//   shapelag_type shapelag; // shape for linear Lagrange unknowns
 
    ///////////////////////////////////////////////////////
    //////////                                  ///////////

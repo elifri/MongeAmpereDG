@@ -11,51 +11,32 @@
 #include <iostream>
 #include <valarray>
 #include "utility.hpp"
-#include <Eigen/Core>
+
+#include "config.hpp"
+
 
 #include "tmycommencelldata.hpp"
 //#include "Tsolver.hpp"
 
-igpm::configfile cfg;
+
 
 //------------------------------------------------------------------------------
 // BASECELL
 //------------------------------------------------------------------------------
 template<typename CONFIG_TYPE>
-class tmybasecell: public igpm::tidcell_base<CONFIG_TYPE>,
-		public tmycommoncelldata<CONFIG_TYPE> {
+class tmybasecell: public igpm::tidcell_base<CONFIG_TYPE>{
 public:
 	typedef CONFIG_TYPE config_type;
 	typedef typename config_type::grid_type grid_type;
 	typedef typename config_type::id_type id_type;
 
-	typedef typename config_type::shape_type shape_type;
-
-	typedef typename config_type::value_type value_type;
-	typedef typename config_type::space_type space_type;
 	typedef typename config_type::leafcellptrvector_type leafcellptrvector_type;
-
-	typedef typename config_type::Equadratureshape_type Equadratureshape_type;
-	typedef typename config_type::Equadratureweight_type Equadratureweight_type;
-	typedef typename config_type::Fquadratureshape_type Fquadratureshape_type;
-
-	typedef typename config_type::Fvaluevector_type Fvaluevector_type;
-	typedef typename config_type::Fnormalvector_type Fnormalvector_type;
-	typedef typename config_type::grad_type grad_type;
-	typedef typename config_type::Fnormalderivative_type Fnormalderivative_type;
-	typedef typename config_type::Emass_type Emass_type;
-	typedef typename config_type::Ejacobian_type Ejacobian_type;
 
 	typedef Eigen::Matrix<space_type, 3, 1> Nvector_type;
 	typedef typename grid_type::nodevector_type grid_nvector_type;
 
-	enum {
-		spacedim = grid_type::config_type::spacedim,
-		statedim = grid_type::config_type::statedim,
-		shapedim = grid_type::config_type::shapedim,
-		Fdim = grid_type::config_type::Fdim,
-		degreedim = grid_type::config_type::degreedim
-	};
+	typedef typename config_type::Fvaluevector_type Fvaluevector_type;
+	typedef typename config_type::Fnormalvector_type Fnormalvector_type;
 
 private:
 	value_type volume;
@@ -268,8 +249,7 @@ private:
 	 * calculates normalderitaves at the faces quadrature points
 	 */
 	void assemble_normalderi(const Fquadratureshape_type &Fquads_x,
-			const Fquadratureshape_type Fquads_y, const int Fquadraturedim,
-			const int Fquadgaussdim, const int Fchilddim) {
+			const Fquadratureshape_type Fquads_y) {
 		// normal derivatives of shapes at face-quadrature-points
 		value_type det = jac(0, 0) * jac(1, 1) - jac(1, 0) * jac(0, 1); //determinant of jacobian
 		for (unsigned int i = 0; i < shapedim; i++) //loop over all ansatzfcts
@@ -322,8 +302,10 @@ private:
 	}
 
 public:
-	void initialize(const shape_type &shape, const grid_type &grid,
-			const id_type idBC) {
+	void initialize(const Equadratureweight_type &Equadw,
+					const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y,
+					const Fquadratureshape_type &Fquads_x, const Fquadratureshape_type Fquads_y,
+					const grid_type &grid, const id_type idBC) {
 		grid_nvector_type vN_temp;
 		grid.nodes(idBC, vN_temp);
 		// cerr << "Nodes" << endl; writeNvector_type (vN);
@@ -371,15 +353,13 @@ public:
 		detjacabs = std::abs(jac(0, 0) * jac(1, 1) - jac(1, 0) * jac(0, 1));
 		assert(detjacabs == 2 * volume);
 
-		cout << "Equadw " << shape.get_Equadw() << endl;
-		assemble_laplace(shape.get_Equadw(), shape.get_Equads_x(),
-				shape.get_Equads_y(), shape.Equadraturedim);
+		cout << "Equadw " << Equadw << endl;
+		assemble_laplace(Equadw, Equads_x, Equads_y, Equadraturedim);
 
 		cout << "laplace " << get_laplace() << endl;
 		cout << "det " << detjacabs_Ref() << endl;
 
-		assemble_normalderi(shape.get_Fquads_x(), shape.get_Fquads_y(),
-				shape.Fquadraturedim, shape.Fquadgaussdim, shape.Fchilddim);
+		assemble_normalderi(Fquads_x, Fquads_y);
 
 		// barycentric coordinates of edge-intersection-points for Serror,
 		// intersect3ion of edge with connection of element-centers

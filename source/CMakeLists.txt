@@ -2,8 +2,13 @@
 # to value given with "project()" in the root CMakeLists.txt.
 include_directories(../include)
 
-add_executable(Mesh mesh.cpp)
+add_library(Tmass Tmass.cpp)
+add_library(Tshape Tshape.cpp)
+add_library(utility utility.cpp)
+add_library(singconfig grid_config.cpp)
 
+add_executable(Mesh mesh.cpp)
+target_link_libraries(Mesh Tmass Tshape singconfig utility)
 
 #----example code ----
 #include_directories(${MyProject_SOURCE_DIR}/MainProject/inc)

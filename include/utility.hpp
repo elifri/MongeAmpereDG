@@ -37,7 +37,7 @@ typedef Eigen::SparseMatrix<double> SparseMatrixD;
 
 const double Pi=4.0 * std::atan2(1.0, 1.0);
 
-template < class T >
+template < typename T >
 /** Convert number to string.
  *
  * @param number number to convert
@@ -62,34 +62,14 @@ std::string NumberToString(const T number)
  * @param x given double
  * @return square of x
  */
-inline double sqr(const double &x)
-{
-  return x * x;
-}
+inline double sqr(const double &x){return x*x;}
 
 /** Calculate factorial by loop.
  *
  * @param n given number
  * @return factorial of n
  */
-inline unsigned long int factorial(const unsigned long int &n)
-{
-  if (n != 0)
-  {
-
-    unsigned long int f = n;
-    for (unsigned long int j = n - 1; j > 1; --j)
-      f *= j;
-    return f;
-
-  }
-  else
-  {
-
-    return 1;
-
-  }
-}
+unsigned long int factorial(const unsigned long int &n);
 
 /** Calculate binomial coefficient "n choose k".
  *
@@ -97,33 +77,12 @@ inline unsigned long int factorial(const unsigned long int &n)
  * @param k lower parameter
  * @return binomial coefficient "n choose k"
  */
-inline int binomial(const unsigned long int &n, const unsigned long int &k)
-{
-
-  if (k != 0)
-  {
-
-    unsigned long int b = n;
-    for (unsigned long int j = 1; j < k; ++j)
-      b *= n - j;
-
-    return b / factorial(k);
-  }
-  else
-  {
-    return 1;
-  }
-
-}
-
+int binomial(const unsigned long int &n, const unsigned long int &k);
 
 
 /** Output separator line to standard output
  */
-void outputseparator(){
-  cout << "////////////////////////////////////////////////////" << endl;
-}
-
+void outputseparator();
 
 ////////////////////////////////////////////////////
 ///////////////                      ///////////////
@@ -140,78 +99,29 @@ class FFmt
 public:
   FFmt(int width, int precision);
   ~FFmt();
-  friend ostream & operator<<(ostream &, FFmt const &);
+  friend std::ostream & operator<<(std::ostream &, FFmt const &);
 private:
   int myWidth;
   int myPrecision;
-  ios *myOwner;
-  ios::fmtflags myOriginalFlags;
+  std::ios *myOwner;
+  std::ios::fmtflags myOriginalFlags;
   int myOriginalPrecision;
   char myOriginalFill;
   int myPointerIndex;
 };
 
-FFmt::FFmt(int width, int precision)
-    :myWidth(width)
-    , myPrecision(precision)
-    , myOwner(NULL)
-{}
-
-FFmt::~FFmt()
-{
-  if (myOwner != NULL)
-  {
-    myOwner->flags(myOriginalFlags);
-    myOwner->precision(myOriginalPrecision);
-    myOwner->fill(myOriginalFill);
-    myOwner->pword(myPointerIndex) = NULL;
-  }
-}
-
-ostream & operator<<(ostream & dst, FFmt const &format)
-{
-  static int i = ios::xalloc();
-  if (dst.pword(i) == NULL)
-  {
-    FFmt & f = const_cast < FFmt & >(format);
-    dst.pword(i) = &dst;
-    f.myOwner = &dst;
-    f.myOriginalFlags = dst.flags();
-    f.myOriginalFill = dst.fill();
-    f.myOriginalPrecision = dst.precision();
-    f.myPointerIndex = i;
-  }
-  dst.setf(ios::fixed, ios::floatfield);
-  dst.precision(format.myPrecision);
-  dst.width(format.myWidth);
-  return dst;
-}
+std::ostream & operator<<(std::ostream & dst, FFmt const &format);
 
 #ifdef USE_PETSC
 
-void check_petsc_error(PetscErrorCode ierr)
-{
-  if (ierr != 0)
-  {
-    cerr << "PETSc Error! " << ierr << endl;
-    exit(ierr);
-  }
-}
+void check_petsc_error(PetscErrorCode ierr);
 
 #endif
 
 template <class Cont>
-Cont toupper(Cont cont)
-{
-  std::transform(cont.begin(), cont.end(), cont.begin(),
-                 static_cast<int(*)(int)>(std::toupper));
-  return cont;
-}
+Cont toupper(Cont cont);
 
-bool string_contains_true(const std::string s) {
-  std::string s2=toupper(s);
-  return ( s2=="Y" || s2=="YES" || s2=="TRUE");
-}
+bool string_contains_true(const std::string s);
 
 
 #endif
