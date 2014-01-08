@@ -28,6 +28,7 @@ public:
     Fdim      = config::Fdim
   };
 
+  int gauss_offset(const int face){return	config::Fquadgaussdim * face;}
 
  tmycommoncelldata(){
  }

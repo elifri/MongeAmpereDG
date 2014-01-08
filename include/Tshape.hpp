@@ -8,6 +8,7 @@
 #include "config.hpp"
 
 #include "Tmass.hpp"
+#include "Fquad.hpp"
 
 using namespace config;
 
@@ -32,19 +33,10 @@ private:
    Equadratureshape_type  Equads_xx, Equads_xy, Equads_yy;
                                     // second derivatives of shapes at quadrature points
 
-   //quadrature data for faces
-   Fquadraturepoint_type  Fquadx;   // quadrature points in baryc. coord.
-   Fquadratureweight_type Fquadw;   // quadrature weight
-   Fquadratureshape_type  Fquads;   // value of shapes at quadrature points
-   Fquadratureshape_type  Fquads_x; // x-der. of shapes at quadrature points in reference element
-   Fquadratureshape_type  Fquads_y; // y-der. of shapes at quadrature points in reference element
+   Fquad fquad;
 
-   Fmidshape_type         Fmids;
-   Fmidpoint_type         Fmidx;
-   Fmidshape_type         Squads;
-   Fmidpoint_type         Squadx;
-   Scentershape_type      Scenters;
-   Scenterpoint_type      Scenterx;
+   Scentershape_type Scenters;
+	Scenterpoint_type Scenterx;
 
 public:
    igpm::tvector<igpm::tvector<double,shapedim>,shapedim> sc; // shape coefficients in monomial basis (better name???)
@@ -152,25 +144,25 @@ public:
 	const value_type& get_Equadx(const int i, const int j) const{	return Equadx(i,j);}
 	value_type& set_Equadx(const int i, const int j){	return Equadx(i,j);}
 
-	Fquadratureshape_type get_Fquads() const { return Fquads;}
-	const value_type& get_Fquads(const int i, const int j) const{	return Fquads(i,j);}
-	value_type& set_Fquads(const int i, const int j){	return Fquads(i,j);}
+	Fquadratureshape_type get_Fquads() const { return fquad.Fquads;}
+	const value_type& get_Fquads(const int i, const int j) const{	return fquad.Fquads(i,j);}
+	value_type& set_Fquads(const int i, const int j){	return fquad.Fquads(i,j);}
 
-	Fquadratureshape_type get_Fquads_x() const { return Fquads_x;}
-	const value_type& get_Fquads_x(const int i, const int j) const{	return Fquads_x(i,j);}
-	value_type& set_Fquads_x(const int i, const int j){	return Fquads_x(i,j);}
+	Fquadratureshape_type get_Fquads_x() const { return fquad.Fquads_x;}
+	const value_type& get_Fquads_x(const int i, const int j) const{	return fquad.Fquads_x(i,j);}
+	value_type& set_Fquads_x(const int i, const int j){	return fquad.Fquads_x(i,j);}
 
-	Fquadratureshape_type get_Fquads_y() const { return Fquads_y;}
-	const value_type& get_Fquads_y(const int i, const int j) const{	return Fquads_y(i,j);}
-	value_type& set_Fquads_y(const int i, const int j){	return Fquads_y(i,j);}
+	Fquadratureshape_type get_Fquads_y() const { return fquad.Fquads_y;}
+	const value_type& get_Fquads_y(const int i, const int j) const{	return fquad.Fquads_y(i,j);}
+	value_type& set_Fquads_y(const int i, const int j){	return fquad.Fquads_y(i,j);}
 
-	Fquadratureweight_type get_Fquadw() const { return Fquadw;}
-	const value_type& get_Fquadw(const int i) const{	return Fquadw(i);}
-	value_type& set_Fquadw(const int i){	return Fquadw(i);}
+	Fquadratureweight_type get_Fquadw() const { return fquad.Fquadw;}
+	const value_type& get_Fquadw(const int i) const{	return fquad.Fquadw(i);}
+	value_type& set_Fquadw(const int i){	return fquad.Fquadw(i);}
 
-	Fquadraturepoint_type get_Fquadx() const { return Fquadx;}
-	const value_type& get_Fquadx(const int i, const int j) const{	return Fquadx(i,j);}
-	value_type& set_Fquadx(const int i, const int j){	return Fquadx(i,j);}
+	Fquadraturepoint_type get_Fquadx() const { return fquad.Fquadx;}
+	const value_type& get_Fquadx(const int i, const int j) const{	return fquad.Fquadx(i,j);}
+	value_type& set_Fquadx(const int i, const int j){	return fquad.Fquadx(i,j);}
 };
 
 

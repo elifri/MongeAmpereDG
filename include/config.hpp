@@ -9,6 +9,7 @@
 #define CONFIG_HPP_
 
 #include "Eigen/Core"
+#include "callback.hpp"
 
 #include "igpm_t2_lib.hpp"
 
@@ -169,6 +170,7 @@ typedef Eigen::Matrix<value_type, shapedim, Equadraturedim> Equadratureshape_typ
 typedef Eigen::Matrix<value_type, Equadraturedim, barycdim> Equadraturepoint_type;
 typedef value_type Emaskquadpoint_type[childdim][Equadraturedim][barycdim];
 typedef Eigen::Matrix<value_type, Equadraturedim, 1> Equadratureweight_type;
+typedef Eigen::Matrix<value_type, Fquadraturedim, 1> Fquadrature_type;
 typedef Eigen::Matrix<value_type, shapedim, Fquadraturedim> Fquadratureshape_type;
 typedef Eigen::Matrix<value_type, Fquadraturedim, barycdim> Fquadraturepoint_type;
 typedef Eigen::Matrix<value_type, Fquadraturedim, 1> Fquadratureweight_type;
@@ -183,6 +185,11 @@ typedef Eigen::Matrix<space_type, Fquadraturedim, 1> gauss_grad_type;
 typedef Eigen::Matrix<gauss_grad_type, shapedim, 1> grad_type; //stores for every shape function at every (face) quadrature node the gradient
 typedef Eigen::Matrix<value_type, shapedim, Fquadraturedim> Fnormalderivative_type;
 typedef Eigen::Matrix<value_type, spacedim, spacedim> Ejacobian_type;
+
+//callback types
+
+typedef util::Function <value_type (const value_type, const value_type)> function_2d_type;
+typedef util::Function <value_type (const value_type, const space_type)> function_u_type;
 
 
 // Where to put these ??? 4=?, 3=? .......
