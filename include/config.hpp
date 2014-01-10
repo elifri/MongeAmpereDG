@@ -166,10 +166,12 @@ typedef Eigen::Matrix<double, shapedim, Ndim> Nvalueshape_type;
 // quadr.-weights, quadrature points
 // and shape-values/derivatives at quadrature points
 typedef Eigen::Matrix<value_type, Ndim, 1> Enodevalue_type;
+typedef Eigen::Matrix<value_type, Equadraturedim, 1> Equadrature_type;
 typedef Eigen::Matrix<value_type, shapedim, Equadraturedim> Equadratureshape_type;
 typedef Eigen::Matrix<value_type, Equadraturedim, barycdim> Equadraturepoint_type;
 typedef value_type Emaskquadpoint_type[childdim][Equadraturedim][barycdim];
 typedef Eigen::Matrix<value_type, Equadraturedim, 1> Equadratureweight_type;
+
 typedef Eigen::Matrix<value_type, Fquadraturedim, 1> Fquadrature_type;
 typedef Eigen::Matrix<value_type, shapedim, Fquadraturedim> Fquadratureshape_type;
 typedef Eigen::Matrix<value_type, Fquadraturedim, barycdim> Fquadraturepoint_type;
@@ -188,8 +190,8 @@ typedef Eigen::Matrix<value_type, spacedim, spacedim> Ejacobian_type;
 
 //callback types
 
+typedef util::Function <value_type (const value_type)> function_1d_type;
 typedef util::Function <value_type (const value_type, const value_type)> function_2d_type;
-typedef util::Function <value_type (const value_type, const space_type)> function_u_type;
 
 
 // Where to put these ??? 4=?, 3=? .......

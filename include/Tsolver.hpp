@@ -249,7 +249,6 @@ public:
 };
 
 
-#include "Tsolver_general.hpp"
 #include "Tsolver_special.hpp"
 
 #endif
