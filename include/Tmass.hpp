@@ -49,7 +49,7 @@ public:
 	void set_massmatrix(const Tmass & m);
 
 	value_type bilin_mass(const double & u0, const double & u1, const double &detjacabs) {return u0 * u1 * detjacabs;}
-//	void initialize(Tshape& shape);
+	void initialize();
 
 	void Cholesky_solve (Estate_type & w) const;
 	void Cholesky_solve (Estate_type & w, const unsigned int & istate) const;

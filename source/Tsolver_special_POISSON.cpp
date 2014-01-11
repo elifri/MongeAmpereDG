@@ -193,8 +193,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 							orderLC = idLC.getSubId(idLC.path(), idLC.level());
 							orderNC = vF[i].getSubId(vF[i].path(),
 									vF[i].level());
-							gaussbaseNC = Fquadgaussdim
-									* tableNeighbOrient[orderLC][i][orderNC];
+							gaussbaseNC = Fquadgaussdim * vFh[i];
 							levelNC = level;
 							grid.findBaseCellOf(vF[i], pNBC);
 							assembleInnerFace = true;
@@ -207,8 +206,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 							orderNC = vF[i].getSubId(vF[i].path(),
 									vF[i].level());
 							orientNC = tableNeighbOrient[orderLC][i][orderNC];
-							gaussbaseNC =
-									tableCoarseNeighbGaussbase[orderLC][i][orientNC];
+							gaussbaseNC = Fquadgaussdim * vFh[i];
 							levelNC = level - 1;
 							grid.findBaseCellOf(iddad, pNBC);
 							assembleInnerFace = true;
@@ -220,19 +218,19 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 						length = facLevelLength[level] * pBC->get_length(i); //calculate actual face length
 						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over gauss nodes
 							iqLC = gaussbaseLC + iq; //index of next gauss node to be processed
-							iqNC = gaussbaseNC + Fquadgaussdim - 1 - iq; //index of next gauss node in neighbour cell to be processed
+							iqNC = vOh[i] == 1? gaussbaseNC + Fquadgaussdim - 1 - iq : gaussbaseNC + iq; //index of next gauss node in neighbour cell to be processed
 
 							// Copy entries into Laplace-matrix
-							for (unsigned int ishape = 0; ishape < shapedim;
-									++ishape) {
+							for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 								for (unsigned int j = 0; j < shapedim; ++j) {
 									int row_LC = pLC->m_offset + ishape;
 									int row_NC = pNC->m_offset + ishape;
 									int col_LC = pLC->n_offset + j;
 									int col_NC = pNC->n_offset + j;
 
+
 									// b(u, phi)
-									LM.coeffRef(row_LC, col_LC) += -0.5 // to average
+										LM.coeffRef(row_LC, col_LC) += -0.5 // to average
 											* shape.get_Fquadw(iqLC) * length//quadrature weights
 											* shape.get_Fquads(ishape,iqLC) //jump
 											* pBC->get_normalderi(j,iqLC)/ facLevelLength[level]; //gradient times normal
@@ -291,9 +289,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 							// Copy entries for Neumann boundary conditions into right hand side
 							for (unsigned int ishape = 0; ishape < shapedim;
 									++ishape) {
-								Lrhs(pLC->n_offset + ishape) +=
-										shape.get_Fquadw(iqLC) * length * uLC(0)
-												* shape.get_Fquads(ishape,iqLC);
+								Lrhs(pLC->n_offset + ishape) +=	shape.get_Fquadw(iqLC) * length * uLC(0)* shape.get_Fquads(ishape,iqLC);
 							}
 						}
 						break;

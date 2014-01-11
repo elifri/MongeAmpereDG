@@ -154,7 +154,6 @@ void Tsolver::update_baseGeometry ()
     basecell_type * const pBC=&grid_type::cell(it);
 
     grid.nodes (idBC,vN2);
-    // cerr << "Nodes" << endl; writeNvector_type (vN);
 
     pBC->initialize(shape.get_Equadw(), shape.get_Equads_x(), shape.get_Equads_y(),
 			shape.get_Fquads_x(), shape.get_Fquads_y(),

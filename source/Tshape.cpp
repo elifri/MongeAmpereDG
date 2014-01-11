@@ -421,6 +421,7 @@ inline double Tshape::shape_yy(int & ishape, const space_type & x) {
 }
 ;
 
+
 /*
 
  inline double Tshape::shape (int & ishape, baryc_type & x)
@@ -496,10 +497,9 @@ inline double Tshape::shape_yy(int & ishape, const space_type & x) {
  */
 
 //////////////////////////////////////////////////////////////////
-
 void Tshape::initialize_quadrature() {
 
-	  // elements
+	// elements
 	equad.initialize();
 	space_type x;
 	for (int j = 0; j < Equadraturedim; j++) {
@@ -520,7 +520,7 @@ void Tshape::initialize_quadrature() {
 	////////////////////////////////////////////
 	{
 
-	fquad.initialize();
+		fquad.initialize();
 		// preevaluate shapes at quadrature points
 		for (int j = 0; j < Fquadraturedim; j++) {
 			x[0] = fquad.Fquadx(j, 1);
@@ -644,9 +644,8 @@ void Tshape::initialize_quadrature() {
 ;
 
 //////////////////////////////////////////////////
-value_type bilin_mass(const double & u0, const double & u1,
-		const double &detjacabs) {
-	return u0 * u1 * detjacabs;
+value_type bilin_mass(const double & u0, const double & u1) {
+	return u0 * u1;
 }
 
 void Tshape::initialize_mass() {
@@ -656,8 +655,6 @@ void Tshape::initialize_mass() {
 	// possible as long as we have x-independent
 	// transformation-jacobians (non-curved triangles)
 
-//	mass.initialize(*this);
-
 	Emass_type A;
 
 	space_type x;
@@ -666,21 +663,13 @@ void Tshape::initialize_mass() {
 	for (unsigned int i = 0; i < shapedim; i++) {
 		for (unsigned int j = 0; j < shapedim; j++) {
 
-			A(i, j) = 0.0;
-			mass.A_full_coeffRef(i, j) = 0.0;
-
+			Equadrature_type values;
 			for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
-				mass.A_full_coeffRef(i, j) += equad.Equadw[iq]
-						* bilin_mass(Equads(i, iq), Equads(j, iq), detjacabs);
+				values(iq) = bilin_mass(Equads(i, iq), Equads(j, iq));
 			}
-//		mass.initialize(*this);
-
-			if (j <= i)
-				A(i, j) = mass.A_full_coeffRef(i, j);
-
+			A(i, j) = equad.integrate(values, detjacabs);
 		}
 	}
-	//  mass.Cholesky_decomp ();
 
 	mass.set_A(A);
 
@@ -688,23 +677,22 @@ void Tshape::initialize_mass() {
 	////////////////////////////////////
 	{
 
-		for (unsigned int i = 0; i < 4; i++)
-			for (unsigned int ish = 0; ish < shapedim; ish++)
-				for (unsigned int jsh = 0; jsh < shapedim; jsh++)
-					mass.B_coeffRef(i, ish, jsh) = 0.0;
-
 		detjacabs = 1.0 / double(childdim); // because child_volume = reference_volume/childdim
 		value_type phi;
+		Equadrature_type values;
 		for (unsigned int i = 0; i < 4; i++) // run through children
-			for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
-				x[0] = equad.Emaskx[i][iq][1];
-				x[1] = equad.Emaskx[i][iq][2];
-				for (int ish = 0; ish < shapedim; ish++) {
-					phi = shape(ish, x);  // shape on reference element
-					// value of shape on child is Equads(j,iq)
-					for (unsigned int jsh = 0; jsh < shapedim; jsh++)
-						mass.B_coeffRef(i, ish, jsh) += equad.Equadw[iq]
-								* bilin_mass(phi, Equads(jsh, iq), detjacabs);
+			for (int ish = 0; ish < shapedim; ish++) {
+				for (unsigned int jsh = 0; jsh < shapedim; jsh++) {
+					for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
+						//get coordinates of child quadrature point
+						x[0] = equad.Emaskx[i][iq][1];
+						x[1] = equad.Emaskx[i][iq][2];
+						phi = shape(ish, x);  // shape on reference element
+						// value of shape on child is Equads(j,iq)
+						values(iq) = bilin_mass(phi, Equads(jsh, iq));
+					}
+
+				mass.B_coeffRef(i, ish, jsh) = equad.integrate(values, detjacabs);
 				}
 			}
 	}

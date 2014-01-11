@@ -131,15 +131,14 @@ public:
 	 * @param gauss_offset		gaussoffset at which the desired face starts
 	 * @param length	length of the face
 	 */
-	value_type integrate(Equadrature_type functionvalues, const int ishape,
-			const int gauss_offset, const value_type length) {
+	value_type integrate(Equadrature_type functionvalues, const value_type detjacabs) {
 
 		assert(functionvalues.size() == Equadraturedim
 						&& "The vector for face integration is not of the right size!");
 		value_type res = 0;
-		for (int iq = gauss_offset; iq < gauss_offset + Equadraturedim; ++iq) //loop over all quadraturepoints
+		for (int iq = 0; iq < Equadraturedim; ++iq) //loop over all quadraturepoints
 				{
-			res += functionvalues(iq) * (Equadw(iq) * length);
+			res += functionvalues(iq) * (Equadw(iq) * detjacabs);
 		}
 
 		return res;

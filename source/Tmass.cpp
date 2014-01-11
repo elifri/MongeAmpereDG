@@ -8,66 +8,45 @@
 #include "Tmass.hpp"
 
 /*void Tmass::initialize(Equads, Equadw, igpm::tvector<igpm::tvector<igpm::tvector<double,shapedim>,shapedim>,childdim> &refinementrules) {
+
 	Emass_type A;
 	space_type x;
 	double detjacabs = 1.0;
 
+	//fill mass matrix (we need only to fill the upper triangle since it is symmetric)
 	for (unsigned int i = 0; i < shapedim; i++) {
-		for (unsigned int j = 0; j < shapedim; j++) {
+		for (unsigned int j = 0; j <= i; j++) {
 
-			A(i, j) = 0.0;
-			A_full(i, j) = 0.0;
-
+			Equadrature_type values;
 			for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
-				A_full(i, j) += Equadw(iq)
-						* bilin_mass(Equads(i, iq), Equads(j, iq),
-								detjacabs);
+				values(iq) = bilin_mass(Equads(i, iq), Equads(j, iq));
 			}
-
-			if (j <= i)
-				A(i, j) = A_full(i, j);
-
+			A(i, j) = equad.integrate(values, detjacabs);
 		}
 	}
-
-	A_cholesky.compute(A);
+	set_A(A);
 
 	// mask matrix on reference element:
 	////////////////////////////////////
 	{
-
-		for (unsigned int i = 0; i < 4; i++)
-			for (unsigned int ish = 0; ish < shapedim; ish++)
-				for (unsigned int jsh = 0; jsh < shapedim; jsh++)
-					B_coeffRef(i, ish, jsh) = 0.0;
-
 		detjacabs = 1.0 / double(childdim); // because child_volume = reference_volume/childdim
 		value_type phi;
+		Equadrature_type values;
 		for (unsigned int i = 0; i < 4; i++) // run through children
-			for (unsigned int iq = 0; iq < shape.Equadraturedim; iq++) {
-				x[0] = shape.Emaskx(i,iq,1);
-				x[1] = shape.Emaskx(i,iq,2);
-				for (int ish = 0; ish < shapedim; ish++) {
-					phi = shape.shape(ish, x);  // shape on reference element
-					// value of shape on child is Equads(j,iq)
-					for (unsigned int jsh = 0; jsh < shapedim; jsh++)
-						B_coeffRef(i, ish, jsh) += shape.get_Equadw(iq)
-								* bilin_mass(phi, shape.get_Equads(jsh, iq), detjacabs);
+			for (int ish = 0; ish < shapedim; ish++) {
+				for (unsigned int jsh = 0; jsh < shapedim; jsh++) {
+					for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
+						//get coordinates of child quadrature point
+						x[0] = equad.Emaskx[i][iq][1];
+						x[1] = equad.Emaskx[i][iq][2];
+						phi = shape(ish, x);  // shape on reference element
+						// value of shape on child is Equads(j,iq)
+						values(iq) = bilin_mass(phi, Equads(jsh, iq));
+					}
+
+				mass.B_coeffRef(i, ish, jsh) = equad.integrate(values, detjacabs);
 				}
 			}
-	}
-
-	/// calculate refinement rules
-	for (int j = 0; j < shapedim; ++j) // number of parent shape function
-			{
-		for (int c = 0; c < childdim; ++c) {
-			Eshape_type alpha_cj;
-			for (int i = 0; i < shapedim; ++i) // number of child shape function
-				alpha_cj[i] = B_coeffRef(c, j, i);
-			Cholesky_solve(alpha_cj);
-			for (int i = 0; i < shapedim; ++i) // number of child shape function
-				refinement_rules[c][j][i] = alpha_cj[i] * childdim;
-		}
 	}
 
 }*/
