@@ -17,6 +17,8 @@
 class Equad {
 public:
 
+
+
 	void initialize()
 	{
 
@@ -115,7 +117,7 @@ public:
 	 * @param gauss_offset		gaussoffset at which the desired face starts
 	 * @param length	length of the face
 	 */
-	value_type integrate(function_1d_type f, const int ishape, const value_type detjacabs) {
+	value_type integrate(function_1d_type f, const int ishape, const value_type detjacabs) const {
 		value_type res = 0;
 		for (int iq = 0; iq < Equadraturedim; ++iq) //loop over all quadraturepoints
 		{
@@ -131,7 +133,7 @@ public:
 	 * @param gauss_offset		gaussoffset at which the desired face starts
 	 * @param length	length of the face
 	 */
-	value_type integrate(Equadrature_type functionvalues, const value_type detjacabs) {
+	value_type integrate(Equadrature_type functionvalues, const value_type detjacabs) const{
 
 		assert(functionvalues.size() == Equadraturedim
 						&& "The vector for face integration is not of the right size!");

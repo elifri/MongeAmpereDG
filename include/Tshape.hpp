@@ -137,6 +137,10 @@ public:
 		return equad.Emaskx[i][j][k];
 	}
 
+	const Equad get_Equad() const{
+		return equad;
+	}
+
 	Equadratureshape_type get_Equads() const {
 		return Equads;
 	}

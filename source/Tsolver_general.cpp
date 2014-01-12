@@ -155,7 +155,7 @@ void Tsolver::update_baseGeometry ()
 
     grid.nodes (idBC,vN2);
 
-    pBC->initialize(shape.get_Equadw(), shape.get_Equads_x(), shape.get_Equads_y(),
+    pBC->initialize(shape.get_Equad(), shape.get_Equads_x(), shape.get_Equads_y(),
 			shape.get_Fquads_x(), shape.get_Fquads_y(),
 			grid, idBC);
     }

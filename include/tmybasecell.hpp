@@ -18,6 +18,7 @@
 #include "tmycommencelldata.hpp"
 //#include "Tsolver.hpp"
 
+#include "Equad.hpp"
 
 
 //------------------------------------------------------------------------------
@@ -177,9 +178,7 @@ private:
 		return phi_i.dot(phi_j);
 	}
 
-	void assemble_laplace(const Equadratureweight_type &Equadw,
-			const Equadratureshape_type &Equads_x,
-			const Equadratureshape_type &Equads_y, const int Equadraturedim) {
+	void assemble_laplace(const Equad &equad, const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y) {
 		laplace.setZero();
 
 		// Laplace-matrix
@@ -226,17 +225,16 @@ private:
 //	#else
 		double test = 0;
 		//write laplace matrix: first top half
-		for (unsigned int i=0; i<shapedim; i++)
-			for (unsigned int j=0; j<=i; j++)
-				for (int iq=0; iq<Equadraturedim; iq++) {
-					double func = bilin_laplace (Equads_x(i,iq), Equads_y(i,iq),
+		for (unsigned int i=0; i<shapedim; i++) {
+			for (unsigned int j=0; j<=i; j++) {
+				Equadrature_type func;
+				for (int iq=0; iq < Equadraturedim; iq++) {
+					func(iq) = bilin_laplace (Equads_x(i,iq), Equads_y(i,iq),
 							Equads_x(j,iq), Equads_y(j,iq));
-					laplace(i,j) += Equadw(iq)*detjacabs*func;
-					test += Equadw(iq);
-					cout << "func " << func << "*weight " << Equadw(iq) * func
-							<< endl;
-					cout << "test " << test << endl;
 				}
+				laplace(i,j) = equad.integrate(func, detjacabs);
+			}
+		}
 //	#endif
 
 		// Laplace-matrix is symmetric:
@@ -302,7 +300,7 @@ private:
 	}
 
 public:
-	void initialize(const Equadratureweight_type &Equadw,
+	void initialize(const Equad &Equad,
 					const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y,
 					const Fquadratureshape_type &Fquads_x, const Fquadratureshape_type Fquads_y,
 					const grid_type &grid, const id_type idBC) {
@@ -353,8 +351,7 @@ public:
 		detjacabs = std::abs(jac(0, 0) * jac(1, 1) - jac(1, 0) * jac(0, 1));
 		assert(detjacabs == 2 * volume);
 
-		cout << "Equadw " << Equadw << endl;
-		assemble_laplace(Equadw, Equads_x, Equads_y, Equadraturedim);
+		assemble_laplace(Equad, Equads_x, Equads_y);
 
 		cout << "laplace " << get_laplace() << endl;
 		cout << "det " << detjacabs_Ref() << endl;
