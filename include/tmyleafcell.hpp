@@ -48,7 +48,7 @@ public:
   value_type       limiter;
   value_type       Serror;
 
-#if(EQUATION==POISSON_EQ || EQUATION==IMPLICIT_HEAT_EQ)
+#if(EQUATION==POISSON_EQ || EQUATION==IMPLICIT_HEAT_EQ || EQUATION == MONGE_AMPERE_EQ)
   unsigned int m_offset, n_offset, m_block_size, n_block_size;
 #endif
 

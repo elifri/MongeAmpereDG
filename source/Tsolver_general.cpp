@@ -626,7 +626,7 @@ void Tsolver::read_problem_parameters_GENERAL (const std::string data_directory)
   igpm::configfile().getValue ("general", "levelmax", lmax, 10);
   levelmax=lmax;
 
-#if (EQUATION!=POISSON_EQ && EQUATION!=POISSON_PREC_EQ)
+#if (EQUATION!=POISSON_EQ && EQUATION!=POISSON_PREC_EQ && EQUATION != MONGE_AMPERE_EQ)
   CFL        = input<double>("CFL                [default= 0.04] =? ",0.04);
   tend       = input<double>("tend               [default= 0.10] =? ",0.10);
   Ntimesteps = input<int>   ("no. of times steps [default= 1000] =? ",1000);
@@ -644,7 +644,7 @@ void Tsolver::write_problem_parameters_GENERAL ()
   }
 
   outparameters << "levelmax           = " << levelmax << endl;
-#if (EQUATION!=POISSON_EQ && EQUATION!=POISSON_PREC_EQ && EQUATION!=IMPLICIT_HEAT_EQ)
+#if (EQUATION!=POISSON_EQ && EQUATION!=POISSON_PREC_EQ && EQUATION!=IMPLICIT_HEAT_EQ && EQUATION != MONGE_AMPERE_EQ)
   outparameters << "CFL                = " << CFL << endl;
   outparameters << "tend               = " << tend << endl;
   outparameters << "no. of times steps = " << Ntimesteps << endl;
@@ -1478,7 +1478,7 @@ void Tsolver::assemble_state_normalderivative_Fquad
 //////////////                         ///////////////
 //////////////////////////////////////////////////////
 
-#if (EQUATION!=POISSON_EQ && EQUATION!=POISSON_PREC_EQ)
+#if (EQUATION!=POISSON_EQ && EQUATION!=POISSON_PREC_EQ && EQUATION != MONGE_AMPERE_EQ)
 void Tsolver::update_dt_CFL ()
 {
    double length, lengthmin, dt_element;

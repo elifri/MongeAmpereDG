@@ -24,14 +24,15 @@ class Tmass;
 #define POISSON_EQ 3
 #define POISSON_PREC_EQ 4
 #define IMPLICIT_HEAT_EQ 5
+#define MONGE_AMPERE_EQ 6
 
-#define EQUATION POISSON_EQ
+#define EQUATION MONGE_AMPERE_EQ
 
 #ifndef EQUATION
  #error No EQUATION defined!
 #endif
 
-#if(EQUATION!=EULER_EQ && EQUATION!=HEAT_EQ && EQUATION!=ENTHALPY_EQ && EQUATION!=POISSON_EQ && EQUATION!=POISSON_PREC_EQ && EQUATION!=IMPLICIT_HEAT_EQ)
+#if(EQUATION!=EULER_EQ && EQUATION!=HEAT_EQ && EQUATION!=ENTHALPY_EQ && EQUATION!=POISSON_EQ && EQUATION!=POISSON_PREC_EQ && EQUATION!=IMPLICIT_HEAT_EQ && EQUATION != MONGE_AMPERE_EQ)
  #error This EQUATION is undefined!
 #endif
 
@@ -68,7 +69,7 @@ class Tmass;
   #define PROBLEM CONSTKAPPA
 #elif (EQUATION == ENTHALPY_EQ)
   #define PROBLEM CUTTING
-#elif (EQUATION == POISSON_EQ || EQUATION == POISSON_PREC_EQ)
+#elif (EQUATION == POISSON_EQ || EQUATION == POISSON_PREC_EQ || EQUATION == MONGE_AMPERE_EQ)
   #define PROBLEM CONST_RHS
 //  #define PROBLEM SINUS
 #elif (EQUATION == IMPLICIT_HEAT_EQ)
@@ -116,6 +117,12 @@ enum {
 	degreedim = 1,        // polynomial degree
 	shapedim = 3,        // no. of basis functions per element
 #endif
+#if (EQUATION == MONGE_AMPERE_EQ)
+	statedim = 1,
+	degreedim = 1, // polynomial degree
+	shapedim = 3, //no. of basis functions per element
+#endif
+
 	lagshapedim = 3, // no. of Lagrange-shapes, e.g. for continuous reconstruction
 	lagstatedim = 1,
 	Ndim = 3,        // no. of nodes
@@ -159,6 +166,9 @@ typedef value_type  Emask_type[childdim][shapedim][shapedim];
 
 // mass
 typedef Tmass mass_type;
+
+//diffusion
+typedef Eigen::Matrix<value_type, spacedim, spacedim> diffusionmatrix_type;
 
 // shape-values at nodes (e.g. for solver-output = visualization-input)
 typedef Eigen::Matrix<double, shapedim, Ndim> Nvalueshape_type;
@@ -209,12 +219,62 @@ typedef unsigned int CoarseNeighbMid_type[4][3][3];
 // static data
 //------------------------------------------------------------------------------
 
+class singleton_config_file{
+	private:
+		static igpm::configfile* cfg;
+
+	public:
+		static igpm::configfile& instance();
+
+		~singleton_config_file(){ delete cfg;}
+};
+
+
 // counts all existing leafs
 template<class IDTYPEINFO_TYPE>
 int tmyleafcell<IDTYPEINFO_TYPE>::m_nCountAllLeafs = 0;
 
 template<class IDTYPEINFO_TYPE>
 typename tmyleafcell<IDTYPEINFO_TYPE>::mass_type tmyleafcell<IDTYPEINFO_TYPE>::mass;
+
+
+template<int LENGTH>
+string entryname1d(const string root, unsigned int number) {
+
+	string s;
+
+	stringstream ss;
+	ss << number;
+	ss >> s;
+
+	while (s.length() < LENGTH)
+		s = "0" + s;
+
+	return root + "[" + s + "]";
+
+}
+
+template<int LENGTH>
+string entryname2d(const string root, unsigned int i, unsigned int j) {
+
+	string s1, s2;
+
+	stringstream ss1, ss2;
+	ss1 << i;
+	ss2 << j;
+	ss1 >> s1;
+	ss2 >> s2;
+
+	while (s1.length() < LENGTH)
+		s1 = "0" + s1;
+
+	while (s2.length() < LENGTH)
+		s2 = "0" + s2;
+
+	return root + "[" + s1 + "," + s2 + "]";
+
+}
+
 
 #endif // DOXYGEN_SKIP
 

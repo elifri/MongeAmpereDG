@@ -214,10 +214,20 @@ public:
    ///////////////////////////////////////////////////////
    //////////                                  ///////////
    //////////       SPECIAL FUNCTIONS          ///////////
-   //////////     for Euler/Heat-equation      ///////////
+   //////////    for Monge Ampere equation     ///////////
    //////////      in class_Tsolver.hpp        ///////////
    //////////                                  ///////////
    ///////////////////////////////////////////////////////
+
+   #if (EQUATION==MONGE_AMPERE_EQ)
+
+         double atol,rtol; // absolute and relative tolerances
+         double dtol;      // tolerances for divergence
+         int maxits;       // maximum number of iterations
+
+         double eta;       // absolute tolerance from estimated error factor
+
+   #endif
 
 #if (EQUATION == POISSON_EQ)
    ///////////////      POISSON      ///////////////
@@ -227,6 +237,7 @@ public:
 
    void read_problem_parameters_POISSON ();
    void initializeLeafCellData_POISSON ();
+
    void assemble_POISSON(const int & STABSIGN, const double & PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs);
    void restore_POISSON (Eigen::VectorXd &solution);
    void get_exacttemperature_POISSON (const space_type & x, state_type & u); // state_type ???
@@ -246,10 +257,39 @@ public:
    void adapt(const double refine_eps, const double coarsen_eps);
    void setleafcellflags(unsigned int flag, bool value);
 #endif
+
+   #if (EQUATION == MONGE_AMPERE_EQ)
+      ///////////////      POISSON_PREC      ///////////////
+
+   void assignViewCell_MA(const id_type & id, const unsigned int &blocksize, unsigned int &offset);
+   void assignViews_MA (unsigned int &LM_size);
+
+   void read_problem_parameters_MA ();
+   void initializeLeafCellData_MA ();
+
+   void assemble_MA(const int & STABSIGN, const double & PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs);
+   void restore_MA (Eigen::VectorXd &solution);
+   void get_exacttemperature_MA (const space_type & x, state_type & u); // state_type ???
+   void get_exacttemperature_MA (const N_type & x, state_type & u); // state_type ???
+   void get_exacttemperaturenormalderivative_MA (const space_type & x, const space_type & normal, state_type & u_n);
+	// state_type ???
+   void get_rhs_MA (const space_type & x, state_type & u_rhs);  // state_type ???
+   void get_rhs_MA (const N_type & x, state_type & u_rhs);  // state_type ???
+   void local_dt_MA (const value_type & lengthmin, value_type & dt_element);
+   void time_stepping_MA ();
+
+   void write_numericalsolution_MA (const unsigned int i);
+   void write_numericalsolution_VTK_MA (const unsigned int i);
+   void write_exactsolution_MA (const unsigned int i);
+   void write_exactrhs_MA (const unsigned int i);
+
+   void adapt(const double refine_eps, const double coarsen_eps);
+   void setleafcellflags(unsigned int flag, bool value);
+   #endif
+
 };
 
 
-#include "Tsolver_special.hpp"
 
 #endif
 

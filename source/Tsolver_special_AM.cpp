@@ -1,18 +1,17 @@
 /*
- * Tsolver_special_POISSON.cpp
+ * Tsolver_special_MA.cpp
  *
- *  Created on: 10.01.2014
+ *  Created on: 12.01.2014
  *      Author: elisa
  */
 
 #include "../include/Tsolver.hpp"
 
-#if(EQUATION==POISSON_EQ)
-
+#if (EQUATION == MONGE_AMPERE_EQ)
 
 ///////////////////////////////////////////
 ///////////////             ///////////////
-///////////////    POISSON  ///////////////
+///////////////    AM  ///////////////
 ///////////////             ///////////////
 ///////////////////////////////////////////
 
@@ -24,12 +23,12 @@
 #include "boost/archive/iterators/transform_width.hpp"
 using namespace boost::archive::iterators;
 
-void Tsolver::read_problem_parameters_POISSON() {
+void Tsolver::read_problem_parameters_MA() {
 }
 
 ////////////////////////////////////////////////////
 
-void Tsolver::initializeLeafCellData_POISSON() {
+void Tsolver::initializeLeafCellData_MA() {
 	// initialize leafcelldata:
 	Nvector_type nv;
 	space_type x;
@@ -50,7 +49,7 @@ void Tsolver::initializeLeafCellData_POISSON() {
 
 		for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
 			get_Ecoordinates(nv, iq, x);
-			get_exacttemperature_POISSON(x, v);
+			get_exacttemperature_MA(x, v);
 			for (unsigned int istate = 0; istate < statedim; istate++)
 				for (unsigned int ishape = 0; ishape < shapedim; ishape++)
 					pLC->u(ishape,istate) += shape.get_Equadw(iq) * v[istate]
@@ -65,7 +64,7 @@ void Tsolver::initializeLeafCellData_POISSON() {
 
 ////////////////////////////////////////////////////
 
-void Tsolver::assignViewCell_POISSON(const id_type & id,
+void Tsolver::assignViewCell_MA(const id_type & id,
 		const unsigned int &blocksize, unsigned int &offset) {
 	leafcell_type *pLC = NULL;
 	if (grid.findLeafCell(id, pLC)) {
@@ -89,12 +88,12 @@ void Tsolver::assignViewCell_POISSON(const id_type & id,
 		id_type::childrenidvector_type cv;
 		id.getChildrenCellId(cv);
 		for (unsigned int i = 0; i < id.countChildren(); ++i) {
-			assignViewCell_POISSON(cv[i], blocksize, offset);
+			assignViewCell_MA(cv[i], blocksize, offset);
 		}
 	}
 }
 
-void Tsolver::assignViews_POISSON(unsigned int & offset) {
+void Tsolver::assignViews_MA(unsigned int & offset) {
 	offset = 0;
 
 	const int blocksize = statedim * shapedim;
@@ -102,18 +101,32 @@ void Tsolver::assignViews_POISSON(unsigned int & offset) {
 	for (grid_type::basecellmap_type::const_iterator it =
 			grid.baseCells().begin(); it != grid.baseCells().end(); ++it) {
 		const grid_type::id_type id = grid_type::id(it);
-		assignViewCell_POISSON(id, blocksize, offset);
+		assignViewCell_MA(id, blocksize, offset);
 	}
 
-	write_exactsolution_POISSON(0);
+	write_exactsolution_MA(0);
 }
 
-/* @brief initializes the stiffness matrix and lhs for the poisson problem
+
+/*Equadrature_type Tsolver::assemble_face_term_MA(const int ishape, const int iface, const int jshape, const int jface, const grid_type::basecell_type * pC, const int level, const int orientation = 1)
+{
+	Equadrature_type values;
+
+	const Equadrature_type& jump = shape.get_Fquads_by_face(ishape,iface);
+	Equadrature_type grad_times_normal = pC->get_normalderi_by_face(jshape, jface)/facLevelLength[level];
+
+	if (vOh(jface) == 1)	grad_times_normal.reverse();
+
+	values = -0.5 * jump.cwiseProduct(grad_times_normal);
+
+	return values;
+}*/
+
+/* @brief initializes the stiffness matrix and lhs for the AM problem
  *
  *
  */
-
-void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
+void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
 		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs) {
 	unsigned int gaussbaseLC = 0;
 	unsigned int gaussbaseNC = 0;
@@ -166,7 +179,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 				state_type uLC;
 
 				get_Ecoordinates(idLC, iq, x);
-				get_rhs_POISSON(x, uLC);
+				get_rhs_MA(x, uLC);
 
 				for (unsigned int istate = 0; istate < statedim; ++istate) {
 					for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
@@ -283,7 +296,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 							get_Fcoordinates(idLC, iqLC, x); // determine x
 
 							state_type uLC;
-							get_exacttemperaturenormalderivative_POISSON(x,
+							get_exacttemperaturenormalderivative_MA(x,
 									pBC->get_normal(i), uLC); // determine uLC
 
 							//                 for (unsigned int ishape=0; ishape<shapedim; ishape++)
@@ -306,7 +319,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 							get_Fcoordinates(idLC, iqLC, x); // determine x
 
 							state_type uLC;
-							get_exacttemperature_POISSON(x, uLC); // determine uLC
+							get_exacttemperature_MA(x, uLC); // determine uLC
 
 							// Copy entries for Dirichlet boundary conditions into right hand side
 							for (unsigned int ishape = 0; ishape < shapedim;
@@ -378,7 +391,7 @@ void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 
 //////////////////////////////////////////////////////
 
-void Tsolver::restore_POISSON(Eigen::VectorXd & solution) {
+void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
 	leafcell_type *pLC = NULL;
 	for (grid_type::leafcellmap_type::const_iterator it =
@@ -442,7 +455,7 @@ double phi(const double x, const double y) {
 }
 
 
-void Tsolver::get_exacttemperature_POISSON(const space_type & x, state_type & u) // state_type ???
+void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // state_type ???
 		{
 #if (PROBLEM == SIMPLEPOISSON)
 	const double a = 0.3, b = 0.5, c = -0.2;
@@ -480,22 +493,22 @@ void Tsolver::get_exacttemperature_POISSON(const space_type & x, state_type & u)
 	throw("solution not implemented for this problem");
 #endif
 }
-void Tsolver::get_exacttemperature_POISSON(const N_type & x, state_type & u)
+void Tsolver::get_exacttemperature_MA(const N_type & x, state_type & u)
 {
 	space_type x2;
 	for (int i = 0; i< x2.size(); ++i)
 		x2(i) = x[i];
-	get_exacttemperature_POISSON(x2,u);
+	get_exacttemperature_MA(x2,u);
 }
 
 //////////////////////////////////////////////////////////
 
-void Tsolver::get_exacttemperaturenormalderivative_POISSON(const space_type & x,
+void Tsolver::get_exacttemperaturenormalderivative_MA(const space_type & x,
 		const space_type & normal, state_type & u_n) // state_type ???
 		{
 #if (PROBLEM == SIMPLEPOISSON)
 	const double a = 0.3, b = 0.5;
-	u_n = a * normal[0] + b * normal[1];
+	u_n(0) = a * normal[0] + b * normal[1];
 #elif (PROBLEM == SIMPLEPOISSON2)
 	const double a = 0.3, b = 0.5;
 	u_n = (2 * a * x[0] + b * x[1]) * normal[0]
@@ -514,7 +527,7 @@ void Tsolver::get_exacttemperaturenormalderivative_POISSON(const space_type & x,
 
 //////////////////////////////////////////////////////////
 
-void Tsolver::get_rhs_POISSON(const space_type & x, state_type & u_rhs) // state_type ???
+void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type ???
 		{
 
 #if (PROBLEM == SIMPLEPOISSON2)
@@ -582,17 +595,17 @@ void Tsolver::get_rhs_POISSON(const space_type & x, state_type & u_rhs) // state
 #endif
 }
 
-void Tsolver::get_rhs_POISSON(const N_type & x, state_type & u_rhs)
+void Tsolver::get_rhs_MA(const N_type & x, state_type & u_rhs)
 {
 	space_type x2;
 	for (int i = 0; i< x2.size(); ++i)
 		x2(i) = x[i];
-	get_rhs_POISSON(x2,u_rhs);
+	get_rhs_MA(x2,u_rhs);
 }
 
 //////////////////////////////////////////////////////////
 /*
- void Tsolver::get_source_POISSON (const value_type & t,
+ void Tsolver::get_source_MA (const value_type & t,
  const space_type & x, state_type & source) // state_type ???
  {
  }
@@ -605,7 +618,7 @@ void Tsolver::get_rhs_POISSON(const N_type & x, state_type & u_rhs)
  }
  */
 //////////////////////////////////////////////////////////
-void Tsolver::time_stepping_POISSON() {
+void Tsolver::time_stepping_MA() {
 
 	// sign of stbilization term: +1: Bauman-Oden/NIPG, -1: GEM/SIPG
 	int stabsign;
@@ -621,13 +634,13 @@ void Tsolver::time_stepping_POISSON() {
 			<< coarsen_eps << "." << endl;
 
 	igpm::processtimer pt;
-	cout << "Starting time_stepping_POISSON" << endl;
+	cout << "Starting time_stepping_MA" << endl;
 
 	//  int refine_count = 0;
 	//  value_type t = 0.0;
 	//  dt = 1e10;
 
-	read_problem_parameters_POISSON();
+	read_problem_parameters_MA();
 	update_baseGeometry();
 	set_leafcellmassmatrix();
 	// refine_circle (1.0); refine_band (0.85, 1.05);
@@ -638,7 +651,7 @@ void Tsolver::time_stepping_POISSON() {
 		level = levelmax;
 
 	refine(level);
-	initializeLeafCellData_POISSON();
+	initializeLeafCellData_MA();
 
 	///////////////////////////////////////////
 	// temperature history at xc: /////////////
@@ -672,12 +685,12 @@ void Tsolver::time_stepping_POISSON() {
 
 	shape.assemble_state_Equad(pc->u, center_quad, uc);
 	//  outnumericalhistory << t << "  " << uc << endl;
-	get_exacttemperature_POISSON(xc, uc);
+	get_exacttemperature_MA(xc, uc);
 	//  outexacthistory << uc[0] << endl;
 	////////////////////////////////////////////////////////////
 
 	int maxloops;
-	singleton_config_file::instance().getValue("poisson", "loops", maxloops, 3);
+	singleton_config_file::instance().getValue("AM", "loops", maxloops, 3);
 
 	for (int loop = 1; loop <= maxloops; ++loop) {
 
@@ -685,7 +698,7 @@ void Tsolver::time_stepping_POISSON() {
 
 		cout << "Assign matrix coordinates..." << endl;
 		pt.start();
-		assignViews_POISSON(LM_size);
+		assignViews_MA(LM_size);
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
@@ -696,7 +709,7 @@ void Tsolver::time_stepping_POISSON() {
 
 		cout << "Assemble linear System..." << flush;
 		pt.start();
-		assemble_POISSON(stabsign, gamma, LM, Lrhs);
+		assemble_MA(stabsign, gamma, LM, Lrhs);
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
@@ -742,12 +755,12 @@ void Tsolver::time_stepping_POISSON() {
 		// VecView(Lrhs,PETSC_VIEWER_STDOUT_WORLD);
 		// cout << "Lsolution=" << endl;
 		// VecView(Lsolution,PETSC_VIEWER_STDOUT_WORLD);
-		restore_POISSON(Lsolution);
+		restore_MA(Lsolution);
 
 		//     // temperature history at xc: //////////////////////////////
 		//     assemble_state_Equad (pc->u, center_quad, uc);
 		//     outnumericalhistory << uc << endl;
-		//     get_exacttemperature_POISSON (xc, uc);
+		//     get_exacttemperature_MA (xc, uc);
 		//     outexacthistory << uc[0] << endl;
 		//     ////////////////////////////////////////////////////////////
 
@@ -768,10 +781,10 @@ void Tsolver::time_stepping_POISSON() {
 
 		assemble_indicator_and_limiting(); // use flag
 
-		write_exactsolution_POISSON(loop);
-		write_numericalsolution_POISSON(loop);
-		write_numericalsolution_VTK_POISSON(loop);
-		write_exactrhs_POISSON(loop);
+		write_exactsolution_MA(loop);
+		write_numericalsolution_MA(loop);
+		write_numericalsolution_VTK_MA(loop);
+		write_exactrhs_MA(loop);
 
 		adapt(refine_eps, coarsen_eps);
 
@@ -1023,7 +1036,7 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 	file << "\n\t</UnstructuredGrid>" << "\n</VTKFile>";
 }
 
-void Tsolver::write_numericalsolution_POISSON(const unsigned int i)
+void Tsolver::write_numericalsolution_MA(const unsigned int i)
 {
 
 	std::vector < std::vector < id_type > >v;
@@ -1101,10 +1114,10 @@ void Tsolver::write_numericalsolution_POISSON(const unsigned int i)
 }
 
 
-void Tsolver::write_numericalsolution_VTK_POISSON(const unsigned int i) {
+void Tsolver::write_numericalsolution_VTK_MA(const unsigned int i) {
 
 	std::string fname(output_directory);
-	fname += "/grid_numericalsolution." + NumberToString(i) + ".vtu";
+	fname += "/grid_numericalsolution" + NumberToString(i) + ".vtu";
 
 	writeLeafCellVTK(fname, grid);
 
@@ -1112,7 +1125,7 @@ void Tsolver::write_numericalsolution_VTK_POISSON(const unsigned int i) {
 
 //////////////////////////////////////////////////////////
 
-void Tsolver::write_exactsolution_POISSON(const unsigned int i) {
+void Tsolver::write_exactsolution_MA(const unsigned int i) {
 
 	std::vector < std::vector<id_type> > v;
 	v.resize(grid.countBlocks());
@@ -1161,7 +1174,7 @@ void Tsolver::write_exactsolution_POISSON(const unsigned int i) {
 
 			grid.nodes(id, nv);
 			for (unsigned int k = 0; k < id.countNodes(); ++k) {
-				get_exacttemperature_POISSON(nv[k], state);
+				get_exacttemperature_MA(nv[k], state);
 				fC << nv[k] << " " << state << endl;
 			}
 		}
@@ -1186,7 +1199,7 @@ void Tsolver::write_exactsolution_POISSON(const unsigned int i) {
 
 //////////////////////////////////////////////////////////
 
-void Tsolver::write_exactrhs_POISSON(const unsigned int i) {
+void Tsolver::write_exactrhs_MA(const unsigned int i) {
 
 	std::vector < std::vector<id_type> > v;
 	v.resize(grid.countBlocks());
@@ -1235,7 +1248,7 @@ void Tsolver::write_exactrhs_POISSON(const unsigned int i) {
 
 			grid.nodes(id, nv);
 			for (unsigned int k = 0; k < id.countNodes(); ++k) {
-				get_rhs_POISSON(nv[k], state);
+				get_rhs_MA(nv[k], state);
 				fC << nv[k] << " " << state << endl;
 			}
 		}
@@ -1328,5 +1341,3 @@ void Tsolver::adapt(const double refine_eps, const double coarsen_eps) {
 }
 
 #endif
-
-

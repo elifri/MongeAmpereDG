@@ -701,7 +701,7 @@ void Tshape::initialize_mass() {
 	for (int j = 0; j < shapedim; ++j) // number of parent shape function
 			{
 		for (int c = 0; c < childdim; ++c) {
-			Eshape_type alpha_cj;
+			Estate_type alpha_cj;
 			for (int i = 0; i < shapedim; ++i) // number of child shape function
 				alpha_cj[i] = mass.B_coeffRef(c, j, i);
 			mass.Cholesky_solve(alpha_cj);

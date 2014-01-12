@@ -14,18 +14,15 @@
 
 #include "config.hpp"
 
-
 #include "tmycommencelldata.hpp"
-//#include "Tsolver.hpp"
 
 #include "Equad.hpp"
-
 
 //------------------------------------------------------------------------------
 // BASECELL
 //------------------------------------------------------------------------------
 template<typename CONFIG_TYPE>
-class tmybasecell: public igpm::tidcell_base<CONFIG_TYPE>{
+class tmybasecell: public igpm::tidcell_base<CONFIG_TYPE> {
 public:
 	typedef CONFIG_TYPE config_type;
 	typedef typename config_type::grid_type grid_type;
@@ -49,6 +46,8 @@ private:
 	Fnormalderivative_type normalderi;
 	Ejacobian_type jac;
 	Emass_type laplace;
+
+	diffusionmatrix_type diffusion_a;
 
 public:
 	// cstr, id not set yet!!!
@@ -140,22 +139,23 @@ public:
 
 private:
 	/*! \brief calculates the bilinearform on the lhs of the laplace eq
-	    *
-	    *\param u0_x  x derivative of the first function
-	    *\param u0_y  y derivative of the first function
-	    *\param u1_x  x derivative of the second function
-	    *\param u1_y  y derivative of the second function
-	    *\param J	  Jacobian of the transformation to the reference element
-	    *\param d_abs the absolute value of the determinant of J
-	    */
-	double bilin_laplace (const double & u0_x, const double & u0_y,
-	                      const double & u1_x, const double & u1_y)
-	{
-		const double phi_i_x=  jac(1,1)*u0_x - jac(1,0)*u0_y, phi_i_y= -jac(0,1)*u0_x + jac(0,0)*u0_y ;
-		const double phi_j_x=  jac(1,1)*u1_x - jac(1,0)*u1_y, phi_j_y= -jac(0,1)*u1_x + jac(0,0)*u1_y ;
+	 *
+	 *\param u0_x  x derivative of the first function
+	 *\param u0_y  y derivative of the first function
+	 *\param u1_x  x derivative of the second function
+	 *\param u1_y  y derivative of the second function
+	 *\param J	  Jacobian of the transformation to the reference element
+	 *\param d_abs the absolute value of the determinant of J
+	 */
+	double bilin_laplace(const double & u0_x, const double & u0_y,
+			const double & u1_x, const double & u1_y) {
+		const double phi_i_x = jac(1, 1) * u0_x - jac(1, 0) * u0_y, phi_i_y =
+				-jac(0, 1) * u0_x + jac(0, 0) * u0_y;
+		const double phi_j_x = jac(1, 1) * u1_x - jac(1, 0) * u1_y, phi_j_y =
+				-jac(0, 1) * u1_x + jac(0, 0) * u1_y;
 
-		return ( phi_i_x * phi_j_x + phi_i_y * phi_j_y ) / sqr(detjacabs);
-	   }
+		return (phi_i_x * phi_j_x + phi_i_y * phi_j_y) / sqr(detjacabs);
+	}
 
 	/*! \brief calculates the bilinearform on the lhs of the laplace eq
 	 *
@@ -178,52 +178,82 @@ private:
 		return phi_i.dot(phi_j);
 	}
 
-	void assemble_laplace(const Equad &equad, const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y) {
+	value_type bilin_alaplace(const double & u0_x, const double & u0_y,
+			const double & u1_x, const double & u1_y) {
+		// calculate gradient of local shape function
+		// by multiplication of transposed inverse of Jacobian of affine transformation
+		// with gradient from shape function on reference cell
+
+		Ejacobian_type J_inv_t(2, 2);
+		J_inv_t << jac(1, 1), -jac(1, 0), -jac(0, 1), jac(0, 0);
+		J_inv_t /= detjacabs;
+
+		space_type phi_i = J_inv_t * (space_type() << u0_x, u0_y).finished();
+		space_type phi_j = J_inv_t * (space_type() << u1_x, u1_y).finished();
+
+		return (diffusion_a * phi_i).dot(phi_j);
+	}
+
+	void assemble_laplace(const Equad &equad,
+			const Equadratureshape_type &Equads_x,
+			const Equadratureshape_type &Equads_y) {
 		laplace.setZero();
 
 		// Laplace-matrix
-//	#if (EQUATION==POISSON_PREC_EQ)
-//		std::string jumping_string;
-//		cfg.getValue ("jumping coefficients", "jumping", jumping_string, "NO");
-//
-//		if(string_contains_true(jumping_string)) {
-//
-//			debugoutput(1, "Using jumping coefficients!" << endl);
-//
-//			// get entry "diffusion_a[xxx]" in section "scaling functions"
-//			std::string line, entryname=entryname1d < 3 > ("diffusion_a",pBC->id().cell());
-//			if (!cfg.getValue("jumping coefficients", entryname, line)) {
-//				cerr << "Error while reading [jumping coefficients] " << entryname1d < 3 > ("a",pBC->id().cell()) << " from configfile." << endl;
-//				abort();
-//			}
-//
-//			std::stringstream strs(line);
-//			for (int ientry = 0; ientry < sqr(spacedim); ++ientry) {
-//				/// interpret entries of this line, fill with zeros for nonexistent entries
-//				if (!(strs >> pBC->diffusion_a[ientry]))
-//					pBC->diffusion_a[ientry] = 0;
-//			}
-//
-//			for (unsigned int i=0; i<shapedim; i++)
-//				for (unsigned int j=0; j<=i; j++)
-//					for (unsigned int iq=0; iq<Equadraturedim; iq++) {
-//						pBC->laplace(i,j) +=
-//								shape.Equadw[iq]*detjacabs*bilin_alaplace (shape.Equads_x(i,iq), shape.Equads_y(i,iq),
-//										shape.Equads_x(j,iq), shape.Equads_y(j,iq),
-//										pBC->jac, pBC->detjacabs, pBC->diffusion_a);
-//					}
-//		} else {
-//			for (unsigned int i=0; i<shapedim; i++)
-//				for (unsigned int j=0; j<=i; j++)
-//					for (unsigned int iq=0; iq<shape.Equadraturedim; iq++) {
-//						pBC->laplace(i,j) +=
-//								shape.Equadw[iq]*detjacabs*bilin_laplace (shape.Equads_x(i,iq), shape.Equads_y(i,iq),
-//										shape.Equads_x(j,iq), shape.Equads_y(j,iq),
-//										pBC->jac, pBC->detjacabs);
-//					}
-//		}
-//	#else
-		double test = 0;
+#if (EQUATION==MONGE_AMPERE_EQ)
+		std::string jumping_string;
+
+		singleton_config_file::instance().getValue("jumping coefficients",
+				"jumping", jumping_string, "NO");
+
+		if (string_contains_true(jumping_string)) {
+
+			debugoutput(1, "Using jumping coefficients!" << endl);
+
+			// get entry "diffusion_a[xxx]" in section "scaling functions"
+			std::string line, entryname = entryname1d<3>("diffusion_a",
+					this->id().cell());
+			if (!singleton_config_file::instance().getValue("jumping coefficients", entryname, line)) {
+				cerr << "Error while reading [jumping coefficients] "
+						<< entryname1d<3>("a", this->id().cell())
+						<< " from configfile." << endl;
+				abort();
+			}
+
+			std::stringstream strs(line);
+			for (int ientry = 0; ientry < sqr(spacedim); ++ientry) {
+				/// interpret entries of this line, fill with zeros for nonexistent entries
+				int row_index = ientry / spacedim;
+				int col_index = ientry % spacedim;
+
+				if (!(strs >> diffusion_a(row_index, col_index)))
+					diffusion_a(row_index, col_index) = 0;
+			}
+
+			//write laplace matrix: first top half
+			for (unsigned int i = 0; i < shapedim; i++) {
+				for (unsigned int j = 0; j <= i; j++) {
+					Equadrature_type func;
+					for (int iq = 0; iq < Equadraturedim; iq++) {
+						func(iq) = bilin_alaplace(Equads_x(i, iq),	Equads_y(i, iq), Equads_x(j, iq), Equads_y(j, iq));
+					}
+					laplace(i, j) = equad.integrate(func, detjacabs);
+				}
+			}
+		} else { //laplace code
+			//write laplace matrix: first top half
+			for (unsigned int i=0; i<shapedim; i++) {
+				for (unsigned int j=0; j<=i; j++) {
+					Equadrature_type func;
+					for (int iq=0; iq < Equadraturedim; iq++) {
+						func(iq) = bilin_laplace (Equads_x(i,iq), Equads_y(i,iq),
+								Equads_x(j,iq), Equads_y(j,iq));
+					}
+					laplace(i,j) = equad.integrate(func, detjacabs);
+				}
+			}
+		}
+#else
 		//write laplace matrix: first top half
 		for (unsigned int i=0; i<shapedim; i++) {
 			for (unsigned int j=0; j<=i; j++) {
@@ -235,7 +265,7 @@ private:
 				laplace(i,j) = equad.integrate(func, detjacabs);
 			}
 		}
-//	#endif
+#endif
 
 		// Laplace-matrix is symmetric:
 		for (unsigned int i = 0; i < shapedim; i++)
@@ -254,7 +284,7 @@ private:
 			for (int iq = 0; iq < Fquadraturedim; iq++) { //loop over all quadrature points
 
 				// gradient (calculated after chainrule \div phi_ref = J^-1 \div \phi
-				Eigen::Matrix < value_type, 2, 2 > J_inv_tr;
+				Eigen::Matrix<value_type, 2, 2> J_inv_tr;
 				J_inv_tr << jac(1, 1), -jac(1, 0), -jac(0, 1), jac(0, 0);
 				Eigen::Vector2d grad_ref_cell(Fquads_x(i, iq), Fquads_y(i, iq));
 
@@ -283,9 +313,8 @@ private:
 		center /= 3.0;
 	}
 
-	void get_center (const grid_type &grid, const id_type& idLC,
-	                          space_type & center)
-	{
+	void get_center(const grid_type &grid, const id_type& idLC,
+			space_type & center) {
 		grid_nvector_type vN_temp;
 		grid.nodes(idLC, vN_temp);
 
@@ -300,15 +329,16 @@ private:
 	}
 
 public:
-	void initialize(const Equad &Equad,
-					const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y,
-					const Fquadratureshape_type &Fquads_x, const Fquadratureshape_type Fquads_y,
-					const grid_type &grid, const id_type idBC) {
+	void initialize(const Equad &Equad, const Equadratureshape_type &Equads_x,
+			const Equadratureshape_type &Equads_y,
+			const Fquadratureshape_type &Fquads_x,
+			const Fquadratureshape_type Fquads_y, const grid_type &grid,
+			const id_type idBC) {
 		grid_nvector_type vN_temp;
 		grid.nodes(idBC, vN_temp);
 		// cerr << "Nodes" << endl; writeNvector_type (vN);
 
-		//transform nodes to Eigenvectors
+//transform nodes to Eigenvectors
 		Nvector_type vN;
 
 		for (int i = 0; i < 3; ++i) {
@@ -321,7 +351,7 @@ public:
 
 			unsigned int node0, node1;
 
-			// face f is the line segment [node(f+1 mod countFaces()), node(f+2 mod countFaces())]
+// face f is the line segment [node(f+1 mod countFaces()), node(f+2 mod countFaces())]
 			node0 = f + 1;
 			if (node0 == idBC.countFaces())
 				node0 = 0;
@@ -329,10 +359,10 @@ public:
 			if (node1 == idBC.countFaces())
 				node1 = 0;
 
-			// initialize face length and unit normal of of pBC
+// initialize face length and unit normal of of pBC
 			value_type diff_x = vN[node0][0] - vN[node1][0];
 			value_type diff_y = vN[node1][1] - vN[node0][1];
-			set_normal(f,diff_y,diff_x);
+			set_normal(f, diff_y, diff_x);
 
 //	    	cout << " outer unit normal at face " << f << ": (" << get_normal(f)[0] << ", " << get_normal(f)[1] << ")" << endl;
 		}
@@ -341,13 +371,13 @@ public:
 		volume = ((vN[1][0] - vN[0][0]) * (vN[2][1] - vN[0][1])
 				- (vN[2][0] - vN[0][0]) * (vN[1][1] - vN[0][1])) * 0.5;
 
-		// jacobian of transformation from reference element
+// jacobian of transformation from reference element
 		jac(0, 0) = vN[1][0] - vN[0][0];
 		jac(0, 1) = vN[2][0] - vN[0][0];
 		jac(1, 0) = vN[1][1] - vN[0][1];
 		jac(1, 1) = vN[2][1] - vN[0][1];
 
-		// absolute value of determinant of jacobian
+// absolute value of determinant of jacobian
 		detjacabs = std::abs(jac(0, 0) * jac(1, 1) - jac(1, 0) * jac(0, 1));
 		assert(detjacabs == 2 * volume);
 
@@ -358,8 +388,8 @@ public:
 
 		assemble_normalderi(Fquads_x, Fquads_y);
 
-		// barycentric coordinates of edge-intersection-points for Serror,
-		// intersect3ion of edge with connection of element-centers
+// barycentric coordinates of edge-intersection-points for Serror,
+// intersect3ion of edge with connection of element-centers
 		{
 			int inode, inode2;
 			double sum, c, s;

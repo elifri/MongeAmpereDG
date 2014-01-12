@@ -173,6 +173,10 @@ int main(int argc, char **argv) {
 #elif (EQUATION == IMPLICIT_HEAT_EQ)
   cerr << "EQUATION = IMPLICIT_HEAT" << endl;
   solver.time_stepping_IMPLICIT_HEAT ();
+#elif (EQUATION == MONGE_AMPERE_EQ)
+  cerr << "EQUATION == MONGE_AMPERE_EQ" << endl;
+  solver.time_stepping_MA();
+
 #else
   cerr << "Unknown equation! Program aborted!" << endl;
 #endif
