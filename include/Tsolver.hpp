@@ -264,7 +264,14 @@ public:
    void assignViewCell_MA(const id_type & id, const unsigned int &blocksize, unsigned int &offset);
    void assignViews_MA (unsigned int &LM_size);
 
-   void read_problem_parameters_MA ();
+   /*! read problem specific problem parameters from input file
+    *
+    */
+   void read_problem_parameters_MA(int &stabsign, double &gamma, double &refine_eps, double &coarsen_eps, int &level);
+
+   /*!
+    * writes exact solution in leafcells
+    */
    void initializeLeafCellData_MA ();
 
    void assemble_MA(const int & STABSIGN, const double & PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs);

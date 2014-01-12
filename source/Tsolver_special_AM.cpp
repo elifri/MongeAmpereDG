@@ -23,7 +23,15 @@
 #include "boost/archive/iterators/transform_width.hpp"
 using namespace boost::archive::iterators;
 
-void Tsolver::read_problem_parameters_MA() {
+//reads specific problem parameter from input
+void Tsolver::read_problem_parameters_MA(int &stabsign, double &gamma, double &refine_eps, double &coarsen_eps, int &level) {
+	singleton_config_file::instance().getValue("method", "stabsign", stabsign, 1);
+	singleton_config_file::instance().getValue("method", "gamma", gamma, 0.0);
+
+	singleton_config_file::instance().getValue("adaptation", "refine_eps", refine_eps, 1.0e-9);
+	singleton_config_file::instance().getValue("adaptation", "coarsen_eps", coarsen_eps, 1.0e-6);
+
+	singleton_config_file::instance().getValue("monge ampere", "startlevel", level, 2);
 }
 
 ////////////////////////////////////////////////////
@@ -41,11 +49,8 @@ void Tsolver::initializeLeafCellData_MA() {
 		grid.findLeafCell(idLC, pLC);
 		grid.nodes(idLC, nv);
 
-		for (unsigned int istate = 0; istate < statedim; istate++)
-			for (unsigned int ishape = 0; ishape < shapedim; ishape++) {
-				pLC->u(ishape,istate) = 0.0;
-				pLC->unew(ishape,istate) = 0.0;
-			}
+		pLC->u.setZero();
+		pLC->unew.setZero();
 
 		for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
 			get_Ecoordinates(nv, iq, x);
@@ -56,7 +61,7 @@ void Tsolver::initializeLeafCellData_MA() {
 							* shape.get_Equads(ishape,iq);
 		}
 
-		shape.get_mass().Cholesky_solve(pLC->u);
+//		shape.get_mass().Cholesky_solve(pLC->u);
 
 		pLC->id().setFlag(0, false);
 	}
@@ -604,51 +609,34 @@ void Tsolver::get_rhs_MA(const N_type & x, state_type & u_rhs)
 }
 
 //////////////////////////////////////////////////////////
-/*
- void Tsolver::get_source_MA (const value_type & t,
- const space_type & x, state_type & source) // state_type ???
- {
- }
-
- //////////////////////////////////////////////////////////
-
- inline double Tsolver::heat_conduction (const value_type & t,
- const space_type & x)
- {
- }
- */
-//////////////////////////////////////////////////////////
 void Tsolver::time_stepping_MA() {
 
 	// sign of stbilization term: +1: Bauman-Oden/NIPG, -1: GEM/SIPG
 	int stabsign;
 	double gamma, refine_eps, coarsen_eps;
 
-	singleton_config_file::instance().getValue("method", "stabsign", stabsign, 1);
-	singleton_config_file::instance().getValue("method", "gamma", gamma, 0.0);
+	int level;
 
-	singleton_config_file::instance().getValue("adaptation", "refine_eps", refine_eps, 1.0e-9);
-	singleton_config_file::instance().getValue("adaptation", "coarsen_eps", coarsen_eps, 1.0e-6);
+	read_problem_parameters_MA(stabsign, gamma, refine_eps, coarsen_eps, level);
+
+	//check level
+	if (levelmax < level)
+		level = levelmax;
 
 	cout << "Using refine_eps=" << refine_eps << " and coarsen_eps="
 			<< coarsen_eps << "." << endl;
 
-	igpm::processtimer pt;
+	igpm::processtimer pt; //start timer
 	cout << "Starting time_stepping_MA" << endl;
 
 	//  int refine_count = 0;
 	//  value_type t = 0.0;
 	//  dt = 1e10;
 
-	read_problem_parameters_MA();
 	update_baseGeometry();
 	set_leafcellmassmatrix();
 	// refine_circle (1.0); refine_band (0.85, 1.05);
 
-	int level;
-	singleton_config_file::instance().getValue("poisson", "startlevel", level, 2);
-	if (levelmax < level)
-		level = levelmax;
 
 	refine(level);
 	initializeLeafCellData_MA();
@@ -668,20 +656,6 @@ void Tsolver::time_stepping_MA() {
 	get_closest_basecenter(x, idcenter, xc);
 	find_centerleaf(idcenter, pc, xc);
 
-//     std::string fname(output_directory);
-//     fname+="/temp_numericalhistory.dat";
-//     std::ofstream outnumericalhistory(fname.c_str());
-//     if( !outnumericalhistory ) {
-//       cerr << "Error opening output file " << fname << "." << endl;
-//       exit(1);
-//     }
-//
-//     fname=output_directory+"/temp_exacthistory.dat";
-//     std::ofstream outexacthistory(fname.c_str());
-//     if( !outexacthistory ) {
-//       cerr << "Error opening output file " << fname << "." << endl;
-//       exit(1);
-//     }
 
 	shape.assemble_state_Equad(pc->u, center_quad, uc);
 	//  outnumericalhistory << t << "  " << uc << endl;
