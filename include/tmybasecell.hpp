@@ -137,6 +137,7 @@ public:
 		return volume;
 	}
 
+
 private:
 	/*! \brief calculates the bilinearform on the lhs of the laplace eq
 	 *
@@ -201,56 +202,14 @@ private:
 
 		// Laplace-matrix
 #if (EQUATION==MONGE_AMPERE_EQ)
-		std::string jumping_string;
-
-		singleton_config_file::instance().getValue("jumping coefficients",
-				"jumping", jumping_string, "NO");
-
-		if (string_contains_true(jumping_string)) {
-
-			debugoutput(1, "Using jumping coefficients!" << endl);
-
-			// get entry "diffusion_a[xxx]" in section "scaling functions"
-			std::string line, entryname = entryname1d<3>("diffusion_a",
-					this->id().cell());
-			if (!singleton_config_file::instance().getValue("jumping coefficients", entryname, line)) {
-				cerr << "Error while reading [jumping coefficients] "
-						<< entryname1d<3>("a", this->id().cell())
-						<< " from configfile." << endl;
-				abort();
-			}
-
-			std::stringstream strs(line);
-			for (int ientry = 0; ientry < sqr(spacedim); ++ientry) {
-				/// interpret entries of this line, fill with zeros for nonexistent entries
-				int row_index = ientry / spacedim;
-				int col_index = ientry % spacedim;
-
-				if (!(strs >> diffusion_a(row_index, col_index)))
-					diffusion_a(row_index, col_index) = 0;
-			}
-
-			//write laplace matrix: first top half
-			for (unsigned int i = 0; i < shapedim; i++) {
-				for (unsigned int j = 0; j <= i; j++) {
-					Equadrature_type func;
-					for (int iq = 0; iq < Equadraturedim; iq++) {
-						func(iq) = bilin_alaplace(Equads_x(i, iq),	Equads_y(i, iq), Equads_x(j, iq), Equads_y(j, iq));
-					}
-					laplace(i, j) = equad.integrate(func, detjacabs);
+		//write laplace matrix: first top half
+		for (unsigned int i = 0; i < shapedim; i++) {
+			for (unsigned int j = 0; j <= i; j++) {
+				Equadrature_type func;
+				for (int iq = 0; iq < Equadraturedim; iq++) {
+					func(iq) = bilin_alaplace(Equads_x(i, iq),	Equads_y(i, iq), Equads_x(j, iq), Equads_y(j, iq));
 				}
-			}
-		} else { //laplace code
-			//write laplace matrix: first top half
-			for (unsigned int i=0; i<shapedim; i++) {
-				for (unsigned int j=0; j<=i; j++) {
-					Equadrature_type func;
-					for (int iq=0; iq < Equadraturedim; iq++) {
-						func(iq) = bilin_laplace (Equads_x(i,iq), Equads_y(i,iq),
-								Equads_x(j,iq), Equads_y(j,iq));
-					}
-					laplace(i,j) = equad.integrate(func, detjacabs);
-				}
+				laplace(i, j) = equad.integrate(func, detjacabs);
 			}
 		}
 #else
@@ -381,7 +340,7 @@ public:
 		detjacabs = std::abs(jac(0, 0) * jac(1, 1) - jac(1, 0) * jac(0, 1));
 		assert(detjacabs == 2 * volume);
 
-		assemble_laplace(Equad, Equads_x, Equads_y);
+		assemble_laplace(Equad, Equads_x, Equads_y); //TODO redundant if MONGE amper ...
 
 		cout << "laplace " << get_laplace() << endl;
 		cout << "det " << detjacabs_Ref() << endl;
@@ -433,6 +392,17 @@ public:
 		}
 
 	}
+
+	/*! sets the diffussion matrix and recalculates the laplace matrix
+	 *
+	 */
+	void set_diffusion_matrix(const Equad &equad, const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y,
+							  const diffusionmatrix_type &A)
+	{
+		diffusion_a = A;
+		assemble_laplace(equad, Equads_x, Equads_y);
+	}
+
 
 };
 

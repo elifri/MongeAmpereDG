@@ -32,6 +32,37 @@ void Tsolver::read_problem_parameters_MA(int &stabsign, double &gamma, double &r
 	singleton_config_file::instance().getValue("adaptation", "coarsen_eps", coarsen_eps, 1.0e-6);
 
 	singleton_config_file::instance().getValue("monge ampere", "startlevel", level, 2);
+
+
+	//read diffusion matrices
+	for (grid_type::basecellmap_type::iterator it=grid.baseCells().begin(); it!=grid.baseCells().end(); ++it) {
+		diffusionmatrix_type diffusion_a;
+		const grid_type::id_type& idBC = grid_type::id(it);
+	    basecell_type * const pBC=&grid_type::cell(it);
+
+	    // get entry "diffusion_a[xxx]" in section "scaling functions"
+	    std::string line, entryname = entryname1d<3>("diffusion_a", idBC.cell());
+	    	if (!singleton_config_file::instance().getValue("monge ampere", entryname, line)) {
+			cerr << "Error while reading [monge ampere] "
+					<< entryname1d<3>("a", idBC.cell())
+					<< " from configfile." << endl;
+			abort();
+		}
+
+	    //convert into Matrix
+		std::stringstream strs(line);
+		for (int ientry = 0; ientry < sqr(spacedim); ++ientry) {
+			/// interpret entries of this line, fill with zeros for nonexistent entries
+			int row_index = ientry / spacedim;
+			int col_index = ientry % spacedim;
+
+			if (!(strs >> diffusion_a(row_index, col_index)))
+				diffusion_a(row_index, col_index) = 0;
+		}
+
+		pBC->set_diffusion_matrix(shape.get_Equad(), shape.get_Equads_x(), shape.get_Equads_y(), diffusion_a);
+	}
+
 }
 
 ////////////////////////////////////////////////////
