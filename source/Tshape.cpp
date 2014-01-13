@@ -513,6 +513,8 @@ void Tshape::initialize_quadrature() {
 			Equads_xx(i, j) = shape_xx(i, x);
 			Equads_xy(i, j) = shape_xy(i, x);
 			Equads_yy(i, j) = shape_yy(i, x);
+			if (j == 0)
+				Equads_dd(i) << Equads_xx(i, j), Equads_xy(i, j), Equads_xy(i, j),Equads_yy(i, j);
 		}
 	}
 
@@ -713,6 +715,7 @@ void Tshape::initialize_mass() {
 }
 ;
 
+
 //////////////////////////////////////////////////////
 //////////////                         ///////////////
 //////////////    ASSEMBLING STATES    ///////////////
@@ -814,6 +817,14 @@ void Tshape::assemble_state_Equad(const Estate_type & u,
 	}
 }
 ;
+
+////////////////////////////////////////////////////
+
+void Tshape::assemble_hessmatrix(const Estate_type & u, const unsigned int &istate, Hessian_type &hess) const{
+	hess.setZero();
+	for (unsigned int j = 0; j < shapedim; j++)
+		hess += u(j, istate) * Equads_dd(j);
+}
 
 ////////////////////////////////////////////////////
 

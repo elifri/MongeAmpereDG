@@ -24,6 +24,7 @@ private:
 	Equadratureshape_type Equads;   // value of shapes at quadrature points
 	Equadratureshape_type Equads_x, Equads_y; // first derivatives of shapes at quadrature points
 	Equadratureshape_type Equads_xx, Equads_xy, Equads_yy; // second derivatives of shapes at quadrature points
+	Equadratureshape_hessian_type Equads_dd;
 
 	Fquad fquad;
 	Fquadratureshape_type Fquads;   // value of shapes at quadrature points
@@ -94,6 +95,7 @@ public:
 			Enodevalue_type & v);
 	void assemble_state_Equad(const Estate_type & u, const unsigned int & iquad,
 			state_type & v);
+	void assemble_hessmatrix(const Estate_type & u, const unsigned int &istate, Hessian_type &hess) const; ///calculates the hessian matrix of a solution u
 	void assemble_state_Fquad(const Estate_type & u, const unsigned int & iquad,
 			state_type & v);
 	void assemble_state_Fquad(const Estate_type & u,

@@ -170,6 +170,8 @@ typedef Tmass mass_type;
 //diffusion
 typedef Eigen::Matrix<value_type, spacedim, spacedim> diffusionmatrix_type;
 
+typedef Eigen::Matrix<value_type, spacedim, spacedim> Hessian_type;
+
 // shape-values at nodes (e.g. for solver-output = visualization-input)
 typedef Eigen::Matrix<double, shapedim, Ndim> Nvalueshape_type;
 
@@ -178,6 +180,8 @@ typedef Eigen::Matrix<double, shapedim, Ndim> Nvalueshape_type;
 typedef Eigen::Matrix<value_type, Ndim, 1> Enodevalue_type;
 typedef Eigen::Matrix<value_type, Equadraturedim, 1> Equadrature_type;
 typedef Eigen::Matrix<value_type, shapedim, Equadraturedim> Equadratureshape_type;
+typedef Eigen::Matrix<space_type, shapedim, Equadraturedim> Equadratureshape_grad_type;
+typedef Eigen::Matrix<Hessian_type, shapedim, 1> Equadratureshape_hessian_type;
 typedef Eigen::Matrix<value_type, Equadraturedim, barycdim> Equadraturepoint_type;
 typedef value_type Emaskquadpoint_type[childdim][Equadraturedim][barycdim];
 typedef Eigen::Matrix<value_type, Equadraturedim, 1> Equadratureweight_type;

@@ -14,6 +14,8 @@
 #include "callback.hpp"
 #include "utility.hpp"
 
+using namespace config;
+
 class Equad {
 public:
 

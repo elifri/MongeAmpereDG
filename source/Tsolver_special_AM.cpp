@@ -144,6 +144,28 @@ void Tsolver::assignViews_MA(unsigned int & offset) {
 }
 
 
+
+void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd Lrhs) {
+	for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
+
+		state_type uLC;
+
+		get_Ecoordinates(idLC, iq, x);
+		get_rhs_MA(x, uLC);
+
+		for (unsigned int istate = 0; istate < statedim; ++istate) {
+			for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+				int row = pLC->n_offset + ishape;
+				double val = shape.get_Equadw(iq) * pBC->get_detjacabs()
+						* facLevelVolume[idLC.level()] * uLC(istate)
+						* shape.get_Equads(ishape, iq);
+
+				Lrhs(row) += val;
+			}
+		}
+	}
+}
+
 /*Equadrature_type Tsolver::assemble_face_term_MA(const int ishape, const int iface, const int jshape, const int jface, const grid_type::basecell_type * pC, const int level, const int orientation = 1)
 {
 	Equadrature_type values;
@@ -151,7 +173,7 @@ void Tsolver::assignViews_MA(unsigned int & offset) {
 	const Equadrature_type& jump = shape.get_Fquads_by_face(ishape,iface);
 	Equadrature_type grad_times_normal = pC->get_normalderi_by_face(jshape, jface)/facLevelLength[level];
 
-	if (vOh(jface) == 1)	grad_times_normal.reverse();
+	if (vOh(jface) == 1)	grad_times_normal.reverseinplace();
 
 	values = -0.5 * jump.cwiseProduct(grad_times_normal);
 
@@ -210,25 +232,8 @@ void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
 			}
 
 			// Copy entries for right hand side into right hand side
-			for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
+			assemble_rhs_MA(pLC, idLC, pBC, x, Lrhs);
 
-				state_type uLC;
-
-				get_Ecoordinates(idLC, iq, x);
-				get_rhs_MA(x, uLC);
-
-				for (unsigned int istate = 0; istate < statedim; ++istate) {
-					for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-						int row = pLC->n_offset + ishape;
-						double val = shape.get_Equadw(iq) * pBC->get_detjacabs()
-								* facLevelVolume[level] * uLC(istate)
-								* shape.get_Equads(ishape,iq);
-
-						Lrhs(row) += val;
-					}
-				}
-
-			}
 
 			// bilinear form b (average of normal derivative u * jump phi)
 			grid_type::facehandlevector_type vFh, vOh; // neighbor face number and orientation
