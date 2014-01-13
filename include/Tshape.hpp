@@ -246,41 +246,5 @@ public:
 
 ///////////////////////////////////////////////////////////////
 
-template<int LENGTH>
-string entryname1d(const string root, unsigned int number) {
-
-	string s;
-
-	stringstream ss;
-	ss << number;
-	ss >> s;
-
-	while (s.length() < LENGTH)
-		s = "0" + s;
-
-	return root + "[" + s + "]";
-
-}
-
-template<int LENGTH>
-string entryname2d(const string root, unsigned int i, unsigned int j) {
-
-	string s1, s2;
-
-	stringstream ss1, ss2;
-	ss1 << i;
-	ss2 << j;
-	ss1 >> s1;
-	ss2 >> s2;
-
-	while (s1.length() < LENGTH)
-		s1 = "0" + s1;
-
-	while (s2.length() < LENGTH)
-		s2 = "0" + s2;
-
-	return root + "[" + s1 + "," + s2 + "]";
-
-}
 
 #endif

@@ -39,15 +39,12 @@ typedef grid_type::id_type id_type;
 typedef grid_type::nodevector_type        Nvector_type;
 typedef grid_type::node_type N_type;
 
-class singleton_config_file{
-	private:
-		static igpm::configfile* cfg;
+// counts all existing leafs
+template<class IDTYPEINFO_TYPE>
+int tmyleafcell<IDTYPEINFO_TYPE>::m_nCountAllLeafs = 0;
 
-	public:
-		static igpm::configfile& instance();
-
-		~singleton_config_file(){ delete cfg;}
-};
+template<class IDTYPEINFO_TYPE>
+typename tmyleafcell<IDTYPEINFO_TYPE>::mass_type tmyleafcell<IDTYPEINFO_TYPE>::mass;
 
 
 #endif /* GRID_CONFIG_HPP_ */

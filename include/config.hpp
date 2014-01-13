@@ -217,8 +217,6 @@ typedef unsigned int CoarseNeighbMid_type[4][3][3];
 
 #if !defined(DOXYGEN_SKIP)
 
-#include "tmyleafcell.hpp"
-
 //------------------------------------------------------------------------------
 // static data
 //------------------------------------------------------------------------------
@@ -233,13 +231,6 @@ class singleton_config_file{
 		~singleton_config_file(){ delete cfg;}
 };
 
-
-// counts all existing leafs
-template<class IDTYPEINFO_TYPE>
-int tmyleafcell<IDTYPEINFO_TYPE>::m_nCountAllLeafs = 0;
-
-template<class IDTYPEINFO_TYPE>
-typename tmyleafcell<IDTYPEINFO_TYPE>::mass_type tmyleafcell<IDTYPEINFO_TYPE>::mass;
 
 
 template<int LENGTH>

@@ -76,58 +76,6 @@ inline double Tsolver::bilin_adv_2d (double & a, double & b,
     return ( a*(J(1,1)*u_x - J(1,0)*u_y) + b*(J(0,0)*u_y - J(0,1)*u_x) )*d_sgn;
 };
 
-inline double Tsolver::bilin_laplace (const Eigen::Vector2d &grad0, const Eigen::Vector2d &grad1, const Ejacobian_type &J, const double &d_abs)
-{
-	// calculate gradient of local shape function
-	// by multiplication of transposed inverse of Jacobian of affine transformation
-	// with gradient from shape function on reference cell
-
-	Eigen::MatrixXd J_inv_t = J.transpose().inverse();
-	Eigen::Vector2d phi_i = J_inv_t * grad0;
-	Eigen::Vector2d phi_j = J_inv_t * grad1;
-
-	return phi_i.dot(phi_j);
-}
-
-inline double Tsolver::bilin_laplace (const double & u0_x, const double & u0_y,
-                                        const double & u1_x, const double & u1_y,
-                                        const Ejacobian_type & J, const double & d_abs)
-{
-	// calculate gradient of local shape function
-	// by multiplication of transposed inverse of Jacobian of affine transformation
-	// with gradient from shape function on reference cell
-
-//	const double phi_i_x=  J(1,1)*u0_x - J(1,0)*u0_y, phi_i_y= -J(0,1)*u0_x + J(0,0)*u0_y ;
-//    const double phi_j_x=  J(1,1)*u1_x - J(1,0)*u1_y, phi_j_y= -J(0,1)*u1_x + J(0,0)*u1_y ;
-//
-//    return ( phi_i_x * phi_j_x + phi_i_y * phi_j_y ) / sqr(d_abs);
-
-	return bilin_laplace((Eigen::Vector2d() << u0_x, u0_y).finished(),
-						 (Eigen::Vector2d() << u1_x, u1_y).finished(),
-						 J, d_abs);
-
-};
-
-inline double Tsolver::bilin_alaplace (const double & u0_x, const double & u0_y,
-                                        const double & u1_x, const double & u1_y,
-                                        const Ejacobian_type & J, const double & d_abs,const igpm::tvector<double,4> & a)
-{
-	// calculate gradient of local shape function
-	// by multiplication of transposed inverse of Jacobian of affine transformation
-	// with gradient from shape function on reference cell
-    const double phi_i_x=  J(1,1)*u0_x - J(1,0)*u0_y, phi_i_y= -J(0,1)*u0_x + J(0,0)*u0_y ;
-    const double phi_j_x=  J(1,1)*u1_x - J(1,0)*u1_y, phi_j_y= -J(0,1)*u1_x + J(0,0)*u1_y ;
-
-    return (    ( a[0]*phi_i_x + a[1]*phi_i_y) * phi_j_x
-              + ( a[2]*phi_i_x + a[3]*phi_i_y) * phi_j_y ) / sqr(d_abs);
-};
-
-////////////////////////////////////////////////////
-///////////////                      ///////////////
-///////////////         SHAPES       ///////////////
-///////////////                      ///////////////
-////////////////////////////////////////////////////
-
 
 
 ////////////////////////////////////////////////////
@@ -527,13 +475,6 @@ void Tsolver::update_centerleaf (id_type& idcenter, leafcell_type* & pcenter,
       pcenter = pc;
       get_center (idcenter, xc);
       }
-};
-
-////////////////////////////////////////////////////
-
-void Tsolver::get_detJacAbs (const basecell_type* pBC, value_type & detjacabs)
-{
-  detjacabs = 2*pBC->get_volume();
 };
 
 ////////////////////////////////////////////////////
