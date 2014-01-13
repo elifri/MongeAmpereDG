@@ -185,7 +185,7 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
  *
  */
 void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
-		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs) {
+		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs, unsigned int istate) {
 	unsigned int gaussbaseLC = 0;
 	unsigned int gaussbaseNC = 0;
 	unsigned int levelNC = 0;
@@ -719,7 +719,7 @@ void Tsolver::time_stepping_MA() {
 
 		cout << "Assemble linear System..." << flush;
 		pt.start();
-		assemble_MA(stabsign, gamma, LM, Lrhs);
+		assemble_MA(stabsign, gamma, LM, Lrhs, loop);
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
