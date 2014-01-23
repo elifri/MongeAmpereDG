@@ -790,7 +790,6 @@ void Tsolver::time_stepping_MA() {
 		write_numericalsolution_VTK_MA(iteration);
 		write_exactrhs_MA(iteration);
 
-		adapt(refine_eps, coarsen_eps);
 
 		// reset flag 0
 		setleafcellflags(0, false);
