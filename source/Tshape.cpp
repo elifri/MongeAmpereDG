@@ -821,6 +821,8 @@ void Tshape::assemble_state_Equad(const Estate_type & u,
 ////////////////////////////////////////////////////
 
 void Tshape::assemble_hessmatrix(const Estate_type & u, const unsigned int &istate, Hessian_type &hess) const{
+
+	assert (istate < statedim);
 	hess.setZero();
 	for (unsigned int j = 0; j < shapedim; j++)
 		hess += u(j, istate) * Equads_dd(j);
