@@ -68,10 +68,10 @@ public:
 
   void set_diffusionmatrix(const diffusionmatrix_type A) {this->A = A;}
 
-  void update_diffusionmatrix(const diffusionmatrix_type A, const Equad &equad, const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y, const Ejacobian_type &jac, const value_type detjacabs, Emass_type laplace){
+  void update_diffusionmatrix(const diffusionmatrix_type A, const Equad &equad, const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y, const Ejacobian_type &jac, const value_type detjacabs, const double faclevel, Emass_type &laplace){
 	  this->A = A;
 //	  cout <<" updating with \n" << A << endl << "to " << endl << this->A << endl;
-	  assemble_laplace(equad, Equads_x, Equads_y, jac, detjacabs, laplace);
+	  assemble_laplace(equad, Equads_x, Equads_y, jac, detjacabs, faclevel, laplace);
   }
 
   unsigned int faces() const { return m_nFaces; }
@@ -83,7 +83,9 @@ public:
   static int countAllLeafs() { return m_nCountAllLeafs; }
 
 	value_type bilin_alaplace(const double & u0_x, const double & u0_y,
-			const double & u1_x, const double & u1_y, const Ejacobian_type &jac) const {
+			const double & u1_x, const double & u1_y, const Ejacobian_type &jac, const double faclevel) const {
+
+
 		// calculate gradient of local shape function
 		// by multiplication of transposed inverse of Jacobian of affine transformation
 		// with gradient from shape function on reference cell
@@ -100,11 +102,17 @@ public:
 //		cout << "A " << A << endl;
 //		cout << "bilin = " << (A * phi_i).dot(phi_j) << endl;
 
+//---------gradient on leaf cell-----------
+		//gradient gets scaled right by multiplication of 2^level
+		phi_i *= 1/faclevel;
+		phi_j *= 1/faclevel;
+
+
 		return (A * phi_i).dot(phi_j);
 	}
 
 	//same as assemble_laplace in basecell
- 	void assemble_laplace(const Equad &equad, const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y, const Ejacobian_type &jac, const value_type detjacabs, Emass_type laplace) {
+ 	void assemble_laplace(const Equad &equad, const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y, const Ejacobian_type &jac, const value_type detjacabs, const double faclevel, Emass_type &laplace) {
 
  	cout << "diffusion matrix in assemble-laplace "<< A<< endl;
 
@@ -115,7 +123,7 @@ public:
 			for (unsigned int j = 0; j <= i; j++) {
 				Equadrature_type func;
 				for (int iq = 0; iq < Equadraturedim; iq++) {
-					func(iq) = bilin_alaplace(Equads_x(i, iq),	Equads_y(i, iq), Equads_x(j, iq), Equads_y(j, iq), jac);
+					func(iq) = bilin_alaplace(Equads_x(i, iq),	Equads_y(i, iq), Equads_x(j, iq), Equads_y(j, iq), jac, faclevel);
 				}
 				cout << "func " << func.transpose() << endl;
 				cout << "detjacabs " << detjacabs << endl;
