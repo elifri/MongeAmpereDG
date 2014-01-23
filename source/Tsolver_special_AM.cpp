@@ -65,7 +65,6 @@ void Tsolver::read_problem_parameters_MA(int &stabsign, double &gamma, double &r
 		pLC->set_diffusionmatrix(shape.get_Equad(), shape.get_Equads_x(), shape.get_Equads_y(), A, laplace);
 		*/
 		pLC->set_diffusionmatrix(diffusionmatrix_type::Identity());
-		cout<< "diffumatrix of " << grid_type::id(it) << ":\n" << pLC->A << endl;
 	}
 
 }
@@ -162,12 +161,10 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 		pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
 		hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
 
-		cout << "calling update in if with " << diffusionmatrix_type::Identity() << endl;
 		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_x(),	shape.get_Equads_y(),
 								pBC->get_jac(), det_jac, laplace); //update diffusionmatrix
 	}
 	else{
-		cout << "calling update in else with " << diffusionmatrix_type::Identity() << endl;
 		pLC->update_diffusionmatrix(diffusionmatrix_type::Identity(), shape.get_Equad(), shape.get_Equads_x(),	shape.get_Equads_y(),
 				pBC->get_jac(), det_jac, laplace);
 	}

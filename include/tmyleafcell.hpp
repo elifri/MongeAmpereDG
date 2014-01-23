@@ -97,11 +97,6 @@ public:
 		space_type phi_i = J_inv_t * (space_type() << u0_x, u0_y).finished();
 		space_type phi_j = J_inv_t * (space_type() << u1_x, u1_y).finished();
 
-//		cout << "phi_i" << phi_i.transpose() << endl;
-//		cout << "phi_j" << phi_j.transpose() << endl;
-//		cout << "A " << A << endl;
-//		cout << "bilin = " << (A * phi_i).dot(phi_j) << endl;
-
 //---------gradient on leaf cell-----------
 		//gradient gets scaled right by multiplication of 2^level
 		phi_i *= 1/faclevel;
@@ -114,8 +109,6 @@ public:
 	//same as assemble_laplace in basecell
  	void assemble_laplace(const Equad &equad, const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y, const Ejacobian_type &jac, const value_type detjacabs, const double faclevel, Emass_type &laplace) {
 
- 	cout << "diffusion matrix in assemble-laplace "<< A<< endl;
-
  		// Laplace-matrix
 #if (EQUATION==MONGE_AMPERE_EQ)
 		//write laplace matrix: first top half
@@ -125,13 +118,10 @@ public:
 				for (int iq = 0; iq < Equadraturedim; iq++) {
 					func(iq) = bilin_alaplace(Equads_x(i, iq),	Equads_y(i, iq), Equads_x(j, iq), Equads_y(j, iq), jac, faclevel);
 				}
-				cout << "func " << func.transpose() << endl;
-				cout << "detjacabs " << detjacabs << endl;
 				laplace(i, j) = equad.integrate(func, detjacabs);
 			}
 		}
 
-		cout << "laplace of leafcell ? " << laplace << endl;
 #else
 		cerr << "leafcell does not know how to calculate the laplace matrix" << endl; abort();
 #endif

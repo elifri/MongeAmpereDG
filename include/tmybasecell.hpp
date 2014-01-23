@@ -166,10 +166,10 @@ private:
 
 	value_type bilin_laplace(const Eigen::Vector2d &grad0,
 			const Eigen::Vector2d &grad1) {
+
 		// calculate gradient of local shape function
 		// by multiplication of transposed inverse of Jacobian of affine transformation
 		// with gradient from shape function on reference cell
-
 		Eigen::MatrixXd J_inv_t(2, 2);
 		J_inv_t << jac(1, 1), -jac(1, 0), -jac(0, 1), jac(0, 0);
 		J_inv_t /= detjacabs;
@@ -315,9 +315,6 @@ public:
 		assert(detjacabs == 2 * volume);
 
 		assemble_laplace(Equad, Equads_x, Equads_y); //TODO redundant if MONGE amper ...
-
-		cout << "laplace " << get_laplace() << endl;
-		cout << "det " << detjacabs_Ref() << endl;
 
 		assemble_normalderi(Fquads_x, Fquads_y);
 
