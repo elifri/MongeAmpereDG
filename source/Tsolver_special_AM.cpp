@@ -60,7 +60,11 @@ void Tsolver::read_problem_parameters_MA(int &stabsign, double &gamma, double &r
 				diffusion_a(row_index, col_index) = 0;
 		}
 
-		pBC->set_diffusion_matrix(shape.get_Equad(), shape.get_Equads_x(), shape.get_Equads_y(), diffusion_a);
+		Emass_type laplace;
+		pLC->set_diffusionmatrix(shape.get_Equad(), shape.get_Equads_x(), shape.get_Equads_y(), A, laplace);
+		*/
+		pLC->set_diffusionmatrix(diffusionmatrix_type::Identity());
+		cout<< "diffumatrix of " << grid_type::id(it) << ":\n" << pLC->A << endl;
 	}
 
 }
@@ -144,8 +148,49 @@ void Tsolver::assignViews_MA(unsigned int & offset) {
 }
 
 
+void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM) {
 
-void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd Lrhs) {
+#if (EQUATION == MONGE_AMPERE_EQ)
+	Emass_type laplace;
+	value_type det_jac = pBC->get_detjacabs() * facLevelVolume[pLC->id().level()]; //determinant of Transformation to leafcell
+
+	if (iteration > 0){ //we need to update the diffusion matrices /hessian
+		Hessian_type hess;
+
+		shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
+		pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
+		hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+
+		cout << "calling update in if with " << diffusionmatrix_type::Identity() << endl;
+		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_x(),	shape.get_Equads_y(),
+								pBC->get_jac(), det_jac, laplace); //update diffusionmatrix
+	}
+	else{
+		cout << "calling update in else with " << diffusionmatrix_type::Identity() << endl;
+		pLC->update_diffusionmatrix(diffusionmatrix_type::Identity(), shape.get_Equad(), shape.get_Equads_x(),	shape.get_Equads_y(),
+				pBC->get_jac(), det_jac, laplace);
+	}
+#endif
+
+	for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
+		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+			int row = (pLC->m_offset + ieq);
+			int col = (pLC->n_offset + ishape);
+
+
+			value_type val;
+#if (EQUATION == POISSON_EQ)
+			val	= pBC->get_laplace(ieq,ishape);
+#elif (EQUATION == MONGE_AMPERE_EQ)
+			val = laplace(ieq,ishape);
+#endif
+
+			LM.coeffRef(row, col) += val;
+		}
+	}
+}
+
+void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs) {
 	for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
 
 		state_type uLC;
@@ -185,7 +230,7 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
  *
  */
 void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
-		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs, unsigned int istate) {
+		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs) {
 	unsigned int gaussbaseLC = 0;
 	unsigned int gaussbaseNC = 0;
 	unsigned int levelNC = 0;
@@ -221,15 +266,9 @@ void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
 			grid.findBaseCellOf(idLC, pBC);
 			const grid_type::basecell_type * pNBC;
 
+
 			// Copy entries for element laplace operator into Laplace-matrix
-			for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
-				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-					int row = (pLC->m_offset + ieq);
-					int col = (pLC->n_offset + ishape);
-					double val = pBC->get_laplace(ieq,ishape);
-					LM.coeffRef(row, col) += val;
-				}
-			}
+			assemble_lhs_bilinearform_MA(pLC, pBC, LM);
 
 			// Copy entries for right hand side into right hand side
 			assemble_rhs_MA(pLC, idLC, pBC, x, Lrhs);
@@ -699,10 +738,12 @@ void Tsolver::time_stepping_MA() {
 	//  outexacthistory << uc[0] << endl;
 	////////////////////////////////////////////////////////////
 
-	int maxloops;
-	singleton_config_file::instance().getValue("AM", "loops", maxloops, 3);
+	singleton_config_file::instance().getValue("AM", "maximal iterations", maxits, 3);
 
-	for (int loop = 1; loop <= maxloops; ++loop) {
+	iteration = 0;
+
+	while (iteration < maxits) {
+		cout << "Iteration: " << iteration << endl;
 
 		unsigned int LM_size;
 
@@ -719,7 +760,7 @@ void Tsolver::time_stepping_MA() {
 
 		cout << "Assemble linear System..." << flush;
 		pt.start();
-		assemble_MA(stabsign, gamma, LM, Lrhs, loop);
+		assemble_MA(stabsign, gamma, LM, Lrhs);
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
@@ -738,63 +779,18 @@ void Tsolver::time_stepping_MA() {
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
-		/*
-		 KSPConvergedReason reason;
-		 PetscInt its;
-
-		 KSPGetConvergedReason(ksp, &reason);
-		 if (reason == KSP_DIVERGED_INDEFINITE_PC) {
-		 printf("\nDivergence because of indefinite preconditioner;\n");
-		 printf
-		 ("Run the executable again but with -pc_icc_shift option.\n");
-		 } else if (reason < 0) {
-		 printf
-		 ("\nOther kind of divergence: this should not happen. %d.\n",
-		 reason);
-		 } else {
-		 KSPGetIterationNumber(ksp, &its);
-		 printf("\nConvergence in %d iterations.\n", (int) its);
-		 }
-		 printf("\n");
-		 */
-
-		//     int iterations;
-		//     gmres(solution, LM, Lrhs, solution, 300, 1E-5, 1000, iterations);
-		//    cout << "iterations:" << endl << iterations << endl;
-		// cout << "Lrhs=" << endl;
-		// VecView(Lrhs,PETSC_VIEWER_STDOUT_WORLD);
-		// cout << "Lsolution=" << endl;
-		// VecView(Lsolution,PETSC_VIEWER_STDOUT_WORLD);
 		restore_MA(Lsolution);
 
-		//     // temperature history at xc: //////////////////////////////
-		//     assemble_state_Equad (pc->u, center_quad, uc);
-		//     outnumericalhistory << uc << endl;
-		//     get_exacttemperature_MA (xc, uc);
-		//     outexacthistory << uc[0] << endl;
-		//     ////////////////////////////////////////////////////////////
+		cout << "LSolution" << Lsolution.transpose() << endl;
 
-		//     refine_count++;
-		//     if (refine_count == 20) {
-		//       cerr << "refine" << endl;
-		//       refine_onelevel_circle (0.9);
-		//       coarsen_onelevel_diagonal ();
-		//       refine_count = 0;
-		//       update_centerleaf (idcenter, pc, xc);
-		//       }
-		//    }
-		//   outnumericalhistory.close ();
-		//   outexacthistory.close ();
-
-		// reset flag 0
 		setleafcellflags(0, false);
 
 		assemble_indicator_and_limiting(); // use flag
 
-		write_exactsolution_MA(loop);
-		write_numericalsolution_MA(loop);
-		write_numericalsolution_VTK_MA(loop);
-		write_exactrhs_MA(loop);
+		write_exactsolution_MA(iteration);
+		write_numericalsolution_MA(iteration);
+		write_numericalsolution_VTK_MA(iteration);
+		write_exactrhs_MA(iteration);
 
 		adapt(refine_eps, coarsen_eps);
 
@@ -807,7 +803,7 @@ void Tsolver::time_stepping_MA() {
 //	ierr = VecDestroy(Lrhs);
 //
 //	ierr = MatDestroy(LM);
-
+		iteration++;
 	}
 }
 
@@ -1065,7 +1061,7 @@ void Tsolver::write_numericalsolution_MA(const unsigned int i)
 	}
 
 	std::string fname(output_directory);
-	fname+="/grid_numericalsolution."+NumberToString(i)+".dat";
+	fname+="/grid_numericalsolution"+NumberToString(i)+".dat";
 	std::ofstream fC(fname.c_str());
 
 	// global header

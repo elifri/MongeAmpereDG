@@ -228,6 +228,9 @@ public:
 
          double atol,rtol; // absolute and relative tolerances
          double dtol;      // tolerances for divergence
+
+         int iteration;
+
          int maxits;       // maximum number of iterations
 
          double eta;       // absolute tolerance from estimated error factor
@@ -280,10 +283,10 @@ public:
    void initializeLeafCellData_MA ();
 
 private:
-   void assemble_lhs_bilinearform_MA(leafcell_type* &pLC, basecell_type* &pBC, const unsigned int istate, Eigen::SparseMatrix<double> &LM); ///writes the stiffness matrix part of LC
-   void assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd Lrhs); ///writes rhs part from LC
+   void assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM); ///writes the stiffness matrix part of LC
+   void assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs); ///writes rhs part from LC
 public:
-   void assemble_MA(const int & STABSIGN, const double & PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs, unsigned int istate);
+   void assemble_MA(const int & STABSIGN, const double & PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs);
    void restore_MA (Eigen::VectorXd &solution);
    void get_exacttemperature_MA (const space_type & x, state_type & u); // state_type ???
    void get_exacttemperature_MA (const N_type & x, state_type & u); // state_type ???
