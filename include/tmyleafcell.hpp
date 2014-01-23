@@ -13,6 +13,9 @@
 #include "config.hpp"
 #include "tmycommencelldata.hpp"
 
+
+#include "Equad.hpp"
+
 using namespace config;
 
 //------------------------------------------------------------------------------
@@ -40,6 +43,7 @@ protected:
   unsigned int m_nFaces;
   bool         m_bKnodes;
 
+
 public:
   static mass_type    mass;
 
@@ -47,6 +51,8 @@ public:
   Estate_type      unew;
   value_type       limiter;
   value_type       Serror;
+
+  diffusionmatrix_type A;
 
 #if(EQUATION==POISSON_EQ || EQUATION==IMPLICIT_HEAT_EQ || EQUATION == MONGE_AMPERE_EQ)
   unsigned int m_offset, n_offset, m_block_size, n_block_size;
@@ -60,6 +66,14 @@ public:
     this->mass.set_massmatrix (m);
   }
 
+  void set_diffusionmatrix(const diffusionmatrix_type A) {this->A = A;}
+
+  void update_diffusionmatrix(const diffusionmatrix_type A, const Equad &equad, const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y, const Ejacobian_type &jac, const value_type detjacabs, Emass_type laplace){
+	  this->A = A;
+//	  cout <<" updating with \n" << A << endl << "to " << endl << this->A << endl;
+	  assemble_laplace(equad, Equads_x, Equads_y, jac, detjacabs, laplace);
+  }
+
   unsigned int faces() const { return m_nFaces; }
   unsigned int& faces() { return m_nFaces; }
 
@@ -67,6 +81,53 @@ public:
   bool& hanging() { return m_bKnodes; }
 
   static int countAllLeafs() { return m_nCountAllLeafs; }
+
+	value_type bilin_alaplace(const double & u0_x, const double & u0_y,
+			const double & u1_x, const double & u1_y, const Ejacobian_type &jac) const {
+		// calculate gradient of local shape function
+		// by multiplication of transposed inverse of Jacobian of affine transformation
+		// with gradient from shape function on reference cell
+
+		Ejacobian_type J_inv_t(2, 2);
+		J_inv_t << jac(1, 1), -jac(1, 0), -jac(0, 1), jac(0, 0);
+		J_inv_t /= jac(0,0)*jac(1,1)-jac(1,0)*jac(0,1);
+
+		space_type phi_i = J_inv_t * (space_type() << u0_x, u0_y).finished();
+		space_type phi_j = J_inv_t * (space_type() << u1_x, u1_y).finished();
+
+//		cout << "phi_i" << phi_i.transpose() << endl;
+//		cout << "phi_j" << phi_j.transpose() << endl;
+//		cout << "A " << A << endl;
+//		cout << "bilin = " << (A * phi_i).dot(phi_j) << endl;
+
+		return (A * phi_i).dot(phi_j);
+	}
+
+	//same as assemble_laplace in basecell
+ 	void assemble_laplace(const Equad &equad, const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y, const Ejacobian_type &jac, const value_type detjacabs, Emass_type laplace) {
+
+ 	cout << "diffusion matrix in assemble-laplace "<< A<< endl;
+
+ 		// Laplace-matrix
+#if (EQUATION==MONGE_AMPERE_EQ)
+		//write laplace matrix: first top half
+		for (unsigned int i = 0; i < shapedim; i++) {
+			for (unsigned int j = 0; j <= i; j++) {
+				Equadrature_type func;
+				for (int iq = 0; iq < Equadraturedim; iq++) {
+					func(iq) = bilin_alaplace(Equads_x(i, iq),	Equads_y(i, iq), Equads_x(j, iq), Equads_y(j, iq), jac);
+				}
+				cout << "func " << func.transpose() << endl;
+				cout << "detjacabs " << detjacabs << endl;
+				laplace(i, j) = equad.integrate(func, detjacabs);
+			}
+		}
+
+		cout << "laplace of leafcell ? " << laplace << endl;
+#else
+		cerr << "leafcell does not know how to calculate the laplace matrix" << endl; abort();
+#endif
+ 	}
 
   // you have to (!!!) provide 9 values ... otherwise Tecplot cannot read the data!!!
   static void writeData(std::ostream& os,

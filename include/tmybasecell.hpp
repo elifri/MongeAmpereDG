@@ -179,40 +179,12 @@ private:
 		return phi_i.dot(phi_j);
 	}
 
-	value_type bilin_alaplace(const double & u0_x, const double & u0_y,
-			const double & u1_x, const double & u1_y) {
-		// calculate gradient of local shape function
-		// by multiplication of transposed inverse of Jacobian of affine transformation
-		// with gradient from shape function on reference cell
-
-		Ejacobian_type J_inv_t(2, 2);
-		J_inv_t << jac(1, 1), -jac(1, 0), -jac(0, 1), jac(0, 0);
-		J_inv_t /= detjacabs;
-
-		space_type phi_i = J_inv_t * (space_type() << u0_x, u0_y).finished();
-		space_type phi_j = J_inv_t * (space_type() << u1_x, u1_y).finished();
-
-		return (diffusion_a * phi_i).dot(phi_j);
-	}
-
 	void assemble_laplace(const Equad &equad,
 			const Equadratureshape_type &Equads_x,
 			const Equadratureshape_type &Equads_y) {
 		laplace.setZero();
 
-		// Laplace-matrix
-#if (EQUATION==MONGE_AMPERE_EQ)
-		//write laplace matrix: first top half
-		for (unsigned int i = 0; i < shapedim; i++) {
-			for (unsigned int j = 0; j <= i; j++) {
-				Equadrature_type func;
-				for (int iq = 0; iq < Equadraturedim; iq++) {
-					func(iq) = bilin_alaplace(Equads_x(i, iq),	Equads_y(i, iq), Equads_x(j, iq), Equads_y(j, iq));
-				}
-				laplace(i, j) = equad.integrate(func, detjacabs);
-			}
-		}
-#else
+#if (EQUATION == POISSON_EQ)
 		//write laplace matrix: first top half
 		for (unsigned int i=0; i<shapedim; i++) {
 			for (unsigned int j=0; j<=i; j++) {
@@ -224,6 +196,8 @@ private:
 				laplace(i,j) = equad.integrate(func, detjacabs);
 			}
 		}
+#else
+//		cerr << "there is no use in calculation a laplace matrix in the basecell ???" << endl; abort();
 #endif
 
 		// Laplace-matrix is symmetric:
@@ -393,14 +367,16 @@ public:
 
 	}
 
-	/*! sets the diffussion matrix and recalculates the laplace matrix
+	/*! calculates the hessmatrix on this basecell given the Hessian of the referencell
 	 *
 	 */
-	void set_diffusion_matrix(const Equad &equad, const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y,
-							  const diffusionmatrix_type &A)
+	void transform_hessmatrix(Hessian_type &A) const
 	{
-		diffusion_a = A;
-		assemble_laplace(equad, Equads_x, Equads_y);
+		Ejacobian_type J_inv_t(2, 2);
+		J_inv_t << jac(1, 1), -jac(1, 0), -jac(0, 1), jac(0, 0);
+		J_inv_t /= detjacabs;
+
+		A = (J_inv_t*A*J_inv_t).transpose();
 	}
 
 
