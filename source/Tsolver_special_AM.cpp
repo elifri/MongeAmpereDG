@@ -35,16 +35,17 @@ void Tsolver::read_problem_parameters_MA(int &stabsign, double &gamma, double &r
 
 
 	//read diffusion matrices
-	for (grid_type::basecellmap_type::iterator it=grid.baseCells().begin(); it!=grid.baseCells().end(); ++it) {
-		diffusionmatrix_type diffusion_a;
-		const grid_type::id_type& idBC = grid_type::id(it);
-	    basecell_type * const pBC=&grid_type::cell(it);
+	for (grid_type::leafcellmap_type::iterator it=grid.leafCells().begin(); it!=grid.leafCells().end(); ++it) {
+	    leafcell_type * const pLC=&grid_type::cell(it);
+
+		/*		diffusionmatrix_type diffusion_a;
+		const grid_type::id_type& idLC = grid_type::id(it);
 
 	    // get entry "diffusion_a[xxx]" in section "scaling functions"
-	    std::string line, entryname = entryname1d<3>("diffusion_a", idBC.cell());
+	    std::string line, entryname = entryname1d<3>("diffusion_a", idLC.cell());
 	    	if (!singleton_config_file::instance().getValue("monge ampere", entryname, line)) {
 			cerr << "Error while reading [monge ampere] "
-					<< entryname1d<3>("a", idBC.cell())
+					<< entryname1d<3>("a", idLC.cell())
 					<< " from configfile." << endl;
 			abort();
 		}
