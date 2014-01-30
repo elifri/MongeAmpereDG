@@ -918,6 +918,13 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 		Nelements += v[i].size();
 
 	}
+
+	if (refine != 0){
+		Nnodes *= (refine+1);
+		Nelements *= 4; //only works for triangle ;)
+	}
+
+
 //    std::string fname(output_directory);
 //    fname+="/grid_numericalsolution."+NumberToString(i)+".dat";
 //    std::ofstream fC(fname.c_str());
@@ -964,7 +971,27 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 			}
 
 		}
+		else
+		{
+			// save points in file without refinement
+
+			// over all ids inside this block
+			for (unsigned int j = 0; j < v[i].size(); ++j) {
+				const grid_type::id_type & id = v[i][j];
+				grid_type::leafcell_type * pLC = NULL;
+				grid.findLeafCell(id, pLC);
+
+				grid.nodes(id, nv);
+				for (unsigned int k = 0; k < id.countNodes(); ++k) {
+					shape.assemble_state_N(pLC->u, k, state);
+					file << "\t\t\t\t\t" << pLC->Serror << endl;
+					file << "\t\t\t\t\t" << pLC->Serror << endl;
+				}
+			}
+
+		}
 	}
+
 
 	file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
 
@@ -996,7 +1023,65 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 				}
 			}
 
+		}else {		// save points in file after refinement
+
+			const unsigned int N = degreedim * (refine + 1);
+
+			// over all ids inside this block
+			for (unsigned int j = 0; j < v[i].size(); ++j) {
+				const grid_type::id_type & id = v[i][j];
+				grid_type::leafcell_type * pLC = NULL;
+				grid.findLeafCell(id, pLC);
+
+				grid.nodes(id, nv);
+
+				cout << "number of nodes " << id.countNodes() << endl;
+				for (int i = 0; i< id.countNodes(); ++i)
+					cout << "node " << i << " "<< nv[i] << endl;
+
+				Eigen::Vector3d h_x, h_y;// (
+				h_x(0) = -nv[0][0]+nv[1][0];
+				h_y(0) = -nv[0][1]+nv[1][1];
+
+				h_x(1) = -nv[1][0]+nv[2][0];
+				h_y(1) = -nv[1][1]+nv[2][1];
+
+				h_x(2) = nv[0][0]-nv[2][0];
+				h_y(2) = nv[0][1]-nv[2][1];
+
+				h_x /= refine +1;
+				h_y /= refine +1;
+
+				cout << "h_x " << h_x.transpose() << endl;
+				cout << "h_y " << h_y.transpose() << endl;
+
+				std::vector<space_type> points(id.countNodes()*(refine+1));
+				Eigen::VectorXd vals (points.size());
+
+				for (int i = 0; i < id.countNodes(); ++i) {//loop over nodes
+					state_type val1, val2;
+					shape.assemble_state_N(pLC->u, i, val1);
+					shape.assemble_state_N(pLC->u, (i+1)%3, val2);
+
+					for (int j = 0; j <= refine; ++j) { //loop over points that are inserted
+						points[i * (refine + 1) + j] = (space_type() << nv[i][0]+j*h_x(i), nv[i][1]+j*h_y(i)).finished(); //interpolate grid points
+						cout << "i " << i << " j " << j << " : " << nv[i][0]+j*h_x(i) << " " << nv[i][1]+j*h_y(i) << endl;
+
+						value_type coeffl = 1.0*(refine - j)/ 1.0*refine, coeffr = 1.0*j/ 1.0*refine; //calculate coefficients for interpolation of u
+						cout << "vals: " << val1 << " " << val2 << "with coeffs: " <<coeffl << " " << coeffr << endl;
+						vals[i * (refine + 1) + j] =  (coeffl* val1 +  coeffr* val2)(0);//interpolate u
+					}
+				}
+
+				// save points in file
+				for (unsigned int k = 0; k < points.size(); ++k) {
+						file << "\t\t\t\t\t" << points[k].transpose() << " " << vals(k) << endl; //" "
+						//<< pLC->Serror << endl;
+				}
+
+			}
 		}
+
 	}
 
 	file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
@@ -1006,19 +1091,30 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 			<< "\t\t\t\t<DataArray type=\"Int32\" Name=\"connectivity\" format=\"";
 	file << "ascii\">"<<endl;
 	// make connectivity
-	for (unsigned int i = 0; i < grid.countBlocks(); ++i) {
-		if (v[i].size() == 0)
-			continue;
-		for (unsigned int N = 1, j = 0; j < v[i].size(); ++j) {
-			Nhandlevector_type vCH;
-			for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
-				vCH[k] = (N++);
 
-			unsigned int nNodes = v[i][j].countNodes();
-			grid.block(v[i][j].block()).prepareTecplotNode(vCH, nNodes);
-			file << "\t\t\t\t\t";
-			for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
-				file << vCH[k]-1 << " ";
+	if (refine == 0){
+		for (unsigned int i = 0; i < grid.countBlocks(); ++i) {
+			if (v[i].size() == 0)
+				continue;
+			for (unsigned int N = 1, j = 0; j < v[i].size(); ++j) {
+				Nhandlevector_type vCH;
+				for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
+					vCH[k] = (N++);
+
+				unsigned int nNodes = v[i][j].countNodes();
+				grid.block(v[i][j].block()).prepareTecplotNode(vCH, nNodes);
+				file << "\t\t\t\t\t";
+				for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
+					file << vCH[k]-1 << " ";
+			}
+		}
+	}
+	else{ //refined
+		for (int i = 0; i < Nnodes ; i+=6){
+			file << "\t\t\t\t\t"<< i+1 << " " << i+3 << " " << i+5 << " ";//triangle in the middle
+			file << "\t\t\t\t\t"<< i << " " << i+1 << " " << i+5 << " "; //botoom triangle
+			file << "\t\t\t\t\t"<< i+1 << " " << i+2 << " " << i+3 << " "; //on the right
+			file << "\t\t\t\t\t"<< i+3 << " " << i+4 << " " << i+5 << " "; // on the top
 		}
 	}
 
