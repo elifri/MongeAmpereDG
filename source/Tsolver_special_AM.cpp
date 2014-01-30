@@ -736,7 +736,7 @@ void Tsolver::time_stepping_MA() {
 	//  outexacthistory << uc[0] << endl;
 	////////////////////////////////////////////////////////////
 
-	singleton_config_file::instance().getValue("AM", "maximal iterations", maxits, 3);
+	singleton_config_file::instance().getValue("monge ampere", "maximal_iterations", maxits, 3);
 
 	iteration = 0;
 
