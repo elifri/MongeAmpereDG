@@ -790,16 +790,9 @@ void Tsolver::time_stepping_MA() {
 		write_numericalsolution_VTK_MA(iteration);
 		write_exactrhs_MA(iteration);
 
-
 		// reset flag 0
 		setleafcellflags(0, false);
 
-//	ierr = KSPDestroy(ksp);
-//
-//	ierr = VecDestroy(Lsolution);
-//	ierr = VecDestroy(Lrhs);
-//
-//	ierr = MatDestroy(LM);
 		iteration++;
 	}
 }
@@ -920,10 +913,8 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 	}
 
 	if (refine != 0){
-		Nelements = Nnodes;
-		Nnodes *= 4;
-		Nnodes /= 3;
-		; //only works for triangle ;)
+		Nelements = Nelements*4;
+		Nnodes *= 2;
 	}
 
 
@@ -1007,9 +998,7 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 		if (v[i].size() == 0)
 			continue;
 
-		if (refine == 0) {
-
-			// save points in file without refinement
+		if (refine == 0) {// save points in file without refinement
 
 			// over all ids inside this block
 			for (unsigned int j = 0; j < v[i].size(); ++j) {
@@ -1037,42 +1026,52 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 
 				grid.nodes(id, nv);
 
-				std::vector<space_type> points(id.countNodes()+1);
-				Eigen::VectorXd vals (points.size());
+				Eigen::Vector3d h_x, h_y;		// (
+				h_x(0) = -nv[0][0] + nv[1][0];
+				h_y(0) = -nv[0][1] + nv[1][1];
+
+				h_x(1) = -nv[1][0] + nv[2][0];
+				h_y(1) = -nv[1][1] + nv[2][1];
+
+				h_x(2) = nv[0][0] - nv[2][0];
+				h_y(2) = nv[0][1] - nv[2][1];
+
+				h_x /= refine + 1;
+				h_y /= refine + 1;
+
+				cout << "h_x " << h_x.transpose() << endl;
+				cout << "h_y " << h_y.transpose() << endl;
+
+				Eigen::Matrix<space_type, Eigen::Dynamic, 1> points(id.countNodes() * (refine + 1));
+				Eigen::VectorXd vals(points.size());
+
 				state_type val;
+				baryc_type xbar;
 
-				//init values
-				state_type val_int;
-				val_int.setZero();
-				points[3].setZero();
+				for (int i = 0; i < id.countNodes(); ++i) {	//loop over nodes
+					//nodes
+					points[i * 2] =	(space_type() << nv[i][0], nv[i][1]).finished(); //set coordinates
+					cout << "points " << i*2 << " "<< points[i*2].transpose() << endl;
+					shape.assemble_state_N(pLC->u, i, val); //get solution at nodes
+					vals(i * 2) = val(0); //write solution
 
-				//copy data
-				for (int i = 0; i < id.countNodes(); ++i) {//loop over nodes
-					shape.assemble_state_N(pLC->u, i, val);
-					vals(i) = val(0);
-					points[i] = (space_type() << nv[i][0], nv[i][1]).finished(); // copy old points
+					//coordinates of new points
+					points[i * 2 + 1] =	(space_type() << nv[i][0] + h_x(i), nv[i][1]+ h_y(i)).finished();
+					cout << "points " << i*2+1 << " "<< points[i*2+1].transpose() << endl;
+					//calc calculate baryc coordinates of middle points
+					xbar.setZero();
+					xbar(i) = 1. / 2.;
+					xbar((i+1) % 3) = 1. / 2.;
 
-					points[3] += points[i];
+					//get solution
+					shape.assemble_state_x_barycentric(pLC->u, xbar, val);
+					vals(i * 2 + 1) = val(0);
 				}
-
-				//get mean value
-				points[3] /= 3.0;
-
-				//get value at new point
-				shape.assemble_state_x_barycentric(pLC->u, (baryc_type() << 1./3., 1./3., 1./3.).finished(),val);
-				vals(3) = val(0);
-
-				cout << points[3].transpose() << endl;
-				cout << vals(3) << endl;
-
-				cout << "error? " << endl;
-
 				// save points in file
 				for (unsigned int k = 0; k < points.size(); ++k) {
-						file << "\t\t\t\t\t" << points[k].transpose() << " " << vals(k) << endl; //" "
+						file << "\t\t\t\t\t" << points[k].transpose() << " "<< vals(k) << endl; //" "
 						//<< pLC->Serror << endl;
 				}
-				cout << "error! " << endl;
 			}
 		}
 
@@ -1104,11 +1103,12 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 		}
 	}
 	else{ //refined
-		for (int i = 0; i < Nnodes ; i+=4){
-			file << "\t\t\t\t\t"<< i << " " << i+3 << " " << i+1 << " ";//triangle in the middle
-			file << "\t\t\t\t\t"<< i << " " << i+2 << " " << i+3 << " "; //botoom triangle
-			file << "\t\t\t\t\t"<< i+1 << " " << i+2 << " " << i+3 << " "; //on the right
-		}
+			for (int i = 0; i < Nnodes ; i+=6){
+				file << "\t\t\t\t\t"<< i+1 << " " << i+3 << " " << i+5 << " ";//triangle in the middle
+				file << "\t\t\t\t\t"<< i << " " << i+1 << " " << i+5 << " "; //botoom triangle
+				file << "\t\t\t\t\t"<< i+1 << " " << i+2 << " " << i+3 << " "; //on the right
+				file << "\t\t\t\t\t"<< i+3 << " " << i+4 << " " << i+5 << " "; // on the top
+	 		}
 	}
 
 	file << "\n\t\t\t\t</DataArray>\n";
