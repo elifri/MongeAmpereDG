@@ -1067,7 +1067,7 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 						points[i * (refine + 1) + j] = (space_type() << nv[i][0]+j*h_x(i), nv[i][1]+j*h_y(i)).finished(); //interpolate grid points
 						cout << "i " << i << " j " << j << " : " << nv[i][0]+j*h_x(i) << " " << nv[i][1]+j*h_y(i) << endl;
 
-						value_type coeffl = 1.0*(refine - j)/ 1.0*refine, coeffr = 1.0*j/ 1.0*refine; //calculate coefficients for interpolation of u
+						value_type coeffl = 1.0*((refine+1) - j)/(refine+1), coeffr = 1.0*j/ (refine+1); //calculate coefficients for interpolation of u
 						cout << "vals: " << val1 << " " << val2 << "with coeffs: " <<coeffl << " " << coeffr << endl;
 						vals[i * (refine + 1) + j] =  (coeffl* val1 +  coeffr* val2)(0);//interpolate u
 					}
@@ -1218,7 +1218,7 @@ void Tsolver::write_numericalsolution_VTK_MA(const unsigned int i) {
 	std::string fname(output_directory);
 	fname += "/grid_numericalsolution" + NumberToString(i) + ".vtu";
 
-	writeLeafCellVTK(fname, grid);
+	writeLeafCellVTK(fname, grid,1);
 
 }
 
