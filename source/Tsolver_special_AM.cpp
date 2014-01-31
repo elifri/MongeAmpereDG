@@ -920,8 +920,10 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 	}
 
 	if (refine != 0){
-		Nnodes *= (refine+1);
-		Nelements *= 4; //only works for triangle ;)
+		Nelements = Nnodes;
+		Nnodes *= 4;
+		Nnodes /= 3;
+		; //only works for triangle ;)
 	}
 
 
@@ -1035,50 +1037,42 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 
 				grid.nodes(id, nv);
 
-				cout << "number of nodes " << id.countNodes() << endl;
-				for (int i = 0; i< id.countNodes(); ++i)
-					cout << "node " << i << " "<< nv[i] << endl;
-
-				Eigen::Vector3d h_x, h_y;// (
-				h_x(0) = -nv[0][0]+nv[1][0];
-				h_y(0) = -nv[0][1]+nv[1][1];
-
-				h_x(1) = -nv[1][0]+nv[2][0];
-				h_y(1) = -nv[1][1]+nv[2][1];
-
-				h_x(2) = nv[0][0]-nv[2][0];
-				h_y(2) = nv[0][1]-nv[2][1];
-
-				h_x /= refine +1;
-				h_y /= refine +1;
-
-				cout << "h_x " << h_x.transpose() << endl;
-				cout << "h_y " << h_y.transpose() << endl;
-
-				std::vector<space_type> points(id.countNodes()*(refine+1));
+				std::vector<space_type> points(id.countNodes()+1);
 				Eigen::VectorXd vals (points.size());
+				state_type val;
 
+				//init values
+				state_type val_int;
+				val_int.setZero();
+				points[3].setZero();
+
+				//copy data
 				for (int i = 0; i < id.countNodes(); ++i) {//loop over nodes
-					state_type val1, val2;
-					shape.assemble_state_N(pLC->u, i, val1);
-					shape.assemble_state_N(pLC->u, (i+1)%3, val2);
+					shape.assemble_state_N(pLC->u, i, val);
+					vals(i) = val(0);
+					points[i] = (space_type() << nv[i][0], nv[i][1]).finished(); // copy old points
 
-					for (int j = 0; j <= refine; ++j) { //loop over points that are inserted
-						points[i * (refine + 1) + j] = (space_type() << nv[i][0]+j*h_x(i), nv[i][1]+j*h_y(i)).finished(); //interpolate grid points
-						cout << "i " << i << " j " << j << " : " << nv[i][0]+j*h_x(i) << " " << nv[i][1]+j*h_y(i) << endl;
-
-						value_type coeffl = 1.0*((refine+1) - j)/(refine+1), coeffr = 1.0*j/ (refine+1); //calculate coefficients for interpolation of u
-						cout << "vals: " << val1 << " " << val2 << "with coeffs: " <<coeffl << " " << coeffr << endl;
-						vals[i * (refine + 1) + j] =  (coeffl* val1 +  coeffr* val2)(0);//interpolate u
-					}
+					points[3] += points[i];
 				}
+
+				//get mean value
+				points[3] /= 3.0;
+
+				//get value at new point
+				shape.assemble_state_x_barycentric(pLC->u, (baryc_type() << 1./3., 1./3., 1./3.).finished(),val);
+				vals(3) = val(0);
+
+				cout << points[3].transpose() << endl;
+				cout << vals(3) << endl;
+
+				cout << "error? " << endl;
 
 				// save points in file
 				for (unsigned int k = 0; k < points.size(); ++k) {
 						file << "\t\t\t\t\t" << points[k].transpose() << " " << vals(k) << endl; //" "
 						//<< pLC->Serror << endl;
 				}
-
+				cout << "error! " << endl;
 			}
 		}
 
@@ -1110,11 +1104,10 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 		}
 	}
 	else{ //refined
-		for (int i = 0; i < Nnodes ; i+=6){
-			file << "\t\t\t\t\t"<< i+1 << " " << i+3 << " " << i+5 << " ";//triangle in the middle
-			file << "\t\t\t\t\t"<< i << " " << i+1 << " " << i+5 << " "; //botoom triangle
+		for (int i = 0; i < Nnodes ; i+=4){
+			file << "\t\t\t\t\t"<< i << " " << i+3 << " " << i+1 << " ";//triangle in the middle
+			file << "\t\t\t\t\t"<< i << " " << i+2 << " " << i+3 << " "; //botoom triangle
 			file << "\t\t\t\t\t"<< i+1 << " " << i+2 << " " << i+3 << " "; //on the right
-			file << "\t\t\t\t\t"<< i+3 << " " << i+4 << " " << i+5 << " "; // on the top
 		}
 	}
 
