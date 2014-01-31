@@ -732,6 +732,20 @@ void Tshape::assemble_state_x(const Estate_type & u, const space_type & xref,
 }
 ;
 
+///////////////////////////////////////////////////
+
+void Tshape::assemble_state_x_barycentric(const Estate_type & u, const baryc_type & xbar,
+		state_type & v) { // xref is coordinate in reference element
+
+	space_type xref;
+	xref = 	  xbar(0) * (space_type() << 0, 0).finished()
+			+ xbar(1) * (space_type() << 1, 0).finished()
+			+ xbar(2) * (space_type() << 0, 1).finished();
+
+	assemble_state_x(u, xref, v);
+}
+;
+
 ////////////////////////////////////////////////////
 
 void Tshape::assemble_state_x(const Estate_type & u,
@@ -826,6 +840,8 @@ void Tshape::assemble_hessmatrix(const Estate_type & u, const unsigned int &ista
 	hess.setZero();
 	for (unsigned int j = 0; j < shapedim; j++)
 		hess += u(j, istate) * Equads_dd(j);
+
+	cout << "calculated hessian:\n" << hess << endl;
 }
 
 ////////////////////////////////////////////////////

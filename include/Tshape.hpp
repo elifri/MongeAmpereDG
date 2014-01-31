@@ -80,8 +80,21 @@ public:
 	//////////////     bilinear forms     ///////////////
 
 	//////////////    ASSEMBLING STATES    ///////////////
+	/*
+	 * !calculates the solution at xref (xref is the coordinate in refcell)
+	 */
 	void assemble_state_x(const Estate_type & u, const space_type & xref,
 			state_type & v);
+
+	/*
+	 * !calculates the solution at xbar (x in barycentric coordinates)
+	 */
+	void assemble_state_x_barycentric(const Estate_type & u, const baryc_type & xbar,
+			state_type & v);
+
+	/*
+	 * !calculates solution_istate(xref) (xref is the coordinate in refcell)
+	 */
 	void assemble_state_x(const Estate_type & u, const unsigned int & istate,
 			const space_type & xref, value_type & v);
 	void assemble_grad_x(const Estate_type & u, const unsigned int & istate,
