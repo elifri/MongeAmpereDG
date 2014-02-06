@@ -51,7 +51,7 @@ private:
 
 public:
 	// cstr, id not set yet!!!
-	tmybasecell() {
+	tmybasecell():detjacabs() {
 	}
 
 	// is called from finalize
@@ -373,7 +373,7 @@ public:
 		J_inv_t << jac(1, 1), -jac(1, 0), -jac(0, 1), jac(0, 0);
 		J_inv_t /= detjacabs;
 
-		A = (J_inv_t*A*J_inv_t).transpose();
+		A = J_inv_t * A * J_inv_t.transpose();
 	}
 
 
