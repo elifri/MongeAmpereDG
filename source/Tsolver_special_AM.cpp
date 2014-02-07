@@ -468,6 +468,10 @@ void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
 }
 
 //////////////////////////////////////////////////////
+void Tsolver::convexify(Eigen::VectorXd & solution) {
+}
+
+///////////////////////////////////////////////////////
 
 void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
