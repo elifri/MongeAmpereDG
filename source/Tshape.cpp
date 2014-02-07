@@ -840,8 +840,6 @@ void Tshape::assemble_hessmatrix(const Estate_type & u, const unsigned int &ista
 	hess.setZero();
 	for (unsigned int j = 0; j < shapedim; j++)
 		hess += u(j, istate) * Equads_dd(j);
-
-	cout << "calculated hessian:\n" << hess << endl;
 }
 
 ////////////////////////////////////////////////////

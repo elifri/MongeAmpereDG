@@ -6,6 +6,8 @@
  */
 
 #include "../include/Tsolver.hpp"
+#include <Eigen/Eigenvalues>
+
 
 #if (EQUATION == MONGE_AMPERE_EQ)
 
@@ -157,9 +159,21 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 	if (iteration > 0){ //we need to update the diffusion matrices /hessian
 		Hessian_type hess;
 
+//		cout << "LC: " <<  pLC->id()<< " :\n" << endl;
+
 		shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
+//		cout << "u " << pLC->u.col(0) << endl;
+
+//		cout << "Hessian at refcell :\n" << hess << endl;
+
 		pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
+//		cout << "Hessian at basecell :\n" << hess << endl;
+
 		hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+		cout << "Hessian at leafcell :\n" << hess << endl;
+
+
+//		cout << "solution coefficients " << pLC->u.col(0) << endl;
 
 		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_x(),	shape.get_Equads_y(),
 								pBC->get_jac(), det_jac,facLevelLength[pLC->id().level()], laplace); //update diffusionmatrix
@@ -169,6 +183,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
 	}
 #endif
+
 
 	for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
@@ -469,11 +484,20 @@ void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
 
 //////////////////////////////////////////////////////
 void Tsolver::convexify(Eigen::VectorXd & solution) {
+	// Copy solution entries back into u
+//	for (int i = 0; i< solution.size(); ++i){
+//		if (solution(i) < 0){
+//			solution(i) = 0;
+//		}
+//	}
 }
 
 ///////////////////////////////////////////////////////
 
 void Tsolver::restore_MA(Eigen::VectorXd & solution) {
+
+	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
+
 
 	leafcell_type *pLC = NULL;
 	for (grid_type::leafcellmap_type::const_iterator it =
@@ -488,6 +512,30 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
 		}
+
+		// get pointer to basecell of this cell
+		const grid_type::basecell_type * pBC;
+		grid.findBaseCellOf(idLC, pBC);
+
+
+		const Hessian_type &hess = pLC->A;
+		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
+
+		//calculate eigen values
+		es.compute(hess);
+
+		//attention works only for constant rhs
+		space_type x;
+		state_type uLC;
+		get_rhs_MA(x, uLC);
+
+		//get rhs
+		value_type rhs = uLC(0);
+		pLC->Serror = det - rhs; //solution should have solution
+		//debug output
+		cout << "residuum in LC: "<< pLC->id() << " is " << pLC->Serror << endl;
+		cout << "The eigenvalues of A are: " << es.eigenvalues().transpose() << endl;
+
 	}
 
 }
@@ -711,11 +759,14 @@ void Tsolver::time_stepping_MA() {
 	//  dt = 1e10;
 
 	update_baseGeometry();
+
 	set_leafcellmassmatrix();
 	// refine_circle (1.0); refine_band (0.85, 1.05);
 
-
 	refine(level);
+
+	cout << "after refine" << endl;
+
 	initializeLeafCellData_MA();
 
 	///////////////////////////////////////////
@@ -780,6 +831,8 @@ void Tsolver::time_stepping_MA() {
 		}
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
+
+		convexify(Lsolution);
 
 		restore_MA(Lsolution);
 
@@ -888,7 +941,7 @@ void check_file_extension(std::string &name, std::string extension) {
 }
 
 void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
-		const unsigned int refine = 0, const bool binary = false) {
+		const int refine = 0, const bool binary = false) {
 
 	//--------------------------------------
 	std::vector < std::vector<id_type> > v;
@@ -970,7 +1023,7 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 		}
 		else
 		{
-			// save points in file without refinement
+			// save points in file with refinement
 
 			// over all ids inside this block
 			for (unsigned int j = 0; j < v[i].size(); ++j) {
@@ -1043,9 +1096,6 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 				h_x /= refine + 1;
 				h_y /= refine + 1;
 
-				cout << "h_x " << h_x.transpose() << endl;
-				cout << "h_y " << h_y.transpose() << endl;
-
 				Eigen::Matrix<space_type, Eigen::Dynamic, 1> points(id.countNodes() * (refine + 1));
 				Eigen::VectorXd vals(points.size());
 
@@ -1055,13 +1105,11 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 				for (int i = 0; i < id.countNodes(); ++i) {	//loop over nodes
 					//nodes
 					points[i * 2] =	(space_type() << nv[i][0], nv[i][1]).finished(); //set coordinates
-					cout << "points " << i*2 << " "<< points[i*2].transpose() << endl;
 					shape.assemble_state_N(pLC->u, i, val); //get solution at nodes
 					vals(i * 2) = val(0); //write solution
 
 					//coordinates of new points
 					points[i * 2 + 1] =	(space_type() << nv[i][0] + h_x(i), nv[i][1]+ h_y(i)).finished();
-					cout << "points " << i*2+1 << " "<< points[i*2+1].transpose() << endl;
 					//calc calculate baryc coordinates of middle points
 					xbar.setZero();
 					xbar(i) = 1. / 2.;
