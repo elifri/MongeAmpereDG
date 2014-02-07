@@ -941,7 +941,7 @@ void check_file_extension(std::string &name, std::string extension) {
 }
 
 void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
-		const int refine = 0, const bool binary = false) {
+		const unsigned int refine = 0, const bool binary = false) {
 
 	//--------------------------------------
 	std::vector < std::vector<id_type> > v;
@@ -1073,8 +1073,6 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 
 		}else {		// save points in file after refinement
 
-			const unsigned int N = degreedim * (refine + 1);
-
 			// over all ids inside this block
 			for (unsigned int j = 0; j < v[i].size(); ++j) {
 				const grid_type::id_type & id = v[i][j];
@@ -1102,7 +1100,7 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 				state_type val;
 				baryc_type xbar;
 
-				for (int i = 0; i < id.countNodes(); ++i) {	//loop over nodes
+				for (unsigned int i = 0; i < id.countNodes(); ++i) {	//loop over nodes
 					//nodes
 					points[i * 2] =	(space_type() << nv[i][0], nv[i][1]).finished(); //set coordinates
 					shape.assemble_state_N(pLC->u, i, val); //get solution at nodes

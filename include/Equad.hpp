@@ -27,8 +27,7 @@ public:
 		  ////////////////////////////////////////////
 		  // Literature:
 		  // Stroud: Approximate calculation of multiple integrals
-		  switch (Equadraturedim) {
-		    case 7:
+		  if (Equadraturedim == 7)
 		    { // exact up to integrand degree 5 (Stroud, page 314)
 		    const double a = (6.0 + sqrt(15.0))/21.0;
 		    const double b = (9.0 - 2.0*sqrt(15.0))/21.0;
@@ -52,8 +51,7 @@ public:
 		    Equadw[5] = Equadw[4];
 		    Equadw[6] = Equadw[4];
 		    }
-		    break;
-		    case 16:
+		  else if (Equadraturedim == 16)
 		    { // exact up to integrand degree 7 (Stroud, page 314)
 		    double r[4]; double s[4]; double a[4]; double b[4];
 		    r[0] = (1.0 - sqrt( ( 3.0 + 2 * sqrt( 6.0/5.0 ) ) / 7.0 ) ) / 2.0;  // approximately 0.0694318
@@ -79,11 +77,9 @@ public:
 			Equadw[k]    = a[i]*b[j];
 		        } }
 		    }
-		    break;
-		    default:
+		  else{
 		    cerr << "PROBLEM in Tshape: Equadraturedim does not fit any defined case"
 		         << endl;
-		    break;
 		    }
 
 		  // value_type Emaskx(4,Equadraturedim)[3];
