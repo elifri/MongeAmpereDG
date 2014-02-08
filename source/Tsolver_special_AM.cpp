@@ -269,6 +269,22 @@ void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
 		for (grid_type::leafcellmap_type::const_iterator it =
 				grid.leafCells().begin(level);
 				it != grid.leafCells().end(level); ++it) {
+			// get id and pointer to this cell
+			const grid_type::id_type & idLC = grid_type::id(it);
+			grid.findLeafCell(idLC, pLC);
+
+			// get pointer to basecell of this cell
+			const grid_type::basecell_type * pBC;
+			grid.findBaseCellOf(idLC, pBC);
+
+			// Copy entries for element laplace operator into Laplace-matrix
+			assemble_lhs_bilinearform_MA(pLC, pBC, LM);
+		}
+
+		// loop over all cells in this level
+		for (grid_type::leafcellmap_type::const_iterator it =
+			grid.leafCells().begin(level);
+				it != grid.leafCells().end(level); ++it) {
 
 			// get id and pointer to this cell
 			const grid_type::id_type & idLC = grid_type::id(it);
@@ -278,10 +294,6 @@ void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
 			const grid_type::basecell_type * pBC;
 			grid.findBaseCellOf(idLC, pBC);
 			const grid_type::basecell_type * pNBC;
-
-
-			// Copy entries for element laplace operator into Laplace-matrix
-			assemble_lhs_bilinearform_MA(pLC, pBC, LM);
 
 			// Copy entries for right hand side into right hand side
 			assemble_rhs_MA(pLC, idLC, pBC, x, Lrhs);
