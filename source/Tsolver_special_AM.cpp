@@ -345,27 +345,31 @@ void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
 									int col_LC = pLC->n_offset + j;
 									int col_NC = pNC->n_offset + j;
 
+									value_type A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,j,iqLC),
+											   A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,j,iqNC);
 
-									// b(u, phi)
-										LM.coeffRef(row_LC, col_LC) += -0.5 // to average
+									LM.coeffRef(row_LC, col_LC) += -0.5 // to average
 											* shape.get_Fquadw(iqLC) * length//quadrature weights
 											* shape.get_Fquads(ishape,iqLC) //jump
-											* pBC->get_normalderi(j,iqLC)/ facLevelLength[level]; //gradient times normal
+											* A_times_normal_BC/ facLevelLength[level]; //gradient times normal
 
-									LM.coeffRef(row_LC, col_NC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * pNBC->get_normalderi(j,iqNC) / facLevelLength[levelNC];
+									LM.coeffRef(row_LC, col_NC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * A_times_normal_NBC / facLevelLength[levelNC];
 
-									LM.coeffRef(row_NC, col_LC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* pBC->get_normalderi(j,iqLC)	/ facLevelLength[level];
+									LM.coeffRef(row_NC, col_LC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* A_times_normal_BC / facLevelLength[level];
 
-									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * pNBC->get_normalderi(j,iqNC) / facLevelLength[levelNC];
+									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
+
+									A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,ishape,iqLC),
+									A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,ishape,iqNC);
 
 									// b(phi, u)
-									LM.coeffRef(row_LC, col_LC) += stabsign	* 0.5 * shape.get_Fquadw(iqLC) * length	* pBC->get_normalderi(ishape,iqLC)	/ facLevelLength[level]	* shape.get_Fquads(j,iqLC);
+									LM.coeffRef(row_LC, col_LC) += stabsign	* 0.5 * shape.get_Fquadw(iqLC) * length	* A_times_normal_BC / facLevelLength[level]	* shape.get_Fquads(j,iqLC);
 
-									LM.coeffRef(row_LC, col_NC) += stabsign	* -0.5 * shape.get_Fquadw(iqLC) * length * pBC->get_normalderi(ishape,iqLC) / facLevelLength[level] * shape.get_Fquads(j,iqNC);
+									LM.coeffRef(row_LC, col_NC) += stabsign	* -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_BC / facLevelLength[level] * shape.get_Fquads(j,iqNC);
 
-									LM.coeffRef(row_NC, col_LC) += stabsign * -0.5 * shape.get_Fquadw(iqLC) * length * pNBC->get_normalderi(ishape,iqNC) / facLevelLength[levelNC] * shape.get_Fquads(j,iqLC);
+									LM.coeffRef(row_NC, col_LC) += stabsign * -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(j,iqLC);
 
-									LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.get_Fquadw(iqLC) * length * pNBC->get_normalderi(ishape,iqNC) / facLevelLength[levelNC] * shape.get_Fquads(j,iqNC);
+									LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(j,iqNC);
 
 									// b_sigma(u, phi)
 									if (penalty != 0.0) {
@@ -819,7 +823,7 @@ void Tsolver::time_stepping_MA() {
 		Lrhs.setZero(LM_size);
 		Lsolution.setZero(LM_size);
 
-		cout << "Assemble linear System..." << flush;
+		cout << "Assemble linear System..." << flush << endl;
 		pt.start();
 		assemble_MA(stabsign, gamma, LM, Lrhs);
 		pt.stop();
