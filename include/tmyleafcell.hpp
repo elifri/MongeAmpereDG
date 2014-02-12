@@ -58,7 +58,7 @@ public:
   unsigned int m_offset, n_offset, m_block_size, n_block_size;
 #endif
 
-  tmyleafcell() { ++m_nCountAllLeafs; }
+  tmyleafcell():A(diffusionmatrix_type::Identity()) { ++m_nCountAllLeafs; }
   ~tmyleafcell() { --m_nCountAllLeafs; }
 
   void set_mass (const mass_type & m)
@@ -109,6 +109,7 @@ public:
 	//same as assemble_laplace in basecell
  	void assemble_laplace(const Equad &equad, const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y, const Ejacobian_type &jac, const value_type detjacabs, const double faclevel, Emass_type &laplace) {
 
+ 	laplace.setZero();
  		// Laplace-matrix
 #if (EQUATION==MONGE_AMPERE_EQ)
 		//write laplace matrix: first top half
@@ -118,14 +119,51 @@ public:
 				for (int iq = 0; iq < Equadraturedim; iq++) {
 					func(iq) = bilin_alaplace(Equads_x(i, iq),	Equads_y(i, iq), Equads_x(j, iq), Equads_y(j, iq), jac, faclevel);
 				}
-				laplace(i, j) = equad.integrate(func, detjacabs);
+				value_type val = equad.integrate(func, detjacabs);
+				if (std::abs(val) > config_type::tol){
+					laplace(i, j) = val;
+				}
 			}
 		}
 
 #else
 		cerr << "leafcell does not know how to calculate the laplace matrix" << endl; abort();
 #endif
+		// Laplace-matrix is symmetric:
+		for (unsigned int i = 0; i < shapedim; i++)
+			for (unsigned int j = 0; j < i; j++)
+				laplace(j, i) = laplace(i, j);
+
  	}
+
+	/*
+	 * @brief calculates (A * grad v)**n (where ** is the scalar product)
+	 * @param pBC pointer to its bascell
+	 * @param i the number of the ansatz function
+	 * @param iq the number of the gauss node
+	 */
+	value_type A_grad_times_normal(const basecell_type* &pBC, const unsigned int i, const int iq) const
+	{
+		assert ( i >= 0 && i < shapedim && "There is not any shape function with that number");
+		assert ( iq >=	 0 && iq < Fquadraturedim && "There is not any face quadrature point with that number");
+
+		// calculate face number
+		unsigned int in = 0;
+		if (iq < Fdim * Fquadgaussdim)
+			in = iq / Fquadgaussdim;
+		else
+			in = (iq - Fdim * Fquadgaussdim)
+				/ (Fchilddim * Fquadgaussdim);
+
+		cout << "A " << A << endl;
+		cout << "grad = " << pBC->get_grad(i,iq).transpose() << endl;
+		cout << "normal = " << pBC->get_normal(in).transpose() << endl;
+
+		// normal derivative
+		return (A*pBC->get_grad(i,iq)).dot(pBC->get_normal(in));
+	}
+
+
 
   // you have to (!!!) provide 9 values ... otherwise Tecplot cannot read the data!!!
   static void writeData(std::ostream& os,
