@@ -151,12 +151,10 @@ void Tsolver::assignViews_MA(unsigned int & offset) {
 
 
 void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM) {
-
-#if (EQUATION == MONGE_AMPERE_EQ)
 	Emass_type laplace;
 	value_type det_jac = pBC->get_detjacabs() * facLevelVolume[pLC->id().level()]; //determinant of Transformation to leafcell
 
-	if (iteration > 0){ //we need to update the diffusion matrices /hessian
+/*	if (iteration > 0){ //we need to update the diffusion matrices /hessian
 		Hessian_type hess;
 
 //		cout << "LC: " <<  pLC->id()<< " :\n" << endl;
@@ -178,12 +176,14 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_x(),	shape.get_Equads_y(),
 								pBC->get_jac(), det_jac,facLevelLength[pLC->id().level()], laplace); //update diffusionmatrix
 	}
-	else{
-		pLC->update_diffusionmatrix(diffusionmatrix_type::Identity(), shape.get_Equad(), shape.get_Equads_x(),	shape.get_Equads_y(),
+	else
+*/
+	if (iteration==0){
+	Hessian_type hess;
+	hess << 1, 0 , 0, 2;
+	pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_x(),	shape.get_Equads_y(),
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
 	}
-#endif
-
 
 	for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
@@ -192,11 +192,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 
 
 			value_type val;
-#if (EQUATION == POISSON_EQ)
-			val	= pBC->get_laplace(ieq,ishape);
-#elif (EQUATION == MONGE_AMPERE_EQ)
 			val = laplace(ieq,ishape);
-#endif
 
 			LM.coeffRef(row, col) += val;
 		}
