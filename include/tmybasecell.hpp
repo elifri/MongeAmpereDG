@@ -364,7 +364,30 @@ public:
 
 	}
 
-	/*! calculates the hessmatrix on this basecell given the Hessian of the referencell
+	/*
+	 * @brief calculates (A * grad v)**n (where ** is the scalar product)
+	 * @param i the number of the ansatz function
+	 * @param iq the number of the gauss node
+	 */
+
+	value_type A_grad_times_normal(const Hessian_type &A, const unsigned int i, const int iq) const
+	{
+		assert ( i >= 0 && i < shapedim && "There is not any shape function with that number");
+		assert ( iq >=	 0 && iq < Fquadraturedim && "There is not any face quadrature point with that number");
+
+		// calculate face number
+		unsigned int in = 0;
+		if (iq < Fdim * Fquadgaussdim)
+			in = iq / Fquadgaussdim;
+		else
+			in = (iq - Fdim * Fquadgaussdim)
+				/ (Fchilddim * Fquadgaussdim);
+
+		// normal derivative
+		return (A*grad(i)(iq)).dot(normal(in));
+	}
+
+	/*! calculates the hessmatrix on this basecell given a Hessian of the referencell
 	 *
 	 */
 	void transform_hessmatrix(Hessian_type &A) const
