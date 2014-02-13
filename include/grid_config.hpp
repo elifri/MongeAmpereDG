@@ -25,6 +25,8 @@ struct grid_config_type: public igpm::tgridconfig<grid_config_type,
 	typedef Eigen::Matrix<value_type, id_type::maxFaces, 1> Fvaluevector_type;
 	typedef Eigen::Matrix<space_type, id_type::maxFaces, 1> Fnormalvector_type;
 
+	static const double tol = 1e-13;
+
 };
 
 //------------------------------------------------------------------------------
