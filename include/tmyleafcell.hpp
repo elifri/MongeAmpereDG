@@ -136,34 +136,6 @@ public:
 
  	}
 
-	/*
-	 * @brief calculates (A * grad v)**n (where ** is the scalar product)
-	 * @param pBC pointer to its bascell
-	 * @param i the number of the ansatz function
-	 * @param iq the number of the gauss node
-	 */
-	value_type A_grad_times_normal(const basecell_type* &pBC, const unsigned int i, const int iq) const
-	{
-		assert ( i >= 0 && i < shapedim && "There is not any shape function with that number");
-		assert ( iq >=	 0 && iq < Fquadraturedim && "There is not any face quadrature point with that number");
-
-		// calculate face number
-		unsigned int in = 0;
-		if (iq < Fdim * Fquadgaussdim)
-			in = iq / Fquadgaussdim;
-		else
-			in = (iq - Fdim * Fquadgaussdim)
-				/ (Fchilddim * Fquadgaussdim);
-
-		cout << "A " << A << endl;
-		cout << "grad = " << pBC->get_grad(i,iq).transpose() << endl;
-		cout << "normal = " << pBC->get_normal(in).transpose() << endl;
-
-		// normal derivative
-		return (A*pBC->get_grad(i,iq)).dot(pBC->get_normal(in));
-	}
-
-
 
   // you have to (!!!) provide 9 values ... otherwise Tecplot cannot read the data!!!
   static void writeData(std::ostream& os,
