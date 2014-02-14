@@ -154,7 +154,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 	Emass_type laplace;
 	value_type det_jac = pBC->get_detjacabs() * facLevelVolume[pLC->id().level()]; //determinant of Transformation to leafcell
 
-/*	if (iteration > 0){ //we need to update the diffusion matrices /hessian
+	if (iteration > 0){ //we need to update the diffusion matrices /hessian
 		Hessian_type hess;
 
 //		cout << "LC: " <<  pLC->id()<< " :\n" << endl;
@@ -177,11 +177,10 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 								pBC->get_jac(), det_jac,facLevelLength[pLC->id().level()], laplace); //update diffusionmatrix
 	}
 	else
-*/
-	if (iteration==0){
-	Hessian_type hess;
-	hess << 1, 0 , 0, 2;
-	pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_x(),	shape.get_Equads_y(),
+	{
+		Hessian_type hess;
+		hess << 5, 0 , 0, 1;
+		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_x(),	shape.get_Equads_y(),
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
 	}
 
