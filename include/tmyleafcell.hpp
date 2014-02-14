@@ -31,6 +31,7 @@ public:
   typedef typename config_type::value_type             value_type;
   typedef typename config_type::antecell_type          antecell_type;
   typedef typename config_type::leafcell_type          leafcell_type;
+  typedef typename config_type::basecell_type          basecell_type;
   typedef typename config_type::leafcellptrvector_type leafcellptrvector_type;
 
   typedef typename config::Estate_type     Estate_type;
@@ -103,7 +104,7 @@ public:
 		phi_j *= 1/faclevel;
 
 
-		return (A * phi_i).dot(phi_j);
+		return -(A * phi_i).dot(phi_j);
 	}
 
 	//same as assemble_laplace in basecell
@@ -229,7 +230,7 @@ public:
       for (int k=0; k<shapedim; k++) pLC->unew(k,j) = 0.0;
   }
 
-protected:
+public:
   static int m_nCountAllLeafs;
 };
 

@@ -154,7 +154,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 	Emass_type laplace;
 	value_type det_jac = pBC->get_detjacabs() * facLevelVolume[pLC->id().level()]; //determinant of Transformation to leafcell
 
-/*	if (iteration > 0){ //we need to update the diffusion matrices /hessian
+	if (iteration > 0){ //we need to update the diffusion matrices /hessian
 		Hessian_type hess;
 
 //		cout << "LC: " <<  pLC->id()<< " :\n" << endl;
@@ -177,11 +177,10 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 								pBC->get_jac(), det_jac,facLevelLength[pLC->id().level()], laplace); //update diffusionmatrix
 	}
 	else
-*/
-	if (iteration==0){
-	Hessian_type hess;
-	hess << 1, 0 , 0, 2;
-	pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_x(),	shape.get_Equads_y(),
+	{
+		Hessian_type hess;
+		hess << 5, -2 , -2, 1;
+		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_x(),	shape.get_Equads_y(),
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
 	}
 
@@ -196,6 +195,17 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 
 			LM.coeffRef(row, col) += val;
 		}
+	}
+
+	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
+
+	//calculate eigen values
+	es.compute(pLC->A);
+
+	cout << "The eigenvalues of A are: " << es.eigenvalues().transpose() << endl;
+
+	if (es.eigenvalues()(1) > max_EW){
+		max_EW = es.eigenvalues()(1);
 	}
 }
 
@@ -238,8 +248,10 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
  *
  *
  */
-void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
+void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs) {
+	max_EW = 0;
+
 	unsigned int gaussbaseLC = 0;
 	unsigned int gaussbaseNC = 0;
 	unsigned int levelNC = 0;
@@ -277,6 +289,9 @@ void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
 			assemble_lhs_bilinearform_MA(pLC, pBC, LM);
 		}
 
+		//update penalty
+		penalty = max_EW;
+
 		// loop over all cells in this level
 		for (grid_type::leafcellmap_type::const_iterator it =
 			grid.leafCells().begin(level);
@@ -300,6 +315,9 @@ void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
 			grid.faceIds(idLC, vF, vFh, vOh);
 			for (unsigned int i = 0; i < idLC.countFaces(); i++) { // loop over faces
 				if (vF[i].isValid()) {
+
+					cout << "face number " << i << endl;
+					cout << "neighbour face " << vFh[i] << endl;
 
 					bool assembleInnerFace = false;
 
@@ -332,22 +350,35 @@ void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
 
 					if (assembleInnerFace) {
 
+						cout << "LC " << idLC << endl;
+						cout << "NLC " << pNC->id() << endl;
+
 						length = facLevelLength[level] * pBC->get_length(i); //calculate actual face length
 						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over gauss nodes
+
 							iqLC = gaussbaseLC + iq; //index of next gauss node to be processed
+							cout << "orientation " << vOh[i] << endl;
 							iqNC = vOh[i] == 1? gaussbaseNC + Fquadgaussdim - 1 - iq : gaussbaseNC + iq; //index of next gauss node in neighbour cell to be processed
+
+							cout << "gauss quadrature point number " << iqLC << " neighbour gauss quadrature point number " << iqNC << endl;
+
 
 							// Copy entries into Laplace-matrix
 							for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-								for (unsigned int j = 0; j < shapedim; ++j) {
-									int row_LC = pLC->m_offset + ishape;
-									int row_NC = pNC->m_offset + ishape;
-									int col_LC = pLC->n_offset + j;
-									int col_NC = pNC->n_offset + j;
+								for (unsigned int jshape = 0; jshape < shapedim; ++jshape) {
+									const int row_LC = pLC->m_offset + ishape;
+									const int row_NC = pNC->m_offset + ishape;
+									const int col_LC = pLC->n_offset + jshape;
+									const int col_NC = pNC->n_offset + jshape;
 
-									value_type A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,j,iqLC),
-											   A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,j,iqNC);
+									value_type A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,jshape,iqLC),
+											   A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,jshape,iqNC);
 
+
+
+									cout << "with A " << pNC->A << endl;
+
+									// b(u, phi)
 									LM.coeffRef(row_LC, col_LC) += -0.5 // to average
 											* shape.get_Fquadw(iqLC) * length//quadrature weights
 											* shape.get_Fquads(ishape,iqLC) //jump
@@ -363,23 +394,23 @@ void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
 									A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,ishape,iqNC);
 
 									// b(phi, u)
-									LM.coeffRef(row_LC, col_LC) += stabsign	* 0.5 * shape.get_Fquadw(iqLC) * length	* A_times_normal_BC / facLevelLength[level]	* shape.get_Fquads(j,iqLC);
+									LM.coeffRef(row_LC, col_LC) += stabsign	* 0.5 * shape.get_Fquadw(iqLC) * length	* A_times_normal_BC / facLevelLength[level]	* shape.get_Fquads(jshape,iqLC);
 
-									LM.coeffRef(row_LC, col_NC) += stabsign	* -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_BC / facLevelLength[level] * shape.get_Fquads(j,iqNC);
+									LM.coeffRef(row_LC, col_NC) += stabsign	* -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_BC / facLevelLength[level] * shape.get_Fquads(jshape,iqNC);
 
-									LM.coeffRef(row_NC, col_LC) += stabsign * -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(j,iqLC);
+									LM.coeffRef(row_NC, col_LC) += stabsign * -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(jshape,iqLC);
 
-									LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(j,iqNC);
+									LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(jshape,iqNC);
 
 									// b_sigma(u, phi)
 									if (penalty != 0.0) {
-										LM.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(j,iqLC) * shape.get_Fquads(ishape,iqLC);
+										LM.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
 
-										LM.coeffRef(row_LC, col_NC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(j,iqNC) * shape.get_Fquads(ishape,iqLC);
+										LM.coeffRef(row_LC, col_NC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqLC);
 
-										LM.coeffRef(row_NC, col_LC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(j,iqLC) * shape.get_Fquads(ishape,iqNC);
+										LM.coeffRef(row_NC, col_LC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqNC);
 
-										LM.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(j,iqNC) * shape.get_Fquads(ishape,iqNC);
+										LM.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
 
 									}
 								}
@@ -508,8 +539,6 @@ void Tsolver::convexify(Eigen::VectorXd & solution) {
 
 void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
-	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
-
 
 	leafcell_type *pLC = NULL;
 	for (grid_type::leafcellmap_type::const_iterator it =
@@ -533,9 +562,6 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		const Hessian_type &hess = pLC->A;
 		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
 
-		//calculate eigen values
-		es.compute(hess);
-
 		//attention works only for constant rhs
 		space_type x;
 		state_type uLC;
@@ -546,7 +572,6 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		pLC->Serror = det - rhs; //solution should have solution
 		//debug output
 		cout << "residuum in LC: "<< pLC->id() << " is " << pLC->Serror << endl;
-		cout << "The eigenvalues of A are: " << es.eigenvalues().transpose() << endl;
 
 	}
 
@@ -822,6 +847,8 @@ void Tsolver::time_stepping_MA() {
 		Eigen::VectorXd Lrhs, Lsolution;
 		Lrhs.setZero(LM_size);
 		Lsolution.setZero(LM_size);
+
+		LM.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
 
 		cout << "Assemble linear System..." << flush << endl;
 		pt.start();

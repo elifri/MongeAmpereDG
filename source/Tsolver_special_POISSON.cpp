@@ -108,11 +108,25 @@ void Tsolver::assignViews_POISSON(unsigned int & offset) {
 	write_exactsolution_POISSON(0);
 }
 
+
+/*Equadrature_type Tsolver::assemble_face_term_POISSON(const int ishape, const int iface, const int jshape, const int jface, const grid_type::basecell_type * pC, const int level, const int orientation = 1)
+{
+	Equadrature_type values;
+
+	const Equadrature_type& jump = shape.get_Fquads_by_face(ishape,iface);
+	Equadrature_type grad_times_normal = pC->get_normalderi_by_face(jshape, jface)/facLevelLength[level];
+
+	if (vOh(jface) == 1)	grad_times_normal.reverse();
+
+	values = -0.5 * jump.cwiseProduct(grad_times_normal);
+
+	return values;
+}*/
+
 /* @brief initializes the stiffness matrix and lhs for the poisson problem
  *
  *
  */
-
 void Tsolver::assemble_POISSON(const int & stabsign, const double & penalty,
 		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs) {
 	unsigned int gaussbaseLC = 0;

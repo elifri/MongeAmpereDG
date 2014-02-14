@@ -120,6 +120,7 @@ public:
 			const value_type diff_y) {
 		normal(f)[0] = diff_x;
 		normal(f)[1] = diff_y;
+
 		length(f) = normal(f).norm();
 		normal(f) /= length(f);
 	}
@@ -289,7 +290,7 @@ public:
 
 			unsigned int node0, node1;
 
-// face f is the line segment [node(f+1 mod countFaces()), node(f+2 mod countFaces())]
+			// face f is the line segment [node(f+1 mod countFaces()), node(f+2 mod countFaces())]
 			node0 = f + 1;
 			if (node0 == idBC.countFaces())
 				node0 = 0;
@@ -297,12 +298,16 @@ public:
 			if (node1 == idBC.countFaces())
 				node1 = 0;
 
-// initialize face length and unit normal of of pBC
+			// initialize face length and unit normal of of pBC
 			value_type diff_x = vN[node0][0] - vN[node1][0];
 			value_type diff_y = vN[node1][1] - vN[node0][1];
+
+			//if DotProduct(normal[1], edge[2])>0 then n[1]:=-n[1]; end;
+//			if ()
+
 			set_normal(f, diff_y, diff_x);
 
-//	    	cout << " outer unit normal at face " << f << ": (" << get_normal(f)[0] << ", " << get_normal(f)[1] << ")" << endl;
+	    	cout << " outer unit normal at face " << f << ": (" << get_normal(f)[0] << ", " << get_normal(f)[1] << ")" << endl;
 		}
 
 		// initialize volume
@@ -388,6 +393,10 @@ public:
 			in = (iq - Fdim * Fquadgaussdim)
 				/ (Fchilddim * Fquadgaussdim);
 
+		cout << "A " << A << endl;
+		cout << "grad = " << grad(i)(iq).transpose() << endl;
+		cout << "normal = " << normal(in).transpose() << endl;
+
 		// normal derivative
 		return (A*grad(i)(iq)).dot(normal(in));
 	}
@@ -403,7 +412,6 @@ public:
 
 		A = J_inv_t * A * J_inv_t.transpose();
 	}
-
 
 };
 

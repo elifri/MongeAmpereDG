@@ -235,6 +235,8 @@ public:
 
          double eta;       // absolute tolerance from estimated error factor
 
+         double max_EW;
+
    #endif
 
 #if (EQUATION == POISSON_EQ)
@@ -286,7 +288,7 @@ private:
    void assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM); ///writes the stiffness matrix part of LC
    void assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs); ///writes rhs part from LC
 public:
-   void assemble_MA(const int & STABSIGN, const double & PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs);
+   void assemble_MA(const int & STABSIGN, double PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs);
    void restore_MA (Eigen::VectorXd &solution);
    void convexify(Eigen::VectorXd & solution); //convexifies the solution // TODO Fixme
    void get_exacttemperature_MA (const space_type & x, state_type & u); // state_type ???
