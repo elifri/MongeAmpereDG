@@ -197,6 +197,17 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 			LM.coeffRef(row, col) += val;
 		}
 	}
+
+	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
+
+	//calculate eigen values
+	es.compute(pLC->A);
+
+	cout << "The eigenvalues of A are: " << es.eigenvalues().transpose() << endl;
+
+	if (es.eigenvalues()(1) > max_EW){
+		max_EW = es.eigenvalues()(1);
+	}
 }
 
 void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs) {
@@ -238,8 +249,10 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
  *
  *
  */
-void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
+void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs) {
+	max_EW = 0;
+
 	unsigned int gaussbaseLC = 0;
 	unsigned int gaussbaseNC = 0;
 	unsigned int levelNC = 0;
@@ -276,6 +289,9 @@ void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
 			// Copy entries for element laplace operator into Laplace-matrix
 			assemble_lhs_bilinearform_MA(pLC, pBC, LM);
 		}
+
+		//update penalty
+		penalty *= 10*max_EW;
 
 		// loop over all cells in this level
 		for (grid_type::leafcellmap_type::const_iterator it =
@@ -334,6 +350,7 @@ void Tsolver::assemble_MA(const int & stabsign, const double & penalty,
 
 						length = facLevelLength[level] * pBC->get_length(i); //calculate actual face length
 						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over gauss nodes
+
 							iqLC = gaussbaseLC + iq; //index of next gauss node to be processed
 							iqNC = vOh[i] == 1? gaussbaseNC + Fquadgaussdim - 1 - iq : gaussbaseNC + iq; //index of next gauss node in neighbour cell to be processed
 
@@ -508,8 +525,6 @@ void Tsolver::convexify(Eigen::VectorXd & solution) {
 
 void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
-	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
-
 
 	leafcell_type *pLC = NULL;
 	for (grid_type::leafcellmap_type::const_iterator it =
@@ -533,9 +548,6 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		const Hessian_type &hess = pLC->A;
 		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
 
-		//calculate eigen values
-		es.compute(hess);
-
 		//attention works only for constant rhs
 		space_type x;
 		state_type uLC;
@@ -546,7 +558,6 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		pLC->Serror = det - rhs; //solution should have solution
 		//debug output
 		cout << "residuum in LC: "<< pLC->id() << " is " << pLC->Serror << endl;
-		cout << "The eigenvalues of A are: " << es.eigenvalues().transpose() << endl;
 
 	}
 
@@ -822,6 +833,8 @@ void Tsolver::time_stepping_MA() {
 		Eigen::VectorXd Lrhs, Lsolution;
 		Lrhs.setZero(LM_size);
 		Lsolution.setZero(LM_size);
+
+		LM.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
 
 		cout << "Assemble linear System..." << flush << endl;
 		pt.start();
