@@ -203,6 +203,17 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 	es.compute(pLC->A);
 
 	cout << "The eigenvalues of A are: " << es.eigenvalues().transpose() << endl;
+	if (es.eigenvalues()(0) < 0)
+	{
+		Nvector_type nv;
+		grid.nodes(pLC->id(),nv);
+
+		value_type x = (nv[0][0] + nv[1][0] + nv[2][0])/3.;
+		value_type y = (nv[0][1] + nv[1][1] + nv[2][1])/3.;
+
+		cout << "At least one eigenvalue is negative at LC " << pLC->id() << " with mid " << x << " " << y << endl;
+	}
+
 
 	if (es.eigenvalues()(1) > max_EW){
 		max_EW = es.eigenvalues()(1);
