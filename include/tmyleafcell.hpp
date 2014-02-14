@@ -103,7 +103,7 @@ public:
 		phi_j *= 1/faclevel;
 
 
-		return (A * phi_i).dot(phi_j);
+		return -(A * phi_i).dot(phi_j);
 	}
 
 	//same as assemble_laplace in basecell

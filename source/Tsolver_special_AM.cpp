@@ -356,47 +356,49 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 							// Copy entries into Laplace-matrix
 							for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-								for (unsigned int j = 0; j < shapedim; ++j) {
-									int row_LC = pLC->m_offset + ishape;
-									int row_NC = pNC->m_offset + ishape;
-									int col_LC = pLC->n_offset + j;
-									int col_NC = pNC->n_offset + j;
+								for (unsigned int jshape = 0; jshape < shapedim; ++jshape) {
+									const int row_LC = pLC->m_offset + ishape;
+									const int row_NC = pNC->m_offset + ishape;
+									const int col_LC = pLC->n_offset + jshape;
+									const int col_NC = pNC->n_offset + jshape;
 
-									value_type A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,j,iqLC),
-											   A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,j,iqNC);
+									value_type A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,jshape,iqLC),
+											   A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,jshape,iqNC);
 
-									LM.coeffRef(row_LC, col_LC) += -0.5 // to average
+
+									// b(u, phi)
+									LM.coeffRef(row_LC, col_LC) += 0.5 // to average
 											* shape.get_Fquadw(iqLC) * length//quadrature weights
 											* shape.get_Fquads(ishape,iqLC) //jump
 											* A_times_normal_BC/ facLevelLength[level]; //gradient times normal
 
-									LM.coeffRef(row_LC, col_NC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * A_times_normal_NBC / facLevelLength[levelNC];
+									LM.coeffRef(row_LC, col_NC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * A_times_normal_NBC / facLevelLength[levelNC];
 
-									LM.coeffRef(row_NC, col_LC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* A_times_normal_BC / facLevelLength[level];
+									LM.coeffRef(row_NC, col_LC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* A_times_normal_BC / facLevelLength[level];
 
-									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
+									LM.coeffRef(row_NC, col_NC) += 0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
 
 									A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,ishape,iqLC),
 									A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,ishape,iqNC);
 
 									// b(phi, u)
-									LM.coeffRef(row_LC, col_LC) += stabsign	* 0.5 * shape.get_Fquadw(iqLC) * length	* A_times_normal_BC / facLevelLength[level]	* shape.get_Fquads(j,iqLC);
+									LM.coeffRef(row_LC, col_LC) += stabsign	* -0.5 * shape.get_Fquadw(iqLC) * length	* A_times_normal_BC / facLevelLength[level]	* shape.get_Fquads(jshape,iqLC);
 
-									LM.coeffRef(row_LC, col_NC) += stabsign	* -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_BC / facLevelLength[level] * shape.get_Fquads(j,iqNC);
+									LM.coeffRef(row_LC, col_NC) += stabsign	* 0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_BC / facLevelLength[level] * shape.get_Fquads(jshape,iqNC);
 
-									LM.coeffRef(row_NC, col_LC) += stabsign * -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(j,iqLC);
+									LM.coeffRef(row_NC, col_LC) += stabsign * 0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(jshape,iqLC);
 
-									LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(j,iqNC);
+									LM.coeffRef(row_NC, col_NC) += stabsign * -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(jshape,iqNC);
 
 									// b_sigma(u, phi)
 									if (penalty != 0.0) {
-										LM.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(j,iqLC) * shape.get_Fquads(ishape,iqLC);
+										LM.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
 
-										LM.coeffRef(row_LC, col_NC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(j,iqNC) * shape.get_Fquads(ishape,iqLC);
+										LM.coeffRef(row_LC, col_NC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqLC);
 
-										LM.coeffRef(row_NC, col_LC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(j,iqLC) * shape.get_Fquads(ishape,iqNC);
+										LM.coeffRef(row_NC, col_LC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqNC);
 
-										LM.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(j,iqNC) * shape.get_Fquads(ishape,iqNC);
+										LM.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
 
 									}
 								}
