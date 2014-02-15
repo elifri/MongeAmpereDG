@@ -37,8 +37,8 @@ public:
 
    grid_type grid;
    std::string output_directory;
-   std::valarray<double> facLevelVolume;
-   std::valarray<double> facLevelLength;
+   std::vector<double> facLevelVolume;
+   std::vector<double> facLevelLength;
 
    NeighbOrient_type            tableNeighbOrient;
    CoarseNeighbGaussbase_type   tableCoarseNeighbGaussbase;

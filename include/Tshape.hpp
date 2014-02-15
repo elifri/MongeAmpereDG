@@ -22,7 +22,7 @@ private:
 
 	Equad equad;
 	Equadratureshape_type Equads;   // value of shapes at quadrature points
-	Equadratureshape_type Equads_x, Equads_y; // first derivatives of shapes at quadrature points
+	Equadratureshape_grad_type Equads_grad; //gradient of shapes at quadrature points
 	Equadratureshape_type Equads_xx, Equads_xy, Equads_yy; // second derivatives of shapes at quadrature points
 	Equadratureshape_hessian_type Equads_dd;
 
@@ -166,24 +166,8 @@ public:
 		return Equads(i, j);
 	}
 
-	Equadratureshape_type get_Equads_x() const {
-		return Equads_x;
-	}
-	const value_type& get_Equads_x(const int i, const int j) const {
-		return Equads_x(i, j);
-	}
-	value_type& set_Equads_x(const int i, const int j) {
-		return Equads_x(i, j);
-	}
-
-	Equadratureshape_type get_Equads_y() const {
-		return Equads_y;
-	}
-	const value_type& get_Equads_y(const int i, const int j) const {
-		return Equads_y(i, j);
-	}
-	value_type& set_Equads_y(const int i, const int j) {
-		return Equads_y(i, j);
+	const Equadratureshape_grad_type& get_Equads_grad() const{
+		return Equads_grad;
 	}
 
 	Equadratureweight_type get_Equadw() const {

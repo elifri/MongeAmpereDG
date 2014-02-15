@@ -507,8 +507,8 @@ void Tshape::initialize_quadrature() {
 		x[1] = equad.Equadx(j, 2);
 		for (int i = 0; i < shapedim; i++) {
 			Equads(i, j) = shape(i, x);
-			Equads_x(i, j) = shape_x(i, x);
-			Equads_y(i, j) = shape_y(i, x);
+			Equads_grad(i,j)(0) = shape_x(i, x);
+			Equads_grad(i,j)(1) = shape_y(i, x);
 
 			Equads_xx(i, j) = shape_xx(i, x);
 			Equads_xy(i, j) = shape_xy(i, x);

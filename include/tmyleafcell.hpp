@@ -68,10 +68,10 @@ public:
 
   void set_diffusionmatrix(const diffusionmatrix_type A) {this->A = A;}
 
-  void update_diffusionmatrix(const diffusionmatrix_type A, const Equad &equad, const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y, const Ejacobian_type &jac, const value_type detjacabs, const double faclevel, Emass_type &laplace){
+  void update_diffusionmatrix(const diffusionmatrix_type A, const Equad &equad, const Equadratureshape_grad_type &Equads_grad, const Ejacobian_type &jac, const value_type detjacabs, const double faclevel, Emass_type &laplace){
 	  this->A = A;
 //	  cout <<" updating with \n" << A << endl << "to " << endl << this->A << endl;
-	  assemble_laplace(equad, Equads_x, Equads_y, jac, detjacabs, faclevel, laplace);
+	  assemble_laplace(equad, Equads_grad, jac, detjacabs, faclevel, laplace);
   }
 
   unsigned int faces() const { return m_nFaces; }
@@ -84,8 +84,6 @@ public:
 
 	value_type bilin_alaplace(const double & u0_x, const double & u0_y,
 			const double & u1_x, const double & u1_y, const Ejacobian_type &jac, const double faclevel) const {
-
-
 		// calculate gradient of local shape function
 		// by multiplication of transposed inverse of Jacobian of affine transformation
 		// with gradient from shape function on reference cell
@@ -106,34 +104,46 @@ public:
 		return -(A * phi_i).dot(phi_j);
 	}
 
+	Eigen::MatrixXd bilin_alaplace(const Eigen::MatrixXd u, const Eigen::MatrixXd v, const Ejacobian_type &jac, const double faclevel) const {
+		// calculate gradient of local shape function
+		// by multiplication of transposed inverse of Jacobian of affine transformation
+		// with gradient from shape function on reference cell
+
+		Ejacobian_type J_inv_t(2, 2);
+		J_inv_t << jac(1, 1), -jac(1, 0), -jac(0, 1), jac(0, 0);
+		J_inv_t /= jac(0,0)*jac(1,1)-jac(1,0)*jac(0,1);
+
+		Eigen::MatrixXd phi_i = J_inv_t * u;
+		Eigen::MatrixXd phi_j = J_inv_t * v;
+
+//---------gradient on leaf cell-----------
+		//gradient gets scaled right by multiplication of 2^level
+		phi_i *= 1/faclevel;
+		phi_j *= 1/faclevel;
+
+		phi_i = (A * phi_i).transpose();
+		return -phi_i*phi_j;
+	}
+
+
 	//same as assemble_laplace in basecell
- 	void assemble_laplace(const Equad &equad, const Equadratureshape_type &Equads_x, const Equadratureshape_type &Equads_y, const Ejacobian_type &jac, const value_type detjacabs, const double faclevel, Emass_type &laplace) {
+ 	void assemble_laplace(const Equad &equad, const Equadratureshape_grad_type &Equads_grad, const Ejacobian_type &jac, const value_type detjacabs, const double faclevel, Emass_type &laplace) {
 
  	laplace.setZero();
  		// Laplace-matrix
 #if (EQUATION==MONGE_AMPERE_EQ)
 		//write laplace matrix: first top half
-		for (unsigned int i = 0; i < shapedim; i++) {
-			for (unsigned int j = 0; j <= i; j++) {
-				Equadrature_type func;
-				for (int iq = 0; iq < Equadraturedim; iq++) {
-					func(iq) = bilin_alaplace(Equads_x(i, iq),	Equads_y(i, iq), Equads_x(j, iq), Equads_y(j, iq), jac, faclevel);
-				}
-				value_type val = equad.integrate(func, detjacabs);
-				if (std::abs(val) > config_type::tol){
-					laplace(i, j) = val;
-				}
+ 		Eigen::MatrixXd u = Eigen::MatrixXd::Zero(spacedim,shapedim);
+		for (int iq = 0; iq < Equadraturedim; iq++) {
+			for (unsigned int i = 0; i < shapedim; i++) {
+				u.col(i) = Equads_grad(i,iq);
 			}
+			laplace += equad.Equadw(iq) * detjacabs* bilin_alaplace(u,u,jac,faclevel);
 		}
 
 #else
 		cerr << "leafcell does not know how to calculate the laplace matrix" << endl; abort();
 #endif
-		// Laplace-matrix is symmetric:
-		for (unsigned int i = 0; i < shapedim; i++)
-			for (unsigned int j = 0; j < i; j++)
-				laplace(j, i) = laplace(i, j);
-
  	}
 
 

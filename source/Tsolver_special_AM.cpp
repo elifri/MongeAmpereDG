@@ -173,15 +173,43 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 
 //		cout << "solution coefficients " << pLC->u.col(0) << endl;
 
-		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_x(),	shape.get_Equads_y(),
+		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 								pBC->get_jac(), det_jac,facLevelLength[pLC->id().level()], laplace); //update diffusionmatrix
 	}
 	else
 	{
 		Hessian_type hess;
-		hess << 5, 0 , 0, 1;
-		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_x(),	shape.get_Equads_y(),
+		hess << 1, 0 , 0, 1;
+		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
+	}
+
+
+	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
+
+	//calculate eigen values
+	es.compute(pLC->A);
+
+	cout << "The eigenvalues of A are: " << es.eigenvalues().transpose() << endl;
+
+	//correct eigenvalues
+	while (es.eigenvalues()(0) <= 0)
+	{
+		Nvector_type nv;
+		grid.nodes(pLC->id(),nv);
+
+		value_type x = (nv[0][0] + nv[1][0] + nv[2][0])/3.;
+		value_type y = (nv[0][1] + nv[1][1] + nv[2][1])/3.;
+
+		cout << "At least one eigenvalue is negative at LC " << pLC->id() << " with mid " << x << " " << y << endl;
+		cout << "Correcting ..." << endl;
+		pLC->set_diffusionmatrix(pLC->A+Hessian_type::Identity());
+		es.compute(pLC->A);
+	}
+
+	//update maximal EW for penalty
+	if (es.eigenvalues()(1) > max_EW){
+		max_EW = es.eigenvalues()(1);
 	}
 
 	for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
@@ -197,27 +225,6 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 		}
 	}
 
-	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
-
-	//calculate eigen values
-	es.compute(pLC->A);
-
-	cout << "The eigenvalues of A are: " << es.eigenvalues().transpose() << endl;
-	if (es.eigenvalues()(0) < 0)
-	{
-		Nvector_type nv;
-		grid.nodes(pLC->id(),nv);
-
-		value_type x = (nv[0][0] + nv[1][0] + nv[2][0])/3.;
-		value_type y = (nv[0][1] + nv[1][1] + nv[2][1])/3.;
-
-		cout << "At least one eigenvalue is negative at LC " << pLC->id() << " with mid " << x << " " << y << endl;
-	}
-
-
-	if (es.eigenvalues()(1) > max_EW){
-		max_EW = es.eigenvalues()(1);
-	}
 }
 
 void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs) {
@@ -301,6 +308,8 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		}
 
 		//update penalty
+
+		cout << "Largest EW " << max_EW << endl;
 		penalty *= 10*max_EW;
 
 		// loop over all cells in this level
