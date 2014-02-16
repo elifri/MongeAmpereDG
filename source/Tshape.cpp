@@ -513,7 +513,7 @@ void Tshape::initialize_quadrature() {
 			Equads_xx(i, j) = shape_xx(i, x);
 			Equads_xy(i, j) = shape_xy(i, x);
 			Equads_yy(i, j) = shape_yy(i, x);
-			if (j == 0)
+			if (j == 0) // second derivative is const
 				Equads_dd(i) << Equads_xx(i, j), Equads_xy(i, j), Equads_xy(i, j),Equads_yy(i, j);
 		}
 	}

@@ -155,25 +155,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 	value_type det_jac = pBC->get_detjacabs() * facLevelVolume[pLC->id().level()]; //determinant of Transformation to leafcell
 
 	if (iteration > 0){ //we need to update the diffusion matrices /hessian
-		Hessian_type hess;
-
-//		cout << "LC: " <<  pLC->id()<< " :\n" << endl;
-
-		shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
-//		cout << "u " << pLC->u.col(0) << endl;
-
-//		cout << "Hessian at refcell :\n" << hess << endl;
-
-		pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
-//		cout << "Hessian at basecell :\n" << hess << endl;
-
-		hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
-		cout << "Hessian at leafcell :\n" << hess << endl;
-
-
-//		cout << "solution coefficients " << pLC->u.col(0) << endl;
-
-		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
+		pLC->assemble_laplace(shape.get_Equad(), shape.get_Equads_grad(),
 								pBC->get_jac(), det_jac,facLevelLength[pLC->id().level()], laplace); //update diffusionmatrix
 	}
 	else
@@ -182,18 +164,14 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 		hess << 1, 0 , 0, 1;
 		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
+		max_EW = 1;
 	}
 
 
 	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
 
-	//calculate eigen values
-	es.compute(pLC->A);
-
-	cout << "The eigenvalues of A are: " << es.eigenvalues().transpose() << endl;
-
 	//correct eigenvalues
-	while (es.eigenvalues()(0) <= 0)
+/*	while (es.eigenvalues()(0) <= 0)
 	{
 		Nvector_type nv;
 		grid.nodes(pLC->id(),nv);
@@ -206,11 +184,8 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 		pLC->set_diffusionmatrix(pLC->A+Hessian_type::Identity());
 		es.compute(pLC->A);
 	}
+*/
 
-	//update maximal EW for penalty
-	if (es.eigenvalues()(1) > max_EW){
-		max_EW = es.eigenvalues()(1);
-	}
 
 	for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
@@ -268,7 +243,6 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
  */
 void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs) {
-	max_EW = 0;
 
 	unsigned int gaussbaseLC = 0;
 	unsigned int gaussbaseNC = 0;
@@ -548,6 +522,9 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
 
 	leafcell_type *pLC = NULL;
+	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
+	max_EW = 0; //init max_Ew
+
 	for (grid_type::leafcellmap_type::const_iterator it =
 			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
 
@@ -565,8 +542,24 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		const grid_type::basecell_type * pBC;
 		grid.findBaseCellOf(idLC, pBC);
 
+		Hessian_type hess;
+		shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
+		pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
+		hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+		pLC->update_diffusionmatrix(hess); //update diffusionmatrix
 
-		const Hessian_type &hess = pLC->A;
+
+		//calculate eigen values
+		es.compute(hess);
+		cout << "The eigenvalues of Hessian are: " << es.eigenvalues().transpose() << endl;
+
+		//update maximal EW for penalty
+		if (es.eigenvalues()(1) > max_EW){
+			max_EW = es.eigenvalues()(1);
+		}
+
+		pLC->smallest_EW = es.eigenvalues()(0);
+
 		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
 
 		//attention works only for constant rhs
@@ -1088,8 +1081,56 @@ void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
 		}
 	}
 
+	file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
+
+	// write error
+	file << "\t\t\t<PointData Scalars=\"smallest EW\">\n"
+			<< "\t\t\t\t<DataArray  Name=\"smallest EW\" type=\"Float32\" format=\"ascii\">\n";
+
+	// loop over all leaf cells
+	for (unsigned int i = 0; i < grid.countBlocks(); ++i) {
+		if (v[i].size() == 0)
+			continue;
+
+		if (refine == 0) {
+
+			// save points in file without refinement
+
+			// over all ids inside this block
+			for (unsigned int j = 0; j < v[i].size(); ++j) {
+				const grid_type::id_type & id = v[i][j];
+				grid_type::leafcell_type * pLC = NULL;
+				grid.findLeafCell(id, pLC);
+
+				grid.nodes(id, nv);
+				for (unsigned int k = 0; k < id.countNodes(); ++k) {
+					file << "\t\t\t\t\t" << pLC->smallest_EW << endl;
+				}
+			}
+
+		}
+		else
+		{
+			// save points in file with refinement
+
+			// over all ids inside this block
+			for (unsigned int j = 0; j < v[i].size(); ++j) {
+				const grid_type::id_type & id = v[i][j];
+				grid_type::leafcell_type * pLC = NULL;
+				grid.findLeafCell(id, pLC);
+
+				grid.nodes(id, nv);
+				for (unsigned int k = 0; k < id.countNodes(); ++k) {
+					file << "\t\t\t\t\t" << pLC->smallest_EW << endl;
+					file << "\t\t\t\t\t" << pLC->smallest_EW << endl;
+				}
+			}
+
+		}
+	}
 
 	file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
+
 
 	// write points
 	file << "\t\t\t<Points>\n"

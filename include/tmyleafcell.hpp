@@ -52,7 +52,9 @@ public:
   value_type       limiter;
   value_type       Serror;
 
-  diffusionmatrix_type A;
+  diffusionmatrix_type 	A;
+  value_type	   		smallest_EW;
+
 
 #if(EQUATION==POISSON_EQ || EQUATION==IMPLICIT_HEAT_EQ || EQUATION == MONGE_AMPERE_EQ)
   unsigned int m_offset, n_offset, m_block_size, n_block_size;
@@ -70,8 +72,11 @@ public:
 
   void update_diffusionmatrix(const diffusionmatrix_type A, const Equad &equad, const Equadratureshape_grad_type &Equads_grad, const Ejacobian_type &jac, const value_type detjacabs, const double faclevel, Emass_type &laplace){
 	  this->A = A;
-//	  cout <<" updating with \n" << A << endl << "to " << endl << this->A << endl;
 	  assemble_laplace(equad, Equads_grad, jac, detjacabs, faclevel, laplace);
+  }
+
+  void update_diffusionmatrix(const diffusionmatrix_type A){
+	  this->A = A;
   }
 
   unsigned int faces() const { return m_nFaces; }
