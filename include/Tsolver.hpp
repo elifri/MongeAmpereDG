@@ -236,6 +236,7 @@ public:
          double eta;       // absolute tolerance from estimated error factor
 
          double max_EW;
+         static const double epsilon = 1e-10; //minimum value of hessian eigenvalues
 
    #endif
 
@@ -290,7 +291,7 @@ private:
 public:
    void assemble_MA(const int & STABSIGN, double PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs);
    void restore_MA (Eigen::VectorXd &solution);
-   void convexify(Eigen::VectorXd & solution); //convexifies the solution // TODO Fixme
+   void convexify(Hessian_type & hess, Eigen::SelfAdjointEigenSolver<Hessian_type> &es); //makes the hessian positive definit
    void get_exacttemperature_MA (const space_type & x, state_type & u); // state_type ???
    void get_exacttemperature_MA (const N_type & x, state_type & u); // state_type ???
    void get_exacttemperaturenormalderivative_MA (const space_type & x, const space_type & normal, state_type & u_n);

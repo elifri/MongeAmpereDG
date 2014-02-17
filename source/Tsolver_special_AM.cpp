@@ -507,13 +507,19 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 }
 
 //////////////////////////////////////////////////////
-void Tsolver::convexify(Eigen::VectorXd & solution) {
-	// Copy solution entries back into u
-//	for (int i = 0; i< solution.size(); ++i){
-//		if (solution(i) < 0){
-//			solution(i) = 0;
-//		}
-//	}
+void Tsolver::convexify(Hessian_type& hess, Eigen::SelfAdjointEigenSolver<Hessian_type> &es) {
+
+	Hessian_type T = es.eigenvectors();
+
+	//correct all negative eigenvalue
+	Eigen::Vector2d new_eigenvalues;
+	new_eigenvalues(0) = epsilon;
+	new_eigenvalues(1) = es.eigenvalues()(1);
+	if (new_eigenvalues(1)< 0)		new_eigenvalues(1) =  epsilon;
+
+	hess = T.transpose()*new_eigenvalues.asDiagonal()*T;
+
+	es.compute(hess);
 }
 
 ///////////////////////////////////////////////////////
@@ -549,20 +555,27 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		pLC->update_diffusionmatrix(hess); //update diffusionmatrix
 
 
-		//calculate eigen values
+		//calculate eigenvalues
 		es.compute(hess);
 		cout << "The eigenvalues of Hessian are: " << es.eigenvalues().transpose() << endl;
 
+		//correct eigenvalues?
+		if (es.eigenvalues()(0) < epsilon){
+			convexify(hess, es);
+		}
 		//update maximal EW for penalty
 		if (es.eigenvalues()(1) > max_EW){
 			max_EW = es.eigenvalues()(1);
 		}
 
+		//store eigenvalue for output
 		pLC->smallest_EW = es.eigenvalues()(0);
 
-		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
+		//calculate residuum
 
-		//attention works only for constant rhs
+		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1); //determinant of hessian = lhs
+
+		//calculate rhs !attention works only for constant rhs
 		space_type x;
 		state_type uLC;
 		get_rhs_MA(x, uLC);
@@ -870,8 +883,6 @@ void Tsolver::time_stepping_MA() {
 		}
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
-
-		convexify(Lsolution);
 
 		restore_MA(Lsolution);
 
