@@ -246,6 +246,13 @@ for (unsigned int k=0; k<3; k++) {
   tableCoarseNeighbMid[3][1][k] += 1;
   }
 };
+
+void Tsolver::initialize_plotter()
+{
+	plotter.set_grid(&grid);
+	plotter.set_shape(&shape);
+}
+
 ////////////////////////////////////////////////////
 
 void Tsolver::set_leafcellmassmatrix ()
@@ -561,7 +568,7 @@ T input(const std::string question, const T defaultvalue) {
 
 void Tsolver::read_problem_parameters_GENERAL (const std::string data_directory)
 {
-  output_directory = data_directory;
+  plotter.set_output_directory(data_directory);
   // levelmax   = input<int>   ("levelmax           [default=   10] =? ",10);
   int lmax;
   igpm::configfile().getValue ("general", "levelmax", lmax, 10);
@@ -576,7 +583,7 @@ void Tsolver::read_problem_parameters_GENERAL (const std::string data_directory)
 
 void Tsolver::write_problem_parameters_GENERAL ()
 {
-  std::string fname(output_directory);
+  std::string fname(plotter.get_output_directory());
   fname+="/parameters.dat";
   std::ofstream outparameters(fname.c_str());
   if( !outparameters ) {
@@ -794,84 +801,6 @@ void Tsolver::write_idset (const grid_type::idset_type & idset) {
       }
 
 };
-
-//////////////////////////////////////////////////////////
-
-void Tsolver::write_numericalsolution () {
-
-      std::vector< std::vector<id_type> > v;
-      v.resize(grid.countBlocks());
-
-      Nvector_type nv;
-      state_type state;
-
-      // collect points
-      for (grid_type::leafcellmap_type::const_iterator
-           it=grid.leafCells().begin(); it!=grid.leafCells().end(); ++it) {
-        const grid_type::id_type& id = grid_type::id(it);
-        grid.nodes(id,nv);
-        v[id.block()].push_back(id);
-      }
-
-      std::string fname(output_directory);
-      fname+="/grid_numericalsolution.dat";
-      std::ofstream fC(fname.c_str());
-      if( !fC ) {
-        cerr << "Error opening output file " << fname << "." << endl;
-        exit(1);
-      }
-
-      // global header
-      fC << "TITLE     = \"" << "numerical solution" << "\"" << std::endl;
-      fC << "VARIABLES = ";
-      for (unsigned int i=1; i<=N_type::dim; ++i)
-        fC << "\"x" << i << "\" ";
-      for (unsigned int i=1; i<=statedim; ++i)
-        fC << "\"u" << i << "\" ";
-      fC << "\"Serror" << "\" ";
-      fC << std::endl;
-
-      // over all blocks
-      for (unsigned int i=0; i<grid.countBlocks(); ++i) {
-        if (v[i].size()==0) continue;
-
-        grid.block(i).writeTecplotHeader(fC,"zone",v[i].size()*id_type::countNodes(grid.block(i).type()),v[i].size());
-
-        fC << endl;
-
-        // over all ids inside this block
-        for (unsigned int j=0; j<v[i].size(); ++j) {
-          const grid_type::id_type& id = v[i][j];
-          const grid_type::leafcell_type *pLC = NULL;
-          grid.findLeafCell (id, pLC);
-
-          grid.nodes(id,nv);
-          for (unsigned int k=0; k<id.countNodes(); ++k) {
-	    shape.assemble_state_N (pLC->u, k, state);
-            fC << nv[k]
-               << " " << state
-               << " " << pLC->Serror
-               << endl;
-	    }
-        }
-
-        fC << endl;
-
-        // make connectivity
-        for (unsigned int N=1,j=0; j<v[i].size(); ++j) {
-          Nhandlevector_type vCH;
-          for (unsigned int k=0; k<v[i][j].countNodes(); ++k)
-              vCH[k]=(N++);
-
-          unsigned int nNodes=v[i][j].countNodes();
-          grid.block(v[i][j].block()).prepareTecplotNode(vCH,nNodes);
-          for (unsigned int k=0; k<v[i][j].countNodes(); ++k)
-            fC << vCH[k] << " ";
-          fC << endl;
-        }
-      }
-
-    };
 
 ////////////////////////////////////////////////////
 ///////////////                      ///////////////

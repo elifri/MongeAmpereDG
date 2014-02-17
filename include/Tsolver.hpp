@@ -11,6 +11,7 @@
 #include "grid_config.hpp"
 
 #include "Tshape.hpp"
+#include "Plotter.hpp"
 
 #include "utility.hpp"
 
@@ -18,16 +19,6 @@ using namespace config;
 
 class Tsolver {
 public:
-	typedef grid_config_type::basecell_type basecell_type;
-	typedef grid_config_type::leafcell_type leafcell_type;
-	typedef grid_config_type::antecell_type antecell_type;
-
-	typedef grid_type::gridblockhandle_type   gridblockhandle_type;
-	typedef grid_type::nodehandle_type        Nhandle_type;
-	typedef grid_type::nodehandlevector_type  Nhandlevector_type;
-	typedef grid_type::faceidvector_type      Fidvector_type;
-
-
 
 	typedef double            Fcoeff_type[childdim][shapedim];
 
@@ -36,7 +27,6 @@ public:
    typedef bool       leafmarker_type[childdim];
 
    grid_type grid;
-   std::string output_directory;
    std::vector<double> facLevelVolume;
    std::vector<double> facLevelLength;
 
@@ -45,6 +35,7 @@ public:
    CoarseNeighbMid_type         tableCoarseNeighbMid;
 
    Tshape shape; // shape for primal unknown (must have the name shape!!!)
+   Plotter plotter;
 
 //   shapelag_type shapelag; // shape for linear Lagrange unknowns
 
@@ -117,16 +108,6 @@ public:
    ///////////////   WRITE MESH DATA    ///////////////
    void write_problem_parameters_GENERAL ();
 
-
-   /*! \brief writes the solution in a vtu file
-    *
-    * \param (string) the name of the file the solution should be written into
-    * \param grid 	  grid
-    * \param int	  ??
-    * \param bool 	  should switch between binary and asccii format is NOT working yet
-    */
-   void writeLeafCellVTK(std::string, grid_type&, unsigned int, bool);
-   void write_numericalsolution ();
    void write_idset (const grid_type::idset_type & idset);
 
    ///////////////      GEOMETRY        ///////////////
@@ -136,6 +117,7 @@ public:
    And: level-volume factors, level-length factors
 */
    void update_baseGeometry ();
+   void initialize_plotter();
    void set_leafcellmassmatrix ();
    void get_normal_length (const Nvector_type & nv, const unsigned int & i,
                           space_type & normal, double & length);
@@ -293,18 +275,16 @@ public:
    void restore_MA (Eigen::VectorXd &solution);
    void convexify(Hessian_type & hess, Eigen::SelfAdjointEigenSolver<Hessian_type> &es); //makes the hessian positive definit
    void get_exacttemperature_MA (const space_type & x, state_type & u); // state_type ???
-   void get_exacttemperature_MA (const N_type & x, state_type & u); // state_type ???
+   void get_exacttemperature_MAN (const N_type & x, state_type & u); // state_type ???
+   node_function_type get_exacttemperature_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_exacttemperature_MAN, this);}
    void get_exacttemperaturenormalderivative_MA (const space_type & x, const space_type & normal, state_type & u_n);
 	// state_type ???
    void get_rhs_MA (const space_type & x, state_type & u_rhs);  // state_type ???
-   void get_rhs_MA (const N_type & x, state_type & u_rhs);  // state_type ???
+   void get_rhs_MAN (const N_type & x, state_type & u_rhs);  // state_type ???
+   node_function_type get_rhs_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_rhs_MAN, this);}
+
    void local_dt_MA (const value_type & lengthmin, value_type & dt_element);
    void time_stepping_MA ();
-
-   void write_numericalsolution_MA (const unsigned int i);
-   void write_numericalsolution_VTK_MA (const unsigned int i);
-   void write_exactsolution_MA (const unsigned int i);
-   void write_exactrhs_MA (const unsigned int i);
 
    void adapt(const double refine_eps, const double coarsen_eps);
    void setleafcellflags(unsigned int flag, bool value);

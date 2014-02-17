@@ -69,8 +69,10 @@ class Tmass;
   #define PROBLEM CONSTKAPPA
 #elif (EQUATION == ENTHALPY_EQ)
   #define PROBLEM CUTTING
-#elif (EQUATION == POISSON_EQ || EQUATION == POISSON_PREC_EQ || EQUATION == MONGE_AMPERE_EQ)
+#elif (EQUATION == POISSON_EQ || EQUATION == POISSON_PREC_EQ)
   #define PROBLEM CONST_RHS
+#elif (EQUATION == MONGE_AMPERE_EQ)
+  #define PROBLEM MONGEAMPERE1
 //  #define PROBLEM SINUS
 #elif (EQUATION == IMPLICIT_HEAT_EQ)
   #define PROBLEM CONSTKAPPA_IMPLICIT
@@ -206,7 +208,6 @@ typedef Eigen::Matrix<value_type, spacedim, spacedim> Ejacobian_type;
 
 typedef util::Function <value_type (const value_type)> function_1d_type;
 typedef util::Function <value_type (const value_type, const value_type)> function_2d_type;
-
 
 // Where to put these ??? 4=?, 3=? .......
 typedef unsigned int NeighbOrient_type[4][3][4];

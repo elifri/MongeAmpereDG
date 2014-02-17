@@ -144,6 +144,8 @@ int main(int argc, char **argv) {
   solver.shape.initialize_quadrature ();
   solver.shape.initialize_mass ();
 
+  solver.initialize_plotter();
+
 //  solver.shapelag.initialize_quadrature ();
 //  solver.shapelag.initialize_mass ();
 
