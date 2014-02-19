@@ -22,22 +22,7 @@
    }
 */
 
-/*
-////////////////////////////////////////////////////
-///////////////                      ///////////////
-///////////////     WRITE ARRAYS     ///////////////
-///////////////                      ///////////////
-////////////////////////////////////////////////////
 
-void Tsolver::writeEmass_type (const Emass_type & A)
-{
-   int j,k;
-   for (k=0;k<shapedim;k++) {
-     for (j=0;j<shapedim;j++) cerr <<  A(k,j) << "   ";
-     cerr << endl;
-     }
-};
-*/
 
 void Tsolver::write_space_type (const space_type & x)
 {
@@ -45,6 +30,21 @@ void Tsolver::write_space_type (const space_type & x)
    for (k=0;k<spacedim;k++) cerr <<  x[k] << "   ";
    cerr << endl;
 };
+
+//////////////////COFACTOR MATRIX ////////////////////
+void cofactor_matrix_inplace(Hessian_type &h)
+{
+	//  a b  _\   d -b
+	//  c d   /  -c  a
+
+	value_type temp = h(0,0);
+	h(0,0) = h(1,1);
+	h(1,1) = temp;
+
+	h(0,1) *=-1;
+	h(1,0) *=-1;
+}
+
 
 ////////////////////////////////////////////////////
 ///////////////                      ///////////////

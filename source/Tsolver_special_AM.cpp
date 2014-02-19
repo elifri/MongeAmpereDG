@@ -437,7 +437,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 									++ishape) {
 								double val = stabsign * shape.get_Fquadw(iqLC)
 										* length * uLC(0)
-										* pBC->get_normalderi(ishape,iqLC)
+										* A_grad_times_normal(pLC->A,ishape,iqLC)
 										/ facLevelLength[level];
 
 								if (penalty != 0.0) {
@@ -546,12 +546,13 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
 		pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
 		hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+		cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
 		pLC->update_diffusionmatrix(hess); //update diffusionmatrix
 
 
 		//calculate eigenvalues
 		es.compute(hess);
-		cout << "The eigenvalues of Hessian are: " << es.eigenvalues().transpose() << endl;
+		cout << "The eigenvalues of diffusion matrix are: " << es.eigenvalues().transpose() << endl;
 
 		//correct eigenvalues?
 		if (es.eigenvalues()(0) < epsilon){

@@ -52,6 +52,9 @@ public:
 			                      const unsigned int & iquad,
                                               const Estate_type & u,
 				              state_type & v);
+   //////////////// COFACTOR MATRIX ///////////////
+   void cofactor_matrix_inplace(Hessian_type h);
+
 
    ///////////////    BILINEAR FORMS    ///////////////
    inline double bilin_mass (double & u0, double & u1, double &d_abs);
