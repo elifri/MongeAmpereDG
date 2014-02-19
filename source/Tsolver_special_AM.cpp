@@ -451,15 +451,15 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 							// Copy entries into Laplace-matrix
 							for (unsigned int ishape = 0; ishape < shapedim;
 									++ishape) {
-								for (unsigned int j = 0; j < shapedim; ++j) {
+								for (unsigned int jshape = 0; jshape < shapedim; ++jshape) {
 									int row = pLC->m_offset + ishape;
-									int col = pLC->n_offset + j;
+									int col = pLC->n_offset + jshape;
 									double val;
 
 									// b(u, phi)
 									val = -shape.get_Fquadw(iqLC) * length
 											* shape.get_Fquads(ishape,iqLC)
-											* pBC->get_normalderi(j,iqLC)
+											* pBC->get_normalderi(jshape,iqLC)
 											/ facLevelLength[level];
 
 									// b(phi, u)
@@ -467,12 +467,12 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 											* length
 											* pBC->get_normalderi(ishape,iqLC)
 											/ facLevelLength[level]
-											* shape.get_Fquads(j,iqLC);
+											* shape.get_Fquads(jshape,iqLC);
 
 									if (penalty != 0.0) {
 										val += penalty * shape.get_Fquadw(iqLC)
 												* shape.get_Fquads(ishape,iqLC)
-												* shape.get_Fquads(j,iqLC);
+												* shape.get_Fquads(jshape,iqLC);
 									}
 
 									LM.coeffRef(row, col) += val;
@@ -505,6 +505,27 @@ void Tsolver::convexify(Hessian_type& hess, Eigen::SelfAdjointEigenSolver<Hessia
 
 	Hessian_type T = es.eigenvectors();
 
+	/*	value_type EW2 = es.eigenvalues()(1);
+
+    cout << "Correcting hessian \n" << endl;
+	cout << hess << endl;
+    cout << "T \n" << T << endl;
+
+    cout<< "??? maybe : \n" << T.transpose()*hess*T << endl;
+
+    Hessian_type A = T*hess*T.transpose();
+    cout << "normal way "<< endl;
+    cout << "T*hess*T^t \n" << A << endl;
+    A(0,0) = epsilon;
+    if (EW2 < 0)	A(1,1) = epsilon;
+    cout << "D*D_e \n" << A << endl;
+    A = T.transpose() * A * T;
+    cout << "T^t*%*T \n " << A << endl << endl;
+	es.compute(A);
+	cout << "=> eigenvalues " << es.eigenvalues().transpose() << endl;
+    cout << "=> eigenvectors  \n" << es.eigenvectors() << endl << endl;
+*/
+
 	//correct all negative eigenvalue
 	Eigen::Vector2d new_eigenvalues;
 	new_eigenvalues(0) = epsilon;
@@ -512,8 +533,13 @@ void Tsolver::convexify(Hessian_type& hess, Eigen::SelfAdjointEigenSolver<Hessia
 	if (new_eigenvalues(1)< 0)		new_eigenvalues(1) =  epsilon;
 
 	hess = T.transpose()*new_eigenvalues.asDiagonal()*T;
+//	cout << "hess*T^t*D*T \n";
+//	cout << hess << endl;
 
 	es.compute(hess);
+
+//	cout << "new eigenvalues " << es.eigenvalues().transpose() << endl;
+//	cout << "new eigenvectors  \n" << es.eigenvectors() << endl << endl;
 }
 
 ///////////////////////////////////////////////////////
