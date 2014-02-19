@@ -141,7 +141,7 @@ void Tsolver::assignViews_MA(unsigned int & offset) {
 		assignViewCell_MA(id, blocksize, offset);
 	}
 
-	plotter.write_exactsolution_MA(get_exacttemperature_MA_callback(),0);
+	plotter.write_exactsolution(get_exacttemperature_MA_callback(),0);
 }
 
 
@@ -891,10 +891,10 @@ void Tsolver::time_stepping_MA() {
 
 		assemble_indicator_and_limiting(); // use flag
 
-		plotter.write_exactsolution_MA(get_exacttemperature_MA_callback(),iteration);
-		plotter.write_exactsolution_VTK_MA(get_exacttemperature_MA_callback(),iteration);
-		plotter.write_numericalsolution_MA(iteration);
-		plotter.write_numericalsolution_VTK_MA(iteration);
+		plotter.write_exactsolution(get_exacttemperature_MA_callback(),iteration);
+		plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
+		plotter.write_numericalsolution(iteration);
+		plotter.write_numericalsolution_VTK(iteration);
 		plotter.write_exactrhs_MA(get_rhs_MA_callback(),iteration);
 
 		// reset flag 0

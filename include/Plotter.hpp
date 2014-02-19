@@ -26,8 +26,13 @@ private:
 	//helper for vtk parts
 	void assemble_points(std::vector < std::vector<id_type> > &v, int &Nelements, int &Nnodes); ///get nodes and number of elements/nodes
 	void write_vtk_header(std::ofstream& file, const int Nnodes, const int Nelements); ///writes vtk header
-	void write_error(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); ///write an data error containing the error stored in every leafcell
 
+	void write_error(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); ///write an data array containing the error stored in every leafcell
+	void write_smallest_EW(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); ///write an data array containing the smallest EW stored in every leafcell
+
+	void write_points(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); //writes points in vtk format
+	void write_solution(const node_function_type &get_exacttemperature, std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); //writes points (of solution) in vtk format
+	void write_cells(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); //write cells
 
 	/*! \brief writes the solution in a vtu file
 	    *
@@ -54,11 +59,11 @@ public:
 
 	std::string get_output_directory() {return output_directory;}
 
-	void write_numericalsolution_MA(const unsigned int i);
-	void write_numericalsolution_VTK_MA(const unsigned int i);
+	void write_numericalsolution(const unsigned int i);
+	void write_numericalsolution_VTK(const unsigned int i);
 
-	void write_exactsolution_MA(const node_function_type get_exacttemperature, const unsigned int i);
-	void write_exactsolution_VTK_MA(const node_function_type &exactSol, const unsigned int i);
+	void write_exactsolution(const node_function_type get_exacttemperature, const unsigned int i);
+	void write_exactsolution_VTK(const node_function_type &exactSol, const unsigned int i);
 	void write_exactrhs_MA(const node_function_type &get_rhs_MA, const unsigned int i);
 
 	void write_numericalsolution ();
