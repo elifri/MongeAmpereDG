@@ -243,7 +243,6 @@ void Plotter::write_points(std::ofstream &file, const std::vector < std::vector<
 	Nvector_type nv;
 	state_type state;
 
-	write_points(file, v,refine);
 	// write points
 	file << "\t\t\t<Points>\n"
 			<< "\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\""
@@ -496,6 +495,9 @@ void Plotter::writeLeafCellVTK(std::string filename, const unsigned int refine, 
 
 	write_error(file, v, refine);
 	write_smallest_EW(file, v, refine);
+
+	write_points(file, v, refine);
+	write_cells(file,v, refine);
 
 	write_vtk_end(file);
 }
@@ -758,53 +760,10 @@ void Plotter::writeExactVTK(const node_function_type &get_exacttemperature_MA, s
 	write_vtk_header(file, Nnodes, Nelements);
 
 	write_solution(get_exacttemperature_MA, file, v,refine);
-	// write cells
-	file << "\t\t\t<Cells>\n"
-			<< "\t\t\t\t<DataArray type=\"Int32\" Name=\"connectivity\" format=\"";
-	file << "ascii\">"<<endl;
-	// make connectivity
 
-	if (refine == 0){
-		for (unsigned int i = 0; i < grid->countBlocks(); ++i) {
-			if (v[i].size() == 0)
-				continue;
-			for (unsigned int N = 1, j = 0; j < v[i].size(); ++j) {
-				Nhandlevector_type vCH;
-				for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
-					vCH[k] = (N++);
+	write_cells(file, v, refine);
 
-				unsigned int nNodes = v[i][j].countNodes();
-				grid->block(v[i][j].block()).prepareTecplotNode(vCH, nNodes);
-				file << "\t\t\t\t\t";
-				for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
-					file << vCH[k]-1 << " ";
-			}
-		}
-	}
-	else{ //refined
-			for (int i = 0; i < Nnodes ; i+=6){
-				file << "\t\t\t\t\t"<< i+1 << " " << i+3 << " " << i+5 << " ";//triangle in the middle
-				file << "\t\t\t\t\t"<< i << " " << i+1 << " " << i+5 << " "; //botoom triangle
-				file << "\t\t\t\t\t"<< i+1 << " " << i+2 << " " << i+3 << " "; //on the right
-				file << "\t\t\t\t\t"<< i+3 << " " << i+4 << " " << i+5 << " "; // on the top
-	 		}
-	}
-
-	file << "\n\t\t\t\t</DataArray>\n";
-	file
-			<< "\t\t\t\t<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n\t\t\t\t\t";
-	for (int i = 1; i <= Nelements; ++i)
-		file << i * 3 << " ";
-	file << "\n\t\t\t\t</DataArray>";
-	file
-			<< "\n\t\t\t\t<DataArray type=\"Int32\" Name=\"types\" format=\"ascii\">\n\t\t\t\t\t";
-	for (int i = 1; i <= Nelements; ++i)
-		file << "5 ";  // 5: triangle, 9: quad
-	file << "\n\t\t\t\t</DataArray>";
-	file << "\n\t\t\t</Cells>\n";
-
-	file << "\n\t\t</Piece>";
-	file << "\n\t</UnstructuredGrid>\n" << "\n</VTKFile>";
+	write_vtk_end(file);
 }
 
 ///////////////////////////////////////////////////////////
