@@ -32,7 +32,7 @@ void Tsolver::write_space_type (const space_type & x)
 };
 
 //////////////////COFACTOR MATRIX ////////////////////
-void cofactor_matrix_inplace(Hessian_type &h)
+void Tsolver::cofactor_matrix_inplace(Hessian_type &h)
 {
 	//  a b  _\   d -b
 	//  c d   /  -c  a

@@ -53,7 +53,7 @@ public:
                                               const Estate_type & u,
 				              state_type & v);
    //////////////// COFACTOR MATRIX ///////////////
-   void cofactor_matrix_inplace(Hessian_type h);
+   void cofactor_matrix_inplace(Hessian_type &h);
 
 
    ///////////////    BILINEAR FORMS    ///////////////
@@ -221,7 +221,7 @@ public:
          double eta;       // absolute tolerance from estimated error factor
 
          double max_EW;
-         static const double epsilon = 1e-10; //minimum value of hessian eigenvalues
+         static const double epsilon = 1e-1; //minimum value of hessian eigenvalues
 
    #endif
 
@@ -280,6 +280,7 @@ public:
    void get_exacttemperature_MA (const space_type & x, state_type & u); // state_type ???
    void get_exacttemperature_MAN (const N_type & x, state_type & u); // state_type ???
    node_function_type get_exacttemperature_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_exacttemperature_MAN, this);}
+   vector_function_type get_exacttemperature_MA_Vcallback() { return MEMBER_FUNCTION(&Tsolver::get_exacttemperature_MA, this);}
    void get_exacttemperaturenormalderivative_MA (const space_type & x, const space_type & normal, state_type & u_n);
 	// state_type ???
    void get_rhs_MA (const space_type & x, state_type & u_rhs);  // state_type ???
