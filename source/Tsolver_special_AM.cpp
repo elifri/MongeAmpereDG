@@ -279,7 +279,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		//update penalty
 
 		cout << "Largest EW " << max_EW << endl;
-		penalty *= 10*max_EW;
+		penalty *= 10*max_EW*(iteration+1);
 
 		// loop over all cells in this level
 		for (grid_type::leafcellmap_type::const_iterator it =
@@ -352,7 +352,6 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 									value_type A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,jshape,iqLC),
 											   A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,jshape,iqNC);
-
 
 									// b(u, phi)
 									LM.coeffRef(row_LC, col_LC) += 0.5 // to average
@@ -437,7 +436,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 									++ishape) {
 								double val = stabsign * shape.get_Fquadw(iqLC)
 										* length * uLC(0)
-										* A_grad_times_normal(pLC->A,ishape,iqLC)
+										* pBC->A_grad_times_normal(pLC->A, ishape,iqLC)
 										/ facLevelLength[level];
 
 								if (penalty != 0.0) {
@@ -459,13 +458,13 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 									// b(u, phi)
 									val = -shape.get_Fquadw(iqLC) * length
 											* shape.get_Fquads(ishape,iqLC)
-											* pBC->get_normalderi(jshape,iqLC)
+											* pBC->A_grad_times_normal(pLC->A,jshape,iqLC)
 											/ facLevelLength[level];
 
 									// b(phi, u)
 									val += stabsign * shape.get_Fquadw(iqLC)
 											* length
-											* pBC->get_normalderi(ishape,iqLC)
+											* pBC->A_grad_times_normal(pLC->A,ishape,iqLC)
 											/ facLevelLength[level]
 											* shape.get_Fquads(jshape,iqLC);
 
@@ -582,6 +581,7 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
 		//correct eigenvalues?
 		if (es.eigenvalues()(0) < epsilon){
+			cout << "Correcting " << endl;
 			convexify(hess, es);
 		}
 		//update maximal EW for penalty
