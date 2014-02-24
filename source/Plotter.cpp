@@ -134,8 +134,7 @@ void Plotter::write_error(std::ofstream &file, const std::vector < std::vector<i
 	state_type state;
 
 	// write error
-	file << "\t\t\t<PointData Scalars=\"error\">\n"
-			<< "\t\t\t\t<DataArray  Name=\"error\" type=\"Float32\" format=\"ascii\">\n";
+	file << "\t\t\t\t<DataArray  Name=\"error\" type=\"Float32\" format=\"ascii\">\n";
 
 	// loop over all leaf cells
 	for (unsigned int i = 0; i < grid->countBlocks(); ++i) {
@@ -152,9 +151,7 @@ void Plotter::write_error(std::ofstream &file, const std::vector < std::vector<i
 				grid_type::leafcell_type * pLC = NULL;
 				grid->findLeafCell(id, pLC);
 
-				grid->nodes(id, nv);
 				for (unsigned int k = 0; k < id.countNodes(); ++k) {
-					shape->assemble_state_N(pLC->u, k, state);
 					file << "\t\t\t\t\t" << pLC->Serror << endl;
 				}
 			}
@@ -181,7 +178,7 @@ void Plotter::write_error(std::ofstream &file, const std::vector < std::vector<i
 		}
 	}
 
-	file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
+	file << "\t\t\t\t</DataArray>\n";
 
 }
 
@@ -191,8 +188,7 @@ void Plotter::write_smallest_EW(std::ofstream &file, const std::vector < std::ve
 	state_type state;
 
 	// write data array with smallest EW
-	file << "\t\t\t<PointData Scalars=\"smallest EW\">\n"
-			<< "\t\t\t\t<DataArray  Name=\"smallest EW\" type=\"Float32\" format=\"ascii\">\n";
+	file << "\t\t\t\t<DataArray  Name=\"smallest EW\" type=\"Float32\" format=\"ascii\">\n";
 
 	// loop over all leaf cells
 	for (unsigned int i = 0; i < grid->countBlocks(); ++i) {
@@ -236,7 +232,7 @@ void Plotter::write_smallest_EW(std::ofstream &file, const std::vector < std::ve
 		}
 	}
 
-	file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
+	file << "\t\t\t\t</DataArray>\n";
 }
 
 void Plotter::write_points(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine){
@@ -493,8 +489,10 @@ void Plotter::writeLeafCellVTK(std::string filename, const unsigned int refine, 
 
 	write_vtk_header(file, Nnodes, Nelements);
 
+	file << "\t\t\t<PointData>\n";
 	write_error(file, v, refine);
 	write_smallest_EW(file, v, refine);
+	file << "\t\t\t</PointData>\n";
 
 	write_points(file, v, refine);
 	write_cells(file,v, refine);
