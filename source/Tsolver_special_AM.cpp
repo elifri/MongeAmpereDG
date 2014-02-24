@@ -8,6 +8,7 @@
 #include "../include/Tsolver.hpp"
 #include <Eigen/Eigenvalues>
 
+#include "../include/matlab_export.hpp"
 
 #if (EQUATION == MONGE_AMPERE_EQ)
 
@@ -569,10 +570,18 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		Hessian_type hess;
 		shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
 		pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
-		hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+		hess /= facLevelVolume[idLC.level()]; //transform to leafcell
 		cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
 		pLC->update_diffusionmatrix(hess); //update diffusionmatrix
 
+		Nvector_type nv;
+		grid.nodes(idLC,nv);
+		state_type state, stateEx;
+		space_type n;
+		value_type error = 0;
+
+
+		cout << "cofactor matrix is with node " << nv[0][0] << " " << nv[0][1] << " :\n" << hess << endl;
 
 		//calculate eigenvalues
 		es.compute(hess);
@@ -593,7 +602,7 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
 		//calculate residuum
 
-		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1); //determinant of hessian = lhs
+		/*		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1); //determinant of hessian = lhs
 
 		//calculate rhs !attention works only for constant rhs
 		space_type x;
@@ -604,7 +613,16 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		value_type rhs = uLC(0);
 		pLC->Serror = det - rhs; //solution should have solution
 		//debug output
-		cout << "residuum in LC: "<< pLC->id() << " is " << pLC->Serror << endl;
+		cout << "residuum in LC: "<< pLC->id() << " is " << pLC->Serror << endl;*/
+
+		for (int k = 0; k < idLC.countNodes(); k++){
+			shape.assemble_state_N(pLC->u,k,state);
+			n[0] = nv[k][0]; n[1] = nv[k][1];
+			get_exacttemperature_MA(n,stateEx);
+			error += std::abs(state[0]-stateEx[0]);
+		}
+		pLC->Serror = error/3.;
+
 
 	}
 
