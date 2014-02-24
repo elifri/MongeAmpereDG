@@ -448,8 +448,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 							}
 
 							// Copy entries into Laplace-matrix
-							for (unsigned int ishape = 0; ishape < shapedim;
-									++ishape) {
+							for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 								for (unsigned int jshape = 0; jshape < shapedim; ++jshape) {
 									int row = pLC->m_offset + ishape;
 									int col = pLC->n_offset + jshape;
@@ -667,7 +666,11 @@ void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // s
 #elif (PROBLEM == SIMPLEPOISSON3)
 	const double a = 0.3, b = 0.5;
 	u[0] = a * (sqr(x[0]) - sqr(x[1])) + b * (x[0] * x[1]);
-#elif (PROBLEM == MONGEAMPERE1)
+//#elif (PROBLEM == MONGEAMPERE1)
+//	u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
+#elif (PROBLEM == SIMPLEMONGEAMPERE)
+	u[0] = 2*sqr(x[0]) + 2*sqr(x[1]) + 3 * x[0]*x[1];
+#elif (PROBLEM == MONGEAMPERE2)
 	u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
 #elif (PROBLEM == CONST_RHS)
 	u[0] = 0; // exact solution not known, Dirichlet boundary conditions with u=0
@@ -738,9 +741,15 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 	u_rhs[0] = -4 * a;
 #elif (PROBLEM == SIMPLEPOISSON3)
 	u_rhs[0] = 0;
-#elif (PROBLEM == MONGEAMPERE1)
-	u_rhs[0] = 1 + sqr(x[0])+sqr(x[1]); //1+||x||^2
-	u_rhs[0] *=exp(sqr(x[0])+sqr(x[1])); //*exp(||x||^2)
+//#elif (PROBLEM == MONGEAMPERE1)
+//	u_rhs[0] = 1 + sqr(x[0])+sqr(x[1]); //1+||x||^2
+//	u_rhs[0] *=exp(sqr(x[0])+sqr(x[1])); //*exp(||x||^2)
+#elif (PROBLEM == MONGEAMPERE2)
+	value_type f = exp( (sqr(x[0])+sqr(x[1]))/2. );
+	u_rhs[0] = 6+ 5*sqr(x[0]) + 4 * x[0]*x[1] + sqr(x[1]);
+	u_rhs[0] *= f;
+#elif (PROBLEM == SIMPLEMONGEAMPERE)
+	u_rhs[0] = 8;
 #elif (PROBLEM == CONST_RHS)
 	u_rhs[0] = 1;
 #elif (PROBLEM == CONST_RHS2)

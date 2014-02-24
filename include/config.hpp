@@ -63,6 +63,13 @@ class Tmass;
 // Implicit Heat-Problems
 #define CONSTKAPPA_IMPLICIT 41
 
+//Monge Ampere Problems
+#define MONGEAMPERE1 42
+#define MONGEAMPERE2 43
+#define SIMPLEMONGEAMPERE 44
+
+
+
 #if (EQUATION == EULER_EQ)
   #define PROBLEM BUMP
 #elif (EQUATION == HEAT_EQ)
@@ -72,8 +79,7 @@ class Tmass;
 #elif (EQUATION == POISSON_EQ || EQUATION == POISSON_PREC_EQ)
   #define PROBLEM CONST_RHS
 #elif (EQUATION == MONGE_AMPERE_EQ)
-  #define PROBLEM MONGEAMPERE1
-//  #define PROBLEM SINUS
+	#define PROBLEM SIMPLEMONGEAMPERE
 #elif (EQUATION == IMPLICIT_HEAT_EQ)
   #define PROBLEM CONSTKAPPA_IMPLICIT
 #endif
