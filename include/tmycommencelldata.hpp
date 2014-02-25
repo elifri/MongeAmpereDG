@@ -28,7 +28,18 @@ public:
     Fdim      = config::Fdim
   };
 
-  int gauss_offset(const int face){return	config::Fquadgaussdim * face;}
+  int gauss_offset(const int face) const {return	config::Fquadgaussdim * face;}
+
+  int get_face_number(const int iq) const{
+	int in = 0;
+	  // calculate face number
+ 	if (iq < Fdim * config::Fquadgaussdim)
+		in = iq / config::Fquadgaussdim;
+	else
+		in = (iq - Fdim * config::Fquadgaussdim)
+			/ (config::Fchilddim * config::Fquadgaussdim);
+ 	return in;
+  }
 
  tmycommoncelldata(){
  }

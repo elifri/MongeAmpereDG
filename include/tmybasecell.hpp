@@ -22,7 +22,7 @@
 // BASECELL
 //------------------------------------------------------------------------------
 template<typename CONFIG_TYPE>
-class tmybasecell: public igpm::tidcell_base<CONFIG_TYPE> {
+class tmybasecell: public igpm::tidcell_base<CONFIG_TYPE>, public tmycommoncelldata<CONFIG_TYPE> {
 public:
 	typedef CONFIG_TYPE config_type;
 	typedef typename config_type::grid_type grid_type;
@@ -378,13 +378,7 @@ public:
 		assert ( i >= 0 && i < shapedim && "There is not any shape function with that number");
 		assert ( iq >=	 0 && iq < Fquadraturedim && "There is not any face quadrature point with that number");
 
-		// calculate face number
-		unsigned int in = 0;
-		if (iq < Fdim * Fquadgaussdim)
-			in = iq / Fquadgaussdim;
-		else
-			in = (iq - Fdim * Fquadgaussdim)
-				/ (Fchilddim * Fquadgaussdim);
+		unsigned int in = this->get_face_number(iq);
 
 		// normal derivative
 		return (A*grad(i)(iq)).dot(normal(in));
