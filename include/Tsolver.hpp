@@ -12,6 +12,7 @@
 
 #include "Tshape.hpp"
 #include "Plotter.hpp"
+#include "boundary_handler.hpp"
 
 #include "utility.hpp"
 
@@ -27,6 +28,9 @@ public:
    typedef bool       leafmarker_type[childdim];
 
    grid_type grid;
+   int number_of_bc, number_of_dofs;
+
+   int max_level;
    std::vector<double> facLevelVolume;
    std::vector<double> facLevelLength;
 
@@ -36,6 +40,7 @@ public:
 
    Tshape shape; // shape for primal unknown (must have the name shape!!!)
    Plotter plotter;
+   boundary_handler bd_handler;
 
 //   shapelag_type shapelag; // shape for linear Lagrange unknowns
 
@@ -121,6 +126,7 @@ public:
 */
    void update_baseGeometry ();
    void initialize_plotter();
+   void initialize_boundary_handler();
    void set_leafcellmassmatrix ();
    void get_normal_length (const Nvector_type & nv, const unsigned int & i,
                           space_type & normal, double & length);

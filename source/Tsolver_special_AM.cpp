@@ -75,9 +75,14 @@ void Tsolver::initializeLeafCellData_MA() {
 	space_type x;
 	state_type v;
 
+	number_of_dofs = 0;
+
 	for (grid_type::leafcellmap_type::const_iterator it =
 			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
 		const grid_type::id_type & idLC = grid_type::id(it);
+
+		number_of_dofs++;
+
 		grid_type::leafcell_type * pLC = NULL;
 		grid.findLeafCell(idLC, pLC);
 		grid.nodes(idLC, nv);
@@ -98,6 +103,8 @@ void Tsolver::initializeLeafCellData_MA() {
 
 		pLC->id().setFlag(0, false);
 	}
+
+	number_of_dofs *= 6;
 }
 
 ////////////////////////////////////////////////////
@@ -423,62 +430,34 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 						break;
 
 					case -2: // Dirichlet boundary
-						gaussbaseLC = Fquadgaussdim * i; //number of first gauss node of this face
-						length = facLevelLength[level] * pBC->get_length(i); //actual facelength of this leafcell
-						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over face quadrature points
-							iqLC = gaussbaseLC + iq;
-							get_Fcoordinates(idLC, iqLC, x); // determine x
+					{
+						cout << "LC " << idLC << endl;
+						cout << "face " << i << endl;
+						nvector_type nv2;
+						get_nodes(idLC, nv2);
+
+						unsigned int shapes_per_face = shapedim/Fdim + 1;
+
+						space_type startvec = nv2( (i+1) % 3);
+						space_type endvec = nv2( (i+2) % 3); //TODO works only for triangles
+
+						value_type l,r;
+
+						for (unsigned int i = 0; i < shapes_per_face; ++i) //loop over boundary DOF
+						{
+							r = (value_type) i / (value_type) (shapes_per_face-1);
+							l = 1 - r;
+							space_type x = l * startvec + r * endvec;
+							cout << " number " << ((i + 1) % 3) << endl;
+							cout << "startvec " << startvec.transpose() << " endvec " << endvec.transpose() << endl;
+							cout << "l " << l << " r " <<r <<  endl;
+
 
 							state_type uLC;
 							get_exacttemperature_MA(x, uLC); // determine uLC (value at boundary point x
-
-							// Copy entries for Dirichlet boundary conditions into right hand side
-							for (unsigned int ishape = 0; ishape < shapedim;
-									++ishape) {
-								double val = stabsign * shape.get_Fquadw(iqLC)
-										* length * uLC(0)
-										* pBC->A_grad_times_normal(pLC->A, ishape,iqLC)
-										/ facLevelLength[level];
-
-								if (penalty != 0.0) {
-									val += penalty * shape.get_Fquadw(iqLC) * uLC(0)
-											* shape.get_Fquads(ishape,iqLC);
-								}
-
-								Lrhs(pLC->n_offset + ishape) += val;
-							}
-
-							// Copy entries into Laplace-matrix
-							for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-								for (unsigned int jshape = 0; jshape < shapedim; ++jshape) {
-									int row = pLC->m_offset + ishape;
-									int col = pLC->n_offset + jshape;
-									double val;
-
-									// b(u, phi)
-									val = -shape.get_Fquadw(iqLC) * length
-											* shape.get_Fquads(ishape,iqLC)
-											* pBC->A_grad_times_normal(pLC->A,jshape,iqLC)
-											/ facLevelLength[level];
-
-									// b(phi, u)
-									val += stabsign * shape.get_Fquadw(iqLC)
-											* length
-											* pBC->A_grad_times_normal(pLC->A,ishape,iqLC)
-											/ facLevelLength[level]
-											* shape.get_Fquads(jshape,iqLC);
-
-									if (penalty != 0.0) {
-										val += penalty * shape.get_Fquadw(iqLC)
-												* shape.get_Fquads(ishape,iqLC)
-												* shape.get_Fquads(jshape,iqLC);
-									}
-
-									LM.coeffRef(row, col) += val;
-								}
-							}
-
+							Lrhs(pLC->n_offset + ((i + 1) % 3)) = uLC[0];
 						}
+					}
 						break;
 
 					default:
@@ -615,7 +594,7 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		//debug output
 		cout << "residuum in LC: "<< pLC->id() << " is " << pLC->Serror << endl;*/
 
-		for (int k = 0; k < idLC.countNodes(); k++){
+		for (unsigned int k = 0; k < idLC.countNodes(); k++){
 			shape.assemble_state_N(pLC->u,k,state);
 			n[0] = nv[k][0]; n[1] = nv[k][1];
 			get_exacttemperature_MA(n,stateEx);
@@ -851,6 +830,8 @@ void Tsolver::time_stepping_MA() {
 	if (levelmax < level)
 		level = levelmax;
 
+	max_level = level;
+
 	cout << "Using refine_eps=" << refine_eps << " and coarsen_eps="
 			<< coarsen_eps << "." << endl;
 
@@ -906,26 +887,39 @@ void Tsolver::time_stepping_MA() {
 		cout << "Assign matrix coordinates..." << endl;
 		pt.start();
 		assignViews_MA(LM_size);
+		initialize_boundary_handler();
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
-		Eigen::SparseMatrix<double> LM(LM_size, LM_size);
-		Eigen::VectorXd Lrhs, Lsolution;
-		Lrhs.setZero(LM_size);
+		Eigen::SparseMatrix<double> LM_bd(LM_size, LM_size);
+		Eigen::SparseMatrix<double> LM;
+		Eigen::VectorXd Lrhs_bd, Lrhs, Lsolution, Lsolution_bd;
+		Lrhs_bd.setZero(LM_size);
 		Lsolution.setZero(LM_size);
 
-		LM.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
+		LM_bd.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
 
 		cout << "Assemble linear System..." << flush << endl;
 		pt.start();
-		assemble_MA(stabsign, gamma, LM, Lrhs);
+		assemble_MA(stabsign, gamma, LM_bd, Lrhs_bd);
+		pt.stop();
+		cout << "done. " << pt << " s." << endl;
+
+
+		cout << "Delete boundary DOFS ..." << flush << endl;
+		pt.start();
+		bd_handler.delete_boundary_dofs(LM_bd, LM);
+		bd_handler.delete_boundary_dofs(Lrhs_bd, Lrhs);
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
 		cout << "Solving linear System..." << endl;
 
 		pt.start();
-		Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
+		Eigen::SimplicialLDLT< Eigen::SparseMatrix<double> > solver;
+//		MATLAB_export(LM, "LM");
+//		cout << "LM " << LM << endl;
+
 		solver.compute(LM);
 		if (solver.info() != Eigen::Success) {
 			std::cerr << "Decomposition of stiffness matrix failed" << endl;
@@ -937,9 +931,11 @@ void Tsolver::time_stepping_MA() {
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
-		restore_MA(Lsolution);
+		bd_handler.add_boundary_dofs(Lsolution,Lrhs_bd,Lsolution_bd);
 
-		cout << "LSolution" << Lsolution.transpose() << endl;
+		restore_MA(Lsolution_bd);
+
+		cout << "LSolution" << Lsolution_bd.transpose() << endl;
 
 		setleafcellflags(0, false);
 

@@ -106,6 +106,7 @@ void Tsolver::update_baseGeometry ()
     pBC->initialize(shape.get_Equad(), shape.get_Equads_grad(),
 			shape.get_Fquads_x(), shape.get_Fquads_y(),
 			grid, idBC);
+    number_of_bc++;
     }
 
   facLevelVolume.resize (grid.leafCells().countLinks()+1);
@@ -253,6 +254,10 @@ void Tsolver::initialize_plotter()
 	plotter.set_shape(&shape);
 }
 
+void Tsolver::initialize_boundary_handler()
+{
+	bd_handler.initialize(grid, number_of_dofs);
+}
 ////////////////////////////////////////////////////
 
 void Tsolver::set_leafcellmassmatrix ()
