@@ -125,6 +125,9 @@ public:
    void get_normal_length (const Nvector_type & nv, const unsigned int & i,
                           space_type & normal, double & length);
 
+   /*! \brief return all nodes of an leafcell*/
+   void get_nodes(const grid_type::id_type& idLC, nvector_type &nvEigen) const;
+
    /*! \brief determine physical coordinates of barycebtric coordinates in cell idLC
     *
     */

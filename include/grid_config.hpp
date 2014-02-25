@@ -44,6 +44,7 @@ typedef grid_config_type::leafcell_type leafcell_type;
 typedef grid_config_type::antecell_type antecell_type;
 
 typedef grid_type::nodevector_type        Nvector_type;
+typedef Eigen::Matrix<space_type, Eigen::Dynamic, 1> nvector_type;
 typedef grid_type::node_type N_type;
 typedef util::Function <void (const N_type&, state_type&)> node_function_type;
 typedef util::Function <void (const space_type&, state_type&)> vector_function_type;
