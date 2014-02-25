@@ -245,7 +245,9 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
  *
  */
 void Tsolver::assemble_MA(const int & stabsign, double penalty,
-		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs) {
+		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs, Eigen::VectorXd &Lbd) {
+
+	Lbd.setZero(Lrhs.size());
 
 	unsigned int gaussbaseLC = 0;
 	unsigned int gaussbaseNC = 0;
@@ -438,24 +440,31 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 						unsigned int shapes_per_face = shapedim/Fdim + 1;
 
-						space_type startvec = nv2( (i+1) % 3);
-						space_type endvec = nv2( (i+2) % 3); //TODO works only for triangles
+						//TODO works only for triangles
+						space_type startvec = nv2( (i+1) % 3); //boundary Dof at left end of face i
+						space_type endvec = nv2( (i+2) % 3); //boundary Dof at right end of face i
 
 						value_type l,r;
 
-						for (unsigned int i = 0; i < shapes_per_face; ++i) //loop over boundary DOF
+						for (unsigned int ishape = 0; ishape < shapes_per_face; ++ishape) //loop over boundary DOF at face i
 						{
-							r = (value_type) i / (value_type) (shapes_per_face-1);
+							r = (value_type) ishape / (value_type) (shapes_per_face-1);
 							l = 1 - r;
 							space_type x = l * startvec + r * endvec;
-							cout << " number " << ((i + 1) % 3) << endl;
 							cout << "startvec " << startvec.transpose() << " endvec " << endvec.transpose() << endl;
 							cout << "l " << l << " r " <<r <<  endl;
-
+							cout << "-> x = " << x.transpose() << endl;
 
 							state_type uLC;
-							get_exacttemperature_MA(x, uLC); // determine uLC (value at boundary point x
-							Lrhs(pLC->n_offset + ((i + 1) % 3)) = uLC[0];
+							get_exacttemperature_MA(x, uLC); // determine uLC (value at boundary point x)
+
+							int loc_no = ((i + 1) % shapes_per_face)*2+ishape;
+							loc_no = loc_no % 6;
+
+							//fix solution at boundary
+							Lbd(pLC->n_offset + loc_no) = uLC[0];
+							cout << " number " << loc_no << "global " << pLC->n_offset + loc_no << endl;
+
 						}
 					}
 						break;
@@ -663,8 +672,8 @@ void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // s
 #elif (PROBLEM == SIMPLEPOISSON3)
 	const double a = 0.3, b = 0.5;
 	u[0] = a * (sqr(x[0]) - sqr(x[1])) + b * (x[0] * x[1]);
-//#elif (PROBLEM == MONGEAMPERE1)
-//	u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
+#elif (PROBLEM == MONGEAMPERE1)
+	u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
 #elif (PROBLEM == SIMPLEMONGEAMPERE)
 	u[0] = 2*sqr(x[0]) + 2*sqr(x[1]) + 3 * x[0]*x[1];
 #elif (PROBLEM == MONGEAMPERE2)
@@ -738,9 +747,9 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 	u_rhs[0] = -4 * a;
 #elif (PROBLEM == SIMPLEPOISSON3)
 	u_rhs[0] = 0;
-//#elif (PROBLEM == MONGEAMPERE1)
-//	u_rhs[0] = 1 + sqr(x[0])+sqr(x[1]); //1+||x||^2
-//	u_rhs[0] *=exp(sqr(x[0])+sqr(x[1])); //*exp(||x||^2)
+#elif (PROBLEM == MONGEAMPERE1)
+	u_rhs[0] = 1 + sqr(x[0])+sqr(x[1]); //1+||x||^2
+	u_rhs[0] *=exp(sqr(x[0])+sqr(x[1])); //*exp(||x||^2)
 #elif (PROBLEM == MONGEAMPERE2)
 	value_type f = exp( (sqr(x[0])+sqr(x[1]))/2. );
 	u_rhs[0] = 6+ 5*sqr(x[0]) + 4 * x[0]*x[1] + sqr(x[1]);
@@ -893,7 +902,7 @@ void Tsolver::time_stepping_MA() {
 
 		Eigen::SparseMatrix<double> LM_bd(LM_size, LM_size);
 		Eigen::SparseMatrix<double> LM;
-		Eigen::VectorXd Lrhs_bd, Lrhs, Lsolution, Lsolution_bd;
+		Eigen::VectorXd Lrhs_bd, Lrhs, Lsolution, Lsolution_bd, Lsolution_only_bd;
 		Lrhs_bd.setZero(LM_size);
 		Lsolution.setZero(LM_size);
 
@@ -901,13 +910,14 @@ void Tsolver::time_stepping_MA() {
 
 		cout << "Assemble linear System..." << flush << endl;
 		pt.start();
-		assemble_MA(stabsign, gamma, LM_bd, Lrhs_bd);
+		assemble_MA(stabsign, gamma, LM_bd, Lrhs_bd, Lsolution_only_bd);
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
 
 		cout << "Delete boundary DOFS ..." << flush << endl;
 		pt.start();
+		Lrhs_bd -= LM_bd*Lsolution_only_bd;
 		bd_handler.delete_boundary_dofs(LM_bd, LM);
 		bd_handler.delete_boundary_dofs(Lrhs_bd, Lrhs);
 		pt.stop();
@@ -931,7 +941,7 @@ void Tsolver::time_stepping_MA() {
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
-		bd_handler.add_boundary_dofs(Lsolution,Lrhs_bd,Lsolution_bd);
+		bd_handler.add_boundary_dofs(Lsolution,Lsolution_only_bd,Lsolution_bd);
 
 		restore_MA(Lsolution_bd);
 
