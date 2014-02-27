@@ -33,7 +33,7 @@ public:
 	/*!
 	 *
 	 */
-	boundary_handler():m_initialized(false), m_boundary_nodes(), m_reduced_number_of_nodes(0), indices_row_without_boundary_nodes(), indices_col_without_boundary_nodes() {}
+	boundary_handler():m_initialized(false), m_boundary_dofs(), m_reduced_number_of_dofs(0), indices_row_without_boundary_dofs(), indices_col_without_boundary_dofs() {}
 
 	boundary_handler(const grid_type &grid, const unsigned int number_of_dofs)
 	{
@@ -43,10 +43,19 @@ public:
 	//does the same as the constructor
 	void initialize(const grid_type &grid, const unsigned int number_of_dofs)
 	{
-		get_boundary_nodes(grid, m_boundary_nodes);
-		m_reduced_number_of_nodes = number_of_dofs - get_number_of_boundary_nodes();
+		get_boundary_nodes(grid, m_boundary_dofs);
+		m_reduced_number_of_dofs = number_of_dofs - get_number_of_boundary_dofs();
 		m_initialized = true;
-		initialize_new_indices(number_of_dofs, number_of_dofs, m_boundary_nodes, m_boundary_nodes, indices_row_without_boundary_nodes, indices_col_without_boundary_nodes);
+		initialize_new_indices(number_of_dofs, number_of_dofs, m_boundary_dofs, m_boundary_dofs, indices_row_without_boundary_dofs, indices_col_without_boundary_dofs);
+	}
+
+	void initialize(const unsigned int number_of_dofs)
+	{
+		m_reduced_number_of_dofs += number_of_dofs;
+		assert(m_reduced_number_of_dofs >= 0 && "something at the initialization of boundary dofs failed");
+
+		m_initialized = true;
+		initialize_new_indices(number_of_dofs, number_of_dofs, m_boundary_dofs, m_boundary_dofs, indices_row_without_boundary_dofs, indices_col_without_boundary_dofs);
 	}
 
 	/*!
@@ -61,24 +70,32 @@ public:
 	 * Check if an index is element of the set boundary_nodes
 	 */
 	const bool check_node(unsigned int index) const {
-		return (m_boundary_nodes.find(index) != m_boundary_nodes.end());
+		return (m_boundary_dofs.find(index) != m_boundary_dofs.end());
 	}
 
 
 	/*!
 	 * Get number of boundary nodes
 	 */
-	const unsigned int get_number_of_boundary_nodes() const {return m_boundary_nodes.size();}
+	const unsigned int get_number_of_boundary_dofs() const {return m_boundary_dofs.size();}
 
 	/*!
 	 * Get total number of nodes
 	 */
-	const unsigned int get_number_of_nodes() const {return get_number_of_boundary_nodes()+get_reduced_number_of_nodes();}
+	const unsigned int get_number_of_dofs() const {return get_number_of_boundary_dofs()+get_reduced_number_of_dofs();}
 
 	/*!
 	 * Get number of remaining nodes, aka non-boundary nodes
 	 */
-	const unsigned int get_reduced_number_of_nodes() const {return m_reduced_number_of_nodes;}
+	const unsigned int get_reduced_number_of_dofs() const {return m_reduced_number_of_dofs;}
+
+
+	/*! add a boundaryDOF*/
+	void add_boundaryDOF(unsigned int i)
+	{
+		m_boundary_dofs.insert(i);
+		m_reduced_number_of_dofs--;
+	}
 
 
 	/*!
@@ -97,7 +114,8 @@ public:
 			Eigen::VectorXd &b_new
 	) const {
 
-		assert(A.rows() == (int) get_number_of_nodes());
+		assert(m_initialized && "Boundary handler is not initialised yet");
+		assert(A.rows() == (int) get_number_of_dofs());
 		assert(A.rows() == A.cols());
 		assert(b.size() == A.rows());
 
@@ -105,15 +123,15 @@ public:
 
 
 		// copy elements from A to A_new and from b to b_new
-		const boundary_DOFs_type::const_iterator end=m_boundary_nodes.end();
-		const unsigned int bn = get_number_of_boundary_nodes();
+		const boundary_DOFs_type::const_iterator end=m_boundary_dofs.end();
+		const unsigned int bn = get_number_of_boundary_dofs();
 		const unsigned int N_new = N-bn;
 		b_new.resize(N_new);
 
 		unsigned int An_col=0;
 		for (int k=0; k<A.cols(); ++k)
 		{
-			if (m_boundary_nodes.find(k)==end)
+			if (m_boundary_dofs.find(k)==end)
 			{
 				// copy from b to b_new
 				b_new(An_col) = b(k);
@@ -123,7 +141,7 @@ public:
 			}
 		}
 
-		get_row_columns(A, A_new, m_boundary_nodes, m_boundary_nodes, indices_row_without_boundary_nodes, indices_col_without_boundary_nodes);
+		get_row_columns(A, A_new, m_boundary_dofs, m_boundary_dofs, indices_row_without_boundary_dofs, indices_col_without_boundary_dofs);
 	}
 
 
@@ -139,9 +157,10 @@ public:
 			Eigen::SparseMatrixD &A_new
 	) const {
 
-		assert(A.rows() == (int) get_number_of_nodes());
+		assert(m_initialized && "Boundary handler is not initialised yet");
+		assert(A.rows() == (int) get_number_of_dofs());
 		assert(A.rows() == A.cols());
-		get_row_columns(A, A_new, m_boundary_nodes, m_boundary_nodes, indices_row_without_boundary_nodes, indices_col_without_boundary_nodes);
+		get_row_columns(A, A_new, m_boundary_dofs, m_boundary_dofs, indices_row_without_boundary_dofs, indices_col_without_boundary_dofs);
 	}
 
 
@@ -157,11 +176,12 @@ public:
 			Eigen::VectorXd &b_new) const
 	{
 
-		assert(b.size() == (int) get_number_of_nodes());
+		assert(m_initialized && "Boundary handler is not initialised yet");
+		assert(b.size() == (int) get_number_of_dofs());
 
 		// copy elements from from b to b_new
-		const boundary_DOFs_type::const_iterator end=m_boundary_nodes.end();
-		const unsigned int N_new = get_reduced_number_of_nodes();
+		const boundary_DOFs_type::const_iterator end=m_boundary_dofs.end();
+		const unsigned int N_new = get_reduced_number_of_dofs();
 		b_new.resize(N_new);
 
 
@@ -169,7 +189,7 @@ public:
 
 		for (int k=0; k<b.rows(); ++k)
 		{
-			if (m_boundary_nodes.find(k)==end)	// if k is not an index of an inner node (not boundary node!!) add b(k) to b_new
+			if (m_boundary_dofs.find(k)==end)	// if k is not an index of an inner node (not boundary node!!) add b(k) to b_new
 			{
 				// copy from b to b_new
 				b_new(b_row) = b(k);
@@ -195,14 +215,15 @@ public:
 			Eigen::SparseMatrixD &A_new,		 Eigen::VectorXd &x_new) const
 	{
 
-		assert(A.cols() == (int) get_reduced_number_of_nodes());
+		assert(m_initialized && "Boundary handler is not initialised yet");
+		assert(A.cols() == (int) get_reduced_number_of_dofs());
 		assert(A.cols() == A.rows());
 		assert(x.size() == A.cols());
 
 		// copy elements from x to x_new
 
-		const boundary_DOFs_type::const_iterator end=m_boundary_nodes.end();
-		const unsigned int N_new = get_number_of_nodes();
+		const boundary_DOFs_type::const_iterator end=m_boundary_dofs.end();
+		const unsigned int N_new = get_number_of_dofs();
 		x_new.resize(N_new);
 		A_new.resize(N_new, N_new);
 		A_new.reserve(A.nonZeros());
@@ -210,13 +231,13 @@ public:
 		unsigned int An_col	=0;
 		for (unsigned int i=0; i<N_new; ++i)
 		{
-			if (m_boundary_nodes.find(i)==end) 	// if i is index of an inner node copy entries to A_new and x_new
+			if (m_boundary_dofs.find(i)==end) 	// if i is index of an inner node copy entries to A_new and x_new
 			{
 
 				unsigned int An_row=0;
 				for(unsigned int j=0; j<N_new; ++j)
 				{
-					if(m_boundary_nodes.find(j)==end) // if j is index of an inner node
+					if(m_boundary_dofs.find(j)==end) // if j is index of an inner node
 					{
 						// ensure no Zero entries are inserted
 						if (A.coeff(j,i)!=0)
@@ -257,27 +278,28 @@ public:
 			Eigen::SparseMatrixD &A_new) const
 	{
 
+		assert(m_initialized && "Boundary handler is not initialised yet");
 		assert(A.cols() == A.rows());
-		assert(A.cols() == (int) get_reduced_number_of_nodes());
+		assert(A.cols() == (int) get_reduced_number_of_dofs());
 
 
 		// copy elements from x to x_new
 
-		const boundary_DOFs_type::const_iterator end=m_boundary_nodes.end();
-		const unsigned int N_new = get_number_of_nodes();
+		const boundary_DOFs_type::const_iterator end=m_boundary_dofs.end();
+		const unsigned int N_new = get_number_of_dofs();
 		A_new.resize(N_new, N_new);
 		A_new.reserve(A.nonZeros());
 
 		unsigned int An_col	=0;
 		for (unsigned int i=0; i<N_new; ++i)
 		{
-			if (m_boundary_nodes.find(i)==end) 	// if i is index of an inner node copy entries to A_new and x_new
+			if (m_boundary_dofs.find(i)==end) 	// if i is index of an inner node copy entries to A_new and x_new
 			{
 
 				unsigned int An_row=0;
 				for(unsigned int j=0; j<N_new; ++j)
 				{
-					if(m_boundary_nodes.find(j)==end) // if j is index of an inner node
+					if(m_boundary_dofs.find(j)==end) // if j is index of an inner node
 					{
 						// ensure no Zero entries are inserted
 						if (A.coeff(j,i)!=0)
@@ -309,17 +331,18 @@ public:
 	void add_boundary_dofs (const Eigen::VectorXd &x, Eigen::VectorXd &x_new) const
 	{
 
-		assert(x.size() == (int) get_reduced_number_of_nodes());
+		assert(m_initialized && "Boundary handler is not initialised yet");
+		assert(x.size() == (int) get_reduced_number_of_dofs());
 
 		// copy elements from x to x_new
-		const boundary_DOFs_type::const_iterator end=m_boundary_nodes.end();
-		const unsigned int N_new = get_number_of_nodes();
+		const boundary_DOFs_type::const_iterator end=m_boundary_dofs.end();
+		const unsigned int N_new = get_number_of_dofs();
 		x_new.resize(N_new);
 
 		unsigned int index=0;
 		for (unsigned int i=0; i<N_new; ++i)
 		{
-			if (m_boundary_nodes.find(i)==end) 	// if i is index of an inner node
+			if (m_boundary_dofs.find(i)==end) 	// if i is index of an inner node
 			{
 				// index i is an index of an inner node
 				x_new(i) = x(index);
@@ -344,18 +367,19 @@ public:
 	void add_boundary_dofs (const Eigen::VectorXd &x, const Eigen::VectorXd &y, Eigen::VectorXd &x_new) const
 	{
 
-		assert(x.size() == (int) get_reduced_number_of_nodes());
-		assert(y.size() == get_number_of_nodes());
+		assert(m_initialized && "Boundary handler is not initialised yet");
+		assert(x.size() == (int) get_reduced_number_of_dofs());
+		assert(y.size() == get_number_of_dofs());
 
 		// copy elements from x to x_new
-		const boundary_DOFs_type::const_iterator end=m_boundary_nodes.end();
-		const unsigned int N_new = get_number_of_nodes();
+		const boundary_DOFs_type::const_iterator end=m_boundary_dofs.end();
+		const unsigned int N_new = get_number_of_dofs();
 		x_new.resize(N_new);
 
 		unsigned int index=0;
 		for (unsigned int i=0; i<N_new; ++i)
 		{
-			if (m_boundary_nodes.find(i)==end) 	// if i is index of an inner node
+			if (m_boundary_dofs.find(i)==end) 	// if i is index of an inner node
 			{
 				// index i is an index of an inner node
 				x_new(i) = x(index);
@@ -378,7 +402,7 @@ private:
 	 *  \param grid  		input
 	 *  \param m_boundary_nodes 	output - set containing indices of boundary nodes of grid
 	 */
-	static void get_boundary_nodes (const grid_type &grid, boundary_DOFs_type &m_boundary_nodes)
+	static void get_boundary_nodes (const grid_type &grid, boundary_DOFs_type &m_boundary_dofs)
 	{
 		// loop over all leaf cells
 		for (typename grid_type::leafcellmap_type::const_iterator
@@ -422,7 +446,7 @@ private:
 						// add index of node at boundary to m_boundary_nodes
 						int loc_no = ((f + 1) % shapes_per_face)*2+ishape;
 						loc_no = loc_no % 6;
-						m_boundary_nodes.insert(LC.n_offset+ loc_no);
+						m_boundary_dofs.insert(LC.n_offset+ loc_no);
 						cout << "inserted " <<  LC.n_offset<< " " << LC.n_offset+loc_no <<endl;
 					}
 
@@ -430,17 +454,20 @@ private:
 
 			} // end loop over faces
 		} // end for-loop over leaf cells
+
+//		m_boundary_nodes.insert(0);m_boundary_nodes.insert(2);m_boundary_nodes.insert(4);
+
 	}
 
 
 protected:
 
 	bool m_initialized;
-	boundary_DOFs_type m_boundary_nodes;
-	unsigned m_reduced_number_of_nodes;
+	boundary_DOFs_type m_boundary_dofs;
+	int m_reduced_number_of_dofs;
 
 	//These vectors map an row_index resp. col_index to a row_index ignoring prior rows belonging to a boundary_node
-	Eigen::VectorXi indices_row_without_boundary_nodes, indices_col_without_boundary_nodes;
+	Eigen::VectorXi indices_row_without_boundary_dofs, indices_col_without_boundary_dofs;
 
 };
 
