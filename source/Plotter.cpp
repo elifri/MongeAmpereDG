@@ -10,13 +10,14 @@
 
 #include "../include/Tshape.hpp"
 
+
 #include "boost/archive/iterators/insert_linebreaks.hpp"
 #include "boost/archive/iterators/base64_from_binary.hpp"
 #include "boost/archive/iterators/binary_from_base64.hpp"
 #include "boost/archive/iterators/transform_width.hpp"
 
 using namespace boost::archive::iterators;
-
+using namespace std;
 
 //////////////////////////////////////////////////////////
 enum {
@@ -127,6 +128,31 @@ void Plotter::write_vtk_header(std::ofstream& file, const int Nnodes, const int 
 	file << "\t\t<Piece NumberOfPoints=\"" << Nnodes << "\" NumberOfCells=\""
 			<< Nelements << "\">\n";
 }
+
+/*
+void Plotter::read_vtk_header(std::ifstream& file, int &Nnodes, int &Nelements)
+{
+	assert (!file.eof() && "The inserted vtk file is too short");
+	string::line;
+	getline(file,line); //<?xml version=\"1.0\"?>
+
+	assert (!file.eof() && "The inserted vtk file is too short");
+	getline(file,line); //<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">
+	assert (!file.eof() && "The inserted vtk file is too short");
+	getline(file,line); //<UnstructuredGrid>
+
+	std::stringstream ss;
+
+	while(file. != '\"') //read \t\t<Piece NumberOfPoints=\"
+		ss << file;
+
+	ss << file; // ss contains now number of points
+
+	Nnodes << ss;
+
+	//TODO to be continued
+}
+*/
 
 void Plotter::write_error(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
 {
@@ -470,6 +496,49 @@ void write_vtk_end(std::ofstream &file)
 }
 
 //-----------------combination----------------
+
+/*
+void Plotter::read_VTK(const std::string filename)
+{
+	// open file
+	check_file_extension(filename, ".vtu");
+	std::ifstream file(filename);
+
+
+	int nodes, elements;
+	read_VTK_header(file, nodes, elements);
+
+	stringstream ss;
+	string line;
+
+	while (ss.str() != "<Points>")
+	{
+		assert (!file.eof() && "Cannot find any points in vtk inputfile!");
+		file << ss;
+	}
+
+	assert (!file.eof() && "cannot read vtk file!");
+	getline(file, line); //"\n"
+	assert (!file.eof() && "cannot read vtk file!");
+	getline(file, line); //"\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">\n";
+
+	double x,y,z;
+
+	for (int i = 0; i < nodes; i++)
+	{
+		assert (!file.eof() && "vtk:input number of points does not match given number");
+		//read coordinates
+		file << ss; x << ss;
+		file << ss; y << ss;
+
+		// solution value
+		file << ss; z << ss;
+
+		points.insert(space_type(x,y), z);
+	}
+
+}*/
+
 
 void Plotter::writeLeafCellVTK(std::string filename, const unsigned int refine, const bool binary) {
 
