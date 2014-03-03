@@ -13,6 +13,7 @@
 
 #include "config.hpp"
 #include "grid_config.hpp"
+#include "Tshape.hpp"
 
 
 //------------------------------------------------------------------------------
@@ -460,11 +461,129 @@ private:
 	}
 
 
+	/*
+	 * @brief helper function for assemble_LGS : assembles all possible matrices for an element at the boundary
+	 * @param number_of_faces	number of boundary faces
+	 * @param max_number_face	number of faces in an element
+	 * @param shapes_per_face	number of ansatz functions on one face
+	 */
+	void assemble_LGS_triangle_less2(int number_of_faces, int max_number_face, unsigned int shapes_per_face)
+	{
+		assert (number_of_faces <=2 && number_of_faces >= 0 && "this function is only implement up to a number of two faces");
+
+		int i = 0, j = 0;
+
+		//loop over all variations
+		switch(number_of_faces)
+	{
+		case 1:
+			cout << "case 1" << endl;
+
+			for (int f = 0; f < max_number_face; f++) {
+				i*=0;
+				m_boundary_LGS[f] = Eigen::MatrixXd::Zero(shapes_per_face,
+						shapes_per_face); //init LGS matrix
+				int first_dof = f * (shapes_per_face-1); //first dof lying on face f
+
+				//loop over bezier control points
+				for (unsigned int bezier_control_pt = first_dof;
+						bezier_control_pt < shapes_per_face + first_dof;
+						bezier_control_pt++) {
+					//assemble matrix
+					// loop over all boundary dofs interfering with the current bezier control point
+					for (unsigned int jshape = first_dof;
+							jshape < shapes_per_face + first_dof; ++jshape) {
+						m_boundary_LGS[f](i,j) = m_shape->nodal_contrib(
+								jshape % shapedim)(
+								bezier_control_pt % shapedim);
+						j++;
+					}
+					j*=0;
+					i++;
+				}
+				cout << " face " << f << " LSG:\n " <<  m_boundary_LGS[f] << endl;
+
+			}
+			break;
+		case 2:
+			for (int f1 = 0; f1 < max_number_face; f1++) {
+				for (int f2 = f1; f2 < max_number_face; f2++) {
+					i*=0;
+					m_boundary_LGS[(f1+1)*10+f2] = Eigen::MatrixXd::Zero(2*shapes_per_face-1, 2*shapes_per_face-1); //init LGS matrix
+					int first_dof;
+
+					if (f2 != max_number_face - 1){ // dofs on f1 have smaller numbers
+						first_dof = f1 * 2; //first dof lying on face f1
+					}
+					else{ //dofs on f2 have smaller numbers
+						first_dof = f2 * 2; //first dof lying on face f2
+					}
+
+					//loop over bezier control points
+					for (unsigned int bezier_control_pt = first_dof;
+							bezier_control_pt < 2*shapes_per_face-1 + first_dof;
+							bezier_control_pt++) {
+						//assemble matrix
+						// loop over all boundary dofs interfering with the current bezier control point
+						for (unsigned int jshape = first_dof;
+								jshape < 2*shapes_per_face-1 + first_dof;
+								++jshape) {
+							m_boundary_LGS[(f1+1)*10+f2](i, j)
+									+= m_shape->nodal_contrib(jshape % shapedim)(bezier_control_pt % shapedim);
+							j++;
+						}
+						j*=0;
+						i++;
+					}
+				}
+			}
+			break;
+			default: cerr << "This case is not implemented!" << endl; exit(1);
+	}
+
+	}
+
+	/*
+	 * @brief helper function for assemble_LGS : assembles all possible matrices for an element at the boundary
+	 * @param number_of_faces	number of boundary faces
+	 * @param max_number_face	number of faces in an element
+	 * @param shapes_per_face	number of ansatz functions on one face
+	 */
+	void assemble_LGS_triangle()
+	{
+		int shapes_per_face = shapedim/Fdim + 1;
+		assemble_LGS_triangle_less2(1, 3, shapes_per_face);
+		assemble_LGS_triangle_less2(2, 3, shapes_per_face);
+
+	}
+
+	/*
+	 * ! return the LGS belonging to an element with only one boundary face namely f
+	 */
+	const Eigen::MatrixXd& get_LGS(const int f)
+	{
+		return m_boundary_LGS[f];
+	}
+
+	/*
+	 * ! return the LGS belonging to an element with exactly two boundary faces namely f1, f2
+	 */
+	const Eigen::MatrixXd& get_LGS(const int f1, const int f2)
+	{
+		return m_boundary_LGS[f1*10+f2];
+	}
+
 protected:
 
 	bool m_initialized;
 	boundary_DOFs_type m_boundary_dofs;
 	int m_reduced_number_of_dofs;
+	const Tshape* m_shape;
+
+	Eigen::VectorXd m_nodal_contrib;
+
+	std::map<int, Eigen::MatrixXd> m_boundary_LGS;
+
 
 	//These vectors map an row_index resp. col_index to a row_index ignoring prior rows belonging to a boundary_node
 	Eigen::VectorXi indices_row_without_boundary_dofs, indices_col_without_boundary_dofs;
