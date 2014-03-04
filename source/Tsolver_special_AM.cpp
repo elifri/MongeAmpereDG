@@ -491,7 +491,6 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 								l = 1 - r;
 								space_type x = l * startvec + r * endvec;
 
-							state_type uLC;
 								state_type uLC;
 								get_exacttemperature_MA(x, uLC); // determine uLC (value at boundary point x)
 

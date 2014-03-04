@@ -462,7 +462,6 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, boundary_
 	Eigen::VectorXd g(dim);
 
 	state_type u;
-	nvector_type nvRC = m_shape->get_nodes();
 	nvector_type nvLC;
 
 
