@@ -4,6 +4,7 @@
 #include "assert.h"
 
 #include "config.hpp"
+#include <vector>
 
 #include "Tmass.hpp"
 #include "Equad.hpp"
@@ -43,7 +44,8 @@ public:
 
 	igpm::tvector<igpm::tvector<igpm::tvector<double, shapedim>, shapedim>,
 			childdim> refinement_rules; // double refinement_rules(childdim,shapedim)[shapedim];
-	igpm::tvector<igpm::tvector<double, Ndim>, shapedim> nodal_contrib; // double nodal_contrib[shapedim][Ndim];
+	Eigen::Matrix<Eigen::Matrix<value_type, Ndim*degreedim,1>, shapedim, 1> nodal_contrib;
+	Eigen::Matrix<std::vector<int>, Eigen::Dynamic, 1 > contrib; /// stores for every bezier node all shapefct not equal to zero on this face
 
 public:
 

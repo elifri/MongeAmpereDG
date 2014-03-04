@@ -288,22 +288,6 @@ void Tsolver::get_normal_length (const Nvector_type & nv,
   normal[1] /= length;
 };
 
-////////////////////////////////////////////////////
-
-void Tsolver::get_nodes(const grid_type::id_type& idLC, nvector_type &nvEigen) const
-{
-	Nvector_type nv;
-	grid.nodes(idLC,nv);
-
-	nvEigen.resize(nv.size());
-	for (unsigned int i=0; i< nv.size(); ++i)
-	{
-		for (int j = 0; j < spacedim; j++)
-		{
-			nvEigen(i)(j) = nv[i][j];
-		}
-	}
-}
 
 ////////////////////////////////////////////////////
 

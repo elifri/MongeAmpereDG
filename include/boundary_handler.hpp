@@ -15,7 +15,6 @@
 #include "grid_config.hpp"
 #include "Tshape.hpp"
 
-
 //------------------------------------------------------------------------------
 // Add or delete boundary degrees of freedom
 //------------------------------------------------------------------------------
@@ -26,6 +25,8 @@ class boundary_handler
 public:
 
 	typedef typename std::set<unsigned int> boundary_DOFs_type;
+
+	typedef Eigen::Matrix<bool, Eigen::Dynamic, 1> VectorXb;
 
 	//typedef iterator for convenience
 	typedef typename boundary_DOFs_type::const_iterator bd_const_iterator;
@@ -50,9 +51,15 @@ public:
 		initialize_new_indices(number_of_dofs, number_of_dofs, m_boundary_dofs, m_boundary_dofs, indices_row_without_boundary_dofs, indices_col_without_boundary_dofs);
 	}
 
-	void initialize(const unsigned int number_of_dofs)
+	void initialize_bezier(const grid_type &grid, const unsigned int number_of_dofs, const vector_function_type  &boundary_conditions, const Tshape* shape_ptr)
 	{
-		m_reduced_number_of_dofs += number_of_dofs;
+		m_nodal_contrib.setZero(number_of_dofs);
+		m_shape = shape_ptr;
+
+		assemble_LGS_triangle();
+		get_boundary_dofs_bezier(grid, m_boundary_dofs, m_nodal_contrib, boundary_conditions);
+		m_reduced_number_of_dofs = number_of_dofs - get_number_of_boundary_dofs();
+
 		assert(m_reduced_number_of_dofs >= 0 && "something at the initialization of boundary dofs failed");
 
 		m_initialized = true;
@@ -72,6 +79,10 @@ public:
 	 */
 	const bool check_node(unsigned int index) const {
 		return (m_boundary_dofs.find(index) != m_boundary_dofs.end());
+	}
+
+	const Eigen::VectorXd& get_nodal_contributions() const{
+		return m_nodal_contrib;
 	}
 
 
@@ -403,7 +414,7 @@ private:
 	 *  \param grid  		input
 	 *  \param m_boundary_nodes 	output - set containing indices of boundary nodes of grid
 	 */
-	static void get_boundary_nodes (const grid_type &grid, boundary_DOFs_type &m_boundary_dofs)
+	void get_boundary_nodes (const grid_type &grid, boundary_DOFs_type &m_boundary_dofs)
 	{
 		// loop over all leaf cells
 		for (typename grid_type::leafcellmap_type::const_iterator
@@ -447,8 +458,8 @@ private:
 						// add index of node at boundary to m_boundary_nodes
 						int loc_no = ((f + 1) % shapes_per_face)*2+ishape;
 						loc_no = loc_no % 6;
-						m_boundary_dofs.insert(LC.n_offset+ loc_no);
-						cout << "inserted " <<  LC.n_offset<< " " << LC.n_offset+loc_no <<endl;
+						m_boundary_dofs.insert(LC.m_offset+ loc_no);
+						cout << "inserted " <<  LC.m_offset<< " " << LC.m_offset+loc_no <<endl;
 					}
 
 				}
@@ -460,6 +471,53 @@ private:
 
 	}
 
+	/*@brief adds all rows belonging to a dof on boundary face f to the boundary LGS i
+	 *
+	 * @param i 	index of the LGS to which will be added
+	 * @param f 	face belonging to the boundary
+	 * @param shapes_per_face number of shapes on one boundary
+	 */
+	void add_to_LGS(const int i, const int f, unsigned int shapes_per_face, VectorXb& bezier_at_bd)
+	{
+		//first bezier_point lying on face f
+		int first_bez_pt = (f+1) * (shapes_per_face-1);
+		first_bez_pt %= shapedim;
+
+		//loop over bezier control points
+		for (unsigned int bezier_control_pt = first_bez_pt;
+				bezier_control_pt < shapes_per_face + first_bez_pt;
+				bezier_control_pt++) {
+
+			//assemble matrix
+			int jshape;
+
+			// loop over all boundary dofs interfering with the current bezier control point
+			for (unsigned int j = 0; j < m_shape->contrib[bezier_control_pt % shapedim].size(); ++j) {
+				jshape = m_shape->contrib[bezier_control_pt % shapedim][j];
+				m_boundary_LGS[i](bezier_control_pt % shapedim,jshape) += m_shape->nodal_contrib(jshape)(bezier_control_pt % shapedim);
+				m_shape_at_boundary[i](jshape) = true;
+				bezier_at_bd(bezier_control_pt % shapedim) = true;
+			}
+		}
+	}
+
+	void fill_up_rank_LGS(const int index, const VectorXb &bezier_at_boundary)
+	{
+		//adds ones on the diagonal such that LGS has full rank
+		// -> add 1 for inner dofs in the rows not used (inner bezier points)
+			int i=0, j=0;
+
+			while(i < shapedim && j < shapedim){
+				while(i < shapedim && bezier_at_boundary(i) )
+					i++;
+				while(j < shapedim && m_shape_at_boundary[index](j))
+					j++;
+				if (i >= shapedim || j >= shapedim) break;
+					m_boundary_LGS[index](i,j) = 1;
+					i++;
+					j++;
+				}
+	}
 
 	/*
 	 * @brief helper function for assemble_LGS : assembles all possible matrices for an element at the boundary
@@ -471,8 +529,6 @@ private:
 	{
 		assert (number_of_faces <=2 && number_of_faces >= 0 && "this function is only implement up to a number of two faces");
 
-		int i = 0, j = 0;
-
 		//loop over all variations
 		switch(number_of_faces)
 	{
@@ -480,61 +536,40 @@ private:
 			cout << "case 1" << endl;
 
 			for (int f = 0; f < max_number_face; f++) {
-				i*=0;
-				m_boundary_LGS[f] = Eigen::MatrixXd::Zero(shapes_per_face,
-						shapes_per_face); //init LGS matrix
-				int first_dof = f * (shapes_per_face-1); //first dof lying on face f
+				m_boundary_LGS[f] = Eigen::MatrixXd::Zero(shapedim,	shapedim); //init LGS matrix
+				m_shape_at_boundary[f] = VectorXb::Constant(shapedim, false);
+				VectorXb bezier_at_boundary = VectorXb::Constant(shapedim, false);
 
-				//loop over bezier control points
-				for (unsigned int bezier_control_pt = first_dof;
-						bezier_control_pt < shapes_per_face + first_dof;
-						bezier_control_pt++) {
-					//assemble matrix
-					// loop over all boundary dofs interfering with the current bezier control point
-					for (unsigned int jshape = first_dof;
-							jshape < shapes_per_face + first_dof; ++jshape) {
-						m_boundary_LGS[f](i,j) = m_shape->nodal_contrib(
-								jshape % shapedim)(
-								bezier_control_pt % shapedim);
-						j++;
-					}
-					j*=0;
-					i++;
-				}
-				cout << " face " << f << " LSG:\n " <<  m_boundary_LGS[f] << endl;
+				add_to_LGS(f, f, shapes_per_face, bezier_at_boundary);
+
+				fill_up_rank_LGS(f, bezier_at_boundary);
+
+				cout << " face " << f
+						<< "\n shapes :" << m_shape_at_boundary[f].transpose()
+						<< "\n bezier pts :" << bezier_at_boundary.transpose()
+						<<"\n LSG:\n " <<  m_boundary_LGS[f] << endl;
 
 			}
 			break;
 		case 2:
 			for (int f1 = 0; f1 < max_number_face; f1++) {
-				for (int f2 = f1; f2 < max_number_face; f2++) {
-					i*=0;
-					m_boundary_LGS[(f1+1)*10+f2] = Eigen::MatrixXd::Zero(2*shapes_per_face-1, 2*shapes_per_face-1); //init LGS matrix
-					int first_dof;
+				for (int f2 = f1+1; f2 < max_number_face; f2++) {
+					int index = (f1+1)*10+f2;
 
-					if (f2 != max_number_face - 1){ // dofs on f1 have smaller numbers
-						first_dof = f1 * 2; //first dof lying on face f1
-					}
-					else{ //dofs on f2 have smaller numbers
-						first_dof = f2 * 2; //first dof lying on face f2
-					}
+					m_boundary_LGS[index] = Eigen::MatrixXd::Zero(shapedim, shapedim); //init LGS matrix
+					m_shape_at_boundary[index] = VectorXb::Constant(shapedim, false);
+					VectorXb bezier_at_boundary = VectorXb::Constant(shapedim, false);
 
-					//loop over bezier control points
-					for (unsigned int bezier_control_pt = first_dof;
-							bezier_control_pt < 2*shapes_per_face-1 + first_dof;
-							bezier_control_pt++) {
-						//assemble matrix
-						// loop over all boundary dofs interfering with the current bezier control point
-						for (unsigned int jshape = first_dof;
-								jshape < 2*shapes_per_face-1 + first_dof;
-								++jshape) {
-							m_boundary_LGS[(f1+1)*10+f2](i, j)
-									+= m_shape->nodal_contrib(jshape % shapedim)(bezier_control_pt % shapedim);
-							j++;
-						}
-						j*=0;
-						i++;
-					}
+					//add dofs on face f1
+					add_to_LGS(index, f1, shapes_per_face, bezier_at_boundary);
+					//add dofs on face f2
+					add_to_LGS(index, f2, shapes_per_face, bezier_at_boundary);
+
+					fill_up_rank_LGS(index, bezier_at_boundary);
+
+					cout << " faces " << f1  << " " << f2
+							<< "\n shapes:" << m_shape_at_boundary[index].transpose()
+							<< "\n LSG:\n " <<  m_boundary_LGS[index] << endl;
 				}
 			}
 			break;
@@ -573,6 +608,130 @@ private:
 		return m_boundary_LGS[f1*10+f2];
 	}
 
+	/*!
+	 *  Stores the indices of the boundary nodes to m_boundary_nodes
+	 *
+	 *  \param grid  		input
+	 *  \param m_boundary_nodes 	output - set containing indices of boundary nodes of grid
+	 */
+	void get_boundary_dofs_bezier(const grid_type &grid, boundary_DOFs_type &m_boundary_dofs, Eigen::VectorXd & nodal_contrib, const vector_function_type  &get_boundary_conditions)
+	{
+		int dim = shapedim;
+
+		unsigned int shapes_per_face = shapedim/Fdim + 1 ;
+
+		Eigen::VectorXd g(dim);
+
+		state_type u;
+		nvector_type nvRC = m_shape->get_nodes();
+		nvector_type nvLC;
+
+
+		// loop over all leaf cells
+		for (typename grid_type::leafcellmap_type::const_iterator
+				it = grid.leafCells().begin();
+				it != grid.leafCells().end(); ++it)
+		{
+			// get id and leaf cell
+			const typename grid_type::id_type & idLC = grid_type::id(it);
+			const typename grid_type::leafcell_type & LC = grid_type::cell(it);
+
+//			if(!LC.isActive()) continue;
+
+			typename grid_type::faceidvector_type vF;		   // neighbor ids
+			typename grid_type::facehandlevector_type vFh, vOh;   // neighbor face number and orientation
+			grid.faceIds(idLC, vF, vFh, vOh);
+
+			g.setZero();
+			int LGS_index = -1, boundary_dof_no = 0;
+
+			for (unsigned int f = 0; f < idLC.countFaces(); f++) { //loop over faces
+
+				bool is_outer_boundary=false;
+				if (vF[f].isValid()) {	// face f of the current leaf cell is part of the (outer) boundary
+
+					const typename grid_type::leafcell_type *pNC = NULL;    // neighbor cell
+
+					// try to find neighbor cell with id vF[f]
+					if (grid.findLeafCell(vF[f], pNC)) {
+
+//						if(!pNC->isActive()) {
+//							is_outer_boundary=true;
+//						}
+					}
+				} else {
+					is_outer_boundary=true;
+				}
+
+				cout << "LSg index in loop f " << LGS_index << endl;
+
+				if(is_outer_boundary)
+				{
+					if (LGS_index == -1){ //first boundary edge
+						LGS_index = f;
+					}
+					else{ //second boundary edge
+						LGS_index = (LGS_index+1)*10;
+						LGS_index += f;
+
+						boundary_dof_no--; //both faces share one boundary dof
+					}
+
+					//get boundary conditions at boundary dof
+					get_nodes(grid, idLC, nvLC);
+
+					//TODO works only for triangles
+					space_type startvecLC = nvLC( (f+1) % 3); //boundary Dof at left end of face i
+					space_type endvecLC = nvLC( (f+2) % 3); //boundary Dof at right end of face i
+
+					value_type l,r;
+
+					for (unsigned int ishape = 0; ishape < shapes_per_face; ++ishape) //loop over boundary DOF at face i
+					{
+						//bezier points are distibuted equidistantly
+						r = (value_type) ishape / (value_type) (shapes_per_face-1);
+						l = 1 - r;
+						space_type bezier_control_pt = l * startvecLC + r * endvecLC;
+
+						get_boundary_conditions(bezier_control_pt,u);
+
+						//calculate local number of boundary dof
+						int loc_no = ((f + 1) % shapes_per_face)*2+ishape;
+						loc_no = loc_no % 6;
+
+						//set rhs of LGS
+						g(boundary_dof_no) = u(0);
+						boundary_dof_no++;
+
+						//assemble matrix part
+					}
+				} //end if is_outer_boundary
+
+			}//end loop over faces
+
+			if (LGS_index != -1) // this leafcell has at least one boundary face
+			{
+
+				Eigen::MatrixXd& P = m_boundary_LGS[LGS_index];
+
+				g.conservativeResize(P.cols());
+
+				Eigen::VectorXd alpha = P.householderQr().solve(g);
+				cout << "alpha " << alpha.transpose() << endl;
+
+				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+					if (m_shape_at_boundary[LGS_index](ishape))
+					{
+						nodal_contrib[LC.m_offset +ishape] = alpha(ishape);
+						m_boundary_dofs.insert(LC.m_offset + ishape);
+						cout << "inserted " << LC.m_offset + ishape << endl;
+					}
+
+				}
+			}//end if LSG_index != 1
+		}
+	}
+
 protected:
 
 	bool m_initialized;
@@ -583,7 +742,7 @@ protected:
 	Eigen::VectorXd m_nodal_contrib;
 
 	std::map<int, Eigen::MatrixXd> m_boundary_LGS;
-
+	std::map<int, VectorXb> m_shape_at_boundary;
 
 	//These vectors map an row_index resp. col_index to a row_index ignoring prior rows belonging to a boundary_node
 	Eigen::VectorXi indices_row_without_boundary_dofs, indices_col_without_boundary_dofs;

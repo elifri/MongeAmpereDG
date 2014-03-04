@@ -118,6 +118,12 @@ int main(int argc, char **argv) {
     exit(2);
   }
 
+  if(!singleton_config_file::instance().getValue("general","interpolating",solver.interpolating_basis,false)) {
+    cerr << "Essential option [general] interpolating missing in config file!" << endl;
+    exit(2);
+  }
+
+
   cerr << "gridfiletemplate = " << gridfiletemplate << endl;
   cerr << "outputdir = " << outputdir << endl;
   cerr << "msafile = " << msafile << endl;

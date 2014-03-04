@@ -246,8 +246,15 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
  */
 void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs, Eigen::VectorXd &Lbd) {
+	if (interpolating_basis){
+		Lbd.setZero(Lrhs.size());
+	}
+	else{
+		cout << "bd_handler size " << bd_handler.get_nodal_contributions().size() << endl;
+		Lbd = bd_handler.get_nodal_contributions();
 
-	Lbd.setZero(Lrhs.size());
+		cout << "Lbd size " << Lbd.size() << endl;
+	}
 
 	unsigned int gaussbaseLC = 0;
 	unsigned int gaussbaseNC = 0;
@@ -360,6 +367,23 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 									const int col_LC = pLC->n_offset + jshape;
 									const int col_NC = pNC->n_offset + jshape;
 
+//									if (row_LC == 2){
+//										state_type x;
+//										get_exacttemperature_MA(space_type(0,2),x);
+//										Lbd(2) = x(0);
+//									}
+//									if (row_LC == 4){
+//										state_type x;
+//										get_exacttemperature_MA(space_type(0.25,0.25),x);
+//										Lbd(2) = x(0);
+//									}
+//									if (row_LC == 0){
+//										state_type x;
+//										get_exacttemperature_MA(space_type(0.25,0.75),x);
+//										Lbd(2) = x(0);
+//									}
+
+
 									value_type A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,jshape,iqLC),
 											   A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,jshape,iqNC);
 
@@ -374,6 +398,19 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 									LM.coeffRef(row_NC, col_LC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* A_times_normal_BC / facLevelLength[level];
 
 									LM.coeffRef(row_NC, col_NC) += 0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
+
+									// b2(u, phi)
+//									LM.coeffRef(row_LC, col_LC) += 0.5 // to average
+//											* shape.get_Fquadw(iqLC) * length//quadrature weights
+//											* shape.get_Fquads(ishape,iqLC) //average
+//											* (A_times_normal_BC-A_times_normal_NBC)/ facLevelLength[level]; //jump
+//
+//									LM.coeffRef(row_LC, col_NC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * A_times_normal_NBC / facLevelLength[levelNC];
+//
+//									LM.coeffRef(row_NC, col_LC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* A_times_normal_BC / facLevelLength[level];
+//
+//									LM.coeffRef(row_NC, col_NC) += 0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
+
 
 									A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,ishape,iqLC),
 									A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,ishape,iqNC);
@@ -436,38 +473,38 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 						cout << "LC " << idLC << endl;
 						cout << "face " << i << endl;
 						nvector_type nv2;
-						get_nodes(idLC, nv2);
+						get_nodes(grid, idLC, nv2);
 
 						unsigned int shapes_per_face = shapedim/Fdim + 1;
 
-						//TODO works only for triangles
-						space_type startvec = nv2( (i+1) % 3); //boundary Dof at left end of face i
-						space_type endvec = nv2( (i+2) % 3); //boundary Dof at right end of face i
-
-						value_type l,r;
-
-						for (unsigned int ishape = 0; ishape < shapes_per_face; ++ishape) //loop over boundary DOF at face i
+						if (interpolating_basis)
 						{
-							r = (value_type) ishape / (value_type) (shapes_per_face-1);
-							l = 1 - r;
-							space_type x = l * startvec + r * endvec;
-							cout << "startvec " << startvec.transpose() << " endvec " << endvec.transpose() << endl;
-							cout << "l " << l << " r " <<r <<  endl;
-							cout << "-> x = " << x.transpose() << endl;
+							//TODO works only for triangles
+							space_type startvec = nv2( (i+1) % 3); //boundary Dof at left end of face i
+							space_type endvec = nv2( (i+2) % 3); //boundary Dof at right end of face i
+
+							value_type l,r;
+
+							for (unsigned int ishape = 0; ishape < shapes_per_face; ++ishape) //loop over boundary DOF at face i
+							{
+								r = (value_type) ishape / (value_type) (shapes_per_face-1);
+								l = 1 - r;
+								space_type x = l * startvec + r * endvec;
 
 							state_type uLC;
-							get_exacttemperature_MA(x, uLC); // determine uLC (value at boundary point x)
+								state_type uLC;
+								get_exacttemperature_MA(x, uLC); // determine uLC (value at boundary point x)
 
-							int loc_no = ((i + 1) % shapes_per_face)*2+ishape;
-							loc_no = loc_no % 6;
+								int loc_no = ((i + 1) % shapes_per_face)*2+ishape;
+								loc_no = loc_no % 6;
 
-							//fix solution at boundary
-							Lbd(pLC->n_offset + loc_no) = uLC[0];
-							cout << " number " << loc_no << "global " << pLC->n_offset + loc_no << endl;
+								//fix solution at boundary
+								Lbd(pLC->n_offset + loc_no) = uLC[0];
 
+							}
 						}
 					}
-						break;
+					break;
 
 					default:
 						cerr << "Unknown boundary type!" << endl;
@@ -579,6 +616,7 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		if (es.eigenvalues()(0) < epsilon){
 			cout << "Correcting " << endl;
 			convexify(hess, es);
+			cout << "corrected cofactor matrix is :\n" << hess << endl;
 		}
 		//update maximal EW for penalty
 		if (es.eigenvalues()(1) > max_EW){
@@ -607,7 +645,7 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 			shape.assemble_state_N(pLC->u,k,state);
 			n[0] = nv[k][0]; n[1] = nv[k][1];
 			get_exacttemperature_MA(n,stateEx);
-			error += std::abs(state[0]-stateEx[0]);
+			error += std::abs(state[0]-stateEx[0])/stateEx[0];
 		}
 		pLC->Serror = error/3.;
 
@@ -755,7 +793,7 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 	u_rhs[0] = 6+ 5*sqr(x[0]) + 4 * x[0]*x[1] + sqr(x[1]);
 	u_rhs[0] *= f;
 #elif (PROBLEM == SIMPLEMONGEAMPERE)
-	u_rhs[0] = 8;
+	u_rhs[0] = 14;
 #elif (PROBLEM == CONST_RHS)
 	u_rhs[0] = 1;
 #elif (PROBLEM == CONST_RHS2)
@@ -882,6 +920,8 @@ void Tsolver::time_stepping_MA() {
 	//  outnumericalhistory << t << "  " << uc << endl;
 	get_exacttemperature_MA(xc, uc);
 	//  outexacthistory << uc[0] << endl;
+
+
 	////////////////////////////////////////////////////////////
 
 	singleton_config_file::instance().getValue("monge ampere", "maximal_iterations", maxits, 3);
@@ -896,7 +936,6 @@ void Tsolver::time_stepping_MA() {
 		cout << "Assign matrix coordinates..." << endl;
 		pt.start();
 		assignViews_MA(LM_size);
-		initialize_boundary_handler();
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
@@ -910,6 +949,9 @@ void Tsolver::time_stepping_MA() {
 
 		cout << "Assemble linear System..." << flush << endl;
 		pt.start();
+		if (interpolating_basis)			bd_handler.initialize(grid,number_of_dofs);
+		else	bd_handler.initialize_bezier(grid, number_of_dofs, get_exacttemperature_MA_Vcallback(), &shape);
+
 		assemble_MA(stabsign, gamma, LM_bd, Lrhs_bd, Lsolution_only_bd);
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
