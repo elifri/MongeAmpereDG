@@ -8,10 +8,13 @@ add_library(utility utility.cpp)
 add_library(singconfig grid_config.cpp)
 add_library(Plotter Plotter.cpp)
 add_library(Eigen_utility Eigen_utility.cpp)
-add_library(Tsolver Tsolver_general.cpp Tsolver_special_POISSON.cpp Tsolver_special_AM.cpp Eigen_utility)
+add_library(bd_handler boundary_handler.cpp)
+
+add_library(Tsolver Tsolver_general.cpp Tsolver_special_POISSON.cpp Tsolver_special_AM.cpp)
+
 
 add_executable(Mesh mesh.cpp)
-target_link_libraries(Mesh Tsolver Plotter Tmass Tshape singconfig utility)
+target_link_libraries(Mesh Tsolver bd_handler Plotter Tmass Tshape singconfig utility Eigen_utility)
 
 #----example code ----
 #include_directories(${MyProject_SOURCE_DIR}/MainProject/inc)
