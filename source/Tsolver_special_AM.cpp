@@ -8,6 +8,7 @@
 #include "../include/Tsolver.hpp"
 #include <Eigen/Eigenvalues>
 
+#include "../include/matlab_export.hpp"
 
 #if (EQUATION == MONGE_AMPERE_EQ)
 
@@ -448,8 +449,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 							}
 
 							// Copy entries into Laplace-matrix
-							for (unsigned int ishape = 0; ishape < shapedim;
-									++ishape) {
+							for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 								for (unsigned int jshape = 0; jshape < shapedim; ++jshape) {
 									int row = pLC->m_offset + ishape;
 									int col = pLC->n_offset + jshape;
@@ -570,10 +570,18 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		Hessian_type hess;
 		shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
 		pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
-		hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+		hess /= facLevelVolume[idLC.level()]; //transform to leafcell
 		cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
 		pLC->update_diffusionmatrix(hess); //update diffusionmatrix
 
+		Nvector_type nv;
+		grid.nodes(idLC,nv);
+		state_type state, stateEx;
+		space_type n;
+		value_type error = 0;
+
+
+		cout << "cofactor matrix is with node " << nv[0][0] << " " << nv[0][1] << " :\n" << hess << endl;
 
 		//calculate eigenvalues
 		es.compute(hess);
@@ -594,7 +602,7 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
 		//calculate residuum
 
-		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1); //determinant of hessian = lhs
+		/*		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1); //determinant of hessian = lhs
 
 		//calculate rhs !attention works only for constant rhs
 		space_type x;
@@ -605,7 +613,16 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		value_type rhs = uLC(0);
 		pLC->Serror = det - rhs; //solution should have solution
 		//debug output
-		cout << "residuum in LC: "<< pLC->id() << " is " << pLC->Serror << endl;
+		cout << "residuum in LC: "<< pLC->id() << " is " << pLC->Serror << endl;*/
+
+		for (int k = 0; k < idLC.countNodes(); k++){
+			shape.assemble_state_N(pLC->u,k,state);
+			n[0] = nv[k][0]; n[1] = nv[k][1];
+			get_exacttemperature_MA(n,stateEx);
+			error += std::abs(state[0]-stateEx[0]);
+		}
+		pLC->Serror = error/3.;
+
 
 	}
 
@@ -667,7 +684,11 @@ void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // s
 #elif (PROBLEM == SIMPLEPOISSON3)
 	const double a = 0.3, b = 0.5;
 	u[0] = a * (sqr(x[0]) - sqr(x[1])) + b * (x[0] * x[1]);
-#elif (PROBLEM == MONGEAMPERE1)
+//#elif (PROBLEM == MONGEAMPERE1)
+//	u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
+#elif (PROBLEM == SIMPLEMONGEAMPERE)
+	u[0] = 2*sqr(x[0]) + 2*sqr(x[1]) + 3 * x[0]*x[1];
+#elif (PROBLEM == MONGEAMPERE2)
 	u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
 #elif (PROBLEM == CONST_RHS)
 	u[0] = 0; // exact solution not known, Dirichlet boundary conditions with u=0
@@ -738,9 +759,15 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 	u_rhs[0] = -4 * a;
 #elif (PROBLEM == SIMPLEPOISSON3)
 	u_rhs[0] = 0;
-#elif (PROBLEM == MONGEAMPERE1)
-	u_rhs[0] = 1 + sqr(x[0])+sqr(x[1]); //1+||x||^2
-	u_rhs[0] *=exp(sqr(x[0])+sqr(x[1])); //*exp(||x||^2)
+//#elif (PROBLEM == MONGEAMPERE1)
+//	u_rhs[0] = 1 + sqr(x[0])+sqr(x[1]); //1+||x||^2
+//	u_rhs[0] *=exp(sqr(x[0])+sqr(x[1])); //*exp(||x||^2)
+#elif (PROBLEM == MONGEAMPERE2)
+	value_type f = exp( (sqr(x[0])+sqr(x[1]))/2. );
+	u_rhs[0] = 6+ 5*sqr(x[0]) + 4 * x[0]*x[1] + sqr(x[1]);
+	u_rhs[0] *= f;
+#elif (PROBLEM == SIMPLEMONGEAMPERE)
+	u_rhs[0] = 8;
 #elif (PROBLEM == CONST_RHS)
 	u_rhs[0] = 1;
 #elif (PROBLEM == CONST_RHS2)
