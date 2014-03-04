@@ -61,5 +61,10 @@ int tmyleafcell<IDTYPEINFO_TYPE>::m_nCountAllLeafs = 0;
 template<class IDTYPEINFO_TYPE>
 typename tmyleafcell<IDTYPEINFO_TYPE>::mass_type tmyleafcell<IDTYPEINFO_TYPE>::mass;
 
+//-------------define wrapper for convenience---------
+
+/*! \brief return all nodes of an leafcell*/
+void get_nodes(const grid_type &grid, const grid_type::id_type& idLC, nvector_type &nvEigen);
+
 
 #endif /* GRID_CONFIG_HPP_ */
