@@ -361,7 +361,7 @@ void boundary_handler::add_to_LGS(const int i, const int f, unsigned int shapes_
 		// loop over all boundary dofs interfering with the current bezier control point
 		for (unsigned int j = 0; j < m_shape->contrib[bezier_control_pt % shapedim].size(); ++j) {
 			jshape = m_shape->contrib[bezier_control_pt % shapedim][j];
-			m_boundary_LGS[i](bezier_control_pt % shapedim,jshape) += m_shape->nodal_contrib(jshape)(bezier_control_pt % shapedim);
+			m_boundary_LGS[i](bezier_control_pt % shapedim,jshape) = m_shape->nodal_contrib(jshape)(bezier_control_pt % shapedim);
 			m_shape_at_boundary[i](jshape) = true;
 			bezier_at_bd(bezier_control_pt % shapedim) = true;
 		}
@@ -482,7 +482,7 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, boundary_
 		grid.faceIds(idLC, vF, vFh, vOh);
 
 		g.setZero();
-		int LGS_index = -1, boundary_dof_no = 0;
+		int LGS_index = -1;
 
 		for (unsigned int f = 0; f < idLC.countFaces(); f++) { //loop over faces
 
@@ -512,8 +512,6 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, boundary_
 				else{ //second boundary edge
 					LGS_index = (LGS_index+1)*10;
 					LGS_index += f;
-
-					boundary_dof_no--; //both faces share one boundary dof
 				}
 
 				//get boundary conditions at boundary dof
@@ -539,8 +537,7 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, boundary_
 					loc_no = loc_no % 6;
 
 					//set rhs of LGS
-					g(boundary_dof_no) = u(0);
-					boundary_dof_no++;
+					g(loc_no) = u(0);
 
 					//assemble matrix part
 				}
