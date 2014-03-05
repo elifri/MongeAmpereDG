@@ -38,6 +38,8 @@ private:
 	void write_solution(const node_function_type &get_exacttemperature, std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); //writes points (of solution) in vtk format
 	void write_cells(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); //write cells
 
+public:
+
 	/*! \brief writes the solution in a vtu file
 	    *
 	    * \param (string) the name of the file the solution should be written into
@@ -54,8 +56,6 @@ private:
 	    * \param bool 	  should switch between binary and asccii format is NOT working yet
 	    */
 	   void writeExactVTK(const node_function_type &get_exacttemperature_MA, std::string filename, const unsigned int refine = 0, const bool binary = false);
-
-public:
 
 	void set_grid(grid_type* grid){	this->grid = grid;}
 	void set_shape(const Tshape* shape){	this->shape = shape;}
