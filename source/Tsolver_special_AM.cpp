@@ -157,10 +157,39 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 	else
 	{
 		Hessian_type hess;
-		hess << 1, 0 , 0, 1;
-		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
+		if (start_solution){
+
+			//calculate cofactor of hessian
+			shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
+			pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
+			hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+			cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
+			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
+					pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
+
+			//calculate eigenvalues
+			Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
+			es.compute(hess);
+			cout << "The eigenvalues of diffusion matrix are: " << es.eigenvalues().transpose() << endl;
+
+			//correct eigenvalues?
+			if (es.eigenvalues()(0) < epsilon){
+				cout << "Attention: the start solution was not convex! Correcting " << endl;
+				convexify(hess, es);
+			}
+			//update maximal EW for penalty
+			if (es.eigenvalues()(1) > max_EW){
+				max_EW = es.eigenvalues()(1);
+			}
+
+
+		}
+		else{
+			hess << 1, 0 , 0, 1;
+			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
-		max_EW = 1;
+			max_EW = 1;
+		}
 	}
 
 
@@ -615,7 +644,7 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		//debug output
 		cout << "residuum in LC: "<< pLC->id() << " is " << pLC->Serror << endl;*/
 
-		for (int k = 0; k < idLC.countNodes(); k++){
+		for (unsigned int k = 0; k < idLC.countNodes(); k++){
 			shape.assemble_state_N(pLC->u,k,state);
 			n[0] = nv[k][0]; n[1] = nv[k][1];
 			get_exacttemperature_MA(n,stateEx);
@@ -895,6 +924,17 @@ void Tsolver::time_stepping_MA() {
 	////////////////////////////////////////////////////////////
 
 	singleton_config_file::instance().getValue("monge ampere", "maximal_iterations", maxits, 3);
+
+	std::string filename;
+	start_solution = singleton_config_file::instance().getValue("monge ampere", "start_iteration", filename, "data/reference\ lösung\ andreas/u_colloc_result.grid");
+	if (start_solution){
+		read_startsolution(filename);
+
+		std::string fname(plotter.get_output_directory());
+		fname += "/grid_startsolution.vtu";
+		plotter.writeLeafCellVTK(fname, 1);
+
+	}
 
 	iteration = 0;
 
