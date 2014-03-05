@@ -7,6 +7,7 @@
 
 #include "../include/Tsolver.hpp"
 
+using namespace std;
 
 ////////////////////////////////////////////////////////
 ///////////////                          ///////////////
@@ -802,7 +803,7 @@ void Tsolver::write_idset (const grid_type::idset_type & idset) {
 
 };
 
-void bilinear_interpolate(space_type x, state_type u, int &n_x, int &n_y,
+void bilinear_interpolate(const space_type x, state_type &u, int &n_x, int &n_y,
 						value_type &h_x, value_type &h_y,
 						value_type &x0, value_type &y0,
 						Eigen::MatrixXd &solution)
