@@ -802,6 +802,24 @@ void Tsolver::write_idset (const grid_type::idset_type & idset) {
 
 };
 
+void bilinear_interpolate(space_type x, state_type u, int &n_x, int &n_y,
+						value_type &h_x, value_type &h_y,
+						value_type &x0, value_type &y0,
+						Eigen::MatrixXd &solution)
+{
+	int index_x = (x(0)-x0)/h_x, index_y = (x(1)-y0)/h_y; //index of the bottom left corner of the rectangle where x lies in
+
+	value_type x1 = x0 + h_x*index_x, x2 = x1+h_x; //coordinates of rectangle
+	value_type y1 = y0 + h_y*index_y, y2 = y1+h_y;
+
+	//interpolate parallel to x-axis
+	value_type f1 = (x2-x(0))/h_x * solution(index_x, index_y) + (x(0)-x1)/h_x * solution(index_x+1, index_y);
+	value_type f2 = (x2-x(0))/h_x * solution(index_x, index_y+1) + (x(0)-x1)/h_x * solution(index_x+1, index_y+1);
+
+	//interpolate parallel to y-axis
+	u(0) = (y2-x(1))/h_y * f1  +  (x(1)-y1)/h_y * f2;
+}
+
 ////////////////////////////////////////////////////
 ///////////////                      ///////////////
 ///////////////  APRIORI REFINEMENT  ///////////////
