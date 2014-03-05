@@ -7,7 +7,6 @@
 
 
 #include "../include/Plotter.hpp"
-
 #include "../include/Tshape.hpp"
 
 
@@ -90,6 +89,9 @@ void check_file_extension(std::string &name, std::string extension) {
 		name.insert(name.length(), extension);
 }
 
+
+//==========================================================================================
+
 void Plotter::assemble_points(std::vector < std::vector<id_type> > &v, int &Nelements, int &Nnodes)
 {
 	v.resize(grid->countBlocks());
@@ -117,7 +119,49 @@ void Plotter::assemble_points(std::vector < std::vector<id_type> > &v, int &Nele
 	}
 
 }
-//-------------------helper------------------------
+
+
+void Plotter::read_quadratic_grid(std::string filename, 	int &n_x, int &n_y,
+												value_type &h_x, value_type &h_y,
+												value_type &x0, value_type &y0,
+												Eigen::MatrixXd &solution)
+{
+	std::ifstream file(filename.c_str()); 	//format "n ## h ## \n u(0,0) u(h,0) ... \n u(h,h) ..."
+	if(!file) { // file couldn't be opened
+	      cerr << "Error: file for reading rectangle grid could not be opened" << endl;
+	      exit(1);
+	   }
+	cout << "Reading starting point from file " << filename << "... " << endl;
+
+	stringstream ss;
+	std::string s;
+
+	assert (!file.eof() && "The inserted vtk file is too short");
+	file >> s; file >> n_x; //read n_x
+
+	file >> s; file >> n_y; //read n_y
+
+	file >> s; file >> h_x; //read h_x
+
+	file >> s;  file >> h_y; //read h_y
+
+	file >> s;  file >> x0;
+	file >> s;  file >> y0;
+
+	solution.resize(n_x,n_y);
+
+	for (int y=0; y < n_y; y++)
+	{
+		for (int x=0; x < n_x; x++)
+		{
+			file >> solution(x,y);
+		}
+	}
+}
+
+//==================================================
+//-----------------vtk-helper-----------------------
+//==================================================
 
 void Plotter::write_vtk_header(std::ofstream& file, const int Nnodes, const int Nelements)
 {

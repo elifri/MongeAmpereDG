@@ -13,6 +13,8 @@
 
 #include "Tshape.hpp"
 
+#include <fstream>
+
 class Plotter{
 private:
 	grid_type* grid;
@@ -62,6 +64,19 @@ public:
 	std::string get_output_directory() {return output_directory;}
 
 	void read_VTK(const std::string filename);
+
+	/*! reads an quadratic equidistant rectangle grid from file
+	 *
+	 *\param filename 	file containing solution in the format "n ## h ## \n u(0,0) u(h,0) ... \n u(h,h) ..."
+	 *\param n_x		number of nodes in x direction
+	 *\param n_y		number of nodes in y direction
+	 *\param h_x		distance between two nodes in x direction
+	 *\param h_x		distance between two nodes in y direction
+	 */
+	void read_quadratic_grid(std::string filename, 	int &n_x, int &n_y,
+													value_type &h_x, value_type &h_y,
+													value_type &x0, value_type &y0,
+													Eigen::MatrixXd &solution);
 
 	void write_numericalsolution(const unsigned int i);
 	void write_numericalsolution_VTK(const unsigned int i);
