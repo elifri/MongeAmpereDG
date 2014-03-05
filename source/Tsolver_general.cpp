@@ -820,6 +820,62 @@ void bilinear_interpolate(space_type x, state_type u, int &n_x, int &n_y,
 	u(0) = (y2-x(1))/h_y * f1  +  (x(1)-y1)/h_y * f2;
 }
 
+
+void Tsolver::read_startsolution(const std::string filename){
+	int n_x, n_y;
+	value_type h_x, h_y, x0, y0;
+	Eigen::MatrixXd sol;
+
+
+	plotter.read_quadratic_grid(filename, n_x,  n_y, h_x, h_y, x0, y0, sol);
+
+	leafcell_type *pLC = NULL; // leaf cell
+	Nvector_type nv;
+
+	for (grid_type::leafcellmap_type::const_iterator it =
+			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) // loop over lefacells
+	{
+		//get leafcell id
+		const grid_type::id_type & idLC = grid_type::id(it);
+
+		grid.findLeafCell(idLC, pLC);
+
+		//TODO do this via function!
+		grid.nodes(idLC, nv);
+
+		Eigen::Vector3d h_x_grid, h_y_grid;
+		h_x_grid(0) = -nv[0][0] + nv[1][0];
+		h_y_grid(0) = -nv[0][1] + nv[1][1];
+
+		h_x_grid(1) = -nv[1][0] + nv[2][0];
+		h_y_grid(1) = -nv[1][1] + nv[2][1];
+
+		h_x_grid(2) = nv[0][0] - nv[2][0];
+		h_y_grid(2) = nv[0][1] - nv[2][1];
+
+		h_x_grid /= shapedim/Ndim;
+		h_y_grid /= shapedim/Ndim;
+
+		Eigen::Matrix<space_type, Eigen::Dynamic, 1> points(idLC.countNodes() * (shapedim/Ndim + 1));
+		Eigen::VectorXd vals(points.size());
+
+		state_type val;
+
+		for (unsigned int i = 0; i < idLC.countNodes(); ++i) {	//loop over nodes
+			//nodes
+			space_type x(nv[i][0], nv[i][1]); //set node coordinates
+			bilinear_interpolate(x, val , n_x, n_y, h_x, h_y, x0, y0, sol); //interpolate bilinear
+			pLC->u(i * 2,0) = val(0); //write solution
+
+			x =	space_type(nv[i][0] + h_x_grid(i), nv[i][1]+ h_y_grid(i)); //set mid point coordinates
+			bilinear_interpolate(x, val , n_x, n_y, h_x, h_y, x0, y0, sol); //interpolate bilinear
+			pLC->u(i*2 +1,0) = val(0); //write solution
+		}
+
+	}
+}
+
+
 ////////////////////////////////////////////////////
 ///////////////                      ///////////////
 ///////////////  APRIORI REFINEMENT  ///////////////

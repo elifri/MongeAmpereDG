@@ -112,6 +112,8 @@ public:
    void write_problem_parameters_GENERAL ();
 
    void write_idset (const grid_type::idset_type & idset);
+   void read_startsolution(const std::string filename);
+
 
    ///////////////      GEOMETRY        ///////////////
 
@@ -201,6 +203,8 @@ public:
 
    int levelmax;
    bool interpolating_basis;
+
+   bool start_solution;
 
    ///////////////////////////////////////////////////////
    //////////                                  ///////////
