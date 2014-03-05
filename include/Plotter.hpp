@@ -23,7 +23,7 @@ private:
 	int Nelements;
 	int Nnodes;
 
-	std::string output_directory;
+	std::string output_directory, output_prefix;
 
 	//helper for vtk parts
 	void assemble_points(std::vector < std::vector<id_type> > &v, int &Nelements, int &Nnodes); ///get nodes and number of elements/nodes
@@ -60,8 +60,10 @@ public:
 	void set_grid(grid_type* grid){	this->grid = grid;}
 	void set_shape(const Tshape* shape){	this->shape = shape;}
 	void set_output_directory(std::string outputdir) {this->output_directory = outputdir;}
+	void set_output_prefix(std::string prefix) {this->output_prefix = prefix;}
 
 	std::string get_output_directory() {return output_directory;}
+	std::string get_output_prefix() {return output_prefix;}
 
 	void read_VTK(const std::string filename);
 

@@ -632,7 +632,7 @@ void Plotter::write_numericalsolution(const unsigned int i)
 	}
 
 	std::string fname(output_directory);
-	fname+="/grid_numericalsolution"+NumberToString(i)+".dat";
+	fname+="/" + output_prefix + "grid_numericalsolution"+NumberToString(i)+".dat";
 	std::ofstream fC(fname.c_str());
 
 	// global header
@@ -694,7 +694,7 @@ void Plotter::write_numericalsolution(const unsigned int i)
 void Plotter::write_numericalsolution_VTK(const unsigned int i) {
 
 	std::string fname(output_directory);
-	fname += "/grid_numericalsolution" + NumberToString(i) + ".vtu";
+	fname += "/"+ output_prefix + "grid_numericalsolution" + NumberToString(i) + ".vtu";
 
 	writeLeafCellVTK(fname, 1);
 
@@ -719,7 +719,7 @@ void Plotter::write_exactsolution(node_function_type get_exacttemperature, const
 	}
 
 	std::string fname(output_directory);
-	fname += "/grid_exactsolution." + NumberToString(i) + ".dat";
+	fname += "/" + output_prefix + "grid_exactsolution." + NumberToString(i) + ".dat";
 	std::ofstream fC(fname.c_str());
 
 // global header
@@ -793,7 +793,7 @@ void Plotter::write_exactrhs_MA(const node_function_type &get_rhs_MA, const unsi
 	}
 
 	std::string fname(output_directory);
-	fname += "/grid->exactrhs." + NumberToString(i) + ".dat";
+	fname += "/" + output_prefix + "grid_exactrhs." + NumberToString(i) + ".dat";
 	std::ofstream fC(fname.c_str());
 
 // global header
@@ -882,7 +882,7 @@ void Plotter::writeExactVTK(const node_function_type &get_exacttemperature_MA, s
 void Plotter::write_exactsolution_VTK(const node_function_type &exactSol, const unsigned int i) {
 
 	std::string fname(output_directory);
-	fname += "/grid_exactsolution" + NumberToString(i) + ".vtu";
+	fname += "/" + output_prefix + "grid_exactsolution" + NumberToString(i) + ".vtu";
 
 	writeExactVTK(exactSol, fname, 1);
 
@@ -908,7 +908,7 @@ void Plotter::write_numericalsolution () {
       }
 
       std::string fname(output_directory);
-      fname+="/grid_numericalsolution.dat";
+      fname+="/" + output_prefix + "grid_numericalsolution.dat";
       std::ofstream fC(fname.c_str());
       if( !fC ) {
         cerr << "Error opening output file " << fname << "." << endl;

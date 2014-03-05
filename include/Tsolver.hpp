@@ -105,7 +105,7 @@ public:
    void write_space_type (const space_type & x);
 
    ///////////////    READ MESH DATA    ///////////////
-   void read_problem_parameters_GENERAL (const std::string data_directory);
+   void read_problem_parameters_GENERAL (const std::string data_directory, const std::string data_prefix);
    void read_easymesh_triangles (const std::string data_file);
 
    ///////////////   WRITE MESH DATA    ///////////////
@@ -226,7 +226,7 @@ public:
          double eta;       // absolute tolerance from estimated error factor
 
          double max_EW;
-         static const double epsilon = 1e-1; //minimum value of hessian eigenvalues
+         static const double epsilon = 1e-2; //minimum value of hessian eigenvalues
 
    #endif
 

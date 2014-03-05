@@ -567,9 +567,10 @@ T input(const std::string question, const T defaultvalue) {
 }
 
 
-void Tsolver::read_problem_parameters_GENERAL (const std::string data_directory)
+void Tsolver::read_problem_parameters_GENERAL (const std::string data_directory, const std::string data_prefix)
 {
   plotter.set_output_directory(data_directory);
+  plotter.set_output_prefix(data_prefix);
   // levelmax   = input<int>   ("levelmax           [default=   10] =? ",10);
   int lmax;
   igpm::configfile().getValue ("general", "levelmax", lmax, 10);
@@ -585,7 +586,9 @@ void Tsolver::read_problem_parameters_GENERAL (const std::string data_directory)
 void Tsolver::write_problem_parameters_GENERAL ()
 {
   std::string fname(plotter.get_output_directory());
-  fname+="/parameters.dat";
+  fname+="/";
+  fname+=plotter.get_output_prefix();
+  fname+="parameters.dat";
   std::ofstream outparameters(fname.c_str());
   if( !outparameters ) {
    cerr << "Error opening output file " << fname << "." << endl;

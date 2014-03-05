@@ -566,7 +566,7 @@ void Tsolver::convexify(Hessian_type& hess, Eigen::SelfAdjointEigenSolver<Hessia
 
 	es.compute(hess);
 
-//	cout << "new eigenvalues " << es.eigenvalues().transpose() << endl;
+	cout << "new eigenvalues " << es.eigenvalues().transpose() << endl;
 //	cout << "new eigenvectors  \n" << es.eigenvectors() << endl << endl;
 }
 
@@ -926,11 +926,12 @@ void Tsolver::time_stepping_MA() {
 	singleton_config_file::instance().getValue("monge ampere", "maximal_iterations", maxits, 3);
 
 	std::string filename;
-	start_solution = singleton_config_file::instance().getValue("monge ampere", "start_iteration", filename, "data/reference\ lösung\ andreas/u_colloc_result.grid");
+	start_solution = singleton_config_file::instance().getValue("monge ampere", "start_iteration", filename, "");
 	if (start_solution){
 		read_startsolution(filename);
 
 		std::string fname(plotter.get_output_directory());
+		fname +=
 		fname += "/grid_startsolution.vtu";
 		plotter.writeLeafCellVTK(fname, 1);
 
