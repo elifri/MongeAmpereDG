@@ -145,6 +145,14 @@ void Tsolver::assignViews_MA(unsigned int & offset) {
 	plotter.write_exactsolution(get_exacttemperature_MA_callback(),0);
 }
 
+void Tsolver::calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1)
+{
+	value_type rad = A(1,1) * A(1,1) + (A(2,2) - 2 * A(1,1)) * A(2,2) + 4 * A(1,2) * A(2,1);
+	value_type s = std::sqrt(rad);
+	ev0 = (A(1,1) + A(2,2) - s) / 0.2e1;
+	ev1 = (A(1,1) + A(2,2) + s) / 0.2e1;
+
+}
 
 void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM) {
 	Emass_type laplace;

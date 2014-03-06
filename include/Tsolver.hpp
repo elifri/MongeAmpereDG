@@ -279,6 +279,8 @@ public:
 private:
    void assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM); ///writes the stiffness matrix part of LC
    void assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs); ///writes rhs part from LC
+
+   void calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1); /// calculates eigenvalues of a 2x2 matrix
 public:
    void assemble_MA(const int & STABSIGN, double PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs);
    void restore_MA (Eigen::VectorXd &solution);
