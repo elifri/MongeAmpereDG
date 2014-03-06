@@ -32,6 +32,7 @@ private:
 	void read_vtk_header(std::ifstream& file, int &Nnodes, int &Nelements); ///reads vtk header
 
 	void write_error(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); ///write an data array containing the error stored in every leafcell
+	void write_residuum(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine);
 	void write_smallest_EW(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); ///write an data array containing the smallest EW stored in every leafcell
 
 	void write_points(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); //writes points in vtk format

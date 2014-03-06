@@ -222,7 +222,7 @@ void Plotter::write_error(std::ofstream &file, const std::vector < std::vector<i
 				grid->findLeafCell(id, pLC);
 
 				for (unsigned int k = 0; k < id.countNodes(); ++k) {
-					file << "\t\t\t\t\t" << pLC->Serror << endl;
+					file << "\t\t\t\t\t" << pLC->Serror(k) << endl;
 				}
 			}
 
@@ -240,8 +240,8 @@ void Plotter::write_error(std::ofstream &file, const std::vector < std::vector<i
 				grid->nodes(id, nv);
 				for (unsigned int k = 0; k < id.countNodes(); ++k) {
 					shape->assemble_state_N(pLC->u, k, state);
-					file << "\t\t\t\t\t" << pLC->Serror << endl;
-					file << "\t\t\t\t\t" << pLC->Serror << endl;
+					file << "\t\t\t\t\t" << pLC->Serror(k) << endl;
+					file << "\t\t\t\t\t" << pLC->Serror(k) << endl;
 				}
 			}
 
@@ -251,6 +251,60 @@ void Plotter::write_error(std::ofstream &file, const std::vector < std::vector<i
 	file << "\t\t\t\t</DataArray>\n";
 
 }
+
+void Plotter::write_residuum(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
+{
+	Nvector_type nv;
+	state_type state;
+
+	// write error
+	file << "\t\t\t\t<DataArray  Name=\"error\" type=\"Float32\" format=\"ascii\">\n";
+
+	// loop over all leaf cells
+	for (unsigned int i = 0; i < grid->countBlocks(); ++i) {
+		if (v[i].size() == 0)
+			continue;
+
+		if (refine == 0) {
+
+			// save points in file without refinement
+
+			// over all ids inside this block
+			for (unsigned int j = 0; j < v[i].size(); ++j) {
+				const grid_type::id_type & id = v[i][j];
+				grid_type::leafcell_type * pLC = NULL;
+				grid->findLeafCell(id, pLC);
+
+				for (unsigned int k = 0; k < id.countNodes(); ++k) {
+					file << "\t\t\t\t\t" << pLC->residuum(k) << endl;
+				}
+			}
+
+		}
+		else
+		{
+			// save points in file with refinement
+
+			// over all ids inside this block
+			for (unsigned int j = 0; j < v[i].size(); ++j) {
+				const grid_type::id_type & id = v[i][j];
+				grid_type::leafcell_type * pLC = NULL;
+				grid->findLeafCell(id, pLC);
+
+				grid->nodes(id, nv);
+				for (unsigned int k = 0; k < id.countNodes(); ++k) {
+					shape->assemble_state_N(pLC->u, k, state);
+					file << "\t\t\t\t\t" << pLC->residuum(k) << endl;
+					file << "\t\t\t\t\t" << pLC->residuum(k) << endl;
+				}
+			}
+
+		}
+	}
+
+	file << "\t\t\t\t</DataArray>\n";
+}
+
 
 void Plotter::write_smallest_EW(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
 {
@@ -604,6 +658,7 @@ void Plotter::writeLeafCellVTK(std::string filename, const unsigned int refine, 
 
 	file << "\t\t\t<PointData>\n";
 	write_error(file, v, refine);
+	write_residuum(file, v, refine);
 	write_smallest_EW(file, v, refine);
 	file << "\t\t\t</PointData>\n";
 
