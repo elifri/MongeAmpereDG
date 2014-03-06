@@ -175,6 +175,21 @@ void Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess,
 	//update min EW
 	if (ev0 < min_EW) {
 		min_EW = ev0;
+
+		if (ev0 < -1)
+		{
+			nvector_type nv;
+
+			get_nodes(grid, pLC->id(), nv);
+
+			cout << "Found very small Eigenvalue at "
+					<< pLC->id() << " with nodes "
+					<< nv[0].transpose() << ", " << nv(1).transpose() <<  ", " << nv(2).transpose() << endl;
+			cout << "Hessian is: \n" << hess << endl;
+
+		}
+
+
 	}
 
 	//correct eigenvalues?
@@ -209,7 +224,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 			calc_cofactor_hessian(pLC, pBC, hess);
 
 			//calculate eigenvalues and convexify
-			calculate_eigenvalues(pLC, hess, true);
+			calculate_eigenvalues(pLC, hess, false);
 
 			//update diffusion matrix and calculate laplace matrix
 			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
@@ -598,7 +613,7 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		get_nodes(grid, idLC,nv);
 
 		cout << "cofactor matrix is with node " << nv[0][0] << " " << nv[0][1] << " :\n" << hess << endl;
-		calculate_eigenvalues(pLC,hess, true);
+		calculate_eigenvalues(pLC,hess, false);
 
 
 		//determinant of hessian for calculation of residuum
