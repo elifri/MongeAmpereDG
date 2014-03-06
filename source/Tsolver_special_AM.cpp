@@ -155,10 +155,10 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 
 void Tsolver::calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1)
 {
-	value_type rad = A(1,1) * A(1,1) + (A(2,2) - 2 * A(1,1)) * A(2,2) + 4 * A(1,2) * A(2,1);
+	value_type rad = A(0,0) * A(0,0) + (A(1,1) - 2 * A(0,0)) * A(1,1) + 4 * A(0,1) * A(1,0);
 	value_type s = std::sqrt(rad);
-	ev0 = (A(1,1) + A(2,2) - s) / 0.2e1;
-	ev1 = (A(1,1) + A(2,2) + s) / 0.2e1;
+	ev0 = (A(0,0) + A(1,1) - s) / 0.2e1;
+	ev1 = (A(0,0) + A(1,1) + s) / 0.2e1;
 
 }
 
