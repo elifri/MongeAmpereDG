@@ -226,6 +226,7 @@ public:
          double eta;       // absolute tolerance from estimated error factor
 
          double max_EW;
+         double min_EW;
          static const double epsilon = 1e-2; //minimum value of hessian eigenvalues
 
    #endif

@@ -172,6 +172,11 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 			es.compute(hess);
 			cout << "The eigenvalues of diffusion matrix are: " << es.eigenvalues().transpose() << endl;
 
+			if (es.eigenvalues()(0) < min_EW){
+				min_EW = es.eigenvalues()(0);
+			}
+
+
 			//correct eigenvalues?
 			if (es.eigenvalues()(0) < epsilon){
 				cout << "Attention: the start solution was not convex! Correcting " << endl;
@@ -181,6 +186,8 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 			if (es.eigenvalues()(1) > max_EW){
 				max_EW = es.eigenvalues()(1);
 			}
+			//store eigenvalue for output
+			pLC->smallest_EW = es.eigenvalues()(0);
 
 
 		}
@@ -578,6 +585,8 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 	leafcell_type *pLC = NULL;
 	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
 	max_EW = 0; //init max_Ew
+	min_EW = 10;
+
 
 	for (grid_type::leafcellmap_type::const_iterator it =
 			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
