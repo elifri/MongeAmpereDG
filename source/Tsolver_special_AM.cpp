@@ -145,6 +145,14 @@ void Tsolver::assignViews_MA(unsigned int & offset) {
 	plotter.write_exactsolution(get_exacttemperature_MA_callback(),0);
 }
 
+void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC, Hessian_type & hess){
+	shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
+	pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
+	hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+	cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
+	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
+}
+
 void Tsolver::calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1)
 {
 	value_type rad = A(1,1) * A(1,1) + (A(2,2) - 2 * A(1,1)) * A(2,2) + 4 * A(1,2) * A(2,1);
@@ -152,6 +160,36 @@ void Tsolver::calculate_eigenvalues(const Hessian_type &A, value_type &ev0, valu
 	ev0 = (A(1,1) + A(2,2) - s) / 0.2e1;
 	ev1 = (A(1,1) + A(2,2) + s) / 0.2e1;
 
+}
+
+void Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess,
+		bool use_convexify) {
+
+	value_type ev0, ev1;
+
+	calculate_eigenvalues(hess, ev0, ev1);
+
+	cout << "The eigenvalues of diffusion matrix are: "
+			<< ev0 << " " << ev1 << " " << endl;
+
+	//update min EW
+	if (ev0 < min_EW) {
+		min_EW = ev0;
+	}
+
+	//correct eigenvalues?
+	if (ev0 < epsilon && use_convexify) {
+		cout << "Attention: the function was not convex! Correcting cofactor matrix"
+				<< endl;
+		convexify(hess);
+	}
+
+	//update maximal EW for penalty
+	if (ev1 > max_EW) {
+		max_EW = ev1;
+	}
+	//store eigenvalue for output
+	pLC->smallest_EW = ev0;
 }
 
 void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM) {
@@ -168,36 +206,14 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 		if (start_solution){
 
 			//calculate cofactor of hessian
-			shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
-			pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
-			hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
-			cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
+			calc_cofactor_hessian(pLC, pBC, hess);
+
+			//calculate eigenvalues and convexify
+			calculate_eigenvalues(pLC, hess, true);
+
+			//update diffusion matrix and calculate laplace matrix
 			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 					pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
-
-			//calculate eigenvalues
-			Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
-			es.compute(hess);
-			cout << "The eigenvalues of diffusion matrix are: " << es.eigenvalues().transpose() << endl;
-
-			if (es.eigenvalues()(0) < min_EW){
-				min_EW = es.eigenvalues()(0);
-			}
-
-
-			//correct eigenvalues?
-			if (es.eigenvalues()(0) < epsilon){
-				cout << "Attention: the start solution was not convex! Correcting " << endl;
-				convexify(hess, es);
-			}
-			//update maximal EW for penalty
-			if (es.eigenvalues()(1) > max_EW){
-				max_EW = es.eigenvalues()(1);
-			}
-			//store eigenvalue for output
-			pLC->smallest_EW = es.eigenvalues()(0);
-
-
 		}
 		else{
 			hess << 1, 0 , 0, 1;
@@ -544,44 +560,26 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 }
 
 //////////////////////////////////////////////////////
-void Tsolver::convexify(Hessian_type& hess, Eigen::SelfAdjointEigenSolver<Hessian_type> &es) {
+void Tsolver::convexify(Hessian_type& hess) {
 
-	Hessian_type T = es.eigenvectors();
+	EW_solver.compute(hess);
 
-	/*	value_type EW2 = es.eigenvalues()(1);
-
-    cout << "Correcting hessian \n" << endl;
-	cout << hess << endl;
-    cout << "T \n" << T << endl;
-
-    cout<< "??? maybe : \n" << T.transpose()*hess*T << endl;
-
-    Hessian_type A = T*hess*T.transpose();
-    cout << "normal way "<< endl;
-    cout << "T*hess*T^t \n" << A << endl;
-    A(0,0) = epsilon;
-    if (EW2 < 0)	A(1,1) = epsilon;
-    cout << "D*D_e \n" << A << endl;
-    A = T.transpose() * A * T;
-    cout << "T^t*%*T \n " << A << endl << endl;
-	es.compute(A);
-	cout << "=> eigenvalues " << es.eigenvalues().transpose() << endl;
-    cout << "=> eigenvectors  \n" << es.eigenvectors() << endl << endl;
-*/
+	Hessian_type T = EW_solver.eigenvectors();
 
 	//correct all negative eigenvalue
 	Eigen::Vector2d new_eigenvalues;
 	new_eigenvalues(0) = epsilon;
-	new_eigenvalues(1) = es.eigenvalues()(1);
+	new_eigenvalues(1) = EW_solver.eigenvalues()(1);
 	if (new_eigenvalues(1)< 0)		new_eigenvalues(1) =  epsilon;
 
 	hess = T.transpose()*new_eigenvalues.asDiagonal()*T;
 //	cout << "hess*T^t*D*T \n";
 //	cout << hess << endl;
 
-	es.compute(hess);
+	value_type ev0, ev1;
+	calculate_eigenvalues(hess, ev0, ev1);
 
-	cout << "new eigenvalues " << es.eigenvalues().transpose() << endl;
+	cout << "new eigenvalues " << ev0 << " " << ev1 << endl;
 //	cout << "new eigenvectors  \n" << es.eigenvectors() << endl << endl;
 }
 
@@ -614,37 +612,14 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		grid.findBaseCellOf(idLC, pBC);
 
 		Hessian_type hess;
-		shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
-		pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
-		hess /= facLevelVolume[idLC.level()]; //transform to leafcell
-		cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
-		pLC->update_diffusionmatrix(hess); //update diffusionmatrix
+		calc_cofactor_hessian(pLC, pBC, hess);
 
-		Nvector_type nv;
-		grid.nodes(idLC,nv);
-		state_type state, stateEx;
-		space_type n;
-		value_type error = 0;
-
+		nvector_type  nv;
+		get_nodes(grid, idLC,nv);
 
 		cout << "cofactor matrix is with node " << nv[0][0] << " " << nv[0][1] << " :\n" << hess << endl;
+		calculate_eigenvalues(pLC,hess, true);
 
-		//calculate eigenvalues
-		es.compute(hess);
-		cout << "The eigenvalues of diffusion matrix are: " << es.eigenvalues().transpose() << endl;
-
-		//correct eigenvalues?
-		if (es.eigenvalues()(0) < epsilon){
-			cout << "Correcting " << endl;
-			convexify(hess, es);
-		}
-		//update maximal EW for penalty
-		if (es.eigenvalues()(1) > max_EW){
-			max_EW = es.eigenvalues()(1);
-		}
-
-		//store eigenvalue for output
-		pLC->smallest_EW = es.eigenvalues()(0);
 
 		//calculate residuum
 
@@ -726,7 +701,7 @@ void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // s
 #elif (PROBLEM == MONGEAMPERE2)
 	u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
 #elif (PROBLEM == MONGEAMPERE3)
-	value_type val = x.length() - 0.2;
+	value_type val = x.norm() - 0.2;
 	if (val > 0)	u[0] = val*val/2.;
 	else u[0] = 0;
 #elif (PROBLEM == MONGEAMPERE4)
@@ -777,7 +752,7 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 	u_rhs[0] = 6+ 5*sqr(x[0]) + 4 * x[0]*x[1] + sqr(x[1]);
 	u_rhs[0] *= f;
 #elif (PROBLEM == MONGEAMPERE3)
-	value_type f = 0.2/x.length();
+	value_type f = 0.2/x.norm();
 	f = 1 - f;
 	if (f > 0)	u_rhs[0] = 2*f;
 	else	u_rhs[0] = 0;
