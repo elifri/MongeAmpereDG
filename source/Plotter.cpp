@@ -394,9 +394,9 @@ void Plotter::write_points(std::ofstream &file, const std::vector < std::vector<
 
 }
 
-void Plotter::write_solution(const node_function_type &get_exacttemperature, std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
+void Plotter::write_solution(const vector_function_type &get_exacttemperature, std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
 {
-	Nvector_type nv;
+	nvector_type nv;
 	state_type state;
 
 	// write points
@@ -417,7 +417,7 @@ void Plotter::write_solution(const node_function_type &get_exacttemperature, std
 				grid_type::leafcell_type * pLC = NULL;
 				grid->findLeafCell(id, pLC);
 
-				grid->nodes(id, nv);
+				get_nodes(*grid, id, nv);
 				for (unsigned int k = 0; k < id.countNodes(); ++k) {
 					get_exacttemperature(nv[k],state);
 					file << "\t\t\t\t\t" << nv[k] << " " << state << endl;
@@ -432,7 +432,7 @@ void Plotter::write_solution(const node_function_type &get_exacttemperature, std
 				grid_type::leafcell_type * pLC = NULL;
 				grid->findLeafCell(id, pLC);
 
-				grid->nodes(id, nv);
+				get_nodes(*grid, id, nv);
 
 				Eigen::Vector3d h_x, h_y;		// (
 				h_x(0) = -nv[0][0] + nv[1][0];
@@ -447,7 +447,7 @@ void Plotter::write_solution(const node_function_type &get_exacttemperature, std
 				h_x /= refine + 1;
 				h_y /= refine + 1;
 
-				std::vector<N_type> points(id.countNodes() * (refine + 1));
+				nvector_type points(id.countNodes() * (refine + 1));
 				Eigen::VectorXd vals(points.size());
 
 				state_type val;
@@ -702,19 +702,19 @@ void Plotter::write_numericalsolution_VTK(const unsigned int i) {
 
 //////////////////////////////////////////////////////////
 
-void Plotter::write_exactsolution(node_function_type get_exacttemperature, const unsigned int i) {
+void Plotter::write_exactsolution(vector_function_type get_exacttemperature, const unsigned int i) {
 
 	std::vector < std::vector<id_type> > v;
 	v.resize(grid->countBlocks());
 
-	Nvector_type nv;
+	nvector_type nv;
 	state_type state;
 
 // collect points
 	for (grid_type::leafcellmap_type::const_iterator it =
 			grid->leafCells().begin(); it != grid->leafCells().end(); ++it) {
 		const grid_type::id_type & id = grid_type::id(it);
-		grid->nodes(id, nv);
+		get_nodes(*grid, id, nv);
 		v[id.block()].push_back(id);
 	}
 
@@ -749,7 +749,7 @@ void Plotter::write_exactsolution(node_function_type get_exacttemperature, const
 			grid_type::leafcell_type * pLC;
 			grid->findLeafCell(id, pLC);
 
-			grid->nodes(id, nv);
+			get_nodes(*grid, id, nv);
 			for (unsigned int k = 0; k < id.countNodes(); ++k) {
 				get_exacttemperature(nv[k], state);
 				fC << nv[k] << " " << state << endl;
@@ -776,19 +776,19 @@ void Plotter::write_exactsolution(node_function_type get_exacttemperature, const
 
 //////////////////////////////////////////////////////////
 
-void Plotter::write_exactrhs_MA(const node_function_type &get_rhs_MA, const unsigned int i) {
+void Plotter::write_exactrhs_MA(const vector_function_type &get_rhs_MA, const unsigned int i) {
 
 	std::vector < std::vector<id_type> > v;
 	v.resize(grid->countBlocks());
 
-	Nvector_type nv;
+	nvector_type nv;
 	state_type state;
 
 // collect points
 	for (grid_type::leafcellmap_type::const_iterator it =
 			grid->leafCells().begin(); it != grid->leafCells().end(); ++it) {
 		const grid_type::id_type & id = grid_type::id(it);
-		grid->nodes(id, nv);
+		get_nodes(*grid, id, nv);
 		v[id.block()].push_back(id);
 	}
 
@@ -823,7 +823,7 @@ void Plotter::write_exactrhs_MA(const node_function_type &get_rhs_MA, const unsi
 			grid_type::leafcell_type * pLC;
 			grid->findLeafCell(id, pLC);
 
-			grid->nodes(id, nv);
+			get_nodes(*grid, id, nv);
 			for (unsigned int k = 0; k < id.countNodes(); ++k) {
 				get_rhs_MA(nv[k], state);
 				fC << nv[k] << " " << state << endl;
@@ -848,7 +848,7 @@ void Plotter::write_exactrhs_MA(const node_function_type &get_rhs_MA, const unsi
 
 }
 
-void Plotter::writeExactVTK(const node_function_type &get_exacttemperature_MA, std::string filename, const unsigned int refine, const bool binary) {
+void Plotter::writeExactVTK(const vector_function_type &get_exacttemperature_MA, std::string filename, const unsigned int refine, const bool binary) {
 
 	//--------------------------------------
 	std::vector < std::vector<id_type> > v;
@@ -879,7 +879,7 @@ void Plotter::writeExactVTK(const node_function_type &get_exacttemperature_MA, s
 
 ///////////////////////////////////////////////////////////
 
-void Plotter::write_exactsolution_VTK(const node_function_type &exactSol, const unsigned int i) {
+void Plotter::write_exactsolution_VTK(const vector_function_type &exactSol, const unsigned int i) {
 
 	std::string fname(output_directory);
 	fname += "/" + output_prefix + "grid_exactsolution" + NumberToString(i) + ".vtu";

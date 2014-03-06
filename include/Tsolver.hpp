@@ -290,14 +290,11 @@ public:
    void restore_MA (Eigen::VectorXd &solution);
    void convexify(Hessian_type & hess); //makes the hessian positive definit
    void get_exacttemperature_MA (const space_type & x, state_type & u); // state_type ???
-   void get_exacttemperature_MAN (const N_type & x, state_type & u); // state_type ???
-   node_function_type get_exacttemperature_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_exacttemperature_MAN, this);}
-   vector_function_type get_exacttemperature_MA_Vcallback() { return MEMBER_FUNCTION(&Tsolver::get_exacttemperature_MA, this);}
+   vector_function_type get_exacttemperature_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_exacttemperature_MA, this);}
    void get_exacttemperaturenormalderivative_MA (const space_type & x, const space_type & normal, state_type & u_n);
 	// state_type ???
    void get_rhs_MA (const space_type & x, state_type & u_rhs);  // state_type ???
-   void get_rhs_MAN (const N_type & x, state_type & u_rhs);  // state_type ???
-   node_function_type get_rhs_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_rhs_MAN, this);}
+   vector_function_type get_rhs_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_rhs_MA, this);}
 
    void local_dt_MA (const value_type & lengthmin, value_type & dt_element);
    void time_stepping_MA ();

@@ -35,7 +35,7 @@ private:
 	void write_smallest_EW(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); ///write an data array containing the smallest EW stored in every leafcell
 
 	void write_points(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); //writes points in vtk format
-	void write_solution(const node_function_type &get_exacttemperature, std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); //writes points (of solution) in vtk format
+	void write_solution(const vector_function_type &get_exacttemperature, std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); //writes points (of solution) in vtk format
 	void write_cells(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); //write cells
 
 public:
@@ -55,7 +55,7 @@ public:
 	    * \param int	  ??
 	    * \param bool 	  should switch between binary and asccii format is NOT working yet
 	    */
-	   void writeExactVTK(const node_function_type &get_exacttemperature_MA, std::string filename, const unsigned int refine = 0, const bool binary = false);
+	   void writeExactVTK(const vector_function_type &get_exacttemperature_MA, std::string filename, const unsigned int refine = 0, const bool binary = false);
 
 	void set_grid(grid_type* grid){	this->grid = grid;}
 	void set_shape(const Tshape* shape){	this->shape = shape;}
@@ -83,9 +83,9 @@ public:
 	void write_numericalsolution(const unsigned int i);
 	void write_numericalsolution_VTK(const unsigned int i);
 
-	void write_exactsolution(const node_function_type get_exacttemperature, const unsigned int i);
-	void write_exactsolution_VTK(const node_function_type &exactSol, const unsigned int i);
-	void write_exactrhs_MA(const node_function_type &get_rhs_MA, const unsigned int i);
+	void write_exactsolution(const vector_function_type get_exacttemperature, const unsigned int i);
+	void write_exactsolution_VTK(const vector_function_type &exactSol, const unsigned int i);
+	void write_exactrhs_MA(const vector_function_type &get_rhs_MA, const unsigned int i);
 
 	void write_numericalsolution ();
 };

@@ -196,7 +196,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 	Emass_type laplace;
 	value_type det_jac = pBC->get_detjacabs() * facLevelVolume[pLC->id().level()]; //determinant of Transformation to leafcell
 
-	if (iteration > 0){ //we need to update the diffusion matrices /hessian
+	if (iteration > 0){ //we need to update the laplace matrix
 		pLC->assemble_laplace(shape.get_Equad(), shape.get_Equads_grad(),
 								pBC->get_jac(), det_jac,facLevelLength[pLC->id().level()], laplace); //update diffusionmatrix
 	}
@@ -222,26 +222,6 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 			max_EW = 1;
 		}
 	}
-
-
-	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
-
-	//correct eigenvalues
-/*	while (es.eigenvalues()(0) <= 0)
-	{
-		Nvector_type nv;
-		grid.nodes(pLC->id(),nv);
-
-		value_type x = (nv[0][0] + nv[1][0] + nv[2][0])/3.;
-		value_type y = (nv[0][1] + nv[1][1] + nv[2][1])/3.;
-
-		cout << "At least one eigenvalue is negative at LC " << pLC->id() << " with mid " << x << " " << y << endl;
-		cout << "Correcting ..." << endl;
-		pLC->set_diffusionmatrix(pLC->A+Hessian_type::Identity());
-		es.compute(pLC->A);
-	}
-*/
-
 
 	for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
@@ -713,13 +693,6 @@ void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // s
 	throw("solution not implemented for this problem");
 #endif
 }
-void Tsolver::get_exacttemperature_MAN(const N_type & x, state_type & u)
-{
-	space_type x2;
-	for (int i = 0; i< x2.size(); ++i)
-		x2(i) = x[i];
-	get_exacttemperature_MA(x2,u);
-}
 
 //////////////////////////////////////////////////////////
 
@@ -759,14 +732,6 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 #else
 	u_rhs[0] = 0;
 #endif
-}
-
-void Tsolver::get_rhs_MAN(const N_type & x, state_type & u_rhs)
-{
-	space_type x2;
-	for (int i = 0; i< x2.size(); ++i)
-		x2(i) = x[i];
-	get_rhs_MA(x2,u_rhs);
 }
 
 //////////////////////////////////////////////////////////
