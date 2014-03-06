@@ -704,41 +704,22 @@ double phi(const double x, const double y) {
 
 void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // state_type ???
 		{
-#if (PROBLEM == SIMPLEPOISSON)
-	const double a = 0.3, b = 0.5, c = -0.2;
-	u[0] = a * x[0] + b * x[1] + c;
-#elif (PROBLEM == SIMPLEPOISSON2)
-	const double a = 0.3, b = 0.5;
-	u[0] = a * (sqr(x[0]) + sqr(x[1])) + b * (x[0] * x[1]);
-#elif (PROBLEM == SIMPLEPOISSON3)
-	const double a = 0.3, b = 0.5;
-	u[0] = a * (sqr(x[0]) - sqr(x[1])) + b * (x[0] * x[1]);
-//#elif (PROBLEM == MONGEAMPERE1)
-//	u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
-#elif (PROBLEM == SIMPLEMONGEAMPERE)
-	u[0] = 2*sqr(x[0]) + 2*sqr(x[1]) + 3 * x[0]*x[1];
+#if (PROBLEM == MONGEAMPERE1)
+	u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
 #elif (PROBLEM == MONGEAMPERE2)
 	u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
+#elif (PROBLEM == MONGEAMPERE3)
+	value_type val = x.length() - 0.2;
+	if (val > 0)	u[0] = val*val/2.;
+	else u[0] = 0;
+#elif (PROBLEM == MONGEAMPERE4)
+	value_type val = 2-sqr(x.norm());
+	if (val < 0) u[0] = 0;
+	else	u[0] = -sqrt(val);
+#elif (PROBLEM == SIMPLEMONGEAMPERE)
+	u[0] = 2*sqr(x[0]) + 2*sqr(x[1]) + 3 * x[0]*x[1];
 #elif (PROBLEM == CONST_RHS)
 	u[0] = 0; // exact solution not known, Dirichlet boundary conditions with u=0
-#elif (PROBLEM == SINGSOL1)
-
-	double xp = x[0] - 1.0, yp = x[1] - 1.0;
-
-	double r = sqrt(sqr(xp) + sqr(yp));
-	double theta = phi(xp, yp) - M_PI / 2;
-
-	double t2 = pow(r - 99.0 / 100.0, 2.0);
-	double t4 = exp(-1 / t2);
-	double t6 = pow(1.0 / 100.0 - r, 2.0);
-	double t8 = exp(-1 / t6);
-	double t12 = pow(r, 0.3333333333333333);
-	double t13 = t12 * t12;
-	double t15 = sin(2.0 / 3.0 * theta);
-	u[0] = t4 / (t4 + t8) * t13 * t15;
-
-//    u[0] = zeta(r) * pow(r, 2.0 / 3.0) * sin(2.0 / 3.0 * theta);
-
 #elif (PROBLEM == CONST_RHS2)
 	u[0] = 1.0 / 8.0 - (pow(x[0] - 0.5, 2) + pow(x[1] - 0.5, 2)) / 4.0;
 #else
@@ -758,24 +739,12 @@ void Tsolver::get_exacttemperature_MAN(const N_type & x, state_type & u)
 
 void Tsolver::get_exacttemperaturenormalderivative_MA(const space_type & x,
 		const space_type & normal, state_type & u_n) // state_type ???
-		{
-#if (PROBLEM == SIMPLEPOISSON)
-	const double a = 0.3, b = 0.5;
-	u_n(0) = a * normal[0] + b * normal[1];
-#elif (PROBLEM == SIMPLEPOISSON2)
-	const double a = 0.3, b = 0.5;
-	u_n = (2 * a * x[0] + b * x[1]) * normal[0]
-	+ (2 * a * x[1] + b * x[0]) * normal[1];
-#elif (PROBLEM == SIMPLEPOISSON3)
-	const double a = 0.3, b = 0.5;
-	u_n = ( 2 * a * x[0] + b * x[1]) * normal[0]
-	+ (-2 * a * x[1] + b * x[0]) * normal[1];
-#elif (PROBLEM == CONST_RHS)
-	u_n.setZero(); // exact solution not explicitly known
-#else
+{
+//#if
+//#else
 	// normal derivative not implemented for this problem
 	throw("normal derivative not implemented for this problem");
-#endif
+//#endif
 }
 
 //////////////////////////////////////////////////////////
@@ -783,75 +752,24 @@ void Tsolver::get_exacttemperaturenormalderivative_MA(const space_type & x,
 void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type ???
 		{
 
-#if (PROBLEM == SIMPLEPOISSON2)
-	const double a = 0.3, b = 0.5;
-	u_rhs[0] = -4 * a;
-#elif (PROBLEM == SIMPLEPOISSON3)
-	u_rhs[0] = 0;
-//#elif (PROBLEM == MONGEAMPERE1)
-//	u_rhs[0] = 1 + sqr(x[0])+sqr(x[1]); //1+||x||^2
-//	u_rhs[0] *=exp(sqr(x[0])+sqr(x[1])); //*exp(||x||^2)
+#if (PROBLEM == MONGEAMPERE1)
+	u_rhs[0] = 1 + sqr(x[0])+sqr(x[1]); //1+||x||^2
+	u_rhs[0] *=2*exp(sqr(x[0])+sqr(x[1])); //*exp(||x||^2)
 #elif (PROBLEM == MONGEAMPERE2)
 	value_type f = exp( (sqr(x[0])+sqr(x[1]))/2. );
 	u_rhs[0] = 6+ 5*sqr(x[0]) + 4 * x[0]*x[1] + sqr(x[1]);
 	u_rhs[0] *= f;
+#elif (PROBLEM == MONGEAMPERE3)
+	value_type f = 0.2/x.length();
+	f = 1 - f;
+	if (f > 0)	u_rhs[0] = 2*f;
+	else	u_rhs[0] = 0;
+#elif (PROBLEM == MONGEAMPERE4)
+	u_rhs[0] = 4./sqr(2-sqr(x.norm()));
 #elif (PROBLEM == SIMPLEMONGEAMPERE)
 	u_rhs[0] = 8;
 #elif (PROBLEM == CONST_RHS)
-	u_rhs[0] = 1;
-#elif (PROBLEM == CONST_RHS2)
-	u_rhs[0] = 1;
-#elif (PROBLEM == SINGSOL1)
-	double xp = x[0] - 1.0, yp = x[1] - 1.0;
-
-	double r = sqrt(sqr(xp) + sqr(yp));
-	double theta = phi(xp, yp) - M_PI / 2;
-
-	if (r > 0.01 && r < 0.99) {
-
-		double t2 = r - 99.0 / 100.0;
-		double t3 = t2 * t2;
-		double t7 = exp(-1 / t3);
-		double t8 = 1 / t3 / t2 * t7;
-		double t9 = 1.0 / 100.0 - r;
-		double t10 = t9 * t9;
-		double t12 = exp(-1 / t10);
-		double t13 = t7 + t12;
-		double t14 = 1 / t13;
-		double t15 = pow(r, 0.3333333333333333);
-		double t16 = t15 * t15;
-		double t19 = sin(2.0 / 3.0 * theta);
-		double t20 = t14 * t16 * t19;
-		double t23 = t13 * t13;
-		double t24 = 1 / t23;
-		double t25 = t7 * t24;
-		double t26 = t16 * t19;
-		double t30 = t8 - 1 / t10 / t9 * t12;
-		double t31 = 2.0 * t26 * t30;
-		double t33 = t7 * t14;
-		double t34 = 1 / t15;
-		double t35 = t34 * t19;
-		double t38 = t3 * t3;
-		double t40 = 1 / t38 * t7;
-		double t45 = 1 / t38 / t3 * t7;
-		double t67 = t10 * t10;
-		double t81 = t33 / t15 / r * t19;
-		u_rhs[0] =
-		-1 / r * (2.0 * t8 * t20 - t25 * t31 + 2.0 / 3.0 * t33 * t35 +
-				r * (-6.0 * t40 * t20 + 4.0 * t45 * t20 -
-						4.0 * t8 * t24 * t31 +
-						8.0 / 3.0 * t8 * t14 * t34 * t19 +
-						8.0 * t7 / t23 / t13 * t26 * t30 * t30 -
-						8.0 / 3.0 * t25 * t35 * t30 -
-						t25 * t26 * (-6.0 * t40 + 4.0 * t45 -
-								6.0 / t67 * t12 +
-								4.0 / t67 / t10 * t12) -
-						2.0 / 9.0 * t81)
-		) + 4.0 / 9.0 * t81;
-
-	} else {
-		u_rhs[0] = 0;
-	}
+	u_rhs[0] = 2;
 #else
 	u_rhs[0] = 0;
 #endif
@@ -930,11 +848,6 @@ void Tsolver::time_stepping_MA() {
 	if (start_solution){
 		read_startsolution(filename);
 
-		std::string fname(plotter.get_output_directory());
-		fname +=
-		fname += "/grid_startsolution.vtu";
-		plotter.writeLeafCellVTK(fname, 1);
-
 	}
 
 	iteration = 0;
@@ -977,6 +890,15 @@ void Tsolver::time_stepping_MA() {
 		}
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
+
+		if (iteration == 0 && start_solution)
+		{
+			std::string fname(plotter.get_output_directory());
+			fname += "/grid_startsolution.vtu";
+			plotter.writeLeafCellVTK(fname, 1);
+			cout << "min Eigenvalue " << min_EW << endl;
+		}
+
 
 		restore_MA(Lsolution);
 
