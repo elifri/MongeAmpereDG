@@ -1395,7 +1395,7 @@ void Tsolver::invert_mass ()
           pLC->unew(i,j) = 0.0;
           }
 
-      pLC->Serror = 0.0;
+      pLC->Serror.setZero();
       pLC->id().setFlag (0,false);
       }
     }
@@ -1645,8 +1645,8 @@ void Tsolver::assemble_indicator_and_limiting ()
 	     }
 
 	   // Simpson:
-	   pLC->Serror += facLC*(4*sqr(pmhalf - uLCS[0]) + sqr(p0 - uLCF[0]))/6.0;
-	   pNC->Serror += facNC*(4*sqr(pphalf - uNCS[0]) + sqr(p0 - uNCF[0]))/6.0;
+	   pLC->Serror += Enodevalue_type::Constant(facLC*(4*sqr(pmhalf - uLCS[0]) + sqr(p0 - uLCF[0]))/6.0);
+	   pNC->Serror += Enodevalue_type::Constant(facNC*(4*sqr(pphalf - uNCS[0]) + sqr(p0 - uNCF[0]))/6.0);
 	   assembleInnerFace = false;
 	   }
 
@@ -1664,6 +1664,6 @@ void Tsolver::assemble_indicator_and_limiting ()
      grid.findLeafCell (idLC, pLC);
      pLC->Serror *= facNC;
      }
-};
+}
 
 //////////////////////////////////////////////////////

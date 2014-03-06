@@ -621,29 +621,23 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		calculate_eigenvalues(pLC,hess, true);
 
 
-		//calculate residuum
+		//determinant of hessian for calculation of residuum
+		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
 
-		/*		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1); //determinant of hessian = lhs
+		state_type state, stateEx, stateRhs;
 
-		//calculate rhs !attention works only for constant rhs
-		space_type x;
-		state_type uLC;
-		get_rhs_MA(x, uLC);
-
-		//get rhs
-		value_type rhs = uLC(0);
-		pLC->Serror = det - rhs; //solution should have solution
-		//debug output
-		cout << "residuum in LC: "<< pLC->id() << " is " << pLC->Serror << endl;*/
-
+		//loop over LC nodes
 		for (unsigned int k = 0; k < idLC.countNodes(); k++){
-			shape.assemble_state_N(pLC->u,k,state);
-			n[0] = nv[k][0]; n[1] = nv[k][1];
-			get_exacttemperature_MA(n,stateEx);
-			error += std::abs(state[0]-stateEx[0]);
-		}
-		pLC->Serror = error/3.;
+			//get rhs
+			get_rhs_MA(nv(k), stateRhs);
+			//calculate residuum
+			pLC->residuum(k) = det - stateRhs(0);
 
+			//calculate abs error
+			shape.assemble_state_N(pLC->u,k,state);
+			get_exacttemperature_MA(nv[k],stateEx);
+			pLC->Serror(k) = std::abs(state(0)-stateEx(0));
+		}
 
 	}
 
@@ -922,7 +916,7 @@ void Tsolver::setleafcellflags(unsigned int flag, bool value) {
 		grid_type::leafcell_type * pLC = NULL;
 		grid.findLeafCell(idLC, pLC);
 
-		pLC->Serror = 0.0;
+		pLC->Serror.setZero();
 		pLC->id().setFlag(flag, value);
 	}
 
@@ -966,10 +960,10 @@ void Tsolver::adapt(const double refine_eps, const double coarsen_eps) {
 			 }
 			 */
 
-			if ((pLC->Serror > refine_eps) && (level < levelmax))
+			if ((pLC->error() > refine_eps) && (level < levelmax))
 				idsrefine.insert(idLC);
 			else {
-				if ((pLC->Serror < coarsen_eps) && (level > 1))
+				if ((pLC->error() < coarsen_eps) && (level > 1))
 					idscoarsen.insert(idLC);
 			}
 

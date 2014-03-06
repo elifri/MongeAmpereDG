@@ -28,7 +28,6 @@ public:
   typedef CONFIG_TYPE                                    config_type;
   typedef typename config_type::grid_type              grid_type;
   typedef typename config_type::id_type                id_type;
-  typedef typename config_type::value_type             value_type;
   typedef typename config_type::antecell_type          antecell_type;
   typedef typename config_type::leafcell_type          leafcell_type;
   typedef typename config_type::leafcellptrvector_type leafcellptrvector_type;
@@ -50,7 +49,8 @@ public:
   Estate_type      u;
   Estate_type      unew;
   value_type       limiter;
-  value_type       Serror;
+  Enodevalue_type  Serror;
+  Enodevalue_type  residuum;
 
   diffusionmatrix_type 	A;
   value_type	   		smallest_EW;
@@ -77,6 +77,16 @@ public:
 
   void update_diffusionmatrix(const diffusionmatrix_type A){
 	  this->A = A;
+  }
+
+  value_type error() const{
+	value_type error = 0;
+	for (unsigned int i = 0; i< Serror.size(); i++)
+	{
+		error += Serror(i);
+	}
+	error /= Serror.size();
+	return error;
   }
 
   unsigned int faces() const { return m_nFaces; }

@@ -183,7 +183,7 @@ typedef Eigen::Matrix<value_type, spacedim, spacedim> diffusionmatrix_type;
 typedef Eigen::Matrix<value_type, spacedim, spacedim> Hessian_type;
 
 // shape-values at nodes (e.g. for solver-output = visualization-input)
-typedef Eigen::Matrix<double, shapedim, Ndim> Nvalueshape_type;
+typedef Eigen::Matrix<value_type, shapedim, Ndim> Nvalueshape_type;
 
 // quadr.-weights, quadrature points
 // and shape-values/derivatives at quadrature points
