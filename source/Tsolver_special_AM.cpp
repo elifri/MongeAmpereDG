@@ -8,7 +8,6 @@
 #include "../include/Tsolver.hpp"
 #include <Eigen/Eigenvalues>
 
-#include "../include/matlab_export.hpp"
 
 #if (EQUATION == MONGE_AMPERE_EQ)
 
