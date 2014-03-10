@@ -867,7 +867,7 @@ void Tsolver::time_stepping_MA() {
 		cout << "Assemble linear System..." << flush << endl;
 		pt.start();
 		if (interpolating_basis)			bd_handler.initialize(grid,number_of_dofs);
-		else	bd_handler.initialize_bezier(grid, number_of_dofs, get_exacttemperature_MA_Vcallback(), &shape);
+		else	bd_handler.initialize_bezier(grid, number_of_dofs, get_exacttemperature_MA_callback(), &shape);
 
 		assemble_MA(stabsign, gamma, LM_bd, Lrhs_bd, Lsolution_only_bd);
 		pt.stop();
