@@ -8,7 +8,6 @@
 #include "../include/Tsolver.hpp"
 #include <Eigen/Eigenvalues>
 
-#include "../include/matlab_export.hpp"
 
 #if (EQUATION == MONGE_AMPERE_EQ)
 
@@ -152,43 +151,98 @@ void Tsolver::assignViews_MA(unsigned int & offset) {
 	plotter.write_exactsolution(get_exacttemperature_MA_callback(),0);
 }
 
+void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC, Hessian_type & hess){
+	shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
+	pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
+	hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+	cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
+	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
+}
+
+void Tsolver::calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1)
+{
+	value_type rad = A(0,0) * A(0,0) + (A(1,1) - 2 * A(0,0)) * A(1,1) + 4 * A(0,1) * A(1,0);
+	value_type s = std::sqrt(rad);
+	ev0 = (A(0,0) + A(1,1) - s) / 0.2e1;
+	ev1 = (A(0,0) + A(1,1) + s) / 0.2e1;
+
+}
+
+void Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess,
+		bool use_convexify) {
+
+	value_type ev0, ev1;
+
+	calculate_eigenvalues(hess, ev0, ev1);
+
+	cout << "The eigenvalues of diffusion matrix are: "
+			<< ev0 << " " << ev1 << " " << endl;
+
+	//update min EW
+	if (ev0 < min_EW) {
+		min_EW = ev0;
+
+		if (ev0 < -1)
+		{
+			nvector_type nv;
+
+			get_nodes(grid, pLC->id(), nv);
+
+			cout << "Found very small Eigenvalue at "
+					<< pLC->id() << " with nodes "
+					<< nv[0].transpose() << ", " << nv(1).transpose() <<  ", " << nv(2).transpose() << endl;
+			cout << "Hessian is: \n" << hess << endl;
+
+		}
+
+
+	}
+
+	//correct eigenvalues?
+	if (ev0 < epsilon && use_convexify) {
+		cout << "Attention: the function was not convex! Correcting cofactor matrix"
+				<< endl;
+		convexify(hess);
+	}
+
+	//update maximal EW for penalty
+	if (ev1 > max_EW) {
+		max_EW = ev1;
+	}
+	//store eigenvalue for output
+	pLC->smallest_EW = ev0;
+}
 
 void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM) {
 	Emass_type laplace;
 	value_type det_jac = pBC->get_detjacabs() * facLevelVolume[pLC->id().level()]; //determinant of Transformation to leafcell
 
-	if (iteration > 0){ //we need to update the diffusion matrices /hessian
+	if (iteration > 0){ //we need to update the laplace matrix
 		pLC->assemble_laplace(shape.get_Equad(), shape.get_Equads_grad(),
 								pBC->get_jac(), det_jac,facLevelLength[pLC->id().level()], laplace); //update diffusionmatrix
 	}
 	else
 	{
 		Hessian_type hess;
-		hess << 1, 0 , 0, 1;
-		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
+		if (start_solution){
+
+			//calculate cofactor of hessian
+			calc_cofactor_hessian(pLC, pBC, hess);
+
+			//calculate eigenvalues and convexify
+			calculate_eigenvalues(pLC, hess, false);
+
+			//update diffusion matrix and calculate laplace matrix
+			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
+					pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
+		}
+		else{
+			hess << 1, 0 , 0, 1;
+			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
-		max_EW = 1;
+			max_EW = 1;
+		}
 	}
-
-
-	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
-
-	//correct eigenvalues
-/*	while (es.eigenvalues()(0) <= 0)
-	{
-		Nvector_type nv;
-		grid.nodes(pLC->id(),nv);
-
-		value_type x = (nv[0][0] + nv[1][0] + nv[2][0])/3.;
-		value_type y = (nv[0][1] + nv[1][1] + nv[2][1])/3.;
-
-		cout << "At least one eigenvalue is negative at LC " << pLC->id() << " with mid " << x << " " << y << endl;
-		cout << "Correcting ..." << endl;
-		pLC->set_diffusionmatrix(pLC->A+Hessian_type::Identity());
-		es.compute(pLC->A);
-	}
-*/
-
 
 	for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
@@ -524,44 +578,26 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 }
 
 //////////////////////////////////////////////////////
-void Tsolver::convexify(Hessian_type& hess, Eigen::SelfAdjointEigenSolver<Hessian_type> &es) {
+void Tsolver::convexify(Hessian_type& hess) {
 
-	Hessian_type T = es.eigenvectors();
+	EW_solver.compute(hess);
 
-	/*	value_type EW2 = es.eigenvalues()(1);
-
-    cout << "Correcting hessian \n" << endl;
-	cout << hess << endl;
-    cout << "T \n" << T << endl;
-
-    cout<< "??? maybe : \n" << T.transpose()*hess*T << endl;
-
-    Hessian_type A = T*hess*T.transpose();
-    cout << "normal way "<< endl;
-    cout << "T*hess*T^t \n" << A << endl;
-    A(0,0) = epsilon;
-    if (EW2 < 0)	A(1,1) = epsilon;
-    cout << "D*D_e \n" << A << endl;
-    A = T.transpose() * A * T;
-    cout << "T^t*%*T \n " << A << endl << endl;
-	es.compute(A);
-	cout << "=> eigenvalues " << es.eigenvalues().transpose() << endl;
-    cout << "=> eigenvectors  \n" << es.eigenvectors() << endl << endl;
-*/
+	Hessian_type T = EW_solver.eigenvectors();
 
 	//correct all negative eigenvalue
 	Eigen::Vector2d new_eigenvalues;
 	new_eigenvalues(0) = epsilon;
-	new_eigenvalues(1) = es.eigenvalues()(1);
+	new_eigenvalues(1) = EW_solver.eigenvalues()(1);
 	if (new_eigenvalues(1)< 0)		new_eigenvalues(1) =  epsilon;
 
 	hess = T.transpose()*new_eigenvalues.asDiagonal()*T;
 //	cout << "hess*T^t*D*T \n";
 //	cout << hess << endl;
 
-	es.compute(hess);
+	value_type ev0, ev1;
+	calculate_eigenvalues(hess, ev0, ev1);
 
-//	cout << "new eigenvalues " << es.eigenvalues().transpose() << endl;
+	cout << "new eigenvalues " << ev0 << " " << ev1 << endl;
 //	cout << "new eigenvectors  \n" << es.eigenvectors() << endl << endl;
 }
 
@@ -573,6 +609,8 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 	leafcell_type *pLC = NULL;
 	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
 	max_EW = 0; //init max_Ew
+	min_EW = 10;
+
 
 	for (grid_type::leafcellmap_type::const_iterator it =
 			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
@@ -592,62 +630,32 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		grid.findBaseCellOf(idLC, pBC);
 
 		Hessian_type hess;
-		shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
-		pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
-		hess /= facLevelVolume[idLC.level()]; //transform to leafcell
-		cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
-		pLC->update_diffusionmatrix(hess); //update diffusionmatrix
+		calc_cofactor_hessian(pLC, pBC, hess);
 
-		Nvector_type nv;
-		grid.nodes(idLC,nv);
-		state_type state, stateEx;
-		space_type n;
-		value_type error = 0;
-
+		nvector_type  nv;
+		get_nodes(grid, idLC,nv);
 
 		cout << "cofactor matrix is with node " << nv[0][0] << " " << nv[0][1] << " :\n" << hess << endl;
+		calculate_eigenvalues(pLC,hess, false);
 
-		//calculate eigenvalues
-		es.compute(hess);
-		cout << "The eigenvalues of diffusion matrix are: " << es.eigenvalues().transpose() << endl;
 
-		//correct eigenvalues?
-		if (es.eigenvalues()(0) < epsilon){
-			cout << "Correcting " << endl;
-			convexify(hess, es);
-			cout << "corrected cofactor matrix is :\n" << hess << endl;
-		}
-		//update maximal EW for penalty
-		if (es.eigenvalues()(1) > max_EW){
-			max_EW = es.eigenvalues()(1);
-		}
+		//determinant of hessian for calculation of residuum
+		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
 
-		//store eigenvalue for output
-		pLC->smallest_EW = es.eigenvalues()(0);
+		state_type state, stateEx, stateRhs;
 
-		//calculate residuum
-
-		/*		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1); //determinant of hessian = lhs
-
-		//calculate rhs !attention works only for constant rhs
-		space_type x;
-		state_type uLC;
-		get_rhs_MA(x, uLC);
-
-		//get rhs
-		value_type rhs = uLC(0);
-		pLC->Serror = det - rhs; //solution should have solution
-		//debug output
-		cout << "residuum in LC: "<< pLC->id() << " is " << pLC->Serror << endl;*/
-
+		//loop over LC nodes
 		for (unsigned int k = 0; k < idLC.countNodes(); k++){
-			shape.assemble_state_N(pLC->u,k,state);
-			n[0] = nv[k][0]; n[1] = nv[k][1];
-			get_exacttemperature_MA(n,stateEx);
-			error += std::abs(state[0]-stateEx[0])/stateEx[0];
-		}
-		pLC->Serror = error/3.;
+			//get rhs
+			get_rhs_MA(nv(k), stateRhs);
+			//calculate residuum
+			pLC->residuum(k) = det - stateRhs(0);
 
+			//calculate abs error
+			shape.assemble_state_N(pLC->u,k,state);
+			get_exacttemperature_MA(nv[k],stateEx);
+			pLC->Serror(k) = std::abs(state(0)-stateEx(0));
+		}
 
 	}
 
@@ -700,41 +708,22 @@ double phi(const double x, const double y) {
 
 void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // state_type ???
 		{
-#if (PROBLEM == SIMPLEPOISSON)
-	const double a = 0.3, b = 0.5, c = -0.2;
-	u[0] = a * x[0] + b * x[1] + c;
-#elif (PROBLEM == SIMPLEPOISSON2)
-	const double a = 0.3, b = 0.5;
-	u[0] = a * (sqr(x[0]) + sqr(x[1])) + b * (x[0] * x[1]);
-#elif (PROBLEM == SIMPLEPOISSON3)
-	const double a = 0.3, b = 0.5;
-	u[0] = a * (sqr(x[0]) - sqr(x[1])) + b * (x[0] * x[1]);
-#elif (PROBLEM == MONGEAMPERE1)
+#if (PROBLEM == MONGEAMPERE1)
 	u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
-#elif (PROBLEM == SIMPLEMONGEAMPERE)
-	u[0] = 2*sqr(x[0]) + 2*sqr(x[1]) + 3 * x[0]*x[1];
 #elif (PROBLEM == MONGEAMPERE2)
 	u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
+#elif (PROBLEM == MONGEAMPERE3)
+	value_type val = x.norm() - 0.2;
+	if (val > 0)	u[0] = val*val/2.;
+	else u[0] = 0;
+#elif (PROBLEM == MONGEAMPERE4)
+	value_type val = 2-sqr(x.norm());
+	if (val < 0) u[0] = 0;
+	else	u[0] = -sqrt(val);
+#elif (PROBLEM == SIMPLEMONGEAMPERE)
+	u[0] = 2*sqr(x[0]) + 2*sqr(x[1]) + 3 * x[0]*x[1];
 #elif (PROBLEM == CONST_RHS)
 	u[0] = 0; // exact solution not known, Dirichlet boundary conditions with u=0
-#elif (PROBLEM == SINGSOL1)
-
-	double xp = x[0] - 1.0, yp = x[1] - 1.0;
-
-	double r = sqrt(sqr(xp) + sqr(yp));
-	double theta = phi(xp, yp) - M_PI / 2;
-
-	double t2 = pow(r - 99.0 / 100.0, 2.0);
-	double t4 = exp(-1 / t2);
-	double t6 = pow(1.0 / 100.0 - r, 2.0);
-	double t8 = exp(-1 / t6);
-	double t12 = pow(r, 0.3333333333333333);
-	double t13 = t12 * t12;
-	double t15 = sin(2.0 / 3.0 * theta);
-	u[0] = t4 / (t4 + t8) * t13 * t15;
-
-//    u[0] = zeta(r) * pow(r, 2.0 / 3.0) * sin(2.0 / 3.0 * theta);
-
 #elif (PROBLEM == CONST_RHS2)
 	u[0] = 1.0 / 8.0 - (pow(x[0] - 0.5, 2) + pow(x[1] - 0.5, 2)) / 4.0;
 #else
@@ -742,36 +731,17 @@ void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // s
 	throw("solution not implemented for this problem");
 #endif
 }
-void Tsolver::get_exacttemperature_MAN(const N_type & x, state_type & u)
-{
-	space_type x2;
-	for (int i = 0; i< x2.size(); ++i)
-		x2(i) = x[i];
-	get_exacttemperature_MA(x2,u);
-}
 
 //////////////////////////////////////////////////////////
 
 void Tsolver::get_exacttemperaturenormalderivative_MA(const space_type & x,
 		const space_type & normal, state_type & u_n) // state_type ???
-		{
-#if (PROBLEM == SIMPLEPOISSON)
-	const double a = 0.3, b = 0.5;
-	u_n(0) = a * normal[0] + b * normal[1];
-#elif (PROBLEM == SIMPLEPOISSON2)
-	const double a = 0.3, b = 0.5;
-	u_n = (2 * a * x[0] + b * x[1]) * normal[0]
-	+ (2 * a * x[1] + b * x[0]) * normal[1];
-#elif (PROBLEM == SIMPLEPOISSON3)
-	const double a = 0.3, b = 0.5;
-	u_n = ( 2 * a * x[0] + b * x[1]) * normal[0]
-	+ (-2 * a * x[1] + b * x[0]) * normal[1];
-#elif (PROBLEM == CONST_RHS)
-	u_n.setZero(); // exact solution not explicitly known
-#else
+{
+//#if
+//#else
 	// normal derivative not implemented for this problem
 	throw("normal derivative not implemented for this problem");
-#endif
+//#endif
 }
 
 //////////////////////////////////////////////////////////
@@ -779,86 +749,27 @@ void Tsolver::get_exacttemperaturenormalderivative_MA(const space_type & x,
 void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type ???
 		{
 
-#if (PROBLEM == SIMPLEPOISSON2)
-	const double a = 0.3, b = 0.5;
-	u_rhs[0] = -4 * a;
-#elif (PROBLEM == SIMPLEPOISSON3)
-	u_rhs[0] = 0;
-#elif (PROBLEM == MONGEAMPERE1)
+#if (PROBLEM == MONGEAMPERE1)
 	u_rhs[0] = 1 + sqr(x[0])+sqr(x[1]); //1+||x||^2
-	u_rhs[0] *=exp(sqr(x[0])+sqr(x[1])); //*exp(||x||^2)
+	u_rhs[0] *=2*exp(sqr(x[0])+sqr(x[1])); //*exp(||x||^2)
 #elif (PROBLEM == MONGEAMPERE2)
 	value_type f = exp( (sqr(x[0])+sqr(x[1]))/2. );
 	u_rhs[0] = 6+ 5*sqr(x[0]) + 4 * x[0]*x[1] + sqr(x[1]);
 	u_rhs[0] *= f;
+#elif (PROBLEM == MONGEAMPERE3)
+	value_type f = 0.2/x.norm();
+	f = 1 - f;
+	if (f > 0)	u_rhs[0] = 2*f;
+	else	u_rhs[0] = 0;
+#elif (PROBLEM == MONGEAMPERE4)
+	u_rhs[0] = 4./sqr(2-sqr(x.norm()));
 #elif (PROBLEM == SIMPLEMONGEAMPERE)
 	u_rhs[0] = 14;
 #elif (PROBLEM == CONST_RHS)
-	u_rhs[0] = 1;
-#elif (PROBLEM == CONST_RHS2)
-	u_rhs[0] = 1;
-#elif (PROBLEM == SINGSOL1)
-	double xp = x[0] - 1.0, yp = x[1] - 1.0;
-
-	double r = sqrt(sqr(xp) + sqr(yp));
-	double theta = phi(xp, yp) - M_PI / 2;
-
-	if (r > 0.01 && r < 0.99) {
-
-		double t2 = r - 99.0 / 100.0;
-		double t3 = t2 * t2;
-		double t7 = exp(-1 / t3);
-		double t8 = 1 / t3 / t2 * t7;
-		double t9 = 1.0 / 100.0 - r;
-		double t10 = t9 * t9;
-		double t12 = exp(-1 / t10);
-		double t13 = t7 + t12;
-		double t14 = 1 / t13;
-		double t15 = pow(r, 0.3333333333333333);
-		double t16 = t15 * t15;
-		double t19 = sin(2.0 / 3.0 * theta);
-		double t20 = t14 * t16 * t19;
-		double t23 = t13 * t13;
-		double t24 = 1 / t23;
-		double t25 = t7 * t24;
-		double t26 = t16 * t19;
-		double t30 = t8 - 1 / t10 / t9 * t12;
-		double t31 = 2.0 * t26 * t30;
-		double t33 = t7 * t14;
-		double t34 = 1 / t15;
-		double t35 = t34 * t19;
-		double t38 = t3 * t3;
-		double t40 = 1 / t38 * t7;
-		double t45 = 1 / t38 / t3 * t7;
-		double t67 = t10 * t10;
-		double t81 = t33 / t15 / r * t19;
-		u_rhs[0] =
-		-1 / r * (2.0 * t8 * t20 - t25 * t31 + 2.0 / 3.0 * t33 * t35 +
-				r * (-6.0 * t40 * t20 + 4.0 * t45 * t20 -
-						4.0 * t8 * t24 * t31 +
-						8.0 / 3.0 * t8 * t14 * t34 * t19 +
-						8.0 * t7 / t23 / t13 * t26 * t30 * t30 -
-						8.0 / 3.0 * t25 * t35 * t30 -
-						t25 * t26 * (-6.0 * t40 + 4.0 * t45 -
-								6.0 / t67 * t12 +
-								4.0 / t67 / t10 * t12) -
-						2.0 / 9.0 * t81)
-		) + 4.0 / 9.0 * t81;
-
-	} else {
-		u_rhs[0] = 0;
-	}
+	u_rhs[0] = 2;
 #else
 	u_rhs[0] = 0;
 #endif
-}
-
-void Tsolver::get_rhs_MAN(const N_type & x, state_type & u_rhs)
-{
-	space_type x2;
-	for (int i = 0; i< x2.size(); ++i)
-		x2(i) = x[i];
-	get_rhs_MA(x2,u_rhs);
 }
 
 //////////////////////////////////////////////////////////
@@ -925,6 +836,13 @@ void Tsolver::time_stepping_MA() {
 
 	singleton_config_file::instance().getValue("monge ampere", "maximal_iterations", maxits, 3);
 
+	std::string filename;
+	start_solution = singleton_config_file::instance().getValue("monge ampere", "start_iteration", filename, "");
+	if (start_solution){
+		read_startsolution(filename);
+
+	}
+
 	iteration = 0;
 
 	while (iteration < maxits) {
@@ -982,8 +900,16 @@ void Tsolver::time_stepping_MA() {
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
-		bd_handler.add_boundary_dofs(Lsolution,Lsolution_only_bd,Lsolution_bd);
 
+		if (iteration == 0 && start_solution)
+		{
+			std::string fname(plotter.get_output_directory());
+			fname += "/grid_startsolution.vtu";
+			plotter.writeLeafCellVTK(fname, 1);
+			cout << "min Eigenvalue " << min_EW << endl;
+		}
+
+		bd_handler.add_boundary_dofs(Lsolution,Lsolution_only_bd,Lsolution_bd);
 		restore_MA(Lsolution_bd);
 
 		cout << "LSolution" << Lsolution_bd.transpose() << endl;
@@ -1014,7 +940,7 @@ void Tsolver::setleafcellflags(unsigned int flag, bool value) {
 		grid_type::leafcell_type * pLC = NULL;
 		grid.findLeafCell(idLC, pLC);
 
-		pLC->Serror = 0.0;
+		pLC->Serror.setZero();
 		pLC->id().setFlag(flag, value);
 	}
 
@@ -1058,10 +984,10 @@ void Tsolver::adapt(const double refine_eps, const double coarsen_eps) {
 			 }
 			 */
 
-			if ((pLC->Serror > refine_eps) && (level < levelmax))
+			if ((pLC->error() > refine_eps) && (level < levelmax))
 				idsrefine.insert(idLC);
 			else {
-				if ((pLC->Serror < coarsen_eps) && (level > 1))
+				if ((pLC->error() < coarsen_eps) && (level > 1))
 					idscoarsen.insert(idLC);
 			}
 

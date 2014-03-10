@@ -110,13 +110,15 @@ public:
    void write_space_type (const space_type & x);
 
    ///////////////    READ MESH DATA    ///////////////
-   void read_problem_parameters_GENERAL (const std::string data_directory);
+   void read_problem_parameters_GENERAL (const std::string data_directory, const std::string data_prefix);
    void read_easymesh_triangles (const std::string data_file);
 
    ///////////////   WRITE MESH DATA    ///////////////
    void write_problem_parameters_GENERAL ();
 
    void write_idset (const grid_type::idset_type & idset);
+   void read_startsolution(const std::string filename);
+
 
    ///////////////      GEOMETRY        ///////////////
 
@@ -208,6 +210,8 @@ public:
    int levelmax;
    bool interpolating_basis;
 
+   bool start_solution;
+
    ///////////////////////////////////////////////////////
    //////////                                  ///////////
    //////////       SPECIAL FUNCTIONS          ///////////
@@ -227,8 +231,10 @@ public:
 
          double eta;       // absolute tolerance from estimated error factor
 
+		 Eigen::SelfAdjointEigenSolver<Hessian_type> EW_solver;
          double max_EW;
-         static const double epsilon = 1e-1; //minimum value of hessian eigenvalues
+         double min_EW;
+         static const double epsilon = 1e-2; //minimum value of hessian eigenvalues
 
    #endif
 
@@ -280,19 +286,22 @@ public:
 private:
    void assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM); ///writes the stiffness matrix part of LC
    void assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs); ///writes rhs part from LC
+
+   void calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1); /// calculates eigenvalues of a 2x2 matrix
 public:
    void assemble_MA(const int & STABSIGN, double PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs, Eigen::VectorXd &Lsol_bd);
+
+   void calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC, Hessian_type & hess); /// calculates the cofactor Matrix of the hessian in LC
+   void calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess, bool use_convexify); /// calculates the eigenvalues of hess and when indicated convexifies (-> spd)
+
    void restore_MA (Eigen::VectorXd &solution);
-   void convexify(Hessian_type & hess, Eigen::SelfAdjointEigenSolver<Hessian_type> &es); //makes the hessian positive definit
+   void convexify(Hessian_type & hess); //makes the hessian positive definit
    void get_exacttemperature_MA (const space_type & x, state_type & u); // state_type ???
-   void get_exacttemperature_MAN (const N_type & x, state_type & u); // state_type ???
-   node_function_type get_exacttemperature_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_exacttemperature_MAN, this);}
-   vector_function_type get_exacttemperature_MA_Vcallback() { return MEMBER_FUNCTION(&Tsolver::get_exacttemperature_MA, this);}
+   vector_function_type get_exacttemperature_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_exacttemperature_MA, this);}
    void get_exacttemperaturenormalderivative_MA (const space_type & x, const space_type & normal, state_type & u_n);
 	// state_type ???
    void get_rhs_MA (const space_type & x, state_type & u_rhs);  // state_type ???
-   void get_rhs_MAN (const N_type & x, state_type & u_rhs);  // state_type ???
-   node_function_type get_rhs_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_rhs_MAN, this);}
+   vector_function_type get_rhs_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_rhs_MA, this);}
 
    void local_dt_MA (const value_type & lengthmin, value_type & dt_element);
    void time_stepping_MA ();

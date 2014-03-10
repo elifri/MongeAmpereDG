@@ -7,8 +7,8 @@
 
 
 #include "../include/Plotter.hpp"
-
 #include "../include/Tshape.hpp"
+
 
 #include "boost/archive/iterators/insert_linebreaks.hpp"
 #include "boost/archive/iterators/base64_from_binary.hpp"
@@ -16,7 +16,7 @@
 #include "boost/archive/iterators/transform_width.hpp"
 
 using namespace boost::archive::iterators;
-
+using namespace std;
 
 //////////////////////////////////////////////////////////
 enum {
@@ -89,6 +89,9 @@ void check_file_extension(std::string &name, std::string extension) {
 		name.insert(name.length(), extension);
 }
 
+
+//==========================================================================================
+
 void Plotter::assemble_points(std::vector < std::vector<id_type> > &v, int &Nelements, int &Nnodes)
 {
 	v.resize(grid->countBlocks());
@@ -116,7 +119,49 @@ void Plotter::assemble_points(std::vector < std::vector<id_type> > &v, int &Nele
 	}
 
 }
-//-------------------helper------------------------
+
+
+void Plotter::read_quadratic_grid(std::string filename, 	int &n_x, int &n_y,
+												value_type &h_x, value_type &h_y,
+												value_type &x0, value_type &y0,
+												Eigen::MatrixXd &solution)
+{
+	std::ifstream file(filename.c_str()); 	//format "n ## h ## \n u(0,0) u(h,0) ... \n u(h,h) ..."
+	if(!file) { // file couldn't be opened
+	      cerr << "Error: file for reading rectangle grid could not be opened" << endl;
+	      exit(1);
+	   }
+	cout << "Reading starting point from file " << filename << "... " << endl;
+
+	stringstream ss;
+	std::string s;
+
+	assert (!file.eof() && "The inserted vtk file is too short");
+	file >> s; file >> n_x; //read n_x
+
+	file >> s; file >> n_y; //read n_y
+
+	file >> s; file >> h_x; //read h_x
+
+	file >> s;  file >> h_y; //read h_y
+
+	file >> s;  file >> x0;
+	file >> s;  file >> y0;
+
+	solution.resize(n_x,n_y);
+
+	for (int y=0; y < n_y; y++)
+	{
+		for (int x=0; x < n_x; x++)
+		{
+			file >> solution(x,y);
+		}
+	}
+}
+
+//==================================================
+//-----------------vtk-helper-----------------------
+//==================================================
 
 void Plotter::write_vtk_header(std::ofstream& file, const int Nnodes, const int Nelements)
 {
@@ -127,6 +172,31 @@ void Plotter::write_vtk_header(std::ofstream& file, const int Nnodes, const int 
 	file << "\t\t<Piece NumberOfPoints=\"" << Nnodes << "\" NumberOfCells=\""
 			<< Nelements << "\">\n";
 }
+
+/*
+void Plotter::read_vtk_header(std::ifstream& file, int &Nnodes, int &Nelements)
+{
+	assert (!file.eof() && "The inserted vtk file is too short");
+	string::line;
+	getline(file,line); //<?xml version=\"1.0\"?>
+
+	assert (!file.eof() && "The inserted vtk file is too short");
+	getline(file,line); //<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">
+	assert (!file.eof() && "The inserted vtk file is too short");
+	getline(file,line); //<UnstructuredGrid>
+
+	std::stringstream ss;
+
+	while(file. != '\"') //read \t\t<Piece NumberOfPoints=\"
+		ss << file;
+
+	ss << file; // ss contains now number of points
+
+	Nnodes << ss;
+
+	//TODO to be continued
+}
+*/
 
 void Plotter::write_error(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
 {
@@ -152,7 +222,7 @@ void Plotter::write_error(std::ofstream &file, const std::vector < std::vector<i
 				grid->findLeafCell(id, pLC);
 
 				for (unsigned int k = 0; k < id.countNodes(); ++k) {
-					file << "\t\t\t\t\t" << pLC->Serror << endl;
+					file << "\t\t\t\t\t" << pLC->Serror(k) << endl;
 				}
 			}
 
@@ -170,8 +240,8 @@ void Plotter::write_error(std::ofstream &file, const std::vector < std::vector<i
 				grid->nodes(id, nv);
 				for (unsigned int k = 0; k < id.countNodes(); ++k) {
 					shape->assemble_state_N(pLC->u, k, state);
-					file << "\t\t\t\t\t" << pLC->Serror << endl;
-					file << "\t\t\t\t\t" << pLC->Serror << endl;
+					file << "\t\t\t\t\t" << pLC->Serror(k) << endl;
+					file << "\t\t\t\t\t" << pLC->Serror(k) << endl;
 				}
 			}
 
@@ -181,6 +251,60 @@ void Plotter::write_error(std::ofstream &file, const std::vector < std::vector<i
 	file << "\t\t\t\t</DataArray>\n";
 
 }
+
+void Plotter::write_residuum(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
+{
+	Nvector_type nv;
+	state_type state;
+
+	// write error
+	file << "\t\t\t\t<DataArray  Name=\"error\" type=\"Float32\" format=\"ascii\">\n";
+
+	// loop over all leaf cells
+	for (unsigned int i = 0; i < grid->countBlocks(); ++i) {
+		if (v[i].size() == 0)
+			continue;
+
+		if (refine == 0) {
+
+			// save points in file without refinement
+
+			// over all ids inside this block
+			for (unsigned int j = 0; j < v[i].size(); ++j) {
+				const grid_type::id_type & id = v[i][j];
+				grid_type::leafcell_type * pLC = NULL;
+				grid->findLeafCell(id, pLC);
+
+				for (unsigned int k = 0; k < id.countNodes(); ++k) {
+					file << "\t\t\t\t\t" << pLC->residuum(k) << endl;
+				}
+			}
+
+		}
+		else
+		{
+			// save points in file with refinement
+
+			// over all ids inside this block
+			for (unsigned int j = 0; j < v[i].size(); ++j) {
+				const grid_type::id_type & id = v[i][j];
+				grid_type::leafcell_type * pLC = NULL;
+				grid->findLeafCell(id, pLC);
+
+				grid->nodes(id, nv);
+				for (unsigned int k = 0; k < id.countNodes(); ++k) {
+					shape->assemble_state_N(pLC->u, k, state);
+					file << "\t\t\t\t\t" << pLC->residuum(k) << endl;
+					file << "\t\t\t\t\t" << pLC->residuum(k) << endl;
+				}
+			}
+
+		}
+	}
+
+	file << "\t\t\t\t</DataArray>\n";
+}
+
 
 void Plotter::write_smallest_EW(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
 {
@@ -324,9 +448,9 @@ void Plotter::write_points(std::ofstream &file, const std::vector < std::vector<
 
 }
 
-void Plotter::write_solution(const node_function_type &get_exacttemperature, std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
+void Plotter::write_solution(const vector_function_type &get_exacttemperature, std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
 {
-	Nvector_type nv;
+	nvector_type nv;
 	state_type state;
 
 	// write points
@@ -347,7 +471,7 @@ void Plotter::write_solution(const node_function_type &get_exacttemperature, std
 				grid_type::leafcell_type * pLC = NULL;
 				grid->findLeafCell(id, pLC);
 
-				grid->nodes(id, nv);
+				get_nodes(*grid, id, nv);
 				for (unsigned int k = 0; k < id.countNodes(); ++k) {
 					get_exacttemperature(nv[k],state);
 					file << "\t\t\t\t\t" << nv[k] << " " << state << endl;
@@ -362,7 +486,7 @@ void Plotter::write_solution(const node_function_type &get_exacttemperature, std
 				grid_type::leafcell_type * pLC = NULL;
 				grid->findLeafCell(id, pLC);
 
-				grid->nodes(id, nv);
+				get_nodes(*grid, id, nv);
 
 				Eigen::Vector3d h_x, h_y;		// (
 				h_x(0) = -nv[0][0] + nv[1][0];
@@ -377,7 +501,7 @@ void Plotter::write_solution(const node_function_type &get_exacttemperature, std
 				h_x /= refine + 1;
 				h_y /= refine + 1;
 
-				std::vector<N_type> points(id.countNodes() * (refine + 1));
+				nvector_type points(id.countNodes() * (refine + 1));
 				Eigen::VectorXd vals(points.size());
 
 				state_type val;
@@ -467,6 +591,49 @@ void write_vtk_end(std::ofstream &file)
 
 //-----------------combination----------------
 
+/*
+void Plotter::read_VTK(const std::string filename)
+{
+	// open file
+	check_file_extension(filename, ".vtu");
+	std::ifstream file(filename);
+
+
+	int nodes, elements;
+	read_VTK_header(file, nodes, elements);
+
+	stringstream ss;
+	string line;
+
+	while (ss.str() != "<Points>")
+	{
+		assert (!file.eof() && "Cannot find any points in vtk inputfile!");
+		file << ss;
+	}
+
+	assert (!file.eof() && "cannot read vtk file!");
+	getline(file, line); //"\n"
+	assert (!file.eof() && "cannot read vtk file!");
+	getline(file, line); //"\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">\n";
+
+	double x,y,z;
+
+	for (int i = 0; i < nodes; i++)
+	{
+		assert (!file.eof() && "vtk:input number of points does not match given number");
+		//read coordinates
+		file << ss; x << ss;
+		file << ss; y << ss;
+
+		// solution value
+		file << ss; z << ss;
+
+		points.insert(space_type(x,y), z);
+	}
+
+}*/
+
+
 void Plotter::writeLeafCellVTK(std::string filename, const unsigned int refine, const bool binary) {
 
 	//--------------------------------------
@@ -491,6 +658,7 @@ void Plotter::writeLeafCellVTK(std::string filename, const unsigned int refine, 
 
 	file << "\t\t\t<PointData>\n";
 	write_error(file, v, refine);
+	write_residuum(file, v, refine);
 	write_smallest_EW(file, v, refine);
 	file << "\t\t\t</PointData>\n";
 
@@ -519,7 +687,7 @@ void Plotter::write_numericalsolution(const unsigned int i)
 	}
 
 	std::string fname(output_directory);
-	fname+="/grid_numericalsolution"+NumberToString(i)+".dat";
+	fname+="/" + output_prefix + "grid_numericalsolution"+NumberToString(i)+".dat";
 	std::ofstream fC(fname.c_str());
 
 	// global header
@@ -581,7 +749,7 @@ void Plotter::write_numericalsolution(const unsigned int i)
 void Plotter::write_numericalsolution_VTK(const unsigned int i) {
 
 	std::string fname(output_directory);
-	fname += "/grid_numericalsolution" + NumberToString(i) + ".vtu";
+	fname += "/"+ output_prefix + "grid_numericalsolution" + NumberToString(i) + ".vtu";
 
 	writeLeafCellVTK(fname, 1);
 
@@ -589,24 +757,24 @@ void Plotter::write_numericalsolution_VTK(const unsigned int i) {
 
 //////////////////////////////////////////////////////////
 
-void Plotter::write_exactsolution(node_function_type get_exacttemperature, const unsigned int i) {
+void Plotter::write_exactsolution(vector_function_type get_exacttemperature, const unsigned int i) {
 
 	std::vector < std::vector<id_type> > v;
 	v.resize(grid->countBlocks());
 
-	Nvector_type nv;
+	nvector_type nv;
 	state_type state;
 
 // collect points
 	for (grid_type::leafcellmap_type::const_iterator it =
 			grid->leafCells().begin(); it != grid->leafCells().end(); ++it) {
 		const grid_type::id_type & id = grid_type::id(it);
-		grid->nodes(id, nv);
+		get_nodes(*grid, id, nv);
 		v[id.block()].push_back(id);
 	}
 
 	std::string fname(output_directory);
-	fname += "/grid_exactsolution." + NumberToString(i) + ".dat";
+	fname += "/" + output_prefix + "grid_exactsolution." + NumberToString(i) + ".dat";
 	std::ofstream fC(fname.c_str());
 
 // global header
@@ -636,7 +804,7 @@ void Plotter::write_exactsolution(node_function_type get_exacttemperature, const
 			grid_type::leafcell_type * pLC;
 			grid->findLeafCell(id, pLC);
 
-			grid->nodes(id, nv);
+			get_nodes(*grid, id, nv);
 			for (unsigned int k = 0; k < id.countNodes(); ++k) {
 				get_exacttemperature(nv[k], state);
 				fC << nv[k] << " " << state << endl;
@@ -663,24 +831,24 @@ void Plotter::write_exactsolution(node_function_type get_exacttemperature, const
 
 //////////////////////////////////////////////////////////
 
-void Plotter::write_exactrhs_MA(const node_function_type &get_rhs_MA, const unsigned int i) {
+void Plotter::write_exactrhs_MA(const vector_function_type &get_rhs_MA, const unsigned int i) {
 
 	std::vector < std::vector<id_type> > v;
 	v.resize(grid->countBlocks());
 
-	Nvector_type nv;
+	nvector_type nv;
 	state_type state;
 
 // collect points
 	for (grid_type::leafcellmap_type::const_iterator it =
 			grid->leafCells().begin(); it != grid->leafCells().end(); ++it) {
 		const grid_type::id_type & id = grid_type::id(it);
-		grid->nodes(id, nv);
+		get_nodes(*grid, id, nv);
 		v[id.block()].push_back(id);
 	}
 
 	std::string fname(output_directory);
-	fname += "/grid->exactrhs." + NumberToString(i) + ".dat";
+	fname += "/" + output_prefix + "grid_exactrhs." + NumberToString(i) + ".dat";
 	std::ofstream fC(fname.c_str());
 
 // global header
@@ -710,7 +878,7 @@ void Plotter::write_exactrhs_MA(const node_function_type &get_rhs_MA, const unsi
 			grid_type::leafcell_type * pLC;
 			grid->findLeafCell(id, pLC);
 
-			grid->nodes(id, nv);
+			get_nodes(*grid, id, nv);
 			for (unsigned int k = 0; k < id.countNodes(); ++k) {
 				get_rhs_MA(nv[k], state);
 				fC << nv[k] << " " << state << endl;
@@ -735,7 +903,7 @@ void Plotter::write_exactrhs_MA(const node_function_type &get_rhs_MA, const unsi
 
 }
 
-void Plotter::writeExactVTK(const node_function_type &get_exacttemperature_MA, std::string filename, const unsigned int refine, const bool binary) {
+void Plotter::writeExactVTK(const vector_function_type &get_exacttemperature_MA, std::string filename, const unsigned int refine, const bool binary) {
 
 	//--------------------------------------
 	std::vector < std::vector<id_type> > v;
@@ -766,10 +934,10 @@ void Plotter::writeExactVTK(const node_function_type &get_exacttemperature_MA, s
 
 ///////////////////////////////////////////////////////////
 
-void Plotter::write_exactsolution_VTK(const node_function_type &exactSol, const unsigned int i) {
+void Plotter::write_exactsolution_VTK(const vector_function_type &exactSol, const unsigned int i) {
 
 	std::string fname(output_directory);
-	fname += "/grid_exactsolution" + NumberToString(i) + ".vtu";
+	fname += "/" + output_prefix + "grid_exactsolution" + NumberToString(i) + ".vtu";
 
 	writeExactVTK(exactSol, fname, 1);
 
@@ -795,7 +963,7 @@ void Plotter::write_numericalsolution () {
       }
 
       std::string fname(output_directory);
-      fname+="/grid_numericalsolution.dat";
+      fname+="/" + output_prefix + "grid_numericalsolution.dat";
       std::ofstream fC(fname.c_str());
       if( !fC ) {
         cerr << "Error opening output file " << fname << "." << endl;
