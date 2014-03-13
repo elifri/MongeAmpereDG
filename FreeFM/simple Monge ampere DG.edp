@@ -7,7 +7,8 @@
 real a11 = 4, a12 = -3, a21 = -3, a22 = 4;
 real sigma = 7*20;
 
- problem laplace(uh,vh,tgv=1e5) =                    //  definion of  the problem 
+
+varf Abilin(uh,vh,tgv=1e5) =                    //  definion of  the problem 
     int2d(Th)( -dx(vh)*(a11*dx(uh) + a12*dy(uh))
                -dy(vh)*(a21*dx(uh) + a22*dy(uh)) ) //  bilinear form
 	+intalledges(Th)( jump(vh) * mean(N.x*(a11*dx(uh) + a12*dy(uh))
@@ -15,11 +16,24 @@ real sigma = 7*20;
 					  +jump(uh) * mean(-N.x*(a11*dx(vh) + a12*dy(vh))
                                       + -N.y*(a21*dx(vh) + a22*dy(vh)) ) 
                      )
-    +intalledges(Th)(sigma/lenEdge * jump(uh)*jump(vh) ) //penalty therm	
-   - int2d(Th)( f*vh )           //  linear form
-  + on(1,2,3,4,uh=g) ;          //  boundary condition form
+    +intalledges(Th)(sigma/lenEdge * jump(uh)*jump(vh) ) //penalty therm
+ ;	
 
-  laplace; // solve the problem plot(uh); // to see the result
+varf rhsbilin(uh,vh) =  int2d(Th)( f*vh )           //  linear form
+ //   +intalledges(Th)( (nTonEdge)* (g(x,y)* (-N.x*(a11*dx(vh) + a12*dy(vh))
+ //                                          + -N.y*(a21*dx(vh) + a22*dy(vh))
+//							               +sigma/lenEdge *g(x,y)*jump(vh)
+  //                                         )
+  //                            ))  //for all boundary term weak bound. cond.
+//  + on(1,2,3,4,uh=g)  //  boundary condition form
+;         
+
+matrix A = Abilin(Vh,Vh);
+real[int] rhs = rhsbilin(0,Vh);
+set(A,solver=sparsesolver);
+uh[] = A^-1*rhs;
+  
+//laplace; // solve the problem plot(uh); // to see the result
   plot(uh,ps="Laplace.eps",value=true);
   
 
