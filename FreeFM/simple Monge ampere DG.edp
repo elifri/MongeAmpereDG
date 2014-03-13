@@ -2,8 +2,10 @@
  fespace Vh(Th,P2dc);     // P1 FE space
  Vh uh,vh;              // unkown and test function. 
  func f=8;                 //  right hand side function 
- func g=2*x*x+2*y*y+3*x*y;                 //  boundary condition function
+ func g = 2*x*x+2*y*y+3*x*y;                 //  boundary condition function
  
+cout <<"g " <<  g(1,1);
+
 real a11 = 4, a12 = -3, a21 = -3, a22 = 4;
 real sigma = 7*20;
 
@@ -17,14 +19,16 @@ varf Abilin(uh,vh,tgv=1e5) =                    //  definion of  the problem
                                       + -N.y*(a21*dx(vh) + a22*dy(vh)) ) 
                      )
     +intalledges(Th)(sigma/lenEdge * jump(uh)*jump(vh) ) //penalty therm
+//     + on(1,2,3,4,uh=g)
  ;	
 
 varf rhsbilin(uh,vh) =  int2d(Th)( f*vh )           //  linear form
- //   +intalledges(Th)( (nTonEdge)* (g(x,y)* (-N.x*(a11*dx(vh) + a12*dy(vh))
- //                                          + -N.y*(a21*dx(vh) + a22*dy(vh))
-//							               +sigma/lenEdge *g(x,y)*jump(vh)
-  //                                         )
-  //                            ))  //for all boundary term weak bound. cond.
+   +int1d(Th,1,2,3,4)( (nTonEdge)* (g* (N.x*(a11*dx(vh) + a12*dy(vh))
+                                      + N.y*(a21*dx(vh) + a22*dy(vh))
+                                      )
+							            +sigma/lenEdge *g*vh
+                                  )  //for all boundary term weak bound. cond.
+                    )
 //  + on(1,2,3,4,uh=g)  //  boundary condition form
 ;         
 
