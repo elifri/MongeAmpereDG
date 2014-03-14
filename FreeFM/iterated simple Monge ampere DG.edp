@@ -1,0 +1,104 @@
+ mesh Th=square(40,40);
+ fespace Vh(Th,P2dc);     // P1 FE space
+ Vh uh, wh,phih;              // unkown and test function. 
+ func f=8;                 //  right hand side function 
+ func g = 2*x*x+2*y*y+3*x*y;                 //  boundary condition function
+
+ wh = g; 
+cout <<"g " <<  g(1,1);
+cout << "wh " << wh(1,1);
+
+real a11 = 4, a12 = -3, a21 = -3, a22 = 4;
+func diffmatrix = [[a11, a12], [a21, a22]];
+
+real sigma = 7*20;
+
+macro Grad(u)
+[dx(u),dy(u)] //
+
+macro GradTimesA(u, v, A) 
+    Grad(u)'*A*Grad(v) //
+
+macro calcCofHess(u)
+	[[dyy(u),-dxy(u)],[-dyx(u),dxx(u)]] //
+
+//diffmatrix = calcCofHess(wh);
+
+varf Abilin(uh,phih,tgv=1e5) =                    //  definion of  the problem 
+    int2d(Th)( -1* GradTimesA(phih, uh, diffmatrix) ) //  bilinear form
+	+intalledges(Th)( jump(phih) * mean([N.x,N.y]'*calcCofHess(wh)*Grad(uh)) 
+					  +jump(uh) * mean(-1* [N.x,N.y]'*calcCofHess(wh)*Grad(phih)) 
+                     )
+    +intalledges(Th)(sigma/lenEdge * jump(uh)*jump(phih) ) //penalty therm
+//     + on(1,2,3,4,uh=g)
+ ;	
+
+varf rhsbilin(uh,phih) =  int2d(Th)( f*phih )           //  linear form
+   +int1d(Th,1,2,3,4)( (nTonEdge)* (g* ([N.x,N.y]'*calcCofHess(wh)*Grad(phih)) 
+							            +sigma/lenEdge *g*phih
+                                  )  //for all boundary term weak bound. cond.
+                    )
+//  + on(1,2,3,4,uh=g)  //  boundary condition form
+;         
+
+matrix A = Abilin(Vh,Vh);
+real[int] rhs = rhsbilin(0,Vh);
+set(A,solver=sparsesolver);
+uh[] = A^-1*rhs;
+  
+//laplace; // solve the problem plot(uh); // to see the result
+  plot(uh,ps="Laplace.eps",value=true);
+  
+
+  int n= 400;
+   real N = n;
+	ofstream gnu("simpleMongeAmpereDG"), points("points");
+    gnu << "n_x " << (n+1) << " n_y " << (n+1) << endl
+        << " h_x " << 1/N << " h_y " << 1/N << endl
+        << " x_0 " << 0 << " y_0 " << 0 << endl;
+
+  real[int] xx(n*n+1), xy(n*n+1), yy(n*n+1);
+  for (int i = 0; i<= n; i++)
+   {
+    for (int j = 0; j <= n; j++)
+   {
+   x  = j/N; y = i/N;
+   xy[i] = y;
+   xx[i] = x;
+   yy[i] = uh;
+
+   points << x << " " << y << " " << yy[i] << endl;
+   gnu << yy[i] << endl;
+   }
+  }
+  
+//==========write out cofactor matrices========
+	ofstream cof("cofactor matrices");
+
+    cof << "n_x " << (n+1) << " n_y " << (n+1) << endl
+        << " h_x " << 1/N << " h_y " << 1/N << endl
+        << " x_0 " << 0 << " y_0 " << 0 << endl << endl;
+
+  for (int i = 0; i<= n; i++)
+   {
+    for (int j = 0; j <= n; j++)
+   {
+   x  = j/N; y = i/N;
+
+	cof << "at " << x << " " << y << " " << endl;
+   cof << dyy(uh) << " " << -dxy(uh)<< endl;
+   cof << -dyx(uh) << " " << dxy(uh)<< endl << endl;
+   }
+  }
+  
+  real[int] array= uh[];
+
+//======write out Lsolution coefficients=========
+ofstream sol("solution coefficients");
+sol << "Lsolution :\n"; 
+	for (int i =0; i <uh.n; i++)
+     {
+       sol << array[i] << " " << endl;
+     }
+  
+  
