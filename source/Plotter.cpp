@@ -258,7 +258,7 @@ void Plotter::write_residuum(std::ofstream &file, const std::vector < std::vecto
 	state_type state;
 
 	// write error
-	file << "\t\t\t\t<DataArray  Name=\"error\" type=\"Float32\" format=\"ascii\">\n";
+	file << "\t\t\t\t<DataArray  Name=\"residuum\" type=\"Float32\" format=\"ascii\">\n";
 
 	// loop over all leaf cells
 	for (unsigned int i = 0; i < grid->countBlocks(); ++i) {
