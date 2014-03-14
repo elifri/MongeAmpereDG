@@ -1,13 +1,24 @@
- mesh Th=square(40,40);
+ mesh Th=square(20,20);
  fespace Vh(Th,P2dc);     // P1 FE space
  Vh uh, wh,phih;              // unkown and test function. 
-// func real f (real x, real y)
-//{	real r = 1 + square(x)+square(y); //1+||x||^2
-//	r *=2*exp(square(x)+square(y)); //*exp(||x||^2)
-// 	return r;
-//}
- func f = (1 + square(x)+square(y)) *  2*exp(square(x)+square(y));//  right hand side function 
- func g = exp( (square(x)+square(y))/2. ); //  boundary condition function /exact solution
+
+ macro norm()
+	sqrt(x*x+y*y) //
+ 
+func real rhsFunc(real x, real y)
+{
+	real r = 2*(1-(0.2/norm));
+	if (r > 0) return r;
+    return 0;
+}
+
+func f = 8;
+// func f = (1 + square(x)+square(y)) *  2*exp(square(x)+square(y));//  right hand side function 
+// func f = rhsFunc(x,y);
+
+// func g = exp( (square(x)+square(y))/2. ); //  boundary condition function /exact solution
+//func g = square((norm - 0.2) * (norm > 0))/2.;
+func g = 2*x*x + 2*y*y + 3*x*y;
 
 // wh = g; 
  wh = x*x/2.+y*y/2.;
@@ -19,7 +30,7 @@ func diffmatrix = [[a11, a12], [a21, a22]];
 
 real sigma = 7*20;
 
-int maxIt = 5;
+int maxIt = 1;
 
 macro Grad(u)
 [dx(u),dy(u)] //
@@ -27,8 +38,8 @@ macro Grad(u)
 macro GradTimesA(u, v, A) 
     Grad(u)'*A*Grad(v) //
 
-macro calcCofHess(u)
-	[[dyy(u),-dxy(u)],[-dyx(u),dxx(u)]] //
+macro calcCofHess(z)
+	[[dyy(z),-dxy(z)],[-dyx(z),dxx(z)]] //
 
 for (int iteration = 0; iteration < maxIt; iteration++)
 {
@@ -162,4 +173,7 @@ for (int iteration = 0; iteration < maxIt; iteration++)
 
 	file << "\n\t\t</Piece>";
 	file << "\n\t</UnstructuredGrid>\n" << "\n</VTKFile>";
+
+
+	wh = uh;
 }
