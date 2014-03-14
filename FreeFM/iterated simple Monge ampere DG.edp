@@ -1,17 +1,19 @@
- mesh Th=square(40,40);
+ mesh Th=square(60,60);
  fespace Vh(Th,P2dc);     // P1 FE space
  Vh uh, wh,phih;              // unkown and test function. 
  func f=8;                 //  right hand side function 
  func g = 2*x*x+2*y*y+3*x*y;                 //  boundary condition function
 
  wh = g; 
-cout <<"g " <<  g(1,1);
-cout << "wh " << wh(1,1);
+cout <<"g " <<  g(1,1) << endl;
+cout << "wh " << wh(1,1) << endl;
 
 real a11 = 4, a12 = -3, a21 = -3, a22 = 4;
 func diffmatrix = [[a11, a12], [a21, a22]];
 
 real sigma = 7*20;
+
+int maxIt = 5;
 
 macro Grad(u)
 [dx(u),dy(u)] //
@@ -22,37 +24,38 @@ macro GradTimesA(u, v, A)
 macro calcCofHess(u)
 	[[dyy(u),-dxy(u)],[-dyx(u),dxx(u)]] //
 
-//diffmatrix = calcCofHess(wh);
+for (int iteration = 0; iteration < maxIt; iteration++)
+{
+	sigma *= (iteration+1)*10;
 
-varf Abilin(uh,phih,tgv=1e5) =                    //  definion of  the problem 
-    int2d(Th)( -1* GradTimesA(phih, uh, diffmatrix) ) //  bilinear form
-	+intalledges(Th)( jump(phih) * mean([N.x,N.y]'*calcCofHess(wh)*Grad(uh)) 
-					  +jump(uh) * mean(-1* [N.x,N.y]'*calcCofHess(wh)*Grad(phih)) 
-                     )
-    +intalledges(Th)(sigma/lenEdge * jump(uh)*jump(phih) ) //penalty therm
-//     + on(1,2,3,4,uh=g)
- ;	
+	varf Abilin(uh,phih,tgv=1e5) =                    //  definion of  the problem 
+    	int2d(Th)( -1* GradTimesA(phih, uh, diffmatrix) ) //  bilinear form
+		+intalledges(Th)( jump(phih) * mean([N.x,N.y]'*calcCofHess(wh)*Grad(uh)) 
+						  +jump(uh) * mean(-1* [N.x,N.y]'*calcCofHess(wh)*Grad(phih)) 
+        	             )
+	    +intalledges(Th)(sigma/lenEdge * jump(uh)*jump(phih) ) //penalty therm
+ 	;	
 
-varf rhsbilin(uh,phih) =  int2d(Th)( f*phih )           //  linear form
-   +int1d(Th,1,2,3,4)( (nTonEdge)* (g* ([N.x,N.y]'*calcCofHess(wh)*Grad(phih)) 
+	varf rhsbilin(uh,phih) =  int2d(Th)( f*phih )           //  linear form
+   		+int1d(Th,1,2,3,4)( (nTonEdge)* (g* ([N.x,N.y]'*calcCofHess(wh)*Grad(phih)) 
 							            +sigma/lenEdge *g*phih
-                                  )  //for all boundary term weak bound. cond.
-                    )
-//  + on(1,2,3,4,uh=g)  //  boundary condition form
-;         
+ 	 	                                )  //for all boundary term weak bound. cond.
+    		                )
+	//  + on(1,2,3,4,uh=g)  //  boundary condition form
+	;         
 
-matrix A = Abilin(Vh,Vh);
-real[int] rhs = rhsbilin(0,Vh);
-set(A,solver=sparsesolver);
-uh[] = A^-1*rhs;
+	matrix A = Abilin(Vh,Vh);
+	real[int] rhs = rhsbilin(0,Vh);
+	set(A,solver=sparsesolver);
+	uh[] = A^-1*rhs;
   
-//laplace; // solve the problem plot(uh); // to see the result
-  plot(uh,ps="Laplace.eps",value=true);
-  
+	string s ="data/Monge Ampere"+iteration+".eps"; 
+	plot(uh,ps=s,value=true);
 
   int n= 400;
    real N = n;
-	ofstream gnu("simpleMongeAmpereDG"), points("points");
+	s = "data/simpleMongeAmpereDG"+iteration;
+	ofstream gnu(s), points("data/points");
     gnu << "n_x " << (n+1) << " n_y " << (n+1) << endl
         << " h_x " << 1/N << " h_y " << 1/N << endl
         << " x_0 " << 0 << " y_0 " << 0 << endl;
@@ -73,7 +76,8 @@ uh[] = A^-1*rhs;
   }
   
 //==========write out cofactor matrices========
-	ofstream cof("cofactor matrices");
+	s = "data/cofactor matrices"+iteration;
+	ofstream cof(s);
 
     cof << "n_x " << (n+1) << " n_y " << (n+1) << endl
         << " h_x " << 1/N << " h_y " << 1/N << endl
@@ -94,11 +98,13 @@ uh[] = A^-1*rhs;
   real[int] array= uh[];
 
 //======write out Lsolution coefficients=========
-ofstream sol("solution coefficients");
-sol << "Lsolution :\n"; 
+	s = "data/solution coefficients"+iteration;
+	ofstream sol(s);
+	sol << "Lsolution :\n"; 
 	for (int i =0; i <uh.n; i++)
      {
        sol << array[i] << " " << endl;
      }
-  
+  wh = uh;
+}
   
