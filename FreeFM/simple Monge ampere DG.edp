@@ -1,4 +1,4 @@
- mesh Th=square(20,20);
+ mesh Th=square(40,40);
  fespace Vh(Th,P2dc);     // P1 FE space
  Vh uh,vh;              // unkown and test function. 
  func f=8;                 //  right hand side function 
@@ -41,10 +41,9 @@ uh[] = A^-1*rhs;
   plot(uh,ps="Laplace.eps",value=true);
   
 
-  int n= 100;
+  int n= 400;
    real N = n;
-	ofstream gnu("simpleMongeAmpereDG");
-
+	ofstream gnu("simpleMongeAmpereDG"), points("points");
     gnu << "n_x " << (n+1) << " n_y " << (n+1) << endl
         << " h_x " << 1/N << " h_y " << 1/N << endl
         << " x_0 " << 0 << " y_0 " << 0 << endl;
@@ -59,15 +58,38 @@ uh[] = A^-1*rhs;
    xx[i] = x;
    yy[i] = uh;
 
-//	gnu << x << " " << y << " " << yy[i] << endl;
+   points << x << " " << y << " " << yy[i] << endl;
    gnu << yy[i] << endl;
    }
   }
-    
-//  real[int] array(uh.n)= uh[];
-//    for (int i =0; i <n*n; i++)
-//     {
-//       gnu << xx[i] << " " << xy[i] << " " << yy[i] << endl;
-//     }
+  
+//==========write out cofactor matrices========
+	ofstream cof("cofactor matrices");
+
+    cof << "n_x " << (n+1) << " n_y " << (n+1) << endl
+        << " h_x " << 1/N << " h_y " << 1/N << endl
+        << " x_0 " << 0 << " y_0 " << 0 << endl << endl;
+
+  for (int i = 0; i<= n; i++)
+   {
+    for (int j = 0; j <= n; j++)
+   {
+   x  = j/N; y = i/N;
+
+	cof << "at " << x << " " << y << " " << endl;
+   cof << dyy(uh) << " " << -dxy(uh)<< endl;
+   cof << -dyx(uh) << " " << dxy(uh)<< endl << endl;
+   }
+  }
+  
+  real[int] array= uh[];
+
+//======write out Lsolution coefficients=========
+ofstream sol("solution coefficients");
+sol << "Lsolution :\n"; 
+	for (int i =0; i <uh.n; i++)
+     {
+       sol << array[i] << " " << endl;
+     }
   
   
