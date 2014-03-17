@@ -304,8 +304,8 @@ public:
 		}
 
 		// initialize volume
-		volume = ((vN[1][0] - vN[0][0]) * (vN[2][1] - vN[0][1])
-				- (vN[2][0] - vN[0][0]) * (vN[1][1] - vN[0][1])) * 0.5;
+		volume = std::abs(((vN[1][0] - vN[0][0]) * (vN[2][1] - vN[0][1])
+				- (vN[2][0] - vN[0][0]) * (vN[1][1] - vN[0][1]))) * 0.5;
 
 // jacobian of transformation from reference element
 		jac(0, 0) = vN[1][0] - vN[0][0];
