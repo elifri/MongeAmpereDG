@@ -1,4 +1,5 @@
- mesh Th=square(20,20);
+ mesh Th=square(1,1);
+ Th = trunc(Th,1, split=2);
  fespace Vh(Th,P2dc);     // P1 FE space
  Vh uh, wh,phih;              // unkown and test function. 
 
@@ -12,25 +13,25 @@ func real rhsFunc(real x, real y)
     return 0;
 }
 
-func f = 8;
-// func f = (1 + square(x)+square(y)) *  2*exp(square(x)+square(y));//  right hand side function 
+//func f = 8;
+func f = (1 + square(x)+square(y)) *  2*exp(square(x)+square(y));//  right hand side function 
 // func f = rhsFunc(x,y);
 
-// func g = exp( (square(x)+square(y))/2. ); //  boundary condition function /exact solution
+func g = exp( (square(x)+square(y))/2. ); //  boundary condition function /exact solution
 //func g = square((norm - 0.2) * (norm > 0))/2.;
-func g = 2*x*x + 2*y*y + 3*x*y;
+//func g = 2*x*x + 2*y*y + 3*x*y;
 
-// wh = g; 
- wh = x*x/2.+y*y/2.;
+ wh = g; 
+ //wh = x*x/2.+y*y/2.;
 cout <<"g " <<  g(1,1) << endl;
 cout << "wh " << wh(1,1) << endl;
 
-real a11 = 4, a12 = -3, a21 = -3, a22 = 4;
-func diffmatrix = [[a11, a12], [a21, a22]];
+//real a11 = 4, a12 = -3, a21 = -3, a22 = 4;
+//func diffmatrix = [[a11, a12], [a21, a22]];
 
 real sigma = 7*20;
 
-int maxIt = 1;
+int maxIt = 20;
 
 macro Grad(u)
 [dx(u),dy(u)] //
@@ -43,9 +44,10 @@ macro calcCofHess(z)
 
 for (int iteration = 0; iteration < maxIt; iteration++)
 {
+
 	sigma *= (iteration+1)*10;
 	varf Abilin(uh,phih,tgv=1e5) =                    //  definion of  the problem 
-    	int2d(Th)( -1* GradTimesA(phih, uh, diffmatrix) ) //  bilinear form
+    	int2d(Th)( -1* GradTimesA(phih, uh, calcCofHess(wh)) ) //  bilinear form
 		+intalledges(Th)( jump(phih) * mean([N.x,N.y]'*calcCofHess(wh)*Grad(uh)) 
 						  +jump(uh) * mean(-1* [N.x,N.y]'*calcCofHess(wh)*Grad(phih)) 
         	             )
@@ -61,14 +63,13 @@ for (int iteration = 0; iteration < maxIt; iteration++)
 	;         
 
 	matrix A = Abilin(Vh,Vh);
+
 	real[int] rhs = rhsbilin(0,Vh);
 	set(A,solver=sparsesolver);
 	uh[] = A^-1*rhs;
   
 	string s ="data/Monge Ampere"+iteration+".eps"; 
 	plot(uh,ps=s,value=true);
-
-	wh = uh; //update wh
 
 //==========================================
 //===============produce output=============
@@ -98,9 +99,12 @@ for (int iteration = 0; iteration < maxIt; iteration++)
   }
   
 //==========write out cofactor matrices========
-	s = "data/cofactor matrices"+iteration;
+	s = "data/info"+iteration;
 	ofstream cof(s);
 
+	cof << "A\n "<< A << endl; 
+
+	cof << "cofactor matrices" << endl;
     cof << "n_x " << (n+1) << " n_y " << (n+1) << endl
         << " h_x " << 1/N << " h_y " << 1/N << endl
         << " x_0 " << 0 << " y_0 " << 0 << endl << endl;
@@ -145,7 +149,7 @@ for (int iteration = 0; iteration < maxIt; iteration++)
 			<< "\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\""
 			<< "ascii" << "\">\n";
 	for (int i=0;i<Th.nv;i++) 	
-		file << "\t\t\t\t\t" << Th(i).x << " " << Th(i).y << " " << uh(Th(i).x,Th(i).y) << endl;
+		file << "\t\t\t\t\t" << Th(i).x << " " << Th(i).y << " " << wh(Th(i).x,Th(i).y) << endl;
 
 	file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
 
