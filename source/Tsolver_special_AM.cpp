@@ -8,6 +8,8 @@
 #include "../include/Tsolver.hpp"
 #include <Eigen/Eigenvalues>
 
+#include "../include/matlab_export.hpp"
+
 
 #if (EQUATION == MONGE_AMPERE_EQ)
 
@@ -217,7 +219,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 	else
 	{
 		Hessian_type hess;
-		if (start_solution){
+		if (start_solution && false){
 
 			//calculate cofactor of hessian
 			calc_cofactor_hessian(pLC, pBC, hess);
@@ -225,17 +227,41 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 			//calculate eigenvalues and convexify
 			calculate_eigenvalues(pLC, hess, false);
 
+			//determinant of hessian for calculation of residuum
+			value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
+
+			nvector_type nv;
+			get_nodes(grid, pLC->id(), nv);
+
+			state_type state, stateEx, stateRhs;
+
+			//loop over LC nodes
+			for (unsigned int k = 0; k < pLC->id().countNodes(); k++){
+				//get rhs
+				get_rhs_MA(nv(k), stateRhs);
+				//calculate residuum
+				pLC->residuum(k) = det - stateRhs(0);
+
+				//calculate abs error
+				shape.assemble_state_N(pLC->u,k,state);
+				get_exacttemperature_MA(nv[k],stateEx);
+				pLC->Serror(k) = std::abs(state(0)-stateEx(0));
+			}
+
 			//update diffusion matrix and calculate laplace matrix
 			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 					pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
 		}
 		else{
-			hess << 1, 0 , 0, 1;
+				hess << 1, 0 , 0, 1;
 			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
-			max_EW = 1;
+			max_EW = 7;
 		}
 	}
+
+	cout << "id " << pLC->id() << "offset " << pLC->m_offset<< endl;
+	cout << "laplace " << laplace << endl;
 
 	for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
@@ -293,6 +319,9 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
  */
 void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs) {
+
+	std::ofstream file("data/s/matricex", std::ios::out);
+
 	unsigned int gaussbaseLC = 0;
 	unsigned int gaussbaseNC = 0;
 	unsigned int levelNC = 0;
@@ -327,22 +356,34 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 			grid.findBaseCellOf(idLC, pBC);
 
 			// Copy entries for element laplace operator into Laplace-matrix
-			assemble_lhs_bilinearform_MA(pLC, pBC, LM);
+//			assemble_lhs_bilinearform_MA(pLC, pBC, LM);
 		}
+
+		file << "iteration " << iteration << endl;
+		file << " A without inner boundary terms \n ";
+//		MATLAB_export(LM, "laplace matrix");
+
 
 		//update penalty
 
 		cout << "Largest EW " << max_EW << endl;
-		penalty *= 10*max_EW*(iteration+1);
+		penalty *= (iteration+1)*10;
+
+		cerr << "used penalty " << penalty << endl;
 
 		// loop over all cells in this level
 		for (grid_type::leafcellmap_type::const_iterator it =
 			grid.leafCells().begin(level);
 				it != grid.leafCells().end(level); ++it) {
 
+
 			// get id and pointer to this cell
 			const grid_type::id_type & idLC = grid_type::id(it);
 			grid.findLeafCell(idLC, pLC);
+
+			//write output
+			file << "leaf cell " << idLC << endl;
+			file << "offset " << pLC->m_offset << endl;
 
 			// get pointer to basecell of this cell
 			const grid_type::basecell_type * pBC;
@@ -396,7 +437,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 						cout << "LC " << idLC << endl;
 						cout << "NLC " << pNC->id() << endl;
 
-						length = facLevelLength[level] * pBC->get_length(i); //calculate actual face length
+/*						length = facLevelLength[level] * pBC->get_length(i); //calculate actual face length
 						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over gauss nodes
 
 							iqLC = gaussbaseLC + iq; //index of next gauss node to be processed
@@ -407,8 +448,8 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 
 							// Copy entries into Laplace-matrix
-							for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-								for (unsigned int jshape = 0; jshape < shapedim; ++jshape) {
+							for (unsigned int ishape = 0; ishape < shapedim; ++ishape) { //loop over test function
+								for (unsigned int jshape = 0; jshape < shapedim; ++jshape) { //loop over ansatz functions
 									const int row_LC = pLC->m_offset + ishape;
 									const int row_NC = pNC->m_offset + ishape;
 									const int col_LC = pLC->n_offset + jshape;
@@ -458,6 +499,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 						}
 
 						assembleInnerFace = false;
+						*/
 					}
 
 				} else { // we are at the boundary, turnover cannot occur !!!
@@ -558,6 +600,11 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		}
 	}
 
+	file << "A complete \n ";
+	MATLAB_export(LM,"A_outer_code");// << endl << endl;
+	file << "rhs \n" << Lrhs << endl << endl;
+	//MATLAB_export(Lrhs, "rhs_inner_code");
+
 	// cerr << "distmax = " << distmax << endl;
 	// set flag=false; unew = 0.0; in invert_mass/volume
 }
@@ -605,8 +652,23 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
 		// Copy solution entries back into u
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+			pLC->uold(ishape,0) = pLC->u(ishape,0);
 			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
+
 		}
+
+		nvector_type  nv;
+		get_nodes(grid, idLC,nv);
+
+		cout << "leafcell " << idLC << endl;
+		cout << " node 0: " << nv[0][0] << " " << nv[0][1] << endl;
+
+		state_type s1, s2;
+		shape.assemble_state_N(pLC->u,0,s1);
+		shape.assemble_state_N(pLC->uold,0,s2);
+
+
+		cout << "unew " << s1 << " uold " << s2 << " ->difference " << s1-s2 << endl;
 
 		// get pointer to basecell of this cell
 		const grid_type::basecell_type * pBC;
@@ -615,10 +677,8 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		Hessian_type hess;
 		calc_cofactor_hessian(pLC, pBC, hess);
 
-		nvector_type  nv;
-		get_nodes(grid, idLC,nv);
 
-		cout << "cofactor matrix is with node " << nv[0][0] << " " << nv[0][1] << " :\n" << hess << endl;
+		cout << "cofactor matrix :\n" << hess << endl;
 		calculate_eigenvalues(pLC,hess, false);
 
 
@@ -633,6 +693,7 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 			get_rhs_MA(nv(k), stateRhs);
 			//calculate residuum
 			pLC->residuum(k) = det - stateRhs(0);
+
 
 			//calculate abs error
 			shape.assemble_state_N(pLC->u,k,state);
@@ -848,6 +909,7 @@ void Tsolver::time_stepping_MA() {
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
+
 		cout << "Solving linear System..." << endl;
 
 		pt.start();
@@ -866,7 +928,7 @@ void Tsolver::time_stepping_MA() {
 		if (iteration == 0 && start_solution)
 		{
 			std::string fname(plotter.get_output_directory());
-			fname += "/grid_startsolution.vtu";
+			fname += "/" + plotter.get_output_prefix() + "grid_startsolution.vtu";
 			plotter.writeLeafCellVTK(fname, 1);
 			cout << "min Eigenvalue " << min_EW << endl;
 		}

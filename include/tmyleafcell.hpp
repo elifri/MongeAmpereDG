@@ -49,6 +49,7 @@ public:
 
   Estate_type      u;
   Estate_type      unew;
+  Estate_type 	   uold;
   value_type       limiter;
   Enodevalue_type  Serror;
   Enodevalue_type  residuum;
@@ -95,6 +96,21 @@ public:
 
   bool hanging() const { return m_bKnodes; }
   bool& hanging() { return m_bKnodes; }
+
+//  typedef boost::counting_iterator<unsigned int> citerator;
+
+  /*
+   * iterates over #refine-1 equidistant points at a face
+   */
+//  citerator face_begin(const unsigned int face, int refine = 1) const{
+//	  return citerator(m_offset + (face+1)*refine);
+//  }
+//
+//  citerator face_end(const unsigned int face, int refine = 1) const{
+//	  int local_no = (face+2)*refine;
+//	  local_no  = local_no % Ndim*refine;
+//	  return citerator(m_offset + local_no);
+//  }
 
   static int countAllLeafs() { return m_nCountAllLeafs; }
 

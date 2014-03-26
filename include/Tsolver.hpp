@@ -114,6 +114,8 @@ public:
    void write_idset (const grid_type::idset_type & idset);
    void read_startsolution(const std::string filename);
 
+   void write_solution();
+
 
    ///////////////      GEOMETRY        ///////////////
 

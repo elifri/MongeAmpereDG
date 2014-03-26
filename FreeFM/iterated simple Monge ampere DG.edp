@@ -49,7 +49,9 @@ for (int iteration = 0; iteration < maxIt; iteration++)
 	set(A,solver=sparsesolver);
 	uh[] = A^-1*rhs;
   
-	string s ="data/Monge Ampere"+iteration+".eps"; 
+	string s ="data/Monge Ampere"+iteration+".eps";
+	cout << A << endl;
+ 
 	plot(uh,ps=s,value=true);
 
   int n= 400;
