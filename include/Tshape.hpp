@@ -22,7 +22,7 @@ private:
 
 	Equad equad;
 	Equadratureshape_type Equads;   // value of shapes at quadrature points
-	Equadratureshape_type Equads_x, Equads_y; // first derivatives of shapes at quadrature points
+	Equadratureshape_grad_type Equads_grad; //gradient of shapes at quadrature points
 	Equadratureshape_type Equads_xx, Equads_xy, Equads_yy; // second derivatives of shapes at quadrature points
 	Equadratureshape_hessian_type Equads_dd;
 
@@ -63,13 +63,13 @@ public:
 	 *
 	 */
 	inline double shape(int & ishape, const space_type & x) const; // x on reference element
-	inline double shape_x(int & ishape, const space_type & x);
-	inline double shape_y(int & ishape, const space_type & x);
-	void shape_grad(int & ishape, const space_type & x, space_type & grad);
+	inline double shape_x(int & ishape, const space_type & x)const;
+	inline double shape_y(int & ishape, const space_type & x)const;
+	void shape_grad(int & ishape, const space_type & x, space_type & grad) const;
 
-	inline double shape_xx(int & ishape, const space_type & x);
-	inline double shape_xy(int & ishape, const space_type & x);
-	inline double shape_yy(int & ishape, const space_type & x);
+	inline double shape_xx(int & ishape, const space_type & x) const;
+	inline double shape_xy(int & ishape, const space_type & x) const;
+	inline double shape_yy(int & ishape, const space_type & x) const;
 
 	void initialize_quadrature();
 	void initialize_mass();
@@ -85,50 +85,50 @@ public:
 	 * !calculates the solution at xref (xref is the coordinate in refcell)
 	 */
 	void assemble_state_x(const Estate_type & u, const space_type & xref,
-			state_type & v);
+			state_type & v) const;
 
 	/*
 	 * !calculates the solution at xbar (x in barycentric coordinates)
 	 */
 	void assemble_state_x_barycentric(const Estate_type & u, const baryc_type & xbar,
-			state_type & v);
+			state_type & v) const;
 
 	/*
 	 * !calculates solution_istate(xref) (xref is the coordinate in refcell)
 	 */
 	void assemble_state_x(const Estate_type & u, const unsigned int & istate,
-			const space_type & xref, value_type & v);
+			const space_type & xref, value_type & v) const;
 	void assemble_grad_x(const Estate_type & u, const unsigned int & istate,
-			const space_type & xref, space_type & grad);
-	void assemble_constant_state(const Estate_type & v, state_type & u);
+			const space_type & xref, space_type & grad) const;
+	void assemble_constant_state(const Estate_type & v, state_type & u) const;
 	void assemble_state_N(const Estate_type & u, const unsigned int & inode,
-			state_type & v);
+			state_type & v) const;
 	void assemble_state_N(const Estate_type & u, const unsigned int & inode,
-			const unsigned int & istate, value_type & v);
+			const unsigned int & istate, value_type & v) const;
 	void assemble_Enodevalue(const Estate_type & u, const unsigned int & istate,
-			Enodevalue_type & v);
+			Enodevalue_type & v) const;
 	void assemble_state_Equad(const Estate_type & u, const unsigned int & iquad,
-			state_type & v);
+			state_type & v) const;
 	void assemble_hessmatrix(const Estate_type & u, const unsigned int &istate, Hessian_type &hess) const; ///calculates the hessian matrix of a solution u
 	void assemble_state_Fquad(const Estate_type & u, const unsigned int & iquad,
-			state_type & v);
+			state_type & v) const;
 	void assemble_state_Fquad(const Estate_type & u,
 			const unsigned int & istate, const unsigned int & iquad,
-			value_type & v);
+			value_type & v) const;
 	void assemble_state_Fmid(const Estate_type & u, const unsigned int & iquad,
-			state_type & v);
+			state_type & v) const;
 	void assemble_state_Fmid(const Estate_type & u, const unsigned int & istate,
-			const unsigned int & iquad, value_type & v);
+			const unsigned int & iquad, value_type & v) const;
 	void assemble_state_Squad(const Estate_type & u, const unsigned int & iquad,
-			state_type & v);
+			state_type & v) const;
 	void assemble_state_Squad(const Estate_type & u,
 			const unsigned int & istate, const unsigned int & iquad,
-			value_type & v);
+			value_type & v) const;
 	void assemble_state_Scenter(const Estate_type & u,
-			const unsigned int & iquad, state_type & v);
+			const unsigned int & iquad, state_type & v) const;
 	void assemble_state_Scenter(const Estate_type & u,
 			const unsigned int & istate, const unsigned int & iquad,
-			value_type & v);
+			value_type & v) const;
 
 	//////////////   Linear Algebra for Emass_type   ///////////////
 	void matrix_solve(Emass_type & A, Estate_type & x, Estate_type & b,
@@ -167,24 +167,8 @@ public:
 		return Equads(i, j);
 	}
 
-	Equadratureshape_type get_Equads_x() const {
-		return Equads_x;
-	}
-	const value_type& get_Equads_x(const int i, const int j) const {
-		return Equads_x(i, j);
-	}
-	value_type& set_Equads_x(const int i, const int j) {
-		return Equads_x(i, j);
-	}
-
-	Equadratureshape_type get_Equads_y() const {
-		return Equads_y;
-	}
-	const value_type& get_Equads_y(const int i, const int j) const {
-		return Equads_y(i, j);
-	}
-	value_type& set_Equads_y(const int i, const int j) {
-		return Equads_y(i, j);
+	const Equadratureshape_grad_type& get_Equads_grad() const{
+		return Equads_grad;
 	}
 
 	Equadratureweight_type get_Equadw() const {

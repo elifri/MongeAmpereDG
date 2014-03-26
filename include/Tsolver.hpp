@@ -11,6 +11,7 @@
 #include "grid_config.hpp"
 
 #include "Tshape.hpp"
+#include "Plotter.hpp"
 
 #include "utility.hpp"
 
@@ -18,16 +19,6 @@ using namespace config;
 
 class Tsolver {
 public:
-	typedef grid_config_type::basecell_type basecell_type;
-	typedef grid_config_type::leafcell_type leafcell_type;
-	typedef grid_config_type::antecell_type antecell_type;
-
-	typedef grid_type::gridblockhandle_type   gridblockhandle_type;
-	typedef grid_type::nodehandle_type        Nhandle_type;
-	typedef grid_type::nodehandlevector_type  Nhandlevector_type;
-	typedef grid_type::faceidvector_type      Fidvector_type;
-
-
 
 	typedef double            Fcoeff_type[childdim][shapedim];
 
@@ -36,15 +27,15 @@ public:
    typedef bool       leafmarker_type[childdim];
 
    grid_type grid;
-   std::string output_directory;
-   std::valarray<double> facLevelVolume;
-   std::valarray<double> facLevelLength;
+   std::vector<double> facLevelVolume;
+   std::vector<double> facLevelLength;
 
    NeighbOrient_type            tableNeighbOrient;
    CoarseNeighbGaussbase_type   tableCoarseNeighbGaussbase;
    CoarseNeighbMid_type         tableCoarseNeighbMid;
 
    Tshape shape; // shape for primal unknown (must have the name shape!!!)
+   Plotter plotter;
 
 //   shapelag_type shapelag; // shape for linear Lagrange unknowns
 
@@ -61,6 +52,9 @@ public:
 			                      const unsigned int & iquad,
                                               const Estate_type & u,
 				              state_type & v);
+   //////////////// COFACTOR MATRIX ///////////////
+   void cofactor_matrix_inplace(Hessian_type &h);
+
 
    ///////////////    BILINEAR FORMS    ///////////////
    inline double bilin_mass (double & u0, double & u1, double &d_abs);
@@ -111,23 +105,15 @@ public:
    void write_space_type (const space_type & x);
 
    ///////////////    READ MESH DATA    ///////////////
-   void read_problem_parameters_GENERAL (const std::string data_directory);
+   void read_problem_parameters_GENERAL (const std::string data_directory, const std::string data_prefix);
    void read_easymesh_triangles (const std::string data_file);
 
    ///////////////   WRITE MESH DATA    ///////////////
    void write_problem_parameters_GENERAL ();
 
-
-   /*! \brief writes the solution in a vtu file
-    *
-    * \param (string) the name of the file the solution should be written into
-    * \param grid 	  grid
-    * \param int	  ??
-    * \param bool 	  should switch between binary and asccii format is NOT working yet
-    */
-   void writeLeafCellVTK(std::string, grid_type&, unsigned int, bool);
-   void write_numericalsolution ();
    void write_idset (const grid_type::idset_type & idset);
+   void read_startsolution(const std::string filename);
+
 
    ///////////////      GEOMETRY        ///////////////
 
@@ -136,6 +122,7 @@ public:
    And: level-volume factors, level-length factors
 */
    void update_baseGeometry ();
+   void initialize_plotter();
    void set_leafcellmassmatrix ();
    void get_normal_length (const Nvector_type & nv, const unsigned int & i,
                           space_type & normal, double & length);
@@ -215,6 +202,9 @@ public:
    ////////////////////////////////////////////////////
 
    int levelmax;
+   bool interpolating_basis;
+
+   bool start_solution;
 
    ///////////////////////////////////////////////////////
    //////////                                  ///////////
@@ -235,7 +225,10 @@ public:
 
          double eta;       // absolute tolerance from estimated error factor
 
+		 Eigen::SelfAdjointEigenSolver<Hessian_type> EW_solver;
          double max_EW;
+         double min_EW;
+         static const double epsilon = 1e-2; //minimum value of hessian eigenvalues
 
    #endif
 
@@ -287,23 +280,24 @@ public:
 private:
    void assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM); ///writes the stiffness matrix part of LC
    void assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs); ///writes rhs part from LC
+
+   void calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1); /// calculates eigenvalues of a 2x2 matrix
 public:
+   void calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC, Hessian_type & hess); /// calculates the cofactor Matrix of the hessian in LC
+   void calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess, bool use_convexify); /// calculates the eigenvalues of hess and when indicated convexifies (-> spd)
+
    void assemble_MA(const int & STABSIGN, double PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs);
    void restore_MA (Eigen::VectorXd &solution);
-   void convexify(Eigen::VectorXd & solution); //convexifies the solution // TODO Fixme
+   void convexify(Hessian_type & hess); //makes the hessian positive definit
    void get_exacttemperature_MA (const space_type & x, state_type & u); // state_type ???
-   void get_exacttemperature_MA (const N_type & x, state_type & u); // state_type ???
+   vector_function_type get_exacttemperature_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_exacttemperature_MA, this);}
    void get_exacttemperaturenormalderivative_MA (const space_type & x, const space_type & normal, state_type & u_n);
 	// state_type ???
    void get_rhs_MA (const space_type & x, state_type & u_rhs);  // state_type ???
-   void get_rhs_MA (const N_type & x, state_type & u_rhs);  // state_type ???
+   vector_function_type get_rhs_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_rhs_MA, this);}
+
    void local_dt_MA (const value_type & lengthmin, value_type & dt_element);
    void time_stepping_MA ();
-
-   void write_numericalsolution_MA (const unsigned int i);
-   void write_numericalsolution_VTK_MA (const unsigned int i);
-   void write_exactsolution_MA (const unsigned int i);
-   void write_exactrhs_MA (const unsigned int i);
 
    void adapt(const double refine_eps, const double coarsen_eps);
    void setleafcellflags(unsigned int flag, bool value);

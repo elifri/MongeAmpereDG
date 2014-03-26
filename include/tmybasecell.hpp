@@ -186,8 +186,7 @@ private:
 	}
 
 	void assemble_laplace(const Equad &equad,
-			const Equadratureshape_type &Equads_x,
-			const Equadratureshape_type &Equads_y) {
+			const Equadratureshape_grad_type &Equads_grad) {
 		laplace.setZero();
 
 #if (EQUATION == POISSON_EQ)
@@ -268,8 +267,7 @@ private:
 	}
 
 public:
-	void initialize(const Equad &Equad, const Equadratureshape_type &Equads_x,
-			const Equadratureshape_type &Equads_y,
+	void initialize(const Equad &Equad, const Equadratureshape_grad_type &Equads_grad,
 			const Fquadratureshape_type &Fquads_x,
 			const Fquadratureshape_type Fquads_y, const grid_type &grid,
 			const id_type idBC) {
@@ -311,8 +309,8 @@ public:
 		}
 
 		// initialize volume
-		volume = ((vN[1][0] - vN[0][0]) * (vN[2][1] - vN[0][1])
-				- (vN[2][0] - vN[0][0]) * (vN[1][1] - vN[0][1])) * 0.5;
+		volume = std::abs(((vN[1][0] - vN[0][0]) * (vN[2][1] - vN[0][1])
+				- (vN[2][0] - vN[0][0]) * (vN[1][1] - vN[0][1]))) * 0.5;
 
 // jacobian of transformation from reference element
 		jac(0, 0) = vN[1][0] - vN[0][0];
@@ -324,7 +322,7 @@ public:
 		detjacabs = std::abs(jac(0, 0) * jac(1, 1) - jac(1, 0) * jac(0, 1));
 		assert(detjacabs == 2 * volume);
 
-		assemble_laplace(Equad, Equads_x, Equads_y); //TODO redundant if MONGE amper ...
+		assemble_laplace(Equad, Equads_grad); //TODO redundant if MONGE amper ...
 
 		assemble_normalderi(Fquads_x, Fquads_y);
 

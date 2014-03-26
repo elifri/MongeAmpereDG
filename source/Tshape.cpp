@@ -304,7 +304,7 @@ inline double Tshape::shape(int & ishape, const space_type & x) const { // x on 
 }
 ;
 
-inline double Tshape::shape_x(int & ishape, const space_type & x) {
+inline double Tshape::shape_x(int & ishape, const space_type & x) const{
 	int ic = 1; // index of coefficient
 	double s = 0.0;
 	double xpower[spacedim][degreedim + 1];
@@ -323,7 +323,7 @@ inline double Tshape::shape_x(int & ishape, const space_type & x) {
 }
 ;
 
-inline double Tshape::shape_y(int & ishape, const space_type & x) {
+inline double Tshape::shape_y(int & ishape, const space_type & x) const{
 	int ic = 1; // index of coefficient
 	double s = 0.0;
 	double xpower[spacedim][degreedim + 1];
@@ -342,7 +342,7 @@ inline double Tshape::shape_y(int & ishape, const space_type & x) {
 }
 ;
 
-void Tshape::shape_grad(int & ishape, const space_type & x, space_type & grad) {
+void Tshape::shape_grad(int & ishape, const space_type & x, space_type & grad) const{
 	int ic = 1; // index of coefficient
 	double xpower[spacedim][degreedim + 1];
 
@@ -364,7 +364,7 @@ void Tshape::shape_grad(int & ishape, const space_type & x, space_type & grad) {
 }
 ;
 
-inline double Tshape::shape_xx(int & ishape, const space_type & x) {
+inline double Tshape::shape_xx(int & ishape, const space_type & x) const{
 	int ic = 3; // index of coefficient
 	double s = 0.0;
 	double xpower[spacedim][degreedim + 1];
@@ -383,7 +383,7 @@ inline double Tshape::shape_xx(int & ishape, const space_type & x) {
 }
 ;
 
-inline double Tshape::shape_xy(int & ishape, const space_type & x) {
+inline double Tshape::shape_xy(int & ishape, const space_type & x) const{
 	int ic = 3; // index of coefficient
 	double s = 0.0;
 	double xpower[spacedim][degreedim + 1];
@@ -402,7 +402,7 @@ inline double Tshape::shape_xy(int & ishape, const space_type & x) {
 }
 ;
 
-inline double Tshape::shape_yy(int & ishape, const space_type & x) {
+inline double Tshape::shape_yy(int & ishape, const space_type & x) const{
 	int ic = 3; // index of coefficient
 	double s = 0.0;
 	double xpower[spacedim][degreedim + 1];
@@ -507,13 +507,13 @@ void Tshape::initialize_quadrature() {
 		x[1] = equad.Equadx(j, 2);
 		for (int i = 0; i < shapedim; i++) {
 			Equads(i, j) = shape(i, x);
-			Equads_x(i, j) = shape_x(i, x);
-			Equads_y(i, j) = shape_y(i, x);
+			Equads_grad(i,j)(0) = shape_x(i, x);
+			Equads_grad(i,j)(1) = shape_y(i, x);
 
 			Equads_xx(i, j) = shape_xx(i, x);
 			Equads_xy(i, j) = shape_xy(i, x);
 			Equads_yy(i, j) = shape_yy(i, x);
-			if (j == 0)
+			if (j == 0) // second derivative is const
 				Equads_dd(i) << Equads_xx(i, j), Equads_xy(i, j), Equads_xy(i, j),Equads_yy(i, j);
 		}
 	}
@@ -723,7 +723,7 @@ void Tshape::initialize_mass() {
 //////////////////////////////////////////////////////
 
 void Tshape::assemble_state_x(const Estate_type & u, const space_type & xref,
-		state_type & v) { // xref is coordinate in reference element
+		state_type & v) const { // xref is coordinate in reference element
 	for (unsigned int istate = 0; istate < statedim; istate++) {
 		v[istate] = 0.0;
 		for (int j = 0; j < shapedim; j++)
@@ -735,7 +735,7 @@ void Tshape::assemble_state_x(const Estate_type & u, const space_type & xref,
 ///////////////////////////////////////////////////
 
 void Tshape::assemble_state_x_barycentric(const Estate_type & u, const baryc_type & xbar,
-		state_type & v) { // xref is coordinate in reference element
+		state_type & v) const{ // xref is coordinate in reference element
 
 	space_type xref;
 	xref = 	  xbar(0) * (space_type() << 0, 0).finished()
@@ -749,7 +749,7 @@ void Tshape::assemble_state_x_barycentric(const Estate_type & u, const baryc_typ
 ////////////////////////////////////////////////////
 
 void Tshape::assemble_state_x(const Estate_type & u,
-		const unsigned int & istate, const space_type & xref, value_type & v) { // xref is coordinate in reference element
+		const unsigned int & istate, const space_type & xref, value_type & v) const{ // xref is coordinate in reference element
 	v = 0.0;
 
 	Eigen::VectorXd shape_x(shapedim);
@@ -765,7 +765,7 @@ void Tshape::assemble_state_x(const Estate_type & u,
 ////////////////////////////////////////////////////
 
 void Tshape::assemble_grad_x(const Estate_type & u, const unsigned int & istate,
-		const space_type & xref, space_type & grad) { // xref is coordinate in reference element
+		const space_type & xref, space_type & grad) const{ // xref is coordinate in reference element
 
 	grad.setZero();
 	for (int j = 0; j < shapedim; ++j) {
@@ -777,7 +777,7 @@ void Tshape::assemble_grad_x(const Estate_type & u, const unsigned int & istate,
 ;
 
 ////////////////////////////////////////////////////
-void Tshape::assemble_constant_state(const Estate_type & u, state_type & v) {
+void Tshape::assemble_constant_state(const Estate_type & u, state_type & v) const{
 	for (unsigned int istate = 0; istate < statedim; istate++)
 		v[istate] = u.coeff(0, istate);
 }
@@ -786,7 +786,7 @@ void Tshape::assemble_constant_state(const Estate_type & u, state_type & v) {
 ////////////////////////////////////////////////////
 
 void Tshape::assemble_state_N(const Estate_type & u, const unsigned int & inode,
-		state_type & v) {
+		state_type & v) const{
 	//TODO substitute by matrix mult
 	for (unsigned int istate = 0; istate < statedim; istate++) {
 		v(istate) = 0.0;
@@ -799,7 +799,7 @@ void Tshape::assemble_state_N(const Estate_type & u, const unsigned int & inode,
 ////////////////////////////////////////////////////
 
 void Tshape::assemble_state_N(const Estate_type & u, const unsigned int & inode,
-		const unsigned int & istate, value_type & v) {
+		const unsigned int & istate, value_type & v) const{
 	v = 0.0;
 	for (unsigned int j = 0; j < shapedim; j++)
 		v += u.coeff(j, istate) * Nvalues(j, inode);
@@ -809,7 +809,7 @@ void Tshape::assemble_state_N(const Estate_type & u, const unsigned int & inode,
 ////////////////////////////////////////////////////
 
 void Tshape::assemble_Enodevalue(const Estate_type & u,
-		const unsigned int & istate, Enodevalue_type & v) {
+		const unsigned int & istate, Enodevalue_type & v) const{
 	for (unsigned int inode = 0; inode < Ndim; inode++) {
 		v[inode] = 0.0;
 		for (unsigned int j = 0; j < shapedim; j++)
@@ -821,7 +821,7 @@ void Tshape::assemble_Enodevalue(const Estate_type & u,
 ////////////////////////////////////////////////////
 
 void Tshape::assemble_state_Equad(const Estate_type & u,
-		const unsigned int & iquad, state_type & v) {
+		const unsigned int & iquad, state_type & v) const{
 	for (unsigned int istate = 0; istate < statedim; istate++) {
 		v[istate] = u.col(istate).dot(Equads.col(iquad));
 
@@ -845,7 +845,7 @@ void Tshape::assemble_hessmatrix(const Estate_type & u, const unsigned int &ista
 ////////////////////////////////////////////////////
 
 void Tshape::assemble_state_Fquad(const Estate_type & u,
-		const unsigned int & iquad, state_type & v) {
+		const unsigned int & iquad, state_type & v) const{
 	for (unsigned int istate = 0; istate < statedim; istate++) {
 		v[istate] = 0.0;
 		for (unsigned int j = 0; j < shapedim; j++)
@@ -858,7 +858,7 @@ void Tshape::assemble_state_Fquad(const Estate_type & u,
 
 void Tshape::assemble_state_Fquad(const Estate_type & u,
 		const unsigned int & istate, const unsigned int & iquad,
-		value_type & v) {
+		value_type & v) const{
 	v = 0.0;
 	for (unsigned int j = 0; j < shapedim; j++)
 		v += u.coeff(j, istate) * Fquads(j, iquad);
@@ -868,7 +868,7 @@ void Tshape::assemble_state_Fquad(const Estate_type & u,
 ////////////////////////////////////////////////////
 
 void Tshape::assemble_state_Fmid(const Estate_type & u,
-		const unsigned int & iquad, state_type & v) {
+		const unsigned int & iquad, state_type & v) const{
 	for (unsigned int istate = 0; istate < statedim; istate++) {
 		v[istate] = 0.0;
 		assemble_state_Fmid(u, istate, iquad, v[istate]);
@@ -880,7 +880,7 @@ void Tshape::assemble_state_Fmid(const Estate_type & u,
 
 void Tshape::assemble_state_Fmid(const Estate_type & u,
 		const unsigned int & istate, const unsigned int & iquad,
-		value_type & v) {
+		value_type & v) const{
 	v = 0.0;
 	for (unsigned int j = 0; j < shapedim; j++)
 		v += u.coeff(j, istate) * Fmids(j, iquad);
@@ -890,7 +890,7 @@ void Tshape::assemble_state_Fmid(const Estate_type & u,
 ////////////////////////////////////////////////////
 
 void Tshape::assemble_state_Squad(const Estate_type & u,
-		const unsigned int & iquad, state_type & v) {
+		const unsigned int & iquad, state_type & v) const{
 	for (unsigned int istate = 0; istate < statedim; istate++) {
 		v[istate] = 0.0;
 		for (unsigned int j = 0; j < shapedim; j++)
@@ -903,7 +903,7 @@ void Tshape::assemble_state_Squad(const Estate_type & u,
 
 void Tshape::assemble_state_Squad(const Estate_type & u,
 		const unsigned int & istate, const unsigned int & iquad,
-		value_type & v) {
+		value_type & v) const{
 	v = 0.0;
 	for (unsigned int j = 0; j < shapedim; j++)
 		v += u.coeff(j, istate) * Squads(j, iquad);
@@ -913,7 +913,7 @@ void Tshape::assemble_state_Squad(const Estate_type & u,
 ////////////////////////////////////////////////////
 
 void Tshape::assemble_state_Scenter(const Estate_type & u,
-		const unsigned int & iquad, state_type & v) {
+		const unsigned int & iquad, state_type & v) const{
 	for (unsigned int istate = 0; istate < statedim; istate++) {
 		v[istate] = 0.0;
 		for (unsigned int j = 0; j < shapedim; j++)
@@ -926,7 +926,7 @@ void Tshape::assemble_state_Scenter(const Estate_type & u,
 
 void Tshape::assemble_state_Scenter(const Estate_type & u,
 		const unsigned int & istate, const unsigned int & iquad,
-		value_type & v) {
+		value_type & v) const{
 	v = 0.0;
 	for (unsigned int j = 0; j < shapedim; j++)
 		v += u.coeff(j, istate) * Scenters(j, iquad);

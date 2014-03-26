@@ -63,15 +63,25 @@ class Tmass;
 // Implicit Heat-Problems
 #define CONSTKAPPA_IMPLICIT 41
 
+//Monge Ampere Problems
+#define MONGEAMPERE1 42 // exp(|x|_2^2 / 2)
+#define MONGEAMPERE2 43
+#define MONGEAMPERE3 44 // 1/2 * max{0,|x-x0|-0.2}^2
+#define MONGEAMPERE4 45 //-sqrt(2-|x|^2)
+#define SIMPLEMONGEAMPERE 46 // solution is 2x^2+2y^2-3xy
+
+
+
 #if (EQUATION == EULER_EQ)
   #define PROBLEM BUMP
 #elif (EQUATION == HEAT_EQ)
   #define PROBLEM CONSTKAPPA
 #elif (EQUATION == ENTHALPY_EQ)
   #define PROBLEM CUTTING
-#elif (EQUATION == POISSON_EQ || EQUATION == POISSON_PREC_EQ || EQUATION == MONGE_AMPERE_EQ)
+#elif (EQUATION == POISSON_EQ || EQUATION == POISSON_PREC_EQ)
   #define PROBLEM CONST_RHS
-//  #define PROBLEM SINUS
+#elif (EQUATION == MONGE_AMPERE_EQ)
+	#define PROBLEM MONGEAMPERE3
 #elif (EQUATION == IMPLICIT_HEAT_EQ)
   #define PROBLEM CONSTKAPPA_IMPLICIT
 #endif
@@ -173,7 +183,7 @@ typedef Eigen::Matrix<value_type, spacedim, spacedim> diffusionmatrix_type;
 typedef Eigen::Matrix<value_type, spacedim, spacedim> Hessian_type;
 
 // shape-values at nodes (e.g. for solver-output = visualization-input)
-typedef Eigen::Matrix<double, shapedim, Ndim> Nvalueshape_type;
+typedef Eigen::Matrix<value_type, shapedim, Ndim> Nvalueshape_type;
 
 // quadr.-weights, quadrature points
 // and shape-values/derivatives at quadrature points
@@ -206,7 +216,6 @@ typedef Eigen::Matrix<value_type, spacedim, spacedim> Ejacobian_type;
 
 typedef util::Function <value_type (const value_type)> function_1d_type;
 typedef util::Function <value_type (const value_type, const value_type)> function_2d_type;
-
 
 // Where to put these ??? 4=?, 3=? .......
 typedef unsigned int NeighbOrient_type[4][3][4];

@@ -7,6 +7,7 @@
 
 #include "../include/Tsolver.hpp"
 
+using namespace std;
 
 ////////////////////////////////////////////////////////
 ///////////////                          ///////////////
@@ -22,22 +23,7 @@
    }
 */
 
-/*
-////////////////////////////////////////////////////
-///////////////                      ///////////////
-///////////////     WRITE ARRAYS     ///////////////
-///////////////                      ///////////////
-////////////////////////////////////////////////////
 
-void Tsolver::writeEmass_type (const Emass_type & A)
-{
-   int j,k;
-   for (k=0;k<shapedim;k++) {
-     for (j=0;j<shapedim;j++) cerr <<  A(k,j) << "   ";
-     cerr << endl;
-     }
-};
-*/
 
 void Tsolver::write_space_type (const space_type & x)
 {
@@ -45,6 +31,21 @@ void Tsolver::write_space_type (const space_type & x)
    for (k=0;k<spacedim;k++) cerr <<  x[k] << "   ";
    cerr << endl;
 };
+
+//////////////////COFACTOR MATRIX ////////////////////
+void Tsolver::cofactor_matrix_inplace(Hessian_type &h)
+{
+	//  a b  _\   d -b
+	//  c d   /  -c  a
+
+	value_type temp = h(0,0);
+	h(0,0) = h(1,1);
+	h(1,1) = temp;
+
+	h(0,1) *=-1;
+	h(1,0) *=-1;
+}
+
 
 ////////////////////////////////////////////////////
 ///////////////                      ///////////////
@@ -103,7 +104,7 @@ void Tsolver::update_baseGeometry ()
 
     grid.nodes (idBC,vN2);
 
-    pBC->initialize(shape.get_Equad(), shape.get_Equads_x(), shape.get_Equads_y(),
+    pBC->initialize(shape.get_Equad(), shape.get_Equads_grad(),
 			shape.get_Fquads_x(), shape.get_Fquads_y(),
 			grid, idBC);
     }
@@ -246,6 +247,13 @@ for (unsigned int k=0; k<3; k++) {
   tableCoarseNeighbMid[3][1][k] += 1;
   }
 };
+
+void Tsolver::initialize_plotter()
+{
+	plotter.set_grid(&grid);
+	plotter.set_shape(&shape);
+}
+
 ////////////////////////////////////////////////////
 
 void Tsolver::set_leafcellmassmatrix ()
@@ -559,9 +567,10 @@ T input(const std::string question, const T defaultvalue) {
 }
 
 
-void Tsolver::read_problem_parameters_GENERAL (const std::string data_directory)
+void Tsolver::read_problem_parameters_GENERAL (const std::string data_directory, const std::string data_prefix)
 {
-  output_directory = data_directory;
+  plotter.set_output_directory(data_directory);
+  plotter.set_output_prefix(data_prefix);
   // levelmax   = input<int>   ("levelmax           [default=   10] =? ",10);
   int lmax;
   igpm::configfile().getValue ("general", "levelmax", lmax, 10);
@@ -576,8 +585,10 @@ void Tsolver::read_problem_parameters_GENERAL (const std::string data_directory)
 
 void Tsolver::write_problem_parameters_GENERAL ()
 {
-  std::string fname(output_directory);
-  fname+="/parameters.dat";
+  std::string fname(plotter.get_output_directory());
+  fname+="/";
+  fname+=plotter.get_output_prefix();
+  fname+="parameters.dat";
   std::ofstream outparameters(fname.c_str());
   if( !outparameters ) {
    cerr << "Error opening output file " << fname << "." << endl;
@@ -795,83 +806,79 @@ void Tsolver::write_idset (const grid_type::idset_type & idset) {
 
 };
 
-//////////////////////////////////////////////////////////
+void bilinear_interpolate(const space_type x, state_type &u, int &n_x, int &n_y,
+						value_type &h_x, value_type &h_y,
+						value_type &x0, value_type &y0,
+						Eigen::MatrixXd &solution)
+{
+	int index_x = (x(0)-x0)/h_x, index_y = (x(1)-y0)/h_y; //index of the bottom left corner of the rectangle where x lies in
 
-void Tsolver::write_numericalsolution () {
+	value_type x1 = x0 + h_x*index_x, x2 = x1+h_x; //coordinates of rectangle
+	value_type y1 = y0 + h_y*index_y, y2 = y1+h_y;
 
-      std::vector< std::vector<id_type> > v;
-      v.resize(grid.countBlocks());
+	//interpolate parallel to x-axis
+	value_type f1 = (x2-x(0))/h_x * solution(index_x, index_y) + (x(0)-x1)/h_x * solution(index_x+1, index_y);
+	value_type f2 = (x2-x(0))/h_x * solution(index_x, index_y+1) + (x(0)-x1)/h_x * solution(index_x+1, index_y+1);
 
-      Nvector_type nv;
-      state_type state;
+	//interpolate parallel to y-axis
+	u(0) = (y2-x(1))/h_y * f1  +  (x(1)-y1)/h_y * f2;
+}
 
-      // collect points
-      for (grid_type::leafcellmap_type::const_iterator
-           it=grid.leafCells().begin(); it!=grid.leafCells().end(); ++it) {
-        const grid_type::id_type& id = grid_type::id(it);
-        grid.nodes(id,nv);
-        v[id.block()].push_back(id);
-      }
 
-      std::string fname(output_directory);
-      fname+="/grid_numericalsolution.dat";
-      std::ofstream fC(fname.c_str());
-      if( !fC ) {
-        cerr << "Error opening output file " << fname << "." << endl;
-        exit(1);
-      }
+void Tsolver::read_startsolution(const std::string filename){
+	int n_x, n_y;
+	value_type h_x, h_y, x0, y0;
+	Eigen::MatrixXd sol;
 
-      // global header
-      fC << "TITLE     = \"" << "numerical solution" << "\"" << std::endl;
-      fC << "VARIABLES = ";
-      for (unsigned int i=1; i<=N_type::dim; ++i)
-        fC << "\"x" << i << "\" ";
-      for (unsigned int i=1; i<=statedim; ++i)
-        fC << "\"u" << i << "\" ";
-      fC << "\"Serror" << "\" ";
-      fC << std::endl;
 
-      // over all blocks
-      for (unsigned int i=0; i<grid.countBlocks(); ++i) {
-        if (v[i].size()==0) continue;
+	plotter.read_quadratic_grid(filename, n_x,  n_y, h_x, h_y, x0, y0, sol);
 
-        grid.block(i).writeTecplotHeader(fC,"zone",v[i].size()*id_type::countNodes(grid.block(i).type()),v[i].size());
+	leafcell_type *pLC = NULL; // leaf cell
+	Nvector_type nv;
 
-        fC << endl;
+	for (grid_type::leafcellmap_type::const_iterator it =
+			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) // loop over lefacells
+	{
+		//get leafcell id
+		const grid_type::id_type & idLC = grid_type::id(it);
 
-        // over all ids inside this block
-        for (unsigned int j=0; j<v[i].size(); ++j) {
-          const grid_type::id_type& id = v[i][j];
-          const grid_type::leafcell_type *pLC = NULL;
-          grid.findLeafCell (id, pLC);
+		grid.findLeafCell(idLC, pLC);
 
-          grid.nodes(id,nv);
-          for (unsigned int k=0; k<id.countNodes(); ++k) {
-	    shape.assemble_state_N (pLC->u, k, state);
-            fC << nv[k]
-               << " " << state
-               << " " << pLC->Serror
-               << endl;
-	    }
-        }
+		//TODO do this via function!
+		grid.nodes(idLC, nv);
 
-        fC << endl;
+		Eigen::Vector3d h_x_grid, h_y_grid;
+		h_x_grid(0) = -nv[0][0] + nv[1][0];
+		h_y_grid(0) = -nv[0][1] + nv[1][1];
 
-        // make connectivity
-        for (unsigned int N=1,j=0; j<v[i].size(); ++j) {
-          Nhandlevector_type vCH;
-          for (unsigned int k=0; k<v[i][j].countNodes(); ++k)
-              vCH[k]=(N++);
+		h_x_grid(1) = -nv[1][0] + nv[2][0];
+		h_y_grid(1) = -nv[1][1] + nv[2][1];
 
-          unsigned int nNodes=v[i][j].countNodes();
-          grid.block(v[i][j].block()).prepareTecplotNode(vCH,nNodes);
-          for (unsigned int k=0; k<v[i][j].countNodes(); ++k)
-            fC << vCH[k] << " ";
-          fC << endl;
-        }
-      }
+		h_x_grid(2) = nv[0][0] - nv[2][0];
+		h_y_grid(2) = nv[0][1] - nv[2][1];
 
-    };
+		h_x_grid /= shapedim/Ndim;
+		h_y_grid /= shapedim/Ndim;
+
+		Eigen::Matrix<space_type, Eigen::Dynamic, 1> points(idLC.countNodes() * (shapedim/Ndim + 1));
+		Eigen::VectorXd vals(points.size());
+
+		state_type val;
+
+		for (unsigned int i = 0; i < idLC.countNodes(); ++i) {	//loop over nodes
+			//nodes
+			space_type x(nv[i][0], nv[i][1]); //set node coordinates
+			bilinear_interpolate(x, val , n_x, n_y, h_x, h_y, x0, y0, sol); //interpolate bilinear
+			pLC->u(i * 2,0) = val(0); //write solution
+
+			x =	space_type(nv[i][0] + h_x_grid(i), nv[i][1]+ h_y_grid(i)); //set mid point coordinates
+			bilinear_interpolate(x, val , n_x, n_y, h_x, h_y, x0, y0, sol); //interpolate bilinear
+			pLC->u(i*2 +1,0) = val(0); //write solution
+		}
+
+	}
+}
+
 
 ////////////////////////////////////////////////////
 ///////////////                      ///////////////
@@ -1388,7 +1395,7 @@ void Tsolver::invert_mass ()
           pLC->unew(i,j) = 0.0;
           }
 
-      pLC->Serror = 0.0;
+      pLC->Serror.setZero();
       pLC->id().setFlag (0,false);
       }
     }
@@ -1638,8 +1645,8 @@ void Tsolver::assemble_indicator_and_limiting ()
 	     }
 
 	   // Simpson:
-	   pLC->Serror += facLC*(4*sqr(pmhalf - uLCS[0]) + sqr(p0 - uLCF[0]))/6.0;
-	   pNC->Serror += facNC*(4*sqr(pphalf - uNCS[0]) + sqr(p0 - uNCF[0]))/6.0;
+	   pLC->Serror += Enodevalue_type::Constant(facLC*(4*sqr(pmhalf - uLCS[0]) + sqr(p0 - uLCF[0]))/6.0);
+	   pNC->Serror += Enodevalue_type::Constant(facNC*(4*sqr(pphalf - uNCS[0]) + sqr(p0 - uNCF[0]))/6.0);
 	   assembleInnerFace = false;
 	   }
 
@@ -1657,6 +1664,6 @@ void Tsolver::assemble_indicator_and_limiting ()
      grid.findLeafCell (idLC, pLC);
      pLC->Serror *= facNC;
      }
-};
+}
 
 //////////////////////////////////////////////////////

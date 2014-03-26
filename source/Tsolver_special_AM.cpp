@@ -19,11 +19,6 @@
 
 #include <Eigen/Sparse>
 
-#include "boost/archive/iterators/insert_linebreaks.hpp"
-#include "boost/archive/iterators/base64_from_binary.hpp"
-#include "boost/archive/iterators/binary_from_base64.hpp"
-#include "boost/archive/iterators/transform_width.hpp"
-using namespace boost::archive::iterators;
 
 //reads specific problem parameter from input
 void Tsolver::read_problem_parameters_MA(int &stabsign, double &gamma, double &refine_eps, double &coarsen_eps, int &level) {
@@ -146,42 +141,100 @@ void Tsolver::assignViews_MA(unsigned int & offset) {
 		assignViewCell_MA(id, blocksize, offset);
 	}
 
-	write_exactsolution_MA(0);
+	plotter.write_exactsolution(get_exacttemperature_MA_callback(),0);
 }
 
+void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC, Hessian_type & hess){
+	shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
+	pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
+	hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+	cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
+	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
+}
+
+void Tsolver::calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1)
+{
+	value_type rad = A(0,0) * A(0,0) + (A(1,1) - 2 * A(0,0)) * A(1,1) + 4 * A(0,1) * A(1,0);
+	value_type s = std::sqrt(rad);
+	ev0 = (A(0,0) + A(1,1) - s) / 0.2e1;
+	ev1 = (A(0,0) + A(1,1) + s) / 0.2e1;
+
+}
+
+void Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess,
+		bool use_convexify) {
+
+	value_type ev0, ev1;
+
+	calculate_eigenvalues(hess, ev0, ev1);
+
+	cout << "The eigenvalues of diffusion matrix are: "
+			<< ev0 << " " << ev1 << " " << endl;
+
+	//update min EW
+	if (ev0 < min_EW) {
+		min_EW = ev0;
+
+		if (ev0 < -1)
+		{
+			nvector_type nv;
+
+			get_nodes(grid, pLC->id(), nv);
+
+			cout << "Found very small Eigenvalue at "
+					<< pLC->id() << " with nodes "
+					<< nv[0].transpose() << ", " << nv(1).transpose() <<  ", " << nv(2).transpose() << endl;
+			cout << "Hessian is: \n" << hess << endl;
+
+		}
+
+
+	}
+
+	//correct eigenvalues?
+	if (ev0 < epsilon && use_convexify) {
+		cout << "Attention: the function was not convex! Correcting cofactor matrix"
+				<< endl;
+		convexify(hess);
+	}
+
+	//update maximal EW for penalty
+	if (ev1 > max_EW) {
+		max_EW = ev1;
+	}
+	//store eigenvalue for output
+	pLC->smallest_EW = ev0;
+}
 
 void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM) {
 	Emass_type laplace;
 	value_type det_jac = pBC->get_detjacabs() * facLevelVolume[pLC->id().level()]; //determinant of Transformation to leafcell
 
-	if (iteration > 0){ //we need to update the diffusion matrices /hessian
-		Hessian_type hess;
-
-//		cout << "LC: " <<  pLC->id()<< " :\n" << endl;
-
-		shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
-//		cout << "u " << pLC->u.col(0) << endl;
-
-//		cout << "Hessian at refcell :\n" << hess << endl;
-
-		pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
-//		cout << "Hessian at basecell :\n" << hess << endl;
-
-		hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
-		cout << "Hessian at leafcell :\n" << hess << endl;
-
-
-//		cout << "solution coefficients " << pLC->u.col(0) << endl;
-
-		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_x(),	shape.get_Equads_y(),
+	if (iteration > 0){ //we need to update the laplace matrix
+		pLC->assemble_laplace(shape.get_Equad(), shape.get_Equads_grad(),
 								pBC->get_jac(), det_jac,facLevelLength[pLC->id().level()], laplace); //update diffusionmatrix
 	}
 	else
 	{
 		Hessian_type hess;
-		hess << 5, -2 , -2, 1;
-		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_x(),	shape.get_Equads_y(),
+		if (start_solution){
+
+			//calculate cofactor of hessian
+			calc_cofactor_hessian(pLC, pBC, hess);
+
+			//calculate eigenvalues and convexify
+			calculate_eigenvalues(pLC, hess, false);
+
+			//update diffusion matrix and calculate laplace matrix
+			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
+					pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
+		}
+		else{
+			hess << 1, 0 , 0, 1;
+			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
+			max_EW = 1;
+		}
 	}
 
 	for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
@@ -197,16 +250,6 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 		}
 	}
 
-	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
-
-	//calculate eigen values
-	es.compute(pLC->A);
-
-	cout << "The eigenvalues of A are: " << es.eigenvalues().transpose() << endl;
-
-	if (es.eigenvalues()(1) > max_EW){
-		max_EW = es.eigenvalues()(1);
-	}
 }
 
 void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs) {
@@ -250,8 +293,6 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
  */
 void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs) {
-	max_EW = 0;
-
 	unsigned int gaussbaseLC = 0;
 	unsigned int gaussbaseNC = 0;
 	unsigned int levelNC = 0;
@@ -290,7 +331,9 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		}
 
 		//update penalty
-		penalty = max_EW;
+
+		cout << "Largest EW " << max_EW << endl;
+		penalty *= 10*max_EW*(iteration+1);
 
 		// loop over all cells in this level
 		for (grid_type::leafcellmap_type::const_iterator it =
@@ -374,33 +417,29 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 									value_type A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,jshape,iqLC),
 											   A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,jshape,iqNC);
 
-
-
-									cout << "with A " << pNC->A << endl;
-
 									// b(u, phi)
-									LM.coeffRef(row_LC, col_LC) += -0.5 // to average
+									LM.coeffRef(row_LC, col_LC) += 0.5 // to average
 											* shape.get_Fquadw(iqLC) * length//quadrature weights
 											* shape.get_Fquads(ishape,iqLC) //jump
 											* A_times_normal_BC/ facLevelLength[level]; //gradient times normal
 
-									LM.coeffRef(row_LC, col_NC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * A_times_normal_NBC / facLevelLength[levelNC];
+									LM.coeffRef(row_LC, col_NC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * A_times_normal_NBC / facLevelLength[levelNC];
 
-									LM.coeffRef(row_NC, col_LC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* A_times_normal_BC / facLevelLength[level];
+									LM.coeffRef(row_NC, col_LC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* A_times_normal_BC / facLevelLength[level];
 
-									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
+									LM.coeffRef(row_NC, col_NC) += 0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
 
 									A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,ishape,iqLC),
 									A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,ishape,iqNC);
 
 									// b(phi, u)
-									LM.coeffRef(row_LC, col_LC) += stabsign	* 0.5 * shape.get_Fquadw(iqLC) * length	* A_times_normal_BC / facLevelLength[level]	* shape.get_Fquads(jshape,iqLC);
+									LM.coeffRef(row_LC, col_LC) += stabsign	* -0.5 * shape.get_Fquadw(iqLC) * length	* A_times_normal_BC / facLevelLength[level]	* shape.get_Fquads(jshape,iqLC);
 
-									LM.coeffRef(row_LC, col_NC) += stabsign	* -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_BC / facLevelLength[level] * shape.get_Fquads(jshape,iqNC);
+									LM.coeffRef(row_LC, col_NC) += stabsign	* 0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_BC / facLevelLength[level] * shape.get_Fquads(jshape,iqNC);
 
-									LM.coeffRef(row_NC, col_LC) += stabsign * -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(jshape,iqLC);
+									LM.coeffRef(row_NC, col_LC) += stabsign * 0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(jshape,iqLC);
 
-									LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(jshape,iqNC);
+									LM.coeffRef(row_NC, col_NC) += stabsign * -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(jshape,iqNC);
 
 									// b_sigma(u, phi)
 									if (penalty != 0.0) {
@@ -447,22 +486,21 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 						break;
 
 					case -2: // Dirichlet boundary
-						gaussbaseLC = Fquadgaussdim * i;
-						//         length = dt*facLevelLength[level]*pBC->length[i];
-						length = facLevelLength[level] * pBC->get_length(i);
-						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) {
+						gaussbaseLC = Fquadgaussdim * i; //number of first gauss node of this face
+						length = facLevelLength[level] * pBC->get_length(i); //actual facelength of this leafcell
+						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over face quadrature points
 							iqLC = gaussbaseLC + iq;
 							get_Fcoordinates(idLC, iqLC, x); // determine x
 
 							state_type uLC;
-							get_exacttemperature_MA(x, uLC); // determine uLC
+							get_exacttemperature_MA(x, uLC); // determine uLC (value at boundary point x
 
 							// Copy entries for Dirichlet boundary conditions into right hand side
 							for (unsigned int ishape = 0; ishape < shapedim;
 									++ishape) {
 								double val = stabsign * shape.get_Fquadw(iqLC)
 										* length * uLC(0)
-										* pBC->get_normalderi(ishape,iqLC)
+										* pBC->A_grad_times_normal(pLC->A, ishape,iqLC)
 										/ facLevelLength[level];
 
 								if (penalty != 0.0) {
@@ -474,30 +512,29 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 							}
 
 							// Copy entries into Laplace-matrix
-							for (unsigned int ishape = 0; ishape < shapedim;
-									++ishape) {
-								for (unsigned int j = 0; j < shapedim; ++j) {
+							for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+								for (unsigned int jshape = 0; jshape < shapedim; ++jshape) {
 									int row = pLC->m_offset + ishape;
-									int col = pLC->n_offset + j;
+									int col = pLC->n_offset + jshape;
 									double val;
 
 									// b(u, phi)
 									val = -shape.get_Fquadw(iqLC) * length
 											* shape.get_Fquads(ishape,iqLC)
-											* pBC->get_normalderi(j,iqLC)
+											* pBC->A_grad_times_normal(pLC->A,jshape,iqLC)
 											/ facLevelLength[level];
 
 									// b(phi, u)
 									val += stabsign * shape.get_Fquadw(iqLC)
 											* length
-											* pBC->get_normalderi(ishape,iqLC)
+											* pBC->A_grad_times_normal(pLC->A,ishape,iqLC)
 											/ facLevelLength[level]
-											* shape.get_Fquads(j,iqLC);
+											* shape.get_Fquads(jshape,iqLC);
 
 									if (penalty != 0.0) {
 										val += penalty * shape.get_Fquadw(iqLC)
 												* shape.get_Fquads(ishape,iqLC)
-												* shape.get_Fquads(j,iqLC);
+												* shape.get_Fquads(jshape,iqLC);
 									}
 
 									LM.coeffRef(row, col) += val;
@@ -526,21 +563,38 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 }
 
 //////////////////////////////////////////////////////
-void Tsolver::convexify(Eigen::VectorXd & solution) {
-	// Copy solution entries back into u
-//	for (int i = 0; i< solution.size(); ++i){
-//		if (solution(i) < 0){
-//			solution(i) = 0;
-//		}
-//	}
+void Tsolver::convexify(Hessian_type& hess) {
+
+	EW_solver.compute(hess);
+
+	Hessian_type T = EW_solver.eigenvectors();
+
+	//correct all negative eigenvalue
+	Eigen::Vector2d new_eigenvalues;
+	new_eigenvalues(0) = epsilon;
+	new_eigenvalues(1) = EW_solver.eigenvalues()(1);
+	if (new_eigenvalues(1)< 0)		new_eigenvalues(1) =  epsilon;
+
+	hess = T.transpose()*new_eigenvalues.asDiagonal()*T;
+//	cout << "hess*T^t*D*T \n";
+//	cout << hess << endl;
+
+	value_type ev0, ev1;
+	calculate_eigenvalues(hess, ev0, ev1);
+
+	cout << "new eigenvalues " << ev0 << " " << ev1 << endl;
+//	cout << "new eigenvectors  \n" << es.eigenvectors() << endl << endl;
 }
 
 ///////////////////////////////////////////////////////
 
 void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
-
 	leafcell_type *pLC = NULL;
+	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
+	max_EW = 0; //init max_Ew
+	min_EW = 10;
+
 	for (grid_type::leafcellmap_type::const_iterator it =
 			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
 
@@ -558,20 +612,33 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		const grid_type::basecell_type * pBC;
 		grid.findBaseCellOf(idLC, pBC);
 
+		Hessian_type hess;
+		calc_cofactor_hessian(pLC, pBC, hess);
 
-		const Hessian_type &hess = pLC->A;
+		nvector_type  nv;
+		get_nodes(grid, idLC,nv);
+
+		cout << "cofactor matrix is with node " << nv[0][0] << " " << nv[0][1] << " :\n" << hess << endl;
+		calculate_eigenvalues(pLC,hess, false);
+
+
+		//determinant of hessian for calculation of residuum
 		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
 
-		//attention works only for constant rhs
-		space_type x;
-		state_type uLC;
-		get_rhs_MA(x, uLC);
+		state_type state, stateEx, stateRhs;
 
-		//get rhs
-		value_type rhs = uLC(0);
-		pLC->Serror = det - rhs; //solution should have solution
-		//debug output
-		cout << "residuum in LC: "<< pLC->id() << " is " << pLC->Serror << endl;
+		//loop over LC nodes
+		for (unsigned int k = 0; k < idLC.countNodes(); k++){
+			//get rhs
+			get_rhs_MA(nv(k), stateRhs);
+			//calculate residuum
+			pLC->residuum(k) = det - stateRhs(0);
+
+			//calculate abs error
+			shape.assemble_state_N(pLC->u,k,state);
+			get_exacttemperature_MA(nv[k],stateEx);
+			pLC->Serror(k) = std::abs(state(0)-stateEx(0));
+		}
 
 	}
 
@@ -624,35 +691,22 @@ double phi(const double x, const double y) {
 
 void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // state_type ???
 		{
-#if (PROBLEM == SIMPLEPOISSON)
-	const double a = 0.3, b = 0.5, c = -0.2;
-	u[0] = a * x[0] + b * x[1] + c;
-#elif (PROBLEM == SIMPLEPOISSON2)
-	const double a = 0.3, b = 0.5;
-	u[0] = a * (sqr(x[0]) + sqr(x[1])) + b * (x[0] * x[1]);
-#elif (PROBLEM == SIMPLEPOISSON3)
-	const double a = 0.3, b = 0.5;
-	u[0] = a * (sqr(x[0]) - sqr(x[1])) + b * (x[0] * x[1]);
+#if (PROBLEM == MONGEAMPERE1)
+	u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
+#elif (PROBLEM == MONGEAMPERE2)
+	u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
+#elif (PROBLEM == MONGEAMPERE3)
+	value_type val = x.norm() - 0.2;
+	if (val > 0)	u[0] = val*val/2.;
+	else u[0] = 0;
+#elif (PROBLEM == MONGEAMPERE4)
+	value_type val = 2-sqr(x.norm());
+	if (val < 0) u[0] = 0;
+	else	u[0] = -sqrt(val);
+#elif (PROBLEM == SIMPLEMONGEAMPERE)
+	u[0] = 2*sqr(x[0]) + 2*sqr(x[1]) + 3 * x[0]*x[1];
 #elif (PROBLEM == CONST_RHS)
 	u[0] = 0; // exact solution not known, Dirichlet boundary conditions with u=0
-#elif (PROBLEM == SINGSOL1)
-
-	double xp = x[0] - 1.0, yp = x[1] - 1.0;
-
-	double r = sqrt(sqr(xp) + sqr(yp));
-	double theta = phi(xp, yp) - M_PI / 2;
-
-	double t2 = pow(r - 99.0 / 100.0, 2.0);
-	double t4 = exp(-1 / t2);
-	double t6 = pow(1.0 / 100.0 - r, 2.0);
-	double t8 = exp(-1 / t6);
-	double t12 = pow(r, 0.3333333333333333);
-	double t13 = t12 * t12;
-	double t15 = sin(2.0 / 3.0 * theta);
-	u[0] = t4 / (t4 + t8) * t13 * t15;
-
-//    u[0] = zeta(r) * pow(r, 2.0 / 3.0) * sin(2.0 / 3.0 * theta);
-
 #elif (PROBLEM == CONST_RHS2)
 	u[0] = 1.0 / 8.0 - (pow(x[0] - 0.5, 2) + pow(x[1] - 0.5, 2)) / 4.0;
 #else
@@ -660,36 +714,17 @@ void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // s
 	throw("solution not implemented for this problem");
 #endif
 }
-void Tsolver::get_exacttemperature_MA(const N_type & x, state_type & u)
-{
-	space_type x2;
-	for (int i = 0; i< x2.size(); ++i)
-		x2(i) = x[i];
-	get_exacttemperature_MA(x2,u);
-}
 
 //////////////////////////////////////////////////////////
 
 void Tsolver::get_exacttemperaturenormalderivative_MA(const space_type & x,
 		const space_type & normal, state_type & u_n) // state_type ???
-		{
-#if (PROBLEM == SIMPLEPOISSON)
-	const double a = 0.3, b = 0.5;
-	u_n(0) = a * normal[0] + b * normal[1];
-#elif (PROBLEM == SIMPLEPOISSON2)
-	const double a = 0.3, b = 0.5;
-	u_n = (2 * a * x[0] + b * x[1]) * normal[0]
-	+ (2 * a * x[1] + b * x[0]) * normal[1];
-#elif (PROBLEM == SIMPLEPOISSON3)
-	const double a = 0.3, b = 0.5;
-	u_n = ( 2 * a * x[0] + b * x[1]) * normal[0]
-	+ (-2 * a * x[1] + b * x[0]) * normal[1];
-#elif (PROBLEM == CONST_RHS)
-	u_n.setZero(); // exact solution not explicitly known
-#else
+{
+//#if
+//#else
 	// normal derivative not implemented for this problem
 	throw("normal derivative not implemented for this problem");
-#endif
+//#endif
 }
 
 //////////////////////////////////////////////////////////
@@ -697,77 +732,27 @@ void Tsolver::get_exacttemperaturenormalderivative_MA(const space_type & x,
 void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type ???
 		{
 
-#if (PROBLEM == SIMPLEPOISSON2)
-	const double a = 0.3, b = 0.5;
-	u_rhs[0] = -4 * a;
-#elif (PROBLEM == SIMPLEPOISSON3)
-	u_rhs[0] = 0;
+#if (PROBLEM == MONGEAMPERE1)
+	u_rhs[0] = 1 + sqr(x[0])+sqr(x[1]); //1+||x||^2
+	u_rhs[0] *=2*exp(sqr(x[0])+sqr(x[1])); //*exp(||x||^2)
+#elif (PROBLEM == MONGEAMPERE2)
+	value_type f = exp( (sqr(x[0])+sqr(x[1]))/2. );
+	u_rhs[0] = 6+ 5*sqr(x[0]) + 4 * x[0]*x[1] + sqr(x[1]);
+	u_rhs[0] *= f;
+#elif (PROBLEM == MONGEAMPERE3)
+	value_type f = 0.2/x.norm();
+	f = 1 - f;
+	if (f > 0)	u_rhs[0] = 2*f;
+	else	u_rhs[0] = 0;
+#elif (PROBLEM == MONGEAMPERE4)
+	u_rhs[0] = 4./sqr(2-sqr(x.norm()));
+#elif (PROBLEM == SIMPLEMONGEAMPERE)
+	u_rhs[0] = 8;
 #elif (PROBLEM == CONST_RHS)
-	u_rhs[0] = 1;
-#elif (PROBLEM == CONST_RHS2)
-	u_rhs[0] = 1;
-#elif (PROBLEM == SINGSOL1)
-	double xp = x[0] - 1.0, yp = x[1] - 1.0;
-
-	double r = sqrt(sqr(xp) + sqr(yp));
-	double theta = phi(xp, yp) - M_PI / 2;
-
-	if (r > 0.01 && r < 0.99) {
-
-		double t2 = r - 99.0 / 100.0;
-		double t3 = t2 * t2;
-		double t7 = exp(-1 / t3);
-		double t8 = 1 / t3 / t2 * t7;
-		double t9 = 1.0 / 100.0 - r;
-		double t10 = t9 * t9;
-		double t12 = exp(-1 / t10);
-		double t13 = t7 + t12;
-		double t14 = 1 / t13;
-		double t15 = pow(r, 0.3333333333333333);
-		double t16 = t15 * t15;
-		double t19 = sin(2.0 / 3.0 * theta);
-		double t20 = t14 * t16 * t19;
-		double t23 = t13 * t13;
-		double t24 = 1 / t23;
-		double t25 = t7 * t24;
-		double t26 = t16 * t19;
-		double t30 = t8 - 1 / t10 / t9 * t12;
-		double t31 = 2.0 * t26 * t30;
-		double t33 = t7 * t14;
-		double t34 = 1 / t15;
-		double t35 = t34 * t19;
-		double t38 = t3 * t3;
-		double t40 = 1 / t38 * t7;
-		double t45 = 1 / t38 / t3 * t7;
-		double t67 = t10 * t10;
-		double t81 = t33 / t15 / r * t19;
-		u_rhs[0] =
-		-1 / r * (2.0 * t8 * t20 - t25 * t31 + 2.0 / 3.0 * t33 * t35 +
-				r * (-6.0 * t40 * t20 + 4.0 * t45 * t20 -
-						4.0 * t8 * t24 * t31 +
-						8.0 / 3.0 * t8 * t14 * t34 * t19 +
-						8.0 * t7 / t23 / t13 * t26 * t30 * t30 -
-						8.0 / 3.0 * t25 * t35 * t30 -
-						t25 * t26 * (-6.0 * t40 + 4.0 * t45 -
-								6.0 / t67 * t12 +
-								4.0 / t67 / t10 * t12) -
-						2.0 / 9.0 * t81)
-		) + 4.0 / 9.0 * t81;
-
-	} else {
-		u_rhs[0] = 0;
-	}
+	u_rhs[0] = 2;
 #else
 	u_rhs[0] = 0;
 #endif
-}
-
-void Tsolver::get_rhs_MA(const N_type & x, state_type & u_rhs)
-{
-	space_type x2;
-	for (int i = 0; i< x2.size(); ++i)
-		x2(i) = x[i];
-	get_rhs_MA(x2,u_rhs);
 }
 
 //////////////////////////////////////////////////////////
@@ -830,6 +815,13 @@ void Tsolver::time_stepping_MA() {
 
 	singleton_config_file::instance().getValue("monge ampere", "maximal_iterations", maxits, 3);
 
+	std::string filename;
+	start_solution = singleton_config_file::instance().getValue("monge ampere", "start_iteration", filename, "");
+	if (start_solution){
+		read_startsolution(filename);
+
+	}
+
 	iteration = 0;
 
 	while (iteration < maxits) {
@@ -871,7 +863,14 @@ void Tsolver::time_stepping_MA() {
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
-		convexify(Lsolution);
+		if (iteration == 0 && start_solution)
+		{
+			std::string fname(plotter.get_output_directory());
+			fname += "/grid_startsolution.vtu";
+			plotter.writeLeafCellVTK(fname, 1);
+			cout << "min Eigenvalue " << min_EW << endl;
+		}
+
 
 		restore_MA(Lsolution);
 
@@ -881,10 +880,11 @@ void Tsolver::time_stepping_MA() {
 
 		assemble_indicator_and_limiting(); // use flag
 
-		write_exactsolution_MA(iteration);
-		write_numericalsolution_MA(iteration);
-		write_numericalsolution_VTK_MA(iteration);
-		write_exactrhs_MA(iteration);
+		plotter.write_exactsolution(get_exacttemperature_MA_callback(),iteration);
+		plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
+		plotter.write_numericalsolution(iteration);
+		plotter.write_numericalsolution_VTK(iteration);
+		plotter.write_exactrhs_MA(get_rhs_MA_callback(),iteration);
 
 		// reset flag 0
 		setleafcellflags(0, false);
@@ -902,555 +902,12 @@ void Tsolver::setleafcellflags(unsigned int flag, bool value) {
 		grid_type::leafcell_type * pLC = NULL;
 		grid.findLeafCell(idLC, pLC);
 
-		pLC->Serror = 0.0;
+		pLC->Serror.setZero();
 		pLC->id().setFlag(flag, value);
 	}
 
 }
 
-//////////////////////////////////////////////////////////
-enum {
-	Triangle, Rectangle
-};
-
-/*!
- *
- */
-inline std::string data_encoding(bool binary) {
-
-	if (binary) {
-		return "binary";
-	} else {
-		return "ascii";
-	}
-}
-
-/*!
- *
- */
-void check_file_extension(std::string &name, std::string extension = ".vtu");
-
-void base64_from_string(string &text, ofstream &file) {
-
-	typedef insert_linebreaks<base64_from_binary< // convert binary values ot base64 characters
-			transform_width< // retrieve 6 bit integers from a sequence of 8 bit bytes
-					const char *, 6, 8> >, 70> base64_text; // compose all the above operations in to a new iterator
-
-	std::copy(base64_text(text.c_str()),
-			base64_text(text.c_str() + text.length()),
-			ostream_iterator<char>(file));
-
-	if (text.length() % 12 == 8)
-		file << "=";
-	if (text.length() % 12 == 4)
-		file << "==";
-}
-
-/*!
- *
- */
-template<typename _Scalar, int _Rows, int _Options, int _MaxRows, int _MaxCols>
-void base64_from_vector(
-		const Eigen::Matrix<_Scalar, _Rows, 1, _Options, _MaxRows, _MaxCols> &vec,
-		std::ofstream &file) {
-
-	const unsigned int N = vec.size();
-
-	union utype {
-		_Scalar t;
-		char c[4];
-	};
-
-	std::string text = "";
-	for (unsigned int i = 0; i < N; ++i) {
-		utype temp;
-		temp.t = vec(i);
-		text.append(temp.c, 4);
-	}
-
-	base64_from_string(text, file);
-}
-
-/** Checks if name has correct file extension, if not file extension will be added */
-void check_file_extension(std::string &name, std::string extension) {
-	if (name.length() <= extension.length())
-		name.insert(name.length(), extension);
-	else if (name.substr(name.length() - extension.length()) != extension)
-		name.insert(name.length(), extension);
-}
-
-void Tsolver::writeLeafCellVTK(std::string filename, grid_type& grid,
-		const unsigned int refine = 0, const bool binary = false) {
-
-	//--------------------------------------
-	std::vector < std::vector<id_type> > v;
-	v.resize(grid.countBlocks());
-
-	Nvector_type nv;
-	state_type state;
-
-	// collect points
-	for (grid_type::leafcellmap_type::const_iterator it =
-			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
-		const grid_type::id_type & id = grid_type::id(it);
-		grid.nodes(id, nv);
-		v[id.block()].push_back(id);
-	}
-
-	//count nodes and elements
-	int Nnodes = 0, Nelements = 0;
-	for (unsigned int i = 0; i < grid.countBlocks(); ++i) {
-		if (v[i].size() == 0)
-			continue;
-
-		Nnodes += v[i].size() * id_type::countNodes(grid.block(i).type());
-		Nelements += v[i].size();
-
-	}
-
-	if (refine != 0){
-		Nelements = Nelements*4;
-		Nnodes *= 2;
-	}
-
-
-//    std::string fname(output_directory);
-//    fname+="/grid_numericalsolution."+NumberToString(i)+".dat";
-//    std::ofstream fC(fname.c_str());
-
-	// open file
-	check_file_extension(filename, ".vtu");
-	std::ofstream file(filename.c_str(), std::ios::out);
-	if (file.rdstate()) {
-		std::cerr << "Error: Couldn't open '" << filename << "'!\n";
-		return;
-	}
-
-	file << "<?xml version=\"1.0\"?>\n"
-			<< "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">\n"
-			<< "\t<UnstructuredGrid>\n";
-
-	file << "\t\t<Piece NumberOfPoints=\"" << Nnodes << "\" NumberOfCells=\""
-			<< Nelements << "\">\n";
-
-	// write error
-	file << "\t\t\t<PointData Scalars=\"error\">\n"
-			<< "\t\t\t\t<DataArray  Name=\"error\" type=\"Float32\" format=\"ascii\">\n";
-
-	// loop over all leaf cells
-	for (unsigned int i = 0; i < grid.countBlocks(); ++i) {
-		if (v[i].size() == 0)
-			continue;
-
-		if (refine == 0) {
-
-			// save points in file without refinement
-
-			// over all ids inside this block
-			for (unsigned int j = 0; j < v[i].size(); ++j) {
-				const grid_type::id_type & id = v[i][j];
-				grid_type::leafcell_type * pLC = NULL;
-				grid.findLeafCell(id, pLC);
-
-				grid.nodes(id, nv);
-				for (unsigned int k = 0; k < id.countNodes(); ++k) {
-					shape.assemble_state_N(pLC->u, k, state);
-					file << "\t\t\t\t\t" << pLC->Serror << endl;
-				}
-			}
-
-		}
-		else
-		{
-			// save points in file with refinement
-
-			// over all ids inside this block
-			for (unsigned int j = 0; j < v[i].size(); ++j) {
-				const grid_type::id_type & id = v[i][j];
-				grid_type::leafcell_type * pLC = NULL;
-				grid.findLeafCell(id, pLC);
-
-				grid.nodes(id, nv);
-				for (unsigned int k = 0; k < id.countNodes(); ++k) {
-					shape.assemble_state_N(pLC->u, k, state);
-					file << "\t\t\t\t\t" << pLC->Serror << endl;
-					file << "\t\t\t\t\t" << pLC->Serror << endl;
-				}
-			}
-
-		}
-	}
-
-
-	file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
-
-	// write points
-	file << "\t\t\t<Points>\n"
-			<< "\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\""
-			<< "ascii" << "\">\n";
-
-	// loop over all leaf cells
-	for (unsigned int i = 0; i < grid.countBlocks(); ++i) {
-		if (v[i].size() == 0)
-			continue;
-
-		if (refine == 0) {// save points in file without refinement
-
-			// over all ids inside this block
-			for (unsigned int j = 0; j < v[i].size(); ++j) {
-				const grid_type::id_type & id = v[i][j];
-				grid_type::leafcell_type * pLC = NULL;
-				grid.findLeafCell(id, pLC);
-
-				grid.nodes(id, nv);
-				for (unsigned int k = 0; k < id.countNodes(); ++k) {
-					shape.assemble_state_N(pLC->u, k, state);
-					file << "\t\t\t\t\t" << nv[k] << " " << state << endl; //" "
-					//<< pLC->Serror << endl;
-				}
-			}
-
-		}else {		// save points in file after refinement
-
-			// over all ids inside this block
-			for (unsigned int j = 0; j < v[i].size(); ++j) {
-				const grid_type::id_type & id = v[i][j];
-				grid_type::leafcell_type * pLC = NULL;
-				grid.findLeafCell(id, pLC);
-
-				grid.nodes(id, nv);
-
-				Eigen::Vector3d h_x, h_y;		// (
-				h_x(0) = -nv[0][0] + nv[1][0];
-				h_y(0) = -nv[0][1] + nv[1][1];
-
-				h_x(1) = -nv[1][0] + nv[2][0];
-				h_y(1) = -nv[1][1] + nv[2][1];
-
-				h_x(2) = nv[0][0] - nv[2][0];
-				h_y(2) = nv[0][1] - nv[2][1];
-
-				h_x /= refine + 1;
-				h_y /= refine + 1;
-
-				Eigen::Matrix<space_type, Eigen::Dynamic, 1> points(id.countNodes() * (refine + 1));
-				Eigen::VectorXd vals(points.size());
-
-				state_type val;
-				baryc_type xbar;
-
-				for (unsigned int i = 0; i < id.countNodes(); ++i) {	//loop over nodes
-					//nodes
-					points[i * 2] =	(space_type() << nv[i][0], nv[i][1]).finished(); //set coordinates
-					shape.assemble_state_N(pLC->u, i, val); //get solution at nodes
-					vals(i * 2) = val(0); //write solution
-
-					//coordinates of new points
-					points[i * 2 + 1] =	(space_type() << nv[i][0] + h_x(i), nv[i][1]+ h_y(i)).finished();
-					//calc calculate baryc coordinates of middle points
-					xbar.setZero();
-					xbar(i) = 1. / 2.;
-					xbar((i+1) % 3) = 1. / 2.;
-
-					//get solution
-					shape.assemble_state_x_barycentric(pLC->u, xbar, val);
-					vals(i * 2 + 1) = val(0);
-				}
-				// save points in file
-				for (unsigned int k = 0; k < points.size(); ++k) {
-						file << "\t\t\t\t\t" << points[k].transpose() << " "<< vals(k) << endl; //" "
-						//<< pLC->Serror << endl;
-				}
-			}
-		}
-
-	}
-
-	file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
-
-	// write cells
-	file << "\t\t\t<Cells>\n"
-			<< "\t\t\t\t<DataArray type=\"Int32\" Name=\"connectivity\" format=\"";
-	file << "ascii\">"<<endl;
-	// make connectivity
-
-	if (refine == 0){
-		for (unsigned int i = 0; i < grid.countBlocks(); ++i) {
-			if (v[i].size() == 0)
-				continue;
-			for (unsigned int N = 1, j = 0; j < v[i].size(); ++j) {
-				Nhandlevector_type vCH;
-				for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
-					vCH[k] = (N++);
-
-				unsigned int nNodes = v[i][j].countNodes();
-				grid.block(v[i][j].block()).prepareTecplotNode(vCH, nNodes);
-				file << "\t\t\t\t\t";
-				for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
-					file << vCH[k]-1 << " ";
-			}
-		}
-	}
-	else{ //refined
-			for (int i = 0; i < Nnodes ; i+=6){
-				file << "\t\t\t\t\t"<< i+1 << " " << i+3 << " " << i+5 << " ";//triangle in the middle
-				file << "\t\t\t\t\t"<< i << " " << i+1 << " " << i+5 << " "; //botoom triangle
-				file << "\t\t\t\t\t"<< i+1 << " " << i+2 << " " << i+3 << " "; //on the right
-				file << "\t\t\t\t\t"<< i+3 << " " << i+4 << " " << i+5 << " "; // on the top
-	 		}
-	}
-
-	file << "\n\t\t\t\t</DataArray>\n";
-	file
-			<< "\t\t\t\t<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n\t\t\t\t\t";
-	for (int i = 1; i <= Nelements; ++i)
-		file << i * 3 << " ";
-	file << "\n\t\t\t\t</DataArray>";
-	file
-			<< "\n\t\t\t\t<DataArray type=\"Int32\" Name=\"types\" format=\"ascii\">\n\t\t\t\t\t";
-	for (int i = 1; i <= Nelements; ++i)
-		file << "5 ";  // 5: triangle, 9: quad
-	file << "\n\t\t\t\t</DataArray>";
-	file << "\n\t\t\t</Cells>\n";
-
-	file << "\n\t\t</Piece>";
-	file << "\n\t</UnstructuredGrid>" << "\n</VTKFile>";
-}
-
-void Tsolver::write_numericalsolution_MA(const unsigned int i)
-{
-
-	std::vector < std::vector < id_type > >v;
-	v.resize(grid.countBlocks());
-
-	Nvector_type nv;
-	state_type state;
-
-	// collect points
-	for (grid_type::leafcellmap_type::const_iterator
-			it = grid.leafCells().begin(); it != grid.leafCells().end();
-			++it) {
-		const grid_type::id_type & id = grid_type::id(it);
-		grid.nodes(id, nv);
-		v[id.block()].push_back(id);
-	}
-
-	std::string fname(output_directory);
-	fname+="/grid_numericalsolution"+NumberToString(i)+".dat";
-	std::ofstream fC(fname.c_str());
-
-	// global header
-	fC << "TITLE     = \"" << "numerical solution" << "\"" << std::endl;
-	fC << "VARIABLES = ";
-	for (unsigned int i = 1; i <= N_type::dim; ++i)
-		fC << "\"x" << i << "\" ";
-	for (unsigned int i = 1; i <= statedim; ++i)
-		fC << "\"u" << i << "\" ";
-	fC << "\"Serror" << "\" ";
-	fC << std::endl;
-
-	// over all blocks
-	for (unsigned int i = 0; i < grid.countBlocks(); ++i) {
-		if (v[i].size() == 0)
-			continue;
-
-		grid.block(i).writeTecplotHeader(fC, "zone",
-				v[i].size() *
-				id_type::countNodes(grid.block(i).
-						type()),
-						v[i].size());
-
-		fC << endl;
-
-		// over all ids inside this block
-		for (unsigned int j = 0; j < v[i].size(); ++j) {
-			const grid_type::id_type & id = v[i][j];
-			grid_type::leafcell_type * pLC = NULL;
-			grid.findLeafCell(id, pLC);
-
-			grid.nodes(id, nv);
-			for (unsigned int k = 0; k < id.countNodes(); ++k) {
-				shape.assemble_state_N(pLC->u, k, state);
-				fC << nv[k]
-				         << " " << state << " " << pLC->Serror << endl;
-			}
-		}
-
-		fC << endl;
-
-		// make connectivity
-		for (unsigned int N = 1, j = 0; j < v[i].size(); ++j) {
-			Nhandlevector_type vCH;
-			for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
-				vCH[k] = (N++);
-
-			unsigned int nNodes = v[i][j].countNodes();
-			grid.block(v[i][j].block()).prepareTecplotNode(vCH, nNodes);
-			for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
-				fC << vCH[k] << " ";
-			fC << endl;
-		}
-	}
-
-}
-
-
-void Tsolver::write_numericalsolution_VTK_MA(const unsigned int i) {
-
-	std::string fname(output_directory);
-	fname += "/grid_numericalsolution" + NumberToString(i) + ".vtu";
-
-	writeLeafCellVTK(fname, grid,1);
-
-}
-
-//////////////////////////////////////////////////////////
-
-void Tsolver::write_exactsolution_MA(const unsigned int i) {
-
-	std::vector < std::vector<id_type> > v;
-	v.resize(grid.countBlocks());
-
-	Nvector_type nv;
-	state_type state;
-
-// collect points
-	for (grid_type::leafcellmap_type::const_iterator it =
-			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
-		const grid_type::id_type & id = grid_type::id(it);
-		grid.nodes(id, nv);
-		v[id.block()].push_back(id);
-	}
-
-	std::string fname(output_directory);
-	fname += "/grid_exactsolution." + NumberToString(i) + ".dat";
-	std::ofstream fC(fname.c_str());
-
-// global header
-	fC << "TITLE     = \"" << "exact solution" << "\"" << std::endl;
-//      fC << "TITLE     = \"" << sFile << "\"" << std::endl;
-	fC << "VARIABLES = ";
-	for (unsigned int i = 1; i <= N_type::dim; ++i)
-		fC << "\"x" << i << "\" ";
-	for (unsigned int i = 1; i <= statedim; ++i)
-		fC << "\"u" << i << "\" ";
-	fC << std::endl;
-
-// over all blocks
-	for (unsigned int i = 0; i < grid.countBlocks(); ++i) {
-		if (v[i].size() == 0)
-			continue;
-
-		grid.block(i).writeTecplotHeader(fC, "zone",
-				v[i].size() * id_type::countNodes(grid.block(i).type()),
-				v[i].size());
-
-		fC << endl;
-
-		// over all ids inside this block
-		for (unsigned int j = 0; j < v[i].size(); ++j) {
-			const grid_type::id_type & id = v[i][j];
-			grid_type::leafcell_type * pLC;
-			grid.findLeafCell(id, pLC);
-
-			grid.nodes(id, nv);
-			for (unsigned int k = 0; k < id.countNodes(); ++k) {
-				get_exacttemperature_MA(nv[k], state);
-				fC << nv[k] << " " << state << endl;
-			}
-		}
-
-		fC << endl;
-
-		// make connectivity
-		for (unsigned int N = 1, j = 0; j < v[i].size(); ++j) {
-			Nhandlevector_type vCH;
-			for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
-				vCH[k] = (N++);
-
-			unsigned int nNodes = v[i][j].countNodes();
-			grid.block(v[i][j].block()).prepareTecplotNode(vCH, nNodes);
-			for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
-				fC << vCH[k] << " ";
-			fC << endl;
-		}
-	}
-
-}
-
-//////////////////////////////////////////////////////////
-
-void Tsolver::write_exactrhs_MA(const unsigned int i) {
-
-	std::vector < std::vector<id_type> > v;
-	v.resize(grid.countBlocks());
-
-	Nvector_type nv;
-	state_type state;
-
-// collect points
-	for (grid_type::leafcellmap_type::const_iterator it =
-			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
-		const grid_type::id_type & id = grid_type::id(it);
-		grid.nodes(id, nv);
-		v[id.block()].push_back(id);
-	}
-
-	std::string fname(output_directory);
-	fname += "/grid_exactrhs." + NumberToString(i) + ".dat";
-	std::ofstream fC(fname.c_str());
-
-// global header
-	fC << "TITLE     = \"" << "exact right hand side" << "\"" << std::endl;
-//      fC << "TITLE     = \"" << sFile << "\"" << std::endl;
-	fC << "VARIABLES = ";
-	for (unsigned int i = 1; i <= N_type::dim; ++i)
-		fC << "\"x" << i << "\" ";
-	for (unsigned int i = 1; i <= statedim; ++i)
-		fC << "\"u" << i << "\" ";
-	fC << std::endl;
-
-// over all blocks
-	for (unsigned int i = 0; i < grid.countBlocks(); ++i) {
-		if (v[i].size() == 0)
-			continue;
-
-		grid.block(i).writeTecplotHeader(fC, "zone",
-				v[i].size() * id_type::countNodes(grid.block(i).type()),
-				v[i].size());
-
-		fC << endl;
-
-		// over all ids inside this block
-		for (unsigned int j = 0; j < v[i].size(); ++j) {
-			const grid_type::id_type & id = v[i][j];
-			grid_type::leafcell_type * pLC;
-			grid.findLeafCell(id, pLC);
-
-			grid.nodes(id, nv);
-			for (unsigned int k = 0; k < id.countNodes(); ++k) {
-				get_rhs_MA(nv[k], state);
-				fC << nv[k] << " " << state << endl;
-			}
-		}
-
-		fC << endl;
-
-		// make connectivity
-		for (unsigned int N = 1, j = 0; j < v[i].size(); ++j) {
-			Nhandlevector_type vCH;
-			for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
-				vCH[k] = (N++);
-
-			unsigned int nNodes = v[i][j].countNodes();
-			grid.block(v[i][j].block()).prepareTecplotNode(vCH, nNodes);
-			for (unsigned int k = 0; k < v[i][j].countNodes(); ++k)
-				fC << vCH[k] << " ";
-			fC << endl;
-		}
-	}
-
-}
 
 //////////////////////////////////////////////////////////
 
@@ -1489,10 +946,10 @@ void Tsolver::adapt(const double refine_eps, const double coarsen_eps) {
 			 }
 			 */
 
-			if ((pLC->Serror > refine_eps) && (level < levelmax))
+			if ((pLC->error() > refine_eps) && (level < levelmax))
 				idsrefine.insert(idLC);
 			else {
-				if ((pLC->Serror < coarsen_eps) && (level > 1))
+				if ((pLC->error() < coarsen_eps) && (level > 1))
 					idscoarsen.insert(idLC);
 			}
 

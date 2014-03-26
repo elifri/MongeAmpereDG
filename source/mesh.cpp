@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
 #endif
   }
 
-  std::string gridfiletemplate, outputdir, msafile, lagfile;
+  std::string gridfiletemplate, outputdir, output_prefix, msafile, lagfile;
   if(!singleton_config_file::instance().getValue("general","gridfiletemplate",gridfiletemplate,"")) {
     cerr << "Essential option [general] gridfiletemplate missing in config file!" << endl;
     exit(2);
@@ -109,6 +109,12 @@ int main(int argc, char **argv) {
     cerr << "Essential option [general] outputdir missing in config file!" << endl;
     exit(2);
   }
+
+  if(!singleton_config_file::instance().getValue("general","outputprefix",output_prefix,"")) {
+    cerr << "Essential option [general] outputdir missing in config file!" << endl;
+    exit(2);
+  }
+
   if(!singleton_config_file::instance().getValue("general","msafile",msafile,"")) {
     cerr << "Essential option [general] msafile missing in config file!" << endl;
     exit(2);
@@ -120,6 +126,7 @@ int main(int argc, char **argv) {
 
   cerr << "gridfiletemplate = " << gridfiletemplate << endl;
   cerr << "outputdir = " << outputdir << endl;
+  cerr << "outputprefix = " << output_prefix << endl;
   cerr << "msafile = " << msafile << endl;
 
   solver.read_easymesh_triangles (gridfiletemplate);
@@ -144,11 +151,13 @@ int main(int argc, char **argv) {
   solver.shape.initialize_quadrature ();
   solver.shape.initialize_mass ();
 
+  solver.initialize_plotter();
+
 //  solver.shapelag.initialize_quadrature ();
 //  solver.shapelag.initialize_mass ();
 
   //
-  solver.read_problem_parameters_GENERAL (outputdir);
+  solver.read_problem_parameters_GENERAL (outputdir, output_prefix);
   solver.write_problem_parameters_GENERAL ();
 
 #if (EQUATION == EULER_EQ)
