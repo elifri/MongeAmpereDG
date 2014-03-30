@@ -322,6 +322,10 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 	std::ofstream file("data/s/matricex", std::ios::out);
 
+	Eigen::SparseMatrix<double> laplace (LM.rows(), LM.cols());
+	Eigen::SparseMatrix<double> inner (LM.rows(), LM.cols());
+	Eigen::SparseMatrix<double> outer (LM.rows(), LM.cols());
+
 	unsigned int gaussbaseLC = 0;
 	unsigned int gaussbaseNC = 0;
 	unsigned int levelNC = 0;
@@ -356,20 +360,19 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 			grid.findBaseCellOf(idLC, pBC);
 
 			// Copy entries for element laplace operator into Laplace-matrix
-//			assemble_lhs_bilinearform_MA(pLC, pBC, LM);
+			assemble_lhs_bilinearform_MA(pLC, pBC, laplace);
 		}
 
 		file << "iteration " << iteration << endl;
 		file << " A without inner boundary terms \n ";
-//		MATLAB_export(LM, "laplace matrix");
-
+		MATLAB_export(laplace, "laplace_code");
 
 		//update penalty
 
 		cout << "Largest EW " << max_EW << endl;
 		penalty *= (iteration+1)*10;
 
-		cerr << "used penalty " << penalty << endl;
+		cout << "used penalty " << penalty << endl;
 
 		// loop over all cells in this level
 		for (grid_type::leafcellmap_type::const_iterator it =
@@ -437,7 +440,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 						cout << "LC " << idLC << endl;
 						cout << "NLC " << pNC->id() << endl;
 
-/*						length = facLevelLength[level] * pBC->get_length(i); //calculate actual face length
+						length = facLevelLength[level] * pBC->get_length(i); //calculate actual face length
 						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over gauss nodes
 
 							iqLC = gaussbaseLC + iq; //index of next gauss node to be processed
@@ -459,16 +462,16 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 											   A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,jshape,iqNC);
 
 									// b(u, phi)
-									LM.coeffRef(row_LC, col_LC) += 0.5 // to average
+									inner.coeffRef(row_LC, col_LC) += 0.5 // to average
 											* shape.get_Fquadw(iqLC) * length//quadrature weights
 											* shape.get_Fquads(ishape,iqLC) //jump
 											* A_times_normal_BC/ facLevelLength[level]; //gradient times normal
 
-									LM.coeffRef(row_LC, col_NC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * A_times_normal_NBC / facLevelLength[levelNC];
+									inner.coeffRef(row_LC, col_NC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * A_times_normal_NBC / facLevelLength[levelNC];
 
-									LM.coeffRef(row_NC, col_LC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* A_times_normal_BC / facLevelLength[level];
+									inner.coeffRef(row_NC, col_LC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* A_times_normal_BC / facLevelLength[level];
 
-									LM.coeffRef(row_NC, col_NC) += 0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
+									inner.coeffRef(row_NC, col_NC) += 0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
 
 									A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,ishape,iqLC),
 									A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,ishape,iqNC);
@@ -484,13 +487,13 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 									// b_sigma(u, phi)
 									if (penalty != 0.0) {
-										LM.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
+										inner.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
 
-										LM.coeffRef(row_LC, col_NC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqLC);
+										inner.coeffRef(row_LC, col_NC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqLC);
 
-										LM.coeffRef(row_NC, col_LC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqNC);
+										inner.coeffRef(row_NC, col_LC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqNC);
 
-										LM.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
+										inner.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
 
 									}
 								}
@@ -499,7 +502,6 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 						}
 
 						assembleInnerFace = false;
-						*/
 					}
 
 				} else { // we are at the boundary, turnover cannot occur !!!
@@ -579,7 +581,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 												* shape.get_Fquads(jshape,iqLC);
 									}
 
-									LM.coeffRef(row, col) += val;
+									outer.coeffRef(row, col) += val;
 								}
 							}
 
@@ -600,10 +602,12 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		}
 	}
 
-	file << "A complete \n ";
-	MATLAB_export(LM,"A_outer_code");// << endl << endl;
-	file << "rhs \n" << Lrhs << endl << endl;
-	//MATLAB_export(Lrhs, "rhs_inner_code");
+	LM = laplace + inner + outer;
+
+	MATLAB_export(LM,"A_code");
+	MATLAB_export(inner, "A_inner_code");
+	MATLAB_export(outer, "A_outer_code");
+	MATLAB_export(Lrhs, "rhs_code");
 
 	// cerr << "distmax = " << distmax << endl;
 	// set flag=false; unew = 0.0; in invert_mass/volume
