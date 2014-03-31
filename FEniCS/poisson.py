@@ -16,8 +16,8 @@ mesh = refine(mesh)
 V = FunctionSpace(mesh, 'DG', 2)
 
 # Define boundary conditions
-u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]')
-#u0 = Constant(0.0)
+#u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]')
+u0 = Constant(0.0)
 u_e = interpolate(u0, V)
 
 def u0_boundary(x, on_boundary):
@@ -41,13 +41,13 @@ n = FacetNormal(mesh)
 
 print(h)
 
-# + jump(v)*avg(inner(n,coeff*nabla_grad(u)))*dS\
-#  - jump(u)*avg(inner(n,coeff*nabla_grad(v)))*dS \
-#  + sigma('+')/h('+')* jump(u)*jump(v)*dS \
 
 a = -inner(coeff*nabla_grad(u), nabla_grad(v))*dx \
+  + jump(v)*avg(inner(n,coeff*nabla_grad(u)))*dS\
+  + jump(u)*avg(inner(n,coeff*nabla_grad(v)))*dS \
+  + sigma('+')/h('+')* jump(u)*jump(v)*dS \
   + v*inner(n,coeff*nabla_grad(u))*ds \
-  - u*inner(n,coeff*nabla_grad(v))*ds \
+  + u*inner(n,coeff*nabla_grad(v))*ds \
   + sigma/h*v*u*ds
 
 #old version:  + inner(jump(u,n),avg(coeff*nabla_grad(v)))*dS \ 
@@ -60,7 +60,7 @@ L = inner(f,v)*dx + u0*dot(n,coeff*nabla_grad(v))*ds +sigma/h *u0*v*ds
 
 A, b = assemble_system(a,L)
 
-scipy.io.savemat('../compare/A_outer_minus.mat', {'A_outer_laplace': A.array(), 'b': b.array()})
+scipy.io.savemat('../compare_poisson/A.mat', {'A': A.array(), 'b': b.array()})
 
 
 #print b.array()
