@@ -128,7 +128,7 @@ void Plotter::read_quadratic_grid(std::string filename, 	int &n_x, int &n_y,
 {
 	std::ifstream file(filename.c_str()); 	//format "n ## h ## \n u(0,0) u(h,0) ... \n u(h,h) ..."
 	if(!file) { // file couldn't be opened
-	      cerr << "Error: file for reading rectangle grid could not be opened" << endl;
+	      cerr << "Error: file "<< filename << " for reading rectangle grid could not be opened" << endl;
 	      exit(1);
 	   }
 	cout << "Reading starting point from file " << filename << "... " << endl;
