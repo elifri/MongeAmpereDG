@@ -549,6 +549,8 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		}
 	}
 
+
+	Lrhs*= -1; // solve -laplace u = -f <-> laplace u = f
 	// cerr << "distmax = " << distmax << endl;
 	// set flag=false; unew = 0.0; in invert_mass/volume
 }
