@@ -154,7 +154,7 @@ public:
 		phi_j *= 1/faclevel;
 
 		phi_i = (A * phi_i).transpose();
-		return -phi_i*phi_j;
+		return phi_i*phi_j;
 	}
 
 

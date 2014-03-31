@@ -603,11 +603,13 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 	}
 
 	LM = laplace + inner + outer;
+	Lrhs*= -1; // solve -laplace u = -f <-> laplace u = f
 
 	MATLAB_export(LM,"A_code");
 	MATLAB_export(inner, "A_inner_code");
 	MATLAB_export(outer, "A_outer_code");
 	MATLAB_export(Lrhs, "rhs_code");
+
 
 	// cerr << "distmax = " << distmax << endl;
 	// set flag=false; unew = 0.0; in invert_mass/volume
