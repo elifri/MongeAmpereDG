@@ -550,7 +550,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 	}
 
 
-	Lrhs*= -1; // solve -laplace u = -f <-> laplace u = f
+	Lrhs*= -2; // solve -laplace u = -2f <-> laplace u = 2f
 	// cerr << "distmax = " << distmax << endl;
 	// set flag=false; unew = 0.0; in invert_mass/volume
 }
@@ -729,7 +729,7 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 
 #if (PROBLEM == MONGEAMPERE1)
 	u_rhs[0] = 1 + sqr(x[0])+sqr(x[1]); //1+||x||^2
-	u_rhs[0] *=2*exp(sqr(x[0])+sqr(x[1])); //*exp(||x||^2)
+	u_rhs[0] *= exp(sqr(x[0])+sqr(x[1])); //*exp(||x||^2)
 #elif (PROBLEM == MONGEAMPERE2)
 	value_type f = exp( (sqr(x[0])+sqr(x[1]))/2. );
 	u_rhs[0] = 6+ 5*sqr(x[0]) + 4 * x[0]*x[1] + sqr(x[1]);
@@ -737,14 +737,14 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 #elif (PROBLEM == MONGEAMPERE3)
 	value_type f = 0.2/x.norm();
 	f = 1 - f;
-	if (f > 0)	u_rhs[0] = 2*f;
+	if (f > 0)	u_rhs[0] = f;
 	else	u_rhs[0] = 0;
 #elif (PROBLEM == MONGEAMPERE4)
-	u_rhs[0] = 4./sqr(2-sqr(x.norm()));
+	u_rhs[0] = 2./sqr(2-sqr(x.norm()));
 #elif (PROBLEM == SIMPLEMONGEAMPERE)
-	u_rhs[0] = 8;
+	u_rhs[0] = 4;
 #elif (PROBLEM == CONST_RHS)
-	u_rhs[0] = 2;
+	u_rhs[0] = 1;
 #else
 	u_rhs[0] = 0;
 #endif
