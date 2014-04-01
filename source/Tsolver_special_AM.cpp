@@ -462,7 +462,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 											   A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,jshape,iqNC);
 
 									// b(u, phi)
-									LM.coeffRef(row_LC, col_LC) += -0.5 // to average
+									inner.coeffRef(row_LC, col_LC) += -0.5 // to average
 											* shape.get_Fquadw(iqLC) * length//quadrature weights
 											* shape.get_Fquads(ishape,iqLC) //jump
 											* A_times_normal_BC/ facLevelLength[level]; //gradient times normal
