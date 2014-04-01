@@ -246,7 +246,8 @@ private:
 
 	}
 
-	void get_center(const Nvector_type & nv, space_type & center) {
+	void get_center(const nvector_type & nv, space_type & center) {
+		assert(nv.size() == 3);
 		center = nv(0) + nv(1) + nv(2);
 		center /= 3.0;
 	}
