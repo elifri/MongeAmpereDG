@@ -157,6 +157,9 @@ enum {
 /// basic types
 typedef double value_type;
 typedef Eigen::Matrix<value_type, spacedim, 1> space_type;
+
+typedef Eigen::Matrix<space_type, Eigen::Dynamic, 1> nvector_type; //stores nodes
+
 //  typedef igpm::tvector<value_type, spacedim> space_type;
 
 /// shape of principal unknown
