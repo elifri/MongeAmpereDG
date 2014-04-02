@@ -22,8 +22,7 @@ u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]')
 #u0 = Constant(0.0)
 
 #rhs
-f = Constant(-8.0) 
-
+f = Constant(8.0) 
 
 #define exact solution
 u_e = interpolate(u0, V)
@@ -34,7 +33,23 @@ u_e = interpolate(u0, V)
 w = Function(V)
 w = interpolate(u0, V)
 #and the cofactor matrix of its hessian
-coeff = cofac(as_matrix(grad(grad(w))))
+#coeff = as_matrix(grad(grad(w)))
+coeff = cofac (grad(grad(w)))
+
+#create output in right space
+wxx = project(coeff[0,0], FunctionSpace(mesh, 'DG',0))
+wyx = project(coeff[1,0], FunctionSpace(mesh, 'DG',0))
+wxy = project(coeff[0,1], FunctionSpace(mesh, 'DG',0))
+wyy = project(coeff[1,1], FunctionSpace(mesh, 'DG',0))
+
+#plot(f_x)
+
+print wxx.vector().array()
+print wyx.vector().array()
+print wxy.vector().array()
+print wyy.vector().array()
+
+
 #coeff = as_matrix([[ 4, -3],[ -3, 4]])
 #coeff = as_matrix([[1,0],[0,1]])
 
@@ -42,7 +57,7 @@ coeff = cofac(as_matrix(grad(grad(w))))
 sigma = Constant(7.0*20.0)
 
 #maximum number of iterations
-max_it = 5
+max_it = 1
 
 # Define variational problem
 u = TrialFunction(V)
@@ -53,12 +68,12 @@ h = CellSize(mesh)
 n = FacetNormal(mesh)
 
 #define bilinear form
-a = +inner(as_matrix(grad(grad(w)))*nabla_grad(u), nabla_grad(v))*dx \
-  - inner(jump(v,n),avg(coeff*nabla_grad(u)))*dS\
-  - inner(jump(u,n),avg(coeff*nabla_grad(v)))*dS\
+a = -inner(as_matrix(coeff)*nabla_grad(u), nabla_grad(v))*dx \
+  + inner(jump(v,n),avg(coeff*nabla_grad(u)))*dS\
+  + inner(jump(u,n),avg(coeff*nabla_grad(v)))*dS\
   + sigma('+')/h('+')* jump(u)*jump(v)*dS \
-  - v*inner(n,as_matrix(grad(grad(w)))*nabla_grad(u))*ds \
-  - u*inner(n,as_matrix(grad(grad(w)))*nabla_grad(v))*ds \
+  + v*inner(n,as_matrix(grad(grad(w)))*nabla_grad(u))*ds \
+  + u*inner(n,as_matrix(grad(grad(w)))*nabla_grad(v))*ds \
   + sigma/h*v*u*ds
 
 #define rhs functional
