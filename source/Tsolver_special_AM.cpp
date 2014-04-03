@@ -9,6 +9,7 @@
 #include <Eigen/Eigenvalues>
 
 #include "../include/matlab_export.hpp"
+#include "../include/ConvexHullAlgorithms.hpp"
 
 
 #if (EQUATION == MONGE_AMPERE_EQ)
@@ -638,6 +639,14 @@ void Tsolver::convexify(Hessian_type& hess) {
 //	cout << "new eigenvectors  \n" << es.eigenvectors() << endl << endl;
 }
 
+//////////////////////////////////////////////////////
+void Tsolver::convexify(Eigen::VectorXd &solution)
+{
+	assert (!interpolating_basis && "This convesification works only with bezier polynomials!");
+
+	convex_hull(grid, shape);
+}
+
 ///////////////////////////////////////////////////////
 
 void Tsolver::restore_MA(Eigen::VectorXd & solution) {
@@ -938,6 +947,7 @@ void Tsolver::time_stepping_MA() {
 			cout << "min Eigenvalue " << min_EW << endl;
 		}
 
+		convexify(Lsolution);
 
 		restore_MA(Lsolution);
 
