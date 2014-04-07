@@ -11,7 +11,7 @@ add_library(Tsolver Tsolver_general.cpp Tsolver_special_POISSON.cpp Tsolver_spec
 add_library(CHAlgo ConvexHullAlgorithms.cpp)
 
 add_executable(Mesh mesh.cpp)
-target_link_libraries(Mesh Tsolver Plotter Tmass Tshape CHAlgo singconfig utility ${CGAL_LIBRARIES} ${CGAL_3RD_PARTY_LIBRARIES})
+target_link_libraries(Mesh Tsolver Tmass Tshape CHAlgo Plotter singconfig utility ${CGAL_LIBRARIES} ${CGAL_3RD_PARTY_LIBRARIES})
 
 #----example code ----
 #include_directories(${MyProject_SOURCE_DIR}/MainProject/inc)
