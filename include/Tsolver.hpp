@@ -230,7 +230,7 @@ public:
 		 Eigen::SelfAdjointEigenSolver<Hessian_type> EW_solver;
          double max_EW;
          double min_EW;
-         static const double epsilon = 1e-2; //minimum value of hessian eigenvalues
+         static const double epsilon = 1e-6; //minimum value of hessian eigenvalues
 
    #endif
 
@@ -286,11 +286,12 @@ private:
    void calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1); /// calculates eigenvalues of a 2x2 matrix
 public:
    void calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC, Hessian_type & hess); /// calculates the cofactor Matrix of the hessian in LC
-   void calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess, bool use_convexify); /// calculates the eigenvalues of hess and when indicated convexifies (-> spd)
+   bool calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess); /// calculates the eigenvalues of hess and return if it was pos def (solution convex)
 
    void assemble_MA(const int & STABSIGN, double PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs);
    void restore_MA (Eigen::VectorXd &solution);
    void convexify(Hessian_type & hess); //makes the hessian positive definit
+   void convexify_cell(const leafcell_type* pLC, Eigen::VectorXd &solution); /// convexifies the solution locally (convexifying bezier control polygon)
 
    void convexify(Eigen::VectorXd &solution); //convexifies the solution globally (convexifying bezier control polygon)
 

@@ -164,15 +164,11 @@ void Tsolver::calculate_eigenvalues(const Hessian_type &A, value_type &ev0, valu
 
 }
 
-void Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess,
-		bool use_convexify) {
+bool Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess) {
 
 	value_type ev0, ev1;
 
 	calculate_eigenvalues(hess, ev0, ev1);
-
-	cout << "The eigenvalues of diffusion matrix are: "
-			<< ev0 << " " << ev1 << " " << endl;
 
 	//update min EW
 	if (ev0 < min_EW) {
@@ -194,12 +190,6 @@ void Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess,
 
 	}
 
-	//correct eigenvalues?
-	if (ev0 < epsilon && use_convexify) {
-		cout << "Attention: the function was not convex! Correcting cofactor matrix"
-				<< endl;
-		convexify(hess);
-	}
 
 	//update maximal EW for penalty
 	if (ev1 > max_EW) {
@@ -207,6 +197,10 @@ void Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess,
 	}
 	//store eigenvalue for output
 	pLC->smallest_EW = ev0;
+
+	cout << "eigenvalues " << ev0 << " " << ev1 << endl;
+
+	return (ev0 > epsilon);
 }
 
 void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM) {
@@ -222,17 +216,27 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 		Hessian_type hess;
 		if (start_solution && false){
 
+			//get cell nodes
+			nvector_type nv;
+			get_nodes(grid, pLC->id(), nv);
+
 			//calculate cofactor of hessian
 			calc_cofactor_hessian(pLC, pBC, hess);
 
-			//calculate eigenvalues and convexify
-			calculate_eigenvalues(pLC, hess, false);
+			//calculate eigenvalues
+			bool is_convex = calculate_eigenvalues(pLC, hess);
+
+			//TODO here
+//			if (!is_convex)
+//			{
+//				cout << "Hessian at cell (node 0 = " << nv(0).transpose() << ") is not convex" << endl;
+//				cout << "Convexifying ... ";
+//				convexify_cell(pLC, solution)
+//			}
 
 			//determinant of hessian for calculation of residuum
 			value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
 
-			nvector_type nv;
-			get_nodes(grid, pLC->id(), nv);
 
 			state_type state, stateEx, stateRhs;
 
@@ -257,12 +261,9 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 				hess << 1, 0 , 0, 1;
 			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
-			max_EW = 7;
+			max_EW = 1;
 		}
 	}
-
-	cout << "id " << pLC->id() << "offset " << pLC->m_offset<< endl;
-	cout << "laplace " << laplace << endl;
 
 	for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
@@ -277,6 +278,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 		}
 	}
 
+	cout << "Hessian " << endl  << pLC->A << endl;
 }
 
 void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs) {
@@ -294,7 +296,7 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
 						* facLevelVolume[idLC.level()] * uLC(istate)
 						* shape.get_Equads(ishape, iq);
 
-				Lrhs(row) += val;
+				Lrhs(row) += -2*val; //solve -u=-2f instead of det u = f
 			}
 		}
 	}
@@ -364,10 +366,6 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 			assemble_lhs_bilinearform_MA(pLC, pBC, laplace);
 		}
 
-		file << "iteration " << iteration << endl;
-		file << " A without inner boundary terms \n ";
-		MATLAB_export(laplace, "laplace_code");
-
 		//update penalty
 
 		cout << "Largest EW " << max_EW << endl;
@@ -385,10 +383,6 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 			const grid_type::id_type & idLC = grid_type::id(it);
 			grid.findLeafCell(idLC, pLC);
 
-			//write output
-			file << "leaf cell " << idLC << endl;
-			file << "offset " << pLC->m_offset << endl;
-
 			// get pointer to basecell of this cell
 			const grid_type::basecell_type * pBC;
 			grid.findBaseCellOf(idLC, pBC);
@@ -403,9 +397,6 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 			grid.faceIds(idLC, vF, vFh, vOh);
 			for (unsigned int i = 0; i < idLC.countFaces(); i++) { // loop over faces
 				if (vF[i].isValid()) {
-
-					cout << "face number " << i << endl;
-					cout << "neighbour face " << vFh[i] << endl;
 
 					bool assembleInnerFace = false;
 
@@ -438,17 +429,11 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 					if (assembleInnerFace) {
 
-						cout << "LC " << idLC << endl;
-						cout << "NLC " << pNC->id() << endl;
-
 						length = facLevelLength[level] * pBC->get_length(i); //calculate actual face length
 						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over gauss nodes
 
 							iqLC = gaussbaseLC + iq; //index of next gauss node to be processed
-							cout << "orientation " << vOh[i] << endl;
 							iqNC = vOh[i] == 1? gaussbaseNC + Fquadgaussdim - 1 - iq : gaussbaseNC + iq; //index of next gauss node in neighbour cell to be processed
-
-							cout << "gauss quadrature point number " << iqLC << " neighbour gauss quadrature point number " << iqNC << endl;
 
 
 							// Copy entries into Laplace-matrix
@@ -604,15 +589,6 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 	}
 
 	LM = laplace + inner + outer;
-	Lrhs*= -2; // solve -laplace u = -f <-> laplace u = f
-
-	MATLAB_export(LM,"A_code");
-	MATLAB_export(inner, "A_inner_code");
-	MATLAB_export(outer, "A_outer_code");
-	MATLAB_export(Lrhs, "rhs_code");
-
-	// cerr << "distmax = " << distmax << endl;
-	// set flag=false; unew = 0.0; in invert_mass/volume
 }
 
 //////////////////////////////////////////////////////
@@ -639,12 +615,26 @@ void Tsolver::convexify(Hessian_type& hess) {
 //	cout << "new eigenvectors  \n" << es.eigenvectors() << endl << endl;
 }
 
+/////////////////////////////////////////////////////
+
+void Tsolver::convexify_cell(const leafcell_type* pLC, Eigen::VectorXd &solution)
+{
+	assert (!interpolating_basis && "This convesification works only with bezier polynomials!");
+
+	Eigen::VectorXd coeff = solution.segment(pLC->m_offset, degreedim*3);
+
+	convex_hull_refcell(grid, shape, coeff, plotter);
+
+	//update convexified coeff
+	solution.segment(pLC->m_offset, degreedim*3) = coeff;
+}
+
 //////////////////////////////////////////////////////
 void Tsolver::convexify(Eigen::VectorXd &solution)
 {
 	assert (!interpolating_basis && "This convesification works only with bezier polynomials!");
 
-	convex_hull(grid, shape);
+	convex_hull(grid, solution, plotter);
 }
 
 ///////////////////////////////////////////////////////
@@ -659,41 +649,39 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 	for (grid_type::leafcellmap_type::const_iterator it =
 			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
 
+		//collect leaf cell data
 		const grid_type::id_type & idLC = grid_type::id(it);
-
-		// grid_type::leafcell_type *pLC;
 		grid.findLeafCell(idLC, pLC);
-
-		// Copy solution entries back into u
-		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-			pLC->uold(ishape,0) = pLC->u(ishape,0);
-			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
-
-		}
-
 		nvector_type  nv;
 		get_nodes(grid, idLC,nv);
-
-		cout << "leafcell " << idLC << endl;
-		cout << " node 0: " << nv[0][0] << " " << nv[0][1] << endl;
-
-		state_type s1, s2;
-		shape.assemble_state_N(pLC->u,0,s1);
-		shape.assemble_state_N(pLC->uold,0,s2);
-
-
-		cout << "unew " << s1 << " uold " << s2 << " ->difference " << s1-s2 << endl;
 
 		// get pointer to basecell of this cell
 		const grid_type::basecell_type * pBC;
 		grid.findBaseCellOf(idLC, pBC);
 
+		//update diffusion matrix
 		Hessian_type hess;
-		calc_cofactor_hessian(pLC, pBC, hess);
 
+		bool is_convex = false;
 
-		cout << "cofactor matrix :\n" << hess << endl;
-		calculate_eigenvalues(pLC,hess, false);
+		if (!is_convex)
+		{
+			calc_cofactor_hessian(pLC, pBC, hess);
+//			cout << "calc factor hessian " << endl << hess << endl;
+
+			is_convex = calculate_eigenvalues(pLC, hess);
+
+			if (!is_convex)
+			{
+				cout << "Hessian at cell (node 0 = " << nv(0).transpose() << ") is not convex" << endl;
+				cout << "Convexifying ... ";
+				convexify_cell(pLC, solution);
+
+				calc_cofactor_hessian(pLC, pBC, hess);
+				is_convex = calculate_eigenvalues(pLC, hess);
+				cout << "the corrected hessian " << endl << hess << endl;
+			}
+		}
 
 
 		//determinant of hessian for calculation of residuum
@@ -714,6 +702,20 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 			get_exacttemperature_MA(nv[k],stateEx);
 			pLC->Serror(k) = std::abs(state(0)-stateEx(0));
 		}
+
+
+
+		// Copy solution entries back into u
+		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+			pLC->uold(ishape,0) = pLC->u(ishape,0);
+			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
+
+		}
+
+		state_type s1, s2;
+		shape.assemble_state_N(pLC->u,0,s1);
+		shape.assemble_state_N(pLC->uold,0,s2);
+
 
 	}
 
@@ -949,7 +951,7 @@ void Tsolver::time_stepping_MA() {
 			cout << "min Eigenvalue " << min_EW << endl;
 		}
 
-		convexify(Lsolution);
+//		convexify(Lsolution);
 
 		restore_MA(Lsolution);
 
@@ -959,11 +961,9 @@ void Tsolver::time_stepping_MA() {
 
 		assemble_indicator_and_limiting(); // use flag
 
-		plotter.write_exactsolution(get_exacttemperature_MA_callback(),iteration);
 		plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
-		plotter.write_numericalsolution(iteration);
 		plotter.write_numericalsolution_VTK(iteration);
-		plotter.write_exactrhs_MA(get_rhs_MA_callback(),iteration);
+		plotter.write_controlpolygonVTK(iteration);
 
 		// reset flag 0
 		setleafcellflags(0, false);
