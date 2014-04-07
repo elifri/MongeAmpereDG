@@ -9,6 +9,12 @@
 #include "Equad.hpp"
 #include "Fquad.hpp"
 
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+
+typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
+typedef K::Point_3 Point_3;
+typedef std::vector<Point_3> Points;
+
 using namespace config;
 
 class Tshape {
@@ -35,6 +41,8 @@ public:
 	Fmidpoint_type Fmidx;
 	Fmidshape_type Squads;
 	Fmidpoint_type Squadx;
+
+	nvector_type control_points;
 
 	Scentershape_type Scenters;
 	Scenterpoint_type Scenterx;
@@ -77,6 +85,8 @@ public:
 	// void read_quadrature_ (char *data_file);
 	// void set_quadrature_data ();
 	// void set_quadrature_data (char *data_file);
+
+	void init_bezier_control_points();
 
 	//////////////     bilinear forms     ///////////////
 
@@ -129,6 +139,8 @@ public:
 	void assemble_state_Scenter(const Estate_type & u,
 			const unsigned int & istate, const unsigned int & iquad,
 			value_type & v) const;
+
+	void assemble_control_polygon(Points &P, const Eigen::VectorXd &solution) const; /// assembles the (space_dim+1) dimensional bezier control polygon with coefficients solution
 
 	//////////////   Linear Algebra for Emass_type   ///////////////
 	void matrix_solve(Emass_type & A, Estate_type & x, Estate_type & b,

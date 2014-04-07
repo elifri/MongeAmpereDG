@@ -89,6 +89,8 @@ void Tshape::read_sc_msa(const std::string data_filename) {
 				nodal_contrib[k][j] = 0;
 		}
 	}
+
+	init_bezier_control_points();
 }
 ;
 
@@ -277,6 +279,29 @@ void Tshape::read_sc(const std::string data_filename) {
  }
  };
  */
+
+void Tshape::init_bezier_control_points()
+{
+	int n = 3;
+
+	control_points.resize(degreedim*n);
+	control_points(0) = space_type(0,0);
+	control_points(2) = space_type(1,0);
+	control_points(4) = space_type(0,1);
+	for (int iface = 0; iface < n; iface++)
+	{
+		for (int j = 1; j < degreedim; j++)
+		{
+			//calc jth point on face between nv(iface) and nv((iface%+1)
+			int node1index = 2*iface, node2index = (2*(iface+1))%(n*degreedim);
+
+			control_points(iface*degreedim + j) = control_points(node1index) + (control_points(node2index) - control_points(node1index))/2;
+			cout << " control_points "<< " i " << iface << " j: " << j << " -> " << control_points(iface*degreedim + j).transpose() << endl;
+		}
+	}
+
+}
+
 
 inline void Tshape::get_xpower(const space_type & x,
 		double xpower[spacedim][degreedim + 1]) const {
@@ -932,6 +957,20 @@ void Tshape::assemble_state_Scenter(const Estate_type & u,
 		v += u.coeff(j, istate) * Scenters(j, iquad);
 }
 ;
+
+////////////////////////////////////////////////////
+
+void Tshape::assemble_control_polygon(Points &P, const Eigen::VectorXd &solution) const
+{
+	assert (solution.size() == degreedim*3 && "The given solution vector has not the right size");
+	assert (P.size() == degreedim*3 && "The given Point vector has not the right size");
+
+	for (int i = 0; i< degreedim*3; i++)
+	{
+		P[i] = (Point_3(control_points(i)(0), control_points(i)(1), solution(i)));
+	}
+
+}
 
 /////////////////////////////////////////////////////
 
