@@ -1,17 +1,20 @@
 #include "../include/ConvexHullAlgorithms.hpp"
 
 #include <iostream>
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Polyhedron_3.h>
-#include <CGAL/convex_hull_3.h>
 #include <vector>
+#include <iostream>
 
-typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
-typedef K::Point_3 Point_3;
-typedef CGAL::Polyhedron_3<K> Polyhedron_3;
-typedef std::vector<Point_3> Points;
+//a functor computing the plane containing a triangular facet
+struct Plane_from_facet {
+	Polyhedron_3::Plane_3 operator()(Polyhedron_3::Facet& f) {
+		Polyhedron_3::Halfedge_handle h = f.halfedge();
+		return Polyhedron_3::Plane_3(h->vertex()->point(),
+				h->next()->vertex()->point(), h->opposite()->vertex()->point());
+	}
+};
 
-void convex_hull(grid_type &grid, const Tshape &shape)
+
+void convex_hull(grid_type &grid, Eigen::VectorXd solution, Plotter &plotter)
 {
 	Points P;
 
@@ -29,17 +32,223 @@ void convex_hull(grid_type &grid, const Tshape &shape)
 
 		get_nodes(grid, id, nv);
 
+		int offset = pLC->m_offset;
+
 		for (unsigned int k = 0; k < id.countNodes(); ++k) {
-			shape.assemble_state_N(pLC->u, k, state);
-			P.push_back(Point_3(nv[k](0),nv[k](1), state(0)));
+			P.push_back(Point_3(nv[k](0),nv[k](1), solution(offset+2*k)));
+
+			//calculate bezier control point between two nodes
+			space_type temp = nv[k]+nv[(k+1)%3];
+			temp /= 2;
+			P.push_back(Point_3(temp(0),temp(1), solution(offset+2*k+1)));
 		}
 
 		}
 
 	}
 
+	cout << "Points before" << endl;
+	plotter.write_controlpolygonVTK("points_before.vtu", false, solution);
+	for (unsigned int i = 0; i < P.size(); i++)
+	{
+		cout <<	P[i].x() << " " <<	P[i].y() << " " <<	P[i].z() << endl;
+	}
 
 	Polyhedron_3 poly;
 	CGAL::convex_hull_3( P.begin(), P.end(), poly);
-	std::cout << poly.size_of_vertices() << " points on the convex hull" << std::endl;
+	std::cout << poly.size_of_vertices() << " points on the convex hull for " << P.size() << std::endl;
+
+	Points polyP;
+	for (Polyhedron_3::Point_iterator it = poly.points_begin(); it != poly.points_end(); it++)
+		polyP.push_back(*it);
+
+	write_points("polygon_points.vtu", polyP);
+
+	//assign a plane equation to each polyhedron facet using funcotr Plance from_face
+	std::transform( poly.facets_begin(), poly.facets_end(), poly.planes_begin(),Plane_from_facet());
+
+	std::vector<double> max_lower_intersection (P.size());
+
+	for (unsigned int i=0; i< max_lower_intersection.size(); i++)	max_lower_intersection[i] = -100000;
+
+
+	for (Polyhedron_3::Plane_iterator it = poly.planes_begin(); it != poly.planes_end(); it++)
+	{
+		double a = it->a(), b = it->b(), c = it->c(), d = it->d(); //coefficients of plane eq
+
+		if (c == 0)	continue;
+
+		for (unsigned int i = 0; i< P.size(); i++) //loop over points
+		{
+//			cout << "i " << i << endl;
+
+			//coordinate of point moved to the plane via the z-axis
+			double z = -d - a * P[i].x() - b * P[i].y();
+			z /= c;
+
+			//idea: remember for every point highest intersection point with a plane below
+
+			if (z <= P[i].z()+1e-5) //plane is below of point (potentially lower convex hull)
+			{
+				//update maximum of potential lower convex hull candidate
+				if (z > max_lower_intersection[i])
+					max_lower_intersection[i] = z;
+			}
+		}
+	}
+
+	for (unsigned int i = 0; i< P.size(); i++)
+	{
+		P[i] = Point_3(P[i].x(), P[i].y(), max_lower_intersection[i]);
+		solution[i] = max_lower_intersection[i];
+	}
+
+	plotter.write_controlpolygonVTK("points_after.vtu", false, solution);
+
+
+	cout << "Testing if new is convex " << endl;
+	CGAL::convex_hull_3( P.begin(), P.end(), poly);
+	std::cout << poly.size_of_vertices() << " points on the convex hull for " << P.size() << std::endl;
+
+	cout << "polygon points " << endl;
+	for (Polyhedron_3::Point_iterator it = poly.points_begin(); it != poly.points_end(); it++)
+	{
+		cout << it->x() << " " <<	it->y() << " " <<	it->z() << endl;
+	}
+
+
+	cout << "Points " << endl;
+	for (unsigned int i = 0; i < P.size(); i++)
+	{
+		cout <<	P[i].x() << " " <<	P[i].y() << " " <<	P[i].z() << endl;
+	}
+}
+
+void convex_hull_refcell(grid_type &grid, const Tshape &shape, Eigen::VectorXd solution, Plotter &plotter)
+{
+	Points P(degreedim*3);
+
+	shape.assemble_control_polygon(P, solution);
+	cout << "Points before" << endl;
+	write_points("points_before.vtu", P);
+//	plotter.writeControlPolygonVTK("points_before.vtu", false, solution);
+	for (unsigned int i = 0; i < P.size(); i++)
+	{
+		cout <<	P[i].x() << " " <<	P[i].y() << " " <<	P[i].z() << endl;
+	}
+
+	Polyhedron_3 poly;
+	CGAL::convex_hull_3( P.begin(), P.end(), poly);
+	std::cout << poly.size_of_vertices() << " points on the convex hull for " << P.size() << std::endl;
+
+	Points polyP;
+	for (Polyhedron_3::Point_iterator it = poly.points_begin(); it != poly.points_end(); it++)
+		polyP.push_back(*it);
+
+	write_points("polygon_points.vtu", polyP);
+
+	//assign a plane equation to each polyhedron facet using funcotr Plance from_face
+	std::transform( poly.facets_begin(), poly.facets_end(), poly.planes_begin(),Plane_from_facet());
+
+	std::vector<double> max_lower_intersection (P.size());
+
+	for (unsigned int i=0; i< max_lower_intersection.size(); i++)	max_lower_intersection[i] = -100000;
+
+
+	for (Polyhedron_3::Plane_iterator it = poly.planes_begin(); it != poly.planes_end(); it++)
+	{
+		double a = it->a(), b = it->b(), c = it->c(), d = it->d(); //coefficients of plane eq
+
+		if (c == 0)	continue;
+
+		for (unsigned int i = 0; i< P.size(); i++) //loop over points
+		{
+//			cout << "i " << i << endl;
+
+			//coordinate of point moved to the plane via the z-axis
+			double z = -d - a * P[i].x() - b * P[i].y();
+			z /= c;
+
+			//idea: remember for every point highest intersection point with a plane below
+
+			if (z <= P[i].z()+1e-5) //plane is below of point (potentially lower convex hull)
+			{
+				//update maximum of potential lower convex hull candidate
+				if (z > max_lower_intersection[i])
+					max_lower_intersection[i] = z;
+			}
+		}
+	}
+
+	for (unsigned int i = 0; i< P.size(); i++)
+	{
+		P[i] = Point_3(P[i].x(), P[i].y(), max_lower_intersection[i]);
+		solution[i] = max_lower_intersection[i];
+	}
+
+//	plotter.writeControlPolygonVTK("points_after.vtu", false, solution);
+	write_points("points_after.vtu", P);
+
+
+	cout << "Testing if new is convex " << endl;
+	CGAL::convex_hull_3( P.begin(), P.end(), poly);
+	std::cout << poly.size_of_vertices() << " points on the convex hull for " << P.size() << std::endl;
+
+	cout << "polygon points " << endl;
+	for (Polyhedron_3::Point_iterator it = poly.points_begin(); it != poly.points_end(); it++)
+	{
+		cout << it->x() << " " <<	it->y() << " " <<	it->z() << endl;
+	}
+
+
+	cout << "Points " << endl;
+	for (unsigned int i = 0; i < P.size(); i++)
+	{
+		cout <<	P[i].x() << " " <<	P[i].y() << " " <<	P[i].z() << endl;
+	}
+}
+
+
+void write_points(std::string name, Points &P)
+{
+	std::ofstream file(name.c_str(), std::ios::out);
+	if (file.rdstate()) {
+		std::cerr << "Error: Couldn't open '" << name << "'!\n";
+		return;
+	}
+
+
+	file << "<VTKFile version=\"0.1\" byte_order=\"LittleEndian\" type=\"PolyData\">\n";
+	file << "\t<PolyData>\n";
+	file << "\t\t<Piece NumberOfPoints=\""<< P.size() << "\" NumberOfVerts=\"" << P.size() << "\">\n";
+
+	file << "\t\t\t<Points>\n"
+			<< "\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\""
+			<< "ascii" << "\">\n";
+	for (unsigned int i= 0; i< P.size(); i++)
+		file << "\t\t\t\t\t" << P[i].x() << " "<< P[i].y() << " "<< P[i].z() << "\n";
+	file << "\t\t\t\t</DataArray>"<<endl;
+	file << "\t\t\t</Points>"<<endl;
+
+	file << "\t\t\t<Verts>\n"
+			<< "\t\t\t\t<DataArray type=\"Int32\" Name=\"connectivity\" format=\""
+			<< "ascii" << "\">\n";
+	file << "\t\t\t\t";
+	for (unsigned int i= 0; i< P.size(); i++)
+		file << i << " ";
+	file << endl;
+
+	file << "\t\t\t\t</DataArray>"<<endl;
+	file << "\t\t\t\t<DataArray type=\"Int32\" Name=\"offsets\" format=\""
+		 << "ascii" << "\">\n";
+	file << "\t\t\t\t";
+	for (unsigned int i= 0; i< P.size(); i++)
+		file << i+1 << " ";
+	file << endl;
+	file << "\t\t\t\t</DataArray>"<<endl;
+	file << "\t\t\t</Verts>"<<endl;
+
+	file << "\t\t</Piece>\n";
+	file << "\t</PolyData>\n";
+	file << "</VTKFile>\n";
 }
