@@ -541,6 +541,64 @@ void Plotter::write_points(std::ofstream &file, const std::vector < std::vector<
 
 }
 
+void Plotter::write_control_points(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const Eigen::VectorXd solution){
+	Nvector_type nv;
+	state_type state;
+
+	// write points
+		file << "\t\t\t<Points>\n"
+			<< "\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\""
+			<< "ascii" << "\">\n";
+
+	// loop over all leaf cells
+	for (unsigned int i = 0; i < grid->countBlocks(); ++i) {
+		if (v[i].size() == 0)
+			continue;
+
+			// over all ids inside this block
+			for (unsigned int j = 0; j < v[i].size(); ++j) {
+				const grid_type::id_type & id = v[i][j];
+				grid_type::leafcell_type * pLC = NULL;
+				grid->findLeafCell(id, pLC);
+				int offset = pLC->m_offset;
+
+				grid->nodes(id, nv);
+
+				Eigen::Vector3d h_x, h_y;		// (
+				h_x(0) = -nv[0][0] + nv[1][0];
+				h_y(0) = -nv[0][1] + nv[1][1];
+
+				h_x(1) = -nv[1][0] + nv[2][0];
+				h_y(1) = -nv[1][1] + nv[2][1];
+
+				h_x(2) = nv[0][0] - nv[2][0];
+				h_y(2) = nv[0][1] - nv[2][1];
+
+				h_x /= 2;
+				h_y /= 2;
+
+				Eigen::Matrix<space_type, Eigen::Dynamic, 1> points(id.countNodes() * (2));
+
+				for (unsigned int i = 0; i < id.countNodes(); ++i) {	//loop over nodes
+					//nodes
+					points[i * 2] =	space_type(nv[i][0], nv[i][1]); //set coordinates
+					//coordinates of new points
+					points[i * 2 + 1] =	space_type(nv[i][0] + h_x(i), nv[i][1]+ h_y(i));
+
+				}
+				// save points in file
+				for (unsigned int k = 0; k < points.size(); ++k) {
+						file << "\t\t\t\t\t" << points[k].transpose() << " "<< solution(offset+k) << endl;
+				}
+		}
+
+	}
+
+	file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
+
+}
+
+
 void Plotter::write_solution(const vector_function_type &get_exacttemperature, std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
 {
 	nvector_type nv;
@@ -756,11 +814,38 @@ void Plotter::writeLeafCellVTK(std::string filename, const unsigned int refine, 
 	write_solution_data_array(file, v, refine);
 	file << "\t\t\t</PointData>\n";
 
-	write_points(file, v, refine, false);
+	write_points(file, v, refine, true);
 	write_cells(file,v, refine);
 
 	write_vtk_end(file);
 }
+
+void Plotter::write_controlpolygonVTK(std::string filename, const bool binary, const Eigen::VectorXd solution) {
+
+	//--------------------------------------
+	std::vector < std::vector<id_type> > v;
+
+	assemble_points(v,Nelements, Nnodes);
+
+	Nelements = Nelements*4;
+	Nnodes *= 2;
+
+	// open file
+	check_file_extension(filename, ".vtu");
+	std::ofstream file(filename.c_str(), std::ios::out);
+	if (file.rdstate()) {
+		std::cerr << "Error: Couldn't open '" << filename << "'!\n";
+		return;
+	}
+
+	write_vtk_header(file, Nnodes, Nelements);
+
+	write_control_points(file, v, solution);
+	write_cells(file,v, 1);
+
+	write_vtk_end(file);
+}
+
 
 void Plotter::write_numericalsolution(const unsigned int i)
 {
@@ -848,6 +933,16 @@ void Plotter::write_numericalsolution_VTK(const unsigned int i) {
 	writeLeafCellVTK(fname, 1);
 
 }
+
+void Plotter::write_controlpolygonVTK(const unsigned int i) {
+
+	std::string fname(output_directory);
+	fname += "/"+ output_prefix + "grid_controlpolygon" + NumberToString(i) + ".vtu";
+
+	writeLeafCellVTK(fname, 1);
+
+}
+
 
 //////////////////////////////////////////////////////////
 
