@@ -37,6 +37,7 @@ private:
 	void write_solution_data_array(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); ///write data array containing the solution values
 
 	void write_points(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine, bool coord3=false); //writes points in vtk format, if coord3 then the third component is the solution
+	void write_control_points(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const Eigen::VectorXd solution);
 	void write_solution(const vector_function_type &get_exacttemperature, std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); //writes points (of solution) in vtk format
 	void write_cells(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); //write cells
 
@@ -49,6 +50,14 @@ public:
 	    * \param bool 	  should switch between binary and asccii format is NOT working yet
 	    */
 	void writeLeafCellVTK(std::string filename,	const unsigned int refine = 0, const bool binary = false);
+
+	/*! \brief writes the solution in a vtu file
+	    *
+	    * \param (string) the name of the file the solution should be written into
+	    * \param binary	  should switch between binary and asccii format is NOT working yet
+	    * \param solution coefficients of solution
+	    */
+	void write_controlpolygonVTK(std::string filename, const bool binary, const Eigen::VectorXd solution);
 
 	/*! \brief writes the exact solution (if known) in a vtu file
 	    *
@@ -84,6 +93,8 @@ public:
 
 	void write_numericalsolution(const unsigned int i);
 	void write_numericalsolution_VTK(const unsigned int i);
+
+	void write_controlpolygonVTK(const unsigned int i);
 
 	void write_exactsolution(const vector_function_type get_exacttemperature, const unsigned int i);
 	void write_exactsolution_VTK(const vector_function_type &exactSol, const unsigned int i);
