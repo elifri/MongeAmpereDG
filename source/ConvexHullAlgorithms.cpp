@@ -218,3 +218,47 @@ void convex_hull_refcell(grid_type &grid, const leafcell_type* pLC, const Tshape
 	}
 	cout << "coefficients after "<< solution.transpose() << endl;
 }
+
+void write_points(std::string name, Points &P)
+{
+	std::ofstream file(name.c_str(), std::ios::out);
+	if (file.rdstate()) {
+		std::cerr << "Error: Couldn't open '" << name << "'!\n";
+		return;
+	}
+
+
+	file << "<VTKFile version=\"0.1\" byte_order=\"LittleEndian\" type=\"PolyData\">\n";
+	file << "\t<PolyData>\n";
+	file << "\t\t<Piece NumberOfPoints=\""<< P.size() << "\" NumberOfVerts=\"" << P.size() << "\">\n";
+
+	file << "\t\t\t<Points>\n"
+			<< "\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\""
+			<< "ascii" << "\">\n";
+	for (unsigned int i= 0; i< P.size(); i++)
+		file << "\t\t\t\t\t" << P[i].x() << " "<< P[i].y() << " "<< P[i].z() << "\n";
+	file << "\t\t\t\t</DataArray>"<<endl;
+	file << "\t\t\t</Points>"<<endl;
+
+	file << "\t\t\t<Verts>\n"
+			<< "\t\t\t\t<DataArray type=\"Int32\" Name=\"connectivity\" format=\""
+			<< "ascii" << "\">\n";
+	file << "\t\t\t\t";
+	for (unsigned int i= 0; i< P.size(); i++)
+		file << i << " ";
+	file << endl;
+
+	file << "\t\t\t\t</DataArray>"<<endl;
+	file << "\t\t\t\t<DataArray type=\"Int32\" Name=\"offsets\" format=\""
+		 << "ascii" << "\">\n";
+	file << "\t\t\t\t";
+	for (unsigned int i= 0; i< P.size(); i++)
+		file << i+1 << " ";
+	file << endl;
+	file << "\t\t\t\t</DataArray>"<<endl;
+	file << "\t\t\t</Verts>"<<endl;
+
+	file << "\t\t</Piece>\n";
+	file << "\t</PolyData>\n";
+	file << "</VTKFile>\n";
+}
