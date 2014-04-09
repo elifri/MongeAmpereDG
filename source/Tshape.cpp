@@ -286,19 +286,20 @@ void Tshape::init_bezier_control_points()
 
 	control_points.resize(degreedim*n);
 	control_points(0) = space_type(0,0);
-	control_points(2) = space_type(1,0);
-	control_points(4) = space_type(0,1);
-	for (int iface = 0; iface < n; iface++)
-	{
-		for (int j = 1; j < degreedim; j++)
-		{
-			//calc jth point on face between nv(iface) and nv((iface%+1)
-			int node1index = 2*iface, node2index = (2*(iface+1))%(n*degreedim);
+	control_points(1) = space_type(0.5, 0);
+	control_points(2) = space_type(0, 0.5);
+	control_points(3) = space_type(1,0);
+	control_points(4) = space_type(0.5,0.5);
+	control_points(5) = space_type(0,1);
 
-			control_points(iface*degreedim + j) = control_points(node1index) + (control_points(node2index) - control_points(node1index))/2;
-			cout << " control_points "<< " i " << iface << " j: " << j << " -> " << control_points(iface*degreedim + j).transpose() << endl;
-		}
-	}
+	baryc_control_points.resize(6);
+	baryc_control_points(0) = baryc_type(1,0,0);
+	baryc_control_points(1) = baryc_type(0.5,0.5,0);
+	baryc_control_points(2) = baryc_type(0.5,0,0.5);
+	baryc_control_points(3) = baryc_type(0,1,0);
+	baryc_control_points(4) = baryc_type(0,0.5,0.5);
+	baryc_control_points(5) = baryc_type(0,0,1);
+
 
 }
 
