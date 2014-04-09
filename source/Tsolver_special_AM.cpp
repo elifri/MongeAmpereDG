@@ -157,11 +157,13 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 
 void Tsolver::calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1)
 {
+	cout << " A " << A << endl;
 	value_type rad = A(0,0) * A(0,0) + (A(1,1) - 2 * A(0,0)) * A(1,1) + 4 * A(0,1) * A(1,0);
+	if (std::abs(rad) < 1e-7)	rad = 0;
 	value_type s = std::sqrt(rad);
 	ev0 = (A(0,0) + A(1,1) - s) / 0.2e1;
 	ev1 = (A(0,0) + A(1,1) + s) / 0.2e1;
-
+	assert(!(ev0 != ev0) && "The smaller eigenvalue is nan");
 }
 
 bool Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess) {
@@ -169,6 +171,10 @@ bool Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess) {
 	value_type ev0, ev1;
 
 	calculate_eigenvalues(hess, ev0, ev1);
+
+	assert(!(ev0 != ev0) && "The smaller eigenvalue is nan");
+	assert(!(ev1 != ev1) && "The bigger eigenvalue is nan");
+
 
 	//update min EW
 	if (ev0 < min_EW) {
