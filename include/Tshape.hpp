@@ -9,8 +9,14 @@
 #include "Equad.hpp"
 #include "Fquad.hpp"
 
+#include <CGAL/AABB_tree.h> // must be inserted before kernel
+#include <CGAL/AABB_traits.h>
+#include <CGAL/AABB_polyhedron_triangle_primitive.h>
+
+//#include <CGAL/Simple_cartesian.h>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 
+//typedef CGAL::Simple_cartesian<double> K;
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef K::Point_3 Point_3;
 typedef std::vector<Point_3> Points;
@@ -43,6 +49,7 @@ public:
 	Fmidpoint_type Squadx;
 
 	nvector_type control_points;
+	baryc_nvector_type baryc_control_points;
 
 	Scentershape_type Scenters;
 	Scenterpoint_type Scenterx;

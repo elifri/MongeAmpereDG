@@ -94,7 +94,7 @@ public:
 	void write_numericalsolution(const unsigned int i);
 	void write_numericalsolution_VTK(const unsigned int i);
 
-	void write_controlpolygonVTK(const unsigned int i);
+	void write_controlpolygonVTK(const unsigned int i, const Eigen::VectorXd &solution);
 
 	void write_exactsolution(const vector_function_type get_exacttemperature, const unsigned int i);
 	void write_exactsolution_VTK(const vector_function_type &exactSol, const unsigned int i);
