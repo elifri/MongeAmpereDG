@@ -277,8 +277,6 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 			LM.coeffRef(row, col) += val;
 		}
 	}
-
-	cout << "Hessian " << endl  << pLC->A << endl;
 }
 
 void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs) {
@@ -623,18 +621,19 @@ void Tsolver::convexify_cell(const leafcell_type* pLC, Eigen::VectorXd &solution
 
 	Eigen::VectorXd coeff = solution.segment(pLC->m_offset, degreedim*3);
 
-	convex_hull_refcell(grid, shape, coeff, plotter);
+//	convex_hull_refcell(grid, pLC, shape, coeff, plotter);
 
 	//update convexified coeff
 	solution.segment(pLC->m_offset, degreedim*3) = coeff;
+
 }
 
 //////////////////////////////////////////////////////
 void Tsolver::convexify(Eigen::VectorXd &solution)
 {
-	assert (!interpolating_basis && "This convesification works only with bezier polynomials!");
+//	assert (!interpolating_basis && "This convesification works only with bezier polynomials!");
 
-	convex_hull(grid, solution, plotter);
+	convex_hull(grid, shape, solution, plotter);
 }
 
 ///////////////////////////////////////////////////////
@@ -709,7 +708,6 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 			pLC->uold(ishape,0) = pLC->u(ishape,0);
 			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
-
 		}
 
 		state_type s1, s2;
@@ -951,7 +949,9 @@ void Tsolver::time_stepping_MA() {
 			cout << "min Eigenvalue " << min_EW << endl;
 		}
 
-//		convexify(Lsolution);
+		plotter.write_controlpolygonVTK(iteration+20, Lsolution);
+
+		convexify(Lsolution);
 
 		restore_MA(Lsolution);
 
@@ -963,7 +963,7 @@ void Tsolver::time_stepping_MA() {
 
 		plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
 		plotter.write_numericalsolution_VTK(iteration);
-		plotter.write_controlpolygonVTK(iteration);
+		plotter.write_controlpolygonVTK(iteration, Lsolution);
 
 		// reset flag 0
 		setleafcellflags(0, false);
