@@ -4,6 +4,8 @@
 #include <vector>
 #include <iostream>
 
+#include<CGAL/exceptions.h>
+
 //a functor computing the plane containing a triangular facet
 struct Plane_from_facet {
 	Polyhedron_3::Plane_3 operator()(Polyhedron_3::Facet& f) {
@@ -14,14 +16,15 @@ struct Plane_from_facet {
 };
 
 
-void convex_hull(grid_type &grid, Eigen::VectorXd solution, Plotter &plotter)
+void convex_hull(grid_type &grid, const Tshape &shape, Eigen::VectorXd &solution, Plotter &plotter)
 {
-	Points P;
+	Points P(solution.size());
 
 	{
 	// collect points
 	int Nnodes;
 	state_type state;
+	baryc_nvector_type bc = shape.baryc_control_points;
 	nvector_type nv;
 
 		// collect points
@@ -30,21 +33,16 @@ void convex_hull(grid_type &grid, Eigen::VectorXd solution, Plotter &plotter)
 		grid_type::leafcell_type * pLC = NULL;
 		grid.findLeafCell(id, pLC);
 
-		get_nodes(grid, id, nv);
-
 		int offset = pLC->m_offset;
 
-		for (unsigned int k = 0; k < id.countNodes(); ++k) {
-			P.push_back(Point_3(nv[k](0),nv[k](1), solution(offset+2*k)));
+		get_nodes(grid, id, nv);
 
-			//calculate bezier control point between two nodes
-			space_type temp = nv[k]+nv[(k+1)%3];
-			temp /= 2;
-			P.push_back(Point_3(temp(0),temp(1), solution(offset+2*k+1)));
+		for (int i=0; i < bc.size(); i++){
+			space_type v = bc(i)[0]*nv[0]+bc(i)[1]*nv[1]+bc(i)[2]*nv[2];
+			P[offset+i] = Point(v(0), v(1), solution(offset+i));
 		}
 
-		}
-
+	}
 	}
 
 	cout << "Points before" << endl;
@@ -124,11 +122,19 @@ void convex_hull(grid_type &grid, Eigen::VectorXd solution, Plotter &plotter)
 	}
 }
 
-void convex_hull_refcell(grid_type &grid, const Tshape &shape, Eigen::VectorXd solution, Plotter &plotter)
+void convex_hull_refcell(grid_type &grid, const leafcell_type* pLC, const Tshape &shape, Eigen::VectorXd &solution, Plotter &plotter)
 {
 	Points P(degreedim*3);
 
-	shape.assemble_control_polygon(P, solution);
+	baryc_nvector_type bc = shape.baryc_control_points;
+	nvector_type nv;
+	get_nodes(grid, pLC->id(), nv);
+
+	for (unsigned int i=0; i < P.size(); i++){
+		space_type v = bc(i)[0]*nv[0]+bc(i)[1]*nv[1]+bc(i)[2]*nv[2];
+		P[i] = Point(v(0), v(1), solution(i));
+	}
+
 	cout << "Points before" << endl;
 	write_points("points_before.vtu", P);
 //	plotter.writeControlPolygonVTK("points_before.vtu", false, solution);
