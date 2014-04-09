@@ -658,6 +658,11 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		const grid_type::basecell_type * pBC;
 		grid.findBaseCellOf(idLC, pBC);
 
+		// Copy solution entries back into u
+		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
+		}
+
 		//update diffusion matrix
 		Hessian_type hess;
 
@@ -670,12 +675,18 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
 			is_convex = calculate_eigenvalues(pLC, hess);
 
-			if (!is_convex)
+			if (!is_convex && false)
 			{
+				cout << "hessian " << endl << hess << endl;
 				cout << "Hessian at cell (node 0 = " << nv(0).transpose() << ") is not convex" << endl;
 				cout << "Convexifying ... ";
 				convexify_cell(pLC, solution);
 
+				// Copy solution entries back into u
+				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+					pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
+
+				}
 				calc_cofactor_hessian(pLC, pBC, hess);
 				is_convex = calculate_eigenvalues(pLC, hess);
 				cout << "the corrected hessian " << endl << hess << endl;
