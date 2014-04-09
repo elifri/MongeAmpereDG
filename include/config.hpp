@@ -81,7 +81,7 @@ class Tmass;
 #elif (EQUATION == POISSON_EQ || EQUATION == POISSON_PREC_EQ)
   #define PROBLEM CONST_RHS
 #elif (EQUATION == MONGE_AMPERE_EQ)
-  #define PROBLEM SIMPLEMONGEAMPERE2
+  #define PROBLEM SIMPLEMONGEAMPERE
 #elif (EQUATION == IMPLICIT_HEAT_EQ)
   #define PROBLEM CONSTKAPPA_IMPLICIT
 #endif
@@ -174,6 +174,8 @@ typedef Eigen::Matrix<Estate_type, childdim, 1> EstateCV_type; // child vector
 
 typedef Eigen::Matrix<value_type, shapedim, shapedim>  Emass_type;
 typedef Eigen::LDLT<Emass_type> Emass_dec_type;
+
+typedef Eigen::Matrix<baryc_type, Eigen::Dynamic, 1> baryc_nvector_type;
 
 typedef value_type  Emask_type[childdim][shapedim][shapedim];
 
