@@ -627,10 +627,13 @@ void Tsolver::convexify_cell(const leafcell_type* pLC, Eigen::VectorXd &solution
 
 	Eigen::VectorXd coeff = solution.segment(pLC->m_offset, degreedim*3);
 
+	cout << "coefficients " << coeff.transpose() << endl;
 //	convex_hull_refcell(grid, pLC, shape, coeff, plotter);
 
+	cout << "coeff in conve_cell " << coeff.transpose() << endl;
 	//update convexified coeff
 	solution.segment(pLC->m_offset, degreedim*3) = coeff;
+	cout << "solution " << solution.transpose() << endl;
 
 }
 
@@ -639,7 +642,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 {
 //	assert (!interpolating_basis && "This convesification works only with bezier polynomials!");
 
-	convex_hull(grid, shape, solution, plotter);
+	convex_hull(grid, shape, solution, plotter, iteration);
 }
 
 ///////////////////////////////////////////////////////

@@ -16,7 +16,7 @@ struct Plane_from_facet {
 };
 
 
-void convex_hull(grid_type &grid, const Tshape &shape, Eigen::VectorXd &solution, Plotter &plotter)
+void convex_hull(grid_type &grid, const Tshape &shape, Eigen::VectorXd &solution, Plotter &plotter, int iteration)
 {
 	Points P(solution.size());
 
@@ -45,12 +45,13 @@ void convex_hull(grid_type &grid, const Tshape &shape, Eigen::VectorXd &solution
 	}
 	}
 
-	cout << "Points before" << endl;
-	plotter.write_controlpolygonVTK("points_before.vtu", false, solution);
-	for (unsigned int i = 0; i < P.size(); i++)
-	{
-		cout <<	P[i].x() << " " <<	P[i].y() << " " <<	P[i].z() << endl;
-	}
+	plotter.write_controlpolygonVTK(plotter.get_output_directory()+"controlpolygon_before"+NumberToString(iteration)+".vtu", false, solution);
+
+	write_points(plotter.get_output_directory()+"pointsbefore_"+NumberToString(iteration)+".vtu", P);
+//	for (unsigned int i = 0; i < P.size(); i++)
+//	{
+//		cout <<	P[i].x() << " " <<	P[i].y() << " " <<	P[i].z() << endl;
+//	}
 
 	Polyhedron_3 polyhedron;
 	CGAL::convex_hull_3( P.begin(), P.end(), polyhedron);
@@ -85,13 +86,12 @@ void convex_hull(grid_type &grid, const Tshape &shape, Eigen::VectorXd &solution
     			Object_and_primitive_id op = *it;
     			CGAL::Object object = op.first;
     			Point point;
-    			cout << "check " << endl;
 
     			if(CGAL::assign(point,object))
 				{
     				if (it_p->z() > point.z())
     				{
-    					cout << "updated a point from " << *it_p << " to " << point << endl;
+    					cout << "updated a point from " << *it_p << " to " << point  << " difference was " << (it_p->z()-point.z())<< endl;
     					*it_p = point;
 					}
 				}
@@ -108,25 +108,26 @@ void convex_hull(grid_type &grid, const Tshape &shape, Eigen::VectorXd &solution
 		solution[i] = P[i].z();
 	}
 
-	plotter.write_controlpolygonVTK("points_after.vtu", false, solution);
+//	plotter.write_controlpolygonVTK(plotter.get_output_directory()+"points_after"+NumberToString(iteration)+".vtu", false, solution);
 
 
 //	cout << "Testing if new is convex " << endl;
 //	CGAL::convex_hull_3( P.begin(), P.end(), polyhedron);
 //	std::cout << polyhedron.size_of_vertices() << " points on the convex hull for " << P.size() << std::endl;
 
-	cout << "polygon points " << endl;
-	for (Polyhedron_3::Point_iterator it = polyhedron.points_begin(); it != polyhedron.points_end(); it++)
-	{
-		cout << it->x() << " " <<	it->y() << " " <<	it->z() << endl;
-	}
+//	cout << "polygon points " << endl;
+//	for (Polyhedron_3::Point_iterator it = polyhedron.points_begin(); it != polyhedron.points_end(); it++)
+//	{
+//		cout << it->x() << " " <<	it->y() << " " <<	it->z() << endl;
+//	}
 
 
-	cout << "Points " << endl;
-	for (unsigned int i = 0; i < P.size(); i++)
-	{
-		cout <<	P[i].x() << " " <<	P[i].y() << " " <<	P[i].z() << endl;
-	}
+//	cout << "Points " << endl;
+//	for (unsigned int i = 0; i < P.size(); i++)
+//	{
+//		cout <<	P[i].x() << " " <<	P[i].y() << " " <<	P[i].z() << endl;
+//	}
+	write_points(plotter.get_output_directory()+"/pointsafter_"+NumberToString(iteration)+".vtu", P);
 }
 
 void convex_hull_refcell(grid_type &grid, const leafcell_type* pLC, const Tshape &shape, Eigen::VectorXd &solution, Plotter &plotter)
@@ -218,6 +219,70 @@ void convex_hull_refcell(grid_type &grid, const leafcell_type* pLC, const Tshape
 	}
 	cout << "coefficients after "<< solution.transpose() << endl;
 }
+
+
+//#include <CGAL/Env_triangle_traits_3.h>
+//#include <CGAL/Env_surface_data_traits_3.h>
+//#include <CGAL/envelope_3.h>
+
+//typedef CGAL::Env_triangle_traits_3<Kernel>	Traits_3;
+//typedef Traits_3::Surface_3	Triangle_3;
+//typedef CGAL::Env_surface_data_traits_3<Traits_3, char> Data_traits_3;
+//typedef Data_traits_3::Surface_3 Data_triangle_3;
+
+/*void lower_envelope(grid_type &grid, const Tshape &shape, const Eigen::VectorXd solution)
+{
+
+	 // Construct the input triangles, makred A and B.
+	std::vector<Data_triangle_3> triangles;
+
+	{
+	// collect points
+	int Nnodes;
+	state_type state;
+	nvector_type nv;
+
+		// collect points
+	for (grid_type::leafcellmap_type::const_iterator it = grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
+		const grid_type::id_type & id = grid_type::id(it);
+		grid_type::leafcell_type * pLC = NULL;
+		grid.findLeafCell(id, pLC);
+
+		get_nodes(grid, id, nv);
+
+		int offset = pLC->m_offset;
+		Points P;
+
+		for (unsigned int k = 0; k < id.countNodes(); ++k) {
+			P.push_back(Point_3(nv[k](0),nv[k](1), solution(offset+2*k)));
+
+			//calculate bezier control point between two nodes
+			space_type temp = nv[k]+nv[(k+1)%3];
+			temp /= 2;
+			P.push_back(Point_3(temp(0),temp(1), solution(offset+2*k+1)));
+		}
+
+		triangles.push_back (Data_triangle_3 (Triangle_3 (P(1), P(3), P(5)))); //child 0
+		triangles.push_back (Data_triangle_3 (Triangle_3 (P(0), P(1), P(5)))); // child 1
+		triangles.push_back (Data_triangle_3 (Triangle_3 (P(1), P(2), P(3)))); //child 2
+		triangles.push_back (Data_triangle_3 (Triangle_3 (P(3), P(4), P(5)))); //child 2
+
+		}
+
+	}
+
+	cout << "Points before" << endl;
+	for (unsigned int i = 0; i < P.size(); i++)
+	{
+		cout <<	P[i].x() << " " <<	P[i].y() << " " <<	P[i].z() << endl;
+	}
+
+	Polyhedron_3 poly;
+	CGAL::convex_hull_3( P.begin(), P.end(), poly);
+
+}
+*/
+
 
 void write_points(std::string name, Points &P)
 {

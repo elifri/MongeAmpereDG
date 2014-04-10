@@ -42,7 +42,7 @@ void convex_hull_refcell(grid_type &grid, const leafcell_type* pLC, const Tshape
  * @grid	underlying grid
  * @solution coefficients of bezier polynomials on grid
  * @plotter plotter for debug output
- */void convex_hull(grid_type &grid, const Tshape &shape, Eigen::VectorXd &solution, Plotter &plotter);
+ */void convex_hull(grid_type &grid, const Tshape &shape, Eigen::VectorXd &solution, Plotter &plotter, int iteration);
 
 
 void lower_envelope(grid_type &grid, const Tshape &shape, const Eigen::VectorXd &solution);
