@@ -9,6 +9,7 @@
 #include <Eigen/Eigenvalues>
 
 #include "../include/matlab_export.hpp"
+#include "../include/ConvexHullAlgorithms.hpp"
 
 
 #if (EQUATION == MONGE_AMPERE_EQ)
@@ -520,13 +521,13 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 							// Copy entries for Dirichlet boundary conditions into right hand side
 							for (unsigned int ishape = 0; ishape < shapedim;
 									++ishape) {
-								double val = stabsign * shape.get_Fquadw(iqLC)
+								double val = -stabsign * shape.get_Fquadw(iqLC)
 										* length * uLC(0)
 										* pBC->A_grad_times_normal(pLC->A, ishape,iqLC)
 										/ facLevelLength[level];
 
 								if (penalty != 0.0) {
-									val += penalty * shape.get_Fquadw(iqLC) * uLC(0)
+									val += -penalty * shape.get_Fquadw(iqLC) * uLC(0)
 											* shape.get_Fquads(ishape,iqLC);
 								}
 
@@ -611,6 +612,17 @@ void Tsolver::convexify(Hessian_type& hess) {
 
 ///////////////////////////////////////////////////////
 
+void Tsolver::convexify(Eigen::VectorXd & solution)
+{
+	assert(!interpolating_basis && "Are you sure, this is a bezier basis?");
+
+	PointVector *A, *B;
+
+	convex_hull(&grid, A, B);
+}
+
+///////////////////////////////////////////////////////
+
 void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
 	leafcell_type *pLC = NULL;
@@ -636,15 +648,10 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		nvector_type  nv;
 		get_nodes(grid, idLC,nv);
 
-		cout << "leafcell " << idLC << endl;
-		cout << " node 0: " << nv[0][0] << " " << nv[0][1] << endl;
-
 		state_type s1, s2;
 		shape.assemble_state_N(pLC->u,0,s1);
 		shape.assemble_state_N(pLC->uold,0,s2);
 
-
-		cout << "unew " << s1 << " uold " << s2 << " ->difference " << s1-s2 << endl;
 
 		// get pointer to basecell of this cell
 		const grid_type::basecell_type * pBC;
@@ -809,11 +816,8 @@ void Tsolver::time_stepping_MA() {
 	if (levelmax < level)
 		level = levelmax;
 
-	cout << "Using refine_eps=" << refine_eps << " and coarsen_eps="
-			<< coarsen_eps << "." << endl;
 
 	igpm::processtimer pt; //start timer
-	cout << "Starting time_stepping_MA" << endl;
 
 	//  int refine_count = 0;
 	//  value_type t = 0.0;
@@ -825,8 +829,6 @@ void Tsolver::time_stepping_MA() {
 	// refine_circle (1.0); refine_band (0.85, 1.05);
 
 	refine(level);
-
-	cout << "after refine" << endl;
 
 	initializeLeafCellData_MA();
 
@@ -920,11 +922,11 @@ void Tsolver::time_stepping_MA() {
 
 		assemble_indicator_and_limiting(); // use flag
 
-		plotter.write_exactsolution(get_exacttemperature_MA_callback(),iteration);
+		//plotter.write_exactsolution(get_exacttemperature_MA_callback(),iteration);
 		plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
-		plotter.write_numericalsolution(iteration);
+		//plotter.write_numericalsolution(iteration);
 		plotter.write_numericalsolution_VTK(iteration);
-		plotter.write_exactrhs_MA(get_rhs_MA_callback(),iteration);
+		//plotter.write_exactrhs_MA(get_rhs_MA_callback(),iteration);
 
 		// reset flag 0
 		setleafcellflags(0, false);

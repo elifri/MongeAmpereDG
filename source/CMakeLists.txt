@@ -8,9 +8,10 @@ add_library(utility utility.cpp)
 add_library(singconfig grid_config.cpp)
 add_library(Plotter Plotter.cpp)
 add_library(Tsolver Tsolver_general.cpp Tsolver_special_POISSON.cpp Tsolver_special_AM.cpp)
+add_library(CHAlgos ConvexHullAlgorithms.cpp)
 
 add_executable(Mesh mesh.cpp)
-target_link_libraries(Mesh Tsolver Plotter Tmass Tshape singconfig utility)
+target_link_libraries(Mesh Tsolver Plotter Tmass Tshape CHAlgos singconfig utility)
 
 #----example code ----
 #include_directories(${MyProject_SOURCE_DIR}/MainProject/inc)
