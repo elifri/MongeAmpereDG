@@ -120,6 +120,7 @@ public:
 			const value_type diff_y) {
 		normal(f)[0] = diff_x;
 		normal(f)[1] = diff_y;
+
 		length(f) = normal(f).norm();
 		normal(f) /= length(f);
 	}
@@ -245,7 +246,8 @@ private:
 
 	}
 
-	void get_center(const Nvector_type & nv, space_type & center) {
+	void get_center(const nvector_type & nv, space_type & center) {
+		assert(nv.size() == 3);
 		center = nv(0) + nv(1) + nv(2);
 		center /= 3.0;
 	}
@@ -270,37 +272,33 @@ public:
 			const Fquadratureshape_type &Fquads_x,
 			const Fquadratureshape_type Fquads_y, const grid_type &grid,
 			const id_type idBC) {
-		grid_nvector_type vN_temp;
-		grid.nodes(idBC, vN_temp);
-		// cerr << "Nodes" << endl; writeNvector_type (vN);
 
-//transform nodes to Eigenvectors
-		Nvector_type vN;
+		int N = idBC.countFaces();
+		nvector_type vN(N);
+		get_nodes(grid, idBC, vN);
 
-		for (int i = 0; i < 3; ++i) {
-			vN(i)(0) = vN_temp[i][0];
-			vN(i)(1) = vN_temp[i][1];
-		}
+		//calculate edges
+		nvector_type edges(N);
+		edges(0) = vN(2)-vN(1);
+		edges(1) = vN(0)-vN(2);
+		edges(2) = vN(1)-vN(0);
 
-		//calculate normals
-		for (unsigned int f = 0; f < idBC.countFaces(); f++) {
+		cout << "id basecell " << idBC << endl;
+		// initialize face length and unit normal of of pBC
+		for (int f = 0; f < N; f++)
+		{
+			normal(f)(0) = edges(f)(1);
+			normal(f)(1) = -edges(f)(0);
 
-			unsigned int node0, node1;
+			//make sure normal points outward
+			if (normal(f).dot(edges((f+1)%3))>0)
+				normal(f) *= -1;
 
-// face f is the line segment [node(f+1 mod countFaces()), node(f+2 mod countFaces())]
-			node0 = f + 1;
-			if (node0 == idBC.countFaces())
-				node0 = 0;
-			node1 = node0 + 1;
-			if (node1 == idBC.countFaces())
-				node1 = 0;
 
-// initialize face length and unit normal of of pBC
-			value_type diff_x = vN[node0][0] - vN[node1][0];
-			value_type diff_y = vN[node1][1] - vN[node0][1];
-			set_normal(f, diff_y, diff_x);
+			length(f) = normal(f).norm();
+			normal(f) /= length(f);
 
-//	    	cout << " outer unit normal at face " << f << ": (" << get_normal(f)[0] << ", " << get_normal(f)[1] << ")" << endl;
+	    	cout << " outer unit normal at face " << f << ": (" << get_normal(f)[0] << ", " << get_normal(f)[1] << ")" << endl;
 		}
 
 		// initialize volume
@@ -386,6 +384,10 @@ public:
 			in = (iq - Fdim * Fquadgaussdim)
 				/ (Fchilddim * Fquadgaussdim);
 
+		cout << "A " << A << endl;
+		cout << "grad = " << grad(i)(iq).transpose() << endl;
+		cout << "normal = " << normal(in).transpose() << endl;
+
 		// normal derivative
 		return (A*grad(i)(iq)).dot(normal(in));
 	}
@@ -401,7 +403,6 @@ public:
 
 		A = J_inv_t * A * J_inv_t.transpose();
 	}
-
 
 };
 

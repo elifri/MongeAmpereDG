@@ -359,12 +359,97 @@ void Plotter::write_smallest_EW(std::ofstream &file, const std::vector < std::ve
 	file << "\t\t\t\t</DataArray>\n";
 }
 
-void Plotter::write_points(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine){
+void Plotter::write_solution_data_array(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
+{
+	Nvector_type nv;
+	state_type state;
+
+	// write data array with smallest EW
+	file << "\t\t\t\t<DataArray  Name=\"solution\" type=\"Float32\" format=\"ascii\">\n";
+
+	// loop over all leaf cells
+	for (unsigned int i = 0; i < grid->countBlocks(); ++i) {
+		if (v[i].size() == 0)
+			continue;
+
+		if (refine == 0) {// save solution in file without refinement
+
+			// over all ids inside this block
+			for (unsigned int j = 0; j < v[i].size(); ++j) {
+				const grid_type::id_type & id = v[i][j];
+				grid_type::leafcell_type * pLC = NULL;
+				grid->findLeafCell(id, pLC);
+
+				grid->nodes(id, nv);
+				for (unsigned int k = 0; k < id.countNodes(); ++k) {
+					shape->assemble_state_N(pLC->u, k, state);
+					file << "\t\t\t\t\t" << state << endl; //" "
+				}
+			}
+
+		}else {		// save points in file after refinement
+
+			// over all ids inside this block
+			for (unsigned int j = 0; j < v[i].size(); ++j) {
+				const grid_type::id_type & id = v[i][j];
+				grid_type::leafcell_type * pLC = NULL;
+				grid->findLeafCell(id, pLC);
+
+				grid->nodes(id, nv);
+
+				Eigen::Vector3d h_x, h_y;		// (
+				h_x(0) = -nv[0][0] + nv[1][0];
+				h_y(0) = -nv[0][1] + nv[1][1];
+
+				h_x(1) = -nv[1][0] + nv[2][0];
+				h_y(1) = -nv[1][1] + nv[2][1];
+
+				h_x(2) = nv[0][0] - nv[2][0];
+				h_y(2) = nv[0][1] - nv[2][1];
+
+				h_x /= refine + 1;
+				h_y /= refine + 1;
+
+				Eigen::Matrix<space_type, Eigen::Dynamic, 1> points(id.countNodes() * (refine + 1));
+				Eigen::VectorXd vals(points.size());
+
+				state_type val;
+				baryc_type xbar;
+
+				for (unsigned int i = 0; i < id.countNodes(); ++i) {	//loop over nodes
+					//nodes
+					points[i * 2] =	(space_type() << nv[i][0], nv[i][1]).finished(); //set coordinates
+					shape->assemble_state_N(pLC->u, i, val); //get solution at nodes
+					vals(i * 2) = val(0); //write solution
+
+					//coordinates of new points
+					points[i * 2 + 1] =	(space_type() << nv[i][0] + h_x(i), nv[i][1]+ h_y(i)).finished();
+					//calc calculate baryc coordinates of middle points
+					xbar.setZero();
+					xbar(i) = 1. / 2.;
+					xbar((i+1) % 3) = 1. / 2.;
+
+					//get solution
+					shape->assemble_state_x_barycentric(pLC->u, xbar, val);
+					vals(i * 2 + 1) = val(0);
+				}
+				// save points in file
+				for (unsigned int k = 0; k < points.size(); ++k) {
+						file << "\t\t\t\t\t" << vals(k) << endl;
+				}
+			}
+		}
+
+	file << "\t\t\t\t</DataArray>\n";
+}
+}
+
+void Plotter::write_points(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine, bool coord3){
 	Nvector_type nv;
 	state_type state;
 
 	// write points
-	file << "\t\t\t<Points>\n"
+		file << "\t\t\t<Points>\n"
 			<< "\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\""
 			<< "ascii" << "\">\n";
 
@@ -421,23 +506,31 @@ void Plotter::write_points(std::ofstream &file, const std::vector < std::vector<
 				for (unsigned int i = 0; i < id.countNodes(); ++i) {	//loop over nodes
 					//nodes
 					points[i * 2] =	(space_type() << nv[i][0], nv[i][1]).finished(); //set coordinates
-					shape->assemble_state_N(pLC->u, i, val); //get solution at nodes
-					vals(i * 2) = val(0); //write solution
-
 					//coordinates of new points
 					points[i * 2 + 1] =	(space_type() << nv[i][0] + h_x(i), nv[i][1]+ h_y(i)).finished();
-					//calc calculate baryc coordinates of middle points
-					xbar.setZero();
-					xbar(i) = 1. / 2.;
-					xbar((i+1) % 3) = 1. / 2.;
 
-					//get solution
-					shape->assemble_state_x_barycentric(pLC->u, xbar, val);
-					vals(i * 2 + 1) = val(0);
+					//collect solution
+					if (coord3)
+					{
+						shape->assemble_state_N(pLC->u, i, val); //get solution at nodes
+						vals(i * 2) = val(0); //write solution
+
+						//calc calculate baryc coordinates of face middle points
+						xbar.setZero();
+						xbar(i) = 1. / 2.;
+						xbar((i+1) % 3) = 1. / 2.;
+
+						//get solution
+						shape->assemble_state_x_barycentric(pLC->u, xbar, val);
+						vals(i * 2 + 1) = val(0);
+					}
 				}
 				// save points in file
 				for (unsigned int k = 0; k < points.size(); ++k) {
+					if (coord3)
 						file << "\t\t\t\t\t" << points[k].transpose() << " "<< vals(k) << endl;
+					else
+						file << "\t\t\t\t\t" << points[k].transpose() << " 0" << endl;
 				}
 			}
 		}
@@ -660,9 +753,10 @@ void Plotter::writeLeafCellVTK(std::string filename, const unsigned int refine, 
 	write_error(file, v, refine);
 	write_residuum(file, v, refine);
 	write_smallest_EW(file, v, refine);
+	write_solution_data_array(file, v, refine);
 	file << "\t\t\t</PointData>\n";
 
-	write_points(file, v, refine);
+	write_points(file, v, refine, false);
 	write_cells(file,v, refine);
 
 	write_vtk_end(file);

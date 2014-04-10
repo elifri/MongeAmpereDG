@@ -813,6 +813,10 @@ void bilinear_interpolate(const space_type x, state_type &u, int &n_x, int &n_y,
 {
 	int index_x = (x(0)-x0)/h_x, index_y = (x(1)-y0)/h_y; //index of the bottom left corner of the rectangle where x lies in
 
+	//special case at right boundary
+	if (index_x == solution.rows()-1)	index_x--;
+	if (index_y == solution.cols()-1)	index_y--;
+
 	value_type x1 = x0 + h_x*index_x, x2 = x1+h_x; //coordinates of rectangle
 	value_type y1 = y0 + h_y*index_y, y2 = y1+h_y;
 
@@ -876,6 +880,26 @@ void Tsolver::read_startsolution(const std::string filename){
 			pLC->u(i*2 +1,0) = val(0); //write solution
 		}
 
+	}
+}
+
+void Tsolver::write_solution()
+{
+	cout << "Solution coefficients :\n";
+	for (grid_type::leafcellmap_type::const_iterator it =
+			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
+
+		const grid_type::id_type & idLC = grid_type::id(it);
+		leafcell_type* pLC;
+
+		// grid_type::leafcell_type *pLC;
+		grid.findLeafCell(idLC, pLC);
+
+		// Copy solution entries back into u
+		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+			cout << pLC->u(ishape,0) << " ";
+		}
+		cout << endl;
 	}
 }
 

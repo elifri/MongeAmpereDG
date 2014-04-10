@@ -69,7 +69,7 @@ class Tmass;
 #define MONGEAMPERE3 44 // 1/2 * max{0,|x-x0|-0.2}^2
 #define MONGEAMPERE4 45 //-sqrt(2-|x|^2)
 #define SIMPLEMONGEAMPERE 46 // solution is 2x^2+2y^2-3xy
-
+#define SIMPLEMONGEAMPERE2 47 // solution is x^2/2+y^2/2
 
 
 #if (EQUATION == EULER_EQ)
@@ -81,7 +81,7 @@ class Tmass;
 #elif (EQUATION == POISSON_EQ || EQUATION == POISSON_PREC_EQ)
   #define PROBLEM CONST_RHS
 #elif (EQUATION == MONGE_AMPERE_EQ)
-	#define PROBLEM MONGEAMPERE3
+  #define PROBLEM SIMPLEMONGEAMPERE2
 #elif (EQUATION == IMPLICIT_HEAT_EQ)
   #define PROBLEM CONSTKAPPA_IMPLICIT
 #endif
@@ -157,6 +157,9 @@ enum {
 /// basic types
 typedef double value_type;
 typedef Eigen::Matrix<value_type, spacedim, 1> space_type;
+
+typedef Eigen::Matrix<space_type, Eigen::Dynamic, 1> nvector_type; //stores nodes
+
 //  typedef igpm::tvector<value_type, spacedim> space_type;
 
 /// shape of principal unknown

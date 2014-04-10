@@ -26,6 +26,7 @@ private:
 	Equadratureshape_type Equads_xx, Equads_xy, Equads_yy; // second derivatives of shapes at quadrature points
 	Equadratureshape_hessian_type Equads_dd;
 
+public:
 	Fquad fquad;
 	Fquadratureshape_type Fquads;   // value of shapes at quadrature points
 	Fquadratureshape_type Fquads_x; // x-der. of shapes at quadrature points in reference element

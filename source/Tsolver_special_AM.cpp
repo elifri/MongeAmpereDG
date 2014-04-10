@@ -8,6 +8,8 @@
 #include "../include/Tsolver.hpp"
 #include <Eigen/Eigenvalues>
 
+#include "../include/matlab_export.hpp"
+
 
 #if (EQUATION == MONGE_AMPERE_EQ)
 
@@ -217,7 +219,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 	else
 	{
 		Hessian_type hess;
-		if (start_solution){
+		if (start_solution && false){
 
 			//calculate cofactor of hessian
 			calc_cofactor_hessian(pLC, pBC, hess);
@@ -225,17 +227,41 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 			//calculate eigenvalues and convexify
 			calculate_eigenvalues(pLC, hess, false);
 
+			//determinant of hessian for calculation of residuum
+			value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
+
+			nvector_type nv;
+			get_nodes(grid, pLC->id(), nv);
+
+			state_type state, stateEx, stateRhs;
+
+			//loop over LC nodes
+			for (unsigned int k = 0; k < pLC->id().countNodes(); k++){
+				//get rhs
+				get_rhs_MA(nv(k), stateRhs);
+				//calculate residuum
+				pLC->residuum(k) = det - stateRhs(0);
+
+				//calculate abs error
+				shape.assemble_state_N(pLC->u,k,state);
+				get_exacttemperature_MA(nv[k],stateEx);
+				pLC->Serror(k) = std::abs(state(0)-stateEx(0));
+			}
+
 			//update diffusion matrix and calculate laplace matrix
 			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 					pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
 		}
 		else{
-			hess << 1, 0 , 0, 1;
+				hess << 1, 0 , 0, 1;
 			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
-			max_EW = 1;
+			max_EW = 7;
 		}
 	}
+
+	cout << "id " << pLC->id() << "offset " << pLC->m_offset<< endl;
+	cout << "laplace " << laplace << endl;
 
 	for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
@@ -334,12 +360,15 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		//update penalty
 
 		cout << "Largest EW " << max_EW << endl;
-		penalty *= 10*max_EW*(iteration+1);
+		penalty *= (iteration+1)*10;
+
+		cout << "used penalty " << penalty << endl;
 
 		// loop over all cells in this level
 		for (grid_type::leafcellmap_type::const_iterator it =
 			grid.leafCells().begin(level);
 				it != grid.leafCells().end(level); ++it) {
+
 
 			// get id and pointer to this cell
 			const grid_type::id_type & idLC = grid_type::id(it);
@@ -395,11 +424,13 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over gauss nodes
 
 							iqLC = gaussbaseLC + iq; //index of next gauss node to be processed
+							cout << "orientation " << vOh[i] << endl;
 							iqNC = vOh[i] == 1? gaussbaseNC + Fquadgaussdim - 1 - iq : gaussbaseNC + iq; //index of next gauss node in neighbour cell to be processed
 
+
 							// Copy entries into Laplace-matrix
-							for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-								for (unsigned int jshape = 0; jshape < shapedim; ++jshape) {
+							for (unsigned int ishape = 0; ishape < shapedim; ++ishape) { //loop over test function
+								for (unsigned int jshape = 0; jshape < shapedim; ++jshape) { //loop over ansatz functions
 									const int row_LC = pLC->m_offset + ishape;
 									const int row_NC = pNC->m_offset + ishape;
 									const int col_LC = pLC->n_offset + jshape;
@@ -549,8 +580,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		}
 	}
 
-
-	Lrhs*= -2; // solve -laplace u = -2f <-> laplace u = 2f
+	Lrhs*= -2; // solve -laplace u = -f <-> laplace u = f
 	// cerr << "distmax = " << distmax << endl;
 	// set flag=false; unew = 0.0; in invert_mass/volume
 }
@@ -583,12 +613,10 @@ void Tsolver::convexify(Hessian_type& hess) {
 
 void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
-
 	leafcell_type *pLC = NULL;
 	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
 	max_EW = 0; //init max_Ew
 	min_EW = 10;
-
 
 	for (grid_type::leafcellmap_type::const_iterator it =
 			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
@@ -600,8 +628,23 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
 		// Copy solution entries back into u
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+			pLC->uold(ishape,0) = pLC->u(ishape,0);
 			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
+
 		}
+
+		nvector_type  nv;
+		get_nodes(grid, idLC,nv);
+
+		cout << "leafcell " << idLC << endl;
+		cout << " node 0: " << nv[0][0] << " " << nv[0][1] << endl;
+
+		state_type s1, s2;
+		shape.assemble_state_N(pLC->u,0,s1);
+		shape.assemble_state_N(pLC->uold,0,s2);
+
+
+		cout << "unew " << s1 << " uold " << s2 << " ->difference " << s1-s2 << endl;
 
 		// get pointer to basecell of this cell
 		const grid_type::basecell_type * pBC;
@@ -610,10 +653,8 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		Hessian_type hess;
 		calc_cofactor_hessian(pLC, pBC, hess);
 
-		nvector_type  nv;
-		get_nodes(grid, idLC,nv);
 
-		cout << "cofactor matrix is with node " << nv[0][0] << " " << nv[0][1] << " :\n" << hess << endl;
+		cout << "cofactor matrix :\n" << hess << endl;
 		calculate_eigenvalues(pLC,hess, false);
 
 
@@ -628,6 +669,7 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 			get_rhs_MA(nv(k), stateRhs);
 			//calculate residuum
 			pLC->residuum(k) = det - stateRhs(0);
+
 
 			//calculate abs error
 			shape.assemble_state_N(pLC->u,k,state);
@@ -700,6 +742,8 @@ void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // s
 	else	u[0] = -sqrt(val);
 #elif (PROBLEM == SIMPLEMONGEAMPERE)
 	u[0] = 2*sqr(x[0]) + 2*sqr(x[1]) + 3 * x[0]*x[1];
+#elif (PROBLEM == SIMPLEMONGEAMPERE2)
+	u[0] = sqr(x[0])/2.0 + sqr(x[1])/2.0;
 #elif (PROBLEM == CONST_RHS)
 	u[0] = 0; // exact solution not known, Dirichlet boundary conditions with u=0
 #elif (PROBLEM == CONST_RHS2)
@@ -743,7 +787,7 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 	u_rhs[0] = 2./sqr(2-sqr(x.norm()));
 #elif (PROBLEM == SIMPLEMONGEAMPERE)
 	u_rhs[0] = 4;
-#elif (PROBLEM == CONST_RHS)
+#elif (PROBLEM == CONST_RHS || SIMPLEMONGEAMPERE2)
 	u_rhs[0] = 1;
 #else
 	u_rhs[0] = 0;
@@ -843,6 +887,7 @@ void Tsolver::time_stepping_MA() {
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
+
 		cout << "Solving linear System..." << endl;
 
 		pt.start();
@@ -861,7 +906,7 @@ void Tsolver::time_stepping_MA() {
 		if (iteration == 0 && start_solution)
 		{
 			std::string fname(plotter.get_output_directory());
-			fname += "/grid_startsolution.vtu";
+			fname += "/" + plotter.get_output_prefix() + "grid_startsolution.vtu";
 			plotter.writeLeafCellVTK(fname, 1);
 			cout << "min Eigenvalue " << min_EW << endl;
 		}
