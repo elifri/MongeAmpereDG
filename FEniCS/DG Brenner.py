@@ -5,11 +5,25 @@ from dolfin import *
 import scipy.io
 
 # Create mesh and define function space
-mesh = UnitSquareMesh(10, 10)
+mesh = UnitSquareMesh(30, 30)
 mesh = refine(mesh)
-V = FunctionSpace(mesh, 'CG', 2)
+V = FunctionSpace(mesh, 'DG', 2)
 
-u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
+
+# Define boundary conditions
+#u0 = Constant(0.0) #const rhs
+#u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
+u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
+#u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
+
+#rhs
+#f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
+f = Constant(4.0)#simpleMongeAmpere
+#f = Constant(1.0) #simpleMongeAmpere2
+
+#define exact solution
+u_e = interpolate(u0, V)
+
 
 #====================================
 #define laplace's iteration
@@ -30,11 +44,10 @@ n = FacetNormal(mesh)
 
 #start solution via laplace
 #penalty
-sigma = 7.0*50.0*10
+sigma = 20
 
 w = interpolate(Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0'),V)
 coeff = as_matrix([[1,0],[0,1]])
-f = Constant(-2.0) #simpleMongeAmpere2
 
 #define bilinear form
 a = inner(as_matrix(coeff)*nabla_grad(u), nabla_grad(v))*dx \
@@ -48,26 +61,19 @@ a = inner(as_matrix(coeff)*nabla_grad(u), nabla_grad(v))*dx \
 #  + Constant(sigma)/h*inner(grad(v),n)*inner(grad(u),n)*ds
 
 #define rhs functional
-L = inner(f,v)*dx - u0*dot(n,coeff*nabla_grad(v))*ds +Constant(sigma)/h *u0*v*ds
+L = inner(-Constant(2.0)*f,v)*dx - u0*dot(n,coeff*nabla_grad(v))*ds +Constant(sigma)/h *u0*v*ds
 
 solve(a == L, u_)
+
+plot(u_)
+plot(abs(u_-u_e))
+
+interactive()
 
 
 #====================================
 #define brenner's iteration
 #====================================
-
-# Define boundary conditions
-#u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
-#u0 = Constant(0.0) #const rhs
-
-#rhs
-#f = Constant(-8.0) #simpleMongeAmpere
-#f = Constant(-2.0) #const rhs
-f = Constant(1.0) #simpleMongeAmpere2
-
-#define exact solution
-u_e = interpolate(u0, V)
 
 
 #penalty
@@ -111,7 +117,7 @@ info(prm, True)
 
 prm['newton_solver']['absolute_tolerance'] = 1E-8
 prm['newton_solver']['relative_tolerance'] = 1E-7
-prm['newton_solver']['maximum_iterations'] = 1000
+prm['newton_solver']['maximum_iterations'] = 100
 prm['newton_solver']['relaxation_parameter'] = 1.0
 prm['newton_solver']['report'] = True
 #prm['linear_solver'] = 'gmres'
@@ -126,13 +132,13 @@ set_log_level(PROGRESS)
 solver.solve()
 
 #examine error
-#u_e_array = u_e.vector().array()
-#u_array = u.vector().array()
-#print 'Errornorm:', errornorm(u,u_e)
+u_e_array = u_e.vector().array()
+u_array = u_.vector().array()
+print 'Errornorm:', errornorm(u_,u_e)
 
  # Plot solution and mesh
 plot(u_)
-plot(u_-u_e)
+plot(abs(u_-u_e))
 #plot(mesh)
 
 #Hold plot
@@ -140,7 +146,7 @@ interactive()
 
 
 # Dump solution to file in VTK format
-s = 'poisson'+str(iteration)+'.pvd'
+s = 'MongeAmpere.pvd'
 file = File(s)
 file << u
   
