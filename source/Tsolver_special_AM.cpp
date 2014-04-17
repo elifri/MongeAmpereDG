@@ -157,7 +157,6 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 
 void Tsolver::calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1)
 {
-	cout << " A " << A << endl;
 	value_type rad = A(0,0) * A(0,0) + (A(1,1) - 2 * A(0,0)) * A(1,1) + 4 * A(0,1) * A(1,0);
 	if (std::abs(rad) < 1e-7)	rad = 0;
 	value_type s = std::sqrt(rad);
@@ -186,7 +185,7 @@ bool Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess) {
 
 			get_nodes(grid, pLC->id(), nv);
 
-			cout << "Found very small Eigenvalue at "
+			cout << "Found very small Eigenvalue " << ev0 << " at "
 					<< pLC->id() << " with nodes "
 					<< nv[0].transpose() << ", " << nv(1).transpose() <<  ", " << nv(2).transpose() << endl;
 			cout << "Hessian is: \n" << hess << endl;
@@ -373,7 +372,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		//update penalty
 
 		cout << "Largest EW " << max_EW << endl;
-		penalty *= (iteration+1)*10;
+		penalty *= max_EW*10;
 
 		cout << "used penalty " << penalty << endl;
 
@@ -593,6 +592,11 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 	}
 
 	LM = laplace + inner + outer;
+//	MATLAB_export(laplace, "laplace");
+//	MATLAB_export(inner, "inner");
+//	MATLAB_export(outer, "outer");
+//	MATLAB_export(LM, "LM");
+
 }
 
 //////////////////////////////////////////////////////
@@ -640,7 +644,7 @@ void Tsolver::convexify_cell(const leafcell_type* pLC, Eigen::VectorXd &solution
 //////////////////////////////////////////////////////
 void Tsolver::convexify(Eigen::VectorXd &solution)
 {
-//	assert (!interpolating_basis && "This convesification works only with bezier polynomials!");
+	assert (!interpolating_basis && "This convesification works only with bezier polynomials!");
 
 	convex_hull(grid, shape, solution, plotter, iteration);
 }
@@ -953,6 +957,7 @@ void Tsolver::time_stepping_MA() {
 		solver.compute(LM);
 		if (solver.info() != Eigen::Success) {
 			std::cerr << "Decomposition of stiffness matrix failed" << endl;
+			exit(1);
 		}
 		Lsolution = solver.solve(Lrhs);
 		if (solver.info() != Eigen::Success) {
@@ -969,7 +974,7 @@ void Tsolver::time_stepping_MA() {
 			cout << "min Eigenvalue " << min_EW << endl;
 		}
 
-		plotter.write_controlpolygonVTK(iteration+20, Lsolution);
+//		?plotter.write_controlpolygonVTK(iteration+20, Lsolution);
 
 		convexify(Lsolution);
 

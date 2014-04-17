@@ -30,6 +30,14 @@ typedef Tree::Primitive_id Primitive_id;
 #include "../include/Plotter.hpp"
 
 
+void collect_Points(grid_type &grid, const Tshape &shape, Eigen::VectorXd &solution, Plotter &plotter, int iteration);
+
+/*@brief projects every Point of P onto the convex envelope
+ *
+ */
+void convex_hull(Points &P, Plotter &plotter, int iteration);
+
+
 /*@brief transforms solution such that the control polygon of the refcell is convex
  * @grid	underlying grid
  * @shape	shape to assemble control points

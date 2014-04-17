@@ -13,6 +13,9 @@ add_library(CHAlgo ConvexHullAlgorithms.cpp)
 add_executable(Mesh mesh.cpp)
 target_link_libraries(Mesh Tsolver Tmass Tshape CHAlgo Plotter singconfig utility ${CGAL_LIBRARIES} ${CGAL_3RD_PARTY_LIBRARIES})
 
+add_executable(Convexify convexify.cpp)
+target_link_libraries(Convexify CHAlgo Plotter Tshape Tmass singconfig utility ${CGAL_LIBRARIES} ${CGAL_3RD_PARTY_LIBRARIES})
+
 #----example code ----
 #include_directories(${MyProject_SOURCE_DIR}/MainProject/inc)
 # I assume you want to use LibProject as a library in MainProject.
