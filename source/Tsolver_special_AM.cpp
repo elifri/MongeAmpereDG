@@ -949,6 +949,7 @@ void Tsolver::time_stepping_MA() {
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
+		MATLAB_export(LM, "LM");
 
 		cout << "Solving linear System..." << endl;
 
@@ -956,7 +957,13 @@ void Tsolver::time_stepping_MA() {
 		Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
 		solver.compute(LM);
 		if (solver.info() != Eigen::Success) {
-			std::cerr << "Decomposition of stiffness matrix failed" << endl;
+			std::cerr << "Decomposition of stiffness matrix failed "  << solver.info() << endl;
+			switch(solver.info()){
+			case Eigen::NumericalIssue: std::cerr<< " because of numerical issues " << endl; break;
+			case Eigen::NoConvergence: std::cerr<< " because it didn't converge" << endl; break;
+			case Eigen::InvalidInput: std::cerr<< " because of invalid input" << endl; break;
+			default: std::cout << endl;break;
+			}
 			exit(1);
 		}
 		Lsolution = solver.solve(Lrhs);
