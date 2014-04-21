@@ -10,17 +10,15 @@ import os
 def mult(trafo,coeffs):
   c = []
   for i in range(len(points)):
-#    print "here comes ", trafo[i,2]*coeffs[2]
-#    print "here is the array ", ([ float(trafo[i,j]*coeffs[j]) for j in range(len(points))])
     y = sum([float(trafo[i,j]*coeffs[j]) for j in range(len(points))])
     c.append(y)
   return c
 
-parameters['reorder_dofs_serial'] = False
+#parameters['reorder_dofs_serial'] = False
 
 
 # Create mesh and define function space
-mesh = UnitSquareMesh(30, 30)
+mesh = UnitSquareMesh(20, 20)
 #mesh = refine(mesh)
 V = FunctionSpace(mesh, 'DG', 2)
 
@@ -28,14 +26,14 @@ V = FunctionSpace(mesh, 'DG', 2)
 #u0 = Constant(0.0) #const rhs
 #u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
 #u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
-#u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
-u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
+u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
+#u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
 
 #rhs
 #f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
 #f = Constant(4.0)#simpleMongeAmpere
-#f = Constant(1.0) #simpleMongeAmpere2
-f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
+f = Constant(1.0) #simpleMongeAmpere2
+#f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
 
 #define exact solution
 u_e = interpolate(u0, V)
@@ -48,7 +46,7 @@ u_e = interpolate(u0, V)
 
 #start solution
 u_ = Function(V)      # the most recently computed solution
-u_ = u_e
+#u_ = u_e
 
 # Define variational problem
 u = TrialFunction(V)
@@ -88,10 +86,17 @@ def h(x,y):
 #u_ = interpolate(Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0+0.25*sin(pi*x[0]*x[1]*150)'),V)
 #u_ = interpolate(Expression('sin(pi*(x[0]-x[1]))'),V)#/exp(2*(x[0]*x[0]+x[1]*x[1]))+x[0]*x[0]+x[1]*x[1]'),V)
 
-plot(u_, title = 'solution')
-plot(abs(u_-u_e), title = 'error')
+#plot(u_, title = 'solution')
+#plot(u_e, title= 'exact solution')
+#plot(abs(u_-u_e), title = 'error')
 
 #interactive()
+#exit()
+
+#create array
+u_array = u_.vector().array()
+print "u_array before ", u_array
+
 
 #====================================
 #convexify
@@ -122,9 +127,6 @@ trafo_inv = as_matrix([ [1   ,   0,   0,  0,  0,  0], \
 def middlePoint(a,b):
   return (a+b)/2
 
-#vertex_to_dof_map = V.dofmap().vertex_to_dof_map(mesh)
-#dof_to_vertex_map = V.dofmap().dof_to_vertex_map(mesh)
-
 coord = mesh.coordinates()
 
 hullPoints = []
@@ -132,20 +134,27 @@ hullPoints = []
 #file to write points into
 tmpfile = open('points_to_convexify.dat', "w")
 
+dofmap = V.dofmap()
+print "DOFMAP", dir(dofmap)
+
+
 # Iterate over cells and collect dofs
 for cell in cells(mesh):
   cell_ind = cell.index()
   vert_inds = cell.entities(0)
+
+  #print dofmap.cell_dofs(cell_ind)
  
-  print "cell", cell.index()
+  #print "cell", cell.index()
   points = [coord[vert_inds[0]], coord[vert_inds[1]], coord[vert_inds[2]], \
             middlePoint(coord[vert_inds[0]], coord[vert_inds[1]]), \
             middlePoint(coord[vert_inds[1]], coord[vert_inds[2]]), \
             middlePoint(coord[vert_inds[2]], coord[vert_inds[0]])]
  
   #calculate lagrange coefficients
-  coeffs = map(u_,points)
-  #print(coeffs)
+#  print "dof map cells ", dofmap.cell_dofs(cell_ind)
+  coeffs = [u_array[i] for i in dofmap.cell_dofs(cell_ind)]
+  
 
 #for i in range(len(u_array)):
 #  dof_to_vertex_map[0]
@@ -155,10 +164,11 @@ for cell in cells(mesh):
 #                 middlePoint(points[2], points[0])])
 #  coeffs = u_array[6*i:6*i+6]
   
-#  print coeffs
  
   #transform into bezier basis  
   coeffBezier = mult(trafo,coeffs)
+  
+  coeffs = mult(trafo_inv, coeffBezier)
   
   #write into file
   for i in range(len(points)):
@@ -166,6 +176,9 @@ for cell in cells(mesh):
 
 #close file after writing points  
 tmpfile.close()
+
+File('mesh.xml') << mesh
+File('func_to_convexify.xml') << u_
 
 
 #wait for convexification
@@ -175,39 +188,54 @@ os.system("../bin/Convexify points_to_convexify.dat convexified_points.dat")
 #open file with convexified coefficients
 tmpfile = open('convexified_points.dat', 'r')
 
-#create array
-u_array = u_.vector().array()
-print len(u_array)
+#create new convex function
+u_convex = Function(V)
 
+coeff_cplusplus = np.array(u_array, copy=True)
+u_convex_array = u_convex.vector().array()
 #update coefficients
 i = 0
 for line in tmpfile:
   coordinates = line.split(" ")
-  u_array[i] = coordinates[2]
+  coeff_cplusplus[i] = coordinates[2]
   i = i+1
 
-print u_array
-
+i=0
 #transform from bezier to lagrange basis
-for i in range(len(u_array)/6): #loop over all cells
-  coeffBezier = u_array[i*6: i*6+6]
-  #print i, coeffBezier
-  u_array[i*6: i*6+6] = mult(trafo_inv,coeffBezier)
+for cell in cells(mesh):
+  cell_ind = cell.index()
+  coeffs = coeff_cplusplus[i*6: i*6+6]
+  coeffs = mult(trafo_inv,coeffs)
+  for j in range(6):
+    u_convex_array[dofmap.cell_dofs(cell_ind)[j]] = coeffs[j]
+  i = i+1
+ 
+#print "u_convex after ", u_convex_array
+#print "u_array after ", u_array
 
-#create new convex function
-u_convex = Function(V)
+#print "difference ", u_array-u_convex_array
 
-u_convex.vector()[:] = u_array
+#for i in range(len(u_array)/6): #loop over all cells
+#  coeffBezier = u_array[i*6: i*6+6]
+#  #print i, coeffBezier
+#  u_array[i*6: i*6+6] = mult(trafo_inv,coeffBezier)
+
+
+u_convex.vector()[:] = u_convex_array
+#u_.vector()[:] = u_array
 
 #plot results
 plot(u_convex, title = 'convexified solution')
 plot(u_, title = 'solution')
+plot(u_-u_convex, title = 'difference convex and not convex')
 plot(u_convex-u_e, title = 'error in conv. sol.')
 
 #hold plot
 interactive()
 
-#exit()
+#u_.assign(u_convex)
+
+exit()
 
 #====================================
 #define brenner's iteration
@@ -254,7 +282,7 @@ prm = solver.parameters
 
 prm['newton_solver']['absolute_tolerance'] = 1E-8
 prm['newton_solver']['relative_tolerance'] = 1E-7
-prm['newton_solver']['maximum_iterations'] = 100
+prm['newton_solver']['maximum_iterations'] = 10
 prm['newton_solver']['relaxation_parameter'] = 1.0
 prm['newton_solver']['report'] = True
 #prm['linear_solver'] = 'gmres'
@@ -285,5 +313,5 @@ interactive()
 # Dump solution to file in VTK format
 s = 'MongeAmpere.pvd'
 file = File(s)
-file << u
+file << u_
   
