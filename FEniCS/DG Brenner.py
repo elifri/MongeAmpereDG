@@ -106,15 +106,15 @@ print "u_array before ", u_array
 trafo = as_matrix([ [1   ,   0,   0,0,0,0], \
                     [   0,   1,   0,0,0,0], \
                     [   0,   0,   1,0,0,0], \
-                    [-0.5,   0,-0.5,2,0,0], \
-                    [   0,-0.5,-0.5,0,2,0], \
+                    [-0.5,   0,-0.5,0,2,0], \
+                    [   0,-0.5,-0.5,2,0,0], \
                     [-0.5,-0.5,   0,0,0,2]])
 
 trafo_inv = as_matrix([ [1   ,   0,   0,  0,  0,  0], \
                         [0   ,   1,   0,  0,  0,  0], \
                         [0   ,   0,   1,  0,  0,  0], \
+                        [0   ,0.25,0.25,  0,0.5,  0], \
                         [0.25,   0,0.25,0.5,  0,  0], \
-                        [   0,0.25,0.25,  0,0.5,  0], \
                         [0.25,0.25,   0,  0,  0,0.5]])
 
 
@@ -135,38 +135,33 @@ hullPoints = []
 tmpfile = open('points_to_convexify.dat', "w")
 
 dofmap = V.dofmap()
-print "DOFMAP", dir(dofmap)
-
 
 # Iterate over cells and collect dofs
 for cell in cells(mesh):
   cell_ind = cell.index()
   vert_inds = cell.entities(0)
 
-  #print dofmap.cell_dofs(cell_ind)
- 
-  #print "cell", cell.index()
-  points = [coord[vert_inds[0]], coord[vert_inds[1]], coord[vert_inds[2]], \
-            middlePoint(coord[vert_inds[0]], coord[vert_inds[1]]), \
+  pointsLagrange = [coord[vert_inds[0]], coord[vert_inds[1]], coord[vert_inds[2]], \
             middlePoint(coord[vert_inds[1]], coord[vert_inds[2]]), \
-            middlePoint(coord[vert_inds[2]], coord[vert_inds[0]])]
+            middlePoint(coord[vert_inds[2]], coord[vert_inds[0]]), \
+            middlePoint(coord[vert_inds[0]], coord[vert_inds[1]])]
+ 
+  points = [coord[vert_inds[0]], coord[vert_inds[1]], coord[vert_inds[2]], \
+            middlePoint(coord[vert_inds[2]], coord[vert_inds[0]]), \
+            middlePoint(coord[vert_inds[1]], coord[vert_inds[2]]), \
+            middlePoint(coord[vert_inds[0]], coord[vert_inds[1]])]
  
   #calculate lagrange coefficients
-#  print "dof map cells ", dofmap.cell_dofs(cell_ind)
   coeffs = [u_array[i] for i in dofmap.cell_dofs(cell_ind)]
+  coeffsLagrange = map(u_, points)
   
-
-#for i in range(len(u_array)):
-#  dof_to_vertex_map[0]
-#  #points = [ dof_to_vertex_map[j] for j in range(3)]
-#  points.append([middlePoint(points[0], points[1]), \
-#                 middlePoint(points[1], points[2]), \
-#                 middlePoint(points[2], points[0])])
-#  coeffs = u_array[6*i:6*i+6]
+#  print "coeffs ", coeffs
+#  print "coeffsLagrange ", coeffsLagrange
   
- 
   #transform into bezier basis  
   coeffBezier = mult(trafo,coeffs)
+
+#  print "coeffsBezier ", coeffBezier
   
   coeffs = mult(trafo_inv, coeffBezier)
   
@@ -177,12 +172,11 @@ for cell in cells(mesh):
 #close file after writing points  
 tmpfile.close()
 
+#write xml output
 File('mesh.xml') << mesh
 File('func_to_convexify.xml') << u_
 
-
-#wait for convexification
-#input('Press bar after the Convexificaton process!')
+#convexify with c++ code
 os.system("../bin/Convexify points_to_convexify.dat convexified_points.dat")
 
 #open file with convexified coefficients
