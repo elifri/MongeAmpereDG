@@ -14,19 +14,21 @@ def mult(trafo,coeffs):
     c.append(y)
   return c
 
-#parameters['reorder_dofs_serial'] = False
+parameters['reorder_dofs_serial'] = False
 
 
 # Create mesh and define function space
 mesh = UnitSquareMesh(20, 20)
 #mesh = refine(mesh)
 V = FunctionSpace(mesh, 'DG', 2)
+bigMesh = refine(refine(mesh))
+bigV = FunctionSpace(bigMesh, 'DG', 2)
 
 # Define boundary conditions
-#u0 = Constant(0.0) #const rhs
+u0 = Constant(0.0) #const rhs
 #u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
 #u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
-u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
+#u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
 #u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
 
 #rhs
@@ -62,6 +64,7 @@ sigma = 20
 
 w = interpolate(Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0'),V)
 coeff = as_matrix([[1,0],[0,1]])
+#coeff = as_matrix([[4,-3],[-3,4]])
 
 #define bilinear form
 a = inner(as_matrix(coeff)*nabla_grad(u), nabla_grad(v))*dx \
@@ -86,16 +89,16 @@ def h(x,y):
 #u_ = interpolate(Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0+0.25*sin(pi*x[0]*x[1]*150)'),V)
 #u_ = interpolate(Expression('sin(pi*(x[0]-x[1]))'),V)#/exp(2*(x[0]*x[0]+x[1]*x[1]))+x[0]*x[0]+x[1]*x[1]'),V)
 
-#plot(u_, title = 'solution')
+plot(u_, title = 'solution linear polated')
 #plot(u_e, title= 'exact solution')
-#plot(abs(u_-u_e), title = 'error')
+plot(project(abs(u_-u_e),bigV), title = 'error in non convexified solution')
 
 #interactive()
 #exit()
 
 #create array
 u_array = u_.vector().array()
-print "u_array before ", u_array
+#print "u_array before ", u_array
 
 
 #====================================
@@ -118,10 +121,6 @@ trafo_inv = as_matrix([ [1   ,   0,   0,  0,  0,  0], \
                         [0.25,0.25,   0,  0,  0,0.5]])
 
 
-#g = Function(V)
-#g = interpolate(Constant(0.0),V)
-#g.vector()[10]=1
-
 #print g.vector().array()
 
 def middlePoint(a,b):
@@ -129,7 +128,6 @@ def middlePoint(a,b):
 
 coord = mesh.coordinates()
 
-hullPoints = []
 
 #file to write points into
 tmpfile = open('points_to_convexify.dat', "w")
@@ -146,6 +144,7 @@ for cell in cells(mesh):
             middlePoint(coord[vert_inds[2]], coord[vert_inds[0]]), \
             middlePoint(coord[vert_inds[0]], coord[vert_inds[1]])]
  
+ #bezier control points
   points = [coord[vert_inds[0]], coord[vert_inds[1]], coord[vert_inds[2]], \
             middlePoint(coord[vert_inds[2]], coord[vert_inds[0]]), \
             middlePoint(coord[vert_inds[1]], coord[vert_inds[2]]), \
@@ -209,27 +208,31 @@ for cell in cells(mesh):
 
 #print "difference ", u_array-u_convex_array
 
-#for i in range(len(u_array)/6): #loop over all cells
-#  coeffBezier = u_array[i*6: i*6+6]
-#  #print i, coeffBezier
-#  u_array[i*6: i*6+6] = mult(trafo_inv,coeffBezier)
-
-
 u_convex.vector()[:] = u_convex_array
 #u_.vector()[:] = u_array
 
 #plot results
-plot(u_convex, title = 'convexified solution')
-plot(u_, title = 'solution')
-plot(u_-u_convex, title = 'difference convex and not convex')
-plot(u_convex-u_e, title = 'error in conv. sol.')
+plot(project(u_convex,bigV), title = 'convexified solution')
+plot(project(u_, bigV), title = 'solution')
+plot(project(abs(u_-u_convex), bigV), title = 'difference convex and not convex')
+plot(project(abs(u_convex-u_e), bigV), title = 'error in conv. sol.')
+
+#plot Determinant of Hessian
+test_convex = det(grad(grad(u_)))
+test_convex2 = det(grad(grad(u_convex)))
+
+bigTest_convex = project(test_convex, bigV)
+bigTest_convex2 = project(test_convex2, bigV)
+plot(bigTest_convex, title = 'determinant of hessian')
+plot(bigTest_convex2, title = 'determinant of convexified hessian')
 
 #hold plot
 interactive()
 
-#u_.assign(u_convex)
+#update start solution
+u_.assign(u_convex)
 
-exit()
+#exit()
 
 #====================================
 #define brenner's iteration
@@ -250,7 +253,7 @@ v  = TestFunction(V)
 
 coeff = cofac (grad(grad(u)))
 
-F  = (f-det(grad(grad(u))) )*v*dx
+F  = (f-det(coeff) )*v*dx
 
 F = F + (dot(avg(coeff)*(nabla_grad(u)('+')) , n('+')) +  dot(avg(coeff)*(nabla_grad(u)('-')), n('-')) )*avg(v)*dS
 
@@ -274,8 +277,8 @@ solver  = NonlinearVariationalSolver(problem)
 prm = solver.parameters
 #info(prm, True)
 
-prm['newton_solver']['absolute_tolerance'] = 1E-8
-prm['newton_solver']['relative_tolerance'] = 1E-7
+prm['newton_solver']['absolute_tolerance'] = 1E-6
+prm['newton_solver']['relative_tolerance'] = 1E-8
 prm['newton_solver']['maximum_iterations'] = 10
 prm['newton_solver']['relaxation_parameter'] = 1.0
 prm['newton_solver']['report'] = True
