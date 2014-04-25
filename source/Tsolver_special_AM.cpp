@@ -614,16 +614,16 @@ void Tsolver::convexify(Hessian_type& hess) {
 //	cout << "new eigenvectors  \n" << es.eigenvectors() << endl << endl;
 }
 
-///////////////////////////////////////////////////////
-
-void Tsolver::convexify(Eigen::VectorXd & solution)
+//////////////////////////////////////////////////////
+void Tsolver::convexify(Eigen::VectorXd &solution)
 {
-	assert(!interpolating_basis && "Are you sure, this is a bezier basis?");
+	assert (!interpolating_basis && "This convexification works only with bezier polynomials!");
 
-	PointVector *A, *B;
+	cout << "Convexification is not yet implemented" << endl;
 
-	convex_hull(&grid, A, B);
+
 }
+
 
 ///////////////////////////////////////////////////////
 
@@ -945,6 +945,7 @@ void Tsolver::time_stepping_MA() {
 			cout << "min Eigenvalue " << min_EW << endl;
 		}
 
+		convexify(Lsolution);
 
 		restore_MA(Lsolution);
 
