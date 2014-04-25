@@ -283,7 +283,6 @@ public:
 		edges(1) = vN(0)-vN(2);
 		edges(2) = vN(1)-vN(0);
 
-		cout << "id basecell " << idBC << endl;
 		// initialize face length and unit normal of of pBC
 		for (int f = 0; f < N; f++)
 		{
@@ -297,8 +296,6 @@ public:
 
 			length(f) = normal(f).norm();
 			normal(f) /= length(f);
-
-	    	cout << " outer unit normal at face " << f << ": (" << get_normal(f)[0] << ", " << get_normal(f)[1] << ")" << endl;
 		}
 
 		// initialize volume
@@ -383,10 +380,6 @@ public:
 		else
 			in = (iq - Fdim * Fquadgaussdim)
 				/ (Fchilddim * Fquadgaussdim);
-
-		cout << "A " << A << endl;
-		cout << "grad = " << grad(i)(iq).transpose() << endl;
-		cout << "normal = " << normal(in).transpose() << endl;
 
 		// normal derivative
 		return (A*grad(i)(iq)).dot(normal(in));
