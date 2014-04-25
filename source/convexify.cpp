@@ -36,7 +36,6 @@ int main(int argc, char*argv[])
 		input >> x;
 		input >> y;
 		input >> z;
-		cout << x << y<< z << endl;
 
 		P.push_back(Point(x,y,z));
 	}
@@ -45,6 +44,7 @@ int main(int argc, char*argv[])
 
 	//convexify
 	Plotter plotter;
+	plotter.set_output_directory("inputdata/test/");
 
 	convex_hull(P, plotter,0);
 

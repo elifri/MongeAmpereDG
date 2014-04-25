@@ -52,7 +52,10 @@ void convex_hull_refcell(grid_type &grid, const leafcell_type* pLC, const Tshape
  * @plotter plotter for debug output
  */void convex_hull(grid_type &grid, const Tshape &shape, Eigen::VectorXd &solution, Plotter &plotter, int iteration);
 
+void test_convex_hull(Points &P, Polyhedron_3 &polyhedron);
 
 void lower_envelope(grid_type &grid, const Tshape &shape, const Eigen::VectorXd &solution);
 
 void write_points(std::string name, Points &P);
+
+void write_controlPolygon(std::string name, Points &P);

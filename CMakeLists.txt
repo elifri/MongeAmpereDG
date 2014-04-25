@@ -32,10 +32,11 @@ ELSE()
    SET(ARPACK_LIBRARY "-L /usr/lib/ -larpack -llapack")
 ENDIF()
 
-include_directories(${IGPM_T2_LIB_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES})
+include_directories(${IGPM_T2_LIB_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} /home/data/friebel/lib/CGAL-4.3)
+link_directories(${CGAL_LIBRARIES} ${CGAL_3RD_PARTY_LIBRARIES})
 
 find_package(CGAL QUIET COMPONENTS Core )
-#find_package(BLAS REQUIRED)
+find_package(BLAS REQUIRED)
 #find_package(IGPM_T2_LIB REQUIRED)
 #find_package(Eigen3 REQUIRED)
 #find_package(Umfpack REQUIRED)

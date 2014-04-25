@@ -67,6 +67,9 @@ void convex_hull(Points &P, Plotter &plotter, int iteration)
 
 	write_points("polygon_points.vtu", polyP);
 
+	//assign a plane equation to each polyhedron facet using funcotr Plance from_face
+	std::transform( polyhedron.facets_begin(), polyhedron.facets_end(), polyhedron.planes_begin(),Plane_from_facet());
+
     // constructs AABB tree
     Tree tree(polyhedron.facets_begin(),polyhedron.facets_end());
 
@@ -107,7 +110,11 @@ void convex_hull(Points &P, Plotter &plotter, int iteration)
     	}
     }
 
+    test_convex_hull(P, polyhedron);
 
+    write_controlPolygon(plotter.get_output_directory()
+			+"/"+ plotter.get_output_prefix()
+			+"controlPolygon after.vtu", P);
 	write_points(plotter.get_output_directory()
 			+"/"+ plotter.get_output_prefix()
 			+"pointsafter_"+NumberToString(iteration)+".vtk", P);
@@ -200,7 +207,7 @@ void convex_hull_refcell(grid_type &grid, const leafcell_type* pLC, const Tshape
     	}
     }
 
-//	plotter.writeControlPolygonVTK("points_after.vtu", false, solution);
+    write_controlPolygon("points_after.vtu", P);
 	write_points("points_after.vtu", P);
 
 //	cout << "polygon points " << endl;
@@ -216,6 +223,57 @@ void convex_hull_refcell(grid_type &grid, const leafcell_type* pLC, const Tshape
 		solution[i] = P[i].z();
 	}
 	cout << "coefficients after "<< solution.transpose() << endl;
+}
+
+void test_convex_hull(Points &P, Polyhedron_3 &poly)
+{
+	vector<bool> is_one_a_plane(P.size());
+	for (unsigned int i =0; i < is_one_a_plane.size(); i++) is_one_a_plane[i] = false;
+
+
+	for (Polyhedron_3::Plane_iterator it = poly.planes_begin(); it != poly.planes_end(); it++)
+	{
+		double norm = std::sqrt(it->orthogonal_vector().squared_length());
+
+		double a = it->a(), b = it->b(), c = it->c(), d = it->d(); //coefficients of plane eq
+
+		a/=norm; b/=norm; c/=norm; d/=norm;
+
+		cout << "next plane with coeffs a " << a << " b " << b << " c " << c << " d " << d << endl;
+		cout << " z component of positive normal vector " << it->orthogonal_vector().z() << endl;
+
+		for (Points::iterator it_point = P.begin(); it_point != P.end(); it_point++)
+		{
+			double rhs = a*it_point->x() +b*it_point->y() +c*it_point->z() +d;
+
+			int index = it_point-P.begin();
+
+
+			is_one_a_plane[index] = is_one_a_plane[index] ||  std::abs(rhs < 1e-15);
+
+			bool inside_or_on = (it->has_on_negative_side(*it_point)) || (it->has_on(*it_point));
+
+			if (index == 109 || index == 2 || true)
+				cout << "point " << index << "(" << *it_point << "): " <<  rhs
+				 	 << " and has on negative side or on " << inside_or_on << endl;
+			cout << "further points ";
+						cout << *it_point+it->base1() << " " << *it_point+it->base2() << " first base was " << it->base1() << endl;
+		}
+	}
+
+	bool every_point_on_a_plane = true;
+
+	for (unsigned int i =0; i < is_one_a_plane.size(); i++)
+	{
+		every_point_on_a_plane = every_point_on_a_plane && is_one_a_plane[i];
+		if (!is_one_a_plane[i])
+		{
+			cout << i << " isn't on any plane " << endl;
+			break;
+		}
+	}
+	cout << " every_point_on_a_plane " << every_point_on_a_plane << endl;
+
 }
 
 
@@ -325,3 +383,56 @@ void write_points(std::string name, Points &P)
 	file << "\t</PolyData>\n";
 	file << "</VTKFile>\n";
 }
+
+void write_controlPolygon(std::string name, Points &P)
+{
+	std::ofstream file(name.c_str(), std::ios::out);
+	if (file.rdstate()) {
+		std::cerr << "Error: Couldn't open '" << name << "'!\n";
+		return;
+	}
+
+	unsigned int Nnodes = P.size();
+	unsigned int Nelements = Nnodes*2/3;
+
+	file << "<?xml version=\"1.0\"?>\n"
+			<< "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">\n"
+			<< "\t<UnstructuredGrid>\n\n";
+	file << "\t\t<Piece NumberOfPoints=\""<< Nnodes << "\" NumberOfCells=\""
+			<< P.size()*2/3 << "\">\n";
+
+	file << "\t\t\t<Points>\n"
+			<< "\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\""
+			<< "ascii" << "\">\n";
+	for (unsigned int i= 0; i< Nnodes; i++)
+		file << "\t\t\t\t\t" << P[i].x() << " "<< P[i].y() << " "<< P[i].z() << "\n";
+	file << "\t\t\t\t</DataArray>"<<endl;
+	file << "\t\t\t</Points>"<<endl;
+
+	// write cells
+	file << "\t\t\t<Cells>\n"
+			<< "\t\t\t\t<DataArray type=\"Int32\" Name=\"connectivity\" format=\"";
+	file << "ascii\">"<<endl;
+	for (unsigned int i = 0; i < Nnodes ; i+=6){
+		file << "\t\t\t\t\t"<< i+3 << " " << i+4 << " " << i+5 << " ";//triangle in the middle
+		file << "\t\t\t\t\t"<< i << " " << i+3 << " " << i+5 << " "; //botoom triangle
+		file << "\t\t\t\t\t"<< i+1 << " " << i+4 << " " << i+5 << " "; //on the right
+		file << "\t\t\t\t\t"<< i+2 << " " << i+3 << " " << i+4 << " "; // on the top
+		 		}
+	file << "\n\t\t\t\t</DataArray>\n";
+	file
+			<< "\t\t\t\t<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n\t\t\t\t\t";
+	for (unsigned int i = 1; i <= Nelements; ++i)
+		file << i * 3 << " ";
+	file << "\n\t\t\t\t</DataArray>";
+	file
+			<< "\n\t\t\t\t<DataArray type=\"Int32\" Name=\"types\" format=\"ascii\">\n\t\t\t\t\t";
+	for (unsigned int i = 1; i <= Nelements; ++i)
+		file << "5 ";  // 5: triangle, 9: quad
+	file << "\n\t\t\t\t</DataArray>";
+	file << "\n\t\t\t</Cells>\n";
+
+	file << "\n\t\t</Piece>";
+	file << "\n\t</UnstructuredGrid>\n" << "\n</VTKFile>";
+}
+
