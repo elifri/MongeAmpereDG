@@ -53,6 +53,7 @@ public:
   value_type       limiter;
   Enodevalue_type  Serror;
   Enodevalue_type  residuum;
+  value_type	   det;
 
   diffusionmatrix_type 	A;
   value_type	   		smallest_EW;

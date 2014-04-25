@@ -33,6 +33,7 @@ private:
 
 	void write_error(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); ///write an data array containing the error stored in every leafcell
 	void write_residuum(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine);
+	void write_det(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); /// write an data array containing the determinant of the hessian
 	void write_smallest_EW(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); ///write an data array containing the smallest EW stored in every leafcell
 	void write_solution_data_array(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); ///write data array containing the solution values
 

@@ -709,6 +709,7 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
 		//determinant of hessian for calculation of residuum
 		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
+		pLC->det = det;
 
 		state_type state, stateEx, stateRhs;
 
@@ -848,7 +849,7 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 #elif (PROBLEM == MONGEAMPERE4)
 	u_rhs[0] = 2./sqr(2-sqr(x.norm()));
 #elif (PROBLEM == SIMPLEMONGEAMPERE)
-	u_rhs[0] = 4;
+	u_rhs[0] = 7;
 #elif (PROBLEM == CONST_RHS || SIMPLEMONGEAMPERE2)
 	u_rhs[0] = 1;
 #else
@@ -949,7 +950,7 @@ void Tsolver::time_stepping_MA() {
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
-		MATLAB_export(LM, "LM");
+//		MATLAB_export(LM, "LM");
 
 		cout << "Solving linear System..." << endl;
 
