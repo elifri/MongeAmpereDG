@@ -1,0 +1,95 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{ngerman}
+\usepackage{cite}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{stmaryrd}
+
+
+\title{atuelle Implementierung}
+
+\newcommand{\myint}{\displaystyle\int}
+\newcommand{\cof}{\operatorname{cof}}
+\newcommand{\edges}{\mathcal{E}_h}
+\newcommand{\edgesi}{\mathcal{E}_h^i}
+\newcommand{\edgesb}{\mathcal{E}_h^b}
+\newcommand{\triang}{\mathcal{T}_h}
+
+\begin{document}
+\maketitle
+
+Consider the following PDE 
+\begin{equation}
+	\frac 1 2 (w_{yy} v_{xx}+w_{xx} v_{yy} - w_{yx} v_{xy} - w_{xy} v_{yx}) = f \qquad \textnormal{ on } \Omega \label{PDE}		
+\end{equation}
+
+$\begin{pmatrix} w_{yy} & -w_{xy} \\ -w_{yx} & w_{xx} \end{pmatrix}$ is the cofactor matrix of the Hessian of $w$ and is from now on denoted by $\cof(D^2 w)$. 
+To abbreviate $\left( w_{yyx}-w_{yxy}, -w_{xyx} + w_{xxy} \right)^t$ we use the term  $\nabla \cdot \cof(D^2 w)$.
+Thus, we can express the left-hand side of the weak formulation by the following bilinear form
+
+\[
+	a(v,\varphi) = \myint_{\Omega} -\nabla \varphi \cdot \cof(D^2 w) \nabla v + \myint_{\partial \Omega} \varphi\cof(D^2 w) \nabla v \cdot n 
+	-  \myint_\Omega \varphi (\nabla \cdot \cof(D^2 w)) \cdot \nabla v
+\]
+
+Let $\mathcal{T}_h$ be shape regular, uniform triangulation of $\Omega$ and denote its edge set by $\mathcal{E}_h$. We divide $\mathcal E _h $ into the disjoint subsets $\mathcal{E}_h^i$ which contains the inner edges and $\mathcal{E}_h^b$ which contains the boundary edges. \\
+In addition let $\mathcal V_h$ be the finite element space of piecewise quadratic polynomials, namely
+\[
+	\mathcal V_h = \{ f \in H^1(\Omega); f \arrowvert_T \textnormal{ is a polynomial of (total) degree} = 2 \textnormal{ for every } t \in \mathcal T_h\}
+\]
+Futhermore let $w$ be $\mathcal V_h$ such that we can define the Hessian of $w$ on every element and let us assume $\varphi \in H^2(\Omega; \triang) \cap H^1(\Omega)$.
+ Decomposing our integral in the contributions of each element we gain
+
+\begin{eqnarray*}
+a(v, \varphi) &=& \sum_{T \in \triang} \myint_T -\nabla \varphi \cdot \cof(D^2 w) \nabla v + \sum_{T \in \triang}\myint_{\partial T} \varphi \cof(D^2 w) \nabla v \cdot n \\
+	&&-  \sum_{T \in \triang} \myint_T \varphi (\nabla \cdot \cof(D^2 w)) \cdot \nabla v
+\end{eqnarray*}
+
+If we take a closer look on $\nabla \cdot \cof(D^2 w) = \left( w_{yyx}-w_{yxy}, -w_{xyx} + w_{xxy} \right)^t$ we discover that it equals zero because of Schwarz' theorem. Thus, the last term in $a$ vanishes.
+
+Since two adjacent elements share one edge with opposite normal vectors we can rewrite the middle term by
+
+\begin{eqnarray*}
+ a(u,v) = & &\sum\limits_{T \in \triang} \myint_T -\nabla v \cdot \cof(D^2 w) \nabla u \\
+	 &+ &\sum\limits_{e \in \edgesi}\myint_{e} \left( \{\{\varphi\}\} \llbracket \cof(D^2 w) \nabla v \cdot n \rrbracket + \llbracket\varphi\rrbracket \{\{ \cof(D^2 w) \nabla v \cdot n \}\} \right)
+\end{eqnarray*}
+
+and
+
+\begin{eqnarray*}
+	f(u,v) = && \sum\limits_{T \in \triang} \myint_T v f \\
+	 				&- &\sum\limits_{e \in \edgesb}\myint_{e} v \cof(D^2 w) \nabla u \cdot n 
+\end{eqnarray*} 
+
+Symmetrising our bilinear form $a$ we get
+
+\begin{eqnarray*}
+ a_S(v, \varphi) = &\sum\limits_{T \in \triang} \myint_T -\nabla \varphi \cdot \cof(D^2 w) \nabla v \\
+ + &\sum\limits_{e \in \edgesi}\myint_{e} \left( \{\{\varphi\}\} \llbracket \cof(D^2 w) \nabla v \cdot n \rrbracket + \llbracket\varphi\rrbracket \{\{ \cof(D^2 w) \nabla v \cdot n \}\} \right)  \\
+ +& \sum\limits_{e \in \edgesi}\myint_{e} \left( \{\{v\}\} \llbracket \cof(D^2 w) \nabla \varphi \cdot n \rrbracket + \llbracket v\rrbracket \{\{ \cof(D^2 w) \nabla \varphi \cdot n \}\} \right) 
+\end{eqnarray*}
+
+Neglecting terms near zero we have
+
+\begin{eqnarray*}
+ a_S(v, \varphi) = &\sum\limits_{T \in \triang} \myint_T -\nabla \varphi \cdot \cof(D^2 w) \nabla v \\
+ + &\sum\limits_{e \in \edgesi}\myint_{e} \llbracket\varphi\rrbracket \{\{ \cof(D^2 w) \nabla v \cdot n \}\} \\
+ +& \sum\limits_{e \in \edgesi}\myint_{e} \llbracket v\rrbracket \{\{ \cof(D^2 w) \nabla \varphi \cdot n \}\} 
+\end{eqnarray*}
+
+
+To enforce stability we enforce the following penalty term [TICAM report 3.2.2.]
+
+\begin{eqnarray*}
+	J^\sigma(\varphi, v) = \sum\limits_{e \in \edges} \myint_e \frac \sigma {|e|} \llbracket \varphi \rrbracket \llbracket v \rrbracket
+\end{eqnarray*}
+
+Thus, we end up with the problem finding $v \in V_h \subset H^1(\Omega)$ such that
+\[
+	a_S(\phi,v) + J^\sigma(\varphi,v) = 2f(\varphi, v) \textnormal{for all } \varphi \in H^2(\Omega; \triang) \cap H^1(\Omega) 
+\] 
+\end{document}
