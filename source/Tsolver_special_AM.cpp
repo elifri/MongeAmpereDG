@@ -156,7 +156,6 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 
 void Tsolver::calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1)
 {
-	cout << " A " << A << endl;
 	value_type rad = A(0,0) * A(0,0) + (A(1,1) - 2 * A(0,0)) * A(1,1) + 4 * A(0,1) * A(1,0);
 	if (std::abs(rad) < 1e-7)	rad = 0;
 	value_type s = std::sqrt(rad);
@@ -184,7 +183,7 @@ bool Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess) {
 
 			get_nodes(grid, pLC->id(), nv);
 
-			cout << "Found very small Eigenvalue at "
+			cout << "Found very small Eigenvalue " << ev0 << " at "
 					<< pLC->id() << " with nodes "
 					<< nv[0].transpose() << ", " << nv(1).transpose() <<  ", " << nv(2).transpose() << endl;
 			cout << "Hessian is: \n" << hess << endl;
@@ -259,7 +258,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 					pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
 		}
 		else{
-				hess << 1, 0 , 0, 1;
+			hess << 1, 0 , 0, 1;
 			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
 			max_EW = 1;
@@ -278,8 +277,6 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 			LM.coeffRef(row, col) += val;
 		}
 	}
-
-	cout << "Hessian " << endl  << pLC->A << endl;
 }
 
 void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs) {
@@ -364,7 +361,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		//update penalty
 
 		cout << "Largest EW " << max_EW << endl;
-		penalty *= (iteration+1)*10;
+		penalty *= max_EW*10;
 
 		cout << "used penalty " << penalty << endl;
 
@@ -916,6 +913,7 @@ void Tsolver::time_stepping_MA() {
 		solver.compute(LM);
 		if (solver.info() != Eigen::Success) {
 			std::cerr << "Decomposition of stiffness matrix failed" << endl;
+			std::exit(-1);
 		}
 		Lsolution = solver.solve(Lrhs);
 		if (solver.info() != Eigen::Success) {
@@ -936,7 +934,7 @@ void Tsolver::time_stepping_MA() {
 
 		restore_MA(Lsolution);
 
-		cout << "LSolution" << Lsolution.transpose() << endl;
+//		cout << "LSolution" << Lsolution.transpose() << endl;
 
 		setleafcellflags(0, false);
 
