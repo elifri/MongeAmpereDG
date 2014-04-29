@@ -4,7 +4,7 @@
 from dolfin import *
 import scipy.io
 import numpy as np
-#from MA_iterated import MA_iteration
+from MA_iterated import MA_iteration
 from convexify import convexify
 
 # Create mesh and define function space
@@ -13,28 +13,28 @@ deg = 3
 
 mesh = UnitSquareMesh(n, n)
 #plot(mesh)
-V = FunctionSpace(mesh, 'CG', deg)
+V = FunctionSpace(mesh, 'CG', deg, 'crossed')
 bigMesh = refine(refine(mesh))
-bigV = FunctionSpace(bigMesh, 'CG', deg)
+bigV = FunctionSpace(bigMesh, 'CG', deg, 'crossed')
 
 # Define boundary conditions
 #u0 = Constant(0.0) #const rhs
-#u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
+u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
 #u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
 #u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
-u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
+#u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
 
 #error = Expression('1/2*x[0]*x[0]+1/2*x[1]*x[1]')#add noisy data
 #error = Expression('0.1*pow(x[0],2)+0.01*pow(x[1],2)')#add noisy data
-error = Expression('0.5*sin(x[0]*x[1]+pi)')#add noisy data
+error = Expression('0.01*sin(3*x[0]*x[1]+pi)')#add noisy data
 
 print "u0 ", u0
 
 #rhs
-#f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
+f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
 #f = Constant(7.0)#simpleMongeAmpere
 #f = Constant(1.0) #simpleMongeAmpere2
-f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
+#f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
 
 #define exact solution
 

@@ -40,7 +40,7 @@ def MA_iteration(mesh, V, u0, f, max_it):
   #  + Constant(sigma)/h*inner(grad(v),n)*inner(grad(u),n)*ds
 
   #define rhs functional
-  L = inner(f,v)*dx - u0*dot(n,coeff*nabla_grad(v))*ds +Constant(sigma)/h *u0*v*ds
+  L = inner(Constant(-2.0)*f,v)*dx - u0*dot(n,coeff*nabla_grad(v))*ds +Constant(sigma)/h *u0*v*ds
 
   #iterate
   u = Function(V)
@@ -67,7 +67,7 @@ def MA_iteration(mesh, V, u0, f, max_it):
 
 
     # Dump solution to file in VTK format
-    s = 'poisson'+str(iteration)+'.pvd'
+    s = 'MongeAmpere'+str(iteration)+'.pvd'
     file = File(s)
     file << u
     
@@ -94,38 +94,60 @@ def MA_iteration(mesh, V, u0, f, max_it):
     scipy.io.savemat('wxy'+str(iteration)+'.mat', {'wxy': wxy.vector().array()})
     scipy.io.savemat('wyx'+str(iteration)+'.mat', {'wyx': wyx.vector().array()})
     scipy.io.savemat('wyy'+str(iteration)+'.mat', {'wyy': wyy.vector().array()})
+  
+    plot(project(u,bigV), title = 'solution'+str(iteration))
+    plot(project(abs(u-u_e),bigV), title = 'error'+str(iteration))
+
+    plot(det(grad(grad(u))), title = 'determinant of hessian'+str(iteration))
+
+    plot(project(abs(f-det(grad(grad(u)))), bigV), title = 'rhs - determinant of hessian'+str(iteration))
+
+  
     
-    return u;
+  return u;
   
 
+if __name__ == "__main__":
+  # Create mesh and define function space
+  deg = 2
+  
+  mesh = UnitSquareMesh(40, 40)
+  V = FunctionSpace(mesh, 'DG', deg)
+  bigMesh = refine(refine(mesh))
+  bigV = FunctionSpace(bigMesh, 'CG', deg, 'crossed')
 
-# Create mesh and define function space
-mesh = UnitSquareMesh(40, 40)
-mesh = refine(mesh)
-V = FunctionSpace(mesh, 'DG', 2)
+
+  #define poblem
+
+  # Define boundary conditions
+  #u0 = Constant(0.0) #const rhs
+  u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
+  #u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
+  #u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
+  #u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
 
 
-#define poblem
+  #rhs
+  #f = Constant(1.0) #const rhs
+  #f = Constant(7.0) #simpleMongeAmpere
+  f = Constant(1.0) #simpleMongeAmpere2
+  #f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
+  #f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
 
-# Define boundary conditions
-#u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
-#u0 = Constant(0.0) #const rhs
-u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
+  #maximum number of iterations
+  max_it = 2
 
-#rhs
-#f = Constant(-8.0) #simpleMongeAmpere
-#f = Constant(-2.0) #const rhs
-f = Constant(-2.0) #simpleMongeAmpere2
+  u_e = interpolate(u0, V)
 
-#maximum number of iterations
-max_it = 1
+  u = MA_iteration(mesh, V, u0, f, max_it)
 
-u = MA_iteration(mesh, V, u0, f, max_it)
+ # Plot solution and mesh
+  plot(project(u,bigV), title = 'solution')
+  plot(project(abs(u-u_e),bigV), title = 'error')
 
-# Plot solution and mesh
-plot(u)
-#plot(u-u_e)
-#plot(mesh)
+  plot(det(grad(grad(u))), title = 'determinant of hessian')
 
-#Hold plot
-interactive()
+  plot(project(abs(f-det(grad(grad(u)))), bigV), title = 'rhs - determinant of hessian')
+
+  #Hold plot
+  interactive()
