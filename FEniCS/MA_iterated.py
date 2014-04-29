@@ -54,7 +54,7 @@ coeff = as_matrix([[1,0],[0,1]])
 sigma = 7.0*50.0*10
 
 #maximum number of iterations
-max_it = 1
+max_it = 5
 
 # Define variational problem
 u = TrialFunction(V)
@@ -69,7 +69,6 @@ a = inner(as_matrix(coeff)*nabla_grad(u), nabla_grad(v))*dx \
   - inner(jump(v,n),avg(coeff*nabla_grad(u)))*dS\
   - inner(jump(u,n),avg(coeff*nabla_grad(v)))*dS\
   + Constant(sigma)('+')/h('+')* jump(u)*jump(v)*dS \
-  + Constant(sigma)('+')/h('+')* jump(grad(u),n)*jump(grad(v),n)*dS \
   - v*inner(n,as_matrix(grad(grad(w)))*nabla_grad(u))*ds \
   - u*inner(n,as_matrix(grad(grad(w)))*nabla_grad(v))*ds \
   + Constant(sigma)/h*v*u*ds
@@ -84,7 +83,7 @@ u = Function(V)
 for iteration in range(0,max_it):
 
   #update penalty
-  sigma = sigma*(iteration+1)*10;
+  #sigma = sigma*(iteration+1)*10;
 
   print sigma
   #dump matrices
