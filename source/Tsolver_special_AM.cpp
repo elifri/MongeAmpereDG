@@ -326,12 +326,6 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
 void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs) {
 
-	std::ofstream file("data/s/matricex", std::ios::out);
-
-	Eigen::SparseMatrix<double> laplace (LM.rows(), LM.cols());
-	Eigen::SparseMatrix<double> inner (LM.rows(), LM.cols());
-	Eigen::SparseMatrix<double> outer (LM.rows(), LM.cols());
-
 	unsigned int gaussbaseLC = 0;
 	unsigned int gaussbaseNC = 0;
 	unsigned int levelNC = 0;
@@ -366,7 +360,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 			grid.findBaseCellOf(idLC, pBC);
 
 			// Copy entries for element laplace operator into Laplace-matrix
-			assemble_lhs_bilinearform_MA(pLC, pBC, laplace);
+			assemble_lhs_bilinearform_MA(pLC, pBC, LM);
 		}
 
 		//update penalty
@@ -393,7 +387,6 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 			// Copy entries for right hand side into right hand side
 			assemble_rhs_MA(pLC, idLC, pBC, x, Lrhs);
-
 
 			// bilinear form b (average of normal derivative u * jump phi)
 			grid_type::facehandlevector_type vFh, vOh; // neighbor face number and orientation
@@ -451,38 +444,38 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 											   A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,jshape,iqNC);
 
 									// b(u, phi)
-									inner.coeffRef(row_LC, col_LC) += -0.5 // to average
+									LM.coeffRef(row_LC, col_LC) += -0.5 // to average
 											* shape.get_Fquadw(iqLC) * length//quadrature weights
 											* shape.get_Fquads(ishape,iqLC) //jump
 											* A_times_normal_BC/ facLevelLength[level]; //gradient times normal
 
-									inner.coeffRef(row_LC, col_NC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * A_times_normal_NBC / facLevelLength[levelNC];
+									LM.coeffRef(row_LC, col_NC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * A_times_normal_NBC / facLevelLength[levelNC];
 
-									inner.coeffRef(row_NC, col_LC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* A_times_normal_BC / facLevelLength[level];
+									LM.coeffRef(row_NC, col_LC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* A_times_normal_BC / facLevelLength[level];
 
-									inner.coeffRef(row_NC, col_NC) += -0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
+									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
 
 									A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,ishape,iqLC),
 									A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,ishape,iqNC);
 
 									// b(phi, u)
-									inner.coeffRef(row_LC, col_LC) += stabsign	* 0.5 * shape.get_Fquadw(iqLC) * length	* A_times_normal_BC / facLevelLength[level]	* shape.get_Fquads(jshape,iqLC);
+									LM.coeffRef(row_LC, col_LC) += stabsign	* 0.5 * shape.get_Fquadw(iqLC) * length	* A_times_normal_BC / facLevelLength[level]	* shape.get_Fquads(jshape,iqLC);
 
-									inner.coeffRef(row_LC, col_NC) += stabsign	* -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_BC / facLevelLength[level] * shape.get_Fquads(jshape,iqNC);
+									LM.coeffRef(row_LC, col_NC) += stabsign	* -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_BC / facLevelLength[level] * shape.get_Fquads(jshape,iqNC);
 
-									inner.coeffRef(row_NC, col_LC) += stabsign * -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(jshape,iqLC);
+									LM.coeffRef(row_NC, col_LC) += stabsign * -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(jshape,iqLC);
 
-									inner.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(jshape,iqNC);
+									LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(jshape,iqNC);
 
 									// b_sigma(u, phi)
 									if (penalty != 0.0) {
-										inner.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
+										LM.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
 
-										inner.coeffRef(row_LC, col_NC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqLC);
+										LM.coeffRef(row_LC, col_NC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqLC);
 
-										inner.coeffRef(row_NC, col_LC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqNC);
+										LM.coeffRef(row_NC, col_LC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqNC);
 
-										inner.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
+										LM.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
 
 									}
 								}
@@ -570,7 +563,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 												* shape.get_Fquads(jshape,iqLC);
 									}
 
-									outer.coeffRef(row, col) += val;
+									LM.coeffRef(row, col) += val;
 								}
 							}
 
@@ -590,12 +583,6 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 		}
 	}
-
-	LM = laplace + inner + outer;
-//	MATLAB_export(laplace, "laplace");
-//	MATLAB_export(inner, "inner");
-//	MATLAB_export(outer, "outer");
-//	MATLAB_export(LM, "LM");
 
 }
 
@@ -984,7 +971,7 @@ void Tsolver::time_stepping_MA() {
 
 //		?plotter.write_controlpolygonVTK(iteration+20, Lsolution);
 
-		convexify(Lsolution);
+//		convexify(Lsolution);
 
 		restore_MA(Lsolution);
 
