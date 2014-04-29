@@ -15,7 +15,7 @@ def MA_iteration(mesh, V, u0, f, max_it):
   #w = interpolate(u0, V)
   w = interpolate(Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0'),V)
   #and the cofactor matrix of its hessian
-  coeff = as_matrix([[1,0],[0,1]])
+  coeff = cofac(grad(grad(w)))
 
   #penalty
   sigma = 7.0*50.0*10
@@ -29,15 +29,15 @@ def MA_iteration(mesh, V, u0, f, max_it):
   n = FacetNormal(mesh)
 
   #define bilinear form
-  a = inner(as_matrix(coeff)*nabla_grad(u), nabla_grad(v))*dx \
+  a = inner(coeff*nabla_grad(v), nabla_grad(u))*dx \
     - inner(jump(v,n),avg(coeff*nabla_grad(u)))*dS\
     - inner(jump(u,n),avg(coeff*nabla_grad(v)))*dS\
     + Constant(sigma)('+')/h('+')* jump(u)*jump(v)*dS \
-    + Constant(sigma)('+')/h('+')* jump(grad(u),n)*jump(grad(v),n)*dS \
-    - v*inner(n,as_matrix(grad(grad(w)))*nabla_grad(u))*ds \
-    - u*inner(n,as_matrix(grad(grad(w)))*nabla_grad(v))*ds \
+    - v*inner(n,coeff*nabla_grad(u))*ds \
+    - u*inner(n,coeff*nabla_grad(v))*ds \
     + Constant(sigma)/h*v*u*ds
   #  + Constant(sigma)/h*inner(grad(v),n)*inner(grad(u),n)*ds
+  # + Constant(sigma)('+')/h('+')* jump(grad(u),n)*jump(grad(v),n)*dS \
 
   #define rhs functional
   L = inner(Constant(-2.0)*f,v)*dx - u0*dot(n,coeff*nabla_grad(v))*ds +Constant(sigma)/h *u0*v*ds
@@ -48,7 +48,7 @@ def MA_iteration(mesh, V, u0, f, max_it):
   for iteration in range(0,max_it):
 
     #update penalty
-    sigma = sigma*(iteration+1)*10;
+    #sigma = sigma*(iteration+1)*10;
 
     print sigma
     #dump matrices
@@ -74,7 +74,7 @@ def MA_iteration(mesh, V, u0, f, max_it):
     #update w
     w.assign(u)
     
-    coeff = cofac(grad(grad(w)))
+    #coeff = cofac(grad(grad(w)))
     
     #create output in right space
     wxx = project(coeff[0,0], FunctionSpace(mesh, 'DG',0))
@@ -95,13 +95,14 @@ def MA_iteration(mesh, V, u0, f, max_it):
     scipy.io.savemat('wyx'+str(iteration)+'.mat', {'wyx': wyx.vector().array()})
     scipy.io.savemat('wyy'+str(iteration)+'.mat', {'wyy': wyy.vector().array()})
   
-    plot(project(u,bigV), title = 'solution'+str(iteration))
+    plot(u, title = 'solution'+str(iteration))
     plot(project(abs(u-u_e),bigV), title = 'error'+str(iteration))
 
     plot(det(grad(grad(u))), title = 'determinant of hessian'+str(iteration))
 
     plot(project(abs(f-det(grad(grad(u)))), bigV), title = 'rhs - determinant of hessian'+str(iteration))
 
+    interactive()
   
     
   return u;
@@ -111,31 +112,31 @@ if __name__ == "__main__":
   # Create mesh and define function space
   deg = 2
   
-  mesh = UnitSquareMesh(40, 40)
+  mesh = UnitSquareMesh(60, 60)
   V = FunctionSpace(mesh, 'DG', deg)
-  bigMesh = refine(refine(mesh))
-  bigV = FunctionSpace(bigMesh, 'CG', deg, 'crossed')
+  bigMesh = refine(mesh)
+  bigV = FunctionSpace(bigMesh, 'DG', deg)
 
 
   #define poblem
 
   # Define boundary conditions
   #u0 = Constant(0.0) #const rhs
-  u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
+  #u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
   #u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
   #u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
-  #u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
+  u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
 
 
   #rhs
   #f = Constant(1.0) #const rhs
   #f = Constant(7.0) #simpleMongeAmpere
-  f = Constant(1.0) #simpleMongeAmpere2
+  #f = Constant(1.0) #simpleMongeAmpere2
   #f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
-  #f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
+  f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
 
   #maximum number of iterations
-  max_it = 2
+  max_it = 3
 
   u_e = interpolate(u0, V)
 
@@ -150,4 +151,4 @@ if __name__ == "__main__":
   plot(project(abs(f-det(grad(grad(u)))), bigV), title = 'rhs - determinant of hessian')
 
   #Hold plot
-  interactive()
+  #interactive()
