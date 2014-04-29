@@ -38,7 +38,8 @@ private:
 	void write_solution_data_array(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); ///write data array containing the solution values
 
 	void write_points(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine, bool coord3=false); //writes points in vtk format, if coord3 then the third component is the solution
-	void write_control_points(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const Eigen::VectorXd solution);
+	void write_control_points(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const Eigen::VectorXd solution); ///writes control pointsa in vtk format
+	void write_control_cells(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); ///writes connectivity between control points
 	void write_solution(const vector_function_type &get_exacttemperature, std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); //writes points (of solution) in vtk format
 	void write_cells(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine); //write cells
 

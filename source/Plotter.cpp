@@ -630,6 +630,36 @@ void Plotter::write_control_points(std::ofstream &file, const std::vector < std:
 
 }
 
+void Plotter::write_control_cells(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
+{
+	// write cells
+	file << "\t\t\t<Cells>\n"
+			<< "\t\t\t\t<DataArray type=\"Int32\" Name=\"connectivity\" format=\"";
+	file << "ascii\">"<<endl;
+	// make connectivity
+
+	for (int i = 0; i < Nnodes ; i+=6){
+		file << "\t\t\t\t\t"<< i+1 << " " << i+2 << " " << i+4 << " ";//triangle in the middle
+		file << "\t\t\t\t\t"<< i << " " << i+1 << " " << i+2 << " "; //botoom triangle
+		file << "\t\t\t\t\t"<< i+1 << " " << i+3 << " " << i+4 << " "; //on the right
+		file << "\t\t\t\t\t"<< i+2 << " " << i+4 << " " << i+5 << " "; // on the top
+	}
+
+	file << "\n\t\t\t\t</DataArray>\n";
+	file
+			<< "\t\t\t\t<DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n\t\t\t\t\t";
+	for (int i = 1; i <= Nelements; ++i)
+		file << i * 3 << " ";
+	file << "\n\t\t\t\t</DataArray>";
+	file
+			<< "\n\t\t\t\t<DataArray type=\"Int32\" Name=\"types\" format=\"ascii\">\n\t\t\t\t\t";
+	for (int i = 1; i <= Nelements; ++i)
+		file << "5 ";  // 5: triangle, 9: quad
+	file << "\n\t\t\t\t</DataArray>";
+	file << "\n\t\t\t</Cells>\n";
+}
+
+
 
 void Plotter::write_solution(const vector_function_type &get_exacttemperature, std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
 {
@@ -874,7 +904,7 @@ void Plotter::write_controlpolygonVTK(std::string filename, const bool binary, c
 	write_vtk_header(file, Nnodes, Nelements);
 
 	write_control_points(file, v, solution);
-	write_cells(file,v, 1);
+	write_control_cells(file,v, 1);
 
 	write_vtk_end(file);
 }
