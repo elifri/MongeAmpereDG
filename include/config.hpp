@@ -70,6 +70,7 @@ class Tmass;
 #define MONGEAMPERE4 45 //-sqrt(2-|x|^2)
 #define SIMPLEMONGEAMPERE 46 // solution is 2x^2+2y^2-3xy
 #define SIMPLEMONGEAMPERE2 47 // solution is x^2/2+y^2/2
+#define BRENNEREX1 48 // solution is 20*exp(x^6)/6.0+y)
 
 
 #if (EQUATION == EULER_EQ)
@@ -81,7 +82,7 @@ class Tmass;
 #elif (EQUATION == POISSON_EQ || EQUATION == POISSON_PREC_EQ)
   #define PROBLEM CONST_RHS
 #elif (EQUATION == MONGE_AMPERE_EQ)
-  #define PROBLEM SIMPLEMONGEAMPERE
+  #define PROBLEM BRENNEREX1
 #elif (EQUATION == IMPLICIT_HEAT_EQ)
   #define PROBLEM CONSTKAPPA_IMPLICIT
 #endif
