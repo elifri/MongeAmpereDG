@@ -15,7 +15,7 @@
 #endif
 
 typedef Eigen::SparseMatrix<double> SparseMatrixD;
-
+typedef Eigen::Triplet<double> T;
 
 
 /**

@@ -157,10 +157,14 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 void Tsolver::calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1)
 {
 	value_type rad = A(0,0) * A(0,0) + (A(1,1) - 2 * A(0,0)) * A(1,1) + 4 * A(0,1) * A(1,0);
-	if (std::abs(rad) < 1e-7)	rad = 0;
+
+	//fetch numerical zeroes
+	if (std::abs(rad) < 1e-10)	rad = 0;
+
 	value_type s = std::sqrt(rad);
 	ev0 = (A(0,0) + A(1,1) - s) / 0.2e1;
 	ev1 = (A(0,0) + A(1,1) + s) / 0.2e1;
+
 	assert(!(ev0 != ev0) && "The smaller eigenvalue is nan");
 }
 
@@ -277,6 +281,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 			LM.coeffRef(row, col) += val;
 		}
 	}
+
 }
 
 void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs) {
@@ -613,16 +618,93 @@ void Tsolver::convexify(Hessian_type& hess) {
 
 void Tsolver::convexify_cell(const leafcell_type* pLC, Eigen::VectorXd &solution)
 {
-	assert (!interpolating_basis && "This convesification works only with bezier polynomials!");
+	assert (!interpolating_basis && "This convexification works only with bezier polynomials!");
 
 	Eigen::VectorXd coeff = solution.segment(pLC->m_offset, degreedim*3);
+}
 
-//	convexify(grid, shape, coeff, plotter);
+void Tsolver::convexify(Eigen::VectorXd &solution)
+{
+
+	int Ndofs = solution.size();
+
+	std::vector< Eigen::Triplet<double> > tripletList;
+	tripletList.reserve(6*Ndofs);
+
+
+	for (int n=0; n< Ndofs; n+=6)
+	{
+		for (int i=n; i < n+6; i++)
+		{
+			//(Delta21 +Delta31)Delta31 >= 0
+			tripletList.push_back( T( i, n+3, 1));
+			tripletList.push_back( T( i, n+5, -1));
+			tripletList.push_back( T( i, n+4, -1));
+			tripletList.push_back( T( i, n, 1));
+
+			tripletList.push_back( T( i, n+2, 1));
+			tripletList.push_back( T( i, n+4, -2));
+			tripletList.push_back( T( i, n, 1));
+
+			//(Delta32 +Delta12)Delta32 >= 0
+			tripletList.push_back( T( i, n+2, 1));
+			tripletList.push_back( T( i, n+3, -2));
+			tripletList.push_back( T( i, n+1, 1));
+
+			tripletList.push_back( T( i, n+3, 1));
+			tripletList.push_back( T( i, n+4, -1));
+			tripletList.push_back( T( i, n+1, -1));
+			tripletList.push_back( T( i, n+5, 1));
+
+			//(Delta13 +Delta23)Delta23 >= 0
+			tripletList.push_back( T( i, n+2, 1));
+			tripletList.push_back( T( i, n+4, -1));
+			tripletList.push_back( T( i, n+3, -1));
+			tripletList.push_back( T( i, n+5, 1));
+
+			tripletList.push_back( T( i, n+2, 1));
+			tripletList.push_back( T( i, n+3, -2));
+			tripletList.push_back( T( i, n+1, 1));
+
+
+			//Delta21 (Delta21 +Delta31)>= 0
+			tripletList.push_back( T( i, n+1, 1));
+			tripletList.push_back( T( i, n+5, -2));
+			tripletList.push_back( T( i, n, 1));
+
+			tripletList.push_back( T( i, n+3, 1));
+			tripletList.push_back( T( i, n+5, -1));
+			tripletList.push_back( T( i, n+4, -1));
+			tripletList.push_back( T( i, n, 1));
+
+			//Delta32 (Delta32 +Delta12)>= 0
+			tripletList.push_back( T( i, n+2, 1));
+			tripletList.push_back( T( i, n+3, -2));
+			tripletList.push_back( T( i, n+1, 1));
+
+			tripletList.push_back( T( i, n+1, 1));
+			tripletList.push_back( T( i, n+3, -1));
+			tripletList.push_back( T( i, n+5, -1));
+			tripletList.push_back( T( i, n+4, 1));
+
+			//Delta13 (Delta13 +Delta23)>= 0
+			tripletList.push_back( T( i, n+2, 1));
+			tripletList.push_back( T( i, n+4, -1));
+			tripletList.push_back( T( i, n+3, -1));
+			tripletList.push_back( T( i, n+5, 1));
+
+			tripletList.push_back( T( i, n+2, 1));
+			tripletList.push_back( T( i, n+4, -2));
+			tripletList.push_back( T( i, n, 1));
+		}
+	}
+
+	SparseMatrixD C(Ndofs, Ndofs);
+	C.setFromTriplets(tripletList.begin(), tripletList.end());
+	MATLAB_export(C,"C");
 
 	cerr << "this function is not implemented!" << endl;
 
-	//update convexified coeff
-	solution.segment(pLC->m_offset, degreedim*3) = coeff;
 }
 
 ///////////////////////////////////////////////////////
@@ -930,7 +1012,7 @@ void Tsolver::time_stepping_MA() {
 			cout << "min Eigenvalue " << min_EW << endl;
 		}
 
-//		convexify(Lsolution);
+		convexify(Lsolution);
 
 		restore_MA(Lsolution);
 
