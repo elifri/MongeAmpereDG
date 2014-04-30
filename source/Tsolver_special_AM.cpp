@@ -767,6 +767,8 @@ void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // s
 	u[0] = 2*sqr(x[0]) + 2*sqr(x[1]) + 3 * x[0]*x[1];
 #elif (PROBLEM == SIMPLEMONGEAMPERE2)
 	u[0] = sqr(x[0])/2.0 + sqr(x[1])/2.0;
+#elif (PROBLEM == BRENNEREX1)
+	u[0] = 20*exp(pow(x[0],6)/6.0+x[1]);
 #elif (PROBLEM == CONST_RHS)
 	u[0] = 0; // exact solution not known, Dirichlet boundary conditions with u=0
 #elif (PROBLEM == CONST_RHS2)
@@ -810,6 +812,8 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 	u_rhs[0] = 2./sqr(2-sqr(x.norm()));
 #elif (PROBLEM == SIMPLEMONGEAMPERE)
 	u_rhs[0] = 4;
+#elif (PROBLEM == BRENNEREX1)
+	u_rhs[0] = 2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4);
 #elif (PROBLEM == CONST_RHS || SIMPLEMONGEAMPERE2)
 	u_rhs[0] = 1;
 #else
