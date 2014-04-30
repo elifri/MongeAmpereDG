@@ -3,18 +3,15 @@
 
 from dolfin import *
 import scipy.io
+from convexify import convexify
 
-def MA_iteration(mesh, V, u0, f, max_it):
+def MA_iteration(mesh, V, u0, f, max_it,w):
   #define variables
 
   #define exact solution
   u_e = interpolate(u0, V)
-
-  #start solution
-  w = Function(V)
-  #w = interpolate(u0, V)
-  w = interpolate(Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0'),V)
-  #and the cofactor matrix of its hessian
+  
+  #cofactor matrix of startsolution's hessian
   coeff = cofac(grad(grad(w)))
 
   #penalty
@@ -65,6 +62,31 @@ def MA_iteration(mesh, V, u0, f, max_it):
     u_array = u.vector().array()
     print 'Errornorm:', errornorm(u,u_e)
 
+    plot(project(u, bigV), title = 'solution'+str(iteration)+'before convexifying')
+    plot(project(abs(u-u_e),bigV), title = 'error'+str(iteration)+'before convexifying')
+
+    
+    plot(det(grad(grad(u))), title = 'determinant of hessian'+str(iteration)+'before convexifying')
+
+    #==================
+    #convexify
+    #===================
+    #convexify function
+
+    u.vector()[:] = convexify(mesh, V, u_array)
+    print "u_array ", u_array
+    print "u_convex_array ", u_convex.vector().array()
+
+    #plot results
+
+    plot(project(u_convex,bigV), title = 'convexified solution')
+    #plot(project(u_-u_convex, bigV), title = 'difference convex and not convex')
+    plot(u_-u_convex, title = 'difference convex and not convex')
+
+    plot(project(abs(u_-u_e),bigV), title = 'error in non convexified solution')
+    
+    #hold plot
+    #interactive()
 
     # Dump solution to file in VTK format
     s = 'MongeAmpere'+str(iteration)+'.pvd'
@@ -73,6 +95,8 @@ def MA_iteration(mesh, V, u0, f, max_it):
     
     #update w
     w.assign(u)
+    
+    #get information abuot second derivatives
     
     #coeff = cofac(grad(grad(w)))
     
@@ -95,15 +119,15 @@ def MA_iteration(mesh, V, u0, f, max_it):
     scipy.io.savemat('wyx'+str(iteration)+'.mat', {'wyx': wyx.vector().array()})
     scipy.io.savemat('wyy'+str(iteration)+'.mat', {'wyy': wyy.vector().array()})
   
-    plot(u, title = 'solution'+str(iteration))
-    plot(project(abs(u-u_e),bigV), title = 'error'+str(iteration))
+    plot(project(u,bigV), title = 'solution'+str(iteration)+'after convexifying')
+    plot(project(abs(u-u_e),bigV), title = 'error'+str(iteration)+'after convexifying')
 
-    plot(det(grad(grad(u))), title = 'determinant of hessian'+str(iteration))
+    plot(det(grad(grad(u))), title = 'determinant of hessian'+str(iteration)+'after convexifying')
+    #plot(abs(wxx-(u_e.dx(0)).dx(0)), title = 'error in dxx'+str(iteration))
 
-    plot(project(abs(f-det(grad(grad(u)))), bigV), title = 'rhs - determinant of hessian'+str(iteration))
-
+    #plot(project(abs(f-det(grad(grad(u)))), bigV), title = 'rhs - determinant of hessian'+str(iteration))
+    
     interactive()
-  
     
   return u;
   
@@ -112,7 +136,7 @@ if __name__ == "__main__":
   # Create mesh and define function space
   deg = 2
   
-  mesh = UnitSquareMesh(60, 60)
+  mesh = UnitSquareMesh(20, 20, 'crossed')
   V = FunctionSpace(mesh, 'DG', deg)
   bigMesh = refine(mesh)
   bigV = FunctionSpace(bigMesh, 'DG', deg)
@@ -124,23 +148,35 @@ if __name__ == "__main__":
   #u0 = Constant(0.0) #const rhs
   #u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
   #u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
-  #u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
-  u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
+  u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
+  #u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
 
 
   #rhs
   #f = Constant(1.0) #const rhs
   #f = Constant(7.0) #simpleMongeAmpere
   #f = Constant(1.0) #simpleMongeAmpere2
-  #f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
-  f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
+  f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
+  #f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
 
-  #maximum number of iterations
-  max_it = 3
-
+  #exact solution
   u_e = interpolate(u0, V)
 
-  u = MA_iteration(mesh, V, u0, f, max_it)
+  #start solution
+  w = Function(V)
+  error = Expression('x[0]*x[1]*(1-x[0]) + x[0]*x[1]*(1-x[1])')
+  #error = Expression('0.0')
+  
+  #choose between "identity" and disturbed exact solution
+  #w = interpolate(Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0'),V)
+  w.assign(u_e+interpolate(error, V))
+  
+  
+  #maximum number of iterations
+  max_it = 1
+
+
+  u = MA_iteration(mesh, V, u0, f, max_it,w)
 
  # Plot solution and mesh
   plot(project(u,bigV), title = 'solution')
@@ -151,4 +187,4 @@ if __name__ == "__main__":
   plot(project(abs(f-det(grad(grad(u)))), bigV), title = 'rhs - determinant of hessian')
 
   #Hold plot
-  #interactive()
+  interactive()
