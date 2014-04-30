@@ -174,7 +174,6 @@ bool Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess) {
 	assert(!(ev0 != ev0) && "The smaller eigenvalue is nan");
 	assert(!(ev1 != ev1) && "The bigger eigenvalue is nan");
 
-
 	//update min EW
 	if (ev0 < min_EW) {
 		min_EW = ev0;
@@ -195,15 +194,12 @@ bool Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess) {
 
 	}
 
-
 	//update maximal EW for penalty
 	if (ev1 > max_EW) {
 		max_EW = ev1;
 	}
 	//store eigenvalue for output
 	pLC->smallest_EW = ev0;
-
-	cout << "eigenvalues " << ev0 << " " << ev1 << endl;
 
 	return (ev0 > epsilon);
 }
@@ -263,7 +259,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 					pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
 		}
 		else{
-				hess << 1, 0 , 0, 1;
+			hess << 1, 0 , 0, 1;
 			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
 			max_EW = 1;
@@ -524,13 +520,13 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 							// Copy entries for Dirichlet boundary conditions into right hand side
 							for (unsigned int ishape = 0; ishape < shapedim;
 									++ishape) {
-								double val = stabsign * shape.get_Fquadw(iqLC)
+								double val = -stabsign * shape.get_Fquadw(iqLC)
 										* length * uLC(0)
 										* pBC->A_grad_times_normal(pLC->A, ishape,iqLC)
 										/ facLevelLength[level];
 
 								if (penalty != 0.0) {
-									val += penalty * shape.get_Fquadw(iqLC) * uLC(0)
+									val += -penalty * shape.get_Fquadw(iqLC) * uLC(0)
 											* shape.get_Fquads(ishape,iqLC);
 								}
 
@@ -583,7 +579,6 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 		}
 	}
-
 }
 
 //////////////////////////////////////////////////////
@@ -714,8 +709,6 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 			pLC->Serror(k) = std::abs(state(0)-stateEx(0));
 		}
 
-
-
 		// Copy solution entries back into u
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 			pLC->uold(ishape,0) = pLC->u(ishape,0);
@@ -725,7 +718,6 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		state_type s1, s2;
 		shape.assemble_state_N(pLC->u,0,s1);
 		shape.assemble_state_N(pLC->uold,0,s2);
-
 
 	}
 
@@ -863,11 +855,8 @@ void Tsolver::time_stepping_MA() {
 	if (levelmax < level)
 		level = levelmax;
 
-	cout << "Using refine_eps=" << refine_eps << " and coarsen_eps="
-			<< coarsen_eps << "." << endl;
 
 	igpm::processtimer pt; //start timer
-	cout << "Starting time_stepping_MA" << endl;
 
 	//  int refine_count = 0;
 	//  value_type t = 0.0;
@@ -879,8 +868,6 @@ void Tsolver::time_stepping_MA() {
 	// refine_circle (1.0); refine_band (0.85, 1.05);
 
 	refine(level);
-
-	cout << "after refine" << endl;
 
 	initializeLeafCellData_MA();
 
@@ -973,13 +960,11 @@ void Tsolver::time_stepping_MA() {
 			cout << "min Eigenvalue " << min_EW << endl;
 		}
 
-//		?plotter.write_controlpolygonVTK(iteration+20, Lsolution);
-
 //		convexify(Lsolution);
 
 		restore_MA(Lsolution);
 
-		cout << "LSolution" << Lsolution.transpose() << endl;
+//		cout << "LSolution" << Lsolution.transpose() << endl;
 
 		setleafcellflags(0, false);
 

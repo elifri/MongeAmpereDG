@@ -1,0 +1,61 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{ngerman}
+\usepackage{cite}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{stmaryrd}
+
+\newcommand{\D}{\operatorname{D}}
+
+
+\title{Notizen für Finite Elemente Verfahren}
+\author{Elisa}
+
+
+\begin{document}
+
+\maketitle
+
+\section*{C++}
+
+für Randbedingungen $u\mid_{\partial \Omega}=g$ und rechte seite $f$ 
+wird das LGS $LM u = Lrhs$ mit
+\[
+	LM = lhs + Randterme + penalty
+\]
+Dabei ist in leafcell berechnet
+\[
+	lhs(\varphi,u) = -\int_\Omega (A \nabla \varphi)^T \cdot \nabla u dx
+\]
+
+im assemble\_MA wird berechnet
+\begin{align*}
+	Randterme(\varphi,u) = \int_{inner \: faces} \lVert \varphi \rVert \{\{A\nabla u \cdot n\}\} dS 
+										+ \int_{inner \: faces} \lVert u \rVert \{\{A\nabla \varphi \cdot n\}\} dS \\
+										+ \int_{outer \: faces} \varphi \cdot (A\nabla u \cdot n) dS 
+										+ \int_{outer \: faces} u \cdot (A\nabla \varphi \cdot n) dS	
+\end{align*}
+
+und
+\[
+	penalty(\varphi,u) = \int_{inner \: faces} \sigma \lVert \varphi \rVert \lVert u \rVert dS
+	                  + \int_{outer \: faces} \sigma \varphi u dS
+\]
+
+Für die Lrhs wird gerechnet:
+\[
+	Lrhs(\varphi) = \int_\Omega f \varphi 
+	             +\int_{outer \: faces} g A \nabla \varphi 
+	             + \sigma \int_{outer \: faces} g \lVert varphi \rVert
+\]
+
+Achtung $\sigma$ wird in jeder Iteration mit $(iteration+1)*10$ multipliziert
+
+\end{document}

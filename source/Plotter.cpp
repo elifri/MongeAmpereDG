@@ -877,7 +877,7 @@ void Plotter::writeLeafCellVTK(std::string filename, const unsigned int refine, 
 	write_solution_data_array(file, v, refine);
 	file << "\t\t\t</PointData>\n";
 
-	write_points(file, v, refine, true);
+	write_points(file, v, refine, true); //define if with 3rd coordinate or without
 	write_cells(file,v, refine);
 
 	write_vtk_end(file);
@@ -1003,7 +1003,6 @@ void Plotter::write_controlpolygonVTK(const unsigned int i, const Eigen::VectorX
 	fname += "/"+ output_prefix + "grid_controlpolygon" + NumberToString(i) + ".vtu";
 
 	write_controlpolygonVTK(fname, 0, solution);
-
 }
 
 
