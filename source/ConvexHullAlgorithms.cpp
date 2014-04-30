@@ -21,7 +21,6 @@ void collect_Points(grid_type &grid, const Tshape &shape, Eigen::VectorXd &solut
 
 	{
 	// collect points
-	int Nnodes;
 	state_type state;
 	baryc_nvector_type bc = shape.baryc_control_points;
 	nvector_type nv;
@@ -67,10 +66,15 @@ void convex_hull(Points &P, Plotter &plotter, int iteration)
 
 	write_points("polygon_points.vtu", polyP);
 
+	igpm::processtimer pt; //start timer
+	pt.start();
+	cout << "Start timing ..." << endl;
+
 	//assign a plane equation to each polyhedron facet using funcotr Plance from_face
 	std::transform( polyhedron.facets_begin(), polyhedron.facets_end(), polyhedron.planes_begin(),Plane_from_facet());
+	cout << "Calculated plane equations ..." << endl;
 
-    // constructs AABB tree
+	// constructs AABB tree
     Tree tree(polyhedron.facets_begin(),polyhedron.facets_end());
 
 
@@ -109,8 +113,9 @@ void convex_hull(Points &P, Plotter &plotter, int iteration)
 
     	}
     }
-
-    test_convex_hull(P, polyhedron);
+    pt.stop();
+    cout << "Finished projection onto lower convex hull, time: " << pt << endl;
+//    test_convex_hull(P, polyhedron);
 
     write_controlPolygon(plotter.get_output_directory()
 			+"/"+ plotter.get_output_prefix()

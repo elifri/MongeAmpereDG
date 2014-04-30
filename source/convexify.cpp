@@ -40,11 +40,13 @@ int main(int argc, char*argv[])
 		P.push_back(Point(x,y,z));
 	}
 
+	//pop last element since program read it twice (last line is blank)
+	P.pop_back();
 	input.close();
 
 	//convexify
 	Plotter plotter;
-	plotter.set_output_directory("inputdata/test/");
+	plotter.set_output_directory("output");
 
 	convex_hull(P, plotter,0);
 
