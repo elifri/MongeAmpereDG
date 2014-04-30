@@ -75,7 +75,7 @@ def convexify(mesh, V, u_array):
 	  
 	  #points_with_middle_pts[len(points_with_middle_pts):] = points
 	  
-	  if cell_ind >= suspicious_begin and cell_ind <= suspicious_end:
+	  if cell_ind == 84 or cell_ind == 67:
 		print "cell index ", cell_ind
 #		print "coeffsLagrange ", coeffsLagrange
 		print "coeffsBezier ", coeffBezier
@@ -89,8 +89,8 @@ def convexify(mesh, V, u_array):
 	  for i in range(len(points)):
 		  tmpfile.write("%.10e %.10e %.10e \n" % (points[i][0],points[i][1],coeffBezier[i]))
 
-	  for i in range(len(middle_pts)):
-		tmpfile.write("%.10e %.10e %.10e \n" % (middle_pts[i][0],middle_pts[i][1],middle_val_pts[i]))
+	  #for i in range(len(middle_pts)):
+		#tmpfile.write("%.10e %.10e %.10e \n" % (middle_pts[i][0],middle_pts[i][1],middle_val_pts[i]))
 	
 	#close file after writing points  
 	tmpfile.close()
@@ -112,6 +112,7 @@ def convexify(mesh, V, u_array):
 	new_coord = 0
 	ignore = False
 
+	"""
 	for line in tmpfile:
 	  print i, " ", new_coord
 	  if ignore:
@@ -130,17 +131,25 @@ def convexify(mesh, V, u_array):
 		i = 0
 	  
 	print "coeffs c++ ", coeff_cplusplus
+"""
+	for line in tmpfile:
+	  coordinates = line.split(" ")
+	  coeff_cplusplus[i] = coordinates[2]
+	  i = i+1
+	  
+	#print "coeffs c++ ", coeff_cplusplus
+
 
 	i=0
 	#transform from bezier to lagrange basis
 	for cell in cells(mesh):
 	  cell_ind = cell.index()
 	  coeffs = coeff_cplusplus[i*6: i*6+6]
-	  print "22coeffs", coeffs
+#	  print "22coeffs", coeffs
 	  coeffs = mult(trafo_inv,coeffs)
 	  for j in range(6):
 		u_convex_array[dofmap.cell_dofs(cell_ind)[j]] = coeffs[j]
-	  if cell_ind >= suspicious_begin and cell_ind <= suspicious_end:
+	  if cell_ind == 84 or cell_ind == 67:
 		print "cell index ", cell_ind
 		print "coeffsBezier ", coeff_cplusplus[i*6: i*6+6]
 		print "coeffsLagrange ", coeffs
