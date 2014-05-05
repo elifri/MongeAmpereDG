@@ -741,6 +741,11 @@ int Tshape::get_local_bezier_no(const int i, const int j, const int k) const{
 	return 4;
 }
 
+int Tshape::get_local_bezier_no(const Eigen::Vector3i &indeces) const
+{
+	return get_local_bezier_no(indeces(0), indeces(1), indeces(2));
+}
+
 int Tshape::get_local_bezier_no_from_node(int n) const{
 	assert (n >= 0 && n < Ndim && "Ther is no node with No "+n);
 
@@ -752,6 +757,120 @@ int Tshape::get_local_bezier_no_from_node(int n) const{
 	case 1: return 3;
 	case 2: return 5;
 	default:	std::cerr << "Error: Could not find node " << n << endl; std::exit(1);
+	}
+}
+
+typedef Tshape::bezier_iterator bezier_iterator;
+
+Tshape::bezier_iterator::bezier_iterator(int start):m_number(start) {}
+
+bezier_iterator& Tshape::bezier_iterator::operator=(const bezier_iterator& bi)
+{
+	m_number = bi.m_number;
+	return *this;
+}
+
+bool Tshape::bezier_iterator::operator!=(const bezier_iterator& bi)
+{
+	return m_number!=bi.m_number;
+}
+
+bezier_iterator& Tshape::bezier_iterator::operator++()
+{
+	switch(m_number)
+	{
+	case 0:		m_number++; break;
+	case 1:		m_number=3; break;
+	case 2:		m_number=0; break;
+	case 3:		m_number=4; break;
+	case 4:		m_number=5; break;
+	case 5:		m_number=2; break;
+	default: std::cerr << "Unknown shape no! "<< endl;
+	}
+	return *this;
+}
+
+
+int Tshape::bezier_iterator::operator*() const
+{
+	return m_number;
+}
+
+
+bezier_iterator Tshape::begin(const int face) const {
+	switch(face)
+	{
+	case 0: return bezier_iterator(3); break;
+	case 1: return bezier_iterator(5); break;
+	case 2: return bezier_iterator(0); break;
+	default: std::cerr << "Unknown face no no! "<< endl; exit(-1);
+	}
+}
+bezier_iterator Tshape::end(const int face) const
+{
+	switch(face)
+	{
+		case 0: return bezier_iterator(4); break;
+		case 1: return bezier_iterator(1); break;
+		case 2: return bezier_iterator(2); break;
+		default: std::cerr << "Unknown face no no! "<< endl; exit(-1);
+	}
+}
+
+typedef Tshape::reverse_bezier_iterator reverse_bezier_iterator;
+
+Tshape::reverse_bezier_iterator::reverse_bezier_iterator(int start):m_number(start) {}
+
+reverse_bezier_iterator& Tshape::reverse_bezier_iterator::operator=(const reverse_bezier_iterator& bi)
+{
+	m_number = bi.m_number;
+	return *this;
+}
+
+bool Tshape::reverse_bezier_iterator::operator!=(const reverse_bezier_iterator& bi)
+{
+	return m_number!=bi.m_number;
+}
+
+reverse_bezier_iterator& Tshape::reverse_bezier_iterator::operator++()
+{
+	switch(m_number)
+	{
+	case 0:		m_number=2; break;
+	case 1:		m_number=0; break;
+	case 2:		m_number=5; break;
+	case 3:		m_number=1; break;
+	case 4:		m_number=3; break;
+	case 5:		m_number=4; break;
+	default: std::cerr << "Unknown shape no! "<< endl;
+	}
+	return *this;
+}
+
+
+int Tshape::reverse_bezier_iterator::operator*() const
+{
+	return m_number;
+}
+
+
+reverse_bezier_iterator Tshape::rbegin(const int face) const {
+	switch(face)
+	{
+	case 0: return reverse_bezier_iterator(5); break;
+	case 1: return reverse_bezier_iterator(0); break;
+	case 2: return reverse_bezier_iterator(3); break;
+	default: std::cerr << "Unknown face no no! "<< endl; exit(-1);
+	}
+}
+reverse_bezier_iterator Tshape::rend(const int face) const
+{
+	switch(face)
+	{
+		case 0: return reverse_bezier_iterator(1); break;
+		case 1: return reverse_bezier_iterator(4); break;
+		case 2: return reverse_bezier_iterator(2); break;
+		default: std::cerr << "Unknown face no no! "<< endl; exit(-1);
 	}
 }
 

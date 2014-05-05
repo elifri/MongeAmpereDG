@@ -9,6 +9,9 @@
 #include "Equad.hpp"
 #include "Fquad.hpp"
 
+#include <iostream>
+#include <stdint.h>
+
 using namespace config;
 
 class Tshape {
@@ -84,9 +87,39 @@ public:
 	///return the local no of the function belonging to the control coefficient c_ijk
 	int get_local_bezier_no(const int i, const int j, const int k) const;
 
+	int get_local_bezier_no(const Eigen::Vector3i &indeces) const;
+
 	///return the local no of the function belonging to the control point at node n
 	int get_local_bezier_no_from_node(int n) const;
 
+
+	struct bezier_iterator {
+			bezier_iterator(int start);
+			bezier_iterator& operator=(const bezier_iterator&);
+			bool operator!=(const bezier_iterator&);
+			bezier_iterator& operator++();
+			int operator*() const;
+
+		private:
+			uint8_t m_number; // number in local enumeration
+		};
+
+	struct reverse_bezier_iterator {
+			reverse_bezier_iterator(int start);
+			reverse_bezier_iterator& operator=(const reverse_bezier_iterator&);
+			bool operator!=(const reverse_bezier_iterator&);
+			reverse_bezier_iterator& operator++();
+			int operator*() const;
+
+		private:
+			uint8_t m_number; // number in local enumeration
+		};
+
+	bezier_iterator begin(int face) const;
+	bezier_iterator end(int face) const;
+
+	reverse_bezier_iterator rbegin(int face) const;
+	reverse_bezier_iterator rend(int face) const;
 
 	//////////////     bilinear forms     ///////////////
 
@@ -250,6 +283,9 @@ public:
 	value_type& set_Fquadx(const int i, const int j) {
 		return fquad.Fquadx(i, j);
 	}
+
+
+
 };
 
 ///////////////////////////////////////////////////////////////
