@@ -92,7 +92,7 @@ public:
 													Eigen::MatrixXd &solution);
 
 	void write_numericalsolution(const unsigned int i);
-	void write_numericalsolution_VTK(const unsigned int i);
+	void write_numericalsolution_VTK(const unsigned int i, bool interstep = false);
 
 	void write_controlpolygonVTK(const unsigned int i);
 
