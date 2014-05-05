@@ -585,7 +585,6 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		}
 	}
 
-	Lrhs*= -2; // solve -laplace u = -f <-> laplace u = f
 	// cerr << "distmax = " << distmax << endl;
 	// set flag=false; unew = 0.0; in invert_mass/volume
 }
@@ -627,12 +626,13 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 {
 
 	int Ndofs = solution.size();
+	int NinnerEdges = Ndofs;
 
 	std::vector< Eigen::Triplet<double> > tripletList;
-	tripletList.reserve(6*Ndofs);
+	tripletList.reserve(12*Ndofs + 8*NinnerEdges*2);
 
 
-	for (int n=0; n< Ndofs; n+=6)
+/*	for (int n=0; n< Ndofs; n+=6)
 	{
 		for (int i=n; i < n+6; i++)
 		{
@@ -698,13 +698,88 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 			tripletList.push_back( T( i, n, 1));
 		}
 	}
+*/
 
-	SparseMatrixD C(Ndofs, Ndofs);
+
+	//linear condition for convexity on every cell - paper "convexity preserving c0splines" (corollary 3.2 (3.7)
+	for (int n=0; n< Ndofs; n+=6)
+		{
+			for (int condition_index=n; condition_index < n+6; condition_index++)
+			{
+				// Delta21 Delta31 >= 0
+				tripletList.push_back( T( condition_index, n+3, 1));
+				tripletList.push_back( T( condition_index, n+5, -1));
+				tripletList.push_back( T( condition_index, n+4, -1));
+				tripletList.push_back( T( condition_index, n, 1));
+
+				// Delta13 Delta23 >= 0
+				tripletList.push_back( T( condition_index, n+2, 1));
+				tripletList.push_back( T( condition_index, n+4, -1));
+				tripletList.push_back( T( condition_index, n+3, -1));
+				tripletList.push_back( T( condition_index, n+5, 1));
+
+				//Delta32 Delta12 >= 0
+				tripletList.push_back( T( condition_index, n+1, 1));
+				tripletList.push_back( T( condition_index, n+3, -1));
+				tripletList.push_back( T( condition_index, n+5, -1));
+				tripletList.push_back( T( condition_index, n+4, 1));
+			}
+		}
+
+	//counter for all inserted conditions (to remember current current row index in matrix C)
+	int condition_index = Ndofs;
+
+	//init variables
+	const leafcell_type *pLC, *pNC;
+	nvector_type nv; //nodevector to store neighbouring nodes
+	Fidvector_type idNCv; //vector for neighbour ids
+	baryc_type x_baryc;
+
+	//conditions for convexity on all cells- paper "convexity preserving c0splines" (Theorem 3.6)
+	//loop over all cells and figure out the conditions mentioned in (3.11)
+	for (grid_type::leafcellmap_type::iterator it=grid.leafCells().begin(); it!=grid.leafCells().end(); ++it)
+	{
+		// get id and pointer to this cell
+		const grid_type::id_type & idLC = grid_type::id(it);
+		grid.findLeafCell(idLC, pLC);
+
+		int offset_T1 = pLC->m_offset;
+
+		grid_type::facehandlevector_type vFh, vOh; // neighbor face number and orientation
+		grid.faceIds(idLC, idNCv, vFh, vOh);
+		for (unsigned int i = 0; i < idLC.countFaces(); i++) { // loop over faces
+			if (idNCv[i].isValid()) {
+				//get point to neighbour leaf cell
+				grid.findLeafCell(idNCv[i], pNC);
+				//get nodes of neighbouring leafcell
+				get_nodes(grid, idNCv[i], nv);
+
+				int offset_T2 = pNC->m_offset;
+
+				//get baryc. coordinates of node (neighbouring leafcell) opposite of the face i
+				// (in the paper called baryc coordinates of v_v with respect to T1)
+				get_baryc_coordinates(idLC, nv[i], x_baryc);
+
+				//c^_101 - beta_1 c_200 - beta_2 c_110 - beta_3 c_101 >= 0
+				tripletList.push_back( T( condition_index, offset_T2 + shape.get_local_bezier_no(1,0,1), 1));
+				tripletList.push_back( T( condition_index, offset_T1 + shape.get_local_bezier_no(2,0,0), -x_baryc(0)));
+				tripletList.push_back( T( condition_index, offset_T1 + shape.get_local_bezier_no(1,1,0), -x_baryc(1)));
+				tripletList.push_back( T( condition_index, offset_T1 + shape.get_local_bezier_no(1,0,1), -x_baryc(2)));
+
+				//c^_001 - beta_1 c_101 - beta_2 c_011 - beta_3 c_002 >= 0
+				tripletList.push_back( T( condition_index+1, offset_T2 + shape.get_local_bezier_no(0,1,1), 1));
+				tripletList.push_back( T( condition_index+1, offset_T1 + shape.get_local_bezier_no(1,0,1), -x_baryc(0)));
+				tripletList.push_back( T( condition_index+1, offset_T1 + shape.get_local_bezier_no(0,1,1), -x_baryc(1)));
+				tripletList.push_back( T( condition_index+1, offset_T1 + shape.get_local_bezier_no(0,0,2), -x_baryc(2)));
+
+				condition_index +=2;
+			}
+		}
+	}
+
+	SparseMatrixD C(condition_index, Ndofs);
 	C.setFromTriplets(tripletList.begin(), tripletList.end());
 	MATLAB_export(C,"C");
-
-	cerr << "this function is not implemented!" << endl;
-
 }
 
 ///////////////////////////////////////////////////////
@@ -893,7 +968,7 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 #elif (PROBLEM == MONGEAMPERE4)
 	u_rhs[0] = 2./sqr(2-sqr(x.norm()));
 #elif (PROBLEM == SIMPLEMONGEAMPERE)
-	u_rhs[0] = 4;
+	u_rhs[0] = 7;
 #elif (PROBLEM == BRENNEREX1)
 	u_rhs[0] = 2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4);
 #elif (PROBLEM == CONST_RHS || SIMPLEMONGEAMPERE2)
@@ -1020,7 +1095,8 @@ void Tsolver::time_stepping_MA() {
 
 		restore_MA(Lsolution);
 
-//		cout << "LSolution" << Lsolution.transpose() << endl;
+		cout << "LSolution" << Lsolution.transpose() << endl;
+		MATLAB_export(Lsolution, "solution");
 
 		setleafcellflags(0, false);
 
