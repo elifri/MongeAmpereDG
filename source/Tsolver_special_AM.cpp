@@ -525,13 +525,13 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 							// Copy entries for Dirichlet boundary conditions into right hand side
 							for (unsigned int ishape = 0; ishape < shapedim;
 									++ishape) {
-								double val = -stabsign * shape.get_Fquadw(iqLC)
+								double val = stabsign * shape.get_Fquadw(iqLC)
 										* length * uLC(0)
 										* pBC->A_grad_times_normal(pLC->A, ishape,iqLC)
 										/ facLevelLength[level];
 
 								if (penalty != 0.0) {
-									val += -penalty * shape.get_Fquadw(iqLC) * uLC(0)
+									val += penalty * shape.get_Fquadw(iqLC) * uLC(0)
 											* shape.get_Fquads(ishape,iqLC);
 								}
 
