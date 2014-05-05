@@ -301,6 +301,26 @@ void Tsolver::get_coordinates (const grid_type::id_type& idLC,
     }
 };
 
+///////////////////////////////////////////////////////
+
+void Tsolver::get_baryc_coordinates (const grid_type::id_type& idLC,
+		   const space_type & x, baryc_type& baryc)
+{
+	nvector_type vN;
+	get_nodes(grid, idLC,vN);
+
+	//assemble LGS to calc baryc coordinates
+	Eigen::Matrix3d LGS;
+	LGS << vN(0)(0), vN(1)(0), vN(2)(0),
+		   vN(0)(1), vN(1)(1), vN(2)(1),
+		   1, 1,1;
+	Eigen::Vector3d rhs;
+	rhs << x(0), x(1), 1;
+
+	baryc = LGS.colPivHouseholderQr().solve(rhs);
+}
+
+
 ////////////////////////////////////////////////////
 
 

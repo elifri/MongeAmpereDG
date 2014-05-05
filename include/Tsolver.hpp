@@ -134,6 +134,12 @@ public:
     */
    void get_coordinates (const grid_type::id_type& idLC,
                          const baryc_type& baryc, space_type & x);
+   /*! determine barycentric coordinates of physical coordinates in cell idLC
+    *
+    */
+   void get_baryc_coordinates (const grid_type::id_type& idLC,
+		   const space_type & x, baryc_type& baryc);
+
    void get_center (const Nvector_type & nv, space_type & center);
    void get_center (const grid_type::id_type& idLC, space_type & center);
    void get_closest_center (const space_type & x,
