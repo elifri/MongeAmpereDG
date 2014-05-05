@@ -715,6 +715,45 @@ void Tshape::initialize_mass() {
 }
 ;
 
+//////////////////////////////////////////////////////
+//////                                     ///////////
+//////   handling of bezier polynomials    ///////////
+//////                                     ///////////
+//////////////////////////////////////////////////////
+
+int Tshape::get_local_bezier_no(const int i, const int j, const int k) const{
+	assert (i >= 0 && j >= 0 && k >= 0 && "Coefficient indices must be positive! ");
+	assert (i <= degreedim && j <= degreedim && k <= degreedim && "Coefficient indices must be smaller or equal than 2! ");
+	assert ( i+ j + k == degreedim && "Sum of indices must be equal degreedim ");
+
+	assert ( degreedim == 2 && "Degrees other than two are not support yet");
+
+	//check nodes
+	if (i == 2)	return 0;
+	if (j == 2)	return 3;
+	if (k == 2) return 5;
+
+	if (i == 1)
+		{
+			if (j == 1)	return	1;
+			else	return 2;
+		}
+	return 4;
+}
+
+int Tshape::get_local_bezier_no_from_node(int n) const{
+	assert (n >= 0 && n < Ndim && "Ther is no node with No "+n);
+
+	assert ( degreedim == 2 && "Degrees other than two are not support yet");
+
+	switch (n)
+	{
+	case 0:	return 0;
+	case 1: return 3;
+	case 2: return 5;
+	default:	std::cerr << "Error: Could not find node " << n << endl; std::exit(1);
+	}
+}
 
 //////////////////////////////////////////////////////
 //////////////                         ///////////////

@@ -78,6 +78,16 @@ public:
 	// void set_quadrature_data ();
 	// void set_quadrature_data (char *data_file);
 
+
+	////////////// handling of bezier polynomials ///////////
+
+	///return the local no of the function belonging to the control coefficient c_ijk
+	int get_local_bezier_no(const int i, const int j, const int k) const;
+
+	///return the local no of the function belonging to the control point at node n
+	int get_local_bezier_no_from_node(int n) const;
+
+
 	//////////////     bilinear forms     ///////////////
 
 	//////////////    ASSEMBLING STATES    ///////////////
