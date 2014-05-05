@@ -36,12 +36,20 @@ public:
   typedef typename config::Estate_type     Estate_type;
   typedef typename config::mass_type       mass_type;
 
+  typedef typename grid_type::faceidvector_type		   Fidvector_type;
+  typedef typename grid_type::facehandlevector_type	   facehandlevector_type;
+
+  typedef typename grid_type::leafcellmap_type	   	   leafcellmap_type;
+  typedef typename config_type::cell_stack_type		   cell_stack_type;
+  typedef typename config_type::cell_stack_entry_type  cell_stack_entry_type;
 
   ////////////////////////////
 
 protected:
   unsigned int m_nFaces;
   bool         m_bKnodes;
+
+  Eigen::Matrix<unsigned int, 6, 1>  m_dofs_C;
 
 
 public:
@@ -216,6 +224,129 @@ public:
         for (int k=0; k<shapedim; k++) pvLC[i]->unew(k,j) = 0.0;
     }
   }
+
+	/*!
+	 * Generate collection of all leafcells meeting at a given node.
+	 *
+	 * @param node Node of this leafcell to start with.
+	 * @param neighbors
+	 * @return returns true, if node is boundary node
+	 */
+	bool node_neighbors(const unsigned int node, leafcellmap_type &neighbors)
+	{
+		bool is_boundary=false;
+
+		assert(node < 3 && "Can only handle triangles! ");
+		neighbors.clear();
+
+		cell_stack_type cell_stack;
+
+		cell_stack_entry_type cell;
+		cell.first       = this->id();
+		cell.second.ptr  = this;
+		cell.second.node = node;
+		cell_stack.push(cell);
+
+		do {
+			cell = cell_stack.top();
+			cell_stack.pop();
+			if (neighbors.find(cell.first) == neighbors.end()) {
+
+				// put cell to list of neighbors
+				neighbors.insert(cell);
+
+				// put neighbors of cell onto the stack
+				Eigen::VectorXi faces;
+				(cell.second.ptr)->nodeFaces(faces, cell.second.node);
+
+				Fidvector_type vF;             // neighbor ids
+				facehandlevector_type vFh, vOh;   // neighbor face number and orientation
+				this->grid->faceIds(cell.first, vF, vFh, vOh);
+
+				// loop over faces
+				for (int i=0; i<faces.size(); ++i)
+				{
+					if (vF[faces(i)].isValid())
+					{
+						cell_stack_entry_type cell_temp;
+
+						// find out the node number of corresponding node
+						// of the neighbor cell
+						cell_temp.second.node = (cell.second.ptr)->neighbor_node_number (vF[faces(i)], faces(i), cell.second.node, vFh[faces(i)], vOh[faces(i)]);
+
+						leafcell_type *pNC = NULL;  // neighbor cell
+						if (this->grid->findLeafCell(vF[faces(i)], pNC)) {
+
+							if(pNC->isActive()) {
+
+								// neighbor is present at the same level
+								cell_temp.second.ptr = pNC;
+								cell_temp.first      = vF[faces(i)];
+								cell_stack.push(cell_temp);
+
+							} else {
+								is_boundary=true;
+							}
+
+						} else {
+
+							// hanging node
+
+							assert(false && "Cannot handle hanging nodes yet!");
+
+						}
+					} else {
+						is_boundary=true;
+					} // end of "if (vF[f].isValid())"
+				} // end of loop over faces
+			} // end of "if (neighbors.find(cell) == neighbors.end())"
+		} while (!cell_stack.empty());
+
+		// erase "this" from the set of neighbors
+		neighbors.erase(this->id());
+
+		return is_boundary;
+	}
+/*
+	/// set dofs (set to sem_tools::OFFSET_OF_NEIGHBOR, if a neighbor cell is responsible for this degrees of freedom)
+	void set_dofs_C(sem_tools::enumerator &dof_offset_Csem, sem_tools::enumerator &dof_offset_CfemD, sem_tools::enumerator &dof_offset_Cwavelet, Eigen::VectorXi &non_zeros_G)
+	{
+
+		// boundary dof handling for continuous version (vertices)
+		for (unsigned int node=0; node<this->id().countNodes(); ++node)
+		{
+
+			// check if we arrive at this vertex for the first time
+			if( m_vdofs_Csem_node(node)!=sem_tools::INVALID_OFFSET) continue;
+			assert(m_vdofs_CfemD_node(node)==sem_tools::INVALID_OFFSET);
+
+			// handle nodes
+			if(is_hanging_node(node))
+			{
+				m_dofs_C(node)  = sem_tools::OFFSET_OF_NEIGHBOR;
+			} else {
+				// allocate new dof for this node
+				m_dofs_C(node)  = dof_offset_Csem(1);
+			}
+
+
+			// enter dof for all cells sharing this node
+			leafcellmap_type ncells;
+			connectivity_type connectivity;
+			const bool is_boundary_node=this->node_neighbors(node, ncells, connectivity);
+
+			// inform all neighbor cells about node number
+			for (typename leafcellmap_type::iterator it=ncells.begin(); it!=ncells.end(); ++it) {
+				it->second.ptr->m_dofs_C (it->second.node) = m_vdofs_Csem_node (node);
+				it->second.ptr->m_dofs_C(it->second.node) = m_vdofs_CfemD_node(node);
+
+				cout << "" << it->first << ", " << it->second.node << ", " << it->second.ptr << endl;
+			}
+
+			}
+
+		}
+*/
 
   // is called from grid::coarsen
   // LC (this) is deleted after coarsening

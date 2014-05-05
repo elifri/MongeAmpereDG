@@ -16,6 +16,8 @@
 #include "tmyleafcell.hpp"
 #include "Tmyantecell.hpp"
 
+#include <stack>
+
 struct grid_config_type: public igpm::tgridconfig<grid_config_type,
 		example_id_type, double, tmybasecell, tmyantecell, tmyleafcell> {
 	typedef grid_config_type::leafcell_type leafcell_type;
@@ -24,10 +26,21 @@ struct grid_config_type: public igpm::tgridconfig<grid_config_type,
 	typedef grid_config_type::leafcellptrvector_type leafcellptrvector_type;
 	typedef grid_config_type::antecellptrvector_type antecellptrvector_type;
 
+
 	typedef Eigen::Matrix<value_type, id_type::maxFaces, 1> Fvaluevector_type;
 	typedef Eigen::Matrix<space_type, id_type::maxFaces, 1> Fnormalvector_type;
 
 	static const double tol = 1e-13;
+
+	// stuff for finding neighbors
+	struct leafcellnodeneigbhor_type {
+		leafcell_type* ptr;   //< pointer to the leaf cell
+		unsigned int   node;  //< node number of the leaf cell
+	};
+
+	typedef pair<id_type,leafcellnodeneigbhor_type> cell_stack_entry_type;
+	typedef std::stack<cell_stack_entry_type> cell_stack_type;
+
 
 };
 
@@ -53,6 +66,8 @@ typedef grid_type::gridblockhandle_type   gridblockhandle_type;
 typedef grid_type::nodehandle_type        Nhandle_type;
 typedef grid_type::nodehandlevector_type  Nhandlevector_type;
 typedef grid_type::faceidvector_type      Fidvector_type;
+
+
 
 // counts all existing leafs
 template<class IDTYPEINFO_TYPE>
