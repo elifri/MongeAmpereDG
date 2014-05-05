@@ -12,6 +12,9 @@ add_library(Tsolver Tsolver_general.cpp Tsolver_special_POISSON.cpp Tsolver_spec
 add_executable(Mesh mesh.cpp)
 target_link_libraries(Mesh Tsolver Plotter Tmass Tshape singconfig utility)
 
+add_executable(Plot plot.cpp)
+target_link_libraries(Plot Tsolver Plotter Tmass Tshape singconfig utility)
+
 #----example code ----
 #include_directories(${MyProject_SOURCE_DIR}/MainProject/inc)
 # I assume you want to use LibProject as a library in MainProject.
