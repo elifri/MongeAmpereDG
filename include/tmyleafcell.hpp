@@ -250,7 +250,7 @@ public:
 		do {
 			cell = cell_stack.top();
 			cell_stack.pop();
-			if (neighbors.find(cell.first) == neighbors.end()) {
+			if (neighbors.count(cell.first) == 0) {
 
 				// put cell to list of neighbors
 				neighbors.insert(cell);
@@ -307,38 +307,31 @@ public:
 
 		return is_boundary;
 	}
-/*
-	/// set dofs (set to sem_tools::OFFSET_OF_NEIGHBOR, if a neighbor cell is responsible for this degrees of freedom)
-	void set_dofs_C(sem_tools::enumerator &dof_offset_Csem, sem_tools::enumerator &dof_offset_CfemD, sem_tools::enumerator &dof_offset_Cwavelet, Eigen::VectorXi &non_zeros_G)
-	{
 
+	/// set dofs (set to sem_tools::OFFSET_OF_NEIGHBOR, if a neighbor cell is responsible for this degrees of freedom)
+	void set_dofs_C(int &dof_offset)
+	{
 		// boundary dof handling for continuous version (vertices)
 		for (unsigned int node=0; node<this->id().countNodes(); ++node)
 		{
 
 			// check if we arrive at this vertex for the first time
-			if( m_vdofs_Csem_node(node)!=sem_tools::INVALID_OFFSET) continue;
-			assert(m_vdofs_CfemD_node(node)==sem_tools::INVALID_OFFSET);
+			if( m_dofs_C(node)!= config_type::INVALID_OFFSET) continue;
+			assert(m_dofs_C(node)== config_type::INVALID_OFFSET);
 
-			// handle nodes
-			if(is_hanging_node(node))
-			{
-				m_dofs_C(node)  = sem_tools::OFFSET_OF_NEIGHBOR;
-			} else {
-				// allocate new dof for this node
-				m_dofs_C(node)  = dof_offset_Csem(1);
-			}
-
+			// handle nodes (TODO cannot handle hanging nodes)
+			// allocate new dof for this node
+			m_dofs_C(node)  = dof_offset;
+			dof_offset++;
 
 			// enter dof for all cells sharing this node
 			leafcellmap_type ncells;
-			connectivity_type connectivity;
-			const bool is_boundary_node=this->node_neighbors(node, ncells, connectivity);
+			const bool is_boundary_node=this->node_neighbors(node, ncells);
 
 			// inform all neighbor cells about node number
 			for (typename leafcellmap_type::iterator it=ncells.begin(); it!=ncells.end(); ++it) {
-				it->second.ptr->m_dofs_C (it->second.node) = m_vdofs_Csem_node (node);
-				it->second.ptr->m_dofs_C(it->second.node) = m_vdofs_CfemD_node(node);
+				it->second.ptr->m_dofs_C (it->second.node) = m_dofs_C(node);
+				it->second.ptr->m_dofs_C(it->second.node) = m_dofs_C(node);
 
 				cout << "" << it->first << ", " << it->second.node << ", " << it->second.ptr << endl;
 			}
@@ -346,7 +339,7 @@ public:
 			}
 
 		}
-*/
+
 
   // is called from grid::coarsen
   // LC (this) is deleted after coarsening

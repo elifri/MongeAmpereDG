@@ -1002,6 +1002,8 @@ void Tsolver::time_stepping_MA() {
 
 	update_baseGeometry();
 
+	update_c_numeration();
+
 	set_leafcellmassmatrix();
 	// refine_circle (1.0); refine_band (0.85, 1.05);
 
