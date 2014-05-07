@@ -32,6 +32,8 @@ struct grid_config_type: public igpm::tgridconfig<grid_config_type,
 
 	static const double tol = 1e-13;
 
+	static const unsigned int INVALID_OFFSET = (unsigned int) -1;
+
 	// stuff for finding neighbors
 	struct leafcellnodeneigbhor_type {
 		leafcell_type* ptr;   //< pointer to the leaf cell

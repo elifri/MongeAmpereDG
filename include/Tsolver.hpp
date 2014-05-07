@@ -124,6 +124,8 @@ public:
    And: level-volume factors, level-length factors
 */
    void update_baseGeometry ();
+   void update_c_numeration();
+
    void initialize_plotter();
    void set_leafcellmassmatrix ();
    void get_normal_length (const Nvector_type & nv, const unsigned int & i,

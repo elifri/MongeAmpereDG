@@ -248,6 +248,22 @@ for (unsigned int k=0; k<3; k++) {
   }
 };
 
+void Tsolver::update_c_numeration()
+{
+	int offset = 0;
+	for (grid_type::leafcellmap_type::iterator it=grid.leafCells().begin(); it!=grid.leafCells().end(); ++it)
+	{
+		// get id and pointer to this cell
+		const grid_type::id_type & idLC = grid_type::id(it);
+		leafcell_type* pLC;
+
+		grid.findLeafCell(idLC, pLC);
+
+		pLC->set_dofs_C(offset);
+	}
+}
+
+
 void Tsolver::initialize_plotter()
 {
 	plotter.set_grid(&grid);
