@@ -134,58 +134,37 @@ int main(int argc, char **argv) {
 
   solver.initializeLeafCellData_MA();
 
-  Eigen::VectorXd solution(48);
-  solution(0) = -0.5728135122;
-  solution(1) = -0.6079978023;
-  solution(2) = -0.4403919124;
-  solution(3) = -0.4874621767;
-  solution(4) = -0.4535408928;
-  solution(5) = -0.3810829460;
-  solution(6) = -0.5520753967;
-  solution(7) = -0.3365471868;
-  solution(8) = -0.4755762025;
-  solution(9) = -0.4350816906;
-  solution(10) = -0.5095695593;
-  solution(11) = -0.4195475361;
-  solution(12) = -0.1888089686;
-  solution(13) = -0.1536246785;
-  solution(14) = -0.4052076223;
-  solution(15) = -0.1451492649;
-  solution(16) = -0.3856121684;
-  solution(17) = -0.2168798361;
-  solution(18) = -0.6754789010;
-  solution(19) = -0.5273295156;
-  solution(20) = -0.7624165042;
-  solution(21) = -0.5488654037;
-  solution(22) = -0.5537419529;
-  solution(23) = -0.8626175643;
-  solution(24) = -0.4921452254;
-  solution(25) = -0.3439958400;
-  solution(26) = -0.4661177333;
-  solution(27) = -0.4086774044;
-  solution(28) = -0.3123740216;
-  solution(29) = -0.5812073727;
-  solution(30) = -0.5624742791;
-  solution(31) = -0.4692849946;
-  solution(32) = -0.5593070177;
-  solution(33) = -0.4885133455;
-  solution(34) = -0.4274636610;
-  solution(35) = -0.2831155319;
-  solution(36) = -0.6290328769;
-  solution(37) = -0.7771822623;
-  solution(38) = -0.6142671187;
-  solution(39) = -0.7382585189;
-  solution(40) = -0.7349510844;
-  solution(41) = -0.4330579873;
-  solution(42) = -0.2350629345;
-  solution(43) = -0.2702472246;
-  solution(44) = -0.3700233322;
-  solution(45) = -0.2382585189;
-  solution(46) = -0.1972843822;
-  solution(47) = -0.2549336927;
+  unsigned int dofs_DG = 24;
+
+  solver.assignViews_MA(dofs_DG);
+
+  Eigen::VectorXd solution(15);
+  solution(0) = 0.9291666667;
+  solution(1) = 1.2200000000;
+  solution(2) = 0.9291666667;
+  solution(3) = 1.0745833333;
+  solution(4) = 0.9291666667;
+  solution(5) = 1.0745833333;
+  solution(6) = 1.2200000000;
+  solution(7) = 1.5108333333;
+  solution(8) = 1.3654166667;
+  solution(9) = 1.2200000000;
+  solution(10) = 1.3654166667;
+  solution(11) = -0.0000000000;
+  solution(12) = 1.0745833333;
+  solution(13) = 0.9291666667;
+  solution(14) = 1.0745833333;
 
 
-  solver.restore_MA(solution);
+  Eigen::VectorXd DG_solution(dofs_DG);
+
+  solver.c0_converter.init_coefficient_map(solver.grid, DG_solution);
+
+
+  solver.c0_converter.convert_coefficients_toC(solution, DG_solution);
+
+
+  solver.restore_MA(DG_solution);
   solver.plotter.write_numericalsolution_VTK(0, true);
 
 #else

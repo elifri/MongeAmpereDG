@@ -6,14 +6,16 @@
 
 #include <Eigen/Sparse>
 
+#include "utility.hpp"
+
 #include "tmybasecell.hpp"
 #include "config.hpp"
 #include "grid_config.hpp"
 
 #include "Tshape.hpp"
 #include "Plotter.hpp"
+#include "c0_converter.hpp"
 
-#include "utility.hpp"
 
 using namespace config;
 
@@ -36,6 +38,7 @@ public:
 
    Tshape shape; // shape for primal unknown (must have the name shape!!!)
    Plotter plotter;
+   C0_converter c0_converter;
 
 //   shapelag_type shapelag; // shape for linear Lagrange unknowns
 
