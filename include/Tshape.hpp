@@ -84,6 +84,8 @@ public:
 
 	////////////// handling of bezier polynomials ///////////
 
+	void get_baryc_coord_bezier(const int no, baryc_type &b) const;
+
 	///return the local no of the function belonging to the control coefficient c_ijk
 	int get_local_bezier_no(const int i, const int j, const int k) const;
 
@@ -148,6 +150,8 @@ public:
 			state_type & v) const;
 	void assemble_state_N(const Estate_type & u, const unsigned int & inode,
 			const unsigned int & istate, value_type & v) const;
+
+	void assemble_state_beziercontrolpoint(const Estate_type & u, const unsigned int & inode, state_type & v) const;
 	void assemble_Enodevalue(const Estate_type & u, const unsigned int & istate,
 			Enodevalue_type & v) const;
 	void assemble_state_Equad(const Estate_type & u, const unsigned int & iquad,

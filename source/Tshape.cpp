@@ -721,6 +721,20 @@ void Tshape::initialize_mass() {
 //////                                     ///////////
 //////////////////////////////////////////////////////
 
+void Tshape::get_baryc_coord_bezier(const int no, baryc_type &b) const
+{
+	switch (no)
+	{
+	case 0: b(0) = 1; b(1) = 0; b(2) = 0; break;
+	case 1: b(0) = 0.5; b(1) = 0.5; b(2) = 0; break;
+	case 2: b(0) = 0.5; b(1) = 0; b(2) = 0.5; break;
+	case 3: b(0) = 0; b(1) = 1; b(2) = 0; break;
+	case 4: b(0) = 0; b(1) = 0.5; b(2) = 0.5; break;
+	case 5: b(0) = 0; b(1) = 0; b(2) = 1; break;
+	default: assert(false && "I do not know this bezier control point number!");
+	}
+}
+
 int Tshape::get_local_bezier_no(const int i, const int j, const int k) const{
 	assert (i >= 0 && j >= 0 && k >= 0 && "Coefficient indices must be positive! ");
 	assert (i <= degreedim && j <= degreedim && k <= degreedim && "Coefficient indices must be smaller or equal than 2! ");
@@ -953,6 +967,18 @@ void Tshape::assemble_state_N(const Estate_type & u, const unsigned int & inode,
 	}
 }
 ;
+
+void Tshape::assemble_state_beziercontrolpoint(const Estate_type & u, const unsigned int & inode,
+		state_type & v) const{
+
+	assert (inode >= 0 && inode <= 6 && "This function works only for beziers of degree 2 on triangles ");
+	baryc_type xbar;
+	get_baryc_coord_bezier(inode, xbar);
+
+	assemble_state_x_barycentric(u, xbar, v);
+}
+;
+
 
 ////////////////////////////////////////////////////
 
