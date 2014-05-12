@@ -289,6 +289,7 @@ public:
     * writes exact solution in leafcells
     */
    void initializeLeafCellData_MA ();
+   void clearLeafCellFlags();
 
 private:
    void assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM); ///writes the stiffness matrix part of LC

@@ -103,6 +103,18 @@ void Tsolver::initializeLeafCellData_MA() {
 	}
 }
 
+void Tsolver::clearLeafCellFlags()
+{
+	for (grid_type::leafcellmap_type::const_iterator it =
+			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
+		const grid_type::id_type & idLC = grid_type::id(it);
+		leafcell_type* pLC;
+
+		grid.findLeafCell(idLC, pLC);
+		pLC->id().setFlag(0, false);
+	}
+}
+
 ////////////////////////////////////////////////////
 
 void Tsolver::assignViewCell_MA(const id_type & id,
@@ -587,6 +599,8 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		}
 	}
 
+
+	clearLeafCellFlags();
 	// cerr << "distmax = " << distmax << endl;
 	// set flag=false; unew = 0.0; in invert_mass/volume
 }
@@ -627,6 +641,7 @@ void Tsolver::convexify_cell(const leafcell_type* pLC, Eigen::VectorXd &solution
 void Tsolver::convexify(Eigen::VectorXd &solution)
 {
 
+//	assert(!interpolating_basis && "This only works with a bezier basis!");
 	int Ndofs_DG = solution.size();
 
 	int Ndofs = c0_converter.get_number_of_dofs_C();
@@ -777,48 +792,29 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 						break;
 					}
 
-					int index;
-
-					//get node ids of nodes at face i
-					int node_left = (f+2) % nFaces, node_right = (f+1) % nFaces;
+					int index2;
 
 					// add rhs of condition from the left part in T_1
-					Eigen::Vector3i baryc_control_point_left = Eigen::Vector3i::Zero();
-					baryc_control_point_left[node_left] = 2;
-					index =  offset_T1 + shape.get_local_bezier_no(baryc_control_point_left);
-					tripletList.push_back( T( condition_index, c0_converter.dof_C(index), -x_baryc(0)));
 
-					baryc_control_point_left.setZero();
-					baryc_control_point_left[node_left] = 1;
-					baryc_control_point_left[(node_left+1) % nFaces] = 1;
-					index = offset_T1 + shape.get_local_bezier_no(baryc_control_point_left);
-					tripletList.push_back( T( condition_index, c0_converter.dof_C(index), -x_baryc(1)));
+					//get node ids of nodes at face i
+					Eigen::Vector2i face_nodes( (f+1) % nFaces,(f+2) % nFaces);
 
-					baryc_control_point_left.setZero();
-					baryc_control_point_left[node_left] = 1;
-					baryc_control_point_left[(node_left+2) % nFaces] = 1;
-					index = offset_T1 + shape.get_local_bezier_no(baryc_control_point_left);
-					tripletList.push_back( T( condition_index, c0_converter.dof_C(index), -x_baryc(2)));
+					for (int i = 0; i < 2; i++)
+					{
+						int node = face_nodes(i);
+						//calculate "small" triangle coordinates
+						switch (node)
+						{
+						case 0: index0 = offset_T1+0; index1 = offset_T1+1; index2 = offset_T1+2; break;
+						case 1: index0 = offset_T1+1; index1 = offset_T1+3; index2 = offset_T1+4; break;
+						case 2: index0 = offset_T1+2; index1 = offset_T1+4; index2 = offset_T1+5; break;
+						default : std::cerr << "Something fishy, this node does not exist!" << std::endl; exit(1);
+						}
+						tripletList.push_back( T( condition_index+i, c0_converter.dof_C(index0), -x_baryc(0)));
+						tripletList.push_back( T( condition_index+i, c0_converter.dof_C(index1), -x_baryc(1)));
+						tripletList.push_back( T( condition_index+i, c0_converter.dof_C(index2), -x_baryc(2)));
 
-					// add rhs of condition from the right part in T_1
-					Eigen::Vector3i baryc_control_point_right = Eigen::Vector3i::Zero();
-					baryc_control_point_right[node_right] = 1;
-					baryc_control_point_right[(node_right+1) % nFaces] = 1;
-					index = offset_T1 + shape.get_local_bezier_no(baryc_control_point_right);
-					tripletList.push_back( T( condition_index+1, c0_converter.dof_C(index), -x_baryc(0)));
-
-					baryc_control_point_right.setZero();
-					baryc_control_point_right[node_right] = 1;
-					baryc_control_point_right[(node_right+2) % nFaces] = 1;
-					index = offset_T1 + shape.get_local_bezier_no(baryc_control_point_right);
-					tripletList.push_back( T( condition_index+1, c0_converter.dof_C(index), -x_baryc(1)));
-
-					baryc_control_point_right.setZero();
-					baryc_control_point_right[node_right] = 2;
-					index = offset_T1 + shape.get_local_bezier_no(baryc_control_point_right);
-					tripletList.push_back( T( condition_index+1, c0_converter.dof_C(index), -x_baryc(2)));
-
-
+					}
 					condition_index +=2;
 				}
 			}
@@ -855,6 +851,8 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 
 	MATLAB_export(values_C, "C_values");
 
+
+	clearLeafCellFlags();
 
 }
 
@@ -1169,10 +1167,15 @@ void Tsolver::time_stepping_MA() {
 			cout << "min Eigenvalue " << min_EW << endl;
 		}
 
+		assert (interpolating_basis && "this only works with a bezier basis");
 		c0_converter.init(grid, Lsolution.size());
 
 		convexify(Lsolution);
 
+//		Eigen::VectorXd Lsolution_DG;
+//		c0_converter.convert_coefficients_toDG(LSolutionC, Lsolution_DG);
+//
+//		MATLAB_export(Lsolution-Lsolution_DG, "solution difference in DG");
 
 		setleafcellflags(0, false);
 
@@ -1184,6 +1187,9 @@ void Tsolver::time_stepping_MA() {
 		plotter.write_numericalsolution_VTK(iteration);
 		//plotter.write_exactrhs_MA(get_rhs_MA_callback(),iteration);
 
+//		restore_MA(Lsolution_DG);
+//
+//		plotter.write_numericalsolution_VTK(0, true);
 
 
 		// reset flag 0
