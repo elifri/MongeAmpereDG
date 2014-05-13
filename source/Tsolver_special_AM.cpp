@@ -100,6 +100,7 @@ void Tsolver::initializeLeafCellData_MA() {
 //		shape.get_mass().Cholesky_solve(pLC->u);
 
 		pLC->id().setFlag(0, false);
+		pLC->clear_C_numeration();
 	}
 }
 
@@ -672,7 +673,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 
 			// Delta13 Delta23 >= 0
 			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+5), 1));
-			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+1), -1));
+			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+4), -1));
 			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+2), -1));
 			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+1), 1));
 
@@ -713,14 +714,15 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		}
 
 
+	//convert matrix to continuous fomrulation and export
 	SparseMatrixD A(Ndofs_DG, Ndofs_DG);
 	A.setFromTriplets(tripletListA.begin(), tripletListA.end());
 	c0_converter.convert_matrix_toC(A);
 	MATLAB_export(A,"A");
 
-	int nFaces;
 
 	//init variables
+	int nFaces;
 	leafcell_type *pLC, *pNC;
 	nvector_type nv; //nodevector to store neighbouring nodes
 	Fidvector_type idNCv; //vector for neighbour ids
@@ -736,11 +738,13 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 
 		int offset_T1 = pLC->m_offset;
 
-		grid_type::facehandlevector_type vFh, vOh; // neighbor face number and orientation
+		// neighbor face number and orientation
+		grid_type::facehandlevector_type vFh, vOh;
 		grid.faceIds(idLC, idNCv, vFh, vOh);
 
 		nFaces = idLC.countFaces();
 
+		// set up convexity conditions over every face
 		for (int f = 0; f < nFaces; f++) { // loop over faces
 			if (idNCv[f].isValid()) {
 
@@ -753,50 +757,39 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 					int offset_T2 = pNC->m_offset;
 					const int ftilde=vFh[f], o=vOh[f];
 
-					//get baryc. coordinates of node (neighbouring leafcell) opposite of the face i
+					//get baryc. coordinates of node (neighbouring leafcell) opposite of the face f
 					// (in the paper called baryc coordinates of v_v with respect to T1)
 					get_baryc_coordinates(idLC, nv[ftilde], x_baryc);
 
-	//				cout << "x_baryc " << x_baryc.transpose() << endl;
-
 					int index0, index1;
 
+					//get index of the control points on the faces which are not on face f
 					switch(ftilde)
 					{
 					case 0:
 						index0 = offset_T2 + 1; // (1,1,0)
 						index1 = offset_T2 + 2; // (1,0,1);
-
-						if(o) std::swap(index0, index1);
-
-						tripletList.push_back( T( condition_index,   c0_converter.dof_C(index0), 1));
-						tripletList.push_back( T( condition_index+1, c0_converter.dof_C(index1), 1));
 						break;
 					case 1:
 						index0 = offset_T2 + 4; // (0,1,1)
 						index1 = offset_T2 + 1; // (1,1,0)
-
-						if(o) std::swap(index0, index1);
-
-						tripletList.push_back( T( condition_index,   c0_converter.dof_C(index0), 1));
-						tripletList.push_back( T( condition_index+1, c0_converter.dof_C(index1), 1));
 						break;
 					case 2:
 						index0 = offset_T2 + 2; // (1,0,1)
 						index1 = offset_T2 + 4; // (0,1,1)
-
-						if(o) std::swap(index0, index1);
-
-						tripletList.push_back( T( condition_index,   c0_converter.dof_C(index0), 1));
-						tripletList.push_back( T( condition_index+1, c0_converter.dof_C(index1), 1));
 						break;
 					}
 
+					if(o) std::swap(index0, index1);
+
+					tripletList.push_back( T( condition_index,   c0_converter.dof_C(index0), 1));
+					tripletList.push_back( T( condition_index+1, c0_converter.dof_C(index1), 1));
+
 					int index2;
 
-					// add rhs of condition from the left part in T_1
+					// add rhs of condition (small triangles weighted with baryc coord of v_v)
 
-					//get node ids of nodes at face i
+					//get node ids of nodes at face f
 					Eigen::Vector2i face_nodes( (f+1) % nFaces,(f+2) % nFaces);
 
 					for (int i = 0; i < 2; i++)
@@ -826,11 +819,10 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	C.setFromTriplets(tripletList.begin(), tripletList.end());
 	MATLAB_export(C,"C");
 
-
-
 	restore_MA(solution);
 
 
+	// collect functions values at control points
 	Eigen::VectorXd values_DG(solution.size());
 	for (grid_type::leafcellmap_type::iterator it=grid.leafCells().begin(); it!=grid.leafCells().end(); ++it)
 	{
@@ -838,7 +830,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		const grid_type::id_type & idLC = grid_type::id(it);
 		grid.findLeafCell(idLC, pLC);
 
-		for (int ishape = 0; ishape < shapedim; ishape++)
+		for (int ishape = 0; ishape < shapedim; ishape++) // loop over shapes
 		{
 			state_type val;
 			shape.assemble_state_beziercontrolpoint(pLC->u, ishape, val);
@@ -846,10 +838,17 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		}
 	}
 
+	//convert DG formulation to C formulation
 	Eigen::VectorXd values_C;
 	c0_converter.convert_coefficients_toC(values_DG, values_C);
 
+	//export values
 	MATLAB_export(values_C, "C_values");
+
+	//export bezier coefficients
+	Eigen::VectorXd coefficients_C;
+	c0_converter.convert_coefficients_toC(solution, coefficients_C);
+	MATLAB_export(coefficients_C, "coefficients");
 
 
 	clearLeafCellFlags();
