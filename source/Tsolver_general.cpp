@@ -259,7 +259,6 @@ void Tsolver::update_c_numeration()
 
 		grid.findLeafCell(idLC, pLC);
 
-		pLC->set_dofs_C(offset);
 	}
 }
 
