@@ -21,11 +21,13 @@ int main(int argc, char **argv) {
 //define the right equation (good idea to do here???)
 #define SIMPLEMONGEAMPERE2
 
-  std::string configfilename(argv[1]);
+  /*std::string configfilename(argv[1]);
   if (!singleton_config_file::instance().read_from_file(configfilename)) {
     cerr << "Unable to read from config file " << argv[1] << "!" << endl;
     exit(1);
-  }
+  }*/
+
+  singleton_config_file::instance().read_from_file("inputdata/config/unittest.cfg");
 
   cerr << "maxchildren = childdim = " << int(example_id_type::maxChildren) << endl;
 

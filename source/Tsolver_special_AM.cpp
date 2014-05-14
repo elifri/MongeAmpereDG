@@ -278,7 +278,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 					pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
 		}
 		else{
-			hess << 4, -3 , -3, 4;
+			hess << 1, 0, 0, 1;
 			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
 			max_EW = 1;
@@ -820,8 +820,6 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	C.setFromTriplets(tripletList.begin(), tripletList.end());
 	MATLAB_export(C,"C");
 
-	restore_MA(solution);
-
 
 	// collect functions values at control points
 	Eigen::VectorXd values_DG(solution.size());
@@ -861,7 +859,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	cout << "f " << solve_quadprog(G, coefficients_C, CE, ce0, C.transpose(), ci0, x) << endl;
 	cout << "x : " << x.transpose() << endl;
 
-	x = solution;
+	solution = x;
 
 	clearLeafCellFlags();
 }
@@ -1190,6 +1188,8 @@ void Tsolver::time_stepping_MA() {
 
 		assemble_indicator_and_limiting(); // use flag
 
+		restore_MA(Lsolution);
+
 		//plotter.write_exactsolution(get_exacttemperature_MA_callback(),iteration);
 		plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
 		//plotter.write_numericalsolution(iteration);
@@ -1197,6 +1197,7 @@ void Tsolver::time_stepping_MA() {
 		//plotter.write_exactrhs_MA(get_rhs_MA_callback(),iteration);
 
 		convexify(Lsolution);
+		restore_MA(Lsolution);
 
 //		restore_MA(Lsolution_DG);
 		plotter.write_numericalsolution_VTK(0, true);

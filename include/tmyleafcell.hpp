@@ -223,8 +223,6 @@ public:
     }
   }
 
-
-
   // is called from grid::coarsen
   // LC (this) is deleted after coarsening
   // pLC points to the new (empty) leaf cell
