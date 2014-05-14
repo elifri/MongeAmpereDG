@@ -36,7 +36,7 @@ public:
 	void convert_coefficients(Eigen::VectorXd &Csolution);
 
 	/// converts a vector in DG formulation to C formulation
-	void convert_coefficients_toDG(const Eigen::VectorXd &DGsolution, Eigen::VectorXd &Csolution);
+	void convert_coefficients_toDG(const Eigen::VectorXd &Csolution, Eigen::VectorXd &DGsolution);
 
 	/// converts a vector in C formulation to DG formulation
 	void convert_coefficients_toC(const Eigen::VectorXd &Csolution, Eigen::VectorXd &solution);
