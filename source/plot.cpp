@@ -158,7 +158,7 @@ int main(int argc, char **argv) {
 
   Eigen::VectorXd DG_solution(dofs_DG);
 
-  solver.c0_converter.init_coefficient_map(solver.grid, DG_solution);
+  solver.c0_converter.init(solver.grid, DG_solution.size());
 
 
   solver.c0_converter.convert_coefficients_toC(solution, DG_solution);
