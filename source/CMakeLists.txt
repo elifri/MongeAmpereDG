@@ -1,6 +1,7 @@
 # Notice name prefix of this variable, set by CMake according
 # to value given with "project()" in the root CMakeLists.txt.
 include_directories(../include)
+subdirs(test)
 
 add_library(Tmass Tmass.cpp)
 add_library(Tshape Tshape.cpp)
@@ -15,6 +16,9 @@ target_link_libraries(Mesh Tsolver C0_converter Plotter Tmass Tshape singconfig 
 
 add_executable(Plot plot.cpp)
 target_link_libraries(Plot Tsolver C0_converter Plotter Tmass Tshape singconfig utility)
+
+add_executable(Test unittest.cpp)
+target_link_libraries(Test testlibs Tsolver C0_converter Plotter Tmass Tshape singconfig utility)  
 
 #----example code ----
 #include_directories(${MyProject_SOURCE_DIR}/MainProject/inc)
