@@ -859,7 +859,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	cout << "f " << solve_quadprog(G, coefficients_C, CE, ce0, C.transpose(), ci0, x) << endl;
 	cout << "x : " << x.transpose() << endl;
 
-	solution = x;
+	c0_converter.convert_coefficients_toDG(x, solution);
 
 	clearLeafCellFlags();
 }
@@ -1200,7 +1200,7 @@ void Tsolver::time_stepping_MA() {
 		restore_MA(Lsolution);
 
 //		restore_MA(Lsolution_DG);
-		plotter.write_numericalsolution_VTK(0, true);
+		plotter.write_numericalsolution_VTK(iteration, true);
 
 
 		// reset flag 0

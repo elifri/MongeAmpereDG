@@ -134,37 +134,58 @@ int main(int argc, char **argv) {
 
   solver.initializeLeafCellData_MA();
 
-  unsigned int dofs_DG = 24;
+  unsigned int dofs_DG = 384;
 
+  // init dof offsets
   solver.assignViews_MA(dofs_DG);
 
+  //solution calculated in matlab
+/*
   Eigen::VectorXd solution(15);
-  solution(0) = 0.9291666667;
-  solution(1) = 1.2200000000;
-  solution(2) = 0.9291666667;
-  solution(3) = 1.0745833333;
-  solution(4) = 0.9291666667;
-  solution(5) = 1.0745833333;
-  solution(6) = 1.2200000000;
-  solution(7) = 1.5108333333;
-  solution(8) = 1.3654166667;
-  solution(9) = 1.2200000000;
-  solution(10) = 1.3654166667;
-  solution(11) = -0.0000000000;
-  solution(12) = 1.0745833333;
-  solution(13) = 0.9291666667;
-  solution(14) = 1.0745833333;
+  solution(0) = 0.6362698395;
+  solution(1) = 0.7664851639;
+  solution(2) = 1.2835952523;
+  solution(3) = 1.6277595302;
+  solution(4) = 1.8357295980;
+  solution(5) = 2.4859622739;
+  solution(6) = 0.5585150961;
+  solution(7) = 0.9978704414;
+  solution(8) = 0.5585150961;
+  solution(9) = 1.9968084718;
+  solution(10) = 1.5002159990;
+  solution(11) = -0.0110552831;
+  solution(12) = 0.1191597512;
+  solution(13) = -0.0110553040;
+  solution(14) = 0.1191597511;
+*/
 
+  Eigen::VectorXd solution(15);
+  solution(0) = -0.1982679734;
+  solution(1) = -4.5754650470;
+  solution(2) = 0.6622917788;
+  solution(3) = 3.8390426351;
+  solution(4) = 4.4730829966;
+  solution(5) = 11.4736543943;
+  solution(6) = -0.2523387378;
+  solution(7) = 0.0495125199;
+  solution(8) = -4.3887487201;
+  solution(9) = 8.4640202020;
+  solution(10) = 4.0257589619;
+  solution(11) = 4.2028902003;
+  solution(12) = -0.1743068733;
+  solution(13) = 0.0664802180;
+  solution(14) = -4.3107168556;
 
   Eigen::VectorXd DG_solution(dofs_DG);
 
+  //convert to DG solution
   solver.c0_converter.init(solver.grid, DG_solution.size());
+  solver.c0_converter.convert_coefficients_toDG(solution, DG_solution);
 
-
-  solver.c0_converter.convert_coefficients_toC(solution, DG_solution);
-
-
+  // write solution into leaf cells
   solver.restore_MA(DG_solution);
+
+  //plot solution to file *Inter.vtu
   solver.plotter.write_numericalsolution_VTK(0, true);
 
 #else
