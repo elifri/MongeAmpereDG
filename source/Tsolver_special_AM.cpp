@@ -12,6 +12,8 @@
 
 #include "../include/c0_converter.hpp"
 
+#include "../include/eiquadprog.hpp"
+
 
 #if (EQUATION == MONGE_AMPERE_EQ)
 
@@ -100,7 +102,6 @@ void Tsolver::initializeLeafCellData_MA() {
 //		shape.get_mass().Cholesky_solve(pLC->u);
 
 		pLC->id().setFlag(0, false);
-		pLC->clear_C_numeration();
 	}
 }
 
@@ -277,7 +278,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 					pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
 		}
 		else{
-			hess << 1, 0 , 0, 1;
+			hess << 4, -3 , -3, 4;
 			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
 			max_EW = 1;
@@ -850,9 +851,19 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	c0_converter.convert_coefficients_toC(solution, coefficients_C);
 	MATLAB_export(coefficients_C, "coefficients");
 
+	Eigen::MatrixXd G = Eigen::MatrixXd::Identity(Ndofs, Ndofs);
+	Eigen::VectorXd ci0 = Eigen::VectorXd::Zero(C.rows());
+
+	coefficients_C *= -1;
+	Eigen::VectorXd x,ce0;
+
+	Eigen::MatrixXd CE;
+	cout << "f " << solve_quadprog(G, coefficients_C, CE, ce0, C.transpose(), ci0, x) << endl;
+	cout << "x : " << x.transpose() << endl;
+
+	x = solution;
 
 	clearLeafCellFlags();
-
 }
 
 ///////////////////////////////////////////////////////
@@ -1166,10 +1177,9 @@ void Tsolver::time_stepping_MA() {
 			cout << "min Eigenvalue " << min_EW << endl;
 		}
 
-		assert (interpolating_basis && "this only works with a bezier basis");
+		assert (!interpolating_basis && "this only works with a bezier basis");
 		c0_converter.init(grid, Lsolution.size());
 
-		convexify(Lsolution);
 
 //		Eigen::VectorXd Lsolution_DG;
 //		c0_converter.convert_coefficients_toDG(LSolutionC, Lsolution_DG);
@@ -1186,9 +1196,10 @@ void Tsolver::time_stepping_MA() {
 		plotter.write_numericalsolution_VTK(iteration);
 		//plotter.write_exactrhs_MA(get_rhs_MA_callback(),iteration);
 
+		convexify(Lsolution);
+
 //		restore_MA(Lsolution_DG);
-//
-//		plotter.write_numericalsolution_VTK(0, true);
+		plotter.write_numericalsolution_VTK(0, true);
 
 
 		// reset flag 0
