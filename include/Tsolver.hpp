@@ -127,10 +127,17 @@ public:
    void write_problem_parameters_GENERAL ();
 
    void write_idset (const grid_type::idset_type & idset);
-   void read_startsolution(const std::string filename);
 
    void write_solution();
 
+   //////////////    READ DATA ///////////////////////
+
+   /*
+    * @brief reads a startsolution given by values on a rectangle grid; for further information see read_quadratic_grid in class Plotter
+    */
+   void read_startsolution(const std::string filename);
+
+   void init_startsolution_from_function(function_type f);
 
    ///////////////      GEOMETRY        ///////////////
 

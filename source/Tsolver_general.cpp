@@ -947,6 +947,40 @@ void Tsolver::assemble_int_f_phi(const function_type f, const leafcell_type* pLC
 	}
 }
 
+
+void Tsolver::init_startsolution_from_function(const function_type f)
+{
+	//do an L2 projection f into our Ansatz/test space
+	//loop over leaf cells and solve in every cell the equation \int l2p(f) *phi = \int f *phi \forall phi
+	for (grid_type::leafcellmap_type::const_iterator it =
+			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
+
+		const grid_type::id_type & idLC = grid_type::id(it);
+		leafcell_type* pLC;
+
+		// grid_type::leafcell_type *pLC;
+		grid.findLeafCell(idLC, pLC);
+
+		// get pointer to basecell of this cell
+		const grid_type::basecell_type * pBC;
+		grid.findBaseCellOf(idLC, pBC);
+
+		Estate_type b;
+
+		//calculate \int f *phi \forall phi in this leaf cell
+		assemble_int_f_phi(f, pLC, idLC, pBC, b);
+
+		//    \int l2p(f) *PHI for l2p(f) = \sum a_i phi_i PHI = mass_matrix*a
+		//solve arising LGS
+		pLC->mass.Cholesky_solve(b);
+
+		//write solution to leaf cell
+		pLC->u = b;
+	}
+
+}
+
+
 void Tsolver::write_solution()
 {
 	cout << "Solution coefficients :\n";
