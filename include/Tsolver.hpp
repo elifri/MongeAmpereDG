@@ -104,6 +104,18 @@ public:
                                         const double & u1_x, const double & u1_y,
                                         const Ejacobian_type & J, const double & d_abs,const igpm::tvector<double,4> & a);
 
+   /*
+    * @ calculates the integral f*phi for every ansatz function in LC
+    * @param f		input function f
+    * @param pLC	pointer in leafcell in which the integral is calculated
+    * @param idLC	id to leafcell in which the integral is calculated
+    * @param pBC	pointer to basecell of LC
+    * @param Lrhs	output; writes the calculated integral with the i-th ansatz function (local enumeration) to Lrhs(offset+i)
+    * @param offset	if necessary provide an offset for vector Lrhs
+    */
+   void assemble_int_f_phi(const function_type f, const leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC,
+		   Estate_type &Lrhs, const int offset = 0);
+
    ///////////////    WRITE_TYPES    ///////////////
    void write_space_type (const space_type & x);
 

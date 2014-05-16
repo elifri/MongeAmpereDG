@@ -7,7 +7,10 @@
 
 #include "../include/Tsolver.hpp"
 
+#include "Eigen/Dense"
+
 using namespace std;
+using namespace Eigen;
 
 ////////////////////////////////////////////////////////
 ///////////////                          ///////////////
@@ -915,6 +918,32 @@ void Tsolver::read_startsolution(const std::string filename){
 			pLC->u(i*2 +1,0) = val(0); //write solution
 		}
 
+	}
+}
+
+void Tsolver::assemble_int_f_phi(const function_type f, const leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC,
+		Estate_type &Lrhs, int offset) {
+
+	assert (Lrhs.size() > offset+shapedim);
+	for (int istate = 0; istate < statedim; istate++)
+	{
+		for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
+			state_type uLC;
+
+			space_type x;
+			get_Ecoordinates(idLC, iq, x);
+			uLC = f(x);
+
+			for (unsigned int istate = 0; istate < statedim; ++istate) {
+				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+					double val = shape.get_Equadw(iq) * pBC->get_detjacabs()
+							* facLevelVolume[idLC.level()] * uLC(istate)
+							* shape.get_Equads(ishape, iq);
+
+					Lrhs(offset + ishape, istate) += val;
+				}
+			}
+		}
 	}
 }
 
