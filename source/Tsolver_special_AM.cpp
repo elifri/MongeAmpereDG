@@ -5,14 +5,17 @@
  *      Author: elisa
  */
 
-#include "../include/Tsolver.hpp"
 #include <Eigen/Eigenvalues>
 
-#include "../include/matlab_export.hpp"
-
 #include "../include/c0_converter.hpp"
-
+#include "../include/config.hpp"
 #include "../include/eiquadprog.hpp"
+#include "../include/grid_config.hpp"
+#include "../include/matlab_export.hpp"
+#include "../include/Plotter.hpp"
+#include "../include/Tshape.hpp"
+#include "../include/Tsolver.hpp"
+#include "../include/utility.hpp"
 
 
 #if (EQUATION == MONGE_AMPERE_EQ)
@@ -643,6 +646,7 @@ void Tsolver::convexify_cell(const leafcell_type* pLC, Eigen::VectorXd &solution
 void Tsolver::convexify(Eigen::VectorXd &solution)
 {
 
+	setleafcellflags(0, false); //reset flags
 //	assert(!interpolating_basis && "This only works with a bezier basis!");
 	int Ndofs_DG = solution.size();
 
@@ -719,7 +723,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	SparseMatrixD A(Ndofs_DG, Ndofs_DG);
 	A.setFromTriplets(tripletListA.begin(), tripletListA.end());
 	c0_converter.convert_matrix_toC(A);
-	MATLAB_export(A,"A");
+//	MATLAB_export(A,"A");
 
 
 	//init variables
@@ -818,7 +822,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 
 	SparseMatrixD C(condition_index, Ndofs);
 	C.setFromTriplets(tripletList.begin(), tripletList.end());
-	MATLAB_export(C,"C");
+//	MATLAB_export(C,"C");
 
 
 	// collect functions values at control points
@@ -842,22 +846,26 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	c0_converter.convert_coefficients_toC(values_DG, values_C);
 
 	//export values
-	MATLAB_export(values_C, "C_values");
+//	MATLAB_export(values_C, "C_values");
 
 	//export bezier coefficients
 	Eigen::VectorXd coefficients_C;
 	c0_converter.convert_coefficients_toC(solution, coefficients_C);
-	MATLAB_export(coefficients_C, "coefficients");
+//	MATLAB_export(coefficients_C, "coefficients");
 
-	Eigen::MatrixXd G = Eigen::MatrixXd::Identity(Ndofs, Ndofs);
+	Eigen::MatrixXd G;
+	//G = Eigen::MatrixXd::Identity(Ndofs, Ndofs);
+	Eigen::SparseMatrix<double >G2 = A.transpose()*A;
+
 	Eigen::VectorXd ci0 = Eigen::VectorXd::Zero(C.rows());
 
 	coefficients_C *= -1;
+	Eigen::VectorXd f = -A.transpose()*values_C;
 	Eigen::VectorXd x,ce0;
 
-	Eigen::MatrixXd CE;
-	cout << "f " << solve_quadprog(G, coefficients_C, CE, ce0, C.transpose(), ci0, x) << endl;
-	cout << "x : " << x.transpose() << endl;
+	Eigen::SparseMatrix<double> CE;
+	cout << "f " << solve_quadprog(G2, f, CE, ce0, C.transpose(), ci0, x) << endl;
+//	cout << "x : " << x.transpose() << endl;
 
 	c0_converter.convert_coefficients_toDG(x, solution);
 

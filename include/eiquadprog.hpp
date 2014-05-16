@@ -83,6 +83,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
 
 namespace Eigen {
 
@@ -129,9 +130,9 @@ bool add_constraint(MatrixXd& R, MatrixXd& J, VectorXd& d, int& iq, double& R_no
 void delete_constraint(MatrixXd& R, MatrixXd& J, VectorXi& A, VectorXd& u,  int p, int& iq, int l);
 
 
-inline double solve_quadprog(MatrixXd & G,  VectorXd & g0,
-                      const MatrixXd & CE, const VectorXd & ce0,
-                      const MatrixXd & CI, const VectorXd & ci0,
+inline double solve_quadprog(SparseMatrix<double> & G,  VectorXd & g0,
+                      const SparseMatrix<double> & CE, const VectorXd & ce0,
+                      const SparseMatrix<double> & CI, const VectorXd & ci0,
                       VectorXd& x)
 {
   int i, j, k, l; /* indices */
@@ -139,7 +140,7 @@ inline double solve_quadprog(MatrixXd & G,  VectorXd & g0,
   int n=g0.size();  int p=ce0.size();  int m=ci0.size();
   MatrixXd R(G.rows(),G.cols()), J(G.rows(),G.cols());
 
-  LLT<MatrixXd,Lower> chol(G.cols());
+  SimplicialLLT<SparseMatrix<double>,Lower> chol;
 
   VectorXd s(m+p), z(n), r(m + p), d(n),  np(n), u(m + p);
   VectorXd x_old(n), u_old(m + p);
@@ -161,7 +162,14 @@ inline double solve_quadprog(MatrixXd & G,  VectorXd & g0,
    */
 
   /* compute the trace of the original matrix G */
-  c1 = G.trace();
+  //c1 = G.trace();
+  c1 = 0;
+  for (int i = 0; i < G.rows(); i++)
+  {
+	  c1 += G.coeffRef(i,i);
+  }
+
+  //TODO sparse has no trace
 
 	/* decompose the matrix G in the form LL^T */
   chol.compute(G);
@@ -173,8 +181,13 @@ inline double solve_quadprog(MatrixXd & G,  VectorXd & g0,
 
 	/* compute the inverse of the factorized matrix G^-1, this is the initial value for H */
   // J = L^-T
-  J.setIdentity();
+
+	J.setIdentity();
+
+  //TODO solve works only for vectors
+//  SparseMatrix<double> U = chol.matrixU();
   J = chol.matrixU().solve(J);
+  //TODO there is no trace function
 	c2 = J.trace();
 #ifdef TRACE_SOLVER
  print_matrix("J", J, n);
@@ -491,10 +504,10 @@ inline bool add_constraint(MatrixXd& R, MatrixXd& J, VectorXd& d, int& iq, doubl
 		xny = ss / (1.0 + cc);
 		for (k = 0; k < n; k++)
 		{
-			t1 = J(k,j - 1);
-			t2 = J(k,j);
-			J(k,j - 1) = t1 * cc + t2 * ss;
-			J(k,j) = xny * (t1 + J(k,j - 1)) - t2;
+			t1 = J.coeffRef(k,j - 1);
+			t2 = J.coeffRef(k,j);
+			J.coeffRef(k,j - 1) = t1 * cc + t2 * ss;
+			J.coeffRef(k,j) = xny * (t1 + J.coeffRef(k,j - 1)) - t2;
 		}
 	}
   /* update the number of constraints added*/
@@ -502,7 +515,9 @@ inline bool add_constraint(MatrixXd& R, MatrixXd& J, VectorXd& d, int& iq, doubl
   /* To update R we have to put the iq components of the d vector
     into column iq - 1 of R
     */
-  R.col(iq-1).head(iq) = d.head(iq);
+//	TODO THE_EVAL_EVALTO_FUNCTION_SHOULD_NEVER_BE_CALLED_FOR_DENSE_OBJECTS
+  for (int i = 0; i< iq; i++)
+	  R.coeffRef(iq-1,i) = d(i);
 #ifdef TRACE_SOLVER
   std::cerr << iq << std::endl;
 #endif
@@ -546,7 +561,7 @@ inline void delete_constraint(MatrixXd& R, MatrixXd& J, VectorXi& A, VectorXd& u
   A(iq) = 0;
   u(iq) = 0.0;
   for (j = 0; j < iq; j++)
-    R(j,iq - 1) = 0.0;
+    R.coeffRef(j,iq - 1) = 0.0;
   /* constraint has been fully removed */
   iq--;
 #ifdef TRACE_SOLVER
@@ -558,37 +573,37 @@ inline void delete_constraint(MatrixXd& R, MatrixXd& J, VectorXi& A, VectorXd& u
 
   for (j = qq; j < iq; j++)
   {
-    cc = R(j,j);
-    ss = R(j + 1,j);
+    cc = R.coeffRef(j,j);
+    ss = R.coeffRef(j + 1,j);
     h = distance(cc, ss);
     if (h == 0.0)
       continue;
     cc = cc / h;
     ss = ss / h;
-    R(j + 1,j) = 0.0;
+    R.coeffRef(j + 1,j) = 0.0;
     if (cc < 0.0)
     {
-      R(j,j) = -h;
+      R.coeffRef(j,j) = -h;
       cc = -cc;
       ss = -ss;
     }
     else
-      R(j,j) = h;
+      R.coeffRef(j,j) = h;
 
     xny = ss / (1.0 + cc);
     for (k = j + 1; k < iq; k++)
     {
-      t1 = R(j,k);
-      t2 = R(j + 1,k);
-      R(j,k) = t1 * cc + t2 * ss;
-      R(j + 1,k) = xny * (t1 + R(j,k)) - t2;
+      t1 = R.coeffRef(j,k);
+      t2 = R.coeffRef(j + 1,k);
+      R.coeffRef(j,k) = t1 * cc + t2 * ss;
+      R.coeffRef(j + 1,k) = xny * (t1 + R.coeffRef(j,k)) - t2;
     }
     for (k = 0; k < n; k++)
     {
-      t1 = J(k,j);
-      t2 = J(k,j + 1);
-      J(k,j) = t1 * cc + t2 * ss;
-      J(k,j + 1) = xny * (J(k,j) + t1) - t2;
+      t1 = J.coeffRef(k,j);
+      t2 = J.coeffRef(k,j + 1);
+      J.coeffRef(k,j) = t1 * cc + t2 * ss;
+      J.coeffRef(k,j + 1) = xny * (J.coeffRef(k,j) + t1) - t2;
     }
   }
 }
