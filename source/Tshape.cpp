@@ -7,7 +7,7 @@
 
 #include "../include/Tshape.hpp"
 
-void Tshape::read_sc_msa(const std::string data_filename) {
+bool Tshape::read_sc_msa(const std::string data_filename) {
 	igpm::configfile msa;
 
 	// open config file
@@ -69,26 +69,38 @@ void Tshape::read_sc_msa(const std::string data_filename) {
 
 	}
 
+	contrib.resize(2*Ndim);
+
 	/// load nodal contributions
-	for (int k = 0; k < shapedim; ++k) {
+	for (int kshape = 0; kshape < shapedim; ++kshape) {
 		std::string line;
 
 		// get entry "M[xxx]" in section [multiscale matrices]
-		if (!msa.getValue("nodal contributions", entryname1d<3>("nc", k),
+		if (!msa.getValue("nodal contributions", entryname1d<3>("nc", kshape),
 				line)) {
 			cerr << "Error while reading [nodal contributions] "
-					<< entryname1d<3>("nc", k) << " from msa-datafile "
+					<< entryname1d<3>("nc", kshape) << " from msa-datafile "
 					<< data_filename << "." << endl;
 			abort();
 		}
 
 		std::stringstream strs(line);
-		for (int j = 0; j < Ndim; ++j) {
+		for (int jnode = 0; jnode < Ndim*degreedim; ++jnode) {
+			value_type entry;
 			/// interpret entries of this line, fill with zeros for nonexistent entries
-			if (!(strs >> nodal_contrib[k][j]))
-				nodal_contrib[k][j] = 0;
+			if (!(strs >> entry))
+				entry = 0;
+			else
+			{
+				if (std::abs(entry) > 1e-10) //shape k is not zero at node j
+					contrib[jnode].push_back(kshape);
+			}
+
+			nodal_contrib[kshape][jnode] = entry;
 		}
 	}
+	//TODO check THIS!!!!!!!!!!!
+	return false;
 }
 ;
 

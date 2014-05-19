@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
   cerr << "msafile = " << msafile << endl;
 
   solver.read_easymesh_triangles (gridfiletemplate);
-  solver.shape.read_sc_msa (msafile);
+  solver.interpolating_basis = solver.shape.read_sc_msa (msafile);
 //  solver.shapelag.read_sc (lagfile);
 
   cerr << "number of blocks: "     << solver.grid.countBlocks() << endl;
