@@ -1130,13 +1130,6 @@ void Tsolver::time_stepping_MA() {
 	refine(level);
 
 	initializeLeafCellData_MA();
-	if (strongBoundaryCond)
-	{
-		if (interpolating_basis)
-			bd_handler.initialize(grid, number_of_dofs);
-		else
-			bd_handler.initialize_bezier(grid, number_of_dofs, get_exacttemperature_MA_callback(), &shape);
-	}
 
 	///////////////////////////////////////////
 	// temperature history at xc: /////////////
@@ -1176,12 +1169,23 @@ void Tsolver::time_stepping_MA() {
 
 		unsigned int LM_size;
 
+		//assign matrix cooordinates
 		cout << "Assign matrix coordinates..." << endl;
 		pt.start();
 		assignViews_MA(LM_size);
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
+		//init boundary handler
+		if (strongBoundaryCond)
+		{
+			if (interpolating_basis)
+				bd_handler.initialize(grid, number_of_dofs);
+			else
+				bd_handler.initialize_bezier(grid, number_of_dofs, get_exacttemperature_MA_callback(), &shape);
+		}
+
+		//init variables
 		Eigen::SparseMatrix<double> LM(LM_size, LM_size);
 		Eigen::SparseMatrix<double> LM_bd(LM_size, LM_size);
 		Eigen::VectorXd Lrhs, Lrhs_bd, Lsolution, Lsolution_bd, Lsolution_only_bd;
@@ -1194,15 +1198,22 @@ void Tsolver::time_stepping_MA() {
 			Lrhs_bd.setZero(LM_size);
 		}
 
+		//assebmle system
 		cout << "Assemble linear System..." << flush << endl;
 		pt.start();
 		if (!strongBoundaryCond)
+		{
 			assemble_MA(stabsign, gamma, LM, Lrhs, Lsolution_only_bd);
+		}
 		else
+		{
 			assemble_MA(stabsign, gamma, LM_bd, Lrhs_bd, Lsolution_only_bd);
+		}
+
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
+		//if strong b.c. delete boundary dofs
 		if (strongBoundaryCond)
 		{
 			cout << "Delete Boundary DOFS ..." << endl;
@@ -1214,9 +1225,8 @@ void Tsolver::time_stepping_MA() {
 			cout << "done. " << pt << " s." << endl;
 		}
 
-
+		//solve system
 		cout << "Solving linear System..." << endl;
-
 		pt.start();
 		Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
 		solver.compute(LM);
@@ -1231,6 +1241,7 @@ void Tsolver::time_stepping_MA() {
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
+		//print start solution
 		if (iteration == 0 && start_solution)
 		{
 			std::string fname(plotter.get_output_directory());
@@ -1239,32 +1250,35 @@ void Tsolver::time_stepping_MA() {
 			cout << "min Eigenvalue " << min_EW << endl;
 		}
 
+		//if strong b.c. add boundary dofs
 		if (strongBoundaryCond)
 		{
 			bd_handler.add_boundary_dofs(Lsolution, Lsolution_only_bd, Lsolution_bd);
+			Lsolution = Lsolution_bd;
 		}
 
+		//init continuous formulation
 		assert (!interpolating_basis && "this only works with a bezier basis");
-		c0_converter.init(grid, Lsolution_bd.size());
+		c0_converter.init(grid, Lsolution.size());
 
+		//clear flags
 		setleafcellflags(0, false);
 
 		assemble_indicator_and_limiting(); // use flag
 
-		restore_MA(Lsolution_bd);
+		//write solution in leaf cells
+		restore_MA(Lsolution);
 
-		//plotter.write_exactsolution(get_exacttemperature_MA_callback(),iteration);
+		//plot solution
 		plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
-		//plotter.write_numericalsolution(iteration);
 		plotter.write_numericalsolution_VTK(iteration);
-		//plotter.write_exactrhs_MA(get_rhs_MA_callback(),iteration);
 
-		convexify(Lsolution_bd);
-		restore_MA(Lsolution_bd);
+		//convexify solution and store
+		convexify(Lsolution);
+		restore_MA(Lsolution);
 
-//		restore_MA(Lsolution_DG);
+		//plot solution
 		plotter.write_numericalsolution_VTK(iteration, true);
-
 
 		// reset flag 0
 		setleafcellflags(0, false);
