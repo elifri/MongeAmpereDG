@@ -134,7 +134,7 @@ void get_row_columns(const SparseMatrixD &A,
 	const unsigned int N=A.cols();
 
 	//prepare A_new
-	A_new.resize(M-rows.size(),N-rows.size());
+	A_new.resize(M-rows.size(),N-cols.size());
 	A_new.reserve(A.nonZeros());
 
 
