@@ -219,6 +219,7 @@ typedef Eigen::Matrix<value_type, spacedim, spacedim> Ejacobian_type;
 
 typedef util::Function <value_type (const value_type)> function_1d_type;
 typedef util::Function <value_type (const value_type, const value_type)> function_2d_type;
+typedef util::Function <state_type (const space_type)> function_type;
 
 // Where to put these ??? 4=?, 3=? .......
 typedef unsigned int NeighbOrient_type[4][3][4];
