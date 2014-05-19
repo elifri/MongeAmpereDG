@@ -15,7 +15,7 @@
 #include "Tshape.hpp"
 #include "Plotter.hpp"
 #include "c0_converter.hpp"
-
+#include "boundary_handler.hpp"
 
 using namespace config;
 
@@ -29,6 +29,7 @@ public:
    typedef bool       leafmarker_type[childdim];
 
    grid_type grid;
+   unsigned int number_of_dofs;
    std::vector<double> facLevelVolume;
    std::vector<double> facLevelLength;
 
@@ -39,6 +40,7 @@ public:
    Tshape shape; // shape for primal unknown (must have the name shape!!!)
    Plotter plotter;
    C0_converter c0_converter;
+   boundary_handler bd_handler;
 
 //   shapelag_type shapelag; // shape for linear Lagrange unknowns
 
@@ -236,6 +238,8 @@ public:
    int levelmax;
    bool interpolating_basis;
 
+   bool strongBoundaryCond;
+
    bool start_solution;
 
    ///////////////////////////////////////////////////////
@@ -319,9 +323,23 @@ public:
    void calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC, Hessian_type & hess); /// calculates the cofactor Matrix of the hessian in LC
    bool calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess); /// calculates the eigenvalues of hess and return if it was pos def (solution convex)
 
-   void assemble_MA(const int & STABSIGN, double PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs);
+   /*
+    * @brief assembles the LGS for the in the iteration arising poisson problem
+    *
+    * @param STABSIGN	switch between SIPG and DIPG
+    * @param PENALTY	give penalty term for SIPG (will be scaled related to the biggest eigenvalue found)
+    * @param LM			matrix of the LGS
+    * @param Lrhs		right-hand side of the LGS
+    * @param Lbd		if strongBoundaryCond is enabled here will be the boundary dofs assembled
+    */
+   void assemble_MA(const int & STABSIGN, double PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs, Eigen::VectorXd &Lbd);
+   /*
+      * @brief stores solution (in leaf cells) and generates analysis data
+      *
+      * @param solution	solution coefficients
+      */
    void restore_MA (Eigen::VectorXd &solution);
-   void convexify(Hessian_type & hess); //makes the hessian positive definit
+   void convexify(Hessian_type & hess); /// makes the hessian positive definit
    void convexify_cell(const leafcell_type* pLC, Eigen::VectorXd &solution); /// convexifies the solution locally (convexifying bezier control polygon)
    void convexify(Eigen::VectorXd &solution); //convexifies the solution globally (convexifying bezier control polygon)
 

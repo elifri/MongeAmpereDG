@@ -17,6 +17,8 @@
 #include "../include/Tsolver.hpp"
 #include "../include/utility.hpp"
 
+#include "../include/eiquadprog.hpp"
+
 
 #if (EQUATION == MONGE_AMPERE_EQ)
 
@@ -28,11 +30,13 @@
 
 #include <Eigen/Sparse>
 
+using namespace Eigen;
 
 //reads specific problem parameter from input
 void Tsolver::read_problem_parameters_MA(int &stabsign, double &gamma, double &refine_eps, double &coarsen_eps, int &level) {
 	singleton_config_file::instance().getValue("method", "stabsign", stabsign, 1);
 	singleton_config_file::instance().getValue("method", "gamma", gamma, 0.0);
+	singleton_config_file::instance().getValue("method", "strongBoundaryCond", strongBoundaryCond, false);
 
 	singleton_config_file::instance().getValue("adaptation", "refine_eps", refine_eps, 1.0e-9);
 	singleton_config_file::instance().getValue("adaptation", "coarsen_eps", coarsen_eps, 1.0e-6);
@@ -83,12 +87,16 @@ void Tsolver::initializeLeafCellData_MA() {
 	space_type x;
 	state_type v;
 
+	number_of_dofs = 0;
+
 	for (grid_type::leafcellmap_type::const_iterator it =
 			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
 		const grid_type::id_type & idLC = grid_type::id(it);
 		grid_type::leafcell_type * pLC = NULL;
 		grid.findLeafCell(idLC, pLC);
 		grid.nodes(idLC, nv);
+
+		number_of_dofs+=shapedim;
 
 		pLC->u.setZero();
 		pLC->unew.setZero();
@@ -343,7 +351,15 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
  *
  */
 void Tsolver::assemble_MA(const int & stabsign, double penalty,
-		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs) {
+		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs, Eigen::VectorXd &Lbd) {
+
+	if (strongBoundaryCond)
+	{
+		if (interpolating_basis)
+			Lbd.setZero(Lrhs.size());
+		else
+			Lbd = bd_handler.get_nodal_contributions();
+	}
 
 	unsigned int gaussbaseLC = 0;
 	unsigned int gaussbaseNC = 0;
@@ -536,25 +552,41 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 						length = facLevelLength[level] * pBC->get_length(i); //actual facelength of this leafcell
 						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over face quadrature points
 							iqLC = gaussbaseLC + iq;
-							get_Fcoordinates(idLC, iqLC, x); // determine x
 
-							state_type uLC;
-							get_exacttemperature_MA(x, uLC); // determine uLC (value at boundary point x
+							if (strongBoundaryCond)
+							{
+								nvector_type nv2;
+								get_nodes(grid, idLC, nv2);
 
-							// Copy entries for Dirichlet boundary conditions into right hand side
-							for (unsigned int ishape = 0; ishape < shapedim;
-									++ishape) {
-								double val = stabsign * shape.get_Fquadw(iqLC)
-										* length * uLC(0)
-										* pBC->A_grad_times_normal(pLC->A, ishape,iqLC)
-										/ facLevelLength[level];
+								if (interpolating_basis)
+//									unsigned int shapes_per_face = shapedim/Fdim + 1;
+									assert (false && "not implemented yet .. ");
+							}
+							else {
+								get_Fcoordinates(idLC, iqLC, x); // determine x
 
-								if (penalty != 0.0) {
-									val += penalty * shape.get_Fquadw(iqLC) * uLC(0)
-											* shape.get_Fquads(ishape,iqLC);
+								state_type uLC;
+								get_exacttemperature_MA(x, uLC); // determine uLC (value at boundary point x
+
+								// Copy entries for Dirichlet boundary conditions into right hand side
+								for (unsigned int ishape = 0; ishape < shapedim;
+										++ishape) {
+									double val = stabsign
+											* shape.get_Fquadw(iqLC) * length
+											* uLC(0)
+											* pBC->A_grad_times_normal(pLC->A,
+													ishape, iqLC)
+											/ facLevelLength[level];
+
+									if (penalty != 0.0) {
+										val += penalty * shape.get_Fquadw(iqLC)
+												* uLC(0)
+												* shape.get_Fquads(ishape,
+														iqLC);
+									}
+
+									Lrhs(pLC->n_offset + ishape) += val;
 								}
-
-								Lrhs(pLC->n_offset + ishape) += val;
 							}
 
 							// Copy entries into Laplace-matrix
@@ -1098,8 +1130,13 @@ void Tsolver::time_stepping_MA() {
 	refine(level);
 
 	initializeLeafCellData_MA();
-
-	update_c_numeration();
+	if (strongBoundaryCond)
+	{
+		if (interpolating_basis)
+			bd_handler.initialize(grid, number_of_dofs);
+		else
+			bd_handler.initialize_bezier(grid, number_of_dofs, get_exacttemperature_MA_callback(), &shape);
+	}
 
 	///////////////////////////////////////////
 	// temperature history at xc: /////////////
@@ -1146,17 +1183,36 @@ void Tsolver::time_stepping_MA() {
 		cout << "done. " << pt << " s." << endl;
 
 		Eigen::SparseMatrix<double> LM(LM_size, LM_size);
-		Eigen::VectorXd Lrhs, Lsolution;
+		Eigen::SparseMatrix<double> LM_bd(LM_size, LM_size);
+		Eigen::VectorXd Lrhs, Lrhs_bd, Lsolution, Lsolution_bd, Lsolution_only_bd;
 		Lrhs.setZero(LM_size);
 		Lsolution.setZero(LM_size);
 
 		LM.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
+		if (strongBoundaryCond){
+			LM_bd.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
+			Lrhs_bd.setZero(LM_size);
+		}
 
 		cout << "Assemble linear System..." << flush << endl;
 		pt.start();
-		assemble_MA(stabsign, gamma, LM, Lrhs);
+		if (!strongBoundaryCond)
+			assemble_MA(stabsign, gamma, LM, Lrhs, Lsolution_only_bd);
+		else
+			assemble_MA(stabsign, gamma, LM_bd, Lrhs_bd, Lsolution_only_bd);
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
+
+		if (strongBoundaryCond)
+		{
+			cout << "Delete Boundary DOFS ..." << endl;
+			pt.start();
+			Lrhs_bd -= LM_bd*Lsolution_only_bd;
+			bd_handler.delete_boundary_dofs(LM_bd, LM);
+			bd_handler.delete_boundary_dofs(Lrhs_bd, Lrhs);
+			pt.stop();
+			cout << "done. " << pt << " s." << endl;
+		}
 
 
 		cout << "Solving linear System..." << endl;
@@ -1183,20 +1239,19 @@ void Tsolver::time_stepping_MA() {
 			cout << "min Eigenvalue " << min_EW << endl;
 		}
 
+		if (strongBoundaryCond)
+		{
+			bd_handler.add_boundary_dofs(Lsolution, Lsolution_only_bd, Lsolution_bd);
+		}
+
 		assert (!interpolating_basis && "this only works with a bezier basis");
-		c0_converter.init(grid, Lsolution.size());
-
-
-//		Eigen::VectorXd Lsolution_DG;
-//		c0_converter.convert_coefficients_toDG(LSolutionC, Lsolution_DG);
-//
-//		MATLAB_export(Lsolution-Lsolution_DG, "solution difference in DG");
+		c0_converter.init(grid, Lsolution_bd.size());
 
 		setleafcellflags(0, false);
 
 		assemble_indicator_and_limiting(); // use flag
 
-		restore_MA(Lsolution);
+		restore_MA(Lsolution_bd);
 
 		//plotter.write_exactsolution(get_exacttemperature_MA_callback(),iteration);
 		plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
@@ -1204,8 +1259,8 @@ void Tsolver::time_stepping_MA() {
 		plotter.write_numericalsolution_VTK(iteration);
 		//plotter.write_exactrhs_MA(get_rhs_MA_callback(),iteration);
 
-		convexify(Lsolution);
-		restore_MA(Lsolution);
+		convexify(Lsolution_bd);
+		restore_MA(Lsolution_bd);
 
 //		restore_MA(Lsolution_DG);
 		plotter.write_numericalsolution_VTK(iteration, true);
