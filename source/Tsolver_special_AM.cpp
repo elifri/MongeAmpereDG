@@ -638,6 +638,8 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 
 	clearLeafCellFlags();
+
+	cout << "LM in assemble \n" << LM << endl;
 	// cerr << "distmax = " << distmax << endl;
 	// set flag=false; unew = 0.0; in invert_mass/volume
 }
@@ -1182,7 +1184,7 @@ void Tsolver::time_stepping_MA() {
 			if (interpolating_basis)
 				bd_handler.initialize(grid, number_of_dofs);
 			else
-				bd_handler.initialize_bezier(grid, number_of_dofs, get_exacttemperature_MA_callback(), &shape);
+				bd_handler.initialize_bezier(grid, number_of_dofs, get_exacttemperature_MA_callback(), &shape, c0_converter);
 		}
 
 		//init variables
@@ -1220,10 +1222,15 @@ void Tsolver::time_stepping_MA() {
 			pt.start();
 			Lrhs_bd -= LM_bd*Lsolution_only_bd;
 			bd_handler.delete_boundary_dofs(LM_bd, LM);
+			MATLAB_export(LM_bd, "LM_bd_strong");
+			MATLAB_export(LM, "LM_strong");
 			bd_handler.delete_boundary_dofs(Lrhs_bd, Lrhs);
+			cout << "Lrhs " << Lrhs.transpose() << endl;
 			pt.stop();
 			cout << "done. " << pt << " s." << endl;
 		}
+		else
+			MATLAB_export(LM, "LM_weak");
 
 		//solve system
 		cout << "Solving linear System..." << endl;

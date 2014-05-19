@@ -19,13 +19,14 @@ void boundary_handler::initialize(const grid_type &grid, const unsigned int numb
 							indices_col_without_boundary_dofs);
 }
 
-void boundary_handler::initialize_bezier(const grid_type &grid, const unsigned int number_of_dofs, const vector_function_type  &boundary_conditions, const Tshape* shape_ptr)
+void boundary_handler::initialize_bezier(const grid_type &grid, const unsigned int number_of_dofs, const vector_function_type  &boundary_conditions,
+		const Tshape* shape_ptr, const C0_converter &c0_converter)
 {
 	m_nodal_contrib.setZero(number_of_dofs);
 	m_shape = shape_ptr;
 
 	assemble_LGS_triangle();
-	get_boundary_dofs_bezier(grid, m_boundary_dofs, m_nodal_contrib, boundary_conditions);
+	get_boundary_dofs_bezier(grid, c0_converter, m_boundary_dofs, m_boundary_dofs_C, m_nodal_contrib, boundary_conditions);
 	cout << "number of bd dofs " << get_number_of_boundary_dofs() << endl;
 	m_reduced_number_of_dofs = number_of_dofs - get_number_of_boundary_dofs();
 
@@ -454,7 +455,9 @@ void boundary_handler::assemble_LGS_triangle()
 
 }
 
-void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, boundary_DOFs_type &m_boundary_dofs, Eigen::VectorXd & nodal_contrib, const vector_function_type  &get_boundary_conditions)
+void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, const C0_converter &c0_converter,
+		boundary_DOFs_type &m_boundary_dofs, boundary_DOFs_type &m_boundary_dofs_C,
+		Eigen::VectorXd & nodal_contrib, const vector_function_type  &get_boundary_conditions)
 {
 	int dim = shapedim;
 
@@ -562,13 +565,17 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, boundary_
 			for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 				if (m_shape_at_boundary[LGS_index](ishape))
 				{
+					unsigned int dof_DG = LC.m_offset + ishape;
 					cout << "LC offset " << LC.m_offset << endl;
 					nodal_contrib[LC.m_offset +ishape] = alpha(ishape);
-					m_boundary_dofs.insert(LC.m_offset + ishape);
-					cout << "inserted " << LC.m_offset + ishape << endl;
+					m_boundary_dofs.insert(dof_DG);
+					m_boundary_dofs.insert(c0_converter.dof_C(dof_DG));
+					cout << "inserted " << dof_DG << endl;
 				}
 
 			}
 		}//end if LSG_index != 1
 	}
+
+
 }

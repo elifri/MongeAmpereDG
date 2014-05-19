@@ -11,6 +11,7 @@
 #include "grid_config.hpp"
 #include "utility.hpp"
 #include "Tshape.hpp"
+#include "c0_converter.hpp"
 
 //------------------------------------------------------------------------------
 // Add or delete boundary degrees of freedom
@@ -42,7 +43,7 @@ public:
 	//does the same as the constructor
 	void initialize(const grid_type &grid, const unsigned int number_of_dofs);
 
-	void initialize_bezier(const grid_type &grid, const unsigned int number_of_dofs, const vector_function_type  &boundary_conditions, const Tshape* shape_ptr);
+	void initialize_bezier(const grid_type &grid, const unsigned int number_of_dofs, const vector_function_type  &boundary_conditions, const Tshape* shape_ptr, const C0_converter &c0_converter);
 
 	/*!
 	 * return if the boundary_handler is associated to a grid
@@ -214,19 +215,21 @@ private:
 	/*!
 	 *  Stores the indices of the boundary dof to m_boundary_dofs if ansatz fcts are beziere polynominals
 	 *
-	 *  \param grid  		input grid
+	 *  \param grid  				input grid
+	 *  \param c0_converter			converter to handle continuous formulation
 	 *  \param m_boundary_nodes 	output - set containing indices of boundary dofs
-	 *  \param nodal_contrib	stores the contribution of the boundary ansatzfct to boundary
+	 *  \param m_boundary_nodes_C 	output - set containing indices of boundary dofs in continuous formulation
+	 *  \param nodal_contrib		stores the contribution of the boundary ansatzfct to boundary
 	 *  \param get_boundary_condition solution at boundary
 	 */
-	void get_boundary_dofs_bezier(const grid_type &grid,
-			boundary_DOFs_type &m_boundary_dofs,
-			Eigen::VectorXd & nodal_contrib,
-			const vector_function_type &get_boundary_conditions);
+	void get_boundary_dofs_bezier(const grid_type &grid, const C0_converter &c0_converter,
+			boundary_DOFs_type &m_boundary_dofs, boundary_DOFs_type &m_boundary_dofs_C,
+			Eigen::VectorXd & nodal_contrib, const vector_function_type  &get_boundary_conditions);
 protected:
 
 	bool m_initialized;
 	boundary_DOFs_type m_boundary_dofs;
+	boundary_DOFs_type m_boundary_dofs_C;
 	int m_reduced_number_of_dofs;
 	const Tshape* m_shape;
 
