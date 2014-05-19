@@ -47,11 +47,13 @@ public:
 
 	igpm::tvector<igpm::tvector<igpm::tvector<double, shapedim>, shapedim>,
 			childdim> refinement_rules; // double refinement_rules(childdim,shapedim)[shapedim];
-	igpm::tvector<igpm::tvector<double, Ndim>, shapedim> nodal_contrib; // double nodal_contrib[shapedim][Ndim];
+	Eigen::Matrix<Eigen::Matrix<value_type, Ndim*degreedim, 1>, shapedim, 1> nodal_contrib; // double nodal_contrib[shapedim][Ndim];
+	Eigen::Matrix<std::vector<int>, Eigen::Dynamic, 1> contrib; // stores for every bezier node all shape fcts not equal to zero on this face
 
 public:
 
-	void read_sc_msa(const std::string data_filename);
+	//reads basis data from msa file and and return whether it is an interpolatory basis or not
+	bool read_sc_msa(const std::string data_filename);
 	void read_sc(const std::string data_filename);
 
 	/*
