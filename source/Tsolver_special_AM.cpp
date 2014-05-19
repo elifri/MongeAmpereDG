@@ -682,17 +682,18 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 
 	setleafcellflags(0, false); //reset flags
 //	assert(!interpolating_basis && "This only works with a bezier basis!");
-	int Ndofs_DG = solution.size();
 
+	//init variables
+	int Ndofs_DG = solution.size();
 	int Ndofs = c0_converter.get_number_of_dofs_C();
 	int NinnerEdges = Ndofs;
 
+	//init triplets for assembling matrices
 	std::vector< Eigen::Triplet<double> > tripletList;
 	tripletList.reserve(12*Ndofs + 8*NinnerEdges*2);
 
 	std::vector< Eigen::Triplet<double> > tripletListA;
 	tripletListA.reserve(6*Ndofs);
-
 
 	int condition_index = 0;
 
@@ -751,14 +752,6 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 			tripletListA.push_back( T (n+4, n+5, 0.25));
 			tripletListA.push_back( T (n+2, n+5, 0.25));
 		}
-
-
-	//convert matrix to continuous fomrulation and export
-	SparseMatrixD A(Ndofs_DG, Ndofs_DG);
-	A.setFromTriplets(tripletListA.begin(), tripletListA.end());
-	c0_converter.convert_matrix_toC(A);
-//	MATLAB_export(A,"A");
-
 
 	//init variables
 	int nFaces;
@@ -854,21 +847,24 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		pLC->id().setFlag(0, true);
 	}
 
+	//init matrices
+	SparseMatrixD A(Ndofs_DG, Ndofs_DG);
+	//convert matrix to continuous fomrulation and export
+	A.setFromTriplets(tripletListA.begin(), tripletListA.end());
+
 	SparseMatrixD C(condition_index, Ndofs);
 	C.setFromTriplets(tripletList.begin(), tripletList.end());
-//	MATLAB_export(C,"C");
-
 
 	// collect functions values at control points
 	Eigen::VectorXd values_DG(solution.size());
-	for (grid_type::leafcellmap_type::iterator it=grid.leafCells().begin(); it!=grid.leafCells().end(); ++it)
-	{
+	for (grid_type::leafcellmap_type::iterator it = grid.leafCells().begin();
+			it != grid.leafCells().end(); ++it) {
 		// get id and pointer to this cell
 		const grid_type::id_type & idLC = grid_type::id(it);
 		grid.findLeafCell(idLC, pLC);
 
 		for (int ishape = 0; ishape < shapedim; ishape++) // loop over shapes
-		{
+				{
 			state_type val;
 			shape.assemble_state_beziercontrolpoint(pLC->u, ishape, val);
 			values_DG(pLC->m_offset + ishape) = val(0);
@@ -879,29 +875,70 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	Eigen::VectorXd values_C;
 	c0_converter.convert_coefficients_toC(values_DG, values_C);
 
-	//export values
-//	MATLAB_export(values_C, "C_values");
-
 	//export bezier coefficients
 	Eigen::VectorXd coefficients_C;
 	c0_converter.convert_coefficients_toC(solution, coefficients_C);
-//	MATLAB_export(coefficients_C, "coefficients");
 
-	Eigen::MatrixXd G;
-	//G = Eigen::MatrixXd::Identity(Ndofs, Ndofs);
-	Eigen::SparseMatrix<double >G2 = A.transpose()*A;
 
-	Eigen::VectorXd ci0 = Eigen::VectorXd::Zero(C.rows());
+	//set up quadratic program to solve least square with inequality constraint
+	SparseMatrixD G2, CE;
+	Eigen::VectorXd f, ci0, x, ce0;
 
-	coefficients_C *= -1;
-	Eigen::VectorXd f = -A.transpose()*values_C;
-	Eigen::VectorXd x,ce0;
+	//handle boundary dofs
+	if (strongBoundaryCond) {
+		//if we want to have strong boundary condition we have to minimize A*x+delte_b_dofs(A_bd*impact_bd) - c
 
-	Eigen::SparseMatrix<double> CE;
+		VectorXd a0;
+		//get values of boundary dofs
+		VectorXd boundary_dofs_impact = bd_handler.get_nodal_contributions();
+		a0 = -A * boundary_dofs_impact;
+		c0_converter.convert_coefficients_toC(a0);
+		bd_handler.delete_boundary_dofs_C(a0);
+
+		//convert to continuous version (if necessary)
+		c0_converter.convert_matrix_toC(A);
+
+		//delete boundary dofs
+		bd_handler.delete_boundary_dofs_C(A);
+		bd_handler.delete_boundary_dofs_C_only_cols(C);
+		bd_handler.delete_boundary_dofs_C(values_C);
+
+
+		//pos. def. matrix in quadr. cost function
+		G2 = A.transpose() * A;
+
+		//rhs of inequality constraints
+		ci0 = Eigen::VectorXd::Zero(C.rows());
+//		ci0 = coefficients_C * -1;
+
+		f = -A.transpose() * (values_C+a0);
+
+		Eigen::SparseMatrix<double> CE;
+	}
+	else
+	{
+		//convert to continuous version
+		c0_converter.convert_matrix_toC(A);
+
+		//pos. def. matrix in quadr. cost function
+		G2 = A.transpose() * A;
+
+		ci0 = Eigen::VectorXd::Zero(C.rows());
+//		ci0 = coefficients_C * -1;
+
+		f = -A.transpose() * values_C;
+	}
+
 	cout << "f " << solve_quadprog(G2, f, CE, ce0, C.transpose(), ci0, x) << endl;
-//	cout << "x : " << x.transpose() << endl;
 
-	c0_converter.convert_coefficients_toDG(x, solution);
+	if (strongBoundaryCond)
+	{
+		VectorXd bd = bd_handler.get_nodal_contributions();
+		c0_converter.convert_coefficients_toC(bd);
+		bd_handler.add_boundary_dofs_C(x, bd, solution);
+	}
+
+	c0_converter.convert_coefficients_toDG(solution);
 
 	clearLeafCellFlags();
 }
@@ -1178,6 +1215,11 @@ void Tsolver::time_stepping_MA() {
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
+		//init continuous formulation
+		assert (!interpolating_basis && "this only works with a bezier basis");
+		c0_converter.init(grid, number_of_dofs);
+
+
 		//init boundary handler
 		if (strongBoundaryCond)
 		{
@@ -1222,15 +1264,11 @@ void Tsolver::time_stepping_MA() {
 			pt.start();
 			Lrhs_bd -= LM_bd*Lsolution_only_bd;
 			bd_handler.delete_boundary_dofs(LM_bd, LM);
-			MATLAB_export(LM_bd, "LM_bd_strong");
-			MATLAB_export(LM, "LM_strong");
 			bd_handler.delete_boundary_dofs(Lrhs_bd, Lrhs);
 			cout << "Lrhs " << Lrhs.transpose() << endl;
 			pt.stop();
 			cout << "done. " << pt << " s." << endl;
 		}
-		else
-			MATLAB_export(LM, "LM_weak");
 
 		//solve system
 		cout << "Solving linear System..." << endl;
@@ -1264,9 +1302,6 @@ void Tsolver::time_stepping_MA() {
 			Lsolution = Lsolution_bd;
 		}
 
-		//init continuous formulation
-		assert (!interpolating_basis && "this only works with a bezier basis");
-		c0_converter.init(grid, Lsolution.size());
 
 		//clear flags
 		setleafcellflags(0, false);
