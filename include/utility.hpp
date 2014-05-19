@@ -14,7 +14,9 @@
 #include "petscksp.h"
 #endif
 
-typedef Eigen::SparseMatrix<double> SparseMatrixD;
+namespace Eigen{
+	typedef SparseMatrix<double> SparseMatrixD;
+}
 typedef Eigen::Triplet<double> T;
 
 
