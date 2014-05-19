@@ -8,6 +8,7 @@
 #include "../include/boundary_handler.hpp"
 
 #include <cassert>
+#include "Eigen_utility.hpp"
 
 void boundary_handler::initialize(const grid_type &grid, const unsigned int number_of_dofs) {
 	get_boundary_nodes(grid, m_boundary_dofs);
@@ -293,18 +294,18 @@ void boundary_handler::add_boundary_dofs (const Eigen::VectorXd &x, const Eigen:
 void boundary_handler::get_boundary_nodes (const grid_type &grid, boundary_DOFs_type &m_boundary_dofs)
 {
 	// loop over all leaf cells
-	for (typename grid_type::leafcellmap_type::const_iterator
+	for (grid_type::leafcellmap_type::const_iterator
 			it = grid.leafCells().begin();
 			it != grid.leafCells().end(); ++it)
 	{
 		// get id and leaf cell
-		const typename grid_type::id_type & idLC = grid_type::id(it);
-		const typename grid_type::leafcell_type & LC = grid_type::cell(it);
+		const grid_type::id_type & idLC = grid_type::id(it);
+		const grid_type::leafcell_type & LC = grid_type::cell(it);
 
 //			if(!LC.isActive()) continue;
 
-		typename grid_type::faceidvector_type vF;		   // neighbor ids
-		typename grid_type::facehandlevector_type vFh, vOh;   // neighbor face number and orientation
+		grid_type::faceidvector_type vF;		   // neighbor ids
+		grid_type::facehandlevector_type vFh, vOh;   // neighbor face number and orientation
 		grid.faceIds(idLC, vF, vFh, vOh);
 
 		for (unsigned int f = 0; f < idLC.countFaces(); f++) {
@@ -312,7 +313,7 @@ void boundary_handler::get_boundary_nodes (const grid_type &grid, boundary_DOFs_
 			bool is_outer_boundary=false;
 			if (vF[f].isValid()) {	// face f of the current leaf cell is part of the (outer) boundary
 
-				const typename grid_type::leafcell_type *pNC = NULL;    // neighbor cell
+				const grid_type::leafcell_type *pNC = NULL;    // neighbor cell
 
 				// try to find neighbor cell with id vF[f]
 				if (grid.findLeafCell(vF[f], pNC)) {
@@ -466,18 +467,18 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, boundary_
 
 
 	// loop over all leaf cells
-	for (typename grid_type::leafcellmap_type::const_iterator
+	for (grid_type::leafcellmap_type::const_iterator
 			it = grid.leafCells().begin();
 			it != grid.leafCells().end(); ++it)
 	{
 		// get id and leaf cell
-		const typename grid_type::id_type & idLC = grid_type::id(it);
-		const typename grid_type::leafcell_type & LC = grid_type::cell(it);
+		const grid_type::id_type & idLC = grid_type::id(it);
+		const grid_type::leafcell_type & LC = grid_type::cell(it);
 
 //			if(!LC.isActive()) continue;
 
-		typename grid_type::faceidvector_type vF;		   // neighbor ids
-		typename grid_type::facehandlevector_type vFh, vOh;   // neighbor face number and orientation
+		grid_type::faceidvector_type vF;		   // neighbor ids
+		grid_type::facehandlevector_type vFh, vOh;   // neighbor face number and orientation
 		grid.faceIds(idLC, vF, vFh, vOh);
 
 		g.setZero();
@@ -488,7 +489,7 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, boundary_
 			bool is_outer_boundary=false;
 			if (vF[f].isValid()) {	// face f of the current leaf cell is part of the (outer) boundary
 
-				const typename grid_type::leafcell_type *pNC = NULL;    // neighbor cell
+				const grid_type::leafcell_type *pNC = NULL;    // neighbor cell
 
 				// try to find neighbor cell with id vF[f]
 				if (grid.findLeafCell(vF[f], pNC)) {

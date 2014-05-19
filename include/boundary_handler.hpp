@@ -6,10 +6,10 @@
 #include <map>
 
 #include <Eigen/Core>
-#include "Eigen_utility.hpp"
 
 #include "config.hpp"
 #include "grid_config.hpp"
+#include "utility.hpp"
 #include "Tshape.hpp"
 
 //------------------------------------------------------------------------------
@@ -21,13 +21,13 @@ class boundary_handler
 {
 public:
 
-	typedef typename std::set<unsigned int> boundary_DOFs_type;
+	typedef std::set<unsigned int> boundary_DOFs_type;
 
 	typedef Eigen::Matrix<bool, Eigen::Dynamic, 1> VectorXb;
 
 	//typedef iterator for convenience
-	typedef typename boundary_DOFs_type::const_iterator bd_const_iterator;
-	typedef typename boundary_DOFs_type::iterator       bd_iterator;
+	typedef boundary_DOFs_type::const_iterator bd_const_iterator;
+	typedef boundary_DOFs_type::iterator       bd_iterator;
 
 	/*!
 	 *
