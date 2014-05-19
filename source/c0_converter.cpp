@@ -118,6 +118,13 @@ void C0_converter::convert_coefficients_toC(const Eigen::VectorXd &DGsolution, E
 
 }
 
+void C0_converter::convert_coefficients_toC(Eigen::VectorXd &solution)
+{
+	Eigen::VectorXd Csolution;
+	convert_coefficients_toC(solution, Csolution);
+	solution = Csolution;
+}
+
 void C0_converter::convert_coefficients_toDG(const Eigen::VectorXd &Csolution, Eigen::VectorXd &DGsolution)
 {
 	assert (Csolution.size() == get_number_of_dofs_C() && "The given vector does not contain as much C dofs as expected!");
@@ -132,6 +139,12 @@ void C0_converter::convert_coefficients_toDG(const Eigen::VectorXd &Csolution, E
 
 }
 
+void C0_converter::convert_coefficients_toDG(Eigen::VectorXd &solution)
+{
+	Eigen::VectorXd DGsolution;
+	convert_coefficients_toDG(solution, DGsolution);
+	solution = DGsolution;
+}
 
 void C0_converter::convert_matrix_toC(Eigen::SparseMatrix<value_type> &A) const
 {
@@ -150,6 +163,28 @@ void C0_converter::convert_matrix_toC(Eigen::SparseMatrix<value_type> &A) const
 	  for (Eigen::SparseMatrix<value_type>::InnerIterator it(A,k); it; ++it)
 	  {
 		  it.valueRef() /= dofsDG_to_dofsC_ratio(it.row());
+	  }
+
+
+}
+
+void C0_converter::convert_matrix_toC_only_cols(Eigen::SparseMatrix<value_type> &A) const
+{
+	std::vector< Eigen::Triplet<value_type> > triplets;
+
+	for (int k=0; k<A.outerSize(); ++k)
+	  for (Eigen::SparseMatrix<value_type>::InnerIterator it(A,k); it; ++it)
+	  {
+		  triplets.push_back( T (it.row(), DG_to_C_indices(it.col()), it.value()));
+	  }
+
+	A.resize(get_number_of_dofs_C(), get_number_of_dofs_C());
+	A.setFromTriplets(triplets.begin(), triplets.end());
+
+	for (int k=0; k<A.outerSize(); ++k)
+	  for (Eigen::SparseMatrix<value_type>::InnerIterator it(A,k); it; ++it)
+	  {
+		  it.valueRef() /= dofsDG_to_dofsC_ratio(it.col());
 	  }
 
 

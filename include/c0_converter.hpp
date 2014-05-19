@@ -35,13 +35,23 @@ public:
 	/// deprecated
 	void convert_coefficients(Eigen::VectorXd &Csolution);
 
-	/// converts a vector in DG formulation to C formulation
-	void convert_coefficients_toDG(const Eigen::VectorXd &Csolution, Eigen::VectorXd &DGsolution);
-
 	/// converts a vector in C formulation to DG formulation
-	void convert_coefficients_toC(const Eigen::VectorXd &Csolution, Eigen::VectorXd &solution);
+	void convert_coefficients_toDG(const Eigen::VectorXd &Csolution, Eigen::VectorXd &DGsolution);
+	/// converts a vector in C formulation to DG formulation
+	void convert_coefficients_toDG(Eigen::VectorXd &solution);
 
+	/// converts a vector in DG formulation to C formulation
+	void convert_coefficients_toC(const Eigen::VectorXd &DGsolution, Eigen::VectorXd &Csolution);
+
+	/// converts a vector in DG formulation to C formulation
+	void convert_coefficients_toC(Eigen::VectorXd &solution);
+
+	/// converts a matrix in DG formulation to C formulation (in rows and cols)
 	void convert_matrix_toC(Eigen::SparseMatrix<value_type> &A) const;
+
+	/// converts a matrix in DG formulation to C formulation (it transform only the columns)
+	void convert_matrix_toC_only_cols(Eigen::SparseMatrix<value_type> &A) const;
+
 
 	int get_number_of_dofs_C() const;
 
