@@ -177,7 +177,7 @@ int main(int argc, char **argv) {
 
 		cout << "Assemble linear System..." << flush << endl;
 		pt.start();
-		solver.assemble_MA(stabsign, gamma, LM, Lrhs);
+		solver.assemble_MA(stabsign, gamma, LM, Lrhs, Lrhs);
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
