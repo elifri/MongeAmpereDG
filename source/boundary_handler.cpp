@@ -29,11 +29,16 @@ void boundary_handler::initialize_bezier(const grid_type &grid, const unsigned i
 	get_boundary_dofs_bezier(grid, c0_converter, m_boundary_dofs, m_boundary_dofs_C, m_nodal_contrib, boundary_conditions);
 	cout << "number of bd dofs " << get_number_of_boundary_dofs() << endl;
 	m_reduced_number_of_dofs = number_of_dofs - get_number_of_boundary_dofs();
+	m_reduced_number_of_dofs_C = c0_converter.get_number_of_dofs_C()- get_number_of_boundary_dofs_C();
 
 	assert(m_reduced_number_of_dofs >= 0 && "something at the initialization of boundary dofs failed");
 
 	m_initialized = true;
 	initialize_new_indices(number_of_dofs, number_of_dofs, m_boundary_dofs, m_boundary_dofs, indices_row_without_boundary_dofs, indices_col_without_boundary_dofs);
+	initialize_new_indices(c0_converter.get_number_of_dofs_C(), c0_converter.get_number_of_dofs_C(), m_boundary_dofs_C,
+							m_boundary_dofs_C, indices_row_without_boundary_dofs_C,
+							indices_col_without_boundary_dofs_C);
+
 }
 
 void boundary_handler::add_boundaryDOF(unsigned int i)
@@ -47,6 +52,9 @@ void boundary_handler::add_boundaryDOF(unsigned int i)
 //	matrix/vector operations
 
 //=========================
+
+
+//=============delete==============
 
 void boundary_handler::delete_boundary_dofs (
 		const Eigen::SparseMatrixD &A,
@@ -96,6 +104,43 @@ void boundary_handler::delete_boundary_dofs (
 	get_row_columns(A, A_new, m_boundary_dofs, m_boundary_dofs, indices_row_without_boundary_dofs, indices_col_without_boundary_dofs);
 }
 
+void boundary_handler::delete_boundary_dofs_C (
+			const Eigen::SparseMatrixD &A,
+			Eigen::SparseMatrixD &A_new
+	) const {
+
+	assert(m_initialized && "Boundary handler is not initialised yet");
+	assert(A.rows() == (int) get_number_of_dofs_C());
+	assert(A.rows() == A.cols());
+	get_row_columns(A, A_new, m_boundary_dofs_C, m_boundary_dofs_C, indices_row_without_boundary_dofs_C, indices_col_without_boundary_dofs_C);
+}
+
+void boundary_handler::delete_boundary_dofs_C (
+			Eigen::SparseMatrixD &A) const
+{
+	Eigen::SparseMatrixD A_new;
+	delete_boundary_dofs_C(A, A_new);
+	A = A_new;
+}
+
+void boundary_handler::delete_boundary_dofs_C_only_cols (
+		Eigen::SparseMatrixD &A
+) const
+{
+	assert(m_initialized && "Boundary handler is not initialised yet");
+	assert(A.cols() == (int) get_number_of_dofs_C());
+
+	Eigen::SparseMatrixD A_new(A.rows(), get_reduced_number_of_dofs_C());
+
+	//calculate identity
+	Eigen::VectorXi indices_rows (A.rows());
+	for (int i =0; i < indices_rows.size(); ++i)	indices_rows(i) = i;
+
+	get_row_columns(A, A_new, boundary_DOFs_type(), m_boundary_dofs_C, indices_rows, indices_col_without_boundary_dofs_C);
+	A = A_new;
+}
+
+
 void boundary_handler::delete_boundary_dofs (
 		const Eigen::VectorXd &b,
 		Eigen::VectorXd &b_new) const
@@ -125,6 +170,55 @@ void boundary_handler::delete_boundary_dofs (
 	}
 
 }
+
+void boundary_handler::delete_boundary_dofs (Eigen::VectorXd &b) const
+{
+	Eigen::VectorXd b_without_bd;
+	delete_boundary_dofs(b, b_without_bd);
+	b = b_without_bd;
+}
+
+void boundary_handler::delete_boundary_dofs_C (Eigen::VectorXd &b) const
+{
+	Eigen::VectorXd b_without_bd;
+	delete_boundary_dofs_C(b, b_without_bd);
+	b = b_without_bd;
+}
+
+
+void boundary_handler::delete_boundary_dofs_C (
+		const Eigen::VectorXd &b,
+		Eigen::VectorXd &b_new) const
+{
+
+	assert(m_initialized && "Boundary handler is not initialised yet");
+	assert(b.size() == get_number_of_dofs_C() );
+
+	// copy elements from from b to b_new
+	const boundary_DOFs_type::const_iterator end=m_boundary_dofs_C.end();
+	const unsigned int N_new = get_reduced_number_of_dofs_C();
+	b_new.resize(N_new);
+
+
+	unsigned int b_row=0;
+
+	for (int k=0; k<b.rows(); ++k)
+	{
+		if (m_boundary_dofs_C.find(k)==end)	// if k is not an index of an inner node (not boundary node!!) add b(k) to b_new
+		{
+			// copy from b to b_new
+			b_new(b_row) = b(k);
+
+			// update col index
+			b_row++;
+		}
+	}
+
+}
+
+//=============add==============
+
+
 
 void boundary_handler::add_boundary_dofs (
 		const Eigen::SparseMatrixD &A, const Eigen::VectorXd &x,
@@ -286,6 +380,37 @@ void boundary_handler::add_boundary_dofs (const Eigen::VectorXd &x, const Eigen:
 	}
 
 }
+
+void boundary_handler::add_boundary_dofs_C (const Eigen::VectorXd &x, const Eigen::VectorXd &y, Eigen::VectorXd &x_new) const
+{
+
+	assert(m_initialized && "Boundary handler is not initialised yet");
+	assert(x.size() == (int) get_reduced_number_of_dofs_C());
+	assert(y.size() == get_number_of_dofs_C());
+
+	// copy elements from x to x_new
+	const boundary_DOFs_type::const_iterator end=m_boundary_dofs_C.end();
+	const unsigned int N_new = get_number_of_dofs_C();
+	x_new.resize(N_new);
+
+	unsigned int index=0;
+	for (unsigned int i=0; i<N_new; ++i)
+	{
+		if (m_boundary_dofs_C.find(i)==end) 	// if i is index of an inner node
+		{
+			// index i is an index of an inner node
+			x_new(i) = x(index);
+			index++;
+		}
+		else								// if i is index of a boundary node add a zero entry
+		{
+			// index i is an index of a node at the boundary
+			x_new(i)=y(i);
+		}
+	}
+
+}
+
 
 
 //=======================
@@ -569,7 +694,7 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, const C0_
 					cout << "LC offset " << LC.m_offset << endl;
 					nodal_contrib[LC.m_offset +ishape] = alpha(ishape);
 					m_boundary_dofs.insert(dof_DG);
-					m_boundary_dofs.insert(c0_converter.dof_C(dof_DG));
+					m_boundary_dofs_C.insert(c0_converter.dof_C(dof_DG));
 					cout << "inserted " << dof_DG << endl;
 				}
 

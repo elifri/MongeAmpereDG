@@ -68,14 +68,31 @@ public:
 	const unsigned int get_number_of_boundary_dofs() const {return m_boundary_dofs.size();}
 
 	/*!
+	 * Get number of boundary dofs in continuous form
+	 */
+	const unsigned int get_number_of_boundary_dofs_C() const {return m_boundary_dofs_C.size();}
+
+
+	/*!
 	 * Get total number of nodes
 	 */
 	const unsigned int get_number_of_dofs() const {return get_number_of_boundary_dofs()+get_reduced_number_of_dofs();}
 
 	/*!
+	 * Get total number of nodes in continuous formulation
+	 */
+	const unsigned int get_number_of_dofs_C() const {return get_number_of_boundary_dofs_C()+get_reduced_number_of_dofs_C();}
+
+
+	/*!
 	 * Get number of remaining nodes, aka non-boundary nodes
 	 */
 	const unsigned int get_reduced_number_of_dofs() const {return m_reduced_number_of_dofs;}
+
+	/*!
+	 * Get number of remaining nodes, aka non-boundary nodes
+	 */
+	const unsigned int get_reduced_number_of_dofs_C() const {return m_reduced_number_of_dofs_C;}
 
 
 	/*! add a boundaryDOF*/
@@ -111,6 +128,40 @@ public:
 	) const;
 
 	/*!
+	 * Deletes the entries of matrix A which correspond to the boundary nodes of the grid in the continuous form
+	 *
+	 * \param grid		input grid
+	 * \param A			input matrix
+	 * \param A_new		output Matrix
+	 */
+	void delete_boundary_dofs_C (
+			const Eigen::SparseMatrixD &A,
+			Eigen::SparseMatrixD &A_new
+	) const;
+
+	/*!
+	 * Deletes the entries of matrix A which correspond to the boundary nodes of the grid in the continuous form
+	 *
+	 * \param grid		input grid
+	 * \param A			input matrix
+	 */
+	void delete_boundary_dofs_C (
+			Eigen::SparseMatrixD &A
+	) const;
+
+
+	/*!
+	 * Deletes the entries of matrix A which correspond to the boundary nodes of the grid
+	 *
+	 * \param grid		input grid
+	 * \param A			input matrix
+	 * \param A_new		output Matrix
+	 */
+	void delete_boundary_dofs_C_only_cols (
+			Eigen::SparseMatrixD &A
+	) const;
+
+	/*!
 	 * Deletes the entries of vector b which correspond to the boundary nodes of the grid
 	 *
 	 * \param grid		input grid
@@ -120,6 +171,36 @@ public:
 	void delete_boundary_dofs (
 			const Eigen::VectorXd &b,
 			Eigen::VectorXd &b_new) const;
+
+	/*!
+	 * Deletes the entries of vector b which correspond to the boundary dofs of the grid in continuous version
+	 *
+	 * \param grid		input grid
+	 * \param b		input vector
+	 * \param b_new		output Vector
+	 */
+	void delete_boundary_dofs_C (
+			const Eigen::VectorXd &b,
+			Eigen::VectorXd &b_new) const;
+
+	/*!
+	 * Deletes the entries of vector b which correspond to the boundary dofs of the grid in continuous version
+	 *
+	 * \param grid		input grid
+	 * \param b			input & output vector
+	 */
+	void delete_boundary_dofs (	Eigen::VectorXd &b) const;
+
+	/*!
+	 * Deletes the entries of matrix A which correspond to the boundary nodes of the grid
+	 *
+	 * \param grid		input grid
+	 * \param b			input & output matrix
+	 */
+	void delete_boundary_dofs_C(
+			Eigen::VectorXd &b
+	) const;
+
 
 	/*!
 	 * Add zero boundary to coefficients given by x or A and save into x_new or A_new
@@ -161,6 +242,16 @@ public:
 	 *  to the value given by x.
 	 */
 	void add_boundary_dofs (const Eigen::VectorXd &x, const Eigen::VectorXd &y, Eigen::VectorXd &x_new) const;
+
+	/*! Add zero boundary to coefficients given by x and save into x_new
+	 *
+	 *  Vector x is the coefficient vector of all nodes expect the boundary dofs in the continuous formulation.
+	 *  This functions generates the vector x_new, which contains the coefficients
+	 *  of all dofs, where the boundary dofs will be set to values given in y and the other
+	 *  to the value given by x.
+	 */
+	void add_boundary_dofs_C (const Eigen::VectorXd &x, const Eigen::VectorXd &y, Eigen::VectorXd &x_new) const;
+
 
 private:
 
@@ -231,6 +322,7 @@ protected:
 	boundary_DOFs_type m_boundary_dofs;
 	boundary_DOFs_type m_boundary_dofs_C;
 	int m_reduced_number_of_dofs;
+	int m_reduced_number_of_dofs_C;
 	const Tshape* m_shape;
 
 	Eigen::VectorXd m_nodal_contrib;
@@ -241,6 +333,7 @@ protected:
 	//These vectors map an row_index resp. col_index to a row_index ignoring prior rows belonging to a boundary_node
 	Eigen::VectorXi indices_row_without_boundary_dofs, indices_col_without_boundary_dofs;
 
+	Eigen::VectorXi indices_row_without_boundary_dofs_C, indices_col_without_boundary_dofs_C;
 };
 
 #endif // boundary_handler_HPP
