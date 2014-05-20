@@ -921,7 +921,7 @@ void Tsolver::read_startsolution(const std::string filename){
 	}
 }
 
-void Tsolver::assemble_int_f_phi(const function_type f, const leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC,
+void Tsolver::assemble_int_f_phi(const vector_function_type f, const leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC,
 		Estate_type &Lrhs, int offset) {
 
 	assert (Lrhs.size() > offset+shapedim);
@@ -932,7 +932,7 @@ void Tsolver::assemble_int_f_phi(const function_type f, const leafcell_type* pLC
 
 			space_type x;
 			get_Ecoordinates(idLC, iq, x);
-			uLC = f(x);
+			f(x, uLC);
 
 			for (unsigned int istate = 0; istate < statedim; ++istate) {
 				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
@@ -948,7 +948,7 @@ void Tsolver::assemble_int_f_phi(const function_type f, const leafcell_type* pLC
 }
 
 
-void Tsolver::init_startsolution_from_function(const function_type f)
+void Tsolver::init_startsolution_from_function(const vector_function_type f)
 {
 	//do an L2 projection f into our Ansatz/test space
 	//loop over leaf cells and solve in every cell the equation \int l2p(f) *phi = \int f *phi \forall phi

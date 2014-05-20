@@ -115,7 +115,7 @@ public:
     * @param Lrhs	output; writes the calculated integral with the i-th ansatz function (local enumeration) to Lrhs(offset+i)
     * @param offset	if necessary provide an offset for vector Lrhs
     */
-   void assemble_int_f_phi(const function_type f, const leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC,
+   void assemble_int_f_phi(const vector_function_type f, const leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC,
 		   Estate_type &Lrhs, const int offset = 0);
 
    ///////////////    WRITE_TYPES    ///////////////
@@ -139,7 +139,7 @@ public:
     */
    void read_startsolution(const std::string filename);
 
-   void init_startsolution_from_function(function_type f);
+   void init_startsolution_from_function(vector_function_type f);
 
    ///////////////      GEOMETRY        ///////////////
 
