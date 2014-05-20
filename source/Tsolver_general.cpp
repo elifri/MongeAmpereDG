@@ -924,24 +924,22 @@ void Tsolver::read_startsolution(const std::string filename){
 void Tsolver::assemble_int_f_phi(const vector_function_type f, const leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC,
 		Estate_type &Lrhs, int offset) {
 
-	assert (Lrhs.size() > offset+shapedim);
-	for (int istate = 0; istate < statedim; istate++)
-	{
-		for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
-			state_type uLC;
+	assert (Lrhs.rows() >= offset+shapedim);
+	Lrhs.setZero();
+	for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
+		state_type uLC;
 
-			space_type x;
-			get_Ecoordinates(idLC, iq, x);
-			f(x, uLC);
+		space_type x;
+		get_Ecoordinates(idLC, iq, x);
+		f(x, uLC);
 
-			for (unsigned int istate = 0; istate < statedim; ++istate) {
-				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-					double val = shape.get_Equadw(iq) * pBC->get_detjacabs()
-							* facLevelVolume[idLC.level()] * uLC(istate)
-							* shape.get_Equads(ishape, iq);
+		for (unsigned int istate = 0; istate < statedim; ++istate) {
+			for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+				double val = shape.get_Equadw(iq) * pBC->get_detjacabs()* facLevelVolume[idLC.level()] //quadratureweights
+						* uLC(istate) //function values of function to project to
+						* shape.get_Equads(ishape, iq); //function value of ansatz function
 
-					Lrhs(offset + ishape, istate) += val;
-				}
+				Lrhs(offset + ishape, istate) += val;
 			}
 		}
 	}
@@ -969,10 +967,17 @@ void Tsolver::init_startsolution_from_function(const vector_function_type f)
 
 		//calculate \int f *phi \forall phi in this leaf cell
 		assemble_int_f_phi(f, pLC, idLC, pBC, b);
+		cout << "rhs " << b.transpose() << endl;
+
+		b /= pBC->get_detjacabs()* facLevelVolume[idLC.level()];
 
 		//    \int l2p(f) *PHI for l2p(f) = \sum a_i phi_i PHI = mass_matrix*a
 		//solve arising LGS
 		pLC->mass.Cholesky_solve(b);
+
+		Estate_type x;
+		pLC->mass.Matrix_multiply(b, x);
+		cout << "mass*b " << x << endl;
 
 		//write solution to leaf cell
 		pLC->u = b;

@@ -19,6 +19,7 @@
 
 #include "../include/eiquadprog.hpp"
 
+#include "../include/Callback_utility.hpp"
 
 #if (EQUATION == MONGE_AMPERE_EQ)
 
@@ -245,7 +246,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 	else
 	{
 		Hessian_type hess;
-		if (start_solution && false){
+		if (start_solution){
 
 			//get cell nodes
 			nvector_type nv;
@@ -258,12 +259,10 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 			bool is_convex = calculate_eigenvalues(pLC, hess);
 
 			//TODO here
-//			if (!is_convex)
-//			{
-//				cout << "Hessian at cell (node 0 = " << nv(0).transpose() << ") is not convex" << endl;
-//				cout << "Convexifying ... ";
-//				convexify_cell(pLC, solution)
-//			}
+			if (!is_convex)
+			{
+				cout << "Hessian at cell (node 0 = " << nv(0).transpose() << ") is not convex" << endl;
+			}
 
 			//determinant of hessian for calculation of residuum
 			value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
@@ -638,10 +637,6 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 
 	clearLeafCellFlags();
-
-	cout << "LM in assemble \n" << LM << endl;
-	// cerr << "distmax = " << distmax << endl;
-	// set flag=false; unew = 0.0; in invert_mass/volume
 }
 
 //////////////////////////////////////////////////////
@@ -888,6 +883,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	//export bezier coefficients
 	Eigen::VectorXd coefficients_C;
 	c0_converter.convert_coefficients_toC(solution, coefficients_C);
+
 
 
 	//set up quadratic program to solve least square with inequality constraint
@@ -1210,10 +1206,7 @@ void Tsolver::time_stepping_MA() {
 
 	std::string filename;
 	start_solution = singleton_config_file::instance().getValue("monge ampere", "start_iteration", filename, "");
-	if (start_solution){
-		read_startsolution(filename);
 
-	}
 
 	iteration = 0;
 
@@ -1233,7 +1226,6 @@ void Tsolver::time_stepping_MA() {
 		assert (!interpolating_basis && "this only works with a bezier basis");
 		c0_converter.init(grid, number_of_dofs);
 
-
 		//init boundary handler
 		if (strongBoundaryCond)
 		{
@@ -1241,6 +1233,18 @@ void Tsolver::time_stepping_MA() {
 				bd_handler.initialize(grid, number_of_dofs);
 			else
 				bd_handler.initialize_bezier(grid, number_of_dofs, get_exacttemperature_MA_callback(), &shape, c0_converter);
+		}
+
+		if (start_solution && iteration == 0){
+			if (filename == "error")
+			{
+				cout << "Using the exact solution with artificial error as start solution!" << endl;
+				//summation f (get_exacttemperature_MA_callback(), Convex_error_functions::get_hat_unitsquare_callback());
+				init_startsolution_from_function(get_exacttemperature_MA_callback());
+				//add_convex_error();
+			}
+			else
+				read_startsolution(filename);
 		}
 
 		//init variables
@@ -1330,7 +1334,11 @@ void Tsolver::time_stepping_MA() {
 		plotter.write_numericalsolution_VTK(iteration);
 
 		//convexify solution and store
+		cout << "Convexifying solution ..." << endl;
+		pt.start();
 		convexify(Lsolution);
+		pt.stop();
+		cout << "done. " << pt << " s." << endl;
 		restore_MA(Lsolution);
 
 		//plot solution
