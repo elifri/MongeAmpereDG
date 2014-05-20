@@ -677,14 +677,10 @@ void Tsolver::convexify_cell(const leafcell_type* pLC, Eigen::VectorXd &solution
 	Eigen::VectorXd coeff = solution.segment(pLC->m_offset, degreedim*3);
 }
 
-void Tsolver::convexify(Eigen::VectorXd &solution)
+void Tsolver::init_matrices_for_quadr_program(SparseMatrixD &A, SparseMatrixD &C)
 {
-
-	setleafcellflags(0, false); //reset flags
-//	assert(!interpolating_basis && "This only works with a bezier basis!");
-
 	//init variables
-	int Ndofs_DG = solution.size();
+	int Ndofs_DG = number_of_dofs;
 	int Ndofs = c0_converter.get_number_of_dofs_C();
 	int NinnerEdges = Ndofs;
 
@@ -848,12 +844,25 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	}
 
 	//init matrices
-	SparseMatrixD A(Ndofs_DG, Ndofs_DG);
+	A.resize(Ndofs_DG, Ndofs_DG);
 	//convert matrix to continuous fomrulation and export
 	A.setFromTriplets(tripletListA.begin(), tripletListA.end());
 
-	SparseMatrixD C(condition_index, Ndofs);
+	C.resize(condition_index, Ndofs);
 	C.setFromTriplets(tripletList.begin(), tripletList.end());
+
+}
+
+
+void Tsolver::convexify(Eigen::VectorXd &solution)
+{
+
+
+	setleafcellflags(0, false); //reset flags
+	assert(!interpolating_basis && "This only works with a bezier basis!");
+
+	SparseMatrixD A,C;
+	init_matrices_for_quadr_program(A,C);
 
 	// collect functions values at control points
 	Eigen::VectorXd values_DG(solution.size());
@@ -861,6 +870,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 			it != grid.leafCells().end(); ++it) {
 		// get id and pointer to this cell
 		const grid_type::id_type & idLC = grid_type::id(it);
+		const leafcell_type* pLC;
 		grid.findLeafCell(idLC, pLC);
 
 		for (int ishape = 0; ishape < shapedim; ishape++) // loop over shapes
@@ -936,9 +946,13 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		VectorXd bd = bd_handler.get_nodal_contributions();
 		c0_converter.convert_coefficients_toC(bd);
 		bd_handler.add_boundary_dofs_C(x, bd, solution);
+		c0_converter.convert_coefficients_toDG(solution);
 	}
+	else
+		c0_converter.convert_coefficients_toDG(x, solution);
 
-	c0_converter.convert_coefficients_toDG(solution);
+
+
 
 	clearLeafCellFlags();
 }

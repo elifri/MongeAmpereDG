@@ -341,6 +341,17 @@ public:
    void restore_MA (Eigen::VectorXd &solution);
    void convexify(Hessian_type & hess); /// makes the hessian positive definit
    void convexify_cell(const leafcell_type* pLC, Eigen::VectorXd &solution); /// convexifies the solution locally (convexifying bezier control polygon)
+
+   /*
+    * !@brief helper function for the quadratic program used in convexify. It assembles the matrices for the inequality constraint least square problem
+    */
+   void init_matrices_for_quadr_program(Eigen::SparseMatrixD &A, Eigen::SparseMatrixD &C);
+
+   /*
+    * !@brief convexifies the inserted solution globally via a quadratic program (least square problem with inequality constraints)
+    *        Solve min_x || A*x-b|| s.t. C*x > 0
+    */
+
    void convexify(Eigen::VectorXd &solution); //convexifies the solution globally (convexifying bezier control polygon)
 
    void get_exacttemperature_MA (const space_type & x, state_type & u); // state_type ???
