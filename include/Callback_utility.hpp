@@ -38,14 +38,14 @@ struct Convex_error_functions{
 	static void hat_unitsquare(const config::space_type & x, config::state_type &u)
 	{
 		if (x(0) <=0.5 )
-			u(0) = 2*x(0);
+			u(0) = -2*x(0);
 		else
-			u(0) = 2-(2*x(0));
+			u(0) = -2+(2*x(0));
 
 		if (x(1) <=0.5 )
-			u(0) *= 2*x(1);
+			u(0) *= -2*x(1);
 		else
-			u(0) *= 2-(2*x(1));
+			u(0) *= -2+(2*x(1));
 
 	}
 
