@@ -133,6 +133,7 @@ public:
    void write_idset (const grid_type::idset_type & idset);
 
    void write_solution();
+   void write_solution_vector(Eigen::VectorXd & solution); ///extract solution from leafcells to vector
 
    //////////////    READ DATA ///////////////////////
 

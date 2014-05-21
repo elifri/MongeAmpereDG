@@ -251,21 +251,6 @@ for (unsigned int k=0; k<3; k++) {
   }
 };
 
-void Tsolver::update_c_numeration()
-{
-	int offset = 0;
-	for (grid_type::leafcellmap_type::iterator it=grid.leafCells().begin(); it!=grid.leafCells().end(); ++it)
-	{
-		// get id and pointer to this cell
-		const grid_type::id_type & idLC = grid_type::id(it);
-		leafcell_type* pLC;
-
-		grid.findLeafCell(idLC, pLC);
-
-	}
-}
-
-
 void Tsolver::initialize_plotter()
 {
 	plotter.set_grid(&grid);
@@ -967,7 +952,6 @@ void Tsolver::init_startsolution_from_function(const vector_function_type f)
 
 		//calculate \int f *phi \forall phi in this leaf cell
 		assemble_int_f_phi(f, pLC, idLC, pBC, b);
-		cout << "rhs " << b.transpose() << endl;
 
 		b /= pBC->get_detjacabs()* facLevelVolume[idLC.level()];
 
@@ -977,7 +961,6 @@ void Tsolver::init_startsolution_from_function(const vector_function_type f)
 
 		Estate_type x;
 		pLC->mass.Matrix_multiply(b, x);
-		cout << "mass*b " << x << endl;
 
 		//write solution to leaf cell
 		pLC->u = b;
@@ -1005,6 +988,26 @@ void Tsolver::write_solution()
 		cout << endl;
 	}
 }
+
+void Tsolver::write_solution_vector(VectorXd & solution)
+{
+	solution.resize(number_of_dofs);
+	for (grid_type::leafcellmap_type::const_iterator it =
+			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
+
+		const grid_type::id_type & idLC = grid_type::id(it);
+		leafcell_type* pLC;
+
+		// grid_type::leafcell_type *pLC;
+		grid.findLeafCell(idLC, pLC);
+
+		// Copy solution entries from leaf cell
+		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+			solution(pLC->n_offset + ishape) = pLC->u(ishape,0);
+		}
+	}
+}
+
 
 
 ////////////////////////////////////////////////////
