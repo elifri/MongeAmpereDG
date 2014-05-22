@@ -9,20 +9,21 @@ add_library(Tshape Tshape.cpp)
 add_library(utility utility.cpp)
 add_library(singconfig grid_config.cpp)
 add_library(Eigen_utility Eigen_utility.cpp)
-#add_library(Callback_utility Callback_utility.cpp)
+add_library(Callback_utility Callback_utility.cpp)
 set(UTILITIES Eigen_utility singconfig utility)
 
 add_library(Plotter Plotter.cpp)
 add_library(C0_converter c0_converter.cpp)
 add_library(boundary_handler boundary_handler.cpp)
+add_library(ConvexifyNLP ConvexifyNLP.cpp)
 
 add_library(Tsolver Tsolver_general.cpp Tsolver_special_POISSON.cpp Tsolver_special_AM.cpp)
 
 add_executable(Mesh mesh.cpp)
-target_link_libraries(Mesh Tsolver boundary_handler C0_converter Plotter Tmass Tshape singconfig utility Eigen_utility)
+target_link_libraries(Mesh Tsolver ConvexifyNLP boundary_handler C0_converter Plotter Tmass Tshape Callback_utility singconfig utility Eigen_utility ${IPOPT_LIBRARIES})
 
 add_executable(Plot plot.cpp)
-target_link_libraries(Plot Tsolver C0_converter Plotter Tmass Tshape singconfig utility)
+target_link_libraries(Plot Tsolver boundary_handler C0_converter Plotter Tmass Tshape Callback_utility singconfig utility Eigen_utility)
 
 add_executable(Test unittest.cpp)
 target_link_libraries(Test testlibs Tsolver C0_converter Plotter Tmass Tshape singconfig utility)  

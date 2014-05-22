@@ -1,5 +1,10 @@
 project(MongeAmpereDG)
 cmake_minimum_required(VERSION 0.1)
+
+if(COMMAND cmake_policy)
+  cmake_policy(SET CMP0003 NEW)
+endif(COMMAND cmake_policy)
+
 subdirs(source include)
 
 # ----------------
@@ -38,10 +43,12 @@ find_package(BLAS REQUIRED)
 find_package(IGPM_T2_LIB REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Umfpack REQUIRED)
+include(./cmake/FindIPOPT_LIB.cmake)
+
 
 # ----------------
 
-include_directories(${IGPM_T2_LIB_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES})
+include_directories(${IPOPT_INCLUDE_DIRS} ${IGPM_T2_LIB_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES})
 link_directories(${CMAKEDEMO_BINARY_DIR})
 
 # ----------------
