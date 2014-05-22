@@ -16,6 +16,7 @@
 #include "Plotter.hpp"
 #include "c0_converter.hpp"
 #include "boundary_handler.hpp"
+#include "Convexifier.hpp"
 
 using namespace config;
 
@@ -41,6 +42,7 @@ public:
    Plotter plotter;
    C0_converter c0_converter;
    boundary_handler bd_handler;
+   Convexifier convexifier;
 
 //   shapelag_type shapelag; // shape for linear Lagrange unknowns
 

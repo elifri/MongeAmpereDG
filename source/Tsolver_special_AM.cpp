@@ -852,7 +852,6 @@ void Tsolver::init_matrices_for_quadr_program(SparseMatrixD &A, SparseMatrixD &C
 void Tsolver::convexify(Eigen::VectorXd &solution)
 {
 
-
 	setleafcellflags(0, false); //reset flags
 	assert(!interpolating_basis && "This only works with a bezier basis!");
 
@@ -1180,6 +1179,8 @@ void Tsolver::time_stepping_MA() {
 
 	initializeLeafCellData_MA();
 
+	convexifier.init();
+
 	///////////////////////////////////////////
 	// temperature history at xc: /////////////
 	space_type x, xc;
@@ -1224,6 +1225,7 @@ void Tsolver::time_stepping_MA() {
 
 		//init continuous formulation
 		assert (!interpolating_basis && "this only works with a bezier basis");
+
 		c0_converter.init(grid, number_of_dofs);
 
 		//init boundary handler
