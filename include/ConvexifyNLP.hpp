@@ -17,7 +17,8 @@ class ConvexifyNLP: public TNLP
 {
 public:
   /** default constructor */
-	ConvexifyNLP();
+	ConvexifyNLP(const Eigen::SparseMatrixD *A, const Eigen::SparseMatrixD *C,
+			const Eigen::VectorXd *values_C);
 
   /** default destructor */
   virtual ~ConvexifyNLP();
