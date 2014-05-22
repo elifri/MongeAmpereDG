@@ -27,8 +27,8 @@ using namespace Ipopt;
 using namespace Eigen;
 
 // constructor
-ConvexifyNLP::ConvexifyNLP(const Eigen::SparseMatrixD *A, const Eigen::SparseMatrixD *C,
-		const Eigen::VectorXd *values_C):A(A), C(C), values_C(values_C)
+ConvexifyNLP::ConvexifyNLP(const Eigen::SparseMatrixD *H, const Eigen::SparseMatrixD *C,
+		const Eigen::VectorXd *g):H(H), C(C), g(g)
 {}
 
 //destructor
@@ -40,10 +40,10 @@ bool ConvexifyNLP::get_nlp_info(Index& n, Index& m, Index& nnz_jac_g,
                              Index& nnz_h_lag, IndexStyleEnum& index_style)
 {
   // The problem described in ConvexifyNLP.hpp has 4 variables, x[0] through x[3]
-  n = A->cols();
+  n = H->cols();
 
   // one equality constraint and one inequality constraint
-  m = C->rows;
+  m = C->rows();
 
   // in this example the jacobian is dense and contains 8 nonzeros
   nnz_jac_g = C->nonZeros();
@@ -64,24 +64,24 @@ bool ConvexifyNLP::get_bounds_info(Index n, Number* x_l, Number* x_u,
 {
   // here, the n and m we gave IPOPT in get_nlp_info are passed back to us.
   // If desired, we could assert to make sure they are what we think they are.
-  assert(n == A->rows());
+  assert(n == H->rows());
   assert(m == C->rows());
 
   // the variables have no lower bounds
-  Matrix<Scalar, Dynamic, 1>::Map(x_l, m) = Eigen::VectorXd::Constant(-2e19,m);
+  Matrix<Number, Dynamic, 1>::Map(x_l, m) = Eigen::VectorXd::Constant(-2e19,m);
 
-  Matrix<Scalar, Dynamic, 1>::Map(x_u, m) = Eigen::VectorXd::Constant(2e19,m);
+  Matrix<Number, Dynamic, 1>::Map(x_u, m) = Eigen::VectorXd::Constant(2e19,m);
 
 
 
   // the first constraint lower bounds are zero
-  Matrix<Scalar, Dynamic, 1>::Map(g_l, m) = Eigen::VectorXd::Zero(m);
+  Matrix<Number, Dynamic, 1>::Map(g_l, m) = Eigen::VectorXd::Zero(m);
 
   // the constraint has NO upper bound, here we set it to 2e19.
   // Ipopt interprets any number greater than nlp_upper_bound_inf as
   // infinity. The default value of nlp_upper_bound_inf and nlp_lower_bound_inf
   // is 1e19 and can be changed through ipopt options.
-  Matrix<Scalar, Dynamic, 1>::Map(g_u, m) = Eigen::VectorXd::Constant(2e19,m);
+  Matrix<Number, Dynamic, 1>::Map(g_u, m) = Eigen::VectorXd::Constant(2e19,m);
 
   return true;
 }
@@ -111,11 +111,13 @@ bool ConvexifyNLP::get_starting_point(Index n, bool init_x, Number* x,
 // returns the value of the objective function
 bool ConvexifyNLP::eval_f(Index n, const Number* x, bool new_x, Number& obj_value)
 {
-  assert(n == A->cols());
+  assert(n == H->cols());
 
-  VectorXd& x_eigen = Matrix<Scalar, Dynamic, 1>::Map(x, n);
+  const VectorXd& x_eigen = Matrix<Number, Dynamic, 1>::Map(x, n);
 
-  obj_value = 0.5*x_eigen.transpose()*A->transpose()*(*A)*x_eigen - values_C->transpose()*(*A)*x_eigen;
+   VectorXd res = 0.5*x_eigen.transpose()*(*H)*x_eigen + g->transpose()*x_eigen;
+   assert (res.size() == 1);
+   obj_value = res(0);
 
   return true;
 }
@@ -123,9 +125,9 @@ bool ConvexifyNLP::eval_f(Index n, const Number* x, bool new_x, Number& obj_valu
 // return the gradient of the objective function grad_{x} f(x)
 bool ConvexifyNLP::eval_grad_f(Index n, const Number* x, bool new_x, Number* grad_f)
 {
-  assert(n == A->cols());
+  assert(n == H->cols());
 
-  Matrix<Scalar, Dynamic, 1>::Map(graf_f, n) = A->transpose()*(*A)*Matrix<Scalar, Dynamic, 1>::Map(x, n) - (A->transpose()*(*values_C));
+  Matrix<Number, Dynamic, 1>::Map(grad_f, n) = (*H)*Matrix<Number, Dynamic, 1>::Map(x, n) + (*g);
 
   return true;
 }
@@ -136,7 +138,7 @@ bool ConvexifyNLP::eval_g(Index n, const Number* x, bool new_x, Index m, Number*
   assert(n == C->cols());
   assert(m == C->rows());
 
-  Matrix<Scalar, Dynamic, 1>::Map(g, m) = (*C)*Matrix<Scalar, Dynamic, 1>::Map(x, n);
+  Matrix<Number, Dynamic, 1>::Map(g, m) = (*C)*Matrix<Number, Dynamic, 1>::Map(x, n);
 
   return true;
 }
@@ -150,7 +152,7 @@ bool ConvexifyNLP::eval_jac_g(Index n, const Number* x, bool new_x,
 	assert(m == C->rows());
 
 	int index = 0;
-	for (int k=0; k<mat.outerSize(); ++k)
+	for (int k=0; k<C->outerSize(); ++k)
 	{
 		 for (SparseMatrixD::InnerIterator it(*C,k); it; ++it)
 		 {
@@ -158,11 +160,11 @@ bool ConvexifyNLP::eval_jac_g(Index n, const Number* x, bool new_x,
 			 {
 				 // return the structure of the jacobian
 
-				 iRow[index] = it->row();
-				 jCol[index] = it->col();
+				 iRow[index] = it.row();
+				 jCol[index] = it.col();
 			 }
 			 // return the values of the jacobian of the constraints
-			 values[index] = it->value();
+			 values[index] = it.value();
 			 index++;
 		 }
 	}
@@ -176,20 +178,21 @@ bool ConvexifyNLP::eval_h(Index n, const Number* x, bool new_x,
                        bool new_lambda, Index nele_hess, Index* iRow,
                        Index* jCol, Number* values)
 {
+	assert ( n == H->rows());
 	int index = 0;
-	for (int k=0; k<mat.outerSize(); ++k)
+	for (int k=0; k<H->outerSize(); ++k)
 	{
-		 for (SparseMatrixD::InnerIterator it(*A,k); it; ++it)
+		 for (SparseMatrixD::InnerIterator it(*H,k); it; ++it)
 		 {
 			 if (values == NULL)
 			 {
 				 // return the structure of the jacobian
 
-				 iRow[index] = it->row();
-				 jCol[index] = it->col();
+				 iRow[index] = it.row();
+				 jCol[index] = it.col();
 			 }
 			 // return the values of the jacobian of the constraints
-			 values[index] = it->value();
+			 values[index] = it.value();
 			 index++;
 		 }
 	}
@@ -229,6 +232,8 @@ void ConvexifyNLP::finalize_solution(SolverReturn status,
   for (Index i=0; i<m ;i++) {
     std::cout << "g(" << i << ") = " << g[i] << std::endl;
   }
+
+  solution = Matrix<Number, Dynamic, 1>::Map(x, n);
 }
 
 

@@ -17,8 +17,8 @@ class ConvexifyNLP: public TNLP
 {
 public:
   /** default constructor */
-	ConvexifyNLP(const Eigen::SparseMatrixD *A, const Eigen::SparseMatrixD *C,
-			const Eigen::VectorXd *values_C);
+	ConvexifyNLP(const Eigen::SparseMatrixD *H, const Eigen::SparseMatrixD *C,
+			const Eigen::VectorXd *g);
 
   /** default destructor */
   virtual ~ConvexifyNLP();
@@ -78,6 +78,11 @@ public:
 				 IpoptCalculatedQuantities* ip_cq);
   //@}
 
+  Eigen::VectorXd get_solution()
+  {
+	  return solution;
+  }
+
 private:
   /**@name Methods to block default compiler methods.
    * The compiler automatically generates the following three methods.
@@ -95,8 +100,10 @@ private:
   ConvexifyNLP& operator=(const ConvexifyNLP&);
   //@}
 
-  const Eigen::SparseMatrixD *A, *C;
-  const Eigen::VectorXd *values_C;
+  const Eigen::SparseMatrixD *H, *C;
+  const Eigen::VectorXd *g;
+  Eigen::VectorXd solution;
+
 
 };
 
