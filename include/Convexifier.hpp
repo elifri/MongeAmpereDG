@@ -17,13 +17,12 @@ class Convexifier
 public:
 	void init()
 	{
-		  nlp = new ConvexifyNLP();
-
 		  // Create a new instance of IpoptApplication
 		  //  (use a SmartPtr, not raw)
 		  // We are using the factory, since this allows us to compile this
 		  // example with an Ipopt Windows DLL
-		  SmartPtr<IpoptApplication> app = IpoptApplicationFactory();
+		  IpoptApplication* app_ptr = IpoptApplicationFactory();
+		  app = app_ptr;
 		  app->RethrowNonIpoptException(true);
 
 		  // Change some options
@@ -37,29 +36,48 @@ public:
 		  // app->Options()->SetStringValue("option_file_name", "hs071.opt");
 
 		  // Initialize the IpoptApplication and process the options
-		  ApplicationReturnStatus status;
+
 		  status = app->Initialize();
 		  if (status != Solve_Succeeded) {
 		    std::cout << std::endl << std::endl << "*** Error during initialization!" << std::endl;
 		  }
 
-		  // Ask Ipopt to solve the problem
-		  status = app->OptimizeTNLP(nlp);
-
-		  if (status == Solve_Succeeded) {
-		    std::cout << std::endl << std::endl << "*** The problem solved!" << std::endl;
-		  }
-		  else {
-		    std::cout << std::endl << std::endl << "*** The problem FAILED!" << std::endl;
-		  }
-
-		  // As the SmartPtrs go out of scope, the reference count
-		  // will be decremented and the objects will automatically
-		  // be deleted.
-
 	}
 
-	 SmartPtr<ConvexifyNLP>  nlp;
+	/*
+	 *@brief solve the quadratic program min( 1/2 x^tHx + g^t*x) s.t. C*x >=0)
+	 *@param H quadratic matrix
+	 *@param C constraint matrix
+	 *@param g vector
+	 *@param x0 starting point
+	 */
+
+	Eigen::VectorXd solve_quad_prog_with_ie_constraints(const Eigen::SparseMatrixD &H, const Eigen::SparseMatrixD &C
+			, const Eigen::VectorXd &g, const Eigen::VectorXd & x0)
+	{
+		///delete nlp_ptr;
+		nlp_ptr = new ConvexifyNLP(H, C, g, x0);
+		assert (IsValid(app));
+		 // Ask Ipopt to solve the problem
+		 status = app->OptimizeTNLP(nlp_ptr);
+
+		if (status == Solve_Succeeded) {
+		   std::cout << std::endl << std::endl << "*** The quadratic problem solved!" << std::endl;
+		}
+		else {
+		   std::cout << std::endl << std::endl << "*** The quadratic problem FAILED!" << std::endl;
+		}
+
+		return nlp_ptr->get_solution();
+	}
+
+private:
+	//pointer to class containing all information for the program
+	 SmartPtr<ConvexifyNLP>  nlp_ptr;
+
+	 //ipoptapplication
+	 SmartPtr<IpoptApplication> app;
+	 ApplicationReturnStatus status;
 };
 
 
