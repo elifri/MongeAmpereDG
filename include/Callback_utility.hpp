@@ -29,6 +29,9 @@ private:
 
 
 struct Convex_error_functions{
+
+	static value_type m_scaling;
+
 	/// a convex hat which is zero at the boundary of the grid "triangle_dirichlet"
 	static void hat_triangle_dirichlet(const config::space_type & x, config::state_type &u);
 
@@ -47,10 +50,12 @@ struct Convex_error_functions{
 		else
 			u(0) *= -2+(2*x(1));
 
+		u *= -Convex_error_functions::m_scaling;
 	}
 
-	static vector_function_type get_hat_unitsquare_callback()
+	static vector_function_type get_hat_unitsquare_callback(value_type scaling =1)
 	{
+		Convex_error_functions::m_scaling = scaling;
 		return FREE_FUNCTION(&Convex_error_functions::hat_unitsquare);
 	}
 };
