@@ -9,7 +9,6 @@
 
 #include "../include/c0_converter.hpp"
 #include "../include/config.hpp"
-#include "../include/eiquadprog.hpp"
 #include "../include/grid_config.hpp"
 #include "../include/matlab_export.hpp"
 #include "../include/Plotter.hpp"
@@ -17,7 +16,6 @@
 #include "../include/Tsolver.hpp"
 #include "../include/utility.hpp"
 
-#include "../include/eiquadprog.hpp"
 
 #include "../include/Callback_utility.hpp"
 
