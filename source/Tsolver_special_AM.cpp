@@ -935,7 +935,14 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	}
 
 	cout << "f " << solve_quadprog(G2, f, CE, ce0, C.transpose(), ci0, x) << endl;
+	MATLAB_export(A, "A");
+	MATLAB_export(C, "C");
 
+	MATLAB_export(values_C, "values_C");
+	MATLAB_export(coefficients_C, "coefficients");
+
+
+	MATLAB_export(x, "x_code");
 	if (strongBoundaryCond)
 	{
 		VectorXd bd = bd_handler.get_nodal_contributions();
@@ -947,11 +954,42 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		c0_converter.convert_coefficients_toDG(x, solution);
 
 
-
-
 	clearLeafCellFlags();
 }
 
+///////////////////////////////////////////////////////
+
+void Tsolver::add_convex_error(VectorXd &solution)
+{
+	assert(solution.size() == number_of_dofs && "coefficient vector is of the wrong size");
+	assert (!interpolating_basis && "works only with a bezier basis");
+
+	for (unsigned int offset = 0; offset < number_of_dofs; offset+=6)	{
+		solution(offset+0) += fRand(0,1);
+		solution(offset+1) += fRand(0,1);
+		solution(offset+2) += fRand(0,1);
+	}
+}
+
+void Tsolver::add_convex_error()
+{
+	assert (!interpolating_basis && "works only with a bezier basis");
+
+	for (grid_type::leafcellmap_type::const_iterator it =
+			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
+		//collect leaf cell data
+		const grid_type::id_type & idLC = grid_type::id(it);
+		leafcell_type* pLC;
+		grid.findLeafCell(idLC, pLC);
+
+		for (int istate = 0; istate < statedim; istate++)
+		{
+			pLC->u(0,istate) += fRand(0,1);
+			pLC->u(1,istate) += fRand(0,1);
+			pLC->u(2,istate) += fRand(0,1);
+		}
+	}
+}
 ///////////////////////////////////////////////////////
 
 void Tsolver::restore_MA(Eigen::VectorXd & solution) {
