@@ -1241,8 +1241,21 @@ void Tsolver::time_stepping_MA() {
 			if (filename == "error")
 			{
 				cout << "Using the exact solution with artificial error as start solution!" << endl;
-				//summation f (get_exacttemperature_MA_callback(), Convex_error_functions::get_hat_unitsquare_callback());
-				init_startsolution_from_function(get_exacttemperature_MA_callback());
+				summation f (get_exacttemperature_MA_callback(), Convex_error_functions::get_hat_unitsquare_callback());
+				init_startsolution_from_function(f.get_add_callback());
+				std::string fname(plotter.get_output_directory());
+				fname += "/" + plotter.get_output_prefix() + "grid_startsolution.vtu";
+				plotter.writeLeafCellVTK(fname, 1);
+
+				VectorXd coeffs;
+
+				write_solution_vector(coeffs);
+				convexify(coeffs);
+				restore_MA(coeffs);
+
+				//plot solution
+				fname = plotter.get_output_directory() + "/" + plotter.get_output_prefix() + "grid_startsolutionConvexified.vtu";
+				plotter.writeLeafCellVTK(fname,1);
 				//add_convex_error();
 			}
 			else
@@ -1309,9 +1322,6 @@ void Tsolver::time_stepping_MA() {
 		//print start solution
 		if (iteration == 0 && start_solution)
 		{
-			std::string fname(plotter.get_output_directory());
-			fname += "/" + plotter.get_output_prefix() + "grid_startsolution.vtu";
-			plotter.writeLeafCellVTK(fname, 1);
 			cout << "min Eigenvalue " << min_EW << endl;
 		}
 
