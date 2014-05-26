@@ -932,16 +932,16 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		f = -A.transpose() * values_C;
 	}
 
-/*	MATLAB_export(A, "A");
+	MATLAB_export(A, "A");
 	MATLAB_export(C, "C");
 
 	MATLAB_export(values_C, "values_C");
-	MATLAB_export(coefficients_C, "coefficients_C");*/
+	MATLAB_export(coefficients_C, "coefficients");
 
 //	cout << "f " << solve_quadprog(G2, f, CE, ce0, C.transpose(), ci0, x) << endl;
 	x = convexifier.solve_quad_prog_with_ie_constraints(G2, C, f, coefficients_C);
 
-//	MATLAB_export(x, "x_code");
+	MATLAB_export(x, "x_code");
 	if (strongBoundaryCond)
 	{
 		VectorXd bd = bd_handler.get_nodal_contributions();

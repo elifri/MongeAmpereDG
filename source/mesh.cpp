@@ -50,10 +50,6 @@ void createRefinement(grid_type& grid, unsigned int nRefine, bool bVerbose, bool
 //------------------------------------------------------------------------------
 int main(int argc, char **argv) {
 
-	//seed for random number generator
-//	std::srand( std::time(0) );
-	std::srand(0);
-
   cout << "This is mesh, revision ???"<< "." << endl;
   if (argc<2) {  // argc
     cerr << "Please give name of config file as argument!" << endl;

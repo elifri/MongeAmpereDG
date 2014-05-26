@@ -137,9 +137,3 @@ bool string_contains_true(const std::string s) {
   return ( s2=="Y" || s2=="YES" || s2=="TRUE");
 }
 
-
-double fRand(const double fMin, const double fMax)
-{
-    double f = (double)rand() / RAND_MAX;
-    return fMin + f * (fMax - fMin);
-}
