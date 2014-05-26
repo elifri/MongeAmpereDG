@@ -29,6 +29,7 @@ public:
 		  // Note: The following choices are only examples, they might not be
 		  //       suitable for your optimization problem.
 		  app->Options()->SetNumericValue("tol", 1e-7);
+		  app->Options()->SetIntegerValue("print_frequency_iter", 50);
 		  app->Options()->SetStringValue("mu_strategy", "adaptive");
 		  app->Options()->SetStringValue("output_file", "ipopt.out");
 		  // The following overwrites the default name (ipopt.opt) of the
