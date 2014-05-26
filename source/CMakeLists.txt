@@ -18,15 +18,16 @@ add_library(boundary_handler boundary_handler.cpp)
 add_library(ConvexifyNLP ConvexifyNLP.cpp)
 
 add_library(Tsolver Tsolver_general.cpp Tsolver_special_POISSON.cpp Tsolver_special_AM.cpp)
+set(dependecies_Tsolver testlibs ConvexifyNLP boundary_handler C0_converter Plotter Tmass Tshape Callback_utility ${UTILITIES} ${IPOPT_LIBRARIES})
 
 add_executable(Mesh mesh.cpp)
-target_link_libraries(Mesh Tsolver ConvexifyNLP boundary_handler C0_converter Plotter Tmass Tshape Callback_utility singconfig utility Eigen_utility ${IPOPT_LIBRARIES})
+target_link_libraries(Mesh Tsolver ${dependecies_Tsolver})
 
 add_executable(Plot plot.cpp)
-target_link_libraries(Plot Tsolver boundary_handler C0_converter Plotter Tmass Tshape Callback_utility singconfig utility Eigen_utility)
+target_link_libraries(Plot Tsolver ${dependecies_Tsolver})
 
 add_executable(Test unittest.cpp)
-target_link_libraries(Test testlibs Tsolver C0_converter Plotter Tmass Tshape singconfig utility)  
+target_link_libraries(Test testlibs Tsolver ${dependecies_Tsolver})  
 
 #----example code ----
 #include_directories(${MyProject_SOURCE_DIR}/MainProject/inc)
