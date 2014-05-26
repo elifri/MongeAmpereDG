@@ -29,6 +29,10 @@ public:
 		  // Note: The following choices are only examples, they might not be
 		  //       suitable for your optimization problem.
 		  app->Options()->SetNumericValue("tol", 1e-7);
+		  //Desired threshold for the constraint violation.Absolute tolerance on the constraint violation. Successful termination requires that the max-norm of the (unscaled) constraint violation is less than this threshold.
+//		  app->Options()->SetNumericValue("constr_viol_tol", 1e-14);
+//		  app->Options()->SetNumericValue("acceptable_constr_viol_tol", 1e-14);
+
 		  app->Options()->SetIntegerValue("print_frequency_iter", 50);
 		  app->Options()->SetStringValue("mu_strategy", "adaptive");
 		  app->Options()->SetStringValue("output_file", "ipopt.out");
@@ -70,6 +74,11 @@ public:
 		}
 
 		return nlp_ptr->get_solution();
+	}
+
+	double get_minimum()
+	{
+		return nlp_ptr->get_minimum();
 	}
 
 private:

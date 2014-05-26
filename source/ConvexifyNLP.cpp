@@ -25,6 +25,7 @@
 
 using namespace Ipopt;
 using namespace Eigen;
+using namespace std;
 
 // constructor
 ConvexifyNLP::ConvexifyNLP(const Eigen::SparseMatrixD &H1, const Eigen::SparseMatrixD &C1,
@@ -77,6 +78,7 @@ bool ConvexifyNLP::get_bounds_info(Index n, Number* x_l, Number* x_u,
 
   // the first constraint lower bounds are zero
   Matrix<Number, Dynamic, 1>::Map(g_l, m) = Eigen::VectorXd::Zero(m);
+//  Matrix<Number, Dynamic, 1>::Map(g_l, m) = Eigen::VectorXd::Constant(m,1e-3);
 
   // the constraint has NO upper bound, here we set it to 2e19.
   // Ipopt interprets any number greater than nlp_upper_bound_inf as
@@ -243,6 +245,7 @@ void ConvexifyNLP::finalize_solution(SolverReturn status,
 */
 
   solution = Matrix<Number, Dynamic, 1>::Map(x, n);
+  fvalue = obj_value;
 }
 
 

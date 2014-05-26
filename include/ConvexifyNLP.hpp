@@ -83,6 +83,11 @@ public:
 	  return solution;
   }
 
+  double get_minimum()
+  {
+	  return fvalue;
+  }
+
 private:
   /**@name Methods to block default compiler methods.
    * The compiler automatically generates the following three methods.
@@ -103,6 +108,8 @@ private:
   const Eigen::SparseMatrixD &H, &C;
   const Eigen::VectorXd &g, &x0;
   Eigen::VectorXd solution;
+
+  double fvalue;
 
 
 };
