@@ -68,6 +68,12 @@ void C0_converter::init(grid_type &grid, const int number_of_dofs_DG)
 	dofsDG_to_dofsC_ratio.conservativeResize(node_indeces.size());
 	nodes.conservativeResize(node_indeces.size());
 
+	cout << " nodes " << endl;
+	for (int i = 0; i < nodes.size(); i++)
+	{
+		cout << i << " " << nodes(i).transpose() << endl;
+	}
+
 /*	cout << "DG to C mapping: " << endl;
 	for (int i=0; i< DG_to_C_indices.size(); i++)
 	{
@@ -97,6 +103,13 @@ int C0_converter::dof_C(const int dof_DG) const
 void C0_converter::get_node(const int i, space_type &node) const
 {
 	node = nodes(i);
+}
+
+void C0_converter::add_to_C_matrix(int &i, int &j, value_type &v) const{
+	i = DG_to_C_indices(i);
+	j = DG_to_C_indices(j);
+
+	v = v / dofsDG_to_dofsC_ratio(DG_to_C_indices(i));
 }
 
 

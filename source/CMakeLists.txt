@@ -19,6 +19,7 @@ add_library(ConvexifyNLP ConvexifyNLP.cpp)
 
 add_library(Tsolver Tsolver_general.cpp Tsolver_special_POISSON.cpp Tsolver_special_AM.cpp)
 
+add_executable(Mesh mesh.cpp)
 target_link_libraries(Mesh Tsolver ConvexifyNLP boundary_handler C0_converter Plotter Tmass Tshape Callback_utility singconfig utility Eigen_utility ${IPOPT_LIBRARIES})
 
 add_executable(Plot plot.cpp)

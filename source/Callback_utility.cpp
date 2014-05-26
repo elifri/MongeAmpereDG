@@ -33,3 +33,4 @@ vector_function_type summation::get_subtract_callback()
 	return MEMBER_FUNCTION(&summation::subtract, this);
 }
 
+value_type Convex_error_functions::m_scaling=1;
