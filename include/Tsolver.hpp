@@ -269,6 +269,8 @@ public:
          double min_EW;
          static const double epsilon = 1e-6; //minimum value of hessian eigenvalues
 
+         static const double alpha = 0.01;
+
    #endif
 
 #if (EQUATION == POISSON_EQ)
@@ -356,6 +358,16 @@ public:
     */
 
    void convexify(Eigen::VectorXd &solution); //convexifies the solution globally (convexifying bezier control polygon)
+
+   /*
+    * @brief adds random multiples  of the basis bezier functions to the coefficient vector solution
+    */
+   void add_convex_error(Eigen::VectorXd &solution);
+
+   /*
+    * @brief adds random multiples  of the basis bezier functions to the solution stored in leaf cells
+    */
+   void add_convex_error();
 
    void get_exacttemperature_MA (const space_type & x, state_type & u); // state_type ???
    vector_function_type get_exacttemperature_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_exacttemperature_MA, this);}
