@@ -269,7 +269,7 @@ public:
          double min_EW;
          static const double epsilon = 1e-6; //minimum value of hessian eigenvalues
 
-         static const double alpha = 0.01;
+         const double alpha = 0.5;
 
    #endif
 

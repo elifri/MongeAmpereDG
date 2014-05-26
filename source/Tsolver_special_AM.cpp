@@ -1014,8 +1014,7 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		// Copy solution entries back into u
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 			pLC->uold(ishape,0) = pLC->u(ishape,0);
-			//affine combination from u and old u
-			pLC->u(ishape,0) = alpha * solution(pLC->m_offset + ishape) + (1-alpha)*pLC->uold(ishape,0);
+			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
 		}
 
 		//update diffusion matrix
@@ -1279,7 +1278,7 @@ void Tsolver::time_stepping_MA() {
 			{
 				cout << "Using the exact solution with artificial error as start solution!" << endl;
 
-				summation f (get_exacttemperature_MA_callback(), Convex_error_functions::get_hat_unitsquare_callback(0.2));
+				summation f (get_exacttemperature_MA_callback(), Convex_error_functions::get_hat_unitsquare_callback(0.3));
 				init_startsolution_from_function(f.get_add_callback());
 //				init_startsolution_from_function(get_exacttemperature_MA_callback());
 				std::string fname(plotter.get_output_directory());
@@ -1381,7 +1380,11 @@ void Tsolver::time_stepping_MA() {
 
 		assemble_indicator_and_limiting(); // use flag
 
-		//write solution in leaf cells
+		//extract solution from last iteration
+		Eigen::VectorXd solution_old;
+		write_solution_vector(solution_old);
+
+		//write poisson solution in leaf cells
 		restore_MA(Lsolution);
 
 		//plot solution
@@ -1394,7 +1397,21 @@ void Tsolver::time_stepping_MA() {
 		convexify(Lsolution);
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
+
+		//write convexified poisson solution in leaf cells
 		restore_MA(Lsolution);
+
+		//plot solution
+		std::string fname = plotter.get_output_directory() + "/" + plotter.get_output_prefix() + "grid_numericalsolutionConvexified"
+				+NumberToString(iteration)+".vtu";
+		plotter.writeLeafCellVTK(fname,1);
+
+
+		//convex combination of two steps
+		Eigen::VectorXd solution = Tsolver::alpha*Lsolution + (1-Tsolver::alpha)*solution_old;
+		cout << "convex combination \n" << solution.transpose() << endl;
+
+		restore_MA(solution);
 
 		//plot solution
 		plotter.write_numericalsolution_VTK(iteration, true);
