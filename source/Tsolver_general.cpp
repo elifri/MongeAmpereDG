@@ -966,6 +966,8 @@ void Tsolver::init_startsolution_from_function(const vector_function_type f)
 		pLC->u = b;
 	}
 
+	cout << "Initialised start solution" << endl;
+
 }
 
 

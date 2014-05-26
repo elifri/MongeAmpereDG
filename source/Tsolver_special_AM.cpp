@@ -16,7 +16,6 @@
 #include "../include/Tsolver.hpp"
 #include "../include/utility.hpp"
 
-
 #include "../include/Callback_utility.hpp"
 
 #if (EQUATION == MONGE_AMPERE_EQ)
@@ -398,7 +397,8 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		//update penalty
 
 		cout << "Largest EW " << max_EW << endl;
-		penalty *= max_EW*10;
+		cout << "smallest EW " << min_EW << endl;
+		penalty *= max_EW*4;
 
 		cout << "used penalty " << penalty << endl;
 
@@ -932,13 +932,14 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		f = -A.transpose() * values_C;
 	}
 
-	cout << "f " << solve_quadprog(G2, f, CE, ce0, C.transpose(), ci0, x) << endl;
 	MATLAB_export(A, "A");
 	MATLAB_export(C, "C");
 
 	MATLAB_export(values_C, "values_C");
 	MATLAB_export(coefficients_C, "coefficients");
 
+//	cout << "f " << solve_quadprog(G2, f, CE, ce0, C.transpose(), ci0, x) << endl;
+	x = convexifier.solve_quad_prog_with_ie_constraints(G2, C, f, coefficients_C);
 
 	MATLAB_export(x, "x_code");
 	if (strongBoundaryCond)
@@ -1012,7 +1013,9 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
 		// Copy solution entries back into u
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
+			pLC->uold(ishape,0) = pLC->u(ishape,0);
+			//affine combination from u and old u
+			pLC->u(ishape,0) = alpha * solution(pLC->m_offset + ishape) + (1-alpha)*pLC->uold(ishape,0);
 		}
 
 		//update diffusion matrix
@@ -1053,17 +1056,14 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 			//calculate abs error
 			shape.assemble_state_N(pLC->u,k,state);
 			get_exacttemperature_MA(nv[k],stateEx);
-			pLC->Serror(k) = std::abs(state(0)-stateEx(0));
+			pLC->Serror(k) = state(0)-stateEx(0);
 		}
 
-		// Copy solution entries back into u
-		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-			pLC->uold(ishape,0) = pLC->u(ishape,0);
-			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
-
-		}
 
 	}
+
+	cout << "solution written in leafcell" << endl;
+	cout << "EW " << min_EW << " -- " << max_EW << endl;
 
 }
 
@@ -1248,6 +1248,7 @@ void Tsolver::time_stepping_MA() {
 	iteration = 0;
 
 	while (iteration < maxits) {
+		cout << "------------------------------------------------------------------------" <<endl;
 		cout << "Iteration: " << iteration << endl;
 
 		unsigned int LM_size;
@@ -1277,8 +1278,10 @@ void Tsolver::time_stepping_MA() {
 			if (filename == "error")
 			{
 				cout << "Using the exact solution with artificial error as start solution!" << endl;
-				summation f (get_exacttemperature_MA_callback(), Convex_error_functions::get_hat_unitsquare_callback());
+
+				summation f (get_exacttemperature_MA_callback(), Convex_error_functions::get_hat_unitsquare_callback(0.2));
 				init_startsolution_from_function(f.get_add_callback());
+//				init_startsolution_from_function(get_exacttemperature_MA_callback());
 				std::string fname(plotter.get_output_directory());
 				fname += "/" + plotter.get_output_prefix() + "grid_startsolution.vtu";
 				plotter.writeLeafCellVTK(fname, 1);
@@ -1292,7 +1295,10 @@ void Tsolver::time_stepping_MA() {
 				//plot solution
 				fname = plotter.get_output_directory() + "/" + plotter.get_output_prefix() + "grid_startsolutionConvexified.vtu";
 				plotter.writeLeafCellVTK(fname,1);
-				//add_convex_error();
+
+				cout << "Finished reading start solution " << endl;
+				cout << "------------------------------------------------------------------------" <<endl;
+
 			}
 			else
 				read_startsolution(filename);
@@ -1359,6 +1365,7 @@ void Tsolver::time_stepping_MA() {
 		if (iteration == 0 && start_solution)
 		{
 			cout << "min Eigenvalue " << min_EW << endl;
+			cout << "max Eigenvalue " << max_EW << endl;
 		}
 
 		//if strong b.c. add boundary dofs
