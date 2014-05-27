@@ -52,7 +52,7 @@ bool is_equal_set(const std::set<Ta>& A, const std::set<Ta>& B)
 	return res;
 }
 
-bool is_close(const double a, const double b, const double tolerance);
+bool is_close(const double a, const double b, const double tolerance=1e-10);
 bool is_small(const double a, const double tolerance);
 
 
