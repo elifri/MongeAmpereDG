@@ -22,7 +22,6 @@
 
 #if (EQUATION == MONGE_AMPERE_EQ)
 
-const double Tsolver::alpha = 0.5;
 
 ///////////////////////////////////////////
 ///////////////             ///////////////
@@ -35,7 +34,7 @@ const double Tsolver::alpha = 0.5;
 using namespace Eigen;
 
 //reads specific problem parameter from input
-void Tsolver::read_problem_parameters_MA(int &stabsign, double &gamma, double &refine_eps, double &coarsen_eps, int &level) {
+void Tsolver::read_problem_parameters_MA(int &stabsign, double &gamma, double &refine_eps, double &coarsen_eps, int &level, double &alpha) {
 	singleton_config_file::instance().getValue("method", "stabsign", stabsign, 1);
 	singleton_config_file::instance().getValue("method", "gamma", gamma, 0.0);
 	singleton_config_file::instance().getValue("method", "strongBoundaryCond", strongBoundaryCond, false);
@@ -44,6 +43,7 @@ void Tsolver::read_problem_parameters_MA(int &stabsign, double &gamma, double &r
 	singleton_config_file::instance().getValue("adaptation", "coarsen_eps", coarsen_eps, 1.0e-6);
 
 	singleton_config_file::instance().getValue("monge ampere", "startlevel", level, 2);
+	singleton_config_file::instance().getValue("monge ampere", "alpha", alpha, 0.5);
 
 
 	//read diffusion matrices
@@ -1195,6 +1195,8 @@ void Tsolver::init_start_solution_MA(std::string filename)
 
 	//convexify start solution
 	cout << "Convexifying start solution ... " << endl;
+
+	igpm::processtimer pt;
 	pt.start();
 	write_solution_vector(coeffs);
 	convexify(coeffs);
@@ -1219,7 +1221,7 @@ void Tsolver::time_stepping_MA() {
 
 	int level;
 
-	read_problem_parameters_MA(stabsign, gamma, refine_eps, coarsen_eps, level);
+	read_problem_parameters_MA(stabsign, gamma, refine_eps, coarsen_eps, level, alpha);
 
 	//check level
 	if (levelmax < level)

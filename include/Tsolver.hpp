@@ -269,7 +269,7 @@ public:
          double min_EW;
          static const double epsilon = 1e-6; //minimum value of hessian eigenvalues
 
-         static const double alpha;
+         double alpha;
 
    #endif
 
@@ -311,7 +311,7 @@ public:
    /*! read problem specific problem parameters from input file
     *
     */
-   void read_problem_parameters_MA(int &stabsign, double &gamma, double &refine_eps, double &coarsen_eps, int &level);
+   void read_problem_parameters_MA(int &stabsign, double &gamma, double &refine_eps, double &coarsen_eps, int &level, double& alpha);
 
    /*!
     * writes exact solution in leafcells
