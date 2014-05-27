@@ -91,7 +91,7 @@ public:
 													value_type &x0, value_type &y0,
 													Eigen::MatrixXd &solution);
 
-	void write_numericalsolution(const unsigned int i);
+	void write_numericalsolution(const unsigned int i, std::string =  "grid_numericalsolution");
 	void write_numericalsolution_VTK(const unsigned int i, std::string = "grid_numericalsolution");
 
 	void write_controlpolygonVTK(const unsigned int i);

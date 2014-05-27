@@ -847,7 +847,7 @@ void Plotter::write_controlpolygonVTK(std::string filename, const bool binary, c
 }
 
 
-void Plotter::write_numericalsolution(const unsigned int i)
+void Plotter::write_numericalsolution(const unsigned int i, std::string name)
 {
 
 	std::vector < std::vector < id_type > >v;
@@ -866,7 +866,7 @@ void Plotter::write_numericalsolution(const unsigned int i)
 	}
 
 	std::string fname(output_directory);
-	fname+="/" + output_prefix + "grid_numericalsolution"+NumberToString(i)+".dat";
+	fname+="/" + output_prefix + name +NumberToString(i)+".dat";
 	std::ofstream fC(fname.c_str());
 
 	// global header
