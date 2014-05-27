@@ -317,6 +317,7 @@ void Tsolver::get_baryc_coordinates (const grid_type::id_type& idLC,
 	LGS << vN(0)(0), vN(1)(0), vN(2)(0),
 		   vN(0)(1), vN(1)(1), vN(2)(1),
 		   1, 1,1;
+
 	Eigen::Vector3d rhs;
 	rhs << x(0), x(1), 1;
 
@@ -1010,6 +1011,44 @@ void Tsolver::write_solution_vector(VectorXd & solution)
 	}
 }
 
+state_type Tsolver::calculate_L2_error(const vector_function_type f)
+{
+	state_type res;
+	res.setZero();
+	for (grid_type::leafcellmap_type::const_iterator it =
+			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
+		const grid_type::id_type & idLC = grid_type::id(it);
+		leafcell_type* pLC;
+
+		// grid_type::leafcell_type *pLC;
+		grid.findLeafCell(idLC, pLC);
+
+		// get pointer to basecell of this cell
+		const grid_type::basecell_type * pBC;
+		grid.findBaseCellOf(idLC, pBC);
+
+		//quadrature
+		for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
+			state_type exactSol, numericSol;
+
+			space_type x;
+			get_Ecoordinates(idLC, iq, x);
+			f(x, exactSol);
+			shape.assemble_state_Equad(pLC->u, iq, numericSol);
+
+			for (unsigned int istate = 0; istate < statedim; ++istate) {
+				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+					double val = shape.get_Equadw(iq) * pBC->get_detjacabs()* facLevelVolume[idLC.level()] //quadratureweights
+							* abs(exactSol(istate) - numericSol(istate)); //function value of ansatz function
+
+					res(istate) += val;
+				}
+			}
+		}
+
+	}
+	return res.cwiseSqrt();
+}
 
 
 ////////////////////////////////////////////////////

@@ -134,6 +134,7 @@ public:
 
    void write_solution();
    void write_solution_vector(Eigen::VectorXd & solution); ///extract solution from leafcells to vector
+   state_type calculate_L2_error(const vector_function_type f); /// calculate l2 error
 
    //////////////    READ DATA ///////////////////////
 
