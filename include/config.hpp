@@ -286,6 +286,8 @@ string entryname2d(const string root, unsigned int i, unsigned int j) {
 }
 
 
+bool is_infinite( const config::value_type &value );
+
 #endif // DOXYGEN_SKIP
 
 #endif /* CONFIG_HPP_ */

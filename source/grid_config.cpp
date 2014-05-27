@@ -50,6 +50,13 @@ std::ostream& operator <<(std::ostream &output, const Monge_Ampere_Problem &p)
 
 	return output;
 }
+
+bool is_infinite( const config::value_type &value )
+{
+	config::value_type max_value = std::numeric_limits<config::value_type>::max();
+	config::value_type min_value = - max_value;
+
+    return ! ( min_value <= value && value <= max_value );
 }
 
 
