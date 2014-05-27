@@ -18,6 +18,38 @@ igpm::configfile& singleton_config_file::instance() {
 }
 
 
+std::ostream& operator <<(std::ostream &output, const Monge_Ampere_Problem &p)
+{
+	switch(p)
+	{
+	case SIMPLEMONGEAMPERE:
+		output << "Simple Monge Ampere Problem";
+		break;
+	case SIMPLEMONGEAMPERE2:
+		output << "Simple Monge Ampere Problem 2";
+		break;
+	case MONGEAMPERE1:
+		output << "Monge Ampere Problem";
+		break;
+	case MONGEAMPERE2:
+		output << "Monge Ampere Problem 2";
+		break;
+	case MONGEAMPERE3:
+		output << "Monge Ampere Problem 3";
+		break;
+	case CONST_RHS:
+		output << "rhs = 1";
+		break;
+	case BRENNER_EX1:
+		output << "first Brenner Example";
+		break;
+	default:
+		cerr << "Error: Unknown Monge Ampere Problem" << endl;
+		exit(-1);
+	}
+
+}
+
 
 void get_nodes(const grid_type &grid, const grid_type::id_type& id, nvector_type &nvEigen)
 {

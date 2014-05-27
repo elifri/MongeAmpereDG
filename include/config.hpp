@@ -54,7 +54,7 @@ class Tmass;
 // Poisson-Problems
 #define SIMPLEPOISSON 31
 #define SIMPLEPOISSON2 32
-#define CONST_RHS 33
+//#define CONST_RHS 33
 #define SINGSOL1 34
 #define CONST_RHS2 35
 #define SIMPLEPOISSON3 36
@@ -64,13 +64,18 @@ class Tmass;
 #define CONSTKAPPA_IMPLICIT 41
 
 //Monge Ampere Problems
-#define MONGEAMPERE1 42 // exp(|x|_2^2 / 2)
-#define MONGEAMPERE2 43
-#define MONGEAMPERE3 44 // 1/2 * max{0,|x-x0|-0.2}^2
-#define MONGEAMPERE4 45 //-sqrt(2-|x|^2)
-#define SIMPLEMONGEAMPERE 46 // solution is 2x^2+2y^2-3xy
-#define SIMPLEMONGEAMPERE2 47 // solution is x^2/2+y^2/2
-
+enum Monge_Ampere_Problem
+{
+	MONGEAMPERE1, // exp(|x|_2^2 / 2)
+	MONGEAMPERE2,
+	MONGEAMPERE3, // 1/2 * max{0,|x-x0|-0.2}^2
+	MONGEAMPERE4, //-sqrt(2-|x|^2)
+	SIMPLEMONGEAMPERE, // solution is 2x^2+2y^2-3xy
+	SIMPLEMONGEAMPERE2, // solution is x^2/2+y^2/2
+	CONST_RHS, //exact solution not known
+	BRENNER_EX1 //first example in brenner paper
+};
+std::ostream& operator <<(std::ostream &output, const Monge_Ampere_Problem &p);
 
 #if (EQUATION == EULER_EQ)
   #define PROBLEM BUMP
@@ -80,8 +85,6 @@ class Tmass;
   #define PROBLEM CUTTING
 #elif (EQUATION == POISSON_EQ || EQUATION == POISSON_PREC_EQ)
   #define PROBLEM CONST_RHS
-#elif (EQUATION == MONGE_AMPERE_EQ)
-  #define PROBLEM SIMPLEMONGEAMPERE2
 #elif (EQUATION == IMPLICIT_HEAT_EQ)
   #define PROBLEM CONSTKAPPA_IMPLICIT
 #endif

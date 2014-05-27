@@ -255,6 +255,8 @@ public:
 
    #if (EQUATION==MONGE_AMPERE_EQ)
 
+   	   	 Monge_Ampere_Problem problem;
+
          double atol,rtol; // absolute and relative tolerances
          double dtol;      // tolerances for divergence
 

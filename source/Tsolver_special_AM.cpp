@@ -45,6 +45,28 @@ void Tsolver::read_problem_parameters_MA(int &stabsign, double &gamma, double &r
 	singleton_config_file::instance().getValue("monge ampere", "startlevel", level, 2);
 	singleton_config_file::instance().getValue("monge ampere", "alpha", alpha, 0.5);
 
+	std::string problem_name;
+	singleton_config_file::instance().getValue("monge ampere", "equation", problem_name, "");
+
+	if (problem_name == "SIMPLEMONGEAMPERE")
+		problem = SIMPLEMONGEAMPERE;
+	else if (problem_name == "SIMPLEMONGEAMPERE2")
+		problem = SIMPLEMONGEAMPERE2;
+	else if (problem_name == "MONGEAMPERE1")
+		problem = MONGEAMPERE1;
+	else if (problem_name == "MONGEAMPERE2")
+		problem = MONGEAMPERE2;
+	else if (problem_name == "CONST_RHS")
+		problem = CONST_RHS;
+	else if (problem_name == "BRENNER_EX1")
+		problem = BRENNER_EX1;
+	else
+	{
+		cerr << "Error: could not read equation name " << endl;
+		exit(-1);
+	}
+
+	cout << "Read Equation " << problem << endl;
 
 	//read diffusion matrices
 	for (grid_type::leafcellmap_type::iterator it=grid.leafCells().begin(); it!=grid.leafCells().end(); ++it) {
@@ -1102,33 +1124,41 @@ double phi(const double x, const double y) {
 
 
 void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // state_type ???
-		{
-#if (PROBLEM == MONGEAMPERE1)
-	u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
-#elif (PROBLEM == MONGEAMPERE2)
-	u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
-#elif (PROBLEM == MONGEAMPERE3)
-	value_type val = x.norm() - 0.2;
-	if (val > 0)	u[0] = val*val/2.;
-	else u[0] = 0;
-#elif (PROBLEM == MONGEAMPERE4)
-	value_type val = 2-sqr(x.norm());
-	if (val < 0) u[0] = 0;
-	else	u[0] = -sqrt(val);
-#elif (PROBLEM == SIMPLEMONGEAMPERE)
-	u[0] = 2*sqr(x[0]) + 2*sqr(x[1]) + 3 * x[0]*x[1];
-#elif (PROBLEM == SIMPLEMONGEAMPERE2)
-	u[0] = sqr(x[0])/2.0 + sqr(x[1])/2.0;
-#elif (PROBLEM == BRENNEREX1)
-	u[0] = 20*exp(pow(x[0],6)/6.0+x[1]);
-#elif (PROBLEM == CONST_RHS)
-	u[0] = 0; // exact solution not known, Dirichlet boundary conditions with u=0
-#elif (PROBLEM == CONST_RHS2)
-	u[0] = 1.0 / 8.0 - (pow(x[0] - 0.5, 2) + pow(x[1] - 0.5, 2)) / 4.0;
-#else
-	// solution not implemented for this problem
-	throw("solution not implemented for this problem");
-#endif
+{
+	value_type val;
+	switch (problem)
+	{
+	case MONGEAMPERE1:
+		u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
+		break;
+	case MONGEAMPERE2:
+		u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
+		break;
+	case MONGEAMPERE3:
+		val = x.norm() - 0.2;
+		if (val > 0)	u[0] = val*val/2.;
+		else u[0] = 0;
+		break;
+	case MONGEAMPERE4:
+		val = 2-sqr(x.norm());
+		if (val < 0) u[0] = 0;
+		else	u[0] = -sqrt(val);
+		break;
+	case SIMPLEMONGEAMPERE:
+		u[0] = 2*sqr(x[0]) + 2*sqr(x[1]) + 3 * x[0]*x[1];
+		break;
+	case BRENNER_EX1:
+		u[0] = 20*exp(pow(x[0],6)/6.0+x[1]);
+		break;
+	case CONST_RHS:
+		u[0] = 1;
+		break;
+	case SIMPLEMONGEAMPERE2:
+		u[0] = sqr(x[0])/2.0 + sqr(x[1])/2.0;
+		break;
+	default:
+		u[0] = 0;// exact solution not known, Dirichlet boundary conditions with u=0
+	}
 }
 
 //////////////////////////////////////////////////////////
@@ -1146,31 +1176,45 @@ void Tsolver::get_exacttemperaturenormalderivative_MA(const space_type & x,
 //////////////////////////////////////////////////////////
 
 void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type ???
-		{
-
-#if (PROBLEM == MONGEAMPERE1)
-	u_rhs[0] = 1 + sqr(x[0])+sqr(x[1]); //1+||x||^2
-	u_rhs[0] *= exp(sqr(x[0])+sqr(x[1])); //*exp(||x||^2)
-#elif (PROBLEM == MONGEAMPERE2)
-	value_type f = exp( (sqr(x[0])+sqr(x[1]))/2. );
-	u_rhs[0] = 6+ 5*sqr(x[0]) + 4 * x[0]*x[1] + sqr(x[1]);
-	u_rhs[0] *= f;
-#elif (PROBLEM == MONGEAMPERE3)
-	value_type f = 0.2/x.norm();
-	f = 1 - f;
-	if (f > 0)	u_rhs[0] = f;
-	else	u_rhs[0] = 0;
-#elif (PROBLEM == MONGEAMPERE4)
-	u_rhs[0] = 2./sqr(2-sqr(x.norm()));
-#elif (PROBLEM == SIMPLEMONGEAMPERE)
-	u_rhs[0] = 7;
-#elif (PROBLEM == BRENNEREX1)
-	u_rhs[0] = 2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4);
-#elif (PROBLEM == CONST_RHS || SIMPLEMONGEAMPERE2)
-	u_rhs[0] = 1;
-#else
-	u_rhs[0] = 0;
-#endif
+{
+	value_type f;
+	switch (problem)
+	{
+	case MONGEAMPERE1:
+		u_rhs[0] = 1 + sqr(x[0]) + sqr(x[1]); //1+||x||^2
+		u_rhs[0] *= exp(sqr(x[0]) + sqr(x[1])); //*exp(||x||^2)
+		break;
+	case MONGEAMPERE2:
+		f = exp((sqr(x[0]) + sqr(x[1])) / 2.);
+		u_rhs[0] = 6 + 5 * sqr(x[0]) + 4 * x[0] * x[1] + sqr(x[1]);
+		u_rhs[0] *= f;
+		break;
+	case MONGEAMPERE3:
+		f = 0.2 / x.norm();
+		f = 1 - f;
+		if (f > 0)
+			u_rhs[0] = f;
+		else
+			u_rhs[0] = 0;
+		break;
+	case MONGEAMPERE4:
+		u_rhs[0] = 2. / sqr(2 - sqr(x.norm()));
+		break;
+	case SIMPLEMONGEAMPERE:
+		u_rhs[0] = 7;
+		break;
+	case BRENNER_EX1:
+		u_rhs[0] = 2000 * pow(exp(pow(x[0], 6) / 6 + x[1]), 2) * pow(x[0], 4);
+		break;
+	case CONST_RHS:
+		u_rhs[0] = 1;
+		break;
+	case SIMPLEMONGEAMPERE2:
+		u_rhs[0] = 1;
+		break;
+	default:
+		u_rhs[0] = 0;
+	}
 }
 
 void Tsolver::init_start_solution_MA(std::string filename)
