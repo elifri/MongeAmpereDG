@@ -57,9 +57,7 @@ void Tsolver::read_problem_parameters_MA(int &stabsign, double &gamma, double &r
 	else if (problem_name == "MONGEAMPERE2")
 		problem = MONGEAMPERE2;
 	else if (problem_name == "MONGEAMPERE3")
-		problem = MONGEAMPERE2;
-	else if (problem_name == "MONGEAMPERE4")
-		problem = MONGEAMPERE2;
+		problem = MONGEAMPERE3;
 	else if (problem_name == "CONST_RHS")
 		problem = CONST_RHS;
 	else if (problem_name == "BRENNER_EX1")
@@ -918,6 +916,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		bd_handler.delete_boundary_dofs_C(A);
 		bd_handler.delete_boundary_dofs_C_only_cols(C);
 		bd_handler.delete_boundary_dofs_C(values_C);
+		bd_handler.delete_boundary_dofs_C(coefficients_C);
 
 
 		//pos. def. matrix in quadr. cost function
@@ -1136,18 +1135,18 @@ void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // s
 	switch (problem)
 	{
 	case MONGEAMPERE1:
-		u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
+		u[0] = exp( x.squaredNorm()/2. );
 		break;
 	case MONGEAMPERE2:
-		u[0] = exp( (sqr(x[0])+sqr(x[1]))/2. );
-		break;
-	case MONGEAMPERE3:
-		val = x.norm() - 0.2;
+	{
+		space_type x0 (0.5,0.5);
+		val = (x-x0).norm() - 0.2;
 		if (val > 0)	u[0] = val*val/2.;
 		else u[0] = 0;
+	}
 		break;
-	case MONGEAMPERE4:
-		val = 2-sqr(x.norm());
+	case MONGEAMPERE3:
+		val = 2-x.squaredNorm();
 		if (val < 0) u[0] = 0;
 		else	u[0] = -sqrt(val);
 		break;
@@ -1193,20 +1192,21 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 		u_rhs[0] *= exp(sqr(x[0]) + sqr(x[1])); //*exp(||x||^2)
 		break;
 	case MONGEAMPERE2:
-		f = exp((sqr(x[0]) + sqr(x[1])) / 2.);
-		u_rhs[0] = 6 + 5 * sqr(x[0]) + 4 * x[0] * x[1] + sqr(x[1]);
-		u_rhs[0] *= f;
-		break;
-	case MONGEAMPERE3:
-		f = 0.2 / x.norm();
+		{
+		space_type x0 (0.5,0.5);
+		f = 0.2 / (x-x0).norm();
 		f = 1 - f;
 		if (f > 0)
 			u_rhs[0] = f;
 		else
 			u_rhs[0] = 0;
+		}
 		break;
-	case MONGEAMPERE4:
-		u_rhs[0] = 2. / sqr(2 - sqr(x.norm()));
+	case MONGEAMPERE3:
+		if (abs(x.squaredNorm() -2) < 1e-6)
+			u_rhs [0] = 1e19;
+		else
+			u_rhs[0] = 2. / sqr(2 - x.squaredNorm());
 		break;
 	case SIMPLEMONGEAMPERE:
 		u_rhs[0] = 7;
@@ -1458,12 +1458,14 @@ void Tsolver::time_stepping_MA() {
 
 		//convex combination of two steps
 		Eigen::VectorXd solution = Tsolver::alpha*Lsolution + (1-Tsolver::alpha)*solution_old;
-		cout << "convex combination \n" << solution.transpose() << endl;
+//		cout << "convex combination \n" << solution.transpose() << endl;
 
 		restore_MA(solution);
 
 		//plot solution
 		plotter.write_numericalsolution_VTK(iteration);
+
+		cout << "Current L2 error is " << calculate_L2_error(get_exacttemperature_MA_callback()) << endl;
 
 		// reset flag 0
 		setleafcellflags(0, false);
