@@ -925,15 +925,9 @@ void Plotter::write_numericalsolution(const unsigned int i)
 }
 
 
-void Plotter::write_numericalsolution_VTK(const unsigned int i, bool interstep) {
-
+void Plotter::write_numericalsolution_VTK(const unsigned int i, std::string name) {
 	std::string fname(output_directory);
-	if (!interstep){
-		fname += "/"+ output_prefix + "grid_numericalsolution" + NumberToString(i) + ".vtu";
-	}
-	else{
-		fname += "/"+ output_prefix + "grid_numericalsolutionInter" + NumberToString(i) + ".vtu";
-	}
+	fname += "/"+ output_prefix + name + NumberToString(i) + ".vtu";
 
 	writeLeafCellVTK(fname, 1);
 

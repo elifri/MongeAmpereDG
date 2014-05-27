@@ -269,7 +269,7 @@ public:
          double min_EW;
          static const double epsilon = 1e-6; //minimum value of hessian eigenvalues
 
-         const double alpha = 0.5;
+         static const double alpha;
 
    #endif
 
@@ -317,7 +317,6 @@ public:
     * writes exact solution in leafcells
     */
    void initializeLeafCellData_MA ();
-   void clearLeafCellFlags();
 
 private:
    void assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM); ///writes the stiffness matrix part of LC

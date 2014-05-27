@@ -20,6 +20,8 @@
 
 #if (EQUATION == MONGE_AMPERE_EQ)
 
+const double Tsolver::alpha = 0.5;
+
 ///////////////////////////////////////////
 ///////////////             ///////////////
 ///////////////    AM  ///////////////
@@ -110,18 +112,6 @@ void Tsolver::initializeLeafCellData_MA() {
 
 //		shape.get_mass().Cholesky_solve(pLC->u);
 
-		pLC->id().setFlag(0, false);
-	}
-}
-
-void Tsolver::clearLeafCellFlags()
-{
-	for (grid_type::leafcellmap_type::const_iterator it =
-			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
-		const grid_type::id_type & idLC = grid_type::id(it);
-		leafcell_type* pLC;
-
-		grid.findLeafCell(idLC, pLC);
 		pLC->id().setFlag(0, false);
 	}
 }
@@ -328,19 +318,6 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
 	}
 }
 
-/*Equadrature_type Tsolver::assemble_face_term_MA(const int ishape, const int iface, const int jshape, const int jface, const grid_type::basecell_type * pC, const int level, const int orientation = 1)
-{
-	Equadrature_type values;
-
-	const Equadrature_type& jump = shape.get_Fquads_by_face(ishape,iface);
-	Equadrature_type grad_times_normal = pC->get_normalderi_by_face(jshape, jface)/facLevelLength[level];
-
-	if (vOh(jface) == 1)	grad_times_normal.reverseinplace();
-
-	values = -0.5 * jump.cwiseProduct(grad_times_normal);
-
-	return values;
-}*/
 
 /* @brief initializes the stiffness matrix and lhs for the AM problem
  *
@@ -634,7 +611,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 	}
 
 
-	clearLeafCellFlags();
+	setleafcellflags(0, false); //reset flags
 }
 
 //////////////////////////////////////////////////////
@@ -662,13 +639,6 @@ void Tsolver::convexify(Hessian_type& hess) {
 }
 
 /////////////////////////////////////////////////////
-
-void Tsolver::convexify_cell(const leafcell_type* pLC, Eigen::VectorXd &solution)
-{
-	assert (!interpolating_basis && "This convexification works only with bezier polynomials!");
-
-	Eigen::VectorXd coeff = solution.segment(pLC->m_offset, degreedim*3);
-}
 
 void Tsolver::init_matrices_for_quadr_program(SparseMatrixD &A, SparseMatrixD &C)
 {
@@ -882,7 +852,6 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	c0_converter.convert_coefficients_toC(solution, coefficients_C);
 
 
-
 	//set up quadratic program to solve least square with inequality constraint
 	SparseMatrixD G2, CE;
 	Eigen::VectorXd f, ci0, x, ce0;
@@ -936,12 +905,15 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	MATLAB_export(C, "C");
 
 	MATLAB_export(values_C, "values_C");
-	MATLAB_export(coefficients_C, "coefficients");
+	MATLAB_export(coefficients_C, "coefficients_C");
 
 //	cout << "f " << solve_quadprog(G2, f, CE, ce0, C.transpose(), ci0, x) << endl;
 	x = convexifier.solve_quad_prog_with_ie_constraints(G2, C, f, coefficients_C);
 
 	MATLAB_export(x, "x_code");
+	cout << "fvalue_code = " << convexifier.get_minimum() << ";" << endl;
+
+//	MATLAB_export(x, "x_code");
 	if (strongBoundaryCond)
 	{
 		VectorXd bd = bd_handler.get_nodal_contributions();
@@ -953,7 +925,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		c0_converter.convert_coefficients_toDG(x, solution);
 
 
-	clearLeafCellFlags();
+	setleafcellflags(0, false); //reset flags
 }
 
 ///////////////////////////////////////////////////////
@@ -1276,31 +1248,38 @@ void Tsolver::time_stepping_MA() {
 		if (start_solution && iteration == 0){
 			if (filename == "error")
 			{
-				cout << "Using the exact solution with artificial error as start solution!" << endl;
+				cout	<< "Using the exact solution with artificial error as start solution!"
+						<< endl;
 
-				summation f (get_exacttemperature_MA_callback(), Convex_error_functions::get_hat_unitsquare_callback(0.3));
+				summation f(get_exacttemperature_MA_callback(),
+						Convex_error_functions::get_hat_unitsquare_callback(
+								0.3));
 				init_startsolution_from_function(f.get_add_callback());
 //				init_startsolution_from_function(get_exacttemperature_MA_callback());
-				std::string fname(plotter.get_output_directory());
-				fname += "/" + plotter.get_output_prefix() + "grid_startsolution.vtu";
-				plotter.writeLeafCellVTK(fname, 1);
-
-				VectorXd coeffs;
-
-				write_solution_vector(coeffs);
-				convexify(coeffs);
-				restore_MA(coeffs);
-
-				//plot solution
-				fname = plotter.get_output_directory() + "/" + plotter.get_output_prefix() + "grid_startsolutionConvexified.vtu";
-				plotter.writeLeafCellVTK(fname,1);
-
-				cout << "Finished reading start solution " << endl;
-				cout << "------------------------------------------------------------------------" <<endl;
-
-			}
-			else
+			} else
 				read_startsolution(filename);
+
+			plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
+
+			VectorXd coeffs;
+
+			//convexify start solution
+			cout << "Convexifying start solution ... " << endl;
+			pt.start();
+			write_solution_vector(coeffs);
+			convexify(coeffs);
+			restore_MA(coeffs); //writes solution and additional data in leaf cells
+			pt.stop();
+			cout << "done. " << pt << " s." << endl;
+
+			//plot solution
+			//fname = plotter.get_output_directory() + "/" + plotter.get_output_prefix() + "grid_startsolutionConvexified.vtu";
+			//plotter.writeLeafCellVTK(fname,1);
+			plotter.write_numericalsolution_VTK(iteration,
+					"grid_startsolutionConvexified");
+
+			cout << "Finished reading start solution " << endl;
+			cout << "------------------------------------------------------------------------" <<endl;
 		}
 
 		//init variables
@@ -1310,13 +1289,14 @@ void Tsolver::time_stepping_MA() {
 		Lrhs.setZero(LM_size);
 		Lsolution.setZero(LM_size);
 
+		//reserve space
 		LM.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
 		if (strongBoundaryCond){
 			LM_bd.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
 			Lrhs_bd.setZero(LM_size);
 		}
 
-		//assebmle system
+		//assemble system
 		cout << "Assemble linear System..." << flush << endl;
 		pt.start();
 		if (!strongBoundaryCond)
@@ -1360,20 +1340,12 @@ void Tsolver::time_stepping_MA() {
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
-		//print start solution
-		if (iteration == 0 && start_solution)
-		{
-			cout << "min Eigenvalue " << min_EW << endl;
-			cout << "max Eigenvalue " << max_EW << endl;
-		}
-
 		//if strong b.c. add boundary dofs
 		if (strongBoundaryCond)
 		{
 			bd_handler.add_boundary_dofs(Lsolution, Lsolution_only_bd, Lsolution_bd);
 			Lsolution = Lsolution_bd;
 		}
-
 
 		//clear flags
 		setleafcellflags(0, false);
@@ -1387,7 +1359,7 @@ void Tsolver::time_stepping_MA() {
 		//write poisson solution in leaf cells
 		restore_MA(Lsolution);
 
-		//plot solution
+		//plot poisson solution
 		plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
 		plotter.write_numericalsolution_VTK(iteration);
 
@@ -1402,9 +1374,7 @@ void Tsolver::time_stepping_MA() {
 		restore_MA(Lsolution);
 
 		//plot solution
-		std::string fname = plotter.get_output_directory() + "/" + plotter.get_output_prefix() + "grid_numericalsolutionConvexified"
-				+NumberToString(iteration)+".vtu";
-		plotter.writeLeafCellVTK(fname,1);
+		plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionConvexified");
 
 
 		//convex combination of two steps
@@ -1414,7 +1384,7 @@ void Tsolver::time_stepping_MA() {
 		restore_MA(solution);
 
 		//plot solution
-		plotter.write_numericalsolution_VTK(iteration, true);
+		plotter.write_numericalsolution_VTK(iteration);
 
 		// reset flag 0
 		setleafcellflags(0, false);
