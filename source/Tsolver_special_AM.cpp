@@ -56,6 +56,10 @@ void Tsolver::read_problem_parameters_MA(int &stabsign, double &gamma, double &r
 		problem = MONGEAMPERE1;
 	else if (problem_name == "MONGEAMPERE2")
 		problem = MONGEAMPERE2;
+	else if (problem_name == "MONGEAMPERE3")
+		problem = MONGEAMPERE2;
+	else if (problem_name == "MONGEAMPERE4")
+		problem = MONGEAMPERE2;
 	else if (problem_name == "CONST_RHS")
 		problem = CONST_RHS;
 	else if (problem_name == "BRENNER_EX1")
