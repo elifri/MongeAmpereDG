@@ -29,16 +29,13 @@ std::ostream& operator <<(std::ostream &output, const Monge_Ampere_Problem &p)
 		output << "Simple Monge Ampere Problem 2, solution is x^2/2+y^2/2";
 		break;
 	case MONGEAMPERE1:
-		output << "Monge Ampere Problem (solution exp(|x|_2^2 / 2))";
+		output << "Monge Ampere Problem 1 (solution exp(|x|_2^2 / 2))";
 		break;
 	case MONGEAMPERE2:
-		output << "Monge Ampere Problem 2";
+		output << "Monge Ampere Problem 2 (solution: 1/2 * max{0,|x-x0|-0.2}^2)";
 		break;
 	case MONGEAMPERE3:
-		output << "Monge Ampere Problem 3 (solution: 1/2 * max{0,|x-x0|-0.2}^2)";
-		break;
-	case MONGEAMPERE4:
-		output << "Monge Ampere Problem 4 (solution: -sqrt(2-|x|^2))";
+		output << "Monge Ampere Problem 3 (solution: -sqrt(2-|x|^2))";
 		break;
 	case CONST_RHS:
 		output << "rhs = 1, exact solution unknown";
@@ -51,6 +48,8 @@ std::ostream& operator <<(std::ostream &output, const Monge_Ampere_Problem &p)
 		exit(-1);
 	}
 
+	return output;
+}
 }
 
 
