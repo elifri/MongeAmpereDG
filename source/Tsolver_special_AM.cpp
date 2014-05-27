@@ -18,6 +18,8 @@
 
 #include "../include/Callback_utility.hpp"
 
+#include "test/test_utils.hpp"
+
 #if (EQUATION == MONGE_AMPERE_EQ)
 
 const double Tsolver::alpha = 0.5;
@@ -157,8 +159,6 @@ void Tsolver::assignViews_MA(unsigned int & offset) {
 		const grid_type::id_type id = grid_type::id(it);
 		assignViewCell_MA(id, blocksize, offset);
 	}
-
-	plotter.write_exactsolution(get_exacttemperature_MA_callback(),0);
 }
 
 void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC, Hessian_type & hess){
@@ -752,6 +752,24 @@ void Tsolver::init_matrices_for_quadr_program(SparseMatrixD &A, SparseMatrixD &C
 					// (in the paper called baryc coordinates of v_v with respect to T1)
 					get_baryc_coordinates(idLC, nv[ftilde], x_baryc);
 
+					{
+						nvector_type nv_LC;
+						get_nodes(grid, idLC, nv_LC);
+
+						space_type x_from_baryc= space_type::Zero();
+						for (int i = 0; i < barycdim; i++)
+							x_from_baryc+= x_baryc(i)*nv_LC(i);
+//
+//						cout << "baryc coord  " << x_baryc << endl;
+//
+//						cout << "node " << nv[ftilde].transpose() << endl;
+//						cout << "node from baryc " << x_from_baryc.transpose() << endl;
+
+						assert(is_close(nv[ftilde](0), x_from_baryc(0)));
+						assert(is_close(nv[ftilde](1), x_from_baryc(1)));
+
+					}
+
 					int index0, index1;
 
 					//get index of the control points on the faces which are not on face f
@@ -1218,69 +1236,70 @@ void Tsolver::time_stepping_MA() {
 
 	iteration = 0;
 
-	while (iteration < maxits) {
-		cout << "------------------------------------------------------------------------" <<endl;
-		cout << "Iteration: " << iteration << endl;
+	//!!!!!!!!!!!!!!warning: this works only outside of loop if there is no refinement inside the loop!!!!!!!!!
+	unsigned int LM_size;
 
-		unsigned int LM_size;
+	//assign matrix cooordinates
+	cout << "Assign matrix coordinates..." << endl;
+	pt.start();
+	assignViews_MA(LM_size);
+	pt.stop();
+	cout << "done. " << pt << " s." << endl;
 
-		//assign matrix cooordinates
-		cout << "Assign matrix coordinates..." << endl;
+	//init continuous formulation
+	assert(!interpolating_basis && "this only works with a bezier basis");
+
+	c0_converter.init(grid, number_of_dofs);
+
+	//init boundary handler
+	if (strongBoundaryCond) {
+		if (interpolating_basis)
+			bd_handler.initialize(grid, number_of_dofs);
+		else
+			bd_handler.initialize_bezier(grid, number_of_dofs,
+					get_exacttemperature_MA_callback(), &shape, c0_converter);
+	}
+
+	//init startsolution
+	if (start_solution){
+		assert(iteration == 0);
+		if (filename == "error")
+		{
+			cout	<< "Using the exact solution with artificial error as start solution!"
+					<< endl;
+
+			summation f(get_exacttemperature_MA_callback(),
+					Convex_error_functions::get_hat_unitsquare_callback(
+							0.3));
+			init_startsolution_from_function(f.get_add_callback());
+//				init_startsolution_from_function(get_exacttemperature_MA_callback());
+		} else
+			read_startsolution(filename);
+
+		plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
+
+		VectorXd coeffs;
+
+		//convexify start solution
+		cout << "Convexifying start solution ... " << endl;
 		pt.start();
-		assignViews_MA(LM_size);
+		write_solution_vector(coeffs);
+		convexify(coeffs);
+		restore_MA(coeffs); //writes solution and additional data in leaf cells
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
-		//init continuous formulation
-		assert (!interpolating_basis && "this only works with a bezier basis");
+		//plot solution
+		plotter.write_numericalsolution_VTK(iteration,
+				"grid_startsolutionConvexified");
 
-		c0_converter.init(grid, number_of_dofs);
+		cout << "Finished reading start solution " << endl;
+		cout << "------------------------------------------------------------------------" <<endl;
+	}
 
-		//init boundary handler
-		if (strongBoundaryCond)
-		{
-			if (interpolating_basis)
-				bd_handler.initialize(grid, number_of_dofs);
-			else
-				bd_handler.initialize_bezier(grid, number_of_dofs, get_exacttemperature_MA_callback(), &shape, c0_converter);
-		}
-
-		if (start_solution && iteration == 0){
-			if (filename == "error")
-			{
-				cout	<< "Using the exact solution with artificial error as start solution!"
-						<< endl;
-
-				summation f(get_exacttemperature_MA_callback(),
-						Convex_error_functions::get_hat_unitsquare_callback(
-								0.3));
-				init_startsolution_from_function(f.get_add_callback());
-//				init_startsolution_from_function(get_exacttemperature_MA_callback());
-			} else
-				read_startsolution(filename);
-
-			plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
-
-			VectorXd coeffs;
-
-			//convexify start solution
-			cout << "Convexifying start solution ... " << endl;
-			pt.start();
-			write_solution_vector(coeffs);
-			convexify(coeffs);
-			restore_MA(coeffs); //writes solution and additional data in leaf cells
-			pt.stop();
-			cout << "done. " << pt << " s." << endl;
-
-			//plot solution
-			//fname = plotter.get_output_directory() + "/" + plotter.get_output_prefix() + "grid_startsolutionConvexified.vtu";
-			//plotter.writeLeafCellVTK(fname,1);
-			plotter.write_numericalsolution_VTK(iteration,
-					"grid_startsolutionConvexified");
-
-			cout << "Finished reading start solution " << endl;
-			cout << "------------------------------------------------------------------------" <<endl;
-		}
+	while (iteration < maxits) {
+		cout << "------------------------------------------------------------------------" <<endl;
+		cout << "Iteration: " << iteration << endl;
 
 		//init variables
 		Eigen::SparseMatrix<double> LM(LM_size, LM_size);
@@ -1361,7 +1380,7 @@ void Tsolver::time_stepping_MA() {
 
 		//plot poisson solution
 		plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
-		plotter.write_numericalsolution_VTK(iteration);
+		plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionPoisson");
 
 		//convexify solution and store
 		cout << "Convexifying solution ..." << endl;
