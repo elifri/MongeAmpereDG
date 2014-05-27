@@ -1173,6 +1173,43 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 #endif
 }
 
+void Tsolver::init_start_solution_MA(std::string filename)
+{
+	assert(iteration == 0);
+	if (filename == "error")
+	{
+		cout	<< "Using the exact solution with artificial error as start solution!"
+				<< endl;
+
+		summation f(get_exacttemperature_MA_callback(),
+				Convex_error_functions::get_hat_unitsquare_callback(
+						0.3));
+		init_startsolution_from_function(f.get_add_callback());
+//				init_startsolution_from_function(get_exacttemperature_MA_callback());
+	} else
+		read_startsolution(filename);
+
+	plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
+
+	VectorXd coeffs;
+
+	//convexify start solution
+	cout << "Convexifying start solution ... " << endl;
+	pt.start();
+	write_solution_vector(coeffs);
+	convexify(coeffs);
+	restore_MA(coeffs); //writes solution and additional data in leaf cells
+	pt.stop();
+	cout << "done. " << pt << " s." << endl;
+
+	//plot solution
+	plotter.write_numericalsolution_VTK(iteration,
+			"grid_startsolutionConvexified");
+
+	cout << "Finished reading start solution " << endl;
+}
+
+
 //////////////////////////////////////////////////////////
 void Tsolver::time_stepping_MA() {
 
@@ -1230,8 +1267,6 @@ void Tsolver::time_stepping_MA() {
 
 	singleton_config_file::instance().getValue("monge ampere", "maximal_iterations", maxits, 3);
 
-	std::string filename;
-	start_solution = singleton_config_file::instance().getValue("monge ampere", "start_iteration", filename, "");
 
 
 	iteration = 0;
@@ -1260,41 +1295,12 @@ void Tsolver::time_stepping_MA() {
 					get_exacttemperature_MA_callback(), &shape, c0_converter);
 	}
 
-	//init startsolution
+
+	//check for start solution and where required init startsolution
+	std::string filename;
+	start_solution = singleton_config_file::instance().getValue("monge ampere", "start_iteration", filename, "");
 	if (start_solution){
-		assert(iteration == 0);
-		if (filename == "error")
-		{
-			cout	<< "Using the exact solution with artificial error as start solution!"
-					<< endl;
-
-			summation f(get_exacttemperature_MA_callback(),
-					Convex_error_functions::get_hat_unitsquare_callback(
-							0.3));
-			init_startsolution_from_function(f.get_add_callback());
-//				init_startsolution_from_function(get_exacttemperature_MA_callback());
-		} else
-			read_startsolution(filename);
-
-		plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
-
-		VectorXd coeffs;
-
-		//convexify start solution
-		cout << "Convexifying start solution ... " << endl;
-		pt.start();
-		write_solution_vector(coeffs);
-		convexify(coeffs);
-		restore_MA(coeffs); //writes solution and additional data in leaf cells
-		pt.stop();
-		cout << "done. " << pt << " s." << endl;
-
-		//plot solution
-		plotter.write_numericalsolution_VTK(iteration,
-				"grid_startsolutionConvexified");
-
-		cout << "Finished reading start solution " << endl;
-		cout << "------------------------------------------------------------------------" <<endl;
+		init_start_solution_MA(filename);
 	}
 
 	while (iteration < maxits) {

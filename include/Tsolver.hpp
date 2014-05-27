@@ -376,6 +376,9 @@ public:
    vector_function_type get_rhs_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_rhs_MA, this);}
 
    void local_dt_MA (const value_type & lengthmin, value_type & dt_element);
+
+   ///initialises a start solution if requested in cfg file
+   void init_start_solution_MA(std::string filename);
    void time_stepping_MA ();
 
    void adapt(const double refine_eps, const double coarsen_eps);
