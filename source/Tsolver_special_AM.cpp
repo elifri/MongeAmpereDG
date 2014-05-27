@@ -1064,6 +1064,9 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		for (unsigned int k = 0; k < idLC.countNodes(); k++){
 			//get rhs
 			get_rhs_MA(nv(k), stateRhs);
+
+			assert(!is_infinite(det));
+			assert(!is_infinite(stateRhs(0)));
 			//calculate residuum
 			pLC->residuum(k) = det - stateRhs(0);
 
@@ -1182,6 +1185,7 @@ void Tsolver::get_exacttemperaturenormalderivative_MA(const space_type & x,
 void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type ???
 {
 	value_type f;
+
 	switch (problem)
 	{
 	case MONGEAMPERE1:
