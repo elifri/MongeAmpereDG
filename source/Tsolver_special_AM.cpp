@@ -298,7 +298,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 					pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
 		}
-		else{
+		else{ // no start solution given
 			hess << 1, 0, 0, 1;
 			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
 				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
@@ -420,7 +420,6 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 			// Copy entries for right hand side into right hand side
 			assemble_rhs_MA(pLC, idLC, pBC, x, Lrhs);
-
 
 			// bilinear form b (average of normal derivative u * jump phi)
 			grid_type::facehandlevector_type vFh, vOh; // neighbor face number and orientation
@@ -892,11 +891,18 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		VectorXd a0;
 		//get values of boundary dofs
 		VectorXd boundary_dofs_impact = bd_handler.get_nodal_contributions();
-		a0 = -A * boundary_dofs_impact;
+
+		//impact on cost function
+		a0 = A * boundary_dofs_impact;
 		c0_converter.convert_coefficients_toC(a0);
 		bd_handler.delete_boundary_dofs_C(a0);
 
-		//convert to continuous version (if necessary)
+		//impact on constraints
+		VectorXd boundary_dofs_impact_C;
+		c0_converter.convert_coefficients_toC(boundary_dofs_impact, boundary_dofs_impact_C);
+		ci0 = - C*boundary_dofs_impact_C;
+
+		//convert to continuous version
 		c0_converter.convert_matrix_toC(A);
 
 		//delete boundary dofs
@@ -909,8 +915,6 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		//pos. def. matrix in quadr. cost function
 		G2 = A.transpose() * A;
 
-		//rhs of inequality constraints
-		ci0 = Eigen::VectorXd::Zero(C.rows());
 //		ci0 = coefficients_C * -1;
 
 		f = -A.transpose() * (values_C+a0);
@@ -939,10 +943,12 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 
 	x = convexifier.solve_quad_prog_with_ie_constraints(G2, f, C, ci0, coefficients_C);
 
-	MATLAB_export(x, "x_code");
 	cout << "fvalue_code = " << convexifier.get_minimum() << ";" << endl;
 
+	cout << "solution of quadr program \n" << x.transpose() << endl;
+
 //	MATLAB_export(x, "x_code");
+
 	if (strongBoundaryCond)
 	{
 		VectorXd bd = bd_handler.get_nodal_contributions();
