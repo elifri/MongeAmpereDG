@@ -61,7 +61,6 @@ public:
 		return m_nodal_contrib;
 	}
 
-
 	/*!
 	 * Get number of boundary nodes
 	 */
@@ -304,7 +303,7 @@ private:
 		assert( f1 != invalid_index && " this cell has no boundary faces!");
 		if (f2 == invalid_index)
 			return m_boundary_LGS[f1];
-		return m_boundary_LGS[f1*10+f2];
+		return m_boundary_LGS[(f1+1)*10+f2];
 	}
 
 	bool shape_contributes_to_boundary(const uint8_t f1, const uint8_t f2, int shape)
@@ -312,7 +311,7 @@ private:
 		assert( f1 != invalid_index && " this cell has no boundary faces!");
 		if (f2 == invalid_index)
 			return m_shape_at_boundary[f1](shape);
-		return m_shape_at_boundary[f1*10+f2](shape);
+		return m_shape_at_boundary[(f1+1)*10+f2](shape);
 	}
 
 
@@ -340,6 +339,7 @@ protected:
 	int m_reduced_number_of_dofs_C;
 
 	Eigen::VectorXd m_nodal_contrib;
+	Eigen::VectorXd m_nodal_contrib_C;
 
 	std::map<int, Eigen::MatrixXd> m_boundary_LGS;
 	static const uint8_t invalid_index = -1;
