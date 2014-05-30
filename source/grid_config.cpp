@@ -74,3 +74,21 @@ void get_nodes(const grid_type &grid, const grid_type::id_type& id, nvector_type
 		}
 	}
 }
+
+void get_bezier_control_points(const grid_type &grid, const grid_type::id_type& id, nvector_type &nvEigen)
+{
+	assert(degreedim == 2);
+	assert(Ndim == 3);
+
+	Nvector_type nv;
+	grid.nodes(id,nv);
+
+	nvEigen.resize(6);
+	nvEigen (0)(0) = nv[0][0];  nvEigen (0)(1) = nv[0][1];
+	nvEigen (3)(0) = nv[1][0];  nvEigen (3)(1) = nv[1][1];
+	nvEigen (5)(0) = nv[2][0];  nvEigen (5)(1) = nv[2][1];
+
+	nvEigen(1) = (nvEigen(0) + nvEigen(3))/2.;
+	nvEigen(2) = (nvEigen(0) + nvEigen(5))/2.;
+	nvEigen(4) = (nvEigen(3) + nvEigen(5))/2.;
+}
