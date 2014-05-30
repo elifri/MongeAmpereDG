@@ -296,12 +296,25 @@ private:
 	}
 
 	/*
-	 * ! return the LGS belonging to an element with exactly two boundary faces namely f1, f2
+	 * ! return the LGS belonging to an element with the boundary faces namely f1, f2
+	 * @ f1, f2 	indeces of boundary faces; if the cell has less bd faces, set bd faces to invalid_index
 	 */
-	const Eigen::MatrixXd& get_LGS(const int f1, const int f2)
+	const Eigen::MatrixXd& get_LGS(const uint8_t f1, const uint8_t f2)
 	{
+		assert( f1 != invalid_index && " this cell has no boundary faces!");
+		if (f2 == invalid_index)
+			return m_boundary_LGS[f1];
 		return m_boundary_LGS[f1*10+f2];
 	}
+
+	bool shape_contributes_to_boundary(const uint8_t f1, const uint8_t f2, int shape)
+	{
+		assert( f1 != invalid_index && " this cell has no boundary faces!");
+		if (f2 == invalid_index)
+			return m_shape_at_boundary[f1](shape);
+		return m_shape_at_boundary[f1*10+f2](shape);
+	}
+
 
 	/*!
 	 *  Stores the indices of the boundary dof to m_boundary_dofs if ansatz fcts are beziere polynominals
@@ -317,17 +330,19 @@ private:
 			boundary_DOFs_type &m_boundary_dofs, boundary_DOFs_type &m_boundary_dofs_C,
 			Eigen::VectorXd & nodal_contrib, const vector_function_type  &get_boundary_conditions);
 protected:
+	const Tshape* m_shape;
 
 	bool m_initialized;
+
 	boundary_DOFs_type m_boundary_dofs;
 	boundary_DOFs_type m_boundary_dofs_C;
 	int m_reduced_number_of_dofs;
 	int m_reduced_number_of_dofs_C;
-	const Tshape* m_shape;
 
 	Eigen::VectorXd m_nodal_contrib;
 
 	std::map<int, Eigen::MatrixXd> m_boundary_LGS;
+	static const uint8_t invalid_index = -1;
 	std::map<int, VectorXb> m_shape_at_boundary;
 
 	//These vectors map an row_index resp. col_index to a row_index ignoring prior rows belonging to a boundary_node

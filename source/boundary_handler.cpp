@@ -586,15 +586,15 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, const C0_
 {
 	int dim = shapedim;
 
-	unsigned int shapes_per_face = shapedim/Fdim + 1 ;
-
+	//init vector for rhs of linear system
 	Eigen::VectorXd g(dim);
 
+	//init type to store boundary conditions
 	state_type u;
 	nvector_type nvLC;
 
 
-	// loop over all leaf cells
+	// loop over all leaf cells and determine boundary dof values
 	for (grid_type::leafcellmap_type::const_iterator
 			it = grid.leafCells().begin();
 			it != grid.leafCells().end(); ++it)
@@ -605,12 +605,15 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, const C0_
 
 //			if(!LC.isActive()) continue;
 
+		//get information about neighbour
 		grid_type::faceidvector_type vF;		   // neighbor ids
 		grid_type::facehandlevector_type vFh, vOh;   // neighbor face number and orientation
 		grid.faceIds(idLC, vF, vFh, vOh);
 
+		//set up linear system for boundary dofs in this cell
 		g.setZero();
-		int LGS_index = -1;
+		//init variables for boundary faces
+		uint8_t bd_face1 = invalid_index, bd_face2 = invalid_index;
 
 		for (unsigned int f = 0; f < idLC.countFaces(); f++) { //loop over faces
 
@@ -630,16 +633,14 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, const C0_
 				is_outer_boundary=true;
 			}
 
-			cout << "LSg index in loop f " << LGS_index << endl;
-
+			//if no other
 			if(is_outer_boundary)
 			{
-				if (LGS_index == -1){ //first boundary edge
-					LGS_index = f;
+				if (bd_face1 == invalid_index){ //first boundary edge
+					bd_face1 = f;
 				}
 				else{ //second boundary edge
-					LGS_index = (LGS_index+1)*10;
-					LGS_index += f;
+					bd_face2 = f;
 				}
 
 				//get boundary conditions at boundary dof
@@ -673,29 +674,34 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, const C0_
 
 		}//end loop over faces
 
-		if (LGS_index != -1) // this leafcell has at least one boundary face
+		//has leaf cell boundary faces?
+		if (bd_face1 != invalid_index) // this leafcell has at least one boundary face
 		{
-			cout << "index " << LGS_index << endl;
-
-			Eigen::MatrixXd& P = m_boundary_LGS[LGS_index];
-
-			g.conservativeResize(P.cols());
+			//get lhs of linear system for this cell
+			const Eigen::MatrixXd& P = get_LGS(bd_face1, bd_face2);
 
 			cout << "P " << P << endl;
 			cout << "g " << g << endl;
 
+			//solve system
 			Eigen::VectorXd alpha = P.householderQr().solve(g);
 			cout << "alpha " << alpha.transpose() << endl;
 
+			//store information
 			for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-				if (m_shape_at_boundary[LGS_index](ishape))
+
+				if (shape_contributes_to_boundary(bd_face1, bd_face2, ishape))
 				{
 					unsigned int dof_DG = LC.m_offset + ishape;
+
 					cout << "LC offset " << LC.m_offset << endl;
+					//store contribution with this boundary coefficients
 					nodal_contrib[LC.m_offset +ishape] = alpha(ishape);
+
+					//mark as boundary dof
 					m_boundary_dofs.insert(dof_DG);
 					m_boundary_dofs_C.insert(c0_converter.dof_C(dof_DG));
-					cout << "inserted " << dof_DG << endl;
+					cout << "inserted in C" << c0_converter.dof_C(dof_DG) << endl;
 				}
 
 			}
