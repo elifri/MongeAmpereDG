@@ -551,40 +551,27 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over face quadrature points
 							iqLC = gaussbaseLC + iq;
 
-							if (strongBoundaryCond)
-							{
-								nvector_type nv2;
-								get_nodes(grid, idLC, nv2);
+							get_Fcoordinates(idLC, iqLC, x); // determine x
 
-								if (interpolating_basis)
-//									unsigned int shapes_per_face = shapedim/Fdim + 1;
-									assert (false && "not implemented yet .. ");
-							}
-							else {
-								get_Fcoordinates(idLC, iqLC, x); // determine x
+							state_type uLC;
+							get_exacttemperature_MA(x, uLC); // determine uLC (value at boundary point x
 
-								state_type uLC;
-								get_exacttemperature_MA(x, uLC); // determine uLC (value at boundary point x
+							// Copy entries for Dirichlet boundary conditions into right hand side
+							for (unsigned int ishape = 0; ishape < shapedim;
+									++ishape) {
+								double val = stabsign * shape.get_Fquadw(iqLC)
+										* length * uLC(0)
+										* pBC->A_grad_times_normal(pLC->A,
+												ishape, iqLC)
+										/ facLevelLength[level];
 
-								// Copy entries for Dirichlet boundary conditions into right hand side
-								for (unsigned int ishape = 0; ishape < shapedim;
-										++ishape) {
-									double val = stabsign
-											* shape.get_Fquadw(iqLC) * length
+								if (penalty != 0.0) {
+									val += penalty * shape.get_Fquadw(iqLC)
 											* uLC(0)
-											* pBC->A_grad_times_normal(pLC->A,
-													ishape, iqLC)
-											/ facLevelLength[level];
-
-									if (penalty != 0.0) {
-										val += penalty * shape.get_Fquadw(iqLC)
-												* uLC(0)
-												* shape.get_Fquads(ishape,
-														iqLC);
-									}
-
-									Lrhs(pLC->n_offset + ishape) += val;
+											* shape.get_Fquads(ishape, iqLC);
 								}
+
+								Lrhs(pLC->n_offset + ishape) += val;
 							}
 
 							// Copy entries into Laplace-matrix
