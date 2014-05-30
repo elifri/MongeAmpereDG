@@ -16,9 +16,15 @@ using namespace Ipopt;
 class ConvexifyNLP: public TNLP
 {
 public:
-  /** default constructor */
-	ConvexifyNLP(const Eigen::SparseMatrixD &H, const Eigen::SparseMatrixD &C,
-			const Eigen::VectorXd &g, const Eigen::VectorXd &x0);
+  /**@brief default constructor to min 1/2*x'*H*x+g'*x st. C*x >=c_lowerbound
+   * @param H	Matrix of quadr. cost functional
+   * @param g	vector of quadr. cost functional
+   * @param C	inequality constrains matrix
+   * @param c_lowerbound	lower bound for inequality constraints
+   * @param	x0	start solution */
+	ConvexifyNLP(const Eigen::SparseMatrixD &H,	const Eigen::VectorXd &g,
+			const Eigen::SparseMatrixD &C, const Eigen::VectorXd &c_lowerbound,
+			const Eigen::VectorXd &x0);
 
   /** default destructor */
   virtual ~ConvexifyNLP();
@@ -105,10 +111,19 @@ private:
   ConvexifyNLP& operator=(const ConvexifyNLP&);
   //@}
 
-  const Eigen::SparseMatrixD &H, &C;
-  const Eigen::VectorXd &g, &x0;
-  Eigen::VectorXd solution;
+  //member for cost functional
+  const Eigen::SparseMatrixD &H;
+  const Eigen::VectorXd &g;
 
+  //member for inequality constraints
+  const Eigen::SparseMatrixD &C;
+  const Eigen::VectorXd &c_lowerbound;
+
+  //member for startsolution
+  const Eigen::VectorXd &x0;
+
+  //member to store solution and the calc. minimum of the cost functional
+  Eigen::VectorXd solution;
   double fvalue;
 
 

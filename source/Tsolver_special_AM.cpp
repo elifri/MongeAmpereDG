@@ -950,8 +950,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	MATLAB_export(values_C, "values_C");
 	MATLAB_export(coefficients_C, "coefficients_C");
 
-//	cout << "f " << solve_quadprog(G2, f, CE, ce0, C.transpose(), ci0, x) << endl;
-	x = convexifier.solve_quad_prog_with_ie_constraints(G2, C, f, coefficients_C);
+	x = convexifier.solve_quad_prog_with_ie_constraints(G2, f, C, ci0, coefficients_C);
 
 	MATLAB_export(x, "x_code");
 	cout << "fvalue_code = " << convexifier.get_minimum() << ";" << endl;

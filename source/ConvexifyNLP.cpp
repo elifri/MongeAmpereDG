@@ -28,9 +28,14 @@ using namespace Eigen;
 using namespace std;
 
 // constructor
-ConvexifyNLP::ConvexifyNLP(const Eigen::SparseMatrixD &H1, const Eigen::SparseMatrixD &C1,
-		const Eigen::VectorXd &g1, const Eigen::VectorXd &x01):H(H1), C(C1), g(g1), x0(x01)
+ConvexifyNLP::ConvexifyNLP(const Eigen::SparseMatrixD &H,	const Eigen::VectorXd &g,
+		const Eigen::SparseMatrixD &C, const Eigen::VectorXd &c_lowerbound,
+		const Eigen::VectorXd &x0):H(H), g(g), C(C), c_lowerbound(c_lowerbound),x0(x0)
 {
+	assert(H.rows() == H.cols() && "H needs to be quadratic!");
+	assert(g.size() == H.cols());
+	assert(C.rows() == c_lowerbound.size());
+	assert(H.cols() == x0.size());
 }
 
 //destructor
@@ -77,7 +82,7 @@ bool ConvexifyNLP::get_bounds_info(Index n, Number* x_l, Number* x_u,
 
 
   // the first constraint lower bounds are zero
-  Matrix<Number, Dynamic, 1>::Map(g_l, m) = Eigen::VectorXd::Zero(m);
+  Matrix<Number, Dynamic, 1>::Map(g_l, m) = c_lowerbound;
 //  Matrix<Number, Dynamic, 1>::Map(g_l, m) = Eigen::VectorXd::Constant(m,1e-3);
 
   // the constraint has NO upper bound, here we set it to 2e19.

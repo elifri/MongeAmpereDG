@@ -57,11 +57,12 @@ public:
 	 *@param x0 starting point
 	 */
 
-	Eigen::VectorXd solve_quad_prog_with_ie_constraints(const Eigen::SparseMatrixD &H, const Eigen::SparseMatrixD &C
-			, const Eigen::VectorXd &g, const Eigen::VectorXd & x0)
+	Eigen::VectorXd solve_quad_prog_with_ie_constraints(const Eigen::SparseMatrixD &H, const Eigen::VectorXd &g,
+			const Eigen::SparseMatrixD &C, const Eigen::VectorXd & c_lowerbound,
+			const Eigen::VectorXd & x0)
 	{
 		///delete nlp_ptr;
-		nlp_ptr = new ConvexifyNLP(H, C, g, x0);
+		nlp_ptr = new ConvexifyNLP(H, g, C, c_lowerbound, x0);
 		assert (IsValid(app));
 		 // Ask Ipopt to solve the problem
 		 status = app->OptimizeTNLP(nlp_ptr);
