@@ -1156,7 +1156,7 @@ void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // s
 		u[0] = 20*exp(pow(x[0],6)/6.0+x[1]);
 		break;
 	case CONST_RHS:
-		u[0] = 1;
+		u[0] = 0;
 		break;
 	case SIMPLEMONGEAMPERE2:
 		u[0] = sqr(x[0])/2.0 + sqr(x[1])/2.0;
