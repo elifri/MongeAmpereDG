@@ -21,7 +21,7 @@ add_library(Tsolver Tsolver_general.cpp Tsolver_special_POISSON.cpp Tsolver_spec
 set(dependecies_Tsolver testlibs ConvexifyNLP boundary_handler C0_converter Plotter Tmass Tshape Callback_utility ${UTILITIES} ${IPOPT_LIBRARIES})
 
 add_executable(Mesh mesh.cpp)
-target_link_libraries(Mesh Tsolver ${dependecies_Tsolver})
+target_link_libraries(Mesh Tsolver ${dependecies_Tsolver} ${BLAS_LIBRARIES} ${ARPACK_LIBRARY})
 
 add_executable(Plot plot.cpp)
 target_link_libraries(Plot Tsolver ${dependecies_Tsolver})
