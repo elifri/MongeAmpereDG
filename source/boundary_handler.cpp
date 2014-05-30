@@ -23,6 +23,7 @@ void boundary_handler::initialize_bezier(const grid_type &grid, const unsigned i
 		const Tshape* shape_ptr, const C0_converter &c0_converter)
 {
 	m_nodal_contrib.setZero(number_of_dofs);
+	m_nodal_contrib_C.setZero(c0_converter.get_number_of_dofs_C());
 	m_shape = shape_ptr;
 
 	assemble_LGS_triangle();
@@ -680,20 +681,33 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, const C0_
 				if (shape_contributes_to_boundary(bd_face1, bd_face2, ishape))
 				{
 					unsigned int dof_DG = LC.m_offset + ishape;
+					unsigned int dof_C = c0_converter.dof_C(dof_DG);
 
-					cout << "LC offset " << LC.m_offset << endl;
 					//store contribution with this boundary coefficients
-					nodal_contrib[LC.m_offset +ishape] = alpha(ishape);
+					m_nodal_contrib_C[dof_C]= alpha(ishape);
 
 					//mark as boundary dof
-					m_boundary_dofs.insert(dof_DG);
-					m_boundary_dofs_C.insert(c0_converter.dof_C(dof_DG));
+					m_boundary_dofs_C.insert(dof_C);
 					cout << "inserted in C" << c0_converter.dof_C(dof_DG) << endl;
 				}
 
 			}
-		}//end if LSG_index != 1
+		}
 	}
+
+	//calculate information for DG case from continuous case
+	c0_converter.convert_coefficients_toDG(m_nodal_contrib_C, nodal_contrib);
+	m_boundary_dofs = c0_converter.convert_to_dofs_DG(m_boundary_dofs_C);
+
+	cout << "Calculated boundary dofs C" << endl;
+	for (boundary_DOFs_type::iterator it = m_boundary_dofs_C.begin(); it != m_boundary_dofs_C.end(); it++)
+		cout << *it << ", ";
+	cout << endl;
+
+	cout << "Calculated nodal_contrib \n" << endl;
+	for (int i = 0; i < nodal_contrib.size(); i++)
+		cout << nodal_contrib[i] << ", ";
+	cout << endl;
 
 
 }
