@@ -100,7 +100,7 @@ void C0_converter::get_node(const int i, space_type &node) const
 }
 
 
-void C0_converter::convert_coefficients_toC(const Eigen::VectorXd &DGsolution, Eigen::VectorXd &Csolution)
+void C0_converter::convert_coefficients_toC(const Eigen::VectorXd &DGsolution, Eigen::VectorXd &Csolution) const
 {
 	assert (DGsolution.size() == DG_to_C_indices.size() && "The given vector does not contain as much DG dofs as expected!");
 	Csolution.setZero(get_number_of_dofs_C());
@@ -118,14 +118,14 @@ void C0_converter::convert_coefficients_toC(const Eigen::VectorXd &DGsolution, E
 
 }
 
-void C0_converter::convert_coefficients_toC(Eigen::VectorXd &solution)
+void C0_converter::convert_coefficients_toC(Eigen::VectorXd &solution) const
 {
 	Eigen::VectorXd Csolution;
 	convert_coefficients_toC(solution, Csolution);
 	solution = Csolution;
 }
 
-void C0_converter::convert_coefficients_toDG(const Eigen::VectorXd &Csolution, Eigen::VectorXd &DGsolution)
+void C0_converter::convert_coefficients_toDG(const Eigen::VectorXd &Csolution, Eigen::VectorXd &DGsolution) const
 {
 	assert (Csolution.size() == get_number_of_dofs_C() && "The given vector does not contain as much C dofs as expected!");
 
@@ -139,7 +139,7 @@ void C0_converter::convert_coefficients_toDG(const Eigen::VectorXd &Csolution, E
 
 }
 
-void C0_converter::convert_coefficients_toDG(Eigen::VectorXd &solution)
+void C0_converter::convert_coefficients_toDG(Eigen::VectorXd &solution) const
 {
 	Eigen::VectorXd DGsolution;
 	convert_coefficients_toDG(solution, DGsolution);

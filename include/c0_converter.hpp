@@ -36,15 +36,15 @@ public:
 	void convert_coefficients(Eigen::VectorXd &Csolution);
 
 	/// converts a vector in C formulation to DG formulation
-	void convert_coefficients_toDG(const Eigen::VectorXd &Csolution, Eigen::VectorXd &DGsolution);
+	void convert_coefficients_toDG(const Eigen::VectorXd &Csolution, Eigen::VectorXd &DGsolution) const;
 	/// converts a vector in C formulation to DG formulation
-	void convert_coefficients_toDG(Eigen::VectorXd &solution);
+	void convert_coefficients_toDG(Eigen::VectorXd &solution) const;
 
 	/// converts a vector in DG formulation to C formulation
-	void convert_coefficients_toC(const Eigen::VectorXd &DGsolution, Eigen::VectorXd &Csolution);
+	void convert_coefficients_toC(const Eigen::VectorXd &DGsolution, Eigen::VectorXd &Csolution) const;
 
 	/// converts a vector in DG formulation to C formulation
-	void convert_coefficients_toC(Eigen::VectorXd &solution);
+	void convert_coefficients_toC(Eigen::VectorXd &solution) const;
 
 	/// converts a matrix in DG formulation to C formulation (in rows and cols)
 	void convert_matrix_toC(Eigen::SparseMatrix<value_type> &A) const;
