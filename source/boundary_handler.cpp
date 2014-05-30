@@ -473,25 +473,25 @@ void boundary_handler::get_boundary_nodes (const grid_type &grid, boundary_DOFs_
 
 void boundary_handler::add_to_LGS(const int i, const int f, unsigned int shapes_per_face, VectorXb& bezier_at_bd)
 {
-	//first bezier_point lying on face f
-	int first_bez_pt = (f+1) * (shapes_per_face-1);
-	first_bez_pt %= shapedim;
+	Tshape::bezier_iterator it_bezier = m_shape->begin(f);
 
-	//loop over bezier control points
-	for (unsigned int bezier_control_pt = first_bez_pt;
-			bezier_control_pt < shapes_per_face + first_bez_pt;
-			bezier_control_pt++) {
-
+	//loop over all bezier point on this face
+	while (it_bezier != m_shape->end(f))
+	{
 		//assemble matrix
 		int jshape;
 
 		// loop over all boundary dofs interfering with the current bezier control point
-		for (unsigned int j = 0; j < m_shape->contrib[bezier_control_pt % shapedim].size(); ++j) {
-			jshape = m_shape->contrib[bezier_control_pt % shapedim][j];
-			m_boundary_LGS[i](bezier_control_pt % shapedim,jshape) = m_shape->nodal_contrib(jshape)(bezier_control_pt % shapedim);
+		for (unsigned int j = 0; j < m_shape->contrib[*it_bezier].size(); ++j) {
+
+			//jshape is not zero at current bezier node
+			jshape = m_shape->contrib[*it_bezier][j];
+
+			m_boundary_LGS[i](*it_bezier,jshape) = m_shape->nodal_contrib(jshape)(*it_bezier);
 			m_shape_at_boundary[i](jshape) = true;
-			bezier_at_bd(bezier_control_pt % shapedim) = true;
+			bezier_at_bd(*it_bezier) = true;
 		}
+		++it_bezier;
 	}
 }
 
@@ -525,7 +525,8 @@ void boundary_handler::assemble_LGS_triangle_less2(int number_of_faces, int max_
 		cout << "case 1" << endl;
 
 		for (int f = 0; f < max_number_face; f++) {
-			m_boundary_LGS[f] = Eigen::MatrixXd::Zero(shapedim, shapedim); //init LGS matrix
+			//init variables
+			m_boundary_LGS[f] = Eigen::MatrixXd::Zero(shapedim, shapedim);
 			m_shape_at_boundary[f] = VectorXb::Constant(shapedim, false);
 			VectorXb bezier_at_boundary = VectorXb::Constant(shapedim, false);
 
@@ -591,7 +592,8 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, const C0_
 
 	//init type to store boundary conditions
 	state_type u;
-	nvector_type nvLC;
+	//init vecot for bezier nodes of leaf cell
+	nvector_type nvLCbezier;
 
 
 	// loop over all leaf cells and determine boundary dof values
@@ -644,31 +646,16 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, const C0_
 				}
 
 				//get boundary conditions at boundary dof
-				get_nodes(grid, idLC, nvLC);
+				get_bezier_control_points(grid, idLC, nvLCbezier);
 
-				//TODO works only for triangles
-				space_type startvecLC = nvLC( (f+1) % 3); //boundary Dof at left end of face i
-				space_type endvecLC = nvLC( (f+2) % 3); //boundary Dof at right end of face i
-
-				value_type l,r;
-
-				for (unsigned int ishape = 0; ishape < shapes_per_face; ++ishape) //loop over boundary DOF at face i
+				 //loop over boundary DOFs at face f
+				for (Tshape::bezier_iterator it_bezier_pt = m_shape->begin(f);
+						it_bezier_pt != m_shape->end(f); ++it_bezier_pt)
 				{
-					//bezier points are distibuted equidistantly
-					r = (value_type) ishape / (value_type) (shapes_per_face-1);
-					l = 1 - r;
-					space_type bezier_control_pt = l * startvecLC + r * endvecLC;
-
-					get_boundary_conditions(bezier_control_pt,u);
-
-					//calculate local number of boundary dof
-					int loc_no = ((f + 1) % shapes_per_face)*2+ishape;
-					loc_no = loc_no % 6;
-
+					get_boundary_conditions(nvLCbezier(*it_bezier_pt),u);
 					//set rhs of LGS
-					g(loc_no) = u(0);
+					g(*it_bezier_pt) = u(0);
 
-					//assemble matrix part
 				}
 			} //end if is_outer_boundary
 
