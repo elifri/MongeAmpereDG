@@ -191,6 +191,22 @@ void C0_converter::convert_matrix_toC_only_cols(Eigen::SparseMatrix<value_type> 
 }
 
 
+std::set<unsigned int> C0_converter::convert_to_dofs_DG(const std::set<unsigned int> &dofs_C) const
+{
+	std::set<unsigned int> dofs_DG;
+
+	//loop over DG dofs
+	for (int dof_DG = 0; dof_DG < DG_to_C_indices.size(); dof_DG++)
+	{
+		//check if current dof_DG's C conversion is in dofs_C
+		if (dofs_C.count(DG_to_C_indices(dof_DG)) > 0)
+			dofs_DG.insert(dof_DG);
+	}
+
+	return dofs_DG;
+}
+
+
 /*
 void init_map_to_c0(const grid_type &grid, const Tshape &shape, Eigen::VectorXi &map_to_c0)
 {

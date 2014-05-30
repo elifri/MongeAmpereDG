@@ -61,6 +61,9 @@ public:
 	///returns the number of dof_G in C enumeration
 	int dof_C(const int dof_DG) const;
 
+	///returns the dofs_C in DG enumeration
+	std::set<unsigned int> convert_to_dofs_DG(const std::set<unsigned int> &dofs_C) const;
+
 
 };
 
