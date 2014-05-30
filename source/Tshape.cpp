@@ -836,9 +836,9 @@ bezier_iterator Tshape::end(const int face) const
 {
 	switch(face)
 	{
-		case 0: return bezier_iterator(4); break;
+		case 0: return bezier_iterator(2); break;
 		case 1: return bezier_iterator(1); break;
-		case 2: return bezier_iterator(2); break;
+		case 2: return bezier_iterator(4); break;
 		default: std::cerr << "Unknown face no no! "<< endl; exit(-1);
 	}
 }
