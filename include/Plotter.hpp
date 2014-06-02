@@ -25,6 +25,9 @@ private:
 
 	std::string output_directory, output_prefix;
 
+
+	std::map<std::string, std::ofstream*> plot_streams;
+
 	//helper for vtk parts
 	void assemble_points(std::vector < std::vector<id_type> > &v, int &Nelements, int &Nnodes); ///get nodes and number of elements/nodes
 
@@ -101,6 +104,14 @@ public:
 	void write_exactrhs_MA(const vector_function_type &get_rhs_MA, const unsigned int i);
 
 	void write_numericalsolution ();
+
+	void add_plot_stream(const std::string &name, const std::string &filepath);
+	std::ofstream& get_plot_stream(const std::string &name)
+	{
+		return *plot_streams[name];
+	}
+
+
 };
 
 #endif /* PLOTTER_HPP_ */

@@ -1210,3 +1210,8 @@ void Plotter::write_numericalsolution () {
 
     };
 
+void Plotter::add_plot_stream(const std::string &name, const std::string &filepath)
+{
+
+	plot_streams[name] = new std::ofstream(filepath.c_str());
+}
