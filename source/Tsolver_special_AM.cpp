@@ -890,9 +890,10 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 
 		VectorXd a0;
 		//get values of boundary dofs
-		VectorXd boundary_dofs_impact = bd_handler.get_nodal_contributions();
+		VectorXd boundary_dofs_impact;
+		bd_handler.add_boundary_dofs(Eigen::VectorXd::Zero(bd_handler.get_reduced_number_of_dofs()), solution, boundary_dofs_impact);
 
-		//impact on cost function
+		//impact on cost function (in DG formulation)
 		a0 = A * boundary_dofs_impact;
 		c0_converter.convert_coefficients_toC(a0);
 		bd_handler.delete_boundary_dofs_C(a0);
