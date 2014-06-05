@@ -128,4 +128,6 @@ Cont toupper(Cont cont);
 bool string_contains_true(const std::string s);
 
 
+double fRand(const double fMin, const double fMax);
+
 #endif
