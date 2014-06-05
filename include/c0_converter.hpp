@@ -16,7 +16,7 @@
 
 class C0_converter{
 private:
-	Eigen::VectorXd DG_to_C_indices;
+	Eigen::VectorXi DG_to_C_indices;
 
 	//count how many DG elements contribute to a node
 	Eigen::VectorXi dofsDG_to_dofsC_ratio;
