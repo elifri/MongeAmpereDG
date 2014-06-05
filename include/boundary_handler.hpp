@@ -226,7 +226,7 @@ public:
 
 	/*! Add zero boundary to coefficients given by x and save into x_new
 	 *
-	 *  Vector x is the coefficient vector of all nodes expect the boundary nodes.
+	 *  Vector x is the coefficient vector of all nodes except the boundary nodes.
 	 *  This functions generates the vector x_new, which contains the coefficients
 	 *  of all nodes, where the nodes at boundary will be set to zero and the other
 	 *  to the value given by x.
@@ -235,7 +235,7 @@ public:
 
 	/*! Add zero boundary to coefficients given by x and save into x_new
 	 *
-	 *  Vector x is the coefficient vector of all nodes expect the boundary nodes.
+	 *  Vector x is the coefficient vector of all nodes except the boundary nodes.
 	 *  This functions generates the vector x_new, which contains the coefficients
 	 *  of all nodes, where the nodes at boundary will be set to values given in y and the other
 	 *  to the value given by x.
@@ -244,7 +244,7 @@ public:
 
 	/*! Add zero boundary to coefficients given by x and save into x_new
 	 *
-	 *  Vector x is the coefficient vector of all nodes expect the boundary dofs in the continuous formulation.
+	 *  Vector x is the coefficient vector of all nodes except the boundary dofs in the continuous formulation.
 	 *  This functions generates the vector x_new, which contains the coefficients
 	 *  of all dofs, where the boundary dofs will be set to values given in y and the other
 	 *  to the value given by x.
