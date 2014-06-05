@@ -918,7 +918,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 
 //		ci0 = coefficients_C * -1;
 
-		f = -A.transpose() * (values_C+a0);
+		f = -A.transpose() * (values_C-a0);
 
 		Eigen::SparseMatrix<double> CE;
 	}
