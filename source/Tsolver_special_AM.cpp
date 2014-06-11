@@ -842,6 +842,10 @@ void Tsolver::init_matrices_for_quadr_program(SparseMatrixD &A, SparseMatrixD &C
 	C.resize(condition_index, Ndofs);
 	C.setFromTriplets(tripletList.begin(), tripletList.end());
 
+	//remove numerical zeroes
+	C.prune(1.);
+	A.prune(1.);
+
 }
 
 
