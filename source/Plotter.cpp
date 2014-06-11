@@ -445,7 +445,7 @@ void Plotter::write_solution_data_array(std::ofstream &file, const std::vector <
 }
 
 void Plotter::write_points(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine, bool coord3){
-	Nvector_type nv;
+	nvector_type nv;
 	state_type state;
 
 	// write points
@@ -466,7 +466,7 @@ void Plotter::write_points(std::ofstream &file, const std::vector < std::vector<
 				grid_type::leafcell_type * pLC = NULL;
 				grid->findLeafCell(id, pLC);
 
-				grid->nodes(id, nv);
+				get_nodes(*grid, id, nv);
 				for (unsigned int k = 0; k < id.countNodes(); ++k) {
 					shape->assemble_state_N(pLC->u, k, state);
 					file << "\t\t\t\t\t" << nv[k] << " " << state << endl; //" "
@@ -482,47 +482,29 @@ void Plotter::write_points(std::ofstream &file, const std::vector < std::vector<
 				grid_type::leafcell_type * pLC = NULL;
 				grid->findLeafCell(id, pLC);
 
-				grid->nodes(id, nv);
+				get_nodes(*grid, id, nv);
 
-				Eigen::Vector3d h_x, h_y;		// (
-				h_x(0) = -nv[0][0] + nv[1][0];
-				h_y(0) = -nv[0][1] + nv[1][1];
+				nvector_type points(Nnodes);
+				nvector_baryc_type points_baryc(Nnodes);
 
-				h_x(1) = -nv[1][0] + nv[2][0];
-				h_y(1) = -nv[1][1] + nv[2][1];
-
-				h_x(2) = nv[0][0] - nv[2][0];
-				h_y(2) = nv[0][1] - nv[2][1];
-
-				h_x /= refine + 1;
-				h_y /= refine + 1;
-
-				Eigen::Matrix<space_type, Eigen::Dynamic, 1> points(id.countNodes() * (refine + 1));
 				Eigen::VectorXd vals(points.size());
 
 				state_type val;
 				baryc_type xbar;
 
-				for (unsigned int i = 0; i < id.countNodes(); ++i) {	//loop over nodes
-					//nodes
-					points[i * 2] =	(space_type() << nv[i][0], nv[i][1]).finished(); //set coordinates
-					//coordinates of new points
-					points[i * 2 + 1] =	(space_type() << nv[i][0] + h_x(i), nv[i][1]+ h_y(i)).finished();
+				shape->get_refined_nodes(refine, points_baryc);
+
+				for (int i = 0; i < points_baryc.size(); i++) {
+					//assemble point coordinates from baryc coordinates
+					points(i).setZero();
+					for (int i_baryc = 0; i_baryc < barycdim; i_baryc++)
+						points(i) += points_baryc(i)(i_baryc) * nv(i_baryc);
 
 					//collect solution
-					if (coord3)
-					{
-						shape->assemble_state_N(pLC->u, i, val); //get solution at nodes
-						vals(i * 2) = val(0); //write solution
-
-						//calc calculate baryc coordinates of face middle points
-						xbar.setZero();
-						xbar(i) = 1. / 2.;
-						xbar((i+1) % 3) = 1. / 2.;
-
+					if (coord3) {
 						//get solution
-						shape->assemble_state_x_barycentric(pLC->u, xbar, val);
-						vals(i * 2 + 1) = val(0);
+						shape->assemble_state_x_barycentric(pLC->u, points_baryc(i), val);
+						vals(i) = val(0);
 					}
 				}
 				// save points in file
@@ -712,12 +694,34 @@ void Plotter::write_cells(std::ofstream &file, const std::vector < std::vector<i
 		}
 	}
 	else{ //refined
-			for (int i = 0; i < Nnodes ; i+=6){
-				file << "\t\t\t\t\t"<< i+1 << " " << i+3 << " " << i+5 << " ";//triangle in the middle
-				file << "\t\t\t\t\t"<< i << " " << i+1 << " " << i+5 << " "; //botoom triangle
-				file << "\t\t\t\t\t"<< i+1 << " " << i+2 << " " << i+3 << " "; //on the right
-				file << "\t\t\t\t\t"<< i+3 << " " << i+4 << " " << i+5 << " "; // on the top
+		for (int offset = 0; offset < Nnodes; offset+=6)
+		{
+			//loop over nodes in refined triangle via its lexicographical ordering (x<y)
+			for (int y = 0; y <= dual_pow(refine); y++)
+			{
+				for (int x = 0; x <= dual_pow(refine)-y; x++)
+				{
+					//add all refined cells which have the current node (x,y) as its node 0
+
+					if (x+y != dual_pow(refine)) // node is not on edge 0 of the base cell
+					{
+						// a triangle similar to the base with base 0 = (x,y) lies within the base
+						file << "\t\t\t\t\t"<<        offset+shape->from_cartesian_to_lex(refine, x,y) //its node 0
+							            	<< " " << offset+shape->from_cartesian_to_lex(refine, x+1,y) //its node 1
+							            	<< " " << offset+shape->from_cartesian_to_lex(refine, x,y+1) << " "; //its node 2
+					}
+
+					if (x > 0 && y > 0) //node is neither on edge 1 nor edge 2
+					{
+						// a triangle mirroring the base with base 0 = (x,y) lies within the base
+						file << "\t\t\t\t\t"<<        offset+shape->from_cartesian_to_lex(refine, x,y) //its node 0
+							            	<< " " << offset+shape->from_cartesian_to_lex(refine, x-1,y) //its node 1
+							            	<< " " << offset+shape->from_cartesian_to_lex(refine, x,y-1) << " "; //its node 2
+					}
+
+				}
 	 		}
+		}
 	}
 
 	file << "\n\t\t\t\t</DataArray>\n";
@@ -793,8 +797,9 @@ void Plotter::writeLeafCellVTK(std::string filename, const unsigned int refine, 
 	assemble_points(v,Nelements, Nnodes);
 
 	if (refine != 0){
-		Nelements = Nelements*4;
-		Nnodes *= 2;
+		Nelements = std::pow(4, refine);
+		int y_max = dual_pow(refine);
+		Nnodes = (y_max+1)*(dual_pow(refine) + 1) - (y_max*(y_max+1))/2;
 	}
 
 	// open file
@@ -929,7 +934,7 @@ void Plotter::write_numericalsolution_VTK(const unsigned int i, std::string name
 	std::string fname(output_directory);
 	fname += "/"+ output_prefix + name + NumberToString(i) + ".vtu";
 
-	writeLeafCellVTK(fname, 1);
+	writeLeafCellVTK(fname, 2);
 
 }
 
