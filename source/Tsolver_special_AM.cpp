@@ -858,6 +858,20 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	SparseMatrixD A,C;
 	init_matrices_for_quadr_program(A,C);
 
+	//adjust DG solution, such that it represents a continuous function
+	Eigen::VectorXd coefficients_C;
+	c0_converter.convert_coefficients_toC(solution, coefficients_C);
+	c0_converter.convert_coefficients_toDG(coefficients_C, solution);
+	Eigen::VectorXd test;
+
+	//check if c version of current dg version is right
+	{
+		c0_converter.convert_coefficients_toC(solution, test);
+		assert ((coefficients_C-test.cwiseAbs()).maxCoeff() < 1e-10 && "c inversion is not right");
+	}
+
+	//write continuous solution in leaf cells
+	restore_MA(solution);
 	// collect functions values at control points
 	Eigen::VectorXd values_DG(solution.size());
 	for (grid_type::leafcellmap_type::iterator it = grid.leafCells().begin();
@@ -875,6 +889,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		}
 	}
 
+	assert ((A*solution+-values_DG).cwiseAbs().maxCoeff() < 1e-12 && " Check evaluation matrix and value extraction from leaf cell!");
 	//convert DG formulation to C formulation
 	Eigen::VectorXd values_C;
 	c0_converter.convert_coefficients_toC(values_DG, values_C);
@@ -910,6 +925,8 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		//convert to continuous version
 		c0_converter.convert_matrix_toC(A);
 
+		cout << "max value of A_C*x_C-C_values: " <<  (A*coefficients_C-values_C.cwiseAbs()).maxCoeff() << endl;
+		assert ((A*coefficients_C-values_C).cwiseAbs().maxCoeff() < 1e-12 && " Check c1 constraction of eval matrix and coefficients!");
 		//delete boundary dofs
 		bd_handler.delete_boundary_dofs_C(A);
 		bd_handler.delete_boundary_dofs_C_only_cols(C);
@@ -925,6 +942,8 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		f = -A.transpose() * (values_C-a0);
 
 		Eigen::SparseMatrix<double> CE;
+		cout << "max value of A_C*x_C+a0-C_values: " <<  (A*coefficients_C+a0-values_C.cwiseAbs()).maxCoeff() << endl;
+		assert ((A*coefficients_C+a0-values_C).cwiseAbs().maxCoeff() < 1e-12 && " Check boundary constraction of eval matrix and coefficients!");
 	}
 	else
 	{
@@ -946,23 +965,44 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	MATLAB_export(values_C, "values_C");
 	MATLAB_export(coefficients_C, "coefficients_C");
 
-	x = convexifier.solve_quad_prog_with_ie_constraints(G2, f, C, ci0, coefficients_C);
 
-	cout << "fvalue_code = " << convexifier.get_minimum() << ";" << endl;
 
-	cout << "solution of quadr program \n" << x.transpose() << endl;
+	//check if constraints are fulfilled already
+	if ((C * coefficients_C - ci0).minCoeff() < -1e-13) {
+		x = convexifier.solve_quad_prog_with_ie_constraints(G2, f, C, ci0,
+//				VectorXd::Zero(coefficients_C.size()));
+				coefficients_C);
+
+		cout << "fstart = "
+				<< 0.5 * coefficients_C.transpose() * G2 * coefficients_C
+						+ f.transpose() * coefficients_C << endl;
+
+		cout << "fvalue_code = " << convexifier.get_minimum() << ";" << endl;
 
 //	MATLAB_export(x, "x_code");
 
-	if (strongBoundaryCond)
-	{
-		VectorXd bd = bd_handler.get_nodal_contributions();
-		c0_converter.convert_coefficients_toC(bd);
-		bd_handler.add_boundary_dofs_C(x, bd, solution);
-		c0_converter.convert_coefficients_toDG(solution);
+		if (strongBoundaryCond) {
+			VectorXd bd = bd_handler.get_nodal_contributions();
+			c0_converter.convert_coefficients_toC(bd);
+			bd_handler.add_boundary_dofs_C(x, bd, solution);
+			c0_converter.convert_coefficients_toDG(solution);
+		} else
+			c0_converter.convert_coefficients_toDG(x, solution);
+
+		cout.precision(10);
+/*
+		cout << "C \n" << C << endl;
+		cout << "C*x " << (C * x ).transpose() << endl;
+		cout << "ci0 " << (ci0).transpose() << endl;
+		cout << " x is  " << x.transpose() << endl;
+*/
+		cout << "C*x-ci0 \n" << (C * x - ci0).transpose() << endl;
+		cout << "biggest difference in x-coefficients_c "
+				<< (x - coefficients_C).cwiseAbs().maxCoeff() << endl;
+		plotter.get_plot_stream("plot_data_min_constraints") << iteration << " " << (C*x-ci0).minCoeff() << endl;
+		plotter.get_plot_stream("plot_data_constraints_l2") << iteration << " " << (C*x-ci0).norm() << endl;
+
 	}
-	else
-		c0_converter.convert_coefficients_toDG(x, solution);
 
 
 	setleafcellflags(0, false); //reset flags
