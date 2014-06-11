@@ -684,8 +684,7 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, const C0_
 					unsigned int dof_C = c0_converter.dof_C(dof_DG);
 
 					//store contribution with this boundary coefficients
-//					m_nodal_contrib_C[dof_C]= alpha(ishape);
-					m_nodal_contrib[dof_DG] = alpha(ishape);
+					m_nodal_contrib_C[dof_C]= alpha(ishape);
 
 					//mark as boundary dof
 					m_boundary_dofs_C.insert(dof_C);
@@ -697,7 +696,7 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, const C0_
 	}
 
 	//calculate information for DG case from continuous case
-	c0_converter.convert_coefficients_toC(nodal_contrib,m_nodal_contrib_C);
+	c0_converter.convert_coefficients_toDG(m_nodal_contrib_C, nodal_contrib);
 	m_boundary_dofs = c0_converter.convert_to_dofs_DG(m_boundary_dofs_C);
 
 	cout << "Calculated boundary dofs C" << endl;
