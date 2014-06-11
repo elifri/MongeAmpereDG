@@ -727,6 +727,51 @@ void Tshape::initialize_mass() {
 }
 ;
 
+
+
+void Tshape::get_refined_nodes(const int refine, nvector_baryc_type &nvb) const
+{
+	assert (refine >= 0);
+	assert (spacedim == 2);
+
+	nvb.resize(calc_number_of_refined_nodes(refine));
+
+	value_type h = ((value_type) 1) / ((value_type) (refine+1));
+
+	int index = 0;
+
+	//loop over nodes in refined triangle via its lexicographical ordering (x<y)
+	for (int y = 0; y <= dual_pow(refine); y++)
+	{
+		for (int x = 0; x <= dual_pow(refine)-y; x++)
+		{
+			//baryc coordinates of point
+			value_type baryc_x = ((value_type) x)*h;
+			value_type baryc_y = ((value_type) y)*h;
+
+			nvb(index) = baryc_type(1-baryc_x-baryc_y, baryc_x, baryc_y);
+			index++;
+
+		}
+	}
+}
+
+int Tshape::from_cartesian_to_lex(const int refine, const int x, const int y) const
+{
+	//assert cartesian coords positive
+	assert (x >= 0 && y >= 0 && refine >= 0);
+
+	//assert cartesian coords in triangle
+	assert( x <= dual_pow(refine) && y <= dual_pow(refine));
+	if (y == 0)
+		return x;
+	else
+	{
+		return y*(dual_pow(refine)+1) - ((y-1)*y)/2 + x;
+	}
+
+}
+
 //////////////////////////////////////////////////////
 //////                                     ///////////
 //////   handling of bezier polynomials    ///////////

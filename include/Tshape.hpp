@@ -84,6 +84,20 @@ public:
 	// void set_quadrature_data (char *data_file);
 
 
+	inline int calc_number_of_refined_nodes(const int refine) const
+	{
+		int y_max = dual_pow(refine);
+		return (y_max+1)*(dual_pow(refine) + 1) - (y_max*(y_max+1))/2;
+	}
+	/*
+	 * @brief calculates the baryc coordinates of all nodes if the cell is refined
+	 * @param	refine	how often the cell is refined
+	 * @param	nvb		(output) returns the baryc coordinates ordered lexicographically with (x<y)
+	 */
+	void get_refined_nodes(const int refine, nvector_baryc_type &nvb) const;
+
+	int from_cartesian_to_lex(const int refine, const int x, const int y) const;
+
 	////////////// handling of bezier polynomials ///////////
 
 	void get_baryc_coord_bezier(const int no, baryc_type &b) const;
