@@ -169,6 +169,9 @@ typedef Eigen::Matrix<space_type, Eigen::Dynamic, 1> nvector_type; //stores node
 
 // define types depending on statedim, shapedim, degreedim(?)
 typedef Eigen::Matrix<value_type, barycdim, 1>  baryc_type;
+typedef Eigen::Matrix<baryc_type, Eigen::Dynamic, 1> nvector_baryc_type; //stores nodes
+
+
 typedef Eigen::Matrix<value_type, statedim, 1>  state_type;
 typedef Eigen::Matrix<value_type, shapedim, 1>  Eshape_type;
 typedef Eigen::Matrix<value_type, shapedim, statedim>  Estate_type;
@@ -287,6 +290,15 @@ string entryname2d(const string root, unsigned int i, unsigned int j) {
 
 
 bool is_infinite( const config::value_type &value );
+
+
+inline int dual_pow(int n)
+{
+	assert(n>=0 && "power must be nonnegative, otherwise return value cannot be integer");
+	assert (n < 16 && "dual_pow is only implemented for exponents smaller than 16");
+	int res = 1u << n;
+	return res;
+}
 
 #endif // DOXYGEN_SKIP
 
