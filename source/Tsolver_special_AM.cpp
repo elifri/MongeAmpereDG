@@ -894,11 +894,6 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	Eigen::VectorXd values_C;
 	c0_converter.convert_coefficients_toC(values_DG, values_C);
 
-	//export bezier coefficients
-	Eigen::VectorXd coefficients_C;
-	c0_converter.convert_coefficients_toC(solution, coefficients_C);
-
-
 	//set up quadratic program to solve least square with inequality constraint
 	SparseMatrixD G2, CE;
 	Eigen::VectorXd f, ci0, x, ce0;
