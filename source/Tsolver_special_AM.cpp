@@ -1272,11 +1272,21 @@ void Tsolver::init_start_solution_MA(std::string filename)
 
 		summation f(get_exacttemperature_MA_callback(),
 				Convex_error_functions::get_hat_unitsquare_callback(
-						0.3));
+						0.1));
 		init_startsolution_from_function(f.get_add_callback());
-//				init_startsolution_from_function(get_exacttemperature_MA_callback());
+//		init_startsolution_from_function(get_exacttemperature_MA_callback());
 	} else
-		read_startsolution(filename);
+		if (filename == "exact")
+		{	cout	<< "Using the exact solution as start solution!"
+					<< endl;
+			init_startsolution_from_function(get_exacttemperature_MA_callback());
+		}
+		else
+		{
+			cout	<< "Using user specified data as start solution!"
+					<< endl;
+			read_startsolution(filename);
+		}
 
 	plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
 
@@ -1334,30 +1344,13 @@ void Tsolver::time_stepping_MA() {
 
 	convexifier.init();
 
-	///////////////////////////////////////////
-	// temperature history at xc: /////////////
-	space_type x, xc;
-	state_type uc;
-	grid_type::id_type idcenter;
-	idcenter = grid_type::id(grid.leafCells().begin());
-	leafcell_type *pc;
-	grid.findLeafCell(idcenter, pc); // to initialize pc
-	const int center_quad = 0;
-
-	x[0] = -0.3;
-	x[1] = 0.9;
-	get_closest_basecenter(x, idcenter, xc);
-	find_centerleaf(idcenter, pc, xc);
-
-
-	shape.assemble_state_Equad(pc->u, center_quad, uc);
-	//  outnumericalhistory << t << "  " << uc << endl;
-	get_exacttemperature_MA(xc, uc);
-	//  outexacthistory << uc[0] << endl;
-	////////////////////////////////////////////////////////////
-
 	singleton_config_file::instance().getValue("monge ampere", "maximal_iterations", maxits, 3);
 
+	//=======add streams to plot data ========
+	std::ofstream plot_data("data/s/plot_data");
+	plotter.add_plot_stream("plot_data_min_constraints", "data/s/plot_data_min_constraints");
+	plotter.add_plot_stream("plot_data_constraints_l2", "data/s/plot_data_constraints_l2");
+	//========================================
 
 
 	iteration = 0;
@@ -1392,6 +1385,7 @@ void Tsolver::time_stepping_MA() {
 	start_solution = singleton_config_file::instance().getValue("monge ampere", "start_iteration", filename, "");
 	if (start_solution){
 		init_start_solution_MA(filename);
+		plot_data << -1 << " " << calculate_L2_error(get_exacttemperature_MA_callback())<< endl;
 	}
 
 	while (iteration < maxits) {
@@ -1453,6 +1447,11 @@ void Tsolver::time_stepping_MA() {
 		if (solver.info() != Eigen::Success) {
 			std::cerr << "Solving of FEM system failed" << endl;
 		}
+
+//		if ((LM*Lsolution-Lrhs).norm() )
+		//(nachiteration)
+		Lsolution += solver.solve(Lrhs-LM*Lsolution);
+
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
@@ -1502,7 +1501,9 @@ void Tsolver::time_stepping_MA() {
 		//plot solution
 		plotter.write_numericalsolution_VTK(iteration);
 
-		cout << "Current L2 error is " << calculate_L2_error(get_exacttemperature_MA_callback()) << endl;
+		state_type error =  calculate_L2_error(get_exacttemperature_MA_callback());
+		cout << "Current L2 error is " << error << endl;
+		plot_data << iteration << " " << error << endl;
 
 		// reset flag 0
 		setleafcellflags(0, false);
