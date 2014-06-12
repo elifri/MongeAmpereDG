@@ -7,13 +7,18 @@
 
 
 #include "../include/Plotter.hpp"
-#include "../include/Tshape.hpp"
 
-
-#include "boost/archive/iterators/insert_linebreaks.hpp"
+#include "../include/config.hpp"
+#include "../include/tmyleafcell.hpp"
+#include "../include/utility.hpp"
 #include "boost/archive/iterators/base64_from_binary.hpp"
 #include "boost/archive/iterators/binary_from_base64.hpp"
+#include "boost/archive/iterators/insert_linebreaks.hpp"
 #include "boost/archive/iterators/transform_width.hpp"
+#include "igpm_t2_tgrid.hpp"
+#include "igpm_t2_thashcontainer.hpp"
+#include "igpm_t2_tkeys.hpp"
+#include "igpm_t2_tvector.hpp"
 
 using namespace boost::archive::iterators;
 using namespace std;
@@ -200,7 +205,7 @@ void Plotter::read_vtk_header(std::ifstream& file, int &Nnodes, int &Nelements)
 
 void Plotter::write_error(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
 {
-	Nvector_type nv;
+	nvector_type nv;
 	state_type state;
 
 	// write error
@@ -229,32 +234,41 @@ void Plotter::write_error(std::ofstream &file, const std::vector < std::vector<i
 		}
 		else
 		{
-			// save points in file with refinement
-
-			// over all ids inside this block
+		// over all ids inside this block
 			for (unsigned int j = 0; j < v[i].size(); ++j) {
 				const grid_type::id_type & id = v[i][j];
 				grid_type::leafcell_type * pLC = NULL;
 				grid->findLeafCell(id, pLC);
 
-				grid->nodes(id, nv);
-				for (unsigned int k = 0; k < id.countNodes(); ++k) {
-					shape->assemble_state_N(pLC->u, k, state);
-					file << "\t\t\t\t\t" << pLC->Serror(k) << endl;
-					file << "\t\t\t\t\t" << pLC->Serror(k) << endl;
+				get_nodes(*grid, id, nv);
+
+				nvector_baryc_type points_baryc(Nnodes);
+
+				space_type point;
+				state_type val, val_exact;
+
+				shape->get_refined_nodes(refine, points_baryc);
+
+				for (int i_node = 0; i_node < points_baryc.size(); i_node++) {
+					//assemble point coordinates from baryc coordinates
+					point.setZero();
+					for (int i_baryc = 0; i_baryc < barycdim; i_baryc++)
+						point += points_baryc(i_node)(i_baryc) * nv(i_baryc);
+
+					//get solution
+					shape->assemble_state_x_barycentric(pLC->u, points_baryc(i_node), val);
+					get_exact_sol(point, val_exact);
+					file << "\t\t\t\t\t" << (val-val_exact).transpose() << endl;
 				}
 			}
-
 		}
 	}
-
 	file << "\t\t\t\t</DataArray>\n";
-
 }
 
 void Plotter::write_residuum(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
 {
-	Nvector_type nv;
+	nvector_type nv;
 	state_type state;
 
 	// write error
@@ -291,11 +305,37 @@ void Plotter::write_residuum(std::ofstream &file, const std::vector < std::vecto
 				grid_type::leafcell_type * pLC = NULL;
 				grid->findLeafCell(id, pLC);
 
-				grid->nodes(id, nv);
-				for (unsigned int k = 0; k < id.countNodes(); ++k) {
-					shape->assemble_state_N(pLC->u, k, state);
-					file << "\t\t\t\t\t" << pLC->residuum(k) << endl;
-					file << "\t\t\t\t\t" << pLC->residuum(k) << endl;
+				get_nodes(*grid, id, nv);
+
+				nvector_type points(Nnodes);
+				nvector_baryc_type points_baryc(Nnodes);
+
+				Eigen::VectorXd vals(points.size());
+
+				state_type val;
+
+				shape->get_refined_nodes(refine, points_baryc);
+
+				for (int i_node = 0; i_node < points_baryc.size(); i_node++) {
+					//assemble point coordinates from baryc coordinates
+					points(i).setZero();
+					for (int i_baryc = 0; i_baryc < barycdim; i_baryc++)
+						points(i_node) += points_baryc(i_node)(i_baryc) * nv(i_baryc);
+
+					const Hessian_type& hess = pLC->A;
+
+					//determinant of hessian for calculation of residuum
+					value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
+
+					state_type stateRhs;
+
+					get_rhs(points(i_node), stateRhs);
+
+					assert(!is_infinite(det));
+					assert(!is_infinite(stateRhs(0)));
+
+					//calculate residuum
+					file << "\t\t\t\t\t" << det - stateRhs(0) << endl;
 				}
 			}
 
@@ -347,8 +387,7 @@ void Plotter::write_smallest_EW(std::ofstream &file, const std::vector < std::ve
 				grid->findLeafCell(id, pLC);
 
 				grid->nodes(id, nv);
-				for (unsigned int k = 0; k < id.countNodes(); ++k) {
-					file << "\t\t\t\t\t" << pLC->smallest_EW << endl;
+				for (int k = 0; k < shape->calc_number_of_refined_nodes(refine); ++k) {
 					file << "\t\t\t\t\t" << pLC->smallest_EW << endl;
 				}
 			}
@@ -361,10 +400,10 @@ void Plotter::write_smallest_EW(std::ofstream &file, const std::vector < std::ve
 
 void Plotter::write_solution_data_array(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
 {
-	Nvector_type nv;
+	nvector_type nv;
 	state_type state;
 
-	// write data array with smallest EW
+	// write data array
 	file << "\t\t\t\t<DataArray  Name=\"solution\" type=\"Float32\" format=\"ascii\">\n";
 
 	// loop over all leaf cells
@@ -380,7 +419,7 @@ void Plotter::write_solution_data_array(std::ofstream &file, const std::vector <
 				grid_type::leafcell_type * pLC = NULL;
 				grid->findLeafCell(id, pLC);
 
-				grid->nodes(id, nv);
+				get_nodes(*grid, id, nv);
 				for (unsigned int k = 0; k < id.countNodes(); ++k) {
 					shape->assemble_state_N(pLC->u, k, state);
 					file << "\t\t\t\t\t" << state << endl; //" "
@@ -395,43 +434,23 @@ void Plotter::write_solution_data_array(std::ofstream &file, const std::vector <
 				grid_type::leafcell_type * pLC = NULL;
 				grid->findLeafCell(id, pLC);
 
-				grid->nodes(id, nv);
+				get_nodes(*grid, id, nv);
 
-				Eigen::Vector3d h_x, h_y;		// (
-				h_x(0) = -nv[0][0] + nv[1][0];
-				h_y(0) = -nv[0][1] + nv[1][1];
+				nvector_baryc_type points_baryc;
+				shape->get_refined_nodes(refine, points_baryc);
 
-				h_x(1) = -nv[1][0] + nv[2][0];
-				h_y(1) = -nv[1][1] + nv[2][1];
+				nvector_type points(points_baryc.size());
 
-				h_x(2) = nv[0][0] - nv[2][0];
-				h_y(2) = nv[0][1] - nv[2][1];
-
-				h_x /= refine + 1;
-				h_y /= refine + 1;
-
-				Eigen::Matrix<space_type, Eigen::Dynamic, 1> points(id.countNodes() * (refine + 1));
 				Eigen::VectorXd vals(points.size());
 
 				state_type val;
 				baryc_type xbar;
 
-				for (unsigned int i = 0; i < id.countNodes(); ++i) {	//loop over nodes
-					//nodes
-					points[i * 2] =	(space_type() << nv[i][0], nv[i][1]).finished(); //set coordinates
-					shape->assemble_state_N(pLC->u, i, val); //get solution at nodes
-					vals(i * 2) = val(0); //write solution
 
-					//coordinates of new points
-					points[i * 2 + 1] =	(space_type() << nv[i][0] + h_x(i), nv[i][1]+ h_y(i)).finished();
-					//calc calculate baryc coordinates of middle points
-					xbar.setZero();
-					xbar(i) = 1. / 2.;
-					xbar((i+1) % 3) = 1. / 2.;
-
-					//get solution
-					shape->assemble_state_x_barycentric(pLC->u, xbar, val);
-					vals(i * 2 + 1) = val(0);
+				for (int i_node = 0; i_node < points_baryc.size(); i_node++) {
+					//collect solution
+					shape->assemble_state_x_barycentric(pLC->u, points_baryc(i_node), val);
+					vals(i_node) = val(0);
 				}
 				// save points in file
 				for (unsigned int k = 0; k < points.size(); ++k) {
@@ -439,9 +458,8 @@ void Plotter::write_solution_data_array(std::ofstream &file, const std::vector <
 				}
 			}
 		}
-
 	file << "\t\t\t\t</DataArray>\n";
-}
+	}
 }
 
 void Plotter::write_points(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine, bool coord3){
@@ -484,27 +502,28 @@ void Plotter::write_points(std::ofstream &file, const std::vector < std::vector<
 
 				get_nodes(*grid, id, nv);
 
-				nvector_type points(Nnodes);
-				nvector_baryc_type points_baryc(Nnodes);
+				nvector_baryc_type points_baryc;
+				shape->get_refined_nodes(refine, points_baryc);
+
+				nvector_type points(points_baryc.size());
 
 				Eigen::VectorXd vals(points.size());
 
 				state_type val;
-				baryc_type xbar;
 
 				shape->get_refined_nodes(refine, points_baryc);
 
-				for (int i = 0; i < points_baryc.size(); i++) {
+				for (int i_node = 0; i_node < points_baryc.size(); i_node++) {
 					//assemble point coordinates from baryc coordinates
-					points(i).setZero();
+					points(i_node).setZero();
 					for (int i_baryc = 0; i_baryc < barycdim; i_baryc++)
-						points(i) += points_baryc(i)(i_baryc) * nv(i_baryc);
+						points(i_node) += points_baryc(i_node)(i_baryc) * nv(i_baryc);
 
 					//collect solution
 					if (coord3) {
 						//get solution
-						shape->assemble_state_x_barycentric(pLC->u, points_baryc(i), val);
-						vals(i) = val(0);
+						shape->assemble_state_x_barycentric(pLC->u, points_baryc(i_node), val);
+						vals(i_node) = val(0);
 					}
 				}
 				// save points in file
@@ -606,12 +625,12 @@ void Plotter::write_solution(const vector_function_type &get_exacttemperature, s
 
 				get_nodes(*grid, id, nv);
 				for (unsigned int k = 0; k < id.countNodes(); ++k) {
-					get_exacttemperature(nv[k],state);
+					get_exacttemperature(nv[k], state);
 					file << "\t\t\t\t\t" << nv[k] << " " << state << endl;
 				}
 			}
 
-		}else {		// save points in file after refinement
+		} else {		// save points in file after refinement
 
 			// over all ids inside this block
 			for (unsigned int j = 0; j < v[i].size(); ++j) {
@@ -621,48 +640,34 @@ void Plotter::write_solution(const vector_function_type &get_exacttemperature, s
 
 				get_nodes(*grid, id, nv);
 
-				Eigen::Vector3d h_x, h_y;		// (
-				h_x(0) = -nv[0][0] + nv[1][0];
-				h_y(0) = -nv[0][1] + nv[1][1];
+				nvector_type points(Nnodes);
+				nvector_baryc_type points_baryc(Nnodes);
 
-				h_x(1) = -nv[1][0] + nv[2][0];
-				h_y(1) = -nv[1][1] + nv[2][1];
-
-				h_x(2) = nv[0][0] - nv[2][0];
-				h_y(2) = nv[0][1] - nv[2][1];
-
-				h_x /= refine + 1;
-				h_y /= refine + 1;
-
-				nvector_type points(id.countNodes() * (refine + 1));
 				Eigen::VectorXd vals(points.size());
 
 				state_type val;
-				baryc_type xbar;
 
-				for (unsigned int i = 0; i < id.countNodes(); ++i) {	//loop over nodes
-					//nodes
-					points[i * 2][0] = nv[i][0];//set coordinates
-					points[i * 2][1] = nv[i][1];
-					get_exacttemperature(points[i*2], val); //get solution at nodes
-					vals(i * 2) = val(0); //write solution
+				shape->get_refined_nodes(refine, points_baryc);
 
-					//coordinates of new points
-					points[i * 2 + 1][0] = nv[i][0] + h_x(i);
-					points[i * 2 + 1][1] = nv[i][1]+ h_y(i);
+				for (int i = 0; i < points_baryc.size(); i++) {
+					//assemble point coordinates from baryc coordinates
+					points(i).setZero();
+					for (int i_baryc = 0; i_baryc < barycdim; i_baryc++)
+						points(i) += points_baryc(i)(i_baryc) * nv(i_baryc);
 
-					//get solution
-					get_exacttemperature(points[i*2+1], val); //get solution at nodes
-					vals(i * 2 + 1) = val(0);
+					//get exact solution
+					get_exacttemperature(points(i), val);
+					vals(i) = val(0);
 				}
+
 				// save points in file
 				for (unsigned int k = 0; k < points.size(); ++k) {
-						file << "\t\t\t\t\t" << points[k][0] << " " << points[k][1] << " "<< vals(k) << endl; //" "
-						//<< pLC->Serror << endl;
+					file << "\t\t\t\t\t" << points[k][0] << " " << points[k][1]
+							<< " " << vals(k) << endl; //" "
+					//<< pLC->Serror << endl;
 				}
 			}
 		}
-
 	}
 
 	file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
@@ -694,7 +699,7 @@ void Plotter::write_cells(std::ofstream &file, const std::vector < std::vector<i
 		}
 	}
 	else{ //refined
-		for (int offset = 0; offset < Nnodes; offset+=6)
+		for (int offset = 0; offset < Nnodes; offset+=shape->calc_number_of_refined_nodes(refine))
 		{
 			//loop over nodes in refined triangle via its lexicographical ordering (x<y)
 			for (int y = 0; y <= dual_pow(refine); y++)
@@ -797,9 +802,8 @@ void Plotter::writeLeafCellVTK(std::string filename, const unsigned int refine, 
 	assemble_points(v,Nelements, Nnodes);
 
 	if (refine != 0){
-		Nelements = std::pow(4, refine);
-		int y_max = dual_pow(refine);
-		Nnodes = (y_max+1)*(dual_pow(refine) + 1) - (y_max*(y_max+1))/2;
+		Nnodes  = Nelements * shape->calc_number_of_refined_nodes(refine);
+		Nelements *= std::pow(4, refine);
 	}
 
 	// open file

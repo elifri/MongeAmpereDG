@@ -20,6 +20,8 @@ private:
 	grid_type* grid;
 	const Tshape* shape;
 
+	vector_function_type get_rhs, get_exact_sol;
+
 	int Nelements;
 	int Nnodes;
 
@@ -75,6 +77,9 @@ public:
 	void set_shape(const Tshape* shape){	this->shape = shape;}
 	void set_output_directory(std::string outputdir) {this->output_directory = outputdir;}
 	void set_output_prefix(std::string prefix) {this->output_prefix = prefix;}
+
+	void set_rhs(vector_function_type get_rhs){ this->get_rhs = get_rhs;}
+	void set_exact_sol(vector_function_type get_exact_sol){ this->get_exact_sol = get_exact_sol;}
 
 	std::string get_output_directory() {return output_directory;}
 	std::string get_output_prefix() {return output_prefix;}
