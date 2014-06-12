@@ -736,7 +736,7 @@ void Tshape::get_refined_nodes(const int refine, nvector_baryc_type &nvb) const
 
 	nvb.resize(calc_number_of_refined_nodes(refine));
 
-	value_type h = ((value_type) 1) / ((value_type) (refine+1));
+	value_type h = ((value_type) 1) / ((value_type) (dual_pow(refine)));
 
 	int index = 0;
 
