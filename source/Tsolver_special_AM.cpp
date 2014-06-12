@@ -347,6 +347,560 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
  *
  *
  */
+//////////////////////////////////////////////////////
+void Tsolver::convexify(Hessian_type& hess) {
+
+	EW_solver.compute(hess);
+
+	Hessian_type T = EW_solver.eigenvectors();
+
+	//correct all negative eigenvalue
+	Eigen::Vector2d new_eigenvalues;
+	new_eigenvalues(0) = epsilon;
+	new_eigenvalues(1) = EW_solver.eigenvalues()(1);
+	if (new_eigenvalues(1)< 0)		new_eigenvalues(1) =  epsilon;
+
+	hess = T.transpose()*new_eigenvalues.asDiagonal()*T;
+//	cout << "hess*T^t*D*T \n";
+//	cout << hess << endl;
+
+	value_type ev0, ev1;
+	calculate_eigenvalues(hess, ev0, ev1);
+
+	cout << "new eigenvalues " << ev0 << " " << ev1 << endl;
+//	cout << "new eigenvectors  \n" << es.eigenvectors() << endl << endl;
+}
+
+/////////////////////////////////////////////////////
+
+void Tsolver::init_matrices_for_quadr_program(SparseMatrixD &A, SparseMatrixD &C)
+{
+	//init variables
+	int Ndofs_DG = number_of_dofs;
+	int Ndofs = c0_converter.get_number_of_dofs_C();
+	int NinnerEdges = Ndofs;
+
+	//init triplets for assembling matrices
+	std::vector< Eigen::Triplet<double> > tripletList;
+	tripletList.reserve(12*Ndofs + 8*NinnerEdges*2);
+
+	std::vector< Eigen::Triplet<double> > tripletListA;
+	tripletListA.reserve(6*Ndofs);
+
+	int condition_index = 0;
+
+	//loop over cell offsets
+	for (int n=0; n< Ndofs_DG; n+=6)
+		{
+
+		//linear condition for convexity on every cell - paper "convexity preserving c0splines" (corollary 3.2 (3.7)
+
+			// Delta21 Delta31 >= 0
+			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+4), 1));
+			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+1), -1));
+			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+2), -1));
+			tripletList.push_back( T( condition_index, c0_converter.dof_C(n), 1));
+
+			condition_index++;
+
+			// Delta13 Delta23 >= 0
+			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+5), 1));
+			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+4), -1));
+			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+2), -1));
+			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+1), 1));
+
+			condition_index++;
+
+			//Delta32 Delta12 >= 0
+			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+3), 1));
+			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+1), -1));
+			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+4), -1));
+			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+2 ), 1));
+
+			condition_index++;
+
+		//set up coefficient matrix
+			//shape 0
+			tripletListA.push_back( T (n, n, 1));
+			tripletListA.push_back( T (n+1, n, 0.25));
+			tripletListA.push_back( T (n+2, n, 0.25));
+
+			//shape 1
+			tripletListA.push_back( T(n+1, n+1, 0.5));
+
+			//shape 2
+			tripletListA.push_back( T(n+2, n+2, 0.5));
+
+			//shape 3
+			tripletListA.push_back( T (n+3, n+3, 1));
+			tripletListA.push_back( T (n+1, n+3, 0.25));
+			tripletListA.push_back( T (n+4, n+3, 0.25));
+
+			//shape 4
+			tripletListA.push_back( T(n+4, n+4, 0.5));
+
+			//shape 5
+			tripletListA.push_back( T (n+5, n+5, 1));
+			tripletListA.push_back( T (n+4, n+5, 0.25));
+			tripletListA.push_back( T (n+2, n+5, 0.25));
+		}
+
+	//init variables
+	int nFaces;
+	leafcell_type *pLC, *pNC;
+	nvector_type nv; //nodevector to store neighbouring nodes
+	Fidvector_type idNCv; //vector for neighbour ids
+	baryc_type x_baryc;
+
+	//conditions for convexity on all cells- paper "convexity preserving c0splines" (Theorem 3.6)
+	//loop over all cells and figure out the conditions mentioned in (3.11)
+	for (grid_type::leafcellmap_type::iterator it=grid.leafCells().begin(); it!=grid.leafCells().end(); ++it)
+	{
+		// get id and pointer to this cell
+		const grid_type::id_type & idLC = grid_type::id(it);
+		grid.findLeafCell(idLC, pLC);
+
+		int offset_T1 = pLC->m_offset;
+
+		// neighbor face number and orientation
+		grid_type::facehandlevector_type vFh, vOh;
+		grid.faceIds(idLC, idNCv, vFh, vOh);
+
+		nFaces = idLC.countFaces();
+
+		// set up convexity conditions over every face
+		for (int f = 0; f < nFaces; f++) { // loop over faces
+			if (idNCv[f].isValid()) {
+
+				//get point to neighbour leaf cell
+				grid.findLeafCell(idNCv[f], pNC);
+				//get nodes of neighbouring leafcell
+				if (!pNC->id().flag(0)) { //neighbour cell has not been processed
+					get_nodes(grid, idNCv[f], nv);
+
+					int offset_T2 = pNC->m_offset;
+					const int ftilde=vFh[f], o=vOh[f];
+
+					//get baryc. coordinates of node (neighbouring leafcell) opposite of the face f
+					// (in the paper called baryc coordinates of v_v with respect to T1)
+					get_baryc_coordinates(idLC, nv[ftilde], x_baryc);
+
+					{
+						nvector_type nv_LC;
+						get_nodes(grid, idLC, nv_LC);
+
+						space_type x_from_baryc= space_type::Zero();
+						for (int i = 0; i < barycdim; i++)
+							x_from_baryc+= x_baryc(i)*nv_LC(i);
+//
+//						cout << "baryc coord  " << x_baryc << endl;
+//
+//						cout << "node " << nv[ftilde].transpose() << endl;
+//						cout << "node from baryc " << x_from_baryc.transpose() << endl;
+
+						assert(is_close(nv[ftilde](0), x_from_baryc(0)));
+						assert(is_close(nv[ftilde](1), x_from_baryc(1)));
+
+					}
+
+					int index0, index1;
+
+					//get index of the control points on the faces which are not on face f
+					switch(ftilde)
+					{
+					case 0:
+						index0 = offset_T2 + 1; // (1,1,0)
+						index1 = offset_T2 + 2; // (1,0,1);
+						break;
+					case 1:
+						index0 = offset_T2 + 4; // (0,1,1)
+						index1 = offset_T2 + 1; // (1,1,0)
+						break;
+					case 2:
+						index0 = offset_T2 + 2; // (1,0,1)
+						index1 = offset_T2 + 4; // (0,1,1)
+						break;
+					}
+
+					if(o) std::swap(index0, index1);
+
+					tripletList.push_back( T( condition_index,   c0_converter.dof_C(index0), 1));
+					tripletList.push_back( T( condition_index+1, c0_converter.dof_C(index1), 1));
+
+					int index2;
+
+					// add rhs of condition (small triangles weighted with baryc coord of v_v)
+
+					//get node ids of nodes at face f
+					Eigen::Vector2i face_nodes( (f+1) % nFaces,(f+2) % nFaces);
+
+					for (int i = 0; i < 2; i++)
+					{
+						int node = face_nodes(i);
+						//calculate "small" triangle coordinates
+						switch (node)
+						{
+						case 0: index0 = offset_T1+0; index1 = offset_T1+1; index2 = offset_T1+2; break;
+						case 1: index0 = offset_T1+1; index1 = offset_T1+3; index2 = offset_T1+4; break;
+						case 2: index0 = offset_T1+2; index1 = offset_T1+4; index2 = offset_T1+5; break;
+						default : std::cerr << "Something fishy, this node does not exist!" << std::endl; exit(1);
+						}
+						tripletList.push_back( T( condition_index+i, c0_converter.dof_C(index0), -x_baryc(0)));
+						tripletList.push_back( T( condition_index+i, c0_converter.dof_C(index1), -x_baryc(1)));
+						tripletList.push_back( T( condition_index+i, c0_converter.dof_C(index2), -x_baryc(2)));
+
+					}
+					condition_index +=2;
+				}
+			}
+		}
+		pLC->id().setFlag(0, true);
+	}
+
+	//init matrices
+	A.resize(Ndofs_DG, Ndofs_DG);
+	//convert matrix to continuous fomrulation and export
+	A.setFromTriplets(tripletListA.begin(), tripletListA.end());
+
+	C.resize(condition_index, Ndofs);
+	C.setFromTriplets(tripletList.begin(), tripletList.end());
+
+	//remove numerical zeroes
+	C.prune(1.);
+	A.prune(1.);
+
+}
+
+
+void Tsolver::convexify(Eigen::VectorXd &solution)
+{
+
+	setleafcellflags(0, false); //reset flags
+	assert(!interpolating_basis && "This only works with a bezier basis!");
+
+	SparseMatrixD A,C;
+	init_matrices_for_quadr_program(A,C);
+
+	//adjust DG solution, such that it represents a continuous function
+	Eigen::VectorXd coefficients_C;
+	c0_converter.convert_coefficients_toC(solution, coefficients_C);
+	c0_converter.convert_coefficients_toDG(coefficients_C, solution);
+	Eigen::VectorXd test;
+
+	//check if c version of current dg version is right
+	{
+		c0_converter.convert_coefficients_toC(solution, test);
+		assert ((coefficients_C-test.cwiseAbs()).maxCoeff() < 1e-10 && "c inversion is not right");
+	}
+
+	//write continuous solution in leaf cells
+	restore_MA(solution);
+	// collect functions values at control points
+	Eigen::VectorXd values_DG(solution.size());
+	for (grid_type::leafcellmap_type::iterator it = grid.leafCells().begin();
+			it != grid.leafCells().end(); ++it) {
+		// get id and pointer to this cell
+		const grid_type::id_type & idLC = grid_type::id(it);
+		const leafcell_type* pLC;
+		grid.findLeafCell(idLC, pLC);
+
+		for (int ishape = 0; ishape < shapedim; ishape++) // loop over shapes
+				{
+			state_type val;
+			shape.assemble_state_beziercontrolpoint(pLC->u, ishape, val);
+			values_DG(pLC->m_offset + ishape) = val(0);
+		}
+	}
+
+	assert ((A*solution+-values_DG).cwiseAbs().maxCoeff() < 1e-12 && " Check evaluation matrix and value extraction from leaf cell!");
+	//convert DG formulation to C formulation
+	Eigen::VectorXd values_C;
+	c0_converter.convert_coefficients_toC(values_DG, values_C);
+//	MATLAB_export(values_C, "values_C");
+
+	//set up quadratic program to solve least square with inequality constraint
+	SparseMatrixD G2, CE;
+	Eigen::VectorXd f, ci0, x, ce0;
+
+	//handle boundary dofs
+	if (strongBoundaryCond) {
+		//if we want to have strong boundary condition we have to minimize A*x+delte_b_dofs(A_bd*impact_bd) - c
+
+		VectorXd a0;
+		//get values of boundary dofs
+		VectorXd boundary_dofs_impact;
+		bd_handler.add_boundary_dofs(Eigen::VectorXd::Zero(bd_handler.get_reduced_number_of_dofs()), solution, boundary_dofs_impact);
+
+		//impact on cost function (in DG formulation)
+		a0 = A * boundary_dofs_impact;
+		c0_converter.convert_coefficients_toC(a0);
+		bd_handler.delete_boundary_dofs_C(a0);
+
+		//impact on constraints
+		VectorXd boundary_dofs_impact_C;
+		c0_converter.convert_coefficients_toC(boundary_dofs_impact, boundary_dofs_impact_C);
+		ci0 = - C*boundary_dofs_impact_C;
+
+		//convert to continuous version
+		c0_converter.convert_matrix_toC(A);
+
+		cout << "max value of A_C*x_C-C_values: " <<  (A*coefficients_C-values_C.cwiseAbs()).maxCoeff() << endl;
+		assert ((A*coefficients_C-values_C).cwiseAbs().maxCoeff() < 1e-12 && " Check c1 constraction of eval matrix and coefficients!");
+		//delete boundary dofs
+		bd_handler.delete_boundary_dofs_C(A);
+		bd_handler.delete_boundary_dofs_C_only_cols(C);
+		bd_handler.delete_boundary_dofs_C(values_C);
+		bd_handler.delete_boundary_dofs_C(coefficients_C);
+
+
+		//pos. def. matrix in quadr. cost function
+		G2 = A.transpose() * A;
+
+//		ci0 = coefficients_C * -1;
+
+		f = -A.transpose() * (values_C-a0);
+
+		Eigen::SparseMatrix<double> CE;
+		cout << "max value of A_C*x_C+a0-C_values: " <<  (A*coefficients_C+a0-values_C.cwiseAbs()).maxCoeff() << endl;
+		assert ((A*coefficients_C+a0-values_C).cwiseAbs().maxCoeff() < 1e-12 && " Check boundary constraction of eval matrix and coefficients!");
+	}
+	else
+	{
+		//convert to continuous version
+		c0_converter.convert_matrix_toC(A);
+
+		//pos. def. matrix in quadr. cost function
+		G2 = A.transpose() * A;
+
+		ci0 = Eigen::VectorXd::Zero(C.rows());
+//		ci0 = coefficients_C * -1;
+
+		f = -A.transpose() * values_C;
+	}
+
+	MATLAB_export(A, "A");
+	MATLAB_export(C, "C");
+
+	MATLAB_export(values_C, "values_C");
+	MATLAB_export(coefficients_C, "coefficients_C");
+	MATLAB_export(ci0, "ci0");
+
+
+
+	//check if constraints are fulfilled already
+	if ((C * coefficients_C - ci0).minCoeff() < -1e-13) {
+		x = convexifier.solve_quad_prog_with_ie_constraints(G2, f, C, ci0,
+//				VectorXd::Zero(coefficients_C.size()));
+				coefficients_C);
+
+		cout << "fstart = "
+				<< 0.5 * coefficients_C.transpose() * G2 * coefficients_C
+						+ f.transpose() * coefficients_C << endl;
+
+		cout << "fvalue_code = " << convexifier.get_minimum() << ";" << endl;
+
+//	MATLAB_export(x, "x_code");
+
+		if (strongBoundaryCond) {
+			VectorXd bd = bd_handler.get_nodal_contributions();
+			c0_converter.convert_coefficients_toC(bd);
+			bd_handler.add_boundary_dofs_C(x, bd, solution);
+			c0_converter.convert_coefficients_toDG(solution);
+		} else
+			c0_converter.convert_coefficients_toDG(x, solution);
+
+		cout.precision(10);
+/*
+		cout << "C \n" << C << endl;
+		cout << "C*x " << (C * x ).transpose() << endl;
+		cout << "ci0 " << (ci0).transpose() << endl;
+		cout << " x is  " << x.transpose() << endl;
+*/
+		cout << "C*x-ci0 \n" << (C * x - ci0).transpose() << endl;
+		cout << "biggest difference in x-coefficients_c "
+				<< (x - coefficients_C).cwiseAbs().maxCoeff() << endl;
+		plotter.get_plot_stream("plot_data_min_constraints") << iteration << " " << (C*x-ci0).minCoeff() << endl;
+		plotter.get_plot_stream("plot_data_constraints_l2") << iteration << " " << (C*x-ci0).norm() << endl;
+	}
+
+
+	setleafcellflags(0, false); //reset flags
+}
+
+///////////////////////////////////////////////////////
+
+void Tsolver::add_convex_error(VectorXd &solution)
+{
+	assert(solution.size() == number_of_dofs && "coefficient vector is of the wrong size");
+	assert (!interpolating_basis && "works only with a bezier basis");
+
+	for (unsigned int offset = 0; offset < number_of_dofs; offset+=6)	{
+//		solution(offset+0) += fRand(0,1);
+//		solution(offset+1) += fRand(0,1);
+//		solution(offset+2) += fRand(0,1);
+	}
+}
+
+void Tsolver::add_convex_error()
+{
+	assert (!interpolating_basis && "works only with a bezier basis");
+
+	for (grid_type::leafcellmap_type::const_iterator it =
+			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
+		//collect leaf cell data
+		const grid_type::id_type & idLC = grid_type::id(it);
+		leafcell_type* pLC;
+		grid.findLeafCell(idLC, pLC);
+
+		for (int istate = 0; istate < statedim; istate++)
+		{
+//			pLC->u(0,istate) += fRand(0,1);
+//			pLC->u(1,istate) += fRand(0,1);
+//			pLC->u(2,istate) += fRand(0,1);
+		}
+	}
+}
+///////////////////////////////////////////////////////
+
+void Tsolver::restore_MA(Eigen::VectorXd & solution) {
+
+	leafcell_type *pLC = NULL;
+	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
+	max_EW = 0; //init max_Ew
+	min_EW = 10;
+
+	for (grid_type::leafcellmap_type::const_iterator it =
+			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
+
+		//collect leaf cell data
+		const grid_type::id_type & idLC = grid_type::id(it);
+		grid.findLeafCell(idLC, pLC);
+		nvector_type  nv;
+		get_nodes(grid, idLC,nv);
+
+		// get pointer to basecell of this cell
+		const grid_type::basecell_type * pBC;
+		grid.findBaseCellOf(idLC, pBC);
+
+		// Copy solution entries back into u
+		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+			pLC->uold(ishape,0) = pLC->u(ishape,0);
+			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
+		}
+
+		//update diffusion matrix
+		Hessian_type hess;
+
+		bool is_convex = false;
+
+		calc_cofactor_hessian(pLC, pBC, hess);
+//			cout << "calc factor hessian " << endl << hess << endl;
+
+		is_convex = calculate_eigenvalues(pLC, hess);
+
+		while(!is_convex && false)
+		{
+			cout << "hessian " << endl << hess << endl;
+			cout << "Hessian at cell (node 0 = " << nv(0).transpose() << ") is not convex" << endl;
+			cout << "Convexifying ... ";
+			convexify_cell(pLC, solution);
+			calc_cofactor_hessian(pLC, pBC, hess);
+			is_convex = calculate_eigenvalues(pLC, hess);
+			cout << "the corrected hessian " << endl << hess << endl;
+		}
+
+	}
+
+	cout << "solution written in leafcell" << endl;
+	cout << "EW " << min_EW << " -- " << max_EW << endl;
+
+}
+
+//////////////////////////////////////////////////////
+
+double phi(const double x, const double y) {
+
+	static const double Pi = 3.1415;
+
+	double d;
+
+	if (x < 0.0) {
+
+		if (y < 0.0) {
+			d = atan2(y, x) + 2 * Pi;
+		} else if (y > 0.0) {
+			d = atan2(y, x);
+		} else { // y==0
+			d = Pi;
+		}
+
+	} else if (x > 0.0) {
+
+		if (y < 0.0) {
+			d = atan2(y, x) + 2 * Pi;
+		} else if (y > 0.0) {
+			d = atan2(y, x);
+		} else { // y==0
+			d = 2 * Pi;
+		}
+
+	} else { // x==0
+
+		if (y < 0.0) {
+			d = 3 * Pi / 2;
+		} else if (y > 0.0) {
+			d = Pi / 2;
+		} else { // y==0
+			d = 5 * Pi / 4;
+		}
+
+	}
+
+	return d;
+
+}
+
+
+void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // state_type ???
+{
+	value_type val;
+	switch (problem)
+	{
+	case MONGEAMPERE1:
+		u[0] = exp( x.squaredNorm()/2. );
+		break;
+	case MONGEAMPERE2:
+	{
+		space_type x0 (0.5,0.5);
+		val = (x-x0).norm() - 0.2;
+		if (val > 0)	u[0] = val*val/2.;
+		else u[0] = 0;
+	}
+		break;
+	case MONGEAMPERE3:
+		val = 2-x.squaredNorm();
+		if (val < 0) u[0] = 0;
+		else	u[0] = -sqrt(val);
+		break;
+	case SIMPLEMONGEAMPERE:
+		u[0] = 2*sqr(x[0]) + 2*sqr(x[1]) + 3 * x[0]*x[1];
+		break;
+	case BRENNER_EX1:
+		u[0] = 20*exp(pow(x[0],6)/6.0+x[1]);
+		break;
+	case CONST_RHS:
+		u[0] = 0;
+		break;
+	case SIMPLEMONGEAMPERE2:
+		u[0] = sqr(x[0])/2.0 + sqr(x[1])/2.0;
+		break;
+	default:
+		u[0] = 0;// exact solution not known, Dirichlet boundary conditions with u=0
+	}
+}
+
+//////////////////////////////////////////////////////////
+
 void Tsolver::assemble_MA(const int & stabsign, double penalty,
 		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs, Eigen::VectorXd &Lbd) {
 
@@ -624,583 +1178,6 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 	setleafcellflags(0, false); //reset flags
 }
 
-//////////////////////////////////////////////////////
-void Tsolver::convexify(Hessian_type& hess) {
-
-	EW_solver.compute(hess);
-
-	Hessian_type T = EW_solver.eigenvectors();
-
-	//correct all negative eigenvalue
-	Eigen::Vector2d new_eigenvalues;
-	new_eigenvalues(0) = epsilon;
-	new_eigenvalues(1) = EW_solver.eigenvalues()(1);
-	if (new_eigenvalues(1)< 0)		new_eigenvalues(1) =  epsilon;
-
-	hess = T.transpose()*new_eigenvalues.asDiagonal()*T;
-//	cout << "hess*T^t*D*T \n";
-//	cout << hess << endl;
-
-	value_type ev0, ev1;
-	calculate_eigenvalues(hess, ev0, ev1);
-
-	cout << "new eigenvalues " << ev0 << " " << ev1 << endl;
-//	cout << "new eigenvectors  \n" << es.eigenvectors() << endl << endl;
-}
-
-/////////////////////////////////////////////////////
-
-void Tsolver::init_matrices_for_quadr_program(SparseMatrixD &A, SparseMatrixD &C)
-{
-	//init variables
-	int Ndofs_DG = number_of_dofs;
-	int Ndofs = c0_converter.get_number_of_dofs_C();
-	int NinnerEdges = Ndofs;
-
-	//init triplets for assembling matrices
-	std::vector< Eigen::Triplet<double> > tripletList;
-	tripletList.reserve(12*Ndofs + 8*NinnerEdges*2);
-
-	std::vector< Eigen::Triplet<double> > tripletListA;
-	tripletListA.reserve(6*Ndofs);
-
-	int condition_index = 0;
-
-	//loop over cell offsets
-	for (int n=0; n< Ndofs_DG; n+=6)
-		{
-
-		//linear condition for convexity on every cell - paper "convexity preserving c0splines" (corollary 3.2 (3.7)
-
-			// Delta21 Delta31 >= 0
-			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+4), 1));
-			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+1), -1));
-			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+2), -1));
-			tripletList.push_back( T( condition_index, c0_converter.dof_C(n), 1));
-
-			condition_index++;
-
-			// Delta13 Delta23 >= 0
-			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+5), 1));
-			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+4), -1));
-			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+2), -1));
-			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+1), 1));
-
-			condition_index++;
-
-			//Delta32 Delta12 >= 0
-			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+3), 1));
-			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+1), -1));
-			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+4), -1));
-			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+2 ), 1));
-
-			condition_index++;
-
-		//set up coefficient matrix
-			//shape 0
-			tripletListA.push_back( T (n, n, 1));
-			tripletListA.push_back( T (n+1, n, 0.25));
-			tripletListA.push_back( T (n+2, n, 0.25));
-
-			//shape 1
-			tripletListA.push_back( T(n+1, n+1, 0.5));
-
-			//shape 2
-			tripletListA.push_back( T(n+2, n+2, 0.5));
-
-			//shape 3
-			tripletListA.push_back( T (n+3, n+3, 1));
-			tripletListA.push_back( T (n+1, n+3, 0.25));
-			tripletListA.push_back( T (n+4, n+3, 0.25));
-
-			//shape 4
-			tripletListA.push_back( T(n+4, n+4, 0.5));
-
-			//shape 5
-			tripletListA.push_back( T (n+5, n+5, 1));
-			tripletListA.push_back( T (n+4, n+5, 0.25));
-			tripletListA.push_back( T (n+2, n+5, 0.25));
-		}
-
-	//init variables
-	int nFaces;
-	leafcell_type *pLC, *pNC;
-	nvector_type nv; //nodevector to store neighbouring nodes
-	Fidvector_type idNCv; //vector for neighbour ids
-	baryc_type x_baryc;
-
-	//conditions for convexity on all cells- paper "convexity preserving c0splines" (Theorem 3.6)
-	//loop over all cells and figure out the conditions mentioned in (3.11)
-	for (grid_type::leafcellmap_type::iterator it=grid.leafCells().begin(); it!=grid.leafCells().end(); ++it)
-	{
-		// get id and pointer to this cell
-		const grid_type::id_type & idLC = grid_type::id(it);
-		grid.findLeafCell(idLC, pLC);
-
-		int offset_T1 = pLC->m_offset;
-
-		// neighbor face number and orientation
-		grid_type::facehandlevector_type vFh, vOh;
-		grid.faceIds(idLC, idNCv, vFh, vOh);
-
-		nFaces = idLC.countFaces();
-
-		// set up convexity conditions over every face
-		for (int f = 0; f < nFaces; f++) { // loop over faces
-			if (idNCv[f].isValid()) {
-
-				//get point to neighbour leaf cell
-				grid.findLeafCell(idNCv[f], pNC);
-				//get nodes of neighbouring leafcell
-				if (!pNC->id().flag(0)) { //neighbour cell has not been processed
-					get_nodes(grid, idNCv[f], nv);
-
-					int offset_T2 = pNC->m_offset;
-					const int ftilde=vFh[f], o=vOh[f];
-
-					//get baryc. coordinates of node (neighbouring leafcell) opposite of the face f
-					// (in the paper called baryc coordinates of v_v with respect to T1)
-					get_baryc_coordinates(idLC, nv[ftilde], x_baryc);
-
-					{
-						nvector_type nv_LC;
-						get_nodes(grid, idLC, nv_LC);
-
-						space_type x_from_baryc= space_type::Zero();
-						for (int i = 0; i < barycdim; i++)
-							x_from_baryc+= x_baryc(i)*nv_LC(i);
-//
-//						cout << "baryc coord  " << x_baryc << endl;
-//
-//						cout << "node " << nv[ftilde].transpose() << endl;
-//						cout << "node from baryc " << x_from_baryc.transpose() << endl;
-
-						assert(is_close(nv[ftilde](0), x_from_baryc(0)));
-						assert(is_close(nv[ftilde](1), x_from_baryc(1)));
-
-					}
-
-					int index0, index1;
-
-					//get index of the control points on the faces which are not on face f
-					switch(ftilde)
-					{
-					case 0:
-						index0 = offset_T2 + 1; // (1,1,0)
-						index1 = offset_T2 + 2; // (1,0,1);
-						break;
-					case 1:
-						index0 = offset_T2 + 4; // (0,1,1)
-						index1 = offset_T2 + 1; // (1,1,0)
-						break;
-					case 2:
-						index0 = offset_T2 + 2; // (1,0,1)
-						index1 = offset_T2 + 4; // (0,1,1)
-						break;
-					}
-
-					if(o) std::swap(index0, index1);
-
-					tripletList.push_back( T( condition_index,   c0_converter.dof_C(index0), 1));
-					tripletList.push_back( T( condition_index+1, c0_converter.dof_C(index1), 1));
-
-					int index2;
-
-					// add rhs of condition (small triangles weighted with baryc coord of v_v)
-
-					//get node ids of nodes at face f
-					Eigen::Vector2i face_nodes( (f+1) % nFaces,(f+2) % nFaces);
-
-					for (int i = 0; i < 2; i++)
-					{
-						int node = face_nodes(i);
-						//calculate "small" triangle coordinates
-						switch (node)
-						{
-						case 0: index0 = offset_T1+0; index1 = offset_T1+1; index2 = offset_T1+2; break;
-						case 1: index0 = offset_T1+1; index1 = offset_T1+3; index2 = offset_T1+4; break;
-						case 2: index0 = offset_T1+2; index1 = offset_T1+4; index2 = offset_T1+5; break;
-						default : std::cerr << "Something fishy, this node does not exist!" << std::endl; exit(1);
-						}
-						tripletList.push_back( T( condition_index+i, c0_converter.dof_C(index0), -x_baryc(0)));
-						tripletList.push_back( T( condition_index+i, c0_converter.dof_C(index1), -x_baryc(1)));
-						tripletList.push_back( T( condition_index+i, c0_converter.dof_C(index2), -x_baryc(2)));
-
-					}
-					condition_index +=2;
-				}
-			}
-		}
-		pLC->id().setFlag(0, true);
-	}
-
-	//init matrices
-	A.resize(Ndofs_DG, Ndofs_DG);
-	//convert matrix to continuous fomrulation and export
-	A.setFromTriplets(tripletListA.begin(), tripletListA.end());
-
-	C.resize(condition_index, Ndofs);
-	C.setFromTriplets(tripletList.begin(), tripletList.end());
-
-	//remove numerical zeroes
-	C.prune(1.);
-	A.prune(1.);
-
-}
-
-
-void Tsolver::convexify(Eigen::VectorXd &solution)
-{
-
-	setleafcellflags(0, false); //reset flags
-	assert(!interpolating_basis && "This only works with a bezier basis!");
-
-	SparseMatrixD A,C;
-	init_matrices_for_quadr_program(A,C);
-
-	//adjust DG solution, such that it represents a continuous function
-	Eigen::VectorXd coefficients_C;
-	c0_converter.convert_coefficients_toC(solution, coefficients_C);
-	c0_converter.convert_coefficients_toDG(coefficients_C, solution);
-	Eigen::VectorXd test;
-
-	//check if c version of current dg version is right
-	{
-		c0_converter.convert_coefficients_toC(solution, test);
-		assert ((coefficients_C-test.cwiseAbs()).maxCoeff() < 1e-10 && "c inversion is not right");
-	}
-
-	//write continuous solution in leaf cells
-	restore_MA(solution);
-	// collect functions values at control points
-	Eigen::VectorXd values_DG(solution.size());
-	for (grid_type::leafcellmap_type::iterator it = grid.leafCells().begin();
-			it != grid.leafCells().end(); ++it) {
-		// get id and pointer to this cell
-		const grid_type::id_type & idLC = grid_type::id(it);
-		const leafcell_type* pLC;
-		grid.findLeafCell(idLC, pLC);
-
-		for (int ishape = 0; ishape < shapedim; ishape++) // loop over shapes
-				{
-			state_type val;
-			shape.assemble_state_beziercontrolpoint(pLC->u, ishape, val);
-			values_DG(pLC->m_offset + ishape) = val(0);
-		}
-	}
-
-	assert ((A*solution+-values_DG).cwiseAbs().maxCoeff() < 1e-12 && " Check evaluation matrix and value extraction from leaf cell!");
-	//convert DG formulation to C formulation
-	Eigen::VectorXd values_C;
-	c0_converter.convert_coefficients_toC(values_DG, values_C);
-
-	//set up quadratic program to solve least square with inequality constraint
-	SparseMatrixD G2, CE;
-	Eigen::VectorXd f, ci0, x, ce0;
-
-	//handle boundary dofs
-	if (strongBoundaryCond) {
-		//if we want to have strong boundary condition we have to minimize A*x+delte_b_dofs(A_bd*impact_bd) - c
-
-		VectorXd a0;
-		//get values of boundary dofs
-		VectorXd boundary_dofs_impact;
-		bd_handler.add_boundary_dofs(Eigen::VectorXd::Zero(bd_handler.get_reduced_number_of_dofs()), solution, boundary_dofs_impact);
-
-		//impact on cost function (in DG formulation)
-		a0 = A * boundary_dofs_impact;
-		c0_converter.convert_coefficients_toC(a0);
-		bd_handler.delete_boundary_dofs_C(a0);
-
-		//impact on constraints
-		VectorXd boundary_dofs_impact_C;
-		c0_converter.convert_coefficients_toC(boundary_dofs_impact, boundary_dofs_impact_C);
-		ci0 = - C*boundary_dofs_impact_C;
-
-		//convert to continuous version
-		c0_converter.convert_matrix_toC(A);
-
-		cout << "max value of A_C*x_C-C_values: " <<  (A*coefficients_C-values_C.cwiseAbs()).maxCoeff() << endl;
-		assert ((A*coefficients_C-values_C).cwiseAbs().maxCoeff() < 1e-12 && " Check c1 constraction of eval matrix and coefficients!");
-		//delete boundary dofs
-		bd_handler.delete_boundary_dofs_C(A);
-		bd_handler.delete_boundary_dofs_C_only_cols(C);
-		bd_handler.delete_boundary_dofs_C(values_C);
-		bd_handler.delete_boundary_dofs_C(coefficients_C);
-
-
-		//pos. def. matrix in quadr. cost function
-		G2 = A.transpose() * A;
-
-//		ci0 = coefficients_C * -1;
-
-		f = -A.transpose() * (values_C-a0);
-
-		Eigen::SparseMatrix<double> CE;
-		cout << "max value of A_C*x_C+a0-C_values: " <<  (A*coefficients_C+a0-values_C.cwiseAbs()).maxCoeff() << endl;
-		assert ((A*coefficients_C+a0-values_C).cwiseAbs().maxCoeff() < 1e-12 && " Check boundary constraction of eval matrix and coefficients!");
-	}
-	else
-	{
-		//convert to continuous version
-		c0_converter.convert_matrix_toC(A);
-
-		//pos. def. matrix in quadr. cost function
-		G2 = A.transpose() * A;
-
-		ci0 = Eigen::VectorXd::Zero(C.rows());
-//		ci0 = coefficients_C * -1;
-
-		f = -A.transpose() * values_C;
-	}
-
-	MATLAB_export(A, "A");
-	MATLAB_export(C, "C");
-
-	MATLAB_export(values_C, "values_C");
-	MATLAB_export(coefficients_C, "coefficients_C");
-
-
-
-	//check if constraints are fulfilled already
-	if ((C * coefficients_C - ci0).minCoeff() < -1e-13) {
-		x = convexifier.solve_quad_prog_with_ie_constraints(G2, f, C, ci0,
-//				VectorXd::Zero(coefficients_C.size()));
-				coefficients_C);
-
-		cout << "fstart = "
-				<< 0.5 * coefficients_C.transpose() * G2 * coefficients_C
-						+ f.transpose() * coefficients_C << endl;
-
-		cout << "fvalue_code = " << convexifier.get_minimum() << ";" << endl;
-
-//	MATLAB_export(x, "x_code");
-
-		if (strongBoundaryCond) {
-			VectorXd bd = bd_handler.get_nodal_contributions();
-			c0_converter.convert_coefficients_toC(bd);
-			bd_handler.add_boundary_dofs_C(x, bd, solution);
-			c0_converter.convert_coefficients_toDG(solution);
-		} else
-			c0_converter.convert_coefficients_toDG(x, solution);
-
-		cout.precision(10);
-/*
-		cout << "C \n" << C << endl;
-		cout << "C*x " << (C * x ).transpose() << endl;
-		cout << "ci0 " << (ci0).transpose() << endl;
-		cout << " x is  " << x.transpose() << endl;
-*/
-		cout << "C*x-ci0 \n" << (C * x - ci0).transpose() << endl;
-		cout << "biggest difference in x-coefficients_c "
-				<< (x - coefficients_C).cwiseAbs().maxCoeff() << endl;
-		plotter.get_plot_stream("plot_data_min_constraints") << iteration << " " << (C*x-ci0).minCoeff() << endl;
-		plotter.get_plot_stream("plot_data_constraints_l2") << iteration << " " << (C*x-ci0).norm() << endl;
-
-	}
-
-
-	setleafcellflags(0, false); //reset flags
-}
-
-///////////////////////////////////////////////////////
-
-void Tsolver::add_convex_error(VectorXd &solution)
-{
-	assert(solution.size() == number_of_dofs && "coefficient vector is of the wrong size");
-	assert (!interpolating_basis && "works only with a bezier basis");
-
-	for (unsigned int offset = 0; offset < number_of_dofs; offset+=6)	{
-		solution(offset+0) += fRand(0,1);
-		solution(offset+1) += fRand(0,1);
-		solution(offset+2) += fRand(0,1);
-	}
-}
-
-void Tsolver::add_convex_error()
-{
-	assert (!interpolating_basis && "works only with a bezier basis");
-
-	for (grid_type::leafcellmap_type::const_iterator it =
-			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
-		//collect leaf cell data
-		const grid_type::id_type & idLC = grid_type::id(it);
-		leafcell_type* pLC;
-		grid.findLeafCell(idLC, pLC);
-
-		for (int istate = 0; istate < statedim; istate++)
-		{
-			pLC->u(0,istate) += fRand(0,1);
-			pLC->u(1,istate) += fRand(0,1);
-			pLC->u(2,istate) += fRand(0,1);
-		}
-	}
-}
-///////////////////////////////////////////////////////
-
-void Tsolver::restore_MA(Eigen::VectorXd & solution) {
-
-	leafcell_type *pLC = NULL;
-	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
-	max_EW = 0; //init max_Ew
-	min_EW = 10;
-
-	for (grid_type::leafcellmap_type::const_iterator it =
-			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
-
-		//collect leaf cell data
-		const grid_type::id_type & idLC = grid_type::id(it);
-		grid.findLeafCell(idLC, pLC);
-		nvector_type  nv;
-		get_nodes(grid, idLC,nv);
-
-		// get pointer to basecell of this cell
-		const grid_type::basecell_type * pBC;
-		grid.findBaseCellOf(idLC, pBC);
-
-		// Copy solution entries back into u
-		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-			pLC->uold(ishape,0) = pLC->u(ishape,0);
-			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
-		}
-
-		//update diffusion matrix
-		Hessian_type hess;
-
-		bool is_convex = false;
-
-		calc_cofactor_hessian(pLC, pBC, hess);
-//			cout << "calc factor hessian " << endl << hess << endl;
-
-		is_convex = calculate_eigenvalues(pLC, hess);
-
-		while(!is_convex && false)
-		{
-			cout << "hessian " << endl << hess << endl;
-			cout << "Hessian at cell (node 0 = " << nv(0).transpose() << ") is not convex" << endl;
-			cout << "Convexifying ... ";
-			convexify_cell(pLC, solution);
-			calc_cofactor_hessian(pLC, pBC, hess);
-			is_convex = calculate_eigenvalues(pLC, hess);
-			cout << "the corrected hessian " << endl << hess << endl;
-		}
-
-
-		//determinant of hessian for calculation of residuum
-		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
-
-		state_type state, stateEx, stateRhs;
-
-		//loop over LC nodes
-		for (unsigned int k = 0; k < idLC.countNodes(); k++){
-			//get rhs
-			get_rhs_MA(nv(k), stateRhs);
-
-			assert(!is_infinite(det));
-			assert(!is_infinite(stateRhs(0)));
-			//calculate residuum
-			pLC->residuum(k) = det - stateRhs(0);
-
-
-			//calculate abs error
-			shape.assemble_state_N(pLC->u,k,state);
-			get_exacttemperature_MA(nv[k],stateEx);
-			pLC->Serror(k) = state(0)-stateEx(0);
-		}
-
-
-	}
-
-	cout << "solution written in leafcell" << endl;
-	cout << "EW " << min_EW << " -- " << max_EW << endl;
-
-}
-
-//////////////////////////////////////////////////////
-
-double phi(const double x, const double y) {
-
-	static const double Pi = 3.1415;
-
-	double d;
-
-	if (x < 0.0) {
-
-		if (y < 0.0) {
-			d = atan2(y, x) + 2 * Pi;
-		} else if (y > 0.0) {
-			d = atan2(y, x);
-		} else { // y==0
-			d = Pi;
-		}
-
-	} else if (x > 0.0) {
-
-		if (y < 0.0) {
-			d = atan2(y, x) + 2 * Pi;
-		} else if (y > 0.0) {
-			d = atan2(y, x);
-		} else { // y==0
-			d = 2 * Pi;
-		}
-
-	} else { // x==0
-
-		if (y < 0.0) {
-			d = 3 * Pi / 2;
-		} else if (y > 0.0) {
-			d = Pi / 2;
-		} else { // y==0
-			d = 5 * Pi / 4;
-		}
-
-	}
-
-	return d;
-
-}
-
-
-void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // state_type ???
-{
-	value_type val;
-	switch (problem)
-	{
-	case MONGEAMPERE1:
-		u[0] = exp( x.squaredNorm()/2. );
-		break;
-	case MONGEAMPERE2:
-	{
-		space_type x0 (0.5,0.5);
-		val = (x-x0).norm() - 0.2;
-		if (val > 0)	u[0] = val*val/2.;
-		else u[0] = 0;
-	}
-		break;
-	case MONGEAMPERE3:
-		val = 2-x.squaredNorm();
-		if (val < 0) u[0] = 0;
-		else	u[0] = -sqrt(val);
-		break;
-	case SIMPLEMONGEAMPERE:
-		u[0] = 2*sqr(x[0]) + 2*sqr(x[1]) + 3 * x[0]*x[1];
-		break;
-	case BRENNER_EX1:
-		u[0] = 20*exp(pow(x[0],6)/6.0+x[1]);
-		break;
-	case CONST_RHS:
-		u[0] = 0;
-		break;
-	case SIMPLEMONGEAMPERE2:
-		u[0] = sqr(x[0])/2.0 + sqr(x[1])/2.0;
-		break;
-	default:
-		u[0] = 0;// exact solution not known, Dirichlet boundary conditions with u=0
-	}
-}
-
-//////////////////////////////////////////////////////////
-
 void Tsolver::get_exacttemperaturenormalderivative_MA(const space_type & x,
 		const space_type & normal, state_type & u_n) // state_type ???
 {
@@ -1337,6 +1314,8 @@ void Tsolver::time_stepping_MA() {
 
 	initializeLeafCellData_MA();
 
+	plotter.set_rhs(get_rhs_MA_callback());
+	plotter.set_exact_sol(get_exacttemperature_MA_callback());
 	convexifier.init();
 
 	singleton_config_file::instance().getValue("monge ampere", "maximal_iterations", maxits, 3);
@@ -1399,6 +1378,7 @@ void Tsolver::time_stepping_MA() {
 		if (strongBoundaryCond){
 			LM_bd.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
 			Lrhs_bd.setZero(LM_size);
+			Lsolution_only_bd.setZero(LM_size);
 		}
 
 		//assemble system
@@ -1456,6 +1436,7 @@ void Tsolver::time_stepping_MA() {
 			bd_handler.add_boundary_dofs(Lsolution, Lsolution_only_bd, Lsolution_bd);
 			Lsolution = Lsolution_bd;
 		}
+
 
 		//clear flags
 		setleafcellflags(0, false);
