@@ -505,33 +505,28 @@ void Plotter::write_points(std::ofstream &file, const std::vector < std::vector<
 				nvector_baryc_type points_baryc;
 				shape->get_refined_nodes(refine, points_baryc);
 
-				nvector_type points(points_baryc.size());
-
-				Eigen::VectorXd vals(points.size());
-
+				space_type point;
 				state_type val;
 
 				shape->get_refined_nodes(refine, points_baryc);
 
 				for (int i_node = 0; i_node < points_baryc.size(); i_node++) {
 					//assemble point coordinates from baryc coordinates
-					points(i_node).setZero();
+					point.setZero();
 					for (int i_baryc = 0; i_baryc < barycdim; i_baryc++)
-						points(i_node) += points_baryc(i_node)(i_baryc) * nv(i_baryc);
+						point += points_baryc(i_node)(i_baryc) * nv(i_baryc);
 
 					//collect solution
 					if (coord3) {
 						//get solution
 						shape->assemble_state_x_barycentric(pLC->u, points_baryc(i_node), val);
-						vals(i_node) = val(0);
+
+						file << "\t\t\t\t\t" << point.transpose() << " "<< val << endl;
 					}
-				}
-				// save points in file
-				for (unsigned int k = 0; k < points.size(); ++k) {
-					if (coord3)
-						file << "\t\t\t\t\t" << points[k].transpose() << " "<< vals(k) << endl;
 					else
-						file << "\t\t\t\t\t" << points[k].transpose() << " 0" << endl;
+					{
+						file << "\t\t\t\t\t" << point.transpose() << " 0" << endl;
+					}
 				}
 			}
 		}
@@ -640,8 +635,10 @@ void Plotter::write_solution(const vector_function_type &get_exacttemperature, s
 
 				get_nodes(*grid, id, nv);
 
-				nvector_type points(Nnodes);
-				nvector_baryc_type points_baryc(Nnodes);
+				nvector_baryc_type points_baryc;
+				shape->get_refined_nodes(refine, points_baryc);
+
+				nvector_type points(points_baryc.size());
 
 				Eigen::VectorXd vals(points.size());
 
@@ -649,15 +646,15 @@ void Plotter::write_solution(const vector_function_type &get_exacttemperature, s
 
 				shape->get_refined_nodes(refine, points_baryc);
 
-				for (int i = 0; i < points_baryc.size(); i++) {
+				for (int i_node = 0; i_node < points_baryc.size(); i_node++) {
 					//assemble point coordinates from baryc coordinates
-					points(i).setZero();
+					points(i_node).setZero();
 					for (int i_baryc = 0; i_baryc < barycdim; i_baryc++)
-						points(i) += points_baryc(i)(i_baryc) * nv(i_baryc);
+						points(i_node) += points_baryc(i_node)(i_baryc) * nv(i_baryc);
 
 					//get exact solution
-					get_exacttemperature(points(i), val);
-					vals(i) = val(0);
+					get_exacttemperature(points(i_node), val);
+					vals(i_node) = val(0);
 				}
 
 				// save points in file
@@ -938,7 +935,7 @@ void Plotter::write_numericalsolution_VTK(const unsigned int i, std::string name
 	std::string fname(output_directory);
 	fname += "/"+ output_prefix + name + NumberToString(i) + ".vtu";
 
-	writeLeafCellVTK(fname, 2);
+	writeLeafCellVTK(fname, 3);
 
 }
 
