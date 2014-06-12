@@ -1322,6 +1322,7 @@ void Tsolver::time_stepping_MA() {
 
 	//=======add streams to plot data ========
 	std::ofstream plot_data("data/s/plot_data");
+	plotter.add_plot_stream("L2_rel", "data/s/plot_data_L2_rel");
 	plotter.add_plot_stream("plot_data_min_constraints", "data/s/plot_data_min_constraints");
 	plotter.add_plot_stream("plot_data_constraints_l2", "data/s/plot_data_constraints_l2");
 	//========================================
@@ -1353,14 +1354,23 @@ void Tsolver::time_stepping_MA() {
 					get_exacttemperature_MA_callback(), &shape, c0_converter);
 	}
 
+	//calculate l2 norm of solution
+	L2_norm_exact_sol(0) = calculate_L2_norm(get_exacttemperature_MA_callback())(0);
+
+	cout << "L2 norm of exact sol " << L2_norm_exact_sol << endl;
+
 
 	//check for start solution and where required init startsolution
 	std::string filename;
 	start_solution = singleton_config_file::instance().getValue("monge ampere", "start_iteration", filename, "");
 	if (start_solution){
 		init_start_solution_MA(filename);
-		plot_data << -1 << " " << calculate_L2_error(get_exacttemperature_MA_callback())<< endl;
+		state_type error = calculate_L2_error(get_exacttemperature_MA_callback());
+		plot_data << -1 << " " << error << endl;
+		if (L2_norm_exact_sol(0) != 0)
+				plotter.get_plot_stream("L2_rel") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
 	}
+
 
 	while (iteration < maxits) {
 		cout << "------------------------------------------------------------------------" <<endl;
@@ -1480,6 +1490,8 @@ void Tsolver::time_stepping_MA() {
 		state_type error =  calculate_L2_error(get_exacttemperature_MA_callback());
 		cout << "Current L2 error is " << error << endl;
 		plot_data << iteration << " " << error << endl;
+		if (L2_norm_exact_sol(0) != 0)
+			plotter.get_plot_stream("L2_rel") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
 
 		// reset flag 0
 		setleafcellflags(0, false);

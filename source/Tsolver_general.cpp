@@ -1051,6 +1051,45 @@ state_type Tsolver::calculate_L2_error(const vector_function_type f)
 }
 
 
+state_type Tsolver::calculate_L2_norm(const vector_function_type f)
+{
+	state_type res;
+	res.setZero();
+	for (grid_type::leafcellmap_type::const_iterator it =
+			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
+		const grid_type::id_type & idLC = grid_type::id(it);
+		leafcell_type* pLC;
+
+		// grid_type::leafcell_type *pLC;
+		grid.findLeafCell(idLC, pLC);
+
+		// get pointer to basecell of this cell
+		const grid_type::basecell_type * pBC;
+		grid.findBaseCellOf(idLC, pBC);
+
+		//quadrature
+		for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
+			state_type f_val;
+
+			space_type x;
+			get_Ecoordinates(idLC, iq, x);
+			f(x, f_val);
+
+			for (unsigned int istate = 0; istate < statedim; ++istate) {
+				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+					value_type val = shape.get_Equadw(iq) * pBC->get_detjacabs()* facLevelVolume[idLC.level()] //quadratureweights
+							* f_val(istate); //function value of ansatz function
+
+					res(istate) += val;
+				}
+			}
+		}
+
+	}
+	return res.cwiseSqrt();
+}
+
+
 ////////////////////////////////////////////////////
 ///////////////                      ///////////////
 ///////////////  APRIORI REFINEMENT  ///////////////

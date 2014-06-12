@@ -134,7 +134,8 @@ public:
 
    void write_solution();
    void write_solution_vector(Eigen::VectorXd & solution); ///extract solution from leafcells to vector
-   state_type calculate_L2_error(const vector_function_type f); /// calculate l2 error
+   state_type calculate_L2_error(const vector_function_type f); /// calculate l2 error of function in leafcell - f
+   state_type calculate_L2_norm(const vector_function_type f); /// calculate l2 norm o function f
 
    //////////////    READ DATA ///////////////////////
 
@@ -273,6 +274,8 @@ public:
          static const double epsilon = 1e-6; //minimum value of hessian eigenvalues
 
          double alpha;
+
+         state_type L2_norm_exact_sol; /// L2 norm of the exact solution (=0 if exact solution is not known)
 
    #endif
 
