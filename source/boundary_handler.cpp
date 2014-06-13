@@ -535,10 +535,12 @@ void boundary_handler::assemble_LGS_triangle_less2(int number_of_faces, int max_
 
 			fill_up_rank_LGS(f, bezier_at_boundary);
 
+/*
 			cout << " face " << f << "\n shapes :"
 					<< m_shape_at_boundary[f].transpose() << "\n bezier pts :"
 					<< bezier_at_boundary.transpose() << "\n LSG:\n "
 					<< m_boundary_LGS[f] << endl;
+*/
 
 		}
 		break;
@@ -561,9 +563,11 @@ void boundary_handler::assemble_LGS_triangle_less2(int number_of_faces, int max_
 
 				fill_up_rank_LGS(index, bezier_at_boundary);
 
+/*
 				cout << " faces " << f1 << " " << f2 << "\n shapes:"
 						<< m_shape_at_boundary[index].transpose()
 						<< "\n LSG:\n " << m_boundary_LGS[index] << endl;
+*/
 			}
 		}
 		break;
@@ -668,12 +672,8 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, const C0_
 			//get lhs of linear system for this cell
 			const Eigen::MatrixXd& P = get_LGS(bd_face1, bd_face2);
 
-			cout << "P " << P << endl;
-			cout << "g " << g << endl;
-
 			//solve system
 			Eigen::VectorXd alpha = P.householderQr().solve(g);
-			cout << "alpha " << alpha.transpose() << endl;
 
 			//store information
 			for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
@@ -688,7 +688,6 @@ void boundary_handler::get_boundary_dofs_bezier(const grid_type &grid, const C0_
 
 					//mark as boundary dof
 					m_boundary_dofs_C.insert(dof_C);
-					cout << "inserted in C" << c0_converter.dof_C(dof_DG) << endl;
 				}
 
 			}
