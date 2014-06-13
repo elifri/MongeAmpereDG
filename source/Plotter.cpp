@@ -307,20 +307,19 @@ void Plotter::write_residuum(std::ofstream &file, const std::vector < std::vecto
 
 				get_nodes(*grid, id, nv);
 
-				nvector_type points(Nnodes);
-				nvector_baryc_type points_baryc(Nnodes);
+				nvector_baryc_type points_baryc;
+				shape->get_refined_nodes(refine, points_baryc);
 
-				Eigen::VectorXd vals(points.size());
-
+				space_type point;
 				state_type val;
 
 				shape->get_refined_nodes(refine, points_baryc);
 
 				for (int i_node = 0; i_node < points_baryc.size(); i_node++) {
 					//assemble point coordinates from baryc coordinates
-					points(i).setZero();
+					point.setZero();
 					for (int i_baryc = 0; i_baryc < barycdim; i_baryc++)
-						points(i_node) += points_baryc(i_node)(i_baryc) * nv(i_baryc);
+						point += points_baryc(i_node)(i_baryc) * nv(i_baryc);
 
 					const Hessian_type& hess = pLC->A;
 
@@ -329,7 +328,7 @@ void Plotter::write_residuum(std::ofstream &file, const std::vector < std::vecto
 
 					state_type stateRhs;
 
-					get_rhs(points(i_node), stateRhs);
+					get_rhs(point, stateRhs);
 
 					assert(!is_infinite(det));
 					assert(!is_infinite(stateRhs(0)));
