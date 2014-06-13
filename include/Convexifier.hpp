@@ -8,8 +8,54 @@
 #ifndef CONVEXIFIER_HPP_
 #define CONVEXIFIER_HPP_
 
+#include <vector>
+
 #include "IpIpoptApplication.hpp"
 #include "ConvexifyNLP.hpp"
+
+#include "config.hpp"
+#include "grid_config.hpp"
+#include "Tshape.hpp"
+#include "c0_converter.hpp"
+
+void init_matrices_for_quadr_program(grid_type& grid, const C0_converter& c0_converter, const Tshape &shape,
+		Eigen::SparseMatrixD &A, Eigen::SparseMatrixD &C,
+		int Ndofs_DG, int Ndofs);
+
+
+struct bezier_baryc_entry_type
+{
+	bezier_baryc_entry_type(const Tshape* shape): coefficient(1), coord(0,0,0), shape(shape) {}
+
+	int get_no(){ return shape->get_local_bezier_no(coord);}
+
+	bezier_baryc_entry_type& operator+=(Eigen::Vector3i coord)
+	{
+		this-> coord += coord;
+		return *this;
+	}
+
+	void add_unit_to_coord(const int i)
+	{
+		coord(i) += 1;
+	}
+
+	bezier_baryc_entry_type& operator*=(const value_type val)
+	{
+		this-> coefficient *= val;
+		return *this;
+	}
+
+	value_type coefficient;
+	Eigen::Vector3i coord;
+	const Tshape* shape;
+
+};
+
+typedef std::vector<bezier_baryc_entry_type> bezier_baryc_list;
+
+void Delta(const int i, const int j, const bezier_baryc_entry_type& c, bezier_baryc_list &c_output);
+void Delta_twice(Eigen::Vector2i diff1, Eigen::Vector2i diff2, const bezier_baryc_list& c, bezier_baryc_list &c_output);
 
 class Convexifier
 {
@@ -30,8 +76,8 @@ public:
 		  //       suitable for your optimization problem.
 		  app->Options()->SetNumericValue("tol", 1e-7);
 		  //Desired threshold for the constraint violation.Absolute tolerance on the constraint violation. Successful termination requires that the max-norm of the (unscaled) constraint violation is less than this threshold.
-//		  app->Options()->SetNumericValue("constr_viol_tol", 1e-14);
-//		  app->Options()->SetNumericValue("acceptable_constr_viol_tol", 1e-14);
+		  app->Options()->SetNumericValue("constr_viol_tol", 1e-14);
+		  app->Options()->SetNumericValue("acceptable_constr_viol_tol", 1e-10);
 
 		  app->Options()->SetIntegerValue("print_frequency_iter", 50);
 		  app->Options()->SetStringValue("mu_strategy", "adaptive");
@@ -72,6 +118,10 @@ public:
 		}
 		else {
 		   std::cout << std::endl << std::endl << "*** The quadratic problem FAILED!" << std::endl;
+		   cout << " last point x " << nlp_ptr->get_solution().transpose() << endl;
+		   cout << "C*x " << (C*nlp_ptr->get_solution()).transpose() << endl;
+
+//		   exit(1);
 		}
 
 		return nlp_ptr->get_solution();

@@ -15,10 +15,11 @@ set(UTILITIES Eigen_utility singconfig utility)
 add_library(Plotter Plotter.cpp)
 add_library(C0_converter c0_converter.cpp)
 add_library(boundary_handler boundary_handler.cpp)
+add_library(Convexifier Convexifier.cpp)
 add_library(ConvexifyNLP ConvexifyNLP.cpp)
 
 add_library(Tsolver Tsolver_general.cpp Tsolver_special_POISSON.cpp Tsolver_special_AM.cpp)
-set(dependecies_Tsolver testlibs ConvexifyNLP boundary_handler C0_converter Plotter Tmass Tshape Callback_utility ${UTILITIES} ${IPOPT_LIBRARIES})
+set(dependecies_Tsolver Convexifier testlibs ConvexifyNLP boundary_handler C0_converter Plotter Tmass Tshape Callback_utility ${UTILITIES} ${IPOPT_LIBRARIES})
 
 add_executable(Mesh mesh.cpp)
 target_link_libraries(Mesh Tsolver ${dependecies_Tsolver} ${BLAS_LIBRARIES} ${ARPACK_LIBRARY})
