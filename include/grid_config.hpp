@@ -109,6 +109,10 @@ typename tmyleafcell<IDTYPEINFO_TYPE>::mass_type tmyleafcell<IDTYPEINFO_TYPE>::m
 /*! \brief return all nodes of an leafcell*/
 void get_nodes(const grid_type &grid, const grid_type::id_type& idLC, nvector_type &nvEigen);
 
+/*! \brief the barycentric coordinates of x resp. the triangle cell leafcell*/
+void get_baryc_coordinates (grid_type& grid, const grid_type::id_type& idLC,
+		   const space_type & x, baryc_type& baryc);
+
 /*! \brief return all bezier control points of an leafcell*/
 void get_bezier_control_points(const grid_type &grid, const grid_type::id_type& id, nvector_type &nvEigen);
 
