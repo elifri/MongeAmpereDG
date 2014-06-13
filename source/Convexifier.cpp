@@ -49,21 +49,117 @@ void init_matrices_for_quadr_program(grid_type& grid, const C0_converter& c0_con
 
 		std::vector<difference_type> operations;
 
-		operations.push_back(difference_type(Vector2i(2,0), Vector2i(1,0))); 		// Delta21 Delta31 >= 0
-		operations.push_back(difference_type(Vector2i(1,2), Vector2i(0,2))); 		// Delta13 Delta23 >= 0
-		operations.push_back(difference_type(Vector2i(0,1), Vector2i(2,1))); 		// Delta32 Delta12 >= 0
 
+		//set up first 6 conditions (inequalities consisting of two differences)
+		operations.push_back(difference_type(Vector2i(2,0), Vector2i(1,0))); 		// Delta21 Delta31
+		operations.push_back(difference_type(Vector2i(2,0), Vector2i(2,0))); 		// +2 Delta31 Delta31 >= 0
 
+		operations.push_back(difference_type(Vector2i(1,0), Vector2i(2,0))); 		// + Delta21 Delta31 >= 0
+		operations.push_back(difference_type(Vector2i(1,0), Vector2i(1,0))); 		// 2 Delta21 Delta21
+
+		operations.push_back(difference_type(Vector2i(2,1), Vector2i(0,1))); 		// Delta32 Delta12
+		operations.push_back(difference_type(Vector2i(0,1), Vector2i(0,1))); 		// + 2 Delta12 Delta12 >= 0
+
+		operations.push_back(difference_type(Vector2i(2,1), Vector2i(0,1))); 		// + Delta32 Delta12 >= 0
+		operations.push_back(difference_type(Vector2i(2,1), Vector2i(2,1))); 		// 2 Delta32 Delta32
+
+		operations.push_back(difference_type(Vector2i(0,2), Vector2i(1,2))); 		// Delta13 Delta23
+		operations.push_back(difference_type(Vector2i(1,2), Vector2i(1,2))); 		// + 2 Delta23 Delta23 >= 0
+
+		operations.push_back(difference_type(Vector2i(0,2), Vector2i(1,2))); 		// + Delta13 Delta23 >= 0
+		operations.push_back(difference_type(Vector2i(0,2), Vector2i(0,2))); 		// 2 Delta13 Delta13
+
+		//add first conditions to triples
+		assert (operations.size() % 2 == 0);
 		for (unsigned int i = 0; i < operations.size(); i++)
 		{
 			Delta_twice(operations[i].first, operations[i].second, c, c_matrix);
-			for (unsigned int i = 0; i < c_matrix.size(); i++)
+			for (unsigned int j = 0; j < c_matrix.size(); j++)
 			{
-				cout << "Added (" << condition_index << ") "<< c_matrix[i].get_no() << " with coeff " << c_matrix[i].coefficient <<endl;
-				tripletList.push_back( T( condition_index, c0_converter.dof_C(n+c_matrix[i].get_no()), c_matrix[i].coefficient));
+				cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
+				tripletList.push_back( T( condition_index, c0_converter.dof_C(n+c_matrix[j].get_no()), c_matrix[j].coefficient));
+			}
+			i++;
+			Delta_twice(operations[i].first, operations[i].second, c, c_matrix);
+			for (unsigned int j = 0; j < c_matrix.size(); j++)
+			{
+				c_matrix[j] *= 2;
+				cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
+				tripletList.push_back( T( condition_index, c0_converter.dof_C(n+c_matrix[j].get_no()), c_matrix[j].coefficient));
 			}
 			condition_index++;
 		}
+
+		operations.clear();
+
+		//set up last 6 conditions (inequalities consisting of three differences)
+		operations.push_back(difference_type(Vector2i(1,0), Vector2i(1,0))); 		// Delta21 Delta21
+		operations.push_back(difference_type(Vector2i(1,0), Vector2i(2,0))); 		// +3 Delta21 Delta31
+		operations.push_back(difference_type(Vector2i(2,0), Vector2i(2,0))); 		// +2 Delta31 Delta31 >= 0
+
+/*		//the next inequality is symmetric to the one before (first coefficient and last are switched)
+		operations.push_back(difference_type(Vector2i(2,0), Vector2i(2,0))); 		// Delta31 Delta31
+		operations.push_back(difference_type(Vector2i(1,0), Vector2i(2,0))); 		// +3 Delta21 Delta31
+		operations.push_back(difference_type(Vector2i(1,0), Vector2i(1,0))); 		// 2 Delta21 Delta21 >= 0
+*/
+
+		operations.push_back(difference_type(Vector2i(2,1), Vector2i(2,1))); 		// Delta32 Delta32
+		operations.push_back(difference_type(Vector2i(2,1), Vector2i(0,1))); 		// +3 Delta32 Delta12
+		operations.push_back(difference_type(Vector2i(0,1), Vector2i(0,1))); 		// +2 Delta12 Delta12 >= 0
+
+/*		//the next inequality is symmetric to the one before
+		operations.push_back(difference_type(Vector2i(0,1), Vector2i(0,1))); 		// Delta12 Delta12
+		operations.push_back(difference_type(Vector2i(2,1), Vector2i(0,1))); 		// +3 Delta32 Delta12
+		operations.push_back(difference_type(Vector2i(2,1), Vector2i(2,1))); 		// +2 Delta32 Delta32 >= 0
+*/
+
+		operations.push_back(difference_type(Vector2i(0,2), Vector2i(0,2))); 		// Delta13 Delta13
+		operations.push_back(difference_type(Vector2i(0,2), Vector2i(1,2))); 		// +3 Delta13 Delta23
+		operations.push_back(difference_type(Vector2i(1,2), Vector2i(1,2))); 		// +2 Delta23 Delta23 >= 0
+
+
+
+/*      //the next inequality is symmetric to the one before
+		operations.push_back(difference_type(Vector2i(1,2), Vector2i(1,2))); 		// Delta23 Delta23
+		operations.push_back(difference_type(Vector2i(0,2), Vector2i(1,2))); 		// +3 Delta13 Delta23
+		operations.push_back(difference_type(Vector2i(0,2), Vector2i(0,2))); 		// +2 Delta13 Delta13 >= 0
+*/
+
+		//add first conditions to triples
+		assert (operations.size() % 3 == 0);
+		for (unsigned int i_opt = 0; i_opt < operations.size(); i_opt++)
+		{
+			Delta_twice(operations[i_opt].first, operations[i_opt].second, c, c_matrix);
+			for (unsigned int j = 0; j < c_matrix.size(); j++)
+			{
+				cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
+				tripletList.push_back( T( condition_index, c0_converter.dof_C(n+c_matrix[j].get_no()), c_matrix[j].coefficient));
+				c_matrix[j] *= 2;
+				tripletList.push_back( T( condition_index+1, c0_converter.dof_C(n+c_matrix[j].get_no()), c_matrix[j].coefficient));
+			}
+			i_opt++;
+			Delta_twice(operations[i_opt].first, operations[i_opt].second, c, c_matrix);
+			for (unsigned int j = 0; j < c_matrix.size(); j++)
+			{
+				cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
+				c_matrix[j] *= 3;
+				tripletList.push_back( T( condition_index, c0_converter.dof_C(n+c_matrix[j].get_no()), c_matrix[j].coefficient));
+				tripletList.push_back( T( condition_index+1, c0_converter.dof_C(n+c_matrix[j].get_no()), c_matrix[j].coefficient));
+			}
+			i_opt++;
+			Delta_twice(operations[i_opt].first, operations[i_opt].second, c, c_matrix);
+			for (unsigned int j = 0; j < c_matrix.size(); j++)
+			{
+				cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
+				c_matrix[j] *= 2;
+				tripletList.push_back( T( condition_index, c0_converter.dof_C(n+c_matrix[j].get_no()), c_matrix[j].coefficient));
+				c_matrix[j] *= 0.5;
+				tripletList.push_back( T( condition_index+1, c0_converter.dof_C(n+c_matrix[j].get_no()), c_matrix[j].coefficient));
+			}
+
+			condition_index+=2;
+		}
+
 
 		//set up coefficient matrix
 			//shape 0
