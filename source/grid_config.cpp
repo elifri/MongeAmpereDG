@@ -75,6 +75,28 @@ void get_nodes(const grid_type &grid, const grid_type::id_type& id, nvector_type
 	}
 }
 
+void get_baryc_coordinates (grid_type& grid, const grid_type::id_type& idLC,
+		   const space_type & x, baryc_type& baryc)
+{
+
+	nvector_type vN;
+	get_nodes(grid, idLC,vN);
+
+	assert (vN.size() == 3);
+
+	//assemble LGS to calc baryc coordinates
+	Eigen::Matrix3d LGS;
+	LGS << vN(0)(0), vN(1)(0), vN(2)(0),
+		   vN(0)(1), vN(1)(1), vN(2)(1),
+		   1, 1,1;
+
+	Eigen::Vector3d rhs;
+	rhs << x(0), x(1), 1;
+
+	baryc = LGS.colPivHouseholderQr().solve(rhs);
+}
+
+
 void get_bezier_control_points(const grid_type &grid, const grid_type::id_type& id, nvector_type &nvEigen)
 {
 	assert(degreedim == 2);
