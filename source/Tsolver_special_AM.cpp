@@ -19,6 +19,7 @@
 #include "../include/Callback_utility.hpp"
 
 #include "test/test_utils.hpp"
+#include <iostream>
 
 #if (EQUATION == MONGE_AMPERE_EQ)
 
@@ -397,6 +398,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 
 	//write continuous solution in leaf cells
 	restore_MA(solution);
+
 	// collect functions values at control points
 	Eigen::VectorXd values_DG(solution.size());
 	for (grid_type::leafcellmap_type::iterator it = grid.leafCells().begin();
@@ -465,6 +467,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		Eigen::SparseMatrix<double> CE;
 		cout << "max value of A_C*x_C+a0-C_values: " <<  (A*coefficients_C+a0-values_C.cwiseAbs()).maxCoeff() << endl;
 		assert ((A*coefficients_C+a0-values_C).cwiseAbs().maxCoeff() < 1e-12 && " Check boundary constraction of eval matrix and coefficients!");
+
 	}
 	else
 	{
@@ -1064,6 +1067,10 @@ void Tsolver::init_start_solution_MA(std::string filename)
 
 	plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
 
+	state_type error = calculate_L2_error(get_exacttemperature_MA_callback());
+	plotter.get_plot_stream("L2_without_convex") << -1 << " " << error << endl;
+
+
 	VectorXd coeffs;
 
 	//convexify start solution
@@ -1124,6 +1131,7 @@ void Tsolver::time_stepping_MA() {
 
 	//=======add streams to plot data ========
 	std::ofstream plot_data("data/s/plot_data");
+	plotter.add_plot_stream("L2_without_convex", "data/s/plot_data_L2_without_convex");
 	plotter.add_plot_stream("L2_rel", "data/s/plot_data_L2_rel");
 	plotter.add_plot_stream("plot_data_min_constraints", "data/s/plot_data_min_constraints");
 	plotter.add_plot_stream("plot_data_constraints_l2", "data/s/plot_data_constraints_l2");
@@ -1266,6 +1274,11 @@ void Tsolver::time_stepping_MA() {
 		plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
 		plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionPoisson");
 
+		//calculate curren l2 error
+		state_type error =  calculate_L2_error(get_exacttemperature_MA_callback());
+		plotter.get_plot_stream("L2_without_convex") << iteration << " " << error << endl;
+
+
 		//convexify solution and store
 		cout << "Convexifying solution ..." << endl;
 		pt.start();
@@ -1289,7 +1302,7 @@ void Tsolver::time_stepping_MA() {
 		//plot solution
 		plotter.write_numericalsolution_VTK(iteration);
 
-		state_type error =  calculate_L2_error(get_exacttemperature_MA_callback());
+		error =  calculate_L2_error(get_exacttemperature_MA_callback());
 		cout << "Current L2 error is " << error << endl;
 		plot_data << iteration << " " << error << endl;
 		if (L2_norm_exact_sol(0) != 0)
