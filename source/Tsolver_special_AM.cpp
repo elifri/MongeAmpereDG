@@ -382,7 +382,7 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 	assert(!interpolating_basis && "This only works with a bezier basis!");
 
 	SparseMatrixD A,C;
-	init_matrices_for_quadr_program(grid, c0_converter, shape, A,C, number_of_dofs, c0_converter.get_number_of_dofs_C());
+	convexifier.init_matrices_for_quadr_program(grid, c0_converter, shape, A,C, number_of_dofs, c0_converter.get_number_of_dofs_C(), false);
 
 	//adjust DG solution, such that it represents a continuous function
 	Eigen::VectorXd coefficients_C;
