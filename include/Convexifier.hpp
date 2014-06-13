@@ -18,9 +18,6 @@
 #include "Tshape.hpp"
 #include "c0_converter.hpp"
 
-void init_matrices_for_quadr_program(grid_type& grid, const C0_converter& c0_converter, const Tshape &shape,
-		Eigen::SparseMatrixD &A, Eigen::SparseMatrixD &C,
-		int Ndofs_DG, int Ndofs);
 
 
 struct bezier_baryc_entry_type
@@ -95,7 +92,15 @@ public:
 		    std::cout << std::endl << std::endl << "*** Error during initialization!" << std::endl;
 		  }
 
+		  matrices_are_initialized = false;
+
 	}
+
+
+	void init_matrices_for_quadr_program(grid_type& grid, const C0_converter& c0_converter, const Tshape &shape,
+			Eigen::SparseMatrixD &A, Eigen::SparseMatrixD &C,
+			int Ndofs_DG, int Ndofs, bool grid_changed = true);
+
 
 	/*
 	 *@brief solve the quadratic program min( 1/2 x^tHx + g^t*x) s.t. C*x >=0)
@@ -141,6 +146,11 @@ private:
 	 //ipoptapplication
 	 SmartPtr<IpoptApplication> app;
 	 ApplicationReturnStatus status;
+
+	 //matrices for the quadr prog
+	 Eigen::SparseMatrixD m_C, m_A;
+	 bool matrices_are_initialized;
+
 };
 
 

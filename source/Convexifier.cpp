@@ -16,10 +16,14 @@ using namespace Eigen;
 /*
  * !@brief helper function for the quadratic program used in convexify. It assembles the matrices for the inequality constraint least square problem
  */
-void init_matrices_for_quadr_program(grid_type& grid, const C0_converter& c0_converter, const Tshape& shape,
+void Convexifier::init_matrices_for_quadr_program(grid_type& grid, const C0_converter& c0_converter, const Tshape& shape,
 		SparseMatrixD &A, SparseMatrixD &C,
-		int Ndofs_DG, int Ndofs)
+		int Ndofs_DG, int Ndofs, bool grid_changed)
 {
+
+	if (grid_changed || !matrices_are_initialized)
+	{
+
 	//init variables
 //	int Ndofs_DG = number_of_dofs;
 //	int Ndofs = c0_converter.get_number_of_dofs_C();
@@ -76,7 +80,7 @@ void init_matrices_for_quadr_program(grid_type& grid, const C0_converter& c0_con
 			Delta_twice(operations[i].first, operations[i].second, c, c_matrix);
 			for (unsigned int j = 0; j < c_matrix.size(); j++)
 			{
-				cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
+//				cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
 				tripletList.push_back( T( condition_index, c0_converter.dof_C(n+c_matrix[j].get_no()), c_matrix[j].coefficient));
 			}
 			i++;
@@ -84,7 +88,7 @@ void init_matrices_for_quadr_program(grid_type& grid, const C0_converter& c0_con
 			for (unsigned int j = 0; j < c_matrix.size(); j++)
 			{
 				c_matrix[j] *= 2;
-				cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
+//				cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
 				tripletList.push_back( T( condition_index, c0_converter.dof_C(n+c_matrix[j].get_no()), c_matrix[j].coefficient));
 			}
 			condition_index++;
@@ -132,7 +136,7 @@ void init_matrices_for_quadr_program(grid_type& grid, const C0_converter& c0_con
 			Delta_twice(operations[i_opt].first, operations[i_opt].second, c, c_matrix);
 			for (unsigned int j = 0; j < c_matrix.size(); j++)
 			{
-				cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
+//				cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
 				tripletList.push_back( T( condition_index, c0_converter.dof_C(n+c_matrix[j].get_no()), c_matrix[j].coefficient));
 				c_matrix[j] *= 2;
 				tripletList.push_back( T( condition_index+1, c0_converter.dof_C(n+c_matrix[j].get_no()), c_matrix[j].coefficient));
@@ -141,7 +145,7 @@ void init_matrices_for_quadr_program(grid_type& grid, const C0_converter& c0_con
 			Delta_twice(operations[i_opt].first, operations[i_opt].second, c, c_matrix);
 			for (unsigned int j = 0; j < c_matrix.size(); j++)
 			{
-				cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
+//				cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
 				c_matrix[j] *= 3;
 				tripletList.push_back( T( condition_index, c0_converter.dof_C(n+c_matrix[j].get_no()), c_matrix[j].coefficient));
 				tripletList.push_back( T( condition_index+1, c0_converter.dof_C(n+c_matrix[j].get_no()), c_matrix[j].coefficient));
@@ -150,7 +154,7 @@ void init_matrices_for_quadr_program(grid_type& grid, const C0_converter& c0_con
 			Delta_twice(operations[i_opt].first, operations[i_opt].second, c, c_matrix);
 			for (unsigned int j = 0; j < c_matrix.size(); j++)
 			{
-				cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
+//				cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
 				c_matrix[j] *= 2;
 				tripletList.push_back( T( condition_index, c0_converter.dof_C(n+c_matrix[j].get_no()), c_matrix[j].coefficient));
 				c_matrix[j] *= 0.5;
@@ -159,7 +163,6 @@ void init_matrices_for_quadr_program(grid_type& grid, const C0_converter& c0_con
 
 			condition_index+=2;
 		}
-
 
 		//set up coefficient matrix
 			//shape 0
@@ -186,6 +189,9 @@ void init_matrices_for_quadr_program(grid_type& grid, const C0_converter& c0_con
 			tripletListA.push_back( T (n+4, n+5, 0.25));
 			tripletListA.push_back( T (n+2, n+5, 0.25));
 		}
+
+	cout << "Set up " << condition_index << " conditions for patchwise convexity" << endl;
+
 
 	//init variables
 	int nFaces;
@@ -300,16 +306,25 @@ void init_matrices_for_quadr_program(grid_type& grid, const C0_converter& c0_con
 	}
 
 	//init matrices
-	A.resize(Ndofs_DG, Ndofs_DG);
+	m_A.resize(Ndofs_DG, Ndofs_DG);
 	//convert matrix to continuous fomrulation and export
-	A.setFromTriplets(tripletListA.begin(), tripletListA.end());
+	m_A.setFromTriplets(tripletListA.begin(), tripletListA.end());
 
-	C.resize(condition_index, Ndofs);
-	C.setFromTriplets(tripletList.begin(), tripletList.end());
+
+	cout << "Set up " << condition_index << " conditions for convexity" << endl;
+	m_C.resize(condition_index, Ndofs);
+	m_C.setFromTriplets(tripletList.begin(), tripletList.end());
 
 	//remove numerical zeroes
-	C.prune(1.);
-	A.prune(1.);
+	m_C.prune(1.);
+	m_A.prune(1.);
+
+	matrices_are_initialized = true;
+
+	}
+
+	A = m_A;
+	C = m_C;
 
 }
 
