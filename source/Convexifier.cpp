@@ -11,6 +11,8 @@
 
 using namespace Eigen;
 
+
+
 /*
  * !@brief helper function for the quadratic program used in convexify. It assembles the matrices for the inequality constraint least square problem
  */
@@ -43,16 +45,25 @@ void init_matrices_for_quadr_program(grid_type& grid, const C0_converter& c0_con
 
 		c.push_back(c_entry);
 
-		Eigen::Vector2i diff1(2,0), diff2(1,0);
+		Vector2i diff1(2,0), diff2(1,0);
 
-		// Delta21 Delta31 >= 0
-		Delta_twice(diff1, diff2, c, c_matrix);
-		for (unsigned int i = 0; i < c_matrix.size(); i++)
+		std::vector<difference_type> operations;
+
+		operations.push_back(difference_type(Vector2i(2,0), Vector2i(1,0))); 		// Delta21 Delta31 >= 0
+		operations.push_back(difference_type(Vector2i(1,2), Vector2i(0,2))); 		// Delta13 Delta23 >= 0
+		operations.push_back(difference_type(Vector2i(0,1), Vector2i(2,1))); 		// Delta32 Delta12 >= 0
+
+
+		for (unsigned int i = 0; i < operations.size(); i++)
 		{
-			cout << "Added "<< c_matrix[i].get_no() << " with coeff " << c_matrix[i].coefficient <<endl;
-			tripletList.push_back( T( condition_index, c0_converter.dof_C(n+c_matrix[i].get_no()), c_matrix[i].coefficient));
+			Delta_twice(operations[i].first, operations[i].second, c, c_matrix);
+			for (unsigned int i = 0; i < c_matrix.size(); i++)
+			{
+				cout << "Added (" << condition_index << ") "<< c_matrix[i].get_no() << " with coeff " << c_matrix[i].coefficient <<endl;
+				tripletList.push_back( T( condition_index, c0_converter.dof_C(n+c_matrix[i].get_no()), c_matrix[i].coefficient));
+			}
+			condition_index++;
 		}
-
 
 		//set up coefficient matrix
 			//shape 0
@@ -216,12 +227,12 @@ void Delta(const int i, const int j, const bezier_baryc_entry_type& c, bezier_ba
 //	for (unsigned int i = 0; i< c.size(); i++)
 //	{
 		bezier_baryc_entry_type c_temp(c.shape);
-		c_temp.coord.setZero();
+		c_temp.coord = c.coord;
 		c_temp.add_unit_to_coord(i);
 		c_temp.coefficient = c.coefficient;
 		c_output.push_back(c_temp);
 
-		c_temp.coord.setZero();
+		c_temp.coord = c.coord;
 		c_temp.add_unit_to_coord(j);
 		c_temp.coefficient = -c.coefficient;
 		c_output.push_back(c_temp);
@@ -231,6 +242,7 @@ void Delta(const int i, const int j, const bezier_baryc_entry_type& c, bezier_ba
 
 void Delta_twice(Eigen::Vector2i diff1, Eigen::Vector2i diff2, const bezier_baryc_list& c, bezier_baryc_list &c_output)
 {
+	c_output.clear();
 	bezier_baryc_list c_temp, c_temp_child;
 
 	for (unsigned int i = 0; i < c.size(); i++)
@@ -242,7 +254,7 @@ void Delta_twice(Eigen::Vector2i diff1, Eigen::Vector2i diff2, const bezier_bary
 	{
 		Delta(diff2(0), diff2(1), c_temp[i], c_temp_child);
 
-		for (int k = 0; k < c_temp_child.size(); k++)
+		for (unsigned int k = 0; k < c_temp_child.size(); k++)
 			c_output.push_back(c_temp_child[k]);
 	}
 }

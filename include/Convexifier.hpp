@@ -54,6 +54,8 @@ struct bezier_baryc_entry_type
 
 typedef std::vector<bezier_baryc_entry_type> bezier_baryc_list;
 
+typedef std::pair<Eigen::Vector2i, Eigen::Vector2i> difference_type;
+
 void Delta(const int i, const int j, const bezier_baryc_entry_type& c, bezier_baryc_list &c_output);
 void Delta_twice(Eigen::Vector2i diff1, Eigen::Vector2i diff2, const bezier_baryc_list& c, bezier_baryc_list &c_output);
 
