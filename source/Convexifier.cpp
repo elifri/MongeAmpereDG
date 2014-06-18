@@ -370,3 +370,105 @@ void Delta_twice(Eigen::Vector2i diff1, Eigen::Vector2i diff2, const bezier_bary
 	}
 }
 
+Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const Eigen::SparseMatrixD &A, const Eigen::VectorXd &b,
+		const Eigen::SparseMatrixD &C, const Eigen::VectorXd & c_lowerbound,
+		const Eigen::VectorXd & x0, bool grid_changed)
+{
+
+	assert(A.cols() == C.cols());
+	assert(A.cols() == x0.size());
+	assert (A.rows() == b.size());
+	assert (C.rows() == c_lowerbound.size());
+
+	if (grid_changed || !matrix_iterative_is_initialized)
+	{
+		//init triplets for assembling matrices
+		std::vector< Eigen::Triplet<value_type> > tripletList;
+		tripletList.reserve(A.nonZeros() + C.nonZeros());
+
+		//copy H to upper part
+		for (int k=0; k<A.outerSize(); ++k)
+		  for (SparseMatrixD::InnerIterator it(A,k); it; ++it)
+		  {
+			  tripletList.push_back( T(it.row(), it.col(), it.value()) );
+		  }
+
+		//copy C to lower part
+		for (int k=0; k<C.outerSize(); ++k)
+		  for (SparseMatrixD::InnerIterator it(C,k); it; ++it)
+		  {
+			  tripletList.push_back( T(it.row()+A.rows(), it.col(), it.value()) );
+		  }
+
+		//set up combined matrix
+		SparseMatrixD H_over_C (A.rows()+C.rows(), A.cols());
+		H_over_C.setFromTriplets(tripletList.begin(), tripletList.end());
+
+		//remove numerical zeroes
+		H_over_C.prune(1.);
+
+		//calculate qr zerlegung
+		H_over_C_solver.compute(H_over_C);
+		matrix_iterative_is_initialized = true;
+
+	}
+
+
+	int iteration = 0;
+
+	//the vector for the extended lsq problem:
+	// the upper part stores the solution for A*x-b and the bottom part the constr violation
+	Eigen::VectorXd constr_violation (C.rows()), b_with_constraints(A.rows()+C.rows()), x, b1;
+
+	//calculate constraints violation
+	constr_violation = C*x0-c_lowerbound;
+
+	int max_it = 30;
+	delta = 0.01;
+	tol = 1e-9;
+
+	b_with_constraints.head(A.cols()) = b;
+
+	while ( constr_violation.minCoeff() < -tol && iteration < max_it)
+	{
+		//correct constr_violation
+		for (int i = 0; i< constr_violation.size(); i++)
+		{
+			if (constr_violation(i) >= -tol)	continue;
+			constr_violation(i) = delta;
+		}
+
+		cout << "b_2 " << b_with_constraints.segment(A.cols(), C.rows()).transpose() << endl;
+		cout << "z " << constr_violation.transpose() << endl;
+		b_with_constraints.segment(A.cols(), C.rows()) = constr_violation;
+
+//		SparseMatrixD Q = H_over_C_solver.matrixQ();
+
+		//calculate b1
+		 b1 = H_over_C_solver.matrixQ()*b_with_constraints;
+
+		//solve lsq proble, || (A)      (b  ) ||
+		//                  || (C) *x - (ci0) ||2
+
+		//x = H_over_C_solver.solve(b_with_constraints);
+//		x = H_over_C_solver.matrixR().solve(b1);
+		x = H_over_C_solver.solve(b_with_constraints);
+
+
+		//permute x
+		x = H_over_C_solver.colsPermutation().inverse()*x;
+
+		cout << "R*x " << (H_over_C_solver.matrixR()*x).transpose() << endl;
+		cout << "b1 " << b1.transpose() << endl;
+
+		cout << "residuum " << b1.segment(A.cols(), C.rows()).norm() << endl;
+
+		constr_violation = C*x-c_lowerbound;
+
+		cout << iteration << "minimal coefficient " << constr_violation.minCoeff() << endl;
+
+
+	}
+
+	return x;
+}

@@ -139,6 +139,13 @@ public:
 		return nlp_ptr->get_minimum();
 	}
 
+
+	//
+	Eigen::VectorXd solve_quad_prog_with_ie_constraints_iterative(const Eigen::SparseMatrixD &A, const Eigen::VectorXd &b,
+			const Eigen::SparseMatrixD &C, const Eigen::VectorXd & c_lowerbound,
+			const Eigen::VectorXd & x0, bool grid_changed = true);
+
+
 private:
 	//pointer to class containing all information for the program
 	 SmartPtr<ConvexifyNLP>  nlp_ptr;
@@ -151,7 +158,14 @@ private:
 	 Eigen::SparseMatrixD m_C, m_A;
 	 bool matrices_are_initialized;
 
+	 value_type delta;
+	 value_type tol;
+
+	 Eigen::SparseQR<Eigen::SparseMatrixD, Eigen::COLAMDOrdering<int> > H_over_C_solver;
+	 bool matrix_iterative_is_initialized;
+
 };
+
 
 
 
