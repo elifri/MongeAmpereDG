@@ -380,6 +380,9 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 	assert (A.rows() == b.size());
 	assert (C.rows() == c_lowerbound.size());
 
+
+	SparseMatrixD H_over_C (A.rows()+C.rows(), A.cols());
+
 	if (grid_changed || !matrix_iterative_is_initialized)
 	{
 		//init triplets for assembling matrices
@@ -401,7 +404,8 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 		  }
 
 		//set up combined matrix
-		SparseMatrixD H_over_C (A.rows()+C.rows(), A.cols());
+//		SparseMatrixD H_over_C (A.rows()+C.rows(), A.cols());
+		H_over_C.resize (A.rows()+C.rows(), A.cols());
 		H_over_C.setFromTriplets(tripletList.begin(), tripletList.end());
 
 		//remove numerical zeroes
@@ -409,6 +413,11 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 
 		//calculate qr zerlegung
 		H_over_C_solver.compute(H_over_C);
+		if (H_over_C_solver.info() != Success)
+		{
+			cerr << "The error " << H_over_C_solver.info() << "occured during the matrix decomposition" << endl;
+			exit(1);
+		}
 		matrix_iterative_is_initialized = true;
 
 	}
@@ -418,12 +427,13 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 
 	//the vector for the extended lsq problem:
 	// the upper part stores the solution for A*x-b and the bottom part the constr violation
-	Eigen::VectorXd constr_violation (C.rows()), b_with_constraints(A.rows()+C.rows()), x, b1;
+	Eigen::VectorXd constr_rhs (C.rows()), constr_violation (C.rows()), b_with_constraints(A.rows()+C.rows()), x, b1;
 
 	//calculate constraints violation
+	constr_rhs = C*x0;
 	constr_violation = C*x0-c_lowerbound;
 
-	int max_it = 30;
+	int max_it = 3000;
 	delta = 0.01;
 	tol = 1e-9;
 
@@ -431,43 +441,57 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 
 	while ( constr_violation.minCoeff() < -tol && iteration < max_it)
 	{
-		//correct constr_violation
+		cout << "cvio " << constr_violation.transpose() << endl;
+
+		//writed desired constr_violation in b
 		for (int i = 0; i< constr_violation.size(); i++)
 		{
-			if (constr_violation(i) >= -tol)	continue;
-			constr_violation(i) = delta;
+			if ( constr_violation(i)>= -tol)
+				b_with_constraints(A.cols()+i) = constr_rhs(i);
+			else
+				b_with_constraints(A.cols()+i) = c_lowerbound(i)+delta;
 		}
 
-		cout << "b_2 " << b_with_constraints.segment(A.cols(), C.rows()).transpose() << endl;
-		cout << "z " << constr_violation.transpose() << endl;
-		b_with_constraints.segment(A.cols(), C.rows()) = constr_violation;
-
-//		SparseMatrixD Q = H_over_C_solver.matrixQ();
-
 		//calculate b1
-		 b1 = H_over_C_solver.matrixQ()*b_with_constraints;
+		 b1 = H_over_C_solver.matrixQ().transpose()*b_with_constraints;
 
 		//solve lsq proble, || (A)      (b  ) ||
 		//                  || (C) *x - (ci0) ||2
 
 		//x = H_over_C_solver.solve(b_with_constraints);
-//		x = H_over_C_solver.matrixR().solve(b1);
-		x = H_over_C_solver.solve(b_with_constraints);
+		SparseMatrixD R = H_over_C_solver.matrixR().topLeftCorner(A.cols(), A.cols());
 
-
-		//permute x
-		x = H_over_C_solver.colsPermutation().inverse()*x;
+		 x = R.triangularView<Upper>().solve(b1.segment(0,A.rows()));
+//		x = H_over_C_solver.solve(b_with_constraints);
 
 		cout << "R*x " << (H_over_C_solver.matrixR()*x).transpose() << endl;
 		cout << "b1 " << b1.transpose() << endl;
 
+		//permute x
+		x = H_over_C_solver.colsPermutation()*x;
+
+		//update constraints
+		constr_rhs = C*x;
+
+		cout << "own QR " << endl;
+
 		cout << "residuum " << b1.segment(A.cols(), C.rows()).norm() << endl;
+		cout << "real residuum norm " << (H_over_C*x-b_with_constraints).norm() << endl;
 
-		constr_violation = C*x-c_lowerbound;
+		x = H_over_C_solver.solve(b_with_constraints);
+		cout << "eigen QR without permutation" << endl;
+		cout << "real residuum " << (H_over_C*x-b_with_constraints).norm() << endl;
+		cout << "crhs goal    : " << b_with_constraints.transpose() << endl;
+		cout << "crhs         : " << (H_over_C*x).transpose() << endl;
+		cout << "real residuum: " << (H_over_C*x-b_with_constraints).transpose() << endl;
 
-		cout << iteration << "minimal coefficient " << constr_violation.minCoeff() << endl;
+		//update constraints violation
+		constr_violation = constr_rhs-c_lowerbound;
+		cout << "cvio         : " << constr_violation.transpose() << endl;
 
+		cout << iteration << " minimal coefficient " << constr_violation.minCoeff() << endl;
 
+		iteration++;
 	}
 
 	return x;
