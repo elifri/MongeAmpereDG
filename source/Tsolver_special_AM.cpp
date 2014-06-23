@@ -491,18 +491,33 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 //	MATLAB_export(ci0, "ci0");
 
 
+	cout << "C*x0-ci0 \n" <<(C*coefficients_C-ci0).transpose() << endl;
+	cout << "minimum coefficient is " << (C * coefficients_C - ci0).minCoeff() << endl;
 
 	//check if constraints are fulfilled already
-	if ((C * coefficients_C - ci0).minCoeff() < -1e-13) {
+	if ((C * coefficients_C - ci0).minCoeff() < -1e-10) {
 		x = convexifier.solve_quad_prog_with_ie_constraints(G2, f, C, ci0,
 //				VectorXd::Zero(coefficients_C.size()));
 				coefficients_C);
+
 
 		cout << "fstart = "
 				<< 0.5 * coefficients_C.transpose() * G2 * coefficients_C
 						+ f.transpose() * coefficients_C << endl;
 
 		cout << "fvalue_code = " << convexifier.get_minimum() << ";" << endl;
+
+		cout << "C*x-ci0 \n" << (C * x - ci0).transpose() << endl;
+		cout << "biggest difference in x-coefficients_c "
+				<< (x - coefficients_C).cwiseAbs().maxCoeff() << endl;
+
+		cout << "================================================" << endl;
+
+		x = convexifier.solve_quad_prog_with_ie_constraints_iterative(A, values_C-a0, C, ci0, coefficients_C);
+		cout << "C*x-ci0 \n" << (C * x - ci0).transpose() << endl;
+		cout << "biggest difference in x-coefficients_c "
+				<< (x - coefficients_C).cwiseAbs().maxCoeff() << endl;
+
 
 //	MATLAB_export(x, "x_code");
 
