@@ -973,14 +973,21 @@ void Tsolver::init_startsolution_from_function(const vector_function_type f)
 			{
 				MatrixXd M = pLC->mass.get_A_full();
 
-				for (boundary_handler::boundary_DOFs_type::iterator it = bd_dofs.begin();
-						it !=bd_dofs.end(); ++it)
+				for (boundary_handler::boundary_DOFs_type::iterator it_dof = bd_dofs.begin();
+						it_dof !=bd_dofs.end(); ++it_dof)
 				{
-					b(*it-offset) = sol_at_bd(*it);
-					M.row(*it-offset) = VectorXd::Unit(shapedim,*it-offset);
+					int i_boundary_shape = *it_dof-offset;
+
+					b(i_boundary_shape) = sol_at_bd(*it_dof);
+					for (int i = 0; i < shapedim; ++i)
+					{
+						if (i == i_boundary_shape)	continue;
+						b(i) -= M(i,i_boundary_shape)* sol_at_bd(*it_dof);
+						M(i,i_boundary_shape) = 0;
+					}
+					M.row(i_boundary_shape) = VectorXd::Unit(shapedim, i_boundary_shape);
 				}
 
-				//
 				for (int i = 0; i< statedim; i++)
 				{
 					b.col(i) = Emass_dec_type(M).solve(b.col(i));
