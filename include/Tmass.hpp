@@ -26,8 +26,8 @@ public:
 	 MSAmatrix_typ G;
 	 */
 
-	const Emass_type& get_A_full() const {
-		return A_full;
+	Emass_type get_A_full() const {
+		return A_cholesky.reconstructedMatrix();
 	}
 	void set_A(const Emass_type& A){
 		A_cholesky.compute(A);
