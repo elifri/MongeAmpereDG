@@ -140,6 +140,18 @@ public:
 	}
 
 
+	void update_matrix_decomposition(const Eigen::SparseMatrixD H_over_C)
+	{
+		H_over_C_solver.compute(H_over_C);
+
+		if (H_over_C_solver.info() != Eigen::Success)
+		{
+			std::cerr << "Error " <<H_over_C_solver.info() << " occured during the decomposition "<< endl;
+			exit(1);
+		}
+	}
+
+
 	//
 	Eigen::VectorXd solve_quad_prog_with_ie_constraints_iterative(const Eigen::SparseMatrixD &A, const Eigen::VectorXd &b,
 			const Eigen::SparseMatrixD &C, const Eigen::VectorXd & c_lowerbound,

@@ -8,6 +8,7 @@
 #include "../include/Convexifier.hpp"
 #include "test/test_utils.hpp"
 
+#include "../include/matlab_export.hpp"
 
 using namespace Eigen;
 
@@ -380,6 +381,12 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 	assert (A.rows() == b.size());
 	assert (C.rows() == c_lowerbound.size());
 
+	MATLAB_export(A, "A");
+	MATLAB_export(C, "C");
+	MATLAB_export(b, "b");
+	MATLAB_export(c_lowerbound, "c0");
+	MATLAB_export(x0, "x0");
+
 
 	SparseMatrixD H_over_C (A.rows()+C.rows(), A.cols());
 
@@ -411,16 +418,11 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 		//remove numerical zeroes
 		H_over_C.prune(1.);
 
-		//calculate qr zerlegung
-		H_over_C_solver.compute(H_over_C);
-		if (H_over_C_solver.info() != Success)
-		{
-			cerr << "The error " << H_over_C_solver.info() << "occured during the matrix decomposition" << endl;
-			exit(1);
-		}
-		matrix_iterative_is_initialized = true;
+		update_matrix_decomposition(H_over_C);
 
 	}
+
+//	cout << "H over C \n" << H_over_C << endl;
 
 
 	int iteration = 0;
@@ -429,67 +431,79 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 	// the upper part stores the solution for A*x-b and the bottom part the constr violation
 	Eigen::VectorXd constr_rhs (C.rows()), constr_violation (C.rows()), b_with_constraints(A.rows()+C.rows()), x, b1;
 
+	VectorXd c_lowerbound_temp = c_lowerbound;
+
 	//calculate constraints violation
 	constr_rhs = C*x0;
 	constr_violation = C*x0-c_lowerbound;
 
-	int max_it = 3000;
+	int max_it = 30;
 	delta = 0.01;
 	tol = 1e-9;
+
+	//weight important constraints
+	value_type weight = 100;
+	VectorXd weights = VectorXd::Ones(A.rows()+C.rows());
+
+	cout << "lower bound " << c_lowerbound.transpose() << endl;
 
 	b_with_constraints.head(A.cols()) = b;
 
 	while ( constr_violation.minCoeff() < -tol && iteration < max_it)
 	{
-		cout << "cvio " << constr_violation.transpose() << endl;
+//		cout << "cvio " << constr_violation.transpose() << endl;
 
+		int no_of_violations = 0;
+
+		cout << "violations: ";
 		//writed desired constr_violation in b
 		for (int i = 0; i< constr_violation.size(); i++)
 		{
 			if ( constr_violation(i)>= -tol)
-				b_with_constraints(A.cols()+i) = constr_rhs(i);
+			{
+				b_with_constraints(A.rows()+i) = constr_rhs(i);
+			}
 			else
-				b_with_constraints(A.cols()+i) = c_lowerbound(i)+delta;
+			{
+				b_with_constraints(A.rows()+i) = c_lowerbound(i)+delta;
+
+				b_with_constraints(A.rows()+i) *= weight;
+				c_lowerbound_temp *= weight;
+				weights(A.rows()+i) = weight;
+
+				no_of_violations++;
+				cout << i << ", ";
+			}
+
 		}
 
-		//calculate b1
-		 b1 = H_over_C_solver.matrixQ().transpose()*b_with_constraints;
+		//weight lhs of gleichungen
+		SparseMatrixD H_over_C_temp = weights.asDiagonal()*H_over_C;
+		update_matrix_decomposition(H_over_C_temp);
 
+		cout << endl;
 		//solve lsq proble, || (A)      (b  ) ||
 		//                  || (C) *x - (ci0) ||2
 
-		//x = H_over_C_solver.solve(b_with_constraints);
-		SparseMatrixD R = H_over_C_solver.matrixR().topLeftCorner(A.cols(), A.cols());
-
-		 x = R.triangularView<Upper>().solve(b1.segment(0,A.rows()));
-//		x = H_over_C_solver.solve(b_with_constraints);
-
-		cout << "R*x " << (H_over_C_solver.matrixR()*x).transpose() << endl;
-		cout << "b1 " << b1.transpose() << endl;
-
-		//permute x
-		x = H_over_C_solver.colsPermutation()*x;
+		x = H_over_C_solver.solve(b_with_constraints);
 
 		//update constraints
 		constr_rhs = C*x;
 
-		cout << "own QR " << endl;
+		cout <<  iteration <<  " no of viol " << no_of_violations << " residuum " << (H_over_C*x-b_with_constraints).norm()
+			 << " rel residuum " << (H_over_C_temp*x-b_with_constraints).norm()/b_with_constraints.norm()<< endl;
 
-		cout << "residuum " << b1.segment(A.cols(), C.rows()).norm() << endl;
-		cout << "real residuum norm " << (H_over_C*x-b_with_constraints).norm() << endl;
+		cout << " goal        : " << (b_with_constraints.segment(A.cols(), C.rows())-c_lowerbound_temp).transpose() << endl;
+		cout << " is          : " << (C*x-c_lowerbound).transpose() << endl;
+//		cout << "real residuum: " << (H_over_C*x-b_with_constraints).transpose() << endl;
 
-		x = H_over_C_solver.solve(b_with_constraints);
-		cout << "eigen QR without permutation" << endl;
-		cout << "real residuum " << (H_over_C*x-b_with_constraints).norm() << endl;
-		cout << "crhs goal    : " << b_with_constraints.transpose() << endl;
-		cout << "crhs         : " << (H_over_C*x).transpose() << endl;
-		cout << "real residuum: " << (H_over_C*x-b_with_constraints).transpose() << endl;
 
 		//update constraints violation
 		constr_violation = constr_rhs-c_lowerbound;
-		cout << "cvio         : " << constr_violation.transpose() << endl;
+//		cout << "cvio         : " << constr_violation.transpose() << endl;
 
-		cout << iteration << " minimal coefficient " << constr_violation.minCoeff() << endl;
+		cout <<" minimal coefficient " << constr_violation.minCoeff() << endl;
+
 
 		iteration++;
 	}
