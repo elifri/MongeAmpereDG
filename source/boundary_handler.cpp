@@ -53,7 +53,7 @@ bool boundary_handler::check_cell(const int offset, boundary_DOFs_type &bd_dofs)
 	bd_dofs.clear();
 
 	//search for nearest index in boundary dofs
-	boundary_DOFs_type::iterator it = m_boundary_dofs.lower_bound(offset);
+	bd_const_iterator it = m_boundary_dofs.lower_bound(offset);
 
 	//insert all dofs lying in the cell with offset offset
 	while (*it < offset+6)
@@ -63,6 +63,7 @@ bool boundary_handler::check_cell(const int offset, boundary_DOFs_type &bd_dofs)
 			bd_dofs.insert(*it);
 		}
 		++it;
+		if (it == m_boundary_dofs.end())	break;
 	}
 
 	return !bd_dofs.empty();

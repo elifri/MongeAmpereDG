@@ -934,8 +934,13 @@ void Tsolver::assemble_int_f_phi(const vector_function_type f, const leafcell_ty
 
 void Tsolver::init_startsolution_from_function(const vector_function_type f)
 {
+
+	assert (!strongBoundaryCond || statedim == 1);
+
+	VectorXd sol_at_bd = bd_handler.get_nodal_contributions();
+
 	//do an L2 projection f into our Ansatz/test space
-	//loop over leaf cells and solve in every cell the equation \int l2p(f) *phi = \int f *phi \forall phi
+	//loop over leaf cells and solve in every cell the equation \int l2proj(f) *phi = \int f *phi \forall phi
 	for (grid_type::leafcellmap_type::const_iterator it =
 			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
 
@@ -956,9 +961,37 @@ void Tsolver::init_startsolution_from_function(const vector_function_type f)
 
 		b /= pBC->get_detjacabs()* facLevelVolume[idLC.level()];
 
-		//    \int l2p(f) *PHI for l2p(f) = \sum a_i phi_i PHI = mass_matrix*a
+		//    \int l2proj(f) *PHI for l2proj(f) = \sum a_i phi_i PHI = mass_matrix*a
 		//solve arising LGS
-		pLC->mass.Cholesky_solve(b);
+		if (!strongBoundaryCond)
+			pLC->mass.Cholesky_solve(b);
+		else
+		{
+			int offset = pLC->m_offset;
+			boundary_handler::boundary_DOFs_type bd_dofs;
+			if (bd_handler.check_cell(offset, bd_dofs))
+			{
+				MatrixXd M = pLC->mass.get_A_full();
+
+				for (boundary_handler::boundary_DOFs_type::iterator it = bd_dofs.begin();
+						it !=bd_dofs.end(); ++it)
+				{
+					b(*it-offset) = sol_at_bd(*it);
+					M.row(*it-offset) = VectorXd::Unit(shapedim,*it-offset);
+				}
+
+				//
+				for (int i = 0; i< statedim; i++)
+				{
+					b.col(i) = Emass_dec_type(M).solve(b.col(i));
+				}
+
+			}
+			else
+				//no boundary dofs
+				pLC->mass.Cholesky_solve(b);
+
+		}
 
 		Estate_type x;
 		pLC->mass.Matrix_multiply(b, x);
