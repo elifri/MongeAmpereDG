@@ -483,12 +483,12 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		f = -A.transpose() * values_C;
 	}
 
-	MATLAB_export(A, "A");
-	MATLAB_export(C, "C");
+//	MATLAB_export(A, "A");
+//	MATLAB_export(C, "C");
 
-	MATLAB_export(values_C, "values_C");
-	MATLAB_export(coefficients_C, "coefficients_C");
-	MATLAB_export(ci0, "ci0");
+//	MATLAB_export(values_C, "values_C");
+//	MATLAB_export(coefficients_C, "coefficients_C");
+//	MATLAB_export(ci0, "ci0");
 
 
 
@@ -522,6 +522,8 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		cout << " x is  " << x.transpose() << endl;
 */
 		cout << "C*x-ci0 \n" << (C * x - ci0).transpose() << endl;
+		cout << "smallest entry "
+				<< (C * x - ci0).minCoeff() << endl;
 		cout << "biggest difference in x-coefficients_c "
 				<< (x - coefficients_C).cwiseAbs().maxCoeff() << endl;
 		plotter.get_plot_stream("plot_data_min_constraints") << iteration << " " << (C*x-ci0).minCoeff() << endl;

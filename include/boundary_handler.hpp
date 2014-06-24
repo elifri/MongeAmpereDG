@@ -57,6 +57,15 @@ public:
 		return (m_boundary_dofs.find(index) != m_boundary_dofs.end());
 	}
 
+	/*
+	 * !
+	 * Check if the cell with offset offset has boundary dofs
+	 * @param offset	offset of cell
+	 * @param bd_dofs	return found boundary dofs
+	 * @output			true, if boundary dofs were found
+	 */
+	bool check_cell(const int offset, boundary_DOFs_type &bd_dofs);
+
 	const Eigen::VectorXd& get_nodal_contributions() const{
 		return m_nodal_contrib;
 	}
