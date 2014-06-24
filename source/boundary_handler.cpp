@@ -48,7 +48,7 @@ void boundary_handler::add_boundaryDOF(unsigned int i)
 	m_reduced_number_of_dofs--;
 }
 
-bool boundary_handler::check_cell(const int offset, boundary_DOFs_type &bd_dofs)
+bool boundary_handler::check_cell(const unsigned int offset, boundary_DOFs_type &bd_dofs)
 {
 	bd_dofs.clear();
 

@@ -64,7 +64,7 @@ public:
 	 * @param bd_dofs	return found boundary dofs
 	 * @output			true, if boundary dofs were found
 	 */
-	bool check_cell(const int offset, boundary_DOFs_type &bd_dofs);
+	bool check_cell(const unsigned int offset, boundary_DOFs_type &bd_dofs);
 
 	const Eigen::VectorXd& get_nodal_contributions() const{
 		return m_nodal_contrib;
