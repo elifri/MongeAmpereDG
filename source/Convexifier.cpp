@@ -429,7 +429,7 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 
 	//the vector for the extended lsq problem:
 	// the upper part stores the solution for A*x-b and the bottom part the constr violation
-	Eigen::VectorXd constr_rhs (C.rows()), constr_violation (C.rows()), b_with_constraints(A.rows()+C.rows()), x, b1;
+	Eigen::VectorXd constr_rhs (C.rows()), constr_violation (C.rows()), b_with_constraints(A.rows()+C.rows()), x = x0, b1;
 
 	VectorXd c_lowerbound_temp = c_lowerbound;
 
@@ -437,15 +437,19 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 	constr_rhs = C*x0;
 	constr_violation = C*x0-c_lowerbound;
 
-	int max_it = 30;
+	//store how often a constr was violated
+	VectorXd constr_count = VectorXd::Zero(constr_violation.size());
+
+	int max_it = 100;
 	delta = 0.01;
 	tol = 1e-9;
 
 	//weight important constraints
-	value_type weight = 100;
+	value_type weight = 10000;
 	VectorXd weights = VectorXd::Ones(A.rows()+C.rows());
 
-	cout << "lower bound " << c_lowerbound.transpose() << endl;
+	//init different residuums
+	value_type res_approx, res_constr;
 
 	b_with_constraints.head(A.cols()) = b;
 
@@ -455,7 +459,11 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 
 		int no_of_violations = 0;
 
-		cout << "violations: ";
+		//reset weights
+		c_lowerbound_temp = c_lowerbound;
+		weights = VectorXd::Ones(A.rows()+C.rows());
+
+//		cout << "violations: ";
 		//writed desired constr_violation in b
 		for (int i = 0; i< constr_violation.size(); i++)
 		{
@@ -468,16 +476,30 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 				b_with_constraints(A.rows()+i) = c_lowerbound(i)+delta;
 
 				b_with_constraints(A.rows()+i) *= weight;
-				c_lowerbound_temp *= weight;
+				c_lowerbound_temp(i) *= weight;
 				weights(A.rows()+i) = weight;
+				constr_count(i)++;
 
 				no_of_violations++;
-				cout << i << ", ";
+//				cout << i << ", ";
 			}
 
+			//additional penalty for often violated constraints
+//			b_with_constraints(A.rows()+i) *= (constr_count(i)/(value_type) max_it);
+//		    weights(A.rows()+i) *= (1+constr_count(i)/(value_type) max_it);
+			b_with_constraints(A.rows()+i) *= constr_count(i);
+			weights(A.rows()+i) *= constr_count(i);
 		}
 
-		//weight lhs of gleichungen
+		//if no conditions are violated weigh lgs more
+		if (no_of_violations == 0)
+		{
+			b_with_constraints.head(A.cols())*=3*weight;
+			weights.head(A.cols())*=3*weight;
+		}
+
+
+		//weight lhs of equations
 		SparseMatrixD H_over_C_temp = weights.asDiagonal()*H_over_C;
 		update_matrix_decomposition(H_over_C_temp);
 
@@ -491,7 +513,7 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 		constr_rhs = C*x;
 
 		cout <<  iteration <<  " no of viol " << no_of_violations << " residuum " << (H_over_C*x-b_with_constraints).norm()
-			 << " rel residuum " << (H_over_C_temp*x-b_with_constraints).norm()/b_with_constraints.norm()<< endl;
+			 << " rel residuum " << (H_over_C_temp*x-b_with_constraints).norm()/b_with_constraints.norm()<< endl << endl;
 
 		cout << " goal        : " << (b_with_constraints.segment(A.cols(), C.rows())-c_lowerbound_temp).transpose() << endl;
 		cout << " is          : " << (C*x-c_lowerbound).transpose() << endl;
@@ -502,11 +524,17 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 		constr_violation = constr_rhs-c_lowerbound;
 //		cout << "cvio         : " << constr_violation.transpose() << endl;
 
-		cout <<" minimal coefficient " << constr_violation.minCoeff() << endl;
+		cout <<" minimal coefficient " << constr_violation.minCoeff();
+
+		res_approx = (A*x-b).norm();
+		res_constr = (C*x-c_lowerbound).norm();
+		cout << ", res_approx=" << res_approx << ", res_constr=" << res_constr << endl;
 
 
 		iteration++;
 	}
+
+	cout << "x " << x.transpose() << endl;
 
 	return x;
 }
