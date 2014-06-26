@@ -449,11 +449,11 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 	VectorXd weights = VectorXd::Ones(A.rows()+C.rows());
 
 	//init different residuums
-	value_type res_approx, res_constr;
+	value_type res_approx=-10, res_approx_old=-1000, res_constr;
 
 	b_with_constraints.head(A.cols()) = b;
 
-	while ( constr_violation.minCoeff() < -tol && iteration < max_it)
+	while ( std::abs(res_approx-res_approx_old) > tol && iteration < max_it)
 	{
 //		cout << "cvio " << constr_violation.transpose() << endl;
 
@@ -529,6 +529,7 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 
 		cout <<" minimal coefficient " << constr_violation.minCoeff();
 
+		res_approx_old= res_approx;
 		res_approx = (A*x-b).norm();
 		res_constr = (C*x-c_lowerbound).norm();
 		cout << ", res_approx=" << res_approx << ", res_constr=" << res_constr << endl;
