@@ -538,6 +538,35 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 		iteration++;
 	}
 
+	//nachitererieren
+	for (int i = 0; i < 100; i++)
+	{
+
+		//store iteration in new variable
+		VectorXd x_after = H_over_C_solver.solve(b_with_constraints);
+
+		//update constraints
+		constr_rhs = C*x_after;
+		//update constraints violation
+		constr_violation = constr_rhs-c_lowerbound;
+
+		//check if constraints are violated
+		if ( constr_violation.minCoeff() < -tol)
+		{
+			cout << constr_violation.minCoeff();
+			cout << " -> the 'nachiteration' was not successfull" << endl;
+			break;
+		}
+
+		//update least square problem
+		b_with_constraints.segment(A.rows(), C.rows()) = constr_rhs;
+		b_with_constraints = weights.asDiagonal()*b_with_constraints;
+		x = x_after;
+
+		res_approx = (A*x-b).norm();
+		cout << ", res_approx=" << res_approx << endl;
+	}
+
 	cout << "x " << x.transpose() << endl;
 
 	return x;
