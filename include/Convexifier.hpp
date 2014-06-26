@@ -126,12 +126,17 @@ public:
 		else {
 		   std::cout << std::endl << std::endl << "*** The quadratic problem FAILED!" << std::endl;
 		   cout << " last point x " << nlp_ptr->get_solution().transpose() << endl;
-		   cout << "C*x " << (C*nlp_ptr->get_solution()).transpose() << endl;
+		   cout << "minimal constraint " << (C*nlp_ptr->get_solution()-c_lowerbound).minCoeff() << endl;
 
 //		   exit(1);
 		}
 
 		return nlp_ptr->get_solution();
+	}
+
+	ApplicationReturnStatus get_status()
+	{
+		return status;
 	}
 
 	double get_minimum()
