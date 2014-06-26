@@ -355,9 +355,11 @@ public:
    /*
     * !@brief convexifies the inserted solution globally via a quadratic program (least square problem with inequality constraints)
     *        Solve min_x || A*x-b|| s.t. C*x > 0
+    *
+    *  @return true, if solution is changed
     */
 
-   void convexify(Eigen::VectorXd &solution); //convexifies the solution globally (convexifying bezier control polygon)
+   bool convexify(Eigen::VectorXd &solution); //convexifies the solution globally (convexifying bezier control polygon)
 
    /*
     * @brief adds random multiples  of the basis bezier functions to the coefficient vector solution

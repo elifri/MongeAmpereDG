@@ -375,8 +375,10 @@ void Tsolver::convexify(Hessian_type& hess) {
 /////////////////////////////////////////////////////
 
 
-void Tsolver::convexify(Eigen::VectorXd &solution)
+bool Tsolver::convexify(Eigen::VectorXd &solution)
 {
+
+	bool solution_changed = false;
 
 	setleafcellflags(0, false); //reset flags
 	assert(!interpolating_basis && "This only works with a bezier basis!");
@@ -416,21 +418,56 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		}
 	}
 
+	cout.precision(10);
+
 	assert ((A*solution+-values_DG).cwiseAbs().maxCoeff() < 1e-12 && " Check evaluation matrix and value extraction from leaf cell!");
+
 	//convert DG formulation to C formulation
 	Eigen::VectorXd values_C;
 	c0_converter.convert_coefficients_toC(values_DG, values_C);
-//	MATLAB_export(values_C, "values_C");
 
 	//set up quadratic program to solve least square with inequality constraint
 	SparseMatrixD G2, CE;
-	Eigen::VectorXd f, ci0, x, ce0;
+	Eigen::VectorXd f, a0, ci0, x, ce0;
 
-	//handle boundary dofs
+/*
+	Eigen::SparseMatrixD gluing_matrix(c0_converter.get_number_of_dofs_C(), number_of_dofs);
+
+	for (int j = 0; j < gluing_matrix.cols(); j++ )
+	{
+		Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(gluing_matrix.cols(), j);
+		Eigen::VectorXd col_j;
+		c0_converter.convert_coefficients_toC(unit_j, col_j);
+		for (int i = 0; i < gluing_matrix.rows(); i ++)
+		{
+			if (std::abs(col_j(i)) > 1e-10 )
+				gluing_matrix.coeffRef(i,j) = col_j(i);
+		}
+	}
+
+	Eigen::SparseMatrixD gluing_matrix_left_inverse(number_of_dofs, c0_converter.get_number_of_dofs_C());
+
+	for (int j = 0; j < gluing_matrix_left_inverse.cols(); j++ )
+	{
+		Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(gluing_matrix_left_inverse.cols(), j);
+		Eigen::VectorXd col_j(gluing_matrix_left_inverse.rows());
+		c0_converter.convert_coefficients_toDG(unit_j, col_j);
+		for (int i = 0; i < gluing_matrix_left_inverse.rows(); i ++)
+		{
+			if (std::abs(col_j(i)) > 1e-10 )
+				gluing_matrix_left_inverse.coeffRef(i,j) = col_j(i);
+		}
+	}
+
+*/
+//	MATLAB_export(gluing_matrix, "G");
+//	MATLAB_export(gluing_matrix_left_inverse, "G_l");
+
+
+	//================handle boundary dofs===========================
 	if (strongBoundaryCond) {
 		//if we want to have strong boundary condition we have to minimize A*x+delte_b_dofs(A_bd*impact_bd) - c
 
-		VectorXd a0;
 		//get values of boundary dofs
 		VectorXd boundary_dofs_impact;
 		bd_handler.add_boundary_dofs(Eigen::VectorXd::Zero(bd_handler.get_reduced_number_of_dofs()), solution, boundary_dofs_impact);
@@ -448,8 +485,11 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		//convert to continuous version
 		c0_converter.convert_matrix_toC(A);
 
+
+
 		cout << "max value of A_C*x_C-C_values: " <<  (A*coefficients_C-values_C.cwiseAbs()).maxCoeff() << endl;
 		assert ((A*coefficients_C-values_C).cwiseAbs().maxCoeff() < 1e-12 && " Check c1 constraction of eval matrix and coefficients!");
+
 		//delete boundary dofs
 		bd_handler.delete_boundary_dofs_C(A);
 		bd_handler.delete_boundary_dofs_C_only_cols(C);
@@ -460,13 +500,12 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		//pos. def. matrix in quadr. cost function
 		G2 = A.transpose() * A;
 
-//		ci0 = coefficients_C * -1;
-
 		f = -A.transpose() * (values_C-a0);
 
 		Eigen::SparseMatrix<double> CE;
-		cout << "max value of A_C*x_C+a0-C_values: " <<  (A*coefficients_C+a0-values_C.cwiseAbs()).maxCoeff() << endl;
+
 		assert ((A*coefficients_C+a0-values_C).cwiseAbs().maxCoeff() < 1e-12 && " Check boundary constraction of eval matrix and coefficients!");
+
 
 	}
 	else
@@ -478,27 +517,61 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		G2 = A.transpose() * A;
 
 		ci0 = Eigen::VectorXd::Zero(C.rows());
-//		ci0 = coefficients_C * -1;
 
 		f = -A.transpose() * values_C;
+
 	}
-
-//	MATLAB_export(A, "A");
-//	MATLAB_export(C, "C");
-
-//	MATLAB_export(values_C, "values_C");
-//	MATLAB_export(coefficients_C, "coefficients_C");
-//	MATLAB_export(ci0, "ci0");
+//
 
 
-	cout << "C*x0-ci0 \n" <<(C*coefficients_C-ci0).transpose() << endl;
-	cout << "minimum coefficient is " << (C * coefficients_C - ci0).minCoeff() << endl;
+/*
+	cout.precision(10);
+	MATLAB_export(A, "A");
+	MATLAB_export(C, "C");
+
+	MATLAB_export(values_C, "values_C");
+	MATLAB_export(coefficients_C, "coefficients_C");
+	MATLAB_export(ci0, "ci0");
+	MATLAB_export(a0, "a0");
+
+*/
+
+
+	cout << "minimum constr violating coefficient is " << (C * coefficients_C - ci0).minCoeff() << endl;
+	//	cout << "C*x0-ci0 \n" <<(C*coefficients_C-ci0).transpose() << endl;
 
 	//check if constraints are fulfilled already
-	if ((C * coefficients_C - ci0).minCoeff() < -1e-10) {
+	if ((C * coefficients_C - ci0).minCoeff() < -1e-9) {
+
+		solution_changed = true;
+
+		//=======================IPOPT==================
+
 		x = convexifier.solve_quad_prog_with_ie_constraints(G2, f, C, ci0,
 //				VectorXd::Zero(coefficients_C.size()));
 				coefficients_C);
+
+		if (convexifier.get_status() != Solve_Succeeded)
+		{
+			cerr << "retry ipopt with new initation value" << endl;
+
+			//==============iterative convexification==================
+
+			VectorXd x_iterative = convexifier.solve_quad_prog_with_ie_constraints_iterative(A, values_C-a0, C, ci0, coefficients_C);
+//			cout << "C*x-ci0 \n" << (C * x_iterative - ci0).transpose() << endl;
+			cout << "minimum constr violating coefficient is " << (C * x_iterative - ci0).minCoeff() << endl;
+			cout << "biggest difference in x-coefficients_c "
+					<< (x_iterative - coefficients_C).cwiseAbs().maxCoeff() << endl;
+
+
+			cout << "================================================" << endl;
+
+
+			//retry with new start
+			x = convexifier.solve_quad_prog_with_ie_constraints(G2, f, C, ci0,x_iterative);
+			if (convexifier.get_status() == Solve_Succeeded)
+				cerr << "new start point was successful!" << endl;
+		}
 
 
 		cout << "fstart = "
@@ -507,19 +580,11 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 
 		cout << "fvalue_code = " << convexifier.get_minimum() << ";" << endl;
 
-		cout << "C*x-ci0 \n" << (C * x - ci0).transpose() << endl;
+//		cout << "C*x-ci0 \n" << (C * x - ci0).transpose() << endl;
+		cout << "minimum constr violating coefficient is " << (C * x - ci0).minCoeff() << endl;
 		cout << "biggest difference in x-coefficients_c "
 				<< (x - coefficients_C).cwiseAbs().maxCoeff() << endl;
 
-		cout << "================================================" << endl;
-
-		x = convexifier.solve_quad_prog_with_ie_constraints_iterative(A, values_C-a0, C, ci0, coefficients_C);
-		cout << "C*x-ci0 \n" << (C * x - ci0).transpose() << endl;
-		cout << "biggest difference in x-coefficients_c "
-				<< (x - coefficients_C).cwiseAbs().maxCoeff() << endl;
-
-
-//	MATLAB_export(x, "x_code");
 
 		if (strongBoundaryCond) {
 			VectorXd bd = bd_handler.get_nodal_contributions();
@@ -529,24 +594,14 @@ void Tsolver::convexify(Eigen::VectorXd &solution)
 		} else
 			c0_converter.convert_coefficients_toDG(x, solution);
 
-		cout.precision(10);
-/*
-		cout << "C \n" << C << endl;
-		cout << "C*x " << (C * x ).transpose() << endl;
-		cout << "ci0 " << (ci0).transpose() << endl;
-		cout << " x is  " << x.transpose() << endl;
-*/
-		cout << "C*x-ci0 \n" << (C * x - ci0).transpose() << endl;
-		cout << "smallest entry "
-				<< (C * x - ci0).minCoeff() << endl;
-		cout << "biggest difference in x-coefficients_c "
-				<< (x - coefficients_C).cwiseAbs().maxCoeff() << endl;
 		plotter.get_plot_stream("plot_data_min_constraints") << iteration << " " << (C*x-ci0).minCoeff() << endl;
 		plotter.get_plot_stream("plot_data_constraints_l2") << iteration << " " << (C*x-ci0).norm() << endl;
 	}
 
-
 	setleafcellflags(0, false); //reset flags
+
+	return solution_changed;
+
 }
 
 ///////////////////////////////////////////////////////
@@ -1085,7 +1140,7 @@ void Tsolver::init_start_solution_MA(std::string filename)
 	plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
 
 	state_type error = calculate_L2_error(get_exacttemperature_MA_callback());
-	plotter.get_plot_stream("L2_without_convex") << -1 << " " << error << endl;
+	plotter.get_plot_stream("rel_L2_without_convex") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
 
 
 	VectorXd coeffs;
@@ -1148,10 +1203,11 @@ void Tsolver::time_stepping_MA() {
 
 	//=======add streams to plot data ========
 	std::ofstream plot_data("data/s/plot_data");
-	plotter.add_plot_stream("L2_without_convex", "data/s/plot_data_L2_without_convex");
+	plotter.add_plot_stream("rel_L2_without_convex", "data/s/plot_data_rel_L2_without_convex");
 	plotter.add_plot_stream("L2_rel", "data/s/plot_data_L2_rel");
 	plotter.add_plot_stream("plot_data_min_constraints", "data/s/plot_data_min_constraints");
 	plotter.add_plot_stream("plot_data_constraints_l2", "data/s/plot_data_constraints_l2");
+	plotter.add_plot_stream("rel_L2_ipopt", "data/s/plot_data_rel_L2_ipopt");
 	//========================================
 
 
@@ -1218,7 +1274,7 @@ void Tsolver::time_stepping_MA() {
 			Lsolution_only_bd.setZero(LM_size);
 		}
 
-		//assemble system
+//==============assemble system============================
 		cout << "Assemble linear System..." << flush << endl;
 		pt.start();
 		if (!strongBoundaryCond)
@@ -1241,13 +1297,12 @@ void Tsolver::time_stepping_MA() {
 			Lrhs_bd -= LM_bd*Lsolution_only_bd;
 			bd_handler.delete_boundary_dofs(LM_bd, LM);
 			bd_handler.delete_boundary_dofs(Lrhs_bd, Lrhs);
-			cout << "Lrhs " << Lrhs.transpose() << endl;
 			pt.stop();
 			cout << "done. " << pt << " s." << endl;
 		}
 
-		//solve system
-		cout << "Solving linear System..." << endl;
+
+		//==============solve system============================
 		pt.start();
 		Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
 		solver.compute(LM);
@@ -1289,28 +1344,37 @@ void Tsolver::time_stepping_MA() {
 
 		//plot poisson solution
 		plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
+//		plotter.write_exactsolution(get_exacttemperature_MA_callback(),iteration);
 		plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionPoisson");
+//		plotter.write_numericalsolution(iteration, "grid_numericalsolutionPoisson");
 
-		//calculate curren l2 error
+		//calculate current l2 error
 		state_type error =  calculate_L2_error(get_exacttemperature_MA_callback());
-		plotter.get_plot_stream("L2_without_convex") << iteration << " " << error << endl;
+		plotter.get_plot_stream("rel_L2_without_convex") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
 
 
-		//convexify solution and store
+
+		//==============convexify============================
 		cout << "Convexifying solution ..." << endl;
 		pt.start();
-		convexify(Lsolution);
+		bool solution_was_not_convex = convexify(Lsolution);
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
 		//write convexified poisson solution in leaf cells
 		restore_MA(Lsolution);
+		if (solution_was_not_convex)
+		{
+			//calc current l2 error of
+			error =  calculate_L2_error(get_exacttemperature_MA_callback());
+			plotter.get_plot_stream("rel_L2_ipopt") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
+		}
 
 		//plot solution
 		plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionConvexified");
 
 
-		//convex combination of two steps
+		//==============convex combination of two steps (damping)============================
 		Eigen::VectorXd solution = Tsolver::alpha*Lsolution + (1-Tsolver::alpha)*solution_old;
 //		cout << "convex combination \n" << solution.transpose() << endl;
 
