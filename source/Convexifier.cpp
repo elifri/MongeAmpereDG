@@ -425,7 +425,6 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 //	cout << "H over C \n" << H_over_C << endl;
 
 
-	int iteration = 0;
 
 	//the vector for the extended lsq problem:
 	// the upper part stores the solution for A*x-b and the bottom part the constr violation
@@ -440,7 +439,9 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 	//store how often a constr was violated
 	VectorXd constr_count = VectorXd::Zero(constr_violation.size());
 
-	int max_it = 1000;
+	int iteration = 0, iteration_penalty = 0;
+
+	int max_it_per_penalty = 100, max_raise_penalty = 2;
 	delta = 0.0;
 	tol = 1e-9;
 
@@ -453,7 +454,7 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 
 	b_with_constraints.head(A.cols()) = b;
 
-	while ( std::abs(res_approx-res_approx_old) > tol && iteration < max_it)
+	while ( std::abs(res_approx-res_approx_old) > tol && iteration < max_it_per_penalty)
 	{
 //		cout << "cvio " << constr_violation.transpose() << endl;
 
@@ -516,7 +517,7 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 		constr_rhs = C*x;
 
 		cout <<  iteration <<  " no of viol " << no_of_violations << " residuum " << (H_over_C_temp*x-b_with_constraints).norm()
-			 << " rel residuum " << (H_over_C_temp*x-b_with_constraints).norm()/b_with_constraints.norm()<< endl << endl;
+			 << " rel residuum " << (H_over_C_temp*x-b_with_constraints).norm()/b_with_constraints.norm()<< endl;
 
 //		cout << " goal        : " << (b_with_constraints.segment(A.cols(), C.rows())-c_lowerbound_temp).transpose() << endl;
 //		cout << " is          : " << (C*x-c_lowerbound).transpose() << endl;
@@ -536,6 +537,15 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 
 
 		iteration++;
+		//if not yet succeeded raise penalty
+		if (iteration == max_it_per_penalty && iteration_penalty < max_raise_penalty)
+		{
+			iteration = 0;
+			penalty *=10;
+			cerr << "Did not converge - raise penalty" << endl;
+
+			iteration_penalty++;
+		}
 	}
 
 	//nachitererieren
