@@ -118,6 +118,21 @@ public:
 //	  return citerator(m_offset + local_no);
 //  }
 
+
+	value_type get_div_A_grad(const int iq) const {
+
+		assert(degreedim == 2);
+
+		//Hessian of u is {A(1,1), -A(1,0) // -(A(0,1), A(0,0)
+
+		return (		 A(0,0) * A(1,1) 			//A_00 * u_xx
+				       + A(0, 1) * (-A(1,0))  		//A_10 * u_xy
+					   + A(1, 0) * (-A(0,1))		//A_10 * u_yx
+					   + A(1, 1) * A(0,0)  ); 		//A_11 * u_yy
+		}
+
+
+
   static int countAllLeafs() { return m_nCountAllLeafs; }
 
 	value_type bilin_alaplace(const double & u0_x, const double & u0_y,

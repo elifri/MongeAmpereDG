@@ -193,6 +193,8 @@ public:
 			const unsigned int & istate, const unsigned int & iquad,
 			value_type & v) const;
 
+	void assemble_div_A_grad(const diffusionmatrix_type &A, const unsigned int & iquad, const int istate);
+
 	//////////////   Linear Algebra for Emass_type   ///////////////
 	void matrix_solve(Emass_type & A, Estate_type & x, Estate_type & b,
 			const int & istate);

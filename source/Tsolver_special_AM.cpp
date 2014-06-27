@@ -322,23 +322,34 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 
 }
 
+
+//div of old solution
 void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs) {
 	for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
 
-		state_type uLC;
+		assert(statedim == 1 && "this function needs to be reviewed for a greater statedem than 1");
+		state_type f;
 
 		get_Ecoordinates(idLC, iq, x);
-		get_rhs_MA(x, uLC);
+		get_rhs_MA(x, f);
 
-		for (unsigned int istate = 0; istate < statedim; ++istate) {
+		//-rhs = cof(w)*Dw + f  - det(D^2 w)
+		value_type rhs = - pLC->get_div_A_grad(iq);
+		rhs -= f(0);
+		rhs += (pLC->A(0,0)*pLC->A(1,1) - pLC->A(1,0)*pLC->A(0,1));
+
+		cout << "-2f " << -2*f << " rhs " << rhs << endl;
+
+
+//		for (unsigned int istate = 0; istate < statedim; ++istate) {
 			for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 				int row = pLC->n_offset + ishape;
 				double val = shape.get_Equadw(iq) * pBC->get_detjacabs()
-						* facLevelVolume[idLC.level()] * uLC(istate)
+						* facLevelVolume[idLC.level()] * rhs
 						* shape.get_Equads(ishape, iq);
 
-				Lrhs(row) += -2*val; //solve -u=-2f instead of det u = f
-			}
+				Lrhs(row) += val; //solve -u=-2f instead of det u = f
+//			}
 		}
 	}
 }
@@ -430,40 +441,6 @@ bool Tsolver::convexify(Eigen::VectorXd &solution)
 	SparseMatrixD G2, CE;
 	Eigen::VectorXd f, a0, ci0, x, ce0;
 
-/*
-	Eigen::SparseMatrixD gluing_matrix(c0_converter.get_number_of_dofs_C(), number_of_dofs);
-
-	for (int j = 0; j < gluing_matrix.cols(); j++ )
-	{
-		Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(gluing_matrix.cols(), j);
-		Eigen::VectorXd col_j;
-		c0_converter.convert_coefficients_toC(unit_j, col_j);
-		for (int i = 0; i < gluing_matrix.rows(); i ++)
-		{
-			if (std::abs(col_j(i)) > 1e-10 )
-				gluing_matrix.coeffRef(i,j) = col_j(i);
-		}
-	}
-
-	Eigen::SparseMatrixD gluing_matrix_left_inverse(number_of_dofs, c0_converter.get_number_of_dofs_C());
-
-	for (int j = 0; j < gluing_matrix_left_inverse.cols(); j++ )
-	{
-		Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(gluing_matrix_left_inverse.cols(), j);
-		Eigen::VectorXd col_j(gluing_matrix_left_inverse.rows());
-		c0_converter.convert_coefficients_toDG(unit_j, col_j);
-		for (int i = 0; i < gluing_matrix_left_inverse.rows(); i ++)
-		{
-			if (std::abs(col_j(i)) > 1e-10 )
-				gluing_matrix_left_inverse.coeffRef(i,j) = col_j(i);
-		}
-	}
-
-*/
-//	MATLAB_export(gluing_matrix, "G");
-//	MATLAB_export(gluing_matrix_left_inverse, "G_l");
-
-
 	//================handle boundary dofs===========================
 	if (strongBoundaryCond) {
 		//if we want to have strong boundary condition we have to minimize A*x+delte_b_dofs(A_bd*impact_bd) - c
@@ -521,21 +498,6 @@ bool Tsolver::convexify(Eigen::VectorXd &solution)
 		f = -A.transpose() * values_C;
 
 	}
-//
-
-
-/*
-	cout.precision(10);
-	MATLAB_export(A, "A");
-	MATLAB_export(C, "C");
-
-	MATLAB_export(values_C, "values_C");
-	MATLAB_export(coefficients_C, "coefficients_C");
-	MATLAB_export(ci0, "ci0");
-	MATLAB_export(a0, "a0");
-
-*/
-
 
 	cout << "minimum constr violating coefficient is " << (C * coefficients_C - ci0).minCoeff() << endl;
 	//	cout << "C*x0-ci0 \n" <<(C*coefficients_C-ci0).transpose() << endl;
@@ -547,9 +509,7 @@ bool Tsolver::convexify(Eigen::VectorXd &solution)
 
 		//=======================IPOPT==================
 
-		x = convexifier.solve_quad_prog_with_ie_constraints(G2, f, C, ci0,
-//				VectorXd::Zero(coefficients_C.size()));
-				coefficients_C);
+		x = convexifier.solve_quad_prog_with_ie_constraints(G2, f, C, ci0, coefficients_C);
 
 		if (convexifier.get_status() != Solve_Succeeded)
 		{
@@ -557,8 +517,12 @@ bool Tsolver::convexify(Eigen::VectorXd &solution)
 
 			//==============iterative convexification==================
 
-			VectorXd x_iterative = convexifier.solve_quad_prog_with_ie_constraints_iterative(A, values_C-a0, C, ci0, coefficients_C);
-//			cout << "C*x-ci0 \n" << (C * x_iterative - ci0).transpose() << endl;
+			VectorXd x_iterative;
+			if (strongBoundaryCond)
+				x_iterative = convexifier.solve_quad_prog_with_ie_constraints_iterative(A, values_C-a0, C, ci0, coefficients_C);
+			else
+				x_iterative = convexifier.solve_quad_prog_with_ie_constraints_iterative(A, values_C, C, ci0, coefficients_C);
+
 			cout << "minimum constr violating coefficient is " << (C * x_iterative - ci0).minCoeff() << endl;
 			cout << "biggest difference in x-coefficients_c "
 					<< (x_iterative - coefficients_C).cwiseAbs().maxCoeff() << endl;
@@ -671,20 +635,8 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		bool is_convex = false;
 
 		calc_cofactor_hessian(pLC, pBC, hess);
-//			cout << "calc factor hessian " << endl << hess << endl;
 
 		is_convex = calculate_eigenvalues(pLC, hess);
-
-		while(!is_convex && false)
-		{
-			cout << "hessian " << endl << hess << endl;
-			cout << "Hessian at cell (node 0 = " << nv(0).transpose() << ") is not convex" << endl;
-			cout << "Convexifying ... ";
-			convexify_cell(pLC, solution);
-			calc_cofactor_hessian(pLC, pBC, hess);
-			is_convex = calculate_eigenvalues(pLC, hess);
-			cout << "the corrected hessian " << endl << hess << endl;
-		}
 
 	}
 
