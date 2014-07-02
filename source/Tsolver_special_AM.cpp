@@ -572,30 +572,39 @@ bool Tsolver::convexify(Eigen::VectorXd &solution)
 	cout << "minimum constr violating coefficient is " << (C * coefficients_C - ci0).minCoeff() << endl;
 	//	cout << "C*x0-ci0 \n" <<(C*coefficients_C-ci0).transpose() << endl;
 
+	cout << "residuum equal since " << residuum_equal_since << " iteration\n";
+
 	//check if constraints are fulfilled already
-	if ((C * coefficients_C - ci0).minCoeff() < -1e-9) {
+	if ((C * coefficients_C - ci0).minCoeff() < -1e-9 && residuum_equal_since < 5) {
 
 		solution_changed = true;
 
 		//=======================IPOPT==================
 
-		igpm::processtimer pt;
+		igpm::processtimer pt; //start timer
 
 		pt.start();
 		x = convexifier.solve_quad_prog_with_ie_constraints(G2, f, C, ci0,
 //				VectorXd::Zero(coefficients_C.size()));
 				coefficients_C);
 		pt.stop();
-		cout << "IPOPT needed " << pt << endl;
+		cout << "IPOPT needed " << pt << "s\n";
 
-		if (convexifier.get_status() != Solve_Succeeded)
+
+		if (convexifier.get_status() != Solve_Succeeded  && false)
 		{
 			cerr << "retry ipopt with new initation value" << endl;
 
 			//==============iterative convexification==================
 
+			pt.start();
 			VectorXd x_iterative = convexifier.solve_quad_prog_with_ie_constraints_iterative(A, values_C-a0, C, ci0, coefficients_C);
-//			cout << "C*x-ci0 \n" << (C * x_iterative - ci0).transpose() << endl;
+			pt.stop();
+			cout << "iterative solver needed " << pt << "s\n";
+
+
+			//			cout << "C*x-ci0 \n" << (C * x_iterative - ci0).transpose() << endl;
+
 			cout << "minimum constr violating coefficient is " << (C * x_iterative - ci0).minCoeff() << endl;
 			cout << "biggest difference in x-coefficients_c "
 					<< (x_iterative - coefficients_C).cwiseAbs().maxCoeff() << endl;
@@ -682,6 +691,7 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
 	max_EW = 0; //init max_Ew
 	min_EW = 10;
+	sum_residuum = 0;
 
 	setleafcellflags(0, false); //reset flags
 
@@ -724,6 +734,26 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 			is_convex = calculate_eigenvalues(pLC, hess);
 			cout << "the corrected hessian " << endl << hess << endl;
 		}
+
+		//determinant of hessian for calculation of residuum
+		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
+
+		state_type state, stateEx, stateRhs;
+
+		//loop over LC nodes
+		for (unsigned int k = 0; k < pLC->id().countNodes(); k++){
+			//get rhs
+			get_rhs_MA(nv(k), stateRhs);
+			//calculate residuum
+			pLC->residuum(k) = det - stateRhs(0);
+			sum_residuum += pLC->residuum(k);
+
+			//calculate abs error
+			shape.assemble_state_N(pLC->u,k,state);
+			get_exacttemperature_MA(nv[k],stateEx);
+			pLC->Serror(k) = std::abs(state(0)-stateEx(0));
+		}
+
 
 	}
 
@@ -945,8 +975,11 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 									const int col_LC = pLC->n_offset + jshape;
 									const int col_NC = pNC->n_offset + jshape;
 
-									value_type A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,jshape,iqLC),
-											   A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,jshape,iqNC);
+									Hessian_type A = 0.5*(pLC->A+pNC->A);
+
+
+									value_type A_times_normal_BC = pBC->A_grad_times_normal(A,jshape,iqLC),
+											   A_times_normal_NBC = pNBC->A_grad_times_normal(A,jshape,iqNC);
 
 									// b(u, phi)
 									LM.coeffRef(row_LC, col_LC) += -0.5 // to average
@@ -963,7 +996,24 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 									A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,ishape,iqLC),
 									A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,ishape,iqNC);
 
+									// ({{phi}}*[[cof(D^2w)grad(v)]]
+/*
+
+									LM.coeffRef(row_LC, col_LC) += -0.5 // to average
+											* shape.get_Fquadw(iqLC) * length//quadrature weights
+											* A_times_normal_BC/ facLevelLength[level] //jump
+											* shape.get_Fquads(ishape,iqLC); //gradient times normal
+
+									LM.coeffRef(row_LC, col_NC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * A_times_normal_NBC / facLevelLength[levelNC];
+
+									LM.coeffRef(row_NC, col_LC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* A_times_normal_BC / facLevelLength[level];
+
+									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
+*/
+
+
 									// b(phi, u)
+
 									LM.coeffRef(row_LC, col_LC) += stabsign	* 0.5 * shape.get_Fquadw(iqLC) * length	* A_times_normal_BC / facLevelLength[level]	* shape.get_Fquads(jshape,iqLC);
 
 									LM.coeffRef(row_LC, col_NC) += stabsign	* -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_BC / facLevelLength[level] * shape.get_Fquads(jshape,iqNC);
@@ -971,6 +1021,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 									LM.coeffRef(row_NC, col_LC) += stabsign * -0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(jshape,iqLC);
 
 									LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(jshape,iqNC);
+
 
 									// b_sigma(u, phi)
 									if (penalty != 0.0) {
@@ -1059,7 +1110,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 											/ facLevelLength[level];
 
 									// b(phi, u)
-									val += stabsign * shape.get_Fquadw(iqLC)
+									val += stabsign *shape.get_Fquadw(iqLC)
 											* length
 											* pBC->A_grad_times_normal(pLC->A,ishape,iqLC)
 											/ facLevelLength[level]
@@ -1253,6 +1304,7 @@ void Tsolver::time_stepping_MA() {
 
 
 	iteration = 0;
+	residuum_equal_since = 0;
 
 	//!!!!!!!!!!!!!!warning: this works only outside of loop if there is no refinement inside the loop!!!!!!!!!
 	unsigned int LM_size;
@@ -1345,7 +1397,9 @@ void Tsolver::time_stepping_MA() {
 
 		//==============solve system============================
 		pt.start();
-		Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
+//		Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
+		Eigen::SparseQR<Eigen::SparseMatrixD, Eigen::COLAMDOrdering<int> > solver;
+		LM.makeCompressed();
 		solver.compute(LM);
 		if (solver.info() != Eigen::Success) {
 			std::cerr << "Decomposition of stiffness matrix failed" << endl;
@@ -1432,6 +1486,19 @@ void Tsolver::time_stepping_MA() {
 
 		// reset flag 0
 		setleafcellflags(0, false);
+
+		if (std::abs(sum_residuum - sum_residuum_old) < 1)
+		{
+			residuum_equal_since++;
+			cerr<< "sum_residuum_equal_since now " << residuum_equal_since << endl;
+		}
+		else
+		{
+			residuum_equal_since = 0;
+		}
+
+		cout << " sum_residuum " << sum_residuum << endl;
+		sum_residuum_old = sum_residuum;
 
 		iteration++;
 	}
