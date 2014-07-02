@@ -1079,7 +1079,7 @@ state_type Tsolver::calculate_L2_error(const vector_function_type f)
 			for (unsigned int istate = 0; istate < statedim; ++istate) {
 				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 					double val = shape.get_Equadw(iq) * pBC->get_detjacabs()* facLevelVolume[idLC.level()] //quadratureweights
-							* abs(exactSol(istate) - numericSol(istate)); //function value of ansatz function
+							* sqr(exactSol(istate) - numericSol(istate)); //function value of ansatz function
 
 					res(istate) += val;
 				}
