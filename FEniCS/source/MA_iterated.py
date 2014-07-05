@@ -4,6 +4,7 @@
 from dolfin import *
 import scipy.io
 from convexify import convexify
+import math
 
 def MA_iteration(mesh, V, u0, f, max_it,w):
   #define variables
@@ -13,9 +14,10 @@ def MA_iteration(mesh, V, u0, f, max_it,w):
   
   #cofactor matrix of startsolution's hessian
   coeff = cofac(grad(grad(w)))
+  #coeff = as_matrix([[1,0],[0,1]])
 
   #penalty
-  sigma = 7.0*50.0*10
+  sigma = 50.0
 
   # Define variational problem
   u = TrialFunction(V)
@@ -48,9 +50,9 @@ def MA_iteration(mesh, V, u0, f, max_it,w):
     #sigma = sigma*(iteration+1)*10;
 
     print sigma
-    #dump matrices
-  #  A, b = assemble_system(a,L)
-
+     #dump matrices
+    A, b = assemble_system(a,L)
+    print ("b", b.array())
   #  scipy.io.savemat('A'+str(iteration)+'.mat', {'A': A.array(), 'b': b.array()})
 
     # Compute solution
@@ -73,17 +75,17 @@ def MA_iteration(mesh, V, u0, f, max_it,w):
     #===================
     #convexify function
 
-    u.vector()[:] = convexify(mesh, V, u_array)
-    print "u_array ", u_array
-    print "u_convex_array ", u_convex.vector().array()
+#    u.vector()[:] = convexify(mesh, V, u_array)
+#    print "u_array ", u_array
+#    print "u_convex_array ", u_convex.vector().array()
 
     #plot results
 
-    plot(project(u_convex,bigV), title = 'convexified solution')
+ #   plot(project(u_convex,bigV), title = 'convexified solution')
     #plot(project(u_-u_convex, bigV), title = 'difference convex and not convex')
-    plot(u_-u_convex, title = 'difference convex and not convex')
+    #plot(u_-u_convex, title = 'difference convex and not convex')
 
-    plot(project(abs(u_-u_e),bigV), title = 'error in non convexified solution')
+  #  plot(project(abs(u_-u_e),bigV), title = 'error in non convexified solution')
     
     #hold plot
     #interactive()
@@ -98,7 +100,7 @@ def MA_iteration(mesh, V, u0, f, max_it,w):
     
     #get information abuot second derivatives
     
-    #coeff = cofac(grad(grad(w)))
+    coeff = cofac(grad(grad(w)))
     
     #create output in right space
     wxx = project(coeff[0,0], FunctionSpace(mesh, 'DG',0))
@@ -130,6 +132,14 @@ def MA_iteration(mesh, V, u0, f, max_it,w):
     interactive()
     
   return u;
+
+class Error(Expression):
+  def eval(self, v, x):
+    s = (x[0]-1./2)**2+(x[1]-1./2)**2
+    if s < 1./10:
+      v[0] = math.exp(-1./(1-100*s**2))
+    else:
+      v[0]=0
   
 
 if __name__ == "__main__":
@@ -147,16 +157,16 @@ if __name__ == "__main__":
   # Define boundary conditions
   #u0 = Constant(0.0) #const rhs
   #u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
-  #u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
-  u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
+  u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
+  #u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
   #u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
 
 
   #rhs
   #f = Constant(1.0) #const rhs
   #f = Constant(7.0) #simpleMongeAmpere
-  #f = Constant(1.0) #simpleMongeAmpere2
-  f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
+  f = Constant(1.0) #simpleMongeAmpere2
+  #f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
   #f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
 
   #exact solution
@@ -164,17 +174,19 @@ if __name__ == "__main__":
 
   #start solution
   w = Function(V)
-  error = Expression('x[0]*x[1]*(1-x[0]) + x[0]*x[1]*(1-x[1])')
-  #error = Expression('0.0')
+  #error = Expression('x[0]*x[1]*(1-x[0]) + x[0]*x[1]*(1-x[1])')
+  error = Error()
   
   #choose between "identity" and disturbed exact solution
   #w = interpolate(Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0'),V)
-  w.assign(u_e+interpolate(error, V))
+  w.assign(u_e-0.1*interpolate(error, V))
   
   
   #maximum number of iterations
-  max_it = 1
+  max_it = 10
 
+  plot(project(w,bigV), title = 'start')
+  interactive()
 
   u = MA_iteration(mesh, V, u0, f, max_it,w)
 
@@ -184,7 +196,7 @@ if __name__ == "__main__":
 
   plot(det(grad(grad(u))), title = 'determinant of hessian')
 
-  plot(project(abs(f-det(grad(grad(u)))), bigV), title = 'rhs - determinant of hessian')
+#  plot(project(abs(f-det(grad(grad(u)))), bigV), title = 'rhs - determinant of hessian')
 
   #Hold plot
   interactive()
