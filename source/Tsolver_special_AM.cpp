@@ -186,12 +186,95 @@ void Tsolver::assignViews_MA(unsigned int & offset) {
 	}
 }
 
+void Tsolver::assemble_face_term_neilan(leafcell_type* pLC, const basecell_type* pBC,
+										leafcell_type* pNC, const basecell_type* pBNC,
+										value_type length,
+										unsigned int &iqLC, unsigned int &iqNC,
+										Hessian_type &hess, int jump_sign)
+{
+	// loop over Hessian entries
+	for (unsigned int i = 0; i < spacedim; ++i) {
+		for (unsigned int j = 0; j < spacedim; ++j) {
+			//loop over shapes
+			for (unsigned int i_shape; i_shape < shapedim; i_shape++)
+			{
+				for (unsigned int i_state; i_state < statedim; i_state++)
+				{
+					hess(i,j) += -jump_sign * 0.5 // to average
+								* shape.get_Fquadw(iqLC) * length//quadrature weights
+								*pLC->u(i_shape,0)*pBC->grad_times_normal(i_shape, iqLC)/ facLevelLength[pLC->id().level()]; //gradient times normal
+
+					hess(i,j) += jump_sign * 0.5 // to average
+								* shape.get_Fquadw(iqLC) * length//quadrature weights
+								*pNC->u(i_shape,0)* pBNC->grad_times_normal(i_shape, iqLC)/ facLevelLength[pLC->id().level()]; //gradient times normal
+				}
+			}
+		}
+	}
+}
+
+void Tsolver::assemble_face_infos(leafcell_type* pLC, const basecell_type* pBC, Hessian_type &hess)
+{
+	Fidvector_type vF; // neighbor ids
+	leafcell_type *pNC = NULL; // neighbor cell
+	grid_type::facehandlevector_type vFh, vOh;
+
+	// get pointer to basecell of this cell
+	const grid_type::basecell_type * pNBC;
+
+	unsigned int gaussbaseLC = 0, gaussbaseNC = 0;
+
+	int jump_sign = 1;
+
+	// neighbor face number and orientation
+	grid.faceIds(pLC->id(), vF, vFh, vOh);
+	for (unsigned int f = 0; f < pLC->id().countFaces(); f++) { // loop over faces
+		if (vF[f].isValid()) {
+
+			 //search for neighbour at face i
+			if (grid.findLeafCell(vF[f], pNC)) {
+				if (pNC->id().flag(0)) { //neighbour cell has already been processed -> use opposite normal
+					jump_sign = -1;
+				}
+				gaussbaseLC = Fquadgaussdim * f;
+				gaussbaseNC = Fquadgaussdim * vFh[f];
+			}
+			 else { //hanging vertices
+				assert (false && "adaptive not implement yet!");
+//				vF[f].getParentId(iddad); // search dad of vF[f]
+				gaussbaseLC = Fquadgaussdim * f;
+				gaussbaseNC = Fquadgaussdim * vFh[f];
+			 }
+		}
+
+		grid.findBaseCellOf(pNC->id(), pNBC);
+
+		for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over gauss nodes
+
+			unsigned int iqLC = gaussbaseLC + iq; //index of next gauss node to be processed
+			unsigned int iqNC = vOh[f] == 1? gaussbaseNC + Fquadgaussdim - 1 - iq : gaussbaseNC + iq; //index of next gauss node in neighbour cell to be processed
+
+			value_type length = facLevelLength[pLC->id().level()] * pBC->get_length(f); //calculate actual face length
+
+			assemble_face_term_neilan(pLC, pBC, pNC, pNBC, length, iqLC, iqNC, hess, jump_sign);
+		}
+	}
+
+	pLC->id().setFlag(0, true);
+
+}
+
 void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC, Hessian_type & hess){
 	shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
 	pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
 	hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
 	cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
 	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
+
+
+	//correction term inspired by neilan
+
+	assemble_face_infos(pLC, pBC, hess);
 }
 
 void Tsolver::calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1)
@@ -430,39 +513,6 @@ bool Tsolver::convexify(Eigen::VectorXd &solution)
 	SparseMatrixD G2, CE;
 	Eigen::VectorXd f, a0, ci0, x, ce0;
 
-/*
-	Eigen::SparseMatrixD gluing_matrix(c0_converter.get_number_of_dofs_C(), number_of_dofs);
-
-	for (int j = 0; j < gluing_matrix.cols(); j++ )
-	{
-		Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(gluing_matrix.cols(), j);
-		Eigen::VectorXd col_j;
-		c0_converter.convert_coefficients_toC(unit_j, col_j);
-		for (int i = 0; i < gluing_matrix.rows(); i ++)
-		{
-			if (std::abs(col_j(i)) > 1e-10 )
-				gluing_matrix.coeffRef(i,j) = col_j(i);
-		}
-	}
-
-	Eigen::SparseMatrixD gluing_matrix_left_inverse(number_of_dofs, c0_converter.get_number_of_dofs_C());
-
-	for (int j = 0; j < gluing_matrix_left_inverse.cols(); j++ )
-	{
-		Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(gluing_matrix_left_inverse.cols(), j);
-		Eigen::VectorXd col_j(gluing_matrix_left_inverse.rows());
-		c0_converter.convert_coefficients_toDG(unit_j, col_j);
-		for (int i = 0; i < gluing_matrix_left_inverse.rows(); i ++)
-		{
-			if (std::abs(col_j(i)) > 1e-10 )
-				gluing_matrix_left_inverse.coeffRef(i,j) = col_j(i);
-		}
-	}
-
-*/
-//	MATLAB_export(gluing_matrix, "G");
-//	MATLAB_export(gluing_matrix_left_inverse, "G_l");
-
 
 	//================handle boundary dofs===========================
 	if (strongBoundaryCond) {
@@ -484,8 +534,6 @@ bool Tsolver::convexify(Eigen::VectorXd &solution)
 
 		//convert to continuous version
 		c0_converter.convert_matrix_toC(A);
-
-
 
 		cout << "max value of A_C*x_C-C_values: " <<  (A*coefficients_C-values_C.cwiseAbs()).maxCoeff() << endl;
 		assert ((A*coefficients_C-values_C).cwiseAbs().maxCoeff() < 1e-12 && " Check c1 constraction of eval matrix and coefficients!");
@@ -547,9 +595,14 @@ bool Tsolver::convexify(Eigen::VectorXd &solution)
 
 		//=======================IPOPT==================
 
+		igpm::processtimer pt;
+
+		pt.start();
 		x = convexifier.solve_quad_prog_with_ie_constraints(G2, f, C, ci0,
 //				VectorXd::Zero(coefficients_C.size()));
 				coefficients_C);
+		pt.stop();
+		cout << "IPOPT needed " << pt << endl;
 
 		if (convexifier.get_status() != Solve_Succeeded)
 		{
@@ -687,6 +740,8 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		}
 
 	}
+
+	setleafcellflags(0, false); //reset flags
 
 	cout << "solution written in leafcell" << endl;
 	cout << "EW " << min_EW << " -- " << max_EW << endl;
@@ -1121,7 +1176,7 @@ void Tsolver::init_start_solution_MA(std::string filename)
 
 		summation f(get_exacttemperature_MA_callback(),
 				Convex_error_functions::get_hat_unitsquare_callback(
-						0.1));
+						0.3));
 		init_startsolution_from_function(f.get_add_callback());
 //		init_startsolution_from_function(get_exacttemperature_MA_callback());
 	} else

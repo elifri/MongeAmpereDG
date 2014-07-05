@@ -329,7 +329,17 @@ private:
    void assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs); ///writes rhs part from LC
 
    void calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1); /// calculates eigenvalues of a 2x2 matrix
+
+   void assemble_face_term_neilan(leafcell_type* pLC, const basecell_type* pBC,
+   										leafcell_type* pNC, const basecell_type* pNBC,
+   										value_type length,
+   										unsigned int &iqLC, unsigned int &iqNC,
+   										Hessian_type &hess, int jump_sign);
+
+   void assemble_face_infos(leafcell_type* pLC, const basecell_type* pBC, Hessian_type &hess);
+
 public:
+
    void calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC, Hessian_type & hess); /// calculates the cofactor Matrix of the hessian in LC
    bool calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess); /// calculates the eigenvalues of hess and return if it was pos def (solution convex)
 
