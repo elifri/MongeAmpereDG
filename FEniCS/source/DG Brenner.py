@@ -123,7 +123,7 @@ F  = (f-det(coeff) )*v*dx
 
 F = F + (dot(avg(coeff)*(nabla_grad(u)('+')) , n('+')) +  dot(avg(coeff)*(nabla_grad(u)('-')), n('-')) )*avg(v)*dS
 
-F = F + (dot(coeff*(nabla_grad(v)) , n) )*(u-u0)*ds
+F = F - (dot(coeff*(nabla_grad(v)) , n) )*(u-u0)*ds
 
 F = F + Constant(sigma)/h*(u-u0)*v*ds
 
