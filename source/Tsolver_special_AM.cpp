@@ -192,23 +192,45 @@ void Tsolver::assemble_face_term_neilan(leafcell_type* pLC, const basecell_type*
 										unsigned int &iqLC, unsigned int &iqNC,
 										Hessian_type &hess, int jump_sign)
 {
+
 	// loop over Hessian entries
 	for (unsigned int i = 0; i < spacedim; ++i) {
 		for (unsigned int j = 0; j < spacedim; ++j) {
-			//loop over shapes
-			for (unsigned int i_shape; i_shape < shapedim; i_shape++)
-			{
-				for (unsigned int i_state; i_state < statedim; i_state++)
-				{
-					hess(i,j) += -jump_sign * 0.5 // to average
-								* shape.get_Fquadw(iqLC) * length//quadrature weights
-								*pLC->u(i_shape,0)*pBC->grad_times_normal(i_shape, iqLC)/ facLevelLength[pLC->id().level()]; //gradient times normal
+			value_type val1 = 0, val2 = 0;
 
-					hess(i,j) += jump_sign * 0.5 // to average
+
+			//loop over shapes
+			for (unsigned int i_shape = 0; i_shape < shapedim; i_shape++)
+			{
+				for (unsigned int i_state = 0; i_state < statedim; i_state++)
+				{
+					Hessian_type A;
+					A.setZero();
+					A(i,j) = 1;
+
+					value_type val = 0;
+
+					val = -jump_sign * 0.5 // to average
 								* shape.get_Fquadw(iqLC) * length//quadrature weights
-								*pNC->u(i_shape,0)* pBNC->grad_times_normal(i_shape, iqLC)/ facLevelLength[pLC->id().level()]; //gradient times normal
+								*pLC->u(i_shape,0)*pBC->A_grad_times_normal(A,i_shape, iqLC)/ facLevelLength[pLC->id().level()]; //gradient times normal
+
+					hess(i,j) += val;
+					val1 += val;
+
+					//does not contribute to
+					val = -jump_sign * 0.5 // to average
+								* shape.get_Fquadw(iqLC) * length//quadrature weights
+								*pNC->u(i_shape,0)* pBNC->A_grad_times_normal(A, i_shape, iqNC)/ facLevelLength[pLC->id().level()]; //gradient times normal
+
+					val2 += val;
+					hess(i,j) += val;
+//					hess(1,0) += val;
+//					hess(0,1) += val;
+//					hess(0,0) += val;
 				}
 			}
+			cout << "val1 " << val1 << " val2 " << val2 << endl;
+
 		}
 	}
 }
@@ -258,6 +280,8 @@ void Tsolver::assemble_face_infos(leafcell_type* pLC, const basecell_type* pBC, 
 
 			assemble_face_term_neilan(pLC, pBC, pNC, pNBC, length, iqLC, iqNC, hess, jump_sign);
 		}
+		cout << "current hessian " << hess << endl;
+
 	}
 
 	pLC->id().setFlag(0, true);
@@ -271,10 +295,13 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 	cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
 	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
 
+	cout<< "Hess before neilan " << hess << endl;
 
 	//correction term inspired by neilan
 
 	assemble_face_infos(pLC, pBC, hess);
+	cout<< "Hess after neilan " << hess << endl;
+
 }
 
 void Tsolver::calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1)
@@ -698,6 +725,8 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
 	max_EW = 0; //init max_Ew
 	min_EW = 10;
+
+	setleafcellflags(0, false); //reset flags
 
 	for (grid_type::leafcellmap_type::const_iterator it =
 			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
