@@ -361,60 +361,17 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 	Emass_type laplace;
 	value_type det_jac = pBC->get_detjacabs() * facLevelVolume[pLC->id().level()]; //determinant of Transformation to leafcell
 
-	if (iteration > 0){ //we need to update the laplace matrix
+	if (iteration > 0 || start_solution){ //we need to update the laplace matrix
 		pLC->assemble_laplace(shape.get_Equad(), shape.get_Equads_grad(),
 								pBC->get_jac(), det_jac,facLevelLength[pLC->id().level()], laplace); //update diffusionmatrix
 	}
 	else
 	{
 		Hessian_type hess;
-		if (start_solution){
-
-			//get cell nodes
-			nvector_type nv;
-			get_nodes(grid, pLC->id(), nv);
-
-			//calculate cofactor of hessian
-			calc_cofactor_hessian(pLC, pBC, hess);
-
-			//calculate eigenvalues
-			bool is_convex = calculate_eigenvalues(pLC, hess);
-
-			//TODO here
-			if (!is_convex)
-			{
-				cout << "Hessian at cell (node 0 = " << nv(0).transpose() << ") is not convex" << endl;
-			}
-
-			//determinant of hessian for calculation of residuum
-			value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
-
-
-			state_type state, stateEx, stateRhs;
-
-			//loop over LC nodes
-			for (unsigned int k = 0; k < pLC->id().countNodes(); k++){
-				//get rhs
-				get_rhs_MA(nv(k), stateRhs);
-				//calculate residuum
-				pLC->residuum(k) = det - stateRhs(0);
-
-				//calculate abs error
-				shape.assemble_state_N(pLC->u,k,state);
-				get_exacttemperature_MA(nv[k],stateEx);
-				pLC->Serror(k) = std::abs(state(0)-stateEx(0));
-			}
-
-			//update diffusion matrix and calculate laplace matrix
-			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
-					pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
-		}
-		else{ // no start solution given
-			hess << 1, 0, 0, 1;
-			pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
-				pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
-			max_EW = 1;
-		}
+		hess << 1, 0, 0, 1;
+		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
+								pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
+		max_EW = 1;
 	}
 
 	for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
