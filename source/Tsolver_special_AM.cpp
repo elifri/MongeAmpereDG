@@ -316,7 +316,12 @@ void Tsolver::calculate_eigenvalues(const Hessian_type &A, value_type &ev0, valu
 	ev0 = (A(0,0) + A(1,1) - s) / 0.2e1;
 	ev1 = (A(0,0) + A(1,1) + s) / 0.2e1;
 
-	assert(!(ev0 != ev0) && "The smaller eigenvalue is nan");
+//	assert(!(ev0 != ev0) && "The smaller eigenvalue is nan");
+	if (ev0 != ev0)
+		{
+		ev0 = -1e6;
+		ev1 = 1e6;
+		}
 }
 
 bool Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess) {
