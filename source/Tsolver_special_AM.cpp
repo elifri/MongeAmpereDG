@@ -188,7 +188,7 @@ void Tsolver::assignViews_MA(unsigned int & offset) {
 
 void Tsolver::assemble_face_term_neilan(leafcell_type* pLC, const basecell_type* pBC,
 										leafcell_type* pNC, const basecell_type* pBNC,
-										value_type length,
+										const value_type volume, const value_type length,
 										unsigned int &iqLC, unsigned int &iqNC,
 										Hessian_type &hess, int jump_sign)
 {
@@ -214,7 +214,7 @@ void Tsolver::assemble_face_term_neilan(leafcell_type* pLC, const basecell_type*
 								* shape.get_Fquadw(iqLC) * length//quadrature weights
 								*pLC->u(i_shape,0)*pBC->A_grad_times_normal(A,i_shape, iqLC)/ facLevelLength[pLC->id().level()]; //gradient times normal
 
-					hess(i,j) += val;
+					hess(i,j) += val/volume;
 					val1 += val;
 
 					//does not contribute to
@@ -223,7 +223,7 @@ void Tsolver::assemble_face_term_neilan(leafcell_type* pLC, const basecell_type*
 								*pNC->u(i_shape,0)* pBNC->A_grad_times_normal(A, i_shape, iqNC)/ facLevelLength[pLC->id().level()]; //gradient times normal
 
 					val2 += val;
-					hess(i,j) += val;
+					hess(i,j) += val/volume;
 //					hess(1,0) += val;
 //					hess(0,1) += val;
 //					hess(0,0) += val;
@@ -247,6 +247,7 @@ void Tsolver::assemble_face_infos(leafcell_type* pLC, const basecell_type* pBC, 
 	unsigned int gaussbaseLC = 0, gaussbaseNC = 0;
 
 	int jump_sign = 1;
+	value_type volumeBC = facLevelVolume[pLC->id().level()] * pBC->get_volume(); //calculate length
 
 	// neighbor face number and orientation
 	grid.faceIds(pLC->id(), vF, vFh, vOh);
@@ -278,7 +279,7 @@ void Tsolver::assemble_face_infos(leafcell_type* pLC, const basecell_type* pBC, 
 
 			value_type length = facLevelLength[pLC->id().level()] * pBC->get_length(f); //calculate actual face length
 
-			assemble_face_term_neilan(pLC, pBC, pNC, pNBC, length, iqLC, iqNC, hess, jump_sign);
+			assemble_face_term_neilan(pLC, pBC, pNC, pNBC, volumeBC, length, iqLC, iqNC, hess, jump_sign);
 		}
 		cout << "current hessian " << hess << endl;
 

@@ -336,7 +336,7 @@ private:
 
    void assemble_face_term_neilan(leafcell_type* pLC, const basecell_type* pBC,
    										leafcell_type* pNC, const basecell_type* pNBC,
-   										value_type length,
+   										const value_type volume, const value_type length,
    										unsigned int &iqLC, unsigned int &iqNC,
    										Hessian_type &hess, int jump_sign);
 
