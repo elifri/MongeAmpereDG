@@ -1,0 +1,272 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{ngerman}
+\usepackage{cite}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{a4wide}
+
+%packages to write algorithms
+\usepackage{algpseudocode}
+\usepackage{algorithmicx}
+
+\usepackage{stmaryrd} % for llbracket
+
+\usepackage{tabularx}%tabelle auf textbreite
+\usepackage{booktabs}%schöne  tabellenlinien
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\cof}{\operatorname{cof}}
+\newcommand{\bigEps}{\mathcal{E}}
+\newcommand{\bigO}{\mathcal{O}}
+\newcommand{\argmin}{\operatorname{argmin}}
+
+% !TeX spellcheck = de_DE
+
+\title{Fortschritte im Monge-Ampère-Gleichungslöser}
+
+\begin{document}
+
+\maketitle
+
+\section*{Die Monge-Ampère-Gleichung in 2D}
+
+Finde die konvexe Lösung $u \in C^2(\Omega)$ mit $\Omega \subset \R^2$ konvex von
+\begin{align*}
+	\det(D^2 u)&= f \textnormal{ in }\Omega, \\
+	u &= g \textnormal{ auf } \partial \Omega.
+\end{align*}	
+
+Alternative Formulierungen für die linke Seite
+\begin{align*}
+  \det(D^2u) &= u_{xx}u_{yy} - u_{yx}u_{xy}\\
+                   &= \frac 1 2 \nabla \cdot \left(  \cof(D^2u) \nabla u \right).
+\end{align*}
+
+\section*{Unser Verfahren}
+Mittels Trennung der Unbekannten in der letzten Identität leiten wir die Iteration (Poissongleichung mit Koeffizientenmatrix in jedem Schritt) her:
+\begin{align*}
+	-\nabla \cdot \left( \cof(D^2 u^m) \nabla u^{m+1} \right) &= -2f \textnormal{ in }\Omega, \\
+	u^{m+1} &= g \textnormal{ auf } \partial \Omega. 
+\end{align*}	
+
+\subsection*{SIPG Formulierung}
+\begin{align*}
+ &\int_{\Omega} \nabla v \cdot \cof(D^2 u^{m}) \nabla u^{m+1}\\
+ & -\sum\limits_{e \in \bigEps^i}\int_{e} \llbracket v \rrbracket \{\{ \cof(D^2 u^{m}) \nabla u^{m+1}\cdot n \}\} 
+ - \sum\limits_{e \in \bigEps^i}\int_{e} \llbracket u\rrbracket \{\{ \cof(D^2 u^{m}) \nabla v \cdot n \}\} \\  
+ & - \sum\limits_{e \in \bigEps^b}\int_{e} v \cof(D^2 u^{m}) \nabla u^{m+1}\cdot n 
+    - \sum\limits_{e \in \bigEps^b}\int_{e} u^{m+1}\cof(D^2 u^{m}) \nabla v \cdot n
+    +\sum\limits_{e \in \bigEps} \int_e \frac \sigma {|e|} \llbracket v \rrbracket \llbracket u^{m+1}\rrbracket \\
+    &\;= - 2 \int_{\Omega}v f
+    	 				-\sum\limits_{e \in \bigEps^b}\int_{e} u_0 \cof(D^2 u^{m}) \nabla v \cdot n 
+    	 				\sum\limits_{e \in \bigEps^b} \int_e \frac \sigma {|e|} v u_0    
+\end{align*}
+
+\begin{itemize}
+	\item Lösung dieser Poissongleichung wird, wenn nötig, nach jedem Schritt konvexifiziert
+	\begin{itemize}
+		\item die konvexe Lösung der Monge-Amp\`ere-Gleichung wird gesucht
+		\item Glättung $\leadsto$ bessere Approximation der zweiten Ableitung
+	\end{itemize}
+	\item Startwert $u^0$ für numerische Experimente: exakte Lösung oder eine konvexifizierte Version der Startlösung mit einem additiven künstlichen Fehler (der Fehler ist 0 auf $\partial \Omega$)
+\end{itemize}
+
+\section*{Konvexifizierung}
+
+Wir führen B\'ezierpolynomen als Ansatzfunktionen ein und haben für deren Konvexität folgende Ansätze ausprobiert
+\begin{enumerate}
+	\item Konvexifizierung des B\'eziekontrollnetzes via eines Konvexe-Hülle-Algorithmus
+	\item Konvexifizierung via eines quadratischen Programms mit linearen Nebenbedingungen (Idee von Schumaker, Speleers \cite{SS2014})
+	        \begin{enumerate}
+	        	\item Lösen des quadratischen Programms mit IPOPT
+	        	\item Lösen des quadratischen Programms mit einer heuristischen iterativen Methode
+	        \end{enumerate}
+\end{enumerate}
+
+\subsection*{Das quadratische Programm}
+
+	Gesucht: konvexe $l^2$-Approximation unserer Poisson-Lösung, Test an B\'eziekontrollpunkten
+	
+	\begin{itemize}
+		\item Nutzung von B\'ezierpolynomen
+		\begin{itemize}
+			\item hinreichende lineare Bedingungen an B\'ezierkoeffizienten für Konvexität innerhalb einer Zelle
+			\item weitere hinreichende Bedingungen für Konvexität von $C^0$-Splines über Zellgrenzen hinweg (nach \cite{SS2014}), im Falle quadratischer Splines sogar notwendig (\cite{SS2014},  Korollar 3.10)
+		\end{itemize}
+	\end{itemize}
+	
+	Resultierendes quadratischen Programm: Wir suchen die B\'ezierkoeffizienten $x$, die
+	\[
+		\left\Vert  Ax - b \right\Vert_2 \text{, so dass } Cx \geq 0  
+	\]
+	
+	\begin{tabular}{cl}
+		$A$ & Matrix, die die Poisson-Lösung an den B\'ezierkontrollpunkten auswertet \\
+		$b$ & die Funktionswerte an den B\'ezierkontrollpunkten \\
+		$C$ & die Konvexitätsbedingungen
+	\end{tabular}
+	
+	\subsubsection*{Iterativer Ansatz (Idee KH Brakhage)}
+	Motivation: $z:=Cx$ wird ``geschätzt''
+	
+	Algorithmus für eine Startschätzung $x^0$ (z.B. Lösung der Poissongleichung)
+	\begin{algorithmic}
+		\State $i \gets 1$
+		\State $res^{-1} \gets -2tol$
+		\State $res^{0} \gets \left\Vert Ax^0-b \right\Vert_2$
+						
+		\While {$|res^{i-2} - res^{i-1}| > tol$}
+		\State Compute $z^i := (z_k^i)$ by $z_k \gets \max(0, (Cx^{i-1})_k)$ 
+		\State $x^i \gets \argmin_x
+		\left\Vert
+		\begin{pmatrix} 
+		A\\ 
+		C
+		\end{pmatrix}
+		x - 
+		\begin{pmatrix} 
+		b \\ 
+		z 
+		\end{pmatrix} 
+		\right\Vert_2
+		$
+		\State $res^i \gets \left\Vert Ax^i-b \right\Vert_2$
+		\State $i\gets i+1$
+		\EndWhile
+	\end{algorithmic}
+
+	
+	erste Verbesserung: Durch $C$ gegebene Nebenbedingungen, die in vielen Iteration verletzt werden, mit einem Faktor $\gg 1$ gewichten. 
+	\\
+	Der iterative Ansatz kann zur Berechnung neuer (zulässiger) Startwerte für IPOPT genutzt werden.
+	
+
+\vspace{1cm}
+
+\begin{tabularx}{1\textwidth}{%
+p{3cm}| %%eine feste 3cm breite spalte
+X %noch eine X spalte; alle zusammen genau textbreit
+}
+\textbf{Algorithmus} & \textbf{Nachteile}\\
+\hline %aus booktabs
+Konvexe-Hülle-Algorithmus & Konvexe Hülle hat andere Konnektivität als die Kontrollfläche\\
+\hline %aus booktabs
+quadr. Programm mit IPOPT &  braucht Startwert, oft ist die Lösung des Poissonproblems als Startwert ungeeignet\\
+\hline
+quadr. Programm mit LS-Iteration &  braucht viele Iterationen, konvergiert oft nicht, nicht optimal\\
+\end{tabularx}
+
+\section*{Numerische Ergebnisse}
+
+\subsection*{Oszillationen}
+
+Unser Verfahren oszilliert stark (auch mit Konvexifizierung)
+\begin{itemize}
+	\item Aufspaltung in zwei Teilfolgen (mit gerade/ungeraden Indices)
+	\item Poissongleichung korrigieriert zu weit?
+\end{itemize}
+ $\leadsto$ Dämpfung durch Konvexkombination aus momentaner und bisheriger Lösung.
+Mögliche Gründe:
+\begin{itemize}
+	\item Wir nähern (durch die Poissongleichung) eine Lösung an, die gar nicht regulär genug ist
+	\item Die analytische Lösung der Iteration muss nicht im jeden Schritt konvex sein, allerdings behauptet Awanou ``The key to numerically handle non smooth solutions	of (1.1)[Verallgemeinerung der Monge-Amp\`ere-Gleichung] is to preserve convexity in the iterations'' \cite{Awanou2014}
+	\item Konvexifizierung findet konvexe Funktion ``in der falschen Richtung'' (Poissonschritt und Konvexifizierung heben sich auf)
+\end{itemize}
+
+\subsection*{Inkonsistenz}
+\begin{itemize}
+	\item Schon kleine Fehler lassen Verfahren divergieren; durch Konvexifizierung bei kleineren Fehlern Konvergenz in einfachen Testbeispielen, aber $L^2$-Fehler stagniert
+\end{itemize}
+
+Zum Vergleich: Awanou zeigt Konvergenz für eine ähnliche Iterationsvorschrift für $u^0$ hinreichend nah an der exakten Lösung \cite{Awanou2014}:
+\begin{align*}
+	\nabla \cdot \left( \cof(D^2 u^0) \nabla u^{m+1} \right) &= \nabla \cdot \left( \cof(D^2 u^0) \nabla u^{m} \right) + f - \operatorname{det} (D^2u^m) \textnormal{ in } \Omega, \\
+	u^{m+1} &= g \textnormal{ on } \partial \Omega. 
+\end{align*}
+\\
+Numerischen Experimente: Für $u^0=u_{exact}$  Konvergenz gegen $u_{exact}$. Ersetzen der Terme $\cof(D^2 u^0)$ mit $\cof(D^2 u^m)$ führt zur Divergenz, auch für $u^0=u_{exact}$ (Test ohne Konvexifizierung).
+
+\section*{Andere implementierte Ansätze}
+
+\subsection*{Ansatz Benamou, Froese und Obermann}
+Motivation: Einsetzen von  
+\[
+	(\triangle u)^2= u_{xx}^2 + 2 u_{xx}u_{yy} + u_{yy}^2 \\
+\]
+in die Monge-Amp\`ere-Gleichung	ergibt
+\[
+	2f = 2\det(D^2u) = (\triangle u)^2  - u_{xx}^2  - u_{yy}^2  - u_{xy}^2  
+\]
+
+Iteratives Verfahren von Benamou, Froese und Obermann \cite{BFO2010}:
+\begin{align*}
+	\triangle u^{m+1} &= \sqrt{(\triangle{u^{m} })^2 +2 (f - \operatorname{det} (D^2u^m)) }\textnormal{ in } \Omega \\
+	u^{m+1} &= g \textnormal{ on } \partial \Omega 
+\end{align*}
+\begin{itemize}
+	\item Numerische Experimente belegen gute Konvergenz und Robustheit für Probleme mit Lösungen in $H^2(\Omega)$
+	\item bisher keine Konvergenzanalyse
+	\item es gibt Arbeiten zur Erweiterung auf radiale Basiselemente \cite{LH2013}
+\end{itemize}
+
+\subsection*{Ansatz Brenner, Thirupathi, Neilan}
+Brenner et al. schlägt in ihrem Paper \cite{BGN+2011} folgendes nichtlineares Gleichungssystem für $C^0$ Lagrange-Finite-Elemente vor:
+\begin{align*}
+	&\int_\Omega \left(  f- \det(D^2_h u_h)   \right) v dx
+	                     + \sum\limits_{e \in \bigEps_h^i} \int_e \llbracket \{\{\cof(D^2_h u_h) \nabla u_h\}\}  \rrbracket v ds \\
+	                     &- \sum\limits_{e \in \bigEps_h^b} \int_e \llbracket \cof(D^2_h u_h) \nabla v \rrbracket (u_h - g) ds 
+	                     + \sigma \sum\limits_{e \in \bigEps_h^b} h_e^{-1} \int_e (u_h - g) v ds = 0 \; \forall v \in V_h
+\end{align*}
+
+\begin{itemize}
+	\item nichtlineares Gleichungssystem wird mit Newton-Verfahren gelöst
+	\begin{itemize}
+		\item Startwert durch Lösen der vanishing moments-Methode
+	\end{itemize}
+	\item Numerische Ergebnisse zeigen, dass das Verfahren für Lösungen in $H^2$ in $L^2$-Norm mit Ordnung $k+1$ und in $H^1$-Norm mit $k$ konvergiert
+	\item  Divergenz für nicht so reguläre, schwächere viscocity solutions (\cite{FGN2013})
+\end{itemize}
+
+\subsection*{Ansatz Neilan}
+Neilan schlägt eine Diskretisierung der Hessematrix vor, die die Eigenschaften der exakten Hessematrix in der partiellen Integration erhält: (Remark 3.1 in \cite{Neilan2014})
+
+\begin{align*}
+	&\int_\Omega \left(  f- \det(D^2_{DH} u_h)   \right) v dx
+	                     + \sigma \sum\limits_{e \in \bigEps_h^i} h_e^{-1} \int_e \llbracket u_h \rrbracket \cdot \llbracket v \rrbracket  ds
+	                     + \sigma \sum\limits_{e \in \bigEps_h^b} h_e^{-1} \int_e (u_h - g) v ds = 0 \; \forall v \in V_h, \\   
+	  &\text{ so dass  } D^2_{DH} u_h \\
+	  &\int_{\Omega} D^2_{DH} u_h : \mu dx = \int_\Omega D^2_h u_h : \mu dx 
+	                        -  \sum\limits_{e \in \bigEps_h^b} \int_e \llbracket  \{\{\mu\}\} u_h \rrbracket ds \; \forall \mu \in \Sigma_h
+\end{align*}
+erfüllt. ``:'' bezeichnet das Frobenius-Skalarprodukt $A:B := \sum_{i,j} a_{ij} b_{ij}$
+
+\begin{itemize}
+	\item nichtlineares Gleichungssystem wird mit gedämpften Newton-Verfahren gelöst, Startwert durch nested-iteration-Ansatz; $u_0 \frac 12 (x_1^2 + x_2^2 )$ auf Startlevel
+	\item Ansatzräume: (stetige und unstetige) Lagrange-Finite-Elemente-Räume
+	\item Beweis der Konvergenz für Polynomgrade $k \geq 3$ 
+	\item Für kleinere Polynomgrade zeigen numerische Experimente allerdings auch Konvergenz,
+	im Fall unstetiger Ansatzfunktionen und $k=1$ musste das Verfahren allerdings modifiziert werden zu (\cite{Neilan2014}, 5.1a). 
+
+\begin{align*}
+	&\int_\Omega \left(  f- \det(D^2_{DH} u_h)   \right) v dx
+	                     + \sigma \sum\limits_{e \in \bigEps_h^i} h_e^{-1} \int_e \llbracket \nabla u_h \rrbracket \cdot \llbracket \nabla v \rrbracket  ds
+	                     + \sigma \sum\limits_{e \in \bigEps_h^b} h_e^{-1} \int_e (u_h - g) v ds = 0 \; \forall v \in V_h, \\   
+	  &\text{so dass  } D^2_{DH} u_h \\
+	 & \int_{\Omega} D^2_{DH} u_h : \mu dx = \int_\Omega D^2_h u_h : \mu dx 
+	                        -  \sum\limits_{e \in \bigEps_h^b} \int_e \llbracket  \{\{\mu\}\} \nabla u_h \rrbracket ds \; \forall \mu \in \Sigma_h 
+\end{align*}
+erfüllt.
+
+	\item Numerische Ergebnisse ähnlich Brenner et al., Konvergenz in $H^2$ Norm mit Ordnung $k+1$,  in $L^2$ Norm mit $H^1$-Norm mit Ordnung $k$.
+	\item ein Beispiel, dessen Lösung nicht in $H^2$ liegt : Konvergenz allerdings deutlich langsamer., für  $k=1$ in der $L^2$-Norm Ordnung $ \approx 1.75$ 
+\end{itemize}
+
+
+\bibliographystyle{plain}
+\bibliography{$HOME/literatur/literatur.bib}
+
+
+\end{document}
