@@ -31,8 +31,8 @@ public:
 
    grid_type grid;
    unsigned int number_of_dofs;
-   std::vector<double> facLevelVolume;
-   std::vector<double> facLevelLength;
+   std::vector<value_type> facLevelVolume;
+   std::vector<value_type> facLevelLength;
 
    NeighbOrient_type            tableNeighbOrient;
    CoarseNeighbGaussbase_type   tableCoarseNeighbGaussbase;
@@ -271,7 +271,7 @@ public:
 		 Eigen::SelfAdjointEigenSolver<Hessian_type> EW_solver;
          double max_EW;
          double min_EW;
-         static const double epsilon = 1e-6; //minimum value of hessian eigenvalues
+         constexpr static double epsilon = 1e-6; //minimum value of hessian eigenvalues
 
          value_type sum_residuum, sum_residuum_old;
          int residuum_equal_since;
