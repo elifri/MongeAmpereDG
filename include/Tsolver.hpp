@@ -340,7 +340,6 @@ private:
    										unsigned int &iqLC, unsigned int &iqNC,
    										Hessian_type &hess, int jump_sign);
 
-   void assemble_face_infos(leafcell_type* pLC, const basecell_type* pBC, Hessian_type &hess);
    void assemble_face_term_pryer_parameters(const Fquad::inner_face_term_function_parameters &bPar, Hessian_type & hess);
    void assemble_face_term_pryer(leafcell_type* pLC, const basecell_type* pBC,
    										leafcell_type* pNC, const basecell_type* pNBC,

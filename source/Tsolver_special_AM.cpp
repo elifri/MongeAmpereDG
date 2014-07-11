@@ -326,77 +326,6 @@ void Tsolver::assemble_boundary_face_term_pryer(leafcell_type* pLC, const basece
 }
 
 
-void Tsolver::assemble_face_infos(leafcell_type* pLC, const basecell_type* pBC, Hessian_type &hess)
-{
-	Fidvector_type vF; // neighbor ids
-	leafcell_type *pNC = NULL; // neighbor cell
-	grid_type::facehandlevector_type vFh, vOh;
-
-	// get pointer to basecell of this cell
-	const grid_type::basecell_type * pNBC;
-
-	unsigned int gaussbaseLC = 0, gaussbaseNC = 0;
-
-	int jump_sign = 1;
-	value_type volumeBC = facLevelVolume[pLC->id().level()] * pBC->get_volume(); //calculate length
-
-	// neighbor face number and orientation
-	grid.faceIds(pLC->id(), vF, vFh, vOh);
-	for (unsigned int f = 0; f < pLC->id().countFaces(); f++) { // loop over faces
-		bool assembleInnerFace = false;
-
-		if (vF[f].isValid()) {
-
-			//search for neighbour at face i
-			if (grid.findLeafCell(vF[f], pNC)) {
-				if (pNC->id().flag(0)) { //neighbour cell has already been processed -> use opposite normal
-					jump_sign = -1;
-					cout << "processed this edge before " << endl;
-				}
-				gaussbaseLC = Fquadgaussdim * f;
-				gaussbaseNC = Fquadgaussdim * vFh[f];
-
-			} else { //hanging vertices
-				assert(false && "adaptive not implement yet!");
-//				vF[f].getParentId(iddad); // search dad of vF[f]
-				gaussbaseLC = Fquadgaussdim * f;
-				gaussbaseNC = Fquadgaussdim * vFh[f];
-			}
-			assembleInnerFace = true;
-		}
-		else{
-			cout << "boundary face" << endl;
-		}
-
-			grid.findBaseCellOf(pNC->id(), pNBC);
-
-			for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over gauss nodes
-
-				unsigned int iqLC = gaussbaseLC + iq; //index of next gauss node to be processed
-				unsigned int iqNC =
-						vOh[f] == 1 ?
-								gaussbaseNC + Fquadgaussdim - 1 - iq :
-								gaussbaseNC + iq; //index of next gauss node in neighbour cell to be processed
-
-				value_type length = facLevelLength[pLC->id().level()]
-						* pBC->get_length(f); //calculate actual face length
-
-				if (assembleInnerFace) {
-//				assemble_face_term_neilan(pLC, pBC, pNC, pNBC, volumeBC, length, iqLC, iqNC, hess, jump_sign);
-					assemble_face_term_pryer(pLC, pBC, pNC, pNBC, volumeBC,
-							length, iqLC, iqNC, hess, jump_sign);
-				} else {
-					assemble_boundary_face_term_pryer(pLC, pBC,
-							volumeBC, length, iqLC, iqNC, hess);
-				}
-			}
-
-		cout << "current hess " << hess << endl;
-	}
-
-	pLC->id().setFlag(0, true);
-
-}
 
 void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC, Hessian_type & hess){
 	shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
@@ -408,9 +337,6 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 	cout<< "Hess before neilan " << hess << endl;
 
 	//correction term inspired by neilan
-	hess.setZero();
-	assemble_face_infos(pLC, pBC, hess);
-	cout<< "Hess after neilan old " << hess << endl;
 	hess.setZero();
 
 	Fquad::inner_face_term_function_type<Hessian_type> f_inner = MEMBER_FUNCTION(&Tsolver::assemble_face_term_pryer_parameters, this);
