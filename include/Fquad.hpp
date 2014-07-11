@@ -16,6 +16,56 @@
 
 class Fquad {
 public:
+
+	//structs to use more than one parameter in function pointer
+	struct boundary_face_term_function_parameters
+	{
+		boundary_face_term_function_parameters(leafcell_type* pLC, const basecell_type* pBC,
+										const value_type volume, const value_type length,
+										unsigned int &iqLC, unsigned int &iqNC): volume(volume), length(length),
+												iqLC(iqLC), iqNC(iqNC)
+		{
+			this->pLC = pLC;
+			this->pBC = pBC;
+		}
+		leafcell_type* pLC;
+		const basecell_type* pBC;
+		const value_type volume;
+		const value_type length;
+		const unsigned int iqLC;
+		const unsigned int iqNC;
+	};
+
+	struct inner_face_term_function_parameters
+	{
+		inner_face_term_function_parameters(leafcell_type* pLC, const basecell_type* pBC,
+				leafcell_type* pNC, const basecell_type* pBNC,
+				const value_type volume, const value_type length,
+				unsigned int &iqLC, unsigned int &iqNC, int jump_sign): volume(volume), length(length),
+						iqLC(iqLC), iqNC(), jump_sign(jump_sign)
+		{
+			this->pLC = pLC;
+			this->pNC = pNC;
+			this->pBC = pBC;
+			this->pBNC = pBNC;
+		}
+
+		leafcell_type* pLC, *pNC;
+		const basecell_type* pBC, *pBNC;
+		const value_type volume;
+		const value_type length;
+		unsigned int iqLC;
+		unsigned int iqNC;
+		int jump_sign;
+	};
+
+	template <typename RETURN_TYPE>
+	using boundary_face_term_function_type = util::Function <void (const boundary_face_term_function_parameters&, RETURN_TYPE &val)>;
+
+	template <typename RETURN_TYPE>
+	using inner_face_term_function_type = util::Function <void (const inner_face_term_function_parameters&, RETURN_TYPE &val)>;
+
+
 	void initialize()
 	{
 		// Gaussian quadrature rule on the interval [0,1]
@@ -550,6 +600,89 @@ public:
 
 		return res;
 	}
+
+
+	template <typename RETURN_TYPE>
+	void assemble_face_infos(inner_face_term_function_type<RETURN_TYPE> assemble_inner_face_term,
+							 boundary_face_term_function_type<RETURN_TYPE> assemble_boundary_face_term,
+							 grid_type &grid,
+							 std::vector<value_type> facLevelVolume, std::vector<value_type> facLevelLength,
+							 leafcell_type* pLC, const basecell_type* pBC, RETURN_TYPE &val, bool process_edges_twice=false)
+	{
+		Fidvector_type vF; // neighbor ids
+		leafcell_type *pNC = NULL; // neighbor cell
+		grid_type::facehandlevector_type vFh, vOh;
+
+		// get pointer to basecell of this cell
+		const grid_type::basecell_type * pNBC;
+
+		unsigned int gaussbaseLC = 0, gaussbaseNC = 0;
+
+		int jump_sign = 1;
+		value_type volumeBC = facLevelVolume[pLC->id().level()] * pBC->get_volume(); //calculate length
+
+		// neighbor face number and orientation
+		grid.faceIds(pLC->id(), vF, vFh, vOh);
+		for (unsigned int f = 0; f < pLC->id().countFaces(); f++) { // loop over faces
+			bool assembleInnerFace = false;
+
+			if (vF[f].isValid()) {
+
+				//search for neighbour at face i
+				if (grid.findLeafCell(vF[f], pNC)) {
+					if (pNC->id().flag(0)) { //neighbour cell has already been processed -> use opposite normal
+						if (process_edges_twice)
+							jump_sign = -1;
+						else
+							continue;
+						cout << "processed this edge before " << endl;
+					}
+					gaussbaseLC = Fquadgaussdim * f;
+					gaussbaseNC = Fquadgaussdim * vFh[f];
+
+				} else { //hanging vertices
+					assert(false && "adaptive not implement yet!");
+	//				vF[f].getParentId(iddad); // search dad of vF[f]
+					gaussbaseLC = Fquadgaussdim * f;
+					gaussbaseNC = Fquadgaussdim * vFh[f];
+				}
+				assembleInnerFace = true;
+			}
+			else{
+				cout << "boundary face" << endl;
+			}
+
+				grid.findBaseCellOf(pNC->id(), pNBC);
+
+				for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over gauss nodes
+
+					unsigned int iqLC = gaussbaseLC + iq; //index of next gauss node to be processed
+					unsigned int iqNC =
+							vOh[f] == 1 ?
+									gaussbaseNC + Fquadgaussdim - 1 - iq :
+									gaussbaseNC + iq; //index of next gauss node in neighbour cell to be processed
+
+					value_type length = facLevelLength[pLC->id().level()]
+							* pBC->get_length(f); //calculate actual face length
+
+					if (assembleInnerFace) {
+							assemble_inner_face_term(
+									inner_face_term_function_parameters(
+											pLC, pBC, pNC, pNBC, volumeBC, length, iqLC, iqNC, jump_sign), val);
+					} else {
+						assemble_boundary_face_term(
+								boundary_face_term_function_parameters(
+								pLC, pBC, volumeBC, length, iqLC, iqNC), val);
+					}
+				}
+		}
+
+		pLC->id().setFlag(0, true);
+
+	}
+
+
+
 public:
 	//quadrature data for faces
 	Fquadraturepoint_type Fquadx;   // quadrature points in baryc. coord.
