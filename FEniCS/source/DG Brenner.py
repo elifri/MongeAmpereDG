@@ -6,6 +6,7 @@ import scipy.io
 import numpy as np
 from MA_iterated import MA_iteration
 from convexify import convexify
+import math
 
 # Create mesh and define function space
 n = 20
@@ -24,9 +25,19 @@ u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
 #u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
 #u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
 
+class Error(Expression):
+  def eval(self, v, x):
+    s = (x[0]-1./2)**2+(x[1]-1./2)**2
+    if s < 1./10:
+      v[0] = math.exp(-1./(1-100*s**2))
+    else:
+      v[0]=0
+
+
 #error = Expression('1/2*x[0]*x[0]+1/2*x[1]*x[1]')#add noisy data
 #error = Expression('0.1*pow(x[0],2)+0.01*pow(x[1],2)')#add noisy data
-error = Expression('0.01*sin(3*x[0]*x[1]+pi)')#add noisy data
+#error = Expression('0.01*sin(3*x[0]*x[1]+pi)')#add noisy data
+error = Error()
 
 print "u0 ", u0
 
@@ -97,8 +108,10 @@ plot(project(abs(f-test_convex2), bigV), title = 'rhs - determinant of convexifi
 #u_.assign(u_convex)
 
 
-#u_ = u_e + interpolate(error, V)
-u_.assign(u_e+interpolate(error, V))
+#choose between "identity" and disturbed exact solution
+u_.assign(u_e-0.01*interpolate(error, V))
+#u_.assign(u_e)
+
 #u_ = interpolate(Expression('2*x[0]*x[0]+2*x[1]*x[1]+x[0]*x[1]'),V)
 
 #====================================
@@ -145,7 +158,7 @@ prm = solver.parameters
 
 prm['newton_solver']['absolute_tolerance'] = 1E-8
 prm['newton_solver']['relative_tolerance'] = 1E-10
-prm['newton_solver']['maximum_iterations'] = 200
+prm['newton_solver']['maximum_iterations'] = 30
 prm['newton_solver']['relaxation_parameter'] = 1.0
 prm['newton_solver']['report'] = True
 #prm['linear_solver'] = 'gmres'
