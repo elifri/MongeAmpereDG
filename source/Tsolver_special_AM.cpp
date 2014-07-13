@@ -336,6 +336,12 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 
 	cout<< "Hess before neilan " << hess << endl;
 
+	pBC->assemble_fe_hessian(pLC->u, hess); //FE hessian on basecell
+	hess /= facLevelVolume[pLC->id().level()];///facLevelVolume[pLC->id().level()]; //transform to leafcell
+	cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
+
+	cout << "fe hess by aguilera " << hess << endl;
+
 	//correction term inspired by neilan
 	hess.setZero();
 
@@ -347,8 +353,10 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 												  pLC, pBC, hess, true);
 	cout<< "Hess after neilan new " << hess << endl;
 	value_type mid_value = (hess(0,1)+hess(1,0))/2.;
-	hess(0,1) = mid_value;
 	hess(1,0) = mid_value;
+	hess(0,1) = mid_value;
+
+	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
 
 
 }

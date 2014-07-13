@@ -46,6 +46,7 @@ private:
 	Fnormalderivative_type normalderi; //normalderivative of every shape function at every face
 	Ejacobian_type jac; //jacobian of the trafo from refcell
 	Emass_type laplace; //the laplace matrix belonging to a(u,v) = grad u * grad v
+	Eigen::Matrix<Hessian_type, shapedim, 1> fe_hessians;
 
 	diffusionmatrix_type diffusion_a;
 
@@ -182,36 +183,58 @@ private:
 		Eigen::Vector2d phi_i = J_inv_t * grad0;
 		Eigen::Vector2d phi_j = J_inv_t * grad1;
 
-		return phi_i.dot(phi_j);
+		return -phi_i.dot(phi_j);
 	}
 
+	void initialize_finite_element_hessians(const Equad &equad,
+			const Equadratureshape_grad_type &Equads_grad) {
+
+		Eigen::MatrixXd J_inv_t(2, 2);
+		J_inv_t << jac(1, 1), -jac(1, 0), -jac(0, 1), jac(0, 0);
+		J_inv_t /= detjacabs;
+
+		for (int i_shape = 0; i_shape < shapedim; i_shape++)	fe_hessians(i_shape).setZero();
+
+		for (int iq=0; iq < Equadraturedim; iq++) {
+
+		for (unsigned int r_shape = 0; r_shape<shapedim; r_shape++) {
+			for (unsigned int s_shape = 0; s_shape <=r_shape; s_shape++) {
+				Eigen::Vector2d grad_r = J_inv_t * Equads_grad(r_shape,iq);
+				Eigen::Vector2d grad_s = J_inv_t * Equads_grad(s_shape,iq);
+
+				for (int i = 0; i < spacedim; i++)
+					for (int j = 0; j < spacedim; j++)
+						fe_hessians(r_shape)(i,j) += -grad_r(i)*grad_s(j) *(equad.Equadw(iq) * detjacabs);
+				}
+			}
+		}
+
+		//fill up (hessian is symmetric)
+		for (int i_shape = 0; i_shape < shapedim; i_shape++)
+			for (unsigned int i = 0; i < statedim; i++) {
+				for (unsigned int j = 0; j < i; j++) {
+					fe_hessians(i_shape)(j, i) = fe_hessians(i_shape)(i, j);
+			}
+		}
+
+	}
+
+public:
+	void assemble_fe_hessian(const Estate_type & u, Hessian_type & hess) const
+	{
+		hess.setZero();
+		for (int i_shape = 0; i_shape < shapedim; i_shape++)
+		{
+			hess += u(i_shape)*fe_hessians(i_shape);
+		}
+	}
+
+private:
 	void assemble_laplace(const Equad &equad,
 			const Equadratureshape_grad_type &Equads_grad) {
 		laplace.setZero();
-
-#if (EQUATION == POISSON_EQ)
-		//write laplace matrix: first top half
-		for (unsigned int i=0; i<shapedim; i++) {
-			for (unsigned int j=0; j<=i; j++) {
-				Equadrature_type func;
-				for (int iq=0; iq < Equadraturedim; iq++) {
-					func(iq) = bilin_laplace (Equads_x(i,iq), Equads_y(i,iq),
-							Equads_x(j,iq), Equads_y(j,iq));
-				}
-				laplace(i,j) = equad.integrate(func, detjacabs);
-			}
-		}
-#else
-//		cerr << "there is no use in calculation a laplace matrix in the basecell ???" << endl; abort();
-#endif
-
-		// Laplace-matrix is symmetric:
-		for (unsigned int i = 0; i < shapedim; i++)
-			for (unsigned int j = 0; j < i; j++)
-				laplace(j, i) = laplace(i, j);
 	}
-
-	/*!
+/*!
 	 * calculates normalderitaves at the faces quadrature points
 	 */
 	void assemble_normalderi(const Fquadratureshape_type &Fquads_x,
@@ -313,6 +336,8 @@ public:
 		assert(detjacabs == 2 * volume);
 
 		assemble_laplace(Equad, Equads_grad); //TODO redundant if MONGE amper ...
+
+		initialize_finite_element_hessians(Equad, Equads_grad);
 
 		assemble_normalderi(Fquads_x, Fquads_y);
 
