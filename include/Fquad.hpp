@@ -42,7 +42,7 @@ public:
 				leafcell_type* pNC, const basecell_type* pBNC,
 				const value_type volume, const value_type length,
 				unsigned int &iqLC, unsigned int &iqNC, int jump_sign): volume(volume), length(length),
-						iqLC(iqLC), iqNC(), jump_sign(jump_sign)
+						iqLC(iqLC), iqNC(iqNC), jump_sign(jump_sign)
 		{
 			this->pLC = pLC;
 			this->pNC = pNC;
