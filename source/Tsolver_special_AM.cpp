@@ -273,32 +273,43 @@ void Tsolver::assemble_face_term_pryer(leafcell_type* pLC, const basecell_type* 
 		for (unsigned int j = 0; j < spacedim; ++j) {
 //			value_type val1 = 0, val2 = 0;
 
+			Hessian_type A;
+			A.setZero();
+			A(i,j) = 1;
+
+			space_type grad_BC(0,0), grad_BNC(0,0);
 
 			//loop over shapes
 			for (unsigned int i_shape = 0; i_shape < shapedim; i_shape++)
 			{
 				for (unsigned int i_state = 0; i_state < statedim; i_state++)
 				{
-					Hessian_type A;
-					A.setZero();
-					A(i,j) = 1;
+					grad_BC = pBC->get_grad(i_shape, iqLC);
+					grad_BNC = pBNC->get_grad(i_shape, iqLC);
 
-					value_type val = 0;
-
-					//jump in test function
-					val += jump_sign * 0.5 // to average
-								* shape.get_Fquadw(iqLC) * length//quadrature weights
-								*(pLC->u(i_shape,0)*pBC->A_grad_times_normal(A,i_shape, iqLC)-pNC->u(i_shape,0)* pBNC->A_grad_times_normal(A, i_shape, iqNC))/ facLevelLength[pLC->id().level()]; //gradient times normal (average)
-
-					//jump in ansatz function
-					val += jump_sign * 0.5 // to average
-								* shape.get_Fquadw(iqLC) * length//quadrature weights
-								*(pLC->u(i_shape,0)*pBC->A_grad_times_normal(A,i_shape, iqLC)+pNC->u(i_shape,0)* pBNC->A_grad_times_normal(A, i_shape, iqNC))/ facLevelLength[pLC->id().level()]; //gradient times normal (jump)
-
-					hess(i,j) += val/volume;
 				}
 			}
 //			cout << "val1 " << val1 << " val2 " << val2 << endl;
+			value_type val = 0;
+
+			//average and transform to leaf cell
+			space_type numerical_trace = (grad_BC+grad_BNC);
+			numerical_trace /= 2./ facLevelLength[pLC->id().level()];
+
+			//jump in test function
+			val +=  jump_sign * 0.5 // to average
+						* shape.get_Fquadw(iqLC) * length//quadrature weights
+						*(A*numerical_trace).dot(pBC->get_normal_by_fquadpoint(iqLC));//gradient times normal (average)
+
+			//jump in ansatz function
+/*
+			val +=  jump_sign* 0.5 // to average
+						* shape.get_Fquadw(iqLC) * length//quadrature weights
+						*(pLC->u(i_shape,0)*pBC->A_grad_times_normal(A,i_shape, iqLC)+pNC->u(i_shape,0)* pBNC->A_grad_times_normal(A, i_shape, iqNC))/ facLevelLength[pLC->id().level()]; //gradient times normal (jump)
+*/
+
+
+			hess(i,j) += val/volume;
 
 		}
 	}
@@ -309,31 +320,33 @@ void Tsolver::assemble_face_term_pryer(leafcell_type* pLC, const basecell_type* 
 
 void Tsolver::assemble_boundary_face_term_pryer_parameters(const Fquad::boundary_face_term_function_parameters &bPar, Hessian_type & hess)
 {
-	assemble_boundary_face_term_pryer(bPar.pLC, bPar.pBC, bPar.volume, bPar.length, bPar.iqLC, bPar.iqNC, hess);
+	assemble_boundary_face_term_pryer(bPar.pLC, bPar.pBC, bPar.volume, bPar.length, bPar.iqLC, hess);
 }
 
 void Tsolver::assemble_boundary_face_term_pryer(leafcell_type* pLC, const basecell_type* pBC,
 										const value_type volume, const value_type length,
-										const unsigned int &iqLC, const unsigned int &iqNC,
+										const unsigned int &iqLC,
 										Hessian_type &hess)
 {
 	// loop over Hessian entries
 	for (unsigned int i = 0; i < spacedim; ++i) {
 		for (unsigned int j = 0; j < spacedim; ++j) {
+
+			Hessian_type A;
+			A.setZero();
+			A(i,j) = 1;
+
 			//loop over shapes
 			for (unsigned int i_shape = 0; i_shape < shapedim; i_shape++)
 			{
 				for (unsigned int i_state = 0; i_state < statedim; i_state++)
 				{
-					Hessian_type A;
-					A.setZero();
-					A(i,j) = 1;
 
 					value_type val = 0;
 
-					//jump in test function
 					val += shape.get_Fquadw(iqLC) * length//quadrature weights
 								*pLC->u(i_shape,0)*pBC->A_grad_times_normal(A,i_shape, iqLC)/ facLevelLength[pLC->id().level()]; //gradient times normal
+
 
 					hess(i,j) += val/volume;
 				}
@@ -346,31 +359,32 @@ void Tsolver::assemble_boundary_face_term_pryer(leafcell_type* pLC, const basece
 
 
 void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC, Hessian_type & hess){
+
 	shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
 	pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
 	hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
 	cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
+
+	value_type ev0, ev1;
+	calculate_eigenvalues(hess, ev0, ev1);
+	if (ev0 < epsilon)
+	{
+		cout << "Smallest eigenvalue near zero correcting to " << std::abs(ev0) + epsilon << endl;
+		hess(0,0) += std::abs(ev0) + epsilon;
+		hess(1,1) += std::abs(ev0) + epsilon;
+	}
+
 	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
 
-	cout<< "Hess before neilan " << hess << endl;
-
-	pBC->assemble_fe_hessian(pLC->u, hess); //FE hessian on basecell
-	hess /= facLevelVolume[pLC->id().level()];///facLevelVolume[pLC->id().level()]; //transform to leafcell
-	cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
-
-	cout << "fe hess by aguilera " << hess << endl;
-
-	//correction term inspired by neilan
-	hess.setZero();
-
-//	Fquad::inner_face_term_function_type<Hessian_type> f_inner = MEMBER_FUNCTION(&Tsolver::assemble_face_term_pryer_parameters, this);
-//	Fquad::boundary_face_term_function_type<Hessian_type> f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_pryer_parameters, this);
-
-	Fquad::inner_face_term_function_type<Hessian_type> f_inner = MEMBER_FUNCTION(&Tsolver::assemble_face_term_pryer_parameters, this);
-	Fquad::boundary_face_term_function_type<Hessian_type> f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_pryer_parameters, this);
 
 
-	cout << "A was " << pLC->A << endl;
+
+	//----------correction term--------------------
+
+/*
+	Fquad::inner_face_term_function_type<Hessian_type> f_inner = MEMBER_FUNCTION(&Tsolver::assemble_inner_face_term_neilan_parameters, this);
+	Fquad::boundary_face_term_function_type<Hessian_type> f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_neilan_parameters, this);
+
 	shape.fquad.assemble_face_infos<Hessian_type>(f_inner, f_boundary,
 												  grid, facLevelVolume, facLevelLength,
 												  pLC, pBC, hess, true);
@@ -381,6 +395,17 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 
 	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
 
+	hess.setZero();
+
+	f_inner = MEMBER_FUNCTION(&Tsolver::assemble_face_term_pryer_parameters, this);
+	f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_pryer_parameters, this);
+	shape.fquad.assemble_face_infos<Hessian_type>(f_inner, f_boundary,
+												  grid, facLevelVolume, facLevelLength,
+												  pLC, pBC, hess, true);
+
+
+	//correction term inspired by neilan
+*/
 
 }
 
