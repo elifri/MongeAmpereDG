@@ -675,6 +675,7 @@ public:
 								pLC, pBC, volumeBC, length, iqLC, iqNC), val);
 					}
 				}
+				cout << "hessian after one face " << val << endl;
 		}
 
 		pLC->id().setFlag(0, true);
