@@ -245,7 +245,9 @@ public:
 
    bool strongBoundaryCond;
 
-   bool start_solution;
+   enum start_solution_type { EXACT, ARTIFICIAL_ERROR, SQRT_F};
+
+   start_solution_type start_solution;
 
    ///////////////////////////////////////////////////////
    //////////                                  ///////////
@@ -356,7 +358,7 @@ private:
    void assemble_boundary_face_term_pryer_parameters(const Fquad::boundary_face_term_function_parameters &bPar, Hessian_type & hess);
    void assemble_boundary_face_term_pryer(leafcell_type* pLC, const basecell_type* pBC,
    										const value_type volume, const value_type length,
-   										const unsigned int &iqLC, const unsigned int &iqNC,
+   										const unsigned int &iqLC,
    										Hessian_type &hess);
 
 public:

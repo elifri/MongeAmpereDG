@@ -198,37 +198,52 @@ void Tsolver::assemble_face_term_neilan(leafcell_type* pLC, const basecell_type*
 										Hessian_type &hess, int jump_sign)
 {
 
+//	cout << "LC: " << pLC->id() << " and neighbour NC: "<< pNC->id() << endl;
+
 	// loop over Hessian entries
 	for (unsigned int i = 0; i < spacedim; ++i) {
-		for (unsigned int j = 0; j < spacedim; ++j) {
+		for (unsigned int j = 0; j <= i; ++j) {
 			value_type val1 = 0, val2 = 0;
 
+			Hessian_type A;
+			A.setZero();
+			A(i,j) = 1;
+			if (i != j )
+				A(j,i) = 1;
 
 			//loop over shapes
 			for (unsigned int i_shape = 0; i_shape < shapedim; i_shape++)
 			{
 				for (unsigned int i_state = 0; i_state < statedim; i_state++)
 				{
-					Hessian_type A;
-					A.setZero();
-					A(i,j) = 1;
 
 					value_type val = 0;
 
-					val = -jump_sign * 0.5 // to average
+					val = - 0.5 // to average
 								* shape.get_Fquadw(iqLC) * length//quadrature weights
-								*pLC->u(i_shape,0)*pBC->A_grad_times_normal(A,i_shape, iqLC)/ facLevelLength[pLC->id().level()]; //gradient times normal
-
-					hess(i,j) += val/volume;
+								*pBC->A_grad_times_normal(A,i_shape, iqLC)/ facLevelLength[pLC->id().level()]; //gradient times normal
 					val1 += val;
 
+//					cout << "val from lhs (ansatz no ." << i_shape<< "): " << val << endl;
+
+
+					hess(i,j) += pLC->u(i_shape,0)*val/volume;
+					if (i != j)
+						hess(j,i)+= pLC->u(i_shape,0)*val/volume;
+
+
 					//does not contribute to
-					val = -jump_sign * 0.5 // to average
+					val = - 0.5 // to average
 								* shape.get_Fquadw(iqLC) * length//quadrature weights
-								*pNC->u(i_shape,0)* pBNC->A_grad_times_normal(A, i_shape, iqNC)/ facLevelLength[pLC->id().level()]; //gradient times normal
+								* pBNC->A_grad_times_normal(A, i_shape, iqNC)/ facLevelLength[pLC->id().level()]; //gradient times normal
+
+//					cout << "val from rhs (ansatz no ." << i_shape<< "): " << val << endl;
 
 					val2 += val;
-					hess(i,j) += val/volume;
+					hess(i,j) += pNC->u(i_shape,0)*val/volume;
+					if (i != j)
+						hess(j,i)+= pNC->u(i_shape,0)*val/volume;
+
 				}
 			}
 //			cout << "val1 " << val1 << " val2 " << val2 << endl;
@@ -238,37 +253,7 @@ void Tsolver::assemble_face_term_neilan(leafcell_type* pLC, const basecell_type*
 }
 
 void Tsolver::assemble_boundary_face_term_neilan_parameters(const Fquad::boundary_face_term_function_parameters &bPar, Hessian_type & hess)
-{
-	assemble_boundary_face_term_neilan(bPar.pLC, bPar.pBC, bPar.volume, bPar.length, bPar.iqLC, bPar.iqNC, hess);
-}
-void Tsolver::assemble_boundary_face_term_neilan(leafcell_type* pLC, const basecell_type* pBC,
-										const value_type volume, const value_type length,
-										const unsigned int &iqLC, const unsigned int &iqNC,
-										Hessian_type &hess)
-{
-	// loop over Hessian entries
-	for (unsigned int i = 0; i < spacedim; ++i) {
-		for (unsigned int j = 0; j < spacedim; ++j) {
-			//loop over shapes
-			for (unsigned int i_shape = 0; i_shape < shapedim; i_shape++)
-			{
-				for (unsigned int i_state = 0; i_state < statedim; i_state++)
-				{
-					Hessian_type A;
-					A.setZero();
-					A(i,j) = 1;
-
-					value_type val = 0;
-
-					val += shape.get_Fquadw(iqLC) * length//quadrature weights
-								*pLC->u(i_shape,0)*pBC->A_grad_times_normal(A,i_shape, iqLC)/ facLevelLength[pLC->id().level()]; //gradient times normal
-
-					hess(i,j) += val/volume;
-				}
-			}
-		}
-	}
-}
+{}
 
 void Tsolver::assemble_face_term_pryer_parameters(const Fquad::inner_face_term_function_parameters &bPar, Hessian_type & hess)
 {
