@@ -46,7 +46,7 @@ private:
 	Fnormalderivative_type normalderi; //normalderivative of every shape function at every face
 	Ejacobian_type jac; //jacobian of the trafo from refcell
 	Emass_type laplace; //the laplace matrix belonging to a(u,v) = grad u * grad v
-	Eigen::Matrix<Hessian_type, shapedim, 1> fe_hessians;
+	Eigen::Matrix<Hessian_type, shapedim, shapedim> fe_hessians;
 
 	diffusionmatrix_type diffusion_a;
 
@@ -115,6 +115,18 @@ public:
 	 */
 	const space_type& get_normal(const int i) const {
 		return normal(i);
+	}
+
+	const space_type& get_normal_by_fquadpoint(int iq) const
+	{
+		// calculate face number
+		unsigned int in = 0;
+		if (iq < Fdim * Fquadgaussdim)
+			in = iq / Fquadgaussdim;
+		else
+			in = (iq - Fdim * Fquadgaussdim)
+					/ (Fchilddim * Fquadgaussdim);
+		return normal(in);
 	}
 
 	void set_normal(const int f, const value_type diff_x,
@@ -204,16 +216,15 @@ private:
 
 				for (int i = 0; i < spacedim; i++)
 					for (int j = 0; j < spacedim; j++)
-						fe_hessians(r_shape)(i,j) += -grad_r(i)*grad_s(j) *(equad.Equadw(iq) * detjacabs);
+						fe_hessians(r_shape,s_shape)(i,j) += -grad_r(i)*grad_s(j) *(equad.Equadw(iq) * detjacabs);
 				}
 			}
 		}
 
 		//fill up (hessian is symmetric)
-		for (int i_shape = 0; i_shape < shapedim; i_shape++)
-			for (unsigned int i = 0; i < statedim; i++) {
-				for (unsigned int j = 0; j < i; j++) {
-					fe_hessians(i_shape)(j, i) = fe_hessians(i_shape)(i, j);
+		for (unsigned int r_shape = 0; r_shape<shapedim; r_shape++) {
+			for (unsigned int s_shape = 0; s_shape < r_shape; s_shape++) {
+					fe_hessians(s_shape, r_shape) = fe_hessians(r_shape,s_shape);
 			}
 		}
 
@@ -409,6 +420,15 @@ public:
 		// normal derivative
 		return (A*grad(i)(iq)).dot(normal(in));
 	}
+
+	space_type get_grad(const unsigned int i, const int iq) const
+	{
+		assert ( i >= 0 && i < shapedim && "There is not any shape function with that number");
+		assert ( iq >=	 0 && iq < Fquadraturedim && "There is not any face quadrature point with that number");
+
+		return grad(i)(iq);
+	}
+
 
 	/*! calculates the hessmatrix on this basecell given a Hessian of the referencell
 	 *
