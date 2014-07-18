@@ -22,8 +22,8 @@ public:
 	{
 		boundary_face_term_function_parameters(leafcell_type* pLC, const basecell_type* pBC,
 										const value_type volume, const value_type length,
-										unsigned int &iqLC, unsigned int &iqNC): volume(volume), length(length),
-												iqLC(iqLC), iqNC(iqNC)
+										unsigned int &iqLC): volume(volume), length(length),
+												iqLC(iqLC)
 		{
 			this->pLC = pLC;
 			this->pBC = pBC;
@@ -33,7 +33,6 @@ public:
 		const value_type volume;
 		const value_type length;
 		const unsigned int iqLC;
-		const unsigned int iqNC;
 	};
 
 	struct inner_face_term_function_parameters
@@ -652,30 +651,31 @@ public:
 				cout << "boundary face" << endl;
 			}
 
-				grid.findBaseCellOf(pNC->id(), pNBC);
+			for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over gauss nodes
 
-				for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over gauss nodes
+				unsigned int iqLC = gaussbaseLC + iq; //index of next gauss node to be processed
 
-					unsigned int iqLC = gaussbaseLC + iq; //index of next gauss node to be processed
-					unsigned int iqNC =
-							vOh[f] == 1 ?
-									gaussbaseNC + Fquadgaussdim - 1 - iq :
-									gaussbaseNC + iq; //index of next gauss node in neighbour cell to be processed
+				value_type length = facLevelLength[pLC->id().level()]*pBC->get_length(f); //calculate actual face length
 
-					value_type length = facLevelLength[pLC->id().level()]
-							* pBC->get_length(f); //calculate actual face length
+				if (assembleInnerFace) {
+					grid.findBaseCellOf(pNC->id(), pNBC);
+					unsigned int iqNC =	vOh[f] == 1 ?
+										gaussbaseNC + Fquadgaussdim - 1 - iq :
+										gaussbaseNC + iq; //index of next gauss node in neighbour cell to be processed
 
-					if (assembleInnerFace) {
-							assemble_inner_face_term(
-									inner_face_term_function_parameters(
-											pLC, pBC, pNC, pNBC, volumeBC, length, iqLC, iqNC, jump_sign), val);
-					} else {
-						assemble_boundary_face_term(
-								boundary_face_term_function_parameters(
-								pLC, pBC, volumeBC, length, iqLC, iqNC), val);
-					}
+
+					assemble_inner_face_term(
+								inner_face_term_function_parameters(
+									pLC, pBC, pNC, pNBC, volumeBC, length, iqLC, iqNC, jump_sign), val);
 				}
+				else {
+					assemble_boundary_face_term(
+								boundary_face_term_function_parameters(
+									pLC, pBC, volumeBC, length, iqLC), val);
+				}
+			}
 				cout << "hessian after one face " << val << endl;
+
 		}
 
 		pLC->id().setFlag(0, true);
