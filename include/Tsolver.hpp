@@ -134,6 +134,7 @@ public:
 
    void write_solution();
    void write_solution_vector(Eigen::VectorXd & solution); ///extract solution from leafcells to vector
+   void write_extended_solution_vector(Eigen::VectorXd & solution);
    state_type calculate_L2_error(const vector_function_type f); /// calculate l2 error of function in leafcell - f
    state_type calculate_L2_norm(const vector_function_type f); /// calculate l2 norm o function f
 
@@ -259,6 +260,42 @@ public:
 
    #if (EQUATION==MONGE_AMPERE_EQ)
 
+   	   struct Functor{
+	   	   void evaluate(const Eigen::VectorXd &coeff, Eigen::VectorXd& f)
+	   	   {
+	   		   f = linear_part*coeff + constant_part;
+	   		   for (int i= 0; i < number_of_dofs; i++)
+	   		   {
+	   			   int offset_hess = i/6;
+
+	   			   f(i) -= integrals_test_functions(i)*
+	   					     (coeff(number_of_dofs+ offset_hess)*coeff(number_of_dofs+ offset_hess+3)
+	   					    		 -coeff(number_of_dofs+ offset_hess+1)*coeff(number_of_dofs+ offset_hess+2));
+	   		   }
+	   	   }
+
+	   	   void derivative(const Eigen::VectorXd &x, Eigen::SparseMatrixD &J)
+	   	   {
+	   		   J = linear_part;
+	   		   for (int i= 0; i < number_of_dofs; i++)
+	   		   {
+	   			   int offset_hess = i/6;
+
+	   			   J.coeffRef(i, offset_hess) += integrals_test_functions(i)*x(number_of_dofs+offset_hess+3);
+	   			   J.coeffRef(i, offset_hess+1) += -integrals_test_functions(i)*x(number_of_dofs+offset_hess+1);
+	   			   J.coeffRef(i, offset_hess+2) += -integrals_test_functions(i)*x(number_of_dofs+offset_hess+2);
+	   			   J.coeffRef(i, offset_hess+3) += integrals_test_functions(i)*x(number_of_dofs+offset_hess);
+	   		   }
+
+	   	   }
+
+	   	   Eigen::SparseMatrixD linear_part;
+	   	   Eigen::VectorXd integrals_test_functions, constant_part;
+	   	   Eigen::VectorXd boundary_coefficients;
+
+	   	   int number_of_dofs;
+   	   };
+
    	   	 Monge_Ampere_Problem problem;
 
          double atol,rtol; // absolute and relative tolerances
@@ -333,6 +370,7 @@ public:
 private:
    void assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM); ///writes the stiffness matrix part of LC
    void assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs); ///writes rhs part from LC
+   void assemble_rhs_MA_Newton(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs);
 
    void calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1); /// calculates eigenvalues of a 2x2 matrix
 
@@ -376,6 +414,11 @@ public:
     * @param Lbd		if strongBoundaryCond is enabled here will be the boundary dofs assembled
     */
    void assemble_MA(const int & STABSIGN, double PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs, Eigen::VectorXd &Lbd);
+   /*
+    * @brief assembles the function for the nonlinear GS for the in the iteration arising poisson problem
+    */
+   void assemble_MA_Newton(const int & stabsign, double penalty, Functor &f);
+
    /*
       * @brief stores solution (in leaf cells) and generates analysis data
       *
