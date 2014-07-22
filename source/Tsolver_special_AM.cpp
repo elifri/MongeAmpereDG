@@ -18,6 +18,8 @@
 
 #include "../include/Callback_utility.hpp"
 
+#include "Dogleg/doglegMethod.hpp"
+
 #include "test/test_utils.hpp"
 #include <iostream>
 
@@ -542,6 +544,25 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
 	}
 }
 
+void Tsolver::assemble_rhs_MA_Newton(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs) {
+	for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
+
+		state_type uLC;
+
+		get_Ecoordinates(idLC, iq, x);
+		get_rhs_MA(x, uLC);
+
+		for (unsigned int istate = 0; istate < statedim; ++istate) {
+			for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+				int row = pLC->n_offset + ishape;
+				double val = shape.get_Equadw(iq) * pBC->get_detjacabs()
+					* facLevelVolume[idLC.level()] * uLC(istate)
+					* shape.get_Equads(ishape, iq);
+					Lrhs(row) += -val; //solve -u=-2f instead of det u = f
+				}
+			}
+		}
+	}
 
 /* @brief initializes the stiffness matrix and lhs for the AM problem
  *
@@ -1263,6 +1284,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 					default:
 						cerr << "Unknown boundary type!" << endl;
+						assert(false);
 						exit(1);
 						break;
 
@@ -1278,6 +1300,275 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 	setleafcellflags(0, false); //reset flags
 }
+
+
+void Tsolver::assemble_MA_Newton(const int & stabsign, double penalty, Functor &f) {
+
+	f.constant_part.setZero();
+	f.linear_part.setZero();
+	f.integrals_test_functions.setZero();
+
+	unsigned int gaussbaseLC = 0;
+	unsigned int gaussbaseNC = 0;
+	unsigned int levelNC = 0;
+	unsigned int iqLC, iqNC, orderLC, orderNC, orientNC;
+	id_type iddad;
+
+	space_type x, normal;
+	double length;
+
+	leafcell_type *pLC = NULL; // leaf cell
+
+	Fidvector_type vF; // neighbor ids
+	leafcell_type *pNC = NULL; // neighbor cell
+
+	// loop over all levels from fine to coarse
+	for (unsigned int level = grid.leafCells().countLinks() - 1; level >= 1; --level) {
+
+		// if there is no cell at this level, take next level
+		if (0 == grid.leafCells().size(level))
+			continue;
+
+		// loop over all cells in this level
+		for (grid_type::leafcellmap_type::const_iterator it =
+			grid.leafCells().begin(level);
+				it != grid.leafCells().end(level); ++it) {
+
+
+			// get id and pointer to this cell
+			const grid_type::id_type & idLC = grid_type::id(it);
+			grid.findLeafCell(idLC, pLC);
+
+			// get pointer to basecell of this cell
+			const grid_type::basecell_type * pBC;
+			grid.findBaseCellOf(idLC, pBC);
+			const grid_type::basecell_type * pNBC;
+
+			value_type volume = facLevelVolume[idLC.level()];
+
+			for (int i_shape = 0; i_shape < shapedim; i_shape++)
+				f.integrals_test_functions(pLC->m_offset + i_shape) = shape.get_Equad().integrate(shape.get_Equads().row(i_shape), pBC->get_detjacabs());
+
+
+			//D_DH u:mu
+			int row_LC_Hessian = number_of_dofs + pLC->m_offset/6*4 -1;
+			for (int i = 0; i < spacedim*spacedim; i++)
+			{
+				row_LC_Hessian++;
+				f.linear_part.coeffRef(row_LC_Hessian, row_LC_Hessian) = 1;
+			}
+
+
+			// D^2 u:mu
+			for (unsigned int jshape = 0; jshape < shapedim; ++jshape) { //loop over ansatz functions
+				const int col_LC = pLC->n_offset + jshape;
+				row_LC_Hessian = number_of_dofs + pLC->m_offset/6*4 -1;
+
+				Hessian_type hess;
+				shape.assemble_hessmatrix(VectorXd::Unit(shapedim, jshape), 0, hess);
+				pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
+				hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+
+				for (int i = 0; i < spacedim; i++)
+				{
+					for (int j = 0; j < spacedim; j++)
+					{
+						row_LC_Hessian++;
+						f.linear_part.coeffRef(row_LC_Hessian, col_LC) -= hess(i,j);
+					}
+				}
+			}
+
+
+			// Copy entries for right hand side into right hand side
+			assemble_rhs_MA_Newton(pLC, idLC, pBC, x, f.constant_part);
+
+			// bilinear form b (average of normal derivative u * jump phi)
+			grid_type::facehandlevector_type vFh, vOh; // neighbor face number and orientation
+			grid.faceIds(idLC, vF, vFh, vOh);
+			for (unsigned int i = 0; i < idLC.countFaces(); i++) { // loop over faces
+				if (vF[i].isValid()) {
+
+					bool assembleInnerFace = false;
+
+					 //search for neighbour at face i
+					if (grid.findLeafCell(vF[i], pNC)) {
+						if (!pNC->id().flag(0)) { //neighbour cell has not been processed
+							gaussbaseLC = Fquadgaussdim * i;
+							orderLC = idLC.getSubId(idLC.path(), idLC.level());
+							orderNC = vF[i].getSubId(vF[i].path(),
+									vF[i].level());
+							gaussbaseNC = Fquadgaussdim * vFh[i];
+							levelNC = level;
+							grid.findBaseCellOf(vF[i], pNBC);
+							assembleInnerFace = true;
+						}
+					} else { //hanging vertices
+						vF[i].getParentId(iddad); // search dad of vF[i]
+						if (grid.findLeafCell(iddad, pNC)) {
+							gaussbaseLC = Fquadgaussdim * i;
+							orderLC = idLC.getSubId(idLC.path(), idLC.level());
+							orderNC = vF[i].getSubId(vF[i].path(),
+									vF[i].level());
+							orientNC = tableNeighbOrient[orderLC][i][orderNC];
+							gaussbaseNC = Fquadgaussdim * vFh[i];
+							levelNC = level - 1;
+							grid.findBaseCellOf(iddad, pNBC);
+							assembleInnerFace = true;
+						}
+					}
+
+					if (assembleInnerFace) {
+
+						length = facLevelLength[level] * pBC->get_length(i); //calculate actual face length
+						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over gauss nodes
+
+							iqLC = gaussbaseLC + iq; //index of next gauss node to be processed
+							iqNC = vOh[i] == 1? gaussbaseNC + Fquadgaussdim - 1 - iq : gaussbaseNC + iq; //index of next gauss node in neighbour cell to be processed
+
+
+							// Copy entries into Laplace-matrix
+							for (unsigned int ishape = 0; ishape < shapedim; ++ishape) { //loop over test function
+								for (unsigned int jshape = 0; jshape < shapedim; ++jshape) { //loop over ansatz functions
+									const int row_LC = pLC->m_offset + ishape;
+									const int row_NC = pNC->m_offset + ishape;
+									const int col_LC = pLC->n_offset + jshape;
+									const int col_NC = pNC->n_offset + jshape;
+
+
+									//first equation: jumps in gradients
+									f.linear_part.coeffRef(row_LC, col_LC) += penalty * -0.5 // to average
+											* shape.get_Fquadw(iqLC) * length//quadrature weights
+											* pBC->get_normalderi(ishape, iqLC)/ facLevelLength[level] //jump in test
+											* pBC->get_normalderi(jshape, iqLC)/ facLevelLength[level]; //jump in ansatz
+
+									f.linear_part.coeffRef(row_LC, col_NC) += penalty * -0.5 * shape.get_Fquadw(iqLC) * length * pBC->get_normalderi(ishape, iqLC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[levelNC];
+
+									f.linear_part.coeffRef(row_NC, col_LC) += penalty * -0.5 * shape.get_Fquadw(iqLC) * length * pNBC->get_normalderi(ishape, iqNC)* pBC->get_normalderi(jshape, iqLC) / facLevelLength[level];
+
+									f.linear_part.coeffRef(row_NC, col_NC) += penalty * -0.5	* shape.get_Fquadw(iqLC) * length * pNBC->get_normalderi(ishape, iqNC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[levelNC];
+
+									// first equation: jumps in functions
+									if (penalty != 0.0) {
+										f.linear_part.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
+
+										f.linear_part.coeffRef(row_LC, col_NC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqLC);
+
+										f.linear_part.coeffRef(row_NC, col_LC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqNC);
+
+										f.linear_part.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
+
+									}
+								}
+
+							}
+
+							// loop over Hessian entries
+							for (unsigned int jshape = 0; jshape < shapedim; ++jshape) { //loop over ansatz functions
+								const int col_LC = pLC->n_offset + jshape;
+								const int col_NC = pNC->n_offset + jshape;
+
+								int row_LC_Hessian = number_of_dofs + pLC->m_offset/6*4 -1;
+								int row_NC_Hessian = number_of_dofs + pNC->m_offset/6*4 -1;
+
+								/*for (unsigned int i = 0; i < spacedim; ++i) {
+									for (unsigned int j = 0; j < spacedim; ++j) {
+										row_LC_Hessian++;
+										row_NC_Hessian++;
+
+										Hessian_type A;
+										A.setZero();
+										A(i, j) = 1;
+
+										//second equation: jump in gradient, average in test function
+										value_type val = 0.5 // to average
+											* shape.get_Fquadw(iqLC) * length //quadrature weights
+											* pBC->A_grad_times_normal(A, jshape,iqLC)	/ facLevelLength[pLC->id().level()]; //gradient times normal
+										val *= pLC->u(jshape, 0)/volume;
+										f.linear_part.coeffRef(row_LC_Hessian,  col_LC) += val;
+										f.linear_part.coeffRef(row_NC_Hessian,  col_LC) += val;
+
+										//second equation: jump in gradient, average in test function
+										val = 0.5 // to average
+											* shape.get_Fquadw(iqLC) * length //quadrature weights
+											* pBC->A_grad_times_normal(A, jshape,iqLC)	/ facLevelLength[pLC->id().level()]; //gradient times normal
+										val *= pLC->u(jshape, 0)/volume;
+										f.linear_part.coeffRef(row_LC_Hessian,  col_NC) += val;
+										f.linear_part.coeffRef(row_NC_Hessian,  col_NC) += val;
+									}
+								}*/
+
+							}
+
+						}
+
+						assembleInnerFace = false;
+					}
+
+				} else { // we are at the boundary, turnover cannot occur !!!
+
+					switch (pBC->faceHandles()[i]) {
+					case -2: // Dirichlet boundary
+						gaussbaseLC = Fquadgaussdim * i; //number of first gauss node of this face
+						length = facLevelLength[level] * pBC->get_length(i); //actual facelength of this leafcell
+						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over face quadrature points
+							iqLC = gaussbaseLC + iq;
+
+							get_Fcoordinates(idLC, iqLC, x); // determine x
+
+							state_type uLC;
+							get_exacttemperature_MA(x, uLC); // determine uLC (value at boundary point x
+
+							// Copy entries for Dirichlet boundary conditions into right hand side
+							for (unsigned int ishape = 0; ishape < shapedim;
+									++ishape) {
+								double val = stabsign * shape.get_Fquadw(iqLC)
+										* length * uLC(0)
+										* pBC->A_grad_times_normal(pLC->A,
+												ishape, iqLC)
+										/ facLevelLength[level];
+
+								if (penalty != 0.0) {
+									val += penalty * shape.get_Fquadw(iqLC)
+											* uLC(0)
+											* shape.get_Fquads(ishape, iqLC);
+								}
+
+								f.constant_part(pLC->n_offset + ishape) -= val;
+
+								if (!strongBoundaryCond)
+								{
+									for (int jshape; jshape < shapedim; jshape++)
+									{
+										if (penalty != 0.0) {
+											val = penalty * shape.get_Fquadw(iqLC)
+													* shape.get_Fquads(ishape, iqLC)
+													* shape.get_Fquads(jshape, iqLC);
+											f.linear_part.coeffRef(pLC->n_offset + ishape, pLC->n_offset + jshape) += val;
+										}
+									}
+								}
+							}
+
+						}
+						break;
+
+					default:
+						cerr << "Unknown boundary type!" << endl; assert(false);
+						exit(1);
+						break;
+
+					}
+				}
+
+				pLC->id().setFlag(0, true);
+			}
+		}
+	}
+
+	setleafcellflags(0, false); //reset flags
+}
+
 
 void Tsolver::get_exacttemperaturenormalderivative_MA(const space_type & x,
 		const space_type & normal, state_type & u_n) // state_type ???
@@ -1517,51 +1808,64 @@ void Tsolver::time_stepping_MA() {
 		}
 
 //==============assemble system============================
-		cout << "Assemble linear System..." << flush << endl;
+
+		Functor f;
+
+		int F_size = LM_size + LM_size/6*4;
+
+		cout << "Assemble System..." << flush << endl;
 		pt.start();
-		if (!strongBoundaryCond)
-		{
-			assemble_MA(stabsign, gamma, LM, Lrhs, Lsolution_only_bd);
-		}
-		else
-		{
-			assemble_MA(stabsign, gamma, LM_bd, Lrhs_bd, Lsolution_only_bd);
-		}
+		f.linear_part.resize(F_size, F_size);
+		f.constant_part.resize(F_size);
+		f.integrals_test_functions.resize(LM_size);
+		f.number_of_dofs = number_of_dofs;
+		f.boundary_coefficients = bd_handler.get_nodal_contributions();
+
+		assemble_MA_Newton(stabsign, gamma, f);
+
+		MATLAB_export(f.linear_part, "linear_part");
+		MATLAB_export(f.constant_part, "constant_part");
 
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
-		//if strong b.c. delete boundary dofs
-		if (strongBoundaryCond)
-		{
-			cout << "Delete Boundary DOFS ..." << endl;
-			pt.start();
-			Lrhs_bd -= LM_bd*Lsolution_only_bd;
-			bd_handler.delete_boundary_dofs(LM_bd, LM);
-			bd_handler.delete_boundary_dofs(Lrhs_bd, Lrhs);
-			pt.stop();
-			cout << "done. " << pt << " s." << endl;
-		}
-
-
 		//==============solve system============================
 		pt.start();
-//		Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
-		Eigen::SparseQR<Eigen::SparseMatrixD, Eigen::COLAMDOrdering<int> > solver;
-		LM.makeCompressed();
-		solver.compute(LM);
-		if (solver.info() != Eigen::Success) {
-			std::cerr << "Decomposition of stiffness matrix failed" << endl;
-			std::exit(-1);
-		}
-		Lsolution = solver.solve(Lrhs);
-		if (solver.info() != Eigen::Success) {
-			std::cerr << "Solving of FEM system failed" << endl;
-		}
 
-//		if ((LM*Lsolution-Lrhs).norm() )
-		//(nachiteration)
-		Lsolution += solver.solve(Lrhs-LM*Lsolution);
+		DogLeg_optionstype op;
+
+		op.iradius = 3;
+		op.maxsteps = 3000;
+		op.silentmode = false;
+		op.stopcriteria[0] = 10*epsilon;
+		op.stopcriteria[0] = 10*epsilon;
+		op.stopcriteria[0] = 10*epsilon;
+
+
+		VectorXd extended_solution;
+
+		//extract solution from last iteration
+		Eigen::VectorXd solution_old;
+
+
+		assert(start_solution != SQRT_F);
+
+		write_extended_solution_vector(extended_solution);
+		MATLAB_export(extended_solution, "extended_solution");
+
+		solution_old = extended_solution.segment(0,LM_size);
+
+		Eigen::VectorXd f_value;
+		f.evaluate(extended_solution, f_value);
+		cout << "f value " << f_value << endl;
+
+
+
+		doglegMethod(f, op, extended_solution);
+
+		Lsolution = extended_solution.segment(0,LM_size);
+
+		cout << "extended solution " << extended_solution.transpose() << endl;
 
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
@@ -1569,7 +1873,7 @@ void Tsolver::time_stepping_MA() {
 		//if strong b.c. add boundary dofs
 		if (strongBoundaryCond)
 		{
-			bd_handler.add_boundary_dofs(Lsolution, Lsolution_only_bd, Lsolution_bd);
+			bd_handler.add_boundary_dofs(Lsolution, f.boundary_coefficients, Lsolution_bd);
 			Lsolution = Lsolution_bd;
 		}
 
@@ -1579,16 +1883,6 @@ void Tsolver::time_stepping_MA() {
 
 		assemble_indicator_and_limiting(); // use flag
 
-		//extract solution from last iteration
-		Eigen::VectorXd solution_old;
-		if (start_solution == SQRT_F)
-		{
-			solution_old = Lsolution;
-		}
-		else
-		{
-			write_solution_vector(solution_old);
-		}
 
 		//write poisson solution in leaf cells
 		restore_MA(Lsolution);
