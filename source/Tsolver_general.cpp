@@ -1051,6 +1051,34 @@ void Tsolver::write_solution_vector(VectorXd & solution)
 	}
 }
 
+void Tsolver::write_extended_solution_vector(VectorXd & solution)
+{
+	int ndofs_extended = number_of_dofs+number_of_dofs/6*4;
+	solution.resize(ndofs_extended);
+	for (grid_type::leafcellmap_type::const_iterator it =
+			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
+
+		const grid_type::id_type & idLC = grid_type::id(it);
+		leafcell_type* pLC;
+
+		// grid_type::leafcell_type *pLC;
+		grid.findLeafCell(idLC, pLC);
+
+		// Copy solution entries from leaf cell
+		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+			solution(pLC->n_offset + ishape) = pLC->u(ishape,0);
+		}
+
+		solution(number_of_dofs + pLC->n_offset/6*4) = pLC->A(1,1);
+		solution(number_of_dofs + pLC->n_offset/6*4+1) = -pLC->A(0,1);
+		solution(number_of_dofs + pLC->n_offset/6*4+2) = -pLC->A(1,0);
+		solution(number_of_dofs + pLC->n_offset/6*4+3) = pLC->A(0,0);
+
+
+	}
+}
+
+
 state_type Tsolver::calculate_L2_error(const vector_function_type f)
 {
 	state_type res;
