@@ -1,0 +1,78 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{template}
+
+\LoadClass[a4paper,bibliography=totoc,BCOR=5mm]{scrbook}
+
+%% auxiliary packages
+\usepackage[ngerman]{babel}
+\usepackage{bold-extra}
+\usepackage{cite}
+%\usepackage{amsthm}
+%\usepackage{lscape}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+%\usepackage{ngerman}
+\usepackage{framed}
+\usepackage[framed,thmmarks]{ntheorem}
+\usepackage{amsmath}
+\usepackage{amssymb}
+%\usepackage{a4wide}
+\usepackage{relsize}
+\usepackage{tikz}
+\usepackage{todonotes}
+\usepackage{multirow}
+\usepackage{bigdelim}
+\usepackage{multicol}
+\usepackage{comment}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{colortbl}
+\usepackage{ltxtable}
+\usepackage{float}
+
+%% page layout
+\setlength{\parindent}{0pt}
+% let latex do its best...
+\setlength{\parskip}{1ex plus 0.25ex minus 0.25ex}
+\setlength{\footskip}{20pt}
+
+%\addtolength{\textheight}{0.75in}
+
+% but please dont do this...
+\widowpenalty=2000
+\clubpenalty=2000
+% -----
+
+%% tikz settings
+
+\definecolor{rwthblue}{HTML}{0066CC}
+
+% drawing hypergraphs
+\tikzstyle{node} = [draw, circle]
+\tikzstyle{edge} = [draw, rectangle]
+% -----
+
+
+%% theorems
+\theoremstyle{break}
+\theorembodyfont{\rmfamily}
+\newcounter{thmc}[section] %theorem counter
+\renewcommand{\thethmc}{\thechapter.\arabic{thmc}}
+
+
+\newtheorem{satz}[thmc]{Satz}
+\newtheorem{beispiel}[thmc]{Beispiel}
+\newtheorem{lemma}[thmc]{Lemma}
+\newtheorem{definition}[thmc]{Definition}
+\newtheorem{behauptung}[thmc]{Behauptung}
+\newtheorem{korollar}[thmc]{Korollar}
+
+\theoremstyle{nonumberplain}
+\theoremstyle{nonumberbreak}
+\theoremsymbol{\ensuremath{\square}}
+
+\newtheorem{beweis}{Beweis}
+
+% -----

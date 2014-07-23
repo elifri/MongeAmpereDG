@@ -1,0 +1,58 @@
+\section{The \MA Equation}
+
+The \MA Equation with Dirichlet boundary data states
+\begin{align}
+	 \mydet{D^2 u} &= f \textnormal{ in } \Omega \label{MA eq}\\
+	 u & = g \textnormal{ on } \partial \Omega,
+\end{align}
+where $D^2 u$ denotes the Hessian of $u$.
+It is a general fully nonlinear partial differential equation meaning it is nonlinear in the highest order derivatives, namely the second derivatives.
+
+Note, different from the well-known linear case we cannot derive a weak formulation based on weak derivatives/integration by parts. Because of the nonlinearity in the highest derivatives we are not able to shift derivatives to test functions. Until now there is n  variational/weak formulation for fully nonlinear PDEs as the \MA equation \cite{FGN2013}.
+However, there are attempts to establish less regular weak solutions to the \MA equation:
+
+\subsection{Viscosity Solution}
+First Crandall and Lions \cite{58} introduced the notion of \emph{viscosity solutions}
+
+\begin{definition}
+	$u \in C^0(\Omega)$ is called a \emph{viscosity subsolution (supersolution)} of \eqref{MA eq} if, for every point $x \in \Omega$ and function $\varphi \in C^2(\Omega)$ satisfying $u \leq \varphi (\geq \varphi)$ in $\Omega$ and $u(x) = \varphi(x)$, there holds $\mydet{D^2 \varphi(x)} - f \leq 0 (\geq 0)$. 
+	\[
+	\forall x_0 \in \Omega \forall \varphi \in C^2(\Omega), u \leq \varphi (\geq \varphi)
+	\] holds
+	\[
+	u(x_0) = \varphi(x_0) : F[\varphi](x_0) \leq 0 (\geq 0)
+	\]
+	$u$ is called a \emph{viscosity solution} if $u$ is simultaneously a viscosity sub- and supersolution.
+\end{definition}
+
+Hier kommt dann eine anschauliche Erklärung zur geometrischen Bedeutung.
+
+\subsection{Aleksandrov solution}[2.1.1. \cite{Feng2013}]
+The \MA problem can be reformulated as a mass problem leading to a different kind of solution concept
+
+Problem: Find $u$ such that for a given $\mu$
+\[
+M_u(E):=\mathcal{L}(\partial u(E))=\mathcal{L}(\{p \in \mathbb{R}^2 : u(x) \geq u(x_0)+p\cdot(x-x_0) x \text{ in } \Omega \}) = \mu(E)
+\]
+
+
+\section{Existence and Uniqueness}
+Showing existence of fully nonlinear PDEs is a hard challenge when compared to the linear case. For simplicity we constraint ourselves to the elliptic case. 
+
+
+The \MA equation is known for its 
+
+Brenner\cite{Brenner2012} : $\Omega$ smooth $\Rightarrow u$ smooth \cite{Caffarelli1984} und aus $\Omega$ smooth auch $\Rightarrow$ es exisitieren genau 2 lösungen: eine convex, die andere konkav \cite{Courant1989}
+
+A viscosity solution is unique if $F$ is elliptic by the comparison principle.
+
+
+\section{Types of Numerical Methods for the \MA Equation}
+Since equations of \MA type arise in many areas such as optics, transportation etc. there has been an active research on how to solve. Except for some simple special cases there is no analytical solution known resulting in a widely varied numerical set of numerical methods.
+
+They can roughly be divided in four categories: Finite difference schemes, methods based on variational principles and approximating infinite-dimensional spaces by finite-dimensional spaces, methods based on finite basis expansions and approximating PDEs at sampling points and the rest.
+because of their simplicity methods of the first category are widely used in "application areas". We concentrate ourselves in this work to methods of the second area to which beside DG methods methods such as finite element methods, least squares methods and boundary element methods belong.
+The third category consists of collocation methods and meshless methods.
+In the last category one can mainly find methods as the lattice Boltzmann method, these are often designed for special applications.
+
+A lot of the methods result in hard to handle nonlinear system. The most favoured method to solve this sytem is Newton's method, however, it requires an appropriate initiation point. Finding those are often as tricky as the problem itself.

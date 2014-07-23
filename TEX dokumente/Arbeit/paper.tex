@@ -1,0 +1,89 @@
+\documentclass{template}
+
+\usepackage{makros}
+
+% metadata
+\titlehead{\includegraphics[height=1.4cm]{rwth.pdf} \hspace{1cm}
+%\includegraphics[height=1.4cm]{l2m-banner.jpg}
+}
+
+\subject{Master Thesis}
+\title{Discontinuous Galerkin Methods for the \MA Equation}
+\subtitle{\Large Discontinuous Galerking Verfahren zur Lösung der Monge-Amp\`ere-Gleichung}
+\author{Elisa Friebel} %\\ Matrikelnummer: 295932
+\date{\today}
+\publishers{Gutachter: Prof. W. Dahmen\\ Prof. S. Noelle}
+
+% begin document
+\begin{document}
+
+
+\pagenumbering{Alph}
+% title page
+\maketitle
+%\cleardoublepage
+
+% erklärung
+\begin{center}
+\begin{minipage}[t]{0.8\textwidth}
+
+Sollte das englisch werden?
+\chapter*{Erklärung}
+Ich versichere hiermit, dass ich die vorliegende Arbeit selbständig und
+ohne Benutzung anderer als der angegebenen Hilfsmittel angefertigt habe.
+Alle Stellen, die wörtlich oder sinngemäß aus veröffentlichten und nicht
+veröffentlichten Schriften entnommen sind, sind als solche kenntlich
+gemacht.
+
+\vspace{1cm}
+Aachen, den \today
+
+\vspace{2cm}
+(Elisa Friebel)
+\end{minipage}
+\end{center}
+\thispagestyle{empty}
+\cleardoublepage
+
+% toc
+\pagenumbering{roman}
+\tableofcontents{}
+
+%\cleardoublepage
+\setcounter{page}{1}
+\pagenumbering{arabic}
+
+% content
+
+% warum wollen wir etwas tun?was wollen wir tun? welche kapitel gibt es?
+\chapter{Motivation}
+\label{ch:leitung}
+
+% wie sieht das mathematische modell aus?
+\chapter{Theoretical background}
+\label{ch:TheoreticalBackground}
+\input{TheoreticalBackground.tex}
+
+
+\chapter{The \MA Equation}
+\label{ch:MongeAmpereEq}
+\input{MongeAmpereEq.tex}
+
+
+% wie sieht das mathematische modell aus?
+\chapter{Finite Element Methods for the \MA Equation}
+\label{ch:finiteElementMethod}
+\input{finiteElementMethod.tex}
+
+\chapter{Conclusion und Perspective}
+\label{ch:conclusion}
+\input{conclusion.tex}
+
+\newpage
+%\input{literatur.tex}
+% bib
+\newpage
+%\nocite*{} 
+\bibliography{literatur.bib}
+\bibliographystyle{unsrt}
+\end{document}
