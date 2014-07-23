@@ -1480,23 +1480,29 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, double penalty, Functor &
 										A.setZero();
 										A(i, j) = 1;
 
-										//second equation: jump in gradient, average in test function
+										//second equation: jump in gradient (zero at NC), average in test function
 										value_type val = 0.5 // to average
 											* shape.get_Fquadw(iqLC) * length //quadrature weights
 											* pBC->A_grad_times_normal(A, jshape,iqLC)	/ facLevelLength[pLC->id().level()]; //gradient times normal
-										val *= pLC->u(jshape, 0)/volume;
+										val0 += val;
+										val /= volume;
 										f.linear_part.coeffRef(row_LC_Hessian,  col_LC) += val;
-										f.linear_part.coeffRef(row_NC_Hessian,  col_LC) += val;
+										f.linear_part.coeffRef(row_NC_Hessian,  col_LC) -= val;
 
-										//second equation: jump in gradient, average in test function
+										//second equation: jump in gradient(zero at LC), average in test function
 										val = 0.5 // to average
 											* shape.get_Fquadw(iqLC) * length //quadrature weights
-											* pBC->A_grad_times_normal(A, jshape,iqLC)	/ facLevelLength[pLC->id().level()]; //gradient times normal
-										val *= pLC->u(jshape, 0)/volume;
+											* pNBC->A_grad_times_normal(A, jshape,iqNC)	/ facLevelLength[pLC->id().level()]; //gradient times normal
+
+										val1 += val;
+										val /= volume;
+
 										f.linear_part.coeffRef(row_LC_Hessian,  col_NC) += val;
-										f.linear_part.coeffRef(row_NC_Hessian,  col_NC) += val;
+										f.linear_part.coeffRef(row_NC_Hessian,  col_NC) -= val;
 									}
-								}*/
+
+
+								}
 
 							}
 
