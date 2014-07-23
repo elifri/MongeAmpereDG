@@ -552,13 +552,14 @@ void Tsolver::assemble_rhs_MA_Newton(leafcell_type* pLC, const grid_type::id_typ
 		get_Ecoordinates(idLC, iq, x);
 		get_rhs_MA(x, uLC);
 
+
 		for (unsigned int istate = 0; istate < statedim; ++istate) {
 			for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 				int row = pLC->n_offset + ishape;
 				double val = shape.get_Equadw(iq) * pBC->get_detjacabs()
 					* facLevelVolume[idLC.level()] * uLC(istate)
 					* shape.get_Equads(ishape, iq);
-					Lrhs(row) += -val; //solve -u=-2f instead of det u = f
+					Lrhs(row) += val; //solve -u=-2f instead of det u = f
 				}
 			}
 		}
@@ -1347,7 +1348,7 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, double penalty, Functor &
 			value_type volume = facLevelVolume[idLC.level()];
 
 			for (int i_shape = 0; i_shape < shapedim; i_shape++)
-				f.integrals_test_functions(pLC->m_offset + i_shape) = shape.get_Equad().integrate(shape.get_Equads().row(i_shape), pBC->get_detjacabs());
+				f.integrals_test_functions(pLC->m_offset + i_shape) = shape.get_Equad().integrate(shape.get_Equads().row(i_shape), pBC->get_detjacabs()) * facLevelVolume[idLC.level()];
 
 
 			//D_DH u:mu
@@ -1382,6 +1383,7 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, double penalty, Functor &
 
 			// Copy entries for right hand side into right hand side
 			assemble_rhs_MA_Newton(pLC, idLC, pBC, x, f.constant_part);
+
 
 			// bilinear form b (average of normal derivative u * jump phi)
 			grid_type::facehandlevector_type vFh, vOh; // neighbor face number and orientation
@@ -1427,6 +1429,7 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, double penalty, Functor &
 							iqNC = vOh[i] == 1? gaussbaseNC + Fquadgaussdim - 1 - iq : gaussbaseNC + iq; //index of next gauss node in neighbour cell to be processed
 
 
+/*
 							// Copy entries into Laplace-matrix
 							for (unsigned int ishape = 0; ishape < shapedim; ++ishape) { //loop over test function
 								for (unsigned int jshape = 0; jshape < shapedim; ++jshape) { //loop over ansatz functions
@@ -1500,7 +1503,6 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, double penalty, Functor &
 										f.linear_part.coeffRef(row_LC_Hessian,  col_NC) += val;
 										f.linear_part.coeffRef(row_NC_Hessian,  col_NC) -= val;
 									}
-
 
 								}
 
@@ -1831,6 +1833,7 @@ void Tsolver::time_stepping_MA() {
 
 		MATLAB_export(f.linear_part, "linear_part");
 		MATLAB_export(f.constant_part, "constant_part");
+		MATLAB_export(f.integrals_test_functions, "integrals_test");
 
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
