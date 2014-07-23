@@ -266,7 +266,7 @@ public:
 	   		   f = linear_part*coeff + constant_part;
 	   		   for (int i= 0; i < number_of_dofs; i++)
 	   		   {
-	   			   int offset_hess = i/6;
+	   			   int offset_hess = i/6*4;
 
 	   			   f(i) -= integrals_test_functions(i)*
 	   					     (coeff(number_of_dofs+ offset_hess)*coeff(number_of_dofs+ offset_hess+3)
