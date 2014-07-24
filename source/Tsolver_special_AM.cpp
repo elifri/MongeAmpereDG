@@ -1530,26 +1530,22 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, double penalty, Functor &
 							// Copy entries for Dirichlet boundary conditions into right hand side
 							for (unsigned int ishape = 0; ishape < shapedim;
 									++ishape) {
-								double val = stabsign * shape.get_Fquadw(iqLC)
-										* length * uLC(0)
-										* pBC->A_grad_times_normal(pLC->A,
-												ishape, iqLC)
-										/ facLevelLength[level];
 
+								value_type val = 0;
 								if (penalty != 0.0) {
-									val += penalty * shape.get_Fquadw(iqLC)
+									val += penalty * shape.get_Fquadw(iqLC)* length
 											* uLC(0)
 											* shape.get_Fquads(ishape, iqLC);
 								}
 
-								f.constant_part(pLC->n_offset + ishape) -= val;
+								f.constant_part(pLC->n_offset + ishape) += val;
 
 								if (!strongBoundaryCond)
 								{
-									for (int jshape; jshape < shapedim; jshape++)
+									for (int jshape = 0; jshape < shapedim; jshape++)
 									{
 										if (penalty != 0.0) {
-											val = penalty * shape.get_Fquadw(iqLC)
+											val = -penalty * shape.get_Fquadw(iqLC)* length
 													* shape.get_Fquads(ishape, iqLC)
 													* shape.get_Fquads(jshape, iqLC);
 											f.linear_part.coeffRef(pLC->n_offset + ishape, pLC->n_offset + jshape) += val;
