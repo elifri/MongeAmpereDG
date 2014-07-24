@@ -43,7 +43,7 @@ private:
 	Fvaluevector_type Spoint;
 	Fnormalvector_type normal; //normals of every face
 	grad_type grad; //the gradient of every shape function at every (face) quadrature node
-	Fnormalderivative_type normalderi; //normalderivative of every shape function at every face
+	Fnormalderivative_type normalderi; //normalderivative of every shape function at every face quadrature point
 	Ejacobian_type jac; //jacobian of the trafo from refcell
 	Emass_type laplace; //the laplace matrix belonging to a(u,v) = grad u * grad v
 	Eigen::Matrix<Hessian_type, shapedim, shapedim> fe_hessians;
