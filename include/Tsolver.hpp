@@ -277,14 +277,16 @@ public:
 	   	   void derivative(const Eigen::VectorXd &x, Eigen::SparseMatrixD &J)
 	   	   {
 	   		   J = linear_part;
+
 	   		   for (int i= 0; i < number_of_dofs; i++)
 	   		   {
-	   			   int offset_hess = i/6;
+	   			   int offset_hess = i/6*4;
 
-	   			   J.coeffRef(i, offset_hess) += integrals_test_functions(i)*x(number_of_dofs+offset_hess+3);
-	   			   J.coeffRef(i, offset_hess+1) += -integrals_test_functions(i)*x(number_of_dofs+offset_hess+1);
-	   			   J.coeffRef(i, offset_hess+2) += -integrals_test_functions(i)*x(number_of_dofs+offset_hess+2);
-	   			   J.coeffRef(i, offset_hess+3) += integrals_test_functions(i)*x(number_of_dofs+offset_hess);
+	   			   //derivate of determint is cofactor matrix
+	   			   J.coeffRef(i, offset_hess) -= integrals_test_functions(i)*x(number_of_dofs+offset_hess+3);
+	   			   J.coeffRef(i, offset_hess+1) -= -integrals_test_functions(i)*x(number_of_dofs+offset_hess+2);
+	   			   J.coeffRef(i, offset_hess+2) -= -integrals_test_functions(i)*x(number_of_dofs+offset_hess+1);
+	   			   J.coeffRef(i, offset_hess+3) -= integrals_test_functions(i)*x(number_of_dofs+offset_hess);
 	   		   }
 
 	   	   }
