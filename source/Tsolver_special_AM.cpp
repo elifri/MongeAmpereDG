@@ -1440,18 +1440,20 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, double penalty, Functor &
 
 
 									//first equation: jumps in gradients
-									f.linear_part.coeffRef(row_LC, col_LC) += penalty * -0.5 // to average
-											* shape.get_Fquadw(iqLC) * length//quadrature weights
+									f.linear_part.coeffRef(row_LC, col_LC) += penalty
+											* shape.get_Fquadw(iqLC) * sqr(length) //quadrature weights
 											* pBC->get_normalderi(ishape, iqLC)/ facLevelLength[level] //jump in test
 											* pBC->get_normalderi(jshape, iqLC)/ facLevelLength[level]; //jump in ansatz
 
-									f.linear_part.coeffRef(row_LC, col_NC) += penalty * -0.5 * shape.get_Fquadw(iqLC) * length * pBC->get_normalderi(ishape, iqLC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[levelNC];
 
-									f.linear_part.coeffRef(row_NC, col_LC) += penalty * -0.5 * shape.get_Fquadw(iqLC) * length * pNBC->get_normalderi(ishape, iqNC)* pBC->get_normalderi(jshape, iqLC) / facLevelLength[level];
+									f.linear_part.coeffRef(row_LC, col_NC) += penalty  * shape.get_Fquadw(iqLC) * sqr(length) * pBC->get_normalderi(ishape, iqLC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[level]/ facLevelLength[levelNC];
 
-									f.linear_part.coeffRef(row_NC, col_NC) += penalty * -0.5	* shape.get_Fquadw(iqLC) * length * pNBC->get_normalderi(ishape, iqNC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[levelNC];
+									f.linear_part.coeffRef(row_NC, col_LC) += penalty * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC)* pBC->get_normalderi(jshape, iqLC) / facLevelLength[level]/ facLevelLength[levelNC];
+
+									f.linear_part.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[levelNC]/ facLevelLength[levelNC];
 
 									// first equation: jumps in functions
+
 									if (penalty != 0.0) {
 										f.linear_part.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
 
@@ -1462,22 +1464,27 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, double penalty, Functor &
 										f.linear_part.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
 
 									}
+
 								}
 
 							}
 
-							// loop over Hessian entries
-							for (unsigned int jshape = 0; jshape < shapedim; ++jshape) { //loop over ansatz functions
-								const int col_LC = pLC->n_offset + jshape;
-								const int col_NC = pNC->n_offset + jshape;
 
-								int row_LC_Hessian = number_of_dofs + pLC->m_offset/6*4 -1;
-								int row_NC_Hessian = number_of_dofs + pNC->m_offset/6*4 -1;
 
-								/*for (unsigned int i = 0; i < spacedim; ++i) {
-									for (unsigned int j = 0; j < spacedim; ++j) {
-										row_LC_Hessian++;
-										row_NC_Hessian++;
+
+							int row_LC_Hessian = number_of_dofs + pLC->m_offset/6*4 -1;
+							int row_NC_Hessian = number_of_dofs + pNC->m_offset/6*4 -1;
+
+							for (unsigned int i = 0; i < spacedim; ++i) {
+								for (unsigned int j = 0; j < spacedim; ++j) {
+									row_LC_Hessian++;
+									row_NC_Hessian++;
+									value_type val0 = 0, val1 = 0;
+
+										// loop over Hessian entries
+									for (unsigned int jshape = 0; jshape < shapedim; ++jshape) { //loop over ansatz functions
+										const int col_LC = pLC->n_offset + jshape;
+										const int col_NC = pNC->n_offset + jshape;
 
 										Hessian_type A;
 										A.setZero();
