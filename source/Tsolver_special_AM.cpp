@@ -1849,9 +1849,9 @@ void Tsolver::time_stepping_MA() {
 		op.iradius = 3;
 		op.maxsteps = 3000;
 		op.silentmode = false;
-		op.stopcriteria[0] = 10*epsilon;
-		op.stopcriteria[0] = 10*epsilon;
-		op.stopcriteria[0] = 10*epsilon;
+		op.stopcriteria[0] = epsilon;
+		op.stopcriteria[1] = epsilon;
+		op.stopcriteria[2] = epsilon;
 
 
 		VectorXd extended_solution;
