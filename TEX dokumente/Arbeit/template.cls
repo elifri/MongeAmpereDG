@@ -32,6 +32,9 @@
 \usepackage{ltxtable}
 \usepackage{float}
 
+\usepackage{stmaryrd} % for llbracket
+
+
 %% page layout
 \setlength{\parindent}{0pt}
 % let latex do its best...
@@ -62,17 +65,17 @@
 \renewcommand{\thethmc}{\thechapter.\arabic{thmc}}
 
 
-\newtheorem{satz}[thmc]{Satz}
-\newtheorem{beispiel}[thmc]{Beispiel}
+\newtheorem{theorem}[thmc]{Theorem}
+\newtheorem{example}[thmc]{Example}
 \newtheorem{lemma}[thmc]{Lemma}
 \newtheorem{definition}[thmc]{Definition}
-\newtheorem{behauptung}[thmc]{Behauptung}
-\newtheorem{korollar}[thmc]{Korollar}
+\newtheorem{claim}[thmc]{claim}
+\newtheorem{corollary}[thmc]{Corollary}
 
 \theoremstyle{nonumberplain}
 \theoremstyle{nonumberbreak}
 \theoremsymbol{\ensuremath{\square}}
 
-\newtheorem{beweis}{Beweis}
+\newtheorem{proof}{Proof}
 
 % -----

@@ -1,12 +1,144 @@
+\todo{explain $\Omega$}
 
-general partial differential equation (PDE) of second order
-\[
-	F(D^2(u), \nabla u, u, x) = 0
-\]
+\begin{definition}
+ A \emph{partial differential equation} (PDE) of order $k\in \N$ is an expression of the form
+\begin{align}
+	F(D^k(u(x)), D^{k-1}(u(x)), Du(x), u(x), x) = 0, \label{eq:general PDE}
+\end{align}
+where $F$ is given and $u$ is unknown.
+\end{definition}
+
+\todo {linear , nonlinear}
 
 \begin{definition}[elliptic PDE]
+	A PDE is called \emph{elliptic} if 
 	
 \end{definition}
 
-discontinuous Galerkin (DG)
+A function $u$ fulfilling \eqref{eq:general PDE} is called a classical solution of the PDE.
 
+There are problems such that no such solution exists, often the demand on the high derivatives cannot be fulfilled. To admit less regular solutions we aim for a weaker solution notion.
+
+
+\section{Functional spaces}
+
+According to the literature we refer by $W^{s,p}(\Omega)$ to the H\"older space, a set consisting of all $L^p(\Omega)$ functions whose distributional derivates up to order $s$ are contained in $L^ p(\Omega)$.
+
+Let $\triang$ be a shape regular, quasi-uniform simplicial triangulation of $\Omega$. We divide its edges $\edges$ into the subsets $\edgesi$ and $\edgesb$ containing all interior edges and boundary edges, respectively.
+Using that we define the piecewise spaces
+\todo{piecewise spaces}
+
+\todo{norms}
+We use a subscript $h$ to indicate a piecewise evaluation/interpretation. Subsequently differential operators with a subscript $h$ imply separate differentiations on every triangle.
+
+
+\section{Notation}
+
+To formulate a method capable of discontinuities along triangle edges we need some edge operators.   
+
+\begin{definition}[Edge Operators]
+We denote the \emph{normal jump} of  a piecewise smooth function $u_h$ across an edge $e \in \edges$ by
+\begin{align*}
+	\llbracket u_h \rrbracket &= u_h^+ \cdot n^+ + u_h^-\cdot n^-  &&\text{ if } \partial T^+ \cap \partial T^- = e, \\
+	\llbracket u_h \rrbracket &= u_h \cdot n  &&\text{ if } \partial T \cap \partial \Omega = e,
+\end{align*}
+where $n^\pm$ are the outward unit normals of $T^\pm$ and  $u_h^\pm(x) = \lim_{\varepsilon \rightarrow 0} u_h(x-n^\pm \varepsilon)$.
+
+The \emph{average} of a piecewise smooth function $u_h$ across an edge $e \in \edges$ is defined by
+\begin{align*}
+	\laverage u_h \raverage &= \frac 1 2 \left(u_h^+ + u_h^-\right) &&\text{ if } \partial T^+ \cap \partial T^- = e, \\
+	\laverage u_h  \raverage &= u_h &&\text{ if } \partial T \cap \partial \Omega = e,
+\end{align*}
+\end{definition}
+
+Note, that the jump of a scalar is a vector, whereas the jump of a vector is a scalar.
+
+
+\section{Finite Element Method}
+Before we handle the \MA equation we recall how a finite element method works using the example of the simpler Poisson equation. 
+
+%\subsection{The Poisson Problem}
+
+\begin{definition}
+The \emph{Poisson Problem} is finding a function $u$ such that 
+\begin{align}
+	-\triangle u = f \qquad &\text{ in }\Omega \label{eq: poisson eq} \\
+	u = g \qquad &\text{ on } \partial \Omega    \label{eq: poisson bc}
+\end{align}
+for a function $f \in ???(\Omega)$ and a function $g \in ??(\partial \Omega)$. 
+\end{definition}
+
+This problem is well-posed \todo{definition of well-posedness} for $f$ and there even exist closed solution formulas, for a detailed analysis we recommend \todo{theory poisson equation} \cite{evans1998}.
+Nevertheless, we can set up a weak formulation based on variational principles.
+
+Due to the main theorem of variation analysis \eqref{eq: poisson eq} is equivalent to 
+\begin{align}
+	-\int_\Omega \varphi \triangle u = \int_\Omega \varphi f \qquad \forall \varphi \in C^\infty(\Omega).
+\end{align}
+Integration by parts yields to
+\begin{align}
+	\int_\Omega \nabla \varphi  \cdot \nabla u -\int_{\partial \Omega} \varphi  \cdot (\nabla u)  = \int_\Omega \varphi f \qquad \forall \varphi \in C^\infty(\Omega).
+\end{align}
+
+We see, that now only first derivatives of $u$ appear on the left-hand side.   
+The main idea of the finite element method is to restrict the two spaces, namely the space where $\varphi$ and the space where $u$ is searched  to finite dimensional spaces $\Phi_h$ and $V_h$.\\
+The limited space $\Phi_h$ is called \emph{test space} and its inhabitants :) are called \emph{test functions}. $V_h$ is referred as \emph{ansatz} or \emph{trial space},  the contained functions accordingly \emph{ansatz} or \emph{trial functions}. To assert the boundary condition \eqref{eq: poisson bc} we demand $u_h|_{\partial \Omega} = g$ for every $u_h \in V_h$.
+
+As the subscript $h$ suggests the two spaces normally are based on a triangulation $\triang$ such that every function is at least piecewise smooth. Consequently, the differential operators must be replaced by to $\Phi_h \cup V_h$ extended forms.
+
+All in all the finite element methods searches for $u_h \in V_h$ such that 
+\begin{align}
+	\int_\Omega \nabla_h \varphi  \cdot \nabla_h u_h -\int_{\partial \Omega} \varphi  \cdot (\nabla_h u_h)  = \int_\Omega \varphi f \qquad \forall \varphi \in \Phi_h. \label{eq: weak formulation fe}
+\end{align}
+
+To construct $u_h$ we first choose a basis $B_{\Phi}$ of $\Phi$ and a basis $B_V$ of $V_h$.
+Since the left-hand side is linear in $\varphi$ we only need to check the equations in \eqref{eq: weak formulation fe} for all $\varphi \in B_{\Phi}$. Exploiting also the linearity in $u_h$  we are able to reformulate the equations using approriate bilinear forms:
+\begin{align}
+	a(\varphi,u_h)  =b(\varphi) \qquad \forall \varphi \in \Phi_h. \label{eq: weak formulation fe bilinear}
+\end{align}
+for $a(v,w)= \int_\Omega \nabla_h v  \cdot \nabla_h w -\int_{\partial \Omega} v  \cdot (\nabla_h w)$ and $b(v) = \int_\Omega v f$.\\
+Using basic linear Algebra we can rewrite \eqref{eq: weak formulation fe bilinear} as a linear system of equations $A \mathbf{u} = \mathbf{b}$ where  $\mathbf{u}$ is the coefficient vector of $u_h$ to the basis $B_V$.  
+
+Typically the spaces $\Phi_h$ and $V_h$ are chosen to be piecewise polynomials which have support only on a few triangles. Thus, the spaces are easy to handle and the resulting linear system is sparse.
+Choosing $\Phi_h = V_h$ yields to the \emph{Galerkin methods}.
+
+\subsection{Discontinuous Galerkin (DG)}
+A recent idea is to choose the test and ansatz spaces to include discontinuous functions (even though the solution is expected to be smooth)\todo{kommentar sinnvoll}.
+The main issue is the handling of derivatives along discontinuities.
+\todo{DG mit numerischen Flux oder mehr wie TICAM?}
+
+\newpage
+
+To apply a DG method to more difficult PDEs such as the \MA equation we need some algebraic and analytic identities for the Hessian.
+\section{Hessian Identities}
+
+\begin{definition}[Cofactor Matrix] \label{def: cof matrix}
+	The \emph{cofactor matrix} of a matrix $A \in \R^{n \times n}$ is defined by the entries
+	\begin{align}
+	(\mycof A )_{i,j} = (-1)^{i+j} \mydet{A_{ij}},
+	\end{align}
+	where $A_{ij}$ denotes the matrix resulting from deleting the $i$-th row and $j$-column in $A$.
+	
+\end{definition}
+
+Very advantageous is the behaviour of the cofactor matrix of a hessian if a divergence is applied to it:
+\begin{lemma}[Divergence-Free Property of Cofactor Matrices] \label{la: divergence free cof}
+For the Frobenius product the following integration by parts rule holds
+\[
+	\nabla \cdot \mycof{D^2 u} = 0
+\] 
+\end{lemma}
+
+\begin{lemma}[Integration by parts for the Frobenius product] \label{la: integration by parts Frobenius}
+For the Frobenius product the following integration by parts rule holds
+\[
+	\int_\Omega (D^2 u : B) = - \int_\Omega (\nabla \cdot B) \cdot \nabla u + \int_{\partial \Omega}  B \nabla u \boldmath n
+\] 
+\end{lemma}
+
+\begin{proof}
+\begin{align*}
+\int_\Omega D^2 u : B &= \int_{\Omega}( \nabla \cdot (B \nabla u ) - (\nabla \cdot B) \nabla u) \\
+									     -\int_{\Omega}( \nabla B \nabla u )  + \int_{\partial \Omega} B- (\nabla \cdot B) \nabla u) 
+\end{align*}
+\end{proof}
