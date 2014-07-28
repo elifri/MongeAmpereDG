@@ -463,6 +463,7 @@ public:
    void time_stepping_MA ();
 
    void adapt(const double refine_eps, const double coarsen_eps);
+   void refine();
    void setleafcellflags(unsigned int flag, bool value);
    #endif
 

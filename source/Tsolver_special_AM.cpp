@@ -381,8 +381,6 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
 
 
-
-
 	//----------correction term--------------------
 
 /*
@@ -1307,9 +1305,11 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties, Functor &f) {
 
-	f.constant_part.setZero();
+	int ndofs_extended = number_of_dofs+number_of_dofs/6*4;
+	f.constant_part.setZero(ndofs_extended);
+	f.linear_part.resize(ndofs_extended, ndofs_extended);
 	f.linear_part.setZero();
-	f.integrals_test_functions.setZero();
+	f.integrals_test_functions.setZero(number_of_dofs);
 
 	unsigned int gaussbaseLC = 0;
 	unsigned int gaussbaseNC = 0;
@@ -1431,7 +1431,6 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 							iqNC = vOh[i] == 1? gaussbaseNC + Fquadgaussdim - 1 - iq : gaussbaseNC + iq; //index of next gauss node in neighbour cell to be processed
 
 
-/*
 							// Copy entries into Laplace-matrix
 							for (unsigned int ishape = 0; ishape < shapedim; ++ishape) { //loop over test function
 								for (unsigned int jshape = 0; jshape < shapedim; ++jshape) { //loop over ansatz functions
@@ -1559,6 +1558,7 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 									}
 								}
 							}
+
 
 						}
 						break;
@@ -1757,33 +1757,11 @@ void Tsolver::time_stepping_MA() {
 	plotter.add_plot_stream("rel_L2_ipopt", "data/s/plot_data_rel_L2_ipopt");
 	//========================================
 
-
 	iteration = 0;
 	residuum_equal_since = 0;
 
 	//!!!!!!!!!!!!!!warning: this works only outside of loop if there is no refinement inside the loop!!!!!!!!!
 	unsigned int LM_size;
-
-	//assign matrix cooordinates
-	cout << "Assign matrix coordinates..." << endl;
-	pt.start();
-	assignViews_MA(LM_size);
-	pt.stop();
-	cout << "done. " << pt << " s." << endl;
-
-	//init continuous formulation
-	assert(!interpolating_basis && "this only works with a bezier basis");
-
-	c0_converter.init(grid, number_of_dofs);
-
-	//init boundary handler
-	if (strongBoundaryCond) {
-		if (interpolating_basis)
-			bd_handler.initialize(grid, number_of_dofs);
-		else
-			bd_handler.initialize_bezier(grid, number_of_dofs,
-					get_exacttemperature_MA_callback(), &shape, c0_converter);
-	}
 
 	//calculate l2 norm of solution
 	L2_norm_exact_sol(0) = calculate_L2_norm(get_exacttemperature_MA_callback())(0);
@@ -1795,13 +1773,31 @@ void Tsolver::time_stepping_MA() {
 	std::string filename;
 	bool use_start_solution = singleton_config_file::instance().getValue("monge ampere", "start_iteration", filename, "");
 	if (use_start_solution){
+		//assign matrix cooordinates
+		cout << "Assign matrix coordinates..." << endl;
+		pt.start();
+		assignViews_MA(LM_size);
+		pt.stop();
+		cout << "done. " << pt << " s." << endl;
+
+		c0_converter.init(grid, number_of_dofs);
+		//init boundary handler
+		if (strongBoundaryCond) {
+			if (interpolating_basis)
+				bd_handler.initialize(grid, number_of_dofs);
+			else
+				bd_handler.initialize_bezier(grid, number_of_dofs,
+						get_exacttemperature_MA_callback(), &shape, c0_converter);
+		}
+
+
 		init_start_solution_MA(filename);
 	}
 
 
 	while (iteration < maxits) {
 		cout << "------------------------------------------------------------------------" <<endl;
-		cout << "Iteration: " << iteration << endl;
+		cout << "Iteration: " << iteration << " level TODO" << iteration+level <<  endl;
 
 		//init variables
 		Eigen::SparseMatrix<double> LM(LM_size, LM_size);
@@ -1810,6 +1806,26 @@ void Tsolver::time_stepping_MA() {
 		Lrhs.setZero(LM_size);
 		Lsolution.setZero(LM_size);
 
+		//assign matrix cooordinates
+		cout << "Assign matrix coordinates..." << endl;
+		pt.start();
+		assignViews_MA(LM_size);
+		pt.stop();
+		cout << "done. " << pt << " s." << endl;
+
+		//init continuous formulation
+		assert(!interpolating_basis && "this only works with a bezier basis");
+
+		c0_converter.init(grid, number_of_dofs);
+		//init boundary handler
+		if (strongBoundaryCond) {
+			if (interpolating_basis)
+				bd_handler.initialize(grid, number_of_dofs);
+			else
+				bd_handler.initialize_bezier(grid, number_of_dofs,
+						get_exacttemperature_MA_callback(), &shape, c0_converter);
+		}
+
 		//reserve space
 		LM.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
 		if (strongBoundaryCond){
@@ -1817,6 +1833,8 @@ void Tsolver::time_stepping_MA() {
 			Lrhs_bd.setZero(LM_size);
 			Lsolution_only_bd.setZero(LM_size);
 		}
+
+
 
 //==============assemble system============================
 
@@ -1834,9 +1852,11 @@ void Tsolver::time_stepping_MA() {
 
 		assemble_MA_Newton(stabsign, gamma, f);
 
-		MATLAB_export(f.linear_part, "linear_part");
-		MATLAB_export(f.constant_part, "constant_part");
-		MATLAB_export(f.integrals_test_functions, "integrals_test");
+
+//		MATLAB_export(f.linear_part, "linear_part");
+//		MATLAB_export(f.constant_part, "constant_part");
+//		MATLAB_export(f.integrals_test_functions, "integrals_test");
+
 
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
@@ -1863,13 +1883,22 @@ void Tsolver::time_stepping_MA() {
 		assert(start_solution != SQRT_F);
 
 		write_extended_solution_vector(extended_solution);
-		MATLAB_export(extended_solution, "extended_solution");
+//		MATLAB_export(extended_solution, "extended_solution");
 
 		solution_old = extended_solution.segment(0,LM_size);
 
 		Eigen::VectorXd f_value;
 		f.evaluate(extended_solution, f_value);
-		cout << "f value " << f_value << endl;
+		cout << endl << "f value " << f_value.transpose() << endl;
+
+/*
+
+		igpm::processtimer p_2;
+		p_2.start();
+		checkJacobian(f, extended_solution);
+		p_2.stop();
+		cout << "need " << p_2 << " s to check Jacobian." << endl;
+*/
 
 
 
@@ -1877,7 +1906,7 @@ void Tsolver::time_stepping_MA() {
 
 		Lsolution = extended_solution.segment(0,LM_size);
 
-		cout << "extended solution " << extended_solution.transpose() << endl;
+		cout << "extended solution " << extended_solution.transpose() << endl << endl;
 
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
@@ -1901,17 +1930,22 @@ void Tsolver::time_stepping_MA() {
 
 		//plot poisson solution
 		plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
-//		plotter.write_exactsolution(get_exacttemperature_MA_callback(),iteration);
-		plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionPoisson");
-//		plotter.write_numericalsolution(iteration, "grid_numericalsolutionPoisson");
 
-		//calculate current l2 error
+		//plot solution
+		plotter.write_numericalsolution_VTK(iteration);
+
 		state_type error =  calculate_L2_error(get_exacttemperature_MA_callback());
-		plotter.get_plot_stream("rel_L2_without_convex") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
+		cout << "Current L2 error is " << error << endl;
+		plotter.get_plot_stream("plot_data")<< iteration << " " << error << endl;
+		if (L2_norm_exact_sol(0) != 0)
+			plotter.get_plot_stream("L2_rel") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
 
+		// reset flag 0
+		setleafcellflags(0, false);
 
 
 		//==============convexify============================
+/*
 		cout << "Convexifying solution ..." << endl;
 		pt.start();
 		bool solution_was_not_convex = convexify(Lsolution);
@@ -1932,22 +1966,11 @@ void Tsolver::time_stepping_MA() {
 
 
 		//==============convex combination of two steps (damping)============================
-		Eigen::VectorXd solution = Tsolver::alpha*Lsolution + (1-Tsolver::alpha)*solution_old;
+		Eigen::VectorXd solution = Lsolution;
 //		cout << "convex combination \n" << solution.transpose() << endl;
 
 		restore_MA(solution);
 
-		//plot solution
-		plotter.write_numericalsolution_VTK(iteration);
-
-		error =  calculate_L2_error(get_exacttemperature_MA_callback());
-		cout << "Current L2 error is " << error << endl;
-		plotter.get_plot_stream("plot_data")<< iteration << " " << error << endl;
-		if (L2_norm_exact_sol(0) != 0)
-			plotter.get_plot_stream("L2_rel") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
-
-		// reset flag 0
-		setleafcellflags(0, false);
 
 		if (std::abs(sum_residuum - sum_residuum_old) < 1)
 		{
@@ -1961,6 +1984,8 @@ void Tsolver::time_stepping_MA() {
 
 		cout << " sum_residuum " << sum_residuum << endl;
 		sum_residuum_old = sum_residuum;
+*/
+		refine();
 
 		iteration++;
 	}
@@ -2050,5 +2075,18 @@ void Tsolver::adapt(const double refine_eps, const double coarsen_eps) {
 	grid.ensureGrading();
 
 }
+
+void Tsolver::refine() {
+
+
+	grid_type::idset_type idsrefine;
+
+	cerr << "idsrefine.size() = " << grid.copyIds(grid.leafCells(), idsrefine) << endl;
+	grid.refine(idsrefine);
+	grid.ensureGrading();
+
+	number_of_dofs*=4;
+}
+
 
 #endif
