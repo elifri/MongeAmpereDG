@@ -140,7 +140,7 @@ enum {
 	Ndim = 3,        // no. of nodes
 	childdim = int(example_id_type::maxChildren),
 	Equadraturedim = 16,        // no. of element-quadr. points per element
-	Fquadgaussdim = 5,        // no. of gauss-points per face
+	Fquadgaussdim = 3,        // no. of gauss-points per face
 	Fdim = 3,        // no. of faces
 	Fchilddim = 2,        // no. of child-faces on one face
 	Fquadraturedim = (Fdim + Fchilddim * Fdim) * Fquadgaussdim, // no. of face-quadr. points per element
