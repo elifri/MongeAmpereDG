@@ -37,9 +37,11 @@
 using namespace Eigen;
 
 //reads specific problem parameter from input
-void Tsolver::read_problem_parameters_MA(int &stabsign, double &gamma, double &refine_eps, double &coarsen_eps, int &level, double &alpha) {
+void Tsolver::read_problem_parameters_MA(int &stabsign, penalties_type &gamma, double &refine_eps, double &coarsen_eps, int &level, double &alpha) {
 	singleton_config_file::instance().getValue("method", "stabsign", stabsign, 1);
-	singleton_config_file::instance().getValue("method", "gamma", gamma, 0.0);
+	singleton_config_file::instance().getValue("method", "gamma_gradient", gamma.gamma_gradient, 0.0);
+	singleton_config_file::instance().getValue("method", "gamma_continuous", gamma.gamma_continuous, 0.0);
+	singleton_config_file::instance().getValue("method", "gamma_boundary", gamma.gamma_boundary, 0.0);
 	singleton_config_file::instance().getValue("method", "strongBoundaryCond", strongBoundaryCond, false);
 
 	singleton_config_file::instance().getValue("adaptation", "refine_eps", refine_eps, 1.0e-9);
@@ -1303,7 +1305,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 }
 
 
-void Tsolver::assemble_MA_Newton(const int & stabsign, double penalty, Functor &f) {
+void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties, Functor &f) {
 
 	f.constant_part.setZero();
 	f.linear_part.setZero();
@@ -1440,36 +1442,33 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, double penalty, Functor &
 
 
 									//first equation: jumps in gradients
-									f.linear_part.coeffRef(row_LC, col_LC) += penalty
+									f.linear_part.coeffRef(row_LC, col_LC) += penalties.gamma_gradient
 											* shape.get_Fquadw(iqLC) * sqr(length) //quadrature weights
 											* pBC->get_normalderi(ishape, iqLC)/ facLevelLength[level] //jump in test
 											* pBC->get_normalderi(jshape, iqLC)/ facLevelLength[level]; //jump in ansatz
 
+									f.linear_part.coeffRef(row_LC, col_NC) += penalties.gamma_gradient  * shape.get_Fquadw(iqLC) * sqr(length) * pBC->get_normalderi(ishape, iqLC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[level]/ facLevelLength[levelNC];
 
-									f.linear_part.coeffRef(row_LC, col_NC) += penalty  * shape.get_Fquadw(iqLC) * sqr(length) * pBC->get_normalderi(ishape, iqLC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[level]/ facLevelLength[levelNC];
+									f.linear_part.coeffRef(row_NC, col_LC) += penalties.gamma_gradient* shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC)* pBC->get_normalderi(jshape, iqLC) / facLevelLength[level]/ facLevelLength[levelNC];
 
-									f.linear_part.coeffRef(row_NC, col_LC) += penalty * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC)* pBC->get_normalderi(jshape, iqLC) / facLevelLength[level]/ facLevelLength[levelNC];
-
-									f.linear_part.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[levelNC]/ facLevelLength[levelNC];
+									f.linear_part.coeffRef(row_NC, col_NC) += penalties.gamma_gradient * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[levelNC]/ facLevelLength[levelNC];
 
 									// first equation: jumps in functions
 
-									if (penalty != 0.0) {
-										f.linear_part.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
+									if (penalties.gamma_continuous != 0.0) {
+										f.linear_part.coeffRef(row_LC, col_LC) += penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
 
-										f.linear_part.coeffRef(row_LC, col_NC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqLC);
+										f.linear_part.coeffRef(row_LC, col_NC) += -penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqLC);
 
-										f.linear_part.coeffRef(row_NC, col_LC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqNC);
+										f.linear_part.coeffRef(row_NC, col_LC) += -penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqNC);
 
-										f.linear_part.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
+										f.linear_part.coeffRef(row_NC, col_NC) += penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
 
 									}
 
 								}
 
 							}
-
-
 
 
 							int row_LC_Hessian = number_of_dofs + pLC->m_offset/6*4 -1;
@@ -1539,8 +1538,8 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, double penalty, Functor &
 									++ishape) {
 
 								value_type val = 0;
-								if (penalty != 0.0) {
-									val += penalty * shape.get_Fquadw(iqLC)* length
+								if (penalties.gamma_boundary != 0.0) {
+									val += penalties.gamma_boundary * shape.get_Fquadw(iqLC)* length
 											* uLC(0)
 											* shape.get_Fquads(ishape, iqLC);
 								}
@@ -1551,8 +1550,8 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, double penalty, Functor &
 								{
 									for (int jshape = 0; jshape < shapedim; jshape++)
 									{
-										if (penalty != 0.0) {
-											val = -penalty * shape.get_Fquadw(iqLC)* length
+										if (penalties.gamma_boundary != 0.0) {
+											val = -penalties.gamma_boundary * shape.get_Fquadw(iqLC)* length
 													* shape.get_Fquads(ishape, iqLC)
 													* shape.get_Fquads(jshape, iqLC);
 											f.linear_part.coeffRef(pLC->n_offset + ishape, pLC->n_offset + jshape) += val;
@@ -1716,7 +1715,8 @@ void Tsolver::time_stepping_MA() {
 
 	// sign of stbilization term: +1: Bauman-Oden/NIPG, -1: GEM/SIPG
 	int stabsign;
-	double gamma, refine_eps, coarsen_eps;
+	penalties_type gamma;
+	double refine_eps, coarsen_eps;
 
 	int level;
 
