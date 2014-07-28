@@ -283,10 +283,10 @@ public:
 	   			   int offset_hess = i/6*4;
 
 	   			   //derivate of determint is cofactor matrix
-	   			   J.coeffRef(i, offset_hess) -= integrals_test_functions(i)*x(number_of_dofs+offset_hess+3);
-	   			   J.coeffRef(i, offset_hess+1) -= -integrals_test_functions(i)*x(number_of_dofs+offset_hess+2);
-	   			   J.coeffRef(i, offset_hess+2) -= -integrals_test_functions(i)*x(number_of_dofs+offset_hess+1);
-	   			   J.coeffRef(i, offset_hess+3) -= integrals_test_functions(i)*x(number_of_dofs+offset_hess);
+	   			   J.coeffRef(i, number_of_dofs+offset_hess) -= integrals_test_functions(i)*x(number_of_dofs+offset_hess+3);
+	   			   J.coeffRef(i, number_of_dofs+offset_hess+1) -= -integrals_test_functions(i)*x(number_of_dofs+offset_hess+2);
+	   			   J.coeffRef(i, number_of_dofs+offset_hess+2) -= -integrals_test_functions(i)*x(number_of_dofs+offset_hess+1);
+	   			   J.coeffRef(i, number_of_dofs+offset_hess+3) -= integrals_test_functions(i)*x(number_of_dofs+offset_hess);
 	   		   }
 
 	   	   }
