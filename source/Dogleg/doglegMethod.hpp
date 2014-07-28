@@ -64,10 +64,12 @@ bool checkJacobian(
 	Eigen::SparseMatrix<double> J(n,n);
 	f.derivative(x,J);
 
-	double tol = 1e-4;
-	double h = 1e-10;//to sqrt(eps)
+	double tol = 1e-6;
+	double h = 1e-8;//to sqrt(eps)
 
-	Eigen::VectorXd f_minus(n), f_plus(n);
+	Eigen::VectorXd f_minus = Eigen::VectorXd::Zero(n), f_plus= Eigen::VectorXd::Zero(n);
+
+	Eigen::SparseMatrixD estimated_J(n,n);
 
 	for (int j = 0; j < J.cols(); j++)
 	{
@@ -80,14 +82,36 @@ bool checkJacobian(
 
 		for (int i = 0; i < n; i++)
 		{
-			if (  std::abs(estimated_derivative(i)-J.coeffRef(i,j)) > tol)
+
+			if (std::abs(estimated_derivative(i)) > 1e-10)
 			{
-				cerr << " The Jacobian at " << i << ","<< j << " does not match the finite differences!" <<endl
-						<< "derivative: " << J.coeffRef(i,j) << " finite difference: " << estimated_derivative(i) << endl;
+				estimated_J.insert(i,j) = estimated_derivative(i);
+				if (  std::abs((estimated_derivative(i) - J.coeffRef(i,j))/estimated_derivative(i)) > tol)
+				{
+					cerr << " The Jacobian at (" << i << ","<< j << ") does not match the finite differences!" <<endl
+						 << "derivative: " << J.coeffRef(i,j) << " finite difference: " << estimated_derivative(i);
+					cerr << " -> abs error " <<  std::abs(estimated_derivative(i) - J.coeffRef(i,j))
+						 << " and rel error " << std::abs((estimated_derivative(i) - J.coeffRef(i,j))/estimated_derivative(i)) << endl;
+
+					res = false;
+				}
+
+			}
+			else
+			{
+				if  (std::abs(estimated_derivative(i) - J.coeffRef(i,j)) > tol)
+				{
+					cerr << " The Jacobian at (" << i << ","<< j << ") does not match the finite differences!" <<endl
+						 << "derivative: " << J.coeffRef(i,j) << " finite difference: " << estimated_derivative(i);
+					cerr << " -> abs error " <<  std::abs(estimated_derivative(i) - J.coeffRef(i,j)) << endl;
+
+				}
 				res = false;
 			}
 		}
 	}
+
+	J.prune(1,1e-10);
 	return res;
 }
 
@@ -140,6 +164,7 @@ void doglegMethod (
        (opts.stopcriteria[1] <= 0) || (opts.stopcriteria[2] <= 0) || (opts.maxsteps <= 0))
     {
         std::cerr << "\nError: The elements in opts must be strictly positive\n";
+        assert(false);
         exit(1);
     }
 
@@ -367,6 +392,7 @@ void doglegMethod (
         }
     }
 
+    gesamtzeit.stop();
     if (!opts.silentmode)
     {
         std::cout << "||f(x)||2   = " << sqrt(2*F) << "\n";
