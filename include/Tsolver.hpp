@@ -298,6 +298,13 @@ public:
 	   	   int number_of_dofs;
    	   };
 
+   	   struct penalties_type
+   	   {
+   		   double gamma_gradient;
+   		   double gamma_continuous;
+   		   double gamma_boundary;
+   	   };
+
    	   	 Monge_Ampere_Problem problem;
 
          double atol,rtol; // absolute and relative tolerances
@@ -362,7 +369,7 @@ public:
    /*! read problem specific problem parameters from input file
     *
     */
-   void read_problem_parameters_MA(int &stabsign, double &gamma, double &refine_eps, double &coarsen_eps, int &level, double& alpha);
+   void read_problem_parameters_MA(int &stabsign, penalties_type &gamma, double &refine_eps, double &coarsen_eps, int &level, double& alpha);
 
    /*!
     * writes exact solution in leafcells
@@ -419,7 +426,7 @@ public:
    /*
     * @brief assembles the function for the nonlinear GS for the in the iteration arising poisson problem
     */
-   void assemble_MA_Newton(const int & stabsign, double penalty, Functor &f);
+   void assemble_MA_Newton(const int & stabsign, penalties_type penalty, Functor &f);
 
    /*
       * @brief stores solution (in leaf cells) and generates analysis data
