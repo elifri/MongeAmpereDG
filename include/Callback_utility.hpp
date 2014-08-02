@@ -60,4 +60,17 @@ struct Convex_error_functions{
 	}
 };
 
+struct General_functions{
+	static void easy_convex_polynomial(const config::space_type & x, config::state_type &u)
+	{
+		u(0) = (x.squaredNorm())/2.;
+	}
+
+	static vector_function_type get_easy_convex_polynomial_callback()
+	{
+		return FREE_FUNCTION(&General_functions::easy_convex_polynomial);
+	}
+
+};
+
 #endif /* CALLBACK_UTILITY_HPP_ */
