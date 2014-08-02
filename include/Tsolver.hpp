@@ -246,7 +246,7 @@ public:
 
    bool strongBoundaryCond;
 
-   enum start_solution_type { EXACT, ARTIFICIAL_ERROR, SQRT_F};
+   enum start_solution_type { EXACT, ARTIFICIAL_ERROR, SQRT_F, USE_IDENTITY};
 
    start_solution_type start_solution;
 
@@ -271,6 +271,12 @@ public:
 	   			   f(i) -= integrals_test_functions(i)*
 	   					     (coeff(number_of_dofs+ offset_hess)*coeff(number_of_dofs+ offset_hess+3)
 	   					    		 -coeff(number_of_dofs+ offset_hess+1)*coeff(number_of_dofs+ offset_hess+2));
+
+/*
+	   			   cout << "det at " << i << " is " << (coeff(number_of_dofs+ offset_hess)*coeff(number_of_dofs+ offset_hess+3)
+					    		 -coeff(number_of_dofs+ offset_hess+1)*coeff(number_of_dofs+ offset_hess+2)) << endl;
+*/
+
 	   		   }
 	   	   }
 

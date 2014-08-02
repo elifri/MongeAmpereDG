@@ -1793,18 +1793,21 @@ void Tsolver::time_stepping_MA() {
 
 		init_start_solution_MA(filename);
 	}
+	else
+	{
+		start_solution = USE_IDENTITY;
+		init_startsolution_from_function(General_functions::get_easy_convex_polynomial_callback());
+		plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
+
+		state_type error = calculate_L2_error(get_exacttemperature_MA_callback());
+		plotter.get_plot_stream("L2_rel") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
+
+	}
 
 
 	while (iteration < maxits) {
 		cout << "------------------------------------------------------------------------" <<endl;
 		cout << "Iteration: " << iteration << " level TODO" << iteration+level <<  endl;
-
-		//init variables
-		Eigen::SparseMatrix<double> LM(LM_size, LM_size);
-		Eigen::SparseMatrix<double> LM_bd(LM_size, LM_size);
-		Eigen::VectorXd Lrhs, Lrhs_bd, Lsolution, Lsolution_bd, Lsolution_only_bd;
-		Lrhs.setZero(LM_size);
-		Lsolution.setZero(LM_size);
 
 		//assign matrix cooordinates
 		cout << "Assign matrix coordinates..." << endl;
@@ -1826,17 +1829,9 @@ void Tsolver::time_stepping_MA() {
 						get_exacttemperature_MA_callback(), &shape, c0_converter);
 		}
 
-		//reserve space
-		LM.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
-		if (strongBoundaryCond){
-			LM_bd.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
-			Lrhs_bd.setZero(LM_size);
-			Lsolution_only_bd.setZero(LM_size);
-		}
-
-
-
 //==============assemble system============================
+
+		Eigen::VectorXd Lsolution(LM_size);
 
 		Functor f;
 
@@ -1849,6 +1844,7 @@ void Tsolver::time_stepping_MA() {
 		f.integrals_test_functions.resize(LM_size);
 		f.number_of_dofs = number_of_dofs;
 		f.boundary_coefficients = bd_handler.get_nodal_contributions();
+//		f.iteration = iteration;
 
 		assemble_MA_Newton(stabsign, gamma, f);
 
@@ -1914,6 +1910,7 @@ void Tsolver::time_stepping_MA() {
 		//if strong b.c. add boundary dofs
 		if (strongBoundaryCond)
 		{
+			Eigen::VectorXd Lsolution_bd;
 			bd_handler.add_boundary_dofs(Lsolution, f.boundary_coefficients, Lsolution_bd);
 			Lsolution = Lsolution_bd;
 		}

@@ -275,7 +275,7 @@ private:
 				// normal derivative
 				normalderi(i, iq) = grad(i)(iq).dot(normal(in));
 
-				//			cout << " normal derivative of shape function " << i << " at q-point " << iq << ": " << pBC->get_normalderi(i,iq) << endl;
+//				cout << " normal derivative of shape function " << i << " at q-point " << iq << ": " << normalderi(i,iq) << endl;
 			}
 
 	}
