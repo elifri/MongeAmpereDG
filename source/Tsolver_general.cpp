@@ -936,6 +936,7 @@ void Tsolver::init_startsolution_from_function(const vector_function_type f)
 {
 
 	assert (!strongBoundaryCond || statedim == 1);
+	assert (!strongBoundaryCond || bd_handler.is_initialized());
 
 	VectorXd sol_at_bd = bd_handler.get_nodal_contributions();
 
