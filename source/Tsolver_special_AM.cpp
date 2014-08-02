@@ -1430,8 +1430,7 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 							iqLC = gaussbaseLC + iq; //index of next gauss node to be processed
 							iqNC = vOh[i] == 1? gaussbaseNC + Fquadgaussdim - 1 - iq : gaussbaseNC + iq; //index of next gauss node in neighbour cell to be processed
 
-
-							// Copy entries into Laplace-matrix
+							//assemble inner face terms
 							for (unsigned int ishape = 0; ishape < shapedim; ++ishape) { //loop over test function
 								for (unsigned int jshape = 0; jshape < shapedim; ++jshape) { //loop over ansatz functions
 									const int row_LC = pLC->m_offset + ishape;
