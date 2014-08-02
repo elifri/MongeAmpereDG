@@ -296,12 +296,12 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 	cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
 	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
 
-	cout<< "Hess before neilan " << hess << endl;
+//	cout<< "Hess before neilan " << hess << endl;
 
 	//correction term inspired by neilan
 
-	assemble_face_infos(pLC, pBC, hess);
-	cout<< "Hess after neilan " << hess << endl;
+//	assemble_face_infos(pLC, pBC, hess);
+//	cout<< "Hess after neilan " << hess << endl;
 
 }
 
@@ -1039,11 +1039,23 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 										LM.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
 
+										//jumps in gradients
+										LM.coeffRef(row_LC, col_LC) += penalty
+												* shape.get_Fquadw(iqLC) * sqr(length) //quadrature weights
+												* pBC->get_normalderi(ishape, iqLC)/ facLevelLength[level] //jump in test
+												* pBC->get_normalderi(jshape, iqLC)/ facLevelLength[level]; //jump in ansatz
+
+										LM.coeffRef(row_LC, col_NC) += penalty * shape.get_Fquadw(iqLC) * sqr(length) * pBC->get_normalderi(ishape, iqLC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[level]/ facLevelLength[levelNC];
+
+										LM.coeffRef(row_NC, col_LC) += penalty * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC)* pBC->get_normalderi(jshape, iqLC) / facLevelLength[level]/ facLevelLength[levelNC];
+
+										LM.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[levelNC]/ facLevelLength[levelNC];
+										}
+
+
 									}
 								}
 							}
-
-						}
 
 						assembleInnerFace = false;
 					}
