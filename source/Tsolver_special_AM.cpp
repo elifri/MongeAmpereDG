@@ -224,12 +224,8 @@ void Tsolver::assemble_face_term_neilan(leafcell_type* pLC, const basecell_type*
 
 					val2 += val;
 					hess(i,j) += val/volume;
-//					hess(1,0) += val;
-//					hess(0,1) += val;
-//					hess(0,0) += val;
 				}
 			}
-			cout << "val1 " << val1 << " val2 " << val2 << endl;
 
 		}
 	}
@@ -281,7 +277,6 @@ void Tsolver::assemble_face_infos(leafcell_type* pLC, const basecell_type* pBC, 
 
 			assemble_face_term_neilan(pLC, pBC, pNC, pNBC, volumeBC, length, iqLC, iqNC, hess, jump_sign);
 		}
-		cout << "current hessian " << hess << endl;
 
 	}
 
@@ -296,12 +291,12 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 	cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
 	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
 
-//	cout<< "Hess before neilan " << hess << endl;
+	cout<< "Hess before neilan " << hess << endl;
 
 	//correction term inspired by neilan
 
 //	assemble_face_infos(pLC, pBC, hess);
-//	cout<< "Hess after neilan " << hess << endl;
+	cout<< "Hess after neilan " << hess << endl;
 
 }
 
