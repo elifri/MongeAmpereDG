@@ -58,20 +58,43 @@ bool checkJacobian(
           FunctorType &f,
           Eigen::VectorXd &x)
 {
-	bool res = true;
-
 	int n = x.size();
 	Eigen::SparseMatrix<double> J(n,n);
 	f.derivative(x,J);
+	J.prune(1,1e-10);
 
 	double tol = 1e-6;
-	double h = 1e-8;//to sqrt(eps)
 
 	Eigen::VectorXd f_minus = Eigen::VectorXd::Zero(n), f_plus= Eigen::VectorXd::Zero(n);
 
 	Eigen::SparseMatrixD estimated_J(n,n);
 
-	for (int j = 0; j < J.cols(); j++)
+	make_FD_Jacobian(f,x,estimated_J);
+	igpm::testblock b(std::cout);
+
+	MATLAB_export(J, "Jacobian");
+	MATLAB_export(estimated_J, "FDJacobian");
+	MATLAB_export(x, "startvector");
+
+	compare_matrices(b, J, estimated_J, "Jacobian", "FD Jacobian", true, tol);
+	return b;
+}
+
+template<typename FunctorType>
+void make_FD_Jacobian(
+          FunctorType &f,
+          Eigen::VectorXd &x,
+          Eigen::SparseMatrixD& estimated_J)
+{
+	int n = x.size();
+
+	double h = 1e-8/2.;//to sqrt(eps)
+
+	Eigen::VectorXd f_minus = Eigen::VectorXd::Zero(n), f_plus= Eigen::VectorXd::Zero(n);
+	estimated_J.resize(n,n);
+	estimated_J.setZero();
+
+	for (int j = 0; j < n; j++)
 	{
 		Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(n, j);
 		f.evaluate(x-h*unit_j, f_minus);
@@ -86,34 +109,11 @@ bool checkJacobian(
 			if (std::abs(estimated_derivative(i)) > 1e-10)
 			{
 				estimated_J.insert(i,j) = estimated_derivative(i);
-				if (  std::abs((estimated_derivative(i) - J.coeffRef(i,j))/estimated_derivative(i)) > tol)
-				{
-					cerr << " The Jacobian at (" << i << ","<< j << ") does not match the finite differences!" <<endl
-						 << "derivative: " << J.coeffRef(i,j) << " finite difference: " << estimated_derivative(i);
-					cerr << " -> abs error " <<  std::abs(estimated_derivative(i) - J.coeffRef(i,j))
-						 << " and rel error " << std::abs((estimated_derivative(i) - J.coeffRef(i,j))/estimated_derivative(i)) << endl;
-
-					res = false;
-				}
-
-			}
-			else
-			{
-				if  (std::abs(estimated_derivative(i) - J.coeffRef(i,j)) > tol)
-				{
-					cerr << " The Jacobian at (" << i << ","<< j << ") does not match the finite differences!" <<endl
-						 << "derivative: " << J.coeffRef(i,j) << " finite difference: " << estimated_derivative(i);
-					cerr << " -> abs error " <<  std::abs(estimated_derivative(i) - J.coeffRef(i,j)) << endl;
-
-				}
-				res = false;
 			}
 		}
 	}
-
-	J.prune(1,1e-10);
-	return res;
 }
+
 
 
 /*! DogLeg-solver [trust region]
@@ -145,6 +145,7 @@ void doglegMethod (
 
     functor.evaluate(x,f);
     functor.derivative(x,J);
+//    make_FD_Jacobian(functor, x, J);
 
     // Check result of function calls for correct length of vectors
     if (x.size() != f.size()) {
