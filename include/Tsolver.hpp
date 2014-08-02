@@ -270,7 +270,7 @@ public:
 
 	   			   f(i) -= integrals_test_functions(i)*
 	   					     (coeff(number_of_dofs+ offset_hess)*coeff(number_of_dofs+ offset_hess+3)
-	   					    		 -coeff(number_of_dofs+ offset_hess+1)*coeff(number_of_dofs+ offset_hess+2));
+	   					    		 -sqr(coeff(number_of_dofs+ offset_hess+1)+coeff(number_of_dofs+ offset_hess+2))/4.);
 
 /*
 	   			   cout << "det at " << i << " is " << (coeff(number_of_dofs+ offset_hess)*coeff(number_of_dofs+ offset_hess+3)
@@ -290,8 +290,10 @@ public:
 
 	   			   //derivate of determint is cofactor matrix
 	   			   J.coeffRef(i, number_of_dofs+offset_hess) -= integrals_test_functions(i)*x(number_of_dofs+offset_hess+3);
-	   			   J.coeffRef(i, number_of_dofs+offset_hess+1) -= -integrals_test_functions(i)*x(number_of_dofs+offset_hess+2);
-	   			   J.coeffRef(i, number_of_dofs+offset_hess+2) -= -integrals_test_functions(i)*x(number_of_dofs+offset_hess+1);
+	   			   J.coeffRef(i, number_of_dofs+offset_hess+1) -= -integrals_test_functions(i)*x(number_of_dofs+offset_hess+2)/2.
+																  -integrals_test_functions(i)*x(number_of_dofs+offset_hess+1)/2.;
+	   			   J.coeffRef(i, number_of_dofs+offset_hess+2) -= -integrals_test_functions(i)*x(number_of_dofs+offset_hess+1)/2.
+																  -integrals_test_functions(i)*x(number_of_dofs+offset_hess+2)/2.;
 	   			   J.coeffRef(i, number_of_dofs+offset_hess+3) -= integrals_test_functions(i)*x(number_of_dofs+offset_hess);
 	   		   }
 
