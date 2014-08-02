@@ -1884,7 +1884,7 @@ void Tsolver::time_stepping_MA() {
 
 		Eigen::VectorXd f_value;
 		f.evaluate(extended_solution, f_value);
-		cout << endl << "f value " << f_value.transpose() << endl;
+		plotter.get_plot_stream("plot_data_constraints_l2") << endl << "f value " << f_value.transpose() << endl;
 
 /*
 
