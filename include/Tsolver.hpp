@@ -245,7 +245,7 @@ public:
 
    bool strongBoundaryCond;
 
-   enum start_solution_type { EXACT, ARTIFICIAL_ERROR, SQRT_F};
+   enum start_solution_type { EXACT, ARTIFICIAL_ERROR, SQRT_F, USE_IDENTITY};
 
    start_solution_type start_solution;
    ///////////////////////////////////////////////////////

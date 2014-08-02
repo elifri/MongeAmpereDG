@@ -1398,6 +1398,16 @@ void Tsolver::time_stepping_MA() {
 	if (use_start_solution){
 		init_start_solution_MA(filename);
 	}
+	else
+	{
+		start_solution = USE_IDENTITY;
+		init_startsolution_from_function(General_functions::get_easy_convex_polynomial_callback());
+		plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
+
+		state_type error = calculate_L2_error(get_exacttemperature_MA_callback());
+		plotter.get_plot_stream("L2_rel") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
+
+	}
 
 	Eigen::VectorXd solution_lastiteration;
 
@@ -1405,12 +1415,32 @@ void Tsolver::time_stepping_MA() {
 		cout << "------------------------------------------------------------------------" <<endl;
 		cout << "Iteration: " << iteration << endl;
 
+		//assign matrix cooordinates
+		cout << "Assign matrix coordinates..." << endl;
+		pt.start();
+		assignViews_MA(LM_size);
+		pt.stop();
+		cout << "done. " << pt << " s." << endl;
+
+		//init continuous formulation
+		assert(!interpolating_basis && "this only works with a bezier basis");
+
+		c0_converter.init(grid, number_of_dofs);
+		//init boundary handler
+		if (strongBoundaryCond) {
+			if (interpolating_basis)
+				bd_handler.initialize(grid, number_of_dofs);
+			else
+				bd_handler.initialize_bezier(grid, number_of_dofs,
+						get_exacttemperature_MA_callback(), &shape, c0_converter);
+		}
 		//init variables
 		Eigen::SparseMatrix<double> LM(LM_size, LM_size);
 		Eigen::SparseMatrix<double> LM_bd(LM_size, LM_size);
 		Eigen::VectorXd Lrhs, Lrhs_bd, Lsolution, Lsolution_bd, Lsolution_only_bd;
 		Lrhs.setZero(LM_size);
 		Lsolution.setZero(LM_size);
+
 
 		//reserve space
 		LM.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
