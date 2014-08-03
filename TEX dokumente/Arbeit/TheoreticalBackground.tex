@@ -8,7 +8,6 @@
 where $F$ is given and $u$ is unknown.
 \end{definition}
 
-\todo {linear , nonlinear}
 
 \begin{definition}[elliptic PDE]
 	A PDE is called \emph{elliptic} if 
@@ -130,6 +129,22 @@ For the Frobenius product the following integration by parts rule holds
 \end{lemma}
 
 \begin{lemma}[Integration by parts for the Frobenius product] \label{la: integration by parts Frobenius}
+For the Frobenius product the following integration by parts rule holds
+\[
+	\int_\Omega (D^2 u : B) = - \int_\Omega (\nabla \cdot B) \cdot \nabla u + \int_{\partial \Omega}  B \nabla u \boldmath n
+\] 
+\end{lemma}
+
+
+\begin{lemma}[Divergence-Free Property of Cofactor Matrices]
+For the Frobenius product the following integration by parts rule holds
+\[
+	\nabla \cdot \mycof{D^2 u} = 0
+\] 
+\end{lemma}
+
+
+\begin{lemma}[Integration by parts for the Frobenius product]
 For the Frobenius product the following integration by parts rule holds
 \[
 	\int_\Omega (D^2 u : B) = - \int_\Omega (\nabla \cdot B) \cdot \nabla u + \int_{\partial \Omega}  B \nabla u \boldmath n
