@@ -39,7 +39,7 @@ void C0_converter::init(grid_type &grid, const int number_of_dofs_DG)
 	dofsDG_to_dofsC_ratio.setZero(number_of_dofs_DG); // careful: we overestimate the entries of dofsDG_...
 
 	//int to count nodes
-	int cur_node_index = 0;
+	int cur_node_index = node_indeces.size();
 
 	nvector_type nv;
 
