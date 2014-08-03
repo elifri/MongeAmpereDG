@@ -291,12 +291,18 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 	cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
 	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
 
-	cout<< "Hess before neilan " << hess << endl;
+//	cout<< "Hess before neilan " << hess << endl;
 
 	//correction term inspired by neilan
 
 //	assemble_face_infos(pLC, pBC, hess);
-	cout<< "Hess after neilan " << hess << endl;
+//
+//	//symmetrise
+//	hess(0,1) += hess(1,0);
+//	hess(0,1) /= 2.;
+//	hess(1,0) = hess(0,1);
+
+//	cout<< "Hess after neilan " << hess << endl;
 
 }
 
@@ -924,7 +930,7 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 		cout << "Largest EW " << max_EW << endl;
 		cout << "smallest EW " << min_EW << endl;
-		penalty *= max_EW*4;
+		penalty *= max_EW;
 
 		cout << "used penalty " << penalty << endl;
 
@@ -1319,8 +1325,6 @@ void Tsolver::time_stepping_MA() {
 	int stabsign;
 	double gamma, refine_eps, coarsen_eps;
 
-	int level;
-
 	read_problem_parameters_MA(stabsign, gamma, refine_eps, coarsen_eps, level, alpha);
 
 	//check level
@@ -1348,6 +1352,8 @@ void Tsolver::time_stepping_MA() {
 	convexifier.init();
 
 	singleton_config_file::instance().getValue("monge ampere", "maximal_iterations", maxits, 3);
+	singleton_config_file::instance().getValue("monge ampere", "iterations_refinement", maxlevel_refinement, level+2);
+	maxlevel_refinement += level;
 
 	//=======add streams to plot data ========
 	plotter.add_plot_stream("plot_data", "data/s/plot_data");
@@ -1362,10 +1368,16 @@ void Tsolver::time_stepping_MA() {
 	iteration = 0;
 	residuum_equal_since = 0;
 
-	//!!!!!!!!!!!!!!warning: this works only outside of loop if there is no refinement inside the loop!!!!!!!!!
 	unsigned int LM_size;
 
-	//assign matrix cooordinates
+
+	//calculate l2 norm of solution
+	L2_norm_exact_sol(0) = calculate_L2_norm(get_exacttemperature_MA_callback())(0);
+
+	cout << "L2 norm of exact sol " << L2_norm_exact_sol << endl;
+
+
+	//assign matrix cooordinates, especially initialises leafcell offsets
 	cout << "Assign matrix coordinates..." << endl;
 	pt.start();
 	assignViews_MA(LM_size);
@@ -1386,16 +1398,12 @@ void Tsolver::time_stepping_MA() {
 					get_exacttemperature_MA_callback(), &shape, c0_converter);
 	}
 
-	//calculate l2 norm of solution
-	L2_norm_exact_sol(0) = calculate_L2_norm(get_exacttemperature_MA_callback())(0);
-
-	cout << "L2 norm of exact sol " << L2_norm_exact_sol << endl;
-
 
 	//check for start solution and where required init startsolution
 	std::string filename;
 	bool use_start_solution = singleton_config_file::instance().getValue("monge ampere", "start_iteration", filename, "");
 	if (use_start_solution){
+
 		init_start_solution_MA(filename);
 	}
 	else
@@ -1411,10 +1419,8 @@ void Tsolver::time_stepping_MA() {
 
 	Eigen::VectorXd solution_lastiteration;
 
-	while (iteration < maxits) {
-		cout << "------------------------------------------------------------------------" <<endl;
-		cout << "Iteration: " << iteration << endl;
-
+	while (level < maxlevel_refinement)
+	{
 		//assign matrix cooordinates
 		cout << "Assign matrix coordinates..." << endl;
 		pt.start();
@@ -1426,6 +1432,7 @@ void Tsolver::time_stepping_MA() {
 		assert(!interpolating_basis && "this only works with a bezier basis");
 
 		c0_converter.init(grid, number_of_dofs);
+
 		//init boundary handler
 		if (strongBoundaryCond) {
 			if (interpolating_basis)
@@ -1434,132 +1441,143 @@ void Tsolver::time_stepping_MA() {
 				bd_handler.initialize_bezier(grid, number_of_dofs,
 						get_exacttemperature_MA_callback(), &shape, c0_converter);
 		}
-		//init variables
-		Eigen::SparseMatrix<double> LM(LM_size, LM_size);
-		Eigen::SparseMatrix<double> LM_bd(LM_size, LM_size);
-		Eigen::VectorXd Lrhs, Lrhs_bd, Lsolution, Lsolution_bd, Lsolution_only_bd;
-		Lrhs.setZero(LM_size);
-		Lsolution.setZero(LM_size);
+
+		//just to make sure
+		write_solution_vector(solution_lastiteration);
+		restore_MA(solution_lastiteration);
+
+		plotter.write_numericalsolution_VTK(iteration, "grid_refinedsolution");
 
 
-		//reserve space
-		LM.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
-		if (strongBoundaryCond){
-			LM_bd.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
-			Lrhs_bd.setZero(LM_size);
-			Lsolution_only_bd.setZero(LM_size);
-		}
+		int cur_it = 0;
+		while (cur_it < maxits) {
+			cout << "------------------------------------------------------------------------" <<endl;
+			cout << "Iteration: " << iteration << endl;
 
-//==============assemble system============================
-		cout << "Assemble linear System..." << flush << endl;
-		pt.start();
-		if (!strongBoundaryCond)
-		{
-			assemble_MA(stabsign, gamma, LM, Lrhs, Lsolution_only_bd);
-		}
-		else
-		{
-			assemble_MA(stabsign, gamma, LM_bd, Lrhs_bd, Lsolution_only_bd);
-		}
 
-		pt.stop();
-		cout << "done. " << pt << " s." << endl;
+			//init variables
+			Eigen::SparseMatrix<double> LM(LM_size, LM_size);
+			Eigen::SparseMatrix<double> LM_bd(LM_size, LM_size);
+			Eigen::VectorXd Lrhs, Lrhs_bd, Lsolution, Lsolution_bd, Lsolution_only_bd;
+			Lrhs.setZero(LM_size);
+			Lsolution.setZero(LM_size);
 
-		//if strong b.c. delete boundary dofs
-		if (strongBoundaryCond)
-		{
-			cout << "Delete Boundary DOFS ..." << endl;
+
+			//reserve space
+			LM.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
+			if (strongBoundaryCond){
+				LM_bd.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
+				Lrhs_bd.setZero(LM_size);
+				Lsolution_only_bd.setZero(LM_size);
+			}
+
+	//==============assemble system============================
+			cout << "Assemble linear System..." << flush << endl;
 			pt.start();
-			Lrhs_bd -= LM_bd*Lsolution_only_bd;
-			bd_handler.delete_boundary_dofs(LM_bd, LM);
-			bd_handler.delete_boundary_dofs(Lrhs_bd, Lrhs);
+			if (!strongBoundaryCond)
+			{
+				assemble_MA(stabsign, gamma, LM, Lrhs, Lsolution_only_bd);
+			}
+			else
+			{
+				assemble_MA(stabsign, gamma, LM_bd, Lrhs_bd, Lsolution_only_bd);
+			}
+
 			pt.stop();
 			cout << "done. " << pt << " s." << endl;
-		}
+
+			//if strong b.c. delete boundary dofs
+			if (strongBoundaryCond)
+			{
+				cout << "Delete Boundary DOFS ..." << endl;
+				pt.start();
+				Lrhs_bd -= LM_bd*Lsolution_only_bd;
+				bd_handler.delete_boundary_dofs(LM_bd, LM);
+				bd_handler.delete_boundary_dofs(Lrhs_bd, Lrhs);
+				pt.stop();
+				cout << "done. " << pt << " s." << endl;
+			}
 
 
-		//==============solve system============================
-		pt.start();
-//		Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
-		Eigen::SparseQR<Eigen::SparseMatrixD, Eigen::COLAMDOrdering<int> > solver;
-		LM.makeCompressed();
-		solver.compute(LM);
-		if (solver.info() != Eigen::Success) {
-			std::cerr << "Decomposition of stiffness matrix failed" << endl;
-			std::exit(-1);
-		}
-		Lsolution = solver.solve(Lrhs);
-		if (solver.info() != Eigen::Success) {
-			std::cerr << "Solving of FEM system failed" << endl;
-		}
+			//==============solve system============================
+			pt.start();
+	//		Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
+			Eigen::SparseQR<Eigen::SparseMatrixD, Eigen::COLAMDOrdering<int> > solver;
+			LM.makeCompressed();
+			solver.compute(LM);
+			if (solver.info() != Eigen::Success) {
+				std::cerr << "Decomposition of stiffness matrix failed" << endl;
+				std::exit(-1);
+			}
+			Lsolution = solver.solve(Lrhs);
+			if (solver.info() != Eigen::Success) {
+				std::cerr << "Solving of FEM system failed" << endl;
+			}
 
-//		if ((LM*Lsolution-Lrhs).norm() )
-		//(nachiteration)
-		Lsolution += solver.solve(Lrhs-LM*Lsolution);
+	//		if ((LM*Lsolution-Lrhs).norm() )
+			//(nachiteration)
+			Lsolution += solver.solve(Lrhs-LM*Lsolution);
 
-		pt.stop();
-		cout << "done. " << pt << " s." << endl;
+			pt.stop();
+			cout << "done. " << pt << " s." << endl;
 
-		//if strong b.c. add boundary dofs
-		if (strongBoundaryCond)
-		{
-			bd_handler.add_boundary_dofs(Lsolution, Lsolution_only_bd, Lsolution_bd);
-			Lsolution = Lsolution_bd;
-		}
+			//if strong b.c. add boundary dofs
+			if (strongBoundaryCond)
+			{
+				bd_handler.add_boundary_dofs(Lsolution, Lsolution_only_bd, Lsolution_bd);
+				Lsolution = Lsolution_bd;
+			}
 
+			//extract solution from last iteration
+			Eigen::VectorXd solution_old;
+			if (start_solution == SQRT_F && iteration == 0)
+			{
+				solution_old = Lsolution;
+			}
+			else
+			{
+				write_solution_vector(solution_old);
+			}
 
-		//clear flags
-		setleafcellflags(0, false);
+			//write poisson solution in leaf cells
+			restore_MA(Lsolution);
 
-		assemble_indicator_and_limiting(); // use flag
+//			cout << "Lsolution before writing numericalPoissonn" << Lsolution.transpose() <<endl;
 
-		//extract solution from last iteration
-		Eigen::VectorXd solution_old;
-		if (start_solution == SQRT_F)
-		{
-			solution_old = Lsolution;
-		}
-		else
-		{
-			write_solution_vector(solution_old);
-		}
+			//plot poisson solution
+			plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
+	//		plotter.write_exactsolution(get_exacttemperature_MA_callback(),iteration);
+			plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionPoisson");
+	//		plotter.write_numericalsolution(iteration, "grid_numericalsolutionPoisson");
 
-		//write poisson solution in leaf cells
-		restore_MA(Lsolution);
-
-		//plot poisson solution
-		plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
-//		plotter.write_exactsolution(get_exacttemperature_MA_callback(),iteration);
-		plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionPoisson");
-//		plotter.write_numericalsolution(iteration, "grid_numericalsolutionPoisson");
-
-		//calculate current l2 error
-		state_type error =  calculate_L2_error(get_exacttemperature_MA_callback());
-		plotter.get_plot_stream("rel_L2_without_convex") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
+			//calculate current l2 error
+			state_type error =  calculate_L2_error(get_exacttemperature_MA_callback());
+			plotter.get_plot_stream("rel_L2_without_convex") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
 
 
+
+			//==============convexify============================
+	//		cout << "Convexifying solution ..." << endl;
+	//		pt.start();
+	//		bool solution_was_not_convex = convexify(Lsolution);
+	//		pt.stop();
+	//		cout << "done. " << pt << " s." << endl;
+	//
+	//		//write convexified poisson solution in leaf cells
+	//		restore_MA(Lsolution);
+	//		if (solution_was_not_convex)
+	//		{
+	//			//calc current l2 error of
+	//			error =  calculate_L2_error(get_exacttemperature_MA_callback());
+	//			plotter.get_plot_stream("rel_L2_ipopt") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
+	//		}
+	//
+	//		//plot solution
+	//		plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionConvexified");
+	//
 
 			//==============convex combination of two steps (damping)============================
 			Eigen::VectorXd solution;
-		//==============convexify============================
-//		cout << "Convexifying solution ..." << endl;
-//		pt.start();
-//		bool solution_was_not_convex = convexify(Lsolution);
-//		pt.stop();
-//		cout << "done. " << pt << " s." << endl;
-//
-//		//write convexified poisson solution in leaf cells
-//		restore_MA(Lsolution);
-//		if (solution_was_not_convex)
-//		{
-//			//calc current l2 error of
-//			error =  calculate_L2_error(get_exacttemperature_MA_callback());
-//			plotter.get_plot_stream("rel_L2_ipopt") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
-//		}
-//
-//		//plot solution
-//		plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionConvexified");
-//
 
 
 
@@ -1610,7 +1628,15 @@ void Tsolver::time_stepping_MA() {
 		}
 
 
-		iteration++;
+		cout << "Refine grid ..." << endl;
+		pt.start();
+
+		refine();
+		level++;
+
+		pt.stop();
+
+		cout << "done. " << pt << " s." << endl;
 	}
 }
 
@@ -1697,6 +1723,18 @@ void Tsolver::adapt(const double refine_eps, const double coarsen_eps) {
 	grid.coarsen(idscoarsen2);
 	grid.ensureGrading();
 
+}
+
+void Tsolver::refine()
+{
+	grid_type::idset_type idsrefine;
+
+	int size = grid.copyIds(grid.leafCells(), idsrefine);
+	cerr << "idsrefine.size() = " << size << endl;
+	grid.refine(idsrefine);
+	grid.ensureGrading();
+
+	number_of_dofs *= 4;
 }
 
 #endif

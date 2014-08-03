@@ -263,9 +263,11 @@ public:
          double atol,rtol; // absolute and relative tolerances
          double dtol;      // tolerances for divergence
 
-         int iteration;
+         int iteration; // iterations in the current level
+         int level; // current level
 
          int maxits;       // maximum number of iterations
+         int maxlevel_refinement;
 
          double eta;       // absolute tolerance from estimated error factor
 
@@ -400,6 +402,7 @@ public:
    void time_stepping_MA ();
 
    void adapt(const double refine_eps, const double coarsen_eps);
+   void refine();
    void setleafcellflags(unsigned int flag, bool value);
    #endif
 
