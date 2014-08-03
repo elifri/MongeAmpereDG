@@ -1399,6 +1399,7 @@ void Tsolver::time_stepping_MA() {
 		init_start_solution_MA(filename);
 	}
 
+	Eigen::VectorXd solution_lastiteration;
 
 	while (iteration < maxits) {
 		cout << "------------------------------------------------------------------------" <<endl;
@@ -1509,27 +1510,38 @@ void Tsolver::time_stepping_MA() {
 
 
 		//==============convexify============================
-		cout << "Convexifying solution ..." << endl;
-		pt.start();
-		bool solution_was_not_convex = convexify(Lsolution);
-		pt.stop();
-		cout << "done. " << pt << " s." << endl;
-
-		//write convexified poisson solution in leaf cells
-		restore_MA(Lsolution);
-		if (solution_was_not_convex)
-		{
-			//calc current l2 error of
-			error =  calculate_L2_error(get_exacttemperature_MA_callback());
-			plotter.get_plot_stream("rel_L2_ipopt") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
-		}
-
-		//plot solution
-		plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionConvexified");
-
+//		cout << "Convexifying solution ..." << endl;
+//		pt.start();
+//		bool solution_was_not_convex = convexify(Lsolution);
+//		pt.stop();
+//		cout << "done. " << pt << " s." << endl;
+//
+//		//write convexified poisson solution in leaf cells
+//		restore_MA(Lsolution);
+//		if (solution_was_not_convex)
+//		{
+//			//calc current l2 error of
+//			error =  calculate_L2_error(get_exacttemperature_MA_callback());
+//			plotter.get_plot_stream("rel_L2_ipopt") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
+//		}
+//
+//		//plot solution
+//		plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionConvexified");
+//
 
 		//==============convex combination of two steps (damping)============================
-		Eigen::VectorXd solution = Tsolver::alpha*Lsolution + (1-Tsolver::alpha)*solution_old;
+		Eigen::VectorXd solution;
+
+		if (iteration == 0)
+		{	solution= Tsolver::alpha*Lsolution + (1-Tsolver::alpha)*solution_old;
+			solution_lastiteration = Lsolution;
+		}
+		else
+		{
+			solution = (Lsolution + solution_lastiteration) /2.;
+			solution_lastiteration = Lsolution;
+		}
+
 //		cout << "convex combination \n" << solution.transpose() << endl;
 
 		restore_MA(solution);
