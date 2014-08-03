@@ -728,7 +728,6 @@ void Tshape::initialize_mass() {
 ;
 
 
-
 void Tshape::get_refined_nodes(const int refine, nvector_baryc_type &nvb) const
 {
 	assert (refine >= 0);

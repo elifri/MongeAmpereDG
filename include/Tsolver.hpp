@@ -31,8 +31,8 @@ public:
 
    grid_type grid;
    unsigned int number_of_dofs;
-   std::vector<double> facLevelVolume;
-   std::vector<double> facLevelLength;
+   std::vector<value_type> facLevelVolume;
+   std::vector<value_type> facLevelLength;
 
    NeighbOrient_type            tableNeighbOrient;
    CoarseNeighbGaussbase_type   tableCoarseNeighbGaussbase;
@@ -274,7 +274,7 @@ public:
 		 Eigen::SelfAdjointEigenSolver<Hessian_type> EW_solver;
          double max_EW;
          double min_EW;
-         static const double epsilon = 1e-6; //minimum value of hessian eigenvalues
+         constexpr static double epsilon = 1e-6; //minimum value of hessian eigenvalues
 
          value_type sum_residuum, sum_residuum_old;
          int residuum_equal_since;
@@ -337,13 +337,30 @@ private:
 
    void calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1); /// calculates eigenvalues of a 2x2 matrix
 
+   void assemble_inner_face_term_neilan_parameters(const Fquad::inner_face_term_function_parameters &bPar, Hessian_type & hess);
    void assemble_face_term_neilan(leafcell_type* pLC, const basecell_type* pBC,
    										leafcell_type* pNC, const basecell_type* pNBC,
    										const value_type volume, const value_type length,
-   										unsigned int &iqLC, unsigned int &iqNC,
+   										const unsigned int &iqLC, const unsigned int &iqNC,
+   										Hessian_type &hess, int jump_sign);
+   void assemble_boundary_face_term_neilan_parameters(const Fquad::boundary_face_term_function_parameters &bPar, Hessian_type & hess);
+   void assemble_boundary_face_term_neilan(leafcell_type* pLC, const basecell_type* pBC,
+   										const value_type volume, const value_type length,
+   										const unsigned int &iqLC, const unsigned int &iqNC,
+   										Hessian_type &hess);
+
+   void assemble_face_term_pryer_parameters(const Fquad::inner_face_term_function_parameters &bPar, Hessian_type & hess);
+   void assemble_face_term_pryer(leafcell_type* pLC, const basecell_type* pBC,
+   										leafcell_type* pNC, const basecell_type* pNBC,
+   										const value_type volume, const value_type length,
+   										const unsigned int &iqLC, const unsigned int &iqNC,
    										Hessian_type &hess, int jump_sign);
 
-   void assemble_face_infos(leafcell_type* pLC, const basecell_type* pBC, Hessian_type &hess);
+   void assemble_boundary_face_term_pryer_parameters(const Fquad::boundary_face_term_function_parameters &bPar, Hessian_type & hess);
+   void assemble_boundary_face_term_pryer(leafcell_type* pLC, const basecell_type* pBC,
+   										const value_type volume, const value_type length,
+   										const unsigned int &iqLC, const unsigned int &iqNC,
+   										Hessian_type &hess);
 
 public:
 
