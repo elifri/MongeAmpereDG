@@ -1539,6 +1539,8 @@ void Tsolver::time_stepping_MA() {
 
 
 
+			//==============convex combination of two steps (damping)============================
+			Eigen::VectorXd solution;
 		//==============convexify============================
 //		cout << "Convexifying solution ..." << endl;
 //		pt.start();
@@ -1559,47 +1561,54 @@ void Tsolver::time_stepping_MA() {
 //		plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionConvexified");
 //
 
-		//==============convex combination of two steps (damping)============================
-		Eigen::VectorXd solution;
 
-		if (iteration == 0)
-		{	solution= Tsolver::alpha*Lsolution + (1-Tsolver::alpha)*solution_old;
-			solution_lastiteration = Lsolution;
+
+			if (iteration == 0)
+			{	solution= Tsolver::alpha*Lsolution + (1-Tsolver::alpha)*solution_old;
+				solution_lastiteration = Lsolution;
+			}
+			else
+			{
+				restore_MA(Lsolution);
+				plotter.write_numericalsolution_VTK(iteration, "grid_lastiteration");
+
+				solution = Tsolver::alpha*Lsolution + (1-Tsolver::alpha)*solution_lastiteration;
+				solution_lastiteration = Lsolution;
+			}
+
+	//		cout << "convex combination \n" << solution.transpose() << endl;
+
+			restore_MA(solution);
+
+			//plot solution
+			plotter.write_numericalsolution_VTK(iteration);
+
+			error =  calculate_L2_error(get_exacttemperature_MA_callback());
+			cout << "Current L2 error is " << error << endl;
+			plotter.get_plot_stream("plot_data")<< iteration << " " << error << endl;
+			if (L2_norm_exact_sol(0) != 0)
+				plotter.get_plot_stream("L2_rel") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
+
+			// reset flag 0
+			setleafcellflags(0, false);
+
+			if (std::abs(sum_residuum - sum_residuum_old) < 1)
+			{
+				residuum_equal_since++;
+				cerr<< "sum_residuum_equal_since now " << residuum_equal_since << endl;
+			}
+			else
+			{
+				residuum_equal_since = 0;
+			}
+
+			cout << " sum_residuum " << sum_residuum << endl;
+			sum_residuum_old = sum_residuum;
+
+			iteration++;
+			cur_it++;
 		}
-		else
-		{
-			solution = (Lsolution + solution_lastiteration) /2.;
-			solution_lastiteration = Lsolution;
-		}
 
-//		cout << "convex combination \n" << solution.transpose() << endl;
-
-		restore_MA(solution);
-
-		//plot solution
-		plotter.write_numericalsolution_VTK(iteration);
-
-		error =  calculate_L2_error(get_exacttemperature_MA_callback());
-		cout << "Current L2 error is " << error << endl;
-		plotter.get_plot_stream("plot_data")<< iteration << " " << error << endl;
-		if (L2_norm_exact_sol(0) != 0)
-			plotter.get_plot_stream("L2_rel") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
-
-		// reset flag 0
-		setleafcellflags(0, false);
-
-		if (std::abs(sum_residuum - sum_residuum_old) < 1)
-		{
-			residuum_equal_since++;
-			cerr<< "sum_residuum_equal_since now " << residuum_equal_since << endl;
-		}
-		else
-		{
-			residuum_equal_since = 0;
-		}
-
-		cout << " sum_residuum " << sum_residuum << endl;
-		sum_residuum_old = sum_residuum;
 
 		iteration++;
 	}
