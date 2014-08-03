@@ -362,12 +362,13 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 	Emass_type laplace;
 	value_type det_jac = pBC->get_detjacabs() * facLevelVolume[pLC->id().level()]; //determinant of Transformation to leafcell
 
-	if (iteration > 0 || start_solution){ //we need to update the laplace matrix
+	if (iteration > 0 || start_solution != SQRT_F){ //we need to update the laplace matrix
 		pLC->assemble_laplace(shape.get_Equad(), shape.get_Equads_grad(),
 								pBC->get_jac(), det_jac,facLevelLength[pLC->id().level()], laplace); //update diffusionmatrix
 	}
 	else
 	{
+		cout << "init diffusion matrix with identity" << endl;
 		Hessian_type hess;
 		hess << 1, 0, 0, 1;
 		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
@@ -398,15 +399,36 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
 		get_Ecoordinates(idLC, iq, x);
 		get_rhs_MA(x, uLC);
 
-		for (unsigned int istate = 0; istate < statedim; ++istate) {
-			for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-				int row = pLC->n_offset + ishape;
-				double val = shape.get_Equadw(iq) * pBC->get_detjacabs()
+		if (iteration > 1)
+		{
+			for (unsigned int istate = 0; istate < statedim; ++istate) {
+				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+					int row = pLC->n_offset + ishape;
+					double val = shape.get_Equadw(iq) * pBC->get_detjacabs()
 						* facLevelVolume[idLC.level()] * uLC(istate)
 						* shape.get_Equads(ishape, iq);
 
-				Lrhs(row) += -2*val; //solve -u=-2f instead of det u = f
+					Lrhs(row) += -2*val; //solve -u=-2f instead of det u = f
+				}
 			}
+		}
+		else
+		{
+			if (start_solution == SQRT_F)
+			{
+				for (unsigned int istate = 0; istate < statedim; ++istate) {
+					for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+						int row = pLC->n_offset + ishape;
+						double val = shape.get_Equadw(iq) * pBC->get_detjacabs()
+							* facLevelVolume[idLC.level()] * std::sqrt(2*uLC(istate))
+							* shape.get_Equads(ishape, iq);
+
+						Lrhs(row) += -val; //solve -u=-sqrt(2f)
+					}
+				}
+
+			}
+
 		}
 	}
 }
@@ -1219,53 +1241,74 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 void Tsolver::init_start_solution_MA(std::string filename)
 {
 	assert(iteration == 0);
-	if (filename == "error")
+
+	if (filename == "sqrt_f")
 	{
-		cout	<< "Using the exact solution with artificial error as start solution!"
+		start_solution = SQRT_F;
+	}
+	else
+	{
+		if (filename == "error")
+		{
+			start_solution = ARTIFICIAL_ERROR;
+			cout	<< "Using the exact solution with artificial error as start solution!"
 				<< endl;
 
-		summation f(get_exacttemperature_MA_callback(),
-				Convex_error_functions::get_hat_unitsquare_callback(
+			summation f(get_exacttemperature_MA_callback(),
+					Convex_error_functions::get_hat_unitsquare_callback(
 						0.3));
-		init_startsolution_from_function(f.get_add_callback());
-//		init_startsolution_from_function(get_exacttemperature_MA_callback());
-	} else
-		if (filename == "exact")
-		{	cout	<< "Using the exact solution as start solution!"
-					<< endl;
-			init_startsolution_from_function(get_exacttemperature_MA_callback());
-		}
-		else
-		{
-			cout	<< "Using user specified data as start solution!"
-					<< endl;
-			read_startsolution(filename);
-		}
+			init_startsolution_from_function(f.get_add_callback());
+	//		init_startsolution_from_function(get_exacttemperature_MA_callback());
+		} else
+			if (filename == "exact")
+			{
+				start_solution = EXACT;
+				cout	<< "Using the exact solution as start solution!"
+						<< endl;
+				init_startsolution_from_function(get_exacttemperature_MA_callback());
+			}
+			else
+			{
+				cout	<< "Using user specified data as start solution!"
+						<< endl;
+				read_startsolution(filename);
+			}
+	}
 
-	plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
+	if (start_solution != SQRT_F)
+	{
+		plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
 
-	state_type error = calculate_L2_error(get_exacttemperature_MA_callback());
-	plotter.get_plot_stream("rel_L2_without_convex") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
+		state_type error = calculate_L2_error(get_exacttemperature_MA_callback());
+		plotter.get_plot_stream("rel_L2_without_convex") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
 
 
-	VectorXd coeffs;
+		VectorXd coeffs;
 
-	//convexify start solution
-	cout << "Convexifying start solution ... " << endl;
+		//convexify start solution
+		cout << "Convexifying start solution ... " << endl;
 
-	igpm::processtimer pt;
-	pt.start();
-	write_solution_vector(coeffs);
-	convexify(coeffs);
-	restore_MA(coeffs); //writes solution and additional data in leaf cells
-	pt.stop();
-	cout << "done. " << pt << " s." << endl;
+		igpm::processtimer pt;
+		pt.start();
+		write_solution_vector(coeffs);
+		convexify(coeffs);
+		pt.stop();
+		cout << "done. " << pt << " s." << endl;
 
-	//plot solution
-	plotter.write_numericalsolution_VTK(iteration,
-			"grid_startsolutionConvexified");
+		restore_MA(coeffs); //writes solution and additional data in leaf cells
 
-	cout << "Finished reading start solution " << endl;
+		//plot solution
+		plotter.write_numericalsolution_VTK(iteration,
+				"grid_startsolutionConvexified");
+		error = calculate_L2_error(get_exacttemperature_MA_callback());
+		plotter.get_plot_stream("plot_data") << -1 << " " << error << endl;
+		if (L2_norm_exact_sol(0) != 0)
+				plotter.get_plot_stream("L2_rel") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
+
+
+		cout << "Finished reading start solution " << endl;
+	}
+
 }
 
 
@@ -1307,7 +1350,7 @@ void Tsolver::time_stepping_MA() {
 	singleton_config_file::instance().getValue("monge ampere", "maximal_iterations", maxits, 3);
 
 	//=======add streams to plot data ========
-	std::ofstream plot_data("data/s/plot_data");
+	plotter.add_plot_stream("plot_data", "data/s/plot_data");
 	plotter.add_plot_stream("rel_L2_without_convex", "data/s/plot_data_rel_L2_without_convex");
 	plotter.add_plot_stream("L2_rel", "data/s/plot_data_L2_rel");
 	plotter.add_plot_stream("plot_data_min_constraints", "data/s/plot_data_min_constraints");
@@ -1351,13 +1394,9 @@ void Tsolver::time_stepping_MA() {
 
 	//check for start solution and where required init startsolution
 	std::string filename;
-	start_solution = singleton_config_file::instance().getValue("monge ampere", "start_iteration", filename, "");
-	if (start_solution){
+	bool use_start_solution = singleton_config_file::instance().getValue("monge ampere", "start_iteration", filename, "");
+	if (use_start_solution){
 		init_start_solution_MA(filename);
-		state_type error = calculate_L2_error(get_exacttemperature_MA_callback());
-		plot_data << -1 << " " << error << endl;
-		if (L2_norm_exact_sol(0) != 0)
-				plotter.get_plot_stream("L2_rel") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
 	}
 
 
@@ -1445,7 +1484,14 @@ void Tsolver::time_stepping_MA() {
 
 		//extract solution from last iteration
 		Eigen::VectorXd solution_old;
-		write_solution_vector(solution_old);
+		if (start_solution == SQRT_F)
+		{
+			solution_old = Lsolution;
+		}
+		else
+		{
+			write_solution_vector(solution_old);
+		}
 
 		//write poisson solution in leaf cells
 		restore_MA(Lsolution);
@@ -1493,7 +1539,7 @@ void Tsolver::time_stepping_MA() {
 
 		error =  calculate_L2_error(get_exacttemperature_MA_callback());
 		cout << "Current L2 error is " << error << endl;
-		plot_data << iteration << " " << error << endl;
+		plotter.get_plot_stream("plot_data")<< iteration << " " << error << endl;
 		if (L2_norm_exact_sol(0) != 0)
 			plotter.get_plot_stream("L2_rel") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
 

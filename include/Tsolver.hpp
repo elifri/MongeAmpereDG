@@ -245,8 +245,9 @@ public:
 
    bool strongBoundaryCond;
 
-   bool start_solution;
+   enum start_solution_type { EXACT, ARTIFICIAL_ERROR, SQRT_F};
 
+   start_solution_type start_solution;
    ///////////////////////////////////////////////////////
    //////////                                  ///////////
    //////////       SPECIAL FUNCTIONS          ///////////
