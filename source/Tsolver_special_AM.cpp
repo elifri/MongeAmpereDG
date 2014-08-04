@@ -337,8 +337,7 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 	cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
 	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
 
-	//correction term inspired by neilan
-	hess.setZero();
+	cout<< "Hess before neilan " << hess << endl;
 
 	Fquad::inner_face_term_function_type<Hessian_type> f_inner = MEMBER_FUNCTION(&Tsolver::assemble_inner_face_term_neilan_parameters, this);
 	Fquad::boundary_face_term_function_type<Hessian_type> f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_neilan_parameters, this);
@@ -349,7 +348,7 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 	shape.fquad.assemble_face_infos<Hessian_type>(f_inner, f_boundary,
 												  grid, facLevelVolume, facLevelLength,
 												  pLC, pBC, hess, true);
-	cout<< "Hess after neilan new " << hess << endl;
+	cout<< "Hess after neilan " << hess << endl;
 	//	//symmetrise
 	value_type mid_value = (hess(0,1)+hess(1,0))/2.;
 	hess(1,0) = mid_value;
