@@ -344,9 +344,9 @@ private:
    										const unsigned int &iqLC, const unsigned int &iqNC,
    										Hessian_type &hess, int jump_sign);
    void assemble_boundary_face_term_neilan_parameters(const Fquad::boundary_face_term_function_parameters &bPar, Hessian_type & hess);
-   void assemble_boundary_face_term_neilan(leafcell_type* pLC, const basecell_type* pBC,
+   void assemble_boundary_face_term_neilan(leafcell_type* pLC,
    										const value_type volume, const value_type length,
-   										const unsigned int &iqLC, const unsigned int &iqNC,
+   										const unsigned int &iqLC,
    										Hessian_type &hess);
 
    void assemble_face_term_pryer_parameters(const Fquad::inner_face_term_function_parameters &bPar, Hessian_type & hess);
@@ -359,7 +359,7 @@ private:
    void assemble_boundary_face_term_pryer_parameters(const Fquad::boundary_face_term_function_parameters &bPar, Hessian_type & hess);
    void assemble_boundary_face_term_pryer(leafcell_type* pLC, const basecell_type* pBC,
    										const value_type volume, const value_type length,
-   										const unsigned int &iqLC, const unsigned int &iqNC,
+   										const unsigned int &iqLC,
    										Hessian_type &hess);
 
 public:

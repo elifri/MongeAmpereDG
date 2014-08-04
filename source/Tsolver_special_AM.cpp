@@ -219,14 +219,14 @@ void Tsolver::assemble_face_term_neilan(leafcell_type* pLC, const basecell_type*
 					value_type val = 0;
 
 					//jump from this side of the leaf cell
-					val = - 0.5 // to average
+					val = - jump_sign*0.5 // to average
 								* shape.get_Fquadw(iqLC) * length//quadrature weights
 								*pBC->A_grad_times_normal(A,i_shape, iqLC)/ facLevelLength[pLC->id().level()]; //gradient times normal
 
 					hess(i,j) += pLC->u(i_shape,0)*val/volume;
 
 					//jump from the side of the neighbouring leaf cell
-					val = - 0.5 // to average
+					val = - jump_sign*0.5 // to average
 								* shape.get_Fquadw(iqLC) * length//quadrature weights
 								* pBNC->A_grad_times_normal(A, i_shape, iqNC)/ facLevelLength[pLC->id().level()]; //gradient times normal
 
@@ -295,12 +295,12 @@ void Tsolver::assemble_face_term_pryer(leafcell_type* pLC, const basecell_type* 
 
 void Tsolver::assemble_boundary_face_term_pryer_parameters(const Fquad::boundary_face_term_function_parameters &bPar, Hessian_type & hess)
 {
-	assemble_boundary_face_term_pryer(bPar.pLC, bPar.pBC, bPar.volume, bPar.length, bPar.iqLC, bPar.iqNC, hess);
+	assemble_boundary_face_term_pryer(bPar.pLC, bPar.pBC, bPar.volume, bPar.length, bPar.iqLC, hess);
 }
 
 void Tsolver::assemble_boundary_face_term_pryer(leafcell_type* pLC, const basecell_type* pBC,
 										const value_type volume, const value_type length,
-										const unsigned int &iqLC, const unsigned int &iqNC,
+										const unsigned int &iqLC,
 										Hessian_type &hess)
 {
 	// loop over Hessian entries
@@ -337,24 +337,24 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 	cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
 	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
 
-	cout<< "Hess before neilan " << hess << endl;
-
-	Fquad::inner_face_term_function_type<Hessian_type> f_inner = MEMBER_FUNCTION(&Tsolver::assemble_inner_face_term_neilan_parameters, this);
-	Fquad::boundary_face_term_function_type<Hessian_type> f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_neilan_parameters, this);
-
-//	Fquad::inner_face_term_function_type<Hessian_type> f_inner = MEMBER_FUNCTION(&Tsolver::assemble_face_term_pryer_parameters, this);
-//	Fquad::boundary_face_term_function_type<Hessian_type> f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_pryer_parameters, this);
-
-	shape.fquad.assemble_face_infos<Hessian_type>(f_inner, f_boundary,
-												  grid, facLevelVolume, facLevelLength,
-												  pLC, pBC, hess, true);
-	cout<< "Hess after neilan " << hess << endl;
-	//	//symmetrise
-	value_type mid_value = (hess(0,1)+hess(1,0))/2.;
-	hess(1,0) = mid_value;
-	hess(0,1) = mid_value;
-
-	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
+//	cout<< "Hess before neilan " << hess << endl;
+//
+//	Fquad::inner_face_term_function_type<Hessian_type> f_inner = MEMBER_FUNCTION(&Tsolver::assemble_inner_face_term_neilan_parameters, this);
+//	Fquad::boundary_face_term_function_type<Hessian_type> f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_neilan_parameters, this);
+//
+////	Fquad::inner_face_term_function_type<Hessian_type> f_inner = MEMBER_FUNCTION(&Tsolver::assemble_face_term_pryer_parameters, this);
+////	Fquad::boundary_face_term_function_type<Hessian_type> f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_pryer_parameters, this);
+//
+//	shape.fquad.assemble_face_infos<Hessian_type>(f_inner, f_boundary,
+//												  grid, facLevelVolume, facLevelLength,
+//												  pLC, pBC, hess, true);
+//	cout<< "Hess after neilan " << hess << endl;
+//	//	//symmetrise
+//	value_type mid_value = (hess(0,1)+hess(1,0))/2.;
+//	hess(1,0) = mid_value;
+//	hess(0,1) = mid_value;
+//
+//	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
 
 }
 
