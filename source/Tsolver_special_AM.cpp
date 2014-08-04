@@ -1056,8 +1056,10 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 									const int col_LC = pLC->n_offset + jshape;
 									const int col_NC = pNC->n_offset + jshape;
 
+									//average A
 									Hessian_type A = 0.5*(pLC->A+pNC->A);
 
+//									Hessian_type A = pLC->A;
 
 									value_type A_times_normal_BC = pBC->A_grad_times_normal(A,jshape,iqLC),
 											   A_times_normal_NBC = pNBC->A_grad_times_normal(A,jshape,iqNC);
@@ -1073,6 +1075,8 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 									LM.coeffRef(row_NC, col_LC) += 0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* A_times_normal_BC / facLevelLength[level];
 
 									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
+
+//									A = pNC->A;
 
 									A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,ishape,iqLC),
 									A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,ishape,iqNC);
