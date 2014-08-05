@@ -1,0 +1,115 @@
+\section{A Picard Iteration for the \MA equation}
+
+For quasilinear PDEs such as $\nabla \cdot (A(u) \nabla u ) = f$ it is common to determine the solution via a fixed point iteration. The key aspect lies in a decoupling of the coefficient matrix $A(u)$ and $\nabla u$. Hence, one solves the equations
+\[
+	\nabla \cdot (A(u^{i} )\nabla u^{i+1}) = f  \text{ and } \nabla \cdot (A(u^{i+1}) \nabla u^{i}) = f, \text{ respectively}
+\] 
+iteratively.
+
+In this spirit we want to decouple the derivates in the \MA equation. Recall, the \MA equation states
+\begin{align}
+ \mydet{D^2 u} &= f \nonumber \\
+ 	\dxx{x_1} u \dxx{x_2} u -\dxy {x_1}{x_2} u \dxy{x_2}{x_1} u  &= f. \label{eq:mongeAmpere detForm}
+\end{align}
+To shorten and facilitate terms we will denote $x \in \Omega \subset {\R^2} $ by $(x,y)^t$ and the partial derivates with subscripts as for example $\dxx{x_1} u = u_{xx} =  u_{x_1^2}  = u_{x_1 x_1}$.
+
+At first, we multiply \eqref{eq:mongeAmpere detForm} by $-2$ \todo{choose one}
+\begin{align}
+ 	-\dyy u {x} \dyy u {y}-\dyy u {x} \dyy u {y} -\dyx u {x}{y} \dyx u{y}{x} -\dyx u {x}{y} \dyx u{y}{x} &=-2 f. \\
+ 	-2\dyy u {x} \dyy u {y}-2\dyx u {x}{y} \dyx u{y}{x}  &=-2 f
+\end{align}
+
+\subsection*{first try}
+Decoupling into the two functions $v = u ,w = u$ we have
+\begin{align}
+	-w_{yy} v_{xx}-w_{xx} v_{yy} + w_{yx} v_{xy} + w_{xy} v_{yx} = -2f \qquad \textnormal{ on } \Omega \label{eq:decoupled PDE start}
+\end{align}
+We want to write this equation in divergence form, assuming that $w$ and $v$ are smooth it holds
+\begin{align}
+	-\nabla \cdot \begin{pmatrix} w_{yy} v_x \\ w_{xx} v_y \end{pmatrix} + w_{yyx}v_x + w_{xxy}v_y
+	 +\nabla \cdot \begin{pmatrix} w_{xy} v_y \\ w_{yx} v_x \end{pmatrix}  - w_{xyx}v_y +  w_{yxy}v_x 
+	 = -2f.
+\end{align}
+\todo{vielleicht ein Komma in den zeilenvektor}
+Rewriting these terms by matrix products yields 
+\begin{align}
+%      -&\nabla \cdot \left( \begin{pmatrix} w_{yy} & 0 \\ 0 & w_{xx} \end{pmatrix} \nabla v \right) + (w_{yyx}v_x + w_{xxy}v_y) \nonumber \\
+%	 &+\nabla \cdot \left( \begin{pmatrix} 0 & w_{xy}  \\ w_{yx} & 0 \end{pmatrix}  \nabla v \right)  - (w_{xyx}v_y +  w_{yxy}v_x ) 
+%	 = -2f \\ 
+	       -&\nabla \cdot \left( \begin{pmatrix} w_{yy} & -w_{xy}  \\ -w_{yx} & w_{xx} \end{pmatrix} \nabla v \right) +  \begin{pmatrix} w_{yyx}-w_{yxy} & -w_{xxy} w_{xyx} \end{pmatrix} \nabla v  = -2f  \label{eq:long formula}
+\end{align}
+We see that the divergence coefficient matrix in \eqref{eq:long formula} is the cofactor matrix of the hessian (Definition \ref{def: cof matrix}) and the right term contains the matrix divergence of the hessian's cofactor matrix leading to
+\begin{align}
+	-\nabla \cdot \left( \mycof {D^2 w } \nabla v \right) + \nabla \cdot \left(\mycof {D^2 w }\right) \nabla v = -2f.
+\end{align}
+\todo{ second divergence term}
+The cofactor matrix is divergence free (Lemma \ref{la: divergence free cof}) and hence we find a term similar to the linearisation of the \MA equation
+\begin{align}
+	- \nabla \cdot \left( \mycof{ D^2 w} \nabla v \right)  = -2f.  \label{eq:decoupled PDE}
+\end{align}
+For a fixed $w$ the left-hand side now is quasilinear in $v$ opposed to the nonlinearity in $u$ in the original PDE. From its derivation it is clear that for smooth functions $w=u, v=u$ \eqref{eq:decoupled PDE} is equivalent to the classical formulation of the \MA equation. Furthermore due to the symmetry of \eqref{eq:decoupled PDE start} in $v$ and $w$ analogously the equation 
+\begin{align}
+	- \nabla \cdot \left( \mycof{ D^2 v} \nabla w \right)  = -2f.  \label{eq:decoupled PDE2}
+\end{align}
+can be deduced.
+
+Thus, it is natural to examine the fixed point iteration
+\begin{align}
+	- \nabla \cdot \left( \mycof{ D^2 u^i} \nabla u^{i+1} \right)  = -2f  \label{eq:decoupled PDE}
+\end{align}
+for its applicability for numerical schemes approximating a \MA solution.
+
+\subsection*{second try}
+Decoupling and not dividing by $-1 $ into the two functions $v = u ,w = u$ and reordering terms we have
+\begin{align}
+	w_{yy} v_{xx}- w_{xy} v_{yx} - w_{yx} v_{xy} +w_{xx} v_{yy} = 2f \qquad \textnormal{ on } \Omega
+\end{align}
+Rewriting this by matrix frobenius product yields to
+\begin{align}
+ \begin{pmatrix} w_{yy} & -w_{xy}  \\ -w_{yx} & w_{xx} \end{pmatrix}: \begin{pmatrix} v_{xx} & v_{yx}  \\  v_{xy} & v_{yy} \end{pmatrix} = 2f.
+\end{align}
+We see that the left matrix is the cofactor matrix of the hessian (Definition \ref{def: cof matrix}) and the right one the hessian itself and find
+\begin{align}
+		\mycof {D^2 w }:D^2 v  = 2f  \label{eq:short formula}
+\end{align}
+
+???????????????????????????????? \\
+Integrating over $\Omega$ and applying integration by parts (Lemma \ref{la: integration by parts Frobenius})we get
+\begin{align}
+		\int_{\Omega} D^2 v:\mycof {D^2 w }  &= 2f \\
+		-\int_{\Omega} \left( \nabla \cdot \mycof {D^2 w } \right) \nabla v + \int_{\partial \Omega} \mycof {D^2 w } \nabla v \mathbf{n} &= 2f
+\end{align}
+????????????????????????????????
+
+
+Substituting the identity of Lemma \ref{la: An application of the divergernce product rule} we find
+\begin{align}
+	\nabla \cdot \left( \mycof {D^2 w } \nabla v \right) = 2f.
+\end{align}
+Multiplying by $-1$ we get a term the equation
+\begin{align}
+	- \nabla \cdot \left( \mycof{ D^2 w} \nabla v \right)  = -2f.  \label{eq:decoupled PDE}
+\end{align}
+For a fixed $w$ the left-hand side now is (at least) quasilinear in $v$ opposed to the nonlinearity in $u$ in the original PDE. From its derivation it is clear that for smooth functions $w=u, v=u$ \eqref{eq:decoupled PDE} is equivalent to the classical formulation of the \MA equation. Furthermore due to the symmetry of \eqref{eq:decoupled PDE start} in $v$ and $w$ analogously the equation 
+\begin{align}
+	- \nabla \cdot \left( \mycof{ D^2 v} \nabla w \right)  = -2f.  \label{eq:decoupled PDE2}
+\end{align}
+can be deduced.
+
+Thus, it is natural to examine the fixed point iteration
+\begin{align}
+	- \nabla \cdot \left( \mycof{ D^2 u^i} \nabla u^{i+1} \right)  = -2f  \label{eq:decoupled PDE}
+\end{align}
+for its applicability for numerical schemes approximating a \MA solution.
+
+
+\section{Challenges for }
+By reviewing existing DG method for the \MA we learned some ?(subjects, matter, points) we have to kepp in mind// pay attentio to //concern.
+
+\begin{itemize}
+\item convexity
+\item consistency
+\item 
+\end{itemize}
+
+\section{DG formulation in every Picard step}
