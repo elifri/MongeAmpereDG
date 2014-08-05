@@ -106,32 +106,81 @@ A recent idea is to choose the test and ansatz spaces to include discontinuous f
 The main issue is the handling of derivatives along discontinuities.
 \todo{DG mit numerischen Flux oder mehr wie TICAM?}
 
+\todo{ Kommentar zur Implementation wegen Vorzeichen für Kantenterme]}
 \newpage
 
 To apply a DG method to more difficult PDEs such as the \MA equation we need some algebraic and analytic identities for the Hessian.
 \section{Hessian Identities}
 
 \begin{definition}[Cofactor Matrix] \label{def: cof matrix}
-	The \emph{cofactor matrix} of a matrix $A \in \R^{n \times n}$ is defined by the entries
+	The \emph{cofactor matrix} of a matrix $A \in \R^{d \times d}$ is defined by the entries
 	\begin{align}
 	(\mycof A )_{i,j} = (-1)^{i+j} \mydet{A_{ij}},
 	\end{align}
 	where $A_{ij}$ denotes the matrix resulting from deleting the $i$-th row and $j$-column in $A$.
-	
 \end{definition}
 
+In the two-dimensional case the cofactor matrix of the hessian simplifies to
+\begin{align}
+\mycof {D^2 u} = \begin{pmatrix}
+								\dxx{x_2} u & -\frac {\partial u}{\partial x_1 x_2} \\
+								-\frac {\partial u}{\partial x_2 x_1} & \frac {\partial u}{\partial x_1^2} 
+							\end{pmatrix}.
+\end{align}
+
+
 Very advantageous is the behaviour of the cofactor matrix of a hessian if a divergence is applied to it:
-\begin{lemma}[Divergence-Free Property of Cofactor Matrices] \label{la: divergence free cof}
-For the Frobenius product the following integration by parts rule holds
+\begin{definition}[Matrix Divergence]
+	$\nabla \cdot A$ for a matrix $A \in ?^{d \times d}$ is defined by taking the divergence row-wise,i.e.
 \[
-	\nabla \cdot \mycof{D^2 u} = 0
+	\nabla \cdot A = \begin{pmatrix} \nabla \cdot A_1 \\ \vdots \\ \nabla \cdot A_d\end{pmatrix}
+	= \begin{pmatrix} \sum_{j = 1}^{d} \dx{x_i} A_{1,j} \\ \vdots \\ \sum_{j = 1}^{d} \dx{x_i} A_{d,j}\end{pmatrix}.
+\]
+	
+	\todo {ueberarbeiten}
+\end{definition}
+
+\begin{lemma}[Divergence-Free Property of Cofactor Matrices] \label{la: divergence free cof}
+For smooth functions $u$ the cofactor matrix of the hessian is divergence-free:
+\[
+	\nabla \cdot \mycof{D^2 u} = 0.
+\] 
+\end{lemma}
+\begin{proof}
+\begin{align*}
+	\nabla \cdot \mycof{D^2 u} = \sum_{i=1}^{d} \dx{ x_i}\mycof{D^2 u}_i = 
+	\begin{pmatrix}
+		\frac {\partial^3} {\partial x_1 {x_2}^2 } -\frac {\partial^3} {\partial{x_2} x_1 {x_2}} \\
+				\frac {\partial^3} {\partial {x_1}x_2 {x_1}} -\frac {\partial^3} {\partial x_2 {x_1}^2 }
+	\end{pmatrix}
+\end{align*}
+By Schwarz' theorem the latter equals zero if $u$ is thrice continuous differentiable.
+\end{proof}
+
+
+\begin{lemma}[Integration by parts for the Frobenius product] \label{la: integration by parts Frobenius}
+For a Frobenius product with the hessian's cofactor matrix  the following integration by parts rule holds for smooth $u$
+\[
+	\int_\Omega (D^2 u : B) = - \int_\Omega (\nabla \cdot B) \cdot \nabla u + \int_{\partial \Omega}  B \nabla u \bf n
 \] 
 \end{lemma}
 
-\begin{lemma}[Integration by parts for the Frobenius product] \label{la: integration by parts Frobenius}
-For the Frobenius product the following integration by parts rule holds
+\begin{proof}
+The proof is based on applying integration by parts row-wise
+\begin{align*}
+- \int_\Omega (\nabla \cdot B) \cdot \nabla u &= 
+- \int_\Omega \sum_{i = 1}^{d} (\nabla \cdot B_i) \dx {x_i} u \\
+&=  \int_\Omega \sum_{i = 1}^{d} B_i \cdot  (\nabla \dx {x_i} u) - \int_{\partial \Omega} \sum_{i = 1}^{d} (B_i) \dx {x_i} u \mathbf{n} \\
+&=  \int_\Omega \sum_{i = 1}^{d}\sum_{j= 1}^{d} B_{ij} \dxy {x_i}{x_j} u- \int_{\partial \Omega} B \nabla u \mathbf{n} \\
+&=  \int_\Omega (D^2 u : B)- \int_{\partial \Omega} B \nabla u \mathbf{n} 
+\end{align*}
+\end{proof}
+
+When later talking about weak formulation it comes handy to have a divergence form of the latter 
+\begin{lemma}[Divergence form of the Frobenius Product] \label{la: An application of the divergernce product rule}
 \[
-	\int_\Omega (D^2 u : B) = - \int_\Omega (\nabla \cdot B) \cdot \nabla u + \int_{\partial \Omega}  B \nabla u \boldmath n
+		\nabla \cdot \left( \mycof {D^2 u } \nabla v \right) %- \nabla \cdot \left(\mycof {D^2 u }\right) \nabla v
+		= \mycof {D^2 u}: D^2 v
 \] 
 \end{lemma}
 
@@ -153,7 +202,12 @@ For the Frobenius product the following integration by parts rule holds
 
 \begin{proof}
 \begin{align*}
-\int_\Omega D^2 u : B &= \int_{\Omega}( \nabla \cdot (B \nabla u ) - (\nabla \cdot B) \nabla u) \\
-									     -\int_{\Omega}( \nabla B \nabla u )  + \int_{\partial \Omega} B- (\nabla \cdot B) \nabla u) 
+\nabla \cdot \left( \mycof {D^2 u } \nabla v \right) =&%- \nabla \cdot \left(\mycof {D^2 u }\right) \nabla =& 
+\sum_{i= 1}^{d} \dx {x_i} 	\left( \sum_{j= 1}^{d} \mycof {D^2 u }_{i,j} \dx{x_j} v \right)\\
+%&-  \sum_{j= 1}^{d}  \sum_{i= 1}^{d} \left(\dx {x_i} \mycof {D^2 u }_{i,j}  \right) \dx{x_j} v \\
+=&  \sum_{i= 1}^{d} \sum_{j= 1}^{d}  \left(\dx {x_i} \mycof {D^2 u }_{i,j}  \right) \dx{x_j}v + \sum_{i= 1}^{d} \sum_{j= 1}^{d}  \mycof {D^2 u }_{i,j} \dxy{x_j}{x_i}v\\
+=&  \sum_{j= 1}^{d}  \nabla \cdot \left(\mycof {D^2 u }\right)_j \dx{x_j}v + \sum_{i= 1}^{d} \sum_{j= 1}^{d}  \mycof {D^2 u }_{i,j} \dxy{x_j}{x_i}v\\
+=&   \nabla \cdot \left(\mycof {D^2 u }\right) \nabla v+ \mycof {D^2 u }:D^2v
 \end{align*}
+The hypothesis results from the fact that the cofactor matrix of the hessian is divergence-free.
 \end{proof}
