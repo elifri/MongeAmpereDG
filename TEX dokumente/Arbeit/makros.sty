@@ -14,8 +14,23 @@
 \newcommand{\mydet}[1]{\det{\left(#1\right)}}
 \newcommand{\mycof}[1]{\cof \left( #1 \right)}
 
-\newcommand{\laverage}{\{\{}
-\newcommand{\raverage}{\}\}}
+
+%=======
+\newcommand{\laverage}{\{\!\!\{}
+\newcommand{\raverage}{\}\!\!\}}
+\newcommand{\average}[1]{\ensuremath{\laverage #1 \raverage}}
+
+\newcommand{\ljump}{\llbracket}
+\newcommand{\rjump}{\rrbracket}
+\newcommand{\jump}[1]{\ensuremath{\ljump #1 \rjump}}
+
+\newcommand{\dx}[1]{\ensuremath{\frac \partial {\partial #1}}}
+\newcommand{\dxx}[1]{\ensuremath{\frac {\partial^2} {\partial {#1}^2}}}
+\newcommand{\dxy}[2]{\ensuremath{\frac {\partial^2} {\partial #1\partial #2}}}
+
+\newcommand{\dy}[2]{\ensuremath{#1_{#2}}}
+\newcommand{\dyy}[2]{\ensuremath{#1_{#2 #2 }}}
+\newcommand{\dyx}[3]{\ensuremath{#1_{#2 #3 }}}
 
 >>>>>>> Stashed changes
 %================Triangulation
