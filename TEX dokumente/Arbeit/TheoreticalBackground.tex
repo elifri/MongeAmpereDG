@@ -26,6 +26,12 @@ According to the literature we refer by $W^{s,p}(\Omega)$ to the H\"older space,
 Let $\triang$ be a shape regular, quasi-uniform simplicial triangulation of $\Omega$. We divide its edges $\edges$ into the subsets $\edgesi$ and $\edgesb$ containing all interior edges and boundary edges, respectively.
 Using that we define the piecewise spaces
 \todo{piecewise spaces}
+\begin{definition}[Piecewise Polynomial Spaces] \label{def: piecewise polySpace}
+	Further we denote the finite-dimensional space of piecewise polynomials by
+\[	
+	\mathcal P^k_h = \{ f \in L^\infty(\Omega); f \arrowvert_T \textnormal{ is a polynomial of (total) degree } \leq k \textnormal{ for every } t \in \mathcal T_h\}.
+\]
+\end{definition}
 
 \todo{norms}
 We use a subscript $h$ to indicate a piecewise evaluation/interpretation. Subsequently differential operators with a subscript $h$ imply separate differentiations on every triangle.
@@ -54,17 +60,17 @@ Note, that the jump of a scalar is a vector, whereas the jump of a vector is a s
 
 
 \section{Finite Element Method}
-Before we handle the \MA equation we recall how a finite element method works using the example of the simpler Poisson equation. 
+Before we handle the \MA equation we recall how a finite element method works using the example of the general Poisson equation. 
 
 %\subsection{The Poisson Problem}
 
-\begin{definition}
-The \emph{Poisson Problem} is finding a function $u$ such that 
+\begin{definition}[Generalised Poisson Problem]
+The \emph{Generalised Poisson Problem} is finding a function $u$ such that 
 \begin{align}
-	-\triangle u = f \qquad &\text{ in }\Omega \label{eq: poisson eq} \\
+	-\nabla \cdot (A \nabla u) = f \qquad &\text{ in }\Omega \label{eq: poisson eq} \\
 	u = g \qquad &\text{ on } \partial \Omega    \label{eq: poisson bc}
 \end{align}
-for a function $f \in ???(\Omega)$ and a function $g \in ??(\partial \Omega)$. 
+for $ A \in ???(\Omega)^{d \times d}$ a function $f \in ???(\Omega)$ and a function $g \in ??(\partial \Omega)$. 
 \end{definition}
 
 This problem is well-posed \todo{definition of well-posedness} for $f$ and there even exist closed solution formulas, for a detailed analysis we recommend \todo{theory poisson equation} \cite{evans1998}.
@@ -72,22 +78,22 @@ Nevertheless, we can set up a weak formulation based on variational principles.
 
 Due to the main theorem of variation analysis \eqref{eq: poisson eq} is equivalent to 
 \begin{align}
-	-\int_\Omega \varphi \triangle u = \int_\Omega \varphi f \qquad \forall \varphi \in C^\infty(\Omega).
+	-\int_\Omega \varphi \nabla \cdot (A \nabla u) = \int_\Omega \varphi f \qquad \forall \varphi \in C^\infty(\Omega).
 \end{align}
 Integration by parts yields to
 \begin{align}
-	\int_\Omega \nabla \varphi  \cdot \nabla u -\int_{\partial \Omega} \varphi  \cdot (\nabla u)  = \int_\Omega \varphi f \qquad \forall \varphi \in C^\infty(\Omega).
+	\int_\Omega \nabla \varphi  \cdot A\nabla u -\int_{\partial \Omega} \varphi (A\nabla u) \mathbf{n}  = \int_\Omega \varphi f \qquad \forall \varphi \in C^\infty(\Omega). \label{eq: FE integration by parts}
 \end{align}
 
 We see, that now only first derivatives of $u$ appear on the left-hand side.   
-The main idea of the finite element method is to restrict the two spaces, namely the space where $\varphi$ and the space where $u$ is searched  to finite dimensional spaces $\Phi_h$ and $V_h$.\\
+The main idea of the finite element method is to restrict the two spaces, namely the space where $\varphi$ and the space where $u$ is searched  to finite dimensional spaces $\Phi_h$ and $V_h$ of $C^\infty(\Omega)$.\\
 The limited space $\Phi_h$ is called \emph{test space} and its inhabitants :) are called \emph{test functions}. $V_h$ is referred as \emph{ansatz} or \emph{trial space},  the contained functions accordingly \emph{ansatz} or \emph{trial functions}. To assert the boundary condition \eqref{eq: poisson bc} we demand $u_h|_{\partial \Omega} = g$ for every $u_h \in V_h$.
 
 As the subscript $h$ suggests the two spaces normally are based on a triangulation $\triang$ such that every function is at least piecewise smooth. Consequently, the differential operators must be replaced by to $\Phi_h \cup V_h$ extended forms.
 
 All in all the finite element methods searches for $u_h \in V_h$ such that 
 \begin{align}
-	\int_\Omega \nabla_h \varphi  \cdot \nabla_h u_h -\int_{\partial \Omega} \varphi  \cdot (\nabla_h u_h)  = \int_\Omega \varphi f \qquad \forall \varphi \in \Phi_h. \label{eq: weak formulation fe}
+	\int_\Omega \nabla_h \varphi  \cdot A\nabla_h u_h -\int_{\partial \Omega} \varphi  \cdot (A\nabla_h u_h) \mathbf{n}  = \int_\Omega \varphi f \qquad \forall \varphi \in \Phi_h. \label{eq: weak formulation fe}
 \end{align}
 
 To construct $u_h$ we first choose a basis $B_{\Phi}$ of $\Phi$ and a basis $B_V$ of $V_h$.
@@ -95,18 +101,87 @@ Since the left-hand side is linear in $\varphi$ we only need to check the equati
 \begin{align}
 	a(\varphi,u_h)  =b(\varphi) \qquad \forall \varphi \in \Phi_h. \label{eq: weak formulation fe bilinear}
 \end{align}
-for $a(v,w)= \int_\Omega \nabla_h v  \cdot \nabla_h w -\int_{\partial \Omega} v  \cdot (\nabla_h w)$ and $b(v) = \int_\Omega v f$.\\
+for $a(v,w)= \int_\Omega \nabla_h v  \cdot A\nabla_h w -\int_{\partial \Omega} v (A\nabla_h w)\mathbf{n}$ and $b(v) = \int_\Omega v f$.\\
 Using basic linear Algebra we can rewrite \eqref{eq: weak formulation fe bilinear} as a linear system of equations $A \mathbf{u} = \mathbf{b}$ where  $\mathbf{u}$ is the coefficient vector of $u_h$ to the basis $B_V$.  
 
 Typically the spaces $\Phi_h$ and $V_h$ are chosen to be piecewise polynomials which have support only on a few triangles. Thus, the spaces are easy to handle and the resulting linear system is sparse.
 Choosing $\Phi_h = V_h$ yields to the \emph{Galerkin methods}.
 
-\subsection{Discontinuous Galerkin (DG)}
+\section{Discontinuous Galerkin (DG)}
 A recent idea is to choose the test and ansatz spaces to include discontinuous functions (even though the solution is expected to be smooth)\todo{kommentar sinnvoll}.
 The main issue is the handling of derivatives along discontinuities.
 \todo{DG mit numerischen Flux oder mehr wie TICAM?}
 
-\todo{ Kommentar zur Implementation wegen Vorzeichen für Kantenterme]}
+We recall our triangulation $\mathcal{T}_h$ of $\Omega$. We are able to use $\mathcal V_h = \mathcal P_h^k$ as defined in \ref*{def: piecewise polySpace} for the ansatz and test space in a finite element method, if we modify the procedure a bit: Due to the discontinuities along edges we perform the integration by parts in \eqref{eq: FE integration by parts} piecewise on every triangle leading to
+\begin{align}
+	a(\varphi, v) = & \sum_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v - \sum_{T \in \triang} \int_{\partial T} \varphi A \nabla v \cdot n.
+\end{align}
+Since two adjacent elements share the same edge only with opposite normal vectors we can rewrite the middle term by
+\begin{align*}
+\sum\limits_{T \in \triang}\int_{\partial T} \varphi A \nabla v \cdot n 
+= &\sum\limits_{e \in \edgesi}\int_{e} \left( \varphi^+ A^+ \nabla v^+ \cdot n - \varphi^- A^- \nabla v^- \cdot n \right) \\
+& + \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot n,
+\end{align*}
+where $x^\pm $ is $x$ evaluated in one of the two adjadecent elements $T^\pm$. With the formula $ac-bd = \frac 1 2 (a+b)(c-d) + \frac 1 2 (a-b)(c+d)$ we get
+\begin{align*}
+	&\varphi^+ A^+ \nabla v^+ \cdot n - \varphi^- A^- \nabla v^- \cdot n \\
+	= & \phantom{+} \frac 1 2 \left(\varphi^+ + \varphi^- \right) \left(A^+ \nabla v^+ \cdot n - A^- \nabla v^- \cdot n \right) \\
+  &+  \frac 1 2 \left(\varphi^+ - \varphi^- \right) \left(A^+ \nabla v^+ \cdot n + A^- \nabla v^- \cdot n \right) \\
+  = &  \average \varphi \jump { A \nabla v \cdot n }+ \jump \varphi \average{ A \nabla v \cdot n }
+\end{align*}
+Therefore the weak formulation can be written as $a(v,\varphi) = l(\varphi)$ with 
+\begin{align*}
+  a(v, \varphi) = & \sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot \left(A \nabla v\right) \\
+	& - \sum\limits_{e \in \edgesi}\int_{e} \left( \average \varphi \jump {A \nabla v \cdot n } + \jump \varphi \average{ A \nabla v \cdot n } \right)\\
+& - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot n
+\end{align*}
+and
+\[
+l(\varphi) = \sum_{T \in \triang} \int_T -2v f
+\]
+Due to the smoothness of $u$ and $w$ we can neglect the jump in $A \nabla u$
+\begin{align*}
+ a(v, \varphi) = & \sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot \left(A \nabla v\right) %\\
+	- \sum\limits_{e \in \edgesi}
+	\jump \varphi \average{ A \nabla v \cdot n } %\right)
+	\\
+& - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot n.
+\end{align*}
+
+Symmetrising our bilinear form $a$ by adding terms on both sides we have
+\begin{align}
+ a_S(v, \varphi) = &\sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v \nonumber \\
+  &-\sum\limits_{e \in \edgesi}\int_{e} \jump \varphi \average{A \nabla v \cdot n } 
+ - \sum\limits_{e \in \edgesi}\int_{e} \jump v \average{ A \nabla \varphi \cdot n } \nonumber\\ 
+ & - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot n 
+    - \sum\limits_{e \in \edgesb}\int_{e} v A \nabla \varphi \cdot n
+\end{align}
+and 
+\begin{align}
+	l(\varphi) =&- \sum\limits_{T \in \triang} \int_T \varphi 2f -\sum\limits_{e \in \edgesb}\int_{e} u_0 A \nabla \varphi \cdot n.
+\end{align} 
+
+%and $f$
+%\begin{align}
+%	f_S(v,\varphi) = && \sum\limits_{T \in \triang} \int_T \varphi f \\
+%	 				&+ &\sum\limits_{e \in \edgesb}\int_{e} \varphi \cof(D^2 w) \nabla v \cdot n \\
+% &+ &\sum\limits_{e \in \edgesi}\int_{e} v \llbracket \cof(D^2 w) \nabla \varphi \cdot n\rrbracket \\
+%	&-  &\sum\limits_{T \in \triang} \int_T v (\nabla \cdot \cof(D^2w)) \cdot \nabla \varphi \\
+%\end{align} 
+
+To enforce stability we enforce the following penalty terms [TICAM report 3.2.2.]
+\begin{align}
+	J^\sigma(\varphi, v) = \sum\limits_{e \in \edges} \int_e \frac \sigma {|e|} \jump \varphi \jump v \textnormal{ and } 	J^\sigma_0(\varphi, v) = \sum\limits_{e \in \edgesb} \int_e \frac \sigma {|e|} \varphi u_0  
+\end{align}
+
+Thus, we end up with the problem finding $v \in V_h$ such that
+\[
+	a_S(\phi,v) + J^\sigma(\varphi,v) = f(\varphi) + J^\sigma_0(\varphi)
+\] 
+$  \textnormal{for all } \varphi \in V_h$\
+
+\subsection{Implementation Remarks}
+todo{ Kommentar zur Implementation wegen Vorzeichen für Kantenterme}
 \newpage
 
 To apply a DG method to more difficult PDEs such as the \MA equation we need some algebraic and analytic identities for the Hessian.
