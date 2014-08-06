@@ -10,6 +10,8 @@
 %\usepackage{amsthm}
 %\usepackage{lscape}
 
+\usepackage{hyperref}
+
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{lmodern}
