@@ -92,24 +92,88 @@ Multiplying by $-1$ we get a term the equation
 \end{align}
 For a fixed $w$ the left-hand side now is (at least) quasilinear in $v$ opposed to the nonlinearity in $u$ in the original PDE. From its derivation it is clear that for smooth functions $w=u, v=u$ \eqref{eq:decoupled PDE} is equivalent to the classical formulation of the \MA equation. Furthermore due to the symmetry of \eqref{eq:decoupled PDE start} in $v$ and $w$ analogously the equation 
 \begin{align}
-	- \nabla \cdot \left( \mycof{ D^2 v} \nabla w \right)  = -2f.  \label{eq:decoupled PDE2}
+	- \nabla \cdot \left( \mycof{ D^2 v} \nabla w \right)  = -2f.  \label{eq:decoupled PDE two}
 \end{align}
 can be deduced.
 
 Thus, it is natural to examine the fixed point iteration
 \begin{align}
-	- \nabla \cdot \left( \mycof{ D^2 u^i} \nabla u^{i+1} \right)  = -2f  \label{eq:decoupled PDE}
+	- \nabla \cdot \left( \mycof{ D^2 u^i} \nabla u^{i+1} \right)  = -2f  \label{eq:fixed point iteration}
 \end{align}
 for its applicability for numerical schemes approximating a \MA solution.
 
 
-\section{Challenges for }
-By reviewing existing DG method for the \MA we learned some ?(subjects, matter, points) we have to kepp in mind// pay attentio to //concern.
+\section{Challenges for a \MA DG method}
+Reviewing existing DG method for the \MA we learned some ?(subjects, matter, points) we have to keep in mind// pay attention to //concern while examining the fixed point iteration.
 
 \begin{itemize}
 \item convexity
 \item consistency
-\item 
+\item penalties
+\item if necessary initial guesses
 \end{itemize}
 
-\section{DG formulation in every Picard step}
+\subsection{Convexfication}
+The \MA equation in general does not define a unique solution. For most applications the unique convex solution is required. The question is how to oblige a numerical method to find only convex solutions.
+The most intuitive way is to convexify the solution after every step. Yet a convexification is not simple. At first we choose a Bernstein basis for our ansatz space.
+\begin{definition}[Bernstein-B\'ezier form]
+	Any univariate polynomial of degree $k$ on a triangle $T$ can be represented in \emph{Bernstein-B\'ezier form} as
+\begin{align}
+	p(x) = \sum_{i+j+k = d}  c_{ijk} B^d_{ijk}(x),
+\end{align}
+where
+\[
+	B^d_{ijk}(x) = \frac {d!}{i!j!k!} \beta_1^i \beta_2^j \beta_3^k
+\]
+are the \emph{Bernstein polynomials} of degree $k$ and $\beta = (\beta_1, \beta_2, \beta_3)$ are the barycentric coordinates of $x$ relative to the triangle $T$.
+The polygon defined by the points $c_{ijk}$ is called \emph{B\'ezier control polygon}.
+\end{definition}
+
+The benefit of the Bernstein-B\'ezier form is that there can be formed conditions ensuring the convexity of the polynomial on a triangle. Namely there is a connection between the convexity of the control polygon and the convexity of the polynomial.
+\begin{theorem}
+	The convexity of the control polygon implies the convexity of the represented polynomial.
+\end{theorem}
+It is not far to seek in applying a convex hull algorithm on given Bernstein-B\'ezier coefficients thereby enforcing convexity. However, this approach is designated to go amiss for a convex hull algorithm does not produce the same connectivity the control polygon implies. We make this clear with an example.
+
+\todo{example fuer verschiende connectivitaeten}
+
+Schumaker and Speleers present in \cite{SS2014} an approach to ensure convexity by a set of conditions on the coefficents , resulting in a quadratic program with linear constraints. To set up the convexity constraints we first need to define the difference operator
+\begin{definition}[Difference Operator]
+	$\Delta_{\mu \nu}$ is the \emph{difference operator} along the edge $(v_\mu, v_\nu)$ as for example
+	\begin{align*}
+		\Delta_{21} c_{ijk} &= c_{i,j+1,k} -c_{i+1, j,k}  \\
+		\Delta_{31}^2 c_{ijk} &= c_{i,j,k+2} -2c_{i, j+1,k+1} +c_{i, j+2,k} \\
+		\Delta_{12} \Delta_{32} c_{ijk} &= c_{i,j+1,k+1} -c_{i+1, j,k+1} - c_{i,j+2,k} +c_{i+1, j+1,k}\\	\end{align*}
+\end{definition}
+ 
+Lai and Schumaker present in \cite{LS2007} \todo{siehe nummer 3 in $C^0 $ schumaker paper} a sufficient condition to ensure convexity on a triangle.
+\begin{theorem}[A Sufficient Condition for Convexity]
+	A polynomial $p$ is convex on a triangle $T$ if the matrix
+	\[
+		\begin{pmatrix}
+			\Delta_{21}^2 c_{ijk} & \Delta_{31} c_{ijk} \Delta_{32} c_{ijk}\\
+			\Delta_{31}c_{ijk} \Delta_{32} c_{ijk} & \Delta_{31}^2 c_{ijk} 
+		\end{pmatrix}
+	\]
+	is nonnegative definite for each $i + j + k =2 $.
+\end{theorem}
+Note, that this condition is quadratic in the coefficients. But there are many relaxations of these conditions, we refer the interested leader to \cite{SS2010}. \todo{zitate}. An example with 12 inequalities is \todo{welche art von satz, theorem, etc?}
+\begin{theorem}[Sufficient Linear Conditions for Convexity]
+	A polynomial $p$ is convex on a triangle $T$ if its B\'ezier coefficient $c_{ijk}$ satisfy
+	\begin{align*}
+		&(\Delta_{21} + 2\Delta_{31}) \Delta_{31} c_{ijk} \geq 0, 
+		&   (\Delta_{21}^2 + 3\Delta_{21} \Delta_{31} + 2 \Delta_{31}^2) c_{ijk} \geq 0, \\
+		& \Delta_{21}(2\Delta_{21} + \Delta_{31})  c_{ijk} \geq 0, 
+		&   (2\Delta_{21}^2 + 3\Delta_{21} \Delta_{31} +  \Delta_{31}^2) c_{ijk} \geq 0, \\  
+		&(\Delta_{32} + 2\Delta_{12}) \Delta_{12} c_{ijk} \geq 0, 
+		&   (\Delta_{32}^2 + 3\Delta_{32} \Delta_{12} + 2 \Delta_{12}^2) c_{ijk} \geq 0, \\
+		&\Delta_{32} (2\Delta_{32} + \Delta_{12}) c_{ijk} \geq 0, 
+		&   (2\Delta_{32}^2 + 3\Delta_{32} \Delta_{12} +  \Delta_{12}^2) c_{ijk} \geq 0, \\  
+		&(\Delta_{13} + 2\Delta_{23}) \Delta_{23} c_{ijk} \geq 0, 
+		&   (\Delta_{13}^2 + 3\Delta_{13} \Delta_{23} + 2 \Delta_{23}^2) c_{ijk} \geq 0, \\
+		& \Delta_{13}(2\Delta_{13} + \Delta_{23})  c_{ijk} \geq 0, 
+		&   (2\Delta_{13}^2 + 3\Delta_{13} \Delta_{23} +  \Delta_{23}^2) c_{ijk} \geq 0   
+	\end{align*}
+	for all $i + j + k =2 $.
+\end{theorem}
+
