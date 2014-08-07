@@ -98,9 +98,34 @@ can be deduced.
 
 Thus, it is natural to examine the fixed point iteration
 \begin{align}
-	- \nabla \cdot \left( \mycof{ D^2 u^i} \nabla u^{i+1} \right)  = -2f  \label{eq:fixed point iteration}
+	\begin{split}
+	- \nabla \cdot \left( \mycof{ D^2 u^i} \nabla u^{i+1} \right)  &= -2f  \text{ in } \Omega \\
+		u^{i+1} &= g \textnormal{ on } \partial \Omega
+	\label{eq:fixed point iteration}
+	\end{split}
 \end{align}
 for its applicability for numerical schemes approximating a \MA solution.
+
+In \cite{Awanou2014} Awanou analysed the similar iteration process
+\begin{align*}
+	\nabla \cdot \left( \cof(D^2 u^0) \nabla u^{i+1} \right) &= \nabla \cdot \left( \cof(D^2 u^0) \nabla u^{i} \right) + f - \operatorname{det} (D^2u^i) \textnormal{ in } \Omega, \\
+	u^{i+1} &= g \textnormal{ on } \partial \Omega
+\end{align*}
+showing convergence for the analytical solution $u$ and a sufficent close $u^0$. While Awanou uses a finite difference scheme to solve the PDE in every step we want to exploit the benefits of a DG method and solve every intermediate step by a SIPG method. 
+
+\section{SIPG formulation of the Iteration}
+Since in every iteration \eqref{eq:fixed point iteration} states a generalised poisson equation we can apply the derived  method of section \ref{sec: SIPG} directly: Given $u^i_h$ find $u^{i+1}_h \in \mathcal P^k_h$ satisfying
+\begin{align*}
+ &\int_{\Omega} \nabla v \cdot \cof(D_h^2 u^{i}) \nabla u_h^{i+1}\\
+ & -\sum\limits_{e \in \bigEps^i}\int_{e} \jump v \average { \cof(D_h^2 u^{i}) \nabla u_h^{i+1}\cdot n } 
+ - \sum\limits_{e \in \bigEps^i}\int_{e} \jump u \average{ \cof(D^2 u_h^{i}) \nabla v \cdot n } \\  
+ & - \sum\limits_{e \in \bigEps^b}\int_{e} v \cof(D^2 u_h^{i}) \nabla u_h^{i+1}\cdot n 
+    - \sum\limits_{e \in \bigEps^b}\int_{e} u_h^{i+1}\cof(D^2 u_h^{i}) \nabla v \cdot n
+    +\sum\limits_{e \in \bigEps} \int_e \frac \sigma {|e|} \jump v  \jump {u_h^{i+1}}\\
+    =& - 2 \int_{\Omega}v f
+    	 				-\sum\limits_{e \in \bigEps^b}\int_{e} u_h^0 \cof(D^2 u_h^{i}) \nabla v \cdot n 
+    	 				\sum\limits_{e \in \bigEps^b} \int_e \frac \sigma {|e|} v u_h^0    \qquad \forall v \in  \mathcal P^k_h.
+\end{align*}
 
 
 \section{Challenges for a \MA DG method}
@@ -115,25 +140,26 @@ Reviewing existing DG method for the \MA we learned some ?(subjects, matter, poi
 
 \subsection{Convexfication}
 The \MA equation in general does not define a unique solution. For most applications the unique convex solution is required. The question is how to oblige a numerical method to find only convex solutions.
-The most intuitive way is to convexify the solution after every step. Yet a convexification is not simple. At first we choose a Bernstein basis for our ansatz space.
-\begin{definition}[Bernstein-B\'ezier form]
+The most intuitive way is to convexify the solution after every step. Thus, on the one hand we make sure the right solution is approximated and on the other hand we smooth the generalised poisson solution aiming for a better approximation of the second derivatives.
+Yet a convexification is not simple. For our approach we choose a Bernstein basis for the ansatz space at first.
+\begin{definition}[Bernstein-B\'ezier form]\label{def: BernsteinBezierForm}
 	Any univariate polynomial of degree $k$ on a triangle $T$ can be represented in \emph{Bernstein-B\'ezier form} as
 \begin{align}
-	p(x) = \sum_{i+j+k = d}  c_{ijk} B^d_{ijk}(x),
+	p(x) = \sum_{i+j+k = d}  c_{ijk} B^d_{ijk}(x),\label{eq: BernsteinBezierForm}
 \end{align}
 where
 \[
 	B^d_{ijk}(x) = \frac {d!}{i!j!k!} \beta_1^i \beta_2^j \beta_3^k
 \]
 are the \emph{Bernstein polynomials} of degree $k$ and $\beta = (\beta_1, \beta_2, \beta_3)$ are the barycentric coordinates of $x$ relative to the triangle $T$.
-The polygon defined by the points $c_{ijk}$ is called \emph{B\'ezier control polygon}.
+The points $c_{ijk}$ are called \emph{control points} and the polygon defined by the control points \emph{B\'ezier control polygon}.
 \end{definition}
 
 The benefit of the Bernstein-B\'ezier form is that there can be formed conditions ensuring the convexity of the polynomial on a triangle. Namely there is a connection between the convexity of the control polygon and the convexity of the polynomial.
 \begin{theorem}
 	The convexity of the control polygon implies the convexity of the represented polynomial.
 \end{theorem}
-It is not far to seek in applying a convex hull algorithm on given Bernstein-B\'ezier coefficients thereby enforcing convexity. However, this approach is designated to go amiss for a convex hull algorithm does not produce the same connectivity the control polygon implies. We make this clear with an example.
+It is not far to seek in applying a convex hull algorithm on given Bernstein-B\'ezier coefficients thereby enforcing convexity, for there are a lot of convex hull algorithm available due to their importance in computer graphics. However, this approach is designated to go amiss for a convex hull algorithm only operate on a set of point and does not necessarily produce the same connectivity the control polygon implies. We make this clear with an example.
 
 \todo{example fuer verschiende connectivitaeten}
 
@@ -176,4 +202,23 @@ Note, that this condition is quadratic in the coefficients. But there are many r
 	\end{align*}
 	for all $i + j + k =2 $.
 \end{theorem}
+The latter conditions only ensure convexity on a single triangle. That would suffice for piecewise polynomials contained $C^1$ because for them unlike to splines contained in $C^0$ convexity on each triangle implies global convexity. To patch this matter Schumaker and Speleers introduce further conditions making sure splines are convex across triangle boundaries//edges, as they prove in Theorem 3.6 \cite{SS2014}.
+\begin{theorem}[Sufficient Conditions for Convexity across Triangle Edges]
+	Let $p$ be a piecewise polynomial being convex on every triangle. Suppose its B\'ezier coefficients for every interior edge $e =(v_\kappa, v_\mu)$ fulfill 
+	\begin{align}
+		{\hat c_{i,j,1}} = \beta_1^c c_{i+1, 0,j} +\beta_2^c c_{i,1,j} + \beta_1^c c_{i, 0,j+1}, \; i+j=d-1, \label{eq: convexity across edge}
+	\end{align}
+where  $\{c_{i,j,k}\}_{i+j+k=d}$ and $\{ {\hat c_{i,j,k}}\}_{i+j+k=d}$ are the B\'ezier coefficients of $p$ relative to the two triangles $T_1 = \langle v_\kappa, v_\lambda, v_\mu \rangle$ and $T_2 = \langle v_\kappa, v_\mu, v_\nu \rangle$ sharing the edge $e$, and $(\beta_1^c,\beta_2^c,\beta_3^c)$ are the barycentric coordinates of $v_\nu$ with respect to $T_1$. Then $p$ is convex.
+\end{theorem}
+\todo{picture of triangles}
+For quadratic splines Schumaker and Speleers even prove the inversion on convex domains $\Omega$, namely if for every interior edge its coefficients satisfy \eqref{eq: convexity across edge} then the corresponding spline is convex.
+This result does not generalise for higher degrees. In fact they give a counterexample for degree $k = 3$.
 
+Now we apply the new insights//methods to the function given after solving the generalised poisson problem stated in \ref{?}.
+Given the DG solution of the generalised poisson problem $u^{gp}_h$ we seek for a convex spline minimising the error at the B\'ezier control points, i.e. we want to find the B\'ezier coefficients $c$ minimising
+\[
+		\lVert A c - b \rVert_2, \qquad \text{ such that } Cc \geq 0,
+\]
+where $A$ is the matrix evaluating the to $c$ corresponding piecewise polynomial at the B\'ezier control points, $b$ are the function values of $u^{gp}_h$ at the B\'ezier control points and $C$ is the matrix containing the conditions ensuring convexity on the whole domain.
+
+\subsection{Solving the Quadratic Program}
