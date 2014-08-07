@@ -107,58 +107,58 @@ Using basic linear Algebra we can rewrite \eqref{eq: weak formulation fe bilinea
 Typically the spaces $\Phi_h$ and $V_h$ are chosen to be piecewise polynomials which have support only on a few triangles. Thus, the spaces are easy to handle and the resulting linear system is sparse.
 Choosing $\Phi_h = V_h$ yields to the \emph{Galerkin methods}.
 
-\section{Discontinuous Galerkin (DG)}
+\section{Discontinuous Galerkin (DG)} \label{sec: SIPG}
 A recent idea is to choose the test and ansatz spaces to include discontinuous functions (even though the solution is expected to be smooth)\todo{kommentar sinnvoll}.
 The main issue is the handling of derivatives along discontinuities.
 \todo{DG mit numerischen Flux oder mehr wie TICAM?}
 
 We recall our triangulation $\mathcal{T}_h$ of $\Omega$. We are able to use $\mathcal V_h = \mathcal P_h^k$ as defined in \ref*{def: piecewise polySpace} for the ansatz and test space in a finite element method, if we modify the procedure a bit: Due to the discontinuities along edges we perform the integration by parts in \eqref{eq: FE integration by parts} piecewise on every triangle leading to
 \begin{align}
-	a(\varphi, v) = & \sum_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v - \sum_{T \in \triang} \int_{\partial T} \varphi A \nabla v \cdot n.
+	a(\varphi, v) = & \sum_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v - \sum_{T \in \triang} \int_{\partial T} \varphi A \nabla v \cdot \mathbf n.
 \end{align}
 Since two adjacent elements share the same edge only with opposite normal vectors we can rewrite the middle term by
 \begin{align*}
-\sum\limits_{T \in \triang}\int_{\partial T} \varphi A \nabla v \cdot n 
-= &\sum\limits_{e \in \edgesi}\int_{e} \left( \varphi^+ A^+ \nabla v^+ \cdot n - \varphi^- A^- \nabla v^- \cdot n \right) \\
-& + \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot n,
+\sum\limits_{T \in \triang}\int_{\partial T} \varphi A \nabla v \cdot \mathbf n 
+= &\sum\limits_{e \in \edgesi}\int_{e} \left( \varphi^+ A^+ \nabla v^+ \cdot \mathbf n - \varphi^- A^- \nabla v^- \cdot \mathbf n \right) \\
+& + \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot \mathbf n,
 \end{align*}
 where $x^\pm $ is $x$ evaluated in one of the two adjadecent elements $T^\pm$. With the formula $ac-bd = \frac 1 2 (a+b)(c-d) + \frac 1 2 (a-b)(c+d)$ we get
 \begin{align*}
-	&\varphi^+ A^+ \nabla v^+ \cdot n - \varphi^- A^- \nabla v^- \cdot n \\
-	= & \phantom{+} \frac 1 2 \left(\varphi^+ + \varphi^- \right) \left(A^+ \nabla v^+ \cdot n - A^- \nabla v^- \cdot n \right) \\
-  &+  \frac 1 2 \left(\varphi^+ - \varphi^- \right) \left(A^+ \nabla v^+ \cdot n + A^- \nabla v^- \cdot n \right) \\
-  = &  \average \varphi \jump { A \nabla v \cdot n }+ \jump \varphi \average{ A \nabla v \cdot n }
+	&\varphi^+ A^+ \nabla v^+ \cdot \mathbf n - \varphi^- A^- \nabla v^- \cdot \mathbf n \\
+	= & \phantom{+} \frac 1 2 \left(\varphi^+ + \varphi^- \right) \left(A^+ \nabla v^+ \cdot \mathbf n - A^- \nabla v^- \cdot \mathbf n \right) \\
+  &+  \frac 1 2 \left(\varphi^+ - \varphi^- \right) \left(A^+ \nabla v^+ \cdot \mathbf n + A^- \nabla v^- \cdot \mathbf n \right) \\
+  = &  \average \varphi \jump { A \nabla v \cdot \mathbf n }+ \jump \varphi \average{ A \nabla v \cdot  \mathbf n }
 \end{align*}
 Therefore the weak formulation can be written as $a(v,\varphi) = l(\varphi)$ with 
 \begin{align*}
   a(v, \varphi) = & \sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot \left(A \nabla v\right) \\
-	& - \sum\limits_{e \in \edgesi}\int_{e} \left( \average \varphi \jump {A \nabla v \cdot n } + \jump \varphi \average{ A \nabla v \cdot n } \right)\\
-& - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot n
+	& - \sum\limits_{e \in \edgesi}\int_{e} \left( \average \varphi \jump {A \nabla v \cdot \mathbf n } + \jump \varphi \average{ A \nabla v \cdot \mathbf n } \right)\\
+& - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot \mathbf n
 \end{align*}
 and
 \[
-l(\varphi) = \sum_{T \in \triang} \int_T -2v f
+l(\varphi) = \sum_{T \in \triang} \int_T v f
 \]
 Due to the smoothness of $u$ and $w$ we can neglect the jump in $A \nabla u$
 \begin{align*}
  a(v, \varphi) = & \sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot \left(A \nabla v\right) %\\
 	- \sum\limits_{e \in \edgesi}
-	\jump \varphi \average{ A \nabla v \cdot n } %\right)
+	\jump \varphi \average{ A \nabla v \cdot \mathbf n } %\right)
 	\\
-& - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot n.
+& - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot \mathbf n.
 \end{align*}
 
 Symmetrising our bilinear form $a$ by adding terms on both sides we have
 \begin{align}
  a_S(v, \varphi) = &\sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v \nonumber \\
-  &-\sum\limits_{e \in \edgesi}\int_{e} \jump \varphi \average{A \nabla v \cdot n } 
- - \sum\limits_{e \in \edgesi}\int_{e} \jump v \average{ A \nabla \varphi \cdot n } \nonumber\\ 
- & - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot n 
-    - \sum\limits_{e \in \edgesb}\int_{e} v A \nabla \varphi \cdot n
+  &-\sum\limits_{e \in \edgesi}\int_{e} \jump \varphi \average{A \nabla v \cdot \mathbf n } 
+ - \sum\limits_{e \in \edgesi}\int_{e} \jump v \average{ A \nabla \varphi \cdot \mathbf n } \nonumber\\ 
+ & - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot \mathbf n 
+    - \sum\limits_{e \in \edgesb}\int_{e} v A \nabla \varphi \cdot \mathbf n.
 \end{align}
 and 
 \begin{align}
-	l(\varphi) =&- \sum\limits_{T \in \triang} \int_T \varphi 2f -\sum\limits_{e \in \edgesb}\int_{e} u_0 A \nabla \varphi \cdot n.
+	l(\varphi) =& \sum\limits_{T \in \triang} \int_T \varphi f -\sum\limits_{e \in \edgesb}\int_{e} u_0 A \nabla \varphi \cdot \mathbf n.
 \end{align} 
 
 %and $f$
@@ -176,7 +176,7 @@ To enforce stability we enforce the following penalty terms [TICAM report 3.2.2.
 
 Thus, we end up with the problem finding $v \in V_h$ such that
 \[
-	a_S(\phi,v) + J^\sigma(\varphi,v) = f(\varphi) + J^\sigma_0(\varphi)
+	a_S(\phi,v) + J^\sigma(\varphi,v) = l(\varphi) + J^\sigma_0(\varphi)
 \] 
 $  \textnormal{for all } \varphi \in V_h$\
 
