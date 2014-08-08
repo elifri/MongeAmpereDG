@@ -180,8 +180,15 @@ Thus, we end up with the problem finding $v \in V_h$ such that
 \] 
 $  \textnormal{for all } \varphi \in V_h$\
 
+Just like in the finite element method we can derive a linear system of equations $A \mathbf{u} = \mathbf{b}$ with $A$ sparse and $\mathbf{u}$ representing the coefficient vector of $u_h$ to the basis $B_V$.  
+
 \subsection{Implementation Remarks}
 \todo{ Kommentar zur Implementation wegen Vorzeichen für Kantenterme}
+To evaluate the integrals in the bilinearform a numerical integration scheme is needed. Usually Gauss quadrature is the method of choice. Since ansatz and test functions are chosen to be piecewise polynomials a Gauss quadrature already is exact for only a few quadrature points.
+Hence, the data we have to provide to assemble the sparse matrix $A$ are the gradient, the normal derivatives, i.e. and the function values of all test functions at each quadrature point.
+Suppose the 
+
+
 \newpage
 
 To apply a DG method to more difficult PDEs such as the \MA equation we need some algebraic and analytic identities for the Hessian.
