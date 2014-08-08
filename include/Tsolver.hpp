@@ -430,7 +430,7 @@ public:
     * @param Lrhs		right-hand side of the LGS
     * @param Lbd		if strongBoundaryCond is enabled here will be the boundary dofs assembled
     */
-   void assemble_MA(const int & STABSIGN, double PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs, Eigen::VectorXd &Lbd);
+   void assemble_MA(const int & STABSIGN, penalties_type PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs, Eigen::VectorXd &Lbd);
    /*
     * @brief assembles the function for the nonlinear GS for the in the iteration arising poisson problem
     */
@@ -451,7 +451,6 @@ public:
     *
     *  @return true, if solution is changed
     */
-
    bool convexify(Eigen::VectorXd &solution); //convexifies the solution globally (convexifying bezier control polygon)
 
    /*

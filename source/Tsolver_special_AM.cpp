@@ -510,7 +510,7 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
 		get_Ecoordinates(idLC, iq, x);
 		get_rhs_MA(x, uLC);
 
-		if (iteration > 1)
+		if (iteration > 1 || start_solution != SQRT_F)
 		{
 			for (unsigned int istate = 0; istate < statedim; ++istate) {
 				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
@@ -1003,7 +1003,7 @@ void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // s
 
 //////////////////////////////////////////////////////////
 
-void Tsolver::assemble_MA(const int & stabsign, double penalty,
+void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs, Eigen::VectorXd &Lbd) {
 
 	if (strongBoundaryCond)
@@ -1051,13 +1051,11 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 			assemble_lhs_bilinearform_MA(pLC, pBC, LM);
 		}
 
-		//update penalty
+		//a variable to update penalty
+		value_type penalty;
 
 		cout << "Largest EW " << max_EW << endl;
 		cout << "smallest EW " << min_EW << endl;
-		penalty *= max_EW*4;
-
-		cout << "used penalty " << penalty << endl;
 
 		// loop over all cells in this level
 		for (grid_type::leafcellmap_type::const_iterator it =
@@ -1177,8 +1175,10 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 									LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(jshape,iqNC);
 
 
-									// b_sigma(u, phi)
-									if (penalty != 0.0) {
+									// penalty term continuity
+									if (penalties.gamma_continuous != 0.0) {
+										penalty = penalties.gamma_continuous * max_EW;
+
 										LM.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
 
 										LM.coeffRef(row_LC, col_NC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqLC);
@@ -1186,6 +1186,22 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 										LM.coeffRef(row_NC, col_LC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqNC);
 
 										LM.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
+									}
+
+									// penalty jumps in gradients
+									if (penalties.gamma_gradient!= 0.0) {
+										penalty = penalties.gamma_gradient * max_EW;
+
+										LM.coeffRef(row_LC, col_LC) += penalty
+												* shape.get_Fquadw(iqLC) * sqr(length) //quadrature weights
+												* pBC->get_normalderi(ishape, iqLC)/ facLevelLength[level] //jump in test
+												* pBC->get_normalderi(jshape, iqLC)/ facLevelLength[level]; //jump in ansatz
+
+										LM.coeffRef(row_LC, col_NC) += penalty * shape.get_Fquadw(iqLC) * sqr(length) * pBC->get_normalderi(ishape, iqLC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[level]/ facLevelLength[levelNC];
+
+										LM.coeffRef(row_NC, col_LC) += penalty * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC)* pBC->get_normalderi(jshape, iqLC) / facLevelLength[level]/ facLevelLength[levelNC];
+
+										LM.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[levelNC]/ facLevelLength[levelNC];
 
 									}
 								}
@@ -1241,7 +1257,8 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 												ishape, iqLC)
 										/ facLevelLength[level];
 
-								if (penalty != 0.0) {
+								if (penalties.gamma_boundary != 0.0) {
+									penalty = penalties.gamma_boundary * max_EW;
 									val += penalty * shape.get_Fquadw(iqLC)
 											* uLC(0)
 											* shape.get_Fquads(ishape, iqLC);
@@ -1270,8 +1287,8 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 											/ facLevelLength[level]
 											* shape.get_Fquads(jshape,iqLC);
 
-									if (penalty != 0.0) {
-										val += penalty * shape.get_Fquadw(iqLC)
+									if (penalties.gamma_boundary != 0.0) {
+										val += penalties.gamma_boundary * max_EW * shape.get_Fquadw(iqLC)
 												* shape.get_Fquads(ishape,iqLC)
 												* shape.get_Fquads(jshape,iqLC);
 									}
