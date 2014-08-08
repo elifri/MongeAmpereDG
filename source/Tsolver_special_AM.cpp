@@ -232,7 +232,7 @@ void Tsolver::assemble_face_term_neilan(leafcell_type* pLC, const basecell_type*
 								* shape.get_Fquadw(iqLC) * length//quadrature weights
 								* pBNC->A_grad_times_normal(A, i_shape, iqNC)/ facLevelLength[pLC->id().level()]; //gradient times normal
 
-					hess(i,j) += val/volume;
+					hess(i,j) += pNC->u(i_shape,0)*val/volume;
 				}
 			}
 
