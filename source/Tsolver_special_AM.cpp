@@ -389,24 +389,30 @@ bool Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess) {
 	assert(!(ev0 != ev0) && "The smaller eigenvalue is nan");
 	assert(!(ev1 != ev1) && "The bigger eigenvalue is nan");
 
+
+	while (ev0 < 0)
+	{
+		nvector_type nv;
+
+		get_nodes(grid, pLC->id(), nv);
+
+		cout << "Found very small Eigenvalue " << ev0 << " at "
+				<< pLC->id() << " with nodes "
+				<< nv[0].transpose() << ", " << nv(1).transpose() <<  ", " << nv(2).transpose() << endl;
+		cout << "Hessian is: \n" << hess << endl;
+
+		hess += (-ev0+epsilon) *Hessian_type::Identity();
+
+		calculate_eigenvalues(hess, ev0, ev1);
+
+		assert(!(ev0 != ev0) && "The smaller eigenvalue is nan");
+		assert(!(ev1 != ev1) && "The bigger eigenvalue is nan");
+
+	}
+
 	//update min EW
 	if (ev0 < min_EW) {
 		min_EW = ev0;
-
-		if (ev0 < -1)
-		{
-			nvector_type nv;
-
-			get_nodes(grid, pLC->id(), nv);
-
-			cout << "Found very small Eigenvalue " << ev0 << " at "
-					<< pLC->id() << " with nodes "
-					<< nv[0].transpose() << ", " << nv(1).transpose() <<  ", " << nv(2).transpose() << endl;
-			cout << "Hessian is: \n" << hess << endl;
-
-		}
-
-
 	}
 
 	//update maximal EW for penalty
