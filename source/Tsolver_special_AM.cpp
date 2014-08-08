@@ -349,6 +349,7 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
   		max_EW = pLC->EW1;
   	}
 
+/*
 	cout<< "Hess before neilan " << hess << endl;
 //
 
@@ -368,6 +369,7 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 	hess(0,1) = mid_value;
 
 	pLC->set_diffusionmatrix(hess); //update diffusionmatrix
+*/
 
 
 }
