@@ -258,6 +258,58 @@ public:
 
    #if (EQUATION==MONGE_AMPERE_EQ)
 
+   	   struct Functor{
+	   	   void evaluate(const Eigen::VectorXd &coeff, Eigen::VectorXd& f)
+	   	   {
+	   		   f = linear_part*coeff + constant_part;
+	   		   for (int i= 0; i < number_of_dofs; i++)
+	   		   {
+	   			   int offset_hess = i/6*4;
+
+	   			   f(i) -= integrals_test_functions(i)*
+	   					     (coeff(number_of_dofs+ offset_hess)*coeff(number_of_dofs+ offset_hess+3)
+	   					    		 -coeff(number_of_dofs+ offset_hess+1)*coeff(number_of_dofs+ offset_hess+2));
+	   		   }
+	   	   }
+
+	   	   void derivative(const Eigen::VectorXd &x, Eigen::SparseMatrixD &J)
+	   	   {
+	   		   J = linear_part;
+
+	   		   for (int i= 0; i < number_of_dofs; i++)
+	   		   {
+	   			   int offset_hess = i/6*4;
+
+	   			   //derivate of determint is cofactor matrix
+	   			   J.coeffRef(i, number_of_dofs+offset_hess) -= integrals_test_functions(i)*x(number_of_dofs+offset_hess+3);
+	   			   J.coeffRef(i, number_of_dofs+offset_hess+1) -= -integrals_test_functions(i)*x(number_of_dofs+offset_hess+2);
+	   			   J.coeffRef(i, number_of_dofs+offset_hess+2) -= -integrals_test_functions(i)*x(number_of_dofs+offset_hess+1);
+	   			   J.coeffRef(i, number_of_dofs+offset_hess+3) -= integrals_test_functions(i)*x(number_of_dofs+offset_hess);
+	   		   }
+
+	   	   }
+
+	   	   Eigen::SparseMatrixD linear_part;
+	   	   Eigen::VectorXd integrals_test_functions, constant_part;
+	   	   Eigen::VectorXd boundary_coefficients;
+
+	   	   int number_of_dofs;
+   	   };
+
+   	   struct penalties_type
+   	   {
+   		   double gamma_gradient;
+   		   double gamma_continuous;
+   		   double gamma_boundary;
+
+   		   void print()
+   		   {
+   			   cout << "gamma gradient " << gamma_gradient
+   					   <<", gamma_continuous " << gamma_continuous
+   					   <<", gamma_boundary " << gamma_boundary << endl;
+   		   }
+   	   };
+
    	   	 Monge_Ampere_Problem problem;
 
          double atol,rtol; // absolute and relative tolerances
@@ -324,7 +376,7 @@ public:
    /*! read problem specific problem parameters from input file
     *
     */
-   void read_problem_parameters_MA(int &stabsign, double &gamma, double &refine_eps, double &coarsen_eps, int &level, double& alpha);
+   void read_problem_parameters_MA(int &stabsign, penalties_type &gamma, double &refine_eps, double &coarsen_eps, int &level, double& alpha);
 
    /*!
     * writes exact solution in leafcells
@@ -376,7 +428,7 @@ public:
     * @param Lrhs		right-hand side of the LGS
     * @param Lbd		if strongBoundaryCond is enabled here will be the boundary dofs assembled
     */
-   void assemble_MA(const int & STABSIGN, double PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs, Eigen::VectorXd &Lbd);
+   void assemble_MA(const int & STABSIGN, penalties_type PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs, Eigen::VectorXd &Lbd);
    /*
       * @brief stores solution (in leaf cells) and generates analysis data
       *

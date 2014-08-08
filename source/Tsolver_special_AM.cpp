@@ -35,9 +35,11 @@
 using namespace Eigen;
 
 //reads specific problem parameter from input
-void Tsolver::read_problem_parameters_MA(int &stabsign, double &gamma, double &refine_eps, double &coarsen_eps, int &level, double &alpha) {
+void Tsolver::read_problem_parameters_MA(int &stabsign, penalties_type &gamma, double &refine_eps, double &coarsen_eps, int &level, double &alpha) {
 	singleton_config_file::instance().getValue("method", "stabsign", stabsign, 1);
-	singleton_config_file::instance().getValue("method", "gamma", gamma, 0.0);
+	singleton_config_file::instance().getValue("method", "gamma_boundary", gamma.gamma_boundary, 0.0);
+	singleton_config_file::instance().getValue("method", "gamma_continuous", gamma.gamma_continuous, 0.0);
+	singleton_config_file::instance().getValue("method", "gamma_gradient", gamma.gamma_gradient, 0.0);
 	singleton_config_file::instance().getValue("method", "strongBoundaryCond", strongBoundaryCond, false);
 
 	singleton_config_file::instance().getValue("adaptation", "refine_eps", refine_eps, 1.0e-9);
@@ -355,6 +357,7 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 //	hess(0,1) = mid_value;
 //
 //	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
+
 
 }
 
@@ -926,7 +929,7 @@ void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // s
 
 //////////////////////////////////////////////////////////
 
-void Tsolver::assemble_MA(const int & stabsign, double penalty,
+void Tsolver::assemble_MA(const int & stabsign, penalties_type penalty,
 		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs, Eigen::VectorXd &Lbd) {
 
 	if (strongBoundaryCond)
@@ -978,9 +981,12 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 
 		cout << "Largest EW " << max_EW << endl;
 		cout << "smallest EW " << min_EW << endl;
-		penalty *= max_EW;
+		penalty.gamma_continuous *= max_EW;
+		penalty.gamma_gradient *= max_EW;
+		penalty.gamma_boundary *= max_EW;
 
-		cout << "used penalty " << penalty << endl;
+		cout << "used penalty ";
+		penalty.print();
 
 		// loop over all cells in this level
 		for (grid_type::leafcellmap_type::const_iterator it =
@@ -1104,27 +1110,29 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 									LM.coeffRef(row_NC, col_NC) += stabsign * 0.5 * shape.get_Fquadw(iqLC) * length * A_times_normal_NBC / facLevelLength[levelNC] * shape.get_Fquads(jshape,iqNC);
 
 
-									// b_sigma(u, phi)
-									if (penalty != 0.0) {
-										LM.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
+									// penalty term continuity
+									if (penalty.gamma_continuous != 0.0) {
+										LM.coeffRef(row_LC, col_LC) += penalty.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
 
-										LM.coeffRef(row_LC, col_NC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqLC);
+										LM.coeffRef(row_LC, col_NC) += -penalty.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqLC);
 
-										LM.coeffRef(row_NC, col_LC) += -penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqNC);
+										LM.coeffRef(row_NC, col_LC) += -penalty.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqNC);
 
-										LM.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
+										LM.coeffRef(row_NC, col_NC) += penalty.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
+									}
 
-										//jumps in gradients
-										LM.coeffRef(row_LC, col_LC) += penalty
+									// penalty jumps in gradients
+									if (penalty.gamma_gradient!= 0.0) {
+										LM.coeffRef(row_LC, col_LC) += penalty.gamma_gradient
 												* shape.get_Fquadw(iqLC) * sqr(length) //quadrature weights
 												* pBC->get_normalderi(ishape, iqLC)/ facLevelLength[level] //jump in test
 												* pBC->get_normalderi(jshape, iqLC)/ facLevelLength[level]; //jump in ansatz
 
-										LM.coeffRef(row_LC, col_NC) += penalty * shape.get_Fquadw(iqLC) * sqr(length) * pBC->get_normalderi(ishape, iqLC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[level]/ facLevelLength[levelNC];
+										LM.coeffRef(row_LC, col_NC) += penalty.gamma_gradient * shape.get_Fquadw(iqLC) * sqr(length) * pBC->get_normalderi(ishape, iqLC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[level]/ facLevelLength[levelNC];
 
-										LM.coeffRef(row_NC, col_LC) += penalty * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC)* pBC->get_normalderi(jshape, iqLC) / facLevelLength[level]/ facLevelLength[levelNC];
+										LM.coeffRef(row_NC, col_LC) += penalty.gamma_gradient * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC)* pBC->get_normalderi(jshape, iqLC) / facLevelLength[level]/ facLevelLength[levelNC];
 
-										LM.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[levelNC]/ facLevelLength[levelNC];
+										LM.coeffRef(row_NC, col_NC) += penalty.gamma_gradient * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[levelNC]/ facLevelLength[levelNC];
 										}
 
 
@@ -1180,8 +1188,8 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 												ishape, iqLC)
 										/ facLevelLength[level];
 
-								if (penalty != 0.0) {
-									val += penalty * shape.get_Fquadw(iqLC)
+								if (penalty.gamma_boundary != 0.0) {
+									val += penalty.gamma_boundary * shape.get_Fquadw(iqLC)
 											* uLC(0)
 											* shape.get_Fquads(ishape, iqLC);
 								}
@@ -1209,8 +1217,8 @@ void Tsolver::assemble_MA(const int & stabsign, double penalty,
 											/ facLevelLength[level]
 											* shape.get_Fquads(jshape,iqLC);
 
-									if (penalty != 0.0) {
-										val += penalty * shape.get_Fquadw(iqLC)
+									if (penalty.gamma_boundary != 0.0) {
+										val += penalty.gamma_boundary * shape.get_Fquadw(iqLC)
 												* shape.get_Fquads(ishape,iqLC)
 												* shape.get_Fquads(jshape,iqLC);
 									}
@@ -1375,7 +1383,8 @@ void Tsolver::time_stepping_MA() {
 
 	// sign of stbilization term: +1: Bauman-Oden/NIPG, -1: GEM/SIPG
 	int stabsign;
-	double gamma, refine_eps, coarsen_eps;
+	penalties_type gamma;
+	double refine_eps, coarsen_eps;
 
 	read_problem_parameters_MA(stabsign, gamma, refine_eps, coarsen_eps, level, alpha);
 
@@ -1633,10 +1642,11 @@ void Tsolver::time_stepping_MA() {
 
 
 
-			if (iteration == 0)
+/*			if (iteration == 0)*/
 			{	solution= Tsolver::alpha*Lsolution + (1-Tsolver::alpha)*solution_old;
 				solution_lastiteration = Lsolution;
 			}
+/*
 			else
 			{
 				restore_MA(Lsolution);
@@ -1645,6 +1655,7 @@ void Tsolver::time_stepping_MA() {
 				solution = Tsolver::alpha*Lsolution + (1-Tsolver::alpha)*solution_lastiteration;
 				solution_lastiteration = Lsolution;
 			}
+*/
 
 	//		cout << "convex combination \n" << solution.transpose() << endl;
 
