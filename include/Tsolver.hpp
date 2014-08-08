@@ -472,8 +472,10 @@ public:
 
    void local_dt_MA (const value_type & lengthmin, value_type & dt_element);
 
+   ///initialises the startsolution satisfying laplace u = - 2sqrt(f)
+   void init_start_solution_MA_sqrt_f(const int stabsign, penalties_type gamma);
    ///initialises a start solution if requested in cfg file
-   void init_start_solution_MA(std::string filename);
+   void init_start_solution_MA(const int stabsign, penalties_type gamma, std::string filename);
    void time_stepping_MA ();
 
    void adapt(const double refine_eps, const double coarsen_eps);

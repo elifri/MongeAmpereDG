@@ -1652,13 +1652,95 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 	}
 }
 
-void Tsolver::init_start_solution_MA(std::string filename)
+void Tsolver::init_start_solution_MA_sqrt_f(const int stabsign, penalties_type gamma)
+{
+	unsigned int LM_size;
+	igpm::processtimer pt; //start timer
+
+	assignViews_MA(LM_size);
+
+	//init variables
+	Eigen::SparseMatrix<double> LM(LM_size, LM_size);
+	Eigen::SparseMatrix<double> LM_bd(LM_size, LM_size);
+	Eigen::VectorXd Lrhs, Lrhs_bd, Lsolution, Lsolution_bd, Lsolution_only_bd;
+	Lrhs.setZero(LM_size);
+	Lsolution.setZero(LM_size);
+
+	//reserve space
+	LM.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
+	if (strongBoundaryCond){
+		LM_bd.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
+		Lrhs_bd.setZero(LM_size);
+		Lsolution_only_bd.setZero(LM_size);
+	}
+
+	//==============assemble system============================
+	cout << "Assemble linear System..." << flush << endl;
+	pt.start();
+	if (!strongBoundaryCond)
+	{
+		assemble_MA(stabsign, gamma, LM, Lrhs, Lsolution_only_bd);
+	}
+	else
+	{
+		assemble_MA(stabsign, gamma, LM_bd, Lrhs_bd, Lsolution_only_bd);
+	}
+
+	pt.stop();
+	cout << "done. " << pt << " s." << endl;
+
+	//if strong b.c. delete boundary dofs
+	if (strongBoundaryCond)
+	{
+		cout << "Delete Boundary DOFS ..." << endl;
+		pt.start();
+		Lrhs_bd -= LM_bd*Lsolution_only_bd;
+		bd_handler.delete_boundary_dofs(LM_bd, LM);
+		bd_handler.delete_boundary_dofs(Lrhs_bd, Lrhs);
+		pt.stop();
+		cout << "done. " << pt << " s." << endl;
+	}
+
+	//==============solve system============================
+	pt.start();
+	Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
+	solver.compute(LM);
+	if (solver.info() != Eigen::Success) {
+		std::cerr << "Decomposition of stiffness matrix failed" << endl;
+		std::exit(-1);
+	}
+	Lsolution = solver.solve(Lrhs);
+	if (solver.info() != Eigen::Success) {
+		std::cerr << "Solving of FEM system failed" << endl;
+	}
+
+//		if ((LM*Lsolution-Lrhs).norm() )
+	//(nachiteration)
+	Lsolution += solver.solve(Lrhs-LM*Lsolution);
+
+	pt.stop();
+	cout << "done. " << pt << " s." << endl;
+
+	//if strong b.c. add boundary dofs
+	if (strongBoundaryCond)
+	{
+		bd_handler.add_boundary_dofs(Lsolution, Lsolution_only_bd, Lsolution_bd);
+		Lsolution = Lsolution_bd;
+	}
+	//write poisson solution in leaf cells
+	restore_MA(Lsolution);
+
+}
+
+void Tsolver::init_start_solution_MA(const int stabsign, penalties_type gamma,std::string filename)
 {
 	assert(iteration == 0);
 
 	if (filename == "sqrt_f")
 	{
+		cout	<< "Using the solution of laplace u = -sqrt(2f) as start solution!" << endl;
 		start_solution = SQRT_F;
+		init_start_solution_MA_sqrt_f(stabsign, gamma);
 	}
 	else
 	{
@@ -1689,13 +1771,13 @@ void Tsolver::init_start_solution_MA(std::string filename)
 			}
 	}
 
+	plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
+
+	state_type error = calculate_L2_error(get_exacttemperature_MA_callback());
+	plotter.get_plot_stream("rel_L2_without_convex") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
+
 	if (start_solution != SQRT_F)
 	{
-		plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
-
-		state_type error = calculate_L2_error(get_exacttemperature_MA_callback());
-		plotter.get_plot_stream("rel_L2_without_convex") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
-
 
 		VectorXd coeffs;
 
@@ -1714,20 +1796,22 @@ void Tsolver::init_start_solution_MA(std::string filename)
 		//plot solution
 		plotter.write_numericalsolution_VTK(iteration,
 				"grid_startsolutionConvexified");
-		error = calculate_L2_error(get_exacttemperature_MA_callback());
-		plotter.get_plot_stream("plot_data") << -1 << " " << error << endl;
-		if (L2_norm_exact_sol(0) != 0)
-				plotter.get_plot_stream("L2_rel") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
+	}
 
+	error = calculate_L2_error(get_exacttemperature_MA_callback());
+	plotter.get_plot_stream("plot_data") << -1 << " " << error << endl;
+	if (L2_norm_exact_sol(0) != 0)
+			plotter.get_plot_stream("L2_rel") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
 
 		cout << "Finished reading start solution " << endl;
-	}
+
 
 }
 
 
 //////////////////////////////////////////////////////////
 void Tsolver::time_stepping_MA() {
+
 
 	// sign of stbilization term: +1: Bauman-Oden/NIPG, -1: GEM/SIPG
 	int stabsign;
@@ -1784,6 +1868,8 @@ void Tsolver::time_stepping_MA() {
 
 	cout << "L2 norm of exact sol " << L2_norm_exact_sol << endl;
 
+	assert(!strongBoundaryCond && "Newton is nonlinear, no strong boundary conditions implemented");
+
 
 	//check for start solution and where required init startsolution
 	std::string filename;
@@ -1807,7 +1893,7 @@ void Tsolver::time_stepping_MA() {
 		}
 
 
-		init_start_solution_MA(filename);
+		init_start_solution_MA(stabsign, gamma, filename);
 	}
 	else
 	{
@@ -1890,9 +1976,6 @@ void Tsolver::time_stepping_MA() {
 
 		//extract solution from last iteration
 		Eigen::VectorXd solution_old;
-
-
-		assert(start_solution != SQRT_F);
 
 		write_extended_solution_vector(extended_solution);
 //		MATLAB_export(extended_solution, "extended_solution");
