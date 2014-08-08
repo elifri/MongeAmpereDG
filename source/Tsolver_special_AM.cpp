@@ -457,7 +457,7 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
 		get_Ecoordinates(idLC, iq, x);
 		get_rhs_MA(x, uLC);
 
-		if (iteration > 1)
+		if (iteration > 1 || start_solution != SQRT_F)
 		{
 			for (unsigned int istate = 0; istate < statedim; ++istate) {
 				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
@@ -472,17 +472,13 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
 		}
 		else
 		{
-			if (start_solution == SQRT_F)
-			{
-				for (unsigned int istate = 0; istate < statedim; ++istate) {
-					for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-						int row = pLC->n_offset + ishape;
-						double val = shape.get_Equadw(iq) * pBC->get_detjacabs()
-							* facLevelVolume[idLC.level()] * std::sqrt(2*uLC(istate))
-							* shape.get_Equads(ishape, iq);
-
+			for (unsigned int istate = 0; istate < statedim; ++istate) {
+				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+					int row = pLC->n_offset + ishape;
+					double val = shape.get_Equadw(iq) * pBC->get_detjacabs()
+						* facLevelVolume[idLC.level()] * std::sqrt(2*uLC(istate))
+						* shape.get_Equads(ishape, iq);
 						Lrhs(row) += -val; //solve -u=-sqrt(2f)
-					}
 				}
 
 			}
