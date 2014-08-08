@@ -337,93 +337,41 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 	pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
 	hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
 	cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
-	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
+	pLC->set_diffusionmatrix(hess); //update diffusionmatrix
 
-//	cout<< "Hess before neilan " << hess << endl;
+  	//update min EW
+  	if (pLC->EW0 < min_EW) {
+  		min_EW = pLC->EW0;
+  	}
+
+  	//update maximal EW for penalty
+  	if (pLC->EW1 > max_EW) {
+  		max_EW = pLC->EW1;
+  	}
+
+	cout<< "Hess before neilan " << hess << endl;
 //
-//	Fquad::inner_face_term_function_type<Hessian_type> f_inner = MEMBER_FUNCTION(&Tsolver::assemble_inner_face_term_neilan_parameters, this);
-//	Fquad::boundary_face_term_function_type<Hessian_type> f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_neilan_parameters, this);
-//
-////	Fquad::inner_face_term_function_type<Hessian_type> f_inner = MEMBER_FUNCTION(&Tsolver::assemble_face_term_pryer_parameters, this);
-////	Fquad::boundary_face_term_function_type<Hessian_type> f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_pryer_parameters, this);
-//
-//	shape.fquad.assemble_face_infos<Hessian_type>(f_inner, f_boundary,
-//												  grid, facLevelVolume, facLevelLength,
-//												  pLC, pBC, hess, true);
-//	cout<< "Hess after neilan " << hess << endl;
-//	//	//symmetrise
-//	value_type mid_value = (hess(0,1)+hess(1,0))/2.;
-//	hess(1,0) = mid_value;
-//	hess(0,1) = mid_value;
-//
-//	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
+
+	Fquad::inner_face_term_function_type<Hessian_type> f_inner = MEMBER_FUNCTION(&Tsolver::assemble_inner_face_term_neilan_parameters, this);
+	Fquad::boundary_face_term_function_type<Hessian_type> f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_neilan_parameters, this);
+
+//	Fquad::inner_face_term_function_type<Hessian_type> f_inner = MEMBER_FUNCTION(&Tsolver::assemble_face_term_pryer_parameters, this);
+//	Fquad::boundary_face_term_function_type<Hessian_type> f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_pryer_parameters, this);
+
+	shape.fquad.assemble_face_infos<Hessian_type>(f_inner, f_boundary,
+												  grid, facLevelVolume, facLevelLength,
+												  pLC, pBC, hess, true);
+	cout<< "Hess after neilan " << hess << endl;
+	//	//symmetrise
+	value_type mid_value = (hess(0,1)+hess(1,0))/2.;
+	hess(1,0) = mid_value;
+	hess(0,1) = mid_value;
+
+	pLC->set_diffusionmatrix(hess); //update diffusionmatrix
 
 
 }
 
-void Tsolver::calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1)
-{
-	value_type rad = A(0,0) * A(0,0) + (A(1,1) - 2 * A(0,0)) * A(1,1) + 4 * A(0,1) * A(1,0);
-
-	//fetch numerical zeroes
-	if (std::abs(rad) < 1e-10)	rad = 0;
-
-	value_type s = std::sqrt(rad);
-	ev0 = (A(0,0) + A(1,1) - s) / 0.2e1;
-	ev1 = (A(0,0) + A(1,1) + s) / 0.2e1;
-
-//	assert(!(ev0 != ev0) && "The smaller eigenvalue is nan");
-	if (ev0 != ev0)
-		{
-		ev0 = -1e6;
-		ev1 = 1e6;
-		}
-}
-
-bool Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess) {
-
-	value_type ev0, ev1;
-
-	calculate_eigenvalues(hess, ev0, ev1);
-
-	assert(!(ev0 != ev0) && "The smaller eigenvalue is nan");
-	assert(!(ev1 != ev1) && "The bigger eigenvalue is nan");
-
-
-	while (ev0 < 0)
-	{
-		nvector_type nv;
-
-		get_nodes(grid, pLC->id(), nv);
-
-		cout << "Found very small Eigenvalue " << ev0 << " at "
-				<< pLC->id() << " with nodes "
-				<< nv[0].transpose() << ", " << nv(1).transpose() <<  ", " << nv(2).transpose() << endl;
-		cout << "Hessian is: \n" << hess << endl;
-
-		hess += (-ev0+epsilon) *Hessian_type::Identity();
-
-		calculate_eigenvalues(hess, ev0, ev1);
-
-		assert(!(ev0 != ev0) && "The smaller eigenvalue is nan");
-		assert(!(ev1 != ev1) && "The bigger eigenvalue is nan");
-
-	}
-
-	//update min EW
-	if (ev0 < min_EW) {
-		min_EW = ev0;
-	}
-
-	//update maximal EW for penalty
-	if (ev1 > max_EW) {
-		max_EW = ev1;
-	}
-	//store eigenvalue for output
-	pLC->smallest_EW = ev0;
-
-	return (ev0 > epsilon);
-}
 
 void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM) {
 	Emass_type laplace;
@@ -495,37 +443,6 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
 		}
 	}
 }
-
-
-/* @brief initializes the stiffness matrix and lhs for the AM problem
- *
- *
- */
-//////////////////////////////////////////////////////
-void Tsolver::convexify(Hessian_type& hess) {
-
-	EW_solver.compute(hess);
-
-	Hessian_type T = EW_solver.eigenvectors();
-
-	//correct all negative eigenvalue
-	Eigen::Vector2d new_eigenvalues;
-	new_eigenvalues(0) = epsilon;
-	new_eigenvalues(1) = EW_solver.eigenvalues()(1);
-	if (new_eigenvalues(1)< 0)		new_eigenvalues(1) =  epsilon;
-
-	hess = T.transpose()*new_eigenvalues.asDiagonal()*T;
-//	cout << "hess*T^t*D*T \n";
-//	cout << hess << endl;
-
-	value_type ev0, ev1;
-	calculate_eigenvalues(hess, ev0, ev1);
-
-	cout << "new eigenvalues " << ev0 << " " << ev1 << endl;
-//	cout << "new eigenvectors  \n" << es.eigenvectors() << endl << endl;
-}
-
-/////////////////////////////////////////////////////
 
 
 bool Tsolver::convexify(Eigen::VectorXd &solution)
@@ -802,24 +719,7 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
 		//update diffusion matrix
 		Hessian_type hess;
-
-		bool is_convex = false;
-
 		calc_cofactor_hessian(pLC, pBC, hess);
-//			cout << "calc factor hessian " << endl << hess << endl;
-
-		is_convex = calculate_eigenvalues(pLC, hess);
-
-		while(!is_convex && false)
-		{
-			cout << "hessian " << endl << hess << endl;
-			cout << "Hessian at cell (node 0 = " << nv(0).transpose() << ") is not convex" << endl;
-			cout << "Convexifying ... ";
-			convexify_cell(pLC, solution);
-			calc_cofactor_hessian(pLC, pBC, hess);
-			is_convex = calculate_eigenvalues(pLC, hess);
-			cout << "the corrected hessian " << endl << hess << endl;
-		}
 
 		//determinant of hessian for calculation of residuum
 		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);

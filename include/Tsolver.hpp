@@ -326,7 +326,6 @@ public:
 		 Eigen::SelfAdjointEigenSolver<Hessian_type> EW_solver;
          double max_EW;
          double min_EW;
-         constexpr static double epsilon = 1e-6; //minimum value of hessian eigenvalues
 
          value_type sum_residuum, sum_residuum_old;
          int residuum_equal_since;

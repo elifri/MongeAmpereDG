@@ -370,7 +370,7 @@ void Plotter::write_smallest_EW(std::ofstream &file, const std::vector < std::ve
 
 				grid->nodes(id, nv);
 				for (unsigned int k = 0; k < id.countNodes(); ++k) {
-					file << "\t\t\t\t\t" << pLC->smallest_EW << endl;
+					file << "\t\t\t\t\t" << pLC->EW0 << endl;
 				}
 			}
 
@@ -387,7 +387,7 @@ void Plotter::write_smallest_EW(std::ofstream &file, const std::vector < std::ve
 
 				grid->nodes(id, nv);
 				for (int k = 0; k < shape->calc_number_of_refined_nodes(refine); ++k) {
-					file << "\t\t\t\t\t" << pLC->smallest_EW << endl;
+					file << "\t\t\t\t\t" << pLC->EW0 << endl;
 				}
 			}
 

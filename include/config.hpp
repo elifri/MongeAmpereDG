@@ -300,6 +300,19 @@ inline int dual_pow(int n)
 	return res;
 }
 
+//calculates the eigenvalues of a two-dimensional matrix
+inline void calculate_eigenvalues(const config::diffusionmatrix_type &A, config::value_type &ev0, config::value_type &ev1)
+{
+	config::value_type rad = A(0,0) * A(0,0) + (A(1,1) - 2 * A(0,0)) * A(1,1) + 4 * A(0,1) * A(1,0);
+
+	//fetch numerical zeroes
+	if (std::abs(rad) < 1e-10)	rad = 0;
+
+	config::value_type s = std::sqrt(rad);
+	ev0 = (A(0,0) + A(1,1) - s) / 0.2e1;
+	ev1 = (A(0,0) + A(1,1) + s) / 0.2e1;
+}
+
 #endif // DOXYGEN_SKIP
 
 #endif /* CONFIG_HPP_ */

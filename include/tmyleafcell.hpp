@@ -61,14 +61,47 @@ public:
   Enodevalue_type  residuum;
 
   diffusionmatrix_type 	A;
-  value_type	   		smallest_EW;
+  value_type	   		EW0, EW1;
+  constexpr static double epsilon = 1e-6; //minimum value of diffusion matrix' eigenvalues
 
 
 #if(EQUATION==POISSON_EQ || EQUATION==IMPLICIT_HEAT_EQ || EQUATION == MONGE_AMPERE_EQ)
   unsigned int m_offset, n_offset, m_block_size, n_block_size;
 #endif
 
-  tmyleafcell():A(diffusionmatrix_type::Identity()) { ++m_nCountAllLeafs; }
+  void calculate_eigenvalues_blub() {
+
+  	calculate_eigenvalues(A, EW0, EW1);
+
+  	assert(!(EW0 != EW0) && "The smaller eigenvalue is nan");
+  	assert(!(EW1 != EW1) && "The bigger eigenvalue is nan");
+
+  	//ensure positive definite diffusion matrix
+  	while (EW0 < 0)
+  	{
+  		nvector_type nv;
+
+  		cout << "Found very small Eigenvalue " << EW0 << " at "
+  				<< this->id() << endl;
+  		cout << "cofactor of Hessian is: \n" << A << endl;
+
+  		A += (-EW0+epsilon) *Hessian_type::Identity();
+
+  		calculate_eigenvalues(A, EW0, EW1);
+
+  		assert(!(EW0 != EW0) && "The smaller eigenvalue is nan");
+  		assert(!(EW1 != EW1) && "The bigger eigenvalue is nan");
+  	}
+  }
+
+  void set_diffusionmatrix(const diffusionmatrix_type &A) {
+	  this->A = A;
+	  calculate_eigenvalues_blub();
+  }
+
+
+  tmyleafcell() { set_diffusionmatrix(diffusionmatrix_type::Identity());
+	  ++m_nCountAllLeafs; }
   ~tmyleafcell() { --m_nCountAllLeafs; }
 
   void set_mass (const mass_type & m)
@@ -76,15 +109,12 @@ public:
     this->mass.set_massmatrix (m);
   }
 
-  void set_diffusionmatrix(const diffusionmatrix_type A) {this->A = A;}
+
+
 
   void update_diffusionmatrix(const diffusionmatrix_type A, const Equad &equad, const Equadratureshape_grad_type &Equads_grad, const Ejacobian_type &jac, const value_type detjacabs, const double faclevel, Emass_type &laplace){
-	  this->A = A;
+	  set_diffusionmatrix(A);
 	  assemble_laplace(equad, Equads_grad, jac, detjacabs, faclevel, laplace);
-  }
-
-  void update_diffusionmatrix(const diffusionmatrix_type A){
-	  this->A = A;
   }
 
   value_type error() const{
