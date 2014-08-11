@@ -694,9 +694,12 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
 	leafcell_type *pLC = NULL;
 	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
+
+	//reset attributes
 	max_EW = 0; //init max_Ew
 	min_EW = 10;
 	sum_residuum = 0;
+	sum_coefficients(iteration) = 0;
 
 	setleafcellflags(0, false); //reset flags
 
@@ -717,6 +720,7 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 			pLC->uold(ishape,0) = pLC->u(ishape,0);
 			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
+			sum_coefficients(iteration) += solution(pLC->m_offset + ishape);
 		}
 
 		//update diffusion matrix
@@ -1331,7 +1335,7 @@ void Tsolver::time_stepping_MA() {
 	plotter.add_plot_stream("L2_rel", "data/s/plot_data_L2_rel");
 	plotter.add_plot_stream("plot_data_min_constraints", "data/s/plot_data_min_constraints");
 	plotter.add_plot_stream("plot_data_constraints_l2", "data/s/plot_data_constraints_l2");
-	plotter.add_plot_stream("rel_L2_ipopt", "data/s/plot_data_rel_L2_ipopt");
+	plotter.add_plot_stream("sum_coefficients", "data/s/plot_data_sum_coefficients");
 	//========================================
 
 
@@ -1343,7 +1347,6 @@ void Tsolver::time_stepping_MA() {
 
 	//calculate l2 norm of solution
 	L2_norm_exact_sol(0) = calculate_L2_norm(get_exacttemperature_MA_callback())(0);
-
 	cout << "L2 norm of exact sol " << L2_norm_exact_sol << endl;
 
 
@@ -1578,6 +1581,8 @@ void Tsolver::time_stepping_MA() {
 			plotter.get_plot_stream("plot_data")<< iteration << " " << error << endl;
 			if (L2_norm_exact_sol(0) != 0)
 				plotter.get_plot_stream("L2_rel") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
+
+			plotter.get_plot_stream("sum_coefficients") << iteration << " " << sum_coefficients(iteration) << endl;
 
 			// reset flag 0
 			setleafcellflags(0, false);

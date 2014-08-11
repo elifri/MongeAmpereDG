@@ -135,7 +135,8 @@ public:
    void write_solution();
    void write_solution_vector(Eigen::VectorXd & solution); ///extract solution from leafcells to vector
    state_type calculate_L2_error(const vector_function_type f); /// calculate l2 error of function in leafcell - f
-   state_type calculate_L2_norm(const vector_function_type f); /// calculate l2 norm o function f
+//   state_type calculate_L2_norm(); /// calculate l2 norm o function in leafcell
+  state_type calculate_L2_norm(const vector_function_type f); /// calculate l2 norm o function f
 
    //////////////    READ DATA ///////////////////////
 
@@ -332,6 +333,8 @@ public:
 
          double alpha;
 
+
+         Eigen::VectorXd sum_coefficients;
 
          state_type L2_norm_exact_sol; /// L2 norm of the exact solution (=0 if exact solution is not known)
 
