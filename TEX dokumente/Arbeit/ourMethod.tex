@@ -139,7 +139,7 @@ Reviewing existing DG method for the \MA we learned some ?(subjects, matter, poi
 \end{itemize}
 
 \subsection{Convexfication}
-The \MA equation in general does not define a unique solution. For most applications the unique convex solution is required. The question is how to oblige a numerical method to find only convex solutions.
+The \MA equation in general does not define a unique solution. For most applications the unique convex solution is required. The question is how to oblige a numerical method to select only convex solutions.
 The most intuitive way is to convexify the solution after every step. Thus, on the one hand we make sure the right solution is approximated and on the other hand we smooth the generalised poisson solution aiming for a better approximation of the second derivatives.
 Yet a convexification is not simple. For our approach we choose a Bernstein basis for the ansatz space at first.
 \begin{definition}[Bernstein-B\'ezier form]\label{def: BernsteinBezierForm}
@@ -183,7 +183,7 @@ Lai and Schumaker present in \cite{LS2007} \todo{siehe nummer 3 in $C^0 $ schuma
 	\]
 	is nonnegative definite for each $i + j + k =2 $.
 \end{theorem}
-Note, that this condition is quadratic in the coefficients. But there are many relaxations of these conditions, we refer the interested leader to \cite{SS2010}. \todo{zitate}. An example with 12 inequalities is \todo{welche art von satz, theorem, etc?}
+Note, that this condition is quadratic in the coefficients. But there are many relaxations of these conditions, we refer the interested leader to \cite{SS2010}. \todo{zitate}An example with 12 inequalities is \todo{welche art von satz, theorem, etc?}
 \begin{theorem}[Sufficient Linear Conditions for Convexity]
 	A polynomial $p$ is convex on a triangle $T$ if its B\'ezier coefficient $c_{ijk}$ satisfy
 	\begin{align*}
@@ -210,7 +210,12 @@ The latter conditions only ensure convexity on a single triangle. That would suf
 	\end{align}
 where  $\{c_{i,j,k}\}_{i+j+k=d}$ and $\{ {\hat c_{i,j,k}}\}_{i+j+k=d}$ are the B\'ezier coefficients of $p$ relative to the two triangles $T_1 = \langle v_\kappa, v_\lambda, v_\mu \rangle$ and $T_2 = \langle v_\kappa, v_\mu, v_\nu \rangle$ sharing the edge $e$, and $(\beta_1^c,\beta_2^c,\beta_3^c)$ are the barycentric coordinates of $v_\nu$ with respect to $T_1$. Then $p$ is convex.
 \end{theorem}
-\todo{picture of triangles}
+
+\begin{figure}[h]
+	\input{triangle_convexity_condition.pgf}
+	\caption{Two triangles}
+\end{figure}
+
 For quadratic splines Schumaker and Speleers even prove the inversion on convex domains $\Omega$, namely if for every interior edge its coefficients satisfy \eqref{eq: convexity across edge} then the corresponding spline is convex.
 This result does not generalise for higher degrees. In fact they give a counterexample for degree $k = 3$.
 
@@ -221,4 +226,20 @@ Given the DG solution of the generalised poisson problem $u^{gp}_h$ we seek for 
 \]
 where $A$ is the matrix evaluating the to $c$ corresponding piecewise polynomial at the B\'ezier control points, $b$ are the function values of $u^{gp}_h$ at the B\'ezier control points and $C$ is the matrix containing the conditions ensuring convexity on the whole domain.
 
-\subsection{Solving the Quadratic Program}
+\subsubsection{Solving the Quadratic Program}
+\todo{how to solve the quadratic program}
+
+\subsection{Penalty Evaluation}
+
+\subsection{Initial Guess}
+Just as the most methods for the \MA equation the fixed point iteration requires an initial guess. Two approaches are very favoured in the literature.
+One is to start with the solution of the equation
+\begin{align}
+	\triangledown u &= \sqrt{2f} \text{ in } \Omega \\
+	u &= g \text{ on }\partial \Omega.
+\end{align}
+
+The other is a nested iteration ansatz. At a the coarsest level $h_1$ one chooses any convex function as initial guess$u^0_{h_1}$, mostly $\frac 1 2 ({x_1^2} + {x_2^2}) $ for it is convex polynomial with a low degree. For finer triangulations $\mathcal{T}_{h_{l}}$ the solution of the previously computed solution $u_{h_{l-1}}$is taken for a starting point.
+
+Advantageously at the first approach is the compliance of the boundary conditions.
+The second approach regards the fact that probably the method's robustness decreases for finer meshes.

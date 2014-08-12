@@ -4,7 +4,7 @@
 \LoadClass[a4paper,bibliography=totoc,BCOR=5mm]{scrbook}
 
 %% auxiliary packages
-\usepackage[ngerman]{babel}
+\usepackage[english]{babel}
 \usepackage{bold-extra}
 \usepackage{cite}
 %\usepackage{amsthm}
@@ -15,9 +15,10 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{lmodern}
-%\usepackage{ngerman}
+
 \usepackage{framed}
 \usepackage[framed,thmmarks]{ntheorem}
+
 \usepackage{amsmath}
 \usepackage{amssymb}
 %\usepackage{a4wide}
@@ -26,14 +27,12 @@
 \usepackage{todonotes}
 \usepackage{multirow}
 \usepackage{bigdelim}
-\usepackage{multicol}
-\usepackage{comment}
 \usepackage{caption}
 \usepackage{subcaption}
-\usepackage{colortbl}
 \usepackage{ltxtable}
 \usepackage{float}
 
+\usepackage{color}
 \usepackage{stmaryrd} % for llbracket
 
 
@@ -53,6 +52,7 @@
 %% tikz settings
 
 \definecolor{rwthblue}{HTML}{0066CC}
+\usetikzlibrary{calc}
 
 % drawing hypergraphs
 \tikzstyle{node} = [draw, circle]
