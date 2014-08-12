@@ -1,0 +1,39 @@
+		\begin{center}
+		\begin{tikzpicture}
+%define coordinates
+			\coordinate (vEins) at (120:4cm) ;
+			\coordinate (vZwei) at (60:4cm);
+			\coordinate (vDrei) at (0:0cm);
+			\coordinate (vVier) at (0:4cm);
+
+			\draw (0,0) -- (vEins) -- (vZwei) -- node[above left ] {$e$} (vDrei) -- (vVier) -- (vZwei);
+
+%draw nodes
+			\draw[fill =black] (vEins) circle (1pt) node[left] {$ v_\nu$};
+			\draw[fill =black] (vZwei) circle (1pt) node[right] {$v_\mu$};
+			\draw[fill =black] (vDrei) circle (1pt) node[below] {$v_\kappa$};
+			\draw[fill =black] (vVier) circle (1pt) node[right] {$v_\lambda$};
+
+%draw control points in T_1
+			\draw[fill =blue] ($(vEins)!0.5!(vZwei)$) circle (1pt) node[above] {$\blue{\hat c_{011}}$};
+			\draw[fill =blue] ($(vEins)!0.5!(vDrei)$) circle (1pt) node[left] {$\blue{\hat c_{101}}$};
+			\draw[fill =blue] ($(vDrei)!0.5!(vZwei)$) circle (1pt) node[left] {$\blue{\hat c_{110}}$};
+
+			\draw[fill =blue] (vEins) circle (1pt) node[above] {$\blue{\hat c_{002}}$};
+			\draw[fill =blue] (vZwei) circle (1pt) node[above] {$\blue{\hat c_{020}}$};
+			\draw[fill =blue] (vDrei) circle (1pt) node[below left] {$\blue{\hat c_{200}}$};
+
+%draw control points in T_2
+			\draw[fill =blue] ($(vVier)!0.5!(vZwei)$) circle (1pt) node[right] {$\blue{c_{011}}$};
+			\draw[fill =blue] ($(vVier)!0.5!(vDrei)$) circle (1pt) node[below] {$\blue{c_{110}}$};
+			\draw[fill =blue] ($(vDrei)!0.5!(vZwei)$) circle (1pt) node[right] {$\blue{ c_{101}}$};
+
+			\draw[fill =blue] (vZwei) circle (1pt) node[below right] {$\blue{c_{002}}$};
+			\draw[fill =blue] (vDrei) circle (1pt) node[below right] {$\blue{c_{200}}$};
+			\draw[fill =blue] (vVier) circle (1pt) node[below] {$\blue{ c_{020}}$};
+
+			\draw node at (90:2.2cm) {$T_2$};
+			\draw node at (30:2.4cm) {$T_1$};
+
+		\end{tikzpicture}
+		\end{center}
