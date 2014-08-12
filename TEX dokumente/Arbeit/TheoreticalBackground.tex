@@ -119,31 +119,31 @@ We recall our triangulation $\mathcal{T}_h$ of $\Omega$. We are able to use $\ma
 Since two adjacent elements share the same edge only with opposite normal vectors we can rewrite the middle term by
 \begin{align*}
 \sum\limits_{T \in \triang}\int_{\partial T} \varphi A \nabla v \cdot \mathbf n 
-= &\sum\limits_{e \in \edgesi}\int_{e} \left( \varphi^+ A^+ \nabla v^+ \cdot \mathbf n - \varphi^- A^- \nabla v^- \cdot \mathbf n \right) \\
+= &\sum\limits_{e \in \edgesi}\int_{e} \left( \varphi^+ A^+ \nabla v^+ \cdot \mathbf n^+ - \varphi^- A^- \nabla v^- \cdot \mathbf n^- \right) \\
 & + \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot \mathbf n,
 \end{align*}
-where $x^\pm $ is $x$ evaluated in one of the two adjadecent elements $T^\pm$. With the formula $ac-bd = \frac 1 2 (a+b)(c-d) + \frac 1 2 (a-b)(c+d)$ we get
+where $x^\pm $ is $x$ evaluated in one of the two adjadecent elements $T^\pm$. With the identity $\mathbf n^- = -\mathbf n^+$ and formula $ac-bd = \frac 1 2 (a+b)(c-d) + a\frac 1 2(c+d)-b\frac 1 2(c+d)$  we get
 \begin{align*}
-	&\varphi^+ A^+ \nabla v^+ \cdot \mathbf n - \varphi^- A^- \nabla v^- \cdot \mathbf n \\
+	&\varphi^+ A^+ \nabla v^+ \cdot \mathbf n^+ - \varphi^- A^- \nabla v^- \cdot \mathbf n^+ \\
 	= & \phantom{+} \frac 1 2 \left(\varphi^+ + \varphi^- \right) \left(A^+ \nabla v^+ \cdot \mathbf n - A^- \nabla v^- \cdot \mathbf n \right) \\
-  &+  \frac 1 2 \left(\varphi^+ - \varphi^- \right) \left(A^+ \nabla v^+ \cdot \mathbf n + A^- \nabla v^- \cdot \mathbf n \right) \\
-  = &  \average \varphi \jump { A \nabla v \cdot \mathbf n }+ \jump \varphi \average{ A \nabla v \cdot  \mathbf n }
+  &+  \varphi^+ \frac 1 2  \left(A^+ \nabla v^+\right) \cdot \mathbf n^+ - \varphi^- \frac 1 2 \left(A^- \nabla v^-\right) \cdot \mathbf n^+ \\
+  = &  \jump {\average \varphi  A \nabla v}+ \jump {\varphi \average{ A \nabla v}}
 \end{align*}
 Therefore the weak formulation can be written as $a(v,\varphi) = l(\varphi)$ with 
 \begin{align*}
   a(v, \varphi) = & \sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot \left(A \nabla v\right) \\
-	& - \sum\limits_{e \in \edgesi}\int_{e} \left( \average \varphi \jump {A \nabla v \cdot \mathbf n } + \jump \varphi \average{ A \nabla v \cdot \mathbf n } \right)\\
+	& - \sum\limits_{e \in \edgesi}\int_{e} \left( \jump {\average \varphi A \nabla v} + \jump {\varphi \average{ A \nabla v}} \right)\\
 & - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot \mathbf n
 \end{align*}
 and
 \[
 l(\varphi) = \sum_{T \in \triang} \int_T v f
 \]
-Due to the smoothness of $u$ and $w$ we can neglect the jump in $A \nabla u$
+Due to the smoothness of $u$ and $w$ we can neglect the jump in $A \nabla u$ and find
 \begin{align*}
  a(v, \varphi) = & \sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot \left(A \nabla v\right) %\\
 	- \sum\limits_{e \in \edgesi}
-	\jump \varphi \average{ A \nabla v \cdot \mathbf n } %\right)
+	\jump{ \varphi \average{ A \nabla v}} %\right)
 	\\
 & - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot \mathbf n.
 \end{align*}
@@ -151,8 +151,8 @@ Due to the smoothness of $u$ and $w$ we can neglect the jump in $A \nabla u$
 Symmetrising our bilinear form $a$ by adding terms on both sides we have
 \begin{align}
  a_S(v, \varphi) = &\sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v \nonumber \\
-  &-\sum\limits_{e \in \edgesi}\int_{e} \jump \varphi \average{A \nabla v \cdot \mathbf n } 
- - \sum\limits_{e \in \edgesi}\int_{e} \jump v \average{ A \nabla \varphi \cdot \mathbf n } \nonumber\\ 
+  &-\sum\limits_{e \in \edgesi}\int_{e} \jump {\varphi \average{A \nabla v} }
+ - \sum\limits_{e \in \edgesi}\int_{e} \jump{ v \average{ A \nabla \varphi}} \nonumber\\ 
  & - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot \mathbf n 
     - \sum\limits_{e \in \edgesb}\int_{e} v A \nabla \varphi \cdot \mathbf n.
 \end{align}
@@ -184,10 +184,86 @@ Just like in the finite element method we can derive a linear system of equation
 
 \subsection{Implementation Remarks}
 \todo{ Kommentar zur Implementation wegen Vorzeichen für Kantenterme}
-To evaluate the integrals in the bilinearform a numerical integration scheme is needed. Usually Gauss quadrature is the method of choice. Since ansatz and test functions are chosen to be piecewise polynomials a Gauss quadrature already is exact for only a few quadrature points.
-Hence, the data we have to provide to assemble the sparse matrix $A$ are the gradient, the normal derivatives, i.e. and the function values of all test functions at each quadrature point.
-Suppose the 
+To evaluate the integrals in the bilinearform  numerically an integration scheme is needed. Usually Gauss quadrature is the method of choice. Since ansatz and test functions are chosen to be piecewise polynomials a Gauss quadrature already is exact for only a few quadrature points.
+Hence, the data we have to provide to assemble the sparse matrix $A$ are the gradient, the normal derivatives, i.e. $\nabla u \cdot \mathbf{n}$ and the function values of all test functions at each quadrature point.
 
+To reduce the storage space one usually specify a reference cell $T_{ref}$ such that every triangle $T \in \triang$ is the image of $T_{ref}$ under an affine transformation $\Phi_T$. Choosing a polynomial basis $p^1_{ref},\dots,p^n_{ref}$ of $T_{ref}$ induces a basis on every $T$, namely 
+\[
+	p_T^i(x) = p^i_{ref}(\Phi_T^{-1}(x)), \qquad x \in T, 1 \leq i \leq n.
+\]
+%Hereafter the only polynomials we refer to are the ones given in this basis.
+Most data on a triangle $T$ can be calculated knowing $\Phi_T$ and the reference cell $T_{ref}$. We explain how to do that exactly for the two-dimensional case.
+
+\begin{example}
+From now an we consider $\Omega \subset \R^2$ and we choose the reference triangle to be the triangle spanned by the points $\point 0 0, \point 0 1$ and $\point 1 0$.
+Suppose we want to figure out the transformation for the triangle $T = \langle v_1,v_2,v_3 \rangle$.
+It has to hold
+\[
+\Phi\left(\point 0 0\right) = v_0, \Phi\left(\point 0 1\right) = v_1 \textnormal{ and } \Phi\left(\point 1 0\right) = v_2
+\]
+Since every two-dimensional affine transformation has the form $\Phi(x) = Ax+b$ for $A \in \R^{2 \times 2}$ and $b \in \R^2$ it is easy to verify that we have $A = \begin{pmatrix} v_1-v_0 & v_2-v_0\end{pmatrix}$ and $b = v_0$.
+
+Having determined the transformation we are able to easily calculate its inverse $\Phi_T^{-1}(x) = A^{-1} (x-b) =: A^{-1} x- \tilde b$. \\
+Let $x \in T$ have the barycentric coordinates $\beta_0, \beta_1$ and $\beta_2$, then because of $\Phi^{-1}$'s linearity we find
+\begin{align*}
+	p^i_T(x) =& p_T^i( \beta_0 v_0 +\beta_1 v_1 + \beta_2 v_2  ) \\
+	=& p^i_{ref}(\Phi_T^{-1}(\beta_0 v_0 +\beta_1 v_1 + \beta_2 v_2)) \\
+	=& p^i_{ref}(\beta_0 \Phi_T^{-1}(v_0) +\beta_1 \Phi_T^{-1}(v_1) + \beta_2 \Phi_T^{-1}(v_2)) \\
+		=& p^i_{ref}(\beta_0 \point 0 0 +\beta_1 \point 0 1 + \beta_2 \point 1 0 ), \qquad 1 \leq i \leq n.
+\end{align*}
+Thus, the function values in $T$ can be simply determined with barycentric coordinates. We refer from no on to the point $\beta_0 \point 0 0 +\beta_1 \point 0 1 + \beta_2 \point 1 0$ with $x_{ref}$.
+
+Similarly we can affiliate the determinant of the gradient in $T$ to a caculation in $T_{ref}$. With the chain rule we have
+\begin{align*}
+	\left(\nabla_x p_T^i(x)\right)^t = D_x p)_T^i(x) =& D_x p^i_{ref}(\Phi_T^{-1}(x)) \\
+	  =& D_{\Phi_T^{-1}(x)}p^i_{ref}(\Phi_T^{-1}(x)) \cdot D_x  \Phi_T^{-1}(x) \\
+	  =& D_{x_{ref}}p^i_{ref}(x_{ref}) \cdot  A^{-1}
+\end{align*}
+and thus
+\begin{align}
+	\nabla_x p_T^i(x) = A^{-t} \cdot \nabla_{ref}(x_{ref}), \qquad 1 \leq i \leq n.
+\end{align}
+
+Analogous proceeding yields for the Hessian
+\begin{align}
+D_x^2p_T^i(x) = A^{-t} D_{x_{ref}}^2p^i_{ref}(x_{ref})  A^{-1}, \qquad 1 \leq i \leq n.
+\end{align}
+
+Concluding all information of a cell we need to store is the Jacobian of its transformation, i.e. $A$ and its normals. We are able to calculate all further information with the data provided by the reference triangle.
+\end{example}
+
+Imagine a typical mesh refinement our triangulation is created by refinement of a coarser mesh. We only to refer to a specific kind of refinement, namely given a triangulation $\triang$ dividing every triangle $T \in \triang$ into four to $T$ similar triangles as is shown in figure \ref{pic: refinement}. We denote the finer grid by $\triangFine$ for the diameter of each triangle is halved.
+
+\begin{figure}[h]
+\input{refinement.pgf}
+\caption{Refinement of a triangle}
+ \label{pic: refinement}
+\end{figure}
+
+We identifying the new triangles with the original cell $T$ calling it their basecell. Repeating the refinement we can relate a cell in the finest mesh with a basecell in the original triangulation.
+The benefit of saving a base cell $T^T_b$ is that the transformation matrix of the transformation from $T^T_b$ is a diagonal matrix and that a it has the same, or for the innermost triangle opposite directed normals.
+\begin{example}
+In fact in the two-dimensional case the Jacobian of a transformation from the base cell to a $l$ times refined triangle is $
+	\begin{pmatrix}
+		\frac 1 {2^l} & 0 \\ 0 & \frac 1 {2^l}
+	\end{pmatrix} \text{ or }
+	\begin{pmatrix}
+		-\frac 1 {2^l} & 0 \\ 0 & -\frac 1 {2^l}
+	\end{pmatrix}$ respectively if there has be an odd number of ??? inner refinements\todo{ueberarbeiten}.
+
+Hence, we have for a point $x \in T$
+\begin{align}
+\nabla_x p^i(x) &= \pm 2^l A^{-t} \cdot \nabla_{ref}(x_{ref}), \label{eq: trafo grad}\\
+\nabla_x p^i(x) \mathbf n &= 2^l A^{-t} \cdot \nabla_{ref}(x_{ref}) \mathbf{ n_{b}} \qquad \text{ and } \\
+D_x^2 p^i(x) &= 2^{2l} A^{-t} D_{x_ref}^2 p^i(x_{ref}), \qquad 1 \leq i \leq n,
+\end{align}
+where $l \in \N$ indicates how often $T$ is refined with respect to the original mesh, $A$ is the Jacobian of the transformation matrix to $T$'s base cell and $\mathbf n_b$ the to $n$ corresponding normal in the base cell. Note, that this even hold for the inner refined triangle since the minus sign in the Jacobian cancels with the minus sign of the with respect to the base cell opposite directed normal.
+When evaluating the first part of the bilinearform, i.e. $\nabla \phi \cdot A \nabla v$ we see that for two basis polynomials $p_T^i, p_T^j$ having only support on $T$ the sign of the right-hand side in \eqref{eq: trafo grad} does not matter for both gradients have the same sign. Of course for other combinations of polynomials the terms always equals zero because the polynomials' suppose is chosen such that all other gradients vanish in the inner of $T$.
+So, we are able to save a lot of memory if we store instead of the data at the quadrature points in all refined cells just the data of the base cell and the number of refinements. The refined cells contained in the actual mesh are referred as \emph{leaf cells}.
+\end{example}
+
+Another crux of the implementation are of course the face terms. When implementing each face has to be naturally processed only once. One has to take that the normal derivatives are stored always with respect to 
+\todo{at the beginning difference face edge }
 
 \newpage
 

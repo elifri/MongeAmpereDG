@@ -117,8 +117,8 @@ showing convergence for the analytical solution $u$ and a sufficent close $u^0$.
 Since in every iteration \eqref{eq:fixed point iteration} states a generalised poisson equation we can apply the derived  method of section \ref{sec: SIPG} directly: Given $u^i_h$ find $u^{i+1}_h \in \mathcal P^k_h$ satisfying
 \begin{align*}
  &\int_{\Omega} \nabla v \cdot \cof(D_h^2 u^{i}) \nabla u_h^{i+1}\\
- & -\sum\limits_{e \in \bigEps^i}\int_{e} \jump v \average { \cof(D_h^2 u^{i}) \nabla u_h^{i+1}\cdot n } 
- - \sum\limits_{e \in \bigEps^i}\int_{e} \jump u \average{ \cof(D^2 u_h^{i}) \nabla v \cdot n } \\  
+ & -\sum\limits_{e \in \bigEps^i}\int_{e} \jump {v \average { \cof(D_h^2 u^{i}) \nabla u_h^{i+1}} }
+ - \sum\limits_{e \in \bigEps^i}\int_{e} \jump {u \average{ \cof(D^2 u_h^{i}) \nabla v} } \\  
  & - \sum\limits_{e \in \bigEps^b}\int_{e} v \cof(D^2 u_h^{i}) \nabla u_h^{i+1}\cdot n 
     - \sum\limits_{e \in \bigEps^b}\int_{e} u_h^{i+1}\cof(D^2 u_h^{i}) \nabla v \cdot n
     +\sum\limits_{e \in \bigEps} \int_e \frac \sigma {|e|} \jump v  \jump {u_h^{i+1}}\\
