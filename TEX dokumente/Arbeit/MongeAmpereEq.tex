@@ -37,7 +37,7 @@ Hier kommt dann eine anschauliche Erklärung zur geometrischen Bedeutung.
 %\subsection{Aleksandrov Solution}
 The \MA problem in two dimensions can be reformulated via a differential geometry interpretation leading to a different kind of solution concept.
 
-\begin{definition}[\MA Measure \cite{Feng2013}]\label{def:MA measure}
+\begin{definition}[\MA Measure {\cite[2.1.1.]{FGN2013}}]\label{def:MA measure}
 	The \emph{\MA measure} associated with $u$ is defined as 
 	\begin{align}
 		\mathcal{M}_u (E) = \mathcal{L}^2(\partial u(E)) \qquad \text{ for any Borel set } E \subset \Omega,
@@ -50,7 +50,7 @@ The \MA problem in two dimensions can be reformulated via a differential geometr
 \end{definition}
 The corresponding \MA problem is then defined by
 
-\begin{definition}[Aleksandrov Solution 2.1.1. \cite{Feng2013}]\label{def:aleksandrov solution}
+\begin{definition}[Aleksandrov Solution {\cite[2.1.1.]{FGN2013}}]\label{def:aleksandrov solution}
 A convex function $u$ such that for a given Radon measure $\mu$ it fulfills
 \begin{align}
 \begin{split}
@@ -61,17 +61,23 @@ u &= g  \text{ on } \partial \Omega
 is called \emph{Aleksandrov solution} of the \MA equation.
 \end{definition}
 
-Aleksandrov solution are also viscosity solutions if $\mu$ is absolutely continuous with Lebesgue measure with a continuous density $f$ \cite{G2001} . For $f > 0$ the two solution concepts even coincide \cite{G2001}. \todo{include proposition 1.3.4. and proposition 1.7.1}
+Aleksandrov solution are also viscosity solutions if $\mu$ is absolutely continuous with Lebesgue measure with a continuous density $f$ \cite[proposition 1.3.4.]{G2001} . For $f > 0$ the two solution concepts even coincide \cite[proposition 1.7.1]{G2001}. 
 
 \section{Existence and Uniqueness}
 Showing existence of fully nonlinear PDEs is a hard challenge compared to the linear case. For simplicity we constraint ourselves to the elliptic case. 
+
+\begin{proposition}
+	The \MA equation is elliptic for strictly convex function $u$ and $f > 0$.
+\end{proposition}
+For a proof of this result we refer to \cite{CC1995, GT1977}.
+
 
 The \MA equation is known for its notorious ambiguity:
 \begin{example}
 \todo{here example mit 16 loesungen}
 \end{example}
 
-Brenner\cite{Brenner2012} : $\Omega$ smooth $\Rightarrow u$ smooth \cite{Caffarelli1984} und aus $\Omega$ smooth auch $\Rightarrow$ es exisitieren genau 2 lösungen: eine convex, die andere konkav \cite{Courant1989}
+Brenner: $\Omega$ smooth $\Rightarrow u$ smooth \cite{Caffarelli1984} und aus $\Omega$ smooth auch $\Rightarrow$ es exisitieren genau 2 lösungen: eine convex, die andere konkav \cite{Courant1989}
 
 A viscosity solution is unique if $F$ is elliptic by the comparison principle.
 

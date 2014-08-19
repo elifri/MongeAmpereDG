@@ -68,6 +68,7 @@
 
 
 \newtheorem{theorem}[thmc]{Theorem}
+\newtheorem{proposition}[thmc]{Proposition}
 \newtheorem{example}[thmc]{Example}
 \newtheorem{lemma}[thmc]{Lemma}
 \newtheorem{definition}[thmc]{Definition}

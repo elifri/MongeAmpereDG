@@ -113,9 +113,9 @@ In \cite{Awanou2014} Awanou analysed the similar iteration process
 \end{align*}
 showing convergence for the analytical solution $u$ and a sufficent close $u^0$. While Awanou uses a finite difference scheme to solve the PDE in every step we want to exploit the benefits of a DG method and solve every intermediate step by a SIPG method. 
 
-\section{SIPG formulation of the Iteration}
+\section{SIPG formulation of the Iteration}\label{sec: SIPG}
 Since in every iteration \eqref{eq:fixed point iteration} states a generalised poisson equation we can apply the derived  method of section \ref{sec: SIPG} directly: Given $u^i_h$ find $u^{i+1}_h \in \mathcal P^k_h$ satisfying
-\begin{align*}
+\begin{align}
  &\int_{\Omega} \nabla v \cdot \cof(D_h^2 u^{i}) \nabla u_h^{i+1}\\
  & -\sum\limits_{e \in \bigEps^i}\int_{e} \jump {v \average { \cof(D_h^2 u^{i}) \nabla u_h^{i+1}} }
  - \sum\limits_{e \in \bigEps^i}\int_{e} \jump {u \average{ \cof(D^2 u_h^{i}) \nabla v} } \\  
@@ -125,7 +125,9 @@ Since in every iteration \eqref{eq:fixed point iteration} states a generalised p
     =& - 2 \int_{\Omega}v f
     	 				-\sum\limits_{e \in \bigEps^b}\int_{e} u_h^0 \cof(D^2 u_h^{i}) \nabla v \cdot n 
     	 				\sum\limits_{e \in \bigEps^b} \int_e \frac \sigma {|e|} v u_h^0    \qquad \forall v \in  \mathcal P^k_h.
-\end{align*}
+    	\label{eq: sipg iteration}
+\end{align}
+\todo{beschraenkung of grad 2}
 
 
 \section{Challenges for a \MA DG method}
@@ -159,9 +161,22 @@ The benefit of the Bernstein-B\'ezier form is that there can be formed condition
 \begin{theorem}
 	The convexity of the control polygon implies the convexity of the represented polynomial.
 \end{theorem}
-It is not far to seek in applying a convex hull algorithm on given Bernstein-B\'ezier coefficients thereby enforcing convexity, for there are a lot of convex hull algorithm available due to their importance in computer graphics. However, this approach is designated to go amiss for a convex hull algorithm only operate on a set of point and does not necessarily produce the same connectivity the control polygon implies. We make this clear with an example.
+It is not far to seek in applying a convex hull algorithm on given Bernstein-B\'ezier coefficients thereby enforcing convexity, for there are a lot of convex hull algorithm available due to their importance in computer graphics. However, this approach is designated to go amiss for a convex hull algorithm only operate on a set of point and does not necessarily produce the same connectivity the control polygon implies. An example for that is given in figure \ref{fig: diff connectivity}. 
 
-\todo{example fuer verschiende connectivitaeten}
+\begin{figure}[h]
+\begin{subfigure}[b]{.5\textwidth}
+	\includegraphics[trim=3cm 8cm 3cm 8cm, width=1.\textwidth]{control_polygon2.pdf}
+	\caption{control polygon}
+\end{subfigure}
+\begin{subfigure}[b]{.5\textwidth}
+	\includegraphics[trim=3cm 8cm 3cm 8cm, width=1.\textwidth]{convex_hull2.pdf}
+	\caption{lower convex hull}
+\end{subfigure}
+\caption{The control polygon and lower convex hull of a given set of control points}
+\label{fig: diff connectivity}
+\end{figure}
+
+While the the control polygon is obviously not convex, the surface of the lower convex hull of the control points is convex because it connect the inner control points differently.
 
 Schumaker and Speleers present in \cite{SS2014} an approach to ensure convexity by a set of conditions on the coefficents , resulting in a quadratic program with linear constraints. To set up the convexity constraints we first need to define the difference operator
 \begin{definition}[Difference Operator]
@@ -235,11 +250,83 @@ where $A$ is the matrix evaluating the to $c$ corresponding piecewise polynomial
 Just as the most methods for the \MA equation the fixed point iteration requires an initial guess. Two approaches are very favoured in the literature.
 One is to start with the solution of the equation
 \begin{align}
-	\triangledown u &= \sqrt{2f} \text{ in } \Omega \\
+	\begin{split}
+	\triangledown u &= \sqrt{2f} \text{ in } \Omega \\ 
 	u &= g \text{ on }\partial \Omega.
+	\end{split}\label{eq: start sqrt_f}
 \end{align}
+
+\todo{motivation for this approach}
 
 The other is a nested iteration ansatz. At a the coarsest level $h_1$ one chooses any convex function as initial guess$u^0_{h_1}$, mostly $\frac 1 2 ({x_1^2} + {x_2^2}) $ for it is convex polynomial with a low degree. For finer triangulations $\mathcal{T}_{h_{l}}$ the solution of the previously computed solution $u_{h_{l-1}}$is taken for a starting point.
 
 Advantageously at the first approach is the compliance of the boundary conditions.
 The second approach regards the fact that probably the method's robustness decreases for finer meshes.
+
+
+\section{First Implementation}
+At the beginning we implemented the SIPG method exactly as stated in section \ref{sec: SIPG}.
+As an initial guess served the solution of \eqref{eq: start sqrt_f} , the penalty parameter was chosen to be 30 and the domain $\Omega$ the unit square$[0,1]^2$.
+
+For first numerical results we consider the rather simple equation
+\begin{align}
+	\mydet {D^2 u} &= 1 \text{ in } \Omega \\ 
+	u &= \frac 1 2 (x_1^2 + x_2^2 )\text{ on }\partial \Omega.	
+\end{align}
+with the exact classical solution $\frac 1 2 (x_1^2 + x_2^2 )$. However, even for this rather simple example the iteration does not converge. This implementation even fails the consistency check. Given the exact solution as starting point the $L2$ error steadily increases, as shown in figure \ref{fig: consisctency_first_try}
+\begin{figure}[h]
+	\centering
+	\includegraphics[trim = 2cm 4cm 1cm 4cm, width=1\textwidth]{plots/consisctency_first_try.pdf}
+	\caption{Relative $L2$ error on a grid with $h=\frac 1 2$}
+	\label{fig: consisctency_first_try}
+\end{figure}
+Looking at latter steps one is able see in the solution the underlying grid structure. Everywhere a triangle edge lies sharps edges arise. Besides continuity the solution on two triangles seem independent although the exact solution is absolutely  regular.
+
+A similar approach works for quasilinear methods, so it is a good starting to analyse the main difference, i.e. the derivation in the iterated variable. This leads us to the question: How good serves the second derivative of the Poisson solution for an approximation of the exact second derivative?
+We illustrate the significance of this question by a example
+\begin{example}
+	Let $\tilde u$ be an approximation of $u\in C^2(\R)$ with $u-\tilde u \in \bigO(h)$. Differentiating twice we are left with $\dxx{x} u(x)-\dxx{x} \tilde u(x)\in \bigO(h^{-1})$ meaning a decrease of the grid size comes along with a increase of the error in the second derivatives.
+	????????//
+	 an approximation find
+	\begin{align*}
+		\dxx{x} u(x)-\dxx{x} \tilde u(x) \approx \frac{\tilde u(x+2h) - 2\tilde u(x) - \tilde u(x-2h) - (u(x+2h) - 2u(x) - u(x-2h))} {4h^2} \\
+		 \in \bigO(h^{-1})
+	\end{align*}
+\end{example}
+Let us recall the geometric interpretation of the second derivative, it indicates the curvature of a function and hence also describes the convexity, concavity respectively.
+
+In order to simplify the required calculation we restricted ourselves test space of piecewise polynomials of degree 2. Hence, we receive a piecewise constant Hessian in every step which is especially during the first iterations not smooth.
+On one hand one can hope for a smoothing by a convexification for it will smooth away all unintended concave curvatures. But on the other hand the result is still unsatisfiable because convexification does not affect sharp edges at triangle transitions.
+
+\subsection{An additional Penalty Parameter}
+Another idea is force more regularity on the first derivative and thus, implicitly obtain a more steady solution. This suits to the ansatz pursued by Neilan described in section \ref{subsec: disrete Hessian}, his proposed correction terms vanish as the gradient jump across internal edges tends to zero.
+Hence, we add the following penalty term 
+\begin{align}
+	\sum_{e \in \edgesi} \sigma_g |e |\int_e \jump{ \nabla u} \jump {\nabla v} \label{eq: grad penalty term}
+\end{align}
+to the formulation in \eqref{eq: sipg iteration}.
+Note that the gradient of a basis functions grows with the mesh size \todo{ja, was will ich hier eigentlich sagen}
+And indeed with the new penalisation of the gradient the implementation is consistent with the previous example. The consistency check worked for the choice $\sigma_g$ equal to $\sigma=30$, as well as for choices much smaller than $\sigma$.
+\todo{Noelle gluecklich machen querschnitt}
+
+Nevertheless, starting with the initial guess from \eqref{eq: start sqrt_f} the method seems instable and diverges. This time the results are even more interesting. As shown in figure \ref{fig: oscillation} the error is oscillating before diverging  to infinity.
+\begin{figure}[h]
+	\centering
+	\includegraphics[trim = 2cm 4cm 1cm 4cm, width=1\textwidth]{plots/oscillation.pdf}
+	\caption{Relative $L2$ error on a grid with $h=\frac 1 4$ and gradient penalty}
+	\label{fig: oscillation}
+\end{figure}
+
+\begin{figure}[h]
+\begin{subfigure}[b]{.5\textwidth}
+	\includegraphics[width=1.\textwidth]{plots/with_penalty_it22.pdf}
+	\caption{Solution after 23 steps}
+\end{subfigure}
+\begin{subfigure}[b]{.5\textwidth}
+	\includegraphics[width=1.\textwidth]{plots/with_penalty_it23.pdf}
+	\caption{Solution after 24 steps}
+\end{subfigure}
+\caption{The solution in two consecutive iterations}
+\label{fig: diff iteration}
+\end{figure}
+Figure \ref{fig: diff iteration} shows to consecutive steps, the error $u-u_{exact}$ is denoted by the surface color. We see that the solution after 23 steps lies above of the exact solution, while after another iteration the Poissson solution lies below of it. These frames are exemplary for the behaviour of our numerical solution. After a step above the solution one below follows, it look like the solution is split into two subsequences.  And as we have also seen in the devolution of the error, these subsequences drive each other away from the actual solution.

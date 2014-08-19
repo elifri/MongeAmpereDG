@@ -81,11 +81,11 @@ However, their approach has a drawback. In order to find $u_h$ one has to solve 
 We implemented their presented method using the finite element tool FEniCS \cite{fenics} and experienced a huge sensitivity for initial starting points.
 \todo{tolle numerische ergebnisse}
 
-Neilan claims when presenting his method in \cite{neilan2014} that this methods fails to converge for the test case
+Neilan claims when presenting his method in \cite{Neilan2014} that this methods fails to converge for the test case
 $u = -\sqrt{2 - x_1^2 - x_2^2 }$ and $f = \frac 2 {{2 - x_1^2 - x_2^2}^2}$. Generally the presented method is more appropriate for classical solutions, they plan to address less regular solution in future work.
 
 
-\subsection{A Finite Element Method based on a Discrete Hessian}
+\subsection{A Finite Element Method based on a Discrete Hessian} \label{subsec: disrete Hessian}
 
 Shortly Neilan generalised a finite element method of Lakkis and Pryer \cite{LP2011} in his paper \cite{neilan2014}.
 The crux of this idea is the notion of a \emph{discrete Hessian}. 

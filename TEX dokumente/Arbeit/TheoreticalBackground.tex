@@ -1,31 +1,61 @@
-\todo{explain $\Omega$}
-
-\begin{definition}
+Let $\Omega \subset \R^d $ be a convex bounded domain.
+First of all we repeat the basis definitions for the analysis of partial differential equations as they are introduced for example in \cite{Evans1998}.
+\begin{definition}[Partial Differential Equation]
  A \emph{partial differential equation} (PDE) of order $k\in \N$ is an expression of the form
 \begin{align}
 	F(D^k(u(x)), D^{k-1}(u(x)), Du(x), u(x), x) = 0, \label{eq:general PDE}
 \end{align}
 where $F$ is given and $u$ is unknown.
 \end{definition}
+We focus in thesis on second order PDEs for our main PDE the \MA equation is of second order. Next to the order there exist further properties to categorise PDEs
+\begin{definition}[Categories of PDEs]
+	Given functions $a_{\alpha} $ and $f$ a PDE is called
+	\begin{enumerate}
+		\item \emph{linear} if it can be written in the form
+		\[
+			\sum_{|\alpha| \leq k} a_{\alpha} (x) D^{\alpha} u = f(x).
+		\] 
+		
+		\item \emph{semilinear} if it can be written in the form
+		\[
+			\sum_{|\alpha| = k} a_{\alpha}(x) D^{\alpha} u + a_0(D^{k-1}u, Du, u, x)= f(x),
+		\]	
+		i.e. a semilinear PDE is nonlinear in the unknown function, but linear in the all partial derivatives.
+		
+		\item \emph{quasilinear} if it can be written in the form
+		\[
+			\sum_{|\alpha| = k} a_{\alpha}(D^{k-1}u, Du, u, x) D^{\alpha} u + a_0(D^{k-1}u, Du, u, x)= f(x),
+		\]	
+		i.e. a quasilinear PDE is nonlinear in (at least) on lower derivate, but linear in the highest order derivates.
+		
+		\item \emph{fully nonlinear}, if it depends nonlinearly upon the highest order derivatives.
+	\end{enumerate}
+	\todo{roman enumeration}
+\end{definition}
+A famous example for linear PDEs is the \emph{Poisson equation} $-\triangle u = f$, a semilinear PDE is for example the \emph{nonlinear Poisson equation} $-\triangle u = f(u)$. A well-known example for quasilienar PDEs are equations of the type $\nabla \cdot (A(u) \nabla u) = f$, where $A: \R^d \rightarrow \R^{d \times d}  $. The\MA equation $\mydet {D^2 u} = f$ which we will disuss later in detail is part of the last category, the nonlinear PDEs. 
 
-
-\begin{definition}[elliptic PDE]
-	A PDE is called \emph{elliptic} if 
-	
+Another important classification of second order PDEs is the ellipticity. 
+\begin{definition}[Elliptic PDE{, \cite[p.207]{FGN2013}}]
+	A fully nonlinear second order PDE is called \emph{elliptic} if its operator satisfy
+	\begin{align}
+		F(A,p,z,x) \leq F(B,p,z,x) \label{eq: ellipitic PDE}
+	\end{align}
+for all $x \in \Omega, z \in \R, p \in \R^d$ and $A,B \in \R^{d \times d}_{sym}$  with $A-B$ positive definite.
 \end{definition}
 
-A function $u$ fulfilling \eqref{eq:general PDE} is called a classical solution of the PDE.
+A function $u$ fulfilling \eqref{eq:general PDE} is called a classical solution of the PDE. There are problems such that no such solution exists, often the demand on the high derivatives cannot be fulfilled. To admit less regular solutions one aims for a weaker solution notion. To do this one needs to we specify some spaces where weaker solutions could be contained.
 
-There are problems such that no such solution exists, often the demand on the high derivatives cannot be fulfilled. To admit less regular solutions we aim for a weaker solution notion.
-
-
-\section{Functional spaces}
-
+\section{Functional Spaces}
 According to the literature we refer by $W^{s,p}(\Omega)$ to the H\"older space, a set consisting of all $L^p(\Omega)$ functions whose distributional derivates up to order $s$ are contained in $L^ p(\Omega)$.
+\todo{what is a distributional derivates}
 
-Let $\triang$ be a shape regular, quasi-uniform simplicial triangulation of $\Omega$. We divide its edges $\edges$ into the subsets $\edgesi$ and $\edgesb$ containing all interior edges and boundary edges, respectively.
-Using that we define the piecewise spaces
-\todo{piecewise spaces}
+Let $\triang$ be a shape regular, quasi-uniform simplicial triangulation of $\Omega$, for simplicity reasons we assume that $\triang$ consists only of triangles. We divide the edges $\edges$ into the subsets $\edgesi$ and $\edgesb$ containing all interior edges and boundary edges, respectively. On this basis we define the piecewise spaces
+\begin{definition}[Piecewise Spaces]
+The to the mesh associated spaces are
+\begin{align}
+	H^s(\triang) = \Pi_{T\in \triang}  H^s(T), W^{s,\infty}(\Omega) = \Pi_{T\in \triang} W^{s,\infty}(T).
+\end{align}	
+\end{definition}
 \begin{definition}[Piecewise Polynomial Spaces] \label{def: piecewise polySpace}
 	Further we denote the finite-dimensional space of piecewise polynomials by
 \[	
@@ -36,9 +66,7 @@ Using that we define the piecewise spaces
 \todo{norms}
 We use a subscript $h$ to indicate a piecewise evaluation/interpretation. Subsequently differential operators with a subscript $h$ imply separate differentiations on every triangle.
 
-
 \section{Notation}
-
 To formulate a method capable of discontinuities along triangle edges we need some edge operators.   
 
 \begin{definition}[Edge Operators]
@@ -70,13 +98,12 @@ The \emph{Generalised Poisson Problem} is finding a function $u$ such that
 	-\nabla \cdot (A \nabla u) = f \qquad &\text{ in }\Omega \label{eq: poisson eq} \\
 	u = g \qquad &\text{ on } \partial \Omega    \label{eq: poisson bc}
 \end{align}
-for $ A \in ???(\Omega)^{d \times d}$ a function $f \in ???(\Omega)$ and a function $g \in ??(\partial \Omega)$. 
+for $ A:\R^d \rightarrow \R^{d \times d}$ symmetric and functions $f,g $. 
 \end{definition}
 
-This problem is well-posed \todo{definition of well-posedness} for $f$ and there even exist closed solution formulas, for a detailed analysis we recommend \todo{theory poisson equation} \cite{evans1998}.
-Nevertheless, we can set up a weak formulation based on variational principles.
+We can set up a weak formulation based on variational principles.
 
-Due to the main theorem of variation analysis \eqref{eq: poisson eq} is equivalent to 
+Due to the main theorem of variation analysis every solution to \eqref{eq: poisson eq} is equivalent to 
 \begin{align}
 	-\int_\Omega \varphi \nabla \cdot (A \nabla u) = \int_\Omega \varphi f \qquad \forall \varphi \in C^\infty(\Omega).
 \end{align}
@@ -84,9 +111,13 @@ Integration by parts yields to
 \begin{align}
 	\int_\Omega \nabla \varphi  \cdot A\nabla u -\int_{\partial \Omega} \varphi (A\nabla u) \mathbf{n}  = \int_\Omega \varphi f \qquad \forall \varphi \in C^\infty(\Omega). \label{eq: FE integration by parts}
 \end{align}
+\begin{definition}[Weak Solution]
+	Functions satisfying \eqref{eq: FE integration by parts} are called \emph{weak solutions} of \eqref{eq: poisson eq}.
+\end{definition}
+The generalised poisson problem is well-posed in the sensse that it has a unique weak solutions for $A$ positive definite and $f\in L^2(\Omega)$, for a detailed analysis we recommend \cite[Chapter~6]{Evans1998}.
 
-We see, that now only first derivatives of $u$ appear on the left-hand side.   
-The main idea of the finite element method is to restrict the two spaces, namely the space where $\varphi$ and the space where $u$ is searched  to finite dimensional spaces $\Phi_h$ and $V_h$ of $C^\infty(\Omega)$.\\
+On the left-hand side in \eqref{eq: FE integration by parts} now only first derivatives of $u$ appear.
+The main idea of the finite element method is to restrict the two spaces, namely the spaces where $\varphi$ and $u$ are come from to finite dimensional spaces $\Phi_h$ and $V_h$ of $C^\infty(\Omega)$.\\
 The limited space $\Phi_h$ is called \emph{test space} and its inhabitants :) are called \emph{test functions}. $V_h$ is referred as \emph{ansatz} or \emph{trial space},  the contained functions accordingly \emph{ansatz} or \emph{trial functions}. To assert the boundary condition \eqref{eq: poisson bc} we demand $u_h|_{\partial \Omega} = g$ for every $u_h \in V_h$.
 
 As the subscript $h$ suggests the two spaces normally are based on a triangulation $\triang$ such that every function is at least piecewise smooth. Consequently, the differential operators must be replaced by to $\Phi_h \cup V_h$ extended forms.
@@ -182,7 +213,7 @@ $  \textnormal{for all } \varphi \in V_h$\
 
 Just like in the finite element method we can derive a linear system of equations $A \mathbf{u} = \mathbf{b}$ with $A$ sparse and $\mathbf{u}$ representing the coefficient vector of $u_h$ to the basis $B_V$.  
 
-\subsection{Implementation Remarks}
+\section{Implementation of a Finite Element Method}
 \todo{ Kommentar zur Implementation wegen Vorzeichen für Kantenterme}
 To evaluate the integrals in the bilinearform  numerically an integration scheme is needed. Usually Gauss quadrature is the method of choice. Since ansatz and test functions are chosen to be piecewise polynomials a Gauss quadrature already is exact for only a few quadrature points.
 Hence, the data we have to provide to assemble the sparse matrix $A$ are the gradient, the normal derivatives, i.e. $\nabla u \cdot \mathbf{n}$ and the function values of all test functions at each quadrature point.
@@ -262,7 +293,7 @@ When evaluating the first part of the bilinearform, i.e. $\nabla \phi \cdot A \n
 So, we are able to save a lot of memory if we store instead of the data at the quadrature points in all refined cells just the data of the base cell and the number of refinements. The refined cells contained in the actual mesh are referred as \emph{leaf cells}.
 \end{example}
 
-Another crux of the implementation are of course the face terms. When implementing each face has to be naturally processed only once. One has to take that the normal derivatives are stored always with respect to 
+Another crux of the implementation are of course the face terms. While assembling the matrices each face has to be naturally processed only once. One has to take that the normal derivatives are stored always with respect to 
 \todo{at the beginning difference face edge }
 
 \newpage
