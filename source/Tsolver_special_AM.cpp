@@ -385,6 +385,7 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 	}
 	else
 	{
+		assert (iteration == 0);
 		cout << "init diffusion matrix with identity" << endl;
 		Hessian_type hess;
 		hess << 1, 0, 0, 1;
@@ -416,7 +417,7 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
 		get_Ecoordinates(idLC, iq, x);
 		get_rhs_MA(x, uLC);
 
-		if (iteration > 1 || start_solution != SQRT_F)
+		if (iteration > 0 || start_solution != SQRT_F)
 		{
 			for (unsigned int istate = 0; istate < statedim; ++istate) {
 				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
@@ -431,6 +432,7 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
 		}
 		else
 		{
+			assert (iteration == 0);
 			for (unsigned int istate = 0; istate < statedim; ++istate) {
 				for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 					int row = pLC->n_offset + ishape;
@@ -720,7 +722,7 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
 			pLC->uold(ishape,0) = pLC->u(ishape,0);
 			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
-			sum_coefficients(iteration) += solution(pLC->m_offset + ishape);
+			sum_coefficients(iteration) += std::abs(solution(pLC->m_offset + ishape));
 		}
 
 		//update diffusion matrix
@@ -1217,13 +1219,98 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 	}
 }
 
-void Tsolver::init_start_solution_MA(std::string filename)
+void Tsolver::init_start_solution_MA_sqrt_f(const int stabsign, penalties_type gamma)
+{
+	assert (iteration == 0);
+
+	unsigned int LM_size;
+	igpm::processtimer pt; //start timer
+
+	assignViews_MA(LM_size);
+
+	//init variables
+	Eigen::SparseMatrix<double> LM(LM_size, LM_size);
+	Eigen::SparseMatrix<double> LM_bd(LM_size, LM_size);
+	Eigen::VectorXd Lrhs, Lrhs_bd, Lsolution, Lsolution_bd, Lsolution_only_bd;
+	Lrhs.setZero(LM_size);
+	Lsolution.setZero(LM_size);
+
+	//reserve space
+	LM.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
+	if (strongBoundaryCond){
+		LM_bd.reserve(Eigen::VectorXi::Constant(LM_size,shapedim*4));
+		Lrhs_bd.setZero(LM_size);
+		Lsolution_only_bd.setZero(LM_size);
+	}
+
+	//==============assemble system============================
+	cout << "Assemble linear System..." << flush << endl;
+	pt.start();
+	if (!strongBoundaryCond)
+	{
+		assemble_MA(stabsign, gamma, LM, Lrhs, Lsolution_only_bd);
+	}
+	else
+	{
+		assemble_MA(stabsign, gamma, LM_bd, Lrhs_bd, Lsolution_only_bd);
+	}
+
+	pt.stop();
+	cout << "done. " << pt << " s." << endl;
+
+	//if strong b.c. delete boundary dofs
+	if (strongBoundaryCond)
+	{
+		cout << "Delete Boundary DOFS ..." << endl;
+		pt.start();
+		Lrhs_bd -= LM_bd*Lsolution_only_bd;
+		bd_handler.delete_boundary_dofs(LM_bd, LM);
+		bd_handler.delete_boundary_dofs(Lrhs_bd, Lrhs);
+		pt.stop();
+		cout << "done. " << pt << " s." << endl;
+	}
+
+	//==============solve system============================
+	pt.start();
+	Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
+	solver.compute(LM);
+	if (solver.info() != Eigen::Success) {
+		std::cerr << "Decomposition of stiffness matrix failed" << endl;
+		std::exit(-1);
+	}
+	Lsolution = solver.solve(Lrhs);
+	if (solver.info() != Eigen::Success) {
+		std::cerr << "Solving of FEM system failed" << endl;
+	}
+
+//		if ((LM*Lsolution-Lrhs).norm() )
+	//(nachiteration)
+	Lsolution += solver.solve(Lrhs-LM*Lsolution);
+
+	pt.stop();
+	cout << "done. " << pt << " s." << endl;
+
+	//if strong b.c. add boundary dofs
+	if (strongBoundaryCond)
+	{
+		bd_handler.add_boundary_dofs(Lsolution, Lsolution_only_bd, Lsolution_bd);
+		Lsolution = Lsolution_bd;
+	}
+	//write poisson solution in leaf cells
+	restore_MA(Lsolution);
+
+}
+
+void Tsolver::init_start_solution_MA(const int stabsign, penalties_type gamma,std::string filename)
 {
 	assert(iteration == 0);
 
 	if (filename == "sqrt_f")
 	{
+		cout	<< "Using the solution of laplace u = -sqrt(2f) as start solution!" << endl;
 		start_solution = SQRT_F;
+		init_start_solution_MA_sqrt_f(stabsign, gamma);
+		iteration = 1;
 	}
 	else
 	{
@@ -1254,13 +1341,16 @@ void Tsolver::init_start_solution_MA(std::string filename)
 			}
 	}
 
-	if (start_solution != SQRT_F)
-	{
-		plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
+	plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
 
-		state_type error = calculate_L2_error(get_exacttemperature_MA_callback());
+	state_type error = calculate_L2_error(get_exacttemperature_MA_callback());
+	if (start_solution == SQRT_F)
+		plotter.get_plot_stream("L2_rel") << 0 << " " << error(0)/L2_norm_exact_sol(0) << endl;
+	else
 		plotter.get_plot_stream("rel_L2_without_convex") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
 
+	if (start_solution != SQRT_F)
+	{
 
 		VectorXd coeffs;
 
@@ -1279,20 +1369,22 @@ void Tsolver::init_start_solution_MA(std::string filename)
 		//plot solution
 		plotter.write_numericalsolution_VTK(iteration,
 				"grid_startsolutionConvexified");
-		error = calculate_L2_error(get_exacttemperature_MA_callback());
-		plotter.get_plot_stream("plot_data") << -1 << " " << error << endl;
-		if (L2_norm_exact_sol(0) != 0)
-				plotter.get_plot_stream("L2_rel") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
+	}
 
+	error = calculate_L2_error(get_exacttemperature_MA_callback());
+	plotter.get_plot_stream("plot_data") << -1 << " " << error << endl;
+	if (L2_norm_exact_sol(0) != 0)
+			plotter.get_plot_stream("L2_rel") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
 
 		cout << "Finished reading start solution " << endl;
-	}
+
 
 }
 
 
 //////////////////////////////////////////////////////////
 void Tsolver::time_stepping_MA() {
+
 
 	// sign of stbilization term: +1: Bauman-Oden/NIPG, -1: GEM/SIPG
 	int stabsign;
@@ -1327,6 +1419,9 @@ void Tsolver::time_stepping_MA() {
 
 	singleton_config_file::instance().getValue("monge ampere", "maximal_iterations", maxits, 3);
 	singleton_config_file::instance().getValue("monge ampere", "iterations_refinement", maxlevel_refinement, level+2);
+
+	sum_coefficients.resize(maxits*maxlevel_refinement+1);
+
 	maxlevel_refinement += level;
 
 	//=======add streams to plot data ========
@@ -1348,7 +1443,6 @@ void Tsolver::time_stepping_MA() {
 	//calculate l2 norm of solution
 	L2_norm_exact_sol(0) = calculate_L2_norm(get_exacttemperature_MA_callback())(0);
 	cout << "L2 norm of exact sol " << L2_norm_exact_sol << endl;
-
 
 	//assign matrix cooordinates, especially initialises leafcell offsets
 	cout << "Assign matrix coordinates..." << endl;
@@ -1377,7 +1471,7 @@ void Tsolver::time_stepping_MA() {
 	bool use_start_solution = singleton_config_file::instance().getValue("monge ampere", "start_iteration", filename, "");
 	if (use_start_solution){
 
-		init_start_solution_MA(filename);
+		init_start_solution_MA(stabsign, gamma, filename);
 	}
 	else
 	{
@@ -1471,11 +1565,10 @@ void Tsolver::time_stepping_MA() {
 				cout << "done. " << pt << " s." << endl;
 			}
 
-
 			//==============solve system============================
 			pt.start();
-	//		Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
-			Eigen::SparseQR<Eigen::SparseMatrixD, Eigen::COLAMDOrdering<int> > solver;
+			Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
+//			Eigen::SparseQR<Eigen::SparseMatrixD, Eigen::COLAMDOrdering<int> > solver;
 			LM.makeCompressed();
 			solver.compute(LM);
 			if (solver.info() != Eigen::Success) {
@@ -1554,22 +1647,11 @@ void Tsolver::time_stepping_MA() {
 
 
 
-/*			if (iteration == 0)*/
-			{	solution= Tsolver::alpha*Lsolution + (1-Tsolver::alpha)*solution_old;
-				solution_lastiteration = Lsolution;
-			}
-/*
-			else
-			{
-				restore_MA(Lsolution);
-				plotter.write_numericalsolution_VTK(iteration, "grid_lastiteration");
+			solution= Tsolver::alpha*Lsolution + (1-Tsolver::alpha)*solution_old;
 
-				solution = Tsolver::alpha*Lsolution + (1-Tsolver::alpha)*solution_lastiteration;
-				solution_lastiteration = Lsolution;
-			}
-*/
-
-	//		cout << "convex combination \n" << solution.transpose() << endl;
+			//smooth solution
+			c0_converter.convert_coefficients_toC(solution);
+			c0_converter.convert_coefficients_toDG(solution);
 
 			restore_MA(solution);
 
@@ -1582,7 +1664,12 @@ void Tsolver::time_stepping_MA() {
 			if (L2_norm_exact_sol(0) != 0)
 				plotter.get_plot_stream("L2_rel") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
 
-			plotter.get_plot_stream("sum_coefficients") << iteration << " " << sum_coefficients(iteration) << endl;
+			plotter.get_plot_stream("sum_coefficients") << iteration << " " << std::setprecision(9) << sum_coefficients(iteration);
+			if (iteration > 0)
+			{
+				plotter.get_plot_stream("sum_coefficients") << " "<< std::setprecision(9) <<  (sum_coefficients(iteration) - sum_coefficients(iteration-1))/sum_coefficients(iteration);
+			}
+			plotter.get_plot_stream("sum_coefficients") << endl;
 
 			// reset flag 0
 			setleafcellflags(0, false);
@@ -1600,8 +1687,19 @@ void Tsolver::time_stepping_MA() {
 			cout << " sum_residuum " << sum_residuum << endl;
 			sum_residuum_old = sum_residuum;
 
+			/*if (iteration > 0)
+				cout << "sum_coefficients(iteration)" << sum_coefficients(iteration) << endl;
+				cout << "change from last iteration " << std::abs((sum_coefficients(iteration) - sum_coefficients(iteration-1))/sum_coefficients(iteration)) << endl;
+				if (std::abs((sum_coefficients(iteration) - sum_coefficients(iteration-1))/sum_coefficients(iteration)) < 1e-10)
+				{
+					iteration++;
+					cur_it++;
+					break;
+				}*/
+
 			iteration++;
 			cur_it++;
+
 		}
 
 
