@@ -634,7 +634,7 @@ public:
 							jump_sign = -1;
 						else
 							continue;
-						cout << "processed this edge before " << endl;
+//						cout << "processed this edge before " << endl;
 					}
 					gaussbaseLC = Fquadgaussdim * f;
 					gaussbaseNC = Fquadgaussdim * vFh[f];
@@ -648,7 +648,7 @@ public:
 				assembleInnerFace = true;
 			}
 			else{
-				cout << "boundary face" << endl;
+//				cout << "boundary face" << endl;
 			}
 
 			for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over gauss nodes
@@ -674,7 +674,7 @@ public:
 									pLC, pBC, volumeBC, length, iqLC), val);
 				}
 			}
-				cout << "hessian after one face " << val << endl;
+//				cout << "hessian after one face " << val << endl;
 
 		}
 

@@ -20,6 +20,7 @@
 #include <Eigen/UmfPackSupport>
 
 #include "utils.hpp"
+#include "../test/test_utils.hpp"
 
 #include "igpm_t2_lib.hpp"
 #include "../test/test_utils.hpp"

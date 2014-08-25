@@ -1054,7 +1054,8 @@ void Tsolver::write_solution_vector(VectorXd & solution)
 
 void Tsolver::write_extended_solution_vector(VectorXd & solution)
 {
-	int ndofs_extended = number_of_dofs+number_of_dofs/6*4;
+	unsigned int ndofs_extended = number_of_dofs+number_of_dofs/shapedim*4;
+	assert (grid.leafCells().size()*(shapedim+4) == ndofs_extended && "The number of triangles does not fit to the extended number of freedoms");
 	solution.resize(ndofs_extended);
 	for (grid_type::leafcellmap_type::const_iterator it =
 			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
@@ -1070,10 +1071,10 @@ void Tsolver::write_extended_solution_vector(VectorXd & solution)
 			solution(pLC->n_offset + ishape) = pLC->u(ishape,0);
 		}
 
-		solution(number_of_dofs + pLC->n_offset/6*4) = pLC->A(1,1);
-		solution(number_of_dofs + pLC->n_offset/6*4+1) = -pLC->A(0,1);
-		solution(number_of_dofs + pLC->n_offset/6*4+2) = -pLC->A(1,0);
-		solution(number_of_dofs + pLC->n_offset/6*4+3) = pLC->A(0,0);
+		solution(number_of_dofs + pLC->n_offset/shapedim*4) = pLC->A(1,1);
+		solution(number_of_dofs + pLC->n_offset/shapedim*4+1) = -pLC->A(0,1);
+		solution(number_of_dofs + pLC->n_offset/shapedim*4+2) = -pLC->A(1,0);
+		solution(number_of_dofs + pLC->n_offset/shapedim*4+3) = pLC->A(0,0);
 
 
 	}

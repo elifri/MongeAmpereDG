@@ -31,7 +31,9 @@ void C0_converter::add_dof(const space_type &node, const int DG_index, int &cur_
 
 void C0_converter::init(grid_type &grid, const int number_of_dofs_DG)
 {
-	assert (degreedim == 2 && shapedim == 6 && " this implementaion works only for triangles and ansatz fct of degree 2!");
+	assert ( ((degreedim == 2 && shapedim == 6) ||
+			  (degreedim == 1 && shapedim == 3))
+			&& " this implementaion works only for triangles and ansatz fct of degree less than 3!");
 
 	nodes.resize(number_of_dofs_DG);
 
@@ -56,13 +58,22 @@ void C0_converter::init(grid_type &grid, const int number_of_dofs_DG)
 		get_nodes(grid, idLC, nv);
 
 		//add coefficients to bezier control points map
-		add_dof(nv(0), pLC->m_offset, cur_node_index);
-		add_dof((nv(0)+nv(1))/2., pLC->m_offset+1, cur_node_index);
-		add_dof((nv(0)+nv(2))/2., pLC->m_offset+2, cur_node_index);
-		add_dof(nv(1), pLC->m_offset+3, cur_node_index);
-		add_dof((nv(2)+nv(1))/2., pLC->m_offset+4, cur_node_index);
-		add_dof(nv(2), pLC->m_offset+5, cur_node_index);
+		if (shapedim == 6)
+		{
+			add_dof(nv(0), pLC->m_offset, cur_node_index);
+			add_dof((nv(0)+nv(1))/2., pLC->m_offset+1, cur_node_index);
+			add_dof((nv(0)+nv(2))/2., pLC->m_offset+2, cur_node_index);
+			add_dof(nv(1), pLC->m_offset+3, cur_node_index);
+			add_dof((nv(2)+nv(1))/2., pLC->m_offset+4, cur_node_index);
+			add_dof(nv(2), pLC->m_offset+5, cur_node_index);
+		}
+		else
+		{
+			add_dof(nv(0), pLC->m_offset, cur_node_index);
+			add_dof(nv(1), pLC->m_offset+1, cur_node_index);
+			add_dof(nv(2), pLC->m_offset+2, cur_node_index);
 
+		}
 	}
 
 	dofsDG_to_dofsC_ratio.conservativeResize(node_indeces.size());

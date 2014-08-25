@@ -266,16 +266,16 @@ public:
 	   		   f = linear_part*coeff + constant_part;
 	   		   for (int i= 0; i < number_of_dofs; i++)
 	   		   {
-	   			   int offset_hess = i/6*4;
+	   			   int offset_hess = i/shapedim*4;
 
 	   			   f(i) -= integrals_test_functions(i)*
 	   					     (coeff(number_of_dofs+ offset_hess)*coeff(number_of_dofs+ offset_hess+3)
 	   					    		 -sqr(coeff(number_of_dofs+ offset_hess+1)+coeff(number_of_dofs+ offset_hess+2))/4.);
 
-/*
+
 	   			   cout << "det at " << i << " is " << (coeff(number_of_dofs+ offset_hess)*coeff(number_of_dofs+ offset_hess+3)
 					    		 -coeff(number_of_dofs+ offset_hess+1)*coeff(number_of_dofs+ offset_hess+2)) << endl;
-*/
+
 
 	   		   }
 	   	   }
@@ -286,7 +286,7 @@ public:
 
 	   		   for (int i= 0; i < number_of_dofs; i++)
 	   		   {
-	   			   int offset_hess = i/6*4;
+	   			   int offset_hess = i/shapedim*4;
 
 	   			   //derivate of determint is cofactor matrix
 	   			   J.coeffRef(i, number_of_dofs+offset_hess) -= integrals_test_functions(i)*x(number_of_dofs+offset_hess+3);
