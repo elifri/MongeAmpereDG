@@ -21,10 +21,10 @@ deg_hessian = 0
 
 mesh = UnitSquareMesh(n, n)
 #plot(mesh)
-V = FunctionSpace(mesh, 'CG', deg, 'crossed')
-Sigma = FunctionSpace(mesh, 'DG', deg_hessian, 'crossed')
+V = FunctionSpace(mesh, 'CG', deg)
+Sigma = TensorFunctionSpace(mesh, 'DG', deg_hessian, shape=(2,2))
 
-W = MixedFunctionSpace([V,Sigma, Sigma, Sigma, Sigma])
+W = MixedFunctionSpace([V,Sigma])
 
 bigMesh = refine(refine(mesh))
 bigV = FunctionSpace(bigMesh, 'CG', deg, 'crossed')
@@ -62,19 +62,25 @@ f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpe
 
 u_e = interpolate(u0, V)
 
-#define startsolution
-
-u_ = Function(W)
-
-#choose between "identity" and disturbed exact solution
-#u_.assign(u_e-0.01*interpolate(error, V))
-u_.assign(u_e)
 
 #u_ = interpolate(Expression('2*x[0]*x[0]+2*x[1]*x[1]+x[0]*x[1]'),V)
 
 #====================================
 #define brenner's iteration
 #====================================
+
+#define startsolution
+
+u_ = Function(W)
+
+#choose between "identity" and disturbed exact solution
+#u_.assign(u_e-0.01*interpolate(error, V))
+assign(u_.sub(0), u_e)
+assign(u_.sub(1),project(as_matrix([[1,0],[0,1]]), Sigma))
+#assign(u_.sub(1), interpolate(Expression((('1.0','0.0'),('0.0','1.0'))),Sigma))
+# [Constant(1.), Constant(0.), Constant(0.), Constant(1.)])
+
+
 
 #penalty
 sigmaC = 50
@@ -86,9 +92,8 @@ sigmaB = 50
 h = CellSize(mesh)
 n = FacetNormal(mesh)
 
-uBig= TrialFunction(W)
-u, w00, w10, w01, w11 = split(uBig)
-(v, mu00, mu10, mu01, mu11)  = TestFunctions(W)
+(u, w)= TrialFunctions(W)
+(v, mu)  = TestFunctions(W)
 #u = Function(V)
 #w00 = Function(Sigma)
 #w10 = Function(Sigma)
@@ -102,18 +107,18 @@ u, w00, w10, w01, w11 = split(uBig)
 #mu11 = TrialFunction(Sigma)
 
 
-mu_matrix = as_matrix([[mu00,mu01],[mu10,mu11]])
+#mu_matrix = as_matrix([[mu[0,0],mu[0,1],[mu[1,0],mu[1,1]]]])
 
 F = 0 
 #(f-det(DH^2 u))*v
-F = u*v*dx
-#F  = (f- (w00*w11-w01*w10))*v*dx
+#F = u*v*dx
+#F  = (f- (w[0,0]*w[1,1]-w[0,1]*w[1,0]))*v*dx
 
 #jump in gradient
 #F =  Constant(sigmaG)('+')*h('+')* jump(nabla_grad(u),n)*jump(nabla_grad(v),n)*dS
 
 #jump in function
-#F = F + Constant(sigmaC)('+')/h('+')* jump(u)*jump(v)*dS
+F = F + Constant(sigmaC)('+')/h('+')* jump(u)*jump(v)*dS
 
 #test with hessian
 #F = F + frobenius_product(w00, w10, w01, w11, mu00, mu10, mu01, mu11)*dx
@@ -126,9 +131,10 @@ F = u*v*dx
 #F = F + Constant(sigmaB)/h*(u-u0)*v*ds
 
 
+
 F = action(F, u_)
 
-J  = derivative(F, u_, uBig)   # Gateaux derivative in dir. of u
+J  = derivative(F, u_)   # Gateaux derivative in dir. of u
 
 def boundary(x, on_boundary):
     return on_boundary
@@ -159,17 +165,15 @@ set_log_level(PROGRESS)
 solver.solve()
 
 #examine error
-u_e_array = u_e.vector().array()
-u_array = u_.vector().array()
-print 'Errornorm:', errornorm(u_,u_e)
+print 'Errornorm:', errornorm(u_.sub(0),u_e)
 
  # Plot solution and mesh
-plot(project(u_,bigV), title = 'solution')
-plot(project(abs(u_-u_e),bigV), title = 'error')
+plot(project(u_.sub(0),bigV), title = 'solution')
+plot(project(abs(u_.sub(0)-u_e),bigV), title = 'error')
 
-plot(det(grad(grad(u_))), title = 'determinant of hessian')
+plot(det(grad(grad(u_.sub(0)))), title = 'determinant of hessian')
 
-plot(project(abs(f-det(grad(grad(u_)))), bigV), title = 'rhs - determinant of hessian')
+plot(project(abs(f-det(grad(grad(u_.sub(0))))), bigV), title = 'rhs - determinant of hessian')
 
 #plot(mesh)
 
