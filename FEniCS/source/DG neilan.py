@@ -11,29 +11,41 @@ from convexify import convexify
 import math
 
 def frobenius_product(a,b):
-  return a[0,0]*b[0,0] + a[1,0]*b[1,0] + a[0,1]*b[0,1] + a[1,1]*b[1,1]
+  return a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3]
 
+def determinant(a):
+  return ((a[0]*a[3]) - (a[1]*a[2]))
+
+def matrix_mult(A,b):
+  return (as_matrix([[A[0],A[1]],[A[2],A[3]]])*b)
+# return [A[0]*b[0] + A[1]*b[1], A[2]*b[0] + A[3]*b[1]]
 
 # Create mesh and define function space
-n = 20
+n = 8
 deg = 1
 deg_hessian = 0
 
-mesh = UnitSquareMesh(n, n)
+mesh = UnitSquareMesh(n, n, "crossed")
 #plot(mesh)
 V = FunctionSpace(mesh, 'CG', deg)
-Sigma = TensorFunctionSpace(mesh, 'DG', deg_hessian, shape=(2,2))
+Sigma = VectorFunctionSpace(mesh, 'DG', deg_hessian, dim=4)
 
 W = V*Sigma
 
 bigMesh = refine(refine(mesh))
 bigV = FunctionSpace(bigMesh, 'CG', deg, 'crossed')
 
+#define rhs
+#f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
+#f = Constant(7.0)#simpleMongeAmpere
+f = Constant(1.0) #simpleMongeAmpere2
+#f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
+
 # Define boundary conditions
 #u0 = Constant(0.0) #const rhs
-u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
+#u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
 #u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
-#u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
+u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
 #u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
 
 class Error(Expression):
@@ -49,14 +61,6 @@ class Error(Expression):
 #error = Expression('0.1*pow(x[0],2)+0.01*pow(x[1],2)')#add noisy data
 #error = Expression('0.01*sin(3*x[0]*x[1]+pi)')#add noisy data
 error = Error()
-
-print "u0 ", u0
-
-#rhs
-f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
-#f = Constant(7.0)#simpleMongeAmpere
-#f = Constant(1.0) #simpleMongeAmpere2
-#f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
 
 #define exact solution
 
@@ -75,18 +79,29 @@ u_ = Function(W)
 
 #choose between "identity" and disturbed exact solution
 u1_ = Function(V)
-u1_.assign(u_e-1*interpolate(error, V))
+u1_.assign(u_e)
+#u1_.assign(u_e-1*interpolate(error, V))
 assign(u_.sub(0), u1_)
-assign(u_.sub(1),project(as_matrix([[1,0],[0,1]]), Sigma))
-#assign(u_.sub(1), interpolate(Expression((('1.0','0.0'),('0.0','1.0'))),Sigma))
+#assign(u_.sub(1),project(as_matrix([[1,0],[0,1]]), Sigma))
+assign(u_.sub(1), interpolate(Expression((('1.0','0.0','0.0','1.0'))),Sigma))
 # [Constant(1.), Constant(0.), Constant(0.), Constant(1.)])
 
+#plot(project(u_.sub(0),bigV), title = 'startsolution')
+#plot(project(abs(u_.sub(0)-u_e),bigV), title = 'start error')
+#plot(determinant(u_.sub(1)), title = 'determinant of hessian')
+
+#plot(u_.sub(1)[0], title = 'first entry of hessian')
+#plot(u_.sub(1)[1], title = 'second entry of hessian')
+#plot(u_.sub(1)[2], title = 'third entry of hessian')
+#plot(u_.sub(1)[3], title = 'fourth entry of hessian')
+
+#interactive()  
 
 
 #penalty
-sigmaC = 50
-sigmaG = 50
-sigmaB = 50
+sigmaC = 30
+sigmaG = 30
+sigmaB = 30
 
 
 #define geometry for penalty and normals
@@ -116,7 +131,7 @@ print type(w)
 F = 0 
 #(f-det(DH^2 u))*v
 #F = u*v*dx
-F  = (f- det(w))*v*dx
+F  = (f- determinant(w))*v*dx
 
 #jump in gradient
 #F = F + Constant(sigmaG)('+')*h('+')* jump(nabla_grad(u),n)*jump(nabla_grad(v),n)*dS
@@ -125,25 +140,24 @@ F  = (f- det(w))*v*dx
 F = F + Constant(sigmaC)('+')/h('+')* jump(u)*jump(v)*dS
 
 #test with hessian
-#F = F + frobenius_product(w, mu)*dx
+F = F + frobenius_product(w, mu)*dx
 
 #correction term
-#F = F - dot(avg(mu)*nabla_grad(u)('+'),n('+'))*dS \
-#      - dot(avg(mu)*nabla_grad(u)('-'),n('-'))*dS
+F = F + dot(matrix_mult(avg(mu),nabla_grad(u)('+')) ,n('+'))*dS \
+      + dot(matrix_mult(avg(mu),nabla_grad(u)('-')) ,n('-'))*dS
 
 #boundary conditions
 F = F + Constant(sigmaB)/h*(u-u0)*v*ds
 
-
-
 F = action(F, u_)
+
 
 J  = derivative(F, u_)   # Gateaux derivative in dir. of u
 
 u0_boundary = Function(W)
 assign(u0_boundary.sub(0), interpolate(u0,V))
 #assign(u0_boundary.sub(1), grad(grad(u0)))
-assign(u0_boundary.sub(1),project(as_matrix([[1,0],[0,1]]), Sigma))
+assign(u0_boundary.sub(1),interpolate(Expression((('1.0','0.0','0.0','1.0'))),Sigma))
 
 def boundary(x, on_boundary):
     return on_boundary
@@ -177,21 +191,17 @@ solver.solve()
 print 'Errornorm:', errornorm(u_.sub(0),u_e)
 
  # Plot solution and mesh
+plot(mesh, title='mesh')
 plot(project(u_.sub(0),bigV), title = 'solution')
 plot(project(abs(u_.sub(0)-u_e),bigV), title = 'error')
 
-plot(det(grad(grad(u_.sub(0)))), title = 'determinant of hessian')
+interactive()  
 
-plot(project(abs(f-det(grad(grad(u_.sub(0))))), bigV), title = 'rhs - determinant of hessian')
+plot(determinant(u_.sub(1)), title = 'determinant of hessian')
+
+#plot(project(abs(f-determinant(u_.sub(0))), bigV), title = 'rhs - determinant of hessian')
 
 #plot(mesh)
 
 #Hold plot
-interactive()
-
-
-# Dump solution to file in VTK format
-s = 'MongeAmpere.pvd'
-file = File(s)
-file << u_
-  
+interactive()  
