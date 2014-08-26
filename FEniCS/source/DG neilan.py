@@ -10,8 +10,8 @@ from MA_iterated import MA_iteration
 from convexify import convexify
 import math
 
-def frobenius_product(a00, a10, a01, a11, b00, b10, b01, b11):
-  return a00*b00 + a10*b10 + a01*b01 + a11*b11 
+def frobenius_product(a,b):
+  return a[0,0]*b[0,0] + a[1,0]*b[1,0] + a[0,1]*b[0,1] + a[1,1]*b[1,1]
 
 
 # Create mesh and define function space
@@ -24,7 +24,7 @@ mesh = UnitSquareMesh(n, n)
 V = FunctionSpace(mesh, 'CG', deg)
 Sigma = TensorFunctionSpace(mesh, 'DG', deg_hessian, shape=(2,2))
 
-W = MixedFunctionSpace([V,Sigma])
+W = V*Sigma
 
 bigMesh = refine(refine(mesh))
 bigV = FunctionSpace(bigMesh, 'CG', deg, 'crossed')
@@ -74,8 +74,9 @@ u_e = interpolate(u0, V)
 u_ = Function(W)
 
 #choose between "identity" and disturbed exact solution
-#u_.assign(u_e-0.01*interpolate(error, V))
-assign(u_.sub(0), u_e)
+u1_ = Function(V)
+u1_.assign(u_e-1*interpolate(error, V))
+assign(u_.sub(0), u1_)
 assign(u_.sub(1),project(as_matrix([[1,0],[0,1]]), Sigma))
 #assign(u_.sub(1), interpolate(Expression((('1.0','0.0'),('0.0','1.0'))),Sigma))
 # [Constant(1.), Constant(0.), Constant(0.), Constant(1.)])
@@ -93,6 +94,9 @@ h = CellSize(mesh)
 n = FacetNormal(mesh)
 
 (u, w)= TrialFunctions(W)
+
+print type(w)
+
 (v, mu)  = TestFunctions(W)
 #u = Function(V)
 #w00 = Function(Sigma)
@@ -112,23 +116,23 @@ n = FacetNormal(mesh)
 F = 0 
 #(f-det(DH^2 u))*v
 #F = u*v*dx
-#F  = (f- (w[0,0]*w[1,1]-w[0,1]*w[1,0]))*v*dx
+F  = (f- det(w))*v*dx
 
 #jump in gradient
-#F =  Constant(sigmaG)('+')*h('+')* jump(nabla_grad(u),n)*jump(nabla_grad(v),n)*dS
+#F = F + Constant(sigmaG)('+')*h('+')* jump(nabla_grad(u),n)*jump(nabla_grad(v),n)*dS
 
 #jump in function
 F = F + Constant(sigmaC)('+')/h('+')* jump(u)*jump(v)*dS
 
 #test with hessian
-#F = F + frobenius_product(w00, w10, w01, w11, mu00, mu10, mu01, mu11)*dx
+#F = F + frobenius_product(w, mu)*dx
 
 #correction term
-#F = F - dot(avg(mu_matrix)*nabla_grad(u)('+'),n('+'))*dS \
-#      - dot(avg(mu_matrix)*nabla_grad(u)('-'),n('-'))*dS
+#F = F - dot(avg(mu)*nabla_grad(u)('+'),n('+'))*dS \
+#      - dot(avg(mu)*nabla_grad(u)('-'),n('-'))*dS
 
 #boundary conditions
-#F = F + Constant(sigmaB)/h*(u-u0)*v*ds
+F = F + Constant(sigmaB)/h*(u-u0)*v*ds
 
 
 
@@ -136,13 +140,18 @@ F = action(F, u_)
 
 J  = derivative(F, u_)   # Gateaux derivative in dir. of u
 
+u0_boundary = Function(W)
+assign(u0_boundary.sub(0), interpolate(u0,V))
+#assign(u0_boundary.sub(1), grad(grad(u0)))
+assign(u0_boundary.sub(1),project(as_matrix([[1,0],[0,1]]), Sigma))
+
 def boundary(x, on_boundary):
     return on_boundary
 
-bc = DirichletBC(V, u0, boundary)
+bc = DirichletBC(W, u0_boundary, boundary)
 
 
-problem = NonlinearVariationalProblem(F, u_, bc, J)
+problem = NonlinearVariationalProblem(F, u_, None, J)
 solver  = NonlinearVariationalSolver(problem)
 
 prm = solver.parameters
