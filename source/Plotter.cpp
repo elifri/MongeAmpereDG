@@ -266,84 +266,83 @@ void Plotter::write_error(std::ofstream &file, const std::vector < std::vector<i
 	file << "\t\t\t\t</DataArray>\n";
 }
 
-void Plotter::write_residuum(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
-{
-	nvector_type nv;
-	state_type state;
-
-	// write error
-	file << "\t\t\t\t<DataArray  Name=\"residuum\" type=\"Float32\" format=\"ascii\">\n";
-
-	// loop over all leaf cells
-	for (unsigned int i = 0; i < grid->countBlocks(); ++i) {
-		if (v[i].size() == 0)
-			continue;
-
-		if (refine == 0) {
-
-			// save points in file without refinement
-
-			// over all ids inside this block
-			for (unsigned int j = 0; j < v[i].size(); ++j) {
-				const grid_type::id_type & id = v[i][j];
-				grid_type::leafcell_type * pLC = NULL;
-				grid->findLeafCell(id, pLC);
-
-				for (unsigned int k = 0; k < id.countNodes(); ++k) {
-					file << "\t\t\t\t\t" << pLC->residuum(k) << endl;
-				}
-			}
-
-		}
-		else
-		{
-			// save points in file with refinement
-
-			// over all ids inside this block
-			for (unsigned int j = 0; j < v[i].size(); ++j) {
-				const grid_type::id_type & id = v[i][j];
-				grid_type::leafcell_type * pLC = NULL;
-				grid->findLeafCell(id, pLC);
-
-				get_nodes(*grid, id, nv);
-
-				nvector_baryc_type points_baryc;
-				shape->get_refined_nodes(refine, points_baryc);
-
-				space_type point;
-				state_type val;
-
-				shape->get_refined_nodes(refine, points_baryc);
-
-				for (int i_node = 0; i_node < points_baryc.size(); i_node++) {
-					//assemble point coordinates from baryc coordinates
-					point.setZero();
-					for (int i_baryc = 0; i_baryc < barycdim; i_baryc++)
-						point += points_baryc(i_node)(i_baryc) * nv(i_baryc);
-
-					const Hessian_type& hess = pLC->A;
-
-					//determinant of hessian for calculation of residuum
-					value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
-
-					state_type stateRhs;
-
-					get_rhs(point, stateRhs);
-
-					assert(!is_infinite(det));
-					assert(!is_infinite(stateRhs(0)));
-
-					//calculate residuum
-					file << "\t\t\t\t\t" << det - stateRhs(0) << endl;
-				}
-			}
-
-		}
-	}
-
-	file << "\t\t\t\t</DataArray>\n";
-}
-
+//void Plotter::write_residuum(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
+//{
+//	nvector_type nv;
+//	state_type state;
+//
+//	// write error
+//	file << "\t\t\t\t<DataArray  Name=\"residuum\" type=\"Float32\" format=\"ascii\">\n";
+//
+//	// loop over all leaf cells
+//	for (unsigned int i = 0; i < grid->countBlocks(); ++i) {
+//		if (v[i].size() == 0)
+//			continue;
+//
+//		if (refine == 0) {
+//
+//			// save points in file without refinement
+//
+//			// over all ids inside this block
+//			for (unsigned int j = 0; j < v[i].size(); ++j) {
+//				const grid_type::id_type & id = v[i][j];
+//				grid_type::leafcell_type * pLC = NULL;
+//				grid->findLeafCell(id, pLC);
+//
+//				for (unsigned int k = 0; k < id.countNodes(); ++k) {
+//					file << "\t\t\t\t\t" << pLC->residuum(k) << endl;
+//				}
+//			}
+//
+//		}
+//		else
+//		{
+//			// save points in file with refinement
+//
+//			// over all ids inside this block
+//			for (unsigned int j = 0; j < v[i].size(); ++j) {
+//				const grid_type::id_type & id = v[i][j];
+//				grid_type::leafcell_type * pLC = NULL;
+//				grid->findLeafCell(id, pLC);
+//
+//				get_nodes(*grid, id, nv);
+//
+//				nvector_baryc_type points_baryc;
+//				shape->get_refined_nodes(refine, points_baryc);
+//
+//				space_type point;
+//				state_type val;
+//
+//				shape->get_refined_nodes(refine, points_baryc);
+//
+//				for (int i_node = 0; i_node < points_baryc.size(); i_node++) {
+//					//assemble point coordinates from baryc coordinates
+//					point.setZero();
+//					for (int i_baryc = 0; i_baryc < barycdim; i_baryc++)
+//						point += points_baryc(i_node)(i_baryc) * nv(i_baryc);
+//
+//					const Hessian_type& hess = pLC->A;
+//
+//					//determinant of hessian for calculation of residuum
+//					value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
+//
+//					state_type stateRhs;
+//
+//					get_rhs(point, stateRhs);
+//
+//					assert(!is_infinite(det));
+//					assert(!is_infinite(stateRhs(0)));
+//
+//					//calculate residuum
+//					file << "\t\t\t\t\t" << det - stateRhs(0) << endl;
+//				}
+//			}
+//
+//		}
+//	}
+//
+//	file << "\t\t\t\t</DataArray>\n";
+//}
 
 void Plotter::write_smallest_EW(std::ofstream &file, const std::vector < std::vector<id_type> > &v, const int refine)
 {
@@ -814,7 +813,7 @@ void Plotter::writeLeafCellVTK(std::string filename, const unsigned int refine, 
 
 	file << "\t\t\t<PointData>\n";
 	write_error(file, v, refine);
-	write_residuum(file, v, refine);
+//	write_residuum(file, v, refine);
 	write_smallest_EW(file, v, refine);
 	write_solution_data_array(file, v, refine);
 	file << "\t\t\t</PointData>\n";

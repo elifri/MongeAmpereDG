@@ -156,58 +156,88 @@ enum {
 };
 
 
-/// basic types
+///---------- basic types-------------
 typedef double value_type;
 typedef Eigen::Matrix<value_type, spacedim, 1> space_type;
 
-typedef Eigen::Matrix<space_type, Eigen::Dynamic, 1> nvector_type; //stores nodes
+/// a vector to store nodes
+typedef Eigen::Matrix<space_type, Eigen::Dynamic, 1> nvector_type;
+
+///a type to store baryccentric coordinates
+typedef Eigen::Matrix<value_type, barycdim, 1>  baryc_type;
+///a vector of baryccentric coordinates
+typedef Eigen::Matrix<baryc_type, Eigen::Dynamic, 1> nvector_baryc_type;
+
 
 //  typedef igpm::tvector<value_type, spacedim> space_type;
 
-/// shape of principal unknown
+///--------- shape of principal unknown---------------
 //typedef Tshape<grid_config_type, statedim, shapedim, degreedim> shape_type;
 
-// define types depending on statedim, shapedim, degreedim(?)
-typedef Eigen::Matrix<value_type, barycdim, 1>  baryc_type;
-typedef Eigen::Matrix<baryc_type, Eigen::Dynamic, 1> nvector_baryc_type; //stores nodes
-
+//----------- define types depending on statedim, shapedim, degreedim(?)--------------
 
 typedef Eigen::Matrix<value_type, statedim, 1>  state_type;
 typedef Eigen::Matrix<value_type, shapedim, 1>  Eshape_type;
 typedef Eigen::Matrix<value_type, shapedim, statedim>  Estate_type;
 typedef Eigen::Matrix<Estate_type, childdim, 1> EstateCV_type; // child vector
 
-typedef Eigen::Matrix<value_type, shapedim, shapedim>  Emass_type;
-typedef Eigen::LDLT<Emass_type> Emass_dec_type;
 
 typedef value_type  Emask_type[childdim][shapedim][shapedim];
 
-// mass
+//--------mass------
+///stores a mass matrix for a single element
+typedef Eigen::Matrix<value_type, shapedim, shapedim>  Emass_type;
+///to store a decomposition of a mass matrix
+typedef Eigen::LDLT<Emass_type> Emass_dec_type;
 typedef Tmass mass_type;
 
-//diffusion
-typedef Eigen::Matrix<value_type, spacedim, spacedim> diffusionmatrix_type;
+///------diffusion----------
+///stores a constant diffusion matrix
+typedef Eigen::Matrix<value_type, spacedim, spacedim> constant_diffusionmatrix_type;
+/////stores a coefficients for every entry of a diffusionmatrix such polynomials of degree shapedim-2 can be represented
+//typedef Eigen::Matrix<constant_diffusionmatrix_type, shapedim-1, 1> diffusionmatrix_type;
 
 typedef Eigen::Matrix<value_type, spacedim, spacedim> Hessian_type;
 
 // shape-values at nodes (e.g. for solver-output = visualization-input)
 typedef Eigen::Matrix<value_type, shapedim, Ndim> Nvalueshape_type;
 
-// quadr.-weights, quadrature points
+//======= quadr.-weights, quadrature points=============
 // and shape-values/derivatives at quadrature points
 typedef Eigen::Matrix<value_type, Ndim, 1> Enodevalue_type;
 typedef Eigen::Matrix<value_type, Equadraturedim, 1> Equadrature_type;
 typedef Eigen::Matrix<value_type, shapedim, Equadraturedim> Equadratureshape_type;
 typedef Eigen::Matrix<space_type, shapedim, Equadraturedim> Equadratureshape_grad_type;
-typedef Eigen::Matrix<Hessian_type, shapedim, 1> Equadratureshape_hessian_type;
+typedef Eigen::Matrix<Hessian_type, shapedim, Equadraturedim> Equadratureshape_hessian_type;
+typedef Eigen::Matrix<constant_diffusionmatrix_type, shapedim, Equadraturedim> Equadratureshape_diffusionmatrix_type;
 typedef Eigen::Matrix<value_type, Equadraturedim, barycdim> Equadraturepoint_type;
 typedef value_type Emaskquadpoint_type[childdim][Equadraturedim][barycdim];
 typedef Eigen::Matrix<value_type, Equadraturedim, 1> Equadratureweight_type;
 
+///struct to store all necessary data for an element quadrature
+struct Equad_data_type{
+
+	Equadratureshape_type Equads;   // value of shapes at quadrature points
+	Equadratureshape_grad_type Equads_grad; //gradient of shapes at quadrature points
+	Equadratureshape_type Equads_xx, Equads_xy, Equads_yy; // second derivatives of shapes at quadrature points
+	Equadratureshape_hessian_type Equads_hessian;
+};
+
+
 typedef Eigen::Matrix<value_type, Fquadraturedim, 1> Fquadrature_type;
 typedef Eigen::Matrix<value_type, shapedim, Fquadraturedim> Fquadratureshape_type;
 typedef Eigen::Matrix<value_type, Fquadraturedim, barycdim> Fquadraturepoint_type;
+typedef Eigen::Matrix<Hessian_type, shapedim, Fquadraturedim> Fquadratureshape_hessian_type;
+typedef Eigen::Matrix<constant_diffusionmatrix_type, shapedim, Fquadraturedim> Fquadratureshape_diffusionmatrix_type;
 typedef Eigen::Matrix<value_type, Fquadraturedim, 1> Fquadratureweight_type;
+
+struct Fquad_data_type{
+	Fquadratureshape_type Fquads;   // value of shapes at quadrature points
+	Fquadratureshape_type Fquads_x; // x-der. of shapes at quadrature points in reference element
+	Fquadratureshape_type Fquads_y; // y-der. of shapes at quadrature points in reference element
+	Fquadratureshape_hessian_type Fquads_hessian;
+};
+
 
 typedef Eigen::Matrix<value_type, shapedim, Fmiddim> Fmidshape_type;
 typedef Eigen::Matrix<value_type, Fmiddim, barycdim> Fmidpoint_type;
@@ -301,7 +331,7 @@ inline int dual_pow(int n)
 }
 
 //calculates the eigenvalues of a two-dimensional matrix
-inline void calculate_eigenvalues(const config::diffusionmatrix_type &A, config::value_type &ev0, config::value_type &ev1)
+inline void calculate_eigenvalues(const config::Hessian_type &A, config::value_type &ev0, config::value_type &ev1)
 {
 	config::value_type rad = A(0,0) * A(0,0) + (A(1,1) - 2 * A(0,0)) * A(1,1) + 4 * A(0,1) * A(1,0);
 

@@ -72,40 +72,6 @@ void Tsolver::read_problem_parameters_MA(int &stabsign, penalties_type &gamma, d
 	}
 
 	cout << "Read Equation " << problem << endl;
-
-	//read diffusion matrices
-	for (grid_type::leafcellmap_type::iterator it=grid.leafCells().begin(); it!=grid.leafCells().end(); ++it) {
-	    leafcell_type * const pLC=&grid_type::cell(it);
-
-		/*		diffusionmatrix_type diffusion_a;
-		const grid_type::id_type& idLC = grid_type::id(it);
-
-	    // get entry "diffusion_a[xxx]" in section "scaling functions"
-	    std::string line, entryname = entryname1d<3>("diffusion_a", idLC.cell());
-	    	if (!singleton_config_file::instance().getValue("monge ampere", entryname, line)) {
-			cerr << "Error while reading [monge ampere] "
-					<< entryname1d<3>("a", idLC.cell())
-					<< " from configfile." << endl;
-			abort();
-		}
-
-	    //convert into Matrix
-		std::stringstream strs(line);
-		for (int ientry = 0; ientry < sqr(spacedim); ++ientry) {
-			/// interpret entries of this line, fill with zeros for nonexistent entries
-			int row_index = ientry / spacedim;
-			int col_index = ientry % spacedim;
-
-			if (!(strs >> diffusion_a(row_index, col_index)))
-				diffusion_a(row_index, col_index) = 0;
-		}
-
-		Emass_type laplace;
-		pLC->set_diffusionmatrix(shape.get_Equad(), shape.get_Equads_x(), shape.get_Equads_y(), A, laplace);
-		*/
-		pLC->set_diffusionmatrix(diffusionmatrix_type::Identity());
-	}
-
 }
 
 ////////////////////////////////////////////////////
@@ -332,12 +298,30 @@ void Tsolver::assemble_boundary_face_term_pryer(leafcell_type* pLC, const basece
 
 
 
-void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC, Hessian_type & hess){
-	shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
-	pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
-	hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
-	cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
-	pLC->set_diffusionmatrix(hess); //update diffusionmatrix
+void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC){
+
+	Hessian_type hess;
+	for (int iq = 0; iq < Equadraturedim; iq++)
+	{
+		shape.assemble_hessian_Equad(pLC->u, 0, iq, hess); //Hessian on the reference cell
+		pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
+		hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+		cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
+		pLC->set_diffusionmatrix_Equad(iq, hess); //update diffusionmatrix
+
+		cout << "hessian at element quadrature point " << iq << " is " << endl << hess << endl;
+	}
+
+	for (int iq = 0; iq < Fquadraturedim; iq++)
+	{
+		shape.assemble_hessian_Fquad(pLC->u, 0, iq, hess); //Hessian on the reference cell
+		pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
+		hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+		cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
+		pLC->set_diffusionmatrix_Fquad(iq, hess); //update diffusionmatrix
+
+		cout << "hessian at face quadrature point " << iq << " is " << endl << hess << endl;
+	}
 
   	//update min EW
   	if (pLC->EW0 < min_EW) {
@@ -379,20 +363,9 @@ void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_t
 	Emass_type laplace;
 	value_type det_jac = pBC->get_detjacabs() * facLevelVolume[pLC->id().level()]; //determinant of Transformation to leafcell
 
-	if (iteration > 0 || start_solution != SQRT_F){ //we need to update the laplace matrix
-		pLC->assemble_laplace(shape.get_Equad(), shape.get_Equads_grad(),
+	//we need to update the laplace matrix
+	pLC->assemble_laplace(shape.get_Equad(), shape.get_equad_data(),
 								pBC->get_jac(), det_jac,facLevelLength[pLC->id().level()], laplace); //update diffusionmatrix
-	}
-	else
-	{
-		assert (iteration == 0);
-		cout << "init diffusion matrix with identity" << endl;
-		Hessian_type hess;
-		hess << 1, 0, 0, 1;
-		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
-								pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
-		max_EW = 1;
-	}
 
 	for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
 		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
@@ -727,10 +700,10 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 
 		//update diffusion matrix
 		Hessian_type hess;
-		calc_cofactor_hessian(pLC, pBC, hess);
+		calc_cofactor_hessian(pLC, pBC);
 
 		//determinant of hessian for calculation of residuum
-		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
+//		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
 
 		state_type state, stateEx, stateRhs;
 
@@ -739,8 +712,8 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 			//get rhs
 			get_rhs_MA(nv(k), stateRhs);
 			//calculate residuum
-			pLC->residuum(k) = det - stateRhs(0);
-			sum_residuum += pLC->residuum(k);
+//			pLC->residuum(k) = det - stateRhs(0);
+//			sum_residuum += pLC->residuum(k);
 
 			//calculate abs error
 			shape.assemble_state_N(pLC->u,k,state);
@@ -968,7 +941,7 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 									const int col_NC = pNC->n_offset + jshape;
 
 									//average A
-									Hessian_type A = 0.5*(pLC->A+pNC->A);
+									Hessian_type A = 0.5*(pLC->A_Fquad(iqLC)+pNC->A_Fquad(iqNC));
 
 //									Hessian_type A = pLC->A;
 
@@ -989,8 +962,8 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 
 //									A = pNC->A;
 
-									A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,ishape,iqLC),
-									A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,ishape,iqNC);
+									A_times_normal_BC = pBC->A_grad_times_normal(A,ishape,iqLC),
+									A_times_normal_NBC = pNBC->A_grad_times_normal(A,ishape,iqNC);
 
 									// ({{phi}}*[[cof(D^2w)grad(v)]]
 /*
@@ -1097,7 +1070,7 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 									++ishape) {
 								double val = stabsign * shape.get_Fquadw(iqLC)
 										* length * uLC(0)
-										* pBC->A_grad_times_normal(pLC->A,
+										* pBC->A_grad_times_normal(pLC->A_Fquad(iqLC),
 												ishape, iqLC)
 										/ facLevelLength[level];
 
@@ -1121,13 +1094,13 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 									// b(u, phi)
 									val = -shape.get_Fquadw(iqLC) * length
 											* shape.get_Fquads(ishape,iqLC)
-											* pBC->A_grad_times_normal(pLC->A,jshape,iqLC)
+											* pBC->A_grad_times_normal(pLC->A_Fquad(iqLC),jshape,iqLC)
 											/ facLevelLength[level];
 
 									// b(phi, u)
 									val += stabsign *shape.get_Fquadw(iqLC)
 											* length
-											* pBC->A_grad_times_normal(pLC->A,ishape,iqLC)
+											* pBC->A_grad_times_normal(pLC->A_Fquad(iqLC),ishape,iqLC)
 											/ facLevelLength[level]
 											* shape.get_Fquads(jshape,iqLC);
 
@@ -1687,7 +1660,7 @@ void Tsolver::time_stepping_MA() {
 			// reset flag 0
 			setleafcellflags(0, false);
 
-			if (std::abs(sum_residuum - sum_residuum_old) < 1)
+/*			if (std::abs(sum_residuum - sum_residuum_old) < 1)
 			{
 				residuum_equal_since++;
 				cerr<< "sum_residuum_equal_since now " << residuum_equal_since << endl;
@@ -1709,7 +1682,7 @@ void Tsolver::time_stepping_MA() {
 					cur_it++;
 					break;
 				}
-
+*/
 			iteration++;
 			cur_it++;
 

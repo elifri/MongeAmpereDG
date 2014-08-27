@@ -518,15 +518,14 @@ void Tshape::initialize_quadrature() {
 		x[0] = equad.Equadx(j, 1);
 		x[1] = equad.Equadx(j, 2);
 		for (int i = 0; i < shapedim; i++) {
-			Equads(i, j) = shape(i, x);
-			Equads_grad(i,j)(0) = shape_x(i, x);
-			Equads_grad(i,j)(1) = shape_y(i, x);
+			equad_data.Equads(i, j) = shape(i, x);
+			equad_data.Equads_grad(i,j)(0) = shape_x(i, x);
+			equad_data.Equads_grad(i,j)(1) = shape_y(i, x);
 
-			Equads_xx(i, j) = shape_xx(i, x);
-			Equads_xy(i, j) = shape_xy(i, x);
-			Equads_yy(i, j) = shape_yy(i, x);
-			if (j == 0) // second derivative is const
-				Equads_dd(i) << Equads_xx(i, j), Equads_xy(i, j), Equads_xy(i, j),Equads_yy(i, j);
+			equad_data.Equads_xx(i, j) = shape_xx(i, x);
+			equad_data.Equads_xy(i, j) = shape_xy(i, x);
+			equad_data.Equads_yy(i, j) = shape_yy(i, x);
+			equad_data.Equads_hessian(i, j) << equad_data.Equads_xx(i, j), equad_data.Equads_xy(i, j), equad_data.Equads_xy(i, j), equad_data.Equads_yy(i, j);
 		}
 	}
 
@@ -540,9 +539,10 @@ void Tshape::initialize_quadrature() {
 			x[0] = fquad.Fquadx(j, 1);
 			x[1] = fquad.Fquadx(j, 2);
 			for (int i = 0; i < shapedim; i++) {
-				Fquads(i, j) = shape(i, x);
-				Fquads_x(i, j) = shape_x(i, x);
-				Fquads_y(i, j) = shape_y(i, x);
+				fquad_data.Fquads(i, j) = shape(i, x);
+				fquad_data.Fquads_x(i, j) = shape_x(i, x);
+				fquad_data.Fquads_y(i, j) = shape_y(i, x);
+				fquad_data.Fquads_hessian(i, j) << shape_xx(i, x), shape_xy(i, x), shape_xy(i, x), shape_yy(i, x);
 			}
 		}
 
@@ -679,7 +679,7 @@ void Tshape::initialize_mass() {
 
 			Equadrature_type values;
 			for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
-				values(iq) = bilin_mass(Equads(i, iq), Equads(j, iq));
+				values(iq) = bilin_mass(equad_data.Equads(i, iq), equad_data.Equads(j, iq));
 			}
 			A(i, j) = equad.integrate(values, detjacabs);
 		}
@@ -703,7 +703,7 @@ void Tshape::initialize_mass() {
 						x[1] = equad.Emaskx[i][iq][2];
 						phi = shape(ish, x);  // shape on reference element
 						// value of shape on child is Equads(j,iq)
-						values(iq) = bilin_mass(phi, Equads(jsh, iq));
+						values(iq) = bilin_mass(phi, equad_data.Equads(jsh, iq));
 					}
 
 				mass.B_coeffRef(i, ish, jsh) = equad.integrate(values, detjacabs);
@@ -1063,7 +1063,7 @@ void Tshape::assemble_Enodevalue(const Estate_type & u,
 void Tshape::assemble_state_Equad(const Estate_type & u,
 		const unsigned int & iquad, state_type & v) const{
 	for (unsigned int istate = 0; istate < statedim; istate++) {
-		v[istate] = u.col(istate).dot(Equads.col(iquad));
+		v[istate] = u.col(istate).dot(equad_data.Equads.col(iquad));
 
 // 		old code
 //    for (unsigned int j=0; j<shapedim; j++)
@@ -1074,12 +1074,24 @@ void Tshape::assemble_state_Equad(const Estate_type & u,
 
 ////////////////////////////////////////////////////
 
-void Tshape::assemble_hessmatrix(const Estate_type & u, const unsigned int &istate, Hessian_type &hess) const{
+void Tshape::assemble_hessian_Equad(const Estate_type & u, const unsigned int &istate,const unsigned int & iquad, Hessian_type &hess) const{
 
-	assert (istate < statedim);
+	assert (istate < statedim && iquad < Equadraturedim);
+	assert (istate == 0);
 	hess.setZero();
 	for (unsigned int j = 0; j < shapedim; j++)
-		hess += u(j, istate) * Equads_dd(j);
+		hess += u(j, istate) * equad_data.Equads_hessian(j, iquad);
+}
+
+////////////////////////////////////////////////////
+
+void Tshape::assemble_hessian_Fquad(const Estate_type & u, const unsigned int &istate,const unsigned int & iquad, Hessian_type &hess) const{
+
+	assert (istate < statedim && iquad < Fquadraturedim);
+	assert (istate == 0);
+	hess.setZero();
+	for (unsigned int j = 0; j < shapedim; j++)
+		hess += u(j, istate) * fquad_data.Fquads_hessian(j, iquad);
 }
 
 ////////////////////////////////////////////////////
@@ -1089,7 +1101,7 @@ void Tshape::assemble_state_Fquad(const Estate_type & u,
 	for (unsigned int istate = 0; istate < statedim; istate++) {
 		v[istate] = 0.0;
 		for (unsigned int j = 0; j < shapedim; j++)
-			v[istate] += u.coeff(j, istate) * Fquads(j, iquad);
+			v[istate] += u.coeff(j, istate) * fquad_data.Fquads(j, iquad);
 	}
 }
 ;
@@ -1101,7 +1113,7 @@ void Tshape::assemble_state_Fquad(const Estate_type & u,
 		value_type & v) const{
 	v = 0.0;
 	for (unsigned int j = 0; j < shapedim; j++)
-		v += u.coeff(j, istate) * Fquads(j, iquad);
+		v += u.coeff(j, istate) * fquad_data.Fquads(j, iquad);
 }
 ;
 

@@ -418,7 +418,7 @@ private:
 
 public:
 
-   void calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC, Hessian_type & hess); /// calculates the cofactor Matrix of the hessian in LC
+   void calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC); /// calculates the cofactor Matrix of the hessian in LC
    bool calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess); /// calculates the eigenvalues of hess and return if it was pos def (solution convex)
 
    /*

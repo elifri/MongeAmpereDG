@@ -48,7 +48,6 @@ private:
 	Emass_type laplace; //the laplace matrix belonging to a(u,v) = grad u * grad v
 	Eigen::Matrix<Hessian_type, shapedim, 1> fe_hessians;
 
-	diffusionmatrix_type diffusion_a;
 
 public:
 	// cstr, id not set yet!!!

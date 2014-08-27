@@ -23,17 +23,13 @@ private:
 	// To get u at nodes, e.g.
 	// to produce tecplot-datafile.
 
-	Equad equad;
-	Equadratureshape_type Equads;   // value of shapes at quadrature points
-	Equadratureshape_grad_type Equads_grad; //gradient of shapes at quadrature points
-	Equadratureshape_type Equads_xx, Equads_xy, Equads_yy; // second derivatives of shapes at quadrature points
-	Equadratureshape_hessian_type Equads_dd;
+	Equad equad; //to carry out quadratur on a reference element
+	Equad_data_type equad_data; //function values, gradient etc. for element quadrature
 
 public:
 	Fquad fquad;
-	Fquadratureshape_type Fquads;   // value of shapes at quadrature points
-	Fquadratureshape_type Fquads_x; // x-der. of shapes at quadrature points in reference element
-	Fquadratureshape_type Fquads_y; // y-der. of shapes at quadrature points in reference element
+	Fquad_data_type fquad_data;
+
 	Fmidshape_type Fmids;
 	Fmidpoint_type Fmidx;
 	Fmidshape_type Squads;
@@ -172,7 +168,8 @@ public:
 			Enodevalue_type & v) const;
 	void assemble_state_Equad(const Estate_type & u, const unsigned int & iquad,
 			state_type & v) const;
-	void assemble_hessmatrix(const Estate_type & u, const unsigned int &istate, Hessian_type &hess) const; ///calculates the hessian matrix of a solution u
+	void assemble_hessian_Equad(const Estate_type & u, const unsigned int &istate,const unsigned int & iquad, Hessian_type &hess) const; ///assembles the cofactor matrix of a hessian matrix of a solution u at a element quadrature point
+	void assemble_hessian_Fquad(const Estate_type & u, const unsigned int &istate,const unsigned int & iquad, Hessian_type &hess) const; ///assembles the cofactor matrix of a hessian matrix of a solution u at a face quadrature point
 	void assemble_state_Fquad(const Estate_type & u, const unsigned int & iquad,
 			state_type & v) const;
 	void assemble_state_Fquad(const Estate_type & u,
@@ -216,22 +213,27 @@ public:
 		return equad.Emaskx[i][j][k];
 	}
 
+	const Equad_data_type& get_equad_data() const
+	{
+		return equad_data;
+	}
+
 	const Equad get_Equad() const{
 		return equad;
 	}
 
 	Equadratureshape_type get_Equads() const {
-		return Equads;
+		return equad_data.Equads;
 	}
 	const value_type& get_Equads(const int i, const int j) const {
-		return Equads(i, j);
+		return equad_data.Equads(i, j);
 	}
 	value_type& set_Equads(const int i, const int j) {
-		return Equads(i, j);
+		return equad_data.Equads(i, j);
 	}
 
 	const Equadratureshape_grad_type& get_Equads_grad() const{
-		return Equads_grad;
+		return equad_data.Equads_grad;
 	}
 
 	Equadratureweight_type get_Equadw() const {
@@ -255,33 +257,33 @@ public:
 	}
 
 	Fquadratureshape_type get_Fquads() const {
-		return Fquads;
+		return fquad_data.Fquads;
 	}
 	const value_type& get_Fquads(const int i, const int j) const {
-		return Fquads(i, j);
+		return fquad_data.Fquads(i, j);
 	}
 	value_type& set_Fquads(const int i, const int j) {
-		return Fquads(i, j);
+		return fquad_data.Fquads(i, j);
 	}
 
 	Fquadratureshape_type get_Fquads_x() const {
-		return Fquads_x;
+		return fquad_data.Fquads_x;
 	}
 	const value_type& get_Fquads_x(const int i, const int j) const {
-		return Fquads_x(i, j);
+		return fquad_data.Fquads_x(i, j);
 	}
 	value_type& set_Fquads_x(const int i, const int j) {
-		return Fquads_x(i, j);
+		return fquad_data.Fquads_x(i, j);
 	}
 
 	Fquadratureshape_type get_Fquads_y() const {
-		return Fquads_y;
+		return fquad_data.Fquads_y;
 	}
 	const value_type& get_Fquads_y(const int i, const int j) const {
-		return Fquads_y(i, j);
+		return fquad_data.Fquads_y(i, j);
 	}
 	value_type& set_Fquads_y(const int i, const int j) {
-		return Fquads_y(i, j);
+		return fquad_data.Fquads_y(i, j);
 	}
 
 	Fquadratureweight_type get_Fquadw() const {
