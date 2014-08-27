@@ -5,10 +5,10 @@
  *      Author: friebel
  */
 
-#include "../include/Convexifier.hpp"
+#include "Convexifier.hpp"
 #include "test/test_utils.hpp"
 
-#include "../include/matlab_export.hpp"
+#include "matlab_export.hpp"
 
 using namespace Eigen;
 

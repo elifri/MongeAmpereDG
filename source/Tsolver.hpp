@@ -8,14 +8,14 @@
 
 #include "utility.hpp"
 
-#include "tmybasecell.hpp"
+#include "grid/tmybasecell.hpp"
 #include "config.hpp"
-#include "grid_config.hpp"
+#include "grid/grid_config.hpp"
 
-#include "Tshape.hpp"
+#include "grid/Tshape.hpp"
 #include "Plotter.hpp"
-#include "c0_converter.hpp"
-#include "boundary_handler.hpp"
+#include "grid/c0_converter.hpp"
+#include "grid/boundary_handler.hpp"
 #include "Convexifier.hpp"
 
 using namespace config;

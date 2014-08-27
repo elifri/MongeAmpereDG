@@ -8,8 +8,8 @@
 #ifndef C0_CONVERTER_HPP_
 #define C0_CONVERTER_HPP_
 
-#include "config.hpp"
-#include "utility.hpp"
+#include "../config.hpp"
+#include "../utility.hpp"
 
 #include "grid_config.hpp"
 

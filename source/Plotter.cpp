@@ -6,11 +6,11 @@
  */
 
 
-#include "../include/Plotter.hpp"
+#include "Plotter.hpp"
 
-#include "../include/config.hpp"
-#include "../include/tmyleafcell.hpp"
-#include "../include/utility.hpp"
+#include "config.hpp"
+#include "grid/tmyleafcell.hpp"
+#include "utility.hpp"
 #include "boost/archive/iterators/base64_from_binary.hpp"
 #include "boost/archive/iterators/binary_from_base64.hpp"
 #include "boost/archive/iterators/insert_linebreaks.hpp"

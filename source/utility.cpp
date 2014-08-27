@@ -5,7 +5,7 @@
  *      Author: elisa
  */
 
-#include "../include/utility.hpp"
+#include "utility.hpp"
 
 /** Calculate factorial by loop.
  *

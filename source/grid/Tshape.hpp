@@ -3,7 +3,7 @@
 
 #include "assert.h"
 
-#include "config.hpp"
+#include "../config.hpp"
 
 #include "Tmass.hpp"
 #include "Equad.hpp"

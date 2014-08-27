@@ -10,7 +10,7 @@
 
 #include <iostream>
 
-#include "config.hpp"
+#include "../config.hpp"
 #include "tmycommencelldata.hpp"
 
 

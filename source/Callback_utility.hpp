@@ -9,7 +9,7 @@
 #define CALLBACK_UTILITY_HPP_
 
 #include "config.hpp"
-#include "grid_config.hpp"
+#include "grid/grid_config.hpp"
 
 class summation{
 public:

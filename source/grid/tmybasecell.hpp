@@ -10,9 +10,9 @@
 
 #include <iostream>
 #include <valarray>
-#include "utility.hpp"
+#include "../utility.hpp"
 
-#include "config.hpp"
+#include "../config.hpp"
 
 #include "tmycommencelldata.hpp"
 

@@ -5,7 +5,7 @@
  *      Author: elisa
  */
 
-#include "../include/Tshape.hpp"
+#include "Tshape.hpp"
 
 bool Tshape::read_sc_msa(const std::string data_filename) {
 	igpm::configfile msa;

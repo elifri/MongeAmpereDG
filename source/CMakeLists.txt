@@ -1,20 +1,15 @@
 # Notice name prefix of this variable, set by CMake according
 # to value given with "project()" in the root CMakeLists.txt.
 include_directories(../include)
-subdirs(test)
+subdirs(test grid)
 
-add_library(Tmass Tmass.cpp)
-add_library(Tshape Tshape.cpp)
-
+# util libraries
 add_library(utility utility.cpp)
-add_library(singconfig grid_config.cpp)
 add_library(Eigen_utility Eigen_utility.cpp)
 add_library(Callback_utility Callback_utility.cpp)
 set(UTILITIES Eigen_utility singconfig utility)
 
 add_library(Plotter Plotter.cpp)
-add_library(C0_converter c0_converter.cpp)
-add_library(boundary_handler boundary_handler.cpp)
 add_library(Convexifier Convexifier.cpp)
 add_library(ConvexifyNLP ConvexifyNLP.cpp)
 

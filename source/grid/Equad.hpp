@@ -10,9 +10,9 @@
 
 #include <Eigen/Core>
 
-#include "config.hpp"
-#include "callback.hpp"
-#include "utility.hpp"
+#include "../config.hpp"
+#include "../callback.hpp"
+#include "../utility.hpp"
 
 using namespace config;
 

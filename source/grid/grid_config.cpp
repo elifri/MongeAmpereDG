@@ -5,8 +5,8 @@
  *      Author: elisa
  */
 
-#include "../include/config.hpp"
-#include "../include/grid_config.hpp"
+#include "../config.hpp"
+#include "grid_config.hpp"
 
 igpm::configfile* singleton_config_file::cfg;
 

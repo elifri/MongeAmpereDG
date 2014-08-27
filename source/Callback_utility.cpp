@@ -5,7 +5,7 @@
  *      Author: friebel
  */
 
-#include "../include/Callback_utility.hpp"
+#include "Callback_utility.hpp"
 
 
 void summation::add(const config::space_type& x, config::state_type &u)

@@ -2,7 +2,7 @@
 #define TMASS_HPP
 
 #include<Eigen/Dense>
-#include "config.hpp"
+#include "../config.hpp"
 #include "grid_config.hpp"
 
 using namespace config;

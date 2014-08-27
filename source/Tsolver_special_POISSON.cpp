@@ -5,7 +5,7 @@
  *      Author: elisa
  */
 
-#include "../include/Tsolver.hpp"
+#include "Tsolver.hpp"
 
 #if(EQUATION==POISSON_EQ)
 

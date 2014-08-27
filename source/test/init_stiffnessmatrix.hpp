@@ -8,7 +8,7 @@
 #ifndef INIT_STIFFNESSMATRIX_HPP_
 #define INIT_STIFFNESSMATRIX_HPP_
 
-#include "../include/utility.hpp"
+#include "../utility.hpp"
 
 
 void init_stiffnessmatrix(Eigen::SparseMatrix<double> &A, Eigen::VectorXd &rhs);

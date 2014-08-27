@@ -12,7 +12,7 @@
 #include "igpm_t2_lib.hpp"
 #include <string>
 
-#include "../include/utility.hpp"
+#include "../utility.hpp"
 #include<set>
 
 const double droptol = 1e-15;

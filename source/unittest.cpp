@@ -5,9 +5,9 @@
  *      Author: elisa
  */
 
-#include "../include/config.hpp"
+#include "config.hpp"
 
-#include "../include/Tsolver.hpp"
+#include "Tsolver.hpp"
 
 #include "test/test_utils.hpp"
 #include "test/init_stiffnessmatrix.hpp"

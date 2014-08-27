@@ -5,10 +5,10 @@
  *      Author: elisa
  */
 
-#include "../include/boundary_handler.hpp"
+#include "boundary_handler.hpp"
 
 #include <cassert>
-#include "Eigen_utility.hpp"
+#include "../Eigen_utility.hpp"
 
 void boundary_handler::initialize(const grid_type &grid, const unsigned int number_of_dofs) {
 	get_boundary_nodes(grid, m_boundary_dofs);

@@ -8,7 +8,7 @@
 #ifndef TMYCOMMENCELLDATA_HPP_
 #define TMYCOMMENCELLDATA_HPP_
 
-#include "config.hpp"
+#include "../config.hpp"
 
 //------------------------------------------------------------------------------
 // common cell data, for instance

@@ -7,9 +7,9 @@
 
 #include <Eigen/Core>
 
-#include "config.hpp"
+#include "../config.hpp"
 #include "grid_config.hpp"
-#include "utility.hpp"
+#include "../utility.hpp"
 #include "Tshape.hpp"
 #include "c0_converter.hpp"
 

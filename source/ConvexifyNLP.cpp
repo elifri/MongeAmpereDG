@@ -5,7 +5,7 @@
  *      Author: friebel
  */
 
-#include "../include/ConvexifyNLP.hpp"
+#include "ConvexifyNLP.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Sparse>

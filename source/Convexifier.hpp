@@ -14,9 +14,9 @@
 #include "ConvexifyNLP.hpp"
 
 #include "config.hpp"
-#include "grid_config.hpp"
-#include "Tshape.hpp"
-#include "c0_converter.hpp"
+#include "grid/grid_config.hpp"
+#include "grid/Tshape.hpp"
+#include "grid/c0_converter.hpp"
 
 
 

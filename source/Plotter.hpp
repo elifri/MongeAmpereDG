@@ -9,9 +9,9 @@
 #define PLOTTER_HPP_
 
 #include <string>
-#include "grid_config.hpp"
+#include "grid/grid_config.hpp"
 
-#include "Tshape.hpp"
+#include "grid/Tshape.hpp"
 
 #include <fstream>
 
