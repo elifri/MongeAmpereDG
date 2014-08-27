@@ -1431,6 +1431,10 @@ void Tsolver::time_stepping_MA() {
 	plotter.add_plot_stream("plot_data_min_constraints", "data/s/plot_data_min_constraints");
 	plotter.add_plot_stream("plot_data_constraints_l2", "data/s/plot_data_constraints_l2");
 	plotter.add_plot_stream("sum_coefficients", "data/s/plot_data_sum_coefficients");
+
+
+	plotter.add_plot_stream("system_matrices", "data/s/plots/system_matrices.m");
+
 	//========================================
 
 
@@ -1566,6 +1570,15 @@ void Tsolver::time_stepping_MA() {
 			}
 
 			//==============solve system============================
+
+			std::string matrix_name("A_iteration");
+			ostringstream convert;   // stream used for the conversion
+			convert << iteration;      // insert the textual representation of 'Number' in the characters in the stream
+			matrix_name+= convert.str();
+
+			MATLAB_export(plotter.get_plot_stream("system_matrices"), LM, matrix_name);
+
+
 			pt.start();
 			Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
 //			Eigen::SparseQR<Eigen::SparseMatrixD, Eigen::COLAMDOrdering<int> > solver;
@@ -1687,7 +1700,7 @@ void Tsolver::time_stepping_MA() {
 			cout << " sum_residuum " << sum_residuum << endl;
 			sum_residuum_old = sum_residuum;
 
-			/*if (iteration > 0)
+			if (iteration > 0)
 				cout << "sum_coefficients(iteration)" << sum_coefficients(iteration) << endl;
 				cout << "change from last iteration " << std::abs((sum_coefficients(iteration) - sum_coefficients(iteration-1))/sum_coefficients(iteration)) << endl;
 				if (std::abs((sum_coefficients(iteration) - sum_coefficients(iteration-1))/sum_coefficients(iteration)) < 1e-10)
@@ -1695,7 +1708,7 @@ void Tsolver::time_stepping_MA() {
 					iteration++;
 					cur_it++;
 					break;
-				}*/
+				}
 
 			iteration++;
 			cur_it++;
