@@ -16,6 +16,8 @@
 
 class C0_converter{
 private:
+	bool m_initialized;
+
 	Eigen::VectorXi DG_to_C_indices;
 
 	//count how many DG elements contribute to a node
@@ -29,6 +31,8 @@ private:
 	void add_dof(const space_type &node, const int DG_index, int &cur_node_index);
 
 public:
+	C0_converter():m_initialized(false) {}
+
 	/// initiliaze c0 converter with this grid
 	void init(grid_type &grid, const int number_of_dofs_DG);
 

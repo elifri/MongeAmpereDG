@@ -11,6 +11,7 @@
 #include "../Eigen_utility.hpp"
 
 void boundary_handler::initialize(const grid_type &grid, const unsigned int number_of_dofs) {
+	m_nodal_contrib.setZero(number_of_dofs);
 	get_boundary_nodes(grid, m_boundary_dofs);
 	m_reduced_number_of_dofs = number_of_dofs - get_number_of_boundary_dofs();
 	m_initialized = true;
@@ -482,8 +483,9 @@ void boundary_handler::get_boundary_nodes (const grid_type &grid, boundary_DOFs_
 				{
 					// add index of node at boundary to m_boundary_nodes
 					int loc_no = ((f + 1) % shapes_per_face)*2+ishape;
-					loc_no = loc_no % 6;
+					loc_no = loc_no % shapedim;
 					m_boundary_dofs.insert(LC.m_offset+ loc_no);
+					m_nodal_contrib(LC.m_offset+ loc_no) = 1;
 					cout << "inserted " <<  LC.m_offset<< " " << LC.m_offset+loc_no <<endl;
 				}
 

@@ -33,6 +33,8 @@ void C0_converter::init(grid_type &grid, const int number_of_dofs_DG)
 {
 	assert (degreedim == 2 && shapedim == 6 && " this implementaion works only for triangles and ansatz fct of degree 2!");
 
+	m_initialized = true;
+
 	nodes.resize(number_of_dofs_DG);
 
 	DG_to_C_indices.resize(number_of_dofs_DG);
@@ -72,23 +74,27 @@ void C0_converter::init(grid_type &grid, const int number_of_dofs_DG)
 
 int C0_converter::get_number_of_dofs_C() const
 {
+	assert (m_initialized && "the converter was not initialised!");
 	return dofsDG_to_dofsC_ratio.size();
 }
 
 
 int C0_converter::dof_C(const int dof_DG) const
 {
+	assert (m_initialized && "the converter was not initialised!");
 	return DG_to_C_indices(dof_DG);
 }
 
 void C0_converter::get_node(const int i, space_type &node) const
 {
+	assert (m_initialized && "the converter was not initialised!");
 	node = nodes(i);
 }
 
 
 void C0_converter::convert_coefficients_toC(const Eigen::VectorXd &DGsolution, Eigen::VectorXd &Csolution) const
 {
+	assert (m_initialized && "the converter was not initialised!");
 	assert (DGsolution.size() == DG_to_C_indices.size() && "The given vector does not contain as much DG dofs as expected!");
 	Csolution.setZero(get_number_of_dofs_C());
 
@@ -107,6 +113,7 @@ void C0_converter::convert_coefficients_toC(const Eigen::VectorXd &DGsolution, E
 
 void C0_converter::convert_coefficients_toC(Eigen::VectorXd &solution) const
 {
+	assert (m_initialized && "the converter was not initialised!");
 	Eigen::VectorXd Csolution;
 	convert_coefficients_toC(solution, Csolution);
 	solution = Csolution;
@@ -114,6 +121,7 @@ void C0_converter::convert_coefficients_toC(Eigen::VectorXd &solution) const
 
 void C0_converter::convert_coefficients_toDG(const Eigen::VectorXd &Csolution, Eigen::VectorXd &DGsolution) const
 {
+	assert (m_initialized && "the converter was not initialised!");
 	assert (Csolution.size() == get_number_of_dofs_C() && "The given vector does not contain as much C dofs as expected!");
 
 	DGsolution.resize(DG_to_C_indices.size());
@@ -128,6 +136,7 @@ void C0_converter::convert_coefficients_toDG(const Eigen::VectorXd &Csolution, E
 
 void C0_converter::convert_coefficients_toDG(Eigen::VectorXd &solution) const
 {
+	assert (m_initialized && "the converter was not initialised!");
 	Eigen::VectorXd DGsolution;
 	convert_coefficients_toDG(solution, DGsolution);
 	solution = DGsolution;
@@ -135,6 +144,7 @@ void C0_converter::convert_coefficients_toDG(Eigen::VectorXd &solution) const
 
 void C0_converter::convert_matrix_toC(Eigen::SparseMatrix<value_type> &A) const
 {
+	assert (m_initialized && "the converter was not initialised!");
 	std::vector< Eigen::Triplet<value_type> > triplets;
 
 	for (int k=0; k<A.outerSize(); ++k)
@@ -156,6 +166,7 @@ void C0_converter::convert_matrix_toC(Eigen::SparseMatrix<value_type> &A) const
 
 void C0_converter::convert_matrix_toC_only_cols(Eigen::SparseMatrix<value_type> &A) const
 {
+	assert (m_initialized && "the converter was not initialised!");
 	std::vector< Eigen::Triplet<value_type> > triplets;
 
 	for (int k=0; k<A.outerSize(); ++k)
@@ -179,6 +190,7 @@ void C0_converter::convert_matrix_toC_only_cols(Eigen::SparseMatrix<value_type> 
 
 std::set<unsigned int> C0_converter::convert_to_dofs_DG(const std::set<unsigned int> &dofs_C) const
 {
+	assert (m_initialized && "the converter was not initialised!");
 	std::set<unsigned int> dofs_DG;
 
 	//loop over DG dofs
