@@ -3,6 +3,7 @@
 [general]
 # Space dimension
 dimension=2
+interpolatory_basis = 0
 
 # Polynomial degree n
 polynomial_degree=3

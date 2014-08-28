@@ -100,7 +100,9 @@ bool Tshape::read_sc_msa(const std::string data_filename) {
 		}
 	}
 	//TODO check THIS!!!!!!!!!!!
-	return false;
+	bool interpolatory;
+	cout << "could read " << msa.getValue("general", "interpolatory_basis", interpolatory, false) << endl;
+	return interpolatory;
 }
 ;
 
