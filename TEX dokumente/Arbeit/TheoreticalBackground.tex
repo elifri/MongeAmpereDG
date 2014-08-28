@@ -273,6 +273,8 @@ Imagine a typical mesh refinement our triangulation is created by refinement of 
 
 We identifying the new triangles with the original cell $T$ calling it their basecell. Repeating the refinement we can relate a cell in the finest mesh with a basecell in the original triangulation.
 The benefit of saving a base cell $T^T_b$ is that the transformation matrix of the transformation from $T^T_b$ is a diagonal matrix and that a it has the same, or for the innermost triangle opposite directed normals.
+\todo{example as in fenics book p. 160 figure 8.1}
+
 \begin{example}
 In fact in the two-dimensional case the Jacobian of a transformation from the base cell to a $l$ times refined triangle is $
 	\begin{pmatrix}
