@@ -303,6 +303,14 @@ public:
    		   double gamma_continuous;
    		   double gamma_boundary;
 
+   		   penalties_type& operator*=(const value_type c)
+   		   {
+   			   gamma_gradient *= c;
+   			   gamma_boundary *= c;
+   			   gamma_continuous *= c;
+   			   return *this;
+   		   }
+
    		   void print()
    		   {
    			   cout << "gamma gradient " << gamma_gradient
