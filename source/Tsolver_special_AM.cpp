@@ -309,7 +309,7 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 		cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
 		pLC->set_diffusionmatrix_Equad(iq, hess); //update diffusionmatrix
 
-		cout << "hessian at element quadrature point " << iq << " is " << endl << hess << endl;
+//		cout << "hessian at element quadrature point " << iq << " is " << endl << hess << endl;
 	}
 
 	for (int iq = 0; iq < Fquadraturedim; iq++)
@@ -320,7 +320,7 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 		cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
 		pLC->set_diffusionmatrix_Fquad(iq, hess); //update diffusionmatrix
 
-		cout << "hessian at face quadrature point " << iq << " is " << endl << hess << endl;
+//		cout << "hessian at face quadrature point " << iq << " is " << endl << hess << endl;
 	}
 
   	//update min EW
@@ -994,7 +994,8 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 
 									// penalty term continuity
 									if (penalties.gamma_continuous != 0.0) {
-										penalty = penalties.gamma_continuous * (pLC->EW1 + pNC->EW1)/2.;
+										if ((pLC->EW1 + pNC->EW1)/2. > 1)
+											penalty = penalties.gamma_continuous * (pLC->EW1 + pNC->EW1)/2.;
 
 										LM.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
 
@@ -1007,7 +1008,8 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 
 									// penalty jumps in gradients
 									if (penalties.gamma_gradient!= 0.0) {
-										penalty = penalties.gamma_gradient * (pLC->EW1 + pNC->EW1)/2.;
+										if ((pLC->EW1 + pNC->EW1)/2. > 1)
+											penalty = penalties.gamma_gradient * (pLC->EW1 + pNC->EW1)/2.;
 
 										LM.coeffRef(row_LC, col_LC) += penalty
 												* shape.get_Fquadw(iqLC) * sqr(length) //quadrature weights
@@ -1075,7 +1077,8 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 										/ facLevelLength[level];
 
 								if (penalties.gamma_boundary != 0.0) {
-									penalty = penalties.gamma_boundary * pLC->EW1;
+									if ((pLC->EW1 + pNC->EW1)/2. > 1)
+										penalty = penalties.gamma_boundary * pLC->EW1;
 									val += penalty * shape.get_Fquadw(iqLC)
 											* uLC(0)
 											* shape.get_Fquads(ishape, iqLC);
@@ -1105,7 +1108,8 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 											* shape.get_Fquads(jshape,iqLC);
 
 									if (penalties.gamma_boundary != 0.0) {
-										penalty = penalties.gamma_boundary * pLC->EW1;
+										if ((pLC->EW1 + pNC->EW1)/2. > 1)
+											penalty = penalties.gamma_boundary * pLC->EW1;
 										val += penalty * shape.get_Fquadw(iqLC)
 												* shape.get_Fquads(ishape,iqLC)
 												* shape.get_Fquads(jshape,iqLC);
@@ -1366,6 +1370,8 @@ void Tsolver::time_stepping_MA() {
 
 	read_problem_parameters_MA(stabsign, gamma, refine_eps, coarsen_eps, level, alpha);
 
+	gamma *= degreedim*degreedim;
+	cout << "gamma_C" << gamma.gamma_continuous << endl;
 	//check level
 	if (levelmax < level)
 		level = levelmax;
@@ -1429,9 +1435,8 @@ void Tsolver::time_stepping_MA() {
 	cout << "done. " << pt << " s." << endl;
 
 	//init continuous formulation
-	assert(!interpolating_basis && "this only works with a bezier basis");
-
-	c0_converter.init(grid, number_of_dofs);
+//	assert(!interpolating_basis && "this only works with a bezier basis");
+//	c0_converter.init(grid, number_of_dofs);
 
 	//init boundary handler
 	if (strongBoundaryCond) {
@@ -1473,9 +1478,8 @@ void Tsolver::time_stepping_MA() {
 		cout << "done. " << pt << " s." << endl;
 
 		//init continuous formulation
-		assert(!interpolating_basis && "this only works with a bezier basis");
-
-		c0_converter.init(grid, number_of_dofs);
+//		assert(!interpolating_basis && "this only works with a bezier basis");
+//		c0_converter.init(grid, number_of_dofs);
 
 		//init boundary handler
 		if (strongBoundaryCond) {
@@ -1636,8 +1640,8 @@ void Tsolver::time_stepping_MA() {
 			solution= Tsolver::alpha*Lsolution + (1-Tsolver::alpha)*solution_old;
 
 			//smooth solution
-			c0_converter.convert_coefficients_toC(solution);
-			c0_converter.convert_coefficients_toDG(solution);
+//			c0_converter.convert_coefficients_toC(solution);
+//			c0_converter.convert_coefficients_toDG(solution);
 
 			restore_MA(solution);
 
