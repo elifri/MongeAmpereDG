@@ -994,8 +994,9 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 
 									// penalty term continuity
 									if (penalties.gamma_continuous != 0.0) {
+										penalty = penalties.gamma_continuous;
 										if ((pLC->EW1 + pNC->EW1)/2. > 1)
-											penalty = penalties.gamma_continuous * (pLC->EW1 + pNC->EW1)/2.;
+											penalty *= (pLC->EW1 + pNC->EW1)/2.;
 
 										LM.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
 
@@ -1008,8 +1009,9 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 
 									// penalty jumps in gradients
 									if (penalties.gamma_gradient!= 0.0) {
+										penalty = penalties.gamma_gradient;
 										if ((pLC->EW1 + pNC->EW1)/2. > 1)
-											penalty = penalties.gamma_gradient * (pLC->EW1 + pNC->EW1)/2.;
+											penalty *= (pLC->EW1 + pNC->EW1)/2.;
 
 										LM.coeffRef(row_LC, col_LC) += penalty
 												* shape.get_Fquadw(iqLC) * sqr(length) //quadrature weights
@@ -1077,8 +1079,9 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 										/ facLevelLength[level];
 
 								if (penalties.gamma_boundary != 0.0) {
+									penalty = penalties.gamma_boundary;
 									if ((pLC->EW1 + pNC->EW1)/2. > 1)
-										penalty = penalties.gamma_boundary * pLC->EW1;
+										penalty *= (pLC->EW1 + pNC->EW1)/2.;
 									val += penalty * shape.get_Fquadw(iqLC)
 											* uLC(0)
 											* shape.get_Fquads(ishape, iqLC);
@@ -1108,8 +1111,11 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 											* shape.get_Fquads(jshape,iqLC);
 
 									if (penalties.gamma_boundary != 0.0) {
+										penalty = penalties.gamma_boundary;
 										if ((pLC->EW1 + pNC->EW1)/2. > 1)
-											penalty = penalties.gamma_boundary * pLC->EW1;
+											penalty *= (pLC->EW1 + pNC->EW1)/2.;
+										else
+											penalty = penalties.gamma_boundary;
 										val += penalty * shape.get_Fquadw(iqLC)
 												* shape.get_Fquads(ishape,iqLC)
 												* shape.get_Fquads(jshape,iqLC);
