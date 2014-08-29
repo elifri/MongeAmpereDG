@@ -131,8 +131,8 @@ enum {
 #endif
 #if (EQUATION == MONGE_AMPERE_EQ)
 	statedim = 1,
-	degreedim = 3, // polynomial degree
-	shapedim = 10, //no. of basis functions per element
+	degreedim = 4, // polynomial degree
+	shapedim = 15, //no. of basis functions per element
 #endif
 
 	lagshapedim = 3, // no. of Lagrange-shapes, e.g. for continuous reconstruction

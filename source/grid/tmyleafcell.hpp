@@ -71,27 +71,35 @@ public:
 
 void calculate_eigenvalues_blub(constant_diffusionmatrix_type &A) {
 
-  	calculate_eigenvalues(A, EW0, EW1);
+	value_type EW0_quadr, EW1_quadr;
+  	calculate_eigenvalues(A, EW0_quadr, EW1_quadr);
 
-  	assert(!(EW0 != EW0) && "The smaller eigenvalue is nan");
-  	assert(!(EW1 != EW1) && "The bigger eigenvalue is nan");
+  	assert(!(EW0_quadr != EW0_quadr) && "The smaller eigenvalue is nan");
+  	assert(!(EW1_quadr != EW1_quadr) && "The bigger eigenvalue is nan");
 
   	//ensure positive definite diffusion matrix
-  	while (EW0 < 0)
+  	while (EW0_quadr < 0)
   	{
   		nvector_type nv;
 
-  		cout << "Found very small Eigenvalue " << EW0 << " at "
+  		cout << "Found very small Eigenvalue " << EW0_quadr << " at "
   				<< this->id() << endl;
   		cout << "cofactor of Hessian is: \n" << A << endl;
 
-  		A += (-EW0+epsilon) *Hessian_type::Identity();
+  		A += (-EW0_quadr+epsilon) *Hessian_type::Identity();
 
-  		calculate_eigenvalues(A, EW0, EW1);
+  		calculate_eigenvalues(A, EW0_quadr, EW1_quadr);
 
-  		assert(!(EW0 != EW0) && "The smaller eigenvalue is nan");
-  		assert(!(EW1 != EW1) && "The bigger eigenvalue is nan");
+  		cout << "new eigenvalue is " << EW0_quadr << endl;
+  		assert(!(EW0_quadr != EW0_quadr) && "The smaller eigenvalue is nan");
+  		assert(!(EW1_quadr != EW1_quadr) && "The bigger eigenvalue is nan");
   	}
+  	if (EW0 > EW0_quadr || EW0 < epsilon-10e-12)
+  		EW0 = EW0_quadr;
+
+  	if (EW1 < EW1_quadr || EW1 < epsilon-10e-12)
+  		EW1 = EW1_quadr;
+
   }
 
  ///update diffusionmatrix and
@@ -115,6 +123,13 @@ void calculate_eigenvalues_blub(constant_diffusionmatrix_type &A) {
 	  ++m_nCountAllLeafs;
   }
   ~tmyleafcell() { --m_nCountAllLeafs; }
+
+  void reset_eigenvalues()
+  {
+	 EW0 = 0;
+	 EW1 = 0;
+  }
+
 
   void set_mass (const mass_type & m)
   {

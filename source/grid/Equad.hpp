@@ -95,6 +95,9 @@ public:
 			  //
 			  // This rule is exact for polynomials up to degree p=8.
 
+			  assert(degreedim/2 < 8 && "The current quadrature order is less than required for the mass matrix");
+
+
 			  // weights
 			  const double w[5] =  {
 			  	0.1443156076777871682510911104890646247988101807702191748349199376053433481866644876319560487187605130/2.,

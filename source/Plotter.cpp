@@ -933,7 +933,7 @@ void Plotter::write_numericalsolution_VTK(const unsigned int i, std::string name
 	std::string fname(output_directory);
 	fname += "/"+ output_prefix + name + NumberToString(i) + ".vtu";
 
-	writeLeafCellVTK(fname, 3);
+	writeLeafCellVTK(fname, 4);
 
 }
 

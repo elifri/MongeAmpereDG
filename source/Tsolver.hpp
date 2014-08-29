@@ -299,9 +299,9 @@ public:
 
    	   struct penalties_type
    	   {
-   		   double gamma_gradient;
-   		   double gamma_continuous;
-   		   double gamma_boundary;
+   		   value_type gamma_gradient;
+   		   value_type gamma_continuous;
+   		   value_type gamma_boundary;
 
    		   penalties_type& operator*=(const value_type c)
    		   {
@@ -317,6 +317,7 @@ public:
    					   <<", gamma_continuous " << gamma_continuous
    					   <<", gamma_boundary " << gamma_boundary << endl;
    		   }
+
    	   };
 
    	   	 Monge_Ampere_Problem problem;

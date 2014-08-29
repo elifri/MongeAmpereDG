@@ -309,7 +309,7 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 		cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
 		pLC->set_diffusionmatrix_Equad(iq, hess); //update diffusionmatrix
 
-//		cout << "hessian at element quadrature point " << iq << " is " << endl << hess << endl;
+		cout << "hessian at element quadrature point " << iq << " is " << endl << hess << endl;
 	}
 
 	for (int iq = 0; iq < Fquadraturedim; iq++)
@@ -320,7 +320,7 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 		cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
 		pLC->set_diffusionmatrix_Fquad(iq, hess); //update diffusionmatrix
 
-//		cout << "hessian at face quadrature point " << iq << " is " << endl << hess << endl;
+		cout << "hessian at face quadrature point " << iq << " is " << endl << hess << endl;
 	}
 
   	//update min EW
@@ -697,6 +697,8 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
 			sum_coefficients(iteration) += std::abs(solution(pLC->m_offset + ishape));
 		}
+
+		pLC->reset_eigenvalues();
 
 		//update diffusion matrix
 		Hessian_type hess;
@@ -1332,7 +1334,7 @@ void Tsolver::init_start_solution_MA(const int stabsign, penalties_type gamma,st
 	else
 		plotter.get_plot_stream("rel_L2_without_convex") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
 
-	if (start_solution != SQRT_F)
+	if (start_solution != SQRT_F && start_solution != EXACT)
 	{
 
 		VectorXd coeffs;
@@ -1359,7 +1361,7 @@ void Tsolver::init_start_solution_MA(const int stabsign, penalties_type gamma,st
 	if (L2_norm_exact_sol(0) != 0)
 			plotter.get_plot_stream("L2_rel") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
 
-		cout << "Finished reading start solution " << endl;
+	cout << "Finished reading start solution " << endl;
 
 
 }
