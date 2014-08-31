@@ -13,6 +13,10 @@ import math
 def frobenius_product(a,b):
   return a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3]
 
+def frobenius_product2(a,b):
+  return a[0,0]*b[0] + a[0,1]*b[1] + a[1,0]*b[2] + a[1,1]*b[3]
+
+
 def determinant(a):
   return ((a[0]*a[3]) - (a[1]*a[2]))
 
@@ -22,12 +26,13 @@ def matrix_mult(A,b):
 
 # Create mesh and define function space
 n = 8
-deg = 1
-deg_hessian = 0
+deg = 2
+deg_hessian = 2
 
 mesh = UnitSquareMesh(n, n, "crossed")
 #plot(mesh)
 V = FunctionSpace(mesh, 'CG', deg)
+Sigma_single = FunctionSpace(mesh, 'DG', deg_hessian)
 Sigma = VectorFunctionSpace(mesh, 'DG', deg_hessian, dim=4)
 
 W = V*Sigma
@@ -79,23 +84,28 @@ u_ = Function(W)
 
 #choose between "identity" and disturbed exact solution
 u1_ = Function(V)
-u1_.assign(u_e)
-#u1_.assign(u_e-1*interpolate(error, V))
+#u1_.assign(u_e)
+u1_.assign(u_e-1*interpolate(error, V))
 assign(u_.sub(0), u1_)
 #assign(u_.sub(1),project(as_matrix([[1,0],[0,1]]), Sigma))
-assign(u_.sub(1), interpolate(Expression((('1.0','0.0','0.0','1.0'))),Sigma))
-# [Constant(1.), Constant(0.), Constant(0.), Constant(1.)])
+#assign(u_.sub(1), interpolate(Expression((('1.0','0.0','0.0','1.0'))),Sigma))
+assign(u_.sub(1), [project((u1_.dx(0)).dx(0),Sigma_single), \
+                   project((u1_.dx(0)).dx(1),Sigma_single), \
+                   project((u1_.dx(1)).dx(0),Sigma_single), \
+                   project((u1_.dx(1)).dx(1),Sigma_single)])
+
+
 
 #plot(project(u_.sub(0),bigV), title = 'startsolution')
 #plot(project(abs(u_.sub(0)-u_e),bigV), title = 'start error')
 #plot(determinant(u_.sub(1)), title = 'determinant of hessian')
 
-#plot(u_.sub(1)[0], title = 'first entry of hessian')
-#plot(u_.sub(1)[1], title = 'second entry of hessian')
-#plot(u_.sub(1)[2], title = 'third entry of hessian')
-#plot(u_.sub(1)[3], title = 'fourth entry of hessian')
+plot(u_.sub(1)[0], title = 'first entry of hessian')
+plot(u_.sub(1)[1], title = 'second entry of hessian')
+plot(u_.sub(1)[2], title = 'third entry of hessian')
+plot(u_.sub(1)[3], title = 'fourth entry of hessian')
 
-#interactive()  
+interactive()  
 
 
 #penalty
@@ -141,6 +151,10 @@ F = F + Constant(sigmaC)('+')/h('+')* jump(u)*jump(v)*dS
 
 #test with hessian
 F = F + frobenius_product(w, mu)*dx
+
+#piecewise hessian
+
+F = F - frobenius_product2(grad(grad(u)),mu)*dx
 
 #correction term
 F = F + dot(matrix_mult(avg(mu),nabla_grad(u)('+')) ,n('+'))*dS \
