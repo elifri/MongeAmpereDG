@@ -7,6 +7,7 @@ from dolfin import *
 import scipy.io
 import numpy as np
 from MA_iterated import MA_iteration
+from MA_iterated_August import start_iteration
 from convexify import convexify
 import math
 
@@ -25,7 +26,7 @@ def matrix_mult(A,b):
 # return [A[0]*b[0] + A[1]*b[1], A[2]*b[0] + A[3]*b[1]]
 
 # Create mesh and define function space
-n = 8
+n = 4
 deg = 2
 deg_hessian = 2
 
@@ -41,16 +42,16 @@ bigMesh = refine(refine(mesh))
 bigV = FunctionSpace(bigMesh, 'CG', deg, 'crossed')
 
 #define rhs
-#f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
+f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
 #f = Constant(7.0)#simpleMongeAmpere
-f = Constant(1.0) #simpleMongeAmpere2
+#f = Constant(1.0) #simpleMongeAmpere2
 #f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
 
 # Define boundary conditions
 #u0 = Constant(0.0) #const rhs
-#u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
+u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
 #u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
-u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
+#u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
 #u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
 
 class Error(Expression):
@@ -74,21 +75,21 @@ u_e = interpolate(u0, V)
 
 #u_ = interpolate(Expression('2*x[0]*x[0]+2*x[1]*x[1]+x[0]*x[1]'),V)
 
-#====================================
-#define brenner's iteration
-#====================================
+u_ = Function(W)
 
 #define startsolution
 
-u_ = Function(W)
-
 #choose between "identity" and disturbed exact solution
-u1_ = Function(V)
+u1_ = start_iteration(mesh, V, u0, f)
 #u1_.assign(u_e)
-u1_.assign(u_e-1*interpolate(error, V))
+#u1_.assign(u_e-1*interpolate(error, V))
 assign(u_.sub(0), u1_)
 #assign(u_.sub(1),project(as_matrix([[1,0],[0,1]]), Sigma))
 #assign(u_.sub(1), interpolate(Expression((('1.0','0.0','0.0','1.0'))),Sigma))
+
+#plot(u1_, bigV, title ='start solution')
+#plot(project(abs(u_.sub(0)-u_e),bigV), title = 'error')
+
 assign(u_.sub(1), [project((u1_.dx(0)).dx(0),Sigma_single), \
                    project((u1_.dx(0)).dx(1),Sigma_single), \
                    project((u1_.dx(1)).dx(0),Sigma_single), \
@@ -96,22 +97,22 @@ assign(u_.sub(1), [project((u1_.dx(0)).dx(0),Sigma_single), \
 
 
 
-#plot(project(u_.sub(0),bigV), title = 'startsolution')
-#plot(project(abs(u_.sub(0)-u_e),bigV), title = 'start error')
+plot(project(u_.sub(0),bigV), title = 'startsolution')
+plot(project(abs(u_.sub(0)-u_e),bigV), title = 'start error')
 #plot(determinant(u_.sub(1)), title = 'determinant of hessian')
 
-plot(u_.sub(1)[0], title = 'first entry of hessian')
-plot(u_.sub(1)[1], title = 'second entry of hessian')
-plot(u_.sub(1)[2], title = 'third entry of hessian')
-plot(u_.sub(1)[3], title = 'fourth entry of hessian')
+#plot(u_.sub(1)[0], title = 'first entry of hessian')
+#plot(u_.sub(1)[1], title = 'second entry of hessian')
+#plot(u_.sub(1)[2], title = 'third entry of hessian')
+#plot(u_.sub(1)[3], title = 'fourth entry of hessian')
 
 interactive()  
 
 
 #penalty
-sigmaC = 30
-sigmaG = 30
-sigmaB = 30
+sigmaC = 50
+sigmaG = 50
+sigmaB = 50
 
 
 #define geometry for penalty and normals
@@ -187,7 +188,7 @@ prm = solver.parameters
 
 prm['newton_solver']['absolute_tolerance'] = 1E-8
 prm['newton_solver']['relative_tolerance'] = 1E-10
-prm['newton_solver']['maximum_iterations'] = 30
+prm['newton_solver']['maximum_iterations'] = 50
 prm['newton_solver']['relaxation_parameter'] = 1.0
 prm['newton_solver']['report'] = True
 #prm['linear_solver'] = 'gmres'
