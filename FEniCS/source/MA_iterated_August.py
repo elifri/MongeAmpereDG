@@ -8,7 +8,7 @@ from MA_iterated_benamour import MA_iteration_Benamou
 
 import math
 
-def MA_iteration(mesh, V, u0, f, max_it,w):
+def MA_iteration(mesh, V, u0, f, max_it,w, sigmaB, sigmaC, sigmaG):
   #define variables
 
   #define exact solution
@@ -17,11 +17,6 @@ def MA_iteration(mesh, V, u0, f, max_it,w):
   #cofactor matrix of startsolution's hessian
   coeff = cofac(grad(grad(w)))
   #coeff = as_matrix([[1,0],[0,1]])
-
-  #penalty
-  sigmaB = 70.0
-  sigmaG = 22.0
-  sigmaC = 70.0
 
   # Define variational problem
   u = TrialFunction(V)
@@ -102,9 +97,10 @@ def start_iteration(mesh, V, u0, f):
 
 if __name__ == "__main__":
   # Create mesh and define function space
-  deg = 2
+  deg = 3
+  Nh = 4
   
-  mesh = UnitSquareMesh(4, 4, 'crossed')
+  mesh = UnitSquareMesh(Nh, Nh, 'crossed')
   V = FunctionSpace(mesh, 'DG', deg)
   bigMesh = refine(mesh)
   bigV = FunctionSpace(bigMesh, 'DG', deg)
@@ -139,17 +135,20 @@ if __name__ == "__main__":
   error = Error()
 
   w.assign(u)
-  
-  interactive()
+
+  #penalty
+  sigmaB = 30.0*deg*deg
+  sigmaG = 30.0*deg*deg
+  sigmaC = 30.0*deg*deg
   
   #maximum number of iterations
   max_it = 10
  
-  for it in range(0,10):
+  for it in range(1,5):
     plot(project(u, bigV), title = 'startsolution')
     plot(project(abs(u-u_e),bigV), title = 'starterror')
     plot(det(grad(grad(u))), title = 'determinant of starthessian')
-    u = MA_iteration(mesh, V, u0, f, max_it,w)
+    u = MA_iteration(mesh, V, u0, f, max_it,w, sigmaB, sigmaC, sigmaG)
 
     # Plot solution and mesh
     plot(project(u,bigV), title = 'solution'+str(it))
@@ -158,7 +157,7 @@ if __name__ == "__main__":
     #plot(det(grad(grad(u))), title = 'determinant of hessian')
     
     #mesh = refine(mesh)
-    mesh = UnitSquareMesh(5+it, 5+it, 'crossed')
+    mesh = UnitSquareMesh(Nh+it, Nh+it, 'crossed')
     V = FunctionSpace(mesh, 'DG', deg)
     bigMesh = refine(mesh)
     bigV = FunctionSpace(bigMesh, 'DG', deg)
