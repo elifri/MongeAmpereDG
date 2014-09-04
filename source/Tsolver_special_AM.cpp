@@ -1413,22 +1413,26 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 
 
 			//D_DH u:mu
+
 			for (int ishape = 0; ishape < shapeSigmadim; ishape++)
 			{
 				for (int jshape = 0; jshape < shapeSigmadim; jshape++)
 				{
-					int row_offset = calc_hessian_offset(pLC, ishape, 0, 0);
-					int col_offset = calc_hessian_offset(pLC, jshape, 0, 0);
+					for (int i = 0; i < spacedim; i++)
+						for (int j = 0; j < spacedim; j++)
+								{
+									int row_offset = calc_hessian_offset(pLC, ishape, i, j);
+									int col_offset = calc_hessian_offset(pLC, jshape, i, j);
 
-					for (int i1 = 0; i1 < spacedim; i1++)
-						for (int j1 = 0; j1 < spacedim; j1++)
-							for (int i2 = 0; i2 < spacedim; i2++)
-								for (int j2 = 0; j2 < spacedim; j2++)
-									f.linear_part.coeffRef(row_offset + j1*spacedim +i1, col_offset+ j2*spacedim +i2) = mass_hessian(ishape, jshape);
+									f.linear_part.coeffRef(row_offset, col_offset) = mass_hessian(ishape, jshape)
+											                                            *pBC->get_detjacabs() * facLevelVolume[idLC.level()]; //transformation factor (det(D PHI))
+								}
 				}
 			}
 
+
 			// D^2 u:mu
+
 			for (int iq = 0; iq < Equadraturedim; ++iq)
 			{
 				for (unsigned int jshape = 0; jshape < shapedim; ++jshape) { //loop over ansatz functions
@@ -1438,6 +1442,7 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 					shape.assemble_hessian_Equad(VectorXd::Unit(shapedim, jshape), 0, iq, hess);
 					pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
 					hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+
 
 					for (int x =0; x < shapeSigmadim; x++)
 					{
