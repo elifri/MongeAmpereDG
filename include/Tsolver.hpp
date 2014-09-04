@@ -260,50 +260,158 @@ public:
 
    #if (EQUATION==MONGE_AMPERE_EQ)
 
+	   int get_ndofs_extended(){ return number_of_dofs+number_of_dofs/shapedim*shapeSigmadim*spacedim*spacedim;}
+
    	   struct Functor{
-	   	   void evaluate(const Eigen::VectorXd &coeff, Eigen::VectorXd& f)
+
+	   //helper function to extract the discrete hessian from a coefficient vector
+	   	   Equadrature_type assemble_determinant_discrete_hessian(const Eigen::VectorXd &coeff, const leafcell_type* pLC)
 	   	   {
-	   		   f = linear_part*coeff + constant_part;
-	   		   for (int i= 0; i < number_of_dofs; i++)
-	   		   {
-	   			   int offset_hess = i/shapedim*4;
+				Equadrature_type discrete_det;
+				discrete_det.setZero();
 
-	   			   f(i) -= integrals_test_functions(i)*
-	   					     (coeff(number_of_dofs+ offset_hess)*coeff(number_of_dofs+ offset_hess+3)
-	   					    		 -sqr(coeff(number_of_dofs+ offset_hess+1)+coeff(number_of_dofs+ offset_hess+2))/4.);
+				Ediffusionmatrix_type A;
 
+				//extract coefficients for (hessian) ansatz fcts from coefficient vector
+				for (int ishape = 0; ishape < shapeSigmadim; ++ishape) {
+					for (int i = 0; i < spacedim; ++i)
+					{
+						for (int j = 0; j < spacedim; ++j)
+						{
+							int offset = pLC->mSigma_offset //cell offset
+											+ ishape*spacedim*spacedim //offset of current ansatz functions
+											+ j*spacedim + i; //offset of current hessian entry
+						A(ishape)(i,j) = coeff( offset);
+						}
+					}
+				}
+				Equadratureshape_hessian_type discrete_hess;
+				shape->assemble_hessian(A, 0, discrete_hess);
 
-	   			   cout << "det at " << i << " is " << (coeff(number_of_dofs+ offset_hess)*coeff(number_of_dofs+ offset_hess+3)
-					    		 -coeff(number_of_dofs+ offset_hess+1)*coeff(number_of_dofs+ offset_hess+2)) << endl;
+				for (int iq = 0; iq < Equadraturedim; ++iq)
+				{
+					//assemble functions values of hessian  (ansatz funtions have the same value at every index)
+					discrete_det(iq) += discrete_hess(iq).determinant();
+				}
 
-
-	   		   }
+				return discrete_det;
 	   	   }
 
-	   	   void derivative(const Eigen::VectorXd &x, Eigen::SparseMatrixD &J)
+
+	   	   void evaluate(const Eigen::VectorXd &coeff, Eigen::VectorXd& f)
+	   	   {
+	   		   assert (coeff.size() == solver->get_ndofs_extended());
+
+	   		   f = linear_part*coeff + constant_part;
+
+	   		   //det(DH u) *v
+/*
+	   		   for (grid_type::leafcellmap_type::const_iterator it =
+	   				grid->leafCells().begin(); it != grid->leafCells().end(); ++it)
+	   		   {
+
+	   			   // get id and pointer to this cell
+	   			   const grid_type::id_type & idLC = grid_type::id(it);
+	   			   leafcell_type* pLC;
+	   			   grid->findLeafCell(idLC, pLC);
+
+	   			   // get pointer to basecell of this cell
+	   			   const grid_type::basecell_type * pBC;
+	   			   grid->findBaseCellOf(idLC, pBC);
+
+	   			   //assemble function values at quadrature points
+	   			   Equadrature_type discrete_det = assemble_determinant_discrete_hessian(coeff, pLC);
+
+	   			   Equadrature_type values;
+	   			   values.setZero();
+
+	   			   //loop over test functions
+	   			   for (int jshape = 0; jshape < shapeSigmadim; ++jshape) {
+						//get funtion values of ansatz fcts
+						values=shape->get_Equads(jshape);
+						//get funtions values of -det(DH u)*v
+						values = -values.cwiseProduct(discrete_det);
+
+						//determinant of Transformation to leafcell
+						value_type det_jac = pBC->get_detjacabs() * solver->facLevelVolume[idLC.level()];
+						//calc integral
+						f(pLC->m_offset+jshape) = shape->get_Equad().integrate(values, det_jac);
+					}
+				}
+*/
+
+			}
+
+	/*   	   void derivative(const Eigen::VectorXd &x, Eigen::SparseMatrixD &J)
 	   	   {
 	   		   J = linear_part;
 
-	   		   for (int i= 0; i < number_of_dofs; i++)
+	   		   //det(DH u) *v
+	   		   for (grid_type::leafcellmap_type::const_iterator it =
+	   				grid.leafCells()->begin(); it != grid.leafCells()->end(); ++it)
 	   		   {
-	   			   int offset_hess = i/shapedim*4;
 
-	   			   //derivate of determint is cofactor matrix
-	   			   J.coeffRef(i, number_of_dofs+offset_hess) -= integrals_test_functions(i)*x(number_of_dofs+offset_hess+3);
-	   			   J.coeffRef(i, number_of_dofs+offset_hess+1) -= -integrals_test_functions(i)*x(number_of_dofs+offset_hess+2)/2.
-																  -integrals_test_functions(i)*x(number_of_dofs+offset_hess+1)/2.;
-	   			   J.coeffRef(i, number_of_dofs+offset_hess+2) -= -integrals_test_functions(i)*x(number_of_dofs+offset_hess+1)/2.
-																  -integrals_test_functions(i)*x(number_of_dofs+offset_hess+2)/2.;
-	   			   J.coeffRef(i, number_of_dofs+offset_hess+3) -= integrals_test_functions(i)*x(number_of_dofs+offset_hess);
-	   		   }
+	   			   // get id and pointer to this cell
+	   			   const grid_type::id_type & idLC = grid_type::id(it);
+	   			   grid->findLeafCell(idLC, pLC);
 
-	   	   }
+	   			   // get pointer to basecell of this cell
+	   			   const grid_type::basecell_type * pBC;
+	   			   grid->findBaseCellOf(idLC, pBC);
+
+	   			   int offset_hess = pLC->mSigma_offset;
+
+					//assemble function values at quadrature points
+					Equadrature_type values;
+					//first get determinant of discrete hessian
+					for (int ishape = 0; ishape < shapeSigmadim; ++ishape) {
+
+						offset_hess += ishape*space_type*space_type;
+
+						for (int i = 0; i < *space_type*space_type; i++)
+						{
+							value_type discrete_det = 0;
+
+							for (auto x: shape->get_equad_data().Equads) //assemble functions values of (hessian) ansatz funtions (same value at every entry)
+							{
+								switch(i)
+								{
+								case 0:		discrete_det += x*coeff(offset_hess+3); break;
+								case 1:		discrete_det += x*-coeff(offset_hess+2); break;
+								case 2:		discrete_det += x*-coeff(offset_hess+1); break;
+								case 3:		discrete_det += x*coeff(offset_hess);	break;
+								default: std::cerr << "Error this function can only handle the 2d case!" << endl;
+							}
+
+							//loop over test functions
+							for (int jshape = 0; jshape < shapeSigmadim; ++jshape) {
+								//get funtion values of ansatz fcts
+								values=shape.get_Equads(jshape);
+								//get funtions values of -det(DH u)*v
+								values *= -discrete_det;
+
+								//determinant of Transformation to leafcell
+								value_type det_jac = pBC->get_detjacabs() * facLevelVolume[pLC->id().level()];
+								//calc integral
+								J(pLC->m_offset+jshape,i) = shape.get_Equad().integrate(values, det_jac);
+							}
+						}
+					}
+				}
+
+			}
+
+	   	   }*/
 
 	   	   Eigen::SparseMatrixD linear_part;
 	   	   Eigen::VectorXd integrals_test_functions, constant_part;
 	   	   Eigen::VectorXd boundary_coefficients;
 
 	   	   int number_of_dofs;
+	   	   grid_type * grid;
+	   	   Tshape* shape;
+	   	   Tsolver* solver;
+
    	   };
 
    	   struct penalties_type
@@ -418,7 +526,7 @@ private:
 
 public:
 
-   void calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC, Hessian_type & hess); /// calculates the cofactor Matrix of the hessian in LC
+   void calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC); /// calculates the cofactor Matrix of the hessian in LC
    bool calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess); /// calculates the eigenvalues of hess and return if it was pos def (solution convex)
 
    /*
@@ -442,6 +550,8 @@ public:
       * @param solution	solution coefficients
       */
    void restore_MA (Eigen::VectorXd &solution);
+   void restore_MA_extended (Eigen::VectorXd &solution);
+
    void convexify(Hessian_type & hess); /// makes the hessian positive definit
    void convexify_cell(const leafcell_type* pLC, Eigen::VectorXd &solution); /// convexifies the solution locally (convexifying bezier control polygon)
 

@@ -264,6 +264,8 @@ void Tsolver::set_leafcellmassmatrix ()
   grid_type::leafcellmap_type::iterator it=grid.leafCells().begin();
   grid_type::leafcell_type * const pLC = &grid_type::cell(it);
   pLC->set_mass (shape.get_mass());
+
+  pLC->set_mass_hessian(shape.get_mass_hessian());
 };
 
 ////////////////////////////////////////////////////
@@ -1054,9 +1056,7 @@ void Tsolver::write_solution_vector(VectorXd & solution)
 
 void Tsolver::write_extended_solution_vector(VectorXd & solution)
 {
-	unsigned int ndofs_extended = number_of_dofs+number_of_dofs/shapedim*4;
-	assert (grid.leafCells().size()*(shapedim+4) == ndofs_extended && "The number of triangles does not fit to the extended number of freedoms");
-	solution.resize(ndofs_extended);
+	solution.resize(get_ndofs_extended());
 	for (grid_type::leafcellmap_type::const_iterator it =
 			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
 
@@ -1071,12 +1071,15 @@ void Tsolver::write_extended_solution_vector(VectorXd & solution)
 			solution(pLC->n_offset + ishape) = pLC->u(ishape,0);
 		}
 
-		solution(number_of_dofs + pLC->n_offset/shapedim*4) = pLC->A(1,1);
-		solution(number_of_dofs + pLC->n_offset/shapedim*4+1) = -pLC->A(0,1);
-		solution(number_of_dofs + pLC->n_offset/shapedim*4+2) = -pLC->A(1,0);
-		solution(number_of_dofs + pLC->n_offset/shapedim*4+3) = pLC->A(0,0);
+		//Copy hessian solution entries from leaf cell
+		for (unsigned int ishape = 0; ishape < shapeSigmadim; ++ishape){
 
-
+			for (unsigned int i = 0; i < spacedim; ++i){
+				for (unsigned int j = 0; j < spacedim; ++j){
+					solution(pLC->mSigma_offset + ishape*(spacedim*spacedim) + j *spacedim+i) = pLC->A(ishape)(i,j);
+				}
+			}
+		}
 	}
 }
 

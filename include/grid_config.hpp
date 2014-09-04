@@ -104,6 +104,9 @@ int tmyleafcell<IDTYPEINFO_TYPE>::m_nCountAllLeafs = 0;
 template<class IDTYPEINFO_TYPE>
 typename tmyleafcell<IDTYPEINFO_TYPE>::mass_type tmyleafcell<IDTYPEINFO_TYPE>::mass;
 
+template<class IDTYPEINFO_TYPE>
+typename tmyleafcell<IDTYPEINFO_TYPE>::mass_type tmyleafcell<IDTYPEINFO_TYPE>::mass_hessian;
+
 //-------------define wrapper for convenience---------
 
 /*! \brief return all nodes of an leafcell*/

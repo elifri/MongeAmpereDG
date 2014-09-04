@@ -146,8 +146,8 @@ void doglegMethod (
     double nh = 0;
 
     functor.evaluate(x,f);
-    functor.derivative(x,J);
-//    make_FD_Jacobian(functor, x, J);
+//    functor.derivative(x,J);
+    make_FD_Jacobian(functor, x, J);
 
     // Check result of function calls for correct length of vectors
     if (x.size() != f.size()) {
@@ -344,7 +344,8 @@ void doglegMethod (
             if ((dL > 0.0) && (dF > 0.0))
             {
                 // new evaluation of Jacobian and its LU decomposition
-                functor.derivative(xnew,J);
+//                functor.derivative(xnew,J);
+                make_FD_Jacobian(functor, x, J);
                 lu_of_J.factorize(J);
                 if (lu_of_J.info()!=0) {
                     // decomposition failed

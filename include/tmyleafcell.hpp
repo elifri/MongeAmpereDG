@@ -47,11 +47,9 @@ protected:
   unsigned int m_nFaces;
   bool         m_bKnodes;
 
-  Eigen::Matrix<unsigned int, 6, 1>  m_dofs_C;
-
-
 public:
   static mass_type    mass;
+  static mass_type    mass_hessian;
 
   Estate_type      u;
   Estate_type      unew;
@@ -60,15 +58,65 @@ public:
   Enodevalue_type  Serror;
   Enodevalue_type  residuum;
 
-  diffusionmatrix_type 	A;
-  value_type	   		smallest_EW;
+  Equadratureshape_diffusionmatrix_type A_Equad;
+  Fquadratureshape_diffusionmatrix_type A_Fquad;
+  Ediffusionmatrix_type A;
+
+
+  value_type	   		EW0, EW1;
+  constexpr static double epsilon = 1e-6; //minimum value of diffusion matrix' eigenvalues
 
 
 #if(EQUATION==POISSON_EQ || EQUATION==IMPLICIT_HEAT_EQ || EQUATION == MONGE_AMPERE_EQ)
   unsigned int m_offset, n_offset, m_block_size, n_block_size;
+  unsigned int mSigma_offset;
 #endif
 
-  tmyleafcell():A(diffusionmatrix_type::Identity()) { ++m_nCountAllLeafs; }
+void calculate_eigenvalues_blub(constant_diffusionmatrix_type &A) {
+
+  	calculate_eigenvalues(A, EW0, EW1);
+
+  	assert(!(EW0 != EW0) && "The smaller eigenvalue is nan");
+  	assert(!(EW1 != EW1) && "The bigger eigenvalue is nan");
+
+  	//ensure positive definite diffusion matrix
+  	while (EW0 < 0)
+  	{
+  		nvector_type nv;
+
+  		cout << "Found very small Eigenvalue " << EW0 << " at "
+  				<< this->id() << endl;
+  		cout << "cofactor of Hessian is: \n" << A << endl;
+
+  		A += (-EW0+epsilon) *Hessian_type::Identity();
+
+  		calculate_eigenvalues(A, EW0, EW1);
+
+  		assert(!(EW0 != EW0) && "The smaller eigenvalue is nan");
+  		assert(!(EW1 != EW1) && "The bigger eigenvalue is nan");
+  	}
+  }
+
+ ///update diffusionmatrix and
+  void set_diffusionmatrix_Equad(const unsigned int iq, const constant_diffusionmatrix_type &A) {
+	  assert (iq < Equadraturedim);
+	  A_Equad(iq) = A;
+	  calculate_eigenvalues_blub(A_Equad(iq));
+  }
+
+  ///update diffusionmatrix and
+  void set_diffusionmatrix_Fquad(const unsigned int iq, const constant_diffusionmatrix_type &A) {
+	  assert (iq < Fquadraturedim);
+	  A_Fquad(iq) = A;
+	  calculate_eigenvalues_blub(A_Fquad(iq));
+  }
+
+  tmyleafcell()
+  {
+	  for (int i = 0; i < Equadraturedim; i++)	 set_diffusionmatrix_Equad(i, constant_diffusionmatrix_type::Identity());
+	  for (int i = 0; i < Fquadraturedim; i++)	 set_diffusionmatrix_Fquad(i, constant_diffusionmatrix_type::Identity());
+	  ++m_nCountAllLeafs;
+  }
   ~tmyleafcell() { --m_nCountAllLeafs; }
 
   void set_mass (const mass_type & m)
@@ -76,16 +124,20 @@ public:
     this->mass.set_massmatrix (m);
   }
 
-  void set_diffusionmatrix(const diffusionmatrix_type A) {this->A = A;}
-
-  void update_diffusionmatrix(const diffusionmatrix_type A, const Equad &equad, const Equadratureshape_grad_type &Equads_grad, const Ejacobian_type &jac, const value_type detjacabs, const double faclevel, Emass_type &laplace){
-	  this->A = A;
-	  assemble_laplace(equad, Equads_grad, jac, detjacabs, faclevel, laplace);
+  void set_mass_hessian (const mass_type & m)
+  {
+    this->mass_hessian.set_massmatrix (m);
   }
 
-  void update_diffusionmatrix(const diffusionmatrix_type A){
-	  this->A = A;
-  }
+
+//  void update_diffusionmatrix_Equad(const Equadratureshape_diffusionmatrix_type& A,
+//		  	  	  	  	  	  	    const Equad &equad, const Equad_data_type &equad_data,
+//		  	  	  	  	  	  	    const Ejacobian_type &jac, const value_type detjacabs,
+//		  	  	  	  	  	  	    const double faclevel, Emass_type &laplace){
+//	  for (int i = 0; i< Equadraturedim; i++)
+//		  set_diffusionmatrix_Equad(iq, A);
+//	  assemble_laplace(equad, Equads_grad, jac, detjacabs, faclevel, laplace);
+//  }
 
   value_type error() const{
 	value_type error = 0;
@@ -121,7 +173,7 @@ public:
   static int countAllLeafs() { return m_nCountAllLeafs; }
 
 	value_type bilin_alaplace(const double & u0_x, const double & u0_y,
-			const double & u1_x, const double & u1_y, const Ejacobian_type &jac, const double faclevel) const {
+			const double & u1_x, const double & u1_y, const constant_diffusionmatrix_type& A, const Ejacobian_type &jac, const double faclevel) const {
 		// calculate gradient of local shape function
 		// by multiplication of transposed inverse of Jacobian of affine transformation
 		// with gradient from shape function on reference cell
@@ -142,7 +194,7 @@ public:
 		return -(A * phi_i).dot(phi_j);
 	}
 
-	Eigen::MatrixXd bilin_alaplace(const Eigen::MatrixXd u, const Eigen::MatrixXd v, const Ejacobian_type &jac, const double faclevel) const {
+	Eigen::MatrixXd bilin_alaplace(const Eigen::MatrixXd u, const Eigen::MatrixXd v, const constant_diffusionmatrix_type& A, const Ejacobian_type &jac, const double faclevel) const {
 		// calculate gradient of local shape function
 		// by multiplication of transposed inverse of Jacobian of affine transformation
 		// with gradient from shape function on reference cell
@@ -165,7 +217,7 @@ public:
 
 
 	//same as assemble_laplace in basecell
- 	void assemble_laplace(const Equad &equad, const Equadratureshape_grad_type &Equads_grad, const Ejacobian_type &jac, const value_type detjacabs, const double faclevel, Emass_type &laplace) {
+ 	void assemble_laplace(const Equad& equad, const Equad_data_type &equad_data, const Ejacobian_type &jac, const value_type detjacabs, const double faclevel, Emass_type &laplace) {
 
  	laplace.setZero();
  		// Laplace-matrix
@@ -174,9 +226,9 @@ public:
  		Eigen::MatrixXd u = Eigen::MatrixXd::Zero(spacedim,shapedim);
 		for (int iq = 0; iq < Equadraturedim; iq++) {
 			for (unsigned int i = 0; i < shapedim; i++) {
-				u.col(i) = Equads_grad(i,iq);
+				u.col(i) = equad_data.Equads_grad(i,iq);
 			}
-			laplace += equad.Equadw(iq) * detjacabs* bilin_alaplace(u,u,jac,faclevel);
+			laplace += equad.Equadw(iq) * detjacabs* bilin_alaplace(u,u, A_Equad(iq), jac,faclevel);
 		}
 
 #else

@@ -36,6 +36,13 @@
 
 using namespace Eigen;
 
+///calculates the index of the hessian in the solution vector
+inline int calc_hessian_offset(const leafcell_type* pLC, unsigned int ishape, unsigned int i, unsigned int j)
+{
+	return pLC->mSigma_offset + ishape*spacedim*spacedim + j*spacedim + i;
+}
+
+
 //reads specific problem parameter from input
 void Tsolver::read_problem_parameters_MA(int &stabsign, penalties_type &gamma, double &refine_eps, double &coarsen_eps, int &level, double &alpha) {
 	singleton_config_file::instance().getValue("method", "stabsign", stabsign, 1);
@@ -74,40 +81,6 @@ void Tsolver::read_problem_parameters_MA(int &stabsign, penalties_type &gamma, d
 	}
 
 	cout << "Read Equation " << problem << endl;
-
-	//read diffusion matrices
-	for (grid_type::leafcellmap_type::iterator it=grid.leafCells().begin(); it!=grid.leafCells().end(); ++it) {
-	    leafcell_type * const pLC=&grid_type::cell(it);
-
-		/*		diffusionmatrix_type diffusion_a;
-		const grid_type::id_type& idLC = grid_type::id(it);
-
-	    // get entry "diffusion_a[xxx]" in section "scaling functions"
-	    std::string line, entryname = entryname1d<3>("diffusion_a", idLC.cell());
-	    	if (!singleton_config_file::instance().getValue("monge ampere", entryname, line)) {
-			cerr << "Error while reading [monge ampere] "
-					<< entryname1d<3>("a", idLC.cell())
-					<< " from configfile." << endl;
-			abort();
-		}
-
-	    //convert into Matrix
-		std::stringstream strs(line);
-		for (int ientry = 0; ientry < sqr(spacedim); ++ientry) {
-			/// interpret entries of this line, fill with zeros for nonexistent entries
-			int row_index = ientry / spacedim;
-			int col_index = ientry % spacedim;
-
-			if (!(strs >> diffusion_a(row_index, col_index)))
-				diffusion_a(row_index, col_index) = 0;
-		}
-
-		Emass_type laplace;
-		pLC->set_diffusionmatrix(shape.get_Equad(), shape.get_Equads_x(), shape.get_Equads_y(), A, laplace);
-		*/
-		pLC->set_diffusionmatrix(diffusionmatrix_type::Identity());
-	}
-
 }
 
 ////////////////////////////////////////////////////
@@ -145,6 +118,7 @@ void Tsolver::initializeLeafCellData_MA() {
 
 		pLC->id().setFlag(0, false);
 	}
+
 }
 
 ////////////////////////////////////////////////////
@@ -157,6 +131,9 @@ void Tsolver::assignViewCell_MA(const id_type & id,
 		// this cell is a leafcell: reserve space in vector
 		pLC->m_offset = offset;
 		pLC->n_offset = offset;
+
+		int elements_processed = (offset/shapedim);
+		pLC->mSigma_offset = number_of_dofs + elements_processed*shapeSigmadim*(spacedim*spacedim);
 
 		pLC->m_block_size = blocksize;
 		pLC->n_block_size = blocksize;
@@ -362,30 +339,30 @@ void Tsolver::assemble_boundary_face_term_pryer(leafcell_type* pLC, const basece
 
 
 
-void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC, Hessian_type & hess){
+void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC){
 
-	shape.assemble_hessmatrix(pLC->u, 0, hess); //Hessian on the reference cell
-	pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
-	hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
-	cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
+	Hessian_type hess;
+	for (int iq = 0; iq < Equadraturedim; iq++)
+	{
+		shape.assemble_hessian_Equad(pLC->u, 0, iq, hess); //Hessian on the reference cell
+		pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
+		hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+		cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
+		pLC->set_diffusionmatrix_Equad(iq, hess); //update diffusionmatrix
 
-	cout<< "Hess before neilan " << hess << endl;
+//		cout << "hessian at element quadrature point " << iq << " is " << endl << hess << endl;
+	}
 
+	for (int iq = 0; iq < Fquadraturedim; iq++)
+	{
+		shape.assemble_hessian_Fquad(pLC->u, 0, iq, hess); //Hessian on the reference cell
+		pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
+		hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+		cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
+		pLC->set_diffusionmatrix_Fquad(iq, hess); //update diffusionmatrix
 
-	//----------correction term--------------------
-
-
-	Fquad::inner_face_term_function_type<Hessian_type> f_inner = MEMBER_FUNCTION(&Tsolver::assemble_inner_face_term_neilan_parameters, this);
-	Fquad::boundary_face_term_function_type<Hessian_type> f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_neilan_parameters, this);
-
-	shape.fquad.assemble_face_infos<Hessian_type>(f_inner, f_boundary,
-												  grid, facLevelVolume, facLevelLength,
-												  pLC, pBC, hess, true);
-	cout<< "Hess after neilan new " << hess << endl;
-//	value_type mid_value = (hess(0,1)+hess(1,0))/2.;
-//	hess(1,0) = mid_value;
-//	hess(0,1) = mid_value;
-//
+//		cout << "hessian at face quadrature point " << iq << " is " << endl << hess << endl;
+	}
 
 	value_type ev0, ev1;
 	calculate_eigenvalues(hess, ev0, ev1);
@@ -396,21 +373,34 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 		hess(1,1) += std::abs(ev0) + epsilon;
 	}
 
-	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
+
+	//----------correction term--------------------
+
+/*
+	Fquad::inner_face_term_function_type<Hessian_type> f_inner = MEMBER_FUNCTION(&Tsolver::assemble_inner_face_term_neilan_parameters, this);
+	Fquad::boundary_face_term_function_type<Hessian_type> f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_neilan_parameters, this);
+
+	shape.fquad.assemble_face_infos<Hessian_type>(f_inner, f_boundary,
+												  grid, facLevelVolume, facLevelLength,
+												  pLC, pBC, hess, true);
+	cout<< "Hess after neilan new " << hess << endl;
+	value_type mid_value = (hess(0,1)+hess(1,0))/2.;
+	hess(1,0) = mid_value;
+	hess(0,1) = mid_value;
 
 	pLC->update_diffusionmatrix(hess); //update diffusionmatrix
-//
-//	hess.setZero();
-//
-//	f_inner = MEMBER_FUNCTION(&Tsolver::assemble_face_term_pryer_parameters, this);
-//	f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_pryer_parameters, this);
-//	shape.fquad.assemble_face_infos<Hessian_type>(f_inner, f_boundary,
-//												  grid, facLevelVolume, facLevelLength,
-//												  pLC, pBC, hess, true);
-//
-//
+
+	hess.setZero();
+
+	f_inner = MEMBER_FUNCTION(&Tsolver::assemble_face_term_pryer_parameters, this);
+	f_boundary = MEMBER_FUNCTION(&Tsolver::assemble_boundary_face_term_pryer_parameters, this);
+	shape.fquad.assemble_face_infos<Hessian_type>(f_inner, f_boundary,
+												  grid, facLevelVolume, facLevelLength,
+												  pLC, pBC, hess, true);
+
+
 	//correction term inspired by neilan
-
+*/
 
 }
 
@@ -433,77 +423,6 @@ void Tsolver::calculate_eigenvalues(const Hessian_type &A, value_type &ev0, valu
 		}
 }
 
-bool Tsolver::calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess) {
-
-	value_type ev0, ev1;
-
-	calculate_eigenvalues(hess, ev0, ev1);
-
-	assert(!(ev0 != ev0) && "The smaller eigenvalue is nan");
-	assert(!(ev1 != ev1) && "The bigger eigenvalue is nan");
-
-	//update min EW
-	if (ev0 < min_EW) {
-		min_EW = ev0;
-
-		if (ev0 < -1)
-		{
-			nvector_type nv;
-
-			get_nodes(grid, pLC->id(), nv);
-
-			cout << "Found very small Eigenvalue " << ev0 << " at "
-					<< pLC->id() << " with nodes "
-					<< nv[0].transpose() << ", " << nv(1).transpose() <<  ", " << nv(2).transpose() << endl;
-			cout << "Hessian is: \n" << hess << endl;
-
-		}
-
-
-	}
-
-	//update maximal EW for penalty
-	if (ev1 > max_EW) {
-		max_EW = ev1;
-	}
-	//store eigenvalue for output
-	pLC->smallest_EW = ev0;
-
-	return (ev0 > epsilon);
-}
-
-void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM) {
-	Emass_type laplace;
-	value_type det_jac = pBC->get_detjacabs() * facLevelVolume[pLC->id().level()]; //determinant of Transformation to leafcell
-
-	if (iteration > 0 || start_solution != SQRT_F){ //we need to update the laplace matrix
-		pLC->assemble_laplace(shape.get_Equad(), shape.get_Equads_grad(),
-								pBC->get_jac(), det_jac,facLevelLength[pLC->id().level()], laplace); //update diffusionmatrix
-	}
-	else
-	{
-		cout << "init diffusion matrix with identity" << endl;
-		Hessian_type hess;
-		hess << 1, 0, 0, 1;
-		pLC->update_diffusionmatrix(hess, shape.get_Equad(), shape.get_Equads_grad(),
-								pBC->get_jac(), det_jac, facLevelLength[pLC->id().level()], laplace);
-		max_EW = 1;
-	}
-
-	for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
-		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
-			int row = (pLC->m_offset + ieq);
-			int col = (pLC->n_offset + ishape);
-
-
-			value_type val;
-			val = laplace(ieq,ishape);
-
-			LM.coeffRef(row, col) += val;
-		}
-	}
-
-}
 
 void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs) {
 	for (unsigned int iq = 0; iq < Equadraturedim; iq++) {
@@ -562,7 +481,7 @@ void Tsolver::assemble_rhs_MA_Newton(leafcell_type* pLC, const grid_type::id_typ
 				double val = shape.get_Equadw(iq) * pBC->get_detjacabs()
 					* facLevelVolume[idLC.level()] * uLC(istate)
 					* shape.get_Equads(ishape, iq);
-					Lrhs(row) += val;
+					Lrhs(row) += val; //solve -u=-2f instead of det u = f
 				}
 			}
 		}
@@ -842,10 +761,11 @@ void Tsolver::add_convex_error()
 }
 ///////////////////////////////////////////////////////
 
-void Tsolver::restore_MA(Eigen::VectorXd & solution) {
+void Tsolver::restore_MA_extended(Eigen::VectorXd & solution) {
+
+	assert (solution.size() == get_ndofs_extended());
 
 	leafcell_type *pLC = NULL;
-	Eigen::SelfAdjointEigenSolver<Hessian_type> es;//to calculate eigen values
 	max_EW = 0; //init max_Ew
 	min_EW = 10;
 	sum_residuum = 0;
@@ -871,29 +791,23 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
 		}
 
+		// Copy coefficients of hessian entries back into leafcell
+		for (unsigned int ishape = 0; ishape < shapeSigmadim; ++ishape) {
+			for (int i = 0; i < spacedim; ++i)
+				for (int j = 0; j < spacedim; ++j)
+					pLC->A(ishape)(i,j) = solution(pLC->mSigma_offset
+							                        + ishape*spacedim*spacedim
+							                        + j*spacedim + i);
+		}
+
+
 		//update diffusion matrix
 		Hessian_type hess;
 
-		bool is_convex = false;
-
-		calc_cofactor_hessian(pLC, pBC, hess);
-//			cout << "calc factor hessian " << endl << hess << endl;
-
-		is_convex = calculate_eigenvalues(pLC, hess);
-
-		while(!is_convex && false)
-		{
-			cout << "hessian " << endl << hess << endl;
-			cout << "Hessian at cell (node 0 = " << nv(0).transpose() << ") is not convex" << endl;
-			cout << "Convexifying ... ";
-			convexify_cell(pLC, solution);
-			calc_cofactor_hessian(pLC, pBC, hess);
-			is_convex = calculate_eigenvalues(pLC, hess);
-			cout << "the corrected hessian " << endl << hess << endl;
-		}
+		calc_cofactor_hessian(pLC, pBC);
 
 		//determinant of hessian for calculation of residuum
-		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
+//		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
 
 		state_type state, stateEx, stateRhs;
 
@@ -902,8 +816,8 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 			//get rhs
 			get_rhs_MA(nv(k), stateRhs);
 			//calculate residuum
-			pLC->residuum(k) = det - stateRhs(0);
-			sum_residuum += pLC->residuum(k);
+//			pLC->residuum(k) = det - stateRhs(0);
+//			sum_residuum += pLC->residuum(k);
 
 			//calculate abs error
 			shape.assemble_state_N(pLC->u,k,state);
@@ -920,6 +834,83 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 	cout << "EW " << min_EW << " -- " << max_EW << endl;
 
 }
+
+void Tsolver::restore_MA(Eigen::VectorXd & solution) {
+
+	assert (solution.size() == number_of_dofs);
+
+	leafcell_type *pLC = NULL;
+	max_EW = 0; //init max_Ew
+	min_EW = 10;
+	sum_residuum = 0;
+
+	setleafcellflags(0, false); //reset flags
+
+	for (grid_type::leafcellmap_type::const_iterator it =
+			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
+
+		//collect leaf cell data
+		const grid_type::id_type & idLC = grid_type::id(it);
+		grid.findLeafCell(idLC, pLC);
+		nvector_type  nv;
+		get_nodes(grid, idLC,nv);
+
+		// get pointer to basecell of this cell
+		const grid_type::basecell_type * pBC;
+		grid.findBaseCellOf(idLC, pBC);
+
+		// Copy solution entries back into u
+		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+			pLC->uold(ishape,0) = pLC->u(ishape,0);
+			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
+		}
+
+
+		calc_cofactor_hessian(pLC, pBC);
+
+
+		//update diffusion matrix
+		Hessian_type hess = Hessian_type::Zero();
+		for (int i = 0; i < Equadraturedim; i++)
+			hess += pLC->A_Equad(i);
+
+		hess /= Equadraturedim;
+
+		// Copy coefficients of hessian entries back into leafcell
+		for (unsigned int ishape = 0; ishape < shapeSigmadim; ++ishape) {
+			pLC->A(ishape) = hess;
+		}
+
+
+		//determinant of hessian for calculation of residuum
+//		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
+
+		state_type state, stateEx, stateRhs;
+
+		//loop over LC nodes
+		for (unsigned int k = 0; k < pLC->id().countNodes(); k++){
+			//get rhs
+			get_rhs_MA(nv(k), stateRhs);
+			//calculate residuum
+//			pLC->residuum(k) = det - stateRhs(0);
+//			sum_residuum += pLC->residuum(k);
+
+			//calculate abs error
+			shape.assemble_state_N(pLC->u,k,state);
+			get_exacttemperature_MA(nv[k],stateEx);
+			pLC->Serror(k) = std::abs(state(0)-stateEx(0));
+		}
+
+
+	}
+
+	setleafcellflags(0, false); //reset flags
+
+	cout << "solution written in leafcell" << endl;
+	cout << "EW " << min_EW << " -- " << max_EW << endl;
+
+}
+
 
 //////////////////////////////////////////////////////
 
@@ -1005,6 +996,31 @@ void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // s
 }
 
 //////////////////////////////////////////////////////////
+
+void Tsolver::assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM) {
+	Emass_type laplace;
+	value_type det_jac = pBC->get_detjacabs() * facLevelVolume[pLC->id().level()]; //determinant of Transformation to leafcell
+
+	//we need to update the laplace matrix
+	pLC->assemble_laplace(shape.get_Equad(), shape.get_equad_data(),
+								pBC->get_jac(), det_jac,facLevelLength[pLC->id().level()], laplace); //update diffusionmatrix
+
+	for (unsigned int ieq = 0; ieq < shapedim; ++ieq) {
+		for (unsigned int ishape = 0; ishape < shapedim; ++ishape) {
+			int row = (pLC->m_offset + ieq);
+			int col = (pLC->n_offset + ishape);
+
+
+			value_type val;
+			val = laplace(ieq,ishape);
+
+			LM.coeffRef(row, col) += val;
+		}
+	}
+
+}
+
+/////////////////////////////////////////////////
 
 void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 		Eigen::SparseMatrix<double>& LM, Eigen::VectorXd & Lrhs, Eigen::VectorXd &Lbd) {
@@ -1130,8 +1146,10 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 									const int col_LC = pLC->n_offset + jshape;
 									const int col_NC = pNC->n_offset + jshape;
 
-									Hessian_type A = 0.5*(pLC->A+pNC->A);
+									//average A
+									Hessian_type A = 0.5*(pLC->A_Fquad(iqLC)+pNC->A_Fquad(iqNC));
 
+//									Hessian_type A = pLC->A;
 
 									value_type A_times_normal_BC = pBC->A_grad_times_normal(A,jshape,iqLC),
 											   A_times_normal_NBC = pNBC->A_grad_times_normal(A,jshape,iqNC);
@@ -1148,8 +1166,10 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 
 									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
 
-									A_times_normal_BC = pBC->A_grad_times_normal(pLC->A,ishape,iqLC),
-									A_times_normal_NBC = pNBC->A_grad_times_normal(pNC->A,ishape,iqNC);
+//									A = pNC->A;
+
+									A_times_normal_BC = pBC->A_grad_times_normal(A,ishape,iqLC),
+									A_times_normal_NBC = pNBC->A_grad_times_normal(A,ishape,iqNC);
 
 									// ({{phi}}*[[cof(D^2w)grad(v)]]
 /*
@@ -1180,7 +1200,9 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 
 									// penalty term continuity
 									if (penalties.gamma_continuous != 0.0) {
-										penalty = penalties.gamma_continuous * max_EW;
+										penalty = penalties.gamma_continuous;
+										if ((pLC->EW1 + pNC->EW1)/2. > 1)
+											penalty *= (pLC->EW1 + pNC->EW1)/2.;
 
 										LM.coeffRef(row_LC, col_LC) += penalty * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
 
@@ -1193,7 +1215,9 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 
 									// penalty jumps in gradients
 									if (penalties.gamma_gradient!= 0.0) {
-										penalty = penalties.gamma_gradient * max_EW;
+										penalty = penalties.gamma_gradient;
+										if ((pLC->EW1 + pNC->EW1)/2. > 1)
+											penalty *= (pLC->EW1 + pNC->EW1)/2.;
 
 										LM.coeffRef(row_LC, col_LC) += penalty
 												* shape.get_Fquadw(iqLC) * sqr(length) //quadrature weights
@@ -1205,12 +1229,12 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 										LM.coeffRef(row_NC, col_LC) += penalty * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC)* pBC->get_normalderi(jshape, iqLC) / facLevelLength[level]/ facLevelLength[levelNC];
 
 										LM.coeffRef(row_NC, col_NC) += penalty * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[levelNC]/ facLevelLength[levelNC];
+										}
+
 
 									}
 								}
 							}
-
-						}
 
 						assembleInnerFace = false;
 					}
@@ -1256,12 +1280,14 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 									++ishape) {
 								double val = stabsign * shape.get_Fquadw(iqLC)
 										* length * uLC(0)
-										* pBC->A_grad_times_normal(pLC->A,
+										* pBC->A_grad_times_normal(pLC->A_Fquad(iqLC),
 												ishape, iqLC)
 										/ facLevelLength[level];
 
 								if (penalties.gamma_boundary != 0.0) {
-									penalty = penalties.gamma_boundary * max_EW;
+									penalty = penalties.gamma_boundary;
+									if ((pLC->EW1 + pNC->EW1)/2. > 1)
+										penalty *= (pLC->EW1 + pNC->EW1)/2.;
 									val += penalty * shape.get_Fquadw(iqLC)
 											* uLC(0)
 											* shape.get_Fquads(ishape, iqLC);
@@ -1280,18 +1306,23 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 									// b(u, phi)
 									val = -shape.get_Fquadw(iqLC) * length
 											* shape.get_Fquads(ishape,iqLC)
-											* pBC->A_grad_times_normal(pLC->A,jshape,iqLC)
+											* pBC->A_grad_times_normal(pLC->A_Fquad(iqLC),jshape,iqLC)
 											/ facLevelLength[level];
 
 									// b(phi, u)
 									val += stabsign *shape.get_Fquadw(iqLC)
 											* length
-											* pBC->A_grad_times_normal(pLC->A,ishape,iqLC)
+											* pBC->A_grad_times_normal(pLC->A_Fquad(iqLC),ishape,iqLC)
 											/ facLevelLength[level]
 											* shape.get_Fquads(jshape,iqLC);
 
 									if (penalties.gamma_boundary != 0.0) {
-										val += penalties.gamma_boundary * max_EW * shape.get_Fquadw(iqLC)
+										penalty = penalties.gamma_boundary;
+										if ((pLC->EW1 + pNC->EW1)/2. > 1)
+											penalty *= (pLC->EW1 + pNC->EW1)/2.;
+										else
+											penalty = penalties.gamma_boundary;
+										val += penalty * shape.get_Fquadw(iqLC)
 												* shape.get_Fquads(ishape,iqLC)
 												* shape.get_Fquads(jshape,iqLC);
 									}
@@ -1305,7 +1336,6 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 
 					default:
 						cerr << "Unknown boundary type!" << endl;
-						assert(false);
 						exit(1);
 						break;
 
@@ -1323,16 +1353,21 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 }
 
 
+
+ /////////////////////////////////////////////////
+
+
+
 void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties, Functor &f) {
 
-	unsigned int ndofs_extended = number_of_dofs+number_of_dofs/shapedim*4;
-
-	assert (grid.leafCells().size()*(shapedim+4) == ndofs_extended && "The number of triangles does not fit to the extended number of freedoms");
-
+	int ndofs_extended = get_ndofs_extended();
 	f.constant_part.setZero(ndofs_extended);
 	f.linear_part.resize(ndofs_extended, ndofs_extended);
 	f.linear_part.setZero();
 	f.integrals_test_functions.setZero(number_of_dofs);
+
+	Emass_type mass_hessian = leafcell_type::mass_hessian.get_A_full();
+
 
 	unsigned int gaussbaseLC = 0;
 	unsigned int gaussbaseNC = 0;
@@ -1375,31 +1410,46 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 			for (int i_shape = 0; i_shape < shapedim; i_shape++)
 				f.integrals_test_functions(pLC->m_offset + i_shape) = shape.get_Equad().integrate(shape.get_Equads().row(i_shape), pBC->get_detjacabs()) * facLevelVolume[idLC.level()];
 
+
+
 			//D_DH u:mu
-			int row_LC_Hessian = number_of_dofs + pLC->m_offset/shapedim*4 -1;
-			for (int i = 0; i < spacedim*spacedim; i++)
+			for (int ishape = 0; ishape < shapeSigmadim; ishape++)
 			{
-				row_LC_Hessian++;
-				f.linear_part.coeffRef(row_LC_Hessian, row_LC_Hessian) = 1;
+				for (int jshape = 0; jshape < shapeSigmadim; jshape++)
+				{
+					int row_offset = calc_hessian_offset(pLC, ishape, 0, 0);
+					int col_offset = calc_hessian_offset(pLC, jshape, 0, 0);
+
+					for (int i1 = 0; i1 < spacedim; i1++)
+						for (int j1 = 0; j1 < spacedim; j1++)
+							for (int i2 = 0; i2 < spacedim; i2++)
+								for (int j2 = 0; j2 < spacedim; j2++)
+									f.linear_part.coeffRef(row_offset + j1*spacedim +i1, col_offset+ j2*spacedim +i2) = mass_hessian(ishape, jshape);
+				}
 			}
 
-
 			// D^2 u:mu
-			for (unsigned int jshape = 0; jshape < shapedim; ++jshape) { //loop over ansatz functions
-				const int col_LC = pLC->n_offset + jshape;
-				row_LC_Hessian = number_of_dofs + pLC->m_offset/shapedim*4 -1;
+			for (int iq = 0; iq < Equadraturedim; ++iq)
+			{
+				for (unsigned int jshape = 0; jshape < shapedim; ++jshape) { //loop over ansatz functions
+					const int col_LC = pLC->n_offset + jshape;
 
-				Hessian_type hess;
-				shape.assemble_hessmatrix(VectorXd::Unit(shapedim, jshape), 0, hess);
-				pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
-				hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+					Hessian_type hess;
+					shape.assemble_hessian_Equad(VectorXd::Unit(shapedim, jshape), 0, iq, hess);
+					pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
+					hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
 
-				for (int i = 0; i < spacedim; i++)
-				{
-					for (int j = 0; j < spacedim; j++)
+					for (int x =0; x < shapeSigmadim; x++)
 					{
-						row_LC_Hessian++;
-						f.linear_part.coeffRef(row_LC_Hessian, col_LC) -= hess(i,j);
+						for (int i = 0; i < spacedim; i++)
+						{
+							for (int j = 0; j < spacedim; j++)
+							{
+								int offset_hessian = calc_hessian_offset(pLC, x, i, j);
+								f.linear_part.coeffRef(offset_hessian, col_LC) -= shape.get_Equadw(iq)*pBC->get_detjacabs() * facLevelVolume[idLC.level()] //quadrature weight
+								                                                  *shape.get_equad_data().Equads(x, iq)*hess(i,j); //quadrature values
+							}
+						}
 					}
 				}
 			}
@@ -1461,77 +1511,80 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 									const int col_NC = pNC->n_offset + jshape;
 
 
-//									//first equation: jumps in gradients
-//									f.linear_part.coeffRef(row_LC, col_LC) += penalties.gamma_gradient
-//											* shape.get_Fquadw(iqLC) * sqr(length) //quadrature weights
-//											* pBC->get_normalderi(ishape, iqLC)/ facLevelLength[level] //jump in test
-//											* pBC->get_normalderi(jshape, iqLC)/ facLevelLength[level]; //jump in ansatz
-//
-//									f.linear_part.coeffRef(row_LC, col_NC) += penalties.gamma_gradient  * shape.get_Fquadw(iqLC) * sqr(length) * pBC->get_normalderi(ishape, iqLC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[level]/ facLevelLength[levelNC];
-//
-//									f.linear_part.coeffRef(row_NC, col_LC) += penalties.gamma_gradient* shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC)* pBC->get_normalderi(jshape, iqLC) / facLevelLength[level]/ facLevelLength[levelNC];
-//
-//									f.linear_part.coeffRef(row_NC, col_NC) += penalties.gamma_gradient * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[levelNC]/ facLevelLength[levelNC];
-//
-//									// first equation: jumps in functions
-//
-//									if (penalties.gamma_continuous != 0.0) {
-//										f.linear_part.coeffRef(row_LC, col_LC) += penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
-//
-//										f.linear_part.coeffRef(row_LC, col_NC) += -penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqLC);
-//
-//										f.linear_part.coeffRef(row_NC, col_LC) += -penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqNC);
-//
-//										f.linear_part.coeffRef(row_NC, col_NC) += penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
-//
-//									}
+									//first equation: jumps in gradients
+									f.linear_part.coeffRef(row_LC, col_LC) += penalties.gamma_gradient
+											* shape.get_Fquadw(iqLC) * sqr(length) //quadrature weights
+											* pBC->get_normalderi(ishape, iqLC)/ facLevelLength[level] //jump in test
+											* pBC->get_normalderi(jshape, iqLC)/ facLevelLength[level]; //jump in ansatz
+
+									f.linear_part.coeffRef(row_LC, col_NC) += penalties.gamma_gradient  * shape.get_Fquadw(iqLC) * sqr(length) * pBC->get_normalderi(ishape, iqLC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[level]/ facLevelLength[levelNC];
+
+									f.linear_part.coeffRef(row_NC, col_LC) += penalties.gamma_gradient* shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC)* pBC->get_normalderi(jshape, iqLC) / facLevelLength[level]/ facLevelLength[levelNC];
+
+									f.linear_part.coeffRef(row_NC, col_NC) += penalties.gamma_gradient * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[levelNC]/ facLevelLength[levelNC];
+
+									// first equation: jumps in functions
+
+									if (penalties.gamma_continuous != 0.0) {
+										f.linear_part.coeffRef(row_LC, col_LC) += penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
+
+										f.linear_part.coeffRef(row_LC, col_NC) += -penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqLC);
+
+										f.linear_part.coeffRef(row_NC, col_LC) += -penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqNC);
+
+										f.linear_part.coeffRef(row_NC, col_NC) += penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
+
+									}
 
 								}
 
 							}
 
 
-							int row_LC_Hessian = number_of_dofs + pLC->m_offset/shapedim*4 -1;
-							int row_NC_Hessian = number_of_dofs + pNC->m_offset/shapedim*4 -1;
 
-							for (unsigned int i = 0; i < spacedim; ++i) {
-								for (unsigned int j = 0; j < spacedim; ++j) {
-									row_LC_Hessian++;
-									row_NC_Hessian++;
-									value_type val0 = 0, val1 = 0;
+							//loop over hessian ansatz functions
+							for (unsigned int ishape = 0; ishape < shapeSigmadim; ++ishape) {
 
-										// loop over Hessian entries
-									for (unsigned int jshape = 0; jshape < shapedim; ++jshape) { //loop over ansatz functions
-										const int col_LC = pLC->n_offset + jshape;
-										const int col_NC = pNC->n_offset + jshape;
+								// loop over Hessian entries
+								for (unsigned int i = 0; i < spacedim; ++i) {
+									for (unsigned int j = 0; j < spacedim; ++j) {
+										int row_LC_Hessian = calc_hessian_offset(pLC, ishape, i, j);
+										int row_NC_Hessian = calc_hessian_offset(pNC, ishape, i, j);
 
-										Hessian_type A;
-										A.setZero();
-										A(i, j) = 1;
+										value_type val0 = 0, val1 = 0;
 
-										//second equation: jump in gradient (zero at NC), average in test function
-										value_type val = 0.5 // to average
-											* shape.get_Fquadw(iqLC) * length //quadrature weights
-											* pBC->A_grad_times_normal(A, jshape,iqLC)	/ facLevelLength[pLC->id().level()]; //gradient times normal
-										val0 += val;
-										val /= volume;
-//										f.linear_part.coeffRef(row_LC_Hessian,  col_LC) += val;
-//										f.linear_part.coeffRef(row_NC_Hessian,  col_LC) -= val;
+										//loop over (solution) ansatz functions
+										for (unsigned int jshape = 0; jshape < shapedim; ++jshape) {
+											const int col_LC = pLC->n_offset + jshape;
+											const int col_NC = pNC->n_offset + jshape;
 
-										//second equation: jump in gradient(zero at LC), average in test function
-										val = 0.5 // to average
-											* shape.get_Fquadw(iqLC) * length //quadrature weights
-											* pNBC->A_grad_times_normal(A, jshape,iqNC)	/ facLevelLength[pLC->id().level()]; //gradient times normal
+											//assemble matrix of current ansatz function
+											Hessian_type A;
+											A.setZero();
+											A(i, j) = shape.get_Equads(ishape, iq);
 
-										val1 += val;
-										val /= volume;
+											//second equation: jump in gradient (zero at NC), average in test function
+											value_type val = 0.5 // to average
+												* shape.get_Fquadw(iqLC) * length //quadrature weights
+												* pBC->A_grad_times_normal(A, jshape,iqLC)	/ facLevelLength[pLC->id().level()]; //gradient times normal
+											val0 += val;
+											val /= volume;
+											f.linear_part.coeffRef(row_LC_Hessian,  col_LC) += val;
+											f.linear_part.coeffRef(row_NC_Hessian,  col_LC) -= val;
 
-//										f.linear_part.coeffRef(row_LC_Hessian,  col_NC) += val;
-//										f.linear_part.coeffRef(row_NC_Hessian,  col_NC) -= val;
+											//second equation: jump in gradient(zero at LC), average in test function
+											val = 0.5 // to average
+												* shape.get_Fquadw(iqLC) * length //quadrature weights
+												* pNBC->A_grad_times_normal(A, jshape,iqNC)	/ facLevelLength[pLC->id().level()]; //gradient times normal
+
+											val1 += val;
+											val /= volume;
+
+											f.linear_part.coeffRef(row_LC_Hessian,  col_NC) += val;
+											f.linear_part.coeffRef(row_NC_Hessian,  col_NC) -= val;
+										}
 									}
-
 								}
-
 							}
 
 						}
@@ -1781,7 +1834,7 @@ void Tsolver::init_start_solution_MA(const int stabsign, penalties_type gamma,st
 	state_type error = calculate_L2_error(get_exacttemperature_MA_callback());
 	plotter.get_plot_stream("rel_L2_without_convex") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
 
-	if (start_solution != SQRT_F && start_solution != EXACT)
+	if (start_solution != SQRT_F)
 	{
 
 		VectorXd coeffs;
@@ -1949,16 +2002,20 @@ void Tsolver::time_stepping_MA() {
 		f.linear_part.resize(F_size, F_size);
 		f.constant_part.resize(F_size);
 		f.integrals_test_functions.resize(LM_size);
+
 		f.number_of_dofs = number_of_dofs;
 		f.boundary_coefficients = bd_handler.get_nodal_contributions();
+		f.grid = &grid;
+		f.shape = &shape;
+		f.solver = this;
 //		f.iteration = iteration;
 
 		assemble_MA_Newton(stabsign, gamma, f);
 
 
-		MATLAB_export(f.linear_part, "linear_part");
-		MATLAB_export(f.constant_part, "constant_part");
-		MATLAB_export(f.integrals_test_functions, "integrals_test");
+//		MATLAB_export(f.linear_part, "linear_part");
+//		MATLAB_export(f.constant_part, "constant_part");
+//		MATLAB_export(f.integrals_test_functions, "integrals_test");
 
 
 		pt.stop();
@@ -1983,8 +2040,9 @@ void Tsolver::time_stepping_MA() {
 		Eigen::VectorXd solution_old;
 
 		write_extended_solution_vector(extended_solution);
-		MATLAB_export(extended_solution, "extended_solution");
-//		cout << "extended solution " << extended_solution.transpose() << endl;
+		cout << "extended solution " << extended_solution << endl;
+//		MATLAB_export(extended_solution, "extended_solution");
+
 
 		solution_old = extended_solution.segment(0,LM_size);
 
@@ -2028,7 +2086,7 @@ void Tsolver::time_stepping_MA() {
 
 
 		//write poisson solution in leaf cells
-		restore_MA(Lsolution);
+		restore_MA_extended(extended_solution);
 
 		//plot poisson solution
 		plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
@@ -2065,7 +2123,6 @@ void Tsolver::time_stepping_MA() {
 
 		//plot solution
 		plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionConvexified");
-
 
 		//==============convex combination of two steps (damping)============================
 		Eigen::VectorXd solution = Lsolution;
