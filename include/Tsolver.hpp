@@ -305,7 +305,7 @@ public:
 	   		   f = linear_part*coeff + constant_part;
 
 	   		   //det(DH u) *v
-/*
+
 	   		   for (grid_type::leafcellmap_type::const_iterator it =
 	   				grid->leafCells().begin(); it != grid->leafCells().end(); ++it)
 	   		   {
@@ -328,17 +328,17 @@ public:
 	   			   //loop over test functions
 	   			   for (int jshape = 0; jshape < shapeSigmadim; ++jshape) {
 						//get funtion values of ansatz fcts
-						values=shape->get_Equads(jshape);
+						values = shape->get_Equads(jshape);
 						//get funtions values of -det(DH u)*v
 						values = -values.cwiseProduct(discrete_det);
 
 						//determinant of Transformation to leafcell
 						value_type det_jac = pBC->get_detjacabs() * solver->facLevelVolume[idLC.level()];
 						//calc integral
-						f(pLC->m_offset+jshape) = shape->get_Equad().integrate(values, det_jac);
+						f(pLC->m_offset+jshape) += shape->get_Equad().integrate(values, det_jac);
 					}
 				}
-*/
+
 
 			}
 
