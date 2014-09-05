@@ -37,7 +37,7 @@
 using namespace Eigen;
 
 ///calculates the index of the hessian in the solution vector
-inline int calc_hessian_offset(const leafcell_type* pLC, unsigned int ishape, unsigned int i, unsigned int j)
+inline int Tsolver::calc_hessian_offset(const leafcell_type* pLC, unsigned int ishape, unsigned int i, unsigned int j)
 {
 	return pLC->mSigma_offset + ishape*spacedim*spacedim + j*spacedim + i;
 }
@@ -1443,6 +1443,8 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 					pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
 					hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
 
+//					cout << "shapedim " << jshape;
+//					cout << " hess " << hess << endl;
 
 					for (int x =0; x < shapeSigmadim; x++)
 					{
@@ -1458,6 +1460,7 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 					}
 				}
 			}
+
 
 
 			// Copy entries for right hand side into right hand side
@@ -1500,6 +1503,7 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 					}
 
 					if (assembleInnerFace) {
+
 
 						length = facLevelLength[level] * pBC->get_length(i); //calculate actual face length
 						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over gauss nodes
@@ -1594,6 +1598,7 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 
 						}
 
+
 						assembleInnerFace = false;
 					}
 
@@ -1601,6 +1606,7 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 
 					switch (pBC->faceHandles()[i]) {
 					case -2: // Dirichlet boundary
+
 						gaussbaseLC = Fquadgaussdim * i; //number of first gauss node of this face
 						length = facLevelLength[level] * pBC->get_length(i); //actual facelength of this leafcell
 						for (unsigned int iq = 0; iq < Fquadgaussdim; iq++) { //loop over face quadrature points
@@ -1640,6 +1646,7 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 
 
 						}
+
 						break;
 
 					default:
@@ -2045,8 +2052,7 @@ void Tsolver::time_stepping_MA() {
 		Eigen::VectorXd solution_old;
 
 		write_extended_solution_vector(extended_solution);
-		cout << "extended solution " << extended_solution << endl;
-//		MATLAB_export(extended_solution, "extended_solution");
+		MATLAB_export(extended_solution, "extended_solution");
 
 
 		solution_old = extended_solution.segment(0,LM_size);
@@ -2055,14 +2061,16 @@ void Tsolver::time_stepping_MA() {
 		f.evaluate(extended_solution, f_value);
 		plotter.get_plot_stream("plot_data_constraints_l2") << endl << "f value " << f_value.transpose() << endl;
 
-/*
+
 
 		igpm::processtimer p_2;
 		p_2.start();
+//		VectorXd unitvector = VectorXd::Unit(get_ndofs_extended(), number_of_dofs+1);
+
 		checkJacobian(f, extended_solution);
 		p_2.stop();
 		cout << "need " << p_2 << " s to check Jacobian." << endl;
-*/
+
 
 
 

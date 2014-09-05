@@ -261,6 +261,7 @@ public:
    #if (EQUATION==MONGE_AMPERE_EQ)
 
 	   int get_ndofs_extended(){ return number_of_dofs+number_of_dofs/shapedim*shapeSigmadim*spacedim*spacedim;}
+	   inline int calc_hessian_offset(const leafcell_type* pLC, unsigned int ishape, unsigned int i, unsigned int j);
 
    	   struct Functor{
 
@@ -278,10 +279,8 @@ public:
 					{
 						for (int j = 0; j < spacedim; ++j)
 						{
-							int offset = pLC->mSigma_offset //cell offset
-											+ ishape*spacedim*spacedim //offset of current ansatz functions
-											+ j*spacedim + i; //offset of current hessian entry
-						A(ishape)(i,j) = coeff( offset);
+							int offset = solver->calc_hessian_offset(pLC, ishape, i,j); //offset of current hessian entry
+							A(ishape)(i,j) = coeff( offset);
 						}
 					}
 				}
@@ -302,7 +301,8 @@ public:
 	   	   {
 	   		   assert (coeff.size() == solver->get_ndofs_extended());
 
-	   		   f = linear_part*coeff + constant_part;
+	   		   f.setZero(solver->get_ndofs_extended());
+//	   		   f = linear_part*coeff + constant_part;
 
 	   		   //det(DH u) *v
 
@@ -342,66 +342,106 @@ public:
 
 			}
 
-	/*   	   void derivative(const Eigen::VectorXd &x, Eigen::SparseMatrixD &J)
-	   	   {
-	   		   J = linear_part;
+   	   void derivative(const Eigen::VectorXd &x, Eigen::SparseMatrixD &J)
+   	   {
+//   		   J = linear_part;
+   		   J.setZero();
 
-	   		   //det(DH u) *v
-	   		   for (grid_type::leafcellmap_type::const_iterator it =
-	   				grid.leafCells()->begin(); it != grid.leafCells()->end(); ++it)
-	   		   {
+   		   //det(DH u) *v
+   		   for (grid_type::leafcellmap_type::const_iterator it =
+   				   grid->leafCells().begin(); it != grid->leafCells().end(); ++it)
+	   		   	   {
 
 	   			   // get id and pointer to this cell
 	   			   const grid_type::id_type & idLC = grid_type::id(it);
+	   			   leafcell_type* pLC;
 	   			   grid->findLeafCell(idLC, pLC);
 
 	   			   // get pointer to basecell of this cell
 	   			   const grid_type::basecell_type * pBC;
 	   			   grid->findBaseCellOf(idLC, pBC);
 
-	   			   int offset_hess = pLC->mSigma_offset;
+	   			   //determinant of Transformation to leafcell
+	   			   value_type det_jac = pBC->get_detjacabs() * solver->facLevelVolume[idLC.level()];
 
-					//assemble function values at quadrature points
-					Equadrature_type values;
+	   			   //we want to calculate the derivative of the nonlinear part of f with respect to the coefficients,
+	   			   // namely the integral \int \d/da det(g(a)) *v   where g(x)= a0b_0 + anb_n with b_i the basis of the hessian ansatz space
+
+		   		   //calculate derivative via chain rule
+		   		   //  det( DH u) = det( g(a0, ..., an) ) where g(x)= a0b_0 + anb_n with b_i the basis of the hessian ansatz space
+		   		   // -> d/da det(( DH u) = d/g det(g) * d/da g(a)
+		   		   // Note, the derivative of the determinant is its cofactor matrix
+
+
 					//first get determinant of discrete hessian
 					for (int ishape = 0; ishape < shapeSigmadim; ++ishape) {
 
-						offset_hess += ishape*space_type*space_type;
+				   		   //calculate discrete Hessian in pLC at quadrature points
+				   		   Ediffusionmatrix_type A;
 
-						for (int i = 0; i < *space_type*space_type; i++)
-						{
-							value_type discrete_det = 0;
+				   		   //extract coefficients for (hessian) ansatz fcts from coefficient vector
+				   		   for (int ishape = 0; ishape < shapeSigmadim; ++ishape) {
+				   			   for (int i = 0; i < spacedim; ++i)
+				   			   {
+				   				   for (int j = 0; j < spacedim; ++j)
+				   				   {
+				   					   int offset = solver->calc_hessian_offset(pLC, ishape, i,j); //offset of current hessian entry
+				   					   A(ishape)(i,j) = x( offset);
+				   				   }
+				   			   }
+				   		   }
 
-							for (auto x: shape->get_equad_data().Equads) //assemble functions values of (hessian) ansatz funtions (same value at every entry)
+				   		   Equadratureshape_hessian_type discrete_hess;
+				   		   shape->assemble_hessian(A, 0, discrete_hess);
+
+				   		   //calculate the derivatives
+				   		   Hessian_type cofac_discrete_hess;
+
+							//loop over hessian ansatz functions
+							for (int jshape = 0; jshape < shapeSigmadim; jshape++ )
 							{
-								switch(i)
+								cofac_discrete_hess.setZero();
+
+								//loop over test functions (entries in target domain)
+								for (int ishape = 0; ishape < shapedim; ishape++ )
 								{
-								case 0:		discrete_det += x*coeff(offset_hess+3); break;
-								case 1:		discrete_det += x*-coeff(offset_hess+2); break;
-								case 2:		discrete_det += x*-coeff(offset_hess+1); break;
-								case 3:		discrete_det += x*coeff(offset_hess);	break;
-								default: std::cerr << "Error this function can only handle the 2d case!" << endl;
-							}
+									//multiply outer and inner derivative
+									for (int i = 0; i < spacedim; i++ )
+									{
+										for (int j = 0; i < spacedim; i++ )
+										{
+											Equadrature_type values = Equadrature_type::Zero();
 
-							//loop over test functions
-							for (int jshape = 0; jshape < shapeSigmadim; ++jshape) {
-								//get funtion values of ansatz fcts
-								values=shape.get_Equads(jshape);
-								//get funtions values of -det(DH u)*v
-								values *= -discrete_det;
+											//calculate now the integral \int \d/da det(g(a)) *v           where v is ishape on the cur LC
+											for (int iq = 0; iq < Equadraturedim; ++iq)
+											{
+												//calculate the derivative of the determinant (the cofactor matrix)
+												cofac_discrete_hess(0,0) = discrete_hess(iq)(1,1);
+												cofac_discrete_hess(0,1) = -discrete_hess(iq)(0,1);
+												cofac_discrete_hess(1,0) = -discrete_hess(iq)(1,0);
+												cofac_discrete_hess(1,1) = discrete_hess(iq)(0,0);
 
-								//determinant of Transformation to leafcell
-								value_type det_jac = pBC->get_detjacabs() * facLevelVolume[pLC->id().level()];
-								//calc integral
-								J(pLC->m_offset+jshape,i) = shape.get_Equad().integrate(values, det_jac);
+												//it holds: derivative d/da_i g(a) = b_i, hence we only need to evaluate the basis functions at the quadrature points
+
+												values(iq) = -cofac_discrete_hess(i,j)*shape->get_equad_data().Equads(jshape, iq)*shape->get_equad_data().Equads(ishape, iq);
+											}
+											int offset_row = pLC->m_offset + ishape;
+											int offset_col = solver->calc_hessian_offset(pLC, jshape, i,j);
+
+											value_type v = shape->get_Equad().integrate(values, det_jac);
+
+											J.coeffRef(offset_row, offset_col) += v;
+
+										}
+									}
+								}
+
 							}
-						}
-					}
 				}
 
 			}
 
-	   	   }*/
+	   	   }
 
 	   	   Eigen::SparseMatrixD linear_part;
 	   	   Eigen::VectorXd integrals_test_functions, constant_part;
