@@ -35,7 +35,10 @@
 \usepackage{color}
 \usepackage{stmaryrd} % for llbracket
 
-
+%\usepackage{listings} %to formulate algorithm with lstlisting
+\usepackage{algorithmicx}%to formulate mathematical algorithms
+ \usepackage{algpseudocode}
+ 
 %% page layout
 \setlength{\parindent}{0pt}
 % let latex do its best...

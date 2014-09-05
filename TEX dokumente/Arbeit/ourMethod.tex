@@ -300,16 +300,16 @@ On one hand one can hope for a smoothing by a convexification for it will smooth
 
 \subsection{An additional Penalty Parameter}
 Another idea is force more regularity on the first derivative and thus, implicitly obtain a more steady solution. This suits to the ansatz pursued by Neilan described in section \ref{subsec: disrete Hessian}, his proposed correction terms vanish as the gradient jump across internal edges tends to zero.
-Hence, we add the following penalty term 
+Hence, we add the following normal derivatives penalty term 
 \begin{align}
 	\sum_{e \in \edgesi} \sigma_g |e |\int_e \jump{ \nabla u} \jump {\nabla v} \label{eq: grad penalty term}
 \end{align}
 to the formulation in \eqref{eq: sipg iteration}.
-Note that the gradient of a basis functions grows with the mesh size \todo{ja, was will ich hier eigentlich sagen}
-And indeed with the new penalisation of the gradient the implementation is consistent with the previous example. The consistency check worked for the choice $\sigma_g$ equal to $\sigma=30$, as well as for choices much smaller than $\sigma$.
+Note, that this is a strong demand on our solution. We implicitly imply that the desired solution is contained in $H^2(\Omega)$, it is not yet clear how this term behaves for less regular solution.
+But, indeed with the new penalisation of the gradient the implementation is consistent with the previous example. The consistency check was carried out with the choice $\sigma_g$ equal to $\sigma=30$, as well as for much smaller choices.
 \todo{Noelle gluecklich machen querschnitt}
 
-Nevertheless, starting with the initial guess from \eqref{eq: start sqrt_f} the method seems instable and diverges. This time the results are even more interesting. As shown in figure \ref{fig: oscillation} the error is oscillating before diverging  to infinity.
+Nevertheless, starting over with the initial guess from \eqref{eq: start sqrt_f} the method is instable and diverges. But the results yet are very remarkable. As shown in figure \ref{fig: oscillation} the error is oscillating while diverging  to infinity.
 \begin{figure}[h]
 	\centering
 	\includegraphics[trim = 2cm 4cm 1cm 4cm, width=1\textwidth]{plots/oscillation.pdf}
@@ -329,4 +329,25 @@ Nevertheless, starting with the initial guess from \eqref{eq: start sqrt_f} the 
 \caption{The solution in two consecutive iterations}
 \label{fig: diff iteration}
 \end{figure}
-Figure \ref{fig: diff iteration} shows to consecutive steps, the error $u-u_{exact}$ is denoted by the surface color. We see that the solution after 23 steps lies above of the exact solution, while after another iteration the Poissson solution lies below of it. These frames are exemplary for the behaviour of our numerical solution. After a step above the solution one below follows, it look like the solution is split into two subsequences.  And as we have also seen in the devolution of the error, these subsequences drive each other away from the actual solution.
+Figure \ref{fig: diff iteration} shows to consecutive steps, the error $u-u_{exact}$ is denoted by the surface color. We see that the solution after 23 steps lies above of the exact solution, while one iteration later the Poisson solution lies below of it. These frames are exemplary for the behaviour of our numerical solution. After a step above the solution one below follows, it looks like the solution is split into two subsequences.  And as we have also seen in the devolution of the error, these subsequences seem even to drive each other away from the actual solution.
+
+To prevent our algorithm from doing so we couple the two subsequences by a damping. Before we continue iterating we combine the current solution with the function calculated one step before by an affine composition. Hence we got a further parameter $\alpha$, namely the amount with that the new solution contributes to the iteration.
+
+
+
+
+\section{The final implementation}
+
+\begin{algorithmic}
+\State $u_0\gets $ solution of  $
+	\triangle u = \sqrt{2f} \text{ in } \Omega $ with $
+	u = g \text{ on }\partial \Omega$
+\State $i \gets 1$
+\While {$u_i-u_{i-1} < \varepsilon$}
+	\State $u_i \gets$ solution of \ref{sec: SIPG}
+	\State $u_i \gets \alpha u_{i-1} + (1-\alpha)u_i $
+	\State convexify ??????????/
+\EndWhile
+\end{algorithmic}
+
+
