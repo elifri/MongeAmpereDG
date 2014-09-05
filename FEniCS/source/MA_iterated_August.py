@@ -62,7 +62,7 @@ def MA_iteration(mesh, V, u0, f, max_it,w, sigmaB, sigmaC, sigmaG):
     #examine error
     u_e_array = u_e.vector().array()
     u_array = u.vector().array()
-    print 'Errornorm:', errornorm(u,u_e)
+    print 'Errornorm:', errornorm(u0, u)
 
     #plot(project(u, bigV), title = 'solution'+str(iteration))
 #    plot(project(abs(u-u_e),bigV), title = 'error'+str(iteration))
@@ -98,7 +98,7 @@ def start_iteration(mesh, V, u0, f):
 if __name__ == "__main__":
   # Create mesh and define function space
   deg = 3
-  Nh = 4
+  Nh = 2
   
   mesh = UnitSquareMesh(Nh, Nh, 'crossed')
   V = FunctionSpace(mesh, 'DG', deg)
@@ -144,20 +144,27 @@ if __name__ == "__main__":
   #maximum number of iterations
   max_it = 10
  
-  for it in range(1,5):
-    plot(project(u, bigV), title = 'startsolution')
-    plot(project(abs(u-u_e),bigV), title = 'starterror')
-    plot(det(grad(grad(u))), title = 'determinant of starthessian')
+  for it in range(1,8):
+    Nh = Nh*2
+    
+    print "calculating on h=1/", Nh
+        
+    if False:
+      plot(project(u, bigV), title = 'startsolution')
+      plot(project(abs(u-u0),bigV), title = 'starterror')
+      plot(det(grad(grad(u))), title = 'determinant of starthessian')
+      
     u = MA_iteration(mesh, V, u0, f, max_it,w, sigmaB, sigmaC, sigmaG)
 
     # Plot solution and mesh
-    plot(project(u,bigV), title = 'solution'+str(it))
-    plot(project(abs(u-u_e),bigV), title = 'error'+str(it))
+    if it > 0:
+      plot(project(u,bigV), title = 'solution'+str(Nh))
+      plot(project(abs(u-u0),bigV), title = 'error'+str(Nh))
 
     #plot(det(grad(grad(u))), title = 'determinant of hessian')
     
     #mesh = refine(mesh)
-    mesh = UnitSquareMesh(Nh+it, Nh+it, 'crossed')
+    mesh = UnitSquareMesh(Nh, Nh, 'crossed')
     V = FunctionSpace(mesh, 'DG', deg)
     bigMesh = refine(mesh)
     bigV = FunctionSpace(bigMesh, 'DG', deg)
