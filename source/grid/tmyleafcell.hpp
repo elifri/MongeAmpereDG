@@ -62,7 +62,7 @@ public:
 
 
   value_type	   		EW0, EW1;
-  constexpr static double epsilon = 1e-6; //minimum value of diffusion matrix' eigenvalues
+  constexpr static double epsilon = 1e-2; //minimum value of diffusion matrix' eigenvalues
 
 
 #if(EQUATION==POISSON_EQ || EQUATION==IMPLICIT_HEAT_EQ || EQUATION == MONGE_AMPERE_EQ)
@@ -78,7 +78,7 @@ void calculate_eigenvalues_blub(constant_diffusionmatrix_type &A) {
   	assert(!(EW1_quadr != EW1_quadr) && "The bigger eigenvalue is nan");
 
   	//ensure positive definite diffusion matrix
-  	while (EW0_quadr < 0)
+  	while (EW0_quadr < epsilon-10e-12)
   	{
   		nvector_type nv;
 
@@ -99,6 +99,9 @@ void calculate_eigenvalues_blub(constant_diffusionmatrix_type &A) {
 
   	if (EW1 < EW1_quadr || EW1 < epsilon-10e-12)
   		EW1 = EW1_quadr;
+
+  	assert(EW0> epsilon-10e-12);
+  	assert(EW1> epsilon-10e-12);
 
   }
 
