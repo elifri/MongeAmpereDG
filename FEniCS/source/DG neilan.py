@@ -19,7 +19,7 @@ def frobenius_product2(a,b):
 
 
 def determinant(a):
-  return ((a[0]*a[3]) - (a[1]*a[2]))
+  return ((a[0]*a[3]) - ((a[1]+a[2])/2.0)**2)
 
 def matrix_mult(A,b):
   return (as_matrix([[A[0],A[1]],[A[2],A[3]]])*b)
