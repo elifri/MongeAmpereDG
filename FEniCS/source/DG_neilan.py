@@ -111,8 +111,8 @@ def neilan_step(mesh, V, W, u0, sigmaC, sigmaG, sigmaB, u_):
 if __name__ == "__main__":
   #------------ Create mesh and define function space-----------
   Nh = 2
-  deg = 3
-  deg_hessian = 1
+  deg = 2
+  deg_hessian = 2
 
   print "deg ", deg, " deg_hessian", deg_hessian
 
@@ -121,9 +121,9 @@ if __name__ == "__main__":
   #space for function
   V = FunctionSpace(mesh, 'CG', deg)
   #space for hessian entries
-  Sigma_single = FunctionSpace(mesh, 'CG', deg_hessian)
+  Sigma_single = FunctionSpace(mesh, 'DG', deg_hessian)
   #space for discrete hessian
-  Sigma = VectorFunctionSpace(mesh, 'CG', deg_hessian, dim=4)
+  Sigma = VectorFunctionSpace(mesh, 'DG', deg_hessian, dim=4)
 
   #combination of functions and its discrete hessian
   W = V*Sigma
@@ -211,7 +211,7 @@ if __name__ == "__main__":
     print 'Errornorm:', errornorm(u0, u_.sub(0))
 
    # ----Plot solution and mesh-------
-    #plot(mesh, title='mesh'+str(it))
+    plot(mesh, title='mesh'+str(it))
     #plot(project(w.sub(0),bigV), title = 'solution'+str(it))
     if it > 0:
       plot(project(abs(w.sub(0)-u0),bigV), title = 'error'+str(Nh))
@@ -224,10 +224,10 @@ if __name__ == "__main__":
     #------refine grid---------
     #mesh = refine(mesh)
     Nh = Nh *2
-    mesh = UnitSquareMesh(Nh, Nh, 'crossed')
+    mesh = UnitSquareMesh(Nh, Nh, 'left/right')
     V = FunctionSpace(mesh, 'CG', deg)
-    Sigma_single = FunctionSpace(mesh, 'CG', deg_hessian)
-    Sigma = VectorFunctionSpace(mesh, 'CG', deg_hessian, dim=4)
+    Sigma_single = FunctionSpace(mesh, 'DG', deg_hessian)
+    Sigma = VectorFunctionSpace(mesh, 'DG', deg_hessian, dim=4)
     W = V*Sigma
     
     bigMesh = refine(mesh)

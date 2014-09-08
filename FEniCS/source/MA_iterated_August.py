@@ -15,6 +15,9 @@ def MA_iteration(mesh, V, u0, f, max_it,w, sigmaB, sigmaC, sigmaG):
   u_e = interpolate(u0, V)
   
   #cofactor matrix of startsolution's hessian
+  
+  
+  
   coeff = cofac(grad(grad(w)))
   #coeff = as_matrix([[1,0],[0,1]])
 
@@ -110,15 +113,15 @@ if __name__ == "__main__":
   # Define boundary conditions
   #u0 = Constant(0.0) #const rhs
   #u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
-  #u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
-  u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
+  u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
+  #u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
   #u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
 
   #rhs
   #f = Constant(1.0) #const rhs
   #f = Constant(7.0) #simpleMongeAmpere
-  #f = Constant(1.0) #simpleMongeAmpere2
-  f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
+  f = Constant(1.0) #simpleMongeAmpere2
+  #f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
   #f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
 
   #exact solution

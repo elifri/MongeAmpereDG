@@ -76,8 +76,8 @@ def MA_iteration_withNeilan(mesh, V, Sigma, u0, f, max_it,w, sigmaB, sigmaC, sig
   for iteration in range(0,max_it):
 
     #cofactor matrix of startsolution's hessian
-    coeff = calc_CofacdiscreteHessian(mesh, Sigma, w)
-    #coeff = calc_CofacpiecewiseHessian(mesh, Sigma, w)
+    #coeff = calc_CofacdiscreteHessian(mesh, Sigma, w)
+    coeff = calc_CofacpiecewiseHessian(mesh, Sigma, w)
 
     #define bilinear form
     a = inner(neilan.matrix_mult(coeff,nabla_grad(v)) , nabla_grad(u))*dx \
@@ -114,8 +114,10 @@ def MA_iteration_withNeilan(mesh, V, Sigma, u0, f, max_it,w, sigmaB, sigmaC, sig
     #examine error
     print 'Errornorm:', errornorm(u0, u_)
 
-    #plot(project(u_, bigV), title = 'solution'+str(iteration))
-    #plot(project(abs(u_-u0),bigV), title = 'error'+str(iteration))
+    if (Nh > 15): 
+      plot(project(u_, bigV), title = 'solution'+str(iteration))
+      plot(project(abs(u_-u0),bigV), title = 'error'+str(iteration))
+      interactive()
 #    plot(det(grad(grad(u_))), title = 'determinant of hessian'+str(iteration))
 
     #interactive()
@@ -202,7 +204,7 @@ if __name__ == "__main__":
   sigmaC = 30.0*deg*deg
   
   #maximum number of iterations
-  max_it = 15
+  max_it = 10
  
   for it in range(1,7):
     
@@ -235,6 +237,8 @@ if __name__ == "__main__":
     bigV = FunctionSpace(bigMesh, 'DG', deg)
     w = Function(V)
     w.assign(project(u,V))
+    
+    print 'Errornorm after projection to bigger space :', errornorm(u0, w)
   
     #plot(project(w,bigV), title = 'projected solution')
 
