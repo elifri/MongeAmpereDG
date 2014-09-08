@@ -10,7 +10,7 @@
 %\usepackage{amsthm}
 %\usepackage{lscape}
 
-\usepackage{hyperref}
+\usepackage{hyperref} %insertes hyperref to mentioned sections
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
@@ -24,8 +24,9 @@
 %\usepackage{a4wide}
 \usepackage{relsize}
 \usepackage{tikz}
+
 \usepackage{todonotes}
-\usepackage{multirow}
+
 \usepackage{bigdelim}
 \usepackage{caption}
 \usepackage{subcaption}
@@ -37,6 +38,8 @@
 
 %\usepackage{listings} %to formulate algorithm with lstlisting
 \usepackage{algorithmicx}%to formulate mathematical algorithms
+
+\usepackage{enumerate} %to allow different kind of enumerations
  \usepackage{algpseudocode}
  
 %% page layout
@@ -66,7 +69,7 @@
 %% theorems
 \theoremstyle{break}
 \theorembodyfont{\rmfamily}
-\newcounter{thmc}[section] %theorem counter
+\newcounter{thmc}[chapter] %theorem counter
 \renewcommand{\thethmc}{\thechapter.\arabic{thmc}}
 
 
