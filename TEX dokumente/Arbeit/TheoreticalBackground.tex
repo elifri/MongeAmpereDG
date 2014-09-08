@@ -1,38 +1,40 @@
 Let $\Omega \subset \R^d $ be a convex bounded domain.
 First of all we repeat the basis definitions for the analysis of partial differential equations as they are introduced for example in \cite{Evans1998}.
-\begin{definition}[Partial Differential Equation]
+\begin{definition}[Partial Differential Equation{\cite[Introduction]{Evans1998}}]
  A \emph{partial differential equation} (PDE) of order $k\in \N$ is an expression of the form
 \begin{align}
 	F(D^k(u(x)), D^{k-1}(u(x)), Du(x), u(x), x) = 0, \label{eq:general PDE}
 \end{align}
 where $F$ is given and $u$ is unknown.
 \end{definition}
-We focus in thesis on second order PDEs for our main PDE the \MA equation is of second order. Next to the order there exist further properties to categorise PDEs
-\begin{definition}[Categories of PDEs]
-	Given functions $a_{\alpha} $ and $f$ a PDE is called
-	\begin{enumerate}
+We focus in thesis on second order PDEs for our main PDE, namely the \MA equation is of second order. 
+\\Next to the order there exist further properties to categorise PDEs:
+\begin{definition}[Categories of PDEs{\cite[Introduction]{Evans1998}}]
+	Given functions  $f$ and $a_{\alpha} $ for $|\alpha| \leq k$, a PDE is called
+	\begin{enumerate}[(i)]
 		\item \emph{linear} if it can be written in the form
 		\[
 			\sum_{|\alpha| \leq k} a_{\alpha} (x) D^{\alpha} u = f(x).
 		\] 
 		
-		\item \emph{semilinear} if it can be written in the form
-		\[
-			\sum_{|\alpha| = k} a_{\alpha}(x) D^{\alpha} u + a_0(D^{k-1}u, Du, u, x)= f(x),
-		\]	
-		i.e. a semilinear PDE is nonlinear in the unknown function, but linear in the all partial derivatives.
+%		\item \emph{semilinear} if it can be written in the form
+%		\[
+%			\sum_{|\alpha| = k} a_{\alpha}(x) D^{\alpha} u + a_0(D^{k-1}u, \dots, Du, u, x)= f(x),
+%		\]	
+%		i.e. a semilinear PDE is nonlinear in the unknown function, but linear in all partial derivatives.
 		
 		\item \emph{quasilinear} if it can be written in the form
 		\[
-			\sum_{|\alpha| = k} a_{\alpha}(D^{k-1}u, Du, u, x) D^{\alpha} u + a_0(D^{k-1}u, Du, u, x)= f(x),
+			\sum_{|\alpha| = k} a_{\alpha}(D^{k-1}u, \dots, Du, u, x) D^{\alpha} u + a_0(D^{k-1}u, Du, u, x)= f(x),
 		\]	
 		i.e. a quasilinear PDE is nonlinear in (at least) on lower derivate, but linear in the highest order derivates.
 		
 		\item \emph{fully nonlinear}, if it depends nonlinearly upon the highest order derivatives.
 	\end{enumerate}
-	\todo{roman enumeration}
 \end{definition}
-A famous example for linear PDEs is the \emph{Poisson equation} $-\triangle u = f$, a semilinear PDE is for example the \emph{nonlinear Poisson equation} $-\triangle u = f(u)$. A well-known example for quasilienar PDEs are equations of the type $\nabla \cdot (A(u) \nabla u) = f$, where $A: \R^d \rightarrow \R^{d \times d}  $. The\MA equation $\mydet {D^2 u} = f$ which we will disuss later in detail is part of the last category, the nonlinear PDEs. 
+A famous example for linear PDEs is the \emph{Poisson equation} $-\triangle u = f$,
+% a semilinear PDE is for example the \emph{nonlinear Poisson equation} $-\triangle u = f(u)$.
+a well-known example for quasilinear PDEs are equations of the type $\nabla \cdot (A(u) \nabla u) = f$, where $A: \R^d \rightarrow \R^{d \times d}  $. The \MA equation $\mydet {D^2 u} = f$ which we will disuss later in detail is part of the last category, the nonlinear PDEs. 
 
 Another important classification of second order PDEs is the ellipticity. 
 \begin{definition}[Elliptic PDE{, \cite[p.207]{FGN2013}}]
@@ -43,9 +45,10 @@ Another important classification of second order PDEs is the ellipticity.
 for all $x \in \Omega, z \in \R, p \in \R^d$ and $A,B \in \R^{d \times d}_{sym}$  with $A-B$ positive definite.
 \end{definition}
 
-A function $u$ fulfilling \eqref{eq:general PDE} is called a classical solution of the PDE. There are problems such that no such solution exists, often the demand on the high derivatives cannot be fulfilled. To admit less regular solutions one aims for a weaker solution notion. To do this one needs to we specify some spaces where weaker solutions could be contained.
+A function $u$ fulfilling \eqref{eq:general PDE} is called a classical solution of the PDE. There are problems such that no such solution exists, often the demand on the high derivatives cannot be fulfilled. To admit less regular solutions one aims for a weaker solution notion. To do this one needs to we specify some spaces where to search for weaker solutions.
 
-\section{Functional Spaces}
+\section{Notation}
+%\section{Functional Spaces}
 According to the literature we refer by $W^{s,p}(\Omega)$ to the H\"older space, a set consisting of all $L^p(\Omega)$ functions whose distributional derivates up to order $s$ are contained in $L^ p(\Omega)$.
 \todo{what is a distributional derivates}
 
@@ -53,8 +56,9 @@ Let $\triang$ be a shape regular, quasi-uniform simplicial triangulation of $\Om
 \begin{definition}[Piecewise Spaces]
 The to the mesh associated spaces are
 \begin{align}
-	H^s(\triang) = \Pi_{T\in \triang}  H^s(T), W^{s,\infty}(\Omega) = \Pi_{T\in \triang} W^{s,\infty}(T).
+	H^s(\triang) = \prod\limits_{T\in \triang}  H^s(T), \qquad W^{s,\infty}(\Omega) = \prod\limits_{T\in \triang} W^{s,\infty}(T).
 \end{align}	
+
 \end{definition}
 \begin{definition}[Piecewise Polynomial Spaces] \label{def: piecewise polySpace}
 	Further we denote the finite-dimensional space of piecewise polynomials by
@@ -66,8 +70,7 @@ The to the mesh associated spaces are
 \todo{norms}
 We use a subscript $h$ to indicate a piecewise evaluation/interpretation. Subsequently differential operators with a subscript $h$ imply separate differentiations on every triangle.
 
-\section{Notation}
-To formulate a method capable of discontinuities along triangle edges we need some edge operators.   
+To formulate a method capable of handling discontinuities along triangle edges we introduce edge operators.   
 
 \begin{definition}[Edge Operators]
 We denote the \emph{normal jump} of  a piecewise smooth function $u_h$ across an edge $e \in \edges$ by
@@ -88,7 +91,7 @@ Note, that the jump of a scalar is a vector, whereas the jump of a vector is a s
 
 
 \section{Finite Element Method}
-Before we handle the \MA equation we recall how a finite element method works using the example of the general Poisson equation. 
+Before we discuss numerical schemes for the \MA equation we recall how a finite element method works using the example of the general Poisson equation. 
 
 %\subsection{The Poisson Problem}
 
@@ -101,7 +104,7 @@ The \emph{Generalised Poisson Problem} is finding a function $u$ such that
 for $ A:\R^d \rightarrow \R^{d \times d}$ symmetric and functions $f,g $. 
 \end{definition}
 
-We can set up a weak formulation based on variational principles.
+We are able to set up a weak formulation of the Generalised Poisson Problem based on variational principles. The weak formulation is the key for deriving a finite element method.
 
 Due to the main theorem of variation analysis every solution to \eqref{eq: poisson eq} is equivalent to 
 \begin{align}
@@ -116,11 +119,11 @@ Integration by parts yields to
 \end{definition}
 The generalised poisson problem is well-posed in the sensse that it has a unique weak solutions for $A$ positive definite and $f\in L^2(\Omega)$, for a detailed analysis we recommend \cite[Chapter~6]{Evans1998}.
 
-On the left-hand side in \eqref{eq: FE integration by parts} now only first derivatives of $u$ appear.
+On the left-hand side in the weak notation only first derivatives of $u$ appear, hence \eqref{eq: FE integration by parts}  is also sensible for functions not twice differentiable. Therefor our infinite-dimensional problem can be formulated as find $u\in H^1(\Omega)$ such that  \eqref{eq: FE integration by parts}  holds $\forall \varphi \in C^\infty(\Omega)$.
 The main idea of the finite element method is to restrict the two spaces, namely the spaces where $\varphi$ and $u$ are come from to finite dimensional spaces $\Phi_h$ and $V_h$ of $C^\infty(\Omega)$.\\
-The limited space $\Phi_h$ is called \emph{test space} and its inhabitants :) are called \emph{test functions}. $V_h$ is referred as \emph{ansatz} or \emph{trial space},  the contained functions accordingly \emph{ansatz} or \emph{trial functions}. To assert the boundary condition \eqref{eq: poisson bc} we demand $u_h|_{\partial \Omega} = g$ for every $u_h \in V_h$.
+The limited space $\Phi_h$ is called \emph{test space} and its inhabitants are called \emph{test functions}. $V_h$ is referred as \emph{ansatz} or \emph{trial space},  the contained functions accordingly \emph{ansatz} or \emph{trial functions}. To assert the boundary condition \eqref{eq: poisson bc} we demand $u_h|_{\partial \Omega} = g$ for every $u_h \in V_h$.
 
-As the subscript $h$ suggests the two spaces normally are based on a triangulation $\triang$ such that every function is at least piecewise smooth. Consequently, the differential operators must be replaced by to $\Phi_h \cup V_h$ extended forms.
+As the subscript $h$ suggests the two spaces normally are based on a triangulation $\triang$ and chosen in a way that every function is only piecewise smooth. Consequently, the differential operators must be replaced by on $\Phi_h \cup V_h$ defined forms. We denote these extended versions by a subscript $h$.
 
 All in all the finite element methods searches for $u_h \in V_h$ such that 
 \begin{align}
@@ -128,26 +131,25 @@ All in all the finite element methods searches for $u_h \in V_h$ such that
 \end{align}
 
 To construct $u_h$ we first choose a basis $B_{\Phi}$ of $\Phi$ and a basis $B_V$ of $V_h$.
-Since the left-hand side is linear in $\varphi$ we only need to check the equations in \eqref{eq: weak formulation fe} for all $\varphi \in B_{\Phi}$. Exploiting also the linearity in $u_h$  we are able to reformulate the equations using approriate bilinear forms:
+Since the left-hand side is linear in $\varphi$ we only need to check the equations in \eqref{eq: weak formulation fe} for all $\varphi \in B_{\Phi}$. Exploiting also the linearity in $u_h$  we are able to reformulate the equations using an approriate bilinear form and a linear function
 \begin{align}
-	a(\varphi,u_h)  =b(\varphi) \qquad \forall \varphi \in \Phi_h. \label{eq: weak formulation fe bilinear}
+	a(\varphi,u_h)  =b(\varphi) \qquad \forall \varphi \in B_{\Phi}. \label{eq: weak formulation fe bilinear}
 \end{align}
 for $a(v,w)= \int_\Omega \nabla_h v  \cdot A\nabla_h w -\int_{\partial \Omega} v (A\nabla_h w)\mathbf{n}$ and $b(v) = \int_\Omega v f$.\\
-\todo{ueberarbeiten} Using basic linear Algebra we can rewrite \eqref{eq: weak formulation fe bilinear} as a linear system of equations $A \mathbf{u} = \mathbf{b}$ where  $\mathbf{u}$ is the coefficient vector of $u_h$ to the basis $B_V$.  
+\todo{ueberarbeiten} 
+Furthermore we can express $u$ as the linear combination of basis functions, namely $\sum_{b \in B_V} \mathbf{c}_b \; b$ and hence, we can rewrite \eqref{eq: weak formulation fe bilinear} as a linear system of equations $M \mathbf{c} = \mathbf{b}$ where  $\mathbf{c}$ is the coefficient vector of $u_h$ to the basis $B_V$.  
 
 Typically the spaces $\Phi_h$ and $V_h$ are chosen to be piecewise polynomials which have support only on a few triangles. Thus, the spaces are easy to handle and the resulting linear system is sparse.
 Choosing $\Phi_h = V_h$ yields to the \emph{Galerkin methods}.
 
 \section{Discontinuous Galerkin (DG)} \label{sec: SIPG}
-A recent idea is to choose the test and ansatz spaces to include discontinuous functions (even though the solution is expected to be smooth)\todo{kommentar sinnvoll}.
-The main issue is the handling of derivatives along discontinuities.
-\todo{DG mit numerischen Flux oder mehr wie TICAM?}
+A recent idea is to choose the test and ansatz spaces to include discontinuous functions. This approach arised in the context of hyperbolic PDEs of which solutions eventually contain discontinuities. Although our example PDE the Generalised Poissson Problem is not hyperbolic and its solutions are continuous we explain at this example the issues arising when extend the finite element spaces to discontinuities. The crux is the handling of derivatives along discontinuities.
 
-We recall our triangulation $\mathcal{T}_h$ of $\Omega$. We are able to use $\mathcal V_h = \mathcal P_h^k$ as defined in \ref*{def: piecewise polySpace} for the ansatz and test space in a finite element method, if we modify the procedure a bit: Due to the discontinuities along edges we perform the integration by parts in \eqref{eq: FE integration by parts} piecewise on every triangle leading to
+We recall our triangulation $\mathcal{T}_h$ of $\Omega$. If we modify the finite element procedure a bit we are able to use $\mathcal V_h = \mathcal P_h^k$ as defined in Definition \ref*{def: piecewise polySpace} for the ansatz and test space: Due to the discontinuities along edges we perform the integration by parts in \eqref{eq: FE integration by parts} piecewise on every triangle leading to
 \begin{align}
 	a(\varphi, v) = & \sum_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v - \sum_{T \in \triang} \int_{\partial T} \varphi A \nabla v \cdot \mathbf n.
 \end{align}
-Since two adjacent elements share the same edge only with opposite normal vectors we can rewrite the middle term by
+Since two adjacent elements share the same edge only with opposite directed normal vectors we can rewrite the middle term by
 \begin{align*}
 \sum\limits_{T \in \triang}\int_{\partial T} \varphi A \nabla v \cdot \mathbf n 
 = &\sum\limits_{e \in \edgesi}\int_{e} \left( \varphi^+ A^+ \nabla v^+ \cdot \mathbf n^+ - \varphi^- A^- \nabla v^- \cdot \mathbf n^- \right) \\
@@ -158,7 +160,7 @@ where $x^\pm $ is $x$ evaluated in one of the two adjadecent elements $T^\pm$. W
 	&\varphi^+ A^+ \nabla v^+ \cdot \mathbf n^+ - \varphi^- A^- \nabla v^- \cdot \mathbf n^+ \\
 	= & \phantom{+} \frac 1 2 \left(\varphi^+ + \varphi^- \right) \left(A^+ \nabla v^+ \cdot \mathbf n - A^- \nabla v^- \cdot \mathbf n \right) \\
   &+  \varphi^+ \frac 1 2  \left(A^+ \nabla v^+\right) \cdot \mathbf n^+ - \varphi^- \frac 1 2 \left(A^- \nabla v^-\right) \cdot \mathbf n^+ \\
-  = &  \jump {\average \varphi  A \nabla v}+ \jump {\varphi \average{ A \nabla v}}
+  = &  \jump {\average \varphi  A \nabla v}+ \jump {\varphi \average{ A \nabla v}}.
 \end{align*}
 Therefore the weak formulation can be written as $a(v,\varphi) = l(\varphi)$ with 
 \begin{align*}
@@ -168,7 +170,7 @@ Therefore the weak formulation can be written as $a(v,\varphi) = l(\varphi)$ wit
 \end{align*}
 and
 \[
-l(\varphi) = \sum_{T \in \triang} \int_T v f
+l(\varphi) = \sum_{T \in \triang} \int_T v f.
 \]
 Due to the smoothness of $u$ and $w$ we can neglect the jump in $A \nabla u$ and find
 \begin{align*}
@@ -179,7 +181,7 @@ Due to the smoothness of $u$ and $w$ we can neglect the jump in $A \nabla u$ and
 & - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot \mathbf n.
 \end{align*}
 
-Symmetrising our bilinear form $a$ by adding terms on both sides we have
+For stability reasons we symmetrise our bilinear form $a$ by adding terms on both sides and have
 \begin{align}
  a_S(v, \varphi) = &\sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v \nonumber \\
   &-\sum\limits_{e \in \edgesi}\int_{e} \jump {\varphi \average{A \nabla v} }
@@ -200,30 +202,35 @@ and
 %	&-  &\sum\limits_{T \in \triang} \int_T v (\nabla \cdot \cof(D^2w)) \cdot \nabla \varphi \\
 %\end{align} 
 
-To enforce stability we enforce the following penalty terms [TICAM report 3.2.2.]
+To enforce continuity in the solution we add the following penalty terms \cite[3.2.2.]{TICAM report} 
 \begin{align}
-	J^\sigma(\varphi, v) = \sum\limits_{e \in \edges} \int_e \frac \sigma {|e|} \jump \varphi \jump v \textnormal{ and } 	J^\sigma_0(\varphi, v) = \sum\limits_{e \in \edgesb} \int_e \frac \sigma {|e|} \varphi u_0  
+	J^\sigma(\varphi, v) = \sum\limits_{e \in \edges} \int_e \frac \sigma {|e|} \jump \varphi \jump v \textnormal{ and } 	J^\sigma_0(\varphi, v) = \sum\limits_{e \in \edgesb} \int_e \frac \sigma {|e|} \varphi u_0 .
 \end{align}
 
 Thus, we end up with the problem finding $v \in V_h$ such that
 \[
 	a_S(\phi,v) + J^\sigma(\varphi,v) = l(\varphi) + J^\sigma_0(\varphi)
 \] 
-$  \textnormal{for all } \varphi \in V_h$\
+$  \textnormal{for all } \varphi \in V_h$.
 
-Just like in the finite element method we can derive a linear system of equations $A \mathbf{u} = \mathbf{b}$ with $A$ sparse and $\mathbf{u}$ representing the coefficient vector of $u_h$ to the basis $B_V$.  
+Just like in the finite element method we can derive a linear system of equations $A \mathbf{u} = \mathbf{b}$ with $A$ sparse and $\mathbf{u}$ representing the coefficient vector of $u_h$ to the basis $B_V$.
+This particular discontinuous Galerkin method is called \emph{Symmetric Interior Penalty Galerkin method} (SIPG).
 
-\section{Implementation of a DG Method}
+\section{Implementation of a SIPG Method}
 \todo{ Kommentar zur Implementation wegen Vorzeichen für Kantenterme}
-To evaluate the integrals in the bilinearform  numerically an integration scheme is needed. Usually Gauss quadrature is the method of choice. Since ansatz and test functions are chosen to be piecewise polynomials a Gauss quadrature already is exact for only a few quadrature points.
-Hence, the data we have to provide to assemble the sparse matrix $A$ are the gradient, the normal derivatives, i.e. $\nabla u \cdot \mathbf{n}$ and the function values of all test functions at each quadrature point.
+To evaluate the integrals in the bilinearform  numerically an integration scheme is needed. Usually Gauss quadrature is the method of choice. To estimate the integral $\int h(x) dx$ a Gauss quadrature formula needs to evaluate $h$ at certain quadrature points. Formulas and quadrature points, also for volume integrals can be found for example in \cite{Strout1971}.
+Hence, the data we have to provide to assemble the sparse matrix $A$ are the data at the element quadrature points and face quadrature points respectively.  
+At an element quadrature point these are the gradients, whereas at a face quadrature point we need information about  the function values and the normal derivatives, i.e. $\nabla u \cdot \mathbf{n}$ of all test functions.
 
-To reduce the storage space one usually specify a reference cell $T_{ref}$ such that every triangle $T \in \triang$ is the image of $T_{ref}$ under an affine transformation $\Phi_T$. 
+The next section 
+To reduce the storage space one usually specifies a reference cell $T_{ref}$ such that every triangle $T \in \triang$ is the image of $T_{ref}$ under an affine transformation $\Phi_T$. 
 %We make use of the triangle spanned by the points $(0,0)^t, (0,1)^t$ and $(1,0)^t$ for our reference cell. 
 Since the DG spaces also allow discontinuous functions choosing a polynomial basis $p^1_{ref},\dots,p^n_{ref}$ of $T_{ref}$ also induces a basis on every $T$, namely the basis consisting of 
 \[
 	p_T^i(x) = p^i_{ref}(\Phi_T^{-1}(x)), \qquad x \in T, 1 \leq i \leq n.
 \]
+The basis $p^1_{ref},\dots,p^n_{ref}$ is also referred as  
+
 %Hereafter the only polynomials we refer to are the ones given in this basis.
 Knowing $\Phi_T$ and the reference cell $T_{ref}$ most required data on a triangle $T$ can be easily derived. We explain how to do that in detail for the two-dimensional case.
 
