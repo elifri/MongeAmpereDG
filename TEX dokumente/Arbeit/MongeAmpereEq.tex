@@ -16,19 +16,19 @@ The \MA Equation with Dirichlet boundary data states
 where $D^2 u$ denotes the Hessian of $u$.
 It is a general fully nonlinear partial differential equation meaning it is nonlinear in the highest order derivatives, namely the second derivatives.
 
-Note, different from the well-known linear case we cannot derive a weak formulation based on weak derivatives/integration by parts. Because of the nonlinearity in the highest derivatives we are not able to shift derivatives to test functions. Until now there is no general variational/weak formulation for fully nonlinear PDEs \cite{FGN2013}.
+Note, different from the well-known linear case we cannot derive a weak formulation based on weak derivatives/integration by parts. Because of the nonlinearity in the highest derivatives we are not able to shift derivatives to test functions. To the author's knowledge there is no general variational or weak formulation for fully nonlinear PDEs \cite{FGN2013}.
 However, there are attempts to establish less regular weak solutions to the \MA equation:
 
 %\subsection{Viscosity Solution}
-First Crandall and Lions \cite{58} introduced the notion of \emph{viscosity solutions}
-\begin{definition}
+First Crandall and Lions \cite{CL1983} introduced the notion of \emph{viscosity solutions}
+\begin{definition}[Viscosity Solution]
 	$u \in C^0(\Omega)$ is called a \emph{viscosity subsolution (supersolution)} of \eqref{MA eq} if, for every point $x \in \Omega$ and function $\varphi \in C^2(\Omega)$ satisfying $u \leq \varphi (\geq \varphi)$ in $\Omega$ and $u(x) = \varphi(x)$, there holds $\mydet{D^2 \varphi(x)} - f \leq 0 (\geq 0)$. 
-	\[
-	\forall x_0 \in \Omega \forall \varphi \in C^2(\Omega), u \leq \varphi (\geq \varphi)
-	\] holds
-	\[
-	u(x_0) = \varphi(x_0) : F[\varphi](x_0) \leq 0 (\geq 0)
-	\]
+%	\[
+%	\forall x_0 \in \Omega \forall \varphi \in C^2(\Omega), u \leq \varphi (\geq \varphi)
+%	\] holds
+%	\[
+%	u(x_0) = \varphi(x_0) : F[\varphi](x_0) \leq 0 (\geq 0)
+%	\]
 	$u$ is called a \emph{viscosity solution} if $u$ is simultaneously a viscosity sub- and supersolution.
 \end{definition}
 
@@ -61,33 +61,67 @@ u &= g  \text{ on } \partial \Omega
 is called \emph{Aleksandrov solution} of the \MA equation.
 \end{definition}
 
-Aleksandrov solution are also viscosity solutions if $\mu$ is absolutely continuous with Lebesgue measure with a continuous density $f$ \cite[proposition 1.3.4.]{G2001} . For $f > 0$ the two solution concepts even coincide \cite[proposition 1.7.1]{G2001}. 
+Aleksandrov solution are also viscosity solutions if $\mu$ is absolutely continuous with Lebesgue measure with a continuous density $f$ \cite[proposition 1.3.4.]{Gutierrez2001} . For $f > 0$ the two solution concepts even coincide \cite[proposition 1.7.1]{Gutierrez2001}. 
 
 \section{Existence and Uniqueness}
-Showing existence of fully nonlinear PDEs is a hard challenge compared to the linear case. For simplicity we constraint ourselves to the elliptic case. 
+Showing existence of fully nonlinear PDEs is a hard challenge compared to the linear case. 
+The \MA equation is known for its notorious ambiguity: If $\Omega$ is a domain, one can proof it has at most two solutions, compare \cite[Kap.IV, \S 5,3]{CH1968}. In general these two solutions also exist.
+A finite difference method with a standard nine-point stencil and Newton's method to solve the resulting nonlinear system produce fore different initial guesses even sixteen different numerical solutions on a $4 \times 4$ grid\cite{FGN2013}. 
 
+For simplicity we constraint ourselves to the elliptic case. 
 \begin{proposition}
 	The \MA equation is elliptic for strictly convex function $u$ and $f > 0$.
 \end{proposition}
-For a proof of this result we refer to \cite{CC1995, GT1977}.
+For a proof of this result we refer to \cite{CC1995, GT1977}. A main thesis for uniqueness theory is the comparison principle for second order equations.
 
+\begin{theorem}[Comparison Principle]
+	Let $F$ be a fully nonlinear second order operator continuous in all of its arguments.
+	If $F$ is elliptic,	u,v are, respectively a viscosity subsolution and a viscosity supersolution to $F[u](x)=0$ and $u \leq v$ on $\partial \Omega$, then $u \leq v$ in all of $\bar \Omega$.
+\end{theorem}
 
-The \MA equation is known for its notorious ambiguity:
-\begin{example}
-\todo{here example mit 16 loesungen}
-\end{example}
-
-Brenner: $\Omega$ smooth $\Rightarrow u$ smooth \cite{Caffarelli1984} und aus $\Omega$ smooth auch $\Rightarrow$ es exisitieren genau 2 lösungen: eine convex, die andere konkav \cite{Courant1989}
-
-A viscosity solution is unique if $F$ is elliptic by the comparison principle.
+A viscosity solution is unique if $F$ is elliptic by the comparison principle. If $u$ and $v$ are two viscosity solutions of $\mydet{D^2 u}=f$ with $u=v$ on $\partial \Omega$, then especially holds $u \leq v$ on $\partial \Omega$ and hence by the comparison principle $u \leq v$ in  $\bar \Omega$. Applying the same argument for $v \leq u$ on $\partial \Omega$ we find equality of the solutions.
 
 
 \section{Types of Numerical Methods for the \MA Equation}
 Since equations of \MA type arise in many areas such as optics, transportation etc. there has been an active research on how to solve. Except for some simple special cases there is no analytical solution known resulting in a widely varied numerical set of numerical methods.
 
-They can roughly be divided in four categories: Finite difference schemes, methods based on variational principles and approximating infinite-dimensional spaces by finite-dimensional spaces, methods based on finite basis expansions and approximating PDEs at sampling points and the rest.
-because of their simplicity methods of the first category are widely used in "application areas". We concentrate ourselves in this work to methods of the second area to which beside DG methods methods such as finite element methods, least squares methods and boundary element methods belong.
-The third category consists of collocation methods and meshless methods.
+They can roughly be divided in four categories: Finite difference schemes, methods based on variational principles and approximating infinite-dimensional spaces by finite-dimensional spaces, methods based on finite basis expansions and approximating PDEs at sampling points and the rest. \\
 In the last category one can mainly find methods as the lattice Boltzmann method, these are often designed for special applications.
 
 A lot of the methods result in hard to handle nonlinear system. The most favoured method to solve this system is Newton's method // Often the method of choice is Newton's method. However, it requires an appropriate initial guess//accurate starting value. Finding//providing those is sometimes as tricky//hard as the problem itself.
+
+We give now an short overview of the different methods and some of their most known representatives. For a more detailed survey we refer the interested reader to the overview article \cite[Section 2.1]{FGN2013}.
+
+
+\subsection{Finite Difference Schemes}
+
+Because of their simplicity methods of the first category, i.e. the finite difference schemes are widely used in "application areas".
+%As one desires monotone schemes for there exist theorems on their convergence, compare \cite[Theorem 2.1]{BS1991} and monotone schemes even for linear PDEs require wide stencil, compare \cite{MW1953} many finite difference schemes are wide-stencil schemes. 
+To mention are the works of Benamou, Oberman and Froese \cite{BFO2010, Oberman2008, FO2011}, where they provide some monotone wide-stencil for the \MA equation.
+In general for monotone schemes the convergence analysis reduces by \cite{BS1991} to a proof of consistency, hence they are able to prove convergence to the unique convex viscosity solution and experiments show the mentioned methods turn out to be very robust.
+Nevertheless these methods have a huge drawback. Monotone schemes even for linear PDEs require wide stencils, compare \cite{MW1953}  and in order to increase accuracy one has not only to refine the grid, but also to increase the size of the stencil. These stencils make the methods difficult to apply if the problem domain $\Omega$ is not easily approximated by rectangles.
+
+\subsection{Methods based on Variational Principles and Approximating Infinite-dimensional Spaces by Finite-dimensional Spaces}
+ We concentrate ourselves in this work to methods of the second area to which beside DG methods methods such as finite element methods, least squares methods and boundary element methods belong. Current DG methods we discuss in the next chapter \ref{ch:DGMongeAmpere} in detail.
+ 
+% The least squares methodology for a \MA equation formulates the problem as follows \cite[3.2.1]{FGN2013}:
+%Find $(u,p) \in V_g \times Q^+_f$ such that
+ %\[
+%	j(u,p) \leq j(v,q) \qquad \forall (v,q) \in V_g \times Q^+_f
+ %\]
+%or
+%\[
+%	(u,p) = \argmin_{(v,q) \in V_g \times Q^+_f} j(v,q)
+%\]
+%with 
+%\[
+%V_g=\{v \in H^2(\Omega), v \arrowvert_{\delta \Omega}=g\}
+%\]
+ %and 
+%\[
+%Q^+_f=\{q \in [L^2(\Omega)]^{2\times2} , q_{12} =q_{21},  q_{11} > 0,q_{22} > 0, det(q) = f\}.
+%\] 
+
+\subsection{Methods based on Finite Basis Expansions and Approximating PDEs at Sampling Points}
+The third category consists of collocation methods and meshless methods.
+

@@ -1,6 +1,6 @@
 \section{A Picard Iteration for the \MA equation}
 
-For quasilinear PDEs such as $\nabla \cdot (A(u) \nabla u ) = f$ it is common to determine the solution via a fixed point iteration. The key aspect lies in a decoupling of the coefficient matrix $A(u)$ and $\nabla u$. Hence, one solves the equations
+For quasilinear PDEs such as $\nabla \cdot (A(u) \nabla u ) = f$ it is common to determine the solution via a fixed point iteration. \todo{cite}The key aspect lies in a decoupling of the coefficient matrix $A(u)$ and $\nabla u$. Hence, one solves the equations
 \[
 	\nabla \cdot (A(u^{i} )\nabla u^{i+1}) = f  \text{ and } \nabla \cdot (A(u^{i+1}) \nabla u^{i}) = f, \text{ respectively}
 \] 
@@ -234,7 +234,7 @@ where  $\{c_{i,j,k}\}_{i+j+k=d}$ and $\{ {\hat c_{i,j,k}}\}_{i+j+k=d}$ are the B
 For quadratic splines Schumaker and Speleers even prove the inversion on convex domains $\Omega$, namely if for every interior edge its coefficients satisfy \eqref{eq: convexity across edge} then the corresponding spline is convex.
 This result does not generalise for higher degrees. In fact they give a counterexample for degree $k = 3$.
 
-Now we apply the new insights//methods to the function given after solving the generalised poisson problem stated in \ref{?}.
+Now we apply the new insights//methods to the function given after solving the generalised poisson problem stated in \ref{sec: SIPG}.
 Given the DG solution of the generalised poisson problem $u^{gp}_h$ we seek for a convex spline minimising the error at the B\'ezier control points, i.e. we want to find the B\'ezier coefficients $c$ minimising
 \[
 		\lVert A c - b \rVert_2, \qquad \text{ such that } Cc \geq 0,

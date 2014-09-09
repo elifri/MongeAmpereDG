@@ -37,7 +37,7 @@
 \usepackage{stmaryrd} % for llbracket
 
 %\usepackage{listings} %to formulate algorithm with lstlisting
-\usepackage{algorithmicx}%to formulate mathematical algorithms
+\usepackage[chapter]{algorithm}
 
 \usepackage{enumerate} %to allow different kind of enumerations
  \usepackage{algpseudocode}
