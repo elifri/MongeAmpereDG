@@ -102,25 +102,35 @@ In general for monotone schemes the convergence analysis reduces by \cite{BS1991
 Nevertheless these methods have a huge drawback. Monotone schemes even for linear PDEs require wide stencils, compare \cite{MW1953}  and in order to increase accuracy one has not only to refine the grid, but also to increase the size of the stencil. These stencils make the methods difficult to apply if the problem domain $\Omega$ is not easily approximated by rectangles.
 
 \subsection{Methods based on Variational Principles and Approximating Infinite-dimensional Spaces by Finite-dimensional Spaces}
- We concentrate ourselves in this work to methods of the second area to which beside DG methods methods such as finite element methods, least squares methods and boundary element methods belong. Current DG methods we discuss in the next chapter \ref{ch:DGMongeAmpere} in detail.
- 
-% The least squares methodology for a \MA equation formulates the problem as follows \cite[3.2.1]{FGN2013}:
-%Find $(u,p) \in V_g \times Q^+_f$ such that
- %\[
-%	j(u,p) \leq j(v,q) \qquad \forall (v,q) \in V_g \times Q^+_f
- %\]
-%or
-%\[
-%	(u,p) = \argmin_{(v,q) \in V_g \times Q^+_f} j(v,q)
-%\]
-%with 
-%\[
-%V_g=\{v \in H^2(\Omega), v \arrowvert_{\delta \Omega}=g\}
-%\]
- %and 
-%\[
-%Q^+_f=\{q \in [L^2(\Omega)]^{2\times2} , q_{12} =q_{21},  q_{11} > 0,q_{22} > 0, det(q) = f\}.
-%\] 
+ We concentrate ourselves in this work to methods of the second area to which beside DG methods methods such as finite element methods, augmented Lagrangian methods, least squares methods and boundary element methods belong. Current DG methods we discuss in the next chapter \ref{ch:DGMongeAmpere} in detail.
+To make use of least square methods one needs at first to formulate the \MA problem as constrained minimalisation problem.
+\begin{definition}[Constrained Minimalisation Formulation, \cite{FGN2013}]
+Find $(u,p) \in \mathcal{S}$ such that
+\begin{align}
+	j(u,p) \leq& j(v,q) \qquad \forall \{v,q\} \in \mathcal{S}, \text{ where }\\
+	j(v,q)  =& \frac 1 2 \int_{\Omega} |\triangle v |^2, \\
+	\mathcal{S} =& \{(v,q)\in V_g \times Q^+_f, D^2v-q =0\},\\
+	V_g =& \{v \in H^2(\Omega), v \arrowvert_{\delta \Omega}=g\} \\
+	Q^+_f =& \{q \in [L^2(\Omega)]^{2\times2} , q_{12} =q_{21},  q_{11} > 0,q_{22} > 0, \mydet q = f\}.
+\end{align}
+
+\end{definition}
+%Ensuing from this formulation Dean and Glowinski formulated a saddle point with an augmented Lagrangian and provided an algorithm computing its solution in \cite{DG2004}. The algorithm splits the nonlinear \MA problem to 
+Based on this formulation Dean and Glowinski developed augmented Lagrangian methods and least square approaches \cite{DG2004,DG2006,DG2006a}.
+
+Another approach in this category are the so called \emph{vanishing moment methods}. First introduced in \cite{FN2009} they try to transfer the idea of the vanishing viscosity method: Feng and Neilan add higher order terms to obtain a higher order PDE that is easier to handle than the original one. Then the contribution of this higher order terms is decreased approximating thereby the \MA solution. \\
+One choice for those higher order terms is the square of the Laplacian of $u$. Additionally the newly derived fourth order PDE gets more boundary conditions, yielding to the problem
+\begin{definition}[Vanishing Moment Equations]
+	The vanishing moment method approximates \eqref{MA eq} by the sequence
+	\begin{align}
+		\varepsilon \triangle^2 u^\varepsilon - \mydet{D^2 u^\varepsilon} =& -f \text{ in } \Omega \\ 
+		u^\varepsilon =& g \text{ on } \partial \Omega\\
+		\triangle u^\varepsilon = & \varepsilon \text{ on } \partial \Omega
+	\end{align}
+The limit $\lim\limits_{\varepsilon \rightarrow 0 } u^\varepsilon$, if exists is called a \emph{moment solution} of the \MA equation.
+\end{definition}
+\todo{theoretical and numerical analysis of this method}
+
 
 \subsection{Methods based on Finite Basis Expansions and Approximating PDEs at Sampling Points}
 The third category consists of collocation methods and meshless methods.
