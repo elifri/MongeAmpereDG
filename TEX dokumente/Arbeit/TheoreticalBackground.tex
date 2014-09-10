@@ -50,7 +50,7 @@ A function $u$ fulfilling \eqref{eq:general PDE} is called a classical solution 
 \section{Notation}
 %\section{Functional Spaces}
 According to the literature we refer by $W^{s,p}(\Omega)$ to the H\"older space, a set consisting of all $L^p(\Omega)$ functions whose distributional derivates up to order $s$ are contained in $L^ p(\Omega)$.
-\todo{what is a distributional derivates}
+\todo{Sollte ich  distributional derivates erklaeren?}
 
 Let $\triang$ be a shape regular, quasi-uniform simplicial triangulation of $\Omega$, for simplicity reasons we assume that $\triang$ consists only of triangles. We divide the edges $\edges$ into the subsets $\edgesi$ and $\edgesb$ containing all interior edges and boundary edges, respectively. On this basis we define the piecewise spaces
 \begin{definition}[Piecewise Spaces]
@@ -67,7 +67,7 @@ The to the mesh associated spaces are
 \]
 \end{definition}
 
-\todo{norms}
+%\todo{norms}
 We use a subscript $h$ to indicate a piecewise evaluation/interpretation. Subsequently differential operators with a subscript $h$ imply separate differentiations on every triangle.
 
 To formulate a method capable of handling discontinuities along triangle edges we introduce edge operators.   
@@ -136,9 +136,9 @@ Since the left-hand side is linear in $\varphi$ we only need to check the equati
 	a(\varphi,u_h)  =b(\varphi) \qquad \forall \varphi \in B_{\Phi}. \label{eq: weak formulation fe bilinear}
 \end{align}
 for $a(v,w)= \int_\Omega \nabla_h v  \cdot A\nabla_h w -\int_{\partial \Omega} v (A\nabla_h w)\mathbf{n}$ and $b(v) = \int_\Omega v f$.\\
-\todo{ueberarbeiten} 
 Furthermore we can express $u$ as the linear combination of basis functions, namely $\sum_{b \in B_V} \mathbf{c}_b \; b$ and hence, we can rewrite \eqref{eq: weak formulation fe bilinear} as a linear system of equations $M \mathbf{c} = \mathbf{b}$ where  $\mathbf{c}$ is the coefficient vector of $u_h$ to the basis $B_V$.  
 
+Altogether a finite element method for the general Poisson equation consists of the assembling process where the matrices $M$ and the right-hand side vector $b$ are computed and the solving process of the resulting linear system of equations.\\
 Typically the spaces $\Phi_h$ and $V_h$ are chosen to be piecewise polynomials which have support only on a few triangles. Thus, the spaces are easy to handle and the resulting linear system is sparse.
 Choosing $\Phi_h = V_h$ yields to the \emph{Galerkin methods}.
 
@@ -217,7 +217,6 @@ Just like in the finite element method we can derive a linear system of equation
 This particular discontinuous Galerkin method is called \emph{Symmetric Interior Penalty Galerkin method} (SIPG).
 
 \section{Implementation of a SIPG Method}
-\todo{ Kommentar zur Implementation wegen Vorzeichen für Kantenterme}
 To evaluate the integrals in the bilinearform  numerically an integration scheme is needed. Usually Gauss quadrature is the method of choice. To estimate the integral $\int h(x) dx$ a Gauss quadrature formula needs to evaluate $h$ at certain quadrature points. Formulas and quadrature points, also for volume integrals can be found for example in \cite{Strout1971}.
 Hence, the data we have to provide to assemble the sparse matrix $A$ are the data at the element quadrature points and face quadrature points respectively.  
 At an element quadrature point these are the gradients, whereas at a face quadrature point we need information about  the function values and the normal derivatives, i.e. $\nabla u \cdot \mathbf{n}$ of all test functions.
@@ -250,7 +249,12 @@ Let $x \in T$ have the barycentric coordinates $\beta_0, \beta_1$ and $\beta_2$,
 	=& p^i_{ref}(\beta_0 \Phi_T^{-1}(v_0) +\beta_1 \Phi_T^{-1}(v_1) + \beta_2 \Phi_T^{-1}(v_2)) \\
 		=& p^i_{ref}(\beta_0 \point 0 0 +\beta_1 \point 0 1 + \beta_2 \point 1 0 ), \qquad 1 \leq i \leq n.
 \end{align*}
-Thus, basis function values in $T$ can be simply determined by barycentric coordinates. Henceforth we refer with $x_{ref}$  to the point $\beta_0 \point 0 0 +\beta_1 \point 0 1 + \beta_2 \point 1 0$ which is the to $x$ corresponding point in the reference triangle .
+Thus, basis function values in $T$ can be simply determined by barycentric coordinates. Henceforth we refer with $x_{ref}$  to the point $\beta_0 \point 0 0 +\beta_1 \point 0 1 + \beta_2 \point 1 0$ which is the to $x$ corresponding point in the reference triangle . In Figure \ref{fig: transformation} the connection between $x_ref$ and $x$ is shown.
+
+\begin{figure}[h] \label{fig: transformation}
+	\input{transformation.pgf}
+	\caption{Transformation of reference cell}
+\end{figure}
 
 Similarly we can affiliate the determination of the gradient in $T$ to a calculation in $T_{ref}$. With the chain rule we have
 \begin{align*}
@@ -281,7 +285,6 @@ Imagine the mesh of our triangulation is created by refinement of a coarser mesh
 
 We identify the new refined triangles with their original cell in $T$ calling it their basecell. Repeating the refinement we can always relate a cell in the finest mesh with a basecell in the original triangulation.
 The benefit of saving a base cell $T^T_b$ is that the transformation matrix of the affine mapping from $T^T_b$ to $T$ is a diagonal matrix and that a it has the same, or for the innermost triangle($T_0$ in figure \ref{pic: refinement}) opposite directed normals.
-\todo{example as in fenics book p. 160 figure 8.1}
 
 \begin{example}
 In fact in the two-dimensional case the Jacobian of a transformation from the base cell to a $l$ times refined triangle is $
@@ -309,7 +312,7 @@ Given that the support of each basis element is contained in one triangle, the c
 Face terms can be collected either by processing them twice, namely splitting the face terms in the contributions from the two adjacent cells, or when visiting the face for the first time immediately handle all terms.
 The second approach is done by introducing a cell flag for every leaf cell storing whether the cell has been processed yet. Each time the assembling algorithm visits a face it searches for the neighbouring cell and checks if the face has already been processed.
 
-The following algorithm \ref{alg: assembling} and a data structure efficiently handling all here mentioned and more requirements can be found in \cite{BMV2009}.
+The following algorithm \ref{alg: assembling} and a data structure efficiently handling all here mentioned requirements can be found in \cite{BMV2009}.
 \begin{algorithm}[H]
 \caption{An assembling loop for a DG method}
 \label{alg: assembling}

@@ -1,0 +1,73 @@
+
+\usetikzlibrary{calc}
+\usetikzlibrary{decorations.markings}
+%\newcommand\fOne[2]{2*#1 + 0* #2 + 2}
+
+%\fOne 1 1 
+
+\begin{tikzpicture}[scale = 4,
+]
+	\def \xOneRef {0};
+	\def \yOneRef {0};
+	\def \xTwoRef {1};
+	\def \yTwoRef {0};
+	\def \xThreeRef {0};
+	\def \yThreeRef {1};
+
+	\coordinate (POneRef) at (\xOneRef, \yOneRef);
+	\coordinate (PTwoRef) at (\xTwoRef, \yTwoRef);
+	\coordinate (PThreeRef) at (\xThreeRef, \yThreeRef);
+
+	\def \xRef {0.6};
+	\def \yRef {0.2};
+	\coordinate (PRef) at (\xRef, \yRef);
+
+
+	\def \a {1.1};
+	\def \b {0.4};
+	\def \c {1.2};
+	\def \d {0.3};
+
+	\def \e {1.5};
+	\def \f {0.5};
+
+	\coordinate (xOneT) at ($({\a*\xOneRef+\b*\yOneRef+\e},{\c*\yOneRef+\d*\xOneRef+\f})$);
+	\coordinate (xTwoT) at ($({\a*\xTwoRef+\b*\yTwoRef+\e},{\c*\yTwoRef+\d*\xTwoRef+\f})$);
+	\coordinate (xThreeT) at ($({\a*\xThreeRef+\b*\yThreeRef+\e},{\c*\yThreeRef+\d*\xThreeRef+\f})$);
+
+	\coordinate (xT) at ($({\a*\xRef+\b*\yRef+\e},{\c*\yRef+\d*\xRef+\f})$);
+
+
+	\draw (0,0) -- (0,1) -- (1,0) -- cycle;
+	\draw (xOneT) -- (xTwoT) -- (xThreeT) -- cycle;
+
+%draw point in ref triangle
+	\draw[fill] (POneRef) circle (0.6pt) node [below left] {$v^{ref}_0$};
+	\draw[fill] (PTwoRef) circle (0.6pt)node [below right] {$v^{ref}_1$};
+	\draw[fill] (PThreeRef) circle (0.6pt)node [above right] {$v^{ref}_2$};
+
+	\draw[fill] (PRef) circle (0.6pt) node [left] {$x^{ref}$};
+
+
+	\draw[fill] (xOneT) circle (0.6pt) node [left=0.1cm] {$v_0$};
+	\draw[fill] (xTwoT) circle (0.6pt) node [right=0.2cm] {$v_1$};
+	\draw[fill] (xThreeT) circle (0.6pt) node [above right] {$v_2$};
+
+	\draw[fill] (xT) circle (0.6pt) node [left=0.1cm] {$\Phi(x^{ref}) =x$};
+
+%	\draw[->, shorten >=0.5cm, shorten <=1cm] (PRef) edge [bend right] ($(xT)$);
+
+	\draw[
+			decoration = {markings, mark=at position 0.98 with {\arrow[scale=3, black]{stealth}}},
+			postaction = {decorate},
+			shorten >=5,
+			shorten <=5,
+			bend right] (PRef) to ($(xT)-(0.005,0.005)$);
+
+	%draw axes
+	\draw[thick,->] (0, 0) -- (1.3,0);
+	\draw[thick,->] (0, 0) -- (0,1.3);
+	
+
+
+\end{tikzpicture}
