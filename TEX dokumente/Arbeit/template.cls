@@ -80,6 +80,7 @@
 \newtheorem{definition}[thmc]{Definition}
 \newtheorem{claim}[thmc]{claim}
 \newtheorem{corollary}[thmc]{Corollary}
+\newtheorem{test}{Test}
 
 \theoremstyle{nonumberplain}
 \theoremstyle{nonumberbreak}

@@ -1,0 +1,69 @@
+\section{Benchmark Examples}
+
+Since the \MA equation became a benchmark problem for fully nonlinear second order PDEs there are same classical test problems for the two-dimensional case.
+
+\begin{test} \label{test smooth}
+The first classical \MA test is the problem with the data
+\[
+	u=\exp( \lVert x \rVert_2^2  /2) 
+	\text { and } 
+	f = (1 + \lVert x \rVert_2^2) \exp( \lVert x \rVert^2).
+\]
+It has a very smooth solution 
+
+\end{test}
+
+\begin{test}\label{test singularity}
+The second \MA test is given by
+\[
+	u=\frac 1 2 \left( \max 0 {\lVert x - x_0 \rVert_2-0.2 }  \right)^2 
+	\text { and } 
+	f = \max 0 {1-\frac {0.2} {\lVert x - x_0 \rVert_2} }.
+\]
+\end{test}
+
+\begin{test}\label{test sqrt}
+The data
+\[
+	u = - \sqrt{ 2-  \lVert x \rVert_2^2}
+	\text { and } 
+	f = 2\left( 2-  \lVert x \rVert_2^2 \right)^{-2}
+\]
+defines the third example.
+\end{test}
+
+\begin{test}\label{test rhsConst}
+A test where the analytical solution is unknown is determined by
+\[
+	u = 0 \text{ on } \partial \Omega
+	\text { and } 
+	f = 1
+\]
+defines the third example.
+\end{test}
+
+
+\section{Numerical Results of a Finite Element Method based on a Disrete Hessian}
+
+For reference I implemented the algorithm introduced in Section \ref{sec: FEM discrete Hessian}.
+
+The implementation was done with the Finite Element Tool FEniCS \cite{FEniCS}
+
+
+\section{Numerical Results of Our DG Method}
+
+
+In \cite{Awanou2014} Awanou analysed the similar iteration process
+\begin{align}
+	\nabla \cdot \left( \cof(D^2 u^0) \nabla u^{i+1} \right) &= \nabla \cdot \left( \cof(D^2 u^0) \nabla u^{i} \right) + f - \operatorname{det} (D^2u^i) \textnormal{ in } \Omega,  \label{eq: Awanout eq}\\
+	u^{i+1} &= g \textnormal{ on } \partial \Omega 
+\end{align}
+showing convergence for the analytical solution $u$ and a sufficent close $u^0$. 
+In a earlier work \cite{Awanou2010} Awanou examined a discrete Version of a vanishing moment method, herein he mentioned Newton's method defined by
+\[
+	\int_{\Omega} [\mycof{ D^2 u_h^i} Du_h^{i+1}] \cdot Dv_h = -	\int_{\Omega} f v_h + \frac 1 2 \int_{\Omega} [\mycof{ D^2 u_h^i} Du_h^{i}] \cdot Dv_h \; \forall v_h \in V_h \cap H^1_0 (\Omega)  \label{eq: Awanout eq2}.
+\]
+He claims that this ansatz for problems with non-smooth solutions breaks down, in his numerical results he cites test \ref{test sqrt} as an example where Newton's method diverges.
+
+?????
+While Awanou uses a finite difference scheme to solve the PDE in every step we want to exploit the benefits of a DG method and solve every intermediate step by a SIPG method. 

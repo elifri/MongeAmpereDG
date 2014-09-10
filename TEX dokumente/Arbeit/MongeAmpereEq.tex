@@ -85,7 +85,7 @@ A viscosity solution is unique if $F$ is elliptic by the comparison principle. I
 \section{Types of Numerical Methods for the \MA Equation}
 Since equations of \MA type arise in many areas such as optics, transportation etc. there has been an active research on how to solve. Except for some simple special cases there is no analytical solution known resulting in a widely varied numerical set of numerical methods.
 
-They can roughly be divided in four categories: Finite difference schemes, methods based on variational principles and approximating infinite-dimensional spaces by finite-dimensional spaces, methods based on finite basis expansions and approximating PDEs at sampling points and the rest. \\
+They can roughly be divided in four categories: Direct Finite difference schemes, methods based on variational principles and approximating infinite-dimensional spaces by finite-dimensional spaces, methods based on finite basis expansions and approximating PDEs at sampling points and the rest. \\
 In the last category one can mainly find methods as the lattice Boltzmann method, these are often designed for special applications.
 
 A lot of the methods result in hard to handle nonlinear system. The most favoured method to solve this system is Newton's method // Often the method of choice is Newton's method. However, it requires an appropriate initial guess//accurate starting value. Finding//providing those is sometimes as tricky//hard as the problem itself.
@@ -93,11 +93,12 @@ A lot of the methods result in hard to handle nonlinear system. The most favoure
 We give now an short overview of the different methods and some of their most known representatives. For a more detailed survey we refer the interested reader to the overview article \cite[Section 2.1]{FGN2013}.
 
 
-\subsection{Finite Difference Schemes}
+\subsection{Direct Finite Difference Schemes}
 
-Because of their simplicity methods of the first category, i.e. the finite difference schemes are widely used in "application areas".
+Because of their simplicity methods of the first category, i.e. the finite difference schemes are widely used in "application areas". The term Direct refers to the fact that these schemes directly approximate the in \eqref{MA eq} occurring derivatives. 
 %As one desires monotone schemes for there exist theorems on their convergence, compare \cite[Theorem 2.1]{BS1991} and monotone schemes even for linear PDEs require wide stencil, compare \cite{MW1953} many finite difference schemes are wide-stencil schemes. 
 To mention are the works of Benamou, Oberman and Froese \cite{BFO2010, Oberman2008, FO2011}, where they provide some monotone wide-stencil for the \MA equation.
+\todo{framework barles souganidis}
 In general for monotone schemes the convergence analysis reduces by \cite{BS1991} to a proof of consistency, hence they are able to prove convergence to the unique convex viscosity solution and experiments show the mentioned methods turn out to be very robust.
 Nevertheless these methods have a huge drawback. Monotone schemes even for linear PDEs require wide stencils, compare \cite{MW1953}  and in order to increase accuracy one has not only to refine the grid, but also to increase the size of the stencil. These stencils make the methods difficult to apply if the problem domain $\Omega$ is not easily approximated by rectangles.
 
@@ -123,11 +124,13 @@ One choice for those higher order terms is the square of the Laplacian of $u$. A
 \begin{definition}[Vanishing Moment Equations]
 	The vanishing moment method approximates \eqref{MA eq} by the sequence
 	\begin{align}
-		\varepsilon \triangle^2 u^\varepsilon - \mydet{D^2 u^\varepsilon} =& -f \text{ in } \Omega \\ 
-		u^\varepsilon =& g \text{ on } \partial \Omega\\
-		\triangle u^\varepsilon = & \varepsilon \text{ on } \partial \Omega
+		\varepsilon \triangle^2 u^\varepsilon - \mydet{D^2 u^\varepsilon} =& -f \text{ in } \Omega \label{eq: VMM 1}\\ 
+		u^\varepsilon =& g \text{ on } \partial \Omega \label{eq: VMM 2}\\
+		\triangle u^\varepsilon = & \varepsilon \text{ on } \partial \Omega \label{eq: VMM 3}
 	\end{align}
 The limit $\lim\limits_{\varepsilon \rightarrow 0 } u^\varepsilon$, if exists is called a \emph{moment solution} of the \MA equation.
+Of course the vanishing moments is not directly connected to a solution method, for example one could solve \eqref{eq: VMM 1}-\eqref{eq: VMM 3} with a finite difference scheme or a appropriate Galerkin Method.
+Feng and Neilan provide a extensive theoretical analysis for the radially symmetric case and numerical experiments in \cite{FN2009, Neilan2010, FN2011a} . One interesting point is that this method autonomously chooses the unique convex viscosity solution, in even dimensions substituting $\varepsilon$ by $-\varepsilon$ in  \eqref{eq: VMM 1} yields to the other, concave solution to the \MA problem.  
 \end{definition}
 \todo{theoretical and numerical analysis of this method}
 

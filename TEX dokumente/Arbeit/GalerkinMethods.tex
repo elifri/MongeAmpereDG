@@ -22,7 +22,7 @@ The most natural attempt for a formulation of a DG method is to exploit the equa
 \end{align}
 
 However, this formulation has two minor disadvantages. 
-At first we cannot throw the high derivatives onto the test functions using integration py parts, thus we do not easily get a variational formulation in weaker spaces. Secondly \eqref{eq: naiv ansatz} only is sensible for test functions contained in $C^1(\Omega)$. For less regular test functions this approach extended with the natural DG terms fails. Brenner et alter make the inconsistency between the linearisation of the discrete problem and the the linearisation of the continuous problem responsible \cite{BGN+2011}. Thus, their idea is to add terms to force consistency and add stability.
+At first we cannot throw the high derivatives onto the test functions using integration py parts, thus we do not easily get a variational formulation as we do for linear PDEs. Secondly \eqref{eq: naiv ansatz} only is sensible for test and ansatz functions contained in $C^1(\Omega)$. An extension with the natural DG terms which would allow less regular functions does not produce sensible results. Brenner et alter make the inconsistency between the linearisation of the discrete problem and the the linearisation of the continuous problem responsible \cite{BGN+2011} for this failure. Thus, their idea is to add terms to force consistency and add stability.
 
 \subsection{A $C^0$ Penalty Method }
 
@@ -85,7 +85,7 @@ Neilan claims when presenting his method in \cite{Neilan2014} that this methods 
 $u = -\sqrt{2 - x_1^2 - x_2^2 }$ and $f = \frac 2 {{2 - x_1^2 - x_2^2}^2}$. Generally the presented method is more appropriate for classical solutions, they plan to address less regular solution in future work.
 
 
-\subsection{A Finite Element Method based on a Discrete Hessian} \label{subsec: disrete Hessian}
+\subsection{A Finite Element Method based on a Discrete Hessian} \label{subsec: disrete Hessian} \label{sec: FEM discrete Hessian}
 
 Shortly Neilan generalised a finite element method of Lakkis and Pryer \cite{LP2011} in his paper \cite{Neilan2014}.
 The crux of this idea is the notion of a \emph{discrete Hessian}. 
@@ -133,7 +133,7 @@ Hence,
 	\end{align}
 \end{definition}
 
-Even though the Hessian is symmetric, in general the discrete Hessian is owing to the face terms not obligatory symmetric. 
+Even though the Hessian is symmetric, in general the discrete Hessian is owing to the face terms not obligatory symmetric. \\
 Note, that for a discontinuous $\Sigma_h$ the computations for $D_{DH}^2 u$ reduce to purely local efforts. For piecewise constant space $\Sigma_h$ the discrete Hessian $D_{DH}^2 u$ can even be computed explicitly.
 
 The next natural step is to plug the newly deduced Hessian into the original \MA PDE resulting in the method: Find $u \in V_h$ such that
@@ -147,10 +147,6 @@ where
 		= \int_\Omega D_h u: B -\sum_{ e \in \edgesi} \int_e  \jump {\average B \nabla u }\qquad \forall B \in \Sigma_h. \eqref{eq: discrete hessian}
 	\end{align}
 
-Neilan shows the well-posedness and optimal error estimates of this methods for $k \geq 3$. Albeit he cannot prove it his numerical experiments suggest that it even works for less polynomial degrees. Although for $k=1$ he had to add an additional penalty term forcing thereby a smooth gradient to obtain convergence.
+Neilan shows the well-posedness and optimal error estimates of this methods for $k \geq 3$. Albeit he cannot prove it his numerical experiments suggest that it even works for smaller polynomial degrees. Although for $k=1$ he had to add an additional penalty term forcing thereby a smooth gradient to obtain convergence.
 
-He does not present any proofs for convergence rates, but in the numerical results his method performs with optimal convergence rates
-
-for a smooth example and 
-
-for other examples \todo{really?}
+He does not present any proofs for convergence rates, but in the numerical results his method performs with optimal convergence rates. We check the performance of this algorithms later in chapter \ref{ch:NumericalResults}.
