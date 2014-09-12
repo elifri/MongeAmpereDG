@@ -23,7 +23,7 @@
 \usepackage{amssymb}
 %\usepackage{a4wide}
 \usepackage{relsize}
-\usepackage{tikz}
+\usepackage{tikz} %for generating images
 
 \usepackage{todonotes}
 
@@ -32,11 +32,11 @@
 \usepackage{subcaption}
 \usepackage{ltxtable}
 \usepackage{float}
+\usepackage{pgfplotstable, booktabs} %to generate tables from data files
 
 \usepackage{color}
 \usepackage{stmaryrd} % for llbracket
 
-%\usepackage{listings} %to formulate algorithm with lstlisting
 \usepackage[chapter]{algorithm}
 
 \usepackage{enumerate} %to allow different kind of enumerations
@@ -89,3 +89,35 @@
 \newtheorem{proof}{Proof}
 
 % -----
+%---define pgfplottablestyle
+
+
+\pgfplotstableset{
+	sci e, /pgf/number format/sci precision=5,
+    columns/iterations/.style={column name={Iterations},% Set the name to be used for the first column
+    	preproc/expr={2^##1}, %preposs (calculate 2^i) 
+		postproc cell content/.append style={
+			/pgfplots/table/@cell content/.add={1/{}}{}, %add 1/ before every number
+		},
+    }, 
+    columns/l2error/.style={
+        column name=$L^2$ error,  % ... and the second
+        dec sep align,      % align on the decimal marker
+        /pgf/number format/sci e, 
+        /pgf/number format/fixed zerofill=false,  % print trailing zeros
+        /pgf/number format/sci precision=4     % print 14 digits
+    },
+    columns/h1error/.style={
+        column name=$H^1$ error,  % ... and the second
+        dec sep align,      % align on the decimal marker
+        /pgf/number format/sci e, 
+        /pgf/number format/fixed zerofill,  % print trailing zeros
+        /pgf/number format/sci precision=4     % print 14 digits
+    },
+    every head row/.style={
+        before row=\toprule,    % booktabs rules
+        after row=\midrule
+    },
+    every last row/.style={
+        after row=\bottomrule
+    }} %{../../FEniCS/data/MA1_Neilan_deg22_l2errornorm}

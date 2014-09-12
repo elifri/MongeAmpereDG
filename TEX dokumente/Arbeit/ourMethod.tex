@@ -191,21 +191,19 @@ where $A$ is the matrix evaluating the to $c$ corresponding piecewise polynomial
 \subsubsection{Solving the Quadratic Program}
 \todo{how to solve the quadratic program}
 
-\subsection{Initial Guess}
+\subsection{Initial Guess}\label{sec: initial guess}
 Just as the most methods for the \MA equation the fixed point iteration requires an initial guess. Two approaches are very favoured in the literature.
-One is to start with the solution of the equation
+In \cite[Remark 2.1]{DG2006a} has been shown a strong connection between the \MA proble, and  the following Poisson problem
 \begin{align}
 	\begin{split}
 	\triangledown u &= \sqrt{2f} \text{ in } \Omega \\ 
 	u &= g \text{ on }\partial \Omega.
 	\end{split}\label{eq: start sqrt_f}
 \end{align}
+Advantageously at this approach is the compliance of the boundary conditions.
 
-\todo{motivation for this approach}
+Alternatively a nested iteration or multilevel ansatz can be utilised. At a the coarsest level $h_1$ one chooses any convex function as initial guess$u^0_{h_1}$, mostly $\frac 1 2 ({x_1^2} + {x_2^2}) $ for it is convex polynomial with a low degree. For finer triangulations $\mathcal{T}_{h_{l}}$ the solution of the previously computed solution $u_{h_{l-1}}$is taken for a starting point. Of course both approaches can be combined using the Poisson solution on the coarsest grid whereas later taking quasi-interpolants.
 
-The other is a nested iteration ansatz. At a the coarsest level $h_1$ one chooses any convex function as initial guess$u^0_{h_1}$, mostly $\frac 1 2 ({x_1^2} + {x_2^2}) $ for it is convex polynomial with a low degree. For finer triangulations $\mathcal{T}_{h_{l}}$ the solution of the previously computed solution $u_{h_{l-1}}$is taken for a starting point.
-
-Advantageously at the first approach is the compliance of the boundary conditions.
 The second approach regards the fact that probably the method's robustness decreases for finer meshes.
 
 
