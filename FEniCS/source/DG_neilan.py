@@ -10,6 +10,8 @@ from MA_iterated import MA_iteration
 from MA_iterated_August import start_iteration
 from convexify import convexify
 import math
+import time
+
 
 def frobenius_product(a,b):
   return a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3]
@@ -35,9 +37,6 @@ def neilan_step(mesh, V, W, u0, sigmaC, sigmaG, sigmaB, u_):
 
   (u, w)= TrialFunctions(W)
 
-  print type(w)
-
-
   (v, mu)  = TestFunctions(W)
 
   #--------------define function------------------------
@@ -46,7 +45,7 @@ def neilan_step(mesh, V, W, u0, sigmaC, sigmaG, sigmaB, u_):
   F  = (f- determinant(w))*v*dx
 
   #jump in gradient
-  F = F + Constant(sigmaG)('+')*h('+')* jump(nabla_grad(u),n)*jump(nabla_grad(v),n)*dS
+  #F = F + Constant(sigmaG)('+')*h('+')* jump(nabla_grad(u),n)*jump(nabla_grad(v),n)*dS
   #F = F + dot(nabla_grad(u)('+') - nabla_grad(u)('-'),n('+'))*v('+')*dS
   
   #jump in function
@@ -104,22 +103,29 @@ def neilan_step(mesh, V, W, u0, sigmaC, sigmaG, sigmaB, u_):
   #prm['krylov_solver']['preconditioner']['ilu']['fill_level'] = 0
   set_log_level(PROGRESS)
 
-  solver.solve()
+  nb_iterations, converged = solver.solve()
+  
+  #write Newton steps required to file 
+  newtonStepsfile.write(str(it)+' '+str(nb_iterations)+'\n')
+  
   return u_
 
 
 if __name__ == "__main__":
+  start = time.clock()
+  
   #------------ Create mesh and define function space-----------
   Nh = 2
   deg = 2
   deg_hessian = 2
+
 
   print "deg ", deg, " deg_hessian", deg_hessian
 
   mesh = UnitSquareMesh(Nh, Nh, "crossed")
   
   #space for function
-  V = FunctionSpace(mesh, 'CG', deg)
+  V = FunctionSpace(mesh, 'DG', deg)
   #space for hessian entries
   Sigma_single = FunctionSpace(mesh, 'DG', deg_hessian)
   #space for discrete hessian
@@ -130,7 +136,12 @@ if __name__ == "__main__":
 
   #refined space to plot funcitons refined
   bigMesh = refine(refine(mesh))
-  bigV = FunctionSpace(bigMesh, 'CG', deg, 'crossed')
+  bigV = FunctionSpace(bigMesh, 'DG', deg, 'crossed')
+
+  #define penalty
+  sigmaC = 10*deg*deg
+  sigmaG = 10*deg*deg
+  sigmaB = 10*deg*deg
 
   #-----------choose PDE------------
   #define rhs
@@ -146,28 +157,26 @@ if __name__ == "__main__":
   #u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
   #u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
 
-  class Error(Expression):
-    def eval(self, v, x):
-      s = (x[0]-1./2)**2+(x[1]-1./2)**2
-      if s < 1./10:
-        v[0] = math.exp(-1./(1-100*s**2))
-      else:
-        v[0]=0
-
-
-  #error = Expression('1/2*x[0]*x[0]+1/2*x[1]*x[1]')#add noisy data
-  #error = Expression('0.1*pow(x[0],2)+0.01*pow(x[1],2)')#add noisy data
-  #error = Expression('0.01*sin(3*x[0]*x[1]+pi)')#add noisy data
-  error = Error()
+  fileprefix = 'MA1_Neilan_deg'+str(deg)+str(deg_hessian)+'_'
+  errorfile = open('data/'+fileprefix+'l2errornorm','wa')
+  errorfile.write('iterations l2error\n');
+  errorfileh1 = open('data/'+fileprefix+'h1errornorm','wa')
+  errorfileh1.write('iterations h1error\n');
+  newtonStepsfile = open('data/'+fileprefix+'newtonSteps','wa')
+  newtonStepsfile.write('iterations steps\n');
+  
 
   #define exact solution
   u_e = project(u0, V)
-  
 
   #--------define startsolution-------------
   u1_ = Function(V)
-  u1_ = start_iteration(mesh, V, u0, f)
+  u1_ = start_iteration(mesh, V, u0, f, sigmaC)
   #u1_.assign(u_e)
+  
+  errorfile.write('0 '+str(errornorm(u0, u1_))+'\n')
+  errorfileh1.write('0 '+str(errornorm(u0, u1_, norm_type='h1'))+'\n')
+
   
   u_ = Function(W)
   
@@ -184,40 +193,54 @@ if __name__ == "__main__":
 
 
   #plot start solution 
-  plot(project(u_.sub(0),bigV), title = 'startsolution')
-  plot(project(u_.sub(0)-u_e,bigV), title = 'start error')
-  plot(determinant(u_.sub(1)), title = 'determinant of hessian')
-  plot(project(determinant(u_.sub(1))-f,bigV), title = 'determinant of hessian')
+  if False:
+    plot(project(u_.sub(0),bigV), title = 'startsolution')
+    plot(project(u_.sub(0)-u_e,bigV), title = 'start error')
+    plot(determinant(u_.sub(1)), title = 'determinant of hessian')
+    plot(project(determinant(u_.sub(1))-f,bigV), title = 'determinant of hessian')
+  
+    plot(u_.sub(1)[0], title = 'first entry of hessian')
+    # plot(project(abs(u_.sub(1)[0]-u0_derivXX_e),bigV), title = 'first entry of hessian error')
+    #plot(u_.sub(1)[1], title = 'second entry of hessian')
+    #plot(u_.sub(1)[2], title = 'third entry of hessian')
+    #plot(u_.sub(1)[3], title = 'fourth entry of hessian')
+    #plot(project(abs(u_.sub(1)[3]-u0_derivYY_e),bigV), title = 'first entry of hessian error')
 
-  plot(u_.sub(1)[0], title = 'first entry of hessian')
- # plot(project(abs(u_.sub(1)[0]-u0_derivXX_e),bigV), title = 'first entry of hessian error')
-  #plot(u_.sub(1)[1], title = 'second entry of hessian')
-  #plot(u_.sub(1)[2], title = 'third entry of hessian')
-  #plot(u_.sub(1)[3], title = 'fourth entry of hessian')
-  #plot(project(abs(u_.sub(1)[3]-u0_derivYY_e),bigV), title = 'first entry of hessian error')
-
-  interactive()  
-
-  #define penalty
-  sigmaC = 20*deg*deg
-  sigmaG = 20*deg*deg
-  sigmaB = 20*deg*deg
+    interactive()
   
   for it in range(1,8):
     print 'Starting Neilan with ', Nh
     w = neilan_step(mesh, V, W, u0, sigmaC, sigmaG, sigmaB, u_)
 
     #examine error
-    print 'Errornorm:', errornorm(u0, u_.sub(0))
+    error_norm = errornorm(u0, u_.sub(0))
+    print 'Errornorm:', error_norm
+    errorfile.write(str(it)+' '+str(error_norm)+'\n')
 
-   # ----Plot solution and mesh-------
-    plot(mesh, title='mesh'+str(it))
-    #plot(project(w.sub(0),bigV), title = 'solution'+str(it))
-    if it > 0:
+    error_norm = errornorm(u0, u_.sub(0), norm_type='H1')
+    print 'Errornorm H1:', error_norm
+    errorfileh1.write(str(it)+' '+str(error_norm)+'\n')
+
+    # ----Plot solution and mesh-------
+    s = 'plots/'+fileprefix+'_Nh'+str(Nh)+'.pvd'
+    file = File(s)
+    solution = Function(bigV, name='u')
+    solution.assign(project(u_.sub(0),bigV))
+    file << solution
+
+    s = 'plots/'+fileprefix+'error_Nh'+str(Nh)+'.pvd'
+    file = File(s)
+    error = Function(bigV, name='error')
+    error.assign(project(abs(w.sub(0)-u0),bigV))
+    file << error
+
+
+    if False:
+      plot(mesh, title='mesh'+str(it))
+      #plot(project(w.sub(0),bigV), title = 'solution'+str(it))
       plot(project(abs(w.sub(0)-u0),bigV), title = 'error'+str(Nh))
-#      plot(project(determinant(w.sub(1))-f,bigV), title = 'determinant of discr. hessian-rhs'+str(Nh))
-#      plot(project(det(grad(grad(w.sub(0))))-f,bigV), title = 'determinant of hessian-rhs'+str(Nh))
-      
+      #plot(project(determinant(w.sub(1))-f,bigV), title = 'determinant of discr. hessian-rhs'+str(Nh))
+      #plot(project(det(grad(grad(w.sub(0))))-f,bigV), title = 'determinant of hessian-rhs'+str(Nh))
       #Hold plot
       interactive()
 
@@ -225,7 +248,7 @@ if __name__ == "__main__":
     #mesh = refine(mesh)
     Nh = Nh *2
     mesh = UnitSquareMesh(Nh, Nh, 'left/right')
-    V = FunctionSpace(mesh, 'CG', deg)
+    V = FunctionSpace(mesh, 'DG', deg)
     Sigma_single = FunctionSpace(mesh, 'DG', deg_hessian)
     Sigma = VectorFunctionSpace(mesh, 'DG', deg_hessian, dim=4)
     W = V*Sigma
@@ -236,4 +259,12 @@ if __name__ == "__main__":
   
     #plot(project(u_.sub(0),bigV), title = 'projected solution'+str(it))
 
-
+  end = time.clock()
+  time_file = open('data/timing','a')
+  time_file.write(fileprefix+' '+str(end-start))
+  
+  print "%.2gs" % (end-start)
+  
+  errorfile.close()
+  errorfileh1.close()
+  time_file.close()
