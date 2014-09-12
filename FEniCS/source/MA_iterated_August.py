@@ -11,9 +11,6 @@ import time
 
 def MA_iteration(mesh, V, u0, f, max_it,w, sigmaB, sigmaC, sigmaG):
   
-  #store start time
-  start = time.clock()
-  
   #------define variables--------
 
   #define cofactor matrix of startsolution's hessian
@@ -78,6 +75,10 @@ def start_iteration(mesh, V, u0, f, sigma):
   return u
 
 if __name__ == "__main__":
+    
+  #store start time
+  start = time.clock()
+  
   # Create mesh and define function space
   deg = 3
   Nh = 2
