@@ -139,14 +139,24 @@ Note, that for a discontinuous $\Sigma_h$ the computations for $D_{DH}^2 u$ redu
 The next natural step is to plug the newly deduced Hessian into the original \MA PDE resulting in the method: Find $u \in V_h$ such that
 
 \begin{align}
-		\int_\Omega \left(\mydet{D_{DH}^2 u} - f \right) v = 0 \qquad \forall v \in V_h
+		\int_\Omega \left(\mydet{D_{DH}^2 u} - f \right) v = 0 \qquad \forall v \in V_h \label{eq: neilan eq1}
 \end{align}
 where
 	\begin{align}
 		\int_\Omega (D_{DH}^2 u : B) 
-		= \int_\Omega D_h u: B -\sum_{ e \in \edgesi} \int_e  \jump {\average B \nabla u }\qquad \forall B \in \Sigma_h. \eqref{eq: discrete hessian}
+		= \int_\Omega D_h u: B -\sum_{ e \in \edgesi} \int_e  \jump {\average B \nabla u }\qquad \forall B \in \Sigma_h. \tag{\ref{eq: discrete hessian}}
 	\end{align}
 
-Neilan shows the well-posedness and optimal error estimates of this methods for $k \geq 3$. Albeit he cannot prove it his numerical experiments suggest that it even works for smaller polynomial degrees. Although for $k=1$ he had to add an additional penalty term forcing thereby a smooth gradient to obtain convergence.
+Neilan shows the well-posedness and optimal error estimates of this methods for $k \geq 3$ in case the solution lies in $H^2(\Omega)$. Albeit he cannot prove it his numerical experiments suggest that it even works for smaller polynomial degrees and problems which's solution lacks $H^2$ regularity. Although for $k=1$ he adds an additional penalty term forcing thereby a smooth gradient to obtain convergence. Thus, he instead solves:
+\begin{align}
+		\int_\Omega \left(\mydet{D_{DH}^2 u} - f \right) v + \eta \sum_{e \in \edgesi} |e| \int_e \jump{ \nabla u_h} \jump{\nabla v}
+		= 0 \qquad \forall v \in V_h \label{eq: neilan eq1 + jump}
+\end{align}
+where
+	\begin{align*}
+		\int_\Omega (D_{DH}^2 u : B) 
+		= \int_\Omega D_h u: B -\sum_{ e \in \edgesi} \int_e  \jump {\average B \nabla u }\qquad \forall B \in \Sigma_h \tag{\ref{eq: discrete hessian}}
+	\end{align*}
+and $\eta$ is an additional penalty parameter which Neilan takes to be 50 in his numerical tests.
 
 He does not present any proofs for convergence rates, but in the numerical results his method performs with optimal convergence rates. We check the performance of this algorithms later in chapter \ref{ch:NumericalResults}.
