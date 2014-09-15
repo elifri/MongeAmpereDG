@@ -78,6 +78,7 @@ For a proof of this result we refer to \cite{CC1995, GT1977}. A main thesis for 
 	Let $F$ be a fully nonlinear second order operator continuous in all of its arguments.
 	If $F$ is elliptic,	u,v are, respectively a viscosity subsolution and a viscosity supersolution to $F[u](x)=0$ and $u \leq v$ on $\partial \Omega$, then $u \leq v$ in all of $\bar \Omega$.
 \end{theorem}
+A proof can be found for example in \cite[Theorem 17.1]{GT1983}
 
 A viscosity solution is unique if $F$ is elliptic by the comparison principle. If $u$ and $v$ are two viscosity solutions of $\mydet{D^2 u}=f$ with $u=v$ on $\partial \Omega$, then especially holds $u \leq v$ on $\partial \Omega$ and hence by the comparison principle $u \leq v$ in  $\bar \Omega$. Applying the same argument for $v \leq u$ on $\partial \Omega$ we find equality of the solutions.
 
@@ -95,16 +96,16 @@ We give now an short overview of the different methods and some of their most kn
 
 \subsection{Direct Finite Difference Schemes}
 
-Because of their simplicity methods of the first category, i.e. the finite difference schemes are widely used in "application areas". The term Direct refers to the fact that these schemes directly approximate the in \eqref{MA eq} occurring derivatives. 
+We recall the first category consists of direct finite difference schemes, where the term Direct refers to the fact that these schemes directly approximate the in \eqref{MA eq} occurring derivatives. 
+There are two points in favor of those schemes. First, because of their simplicity methods finite difference schemes widely used in "application areas".  And second Barles and Souganidis set up a general framework to analyse finite difference schemes for fully nonlinear elliptic PDEs \cite{BS1991}, this work especially reduces the convergence analysis for monotone schemes to the verification of stability and consistency.
 %As one desires monotone schemes for there exist theorems on their convergence, compare \cite[Theorem 2.1]{BS1991} and monotone schemes even for linear PDEs require wide stencil, compare \cite{MW1953} many finite difference schemes are wide-stencil schemes. 
-To mention are the works of Benamou, Oberman and Froese \cite{BFO2010, Oberman2008, FO2011}, where they provide some monotone wide-stencil for the \MA equation.
-\todo{framework barles souganidis}
-In general for monotone schemes the convergence analysis reduces by \cite{BS1991} to a proof of consistency, hence they are able to prove convergence to the unique convex viscosity solution and experiments show the mentioned methods turn out to be very robust.
+Built on this structure and are the works of Benamou, Oberman and Froese \cite{BFO2010, Oberman2008, FO2011}, where they provide some monotone wide-stencil for the \MA equation.
+They are able to prove convergence to the unique convex viscosity solution and experiments show the mentioned methods turn out to be very robust. To the author's knowledge until today all methods proven to converge to the viscosity solution are finite difference schemes.
 Nevertheless these methods have a huge drawback. Monotone schemes even for linear PDEs require wide stencils, compare \cite{MW1953}  and in order to increase accuracy one has not only to refine the grid, but also to increase the size of the stencil. These stencils make the methods difficult to apply if the problem domain $\Omega$ is not easily approximated by rectangles.
 
 \subsection{Methods based on Variational Principles and Approximating Infinite-dimensional Spaces by Finite-dimensional Spaces}
  We concentrate ourselves in this work to methods of the second area to which beside DG methods methods such as finite element methods, augmented Lagrangian methods, least squares methods and boundary element methods belong. Current DG methods we discuss in the next chapter \ref{ch:DGMongeAmpere} in detail.
-To make use of least square methods one needs at first to formulate the \MA problem as constrained minimalisation problem.
+To make use of least square methods one needs at first to formulate the \MA problem as a constrained minimalisation problem.
 \begin{definition}[Constrained Minimalisation Formulation, \cite{FGN2013}]
 Find $(u,p) \in \mathcal{S}$ such that
 \begin{align}
