@@ -67,23 +67,23 @@ Different to the initial guess suggested in \cite{Neilan2014} I used the solutio
 We denote the degree of the trial space $V_h=P_h^k \cap H^1(\Omega)$ by $k$ and the degree chosen for the Hessian ansatz space $\Sigma_h = [\mathcal{P}_h^{k_{DH}}]^{d \times d}$ by $k_{DH}$.
 Figure \ref{fig: l2 errors test 1} shows the $L^2$ error calculated for the first test case, the numbers for the cases with $k=2$ are shown more detailed in Table \ref{tab: l2 errors test 1 deg 2}. For a run with $k=3$ and $k_{DH}=0$  the Newton solver diverged already for $h=1/2$. \todo{Kommentar?}
 
-%\input{load_Neilan_data.tex}
+\input{load_Neilan_data.tex}
 
-%\begin{table}[h]
-%	\begin{subtable}[b]{0.45\textwidth}
-%		\centering
-%		\pgfplotstabletypeset[columns={iterations, l2error, h1error}]\MAOneJumpdegTwoTwo
- %   	\caption{Error for $k=2, k_{DH}=2$}
- %   \end{subtable}
-  %  ~
-%	\begin{subtable}[b]{0.45\textwidth}
-%		\centering
-%		\pgfplotstabletypeset[columns={iterations, l2error, h1error}]\MAOneJumpdegTwoZero
- % 	\caption{Error for $k=2, k_{DH}=0$}
-%	\end{subtable}
-%	\caption{Errors for test case \ref{test smooth}}
-%	\label{tab: l2 errors test 1 deg 2}
-%\end{table}
+\begin{table}[h]
+	\begin{subtable}[b]{0.45\textwidth}
+		\centering
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N}]\MAOneJumpdegTwoTwo
+    	\caption{Error for $k=2, k_{DH}=2$}
+   \end{subtable}
+   ~
+	\begin{subtable}[b]{0.45\textwidth}
+		\centering
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N}]\MAOneJumpdegTwoZero
+ 	\caption{Error for $k=2, k_{DH}=0$}
+	\end{subtable}
+	\caption{Errors for test case \ref{test smooth}}
+	\label{tab: l2 errors test 1 deg 2}
+\end{table}
 
 deg =3 $deg_h$essian =0 funktioniert nicht.
 

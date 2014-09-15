@@ -94,12 +94,12 @@
 
 \pgfplotstableset{
 	sci e, /pgf/number format/sci precision=5,
-    columns/iterations/.style={column name={Iterations},% Set the name to be used for the first column
+    columns/iterations/.style={column name={$h$},% Set the name to be used for the first column
     	preproc/expr={2^##1}, %preposs (calculate 2^i) 
 		postproc cell content/.append style={
 			/pgfplots/table/@cell content/.add={1/{}}{}, %add 1/ before every number
 		},
-    }, 
+    },
     columns/l2error/.style={
         column name=$L^2$ error,  % ... and the second
         dec sep align,      % align on the decimal marker
@@ -114,6 +114,7 @@
         /pgf/number format/fixed zerofill,  % print trailing zeros
         /pgf/number format/sci precision=4     % print 14 digits
     },
+    every row 0 column 0/.style={set content=init},
     every head row/.style={
         before row=\toprule,    % booktabs rules
         after row=\midrule
