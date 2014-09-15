@@ -119,6 +119,11 @@
         before row=\toprule,    % booktabs rules
         after row=\midrule
     },
+    every row 0 column N/.style={set content={-}},
+    every head row/.style={
+        before row=\toprule,    % booktabs rules
+        after row=\midrule
+    },
     every last row/.style={
         after row=\bottomrule
     }} %{../../FEniCS/data/MA1_Neilan_deg22_l2errornorm}

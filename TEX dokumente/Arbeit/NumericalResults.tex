@@ -64,10 +64,58 @@ Additional to the numerical results Neilan presented it is interesting to explor
 
 The implementation was done with the Finite Element Tool FEniCS \cite{FEniCS}. The uniform triangulation $\triang$ was obtained by first dividing the domain into squares of side length $h$ and then split them into 4 triangles by drawing both diagonals. \\
 Different to the initial guess suggested in \cite{Neilan2014} I used the solution of $\triangle u = -\sqrt{2f}$ as introduced in \ref{sec: initial guess}. 
-We denote the degree of the trial space $V_h=P_h^k \cap H^1(\Omega)$ by $k$ and the degree chosen for the Hessian ansatz space $\Sigma_h = [\mathcal{P}_h^{k_{DH}}]^{d \times d}$ by $k_{DH}$.
-Figure \ref{fig: l2 errors test 1} shows the $L^2$ error calculated for the first test case, the numbers for the cases with $k=2$ are shown more detailed in Table \ref{tab: l2 errors test 1 deg 2}. For a run with $k=3$ and $k_{DH}=0$  the Newton solver diverged already for $h=1/2$. \todo{Kommentar?}
+We denote the degree of the trial space $V_h=P_h^k \cap H^1(\Omega)$ by $k$ and the degree chosen for the Hessian ansatz space $\Sigma_h = [\mathcal{P}_h^{k_{DH}}]^{d \times d}$ by $k_{DH}$. The nonlinear system of equations given by \eqref{eq: neilan eq1} and \eqref{eq: discrete hessian} or \eqref{eq: neilan eq1 + jump} and \eqref{eq: discrete hessian}, respectively was solved with FEniCS' internal Newton solver. Its parameters for absolute and relative tolerance were set to $1e-8$ and the number of maximum iteration was restricted to 100. 
+
+Figure \ref{fig: l2 errors test 1} shows the $L^2$ error of all performances of the first test case that have converged, the polynomial degrees $k$ were taken to be $1,\dots,3$ and $k_{DH}$ equal to all variants $0, \dots, k$.  The results for the runs with $k=3$ are shown more detailed in Table \ref{tab: l2 errors test 1 deg 2}, in both tables the column $N$ refers to the number of iterations the Newton solver needed to reach the desired tolerance. 
 
 \input{load_Neilan_data.tex}
+
+\begin{figure}[h!]
+\centering
+	\includegraphics[width = 0.95\textwidth, height = 0.41\textheight]{../../FEniCS/diagrams/MA1_NeilanCG_l2.pdf}
+	\caption{$L^2$ errors for test case \ref{test smooth}}
+	\label{fig: l2 errors test 1}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+	\includegraphics[width = 0.95\textwidth, height = 0.41\textheight]{../../FEniCS/diagrams/MA1_NeilanCG_h1.pdf}
+	\caption{$H^1$ errors for test case \ref{test smooth}}
+	\label{fig: h2 errors test 1}
+\end{figure}
+
+\begin{table}[h]
+	\begin{subtable}[b]{0.45\textwidth}
+		\centering
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N}]\MAOnedegThreeThree
+    	\caption{Error for $k=3, k_{DH}=3$}
+   \end{subtable}
+   ~
+	\begin{subtable}[b]{0.45\textwidth}
+		\centering
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N}]\MAOnedegThreeTwo
+ 	\caption{Error for $k=3, k_{DH}=2$}
+	\end{subtable}
+	\caption{Errors for test case \ref{test smooth}}
+	\label{tab: l2 errors test 1 deg 2}
+\end{table}
+
+
+Considering the results of the smooth test scenario we notice that the error almost do not alter for different polynomial degrees $k_{DH}$ if both converge. Albeit it seems for low polynomial degrees a difference between those degrees leads to divergence.
+
+This test scenario was also performed with the additional normal jump penalty term as stated in \eqref{eq: neilan eq1 + jump} weighted with $\eta$ equal to 50 leading to the results shown in figure \ref{fig: l2 errors test 1 jump} and the tables \ref{tab: l2 errors test 1 deg 2 jump}.
+
+\begin{figure}[h!]
+	\includegraphics[width = 0.95\textwidth, height = 0.41\textheight]{../../FEniCS/diagrams/MA1_NeilanCG_GradJump_l2.pdf}
+	\caption{$L^2$ errors for test case \ref{test smooth} and additional gradient jump penalty}
+	\label{fig: l2 errors test 1 jump}
+\end{figure}
+
+\begin{figure}[h!]
+	\includegraphics[width = 0.95\textwidth, height = 0.41\textheight]{../../FEniCS/diagrams/MA1_NeilanCG_GradJump_h1.pdf}
+	\caption{$H^1$ errors for test case \ref{test smooth} and additional gradient jump penalty}
+	\label{fig: h1 errors test 1 jump}
+\end{figure}
 
 \begin{table}[h]
 	\begin{subtable}[b]{0.45\textwidth}
@@ -82,16 +130,15 @@ Figure \ref{fig: l2 errors test 1} shows the $L^2$ error calculated for the firs
  	\caption{Error for $k=2, k_{DH}=0$}
 	\end{subtable}
 	\caption{Errors for test case \ref{test smooth}}
-	\label{tab: l2 errors test 1 deg 2}
+	\label{tab: l2 errors test 1 deg 2 jump}
 \end{table}
 
-deg =3 $deg_h$essian =0 funktioniert nicht.
+\todo{Kommentar zu diesen Ergebnissen.}
 
-\begin{figure}[h]
-	\includegraphics[scale=0.5]{../../FEniCS/diagrams/MA1_NeilanGradJump_l2.pdf}
-	\caption{$L^2$ errors for test case \ref{test smooth}}
-	\label{fig: l2 errors test 1}
-\end{figure}
+The test two was carried out for $\eta=20k^2$
+
+
+\newpage
 
 \section{Numerical Results of Our DG Method}
 
@@ -102,11 +149,11 @@ In \cite{Awanou2014} Awanou analysed the similar iteration process
 	u^{i+1} &= g \textnormal{ on } \partial \Omega 
 \end{align}
 showing convergence for the analytical solution $u$ and a sufficent close $u^0$. 
-In a earlier work \cite{Awanou2010} Awanou examined a discrete Version of a vanishing moment method, herein he mentioned Newton's method defined by
+In a earlier work \cite{Awanou2010} Awanou examined a discrete Version of a vanishing moment method, herein he mentioned a method he calls Newton's method defined by
 \[
 	\int_{\Omega} [\mycof{ D^2 u_h^i} Du_h^{i+1}] \cdot Dv_h = -	\int_{\Omega} f v_h + \frac 1 2 \int_{\Omega} [\mycof{ D^2 u_h^i} Du_h^{i}] \cdot Dv_h \; \forall v_h \in V_h \cap H^1_0 (\Omega)  \label{eq: Awanout eq2}.
 \]
-He claims that this ansatz for problems with non-smooth solutions breaks down, in his numerical results he cites test \ref{test sqrt} as an example where Newton's method diverges.
+His chosen trial space were piecewise polynomials contained in $C^1(\Omega)$. He claims that this ansatz breaks down for problems with non-smooth solutions, in his numerical results he cites test \ref{test sqrt} as an example where Newton's method diverges.
 
 ?????
 While Awanou uses a finite difference scheme to solve the PDE in every step we want to exploit the benefits of a DG method and solve every intermediate step by a SIPG method. 
