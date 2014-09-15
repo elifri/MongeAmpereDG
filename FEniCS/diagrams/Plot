@@ -1,0 +1,63 @@
+#!/bin/bash
+
+DATA1="../data/MA1_Neilan_degGradJump22_l2errornorm"
+DATA2="../data/MA1_Neilan_degGradJump21_l2errornorm"
+DATA3="../data/MA1_Neilan_degGradJump20_l2errornorm"
+DATA3="../data/MA1_Neilan_degGradJump20_l2errornorm"
+DATA3="../data/MA1_Neilan_degGradJump10_l2errornorm"
+DATA4="../data/MA1_Neilan_degGradJump33_l2errornorm"
+DATA5="../data/MA1_Neilan_degGradJump32_l2errornorm"
+DATA6="../data/MA1_Neilan_degGradJump31_l2errornorm"
+
+DATA1="../data/MA1_Neilan_degGradJump22_l2errornorm"
+DATA2="../data/MA1_Neilan_degGradJump21_l2errornorm"
+DATA3="../data/MA1_Neilan_degGradJump20_l2errornorm"
+DATA3="../data/MA1_Neilan_degGradJump20_l2errornorm"
+DATA3="../data/MA1_Neilan_degGradJump10_l2errornorm"
+
+PREFIX="../data/MA1_Neilan_degGradJump"
+
+TITLE1='deg22'
+TITLE2='deg21'
+TITLE3='deg20'
+TITLE4='deg10'
+
+OUTPUT1="MA1_NeilanGradJump_L2"
+
+
+gnuplot << EOF
+
+#set axis data
+set logscale y 
+set yrange [1e-10:1]
+set format y "%.0e"
+set ytics 1e-10,1e-1
+
+set grid ytics
+
+set xtics ("1/2" 1, "1/4" 2, "1/8" 3, "1/16" 4, "1/32" 5, "1/64" 6, "1/128" 7, "1/256" 8)
+
+set style line 1 lc rgb 'skyblue' pt 5   # square
+set style line 2 lc rgb 'orange-red' pt 7   #circle
+#set style line 3 lt rgb '#FF4500' pt 9   #triangle
+set style line 3 lc rgb 'blue' pt 5   # square
+set style line 4 lc rgb 'red' pt 7   #circle
+set style line 5 lc rgb 'grey' pt 9   #triangle
+set style line 6 lc rgb 'navy' pt 5   # square
+set style line 7 lc rgb 'black' pt 7   #circle
+set style line 8 lc rgb 'dark-red' pt 9   #triangle
+
+#plot
+LIST = system("ls -1 $PREFIX*l2errornorm")
+FILES = words(LIST)
+FILE(i) = word(LIST,i)
+
+plot for [i=1:FILES] FILE(i) every 1::2  notitle with lines ls i, for [i=1:FILES] FILE(i) every 1::2  title 'deg '.FILE(i)[31:31].' '.FILE(i)[32:32] ls i
+
+set terminal postscript color
+set output '$OUTPUT1.ps'
+replot
+q
+EOF
+
+ps2pdf $OUTPUT1.ps $OUTPUT1.pdf
