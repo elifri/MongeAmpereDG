@@ -1,12 +1,18 @@
 %read data for case deg=22 and merge into one file
-\pgfplotstableread{../../FEniCS/data/MA1_Neilan_deg22_l2errornorm} \MAOnedegTwoTwoL
-\pgfplotstableread{../../FEniCS/data/MA1_NeilanGradJump_deg22_l2errornorm} \MAOneJumpdegTwoTwo
-\pgfplotstableread{../../FEniCS/data/MA1_NeilanGradJump_deg22_h1errornorm}\MAOneJumpdegTwoTwoH
+\newcommand{\readDataN}[2]{
+\pgfplotstableread{../../FEniCS/data/#1_l2errornorm} #2
 
-\pgfplotstablecreatecol[copy column from table={../../FEniCS/data/MA1_NeilanGradJump_deg22_h1errornorm}{h1error}] {h1error} \MAOneJumpdegTwoTwo
+\pgfplotstablecreatecol[copy column from table={../../FEniCS/data/#1_h1errornorm}{h1error}] {h1error} #2
 
-%read data for case deg=20 and merge into one file
-\pgfplotstableread{../../FEniCS/data/MA1_NeilanGradJump_deg20_l2errornorm} \MAOneJumpdegTwoZero
-\pgfplotstableread{../../FEniCS/data/MA1_NeilanGradJump_deg20_h1errornorm}\MAOneJumpdegTwoZeroH
+\pgfplotstablecreatecol[copy column from table={../../FEniCS/data/#1_newtonSteps}{steps}] {N} #2
+}
 
-\pgfplotstablecreatecol[copy column from table={../../FEniCS/data/MA1_NeilanGradJump_deg20_h1errornorm}{h1error}] {h1error} \MAOneJumpdegTwoZero
+\readDataN{MA1_Neilan_degGradJump22}{\MAOneJumpdegTwoTwo}
+\readDataN{MA1_Neilan_degGradJump20}{\MAOneJumpdegTwoZero}
+
+%\pgfplotstableread{../../FEniCS/data/MA1_Neilan_deg22_l2errornorm} \MAOnedegTwoTwoL
+%\pgfplotstableread{../../FEniCS/data/MA1_NeilanGradJump_deg22_l2errornorm} \MAOneJumpdegTwoTwo
+%\pgfplotstableread{../../FEniCS/data/MA1_NeilanGradJump_deg22_h1errornorm}\MAOneJumpdegTwoTwoH
+
+%\pgfplotstablecreatecol[copy column from table={../../FEniCS/data/MA1_NeilanGradJump_deg22_h1errornorm}{h1error}] {h1error} \MAOneJumpdegTwoTwo
+%\pgfplotstablecreatecol[copy column from table={../../FEniCS/data/MA1_NeilanGradJump_deg22_newtonsteps}{steps}] {N} \MAOneJumpdegTwoTwo
