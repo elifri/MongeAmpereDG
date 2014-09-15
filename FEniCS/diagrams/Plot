@@ -1,35 +1,23 @@
 #!/bin/bash
 
-DATA1="../data/MA1_Neilan_degGradJump22_l2errornorm"
-DATA2="../data/MA1_Neilan_degGradJump21_l2errornorm"
-DATA3="../data/MA1_Neilan_degGradJump20_l2errornorm"
-DATA3="../data/MA1_Neilan_degGradJump20_l2errornorm"
-DATA3="../data/MA1_Neilan_degGradJump10_l2errornorm"
-DATA4="../data/MA1_Neilan_degGradJump33_l2errornorm"
-DATA5="../data/MA1_Neilan_degGradJump32_l2errornorm"
-DATA6="../data/MA1_Neilan_degGradJump31_l2errornorm"
+#PREFIX="../data/MA1_Neilan_deg"
+#PREFIX="../data/MA1_NeilanCG_deg"
+#PREFIX="../data/MA1_NeilanCG_GradJump_deg"
+#PREFIX="../data/MA2_NeilanCG_GradJump_deg"
+PREFIX="../data/MA3_NeilanCG_deg"
 
-DATA1="../data/MA1_Neilan_degGradJump22_l2errornorm"
-DATA2="../data/MA1_Neilan_degGradJump21_l2errornorm"
-DATA3="../data/MA1_Neilan_degGradJump20_l2errornorm"
-DATA3="../data/MA1_Neilan_degGradJump20_l2errornorm"
-DATA3="../data/MA1_Neilan_degGradJump10_l2errornorm"
-
-PREFIX="../data/MA1_Neilan_degGradJump"
-
-TITLE1='deg22'
-TITLE2='deg21'
-TITLE3='deg20'
-TITLE4='deg10'
-
-OUTPUT1="MA1_NeilanGradJump_L2"
+#OUTPUT1="MA1_Neilan_h1" OFFSET1=23 OFFSET2=24
+#OUTPUT1="MA1_NeilanCG_h1" OFFSET1=25 OFFSET2=26
+#OUTPUT1="MA1_NeilanCG_GradJump_h1" OFFSET1=34 OFFSET2=35
+#OUTPUT1="MA2_NeilanCG_GradJump_l2" OFFSET1=34 OFFSET2=35
+OUTPUT1="MA3_NeilanCG_h1" OFFSET1=25 OFFSET2=26
 
 
 gnuplot << EOF
 
 #set axis data
 set logscale y 
-set yrange [1e-10:1]
+#set yrange [1e-10:1]
 set format y "%.0e"
 set ytics 1e-10,1e-1
 
@@ -39,20 +27,21 @@ set xtics ("1/2" 1, "1/4" 2, "1/8" 3, "1/16" 4, "1/32" 5, "1/64" 6, "1/128" 7, "
 
 set style line 1 lc rgb 'skyblue' pt 5   # square
 set style line 2 lc rgb 'orange-red' pt 7   #circle
-#set style line 3 lt rgb '#FF4500' pt 9   #triangle
-set style line 3 lc rgb 'blue' pt 5   # square
-set style line 4 lc rgb 'red' pt 7   #circle
-set style line 5 lc rgb 'grey' pt 9   #triangle
-set style line 6 lc rgb 'navy' pt 5   # square
-set style line 7 lc rgb 'black' pt 7   #circle
-set style line 8 lc rgb 'dark-red' pt 9   #triangle
+#set style line 3 lc rgb '#FF4500' pt 9   #triangle
+set style line 3 lc rgb 'grey' pt 5   # square
+set style line 4 lc rgb 'blue' pt 7   #circle
+set style line 5 lc rgb 'red' pt 9   #triangle
+set style line 6 lc rgb 'black' pt 5   # square
+set style line 6 lc rgb 'black' pt 5   # square
+set style line 8 lc rgb 'navy' pt 7   #circle
+set style line 9 lc rgb 'dark-red' pt 9   #triangle
 
 #plot
-LIST = system("ls -1 $PREFIX*l2errornorm")
+LIST = system("ls -1 $PREFIX*h1errornorm")
 FILES = words(LIST)
 FILE(i) = word(LIST,i)
 
-plot for [i=1:FILES] FILE(i) every 1::2  notitle with lines ls i, for [i=1:FILES] FILE(i) every 1::2  title 'deg '.FILE(i)[31:31].' '.FILE(i)[32:32] ls i
+plot for [i=1:FILES] FILE(i) every 1::2  notitle with lines ls i, for [i=1:FILES] FILE(i) every 1::2  title 'deg '.FILE(i)[$OFFSET1:$OFFSET1].' '.FILE(i)[$OFFSET2:$OFFSET2] ls i
 
 set terminal postscript color
 set output '$OUTPUT1.ps'
