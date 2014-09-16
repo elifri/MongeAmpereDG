@@ -153,7 +153,13 @@ In a earlier work \cite{Awanou2010} Awanou examined a discrete Version of a vani
 \[
 	\int_{\Omega} [\mycof{ D^2 u_h^i} Du_h^{i+1}] \cdot Dv_h = -	\int_{\Omega} f v_h + \frac 1 2 \int_{\Omega} [\mycof{ D^2 u_h^i} Du_h^{i}] \cdot Dv_h \; \forall v_h \in V_h \cap H^1_0 (\Omega)  \label{eq: Awanout eq2}.
 \]
-His chosen trial space were piecewise polynomials contained in $C^1(\Omega)$. He claims that this ansatz breaks down for problems with non-smooth solutions, in his numerical results he cites test \ref{test sqrt} as an example where Newton's method diverges.
+His chosen trial space were piecewise polynomials contained in $C^1(\Omega)$. Note, it holds 
+\[\int_{\Omega}[\mycof{ D^2 u_h} Du_h] \cdot Dv_h 
+= -2 \int_\Omega \mydet{D^2 u_h} v_h \forall v_h \in V_h \cap H^1_0 (\Omega) ,
+\]
+where the right-hand side equals to $\int_\Omega f v_h$ if $u$ is the solution to the \MA equation. Hence we can see this ansatz as an $C^1$variant of the approach our method pursued.
+He claims that this ansatz breaks down for problems with non-smooth solutions, in his numerical results he cites test \ref{test sqrt} as an example where Newton's method diverges.
+
 
 ?????
 While Awanou uses a finite difference scheme to solve the PDE in every step we want to exploit the benefits of a DG method and solve every intermediate step by a SIPG method. 

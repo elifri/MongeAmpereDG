@@ -20,8 +20,8 @@ Note, different from the well-known linear case we cannot derive a weak formulat
 However, there are attempts to establish less regular weak solutions to the \MA equation:
 
 %\subsection{Viscosity Solution}
-First Crandall and Lions \cite{CL1983} introduced the notion of \emph{viscosity solutions}
-\begin{definition}[Viscosity Solution]
+First Crandall and Lions \cite{CL1983} introduced the notion of \emph{viscosity solutions} for fully nonlinear first order PDEs. The developed theory was later extended to also handle second order PDEs.
+\begin{definition}[Viscosity Solution{\cite[Definition 1.1]{FGN2013}}]
 	$u \in C^0(\Omega)$ is called a \emph{viscosity subsolution (supersolution)} of \eqref{MA eq} if, for every point $x \in \Omega$ and function $\varphi \in C^2(\Omega)$ satisfying $u \leq \varphi (\geq \varphi)$ in $\Omega$ and $u(x) = \varphi(x)$, there holds $\mydet{D^2 \varphi(x)} - f \leq 0 (\geq 0)$. 
 %	\[
 %	\forall x_0 \in \Omega \forall \varphi \in C^2(\Omega), u \leq \varphi (\geq \varphi)
@@ -31,11 +31,10 @@ First Crandall and Lions \cite{CL1983} introduced the notion of \emph{viscosity 
 %	\]
 	$u$ is called a \emph{viscosity solution} if $u$ is simultaneously a viscosity sub- and supersolution.
 \end{definition}
-
-Hier kommt dann eine anschauliche Erklärung zur geometrischen Bedeutung.
+It proved very hard to develop reliable numerical schemes converging to the viscosity solution.
 
 %\subsection{Aleksandrov Solution}
-The \MA problem in two dimensions can be reformulated via a differential geometry interpretation leading to a different kind of solution concept.
+A different kind of solution concept is derived by reformulating the \MA problem in two dimensions via a differential geometry interpretation.
 
 \begin{definition}[\MA Measure {\cite[2.1.1.]{FGN2013}}]\label{def:MA measure}
 	The \emph{\MA measure} associated with $u$ is defined as 
@@ -64,15 +63,20 @@ is called \emph{Aleksandrov solution} of the \MA equation.
 Aleksandrov solution are also viscosity solutions if $\mu$ is absolutely continuous with Lebesgue measure with a continuous density $f$ \cite[proposition 1.3.4.]{Gutierrez2001} . For $f > 0$ the two solution concepts even coincide \cite[proposition 1.7.1]{Gutierrez2001}. 
 
 \section{Existence and Uniqueness}
-Showing existence of fully nonlinear PDEs is a hard challenge compared to the linear case. 
-The \MA equation is known for its notorious ambiguity: If $\Omega$ is a domain, one can proof it has at most two solutions, compare \cite[Kap.IV, \S 5,3]{CH1968}. In general these two solutions also exist.
-A finite difference method with a standard nine-point stencil and Newton's method to solve the resulting nonlinear system produce fore different initial guesses even sixteen different numerical solutions on a $4 \times 4$ grid\cite{FGN2013}. 
-
+Showing existence of fully nonlinear PDEs is a hard challenge compared to the linear case. Nevertheless it is an important part of the well-posedness of a numerical problem. 
 For simplicity we constraint ourselves to the elliptic case. 
 \begin{proposition}
 	The \MA equation is elliptic for strictly convex function $u$ and $f > 0$.
 \end{proposition}
-For a proof of this result we refer to \cite{CC1995, GT1977}. A main thesis for uniqueness theory is the comparison principle for second order equations.
+For a proof of this result we refer to \cite{CC1995, GT1977}. 
+
+The existence of classical solutions hangs on the regularity of the right-hand side $f$ and boundary data $g$, as well as on the problem domain $\Omega$. There are several variants and relaxations on assumptions made on $\Omega,f$ and $g$, mostly $\Omega$ is taken to be convex with a smooth boundary and $f,g$ to be smooth, results can be found e.g. in \cite{Gutierrez2001, GT1983, Urbas1998}.
+
+The \MA equation is known for its notorious ambiguity: If $\Omega$ is a domain, one can proof it has at most two solutions, compare \cite[Kap.IV, \S 5,3]{CH1968}. In general these two solutions also exist.
+A finite difference method with a standard nine-point stencil and Newton's method to solve the resulting nonlinear system produce fore different initial guesses even sixteen different numerical solutions on a $4 \times 4$ grid\cite{FGN2013}. 
+
+In 1989 Ishii proved existence of viscosity solution using the comparison principle and Perron's method \cite{Ishii1989}. 
+A main thesis for uniqueness theory is the comparison principle for second order equations.
 
 \begin{theorem}[Comparison Principle]
 	Let $F$ be a fully nonlinear second order operator continuous in all of its arguments.
@@ -121,7 +125,7 @@ Find $(u,p) \in \mathcal{S}$ such that
 Based on this formulation Dean and Glowinski developed augmented Lagrangian methods and least square approaches \cite{DG2004,DG2006,DG2006a}.
 
 Another approach in this category are the so called \emph{vanishing moment methods}. First introduced in \cite{FN2009} they try to transfer the idea of the vanishing viscosity method: Feng and Neilan add higher order terms to obtain a higher order PDE that is easier to handle than the original one. Then the contribution of this higher order terms is decreased approximating thereby the \MA solution. \\
-One choice for those higher order terms is the square of the Laplacian of $u$. Additionally the newly derived fourth order PDE gets more boundary conditions, yielding to the problem
+One choice for those higher order terms is the square of the Laplacian of $u$ such that the new PDE is fourth order but linear. Additionally to more terms the newly derived PDE gets further boundary conditions to gain well-posedness , yielding to the problem
 \begin{definition}[Vanishing Moment Equations]
 	The vanishing moment method approximates \eqref{MA eq} by the sequence
 	\begin{align}
@@ -131,9 +135,8 @@ One choice for those higher order terms is the square of the Laplacian of $u$. A
 	\end{align}
 The limit $\lim\limits_{\varepsilon \rightarrow 0 } u^\varepsilon$, if exists is called a \emph{moment solution} of the \MA equation.
 Of course the vanishing moments is not directly connected to a solution method, for example one could solve \eqref{eq: VMM 1}-\eqref{eq: VMM 3} with a finite difference scheme or a appropriate Galerkin Method.
-Feng and Neilan provide a extensive theoretical analysis for the radially symmetric case and numerical experiments in \cite{FN2009, Neilan2010, FN2011a} . One interesting point is that this method autonomously chooses the unique convex viscosity solution, in even dimensions substituting $\varepsilon$ by $-\varepsilon$ in  \eqref{eq: VMM 1} yields to the other, concave solution to the \MA problem.  
+Feng and Neilan provide a theoretical analysis for the radially symmetric case and numerical experiments in \cite{FN2009, Neilan2010, FN2011a}. One interesting point is that this method autonomously chooses the unique convex viscosity solution, in even dimensions substituting $\varepsilon$ by $-\varepsilon$ in  \eqref{eq: VMM 1} yields to the other, concave solution to the \MA problem.  
 \end{definition}
-\todo{theoretical and numerical analysis of this method}
 
 
 \subsection{Methods based on Finite Basis Expansions and Approximating PDEs at Sampling Points}

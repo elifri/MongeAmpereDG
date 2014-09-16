@@ -91,7 +91,7 @@
 % -----
 %---define pgfplottablestyle
 
-
+\pgfplotsset{compat=1.8}
 \pgfplotstableset{
 	sci e, /pgf/number format/sci precision=5,
     columns/iterations/.style={column name={$h$},% Set the name to be used for the first column
