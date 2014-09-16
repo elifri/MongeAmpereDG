@@ -35,9 +35,7 @@ z = numpy.zeros(number_of_points)
 
 for points in tree.findall('.//Points'):
   for elem in points.findall('.//DataArray'):
-    print elem.text
     point_data = elem.text.split(' ')
-    print point_data
 
     for i in range(0, number_of_points):
       x[i]=point_data[4*i]

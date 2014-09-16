@@ -2,15 +2,21 @@
 
 #PREFIX="../data/MA1_Neilan_deg"
 #PREFIX="../data/MA1_NeilanCG_deg"
-#PREFIX="../data/MA1_NeilanCG_GradJump_deg"
+#PREFIX="../data/MA1_NeilanCG_GradJump"
 #PREFIX="../data/MA2_NeilanCG_GradJump_deg"
-PREFIX="../data/MA3_NeilanCG_deg"
+#PREFIX="../data/MA3_NeilanCG_deg"
+#PREFIX="../data/MA3_NeilanCG_GradJump_deg"
+#PREFIX="../data/temp"
+PREFIX="../data/MA4_NeilanCG_GradJump_deg"
 
 #OUTPUT1="MA1_Neilan_h1" OFFSET1=23 OFFSET2=24
 #OUTPUT1="MA1_NeilanCG_h1" OFFSET1=25 OFFSET2=26
-#OUTPUT1="MA1_NeilanCG_GradJump_h1" OFFSET1=34 OFFSET2=35
+#OUTPUT1="MA1_NeilanCG_GradJump_l2" OFFSET1=34 OFFSET2=35
 #OUTPUT1="MA2_NeilanCG_GradJump_l2" OFFSET1=34 OFFSET2=35
-OUTPUT1="MA3_NeilanCG_h1" OFFSET1=25 OFFSET2=26
+#OUTPUT1="MA3_NeilanCG_h1" OFFSET1=25 OFFSET2=26
+#OUTPUT1="MA3_NeilanCG_GradJump_l2" OFFSET1=34 OFFSET2=35
+#OUTPUT1="temp" OFFSET1=13 OFFSET2=14
+OUTPUT1="MA4_NeilanCG_GradJump_l2" OFFSET1=34 OFFSET2=35
 
 
 gnuplot << EOF
@@ -37,7 +43,7 @@ set style line 8 lc rgb 'navy' pt 7   #circle
 set style line 9 lc rgb 'dark-red' pt 9   #triangle
 
 #plot
-LIST = system("ls -1 $PREFIX*h1errornorm")
+LIST = system("ls -1 $PREFIX*l2errornorm")
 FILES = words(LIST)
 FILE(i) = word(LIST,i)
 
