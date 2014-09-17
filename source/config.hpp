@@ -3,6 +3,7 @@
  *
  *  Created on: 07.01.2014
  *      Author: elisa
+ * \brief Sets all configuration not set in config file
  */
 
 #ifndef CONFIG_HPP_
@@ -63,16 +64,16 @@ class Tmass;
 // Implicit Heat-Problems
 #define CONSTKAPPA_IMPLICIT 41
 
-//Monge Ampere Problems
+///Monge Ampere Problems
 enum Monge_Ampere_Problem
 {
-	MONGEAMPERE1, // exp(|x|_2^2 / 2)
-	MONGEAMPERE2, // 1/2 * max{0,|x-x0|-0.2}^2
-	MONGEAMPERE3, //-sqrt(2-|x|^2)
-	SIMPLEMONGEAMPERE, // solution is 2x^2+2y^2-3xy
-	SIMPLEMONGEAMPERE2, // solution is x^2/2+y^2/2
-	CONST_RHS, //exact solution not known
-	BRENNER_EX1 //first example in brenner paper
+	MONGEAMPERE1, ///< exp(|x|_2^2 / 2)
+	MONGEAMPERE2, ///< 1/2 * max{0,|x-x0|-0.2}^2
+	MONGEAMPERE3, ///<-sqrt(2-|x|^2)
+	SIMPLEMONGEAMPERE, ///< solution is 2x^2+2y^2-3xy
+	SIMPLEMONGEAMPERE2, ///< solution is x^2/2+y^2/2
+	CONST_RHS, ///<exact solution not known
+	BRENNER_EX1 ///<first example in brenner paper
 };
 std::ostream& operator <<(std::ostream &output, const Monge_Ampere_Problem &p);
 
@@ -114,7 +115,8 @@ typedef igpm::telementid_D3_L4C16P48 example_id_type;
 namespace config{
 
 enum {
-	spacedim = SPACE_DIMENSION, barycdim = spacedim + 1,
+	spacedim = SPACE_DIMENSION,
+	barycdim = spacedim + 1,
 #if (EQUATION == EULER_EQ)
 	statedim = 1 + spacedim + 1, degreedim = 0,        // polynomial degree
 	shapedim = 1,        // no. of basis functions per element
@@ -130,21 +132,21 @@ enum {
 	shapedim = 3,        // no. of basis functions per element
 #endif
 #if (EQUATION == MONGE_AMPERE_EQ)
-	statedim = 1,
-	degreedim = 4, // polynomial degree
-	shapedim = 15, //no. of basis functions per element
+	statedim = 1, ///< target domain dimension (of solution)
+	degreedim = 3, ///< polynomial degree
+	shapedim = 10, ///< no. of basis functions per element
 #endif
 
 	lagshapedim = 3, // no. of Lagrange-shapes, e.g. for continuous reconstruction
 	lagstatedim = 1,
-	Ndim = 3,        // no. of nodes
-	childdim = int(example_id_type::maxChildren),
-	Equadraturedim = 16,        // no. of element-quadr. points per element
-	Fquadgaussdim = 5,        // no. of gauss-points per face
-	Fdim = 3,        // no. of faces
-	Fchilddim = 2,        // no. of child-faces on one face
-	Fquadraturedim = (Fdim + Fchilddim * Fdim) * Fquadgaussdim, // no. of face-quadr. points per element
-	Fmiddim = 9,        // no. of face-midpoints per element
+	Ndim = 3,        ///< no. of nodes
+	childdim = int(example_id_type::maxChildren), ///< Number of children during refinement
+	Equadraturedim = 16,        ///< no. of element-quadr. points per element
+	Fquadgaussdim = 5,        ///<  no. of gauss-points per face
+	Fdim = 3,        ///<  no. of faces
+	Fchilddim = 2,        ///< no. of child-faces on one face
+	Fquadraturedim = (Fdim + Fchilddim * Fdim) * Fquadgaussdim, ///< no. of face-quadr. points per element
+	Fmiddim = 9,        ///< no. of face-midpoints per element
 	maxBaseCells = 10000,       // for simplicitly only
 	maxAnteCells = 2500000,
 	maxLeafCells = 2500000,
@@ -185,9 +187,9 @@ typedef Eigen::Matrix<Estate_type, childdim, 1> EstateCV_type; // child vector
 typedef value_type  Emask_type[childdim][shapedim][shapedim];
 
 //--------mass------
-///stores a mass matrix for a single element
+///Type to store a mass matrix for a single element
 typedef Eigen::Matrix<value_type, shapedim, shapedim>  Emass_type;
-///to store a decomposition of a mass matrix
+///Type to store a decomposition of a mass matrix
 typedef Eigen::LDLT<Emass_type> Emass_dec_type;
 typedef Tmass mass_type;
 
@@ -205,22 +207,22 @@ typedef Eigen::Matrix<value_type, shapedim, Ndim> Nvalueshape_type;
 //======= quadr.-weights, quadrature points=============
 // and shape-values/derivatives at quadrature points
 typedef Eigen::Matrix<value_type, Ndim, 1> Enodevalue_type;
-typedef Eigen::Matrix<value_type, Equadraturedim, 1> Equadrature_type;
-typedef Eigen::Matrix<value_type, shapedim, Equadraturedim> Equadratureshape_type;
-typedef Eigen::Matrix<space_type, shapedim, Equadraturedim> Equadratureshape_grad_type;
-typedef Eigen::Matrix<Hessian_type, shapedim, Equadraturedim> Equadratureshape_hessian_type;
-typedef Eigen::Matrix<constant_diffusionmatrix_type, shapedim, Equadraturedim> Equadratureshape_diffusionmatrix_type;
-typedef Eigen::Matrix<value_type, Equadraturedim, barycdim> Equadraturepoint_type;
+typedef Eigen::Matrix<value_type, Equadraturedim, 1> Equadrature_type; ///< Type to store values at quadrature points
+typedef Eigen::Matrix<value_type, shapedim, Equadraturedim> Equadratureshape_type; ///< Type to store values depending on a shape at quadrature points
+typedef Eigen::Matrix<space_type, shapedim, Equadraturedim> Equadratureshape_grad_type; ///< Type to store gradients depending on a shape at quadrature points
+typedef Eigen::Matrix<Hessian_type, shapedim, Equadraturedim> Equadratureshape_hessian_type; ///< Type to store (const.) Hessian depending on a shape at quadrature points
+typedef Eigen::Matrix<constant_diffusionmatrix_type, shapedim, Equadraturedim> Equadratureshape_diffusionmatrix_type;///< Type to store (const) Hessian depending on a shape at quadrature points
+typedef Eigen::Matrix<value_type, Equadraturedim, barycdim> Equadraturepoint_type; ///< Type to store quadrature points in barycentric coordinates
 typedef value_type Emaskquadpoint_type[childdim][Equadraturedim][barycdim];
 typedef Eigen::Matrix<value_type, Equadraturedim, 1> Equadratureweight_type;
 
-///struct to store all necessary data for an element quadrature
+///Struct to store all necessary data for an element quadrature
 struct Equad_data_type{
 
-	Equadratureshape_type Equads;   // value of shapes at quadrature points
-	Equadratureshape_grad_type Equads_grad; //gradient of shapes at quadrature points
-	Equadratureshape_type Equads_xx, Equads_xy, Equads_yy; // second derivatives of shapes at quadrature points
-	Equadratureshape_hessian_type Equads_hessian;
+	Equadratureshape_type Equads;   ///< Values of shapes at quadrature points
+	Equadratureshape_grad_type Equads_grad; ///< Gradients of shapes at quadrature points
+	Equadratureshape_type Equads_xx, Equads_xy, Equads_yy; ///< Second derivatives of shapes at quadrature points
+	Equadratureshape_hessian_type Equads_hessian; ///< Hessian of shapes at quadrature points
 };
 
 
@@ -231,11 +233,12 @@ typedef Eigen::Matrix<Hessian_type, shapedim, Fquadraturedim> Fquadratureshape_h
 typedef Eigen::Matrix<constant_diffusionmatrix_type, shapedim, Fquadraturedim> Fquadratureshape_diffusionmatrix_type;
 typedef Eigen::Matrix<value_type, Fquadraturedim, 1> Fquadratureweight_type;
 
+///Struct to store all necessary data for an face quadrature
 struct Fquad_data_type{
-	Fquadratureshape_type Fquads;   // value of shapes at quadrature points
-	Fquadratureshape_type Fquads_x; // x-der. of shapes at quadrature points in reference element
-	Fquadratureshape_type Fquads_y; // y-der. of shapes at quadrature points in reference element
-	Fquadratureshape_hessian_type Fquads_hessian;
+	Fquadratureshape_type Fquads;   ///< Values of shapes at quadrature points
+	Fquadratureshape_type Fquads_x; ///< x-der. of shapes at quadrature points in reference element
+	Fquadratureshape_type Fquads_y; ///< y-der. of shapes at quadrature points in reference element
+	Fquadratureshape_hessian_type Fquads_hessian; ///< Hessian of shapes at quadrature points in reference element
 };
 
 
@@ -269,11 +272,14 @@ typedef unsigned int CoarseNeighbMid_type[4][3][3];
 // static data
 //------------------------------------------------------------------------------
 
+/*! A class ensuring the config file is created exactly once and accessible for everyone
+ */
 class singleton_config_file{
 	private:
 		static igpm::configfile* cfg;
 
 	public:
+		///Returns a reference to the config file
 		static igpm::configfile& instance();
 
 		~singleton_config_file(){ delete cfg;}
@@ -321,7 +327,7 @@ string entryname2d(const string root, unsigned int i, unsigned int j) {
 
 bool is_infinite( const config::value_type &value );
 
-
+///calculates the power to the basis two
 inline int dual_pow(int n)
 {
 	assert(n>=0 && "power must be nonnegative, otherwise return value cannot be integer");
@@ -330,7 +336,7 @@ inline int dual_pow(int n)
 	return res;
 }
 
-//calculates the eigenvalues of a two-dimensional matrix
+///calculates the eigenvalues of a two-dimensional matrix
 inline void calculate_eigenvalues(const config::Hessian_type &A, config::value_type &ev0, config::value_type &ev1)
 {
 	config::value_type rad = A(0,0) * A(0,0) + (A(1,1) - 2 * A(0,0)) * A(1,1) + 4 * A(0,1) * A(1,0);

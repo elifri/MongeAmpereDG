@@ -21,11 +21,13 @@ using namespace config;
 //------------------------------------------------------------------------------
 // LEAFCELL
 //------------------------------------------------------------------------------
+
 template <typename CONFIG_TYPE>
+///a Class implementing a leaf cell
 class tmyleafcell : public igpm::tidcell_leaf<CONFIG_TYPE>, public tmycommoncelldata<CONFIG_TYPE>
 {
 public:
-  typedef CONFIG_TYPE                                    config_type;
+  typedef CONFIG_TYPE                                  config_type;
   typedef typename config_type::grid_type              grid_type;
   typedef typename config_type::id_type                id_type;
   typedef typename config_type::antecell_type          antecell_type;
@@ -44,31 +46,35 @@ public:
   ////////////////////////////
 
 protected:
-  unsigned int m_nFaces;
-  bool         m_bKnodes;
+  unsigned int m_nFaces; ///< Number of faces
+  bool         m_bKnodes; ///< Number of nodes
 
 public:
-  static mass_type    mass;
+  static mass_type    mass;///< Mass matrix
 
-  Estate_type      u;
+  Estate_type      u; ///< Solution coefficients
   Estate_type      unew;
   Estate_type 	   uold;
   value_type       limiter;
   Enodevalue_type  Serror;
   Enodevalue_type  residuum;
 
-  Equadratureshape_diffusionmatrix_type A_Equad;
-  Fquadratureshape_diffusionmatrix_type A_Fquad;
+  Equadratureshape_diffusionmatrix_type A_Equad; ///< Diffusion matrices at element quadrature points
+  Fquadratureshape_diffusionmatrix_type A_Fquad; ///< Diffusion matrices at face quadrature points
 
 
-  value_type	   		EW0, EW1;
-  constexpr static double epsilon = 1e-2; //minimum value of diffusion matrix' eigenvalues
+  value_type	   		EW0; ///< Minimum eigenvalues of diffusion matricdes at quad points
+  value_type 			EW1; ///< Maximum eigenvalues of diffusion matricdes at quad points
+  constexpr static double epsilon = 1e-2; ///< Minimum value for diffusion matrix' eigenvalues
 
 
 #if(EQUATION==POISSON_EQ || EQUATION==IMPLICIT_HEAT_EQ || EQUATION == MONGE_AMPERE_EQ)
-  unsigned int m_offset, n_offset, m_block_size, n_block_size;
+  unsigned int m_offset, n_offset; ///< offset of this cell in solution vector
+  unsigned int m_block_size, n_block_size;
 #endif
 
+/// @brief Calculates the eigenvalues of a Hessian at a quad point and ensures its pos def.
+/** if the matrix is not pos. def. an multiple of the identity is added such that the minimal eigenvalue is at least epsilon **/
 void calculate_eigenvalues_blub(constant_diffusionmatrix_type &A) {
 
 	value_type EW0_quadr, EW1_quadr;
@@ -105,20 +111,21 @@ void calculate_eigenvalues_blub(constant_diffusionmatrix_type &A) {
 
   }
 
- ///update diffusionmatrix and
+ ///Updates diffusionmatrix and ensure pos. def.
   void set_diffusionmatrix_Equad(const unsigned int iq, const constant_diffusionmatrix_type &A) {
 	  assert (iq < Equadraturedim);
 	  A_Equad(iq) = A;
 	  calculate_eigenvalues_blub(A_Equad(iq));
   }
 
-  ///update diffusionmatrix and
+  ///Updates diffusionmatrix and pos. def.
   void set_diffusionmatrix_Fquad(const unsigned int iq, const constant_diffusionmatrix_type &A) {
 	  assert (iq < Fquadraturedim);
 	  A_Fquad(iq) = A;
 	  calculate_eigenvalues_blub(A_Fquad(iq));
   }
 
+  ///Default constructor
   tmyleafcell()
   {
 	  for (int i = 0; i < Equadraturedim; i++)	 set_diffusionmatrix_Equad(i, constant_diffusionmatrix_type::Identity());
@@ -127,30 +134,20 @@ void calculate_eigenvalues_blub(constant_diffusionmatrix_type &A) {
   }
   ~tmyleafcell() { --m_nCountAllLeafs; }
 
+  ///Sets stored eigenvalues to zero
   void reset_eigenvalues()
   {
 	 EW0 = 0;
 	 EW1 = 0;
   }
 
-
+  ///Sets local mass matrix
   void set_mass (const mass_type & m)
   {
     this->mass.set_massmatrix (m);
   }
 
-
-
-
-//  void update_diffusionmatrix_Equad(const Equadratureshape_diffusionmatrix_type& A,
-//		  	  	  	  	  	  	    const Equad &equad, const Equad_data_type &equad_data,
-//		  	  	  	  	  	  	    const Ejacobian_type &jac, const value_type detjacabs,
-//		  	  	  	  	  	  	    const double faclevel, Emass_type &laplace){
-//	  for (int i = 0; i< Equadraturedim; i++)
-//		  set_diffusionmatrix_Equad(iq, A);
-//	  assemble_laplace(equad, Equads_grad, jac, detjacabs, faclevel, laplace);
-//  }
-
+  ///Calculates average error in this cell
   value_type error() const{
 	value_type error = 0;
 	for (unsigned int i = 0; i< Serror.size(); i++)
@@ -161,29 +158,24 @@ void calculate_eigenvalues_blub(constant_diffusionmatrix_type &A) {
 	return error;
   }
 
-  unsigned int faces() const { return m_nFaces; }
-  unsigned int& faces() { return m_nFaces; }
+  unsigned int faces() const { return m_nFaces; } ///< @return Number of Faces
+  unsigned int& faces() { return m_nFaces; } ///< @return Reference to number of Faces
 
   bool hanging() const { return m_bKnodes; }
   bool& hanging() { return m_bKnodes; }
 
-//  typedef boost::counting_iterator<unsigned int> citerator;
+  static int countAllLeafs() { return m_nCountAllLeafs; } ///< @return Number of all leaf cells
 
-  /*
-   * iterates over #refine-1 equidistant points at a face
+  /*! \brief Calculates the bilinearform on the lhs of the eq: \nabla(A*\nabla) = ... where A is a 2x2 matrix
+   *
+   *\param u0_x  x derivative of the first function
+   *\param u0_y  y derivative of the first function
+   *\param u1_x  x derivative of the second function
+   *\param u1_y  y derivative of the second function
+   *\param A	 diffusion matrix
+   *\param jac	 Jacobian of the transformation to the reference element
+   *\param faclevel table for scaling to leaf cell level
    */
-//  citerator face_begin(const unsigned int face, int refine = 1) const{
-//	  return citerator(m_offset + (face+1)*refine);
-//  }
-//
-//  citerator face_end(const unsigned int face, int refine = 1) const{
-//	  int local_no = (face+2)*refine;
-//	  local_no  = local_no % Ndim*refine;
-//	  return citerator(m_offset + local_no);
-//  }
-
-  static int countAllLeafs() { return m_nCountAllLeafs; }
-
 	value_type bilin_alaplace(const double & u0_x, const double & u0_y,
 			const double & u1_x, const double & u1_y, const constant_diffusionmatrix_type& A, const Ejacobian_type &jac, const double faclevel) const {
 		// calculate gradient of local shape function
@@ -206,6 +198,14 @@ void calculate_eigenvalues_blub(constant_diffusionmatrix_type &A) {
 		return -(A * phi_i).dot(phi_j);
 	}
 
+	/*! \brief Calculates the bilinearform on the lhs of the eq: \nabla(A*\nabla) = ... where A is a 2x2 matrix parallel for all shapes
+	   *
+	   *\param u  gradients of the first functions
+	   *\param v  gradients of the second functions
+	   *\param A	 diffusion matrix
+	   *\param jac	 Jacobian of the transformation to the reference element
+	   *\param faclevel table for scaling to leaf cell level
+	   */
 	Eigen::MatrixXd bilin_alaplace(const Eigen::MatrixXd u, const Eigen::MatrixXd v, const constant_diffusionmatrix_type& A, const Ejacobian_type &jac, const double faclevel) const {
 		// calculate gradient of local shape function
 		// by multiplication of transposed inverse of Jacobian of affine transformation
@@ -228,7 +228,7 @@ void calculate_eigenvalues_blub(constant_diffusionmatrix_type &A) {
 	}
 
 
-	//same as assemble_laplace in basecell
+	///same as assemble_laplace in basecell
  	void assemble_laplace(const Equad& equad, const Equad_data_type &equad_data, const Ejacobian_type &jac, const value_type detjacabs, const double faclevel, Emass_type &laplace) {
 
  	laplace.setZero();
@@ -314,7 +314,7 @@ void calculate_eigenvalues_blub(constant_diffusionmatrix_type &A) {
   }
 
 public:
-  static int m_nCountAllLeafs;
+  static int m_nCountAllLeafs; ///< Number of all leaf cells
 };
 
 

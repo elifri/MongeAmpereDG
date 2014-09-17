@@ -22,6 +22,7 @@
 // BASECELL
 //------------------------------------------------------------------------------
 template<typename CONFIG_TYPE>
+///a class implementing a base cell
 class tmybasecell: public igpm::tidcell_base<CONFIG_TYPE> {
 public:
 	typedef CONFIG_TYPE config_type;
@@ -37,20 +38,19 @@ public:
 	typedef typename config_type::Fnormalvector_type Fnormalvector_type;
 
 private:
-	value_type volume; // volume of the basecell
-	value_type detjacabs; //determinant of the jacobian of the affine transformation from refcell
-	Fvaluevector_type length; //length of every face
+	value_type volume; ///< Volume of the basecell
+	value_type detjacabs; ///< Determinant of the jacobian of the affine transformation from refcell
+	Fvaluevector_type length; ///< Length of a every face
 	Fvaluevector_type Spoint;
-	Fnormalvector_type normal; //normals of every face
-	grad_type grad; //the gradient of every shape function at every (face) quadrature node
-	Fnormalderivative_type normalderi; //normalderivative of every shape function at every face
-	Ejacobian_type jac; //jacobian of the trafo from refcell
-	Emass_type laplace; //the laplace matrix belonging to a(u,v) = grad u * grad v
-	Eigen::Matrix<Hessian_type, shapedim, 1> fe_hessians;
-
+	Fnormalvector_type normal; ///< normals of every face
+	grad_type grad; ///< the gradient of every shape function at every (face) quadrature node
+	Fnormalderivative_type normalderi; ///< normalderivative of every shape function at every face
+	Ejacobian_type jac; ///<jacobian of the trafo from refcell
+	Emass_type laplace; ///<the laplace matrix belonging to a(u,v) = grad u * grad v
 
 public:
 	// cstr, id not set yet!!!
+	///Default constructor
 	tmybasecell():detjacabs() {
 	}
 
@@ -66,37 +66,33 @@ public:
 		os << "0 0 0 0 0 0 0 0 0";
 	}
 
+	/// @return Determinant of Jacobian (of transformation from reference cell)
 	const value_type& get_detjacabs() const {
 		return detjacabs;
 	}
+	/// @return Reference of determinant of Jacobian (of transformation from reference cell)
 	value_type& detjacabs_Ref() {
 		return detjacabs;
 	}
-
+	/// @return Gradient information
 	const grad_type& get_grad() const {
 		return grad;
 	}
+	/// @return Gradient of shape j
 	const space_type& get_grad(const int i, const int j) const {
 		return grad(i)(j);
 	}
 
+	/// @return Jacobian (of transformation from reference cell)
 	const Ejacobian_type& get_jac() const {
 		return jac;
 	}
+	/// @return Entry i,j of Jacobian (of transformation from reference cell)
 	const value_type& get_jac(const int i, const int j) const {
 		return jac(i, j);
 	}
 
-	const Emass_type& get_laplace() const {
-		return laplace;
-	}
-	const value_type& get_laplace(const int i, const int j) const {
-		return laplace(i, j);
-	}
-	value_type& laplace_coeffRef(const int i, const int j) {
-		return laplace(i, j);
-	}
-
+	/// @return Vector containing face lengths
 	const Fvaluevector_type& get_length() const {
 		return length;
 	}

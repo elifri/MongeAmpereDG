@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
   solver.time_stepping_IMPLICIT_HEAT ();
 #elif (EQUATION == MONGE_AMPERE_EQ)
   cerr << "EQUATION == MONGE_AMPERE_EQ" << endl;
-  solver.time_stepping_MA();
+  solver.stepping_MA();
 
 #else
   cerr << "Unknown equation! Program aborted!" << endl;

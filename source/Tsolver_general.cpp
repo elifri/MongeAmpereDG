@@ -3,6 +3,7 @@
  *
  *  Created on: 06.01.2014
  *      Author: elisa
+ *\brief Implements all general methods of Tsolver
  */
 
 #include "Tsolver.hpp"
@@ -264,27 +265,6 @@ void Tsolver::set_leafcellmassmatrix ()
   grid_type::leafcellmap_type::iterator it=grid.leafCells().begin();
   grid_type::leafcell_type * const pLC = &grid_type::cell(it);
   pLC->set_mass (shape.get_mass());
-};
-
-////////////////////////////////////////////////////
-
-void Tsolver::get_normal_length (const Nvector_type & nv,
-                                 const unsigned int & i,
-			         space_type & normal,
-			         double & length)
-{ // replace function by taking normal and length directly
-  // from the basecell and the level information
-  unsigned int node0 = i+1;
-  if (node0 == 3) node0 = 0; // replace the 3 !
-  unsigned int node1 = node0+1;
-  if (node1 == 3) node1 = 0; // replace the 3 !
-
-  normal[0] = nv[node1][1] - nv[node0][1];
-  normal[1] = nv[node0][0] - nv[node1][0];
-
-  length = sqrt(normal[0]*normal[0] + normal[1]*normal[1]);
-  normal[0] /= length;
-  normal[1] /= length;
 };
 
 ////////////////////////////////////////////////////

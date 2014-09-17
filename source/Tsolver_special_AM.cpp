@@ -3,6 +3,7 @@
  *
  *  Created on: 12.01.2014
  *      Author: elisa
+ * \brief implements all Monge Ampere specific methods of Tsolver
  */
 
 #include <Eigen/Eigenvalues>
@@ -309,7 +310,7 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 		cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
 		pLC->set_diffusionmatrix_Equad(iq, hess); //update diffusionmatrix
 
-		cout << "hessian at element quadrature point " << iq << " is " << endl << hess << endl;
+//		cout << "hessian at element quadrature point " << iq << " is " << endl << hess << endl;
 	}
 
 	for (int iq = 0; iq < Fquadraturedim; iq++)
@@ -320,7 +321,7 @@ void Tsolver::calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &p
 		cofactor_matrix_inplace(hess); //calculate cofactor matrix of Hessian
 		pLC->set_diffusionmatrix_Fquad(iq, hess); //update diffusionmatrix
 
-		cout << "hessian at face quadrature point " << iq << " is " << endl << hess << endl;
+//		cout << "hessian at face quadrature point " << iq << " is " << endl << hess << endl;
 	}
 
   	//update min EW
@@ -630,39 +631,6 @@ bool Tsolver::convexify(Eigen::VectorXd &solution)
 
 }
 
-///////////////////////////////////////////////////////
-
-void Tsolver::add_convex_error(VectorXd &solution)
-{
-	assert(solution.size() == number_of_dofs && "coefficient vector is of the wrong size");
-	assert (!interpolating_basis && "works only with a bezier basis");
-
-	for (unsigned int offset = 0; offset < number_of_dofs; offset+=6)	{
-//		solution(offset+0) += fRand(0,1);
-//		solution(offset+1) += fRand(0,1);
-//		solution(offset+2) += fRand(0,1);
-	}
-}
-
-void Tsolver::add_convex_error()
-{
-	assert (!interpolating_basis && "works only with a bezier basis");
-
-	for (grid_type::leafcellmap_type::const_iterator it =
-			grid.leafCells().begin(); it != grid.leafCells().end(); ++it) {
-		//collect leaf cell data
-		const grid_type::id_type & idLC = grid_type::id(it);
-		leafcell_type* pLC;
-		grid.findLeafCell(idLC, pLC);
-
-		for (int istate = 0; istate < statedim; istate++)
-		{
-//			pLC->u(0,istate) += fRand(0,1);
-//			pLC->u(1,istate) += fRand(0,1);
-//			pLC->u(2,istate) += fRand(0,1);
-		}
-	}
-}
 ///////////////////////////////////////////////////////
 
 void Tsolver::restore_MA(Eigen::VectorXd & solution) {
@@ -1368,7 +1336,7 @@ void Tsolver::init_start_solution_MA(const int stabsign, penalties_type gamma,st
 
 
 //////////////////////////////////////////////////////////
-void Tsolver::time_stepping_MA() {
+void Tsolver::stepping_MA() {
 
 
 	// sign of stbilization term: +1: Bauman-Oden/NIPG, -1: GEM/SIPG
@@ -1609,9 +1577,9 @@ void Tsolver::time_stepping_MA() {
 //			cout << "Lsolution before writing numericalPoissonn" << Lsolution.transpose() <<endl;
 
 			//plot poisson solution
-			plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
+//			plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
 	//		plotter.write_exactsolution(get_exacttemperature_MA_callback(),iteration);
-			plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionPoisson");
+//			plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionPoisson");
 	//		plotter.write_numericalsolution(iteration, "grid_numericalsolutionPoisson");
 
 			//calculate current l2 error

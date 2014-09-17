@@ -1,3 +1,8 @@
+/*
+ * Tsolver_special_MA.cpp
+ * \brief The main object Tsolver handling the solution process
+ */
+
 #ifndef TSOLVER_H
 #define TSOLVER_H
 
@@ -20,6 +25,7 @@
 
 using namespace config;
 
+///The main class handling the solving process
 class Tsolver {
 public:
 
@@ -30,40 +36,38 @@ public:
    typedef bool       leafmarker_type[childdim];
 
    grid_type grid;
-   unsigned int number_of_dofs;
-   std::vector<value_type> facLevelVolume;
-   std::vector<value_type> facLevelLength;
+   unsigned int number_of_dofs; ///< Number of degrees of freedom
+   std::vector<value_type> facLevelVolume; ///< Scale of leaf cell volume depending on its level
+   std::vector<value_type> facLevelLength; ///< Scale of leaf cell face length depending on its level
 
-   NeighbOrient_type            tableNeighbOrient;
+   NeighbOrient_type            tableNeighbOrient; ///< Table stating face orientation of neighbouring cell
    CoarseNeighbGaussbase_type   tableCoarseNeighbGaussbase;
    CoarseNeighbMid_type         tableCoarseNeighbMid;
 
-   Tshape shape; // shape for primal unknown (must have the name shape!!!)
-   Plotter plotter;
-   C0_converter c0_converter;
-   boundary_handler bd_handler;
-   Convexifier convexifier;
-
-//   shapelag_type shapelag; // shape for linear Lagrange unknowns
+   Tshape shape; ///< Shape for primal unknown (must have the name shape!!!)
+   Plotter plotter; ///< Struct to write solutions into files
+   C0_converter c0_converter; ///< Handles converting between DG and CG formulation
+   boundary_handler bd_handler; ///< Handles boundary dofs
+   Convexifier convexifier; ///< Handles convexification process
 
    ///////////////////////////////////////////////////////
-   //////////                                  ///////////
-   //////////       GENERAL FUNCTIONS          ///////////
-   //////////   in class_Tsolver_general.hpp   ///////////
-   //////////                                  ///////////
+   //////////<                                  ///////////
+   //////////<       GENERAL FUNCTIONS          ///////////
+   //////////<   in class_Tsolver_general.hpp   ///////////
+   //////////<                                  ///////////
    ///////////////////////////////////////////////////////
 
-   //////////////    ASSEMBLING STATES    ///////////////
+   //////////////<    ASSEMBLING STATES    ///////////////
    void assemble_state_normalderivative_Fquad (const basecell_type* pBC,
                                               const unsigned int & level,
 			                      const unsigned int & iquad,
                                               const Estate_type & u,
 				              state_type & v);
-   //////////////// COFACTOR MATRIX ///////////////
-   void cofactor_matrix_inplace(Hessian_type &h);
+   ////////////////< COFACTOR MATRIX ///////////////
+   void cofactor_matrix_inplace(Hessian_type &h); ///< Calculates the cofactor matrix in-place
 
 
-   ///////////////    BILINEAR FORMS    ///////////////
+   ///////////////<    BILINEAR FORMS    ///////////////
    inline double bilin_mass (double & u0, double & u1, double &d_abs);
    inline double bilin_adv_x (double & a, double & u_x, double & u_y,
                                 Ejacobian_type &J, double &d_sgn);
@@ -72,7 +76,7 @@ public:
                                  double & u_x, double & u_y,
 				 Ejacobian_type &J, double &d_sgn);
 
-   /*! \brief calculates the bilinearform on the lhs of the laplace eq
+   /*! \brief Calculates the bilinearform on the lhs of the laplace eq
     *
     *\param grad0 gradient of the first function
     *\param grad1 gradient of the second function
@@ -81,7 +85,7 @@ public:
     */
    inline double bilin_laplace (const Eigen::Vector2d &grad0, const Eigen::Vector2d &grad1, const Ejacobian_type &J, const double &d_abs);
 
-   /*! \brief calculates the bilinearform on the lhs of the laplace eq
+   /*! \brief Calculates the bilinearform on the lhs of the laplace eq
     *
     *\param u0_x  x derivative of the first function
     *\param u0_y  y derivative of the first function
@@ -94,7 +98,7 @@ public:
                                   const double & u1_x, const double & u1_y,
                                   const Ejacobian_type &J, const double &d_abs);
 
-   /*! \brief calculates the bilinearform on the lhs of the eq: \nabla(A*\nabla) = ... where A is a 2x2 matrix
+   /*! \brief Calculates the bilinearform on the lhs of the eq: \nabla(A*\nabla) = ... where A is a 2x2 matrix
     *
     *\param u0_x  x derivative of the first function
     *\param u0_y  y derivative of the first function
@@ -108,8 +112,8 @@ public:
                                         const double & u1_x, const double & u1_y,
                                         const Ejacobian_type & J, const double & d_abs,const igpm::tvector<double,4> & a);
 
-   /*
-    * @ calculates the integral f*phi for every ansatz function in LC
+   /*!
+    * @ Calculates the integral f*phi for every ansatz function in LC
     * @param f		input function f
     * @param pLC	pointer in leafcell in which the integral is calculated
     * @param idLC	id to leafcell in which the integral is calculated
@@ -120,53 +124,51 @@ public:
    void assemble_int_f_phi(const vector_function_type f, const leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC,
 		   Estate_type &Lrhs, const int offset = 0);
 
-   ///////////////    WRITE_TYPES    ///////////////
+   ///////////////<    WRITE_TYPES    ///////////////
    void write_space_type (const space_type & x);
 
-   ///////////////    READ MESH DATA    ///////////////
+   ///////////////<    READ MESH DATA    ///////////////
    void read_problem_parameters_GENERAL (const std::string data_directory, const std::string data_prefix);
    void read_easymesh_triangles (const std::string data_file);
 
-   ///////////////   WRITE MESH DATA    ///////////////
+   ///////////////<   WRITE MESH DATA    ///////////////
    void write_problem_parameters_GENERAL ();
 
    void write_idset (const grid_type::idset_type & idset);
 
    void write_solution();
-   void write_solution_vector(Eigen::VectorXd & solution); ///extract solution from leafcells to vector
-   state_type calculate_L2_error(const vector_function_type f); /// calculate l2 error of function in leafcell - f
-//   state_type calculate_L2_norm(); /// calculate l2 norm o function in leafcell
-  state_type calculate_L2_norm(const vector_function_type f); /// calculate l2 norm o function f
+   void write_solution_vector(Eigen::VectorXd & solution); ///Extract solution from leafcells to vector
+   state_type calculate_L2_error(const vector_function_type f); ///< Calculate l2 error of function in leafcell - f
+//   state_type calculate_L2_norm(); ///< calculate l2 norm o function in leafcell
+  state_type calculate_L2_norm(const vector_function_type f); ///< Calculate l2 norm o function f
 
-   //////////////    READ DATA ///////////////////////
+   //////////////<    READ DATA ///////////////////////
 
-   /*
-    * @brief reads a startsolution given by values on a rectangle grid; for further information see read_quadratic_grid in class Plotter
+   /*!
+    * @brief Reads a startsolution given by values on a rectangle grid; for further information see read_quadratic_grid in class Plotter
     */
    void read_startsolution(const std::string filename);
 
-   void init_startsolution_from_function(vector_function_type f);
+   void init_startsolution_from_function(vector_function_type f);///< init the start solution by a function pointer
 
-   ///////////////      GEOMETRY        ///////////////
+   ///////////////<      GEOMETRY        ///////////////
 
-/*! determine facenormals, facelengths, volumes, transformation jacobian and determinant,
+/*! Determine facenormals, facelengths, volumes, transformation jacobian and determinant,
    mass matrix, Laplace matrix for each basecell
    And: level-volume factors, level-length factors
 */
    void update_baseGeometry ();
    void update_c_numeration();
 
-   void initialize_plotter();
-   void set_leafcellmassmatrix ();
-   void get_normal_length (const Nvector_type & nv, const unsigned int & i,
-                          space_type & normal, double & length);
+   void initialize_plotter();///< Initialize by setting pointers to grid and shape
+   void set_leafcellmassmatrix (); ///< Set mass matrices in leaf cells
 
-   /*! \brief determine physical coordinates of barycebtric coordinates in cell idLC
+   /*! \brief Determine physical coordinates of barycebtric coordinates in cell idLC
     *
     */
    void get_coordinates (const grid_type::id_type& idLC,
                          const baryc_type& baryc, space_type & x);
-   /*! determine barycentric coordinates of physical coordinates in cell idLC
+   /*! Determine barycentric coordinates of physical coordinates in cell idLC
     *
     */
    void get_baryc_coordinates (const grid_type::id_type& idLC,
@@ -195,7 +197,7 @@ public:
    void update_centerleaf (id_type& idcenter, leafcell_type* & pcenter,
                            space_type & xc);
    //////////
-   /*! \brief calculates the determinant of the Jacobian of the transformation to ref element
+   /*! \brief Calculates the determinant of the Jacobian of the transformation to ref element
    */
    void get_detJacAbs (const basecell_type* pBC, value_type & detjacabs);
    void get_Fcoordinates (const grid_type::id_type& idLC,
@@ -207,18 +209,18 @@ public:
    void get_Ecoordinates (const Nvector_type & nv, const unsigned int & iq,
 			  N_type & x);
 
-   ///////////////          IDS         ///////////////
+   ///////////////<          IDS         ///////////////
    void writeIds (const int maxids);
    bool turnover (const grid_type::id_type& idLC);
 
-   ///////////////    CHECK IGPM_LIB    ///////////////
+   ///////////////<    CHECK IGPM_LIB    ///////////////
    void check_antes ();
 
-   //////////////  INVERTING MASSMATRIX   ///////////////
+   //////////////<  INVERTING MASSMATRIX   ///////////////
    void invert_volume ();
    void invert_mass ();
 
-   ///////////////  APRIORI REFINEMENT  ///////////////
+   ///////////////<  APRIORI REFINEMENT  ///////////////
    void refine_all ();
    void refine (unsigned int level);
    void refine_circle (const double radius);
@@ -226,84 +228,48 @@ public:
    void refine_onelevel_circle (const double radius);
    void coarsen_onelevel_diagonal ();
 
-   //////////////  HANDLING CONNECTIVITY  ///////////////
+   //////////////<  HANDLING CONNECTIVITY  ///////////////
    void writeNvector_type (const Nvector_type & nv);
    void visit_neighbors ();
    void visit_faces ();
 
-   //////////////    ADAPTIVITY    ///////////////
+   //////////////<    ADAPTIVITY    ///////////////
    void assemble_indicator_and_limiting ();
 
    ////////////////////////////////////////////////////
-   //////////                               ///////////
-   //////////      NUMERICAL/PHYSICAL       ///////////
-   //////////          PARAMETER            ///////////
-   //////////                               ///////////
+   //////////<                               ///////////
+   //////////<      NUMERICAL/PHYSICAL       ///////////
+   //////////<          PARAMETER            ///////////
+   //////////<                               ///////////
    ////////////////////////////////////////////////////
 
-   int levelmax;
-   bool interpolating_basis;
+   int levelmax; ///< Maximum level
+   bool interpolating_basis;///< States if the chosen polynomial basis is interpolatory
 
-   bool strongBoundaryCond;
+   bool strongBoundaryCond;///< States if the PDE is solved with strong boundary conditions
 
-   enum start_solution_type { EXACT, ARTIFICIAL_ERROR, SQRT_F, USE_IDENTITY};
+   enum start_solution_type { EXACT, ARTIFICIAL_ERROR, SQRT_F, USE_IDENTITY};///< Enum to choose the initial guess
 
-   start_solution_type start_solution;
+   start_solution_type start_solution;///< states the initial guess
+
    ///////////////////////////////////////////////////////
-   //////////                                  ///////////
-   //////////       SPECIAL FUNCTIONS          ///////////
-   //////////    for Monge Ampere equation     ///////////
-   //////////      in class_Tsolver.hpp        ///////////
-   //////////                                  ///////////
+   //////////<                                  ///////////
+   //////////<       SPECIAL FUNCTIONS          ///////////
+   //////////<    for Monge Ampere equation     ///////////
+   //////////<      in class_Tsolver.hpp        ///////////
+   //////////<                                  ///////////
    ///////////////////////////////////////////////////////
 
    #if (EQUATION==MONGE_AMPERE_EQ)
 
-   	   struct Functor{
-	   	   void evaluate(const Eigen::VectorXd &coeff, Eigen::VectorXd& f)
-	   	   {
-	   		   f = linear_part*coeff + constant_part;
-	   		   for (int i= 0; i < number_of_dofs; i++)
-	   		   {
-	   			   int offset_hess = i/6*4;
-
-	   			   f(i) -= integrals_test_functions(i)*
-	   					     (coeff(number_of_dofs+ offset_hess)*coeff(number_of_dofs+ offset_hess+3)
-	   					    		 -coeff(number_of_dofs+ offset_hess+1)*coeff(number_of_dofs+ offset_hess+2));
-	   		   }
-	   	   }
-
-	   	   void derivative(const Eigen::VectorXd &x, Eigen::SparseMatrixD &J)
-	   	   {
-	   		   J = linear_part;
-
-	   		   for (int i= 0; i < number_of_dofs; i++)
-	   		   {
-	   			   int offset_hess = i/6*4;
-
-	   			   //derivate of determint is cofactor matrix
-	   			   J.coeffRef(i, number_of_dofs+offset_hess) -= integrals_test_functions(i)*x(number_of_dofs+offset_hess+3);
-	   			   J.coeffRef(i, number_of_dofs+offset_hess+1) -= -integrals_test_functions(i)*x(number_of_dofs+offset_hess+2);
-	   			   J.coeffRef(i, number_of_dofs+offset_hess+2) -= -integrals_test_functions(i)*x(number_of_dofs+offset_hess+1);
-	   			   J.coeffRef(i, number_of_dofs+offset_hess+3) -= integrals_test_functions(i)*x(number_of_dofs+offset_hess);
-	   		   }
-
-	   	   }
-
-	   	   Eigen::SparseMatrixD linear_part;
-	   	   Eigen::VectorXd integrals_test_functions, constant_part;
-	   	   Eigen::VectorXd boundary_coefficients;
-
-	   	   int number_of_dofs;
-   	   };
-
+   	   /// Wrapper struct to store all necessary penalties
    	   struct penalties_type
    	   {
-   		   value_type gamma_gradient;
-   		   value_type gamma_continuous;
-   		   value_type gamma_boundary;
+   		   value_type gamma_gradient; ///< Penalty for normal derivative jump term
+   		   value_type gamma_continuous; ///< Penalty for the term enforcing continuity in the problem domain
+   		   value_type gamma_boundary; ///< Penalty for the term enforcing continuity at the problem boundary
 
-   		   penalties_type& operator*=(const value_type c)
+   		   penalties_type& operator*=(const value_type c)///< Scale all penatlies by scalar
    		   {
    			   gamma_gradient *= c;
    			   gamma_boundary *= c;
@@ -311,7 +277,7 @@ public:
    			   return *this;
    		   }
 
-   		   void print()
+   		   void print() ///< Print penalties pretty
    		   {
    			   cout << "gamma gradient " << gamma_gradient
    					   <<", gamma_continuous " << gamma_continuous
@@ -320,37 +286,38 @@ public:
 
    	   };
 
-   	   	 Monge_Ampere_Problem problem;
+   	   	 Monge_Ampere_Problem problem;///< States the problem to solve
 
-         double atol,rtol; // absolute and relative tolerances
-         double dtol;      // tolerances for divergence
+         double atol; ///< Absolute tolerances
+         double rtol; ///< Relative tolerances
+         double dtol;      ///< Tolerances for divergence
 
-         int iteration; // iterations in the current level
-         int level; // current level
+         int iteration; ///< Iterations in the current level
+         int level; ///< Current level
 
-         int maxits;       // maximum number of iterations
-         int maxlevel_refinement;
+         int maxits;       ///< Maximum number of iterations
+         int maxlevel_refinement; ///< Maximum number of refinements in the nested iteration
 
-         double eta;       // absolute tolerance from estimated error factor
+         double eta;       ///< absolute tolerance from estimated error factor
 
 		 Eigen::SelfAdjointEigenSolver<Hessian_type> EW_solver;
-         double max_EW;
-         double min_EW;
+         double max_EW; ///< Maximum eigenvalue of piecewise evaluated Hessian
+         double min_EW; ///< Minimum eigenvalue of piecewise evaluated Hessian
 
          value_type sum_residuum, sum_residuum_old;
          int residuum_equal_since;
 
-         double alpha;
+         double alpha; ///< Factor for affine combination of u_old(1-alpha) an u_new(alpha)
 
 
          Eigen::VectorXd sum_coefficients;
 
-         state_type L2_norm_exact_sol; /// L2 norm of the exact solution (=0 if exact solution is not known)
+         state_type L2_norm_exact_sol; ///< L2 norm of the exact solution (=0 if exact solution is not known)
 
    #endif
 
 #if (EQUATION == POISSON_EQ)
-   ///////////////      POISSON      ///////////////
+   ///////////////<      POISSON      ///////////////
 
    void assignViewCell_POISSON(const id_type & id, const unsigned int &blocksize, unsigned int &offset);
    void assignViews_POISSON (unsigned int &LM_size);
@@ -379,26 +346,26 @@ public:
 #endif
 
    #if (EQUATION == MONGE_AMPERE_EQ)
-      ///////////////      POISSON_PREC      ///////////////
+      ///////////////<      POISSON_PREC      ///////////////
 
    void assignViewCell_MA(const id_type & id, const unsigned int &blocksize, unsigned int &offset);
    void assignViews_MA (unsigned int &LM_size);
 
-   /*! read problem specific problem parameters from input file
+   /*! Read problem specific problem parameters from input file
     *
     */
    void read_problem_parameters_MA(int &stabsign, penalties_type &gamma, double &refine_eps, double &coarsen_eps, int &level, double& alpha);
 
    /*!
-    * writes exact solution in leafcells
+    * Writes exact solution in leafcells
     */
    void initializeLeafCellData_MA ();
 
 private:
-   void assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM); ///writes the stiffness matrix part of LC
-   void assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs); ///writes rhs part from LC
+   void assemble_lhs_bilinearform_MA(leafcell_type* &pLC, const basecell_type* &pBC, Eigen::SparseMatrix<double> &LM); ///<writes the stiffness matrix part of LC
+   void assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC, const basecell_type *pBC, space_type &x, Eigen::VectorXd &Lrhs); ///<writes rhs part from LC
 
-   void calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1); /// calculates eigenvalues of a 2x2 matrix
+   void calculate_eigenvalues(const Hessian_type &A, value_type &ev0, value_type &ev1); ///< calculates eigenvalues of a 2x2 matrix
 
    void assemble_inner_face_term_neilan_parameters(const Fquad::inner_face_term_function_parameters &bPar, Hessian_type & hess);
    void assemble_face_term_neilan(leafcell_type* pLC, const basecell_type* pBC,
@@ -427,11 +394,15 @@ private:
 
 public:
 
-   void calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC); /// calculates the cofactor Matrix of the hessian in LC
-   bool calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess); /// calculates the eigenvalues of hess and return if it was pos def (solution convex)
+   void calc_cofactor_hessian(leafcell_type* &pLC, const basecell_type* &pBC); ///< Calculates the cofactor Matrix of the hessian in LC
 
-   /*
-    * @brief assembles the LGS for the in the iteration arising poisson problem
+   /*! @brief calculates the eigenvalues of hess
+    * @return true, if given matrix was positiv definit (solution convex)
+    */
+   bool calculate_eigenvalues(leafcell_type* pLC, Hessian_type &hess);
+
+   /*!
+    * @brief Assembles the linear system of equations for the in the iteration arising general poisson problem
     *
     * @param STABSIGN	switch between SIPG and DIPG
     * @param PENALTY	give penalty term for SIPG (will be scaled related to the biggest eigenvalue found)
@@ -440,52 +411,44 @@ public:
     * @param Lbd		if strongBoundaryCond is enabled here will be the boundary dofs assembled
     */
    void assemble_MA(const int & STABSIGN, penalties_type PENALTY, Eigen::SparseMatrix<double> & LM, Eigen::VectorXd& Lrhs, Eigen::VectorXd &Lbd);
-   /*
-      * @brief stores solution (in leaf cells) and generates analysis data
+   /*!
+      * @brief Stores solution (in leaf cells) and generates analysis data
       *
-      * @param solution	solution coefficients
+      * @param solution coefficients
       */
    void restore_MA (Eigen::VectorXd &solution);
-   void convexify(Hessian_type & hess); /// makes the hessian positive definit
-   void convexify_cell(const leafcell_type* pLC, Eigen::VectorXd &solution); /// convexifies the solution locally (convexifying bezier control polygon)
+   void convexify(Hessian_type & hess); ///< makes the hessian positive definit
+   void convexify_cell(const leafcell_type* pLC, Eigen::VectorXd &solution); ///< convexifies the solution locally (convexifying bezier control polygon)
 
-   /*
-    * !@brief convexifies the inserted solution globally via a quadratic program (least square problem with inequality constraints)
+   /*!@brief Convexifies the inserted solution globally via a quadratic program (least square problem with inequality constraints)
     *        Solve min_x || A*x-b|| s.t. C*x > 0
     *
     *  @return true, if solution is changed
     */
+   bool convexify(Eigen::VectorXd &solution); ///<Convexifies the solution globally (convexifying bezier control polygon)
 
-   bool convexify(Eigen::VectorXd &solution); //convexifies the solution globally (convexifying bezier control polygon)
+   void get_exacttemperature_MA (const space_type & x, state_type & u); ///< provides the exact solution (if known)
+   vector_function_type get_exacttemperature_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_exacttemperature_MA, this);} ///< return function pointer of exact solution
 
-   /*
-    * @brief adds random multiples  of the basis bezier functions to the coefficient vector solution
-    */
-   void add_convex_error(Eigen::VectorXd &solution);
+   void get_exacttemperaturenormalderivative_MA (const space_type & x, const space_type & normal, state_type & u_n);///< provides Neumann boundary data
 
-   /*
-    * @brief adds random multiples  of the basis bezier functions to the solution stored in leaf cells
-    */
-   void add_convex_error();
+   void get_rhs_MA (const space_type & x, state_type & u_rhs);  ///< Provides the functions values of the right-hand side
+   vector_function_type get_rhs_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_rhs_MA, this);}///< return function pointer of right-hand side function
 
-   void get_exacttemperature_MA (const space_type & x, state_type & u); // state_type ???
-   vector_function_type get_exacttemperature_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_exacttemperature_MA, this);}
-   void get_exacttemperaturenormalderivative_MA (const space_type & x, const space_type & normal, state_type & u_n);
-	// state_type ???
-   void get_rhs_MA (const space_type & x, state_type & u_rhs);  // state_type ???
-   vector_function_type get_rhs_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_rhs_MA, this);}
-
-   void local_dt_MA (const value_type & lengthmin, value_type & dt_element);
-
-   ///initialises the startsolution satisfying laplace u = - 2sqrt(f)
+   ///Initialises the startsolution satisfying laplace u = - 2sqrt(f)
    void init_start_solution_MA_sqrt_f(const int stabsign, penalties_type gamma);
-   ///initialises a start solution if requested in cfg file
+   ///Initialises a start solution if requested in cfg file
    void init_start_solution_MA(const int stabsign, penalties_type gamma, std::string filename);
-   void time_stepping_MA ();
+
+   /*! @brief Performs the fixed point iteration steps
+    * the main routine performing the solution process of the general poisson equation
+    *
+    */
+   void stepping_MA();
 
    void adapt(const double refine_eps, const double coarsen_eps);
-   void refine();
-   void setleafcellflags(unsigned int flag, bool value);
+   void refine();///< Refines every cell
+   void setleafcellflags(unsigned int flag, bool value); ///< Resets all leaf cell flags to given value
    #endif
 
 };
