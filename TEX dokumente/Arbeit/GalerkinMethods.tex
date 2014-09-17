@@ -1,27 +1,11 @@
-\subsection*{Vorüberlegungen zu Galerkin}
-
-\[
-\int_\Omega F(D^2 u_h, \nabla u_h, u_h, x)v_h dx = 0
-\]
-
-Damit diese Formulierung Sinn macht, sollten die FE-Räume $C^1$ sein.
-Für Brenner ist wichtig, dass Linearisieren und Diskretisieren kommutativ sind (bei $C^1$ der Fall, im Paper \cite{Brenner2012} erzwingt sie es für $C^0$) sonst ist das Verfahren instabil.
-
-ACHTUNG:
-\[
-\sum_{T \in \mathcal{T}_h} \int_T(f-Det(D^2 u_h))v_h dx = 0 \qquad \forall v_h \in V_h \cap H_0^1(\Omega)
-\]
-
-
-
 \section{State of the Art for Discontinuous Galerkin Methods} % for the \MA equation}
 
 The most natural attempt for a formulation of a DG method is to exploit the equations
 \begin{align}
-	\int_{\Omega} \mydet {D^2 u} v = \int_\Omega fv, \qquad \text{ for all test functions } v. \label{eq: naiv ansatz}
+	\int_{\Omega} \mydet {D^2 u} v = \int_\Omega fv \qquad \text{ for all test functions } v. \label{eq: naiv ansatz}
 \end{align}
 
-However, this formulation has two minor disadvantages. 
+However, this formulation has two major disadvantages. 
 At first we cannot throw the high derivatives onto the test functions using integration py parts, thus we do not easily get a variational formulation as we do for linear PDEs. Secondly \eqref{eq: naiv ansatz} only is sensible for test and ansatz functions contained in $C^1(\Omega)$. An extension with the natural DG terms which would allow less regular functions does not produce sensible results. Brenner et alter make the inconsistency between the linearisation of the discrete problem and the the linearisation of the continuous problem responsible \cite{BGN+2011} for this failure. Thus, their idea is to add terms to force consistency and add stability.
 
 \subsection{A $C^0$ Penalty Method }
@@ -82,19 +66,18 @@ We implemented their presented method using the finite element tool FEniCS \cite
 \todo{tolle numerische ergebnisse}
 
 Neilan claims when presenting his method in \cite{Neilan2014} that this methods fails to converge for the test case
-$u = -\sqrt{2 - x_1^2 - x_2^2 }$ and $f = \frac 2 {{2 - x_1^2 - x_2^2}^2}$. Generally the presented method is more appropriate for classical solutions, they plan to address less regular solution in future work.
+$u = -\sqrt{2 - x_1^2 - x_2^2 }$ and $f = \frac 2 {{2 - x_1^2 - x_2^2}^2}$ which lacks $H^2$ regularity, see also test \ref{test sqrt}. Generally the presented method is more appropriate for classical solutions, they plan to address less regular solution in future work.
 
 
 \subsection{A Finite Element Method based on a Discrete Hessian} \label{subsec: disrete Hessian} \label{sec: FEM discrete Hessian}
 
-Shortly Neilan generalised a finite element method of Lakkis and Pryer \cite{LP2011} in his paper \cite{Neilan2014}.
+Shortly Neilan generalised in \cite{Neilan2014} a finite element method of Lakkis and Pryer presented in \cite{LP2011}.
 The crux of this idea is the notion of a \emph{discrete Hessian}. 
 While the real Hessian fulfills due to integration by parts as we have seen in Lemma \ref{la: integration by parts Frobenius}
 	\begin{align}
 		\int_\Omega (D^2 u : B) = - \int_\Omega \left(\nabla \cdot B\right) \cdot \nabla u + \int_{\partial \Omega}  B \nabla u \mathbf {n} \qquad \forall B \in [H^1(\Omega)]^{d \times d}, \label{eq: part int hessian}
 	\end{align}
-often the ansatz spaces $V_h$ are not regular enough such that $D_h^2 v$ for $ v \in V_h$ does not inherit this property. Considering that most weak formulations base on a integration of a multiplication with a test function, the idea of a discretisation of the Hessian retaining this quality was born.
-To create this discretisation he integrates \eqref{eq: part int hessian} piecewise on every triangle and rewrite as usual the edge terms by a combination of jump and averages leading to
+often the piecewise derived Hessian $D_h^2 v$ of $ v \in V_h$ for less regular ansatz spaces $V_h$ does not inherit this property. Considering that most weak formulations base on a integration by parts approach, the idea of a discretisation of the Hessian retaining this quality is standing to reason. To create this discretisation Neilan carries the integration from \eqref{eq: part int hessian} piecewise on every triangle out and rewrites the edge terms by a combination of jump and averages as usual leading to
 	\begin{align}
 		\begin{split}
 		\int_\Omega (D^2 u : B) 
@@ -103,9 +86,10 @@ To create this discretisation he integrates \eqref{eq: part int hessian} piecewi
 				+ \sum_{ e \in \edges} \int_e  \jump{B \average {\nabla u} }  \qquad \forall B \in \Sigma_h. \label{eq: part int hessian omega}
 		\end{split}
 	\end{align}
-Observing, that the last step admits more possible test functions $B$, Neilan suggests the ansatz space $V_h = \mathcal{P}_h^k \cap H^1(\Omega)$ and the test space $\Sigma_h = [\mathcal{P}_h^k]^{d \times d}$.
+Observing, that the last step admits test functions $B$ only piecewise smooth, Neilan suggests the ansatz space $V_h = \mathcal{P}_h^k \cap H^1(\Omega)$ and the test space $\Sigma_h = [\mathcal{P}_h^k]^{d \times d}$.
 
 Substituting in \eqref{eq: part int hessian omega} $\nabla u$ across the edges with its numerical counterpart, namely the numerical trace chosen as $\laverage \nabla u \raverage$ one has as predefinition of the discrete Hessian
+\todo{lifting erwaehnen?}
 	\begin{align}
 		\int_\Omega (D_{DH}^2 u : B) 
 		&= - \int_\Omega \left(\nabla \cdot B\right) \cdot \nabla u
@@ -114,7 +98,7 @@ Substituting in \eqref{eq: part int hessian omega} $\nabla u$ across the edges w
 		&= - \int_\Omega \left(\nabla \cdot B\right) \cdot \nabla u
 				+ \sum_{ e \in \edges} \int_e  \jump{B \average {\nabla u} }.	
 	\end{align}
-Applying once more integration by parts for a Frobenius product on every triangle in the integral on the right-hand side results in
+Applying once more integration by parts for a Frobenius product on every triangle in the right-hande side integral results in
 	\begin{align}
 		\int_\Omega (D_{DH}^2 u : B) 
 		=& \int_\Omega D_h u: B 

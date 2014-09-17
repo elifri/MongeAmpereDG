@@ -1,1 +1,52 @@
+\section{Comparison with Newton's method}
 
+Before we start the anlaysis of our Method we shortly see what happens if we apply Newton's method on the anlaytical form of the \MA equation \ref{MA eq}.
+Let $F$ be the function such that its root solves the \MA equation, i.e. 
+\[
+	F(u) = \mydet{D^2 u} -f
+\]
+Applying Newton's method on $F(u) =0$ we have
+\begin{align}
+	DF[u^n](u^{i+1}-u^i) = -F[u^i]
+\end{align}
+where $DF[u]$ denotes the \emph{Fr\'echet derivative} given by
+\begin{align*}
+	DF[u] v =& \lim\limits_{\varepsilon \rightarrow 0} \frac { F[u+\varepsilon v]- F[u]} \varepsilon.
+\end{align*}
+The Fr\'echet derivative can also be expressed as
+\begin{align*}
+				 =& \lim\limits_{\varepsilon \rightarrow 0} \frac { \mydet{D^2u+\varepsilon D^2v} - \mydet{D^2u}}\varepsilon\\ 
+				 =& \mycof{D^2 u}:D^2v
+\end{align*}
+leading to the Newton iteration
+\begin{align}
+	\mycof{D^2 u^i}:D^2\left(u^{i+1}-u^i\right) &= -\mydet{D^2 u^i}+f \nonumber \\
+	\Leftrightarrow \qquad \qquad  \mycof{D^2 u^i}:D^2(u^{i+1}) &= -\mydet{D^2 u^i} +f  +\mycof{D^2 u^i}:D^2(u^i). \label{eq: Newton iteration pre}
+\end{align}
+
+Similar to the derivation of the fixed point iteration we can apply Lemma \ref{la: An application of the divergernce product rule} to rewrite \eqref{eq: Newton iteration pre} and we have the problem
+\begin{align}
+	\nabla \cdot \left( \cof(D^2 u^0) \nabla u^{i+1} \right) &= -\mydet {D^2u^i} +f+\nabla \cdot \left( \cof(D^2 u^i) \nabla u^{i} \right)  \textnormal{ in } \Omega,  \label{eq: Newton iteration}\\
+	u^{i+1} &= g. \textnormal{ on } \partial \Omega 
+\end{align}
+
+Hence, considering  the fact 
+\[
+\nabla \cdot \left( \mycof {D^2 u } \nabla v \right)
+\stackrel{La.\ref{la: An application of the divergernce product rule}}=\nabla \cdot {}\mycof{D^2 u}:D^2u
+=\frac 1 2 \mydet{D^2u}.
+\]
+we can see our method as a variant of Newton's method. 
+
+In \cite{Awanou2014} Awanou analysed the similar iteration process
+\begin{align}
+	\nabla \cdot \left( \cof(D^2 u^0) \nabla u^{i+1} \right) &= \nabla \cdot \left( \cof(D^2 u^0) \nabla u^{i} \right) + f - \operatorname{det} (D^2u^i) \textnormal{ in } \Omega,  \label{eq: Awanout eq}\\
+	u^{i+1} &= g \textnormal{ on } \partial \Omega.
+\end{align}
+showing convergence for the analytical solution $u$ and a sufficent close $u^0$. 
+In a earlier work \cite{Awanou2010} Awanou examined a discrete Version of a vanishing moment method, herein he mentioned a method he calls Newton's method defined by
+\[
+	\int_{\Omega} [\mycof{ D^2 u_h^i} Du_h^{i+1}] \cdot Dv_h = -	\int_{\Omega} f v_h + \frac 1 2 \int_{\Omega} [\mycof{ D^2 u_h^i} Du_h^{i}] \cdot Dv_h \; \forall v_h \in V_h \cap H^1_0 (\Omega)  \label{eq: Awanout eq2}.
+\]
+And indeed this is the variational form of \eqref{eq: Newton iteration}
+His chosen trial space were piecewise polynomials contained in $C^1(\Omega)$. He claims that this ansatz breaks down for problems with non-smooth solutions, in his numerical results he cites test \ref{test sqrt} as an example where Newton's method diverges.

@@ -142,23 +142,8 @@ The test two was carried out for $\eta=20k^2$
 
 \section{Numerical Results of Our DG Method}
 
+Our method was implemented in pure C++. The underlying grid structure was taken from the implementation of \cite{BMV2009}, handling vectors and matrices as well as was linear solver were provided by the Eigen library \cite{eigenweb}. To solve the quadratic program arising in the context of convexification the C++ library CGAL \cite{cgal} was used.
 
-In \cite{Awanou2014} Awanou analysed the similar iteration process
-\begin{align}
-	\nabla \cdot \left( \cof(D^2 u^0) \nabla u^{i+1} \right) &= \nabla \cdot \left( \cof(D^2 u^0) \nabla u^{i} \right) + f - \operatorname{det} (D^2u^i) \textnormal{ in } \Omega,  \label{eq: Awanout eq}\\
-	u^{i+1} &= g \textnormal{ on } \partial \Omega 
-\end{align}
-showing convergence for the analytical solution $u$ and a sufficent close $u^0$. 
-In a earlier work \cite{Awanou2010} Awanou examined a discrete Version of a vanishing moment method, herein he mentioned a method he calls Newton's method defined by
-\[
-	\int_{\Omega} [\mycof{ D^2 u_h^i} Du_h^{i+1}] \cdot Dv_h = -	\int_{\Omega} f v_h + \frac 1 2 \int_{\Omega} [\mycof{ D^2 u_h^i} Du_h^{i}] \cdot Dv_h \; \forall v_h \in V_h \cap H^1_0 (\Omega)  \label{eq: Awanout eq2}.
-\]
-His chosen trial space were piecewise polynomials contained in $C^1(\Omega)$. Note, it holds 
-\[\int_{\Omega}[\mycof{ D^2 u_h} Du_h] \cdot Dv_h 
-= -2 \int_\Omega \mydet{D^2 u_h} v_h \forall v_h \in V_h \cap H^1_0 (\Omega) ,
-\]
-where the right-hand side equals to $\int_\Omega f v_h$ if $u$ is the solution to the \MA equation. Hence we can see this ansatz as an $C^1$variant of the approach our method pursued.
-He claims that this ansatz breaks down for problems with non-smooth solutions, in his numerical results he cites test \ref{test sqrt} as an example where Newton's method diverges.
 
 
 ?????

@@ -60,7 +60,7 @@ Thus, it is natural to examine the fixed point iteration
 \end{align}
 for its applicability for numerical schemes approximating a \MA solution.
 
-\section{SIPG formulation of the Iteration}\label{sec: SIPG}
+\section{SIPG formulation of the Iteration}\label{sec: SIPG MA}
 Since in every iteration \eqref{eq:fixed point iteration} states a generalised poisson equation we can apply the derived  method of section \ref{sec: SIPG} directly: Given $u^i_h$ find $u^{i+1}_h \in \mathcal P^k_h$ satisfying
 \begin{align}
  &\int_{\Omega} \nabla v \cdot \cof(D_h^2 u^{i}) \nabla u_h^{i+1}\\
@@ -181,7 +181,7 @@ where  $\{c_{i,j,k}\}_{i+j+k=d}$ and $\{ {\hat c_{i,j,k}}\}_{i+j+k=d}$ are the B
 For quadratic splines Schumaker and Speleers even prove the inversion on convex domains $\Omega$, namely if for every interior edge its coefficients satisfy \eqref{eq: convexity across edge} then the corresponding spline is convex.
 This result does not generalise for higher degrees. In fact they give a counterexample for degree $k = 3$.
 
-Now we apply the new insights//methods to the function given after solving the generalised poisson problem stated in \ref{sec: SIPG}.
+Now we apply the new insights//methods to the function given after solving the generalised poisson problem stated in \ref{sec: SIPG MA}.
 Given the DG solution of the generalised poisson problem $u^{gp}_h$ we seek for a convex spline minimising the error at the B\'ezier control points, i.e. we want to find the B\'ezier coefficients $c$ minimising
 \[
 		\lVert A c - b \rVert_2, \qquad \text{ such that } Cc \geq 0,
@@ -207,7 +207,7 @@ The second approach regards the fact that probably the method's robustness decre
 
 
 \section{First Implementation}
-At the beginning we implemented the SIPG method exactly as stated in section \ref{sec: SIPG}.
+At the beginning we implemented the SIPG method exactly as stated in section \ref{sec: SIPG MA}.
 As an initial guess served the solution of \eqref{eq: start sqrt_f} , the penalty parameter was chosen to be 30 and the domain $\Omega$ the unit square$[0,1]^2$.
 
 For first numerical results we consider the rather simple equation
@@ -259,7 +259,7 @@ Nevertheless, starting over with the initial guess from \eqref{eq: start sqrt_f}
 	\label{fig: oscillation}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[!h]
 \begin{subfigure}[b]{.5\textwidth}
 	\includegraphics[width=1.\textwidth]{plots/with_penalty_it22.pdf}
 	\caption{Solution after 23 steps}
@@ -274,6 +274,17 @@ Nevertheless, starting over with the initial guess from \eqref{eq: start sqrt_f}
 Figure \ref{fig: diff iteration} shows to consecutive steps, the error $u-u_{exact}$ is denoted by the surface color. We see that the solution after 23 steps lies above of the exact solution, while one iteration later the Poisson solution lies below of it. These frames are exemplary for the behaviour of our numerical solution. After a step above the solution one below follows, it looks like the solution is split into two subsequences.  And as we have also seen in the devolution of the error, these subsequences seem even to drive each other away from the actual solution.
 
 To prevent our algorithm from doing so we couple the two subsequences by a damping. Before we continue iterating we combine the current solution with the function calculated one step before by an affine composition. Hence we got a further parameter $\alpha$, namely the amount with that the new solution contributes to the iteration.
+
+\section{The ellipticity constant}
+For the condition of the problem it is necessary that the eigenvalues of the diffusion matrix, namely $\mycof{D_h^2 u_h^i}$ are positive for all $x$. Even better is if they are constrained from below with some constant $\varepsilon$. 
+To suffice this criteria we introduce a modified cofactor matrix
+\[ 
+	\mycofMod {D^2_h u_h} = \begin{cases}
+	\mycof {D^2_h u_h} & \operatorname{min}( \operatorname{eigs} \left( \mycof {D^2_h u_h} \right)) \geq \varepsilon	\\
+	\mycof {D^2_h u_h}+\begin{pmatrix} -\lambda+\varepsilon & 0 \\ 0 & -\lambda+\varepsilon
+	\end{pmatrix} 
+	\end{cases}
+\]
 
 \section{The final implementation}
 
