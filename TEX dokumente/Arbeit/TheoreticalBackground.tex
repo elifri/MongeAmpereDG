@@ -3,9 +3,9 @@ First of all we repeat the basis definitions for the analysis of partial differe
 \begin{definition}[Partial Differential Equation{\cite[Introduction]{Evans1998}}]
  A \emph{partial differential equation} (PDE) of order $k\in \N$ is an expression of the form
 \begin{align}
-	F(D^k(u(x)), D^{k-1}(u(x)), Du(x), u(x), x) = 0, \label{eq:general PDE}
+	F(D^k(u(x)), D^{k-1}(u(x)), \dots, Du(x), u(x), x) = 0, (x \in \Omega)\label{eq:general PDE}
 \end{align}
-where $F$ is given and $u$ is unknown.
+where $F:\R^{n^k} \times R^{n^{k-1}} \times \dots \times \R^n \times \R \times \Omega \rightarrow \R $ is given and $u:\Omega \rightarrow \R$ is unknown.
 \end{definition}
 We focus in thesis on second order PDEs for our main PDE, namely the \MA equation is of second order. 
 \\Next to the order there exist further properties to categorise PDEs:
@@ -358,8 +358,26 @@ In the two-dimensional case the cofactor matrix of the Hessian simplifies to
 							\end{pmatrix}.
 \end{align}
 
+Very helpful is the relation between the determinant and the cofactor matrix.
+\begin{lemma}\label{la: rel det cofactor}
+	For every matrix $A  \in \R^{d \times d}$ it holds
+	\[
+		d \mydet A = \mycof A: A
+	\]
+	where $:$ denotes the Frobenius product $A:B= \sum\limits_{i,j=1}^{d}a_{i,j}b_{i,j}$ 
+\end{lemma}
+\begin{proof}
+	After Laplace's formula it holds for any $1 \leq j \leq d$
+	\[
+		\mydet A = \sum\limits_{i = 1}^{d} a_{i,j} (\mycof A )_{i,j} 
+	\]
+	Summing over all $j$ yields
+	\[
+		d \mydet A = \sum\limits_{j= 1}^{d} \sum\limits_{i = 1}^{d} (\mycof A )_{i,j}  a_{i,j}  = \mycof A: A
+	\]
+\end{proof}
 
-Very advantageous is the behaviour of the cofactor matrix of a Hessian if a divergence is applied to it:
+Another advantage is the behaviour of the cofactor matrix of a Hessian if a divergence is applied to it:
 \begin{definition}[Matrix Divergence]
 	$\nabla \cdot A$ for a matrix $A$ is defined by taking the divergence row-wise,i.e.
 \[

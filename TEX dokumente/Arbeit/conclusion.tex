@@ -9,16 +9,7 @@ Applying Newton's method on $F(u) =0$ we have
 \begin{align}
 	DF[u^n](u^{i+1}-u^i) = -F[u^i]
 \end{align}
-where $DF[u]$ denotes the \emph{Fr\'echet derivative} given by
-\begin{align*}
-	DF[u] v =& \lim\limits_{\varepsilon \rightarrow 0} \frac { F[u+\varepsilon v]- F[u]} \varepsilon.
-\end{align*}
-The Fr\'echet derivative can also be expressed as
-\begin{align*}
-				 =& \lim\limits_{\varepsilon \rightarrow 0} \frac { \mydet{D^2u+\varepsilon D^2v} - \mydet{D^2u}}\varepsilon\\ 
-				 =& \mycof{D^2 u}:D^2v
-\end{align*}
-leading to the Newton iteration
+where $DF[u]$ denotes the G\^ateaux derivative. We derived the G\^ateaux derivative $DF[u] v = \mycof{D^2 u}:D^2v$ already in theorem \ref{thm: linearisation} leading us to the Newton iteration
 \begin{align}
 	\mycof{D^2 u^i}:D^2\left(u^{i+1}-u^i\right) &= -\mydet{D^2 u^i}+f \nonumber \\
 	\Leftrightarrow \qquad \qquad  \mycof{D^2 u^i}:D^2(u^{i+1}) &= -\mydet{D^2 u^i} +f  +\mycof{D^2 u^i}:D^2(u^i). \label{eq: Newton iteration pre}
@@ -30,7 +21,7 @@ Similar to the derivation of the fixed point iteration we can apply Lemma \ref{l
 	u^{i+1} &= g. \textnormal{ on } \partial \Omega 
 \end{align}
 
-Hence, considering  the fact 
+Hence, considering once again the fact 
 \[
 \nabla \cdot \left( \mycof {D^2 u } \nabla v \right)
 \stackrel{La.\ref{la: An application of the divergernce product rule}}=\nabla \cdot {}\mycof{D^2 u}:D^2u

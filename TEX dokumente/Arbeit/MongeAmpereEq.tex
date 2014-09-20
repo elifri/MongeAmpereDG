@@ -1,9 +1,4 @@
 \section{Notes}
-finite Differenzen brauchen verrückte Stencils, zitat von feng [139] einfuegen - Probleme am Rand, Anforderungen an das Gebiet, es gibt keine Beweise zu Konvergenzordnungen
-basieren immer auf einem maximumsprinzip
-
-Richardson type Picard Iterationen werden bisher nur auf quasilineare Gleichungen angewandt
-%\todo{ convex definieren}
 
 \section{The \MA Equation}
 
@@ -89,6 +84,42 @@ A proof can be found for example in \cite[Theorem 17.1]{GT1983}
 
 A viscosity solution is unique by the comparison principle. If $u$ and $v$ are two viscosity solutions of $\mydet{D^2 u}=f$ with $u=v$ on $\partial \Omega$, then especially holds $u \leq v$ on $\partial \Omega$ and hence by the comparison principle $u \leq v$ in  $\bar \Omega$. Applying the same argument for $v \leq u$ on $\partial \Omega$ we find equality of the solutions. Note, that a viscosity has to be convex since otherwise the \MA operator is not elliptic, hence  
 
+\section{The Linearisation of the \MA operator}
+	\begin{theorem}[Linearisation] \label{thm: linearisation}
+		The Linearisation of the \MA operator $F(u)=\mydet{D^2u}-f$ is given by
+		\begin{align}
+			DF[u]v = \nabla \cdot \left( \mycof {D^2 u } \nabla (v) \right) \text{ or } DF[u]v=\mycof{D^2 u}:D^2 (v)		\end{align}
+	\end{theorem}
+	
+	\begin{proof}
+	We define the \MA bilinear form by
+	\[
+	\bilin v w = \mycof{D^2 v}:D^2w.
+	\]
+	Note that by Lemma \ref{la: rel det cofactor} then $\mydet {D^2 u} = \frac 1 2 \bilin u u$ holds.
+	
+	Since the \MA form is bilinear and symmetric we have the identity
+	\begin{align}
+		\mydet{D^2 (v+w)} =& \frac 1 2 \bilin{v+w}{v+w} = \frac 1 2 \left(\bilin v v + 2 \bilin v w + \bilin w w \right)  \\
+		=&  \detHess v  + \cofHess v : D^2 w + \detHess w \label{eq: det addition}
+	\end{align}
+	 Let us now look at the G\^ateaux derivative of $F$
+		\begin{align*}
+			DF[u]v =& \lim\limits_{\varepsilon \rightarrow 0} \frac { \mydet{D^2(u+\varepsilon v)} - \mydet{D^2u}}\varepsilon\\
+			\end{align*}
+Applying \eqref{eq: det addition} we find
+		\begin{align*}
+			DF[u]v =& \lim\limits_{\varepsilon \rightarrow 0} 
+										\frac  {\detHess u + \cofHess u : D^2(\varepsilon v) + \detHess {\varepsilon v} - \detHess u}
+													\varepsilon\\ 
+			 =& \lim\limits_{\varepsilon \rightarrow 0} 
+										\frac  {\varepsilon \cofHess u : D^2(v) + \varepsilon^d \detHess v}
+													\varepsilon\\ 
+			\stackrel{d > 1} =& \mycof{D^2 u}:D^2v
+		\end{align*}
+Considering also the result of Lemma \ref{la: An application of the divergernce product rule} the claim follows.
+	\end{proof}	
+
 
 \section{Types of Numerical Methods for the \MA Equation}
 Since equations of \MA type arise in many areas such as optics, transportation etc. there has been an active research on how to solve. Except for some simple special cases there is no analytical solution known resulting in a widely varied numerical set of numerical methods.
@@ -104,11 +135,11 @@ We give now an short overview of the different methods and some of their most kn
 \subsection{Direct Finite Difference Schemes}
 
 We recall the first category consists of direct finite difference schemes, where the term Direct refers to the fact that these schemes directly approximate the in \eqref{MA eq} occurring derivatives. 
-There are two points in favor of those schemes. First, because of their simplicity methods finite difference schemes widely used in "application areas".  And second Barles and Souganidis set up a general framework to analyse finite difference schemes for fully nonlinear elliptic PDEs \cite{BS1991}, this work especially reduces the convergence analysis for monotone schemes to the verification of stability and consistency.
+There are two points in favor of those schemes. First, because of their simplicity methods finite difference schemes widely used in "application areas".  And second Barles and Souganidis set up a general framework to analyse finite difference schemes for fully nonlinear elliptic PDEs satisfying a comparison principle \cite{BS1991}, this work especially reduces the convergence analysis for monotone schemes to the verification of stability and consistency.
 %As one desires monotone schemes for there exist theorems on their convergence, compare \cite[Theorem 2.1]{BS1991} and monotone schemes even for linear PDEs require wide stencil, compare \cite{MW1953} many finite difference schemes are wide-stencil schemes. 
 Built on this structure and are the works of Benamou, Oberman and Froese \cite{BFO2010, Oberman2008, FO2011}, where they provide some monotone wide-stencil for the \MA equation.
 They are able to prove convergence to the unique convex viscosity solution and experiments show the mentioned methods turn out to be very robust. To the author's knowledge until today all methods proven to converge to the viscosity solution are finite difference schemes.
-Nevertheless these methods have a huge drawback. Monotone schemes even for linear PDEs require wide stencils, compare \cite{MW1953}  and in order to increase accuracy one has not only to refine the grid, but also to increase the size of the stencil. These stencils make the methods difficult to apply if the problem domain $\Omega$ is not easily approximated by rectangles.
+Nevertheless these methods have a huge drawback. Monotone schemes even for linear PDEs require wide stencils, compare \cite{MW1953}  and in order to increase accuracy one has not only to refine the grid, but also to increase the size of the stencil. These stencils make the methods difficult to apply if the problem domain $\Omega$ is not easily approximated by rectangles. Another disadvantage is that in general there are no rate of convergence is given, even for classical solutions.
 
 \subsection{Methods based on Variational Principles and Approximating Infinite-dimensional Spaces by Finite-dimensional Spaces}
  We concentrate ourselves in this work to methods of the second area to which beside DG methods methods such as finite element methods, augmented Lagrangian methods, least squares methods and boundary element methods belong. Current DG methods we discuss in the next chapter \ref{ch:DGMongeAmpere} in detail.
@@ -144,4 +175,5 @@ Feng and Neilan provide a theoretical analysis for the radially symmetric case a
 
 \subsection{Methods based on Finite Basis Expansions and Approximating PDEs at Sampling Points}
 The third category consists of collocation methods and meshless methods.
-An example are \cite{BHP2014}.
+An example for a spline collocation method is introduced in \cite{BHP2014}. 
+Liu and He developed an adaption of an approach of Benamou, Froese and Oberman into to meshless method \cite{LH2013}.

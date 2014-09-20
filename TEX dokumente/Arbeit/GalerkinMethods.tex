@@ -6,51 +6,33 @@ The most natural attempt for a formulation of a DG method is to exploit the equa
 \end{align}
 
 However, this formulation has two major disadvantages. 
-At first we cannot throw the high derivatives onto the test functions using integration py parts, thus we do not easily get a variational formulation as we do for linear PDEs. Secondly \eqref{eq: naiv ansatz} only is sensible for test and ansatz functions contained in $C^1(\Omega)$. An extension with the natural DG terms which would allow less regular functions does not produce sensible results. Brenner et alter make the inconsistency between the linearisation of the discrete problem and the the linearisation of the continuous problem responsible \cite{BGN+2011} for this failure. Thus, their idea is to add terms to force consistency and add stability.
+At first we cannot throw the high derivatives onto the test functions using integration py parts, thus we do not easily get a variational formulation as we do for linear PDEs. Secondly \eqref{eq: naiv ansatz} seems to work only for test and ansatz functions contained in $C^1(\Omega)$. Brenner et alter make the inconsistency between the linearisation of the discrete problem and the the linearisation of the continuous problem responsible for this failure in less regular spaces\cite{BGN+2011}. Thus, their idea is to add DG terms to force consistency and add stability.
 
 \subsection{A $C^0$ Penalty Method }
 
-The linearisation of the left-hand side of \eqref{eq: naiv ansatz} is given by the bilinear form
+Given zero boundary conditions the linearisation of the left-hand side of \eqref{eq: naiv ansatz} can be derived exactly as in the proof of theorem \ref{thm: linearisation} leading to the bilinear form
 \begin{align}
-\langle L_{u,h}(w_h),v_h\rangle = \int_{\Omega} \left( \mycof{D^2 u_h} \nabla w_h\right) \cdot \nabla v_h. \label{linearOperator}
+\langle L_{u,h}(w_h),v_h\rangle =& \int_{\Omega} \nabla \cdot \left( \mycof {D^2 u_h } \nabla w_h \right) v_h
+%=& \int_{\Omega} \left( \mycof {D^2 u_h } \nabla w_h \right) \nabla v_h. 
+\label{eq: linearOperator}
 \end{align}
-\todo{proof}
 
-%operator is
-%\begin{align}
-%\langle L_{u,h}(w_h),v_h\rangle = \int_{\Omega} \left( \mycof{D^2 u_h} \nabla w_h\right) \cdot \nabla v_h. %\label{linearOperator}
-%\end{align}
-%Using the divergence product rule we get 
-%\[
-%   \mycof{D^2 u_h}:D^2 w_h  = \nabla \cdot (\mycof{D^2 u_h} \nabla w_h) - (\nabla \cdot \mycof{D^2 u_h}) \nabla w_h,
-%\]
-%which simplifies by the divergence free property of the cofactor matrix to
-%\begin{align*}
-%   \mycof{D^2 u_h}:D^2 w_h  &= \nabla \cdot (\mycof{D^2 u_h} \nabla w_h).
-%\end{align*}
-Due to integration by parts it holds
+Now we analyse the variational form of the linearisation of the \MA equation. Due to integration by parts it holds
 \begin{align*}
   \int_T \nabla \cdot (\mycof{D^2 u_h} \nabla w_h) v_h= -\int_T (\mycof{D^2 u_h} \nabla w_h) \nabla v_h+ \int_{\partial T} (\mycof{D^2 u_h} \nabla w_h) v_h.
 \end{align*}
 Summing over the whole triangulation it becomes
 \begin{align*}
-  \int_\Omega \nabla \cdot (\mycof{D^2 u_h} \nabla w_h) v_h= -\int_\Omega (\mycof{D^2 u_h} \nabla w_h) \nabla v_h+ \sum_{e \in \edges} \int_{e} \llbracket \{\{\mycof{D^2 u_h} \}\} \nabla w_h\rrbracket v_h.
+  \int_\Omega \nabla \cdot (\mycof{D^2 u_h} \nabla w_h) v_h= -\int_\Omega (\mycof{D^2 u_h} \nabla w_h) \nabla v_h+ \sum_{e \in \edgesi} \int_{e} \llbracket \{\{\mycof{D^2 u_h} \}\} \nabla w_h\rrbracket v_h.
 \end{align*}
-
-Setting this in \eqref{linearOperator} yields 
-\begin{align*}
-	\langle L_{u,h}(w_h),v_h\rangle 
-	     &=- \sum_{T \in \triang}  \int_T \nabla \cdot (\mycof{D^2 u_h} \nabla w_h) v_h
-	    + \sum_{e \in \edges} \int_{e} \llbracket \{\{\mycof{D^2 u_h} \}\} \nabla w_h\rrbracket v_h
-\end{align*}
-The aim is this bilinear form to be consistent and stable with the linearisation of the \MA equation. Hence, Brenner et al. gain the improved bilinearform
-\begin{align*}
-	\langle L^B_{u,h}(w_h),v_h\rangle 
+Considering the last identity the variational form of the linearisation reads
+\begin{align}
+	\langle L^L_{u,h}(w_h),v_h\rangle 
 	    =&- \sum_{T \in \triang}  \int_T \nabla \cdot (\mycof{D^2 u_h} \nabla w_h) v_h
-	    + \sum_{e \in \edges} \int_{e} \llbracket \{\{\mycof{D^2 u_h} \}\} \nabla w_h\rrbracket v_h \\
-	    &+ \sum_{e \in \edges} \int_{e} \llbracket \{\{\mycof{D^2 u_h} \}\} \nabla v_h\rrbracket w_h
-\end{align*}
-Plugging the newly derived terms of the enhanced bilinearform into the original naive ansatz \eqref{eq: naiv ansatz} and adding further terms to enforce weak boundary conditions they formulate the problem: Find $u_h \in V_h$ such that
+	    + \sum_{e \in \edges} \int_{e} \llbracket \{\{\mycof{D^2 u_h} \}\} \nabla w_h\rrbracket v_h \nonumber \\
+	    &+ \sum_{e \in \edges} \int_{e} \llbracket \{\{\mycof{D^2 u_h} \}\} \nabla v_h\rrbracket w_h \label{eq: var of linearisation}
+\end{align}
+Plugging the terms missing in \eqref{eq: linearOperator} but appearing in \eqref{eq: var of linearisation} into the original naive ansatz \eqref{eq: naiv ansatz} and adding further terms to enforce weak boundary conditions they formulate the problem: Find $u_h \in V_h$ such that
 \begin{align}
 \begin{split}
 	&\int_{\Omega} (f-\mydet {D^2_h u_h} v 
@@ -59,14 +41,14 @@ Plugging the newly derived terms of the enhanced bilinearform into the original 
 	+ \sigma  \sum_{e \in \edgesb} \frac 1 {h_e} \int_{e} (u_h -g)  = 0 \; \forall v_h \in V_h \label{eq: brenner method}
 \end{split}
 \end{align}
-They choose their ansatz and test space $V_h$ to be the space of continuous functionous being piecewise polynomials up to degree $k$ for a $k \geq 3$. For this case they provide a detailed analysis consisting of a proof of well-posedness and some error estimates. Their numerical results suggest convergence rates \todo{convergence rates} although they cannot confirm those with theoretical evidence. \\
+They choose their ansatz and test space $V_h$ to be the space of continuous functionous being piecewise polynomials up to degree $k$ for a $k \geq 3$. For these degrees and the case of classical solutions they provide a detailed analysis consisting of a proof of well-posedness and some error estimates. Their numerical results suggest optimal convergence rates \todo{convergence rates} for smooth solutions although they cannot confirm those with theoretical evidence. \\
 However, their approach has a drawback. In order to find $u_h$ one has to solve the from \eqref{eq: brenner method} resulting nonlinear system. Brenner et alt. make use of Newton's method in the numerical results to solve their example problems. For a good initial guess they inquire a vanishing moments method which internally again solves nonlinear systems based on a Newton's method which uses a nested iteration to create initial guesses. 
 
-We implemented their presented method using the finite element tool FEniCS \cite{FEniCS} and experienced a huge sensitivity for initial starting points.
+We implemented their presented method using the finite element tool FEniCS \cite{FEniCS} and experienced a huge sensitivity for initial starting points. \todo{brauchen ja auch vanishing moments als start}
 \todo{tolle numerische ergebnisse}
 
 Neilan claims when presenting his method in \cite{Neilan2014} that this methods fails to converge for the test case
-$u = -\sqrt{2 - x_1^2 - x_2^2 }$ and $f = \frac 2 {{2 - x_1^2 - x_2^2}^2}$ which lacks $H^2$ regularity, see also test \ref{test sqrt}. Generally the presented method is more appropriate for classical solutions, they plan to address less regular solution in future work.
+$u = -\sqrt{2 - x_1^2 - x_2^2 }$ and $f = \frac 2 {{2 - x_1^2 - x_2^2}^2}$ which lacks $H^2$ regularity, see also test \ref{test sqrt}. Generally the presented method is more appropriate for classical solutions, Brenner et alt. say they plan to address less regular solution in future work.
 
 
 \subsection{A Finite Element Method based on a Discrete Hessian} \label{subsec: disrete Hessian} \label{sec: FEM discrete Hessian}

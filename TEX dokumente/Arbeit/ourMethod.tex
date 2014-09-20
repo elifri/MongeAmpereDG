@@ -31,20 +31,13 @@ We see that the left matrix is the cofactor matrix of the hessian (Definition \r
 \begin{align}
 		\mycof {D^2 w }:D^2 v  = 2f  \label{eq:short formula}
 \end{align}
-Note, the identity $\mycof {D^2 w }:D^2 v  = d \mydet{D^2 w}$ also holds for arbitrary dimensions $d \in \N$ as one can easily verify with Laplace's formula and the definition of the cofactor matrix . 
-\todo{Teil davor durch die herleitung mit laplaces formula ersetzen}
+Note, that this derivation of decoupling of $v,w$ is chosen for it is a very intuitive approach. Alternatively \eqref{eq:short formula} can quickly be derived from the identity $\mycof {D^2 u }:D^2 u  = d \mydet{D^2 u}$ of Lemma \ref{la: rel det cofactor}
 
-Substituting the identity of Lemma \ref{la: An application of the divergernce product rule} we find
-\begin{align}
-	\nabla \cdot \left( \mycof {D^2 w } \nabla v \right) = 2f.
-\end{align}
-
-
-Multiplying by $-1$ we get a term the equation
+Substituting the identity of Lemma \ref{la: An application of the divergernce product rule} and multiplying with -1 we find
 \begin{align}
 	- \nabla \cdot \left( \mycof{ D^2 w} \nabla v \right)  = -2f.  \label{eq:decoupled PDE}
 \end{align}
-For a fixed $w$ the left-hand side now is (at least) quasilinear in $v$ opposed to the nonlinearity in $u$ in the original PDE. From its derivation it is clear that for smooth functions $w=u, v=u$ \eqref{eq:decoupled PDE} is equivalent to the classical formulation of the \MA equation. Furthermore due to the symmetry of \eqref{eq:decoupled PDE start} in $v$ and $w$, analogously the equation 
+For a fixed $w$ the left-hand side now is quasilinear in $v$ opposed to the nonlinearity in $u$ in the original PDE. From its derivation it is clear that for smooth functions $w=u, v=u$ \eqref{eq:decoupled PDE} is equivalent to the classical formulation of the \MA equation. Furthermore due to the symmetry of \eqref{eq:decoupled PDE start} in $v$ and $w$, analogously the equation 
 \begin{align}
 	- \nabla \cdot \left( \mycof{ D^2 v} \nabla w \right)  = -2f.  \label{eq:decoupled PDE two}
 \end{align}
@@ -74,8 +67,6 @@ Since in every iteration \eqref{eq:fixed point iteration} states a generalised p
     	 				+\sum\limits_{e \in \bigEps^b} \int_e \frac \sigma {|e|} v u_h^0    \qquad \forall v \in  \mathcal P^k_h.
     	\label{eq: sipg iteration}
 \end{align}
-\todo{beschraenkung of grad 2}
-
 
 \section{Challenges for a \MA DG method}
 Reviewing existing DG method for the \MA we learned some ?(subjects, matter, points) we have to keep in mind// pay attention to //concern while examining the fixed point iteration.
@@ -275,16 +266,17 @@ Figure \ref{fig: diff iteration} shows to consecutive steps, the error $u-u_{exa
 
 To prevent our algorithm from doing so we couple the two subsequences by a damping. Before we continue iterating we combine the current solution with the function calculated one step before by an affine composition. Hence we got a further parameter $\alpha$, namely the amount with that the new solution contributes to the iteration.
 
-\section{The ellipticity constant}
+\section{The ellipticity constant}\label{sec: mod cofactor}
 For the condition of the problem it is necessary that the eigenvalues of the diffusion matrix, namely $\mycof{D_h^2 u_h^i}$ are positive for all $x$. Even better is if they are constrained from below with some constant $\varepsilon$. 
 To suffice this criteria we introduce a modified cofactor matrix
 \[ 
 	\mycofMod {D^2_h u_h} = \begin{cases}
-	\mycof {D^2_h u_h} & \operatorname{min}( \operatorname{eigs} \left( \mycof {D^2_h u_h} \right)) \geq \varepsilon	\\
-	\mycof {D^2_h u_h}+\begin{pmatrix} -\lambda+\varepsilon & 0 \\ 0 & -\lambda+\varepsilon
-	\end{pmatrix} 
+	\mycof {D^2_h u_h} & \lambda \geq \varepsilon	\\
+	\mycof {D^2_h u_h}+ (-\lambda+\varepsilon) Id%\begin{pmatrix} -\lambda+\varepsilon & 0 \\ 0 & -\lambda+\varepsilon \end{pmatrix} 
+	& else
 	\end{cases}
 \]
+where $\lambda$ is the minimal eigenvalue of $ \mycof {D^2_h u_h}$ and $Id$ is the $d \times d$-Identity matrix. Now we replace all occurrences of $\mycof {D^2_h u_h}$ in \eqref{eq: sipg iteration} by $\mycofMod {D^2_h u_h}$ to stabilise the problem condition.
 
 \section{The final implementation}
 
@@ -295,7 +287,7 @@ To suffice this criteria we introduce a modified cofactor matrix
 	u = g \text{ on }\partial \Omega$
 \State $i \gets 1$
 \While {$u_i-u_{i-1} < \varepsilon$}
-	\State $u_i \gets$ solution of \ref{sec: SIPG}
+	\State $u_i \gets$ solution of \ref{sec: SIPG} with modified cofactor matrix (\ref{sec: mod cofactor})
 	\State $u_i \gets \alpha u_{i-1} + (1-\alpha)u_i $
 	\State convexify ??????????/
 \EndWhile

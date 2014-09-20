@@ -8,9 +8,15 @@
 \newcommand{\cof}{\operatorname{cof}}
 \newcommand{\bigO}{\mathcal{O}}
 \newcommand{\MA}{Monge-Amp\`ere }
+
 \newcommand{\mydet}[1]{\det{\left(#1\right)}}
+\newcommand{\detHess}[1] {\ensuremath{\mydet{D^2 #1}}}
+\newcommand{\cofHess}[1] {\ensuremath{\mycof{D^2 #1}}}
 \newcommand{\mycof}[1]{\cof \left( #1 \right)}
 \newcommand{\mycofMod}[1]{\cof^+ \left( #1 \right)}
+
+\newcommand{\bilin}[2] {\ensuremath{  \langle #1, #2 \rangle}}
+
 \DeclareMathOperator*{\argmin}{argmin}
 \renewcommand{\max}[2]{\ensuremath{\operatorname{max} \left\{ #1, #2  \right\}  }}
 
