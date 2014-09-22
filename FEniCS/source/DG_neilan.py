@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 """
 #source ~/Work/FEniCS/share/dolfin/dolfin.conf
@@ -8,10 +9,10 @@ import scipy.io
 import numpy as np
 from MA_iterated import MA_iteration
 from MA_iterated_August import start_iteration
-from convexify import convexify
+from MA_problem import MA_problem
 import math
 import time
-
+import sys
 
 def frobenius_product(a,b):
   return a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3]
@@ -21,14 +22,17 @@ def frobenius_product2(a,b):
 
 
 def determinant(a):
+  return ((a[0]*a[3]) - (a[1]*a[2]))
+
+def determinant_sym(a):
   return ((a[0]*a[3]) - ((a[1]+a[2])/2.0)**2)
 
 def matrix_mult(A,b):
   return (as_matrix([[A[0],A[1]],[A[2],A[3]]])*b)
-# return [A[0]*b[0] + A[1]*b[1], A[2]*b[0] + A[3]*b[1]]
+  #return [A[0]*b[0] + A[1]*b[1], A[2]*b[0] + A[3]*b[1]]
 
 
-def neilan_step(mesh, V, W, u0, sigmaC, sigmaG, sigmaB, u_):
+def neilan_step(mesh, V, Sigma, W, u0, f, sigmaC, sigmaG, sigmaB, u_):
 
 
   #define geometry for penalty and normals
@@ -45,7 +49,7 @@ def neilan_step(mesh, V, W, u0, sigmaC, sigmaG, sigmaB, u_):
   F  = (f- determinant(w))*v*dx
 
   #jump in gradient
-  #F = F + Constant(sigmaG)('+')*h('+')* jump(nabla_grad(u),n)*jump(nabla_grad(v),n)*dS
+  F = F + Constant(sigmaG)('+')*h('+')* jump(nabla_grad(u),n)*jump(nabla_grad(v),n)*dS
   #F = F + dot(nabla_grad(u)('+') - nabla_grad(u)('-'),n('+'))*v('+')*dS
   
   #jump in function
@@ -87,26 +91,29 @@ def neilan_step(mesh, V, W, u0, sigmaC, sigmaG, sigmaB, u_):
   solver  = NonlinearVariationalSolver(problem)
 
   prm = solver.parameters
-  #info(prm, True)
+  
+  prm['nonlinear_solver']='snes'
+  prm['snes_solver']['absolute_tolerance'] = 1E-8
+  prm['snes_solver']['linear_solver']= 'petsc'
+  #prm['snes_solver']['preconditioner']= 'lu'
+  prm['snes_solver']['line_search'] = 'bt' 
+  
+  info(prm, True)
+  
+  
+  #prm['newton_solver']['absolute_tolerance'] = 1E-8
+  #prm['newton_solver']['relative_tolerance'] = 1E-8
+  #prm['newton_solver']['maximum_iterations'] = 1000
+  #prm['newton_solver']['relaxation_parameter'] = 0.2
+  #prm['newton_solver']['report'] = True
 
-  prm['newton_solver']['absolute_tolerance'] = 1E-8
-  prm['newton_solver']['relative_tolerance'] = 1E-8
-  prm['newton_solver']['maximum_iterations'] = 10
-  prm['newton_solver']['relaxation_parameter'] = 1.0
-  prm['newton_solver']['report'] = True
-  #prm['linear_solver'] = 'gmres'
-  #prm['preconditioner'] = 'ilu'
-  #prm['krylov_solver']['absolute_tolerance'] = 1E-9
-  #prm['krylov_solver']['relative_tolerance'] = 1E-7
-  #prm['krylov_solver']['maximum_iterations'] = 1000
-  #prm['krylov_solver']['gmres']['restart'] = 40
-  #prm['krylov_solver']['preconditioner']['ilu']['fill_level'] = 0
+  
   set_log_level(PROGRESS)
 
   nb_iterations, converged = solver.solve()
   
   #write Newton steps required to file 
-  newtonStepsfile.write(str(it)+' '+str(nb_iterations)+'\n')
+ # newtonStepsfile.write(str(it)+' '+str(nb_iterations)+'\n')
   
   return u_
 
@@ -116,14 +123,20 @@ if __name__ == "__main__":
   
   #------------ Create mesh and define function space-----------
   Nh = 2
-  deg = 2
-  deg_hessian = 2
+  
+  if len(sys.argv) < 3:
+    print 'Error, please specify the polynomial degrees of the trial and the Hessian trial fcts!'
+    sys.exit(-1)
+  
+  deg = int(sys.argv[1])
+  deg_hessian = int(sys.argv[2])
 
 
   print "deg ", deg, " deg_hessian", deg_hessian
 
   mesh = UnitSquareMesh(Nh, Nh, "crossed")
-  
+  interactive
+
   #space for function
   V = FunctionSpace(mesh, 'DG', deg)
   #space for hessian entries
@@ -139,30 +152,33 @@ if __name__ == "__main__":
   bigV = FunctionSpace(bigMesh, 'DG', deg, 'crossed')
 
   #define penalty
-  sigmaC = 10*deg*deg
-  sigmaG = 10*deg*deg
-  sigmaB = 10*deg*deg
+  sigmaC = 20*deg*deg
+  sigmaG = 50
+  sigmaB = 20*deg*deg
 
   #-----------choose PDE------------
+  #u0, g = MA_problem('MA2')
+
+  u0 = Expression('-sqrt(2-pow(x[0],2)-pow(x[1],2))')
   #define rhs
-  f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
-  #f = Constant(7.0)#simpleMongeAmpere
-  #f = Constant(1.0) #simpleMongeAmpere2
-  #f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
-
-  # Define boundary conditions
-  #u0 = Constant(0.0) #const rhs
-  u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
-  #u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
-  #u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
-  #u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
-
-  fileprefix = 'MA1_Neilan_deg'+str(deg)+str(deg_hessian)+'_'
-  errorfile = open('data/'+fileprefix+'l2errornorm','wa')
+  class rhs(Expression):
+    def eval(self, v, x):
+      if math.fabs(x[0] - 1) <= 1e-12 and math.fabs(x[1] - 1) <= 1e-12:
+        v[0] = 1
+      else:
+        val = 2-x[0]**2-x[1]**2
+        v[0]= 2/(val**2)
+  
+  f = rhs()
+  
+  fileprefix = 'temp2_deg'+str(deg)+str(deg_hessian)+'_'
+  print "processing files ", fileprefix
+  
+  errorfile = open('data/'+fileprefix+'l2errornorm','wa',1)
   errorfile.write('iterations l2error\n');
-  errorfileh1 = open('data/'+fileprefix+'h1errornorm','wa')
+  errorfileh1 = open('data/'+fileprefix+'h1errornorm','wa',1)
   errorfileh1.write('iterations h1error\n');
-  newtonStepsfile = open('data/'+fileprefix+'newtonSteps','wa')
+  newtonStepsfile = open('data/'+fileprefix+'newtonSteps','wa',1)
   newtonStepsfile.write('iterations steps\n');
   
 
@@ -208,37 +224,37 @@ if __name__ == "__main__":
 
     interactive()
   
-  for it in range(1,8):
+  for it in range(1,7):
     print 'Starting Neilan with ', Nh
-    w = neilan_step(mesh, V, W, u0, sigmaC, sigmaG, sigmaB, u_)
+    w = neilan_step(mesh, V, Sigma, W, u0, f, sigmaC, sigmaG, sigmaB, u_)
 
     #examine error
-    error_norm = errornorm(u0, u_.sub(0))
+    error_norm = errornorm(u0, w.sub(0))
     print 'Errornorm:', error_norm
     errorfile.write(str(it)+' '+str(error_norm)+'\n')
 
-    error_norm = errornorm(u0, u_.sub(0), norm_type='H1')
+    error_norm = errornorm(u0, w.sub(0), norm_type='H1')
     print 'Errornorm H1:', error_norm
     errorfileh1.write(str(it)+' '+str(error_norm)+'\n')
 
     # ----Plot solution and mesh-------
-    s = 'plots/'+fileprefix+'_Nh'+str(Nh)+'.pvd'
-    file = File(s)
-    solution = Function(bigV, name='u')
-    solution.assign(project(u_.sub(0),bigV))
-    file << solution
-
-    s = 'plots/'+fileprefix+'error_Nh'+str(Nh)+'.pvd'
-    file = File(s)
-    error = Function(bigV, name='error')
-    error.assign(project(abs(w.sub(0)-u0),bigV))
-    file << error
-
+    if True:
+      s = 'plots/'+fileprefix+'_Nh'+str(Nh)+'.pvd'
+      file = File(s)
+      solution = Function(bigV, name='u')
+      solution.assign(project(w.sub(0),bigV))
+      file << solution
+  
+      s = 'plots/'+fileprefix+'error_Nh'+str(Nh)+'.pvd'
+      file = File(s)
+      error = Function(bigV, name='error')
+      error.assign(project(abs(w.sub(0)-u0),bigV))
+      file << error
 
     if False:
-      plot(mesh, title='mesh'+str(it))
-      #plot(project(w.sub(0),bigV), title = 'solution'+str(it))
-      plot(project(abs(w.sub(0)-u0),bigV), title = 'error'+str(Nh))
+      #plot(mesh, title='mesh'+str(it))
+      plot(project(w.sub(0),bigV), title = 'solution'+str(it))
+      #plot(project(w.sub(0)-u0,bigV), title = 'error'+str(Nh))
       #plot(project(determinant(w.sub(1))-f,bigV), title = 'determinant of discr. hessian-rhs'+str(Nh))
       #plot(project(det(grad(grad(w.sub(0))))-f,bigV), title = 'determinant of hessian-rhs'+str(Nh))
       #Hold plot
@@ -247,7 +263,8 @@ if __name__ == "__main__":
     #------refine grid---------
     #mesh = refine(mesh)
     Nh = Nh *2
-    mesh = UnitSquareMesh(Nh, Nh, 'left/right')
+    mesh = UnitSquareMesh(Nh, Nh, 'crossed')
+    
     V = FunctionSpace(mesh, 'DG', deg)
     Sigma_single = FunctionSpace(mesh, 'DG', deg_hessian)
     Sigma = VectorFunctionSpace(mesh, 'DG', deg_hessian, dim=4)
@@ -261,7 +278,7 @@ if __name__ == "__main__":
 
   end = time.clock()
   time_file = open('data/timing','a')
-  time_file.write(fileprefix+' '+str(end-start))
+  time_file.write(fileprefix+' '+str(end-start)+'\n')
   
   print "%.2gs" % (end-start)
   
