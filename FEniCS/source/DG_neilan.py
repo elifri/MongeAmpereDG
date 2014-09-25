@@ -9,7 +9,7 @@ import scipy.io
 import numpy as np
 from MA_iterated import MA_iteration
 from MA_iterated_August import start_iteration
-from MA_problem import MA_problem
+from MA_problem import *
 import math
 import time
 import sys
@@ -33,7 +33,6 @@ def matrix_mult(A,b):
 
 
 def neilan_step(mesh, V, Sigma, W, u0, f, sigmaC, sigmaG, sigmaB, u_):
-
 
   #define geometry for penalty and normals
   h = CellSize(mesh)
@@ -76,9 +75,9 @@ def neilan_step(mesh, V, Sigma, W, u0, f, sigmaC, sigmaG, sigmaB, u_):
 
   #------define boundary conditions--------
   u0_boundary = Function(W)
-  assign(u0_boundary.sub(0), interpolate(u0,V))
+  assign(u0_boundary.sub(0), project(u0,V))
   #assign(u0_boundary.sub(1), grad(grad(u0)))
-  assign(u0_boundary.sub(1),interpolate(Expression((('1.0','0.0','0.0','1.0'))),Sigma))
+  assign(u0_boundary.sub(1),project(Expression((('1.0','0.0','0.0','1.0'))),Sigma))
 
   def boundary(x, on_boundary):
       return on_boundary
@@ -94,13 +93,12 @@ def neilan_step(mesh, V, Sigma, W, u0, f, sigmaC, sigmaG, sigmaB, u_):
   
   prm['nonlinear_solver']='snes'
   prm['snes_solver']['absolute_tolerance'] = 1E-8
+  prm['snes_solver']['maximum_iterations'] = 50
   prm['snes_solver']['linear_solver']= 'petsc'
   #prm['snes_solver']['preconditioner']= 'lu'
-  prm['snes_solver']['line_search'] = 'bt' 
+  prm['snes_solver']['line_search'] = 'basic'
   
-  info(prm, True)
-  
-  
+  info(prm['snes_solver'], True)
   #prm['newton_solver']['absolute_tolerance'] = 1E-8
   #prm['newton_solver']['relative_tolerance'] = 1E-8
   #prm['newton_solver']['maximum_iterations'] = 1000
@@ -113,26 +111,87 @@ def neilan_step(mesh, V, Sigma, W, u0, f, sigmaC, sigmaG, sigmaB, u_):
   nb_iterations, converged = solver.solve()
   
   #write Newton steps required to file 
- # newtonStepsfile.write(str(it)+' '+str(nb_iterations)+'\n')
+  newtonStepsfile.write(str(it)+' '+str(nb_iterations)+'\n')
   
   return u_
 
 
+def neilan_start(u0, f, Nh, deg, deg_hessian, sigmaC, sigmaG, sigmaB, maxRefinement):
+  mesh = UnitSquareMesh(Nh, Nh, "crossed")  
+
+  #space for function
+  V = FunctionSpace(mesh, 'DG', deg)
+  #space for hessian entries
+  Sigma_single = FunctionSpace(mesh, 'DG', deg_hessian)
+  #space for discrete hessian
+  Sigma = VectorFunctionSpace(mesh, 'DG', deg_hessian, dim=4)
+
+  #combination of functions and its discrete hessian
+  W = V*Sigma
+
+  #refined space to plot funcitons refined
+  bigMesh = refine(refine(mesh))
+  bigV = FunctionSpace(bigMesh, 'DG', deg, 'crossed')
+
+  #--------define startsolution-------------
+  u1_ = Function(V)
+  u1_ = start_iteration(mesh, V, u0, f, sigmaC)
+  
+  u_ = Function(W)
+  assign(u_.sub(0), u1_)
+  #calculate current hessian
+  assign(u_.sub(1), [project((u1_.dx(0)).dx(0),Sigma_single), \
+                     project((u1_.dx(0)).dx(1),Sigma_single), \
+                     project((u1_.dx(1)).dx(0),Sigma_single), \
+                     project((u1_.dx(1)).dx(1),Sigma_single)])
+
+  for it in range(1,maxRefinement):
+    print 'Starting Neilan with ', Nh
+    w = neilan_step(mesh, V, Sigma, W, u0, f, sigmaC, sigmaG, sigmaB, u_)
+
+    #examine error
+    error_norm = errornorm(u0, w.sub(0))
+    print 'Errornorm:', error_norm
+ 
+    error_norm = errornorm(u0, w.sub(0), norm_type='H1')
+    print 'Errornorm H1:', error_norm
+
+    #------refine grid---------
+    #mesh = refine(mesh)
+    Nh = Nh *2
+    mesh = UnitSquareMesh(Nh, Nh, 'crossed')
+    V = FunctionSpace(mesh, 'DG', deg)
+    Sigma_single = FunctionSpace(mesh, 'DG', deg_hessian)
+    Sigma = VectorFunctionSpace(mesh, 'DG', deg_hessian, dim=4)
+    W = V*Sigma
+    
+    bigMesh = refine(mesh)
+    bigV = FunctionSpace(bigMesh, 'DG', deg)
+    u_=project(w,W)
+  
+  return Nh, V, bigV, u_
+
 if __name__ == "__main__":
   start = time.clock()
+  
+  
+  #dolfin.parameters['form_compiler']['quadrature_scheme'] = 'canonical'
   
   #------------ Create mesh and define function space-----------
   Nh = 2
   
-  if len(sys.argv) < 3:
-    print 'Error, please specify the polynomial degrees of the trial and the Hessian trial fcts!'
+  if len(sys.argv) < 4:
+    print 'Error, please specify problem and the polynomial degrees of the trial and the Hessian trial fcts!'
     sys.exit(-1)
   
-  deg = int(sys.argv[1])
-  deg_hessian = int(sys.argv[2])
-
+  problem_name = sys.argv[1]
+  deg = int(sys.argv[2])
+  deg_hessian = int(sys.argv[3])
 
   print "deg ", deg, " deg_hessian", deg_hessian
+
+  parameters['form_compiler']['quadrature_degree'] = 2*deg
+
 
   mesh = UnitSquareMesh(Nh, Nh, "crossed")
   interactive
@@ -155,23 +214,8 @@ if __name__ == "__main__":
   sigmaC = 20*deg*deg
   sigmaG = 50
   sigmaB = 20*deg*deg
-
-  #-----------choose PDE------------
-  #u0, g = MA_problem('MA2')
-
-  u0 = Expression('-sqrt(2-pow(x[0],2)-pow(x[1],2))')
-  #define rhs
-  class rhs(Expression):
-    def eval(self, v, x):
-      if math.fabs(x[0] - 1) <= 1e-12 and math.fabs(x[1] - 1) <= 1e-12:
-        v[0] = 1
-      else:
-        val = 2-x[0]**2-x[1]**2
-        v[0]= 2/(val**2)
   
-  f = rhs()
-  
-  fileprefix = 'temp2_deg'+str(deg)+str(deg_hessian)+'_'
+  fileprefix = problem_name+'_Neilan_GradJump_deg'+str(deg)+str(deg_hessian)+'_'
   print "processing files ", fileprefix
   
   errorfile = open('data/'+fileprefix+'l2errornorm','wa',1)
@@ -181,6 +225,7 @@ if __name__ == "__main__":
   newtonStepsfile = open('data/'+fileprefix+'newtonSteps','wa',1)
   newtonStepsfile.write('iterations steps\n');
   
+  u0, f = MA_problemSimple(problem_name, Nh, parameters['form_compiler']['quadrature_degree'])
 
   #define exact solution
   u_e = project(u0, V)
@@ -189,24 +234,23 @@ if __name__ == "__main__":
   u1_ = Function(V)
   u1_ = start_iteration(mesh, V, u0, f, sigmaC)
   #u1_.assign(u_e)
+  #u1_ = project(Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0'), V)
   
+  print 'start error ', errornorm(u0, u1_)
   errorfile.write('0 '+str(errornorm(u0, u1_))+'\n')
   errorfileh1.write('0 '+str(errornorm(u0, u1_, norm_type='h1'))+'\n')
-
   
   u_ = Function(W)
   
   assign(u_.sub(0), u1_)
  
   #calculate current hessian
-  assign(u_.sub(1), [project((u1_.dx(0)).dx(0),Sigma_single), \
-                     project((u1_.dx(0)).dx(1),Sigma_single), \
-                     project((u1_.dx(1)).dx(0),Sigma_single), \
-                     project((u1_.dx(1)).dx(1),Sigma_single)])
+  #assign(u_.sub(1), [project((u1_.dx(0)).dx(0),Sigma_single), \
+  #                   project((u1_.dx(0)).dx(1),Sigma_single), \
+  #                   project((u1_.dx(1)).dx(0),Sigma_single), \
+  #                   project((u1_.dx(1)).dx(1),Sigma_single)])
 
-#  assign(u_.sub(1), [u0_derivXX_e, u0_derivXY_e, u0_derivXY_e, u0_derivYY_e])
-
-
+  assign(u_.sub(1),project(Expression((('1.0','0.0','0.0','1.0'))),Sigma))
 
   #plot start solution 
   if False:
@@ -224,18 +268,27 @@ if __name__ == "__main__":
 
     interactive()
   
-  for it in range(1,7):
+  for it in range(1,8):
     print 'Starting Neilan with ', Nh
+    
+      #-----------choose PDE------------
+    u0, f = MA_problemSimple(problem_name, Nh, parameters['form_compiler']['quadrature_degree'])
+    f.domain=Domain(triangle)
+    
     w = neilan_step(mesh, V, Sigma, W, u0, f, sigmaC, sigmaG, sigmaB, u_)
 
     #examine error
-    error_norm = errornorm(u0, w.sub(0))
+    error_norm = errornorm(u0, w.sub(0), degree_rise=5)
     print 'Errornorm:', error_norm
     errorfile.write(str(it)+' '+str(error_norm)+'\n')
 
-    error_norm = errornorm(u0, w.sub(0), norm_type='H1')
+    error_norm = errornorm(u0, w.sub(0), norm_type='H1', degree_rise=5)
     print 'Errornorm H1:', error_norm
     errorfileh1.write(str(it)+' '+str(error_norm)+'\n')
+
+#    u00, u01, u10, u11 = (((MA_exact_derivative('MA2'))))
+#    plot(project(w.sub(1)[1]-u01,bigV), title = 'first entry of hessian error')
+#    interactive()
 
     # ----Plot solution and mesh-------
     if True:
@@ -272,7 +325,7 @@ if __name__ == "__main__":
     
     bigMesh = refine(mesh)
     bigV = FunctionSpace(bigMesh, 'DG', deg)
-    u_.assign(project(w,W))
+    u_=project(w,W)
   
     #plot(project(u_.sub(0),bigV), title = 'projected solution'+str(it))
 
