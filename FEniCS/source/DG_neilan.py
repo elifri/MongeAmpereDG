@@ -135,7 +135,7 @@ def neilan_start(u0, f, Nh, deg, deg_hessian, sigmaC, sigmaG, sigmaB, maxRefinem
 
   #--------define startsolution-------------
   u1_ = Function(V)
-  u1_ = start_iteration(mesh, V, u0, f, sigmaC)
+  u1_ = start_iteration(mesh, V, u0, f, sigmaC, parameters['form_compiler']['quadrature_degree'])
   
   u_ = Function(W)
   assign(u_.sub(0), u1_)
@@ -175,7 +175,7 @@ if __name__ == "__main__":
   start = time.clock()
   
   
-  #dolfin.parameters['form_compiler']['quadrature_scheme'] = 'canonical'
+  parameters['form_compiler']['quadrature_rule'] = 'canonical'
   
   #------------ Create mesh and define function space-----------
   Nh = 2
@@ -225,16 +225,16 @@ if __name__ == "__main__":
   newtonStepsfile = open('data/'+fileprefix+'newtonSteps','wa',1)
   newtonStepsfile.write('iterations steps\n');
   
-  u0, f = MA_problemSimple(problem_name, Nh, parameters['form_compiler']['quadrature_degree'])
+  u0, f = MA_problem(problem_name, Nh, 2*deg, mesh)
 
   #define exact solution
   u_e = project(u0, V)
 
   #--------define startsolution-------------
   u1_ = Function(V)
-  u1_ = start_iteration(mesh, V, u0, f, sigmaC)
+  #u1_ = start_iteration(mesh, V, u0, f, sigmaC, parameters['form_compiler']['quadrature_degree'])
   #u1_.assign(u_e)
-  #u1_ = project(Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0'), V)
+  u1_ = project(Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0'), V)
   
   print 'start error ', errornorm(u0, u1_)
   errorfile.write('0 '+str(errornorm(u0, u1_))+'\n')
@@ -272,8 +272,7 @@ if __name__ == "__main__":
     print 'Starting Neilan with ', Nh
     
       #-----------choose PDE------------
-    u0, f = MA_problemSimple(problem_name, Nh, parameters['form_compiler']['quadrature_degree'])
-    f.domain=Domain(triangle)
+    u0, f = MA_problem(problem_name, Nh, 2*deg, mesh)
     
     w = neilan_step(mesh, V, Sigma, W, u0, f, sigmaC, sigmaG, sigmaB, u_)
 
