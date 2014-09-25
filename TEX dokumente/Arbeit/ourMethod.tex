@@ -54,7 +54,7 @@ Thus, it is natural to examine the fixed point iteration
 for its applicability for numerical schemes approximating a \MA solution.
 
 \section{SIPG formulation of the Iteration}\label{sec: SIPG MA}
-Since in every iteration \eqref{eq:fixed point iteration} states a generalised poisson equation we can apply the derived  method of section \ref{sec: SIPG} directly: Given $u^i_h$ find $u^{i+1}_h \in \mathcal P^k_h$ satisfying
+Since in every iteration \eqref{eq:fixed point iteration} states a generalised poisson equation we can apply the derived  SIPG method of section \ref{sec: SIPG} directly: Given $u^i_h$ find $u^{i+1}_h \in \mathcal P^k_h$ satisfying
 \begin{align}
  &\int_{\Omega} \nabla v \cdot \cof(D_h^2 u^{i}) \nabla u_h^{i+1}\\
  & -\sum\limits_{e \in \bigEps^i}\int_{e} \jump {v \average { \cof(D_h^2 u^{i}) \nabla u_h^{i+1}} }
@@ -78,7 +78,7 @@ Reviewing existing DG method for the \MA we learned some ?(subjects, matter, poi
 \item if necessary initial guesses
 \end{itemize}
 
-\subsection{Convexfication}
+\subsection{Convexfication} \label{subsec: convexification}
 The \MA equation in general does not define a unique solution. For most applications the unique convex solution is required. The question is how to oblige a numerical method to select only convex solutions.
 The most intuitive way is to convexify the solution after every step. Thus, on the one hand we make sure the right solution is approximated and on the other hand we smooth the generalised poisson solution aiming for a better approximation of the second derivatives.
 Yet a convexification is not simple. For our approach we choose a Bernstein basis for the ansatz space at first.
@@ -278,21 +278,29 @@ To suffice this criteria we introduce a modified cofactor matrix
 \]
 where $\lambda$ is the minimal eigenvalue of $ \mycof {D^2_h u_h}$ and $Id$ is the $d \times d$-Identity matrix. Now we replace all occurrences of $\mycof {D^2_h u_h}$ in \eqref{eq: sipg iteration} by $\mycofMod {D^2_h u_h}$ to stabilise the problem condition.
 
-\section{The final implementation}
+\section{The Final Algorithm}
+
+Putting all together the our methods works as Algorithm \ref{alg: final} describes.
 
 \begin{algorithm}
 \begin{algorithmic}
+\Require triangulation \triang, desired mesh width $H$
 \State $u_0\gets $ solution of  $
 	\triangle u = \sqrt{2f} \text{ in } \Omega $ with $
 	u = g \text{ on }\partial \Omega$
 \State $i \gets 1$
-\While {$u_i-u_{i-1} < \varepsilon$}
-	\State $u_i \gets$ solution of \ref{sec: SIPG} with modified cofactor matrix (\ref{sec: mod cofactor})
-	\State $u_i \gets \alpha u_{i-1} + (1-\alpha)u_i $
-	\State convexify ??????????/
+\While {$h < H$}
+	\While {$|u_i-u_{i-1}| < \varepsilon$}
+		\State $u_i \gets$ solution of \ref{sec: SIPG} with modified cofactor matrix (\ref{sec: mod cofactor})
+		\State $u_i \gets \alpha u_{i-1} + (1-\alpha)u_i $
+		\State (convexify)
+	\EndWhile
+	\State $h, \triang \gets h/2, \triangFine$
 \EndWhile
 \end{algorithmic}
 \caption{Final Algorithm}
+\label{alg: final}
 \end{algorithm}
-\todo{nested iteration}
 
+The step convexify is put into brackets for it is not clear whether a convexification is necessary and actually helps the convergence. A lot of the methods mentioned in the chapters \ref{ch:MongeAmpereEq} and \ref{ch:DGMongeAmpere} work without an explicit convexification, although most require a convex initial guess. 
+Additionally the approach described in section \ref{subsec: convexification} is intricately to implement, increases significantly the computation costs and it may modify functions even though they already are convex. We note, that for the condition of the stiffness matrix of the used SIPG method we need the cofactor matrix to be positive definit which is equivalent to the piecewise convexity of the last iteration step. However, our modification of the cofactor matrix  may avert the problems arising for slightly non convex intermediate solutions.

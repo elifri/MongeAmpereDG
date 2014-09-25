@@ -42,7 +42,7 @@ A test where the analytical solution is unknown is determined by
 	\text { and } 
 	f = \pi \delta_{x_0}
 \]
-defines the third example.
+defines the third example. \todo{cone only aleksandrov solution}
 \end{test}
 
 
@@ -64,22 +64,57 @@ Additional to the numerical results Neilan presented it is interesting to explor
 
 The implementation was done with the Finite Element Tool FEniCS \cite{FEniCS}. The uniform triangulation $\triang$ was obtained by first dividing the domain into squares of side length $h$ and then split them into 4 triangles by drawing both diagonals. \\
 Different to the initial guess suggested in \cite{Neilan2014} I used the solution of $\triangle u = -\sqrt{2f}$ as introduced in \ref{sec: initial guess}. 
-We denote the degree of the trial space $V_h=P_h^k \cap H^1(\Omega)$ by $k$ and the degree chosen for the Hessian ansatz space $\Sigma_h = [\mathcal{P}_h^{k_{DH}}]^{d \times d}$ by $k_{DH}$. The nonlinear system of equations given by \eqref{eq: neilan eq1} and \eqref{eq: discrete hessian} or \eqref{eq: neilan eq1 + jump} and \eqref{eq: discrete hessian}, respectively was solved with FEniCS' internal Newton solver. Its parameters for absolute and relative tolerance were set to $1e-8$ and the number of maximum iteration was restricted to 100. 
+We denote the degree of the trial space $V_h=P_h^k \cap H^1(\Omega)$ by $k$ and the degree chosen for the Hessian ansatz space $\Sigma_h = [\mathcal{P}_h^{k_{DH}}]^{d \times d}$ by $k_{DH}$. The nonlinear system of equations given by \eqref{eq: neilan eq1} and \eqref{eq: discrete hessian} or \eqref{eq: neilan eq1 + jump} and \eqref{eq: discrete hessian}, respectively was solved with PETSc' line search Newton method. 
+%SNES Object: 1 MPI processes
+%  type: newtonls
+%  SNES has not been set up so information may be incomplete
+ % maximum iterations=10, maximum function evaluations=2000
+ % tolerances: relative=1e-09, absolute=1e-08, solution=1e-16
+  %total number of linear solver iterations=0
+  %total number of function evaluations=0
+  %SNESLineSearch Object:   1 MPI processes
+   % type: bt
+    %  interpolation: cubic
+   %   alpha=1.000000e-04
+  %  maxstep=1.000000e+08, minlambda=1.000000e-12
+ %   tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+  %  maximum iterations=40
+  %KSP Object:   1 MPI processes
+    %type: preonly
+    %maximum iterations=10000, initial guess is zero
+   % tolerances:  relative=1e-05, absolute=1e-50, divergence=10000
+   % left preconditioning
+   % using DEFAULT norm type for convergence test
+  %PC Object:   1 MPI processes
+  %  type: lu
+  %  PC has not been set up so information may be incomplete
+    %  LU: out-of-place factorization
+   %   tolerance for zero pivot 2.22045e-14
+   %   matrix ordering: nd
+   % linear system matrix = precond matrix:
+   % Matrix Object:     1 MPI processes
+    %  type: seqaij
+    %  rows=112, cols=112
+    %  total: nonzeros=2744, allocated nonzeros=2744
+    %  total number of mallocs used during MatSetValues calls =0
+      %  using I-node routines: found 80 nodes, limit used is 5
+
+Most parameters were set to the default PETSc values which includes the solver uses cubic backtracking but the absolute tolerance was adjusted to $1e-8$ and the number of maximum iteration was restricted to 50. 
 
 Figure \ref{fig: l2 errors test 1} shows the $L^2$ error of all performances of the first test case that have converged, the polynomial degrees $k$ were taken to be $1,\dots,3$ and $k_{DH}$ equal to all variants $0, \dots, k$.  The results for the runs with $k=3$ are shown more detailed in Table \ref{tab: l2 errors test 1 deg 2}, in both tables the column $N$ refers to the number of iterations the Newton solver needed to reach the desired tolerance. 
 
-\input{load_Neilan_data.tex}
+%\input{load_Neilan_data.tex}
 
 \begin{figure}[h!]
 \centering
-	\includegraphics[width = 0.95\textwidth, height = 0.41\textheight]{../../FEniCS/diagrams/MA1_NeilanCG_l2.pdf}
+	\includegraphics[width = 0.95\textwidth, height = 0.41\textheight]{../../FEniCS/diagrams/MA1_Neilan_l2.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth}}
 	\label{fig: l2 errors test 1}
 \end{figure}
 
 \begin{figure}[h!]
 \centering
-	\includegraphics[scale =0.5]{../../FEniCS/diagrams/MA1_NeilanCG_h1.pdf}
+	\includegraphics[scale =0.5]{../../FEniCS/diagrams/MA1_Neilan_h1.pdf}
 	\caption{$H^1$ errors for test case \ref{test smooth}}
 	\label{fig: h2 errors test 1}
 \end{figure}
@@ -87,13 +122,13 @@ Figure \ref{fig: l2 errors test 1} shows the $L^2$ error of all performances of 
 \begin{table}[h]
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N}]\MAOnedegThreeThree
+%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N}]\MAOnedegThreeThree
     	\caption{Error for $k=3, k_{DH}=3$}
    \end{subtable}
    ~
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N}]\MAOnedegThreeTwo
+%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N}]\MAOnedegThreeTwo
  	\caption{Error for $k=3, k_{DH}=2$}
 	\end{subtable}
 	\caption{Errors for test case \ref{test smooth}}
@@ -106,13 +141,13 @@ Considering the results of the smooth test scenario we notice that the error alm
 This test scenario was also performed with the additional normal jump penalty term as stated in \eqref{eq: neilan eq1 + jump} weighted with $\eta$ equal to 50 leading to the results shown in figure \ref{fig: l2 errors test 1 jump} and the tables \ref{tab: l2 errors test 1 deg 2 jump}.
 
 \begin{figure}[h!]
-	\includegraphics[scale=0.5]{../../FEniCS/diagrams/MA1_NeilanCG_GradJump_l2.pdf}
+	\includegraphics[scale=0.5]{../../FEniCS/diagrams/MA1_Neilan_GradJump_l2.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth} and additional gradient jump penalty}
 	\label{fig: l2 errors test 1 jump}
 \end{figure}
 
 \begin{figure}[h!]
-	\includegraphics[width = 0.95\textwidth, height = 0.41\textheight]{../../FEniCS/diagrams/MA1_NeilanCG_GradJump_h1.pdf}
+	\includegraphics[width = 0.95\textwidth, height = 0.41\textheight]{../../FEniCS/diagrams/MA1_Neilan_GradJump_h1.pdf}
 	\caption{$H^1$ errors for test case \ref{test smooth} and additional gradient jump penalty}
 	\label{fig: h1 errors test 1 jump}
 \end{figure}
@@ -120,14 +155,14 @@ This test scenario was also performed with the additional normal jump penalty te
 \begin{table}[h]
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N}]\MAOneJumpdegTwoTwo
+%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N}]\MAOneJumpdegTwoTwo
     	\caption{Error for $k=2, k_{DH}=2$}
    \end{subtable}
    ~
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N}]\MAOneJumpdegTwoZero
- 	\caption{Error for $k=2, k_{DH}=0$}
+%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N}]\MAOneJumpdegTwoZero
+	\caption{Error for $k=2, k_{DH}=0$}
 	\end{subtable}
 	\caption{Errors for test case \ref{test smooth}}
 	\label{tab: l2 errors test 1 deg 2 jump}
@@ -151,10 +186,24 @@ The parameters were if not other specified taken to be $\sigma=blub, \sigma_G = 
 In the first figure \ref{fig: l2 errors test 1 ourMethod} there were carried out 15 steps before a further refinement.
 
 \begin{figure}[h!]
-	\includegraphics[scale =0.5]{../../temp.pdf}
+	\includegraphics[scale =0.5]{plots/MA1.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth} and additional gradient jump penalty}
-	\label{fig: l2 errors test 1 ourMethod}
+	\label{fig: l2 errors test smooth ourMethod}
 \end{figure}
+
+\begin{figure}[h!]
+	\includegraphics[scale =0.5]{plots/MA3.pdf}
+	\caption{$L^2$ errors for test case \ref{test sqrt} and additional gradient jump penalty}
+	\label{fig: l2 errors test sqrt ourMethod}
+\end{figure}
+
+
+\begin{figure}[h!]
+	\includegraphics[scale =0.5]{plots/MA2.pdf}
+	\caption{$L^2$ errors for test case \ref{test singularity} and additional gradient jump penalty}
+	\label{fig: l2 errors test singularity ourMethod}
+\end{figure}
+
 
 
 ?????

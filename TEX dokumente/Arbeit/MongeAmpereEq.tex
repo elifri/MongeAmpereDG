@@ -1,4 +1,5 @@
-\section{Notes}
+This chapter covers the main results on the \MA equation. After a definition of our main PDE we very briefly discuss solution concepts, as well as existence and uniqueness results. Thereafter we derive a linearisation of the \MA operator and conclude with a short overview of existing numerical schemes solving \MA equations. 
+
 
 \section{The \MA Equation}
 
@@ -18,7 +19,7 @@ For a proof of this result we refer to \cite{CC1995, GT1977}. In other words onl
 Note, different from the well-known linear case we cannot derive a weak formulation based on weak derivatives/integration by parts. Because of the nonlinearity in the highest derivatives we are not able to shift derivatives to test functions. To the author's knowledge there is no general variational or weak formulation for fully nonlinear PDEs \cite{FGN2013}.
 However, there are attempts to establish less regular weak solutions to the \MA equation:
 
-%\subsection{Viscosity Solution}
+\section{Weak Solution Concepts}
 First Crandall and Lions \cite{CL1983} introduced the notion of \emph{viscosity solutions} for fully nonlinear first order PDEs. The developed theory was later extended to also handle second order PDEs.
 \begin{definition}[Viscosity Solution{\cite[Definition 1.1]{FGN2013}}]
 	Let $F$ be an elliptic  fully nonlinear second order operator.
@@ -85,12 +86,17 @@ A proof can be found for example in \cite[Theorem 17.1]{GT1983}
 A viscosity solution is unique by the comparison principle. If $u$ and $v$ are two viscosity solutions of $\mydet{D^2 u}=f$ with $u=v$ on $\partial \Omega$, then especially holds $u \leq v$ on $\partial \Omega$ and hence by the comparison principle $u \leq v$ in  $\bar \Omega$. Applying the same argument for $v \leq u$ on $\partial \Omega$ we find equality of the solutions. Note, that a viscosity has to be convex since otherwise the \MA operator is not elliptic, hence  
 
 \section{The Linearisation of the \MA operator}
+
 	\begin{theorem}[Linearisation] \label{thm: linearisation}
 		The Linearisation of the \MA operator $F(u)=\mydet{D^2u}-f$ is given by
 		\begin{align}
 			DF[u]v = \nabla \cdot \left( \mycof {D^2 u } \nabla (v) \right) \text{ or } DF[u]v=\mycof{D^2 u}:D^2 (v)		\end{align}
+	where $DG[u]$ denotes the \emph{G\^ateaux derivative} of $G$ given by
+	\[
+		DG[u]v = \lim\limits_{\varepsilon \rightarrow 0} \frac { G(u+\varepsilon v) - G(u)}\varepsilon.
+	\]
 	\end{theorem}
-	
+		
 	\begin{proof}
 	We define the \MA bilinear form by
 	\[
@@ -122,7 +128,7 @@ Considering also the result of Lemma \ref{la: An application of the divergernce 
 
 
 \section{Types of Numerical Methods for the \MA Equation}
-Since equations of \MA type arise in many areas such as optics, transportation etc. there has been an active research on how to solve. Except for some simple special cases there is no analytical solution known resulting in a widely varied numerical set of numerical methods.
+Since equations of \MA type arise in many areas such as optics, transportation etc. there has been an active research on how to solve. Except for some simple special cases there is no analytical solution known resulting in a widely varied numerical set of methods.
 
 They can roughly be divided in four categories: Direct Finite difference schemes, methods based on variational principles and approximating infinite-dimensional spaces by finite-dimensional spaces, methods based on finite basis expansions and approximating PDEs at sampling points and the rest. \\
 In the last category one can mainly find methods as the lattice Boltzmann method, these are often designed for special applications.
