@@ -1,7 +1,7 @@
 from dolfin import *
 import math
 
-def norm(x)
+def norm(x):
   return sqrt(x[0]**2 + x[1]**2)
 
 #-----------choose PDE------------
@@ -87,13 +87,13 @@ def MA_problem(name, Nh, degree, mesh):
 
   # Define exact sol
   if name=='MA1':
-    u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )', mesh=mesh, element = FiniteElement("Quadrature", triangle, degree))#MongeAmpere1
+    u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )', element = FiniteElement("Quadrature", triangle, degree))#MongeAmpere1
   elif name == 'simpleMA':
     u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
   elif name == 'simpleMA2':
     u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
   elif name == 'Brenner1':
-    u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])', mesh=mesh, element = FiniteElement("Quadrature", triangle, degree))#BrennerEx1
+    u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])', element = FiniteElement("Quadrature", triangle, degree))#BrennerEx1
   elif name == 'Brenner1':
     u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])', element = FiniteElement("Quadrature", triangle, degree))#BrennerEx1
   elif name == 'MA2':
@@ -101,7 +101,7 @@ def MA_problem(name, Nh, degree, mesh):
   elif name == 'MA3':
     u0  = exact_sol(mesh, element = FiniteElement("Quadrature", triangle, degree))
   elif name == 'MA4':
-    u0  = Expression('sqrt( pow(x[0]-0.5,2) + pow(x[1]-0.5,2))', mesh=mesh, element = FiniteElement("Quadrature", triangle, degree)) #test 4
+    u0  = Expression('sqrt( pow(x[0]-0.5,2) + pow(x[1]-0.5,2))', element = FiniteElement("Quadrature", triangle, degree)) #test 4
   elif name == 'const rhs':
     u0 = Expression('0.0') #const rhs
 
