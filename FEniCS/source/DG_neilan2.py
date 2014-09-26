@@ -167,7 +167,7 @@ if __name__ == "__main__":
   print 'start error ', errornorm(u0, u1_)
   errorfile.write('0 '+str(errornorm(u0, u1_))+'\n')
   errorfileh1.write('0 '+str(errornorm(u0, u1_, norm_type='h1'))+'\n')
-
+  fitdata_file.write(str(math.log(1.0/Nh))+' '+str(math.log(errornorm(u0, u1_)))+'\n')
   u_ = Function(W)
   
   assign(u_.sub(0), u1_)
@@ -186,6 +186,7 @@ if __name__ == "__main__":
     error_norm = errornorm(u0, w.sub(0))
     print 'Errornorm:', error_norm
     errorfile.write(str(it)+' '+str(error_norm)+'\n')
+    fitdata_file.write(str(math.log(1.0/Nh))+' '+str(math.log(error_norm))+'\n')
 
     error_norm = errornorm(u0, w.sub(0), norm_type='H1')
     print 'Errornorm H1:', error_norm
