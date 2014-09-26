@@ -238,7 +238,7 @@ Hence, we add the following normal derivatives penalty term
 	\sum_{e \in \edgesi} \sigma_g |e |\int_e \jump{ \nabla u} \jump {\nabla v} \label{eq: grad penalty term}
 \end{align}
 to the formulation in \eqref{eq: sipg iteration}.
-Note, that this is a strong demand on our solution. We implicitly imply that the desired solution is contained in $H^2(\Omega)$, it is not yet clear how this term behaves for less regular solution.
+Note, that this avoids variational crimes by interior jumps of derivatives along interior edges of the triangulation. But we implicitly imply that the desired solution is contained in $H^2(\Omega)$, it is not yet clear how this term behaves for less regular solution.
 But, indeed with the new penalisation of the gradient the implementation is consistent with the previous example. The consistency check was carried out with the choice $\sigma_g$ equal to $\sigma=30$, as well as for much smaller choices.
 \todo{Noelle gluecklich machen querschnitt}
 

@@ -114,11 +114,6 @@
         /pgf/number format/fixed zerofill,  % print trailing zeros
         /pgf/number format/sci precision=4     % print 14 digits
     },
-    every row 0 column 0/.style={set content=init},
-    every head row/.style={
-        before row=\toprule,    % booktabs rules
-        after row=\midrule
-    },
     every row 0 column N/.style={set content={-}},
     every head row/.style={
         before row=\toprule,    % booktabs rules

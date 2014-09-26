@@ -9,7 +9,7 @@ The first classical \MA test is the problem with the data
 	\text { and } 
 	f = (1 + \lVert x \rVert_2^2) \exp( \lVert x \rVert^2).
 \]
-It has a very smooth solution 
+It has a very smooth solution and is even radial.
 
 \end{test}
 
@@ -26,7 +26,7 @@ defines the second example. This test is especially interesting because the conv
 For the next two tests we define $x_0 = \left(\frac 1 2, \frac 1 2  \right)^t$.
 
 \begin{test}\label{test singularity}
-The third \MA test is given by
+The third \MA test is yet more regular. Its solution lies in $C^1$ and it is given by
 \[
 	u=\frac 1 2 \left( \max 0 {\lVert x - x_0 \rVert_2-0.2 }  \right)^2 
 	\text { and } 
@@ -36,13 +36,13 @@ The third \MA test is given by
 
 
 \begin{test}\label{test dirac}
-A test where the analytical solution is unknown is determined by
+A test determined by
 \[
 	u = \lVert x - x_0 \rVert_2
 	\text { and } 
 	f = \pi \delta_{x_0}
 \]
-defines the third example. \todo{cone only aleksandrov solution}
+describes a cone with origin $x_0$. Note, $f$ is highly non regular. This example does not have a viscosity solution, but $u$ is only an Aleksandrov solution of the problem \cite[Section 2.3.]{FO2011}.
 \end{test}
 
 
@@ -53,7 +53,7 @@ A test where the analytical solution is unknown is determined by
 	\text { and } 
 	f = 1
 \]
-defines the third example.
+defines the last example.
 \end{test}
 
 
@@ -64,7 +64,7 @@ Additional to the numerical results Neilan presented it is interesting to explor
 
 The implementation was done with the Finite Element Tool FEniCS \cite{FEniCS}. The uniform triangulation $\triang$ was obtained by first dividing the domain into squares of side length $h$ and then split them into 4 triangles by drawing both diagonals. \\
 Different to the initial guess suggested in \cite{Neilan2014} I used the solution of $\triangle u = -\sqrt{2f}$ as introduced in \ref{sec: initial guess}. 
-We denote the degree of the trial space $V_h=P_h^k \cap H^1(\Omega)$ by $k$ and the degree chosen for the Hessian ansatz space $\Sigma_h = [\mathcal{P}_h^{k_{DH}}]^{d \times d}$ by $k_{DH}$. The nonlinear system of equations given by \eqref{eq: neilan eq1} and \eqref{eq: discrete hessian} or \eqref{eq: neilan eq1 + jump} and \eqref{eq: discrete hessian}, respectively was solved with PETSc' line search Newton method. 
+We denote the degree of the trial space $V_h=P_h^k \cap H^1(\Omega)$ by $k$ and the degree chosen for the Hessian ansatz space $\Sigma_h = [\mathcal{P}_h^{k_{DH}}]^{d \times d}$ by $k_{DH}$. The nonlinear system of equations given by \eqref{eq: neilan eq1} and \eqref{eq: discrete hessian} or \eqref{eq: neilan eq1 + jump} and \eqref{eq: discrete hessian}, respectively was solved with PETSc' basic line search Newton method. 
 %SNES Object: 1 MPI processes
 %  type: newtonls
 %  SNES has not been set up so information may be incomplete
@@ -99,22 +99,30 @@ We denote the degree of the trial space $V_h=P_h^k \cap H^1(\Omega)$ by $k$ and 
     %  total number of mallocs used during MatSetValues calls =0
       %  using I-node routines: found 80 nodes, limit used is 5
 
-Most parameters were set to the default PETSc values which includes the solver uses cubic backtracking but the absolute tolerance was adjusted to $1e-8$ and the number of maximum iteration was restricted to 50. 
+Most parameters were set to the default PETSc values %which includes the solver uses cubic backtracking 
+but the absolute tolerance was adjusted to $1e-8$ and the number of maximum iteration was restricted to 50. 
 
 Figure \ref{fig: l2 errors test 1} shows the $L^2$ error of all performances of the first test case that have converged, the polynomial degrees $k$ were taken to be $1,\dots,3$ and $k_{DH}$ equal to all variants $0, \dots, k$.  The results for the runs with $k=3$ are shown more detailed in Table \ref{tab: l2 errors test 1 deg 2}, in both tables the column $N$ refers to the number of iterations the Newton solver needed to reach the desired tolerance. 
 
-%\input{load_Neilan_data.tex}
+\input{load_Neilan_data.tex}
 
 \begin{figure}[h!]
 \centering
-	\includegraphics[width = 0.95\textwidth, height = 0.41\textheight]{../../FEniCS/diagrams/MA1_Neilan_l2.pdf}
+	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA1_Neilan_l2.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth}}
 	\label{fig: l2 errors test 1}
 \end{figure}
-
+ \todo{memory errors}
+ Unfortunately the calculation for $k=3$ could not be carried out since 0]PETSC ERROR: Out of memory. This could be due to allocating
+ [0]PETSC ERROR: too large an object or bleeding by not properly
+ [0]PETSC ERROR: destroying unneeded objects.
+ [0]PETSC ERROR: Memory allocated 0 Memory used by process 15882436608
+ PETSC ERROR: Try running with -malloc\_dump or -malloc\_log for info.
+ PETSC ERROR: Memory requested 18446744065119617024!
+ 
 \begin{figure}[h!]
 \centering
-	\includegraphics[scale =0.5]{../../FEniCS/diagrams/MA1_Neilan_h1.pdf}
+	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA1_Neilan_h1.pdf}
 	\caption{$H^1$ errors for test case \ref{test smooth}}
 	\label{fig: h2 errors test 1}
 \end{figure}
@@ -122,13 +130,17 @@ Figure \ref{fig: l2 errors test 1} shows the $L^2$ error of all performances of 
 \begin{table}[h]
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N}]\MAOnedegThreeThree
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+				    every row 0 column 0/.style={set content=init},
+		]\MAOnedegThreeThree
     	\caption{Error for $k=3, k_{DH}=3$}
    \end{subtable}
    ~
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N}]\MAOnedegThreeTwo
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+				    every row 0 column 0/.style={set content=init},
+		]\MAOnedegThreeTwo
  	\caption{Error for $k=3, k_{DH}=2$}
 	\end{subtable}
 	\caption{Errors for test case \ref{test smooth}}
@@ -141,13 +153,15 @@ Considering the results of the smooth test scenario we notice that the error alm
 This test scenario was also performed with the additional normal jump penalty term as stated in \eqref{eq: neilan eq1 + jump} weighted with $\eta$ equal to 50 leading to the results shown in figure \ref{fig: l2 errors test 1 jump} and the tables \ref{tab: l2 errors test 1 deg 2 jump}.
 
 \begin{figure}[h!]
-	\includegraphics[scale=0.5]{../../FEniCS/diagrams/MA1_Neilan_GradJump_l2.pdf}
+\centering
+	\includegraphics[scale=0.4]{../../FEniCS/diagrams/MA1_Neilan_GradJump_l2.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth} and additional gradient jump penalty}
 	\label{fig: l2 errors test 1 jump}
 \end{figure}
 
 \begin{figure}[h!]
-	\includegraphics[width = 0.95\textwidth, height = 0.41\textheight]{../../FEniCS/diagrams/MA1_Neilan_GradJump_h1.pdf}
+\centering
+	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA1_Neilan_GradJump_h1.pdf}
 	\caption{$H^1$ errors for test case \ref{test smooth} and additional gradient jump penalty}
 	\label{fig: h1 errors test 1 jump}
 \end{figure}
@@ -155,13 +169,18 @@ This test scenario was also performed with the additional normal jump penalty te
 \begin{table}[h]
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N}]\MAOneJumpdegTwoTwo
+		\pgfplotstabletypeset[
+		columns={iterations, l2error, h1error,N},
+		    every row 0 column 0/.style={set content=init},
+		]\MAOneJumpdegTwoTwo
     	\caption{Error for $k=2, k_{DH}=2$}
    \end{subtable}
    ~
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N}]\MAOneJumpdegTwoZero
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+		    every row 0 column 0/.style={set content=init},
+		]\MAOneJumpdegTwoZero
 	\caption{Error for $k=2, k_{DH}=0$}
 	\end{subtable}
 	\caption{Errors for test case \ref{test smooth}}
@@ -169,6 +188,23 @@ This test scenario was also performed with the additional normal jump penalty te
 \end{table}
 
 \todo{Kommentar zu diesen Ergebnissen.}
+
+\begin{table}
+	\pgfplotstabletypeset
+	{
+		k $k_{DH}$ {numerical order}
+		1 0 0.873103
+		2 0 2.35083
+		2 1 2.29612
+		2 2 2.37389
+		3 1 3.83759
+		3 2 3.33588
+		3 3 3.33706
+	}
+\caption{order calculated fitted the data for the case with a jump penalty}
+\label{tab: order jump}
+\end{table}
+
 
 The test two was carried out for $\eta=20k^2$
 
@@ -181,7 +217,7 @@ Our method was implemented in pure C++. The underlying grid structure was taken 
 
 For a initial guess I also used the solution of $\triangle u = -\sqrt{2f}$ combined with the multilevel approach as described in \ref{sec: initial guess}.
 The arising linear system of equations was solved with Eigen's internal Cholesky solver.
-The parameters were if not other specified taken to be $\sigma=blub, \sigma_G = blubberdiblub, \alpha =
+The parameters were if not other specified taken to be $\sigma=10 k^2, \sigma_G = 50, \alpha =
 0.3$ and $\varepsilon = 1e-2$.
 In the first figure \ref{fig: l2 errors test 1 ourMethod} there were carried out 15 steps before a further refinement.
 

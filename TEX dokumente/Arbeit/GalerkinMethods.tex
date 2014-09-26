@@ -5,8 +5,16 @@ The most natural attempt for a formulation of a DG method is to exploit the equa
 	\int_{\Omega} \mydet {D^2 u} v = \int_\Omega fv \qquad \text{ for all test functions } v. \label{eq: naiv ansatz}
 \end{align}
 
+In 2008 B\"ohmer investigated this ansatz for $C^1$ elements in \cite{Boehmer2008}. He derives a general $C^1$ method including statements on its stability and consistency. He is able to reduce the convergence analysis to the linearised case \cite[Section 9]{Boehmer2008}, and discovers that the weak and strong linear operators even coincide for his ansatz spaces meaning the diagram in figure \ref{fig: fe diagram} taken from \cite[Fig 2.2]{FGN2013} commutes.
+
+\begin{figure}[H]
+	\input{feDiagram.pgf}
+	\label{fig: fe diagram}
+	\caption{An abstract commuting diagram about the relation between weak and strong linear operators.\\ The analytical \MA operator is hereby denoted by $F:=\detHess u$ and its linearisation $L_u(w) = -\nabla \cdot (\cofHess u \nabla w)$, compare \ref{sec: linearisation}. $F_h[u]=0$ denots the discretised formulation, for B\"ohmer's method this is given by \eqref{eq: naiv ansatz}}.
+\end{figure}
+
 However, this formulation has two major disadvantages. 
-At first we cannot throw the high derivatives onto the test functions using integration py parts, thus we do not easily get a variational formulation as we do for linear PDEs. Secondly \eqref{eq: naiv ansatz} seems to work only for test and ansatz functions contained in $C^1(\Omega)$. Brenner et alter make the inconsistency between the linearisation of the discrete problem and the the linearisation of the continuous problem responsible for this failure in less regular spaces\cite{BGN+2011}. Thus, their idea is to add DG terms to force consistency and add stability.
+At first we cannot throw the high derivatives onto the test functions using integration py parts, thus we do not cannot easily solve the arising system of equations. Secondly \eqref{eq: naiv ansatz} seems to work only for test and ansatz functions contained in $C^1(\Omega)$ whereas usual finite elements are contained in $C^0$. Brenner et alter make the inconsistency between the linearisation of the discrete problem and the the linearisation of the continuous problem, figuratively the non commutating of the diagram in figure \ref{fig: fe diagram} for less regular spaces,  responsible\cite{BGN+2011}. Their idea is to improve the discretised formulation by adding DG terms to force consistency and add stability.
 
 \subsection{A $C^0$ Penalty Method }
 
