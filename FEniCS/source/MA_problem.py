@@ -24,7 +24,7 @@ def MA_problem(name, Nh, degree, mesh):
           v[0] = 0
           print 'point', x
         else:
-          val = sqrt ((x[0]-0.5)**2-(x[1]-0.5)**2)
+          val = sqrt ((x[0]-0.5)**2+(x[1]-0.5)**2)
           val = 1 - 0.2/val
           if val > 0:
             v[0] = val
