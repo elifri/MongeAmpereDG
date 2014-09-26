@@ -1,3 +1,4 @@
+\section{ Preliminaries and Notation}
 At the beginning of this chapter we repeat the basis definitions for the analysis of partial differential equations as they are introduced for example in \cite{Evans1998}.
 Let $\Omega \subset \R^d $ be an open area.
 \begin{definition}[Partial Differential Equation{\cite[Introduction]{Evans1998}}]
@@ -57,13 +58,35 @@ According to the literature we refer by $W^{s,p}(\Omega)$ to the H\"older space,
 \todo{Sollte ich  distributional derivates erklaeren?} The special case $p=2$ are referred to as Sobolev spaces $W^{s,2}(\Omega)=H^s(\Omega)$.
 
 \todo{triangulation}
-Let $\triang$ be a shape regular, quasi-uniform simplicial triangulation of $\Omega$, for simplicity reasons we assume that $\triang$ consists only of triangles.  For a triangle spanned by the points $v_0, v_1, v_2$ we also write 
-\[
-	T= \langle v_0, v_1, v_2 \rangle := \{\beta_0 v_0+ \beta_1 v_1 +\beta2 v_2; 0 \leq \beta_i \leq 1, i= 0,1,2\}
-\]
-\todo{diameter of a triangle}
 
-We divide the edges $\edges$ into the subsets $\edgesi$ and $\edgesb$ containing all interior edges and boundary edges, respectively. On this basis we define the piecewise spaces
+Let $T$ be a triangle in $\Omega$ and spanned by the points $v_0, v_1, v_2$. We also write 
+\[
+	T= \langle v_0, v_1, v_2 \rangle := \{\beta_0 v_0+ \beta_1 v_1 +\beta2 v_2; 0 \leq \beta_i \leq 1, i= 0,1,2\}.
+\]
+The \emph{diameter} $diam(T)$ of a triangle $T$ we define as the diameter of the smallest circle containing it.
+To discretise our domain $\Omega$ we subdivide it into simplices, more precisely we divide them into triangles.
+\begin{definition}[Triangulation, {\cite[Definition 5.1]{Braess2003}}]
+	We call a finite partition of $\Omega$ into triangles $\{T_1, \dots, T_n\}$ a feasible \emph{triangulation} $\triang$, such that
+	\begin{enumerate}[(i)]
+		\item	$\bar \Omega = \bigcup_{T \in \triang} T_i$
+		\item If $_i \cap T_j$ is a point for, it is a corner of both $T_i$ and $T_j$
+		\item If $_i \cap T_j$ is more than one point for $i \neq j$, it is an edge of both $T_i$ and $T_j$
+	\end{enumerate}
+	$h$ denotes the maximal diameter $h:= \operatorname{max}\limits_{T\in \triang} diam(T)$ in the triangulation $\triang$. We call a triangulation \emph{regular} if every element is congruent.
+\end{definition}
+
+\begin{figure}[H]
+\input{grid.pgf}
+\caption{A regular triangulation of the unitsquare}
+ \label{fig: triangulation}
+\end{figure}
+
+Figure \ref{fig: triangulation} shows a triangulation of the unitsquare. 
+An edge $e$ is called an interior edge if $e=T^+ \cap T^-$ holds for some $T^+,T^- \in \triang$, whereas it is called a boundary edge if $e \subset \partial \Omega$.
+We divide the edges $\edges$ into the subsets $\edgesi$ and $\edgesb$ containing all interior edges and boundary edges, respectively. 
+When we refer to a normal of an edge we always refer to an outward directed normal of one of the adjacent triangles. If it is not clear from the context a superscript denotes which triangle we chose.
+
+On this basis we define the piecewise spaces
 \begin{definition}[Piecewise Spaces]
 The to the mesh associated spaces are
 \begin{align}
@@ -84,21 +107,35 @@ We use a subscript $h$ to indicate a piecewise evaluation/interpretation. Subseq
 To formulate a method capable of handling discontinuities along triangle edges we introduce edge operators.   
 
 \begin{definition}[Edge Operators]
-We denote the \emph{normal jump} of  a piecewise smooth function $u_h$ across an edge $e \in \edges$ by
+We denote the \emph{normal jump} of  a piecewise smooth function $u_h:\Omega \rightarrow \R$ across an edge $e \in \edges$ by
 \begin{align*}
-	\llbracket u_h \rrbracket &:= u_h^+ \cdot \mathbf n^+ + u_h^-\cdot \mathbf n^-  &&\text{ if } \partial T^+ \cap \partial T^- = e, \\
-	\llbracket u_h \rrbracket &:= u_h \cdot n  &&\text{ if } \partial T \cap \partial \Omega = e,
+	\jump {u_h}&:= 
+	\begin{cases}
+		u_h^+  \mathbf n^+ + u_h^- \mathbf n^-  &\text{ if } \partial T^+ \cap \partial T^- = e \text{ for some }T^+,T^- \in \triang, \\
+		u_h \mathbf n 	 &\text{ if } \partial T \cap \partial \Omega = e \text{ for } T \in \triang,
+	\end{cases}	
 \end{align*}
-where $n^\pm$ are the outward unit normals of $T^\pm$ and  $u_h^\pm(x) = \lim_{\varepsilon \rightarrow 0} u_h(x-n^\pm \varepsilon)$.
-
-The \emph{average} of a piecewise smooth function $u_h$ across an edge $e \in \edges$ is defined by
+where $n^\pm$ are the normals with respect to $T^\pm$ and  $u_h^\pm(x) = \lim_{\varepsilon \rightarrow 0} u_h(x-n^\pm \varepsilon)$.
+Likewise we define the normal jump of a piecewise smooth function $u_h:\Omega \rightarrow \R^2$ across an edge $e \in \edges$ by
 \begin{align*}
-	\laverage u_h \raverage &:= \frac 1 2 \left(u_h^+ + u_h^-\right) &&\text{ if } \partial T^+ \cap \partial T^- = e, \\
-	\laverage u_h  \raverage &:= u_h &&\text{ if } \partial T \cap \partial \Omega = e,
+	\jump {u_h}&:= 
+	\begin{cases}
+		u_h^+ \cdot \mathbf n^+ + u_h^-\cdot  \mathbf n^-  &\text{ if } \partial T^+ \cap \partial T^- = e \text{ for some }T^+,T^- \in \triang,\\
+		u_h\cdot \mathbf n 	 &\text{ if } \partial T \cap \partial \Omega = e \text{ for }T\in \triang.
+	\end{cases}	
+\end{align*}
+Here $\cdot$ denotes the scalar product.
+Note, that the jump of a scalar is a vector, whereas the jump of a vector is a scalar.
+
+The \emph{average} of a piecewise smooth function $u_h:\Omega \rightarrow X$ for every $X$ across an edge $e \in \edges$ is defined by
+\begin{align*}
+	\average {u_h} &:= 
+	\begin{cases}
+	\frac 1 2 \left(u_h^+ + u_h^-\right) &\text{ if } \partial T^+ \cap \partial T^- = e \text{ for some }T^+,T^- \in \triang, \\
+	 u_h &\text{ if } \partial T \cap \partial \Omega = e \text{ for }T\in \triang.
+	\end{cases}
 \end{align*}
 \end{definition}
-
-Note, that the jump of a scalar is a vector, whereas the jump of a vector is a scalar.
 
 
 \section{Finite Element Method}
@@ -254,7 +291,7 @@ and
 %	&-  &\sum\limits_{T \in \triang} \int_T v (\nabla \cdot \cof(D^2w)) \cdot \nabla \varphi \\
 %\end{align} 
 
-To enforce continuity in the numerical solution we add the following penalty terms as in  \cite[3.2.2.]{PPO+2000}  \todo{mehr Motivation for penalty term}
+To enforce continuity in the numerical solution we add the following penalty terms as in  \cite[3.2.2.]{PPO+2000}  \todo{mehr Motivation for penalty term?}
 \begin{align}
 	J^\sigma(\varphi, v) = \sum\limits_{e \in \edges} \int_e \frac \sigma {|e|} \jump \varphi \jump v \textnormal{ and } 	J^\sigma_0(\varphi, v) = \sum\limits_{e \in \edgesb} \int_e \frac \sigma {|e|} \varphi g .
 \end{align}
@@ -263,7 +300,8 @@ Thus, we end up with the problem finding $v \in V_h$ such that
 \[
 	a_S(\phi,v) + J^\sigma(\varphi,v) = l(\varphi) + J^\sigma_0(\varphi)
 \] 
-$  \textnormal{for all } \varphi \in V_h$.
+$  \textnormal{for all } \varphi \in V_h$. 
+%The authors of \cite{PPO+2000} suggest to choose the penalty term $\sigma$ as $10 k^2$ and undergird that 
 
 Just like in the finite element method we can derive a linear system of equations $M \mathbf{u} = \mathbf{b}$ with $M$ sparse and $\mathbf{u}$ representing the coefficient vector of $u_h$ with respect to the basis $B_V$.
 This particular discontinuous Galerkin method is called \emph{Symmetric Interior Penalty Galerkin method} (SIPG).
