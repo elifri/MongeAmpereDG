@@ -75,39 +75,6 @@ void Tsolver::read_problem_parameters_MA(int &stabsign, penalties_type &gamma, d
 
 	cout << "Read Equation " << problem << endl;
 
-	//read diffusion matrices
-	for (grid_type::leafcellmap_type::iterator it=grid.leafCells().begin(); it!=grid.leafCells().end(); ++it) {
-	    leafcell_type * const pLC=&grid_type::cell(it);
-
-		/*		diffusionmatrix_type diffusion_a;
-		const grid_type::id_type& idLC = grid_type::id(it);
-
-	    // get entry "diffusion_a[xxx]" in section "scaling functions"
-	    std::string line, entryname = entryname1d<3>("diffusion_a", idLC.cell());
-	    	if (!singleton_config_file::instance().getValue("monge ampere", entryname, line)) {
-			cerr << "Error while reading [monge ampere] "
-					<< entryname1d<3>("a", idLC.cell())
-					<< " from configfile." << endl;
-			abort();
-		}
-
-	    //convert into Matrix
-		std::stringstream strs(line);
-		for (int ientry = 0; ientry < sqr(spacedim); ++ientry) {
-			/// interpret entries of this line, fill with zeros for nonexistent entries
-			int row_index = ientry / spacedim;
-			int col_index = ientry % spacedim;
-
-			if (!(strs >> diffusion_a(row_index, col_index)))
-				diffusion_a(row_index, col_index) = 0;
-		}
-
-		Emass_type laplace;
-		pLC->set_diffusionmatrix(shape.get_Equad(), shape.get_Equads_x(), shape.get_Equads_y(), A, laplace);
-		*/
-		pLC->set_diffusionmatrix(diffusionmatrix_type::Identity());
-	}
-
 }
 
 ////////////////////////////////////////////////////
@@ -871,40 +838,40 @@ void Tsolver::restore_MA(Eigen::VectorXd & solution) {
 			pLC->u(ishape,0) = solution(pLC->m_offset + ishape);
 		}
 
-		//update diffusion matrix
-		Hessian_type hess;
-
-		bool is_convex = false;
-
-		calc_cofactor_hessian(pLC, pBC, hess);
-//			cout << "calc factor hessian " << endl << hess << endl;
-
-		is_convex = calculate_eigenvalues(pLC, hess);
-
-		while(!is_convex && false)
+		if (degreedim >= 2)
 		{
-			cout << "hessian " << endl << hess << endl;
-			cout << "Hessian at cell (node 0 = " << nv(0).transpose() << ") is not convex" << endl;
-			cout << "Convexifying ... ";
-			convexify_cell(pLC, solution);
-			calc_cofactor_hessian(pLC, pBC, hess);
-			is_convex = calculate_eigenvalues(pLC, hess);
-			cout << "the corrected hessian " << endl << hess << endl;
-		}
+				//update diffusion matrix
 
-		//determinant of hessian for calculation of residuum
-		value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
+			Hessian_type hess;
+
+			bool is_convex = false;
+
+			calc_cofactor_hessian(pLC, pBC, hess);
+	//			cout << "calc factor hessian " << endl << hess << endl;
+
+			is_convex = calculate_eigenvalues(pLC, hess);
+
+			while(!is_convex && false)
+			{
+				cout << "hessian " << endl << hess << endl;
+				cout << "Hessian at cell (node 0 = " << nv(0).transpose() << ") is not convex" << endl;
+				cout << "Convexifying ... ";
+				convexify_cell(pLC, solution);
+				calc_cofactor_hessian(pLC, pBC, hess);
+				is_convex = calculate_eigenvalues(pLC, hess);
+				cout << "the corrected hessian " << endl << hess << endl;
+			}
+
+
+			//determinant of hessian for calculation of residuum
+			value_type det = hess(0,0)*hess(1,1) - hess(1,0)*hess(0,1);
+
+		}
 
 		state_type state, stateEx, stateRhs;
 
 		//loop over LC nodes
 		for (unsigned int k = 0; k < pLC->id().countNodes(); k++){
-			//get rhs
-			get_rhs_MA(nv(k), stateRhs);
-			//calculate residuum
-			pLC->residuum(k) = det - stateRhs(0);
-			sum_residuum += pLC->residuum(k);
-
 			//calculate abs error
 			shape.assemble_state_N(pLC->u,k,state);
 			get_exacttemperature_MA(nv[k],stateEx);
@@ -1385,21 +1352,24 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 
 
 			// D^2 u:mu
-			for (unsigned int jshape = 0; jshape < shapedim; ++jshape) { //loop over ansatz functions
-				const int col_LC = pLC->n_offset + jshape;
-				row_LC_Hessian = number_of_dofs + pLC->m_offset/shapedim*4 -1;
+			if (degreedim >= 2) //else the (piecewise) hessian of the discrete solution is zero anyway
+			{
+				for (unsigned int jshape = 0; jshape < shapedim; ++jshape) { //loop over ansatz functions
+					const int col_LC = pLC->n_offset + jshape;
+					row_LC_Hessian = number_of_dofs + pLC->m_offset/shapedim*4 -1;
 
-				Hessian_type hess;
-				shape.assemble_hessmatrix(VectorXd::Unit(shapedim, jshape), 0, hess);
-				pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
-				hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
+					Hessian_type hess;
+					shape.assemble_hessmatrix(VectorXd::Unit(shapedim, jshape), 0, hess);
+					pBC->transform_hessmatrix(hess); //calculate Hessian on basecell
+					hess /= facLevelVolume[pLC->id().level()]; //transform to leafcell
 
-				for (int i = 0; i < spacedim; i++)
-				{
-					for (int j = 0; j < spacedim; j++)
+					for (int i = 0; i < spacedim; i++)
 					{
-						row_LC_Hessian++;
-						f.linear_part.coeffRef(row_LC_Hessian, col_LC) -= hess(i,j);
+						for (int j = 0; j < spacedim; j++)
+						{
+							row_LC_Hessian++;
+							f.linear_part.coeffRef(row_LC_Hessian, col_LC) -= hess(i,j);
+						}
 					}
 				}
 			}
@@ -1461,30 +1431,30 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 									const int col_NC = pNC->n_offset + jshape;
 
 
-//									//first equation: jumps in gradients
-//									f.linear_part.coeffRef(row_LC, col_LC) += penalties.gamma_gradient
-//											* shape.get_Fquadw(iqLC) * sqr(length) //quadrature weights
-//											* pBC->get_normalderi(ishape, iqLC)/ facLevelLength[level] //jump in test
-//											* pBC->get_normalderi(jshape, iqLC)/ facLevelLength[level]; //jump in ansatz
-//
-//									f.linear_part.coeffRef(row_LC, col_NC) += penalties.gamma_gradient  * shape.get_Fquadw(iqLC) * sqr(length) * pBC->get_normalderi(ishape, iqLC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[level]/ facLevelLength[levelNC];
-//
-//									f.linear_part.coeffRef(row_NC, col_LC) += penalties.gamma_gradient* shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC)* pBC->get_normalderi(jshape, iqLC) / facLevelLength[level]/ facLevelLength[levelNC];
-//
-//									f.linear_part.coeffRef(row_NC, col_NC) += penalties.gamma_gradient * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[levelNC]/ facLevelLength[levelNC];
-//
-//									// first equation: jumps in functions
-//
-//									if (penalties.gamma_continuous != 0.0) {
-//										f.linear_part.coeffRef(row_LC, col_LC) += penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
-//
-//										f.linear_part.coeffRef(row_LC, col_NC) += -penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqLC);
-//
-//										f.linear_part.coeffRef(row_NC, col_LC) += -penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqNC);
-//
-//										f.linear_part.coeffRef(row_NC, col_NC) += penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
-//
-//									}
+									//first equation: jumps in gradients
+									f.linear_part.coeffRef(row_LC, col_LC) += penalties.gamma_gradient
+											* shape.get_Fquadw(iqLC) * sqr(length) //quadrature weights
+											* pBC->get_normalderi(ishape, iqLC)/ facLevelLength[level] //jump in test
+											* pBC->get_normalderi(jshape, iqLC)/ facLevelLength[level]; //jump in ansatz
+
+									f.linear_part.coeffRef(row_LC, col_NC) += penalties.gamma_gradient  * shape.get_Fquadw(iqLC) * sqr(length) * pBC->get_normalderi(ishape, iqLC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[level]/ facLevelLength[levelNC];
+
+									f.linear_part.coeffRef(row_NC, col_LC) += penalties.gamma_gradient* shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC)* pBC->get_normalderi(jshape, iqLC) / facLevelLength[level]/ facLevelLength[levelNC];
+
+									f.linear_part.coeffRef(row_NC, col_NC) += penalties.gamma_gradient * shape.get_Fquadw(iqLC) * sqr(length) * pNBC->get_normalderi(ishape, iqNC) * pNBC->get_normalderi(jshape, iqNC) / facLevelLength[levelNC]/ facLevelLength[levelNC];
+
+									// first equation: jumps in functions
+
+									if (penalties.gamma_continuous != 0.0) {
+										f.linear_part.coeffRef(row_LC, col_LC) += penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqLC);
+
+										f.linear_part.coeffRef(row_LC, col_NC) += -penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqLC);
+
+										f.linear_part.coeffRef(row_NC, col_LC) += -penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqLC) * shape.get_Fquads(ishape,iqNC);
+
+										f.linear_part.coeffRef(row_NC, col_NC) += penalties.gamma_continuous * shape.get_Fquadw(iqLC) * shape.get_Fquads(jshape,iqNC) * shape.get_Fquads(ishape,iqNC);
+
+									}
 
 								}
 
@@ -1515,8 +1485,8 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 											* pBC->A_grad_times_normal(A, jshape,iqLC)	/ facLevelLength[pLC->id().level()]; //gradient times normal
 										val0 += val;
 										val /= volume;
-//										f.linear_part.coeffRef(row_LC_Hessian,  col_LC) += val;
-//										f.linear_part.coeffRef(row_NC_Hessian,  col_LC) -= val;
+										f.linear_part.coeffRef(row_LC_Hessian,  col_LC) += val;
+										f.linear_part.coeffRef(row_NC_Hessian,  col_LC) -= val;
 
 										//second equation: jump in gradient(zero at LC), average in test function
 										val = 0.5 // to average
@@ -1526,8 +1496,8 @@ void Tsolver::assemble_MA_Newton(const int & stabsign, penalties_type penalties,
 										val1 += val;
 										val /= volume;
 
-//										f.linear_part.coeffRef(row_LC_Hessian,  col_NC) += val;
-//										f.linear_part.coeffRef(row_NC_Hessian,  col_NC) -= val;
+										f.linear_part.coeffRef(row_LC_Hessian,  col_NC) += val;
+										f.linear_part.coeffRef(row_NC_Hessian,  col_NC) -= val;
 									}
 
 								}
@@ -1956,9 +1926,9 @@ void Tsolver::time_stepping_MA() {
 		assemble_MA_Newton(stabsign, gamma, f);
 
 
-		MATLAB_export(f.linear_part, "linear_part");
-		MATLAB_export(f.constant_part, "constant_part");
-		MATLAB_export(f.integrals_test_functions, "integrals_test");
+//		MATLAB_export(f.linear_part, "linear_part");
+//		MATLAB_export(f.constant_part, "constant_part");
+//		MATLAB_export(f.integrals_test_functions, "integrals_test");
 
 
 		pt.stop();
@@ -1983,7 +1953,7 @@ void Tsolver::time_stepping_MA() {
 		Eigen::VectorXd solution_old;
 
 		write_extended_solution_vector(extended_solution);
-		MATLAB_export(extended_solution, "extended_solution");
+//		MATLAB_export(extended_solution, "extended_solution");
 //		cout << "extended solution " << extended_solution.transpose() << endl;
 
 		solution_old = extended_solution.segment(0,LM_size);
