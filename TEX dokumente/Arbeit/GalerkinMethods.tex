@@ -5,18 +5,18 @@ The most natural attempt for a formulation of a DG method is to exploit the equa
 	\int_{\Omega} \mydet {D^2 u} v = \int_\Omega fv \qquad \text{ for all test functions } v. \label{eq: naiv ansatz}
 \end{align}
 
-In 2008 B\"ohmer investigated this ansatz for $C^1$ elements in \cite{Boehmer2008}. He derives a general $C^1$ method including statements on its stability and consistency. He is able to reduce the convergence analysis to the linearised case \cite[Section 9]{Boehmer2008}, and discovers that the weak and strong linear operators even coincide for his ansatz spaces meaning the diagram in figure \ref{fig: fe diagram} taken from \cite[Fig 2.2]{FGN2013} commutes.
+In 2008 B\"ohmer investigated this ansatz for $C^1$ elements in \cite{Boehmer2008}. He derives a general $C^1$ method including statements on its stability and consistency. He is able to reduce the convergence analysis to the linearised case \cite[Section 9]{Boehmer2008}, and discovers that the weak and strong linear operators even coincide for his ansatz spaces meaning the diagram in figure \ref{fig: fe diagram} commutes.
 
 \begin{figure}[H]
 	\input{feDiagram.pgf}
 	\label{fig: fe diagram}
-	\caption{An abstract commuting diagram about the relation between weak and strong linear operators.\\ The analytical \MA operator is hereby denoted by $F:=\detHess u$ and its linearisation $L_u(w) = -\nabla \cdot (\cofHess u \nabla w)$, compare \ref{sec: linearisation}. $F_h[u]=0$ denots the discretised formulation, for B\"ohmer's method this is given by \eqref{eq: naiv ansatz}}.
+	\caption{An abstract commuting diagram about the relation between weak and strong linear operators.\\ The analytical \MA operator is hereby denoted by $F:=\detHess u$ and its linearisation $L_u(w) = -\nabla \cdot (\cofHess u \nabla w)$, compare \ref{sec: linearisation}. $F_h[u]=0$ denots the discretised formulation, for B\"ohmer's method this is given by \eqref{eq: naiv ansatz}. The diagram is taken of \cite[Fig 2.2]{FGN2013}}
 \end{figure}
 
 However, this formulation has two major disadvantages. 
 At first we cannot throw the high derivatives onto the test functions using integration py parts, thus we do not cannot easily solve the arising system of equations. Secondly \eqref{eq: naiv ansatz} seems to work only for test and ansatz functions contained in $C^1(\Omega)$ whereas usual finite elements are contained in $C^0$. Brenner et alter make the inconsistency between the linearisation of the discrete problem and the the linearisation of the continuous problem, figuratively the non commutating of the diagram in figure \ref{fig: fe diagram} for less regular spaces,  responsible\cite{BGN+2011}. Their idea is to improve the discretised formulation by adding DG terms to force consistency and add stability.
 
-\subsection{A $C^0$ Penalty Method }
+\subsection{A $C^0$ Penalty Method }\label{sec: Brenner method}
 
 Given zero boundary conditions the linearisation of the left-hand side of \eqref{eq: naiv ansatz} can be derived exactly as in the proof of theorem \ref{thm: linearisation} leading to the bilinear form
 \begin{align}
@@ -49,14 +49,11 @@ Plugging the terms missing in \eqref{eq: linearOperator} but appearing in \eqref
 	+ \sigma  \sum_{e \in \edgesb} \frac 1 {h_e} \int_{e} (u_h -g)  = 0 \; \forall v_h \in V_h \label{eq: brenner method}
 \end{split}
 \end{align}
-They choose their ansatz and test space $V_h$ to be the space of continuous functionous being piecewise polynomials up to degree $k$ for a $k \geq 3$. For these degrees and the case of classical solutions they provide a detailed analysis consisting of a proof of well-posedness and some error estimates. Their numerical results suggest optimal convergence rates \todo{convergence rates} for smooth solutions although they cannot confirm those with theoretical evidence. \\
+They choose their ansatz and test space $V_h$ to be the space of continuous functionous being piecewise polynomials up to degree $k$ for a $k \geq 3$. For these degrees and the case of classical solutions they provide a detailed analysis consisting of a proof of well-posedness and some error estimates. Their numerical results suggest optimal convergence rates for smooth solutions although they cannot confirm those with theoretical evidence. \\
 However, their approach has a drawback. In order to find $u_h$ one has to solve the from \eqref{eq: brenner method} resulting nonlinear system. Brenner et alt. make use of Newton's method in the numerical results to solve their example problems. For a good initial guess they inquire a vanishing moments method which internally again solves nonlinear systems based on a Newton's method which uses a nested iteration to create initial guesses. 
 
-We implemented their presented method using the finite element tool FEniCS \cite{FEniCS} and experienced a huge sensitivity for initial starting points. \todo{brauchen ja auch vanishing moments als start}
-\todo{tolle numerische ergebnisse}
-
 Neilan claims when presenting his method in \cite{Neilan2014} that this methods fails to converge for the test case
-$u = -\sqrt{2 - x_1^2 - x_2^2 }$ and $f = \frac 2 {{2 - x_1^2 - x_2^2}^2}$ which lacks $H^2$ regularity, see also test \ref{test sqrt}. Generally the presented method is more appropriate for classical solutions, Brenner et alt. say they plan to address less regular solution in future work.
+$u = -\sqrt{2 - x_1^2 - x_2^2 }$ and $f = \frac 2 {{2 - x_1^2 - x_2^2}^2}$ which lacks $H^2$ regularity and our computations confirm this result, see also test \ref{test sqrt}. Generally the presented method is more appropriate for classical solutions, Brenner et alt. say they plan to address less regular solution in future work.
 
 
 \subsection{A Finite Element Method based on a Discrete Hessian} \label{subsec: disrete Hessian} \label{sec: FEM discrete Hessian}

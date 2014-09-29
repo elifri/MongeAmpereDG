@@ -69,19 +69,12 @@ Since in every iteration \eqref{eq:fixed point iteration} states a generalised p
 \end{align}
 
 \section{Challenges for a \MA DG method}
-Reviewing existing DG method for the \MA we learned some ?(subjects, matter, points) we have to keep in mind// pay attention to //concern while examining the fixed point iteration.
-
-\begin{itemize}
-\item convexity
-\item consistency
-\item penalties
-\item if necessary initial guesses
-\end{itemize}
+Reviewing existing DG methods for the \MA we learned some ?(subjects, matter, points) we have to pay attention to  while examining the fixed point iteration.
 
 \subsection{Convexfication} \label{subsec: convexification}
 The \MA equation in general does not define a unique solution. For most applications the unique convex solution is required. The question is how to oblige a numerical method to select only convex solutions.
-The most intuitive way is to convexify the solution after every step. Thus, on the one hand we make sure the right solution is approximated and on the other hand we smooth the generalised poisson solution aiming for a better approximation of the second derivatives.
-Yet a convexification is not simple. For our approach we choose a Bernstein basis for the ansatz space at first.
+The most intuitive way is to convexify the solution after every step. Thereby, on one hand we make sure the right solution is approximated and on another hand we smooth the Generalised Poisson solution. This could also improve the quality of second derivatives of our interim solution. % aiming for a better approximation of the second derivatives.
+Unfortunately convexification is not simple. For our approach we choose a Bernstein basis for the ansatz space at first.
 \begin{definition}[Bernstein-B\'ezier form]\label{def: BernsteinBezierForm}
 	Any univariate polynomial of degree $k$ on a triangle $T$ can be represented in \emph{Bernstein-B\'ezier form} as
 \begin{align}
@@ -99,8 +92,7 @@ The benefit of the Bernstein-B\'ezier form is that there can be formed condition
 \begin{theorem}
 	The convexity of the control polygon implies the convexity of the represented polynomial.
 \end{theorem}
-It is not far to seek in applying a convex hull algorithm on given Bernstein-B\'ezier coefficients thereby enforcing convexity, for there are a lot of convex hull algorithm available due to their importance in computer graphics. However, this approach is designated to go amiss for a convex hull algorithm only operate on a set of point and does not necessarily produce the same connectivity the control polygon implies. An example for that is given in figure \ref{fig: diff connectivity}. 
-
+Due to their importance in computer graphics, there are a lot of convex hull algorithm available. Hence it suggests itself to apply a convex hull algorithm on given Bernstein-B\'ezier coefficients to enforce convexity. However, this approach is designated to go amiss for a convex hull algorithm only operate on a set of point and does not necessarily produce the same connectivity the control polygon implies. An example for that is given in figure \ref{fig: diff connectivity}:
 \begin{figure}[h]
 \begin{subfigure}[b]{.5\textwidth}
 	\includegraphics[trim=3cm 8cm 3cm 8cm, width=1.\textwidth]{control_polygon2.pdf}
@@ -113,10 +105,9 @@ It is not far to seek in applying a convex hull algorithm on given Bernstein-B\'
 \caption{The control polygon and lower convex hull of a given set of control points}
 \label{fig: diff connectivity}
 \end{figure}
+While the the control polygon is obviously not convex, the surface of the lower convex hull of the control points is convex because it connects the inner control points differently.
 
-While the the control polygon is obviously not convex, the surface of the lower convex hull of the control points is convex because it connect the inner control points differently.
-
-Schumaker and Speleers present in \cite{SS2014} an approach to ensure convexity by a set of conditions on the coefficents , resulting in a quadratic program with linear constraints. To set up the convexity constraints we first need to define the difference operator
+Schumaker and Speleers present in \cite{SS2014} an approach to ensure convexity by a set of lienar conditions on the coefficents. To set up these convexity constraints we first need to define the difference operator
 \begin{definition}[Difference Operator]
 	$\Delta_{\mu \nu}$ is the \emph{difference operator} along the edge $(v_\mu, v_\nu)$ as for example
 	\begin{align*}
@@ -173,24 +164,24 @@ For quadratic splines Schumaker and Speleers even prove the inversion on convex 
 This result does not generalise for higher degrees. In fact they give a counterexample for degree $k = 3$.
 
 Now we apply the new insights//methods to the function given after solving the generalised poisson problem stated in \ref{sec: SIPG MA}.
-Given the DG solution of the generalised poisson problem $u^{gp}_h$ we seek for a convex spline minimising the error at the B\'ezier control points, i.e. we want to find the B\'ezier coefficients $c$ minimising
+Given the DG solution of the Generalised Poisson problem $u^{gp}_h$ we seek for a convex spline minimising the error at the B\'ezier control points, i.e. we want to find the B\'ezier coefficients $c$ minimising
 \[
 		\lVert A c - b \rVert_2, \qquad \text{ such that } Cc \geq 0,
 \]
 where $A$ is the matrix evaluating the to $c$ corresponding piecewise polynomial at the B\'ezier control points, $b$ are the function values of $u^{gp}_h$ at the B\'ezier control points and $C$ is the matrix containing the conditions ensuring convexity on the whole domain.
 
-However, solving a quadratic program or a linearly constrained least squares problem, respectively is nontrivial. 
+However, solving a linearly constrained least squares problem, respectively is nontrivial. So, when using this approach one should ensure a convexification is justified. Also, one has to keep in mind that the constraints in $C$ are sufficient but not necessary. We discuss in the numerical results whether this approach fulfills our requirements on a convexificiation.
 
 \subsection{Initial Guess}\label{sec: initial guess}
-Just as the most methods for the \MA equation the fixed point iteration requires an initial guess. Two approaches are very favoured in the literature.
-In \cite[Remark 2.1]{DG2006a} has been shown a strong connection between the \MA proble, and  the following Poisson problem
+Just as most methods for the \MA equation the fixed point iteration requires an initial guess. Two approaches are very favoured in the literature.
+In \cite[Remark 2.1]{DG2006a} has been shown a strong connection between the \MA problem, and  the following Poisson problem
 \begin{align}
 	\begin{split}
 	\triangledown u &= \sqrt{2f} \text{ in } \Omega \\ 
 	u &= g \text{ on }\partial \Omega.
 	\end{split}\label{eq: start sqrt_f}
 \end{align}
-Advantageously at this approach is the compliance of the boundary conditions.
+An advantage of this approach is the compliance of boundary conditions.
 
 Alternatively a nested iteration or multilevel ansatz can be utilised. At a the coarsest level $h_1$ one chooses any convex function as initial guess$u^0_{h_1}$, mostly $\frac 1 2 ({x_1^2} + {x_2^2}) $ for it is convex polynomial with a low degree. For finer triangulations $\mathcal{T}_{h_{l}}$ the solution of the previously computed solution $u_{h_{l-1}}$is taken for a starting point. Of course both approaches can be combined using the Poisson solution on the coarsest grid whereas later taking quasi-interpolants.
 
@@ -213,23 +204,25 @@ with the exact classical solution $\frac 1 2 (x_1^2 + x_2^2 )$. However, even fo
 	\caption{Relative $L2$ error on a grid with $h=\frac 1 2$}
 	\label{fig: consisctency_first_try}
 \end{figure}
-Looking at latter steps one is able see in the solution the underlying grid structure. Everywhere a triangle edge lies sharps edges arise. Besides continuity the solution on two triangles seem independent although the exact solution is absolutely  regular.
+Looking at steps shortly before the method diverges one is able see in the solution the underlying grid structure. Everywhere a triangle edge lies sharps edges arise. Besides continuity the solution on two triangles seems independent although the exact solution is absolutely  regular.
 
-A similar approach works for quasilinear methods, so it is a good starting to analyse the main difference, i.e. the derivation in the iterated variable. This leads us to the question: How good serves the second derivative of the Poisson solution for an approximation of the exact second derivative?
+As the decoupling approach works for quasilinear methods, so it is a good starting to analyse the main differences. This leads us to the question: How good serves the second derivative of the Poisson solution for an approximation of the second derivative of the exact solution?
 We illustrate the significance of this question by a example
 \begin{example}
-	Let $\tilde u$ be an approximation of $u\in C^2(\R)$ with $u-\tilde u \in \bigO(h)$. Differentiating twice we are left with $\dxx{x} u(x)-\dxx{x} \tilde u(x)\in \bigO(h^{-1})$ meaning a decrease of the grid size comes along with a increase of the error in the second derivatives.
-	????????//
-	 an approximation find
+	Let $\tilde u$ be an approximation of $u\in C^2(\R)$ with $u-\tilde u \in \bigO(h)$. 
+	%Differentiating twice we are left with $\dxx{x} u(x)-\dxx{x} \tilde u(x)\in \bigO(h^{-1})$ meaning a decrease of the grid size comes along with a increase of the error in the second derivatives.
+	%????????//
+	Differentiating twice we are left with the taylor approximation
 	\begin{align*}
 		\dxx{x} u(x)-\dxx{x} \tilde u(x) \approx \frac{\tilde u(x+2h) - 2\tilde u(x) - \tilde u(x-2h) - (u(x+2h) - 2u(x) - u(x-2h))} {4h^2} \\
 		 \in \bigO(h^{-1})
 	\end{align*}
+	This shows, even for small $h$ a good approximation of $u$ does not imply that its second derivatives are good approximations for second derivatives of $u$.
 \end{example}
+
 Let us recall the geometric interpretation of the second derivative, it indicates the curvature of a function and hence also describes the convexity, concavity respectively.
 
-In order to simplify the required calculation we restricted ourselves test space of piecewise polynomials of degree 2. Hence, we receive a piecewise constant Hessian in every step which is especially during the first iterations not smooth.
-On one hand one can hope for a smoothing by a convexification for it will smooth away all unintended concave curvatures. But on the other hand the result is still unsatisfiable because convexification does not affect sharp edges at triangle transitions.
+One improvement could be the smoothing process during a convexification for it will smooth away all unintended concave curvatures. But probably the result will be still unsatisfiable because convexification does not affect sharp edges at triangle transitions.
 
 \subsection{An additional Penalty Parameter}
 Another idea is force more regularity on the first derivative and thus, implicitly obtain a more steady solution. This suits to the ansatz pursued by Neilan described in section \ref{subsec: disrete Hessian}, his proposed correction terms vanish as the gradient jump across internal edges tends to zero.
@@ -278,22 +271,24 @@ To suffice this criteria we introduce a modified cofactor matrix
 \]
 where $\lambda$ is the minimal eigenvalue of $ \mycof {D^2_h u_h}$ and $Id$ is the $d \times d$-Identity matrix. Now we replace all occurrences of $\mycof {D^2_h u_h}$ in \eqref{eq: sipg iteration} by $\mycofMod {D^2_h u_h}$ to stabilise the problem condition.
 
-\section{The Final Algorithm}
+\section{The Algorithm}
 
-Putting all together the our methods works as Algorithm \ref{alg: final} describes.
+Bringing those points together our method to carry out the fixed point iteration works as Algorithm \ref{alg: final} describes.
 
 \begin{algorithm}
 \begin{algorithmic}
-\Require triangulation \triang, desired mesh width $H$
+\Require triangulation \triang, desired mesh width $h$, maximimal number of intermediate steps $i_{max}$
 \State $u_0\gets $ solution of  $
 	\triangle u = \sqrt{2f} \text{ in } \Omega $ with $
 	u = g \text{ on }\partial \Omega$
-\State $i \gets 1$
 \While {$h < H$}
-	\While {$|u_i-u_{i-1}| < \varepsilon$}
+	\State $i \gets 0$
+%	\While {$|u_i-u_{i-1}| < \varepsilon$}
+	\While {$i < i_{max} $}
 		\State $u_i \gets$ solution of \ref{sec: SIPG} with modified cofactor matrix (\ref{sec: mod cofactor})
 		\State $u_i \gets \alpha u_{i-1} + (1-\alpha)u_i $
 		\State (convexify)
+		\State $i \gets i+1$
 	\EndWhile
 	\State $h, \triang \gets h/2, \triangFine$
 \EndWhile

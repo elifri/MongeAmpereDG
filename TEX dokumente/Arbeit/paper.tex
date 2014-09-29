@@ -91,6 +91,31 @@ Aachen, den \today
 \label{ch:conclusion}
 \input{conclusion.tex}
 
+\chapter*{Acknowledgements}
+
+\begin{appendices}
+	\chapter{FEniCS Code}
+	\input{appendix.tex}
+
+\definecolor{keywords}{RGB}{255,0,90}
+\definecolor{comments}{RGB}{0,0,113}
+\definecolor{red}{RGB}{160,0,0}
+\definecolor{green}{RGB}{0,150,0}
+	
+\lstset{language=Python, 
+        basicstyle=\ttfamily\small, 
+        keywordstyle=\color{keywords},
+        commentstyle=\color{comments},
+        stringstyle=\color{red},
+        showstringspaces=false,
+%        identifierstyle=\color{green},
+        procnamekeys={def,class}}
+	\lstinputlisting{../../FEniCS/source/DG_Brenner.py}
+	
+\end{appendices}
+
+
+
 \newpage
 %\input{literatur.tex}
 % bib

@@ -1,6 +1,6 @@
 \section{ Preliminaries and Notation}
-At the beginning of this chapter we repeat the basis definitions for the analysis of partial differential equations as they are introduced for example in \cite{Evans1998}.
-Let $\Omega \subset \R^d $ be an open area.
+At the beginning of this chapter we repeat the basic definitions and notation for the analysis of partial differential equations as they are introduced for example in \cite[Introduction]{Evans1998}.
+Let $\Omega \subset \R^d $ be an open, bounded area and $\partial \Omega$ its boundary.
 \begin{definition}[Partial Differential Equation{\cite[Introduction]{Evans1998}}]
  A \emph{partial differential equation} (PDE) of order $k\in \N$ is an expression of the form
 \begin{align}
@@ -8,7 +8,7 @@ Let $\Omega \subset \R^d $ be an open area.
 \end{align}
 where $F:\R^{n^k} \times \R^{n^{k-1}} \times \dots \times \R^n \times \R \times \Omega \rightarrow \R $ is given and $u:\Omega \rightarrow \R$ is unknown.
 \end{definition}
-We focus in this thesis on second order PDEs for our main PDE, namely the \emph{\MA equation} which we will introduce later is of second order. 
+We focus in this thesis on second-order PDEs for our main PDE, namely the \emph{\MA equation} which we will introduce later is of second order. 
 \\Next to the order there exist further properties to categorise PDEs:
 \begin{definition}[Categories of PDEs{\cite[Introduction]{Evans1998}}]
 	Given functions  $f:\Omega \rightarrow \R$ and $a_{\alpha}:\Omega \rightarrow \R$ or $a_{\alpha}:\R^{n^{k-1}} \times \dots \times \R^n \times \R \times \Omega$ respectively, for $\alpha \in \N^{k}, |\alpha| \leq k$, a PDE of order $k$ is called
@@ -37,7 +37,7 @@ A famous example for linear PDEs is the \emph{Poisson equation} $-\triangle u = 
 % a semilinear PDE is for example the \emph{nonlinear Poisson equation} $-\triangle u = f(u)$.
 a well-known example for quasilinear PDEs are equations of the type $\nabla \cdot (A(u) \nabla u) = f$, where $A: \R^d \rightarrow \R^{d \times d}  $. The \MA equation $\mydet {D^2 u} = f$ is part of the last category, the nonlinear PDEs. 
 
-Another important property to classify second order PDEs is ellipticity. 
+Another important property to classify second-order PDEs is ellipticity. 
 \begin{definition}[Elliptic PDE{, \cite[p.207]{FGN2013}}]
 	A fully nonlinear second order PDE is called \emph{elliptic} if its operator satisfy
 	\begin{align}
@@ -48,16 +48,18 @@ for all $x \in \Omega, z \in \R, p \in \R^d$ and $A,B \in \R^{d \times d}_{sym}$
 This notion is a natural extension of the ellipticity concept for first order PDEs. Interpreting a first order PDE operator as a Function depending on $D^2u, Du, u, x$, \eqref{eq: ellipitic PDE} characterises an elliptic PDE.
 \end{definition}
 
-A function $u:\Omega \rightarrow \R$ fulfilling \eqref{eq:general PDE} is called a classical solution of the PDE. 
+Searching for a function $u:\Omega \rightarrow \R$ with 
+\begin{align}
+u=g \text{ on } \partial \Omega \label{eq: boundary}
+\end{align}
+for some $g:\partial \Omega \rightarrow \R$ is called a \emph{Dirichlet-boundary problem}. The function $u:\Omega \rightarrow \R$ fulfilling \eqref{eq:general PDE} and \eqref{eq: boundary} is called a classical solution of the problem. 
 \todo{boundary conditions}
 
-There are problems such that no such solution exists, often the demand on the high derivatives cannot be fulfilled. To admit less regular solutions one aims for a weaker solution notion. To do this we need to specify some spaces where to search for such weaker solutions.
+There are problems such that no such solution exists. A PDE of order $k$ requires its classical solution to be at least $k$ times differentiable, which is a very strong demand. To admit less regular solutions one aims for a weaker notion of a solution. Before doing this we specify some function spaces.
 
 %\section{Functional Spaces}
 According to the literature we refer by $W^{s,p}(\Omega)$ to the H\"older space, a set consisting of all $L^p(\Omega)$ functions whose distributional derivates up to order $s$ are contained in $L^ p(\Omega)$.
-\todo{Sollte ich  distributional derivates erklaeren?} The special case $p=2$ are referred to as Sobolev spaces $W^{s,2}(\Omega)=H^s(\Omega)$.
-
-\todo{triangulation}
+\todo{Sollte ich  distributional derivates erklaeren?} The special case $p=2$ are referred to as Sobolev spaces $H^s(\Omega):=W^{s,2}(\Omega)$. An additional subscript $0$ denotes the set where all functions are zero at the boundary, i.e. $H^s_0 :=\{f \in H^s(\Omega); f(x)=0 \; \forall x \in \partial \Omega\}$
 
 Let $T$ be a triangle in $\Omega$ and spanned by the points $v_0, v_1, v_2$. We also write 
 \[
@@ -66,14 +68,15 @@ Let $T$ be a triangle in $\Omega$ and spanned by the points $v_0, v_1, v_2$. We 
 The \emph{diameter} $diam(T)$ of a triangle $T$ we define as the diameter of the smallest circle containing it.
 To discretise our domain $\Omega$ we subdivide it into simplices, more precisely we divide them into triangles.
 \begin{definition}[Triangulation, {\cite[Definition 5.1]{Braess2003}}]
-	We call a finite partition of $\Omega$ into triangles $\{T_1, \dots, T_n\}$ a feasible \emph{triangulation} $\triang$, such that
+	We call a finite partition of $\Omega$ into triangles $\{T_1, \dots, T_n\}$ a feasible \emph{triangulation} $\mathcal{T}$, such that
 	\begin{enumerate}[(i)]
 		\item	$\bar \Omega = \bigcup_{T \in \triang} T_i$
-		\item If $_i \cap T_j$ is a point for, it is a corner of both $T_i$ and $T_j$
-		\item If $_i \cap T_j$ is more than one point for $i \neq j$, it is an edge of both $T_i$ and $T_j$
+		\item If $T_i \cap T_j$ is a point for, it is a vertex of both $T_i$ and $T_j$
+		\item If $T_i \cap T_j$ is more than one point for $i \neq j$, it is an edge of both $T_i$ and $T_j$
 	\end{enumerate}
-	$h$ denotes the maximal diameter $h:= \operatorname{max}\limits_{T\in \triang} diam(T)$ in the triangulation $\triang$. We call a triangulation \emph{regular} if every element is congruent.
+	Let $h$ denote the maximal diameter $h:= \operatorname{max}\limits_{T\in \mathcal T} diam(T)$ in the triangulation $\mathcal T$, we then also refer to $\mathcal{T}$ by $\triang$. We call a triangulation \emph{regular} if every element is congruent.
 \end{definition}
+Note that this definition requires $\Omega$ to be a polygonal domain. However, there are extension to domain with curved boundaries: In those triangles lying at the boundary are replaced by "triangles" which have curved sides. 
 
 \begin{figure}[H]
 \input{grid.pgf}
@@ -81,14 +84,14 @@ To discretise our domain $\Omega$ we subdivide it into simplices, more precisely
  \label{fig: triangulation}
 \end{figure}
 
-Figure \ref{fig: triangulation} shows a triangulation of the unitsquare. 
+Figure \ref{fig: triangulation} shows a triangulation of the unitsquare. Since the edges uniquely define a triangulation of $\Omega$, we later use the terms grid and mesh to refer to a subdivision into triangles.
 An edge $e$ is called an interior edge if $e=T^+ \cap T^-$ holds for some $T^+,T^- \in \triang$, whereas it is called a boundary edge if $e \subset \partial \Omega$.
 We divide the edges $\edges$ into the subsets $\edgesi$ and $\edgesb$ containing all interior edges and boundary edges, respectively. 
 When we refer to a normal of an edge we always refer to an outward directed normal of one of the adjacent triangles. If it is not clear from the context a superscript denotes which triangle we chose.
 
 On this basis we define the piecewise spaces
-\begin{definition}[Piecewise Spaces]
-The to the mesh associated spaces are
+\begin{definition}[Broken Spaces]
+We define some function spaces associated to a triangulation
 \begin{align}
 	H^s(\triang) = \prod\limits_{T\in \triang}  H^s(T), \qquad W^{s,p}(\Omega) = \prod\limits_{T\in \triang} W^{s,p}(T).
 \end{align}	
@@ -149,12 +152,13 @@ The \emph{Generalised Poisson Problem} is finding a function $u:\Omega \rightarr
 	-\nabla \cdot (A \nabla u) = f \qquad &\text{ in }\Omega \label{eq: poisson eq} \\
 	u = g \qquad &\text{ on } \partial \Omega    \label{eq: poisson bc}
 \end{align}
-for $ A:\R^d \rightarrow \R^{d \times d}$ symmetric and functions $f,g $. 
+for $ A:\Omega^d \rightarrow \R^{d \times d}$ symmetric and functions $f,g:\Omega \rightarrow \R $. 
+Because of the physical meaning of this PDE $A$ is also referred to as \emph{diffusion matrix}.
 \end{definition}
 
 We are able to set up a weak formulation of the Generalised Poisson Problem based on variational principles. A weak formulation of the problem is the key element for deriving a finite element method.
 
-Due to the main theorem of variational analysis every solution to \eqref{eq: poisson eq} is equivalent to 
+Due to the main theorem of variational analysis every classical solution to \eqref{eq: poisson eq} is equivalent to 
 \begin{align}
 	-\int_\Omega \varphi \nabla \cdot (A \nabla u) = \int_\Omega \varphi f \qquad \forall \varphi \in C^\infty(\Omega).\label{eq: variational form}
 \end{align}
@@ -162,7 +166,7 @@ Integration by parts yields to
 \begin{align}
 	\int_\Omega \nabla \varphi  \cdot A\nabla u -\int_{\partial \Omega} \varphi (A\nabla u) \mathbf{n}  = \int_\Omega \varphi f \qquad \forall \varphi \in C^\infty(\Omega). \label{eq: FE integration by parts}
 \end{align}
-The last statement can be reformulated to the variational form 
+The last statement can be reformulated to the so called variational form 
 \begin{align}
 a(\varphi,u)  = b(\varphi) \qquad \forall \varphi \in C^\infty(\Omega). \label{eq: variational formulation}
 \end{align}
@@ -179,11 +183,13 @@ where $X$ is a function space we define in a moment and the functional $b:C^\inf
 \begin{definition}[Weak Solution]
 	Functions satisfying \eqref{eq: variational formulation} are called \emph{weak solutions} of \eqref{eq: poisson eq}.
 \end{definition}
-The generalised poisson problem is well-posed in the sense that it has a unique weak solutions for $A$ positive definite and $f\in L^2(\Omega)$. This is mainly due to the ellipticity of the PDE (and as a consequence thereof the ellipticity of $a$) allowing to apply the Lax-Milgram theory and a maximum principle. For a detailed analysis we refer the interested reader to \cite[Chapter~6]{Evans1998}.
+Note, due to the lack of regularity it is possible that we cannot restrict a weak solution to the boundary of $\Omega$. However one can reformulate boundary conditions for weak solution with trace operators \cite[Section 5.5]{Evans1998}.
 
-On the left-hand side in the weak notation only first derivatives of $u$ appear, hence \eqref{eq: variational formulation} is also sensible for functions not twice differentiable. It turned out that the previously defined Sobolev spaces are well-suited candidates for the space $X$ where we find weak solutions. Therefore we search for the solution of the infinite-dimensional problem: Find $u\in H^1(\Omega)$ such that  $a(\varphi,u)  = b(\varphi) \;\forall \varphi \in C^\infty(\Omega)$ holds. % $\forall \varphi \in C^\infty(\Omega)$.
+The generalised poisson problem is well-posed in the sense that it has a unique weak solutions if $A$ is positive definite and $f\in L^2(\Omega)$. This is mainly due to the ellipticity of the PDE (and as a consequence thereof the ellipticity of $a$) allowing to apply the Lax-Milgram theory and a maximum principle. For an analysis we refer the interested reader to \cite[Chapter~6]{Evans1998}.
+
+On the left-hand side in the weak notation only first derivatives of $u$ appear, hence \eqref{eq: variational formulation} is also applicable for functions $u$ not twice differentiable. It turned out that the previously defined Sobolev spaces are well-suited candidates for the space $X$ where we find weak solutions \cite[Chapter 1]{BS2002}. Therefore we search for the solution of the infinite-dimensional problem: Find $u\in H^1(\Omega)$ such that  $a(\varphi,u)  = b(\varphi) \;\forall \varphi \in C^\infty(\Omega)$ holds. % $\forall \varphi \in C^\infty(\Omega)$.
 The main idea of the finite element method is to approximate the two function spaces, namely the spaces $H^1(\Omega)$ and $C^\infty(\Omega)$ containing $\varphi$ and $u$, respectively by finite dimensional spaces $W_h$ and $V_h$. For those spaces should hold a analogous equation as we have in the variational form stated in \eqref{eq: variational formulation}.\\
-The limited space $W_h$ is called \emph{test space} and its elements are called \emph{test functions}. $V_h$ is referred as \emph{ansatz} or \emph{trial space}, the contained functions accordingly \emph{ansatz} or \emph{trial functions}. To assert the boundary condition \eqref{eq: poisson bc} we demand $u_h|_{\partial \Omega} = g$ for every $u_h \in V_h$.
+The limited space $W_h$ is called \emph{test space} and its elements are called \emph{test functions}. $V_h$ is referred to as \emph{ansatz} or \emph{trial space}, the contained functions accordingly \emph{ansatz} or \emph{trial functions}. To assert the boundary condition \eqref{eq: poisson bc} we demand $u_h|_{\partial \Omega} = g$ for every $u_h \in V_h$.
 
 As the subscript $h$ suggests the two spaces normally are based on a discretisation of $\Omega$ and often only piecewise smooth. Consequently, since we are searching for an analogue of the bilinearform $a$ we require differential operators defined on $W_h \cup V_h$. We denote these extended versions using the subscript $h$.
 
@@ -211,17 +217,17 @@ The error made by restriction to finite elements is characterised by the followi
 \begin{lemma}[C\'ea Lemma{, \cite[4.2]{Braess2003}}]
 	Let the bilinear form $a$ be $V$ elliptic with $H_0^m \subset V \subset H^m(\Omega) $, i.e. $0 < \alpha \leq C$ exist with
 	\[
-		a(u,u) \geq \alpha  \norm u ^2_m \text{ and } |a(u,v)| \leq C \norm u ^2_m \norm v ^2_m.
+		a(u,u) \geq \alpha  \norm u ^2_V \text{ and } |a(u,v)| \leq C \norm u ^2_V \norm v ^2_V.
 	\]
 	Then for the solution $u_h$ of \eqref{eq: FE variational formulation}  holds
 	\begin{align}
-		\norm {u - u_h}_m \leq \frac C \alpha \inf\limits_{v_h \in V_h} \norm {u-v_h}_m.
+		\norm {u - u_h}_V \leq \frac C \alpha \inf\limits_{v_h \in V_h} \norm {u-v_h}_V.
 	\end{align}
 \end{lemma}
 This result shows the quality of the finite element solution depends on one side on the problem parameters $\alpha$ and $C$, but on the other side particularly on the approximation properties of $V_h$. A typical choice for the function spaces $W_h$ and $V_h$ are piecewise polynomials spaces which have good approximation properties and are easy to handle.
 
 \section{Discontinuous Galerkin (DG)} \label{sec: SIPG}
-A recent idea is to choose the test and ansatz spaces to include discontinuous functions. This approach arised in the context of hyperbolic PDEs of which solutions eventually contain discontinuities. Although the Generalised Poissson Problem is not hyperbolic and its solutions are continuous we use this example to explain the issues arising when the finite element spaces is extended to discontinuities. The crux is the handling of derivatives along discontinuities.
+A recent idea is to choose the test and ansatz spaces to include discontinuous functions. This approach arised in the context of hyperbolic PDEs of which solutions eventually contain discontinuities, later it was also applied to ellipitic PDEs \cite{ABC+2002}. Although the Generalised Poissson Problem is not hyperbolic and its solutions are continuous we use this example to explain the issues arising when the finite element spaces is extended to discontinuities. The crux is the handling function evaluations along discontinuities.
 
 %We recall our triangulation $\mathcal{T}_h$ of $\Omega$. 
 If we modify the finite element procedure a bit we can use $V_h = \mathcal P_h^k$ as defined in Definition \ref*{def: piecewise polySpace} for the ansatz and test space: Due to fact we have discontinuities pnly along edges we perform the integration by parts in \eqref{eq: variational form} piecewise on every triangle leading to
@@ -276,7 +282,7 @@ The first term we add is  $- \sum\limits_{e \in \edgesi}\int_{e} \jump{ v \avera
   &-\sum\limits_{e \in \edgesi}\int_{e} \jump {\varphi \average{A \nabla v} }
  - \sum\limits_{e \in \edgesi}\int_{e} \jump{ v \average{ A \nabla \varphi}} \nonumber\\ 
  & - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot \mathbf n 
-    - \sum\limits_{e \in \edgesb}\int_{e} v A \nabla \varphi \cdot \mathbf n.
+    - \sum\limits_{e \in \edgesb}\int_{e} v A \nabla \varphi \cdot \mathbf n. \label{eq:inner product SIPG}
 \end{align}
 and 
 \begin{align}
@@ -307,17 +313,23 @@ Just like in the finite element method we can derive a linear system of equation
 This particular discontinuous Galerkin method is called \emph{Symmetric Interior Penalty Galerkin method} (SIPG).
 
 \section{Implementation of a SIPG Method}
-To evaluate the bilinearform  numerically we need an integration scheme. Usually Gauss quadrature is the method of choice. To estimate the integral $\int h(x) dx$ a Gauss quadrature formula $\sum_{i=1}^{N} w_i h(q_i)$ needs to evaluate $h$ at certain quadrature points $q$. For the case $N=7$ we show the quadrature points for a triangular domain in figure \ref{fig: quadrature}.
+
+In this section we mention the main problems arising at the implementation of a finite element method. A detailed survey can be also found in \cite[Section 0.6]{BS2002} and \cite[Chapter 8]{Braess2003}.
+We assume that we have a regular triangulation of $\Omega$ given. One main problem in the implementation of a SIPG method (or any finite element method) is the assembly of matrix defined by the left-hand side inner product. As suggest in the form in \eqref{eq:inner product SIPG} we evaluate the integrals on every triangle, edge respectively individually.
+
+\subsection{Integration scheme}
+First, to evaluate an integral numerically we need an integration scheme. Usually Gauss quadrature is the method of choice. To estimate the integral $\int h(x) dx$ a Gauss quadrature formula $\sum_{i=1}^{N} w_i h(q_i)$ needs to evaluate $h$ at certain quadrature points $q$. For the case $N=7$ we show the quadrature points for a triangular domain in figure \ref{fig: quadrature}.
 \begin{figure}[!h]
 	\centering
 	\input{quadrature.pgf}
 	\caption{Quadrature points for a integral over a triangle domain with $N=7$}
 	 \label{fig: quadrature}
 \end{figure}
-Typical formulas, i.e. quadrature points and weights, especially for handling volume integrals can be found in \cite{Strout1971}.
+Quadrature formulas, i.e. quadrature points and weights, especially for handling volume integrals can be found in \cite{Strout1971}.
 To assemble the stiffness matrix $M$ the data we have to provide reduces to the data at the element, face respectively quadrature points.  
 At an element quadrature point these are the gradients, whereas at a face quadrature point we need information about  the function values $u$ and the normal derivatives, i.e. $\nabla u \cdot \mathbf{n}$ of all test functions.
 
+\subsection{A Reference Cell}
 To reduce the storage space one usually specifies a reference cell $T_{ref}$ such that every triangle $T \in \triang$ is the image of $T_{ref}$ under an affine transformation $\Phi_T:T_ref \rightarrow T$. 
 %We make use of the triangle spanned by the points $(0,0)^t, (0,1)^t$ and $(1,0)^t$ for our reference cell. 
 Since the DG spaces also allow discontinuous functions a basis $p^1_{ref},\dots,p^n_{ref}$ of $T_{ref}$ also induces a basis on every $T$, namely the basis consisting of 
@@ -372,6 +384,7 @@ D_x^2p_T^i(x) = A^{-t} D_{x_{ref}}^2p^i_{ref}(x_{ref})  A^{-1}, \qquad 1 \leq i 
 Concluding, if we need to determine function values, gradient and Hessian of a basis function on a cell, we only need the Jacobian of its transformation, i.e. $A$. We are able to calculate all further information with the data provided by the reference triangle.
 \end{example}
 
+\subsection{Refinement and Base Cells}
 Let us in the rest of this section further assume we have a triangulation of a two-dimensional domain $\Omega$. 
 Suppose the mesh of our triangulation is created by refinement of a coarser mesh. We use a specific kind of refinement: Given a triangulation $\triang$ every triangle $T \in \triang$ is divided into four congruent triangles as is shown in figure \ref{pic: refinement}. We note, the finer grid $\triangFine$ for the diameter of each triangle is halved.
 
@@ -415,11 +428,11 @@ Of course for other combinations of basis polynomials the latter volume integral
 So, we are able to save a lot of memory if we store instead of all data at every quadrature points in each refined cell just the data of the base cell and the number of refinements. The refined cells contained in the actual mesh are referred as \emph{leaf cells}.
 \end{example}
 
-Another crux of the implementation is the handling of face terms. 
-Given that the support of each basis element is contained in one triangle, the contribution to the volume integrals can be calculated visiting the cell only once.
+\subsection{Assembly Loop}
+Another crux of the implementation is the handling of face terms, more specific: We mentioned earlier that we evaluate the bilinearform cell-wise. Hence the volume integrals are calculated visiting every cell only once. When do we compute the edge integrals?\\
 Face terms can be collected either by assemble them in two steps or a more complex one.
 For the two step variant the face terms are split up into the contributions of their two adjacent cells, such that the first part is assembled when processing the first adjacent cell and the second during the processing of the other adjacent cell. \\
-In the one step variant one handles a face term when visiting an adjacent cell for first time. To detect the first time we introduce a cell flag for every leaf cell indicating whether the cell has been processed yet. Now, each time the assembling algorithm visits a face it determines the neighbouring cell and checks if the face has already been processed. The following algorithm \ref{alg: assembling} from \cite{BMV2009} illustrates how to perform this one step approach. 
+In the one step variant we handle a face term when visiting an adjacent cell for first time. To detect the first time we introduce a cell flag for every leaf cell indicating whether the cell has been processed yet. Now, each time the assembling algorithm visits a face it determines the neighbouring cell and checks if the face has already been processed. The following algorithm \ref{alg: assembling} from \cite{BMV2009} illustrates how to perform this one step approach. 
 \begin{algorithm}[H]
 \caption{An assembling loop for a DG method}
 \label{alg: assembling}

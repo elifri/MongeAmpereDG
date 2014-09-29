@@ -10,6 +10,8 @@
 %\usepackage{amsthm}
 %\usepackage{lscape}
 
+\usepackage[toc, page]{appendix}
+
 \usepackage{hyperref} %insertes hyperref to mentioned sections
 
 \usepackage[T1]{fontenc}
@@ -37,6 +39,7 @@
 \usepackage{color}
 \usepackage{stmaryrd} % for llbracket
 
+\usepackage[procnames]{listings} %to include python code
 \usepackage[chapter]{algorithm}
 
 \usepackage{enumerate} %to allow different kind of enumerations

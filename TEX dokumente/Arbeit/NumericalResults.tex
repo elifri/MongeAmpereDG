@@ -56,13 +56,84 @@ A test where the analytical solution is unknown is determined by
 defines the last example.
 \end{test}
 
+\section{Numerical Results of a blub}
 
+\input{load_Neilan_data.tex}
+
+For reference I implemented the algorithm introduced in Section \ref{sec: Brenner method}.
+We implemented their presented method using the finite element tool FEniCS \cite{FEniCS}, the Code is append in Appendix. 
+To create our initial guess I did not use a vanishing moment method as Brenner suggested, but the solution of $\triangle u = -\sqrt{2f}$ as introduced in \ref{sec: initial guess}. 
+
+I solved the arising nonlinear system of equations with PETSc' basic line search Newton method. 
+
+\begin{table}[h]
+	\begin{subtable}[b]{0.45\textwidth}
+		\centering
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+				    every row 0 column 0/.style={set content=init},
+		]\MAOneBrennerTwo
+    	\caption{Error for $k=2$}
+   \end{subtable}
+   ~
+	\begin{subtable}[b]{0.45\textwidth}
+		\centering
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+				    every row 0 column 0/.style={set content=init},
+		]\MAOneBrennerThree
+ 	\caption{Error for $k=3$}
+	\end{subtable}
+	\caption{Errors for test case \ref{test smooth}}
+	\label{tab: l2 errors test 1 Brenner}
+\end{table}
+
+
+\begin{figure}[h!]
+\centering
+	\includegraphics[scale=0.4]{../../FEniCS/diagrams/MA1_Brenner_l2.pdf}
+	\caption{$L^2$ errors for test case \ref{test smooth}}
+\end{figure}
+
+For the second test case the Newton did not even on the coarsest grid converge. Also in the third test case our Newton solver had problems. You can see results of the runs for $h=1/2, \dots, 1/16$ in table \ref{tab: l2 errors test 3 Brenner}, for finer grid the solver did not converge. My attempts to solve this example with FEniCS' built in damped Newton method with different relaxation parameters did also not succeed on any grid finer than $1/16$.
+\begin{table}[h]
+		\centering
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+				    every row 0 column 0/.style={set content=init},
+		]\MAThreeBrennerTwo
+    	\caption{Error for $k=2$}
+	\caption{Errors for test case \ref{test singularity}}
+	\label{tab: l2 errors test 3 Brenner}
+\end{table}
+
+The fourth example does not have not a classical solution. As in the previous cases the method does not converge and after some steps the Newton solver does not converge on the provided initial guesses. The corresponding results are shown in table \ref{tab: l2 errors test 4 Brenner}.
+
+\begin{table}[h]
+	\begin{subtable}[b]{0.45\textwidth}
+		\centering
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+				    every row 0 column 0/.style={set content=init},
+				    columns/l2error/.style={ /pgf/number format/sci precision=6}     % print 14 digits
+		]\MAFourBrennerTwo
+    	\caption{Error for $k=2$}
+   \end{subtable}
+   ~
+	\begin{subtable}[b]{0.45\textwidth}
+		\centering
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+				    every row 0 column 0/.style={set content=init},
+		]\MAFourBrennerThree
+ 	\caption{Error for $k=3$}
+	\end{subtable}
+	\caption{Errors for test case \ref{test dirac}}
+	\label{tab: l2 errors test 4 Brenner}
+\end{table}
+
+\newpage
 \section{Numerical Results of a Finite Element Method based on a Disrete Hessian}
 
-For reference I implemented the algorithm introduced in Section \ref{sec: FEM discrete Hessian}.
+I also implemented the algorithm introduced in Section \ref{sec: FEM discrete Hessian}.
 Additional to the numerical results Neilan presented it is interesting to explore what happens if we vary the polynomial degree for the Hessian ansatz space. 
 
-The implementation was done with the Finite Element Tool FEniCS \cite{FEniCS}. The uniform triangulation $\triang$ was obtained by first dividing the domain into squares of side length $h$ and then split them into 4 triangles by drawing both diagonals. \\
+The implementation was also done with the Finite Element Tool FEniCS \cite{FEniCS}. The uniform triangulation $\triang$ was obtained by first dividing the domain into squares of side length $h$ and then split them into 4 triangles by drawing both diagonals. \\
 Different to the initial guess suggested in \cite{Neilan2014} I used the solution of $\triangle u = -\sqrt{2f}$ as introduced in \ref{sec: initial guess}. 
 We denote the degree of the trial space $V_h=P_h^k \cap H^1(\Omega)$ by $k$ and the degree chosen for the Hessian ansatz space $\Sigma_h = [\mathcal{P}_h^{k_{DH}}]^{d \times d}$ by $k_{DH}$. The nonlinear system of equations given by \eqref{eq: neilan eq1} and \eqref{eq: discrete hessian} or \eqref{eq: neilan eq1 + jump} and \eqref{eq: discrete hessian}, respectively was solved with PETSc' basic line search Newton method. 
 %SNES Object: 1 MPI processes
@@ -104,8 +175,6 @@ but the absolute tolerance was adjusted to $1e-8$ and the number of maximum iter
 
 Figure \ref{fig: l2 errors test 1} shows the $L^2$ error of all performances of the first test case that have converged, the polynomial degrees $k$ were taken to be $1,\dots,3$ and $k_{DH}$ equal to all variants $0, \dots, k$.  The results for the runs with $k=3$ are shown more detailed in Table \ref{tab: l2 errors test 1 deg 2}, in both tables the column $N$ refers to the number of iterations the Newton solver needed to reach the desired tolerance. 
 
-\input{load_Neilan_data.tex}
-
 \begin{figure}[h!]
 \centering
 	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA1_Neilan_l2.pdf}
@@ -113,7 +182,8 @@ Figure \ref{fig: l2 errors test 1} shows the $L^2$ error of all performances of 
 	\label{fig: l2 errors test 1}
 \end{figure}
  \todo{memory errors}
- Unfortunately the calculation for $k=3$ could not be carried out since 0]PETSC ERROR: Out of memory. This could be due to allocating
+ Unfortunately the calculation for $k=3$ could not be carried out since 
+ 0]PETSC ERROR: Out of memory. This could be due to allocating
  [0]PETSC ERROR: too large an object or bleeding by not properly
  [0]PETSC ERROR: destroying unneeded objects.
  [0]PETSC ERROR: Memory allocated 0 Memory used by process 15882436608
@@ -223,7 +293,7 @@ In the first figure \ref{fig: l2 errors test 1 ourMethod} there were carried out
 
 \begin{figure}[h!]
 	\includegraphics[scale =0.5]{plots/MA1.pdf}
-	\caption{$L^2$ errors for test case \ref{test smooth} and additional gradient jump penalty}
+	\caption{Relative $L^2$ errors for test case \ref{test smooth} and additional gradient jump penalty}
 	\label{fig: l2 errors test smooth ourMethod}
 \end{figure}
 

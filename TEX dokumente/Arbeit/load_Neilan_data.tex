@@ -7,11 +7,22 @@
 \pgfplotstablecreatecol[copy column from table={../../FEniCS/data/#1_newtonSteps}{steps}] {N} #2
 }
 
+\readDataN{MA1_Brenner_deg2}{\MAOneBrennerTwo}
+\readDataN{MA1_Brenner_deg3}{\MAOneBrennerThree}
+
+\readDataN{MA3_Brenner_deg2}{\MAThreeBrennerTwo}
+
+\readDataN{MA4_Brenner_deg2}{\MAFourBrennerTwo}
+\readDataN{MA4_Brenner_deg3}{\MAFourBrennerThree}
+
+
 \readDataN{MA1_Neilan_GradJump_deg22}{\MAOneJumpdegTwoTwo}
 \readDataN{MA1_Neilan_GradJump_deg20}{\MAOneJumpdegTwoZero}
 
 \readDataN{MA1_Neilan_deg33}{\MAOnedegThreeThree}
 \readDataN{MA1_Neilan_deg32}{\MAOnedegThreeTwo}
+
+
 
 
 %\pgfplotstableread{../../FEniCS/data/MA1_Neilan_deg22_l2errornorm} \MAOnedegTwoTwoL
