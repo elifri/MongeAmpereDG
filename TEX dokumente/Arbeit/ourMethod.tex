@@ -89,9 +89,10 @@ The points $c_{ijk}$ are called \emph{control points} and the polygon defined by
 \end{definition}
 
 The benefit of the Bernstein-B\'ezier form is that there can be formed conditions ensuring the convexity of the polynomial on a triangle. Namely there is a connection between the convexity of the control polygon and the convexity of the polynomial.
-\begin{theorem}
+\begin{theorem}[ {\cite[Theorem 4.6]{Dahmen1991}}]
 	The convexity of the control polygon implies the convexity of the represented polynomial.
 \end{theorem}
+Note, that this result holds only for a single triangle and not for the convexity of the whole patch. Nevertheless, piecewise convexity is very important for the condition of the Generalised Poisson problem such that it is worth a try to convexify the union of all control polygons.
 Due to their importance in computer graphics, there are a lot of convex hull algorithm available. Hence it suggests itself to apply a convex hull algorithm on given Bernstein-B\'ezier coefficients to enforce convexity. However, this approach is designated to go amiss for a convex hull algorithm only operate on a set of point and does not necessarily produce the same connectivity the control polygon implies. An example for that is given in figure \ref{fig: diff connectivity}:
 \begin{figure}[h]
 \begin{subfigure}[b]{.5\textwidth}
@@ -107,7 +108,8 @@ Due to their importance in computer graphics, there are a lot of convex hull alg
 \end{figure}
 While the the control polygon is obviously not convex, the surface of the lower convex hull of the control points is convex because it connects the inner control points differently.
 
-Schumaker and Speleers present in \cite{SS2014} an approach to ensure convexity by a set of lienar conditions on the coefficents. To set up these convexity constraints we first need to define the difference operator
+\todo{altere idee nur fur c0 splines}
+In the eighties mathematicians pursuit an approach based on the Hessian. They derived quadratic conditions on the B\'ezier coefficients equivalent to its convexity. Later this conditios were relaxed to a set of linear conditions, yet loosing necessity. To set up these convexity constraints we first need to define the difference operator
 \begin{definition}[Difference Operator]
 	$\Delta_{\mu \nu}$ is the \emph{difference operator} along the edge $(v_\mu, v_\nu)$ as for example
 	\begin{align*}
@@ -116,9 +118,9 @@ Schumaker and Speleers present in \cite{SS2014} an approach to ensure convexity 
 		\Delta_{12} \Delta_{32} c_{ijk} &= c_{i,j+1,k+1} -c_{i+1, j,k+1} - c_{i,j+2,k} +c_{i+1, j+1,k}\\	\end{align*}
 \end{definition}
  
-Lai and Schumaker present in \cite{LS2007} \todo{siehe nummer 3 in $C^0 $ schumaker paper} a sufficient condition to ensure convexity on a triangle.
-\begin{theorem}[A Sufficient Condition for Convexity]
-	A polynomial $p$ is convex on a triangle $T$ if the matrix
+A result due to Chang and Feng \cite{CD1984} are the following quadratic constraints.
+\begin{theorem}[{\cite[p.2]{LS2007}}]
+	A polynomial $p:\Omega \rightarrow \R$ for $\Omega \subseteq \R$ is convex on a triangle $T$ if and only if the matrix
 	\[
 		\begin{pmatrix}
 			\Delta_{21}^2 c_{ijk} & \Delta_{31} c_{ijk} \Delta_{32} c_{ijk}\\
@@ -127,8 +129,9 @@ Lai and Schumaker present in \cite{LS2007} \todo{siehe nummer 3 in $C^0 $ schuma
 	\]
 	is nonnegative definite for each $i + j + k =2 $.
 \end{theorem}
-Note, that this condition is quadratic in the coefficients. But there are many relaxations of these conditions, we refer the interested leader to \cite{SS2010}. \todo{zitate}An example with 12 inequalities is \todo{welche art von satz, theorem, etc?}
-\begin{theorem}[Sufficient Linear Conditions for Convexity]
+For an overview of relaxations of these conditions, we refer to \cite{SS2010}. An example with 12 inequalities is 
+\begin{theorem}[Sufficient Linear Convexity Conditions, {\cite[Colloray 2.8]{SS2010}}]
+\label{thm: convex cond on triangle}
 	A polynomial $p$ is convex on a triangle $T$ if its B\'ezier coefficient $c_{ijk}$ satisfy
 	\begin{align*}
 		&(\Delta_{21} + 2\Delta_{31}) \Delta_{31} c_{ijk} \geq 0, 
@@ -146,8 +149,8 @@ Note, that this condition is quadratic in the coefficients. But there are many r
 	\end{align*}
 	for all $i + j + k =2 $.
 \end{theorem}
-The latter conditions only ensure convexity on a single triangle. That would suffice for piecewise polynomials contained $C^1$ because for them unlike to splines contained in $C^0$ convexity on each triangle implies global convexity. To patch this matter Schumaker and Speleers introduce further conditions making sure splines are convex across triangle boundaries//edges, as they prove in Theorem 3.6 \cite{SS2014}.
-\begin{theorem}[Sufficient Conditions for Convexity across Triangle Edges]
+Note, the latter conditions only ensure convexity on a single triangle. That would suffice for piecewise polynomials contained $C^1$ because for them unlike to splines contained in $C^0$ convexity on each triangle implies global convexity. To patch this matter Schumaker and Speleers introduce further conditions making sure $C^0$ splines are convex across triangle boundaries.
+\begin{theorem}[Sufficient Conditions across Edges,{ \cite[Theoerem 3.6]{SS2014} }]\label{thm: convex cond across edge}
 	Let $p$ be a piecewise polynomial being convex on every triangle. Suppose its B\'ezier coefficients for every interior edge $e =(v_\kappa, v_\mu)$ fulfill 
 	\begin{align}
 		{\hat c_{i,j,1}} = \beta_1^c c_{i+1, 0,j} +\beta_2^c c_{i,1,j} + \beta_1^c c_{i, 0,j+1}, \; i+j=d-1, \label{eq: convexity across edge}
@@ -157,7 +160,7 @@ where  $\{c_{i,j,k}\}_{i+j+k=d}$ and $\{ {\hat c_{i,j,k}}\}_{i+j+k=d}$ are the B
 
 \begin{figure}[h]
 	\input{triangle_convexity_condition.pgf}
-	\caption{Two triangles}
+	\caption{Two triangles and B\'ezier control points for polynomials of degree $k=2$}
 \end{figure}
 
 For quadratic splines Schumaker and Speleers even prove the inversion on convex domains $\Omega$, namely if for every interior edge its coefficients satisfy \eqref{eq: convexity across edge} then the corresponding spline is convex.
@@ -165,9 +168,9 @@ This result does not generalise for higher degrees. In fact they give a countere
 
 Now we apply the new insights//methods to the function given after solving the generalised poisson problem stated in \ref{sec: SIPG MA}.
 Given the DG solution of the Generalised Poisson problem $u^{gp}_h$ we seek for a convex spline minimising the error at the B\'ezier control points, i.e. we want to find the B\'ezier coefficients $c$ minimising
-\[
-		\lVert A c - b \rVert_2, \qquad \text{ such that } Cc \geq 0,
-\]
+\begin{align}
+		\lVert A c - b \rVert_2, \qquad \text{ such that } Cc \geq 0, \label{eq: convex lsq}
+\end{align}
 where $A$ is the matrix evaluating the to $c$ corresponding piecewise polynomial at the B\'ezier control points, $b$ are the function values of $u^{gp}_h$ at the B\'ezier control points and $C$ is the matrix containing the conditions ensuring convexity on the whole domain.
 
 However, solving a linearly constrained least squares problem, respectively is nontrivial. So, when using this approach one should ensure a convexification is justified. Also, one has to keep in mind that the constraints in $C$ are sufficient but not necessary. We discuss in the numerical results whether this approach fulfills our requirements on a convexificiation.

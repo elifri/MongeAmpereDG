@@ -56,7 +56,7 @@ A test where the analytical solution is unknown is determined by
 defines the last example.
 \end{test}
 
-\section{Numerical Results of a blub}
+\section{Numerical Results of a $C^0$ Penalty Method}
 
 \input{load_Neilan_data.tex}
 
@@ -65,6 +65,7 @@ We implemented their presented method using the finite element tool FEniCS \cite
 To create our initial guess I did not use a vanishing moment method as Brenner suggested, but the solution of $\triangle u = -\sqrt{2f}$ as introduced in \ref{sec: initial guess}. 
 
 I solved the arising nonlinear system of equations with PETSc' basic line search Newton method. 
+The results can be found in figure \ref{fig: Brenner test1} and in table \ref{tab: l2 errors test 1 Brenner} where $h$ denotes the grid width and $N$ denotes the iterations needed to reach the desired tolerance. 
 
 \begin{table}[h]
 	\begin{subtable}[b]{0.45\textwidth}
@@ -85,13 +86,13 @@ I solved the arising nonlinear system of equations with PETSc' basic line search
 	\caption{Errors for test case \ref{test smooth}}
 	\label{tab: l2 errors test 1 Brenner}
 \end{table}
-
-
 \begin{figure}[h!]
 \centering
-	\includegraphics[scale=0.4]{../../FEniCS/diagrams/MA1_Brenner_l2.pdf}
+	\includegraphics[scale=0.35]{../../FEniCS/diagrams/MA1_Brenner_l2.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth}}
+	\label{fig: Brenner test1}
 \end{figure}
+Fitting the data we can calculate then convergence order  $2.576$ for $k=2$ and $3.306$ for $k=3$.
 
 For the second test case the Newton did not even on the coarsest grid converge. Also in the third test case our Newton solver had problems. You can see results of the runs for $h=1/2, \dots, 1/16$ in table \ref{tab: l2 errors test 3 Brenner}, for finer grid the solver did not converge. My attempts to solve this example with FEniCS' built in damped Newton method with different relaxation parameters did also not succeed on any grid finer than $1/16$.
 \begin{table}[h]
@@ -104,7 +105,7 @@ For the second test case the Newton did not even on the coarsest grid converge. 
 	\label{tab: l2 errors test 3 Brenner}
 \end{table}
 
-The fourth example does not have not a classical solution. As in the previous cases the method does not converge and after some steps the Newton solver does not converge on the provided initial guesses. The corresponding results are shown in table \ref{tab: l2 errors test 4 Brenner}.
+The fourth example does not have not a classical solution. As in the previous cases the method does not converge. The corresponding results are shown in table \ref{tab: l2 errors test 4 Brenner}.
 
 \begin{table}[h]
 	\begin{subtable}[b]{0.45\textwidth}
@@ -120,12 +121,17 @@ The fourth example does not have not a classical solution. As in the previous ca
 		\centering
 		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
 				    every row 0 column 0/.style={set content=init},
+				    columns/l2error/.style={ /pgf/number format/sci precision=6}     % print 14 digits
 		]\MAFourBrennerThree
  	\caption{Error for $k=3$}
 	\end{subtable}
 	\caption{Errors for test case \ref{test dirac}}
 	\label{tab: l2 errors test 4 Brenner}
 \end{table}
+
+For the last test case with constant right-hand side and zero Dirichlet boundary data Newton's method only converged on the coarsest grid such that we cannot make any statement on this test.
+
+We see that this method behaves well for smooth solutions. This method was designed to detect classical solutions and indeed to solve problems with non smooth solution and viscosity solutions the method is inappropriate.
 
 \newpage
 \section{Numerical Results of a Finite Element Method based on a Disrete Hessian}
@@ -192,7 +198,7 @@ Figure \ref{fig: l2 errors test 1} shows the $L^2$ error of all performances of 
  
 \begin{figure}[h!]
 \centering
-	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA1_Neilan_h1.pdf}
+%	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA1_Neilan_h1.pdf}
 	\caption{$H^1$ errors for test case \ref{test smooth}}
 	\label{fig: h2 errors test 1}
 \end{figure}
@@ -200,17 +206,17 @@ Figure \ref{fig: l2 errors test 1} shows the $L^2$ error of all performances of 
 \begin{table}[h]
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-				    every row 0 column 0/.style={set content=init},
-		]\MAOnedegThreeThree
+%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+%				    every row 0 column 0/.style={set content=init},
+%		]\MAOnedegThreeThree
     	\caption{Error for $k=3, k_{DH}=3$}
    \end{subtable}
    ~
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-				    every row 0 column 0/.style={set content=init},
-		]\MAOnedegThreeTwo
+%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+%				    every row 0 column 0/.style={set content=init},
+%		]\MAOnedegThreeTwo
  	\caption{Error for $k=3, k_{DH}=2$}
 	\end{subtable}
 	\caption{Errors for test case \ref{test smooth}}
@@ -224,42 +230,39 @@ This test scenario was also performed with the additional normal jump penalty te
 
 \begin{figure}[h!]
 \centering
-	\includegraphics[scale=0.4]{../../FEniCS/diagrams/MA1_Neilan_GradJump_l2.pdf}
+%	\includegraphics[scale=0.4]{../../FEniCS/diagrams/MA1_Neilan_GradJump_l2.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth} and additional gradient jump penalty}
 	\label{fig: l2 errors test 1 jump}
 \end{figure}
 
-\begin{figure}[h!]
+\begin{figure}[H]
 \centering
 	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA1_Neilan_GradJump_h1.pdf}
 	\caption{$H^1$ errors for test case \ref{test smooth} and additional gradient jump penalty}
 	\label{fig: h1 errors test 1 jump}
 \end{figure}
-
-\begin{table}[h]
+\begin{table}[H]
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-		\pgfplotstabletypeset[
-		columns={iterations, l2error, h1error,N},
-		    every row 0 column 0/.style={set content=init},
-		]\MAOneJumpdegTwoTwo
+%		\pgfplotstabletypeset[
+%		columns={iterations, l2error, h1error,N},
+%		    every row 0 column 0/.style={set content=init},
+%		]\MAOneJumpdegTwoTwo
     	\caption{Error for $k=2, k_{DH}=2$}
    \end{subtable}
    ~
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-		    every row 0 column 0/.style={set content=init},
-		]\MAOneJumpdegTwoZero
+%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+%		    every row 0 column 0/.style={set content=init},
+%		]\MAOneJumpdegTwoZero
 	\caption{Error for $k=2, k_{DH}=0$}
 	\end{subtable}
 	\caption{Errors for test case \ref{test smooth}}
 	\label{tab: l2 errors test 1 deg 2 jump}
 \end{table}
-
 \todo{Kommentar zu diesen Ergebnissen.}
-
-\begin{table}
+\begin{table}[H]
 	\pgfplotstabletypeset
 	{
 		k $k_{DH}$ {numerical order}
@@ -285,32 +288,161 @@ The test two was carried out for $\eta=20k^2$
 
 Our method was implemented in pure C++. The underlying grid structure was taken from the implementation of \cite{BMV2009}, handling vectors and matrices as well as was linear solver were provided by the Eigen library \cite{eigenweb}. To solve the quadratic program arising in the context of convexification the C++ library ipopt \cite{ipopt} was used.
 
+\todo{mesh}
+
+\subsection{Implementation Details}
+
+The main class of the implementation is the Tsolver class. Here come all information together and the solver controls the assembly and solving process. 
+We make the clear looking at a . The main method can be found in mesh.cpp. At the beginning all input data is fed into the program. With this information the solver can initialise the grid and the reference cell. 
+The grid is taken from the igpm\_t2\_lib and based on the work of \cite{BMV2009} and all reference data is handled in the class Tshape.
+
+\subsubsection{alternative 1}
+The main work is done in Tsolver's function stepping\_MA(). It starts with an initialisation process where it reads specific problem data which includes
+\begin{enumerate}
+ \item  the problem we want to solve,
+ \item penalty parameters to enforce continuity and penalise the gradient jump,
+ \item the start level of refinement with respect to the initial grid,
+ \item the damping paramter alpha,
+ \item the number of fixed point iterations per grid,
+ \item the maximal grid refinements.
+\end{enumerate}
+During the initialisation it also updates all base cell data, the leaf cell data, enumerate the degree of freedoms and the initial guess.
+Afterwards the fixed point iterations begin, in every step the General Poisson Problem is solved, eventually convexified and afterwards with the last solution step combined. If the specified number of iterations has been carried out, the grid is refined, the leaf cell data updated and we start the fixed point iterations again.
+We repeat this process until the maximal number of grid refinements is reached.
+
+
+\subsubsection{alternative 2}
+The main work is done in Tsolver's function stepping\_MA(). Algorithm \ref{alg: stepping} illustrates how this function works.
+\begin{algorithm}[H]
+\begin{algorithmic}
+	\State Read problem specific data:
+		\begin{enumerate}
+			 \item  problem\_name \Comment {to choose right-hand side and boundary conditions}
+			 \item penalty parameters   \Comment {  to enforce continuity and penalise the gradient jump}
+			 \item start\_level  \Comment { the start level of refinement with respect to the input grid}
+			 \item $\alpha$  \Comment {the damping paramter}
+			 \item maxits \Comment{ the number of fixed point iterations per grid}
+			 \item max\_levelrefinement \Comment{ the maximal refinement level }
+		\end{enumerate}
+	\State Initialise base cell data
+	\State Refine to start\_level
+	\State Initialise leaf cell data
+	\State Enumerate degree of freedoms
+	\State (Initialise Convexifier)
+	\State Initialise initial guess $u_{-1}$
+	\State $i \gets 0$
+	\While {level < max\_levelrefinement}
+		\State Enumerate degree of freedoms
+		\State (Initialise C0 converter) \Comment{only needed for convexification}
+		\State cur\_it$ \gets 0$
+		\While {cur\_it < maxits}
+			\State  assemble\_MA()                              \Comment Assemble system for General Poisson Problem
+			\State $u_i \gets$ solution of assembled system
+			\State (Convexify $u_i$)		 
+			\State $u_i \gets \alpha u_{i-1}  +(1-\alpha) u_i$
+			\State	cur\_it, i $\gets$ cur\_it$+1$, i$+1$
+			\State Restore\_MA() 		\Comment{Store solution in leaf cells}
+		\EndWhile
+		\State Refine grid and update leaf cell data
+		\State level $\gets$ level $+1$
+	\EndWhile
+\end{algorithmic}
+\caption{stepping\_MA}
+\label{alg: stepping}
+\end{algorithm}
+
+Direct at the beginning of system assembly the diffusion matrix in every cell has to be updated with the current cofactor matrix of the Hessian. Note, that this matrix is constant for polynomial degree $k=2$ and otherwise has to be calculated for every quadrature point. Since in general here is no connection between diffusion matrix values at the reference cell and in the leaf cell, the values of the diffusion matrix are stored in the leaf cells.
+The assembly process is carried out as already mentioned in algorithm \ref{alg: assembling}. Hereby one has to pay attention to the right scaling of quadrature weights and the right calculation of quadrature data from reference cell data as described in Examples \ref{ex: base cell trafo} and \ref{ex: leaf cell trafo}. 
+
+If a convexification is desired the class Convexifier takes care of the assembly of the matrices $A$ and $C$ for \eqref{eq: convex lsq} and deals with ipopt's interface to solve the quadratic program.
+
+Additionally the Tsolver has a member Plotter handling all export to files. It is able to write the solution which's coefficients are currently stored in the leaf cells to a .vtu file or .dat file. Besides plotting it also administers all file stream to which information such as $L2$ errors are written into.
+
+\subsection{Results without Convexification}
+
 For a initial guess I also used the solution of $\triangle u = -\sqrt{2f}$ combined with the multilevel approach as described in \ref{sec: initial guess}.
 The arising linear system of equations was solved with Eigen's internal Cholesky solver.
 The parameters were if not other specified taken to be $\sigma=10 k^2, \sigma_G = 50, \alpha =
-0.3$ and $\varepsilon = 1e-2$.
-In the first figure \ref{fig: l2 errors test 1 ourMethod} there were carried out 15 steps before a further refinement.
-
+0.3$ and $\varepsilon = 1e-2$. At the beginning we do not convexify, and we always carry out 15 steps before we refine further. 
+In the first figure \ref{fig: l2 errors test smooth ourMethod} we can see the results for the the smooth test case \ref{test smooth}.
 \begin{figure}[h!]
-	\includegraphics[scale =0.5]{plots/MA1.pdf}
-	\caption{Relative $L^2$ errors for test case \ref{test smooth} and additional gradient jump penalty}
+	\centering
+	\includegraphics[scale =0.4]{plots/MA1.pdf}
+	\caption{$L^2$ errors for test case \ref{test smooth}}
 	\label{fig: l2 errors test smooth ourMethod}
 \end{figure}
-
-\begin{figure}[h!]
-	\includegraphics[scale =0.5]{plots/MA3.pdf}
-	\caption{$L^2$ errors for test case \ref{test sqrt} and additional gradient jump penalty}
+ For the first four refinements the method behaves well for both $k=2$ and $k=3$. Afterwards the numerical solution departs from the actual solution although the $L^2$ error seems to not excel $1$.
+ 
+ We get similiar results in the next two cases albeit the fixed point iterations performs worse in the second case which lacks $H^2$ regularity. The $L2$ errors are shown in the figures \ref{fig: l2 errors test sqrt ourMethod} and \ref{fig: l2 errors test singularity ourMethod}.
+ 
+\begin{figure}[H]
+\centering
+%	\includegraphics[scale =0.4]{plots/MA3.pdf}
+	\caption{$L^2$ errors for test case \ref{test sqrt}}
 	\label{fig: l2 errors test sqrt ourMethod}
 \end{figure}
 
 
-\begin{figure}[h!]
-	\includegraphics[scale =0.5]{plots/MA2.pdf}
-	\caption{$L^2$ errors for test case \ref{test singularity} and additional gradient jump penalty}
+\begin{figure}[H]
+\centering
+%	\includegraphics[scale =0.4]{plots/MA2.pdf}
+	\caption{$L^2$ errors for test case \ref{test singularity}}
 	\label{fig: l2 errors test singularity ourMethod}
 \end{figure}
 
+\subsection{Convexification}
+
+We used the same code basis as in the previous tests but we added a convexification as described in Section \ref{subsec: convexification}. 
+
+The linear constraints ensuring convexity on a triangle are chosen the one from theorem \ref{thm: convex cond on triangle} and the constrains for convexity across edges were given by theorem \ref{thm: convex cond across edge}. Due to the error-proneness during the assembly of $C$ the convexification was only implement for the case $k=2$. Note, that before applying the theorems of section \ref{subsec: convexification} we have to convert our numerical solution from the DG formulation to a $C^0$ spline.
+
+The linearly constrained least square problem \eqref{eq: convex lsq}  was reformulated as a quadratic program with linear constraints using normal equations. 
+The quadratic program was solved with the C++ library ipopt \cite{ipopt}. Fortunately the evaluation matrix $A$, and the constraint matrix $C$ of \eqref{eq: convex lsq} only depend on the grid. Hence they need only to be assembled once after every refinement.
 
 
-?????
-While Awanou uses a finite difference scheme to solve the PDE in every step we want to exploit the benefits of a DG method and solve every intermediate step by a SIPG method. 
+The results shown in figure \ref{fig: l2 errors test smooth ourMethodConvex} are very disillusioning.
+\begin{figure}[H]
+\centering
+	\includegraphics[scale =0.4]{plots/MA1_convexify.pdf}
+	\caption{$L^2$ errors for test case \ref{test smooth} and additional convexification}
+	\label{fig: l2 errors test smooth ourMethodConvex}
+\end{figure}
+We plotted in figure \ref{fig: convex before after} the $L2$ errors before the convexification step and after it. As we can see the convexification process increases the error. There are several possible explanations for that:\\
+Though the used convexification algorithm produces a convex result it does not garantuee that it leaves convex input functions unchanged.\\
+The convex function in $\mathcal P^2_h$ approximating the numerical solution $u_h$ best is not necessarily closer to the exact solution $u$ than $u_h$. Then the convexification gives a push into the wrong direction. \\
+Also the best approximation of $u$ into $\mathcal P^2_h$ does not have to be convex\todo{aguilera}. I have examined for the triangulation with $h=1/2$ the vector $Cc_u$ where $c_u$ are the coefficients of $L2$ projection into $\mathcal P^2_h$ and its minimal entry is -9.77e-03, for a grid with $h=1/16$ the minimal entry is -4.26e-04. Thus, the $L2$ projection of the exact solution does not comply with the convexity conditions.
+Figure \ref{fig: convex min coeffs} plots the minimal entry of $Cc$ for every Generalised Poisson solution vector $c$. We see that especially for small grid widths the solutions do not fulfill the convexity conditions. \todo{grid structure maxima etc.}
+
+
+\begin{figure}[H]
+\centering
+	\begin{subfigure}{0.45\textwidth}
+		\includegraphics[scale=0.25]{plots/MA1_convexComp.pdf}
+		\caption{Comparison of $L2$ errors directly before and after convexification}
+		\label{fig: convex before after}
+	\end{subfigure}
+	\begin{subfigure}{0.45\textwidth}
+		\includegraphics[scale=0.25]{plots/MA1_minCoeff.pdf}
+		\caption{Comparison of $L2$ errors directly before and after convexification}
+		\label{fig: convex min coeffs}
+	\end{subfigure}	
+	\caption{$L^2$ errors for test case \ref{test smooth} and additional convexification}
+	\label{fig: Compare test smooth ourMethodConvex}
+\end{figure}
+
+
+The other test cases produce similar results as can be seen in figure \ref{fig: l2 errors test singularity ourMethodConvex} ... \todo{}
+
+\begin{figure}[H]
+\centering
+	\includegraphics[scale =0.4]{plots/MA2_convexify.pdf}
+	\caption{$L^2$ errors for test case \ref{test singularity} and additional convexification}
+	\label{fig: l2 errors test singularity ourMethodConvex}
+\end{figure}
+\begin{figure}[H]
+\centering
+	\includegraphics[scale =0.4]{plots/MA2_convexComp.pdf}
+	\caption{$L^2$ errors for test case \ref{test singularity} and additional convexification}
+	\label{fig: Compare test singularity ourMethodConvex}
+\end{figure}
+

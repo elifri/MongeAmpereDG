@@ -39,7 +39,6 @@
 \usepackage{color}
 \usepackage{stmaryrd} % for llbracket
 
-\usepackage[procnames]{listings} %to include python code
 \usepackage[chapter]{algorithm}
 
 \usepackage{enumerate} %to allow different kind of enumerations
@@ -90,6 +89,24 @@
 \theoremsymbol{\ensuremath{\square}}
 
 \newtheorem{proof}{Proof}
+
+% -----
+%---define pythonplotstyle
+
+\usepackage[procnames]{listings} %to include python code
+\definecolor{keywords}{RGB}{255,0,90}
+\definecolor{comments}{RGB}{0,0,113}
+\definecolor{red}{RGB}{160,0,0}
+\definecolor{green}{RGB}{0,150,0}
+	
+\lstset{language=Python, 
+        basicstyle=\ttfamily\small, 
+        keywordstyle=\color{keywords},
+        commentstyle=\color{comments},
+        stringstyle=\color{red},
+        showstringspaces=false,
+%        identifierstyle=\color{green},
+        procnamekeys={def,class}}
 
 % -----
 %---define pgfplottablestyle
