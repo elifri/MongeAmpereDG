@@ -84,7 +84,7 @@ if __name__ == "__main__":
   Nh = 2
   
   mesh = UnitSquareMesh(Nh, Nh, 'crossed')
-  V = FunctionSpace(mesh, 'DG', deg)
+  V = FunctionSpace(mesh, 'CG', deg)
   bigMesh = refine(mesh)
   bigV = FunctionSpace(bigMesh, 'DG', deg)
 
@@ -127,6 +127,7 @@ if __name__ == "__main__":
   errorfileh1.write('iterations h1error\n');
   newtonStepsfile = open('data/'+fileprefix+'newtonSteps','wa')
   newtonStepsfile.write('iterations steps\n');
+  newtonStepsfile.write('0 \n');
 
   #interpolate of exact solution
   u_e = interpolate(u0, V)
@@ -177,7 +178,7 @@ if __name__ == "__main__":
     mesh = UnitSquareMesh(Nh, Nh, 'crossed')
 
     #update sapces
-    V = FunctionSpace(mesh, 'DG', deg)
+    V = FunctionSpace(mesh, 'CG', deg)
     bigMesh = refine(mesh)
     bigV = FunctionSpace(bigMesh, 'DG', deg)
 

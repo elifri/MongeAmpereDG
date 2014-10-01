@@ -6,6 +6,7 @@ import scipy.io
 import math
 
 def MA_iteration_Benamou(mesh, V, u0, f, sigma, max_it,w):
+  
   #define variables
 
   #define exact solution
@@ -24,7 +25,7 @@ def MA_iteration_Benamou(mesh, V, u0, f, sigma, max_it,w):
     - inner(jump(v,n),avg(nabla_grad(u)))*dS\
     - inner(jump(u,n),avg(nabla_grad(v)))*dS\
     + Constant(sigma)('+')/h('+')* jump(u)*jump(v)*dS \
-    + Constant(sigma/2)('+')/h('+')*jump(nabla_grad(u),n)*jump(nabla_grad(v),n)*dS \
+    + Constant(sigma/2.0)('+')/h('+')*jump(nabla_grad(u),n)*jump(nabla_grad(v),n)*dS \
     - v*inner(n,nabla_grad(u))*ds \
     - u*inner(n,nabla_grad(v))*ds \
     + Constant(sigma)/h*v*u*ds
@@ -42,14 +43,9 @@ def MA_iteration_Benamou(mesh, V, u0, f, sigma, max_it,w):
   u = Function(V)
 
   for iteration in range(0,max_it):
-    #dump matrices
-    A, b = assemble_system(a,L)
-    print ("b", b.array())
-
-  #  scipy.io.savemat('A'+str(iteration)+'.mat', {'A': A.array(), 'b': b.array()})
 
     # Compute solution
-    solve(a == L, u)#, solver_parameters={"linear_solver":"bicgstab", "preconditioner":"jacobi"})
+    solve(a == L, u)
     #solve(A,u.vector(), b)
 
     #examine error

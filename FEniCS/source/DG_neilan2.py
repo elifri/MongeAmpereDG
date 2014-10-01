@@ -30,28 +30,23 @@ def neilan_step(mesh, V, Sigma, W, u0, f, sigmaC, sigmaG, sigmaB, u_):
   
   F  = (f-det(w))*v*dx
   
-  #jump  in Gradient
+  #jump in function
   F = F + Constant(sigmaC)('+')/avg(h)*jump(u)*jump(v)*dS
 
   #jump  in Gradient
-  #F = F + Constant(sigmaG)('+')*avg(h)*(dot((nabla_grad(u)('+')) , n('+')) +  dot((nabla_grad(u)('-')), n('-')) )*jump(nabla_grad(v),n)*dS
-  F = F + Constant(sigmaG)('+')*avg(h)* jump(nabla_grad(u),n)*jump(nabla_grad(v),n)*dS
+  #F = F + Constant(sigmaG)('+')*h('+')*dot((nabla_grad(u)('+'))-(nabla_grad(u)('-')) , (nabla_grad(v)('+'))-(nabla_grad(v)('-')))*dS
+  F = F + Constant(sigmaG)('+')*avg(h)*jump(nabla_grad(u),n)*jump(nabla_grad(v),n)*dS
  
   
   #jump d_dh u : mu 
   F = F + frobenius_product(w,mu)*dx
   
   #piecewise hessian
-
   F = F - frobenius_product(grad(grad(u)),mu)*dx
 
   #jump d_dh u : mu 
   #F = F + Constant(sigmaC)/avg(h)*jump(avg(mu)*nabla_grad(u),n)*dS
   F = F + (dot(avg(mu)*nabla_grad(u)('+'),n('+'))+dot(avg(mu)*nabla_grad(u)('-'),n('-')))*dS
-  #correction term
-  #F = F + dot(avg(mu)*nabla_grad(u)('+') ,n('+'))*dS \
-  #      + dot(matrix_mult(avg(mu),nabla_grad(u)('-')) ,n('-'))*dS
-
 
   #boundary conditions
   F = F + Constant(sigmaC)/h*(u-u0)*v*ds
@@ -63,23 +58,13 @@ def neilan_step(mesh, V, Sigma, W, u0, f, sigmaC, sigmaG, sigmaB, u_):
   
   J  = derivative(F, u_, U)   # Gateaux derivative in dir. of u
   
-  def boundary(x, on_boundary):
-      return on_boundary
   
-  u0_ = project(u0, V)
-  
-  identity = project(as_matrix((((u0_.dx(0)).dx(0), \
-                     (u0_.dx(0)).dx(1)), \
-                     ((u0_.dx(1)).dx(0), \
-                     (u0_.dx(1)).dx(1)))), Sigma)
-  u0Temp = Function(W)
-  assign(u0Temp.sub(0), project(u0,V))
-  assign(u0Temp.sub(1),identity)
-
+    #------define boundary conditions--------
   def boundary(x, on_boundary):
       return on_boundary
 
-  bc = DirichletBC(W, u0Temp, boundary)
+  bc = DirichletBC(W.sub(0), u0, boundary)
+
   
   problem = NonlinearVariationalProblem(F, u_, None, J)
   solver  = NonlinearVariationalSolver(problem)
@@ -90,16 +75,24 @@ def neilan_step(mesh, V, Sigma, W, u0, f, sigmaC, sigmaG, sigmaB, u_):
   prm = solver.parameters
   
   prm['nonlinear_solver']='snes'
-  prm['snes_solver']['absolute_tolerance'] = 1E-8
+  prm['snes_solver']['absolute_tolerance'] = 1E-2
   prm['snes_solver']['linear_solver']= 'petsc'
   #prm['snes_solver']['preconditioner']= 'lu'
+  prm['snes_solver']['maximum_iterations'] = 50
   prm['snes_solver']['line_search'] = 'basic' 
+  
+  prm['newton_solver']['absolute_tolerance'] = 2E-4
+  prm['newton_solver']['relative_tolerance'] = 2E-4
+  prm['newton_solver']['maximum_iterations'] = 1000
+  prm['newton_solver']['relaxation_parameter'] = 0.5
+  prm['newton_solver']['report'] = True
+  
   set_log_level(PROGRESS)
   
   nb_iterations, converged = solver.solve()
   
   #write Newton steps required to file 
-  #newtonStepsfile.write(str(it)+' '+str(nb_iterations)+'\n')
+  newtonStepsfile.write(str(it)+' '+str(nb_iterations)+'\n')
   return u_
   
   
@@ -120,18 +113,20 @@ if __name__ == "__main__":
   deg_hessian = int(sys.argv[3])
 
   parameters['form_compiler']['quadrature_rule'] = 'canonical'
-  parameters['form_compiler']['quadrature_degree'] = 2*deg
+  parameters['form_compiler']['quadrature_degree'] = 2*deg+2
 
 
   fileprefix = problem_name+'_Neilan_GradJump_deg'+str(deg)+str(deg_hessian)+'_'
   print "processing files ", fileprefix
   
-  errorfile = open('data2/'+fileprefix+'l2errornorm','wa',1)
+  errorfile = open('data/'+fileprefix+'l2errornorm','wa',1)
   errorfile.write('iterations l2error\n');
-  errorfileh1 = open('data2/'+fileprefix+'h1errornorm','wa',1)
+  fitdata_file = open('data/'+fileprefix+'fitData','wa',1)
+  errorfileh1 = open('data/'+fileprefix+'h1errornorm','wa',1)
   errorfileh1.write('iterations h1error\n');
-  newtonStepsfile = open('data2/'+fileprefix+'newtonSteps','wa',1)
+  newtonStepsfile = open('data/'+fileprefix+'newtonSteps','wa',1)
   newtonStepsfile.write('iterations steps\n');
+  newtonStepsfile.write('0 0\n');
 
 
   print "problem", problem_name, "deg ", deg, " deg_hessian", deg_hessian
@@ -153,9 +148,9 @@ if __name__ == "__main__":
   bigV = FunctionSpace(bigMesh, 'DG', deg, 'crossed')
 
   #define penalty
-  sigmaC = 20.0*deg*deg
-  sigmaG = 50.0
-  sigmaB = 20.0*deg*deg
+  sigmaC = 50.0*deg*deg
+  sigmaG = 50.0*deg
+  sigmaB = 50.0*deg*deg
 
   u1_ = Function(V)
 
@@ -163,7 +158,9 @@ if __name__ == "__main__":
   
   #define start function
   
-  u1_ = start_iteration(mesh, V, u0, f, sigmaC, parameters['form_compiler']['quadrature_degree'])
+  u1_ = start_iteration(mesh, V, u0, f, sigmaC)
+  #u1_ = project(Expression('x[0]*x[0]/2.0 +x[1]*x[1]/2.0',degree=1), V)
+
   print 'start error ', errornorm(u0, u1_)
   errorfile.write('0 '+str(errornorm(u0, u1_))+'\n')
   errorfileh1.write('0 '+str(errornorm(u0, u1_, norm_type='h1'))+'\n')
@@ -178,7 +175,9 @@ if __name__ == "__main__":
                      ((u1_.dx(1)).dx(0), \
                      (u1_.dx(1)).dx(1)))), Sigma))
 
-  for it in range(1,8):
+#  assign(u_.sub(1), project(MA_exact_derivativeEx(problem_name), Sigma))
+
+  for it in range(1,7):
     print 'Starting Neilan with ', Nh
     w = neilan_step(mesh, V, Sigma, W, u0, f, sigmaC, sigmaG, sigmaB, u_)
 
@@ -193,7 +192,7 @@ if __name__ == "__main__":
     errorfileh1.write(str(it)+' '+str(error_norm)+'\n')
 
     # ----Plot solution and mesh-------
-    if True:
+    if False:
       s = 'plots/'+fileprefix+'_Nh'+str(Nh)+'.pvd'
       file = File(s)
       solution = Function(bigV, name='u')
@@ -203,23 +202,30 @@ if __name__ == "__main__":
       s = 'plots/'+fileprefix+'error_Nh'+str(Nh)+'.pvd'
       file = File(s)
       error = Function(bigV, name='error')
-      error.assign(project(abs(w.sub(0)-u0),bigV))
+      error.assign(project(w.sub(0)-u0,bigV))
       file << error
 
-    if False:
-      #plot(mesh, title='mesh'+str(it))
-      plot(project(w.sub(0),bigV), title = 'solution'+str(it))
-      plot(project(w.sub(0)-u0,bigV), title = 'error'+str(Nh))
-      #plot(project(determinant(w.sub(1))-f,bigV), title = 'determinant of discr. hessian-rhs'+str(Nh))
-      #plot(project(det(grad(grad(w.sub(0))))-f,bigV), title = 'determinant of hessian-rhs'+str(Nh))
+    if True:
+      #w_ = Expression('1.0')
+      #wTemp = Function(Sigma_single)
+      #wTemp = project(w.sub(1)[0,0], Sigma_single)
+      #print 'l2 error in first component', errornorm(w_, wTemp)
+      
+      w_ = project(MA_exact_derivativeEx(problem_name), Sigma)
+      plot(mesh, title='mesh h=1/'+str(Nh))
+      #plot(project(u0,bigV), title = 'solution'+str(it))
+      plot(w.sub(0)-u0, title = 'error for h=1/'+str(Nh))
+      #plot(w_[0,0], title = 'exact derivative'+str(Nh))
+      #plot(w.sub(1)[0,0], title = 'numer derivative00 '+str(Nh))
+      #plot(w.sub(1)[0,0]-w_[0,0], title = 'error der00 '+str(Nh))
+      #plot(w.sub(1)[1,1], title = 'numer derivative11 '+str(Nh))
+      #plot(w.sub(1)[1,1]-w_[1,1], title = 'error der11 '+str(Nh))
       #Hold plot
-      interactive()
 
     #------refine grid---------
     #mesh = refine(mesh)
     Nh = Nh *2
     mesh = UnitSquareMesh(Nh, Nh, 'crossed')
-    mesh2 = UnitSquareMesh(Nh, Nh, "left/right")
     
     V = FunctionSpace(mesh, 'DG', deg)
     Sigma_single = FunctionSpace(mesh, 'DG', deg_hessian)
@@ -230,20 +236,17 @@ if __name__ == "__main__":
     bigV = FunctionSpace(bigMesh, 'DG', deg)
     u_ = Function(W)
     u_=project(w,W)
-  
-  
-    print f.domain
-    print 'quad degree', parameters['form_compiler']['quadrature_degree']
-    
+      
     (u, w) = TrialFunctions(W)
     (v,mu) = TestFunctions(W)
 
     g, f, u0 = MA_problem(problem_name, Nh, parameters['form_compiler']['quadrature_degree'], mesh)
 
   end = time.clock()
-  time_file = open('data2/timing','a')
+  time_file = open('data/timing','a')
   time_file.write(fileprefix+' '+str(end-start)+'\n')
-  
+  interactive()
+
   print "%.2gs" % (end-start)
   
   errorfile.close()
