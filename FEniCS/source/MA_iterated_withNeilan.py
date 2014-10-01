@@ -3,11 +3,10 @@
 
 from dolfin import *
 import scipy.io
-from convexify import convexify
-from MA_iterated_benamour import MA_iteration_Benamou
-
-import DG_neilan as neilan
-
+from MA_iterated_August import start_iteration
+import DG_neilan2 as neilan
+import sys
+import time
 import math
 
 def calc_CofacpiecewiseHessian(mesh, Sigma, u_):
@@ -76,8 +75,8 @@ def MA_iteration_withNeilan(mesh, V, Sigma, u0, f, max_it,w, sigmaB, sigmaC, sig
   for iteration in range(0,max_it):
 
     #cofactor matrix of startsolution's hessian
-    #coeff = calc_CofacdiscreteHessian(mesh, Sigma, w)
-    coeff = calc_CofacpiecewiseHessian(mesh, Sigma, w)
+    coeff = calc_CofacdiscreteHessian(mesh, Sigma, w)
+    #coeff = calc_CofacpiecewiseHessian(mesh, Sigma, w)
 
     #define bilinear form
     a = inner(neilan.matrix_mult(coeff,nabla_grad(v)) , nabla_grad(u))*dx \
@@ -90,10 +89,6 @@ def MA_iteration_withNeilan(mesh, V, Sigma, u0, f, max_it,w, sigmaB, sigmaC, sig
       - v*inner(n,neilan.matrix_mult(coeff,nabla_grad(u)))*ds \
       - u*inner(n,neilan.matrix_mult(coeff,nabla_grad(v)))*ds \
       + Constant(sigmaB)/h*v*u*ds
-    #  + Constant(sigma)/h*inner(grad(v),n)*inner(grad(u),n)*ds
-    # + Constant(sigma)('+')/h('+')* jump(grad(u),n)*jump(grad(v),n)*dS \
-    #    - jump(v*avg(coeff*nabla_grad(u)),n)*dS\
-   #   - jump(u*avg(coeff*nabla_grad(v)),n)*dS\
 
     #define rhs functional
     L = inner(Constant(-2.0)*f,v)*dx - u0*dot(n,neilan.matrix_mult(coeff,nabla_grad(v)))*ds +Constant(sigmaB)/h *u0*v*ds
@@ -110,25 +105,32 @@ def MA_iteration_withNeilan(mesh, V, Sigma, u0, f, max_it,w, sigmaB, sigmaC, sig
     # Compute solution
     solve(a == L, u_)#, solver_parameters={"linear_solver":"bicgstab", "preconditioner":"jacobi"})
     #solve(A,u.vector(), b)
-
+    
     #examine error
     print 'Errornorm:', errornorm(u0, u_)
 
-    if (Nh > 15): 
+    if False: 
       plot(project(u_, bigV), title = 'solution'+str(iteration))
       plot(project(abs(u_-u0),bigV), title = 'error'+str(iteration))
       interactive()
 #    plot(det(grad(grad(u_))), title = 'determinant of hessian'+str(iteration))
 
     #interactive()
-    # Dump solution to file in VTK format
-    s = 'MongeAmpere'+str(iteration)+'.pvd'
-    file = File(s)
-    file << u_
     
     #damping and update w
     #w.assign(u)
     w.vector()[:] = (0.7*w.vector().array() + 0.3*u_.vector().array())
+    
+
+    #examine error
+    error_norm = errornorm(u0, w)
+    print 'Errornorm:', error_norm
+    errorfile.write(str((it-1)*max_it+iteration)+' '+str(error_norm)+'\n')
+
+    error_norm = errornorm(u0, w, norm_type='H1')
+    print 'Errornorm H1:', error_norm
+    errorfileh1.write(str((it-1)*max_it+iteration)+' '+str(error_norm)+'\n')
+
     
     coeff = cofac(grad(grad(w)))    
   return w;
@@ -141,19 +143,21 @@ class Error(Expression):
     else:
       v[0]=0
   
-
-def start_iteration(mesh, V, u0, f):
-  w = Function(V)
-  w = interpolate(Expression('0'),V)
-  u = MA_iteration_Benamou(mesh, V, u0, f, 1,w)
-  return u
-
 if __name__ == "__main__":
+  start = time.clock()
+  
   # Create mesh and define function space
-  deg = 2
-  deg_hessian = 2
+  deg = int(sys.argv[1])
+  deg_hessian = int(sys.argv[2])
   
   Nh = 2
+  
+  fileprefix = 'MA1_iteratedNeilan_GradJump_deg'+str(deg)+str(deg_hessian)+'_'
+  errorfile = open('data/'+fileprefix+'l2errornorm','wa', 1)
+  errorfile.write('iterations l2error\n');
+  errorfileh1 = open('data/'+fileprefix+'h1errornorm','wa', 1)
+  errorfileh1.write('iterations h1error\n');
+
   
   
   mesh = UnitSquareMesh(Nh, Nh, 'crossed')
@@ -187,7 +191,7 @@ if __name__ == "__main__":
   u_e = interpolate(u0, V)
   
   #u = u_e  
-  u = start_iteration(mesh, V, u0, f)
+  u = start_iteration(mesh, V, u0, f, 50)
 
   #start solution
   w = Function(V)
@@ -204,9 +208,9 @@ if __name__ == "__main__":
   sigmaC = 30.0*deg*deg
   
   #maximum number of iterations
-  max_it = 10
+  max_it = 20
  
-  for it in range(1,7):
+  for it in range(1,8):
     
     print "calculating on h=1/", Nh
         
@@ -217,12 +221,20 @@ if __name__ == "__main__":
       
     u = MA_iteration_withNeilan(mesh, V, Sigma, u0, f, max_it,w, sigmaB, sigmaC, sigmaG)
 
+    #examine error
+    error_norm = errornorm(u0, u)
+    print 'Errornorm:', error_norm
+    #errorfile.write(str(it)+' '+str(error_norm)+'\n')
+
+    error_norm = errornorm(u0, u, norm_type='H1')
+    print 'Errornorm H1:', error_norm
+    #errorfileh1.write(str(it)+' '+str(error_norm)+'\n')
+
     # Plot solution and mesh
-    if it > 0:
+    if False:
       plot(project(u,bigV), title = 'solution'+str(Nh))
       plot(project(abs(u-u0),bigV), title = 'error'+str(Nh))
-
-    #plot(det(grad(grad(u))), title = 'determinant of hessian')
+      #plot(det(grad(grad(u))), title = 'determinant of hessian')
 
     Nh = Nh*2
     
@@ -238,9 +250,14 @@ if __name__ == "__main__":
     w = Function(V)
     w.assign(project(u,V))
     
-    print 'Errornorm after projection to bigger space :', errornorm(u0, w)
+    #print 'Errornorm after projection to bigger space :', errornorm(u0, w)
+    
+  end = time.clock()
+  time_file = open('data/timing','a')
+  time_file.write(fileprefix+' '+str(end-start)+'\n')
   
-    #plot(project(w,bigV), title = 'projected solution')
-
-    #Hold plot
-    interactive()
+  print "%.2gs" % (end-start)
+  
+  errorfile.close()
+  errorfileh1.close()
+  time_file.close()
