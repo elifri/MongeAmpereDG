@@ -7,13 +7,13 @@
 \pgfplotstablecreatecol[copy column from table={../../FEniCS/data/#1_newtonSteps}{steps}] {N} #2
 }
 
-\readDataN{MA1_Brenner_deg2}{\MAOneBrennerTwo}
-\readDataN{MA1_Brenner_deg3}{\MAOneBrennerThree}
+%\readDataN{MA1_Brenner_deg2}{\MAOneBrennerTwo}
+%\readDataN{MA1_Brenner_deg3}{\MAOneBrennerThree}
 
-\readDataN{MA3_Brenner_deg2}{\MAThreeBrennerTwo}
+%\readDataN{MA3_Brenner_deg2}{\MAThreeBrennerTwo}
 
-\readDataN{MA4_Brenner_deg2}{\MAFourBrennerTwo}
-\readDataN{MA4_Brenner_deg3}{\MAFourBrennerThree}
+%\readDataN{MA4_Brenner_deg2}{\MAFourBrennerTwo}
+%\readDataN{MA4_Brenner_deg3}{\MAFourBrennerThree}
 
 
 \readDataN{MA1_Neilan_GradJump_deg22}{\MAOneJumpdegTwoTwo}
@@ -22,7 +22,13 @@
 \readDataN{MA1_Neilan_deg33}{\MAOnedegThreeThree}
 \readDataN{MA1_Neilan_deg32}{\MAOnedegThreeTwo}
 
+%\readDataN{MA2_Neilan_deg22}{\MATwodegTwoTwo}
+%\readDataN{MA2_Neilan_deg33}{\MATwodegThreeThree}
 
+%\readDataN{MA3_Neilan_deg22}{\MAThreedegTwoTwo}
+%\readDataN{MA3_Neilan_deg33}{\MAThreedegThreeThree}
+\readDataN{MA3_Neilan_GradJump_deg22}{\MAThreeJumpdegTwoTwo}
+\readDataN{MA3_Neilan_GradJump_deg33}{\MAThreeJumpdegThreeThree}
 
 
 %\pgfplotstableread{../../FEniCS/data/MA1_Neilan_deg22_l2errornorm} \MAOnedegTwoTwoL

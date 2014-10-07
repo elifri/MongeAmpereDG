@@ -70,17 +70,17 @@ The results can be found in figure \ref{fig: Brenner test1} and in table \ref{ta
 \begin{table}[h]
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-				    every row 0 column 0/.style={set content=init},
-		]\MAOneBrennerTwo
+%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+%				    every row 0 column 0/.style={set content=init},
+%		]\MAOneBrennerTwo
     	\caption{Error for $k=2$}
    \end{subtable}
    ~
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-				    every row 0 column 0/.style={set content=init},
-		]\MAOneBrennerThree
+%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+%				    every row 0 column 0/.style={set content=init},
+%		]\MAOneBrennerThree
  	\caption{Error for $k=3$}
 	\end{subtable}
 	\caption{Errors for test case \ref{test smooth}}
@@ -97,9 +97,9 @@ Fitting the data we can calculate then convergence order  $2.576$ for $k=2$ and 
 For the second test case the Newton did not even on the coarsest grid converge. Also in the third test case our Newton solver had problems. You can see results of the runs for $h=1/2, \dots, 1/16$ in table \ref{tab: l2 errors test 3 Brenner}, for finer grid the solver did not converge. My attempts to solve this example with FEniCS' built in damped Newton method with different relaxation parameters did also not succeed on any grid finer than $1/16$.
 \begin{table}[h]
 		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-				    every row 0 column 0/.style={set content=init},
-		]\MAThreeBrennerTwo
+%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+%				    every row 0 column 0/.style={set content=init},
+%		]\MAThreeBrennerTwo
     	\caption{Error for $k=2$}
 	\caption{Errors for test case \ref{test singularity}}
 	\label{tab: l2 errors test 3 Brenner}
@@ -110,19 +110,19 @@ The fourth example does not have not a classical solution. As in the previous ca
 \begin{table}[h]
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-				    every row 0 column 0/.style={set content=init},
-				    columns/l2error/.style={ /pgf/number format/sci precision=6}     % print 14 digits
-		]\MAFourBrennerTwo
+%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+%				    every row 0 column 0/.style={set content=init},
+%				    columns/l2error/.style={ /pgf/number format/sci precision=6}     % print 14 digits
+%		]\MAFourBrennerTwo
     	\caption{Error for $k=2$}
    \end{subtable}
    ~
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-				    every row 0 column 0/.style={set content=init},
-				    columns/l2error/.style={ /pgf/number format/sci precision=6}     % print 14 digits
-		]\MAFourBrennerThree
+%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+%				    every row 0 column 0/.style={set content=init},
+%				    columns/l2error/.style={ /pgf/number format/sci precision=6}     % print 14 digits
+%		]\MAFourBrennerThree
  	\caption{Error for $k=3$}
 	\end{subtable}
 	\caption{Errors for test case \ref{test dirac}}
@@ -139,9 +139,10 @@ We see that this method behaves well for smooth solutions. This method was desig
 I also implemented the algorithm introduced in Section \ref{sec: FEM discrete Hessian}.
 Additional to the numerical results Neilan presented it is interesting to explore what happens if we vary the polynomial degree for the Hessian ansatz space. 
 
-The implementation was also done with the Finite Element Tool FEniCS \cite{FEniCS}. The uniform triangulation $\triang$ was obtained by first dividing the domain into squares of side length $h$ and then split them into 4 triangles by drawing both diagonals. \\
-Different to the initial guess suggested in \cite{Neilan2014} I used the solution of $\triangle u = -\sqrt{2f}$ as introduced in \ref{sec: initial guess}. 
-We denote the degree of the trial space $V_h=P_h^k \cap H^1(\Omega)$ by $k$ and the degree chosen for the Hessian ansatz space $\Sigma_h = [\mathcal{P}_h^{k_{DH}}]^{d \times d}$ by $k_{DH}$. The nonlinear system of equations given by \eqref{eq: neilan eq1} and \eqref{eq: discrete hessian} or \eqref{eq: neilan eq1 + jump} and \eqref{eq: discrete hessian}, respectively was solved with PETSc' basic line search Newton method. 
+The implementation was also done with the Finite Element Tool FEniCS \cite{FEniCS}, the corresponding source code can be found in the appendix \ref{app: Code Neilan}. \\
+The uniform triangulation $\triang$ was obtained as also explained in \ref{subsec: refinement and base cells}: First the domain was split into four triangles by drawing both diagonals and afterwards each triangle was successively divided into four congruent triangles. \\
+Different to the initial guess suggested in \cite{Neilan2014} I used the solution of $\triangle u = -\sqrt{2f}$ as introduced in \ref{sec: initial guess}. All results presented base on discontinuous ansatz spaces, namely piecewise polynomial spaces as introduced in \ref{def: piecewise polySpace}.
+We denote the degree of the trial space $V_h=\mathcal P_h^k$ by $k$ and the degree chosen for the Hessian ansatz space $\Sigma_h = [\mathcal{P}_h^{k_{DH}}]^{d \times d}$ by $k_{DH}$. The nonlinear system of equations given by \eqref{eq: neilan eq1} and \eqref{eq: discrete hessian} or \eqref{eq: neilan eq1 + jump} and \eqref{eq: discrete hessian}, respectively was solved with PETSc' basic line search Newton method. 
 %SNES Object: 1 MPI processes
 %  type: newtonls
 %  SNES has not been set up so information may be incomplete
@@ -177,60 +178,80 @@ We denote the degree of the trial space $V_h=P_h^k \cap H^1(\Omega)$ by $k$ and 
       %  using I-node routines: found 80 nodes, limit used is 5
 
 Most parameters were set to the default PETSc values %which includes the solver uses cubic backtracking 
-but the absolute tolerance was adjusted to $1e-8$ and the number of maximum iteration was restricted to 50. 
+but the absolute tolerance was adjusted to $1e-8$ and the number of maximum iteration was restricted to 100. 
 
-Figure \ref{fig: l2 errors test 1} shows the $L^2$ error of all performances of the first test case that have converged, the polynomial degrees $k$ were taken to be $1,\dots,3$ and $k_{DH}$ equal to all variants $0, \dots, k$.  The results for the runs with $k=3$ are shown more detailed in Table \ref{tab: l2 errors test 1 deg 2}, in both tables the column $N$ refers to the number of iterations the Newton solver needed to reach the desired tolerance. 
-
-\begin{figure}[h!]
+Figure \ref{fig: l2 errors test 1} shows the $L^2$ error of all performances of the first test case that have converged, the polynomial degrees $k$ were taken to be $1,\dots,3$ and $k_{DH}$ equal to all variants $0, \dots, k$. In Figure \ref{fig: h1 errors test 1} the corresponding $H^1$ errors are plotted.
+\begin{figure}[H]
 \centering
 	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA1_Neilan_l2.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth}}
 	\label{fig: l2 errors test 1}
 \end{figure}
- \todo{memory errors}
- Unfortunately the calculation for $k=3$ could not be carried out since 
- 0]PETSC ERROR: Out of memory. This could be due to allocating
- [0]PETSC ERROR: too large an object or bleeding by not properly
- [0]PETSC ERROR: destroying unneeded objects.
- [0]PETSC ERROR: Memory allocated 0 Memory used by process 15882436608
- PETSC ERROR: Try running with -malloc\_dump or -malloc\_log for info.
- PETSC ERROR: Memory requested 18446744065119617024!
- 
-\begin{figure}[h!]
+\begin{figure}[H]
 \centering
-%	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA1_Neilan_h1.pdf}
+	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA1_Neilan_h1.pdf}
 	\caption{$H^1$ errors for test case \ref{test smooth}}
-	\label{fig: h2 errors test 1}
+	\label{fig: h1 errors test 1}
 \end{figure}
 
-\begin{table}[h]
+Due to the large number of degree of freedoms the I could not obtain any results for the cases $k=2,3$ and $k_{DH}=2,3$ on the finest grid, for $k=3$ and $k_{DH}=3$ even on a mesh with $h=1/64$ the requested memory was too much.
+
+As also experienced by Neilan the method does not work for the polynomial degree $k=1$. Similarly, in runs with a low polynomial degree $k_{DH}$ Newton's method did not converge. \todo{LU hat nicht funktioniert}
+The results for the runs with $k=3$ are shown more detailed in Table \ref{tab: l2 errors test 1 deg 2}, in both tables the column $N$ refers to the number of iterations the Newton solver needed to reach the desired tolerance. 
+\begin{table}[H]
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-%				    every row 0 column 0/.style={set content=init},
-%		]\MAOnedegThreeThree
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+				    every row 0 column 0/.style={set content=init},
+		]\MAOnedegThreeThree
     	\caption{Error for $k=3, k_{DH}=3$}
    \end{subtable}
    ~
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-%				    every row 0 column 0/.style={set content=init},
-%		]\MAOnedegThreeTwo
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+				    every row 0 column 0/.style={set content=init},
+		]\MAOnedegThreeTwo
  	\caption{Error for $k=3, k_{DH}=2$}
 	\end{subtable}
 	\caption{Errors for test case \ref{test smooth}}
 	\label{tab: l2 errors test 1 deg 2}
 \end{table}
+Considering this results in the smooth test scenario we observe that the error almost do not alter for different polynomial degrees $k_{DH}$ if both converge. Albeit for fine grids the methods with less difference between the two degrees seem to perform better. The calculated numerical orders as shown in table \ref{tab: order} supports this first intuition.
 
-
-Considering the results of the smooth test scenario we notice that the error almost do not alter for different polynomial degrees $k_{DH}$ if both converge. Albeit it seems for low polynomial degrees a difference between those degrees leads to divergence.
+\begin{table}[H]
+\begin{subtable}[b]{0.45\textwidth}
+\centering
+	\pgfplotstabletypeset
+	{
+		k $k_{DH}$ {numerical order}
+		2 1  1.50338
+		2 2  2.24427
+		3 2 2.63597
+		3 3 3.64758
+	}
+	\caption{numerical order in $L2$ norm}
+\end{subtable}
+\begin{subtable}[b]{0.45\textwidth}
+	\pgfplotstabletypeset
+	{
+		k $k_{DH}$ {numerical order}
+		2 1  1.65382 
+		2 2  1.973
+		3 2 2.39616
+		3 3 2.97876
+	}
+	\caption{numerical order in $H1$ norm}
+	\end{subtable}
+\caption{numerical order in test \ref{test smooth}}
+\label{tab: order}
+\end{table}
 
 This test scenario was also performed with the additional normal jump penalty term as stated in \eqref{eq: neilan eq1 + jump} weighted with $\eta$ equal to 50 leading to the results shown in figure \ref{fig: l2 errors test 1 jump} and the tables \ref{tab: l2 errors test 1 deg 2 jump}.
 
 \begin{figure}[h!]
 \centering
-%	\includegraphics[scale=0.4]{../../FEniCS/diagrams/MA1_Neilan_GradJump_l2.pdf}
+	\includegraphics[scale=0.4]{../../FEniCS/diagrams/MA1_Neilan_GradJump_l2.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth} and additional gradient jump penalty}
 	\label{fig: l2 errors test 1 jump}
 \end{figure}
@@ -244,10 +265,78 @@ This test scenario was also performed with the additional normal jump penalty te
 \begin{table}[H]
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
+		\pgfplotstabletypeset[
+		columns={iterations, l2error, h1error,N},
+		    every row 0 column 0/.style={set content=init},
+		    every row 7 column 1/.style={set content={-}},
+		    every row 7 column 2/.style={set content={-}},
+		    every row 7 column 3/.style={set content={-}},
+		]\MAOneJumpdegTwoTwo
+    	\caption{Error for $k=2, k_{DH}=2$}
+   \end{subtable}
+   ~
+	\begin{subtable}[b]{0.45\textwidth}
+		\centering
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+		    every row 0 column 0/.style={set content=init},
+		]\MAOneJumpdegTwoZero
+	\caption{Error for $k=2, k_{DH}=0$}
+	\end{subtable}
+	\caption{Errors for test case \ref{test smooth}}
+	\label{tab: l2 errors test 1 deg 2 jump}
+\end{table}
+As claimed by Neilan the additional penalisation leads to a convergend method even for low polynomial degrees, even in the cases where only $k_{DH}$ was taken to be small. The calculated error norms indicate more clearly than in the non penalised runs that variation of $k_{DH}$ yields only to a slight loss of accuracy. The corresponding numerical orders can be found in \ref{tab: order jump}.
+\begin{table}[H]
+\centering
+\begin{subtable}[b]{0.45\textwidth}
+	\pgfplotstabletypeset
+	{
+		k $k_{DH}$ {numerical order}
+		1 0 1.32061
+		2 0 2.69871
+		2 1 2.93488
+		2 2 3.0406
+		3 1 3.63116
+		3 2 4.01895
+		3 3 4.0588
+	}
+	\caption{numerical order in $L2$ norm}
+	\end{subtable}
+	\begin{subtable}[b]{0.45\textwidth}
+	\pgfplotstabletypeset
+	{
+		k $k_{DH}$ {numerical order}
+		1 0 0.978853
+		2 0 2.24561
+		2 1 2.24836
+		2 2 2.28606
+		3 1 3.03434
+		3 2 3.0359
+		3 3  3.0343
+	}
+	\caption{numerical order in $H1$ norm}
+	\end{subtable}
+	\caption{numerical order with jump penalty in test \ref{test smooth}}
+\label{tab: order jump}
+\end{table}
+
+
+The second test two was carried out for $\eta=20k^2$. Unfortunalety the Newton solver did not converge after the mesh was once refined. Table \ref{tab: l2 errors test 2} show the results for this one step, it shows only two degree pairs for other degree paris behaved similarly.
+
+%\begin{figure}[H]
+%\centering
+%	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA2_Neilan_l2.pdf}
+%	\caption{$L^2$ errors for test case \ref{test sqrt} }
+%	\label{fig: l2 errors test 2}
+%\end{figure}
+
+\begin{table}[H]
+	\begin{subtable}[b]{0.45\textwidth}
+		\centering
 %		\pgfplotstabletypeset[
 %		columns={iterations, l2error, h1error,N},
 %		    every row 0 column 0/.style={set content=init},
-%		]\MAOneJumpdegTwoTwo
+%		]{\MATwodegTwoTwo}
     	\caption{Error for $k=2, k_{DH}=2$}
    \end{subtable}
    ~
@@ -255,31 +344,84 @@ This test scenario was also performed with the additional normal jump penalty te
 		\centering
 %		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
 %		    every row 0 column 0/.style={set content=init},
-%		]\MAOneJumpdegTwoZero
-	\caption{Error for $k=2, k_{DH}=0$}
+%		]{\MATwodegThreeThree}
+	\caption{Error for $k=3, k_{DH}=3$}
 	\end{subtable}
-	\caption{Errors for test case \ref{test smooth}}
-	\label{tab: l2 errors test 1 deg 2 jump}
+	\caption{Errors for test case \ref{test sqrt}}
+	\label{tab: l2 errors test 2}
 \end{table}
-\todo{Kommentar zu diesen Ergebnissen.}
+
+Switching the penalisation of gradient jumps on the method performs again well, its results are shown in figure \ref{fig: l2 errors test 2 jump}. 
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{\textwidth}
+\centering
+	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA2_Neilan_GradJump_l2.pdf}
+\end{subfigure}
+
+\begin{subfigure}{\textwidth}
+\centering
+	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA2_Neilan_GradJump_h1.pdf}
+\end{subfigure}
+	\caption{$L^2$ and $H^1$ errors for test case \ref{test sqrt} and additional gradient jump penalty}
+	\label{fig: l2 errors test 2 jump}
+\end{figure}
+
+Similar are results for the third case, but now also an additional penalisation of the jump of the gradient across edges do not yield to better results. All converged iteration steps are given in the tables \ref{tab: l2 errors test 3} and \ref{tab: l2 errors test 3 jump}. 
+
 \begin{table}[H]
-	\pgfplotstabletypeset
-	{
-		k $k_{DH}$ {numerical order}
-		1 0 0.873103
-		2 0 2.35083
-		2 1 2.29612
-		2 2 2.37389
-		3 1 3.83759
-		3 2 3.33588
-		3 3 3.33706
-	}
-\caption{order calculated fitted the data for the case with a jump penalty}
-\label{tab: order jump}
+	\begin{subtable}[b]{0.45\textwidth}
+		\centering
+%		\pgfplotstabletypeset[
+%		columns={iterations, l2error, h1error,N},
+%		    every row 0 column 0/.style={set content=init},
+%		]{\MAThreedegTwoTwo}
+    	\caption{Error for $k=2, k_{DH}=2$}
+   \end{subtable}
+   ~
+	\begin{subtable}[b]{0.45\textwidth}
+		\centering
+%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+%		    every row 0 column 0/.style={set content=init},
+%		]{\MAThreedegThreeThree}
+	\caption{Error for $k=3, k_{DH}=3$}
+	\end{subtable}
+	\caption{Errors for test case \ref{test singularity}}
+	\label{tab: l2 errors test 3}
 \end{table}
 
 
-The test two was carried out for $\eta=20k^2$
+\begin{table}[H]
+	\begin{subtable}[b]{0.45\textwidth}
+		\centering
+		\pgfplotstabletypeset[
+		columns={iterations, l2error, h1error,N},
+		    every row 0 column 0/.style={set content=init},
+		]{\MAThreeJumpdegTwoTwo}
+    	\caption{Error for $k=2, k_{DH}=2$}
+   \end{subtable}
+   ~
+	\begin{subtable}[b]{0.45\textwidth}
+		\centering
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+		    every row 0 column 0/.style={set content=init},
+		]{\MAThreeJumpdegThreeThree}
+	\caption{Error for $k=3, k_{DH}=3$}
+	\end{subtable}
+	\caption{Errors for test case \ref{test singularity} and additional gradient jump penalty}
+	\label{tab: l2 errors test 3 jump}
+\end{table}
+
+
+%\begin{figure}[H]
+%\centering
+%\begin{subfigure}{\textwidth}
+%	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA3_Neilan_GradJump_l2.pdf}
+%\end{subfigure}
+%	\caption{$L^2$ and $H^1$ errors for test case \ref{test sqrt} and additional gradient jump penalty}
+%	\label{fig: l2 errors test 3 jump}
+%\end{figure}
 
 
 \newpage
@@ -358,41 +500,12 @@ If a convexification is desired the class Convexifier takes care of the assembly
 
 Additionally the Tsolver has a member Plotter handling all export to files. It is able to write the solution which's coefficients are currently stored in the leaf cells to a .vtu file or .dat file. Besides plotting it also administers all file stream to which information such as $L2$ errors are written into.
 
-\subsection{Results without Convexification}
+\subsection{Results with Convexification}
 
 For a initial guess I also used the solution of $\triangle u = -\sqrt{2f}$ combined with the multilevel approach as described in \ref{sec: initial guess}.
 The arising linear system of equations was solved with Eigen's internal Cholesky solver.
 The parameters were if not other specified taken to be $\sigma=10 k^2, \sigma_G = 50, \alpha =
-0.3$ and $\varepsilon = 1e-2$. At the beginning we do not convexify, and we always carry out 15 steps before we refine further. 
-In the first figure \ref{fig: l2 errors test smooth ourMethod} we can see the results for the the smooth test case \ref{test smooth}.
-\begin{figure}[h!]
-	\centering
-	\includegraphics[scale =0.4]{plots/MA1.pdf}
-	\caption{$L^2$ errors for test case \ref{test smooth}}
-	\label{fig: l2 errors test smooth ourMethod}
-\end{figure}
- For the first four refinements the method behaves well for both $k=2$ and $k=3$. Afterwards the numerical solution departs from the actual solution although the $L^2$ error seems to not excel $1$.
- 
- We get similiar results in the next two cases albeit the fixed point iterations performs worse in the second case which lacks $H^2$ regularity. The $L2$ errors are shown in the figures \ref{fig: l2 errors test sqrt ourMethod} and \ref{fig: l2 errors test singularity ourMethod}.
- 
-\begin{figure}[H]
-\centering
-%	\includegraphics[scale =0.4]{plots/MA3.pdf}
-	\caption{$L^2$ errors for test case \ref{test sqrt}}
-	\label{fig: l2 errors test sqrt ourMethod}
-\end{figure}
-
-
-\begin{figure}[H]
-\centering
-%	\includegraphics[scale =0.4]{plots/MA2.pdf}
-	\caption{$L^2$ errors for test case \ref{test singularity}}
-	\label{fig: l2 errors test singularity ourMethod}
-\end{figure}
-
-\subsection{Convexification}
-
-We used the same code basis as in the previous tests but we added a convexification as described in Section \ref{subsec: convexification}. 
+0.3$ and $\varepsilon = 1e-2$. We always carry out 15 steps including a convexification after every step before we refine further. The implemented convexification followed the ideas of Section \ref{subsec: convexification}. 
 
 The linear constraints ensuring convexity on a triangle are chosen the one from theorem \ref{thm: convex cond on triangle} and the constrains for convexity across edges were given by theorem \ref{thm: convex cond across edge}. Due to the error-proneness during the assembly of $C$ the convexification was only implement for the case $k=2$. Note, that before applying the theorems of section \ref{subsec: convexification} we have to convert our numerical solution from the DG formulation to a $C^0$ spline.
 
@@ -446,3 +559,37 @@ The other test cases produce similar results as can be seen in figure \ref{fig: 
 	\label{fig: Compare test singularity ourMethodConvex}
 \end{figure}
 
+
+
+\subsection{Results without Convexification}
+
+We used the same code basis as in the previous tests but turned off every direct convexification.
+In the first figure \ref{fig: l2 errors test smooth ourMethod} we can see the results for the the smooth test case \ref{test smooth}.
+\begin{figure}[h!]
+	\centering
+	\includegraphics[scale =0.4]{plots/MA1.pdf}
+	\caption{$L^2$ errors for test case \ref{test smooth}}
+	\label{fig: l2 errors test smooth ourMethod}
+\end{figure}
+ For the first four refinements the method behaves well for both $k=2$ and $k=3$. Afterwards the numerical solution departs from the actual solution although the $L^2$ error seems to not excel $1$.
+ 
+ We get similiar results in the next two cases albeit the fixed point iterations performs worse in the second case which lacks $H^2$ regularity. The $L2$ errors are shown in the figures \ref{fig: l2 errors test sqrt ourMethod} and \ref{fig: l2 errors test singularity ourMethod}.
+ 
+\begin{figure}[H]
+\centering
+	\includegraphics[scale =0.4]{plots/MA3.pdf}
+	\caption{$L^2$ errors for test case \ref{test sqrt}}
+	\label{fig: l2 errors test sqrt ourMethod}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+	\includegraphics[scale =0.4]{plots/MA2.pdf}
+	\caption{$L^2$ errors for test case \ref{test singularity}}
+	\label{fig: l2 errors test singularity ourMethod}
+\end{figure}
+
+The results were validated by a reference implementation using the finite element tool FEniCS. Albeit I was not able to include the modified cofactor matrix to the bilinear form the error behaved as in the computational results of the C++ code. It decreased for the first four refinements and diverged afterwards. 
+
+Additionally one can in the FEniCS variant the cofactor matrix of the Hessian which is evaluated piecewise replace by the discrete Hessian as defined in \ref{def: discrete Hessian} for a symmetric ansatz space $\Sigma_h$. The code can be found in the Appendix \todo{ref}.

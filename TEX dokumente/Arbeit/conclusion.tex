@@ -41,3 +41,34 @@ In a earlier work \cite{Awanou2010} Awanou examined a discrete Version of a vani
 \]
 And indeed this is the variational form of \eqref{eq: Newton iteration}
 His chosen trial space were piecewise polynomials contained in $C^1(\Omega)$. He claims that this ansatz breaks down for problems with non-smooth solutions, in his numerical results he cites test \ref{test sqrt} as an example where Newton's method diverges.
+
+\todo{existence theory}
+
+\section{Conclusion}
+
+We saw the performances of three DG methods solving PDEs of \MA type.
+The first method, introduced by Brenner et alter yields a good result for the smooth test case but failed for every other test case, even for test case \ref{test singularity} that has a solution in $C^1(\Omega)$. Hence, as the developer indicate in their paper it is only suitable for finding classical solutions.
+Brenner et alter used a vanishing moment method to find a proper initial guess. This seems rather costly and our numerical results show the method could be improved using a nested iterations and a simple linear PDE for the first initial guess.
+
+The results Neilan showed in his paper for our second examined method look very promising.
+Note, that this method has if polynomial degree of $V_h$ and $\Sigma_h$ are chosen equally has as five times as many degree of freedoms compared to both other methods.
+
+The last presented method turned out to be a variant of an classical damped Newton approach. 
+\todo{verbesserung mit modifizierter cofactor matrix}
+The classical approach is known to fail for elements which are not at least contained in $C^1(\Omega)$. Unfortunately the fixed point iteration do also diverge for finer grids. Yet it may serve for an initial guess during a multilevel method. For big grid widths in our test cases the $L2$ error even decreased for problems which do not have a classical solution.
+
+Comparing the three methods for the smooth test case the first and second method produce similar convergence orders while the first has less degree of freedoms. The Picard type method yields even for the first four refinement a much smaller convergence rate.
+
+We saw that recent DG methods perform well on problems with classical solution, but have problems with problems with only viscocity solution or Aleksandrov solutions. Most rely on Newton's method to solve their nonlinear system and how to provide good initial guesses is not answered yet.
+My numerical results show that a nested iteration approach often does not provide suitable starting points for further refinements.
+
+\section{Perspective}
+Handling fully nonlinear PDEs is a complex domain and results on this domain are very unsatisfactory when compared to the linear case. Even when restrict ourselves to the prototype of nonlinear PDEs, the \MA equation, the theory is far from being complete for both the analytical and the numerical point of view.
+
+Recent DG methods work provably well for classical solutions, but to the author's knowledge there are no proven statement on their performance for viscosity solutions or Aleksandrov solutions. Even in the case we have a classical solution convergence of DG method is only proven for polynomial degrees greater or equal than three. Though most numerical experiment suggest a relaxation it could not be proved yet.
+
+We presented methods for the \MA equation given that the right-hand side only depend on $x$ and the left-hand side only on the determinant of the Hessian. Currently DG methods were often not extended to more general PDEs. It has to be analysed, if  discretisations for right-hand sides depending on $u$ and $\nabla u$ and more complicated left-hand sides may be derived analogously. An example for one of those more complicated left-hand sides is $\mydet {D^2 u +A}$ for $A:\Omega \rightarrow \R^{d \times d}$.
+ 
+The implemented convexification did not support the solution process. Yet, it is worth to address this approach further. Maybe it is useful to convexify intermediate solution only on fine grids.
+
+

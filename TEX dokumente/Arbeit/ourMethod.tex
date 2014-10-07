@@ -69,10 +69,10 @@ Since in every iteration \eqref{eq:fixed point iteration} states a generalised p
 \end{align}
 
 \section{Challenges for a \MA DG method}
-Reviewing existing DG methods for the \MA we learned some ?(subjects, matter, points) we have to pay attention to  while examining the fixed point iteration.
+Reviewing existing DG methods for the \MA we learned some ?(subjects, matter, points) we have to pay attention to  while examining the fixed point iteration. The next subsections treat the most challenging points.
 
 \subsection{Convexfication} \label{subsec: convexification}
-The \MA equation in general does not define a unique solution. For most applications the unique convex solution is required. The question is how to oblige a numerical method to select only convex solutions.
+ The \MA equation in general does not define a unique solution. For most applications the unique convex solution is required. The question is there a appropriate method to oblige a numerical method to select only convex solutions.
 The most intuitive way is to convexify the solution after every step. Thereby, on one hand we make sure the right solution is approximated and on another hand we smooth the Generalised Poisson solution. This could also improve the quality of second derivatives of our interim solution. % aiming for a better approximation of the second derivatives.
 Unfortunately convexification is not simple. For our approach we choose a Bernstein basis for the ansatz space at first.
 \begin{definition}[Bernstein-B\'ezier form]\label{def: BernsteinBezierForm}
@@ -191,7 +191,7 @@ Alternatively a nested iteration or multilevel ansatz can be utilised. At a the 
 The second approach regards the fact that probably the method's robustness decreases for finer meshes.
 
 
-\section{First Implementation}
+\subsection{An additional Penalty Parameter}
 At the beginning we implemented the SIPG method exactly as stated in section \ref{sec: SIPG MA}.
 As an initial guess served the solution of \eqref{eq: start sqrt_f} , the penalty parameter was chosen to be 30 and the domain $\Omega$ the unit square$[0,1]^2$.
 
@@ -227,7 +227,6 @@ Let us recall the geometric interpretation of the second derivative, it indicate
 
 One improvement could be the smoothing process during a convexification for it will smooth away all unintended concave curvatures. But probably the result will be still unsatisfiable because convexification does not affect sharp edges at triangle transitions.
 
-\subsection{An additional Penalty Parameter}
 Another idea is force more regularity on the first derivative and thus, implicitly obtain a more steady solution. This suits to the ansatz pursued by Neilan described in section \ref{subsec: disrete Hessian}, his proposed correction terms vanish as the gradient jump across internal edges tends to zero.
 Hence, we add the following normal derivatives penalty term 
 \begin{align}
@@ -262,7 +261,7 @@ Figure \ref{fig: diff iteration} shows to consecutive steps, the error $u-u_{exa
 
 To prevent our algorithm from doing so we couple the two subsequences by a damping. Before we continue iterating we combine the current solution with the function calculated one step before by an affine composition. Hence we got a further parameter $\alpha$, namely the amount with that the new solution contributes to the iteration.
 
-\section{The ellipticity constant}\label{sec: mod cofactor}
+\subsection{Modification of the Cofactor Matrix}\label{sec: mod cofactor}
 For the condition of the problem it is necessary that the eigenvalues of the diffusion matrix, namely $\mycof{D_h^2 u_h^i}$ are positive for all $x$. Even better is if they are constrained from below with some constant $\varepsilon$. 
 To suffice this criteria we introduce a modified cofactor matrix
 \[ 
