@@ -133,15 +133,15 @@ enum {
 #endif
 #if (EQUATION == MONGE_AMPERE_EQ)
 	statedim = 1, ///< target domain dimension (of solution)
-	degreedim = 3, ///< polynomial degree
-	shapedim = 10, ///< no. of basis functions per element
+	degreedim = 2, ///< polynomial degree
+	shapedim = 6, ///< no. of basis functions per element
 #endif
 
 	lagshapedim = 3, // no. of Lagrange-shapes, e.g. for continuous reconstruction
 	lagstatedim = 1,
 	Ndim = 3,        ///< no. of nodes
 	childdim = int(example_id_type::maxChildren), ///< Number of children during refinement
-	Equadraturedim = 16,        ///< no. of element-quadr. points per element
+	Equadraturedim = 7,        ///< no. of element-quadr. points per element
 	Fquadgaussdim = 5,        ///<  no. of gauss-points per face
 	Fdim = 3,        ///<  no. of faces
 	Fchilddim = 2,        ///< no. of child-faces on one face

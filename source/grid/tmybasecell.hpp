@@ -181,49 +181,6 @@ private:
 		return -phi_i.dot(phi_j);
 	}
 
-	void initialize_finite_element_hessians(const Equad &equad,
-			const Equadratureshape_grad_type &Equads_grad) {
-
-		Eigen::MatrixXd J_inv_t(2, 2);
-		J_inv_t << jac(1, 1), -jac(1, 0), -jac(0, 1), jac(0, 0);
-		J_inv_t /= detjacabs;
-
-		for (int i_shape = 0; i_shape < shapedim; i_shape++)	fe_hessians(i_shape).setZero();
-
-		for (int iq=0; iq < Equadraturedim; iq++) {
-
-		for (unsigned int r_shape = 0; r_shape<shapedim; r_shape++) {
-			for (unsigned int s_shape = 0; s_shape <=r_shape; s_shape++) {
-				Eigen::Vector2d grad_r = J_inv_t * Equads_grad(r_shape,iq);
-				Eigen::Vector2d grad_s = J_inv_t * Equads_grad(s_shape,iq);
-
-				for (int i = 0; i < spacedim; i++)
-					for (int j = 0; j < spacedim; j++)
-						fe_hessians(r_shape)(i,j) += -grad_r(i)*grad_s(j) *(equad.Equadw(iq) * detjacabs);
-				}
-			}
-		}
-
-		//fill up (hessian is symmetric)
-		for (int i_shape = 0; i_shape < shapedim; i_shape++)
-			for (unsigned int i = 0; i < statedim; i++) {
-				for (unsigned int j = 0; j < i; j++) {
-					fe_hessians(i_shape)(j, i) = fe_hessians(i_shape)(i, j);
-			}
-		}
-
-	}
-
-public:
-	void assemble_fe_hessian(const Estate_type & u, Hessian_type & hess) const
-	{
-		hess.setZero();
-		for (int i_shape = 0; i_shape < shapedim; i_shape++)
-		{
-			hess += u(i_shape)*fe_hessians(i_shape);
-		}
-	}
-
 private:
 	void assemble_laplace(const Equad &equad,
 			const Equadratureshape_grad_type &Equads_grad) {
@@ -331,8 +288,6 @@ public:
 		assert(detjacabs == 2 * volume);
 
 		assemble_laplace(Equad, Equads_grad); //TODO redundant if MONGE amper ...
-
-		initialize_finite_element_hessians(Equad, Equads_grad);
 
 		assemble_normalderi(Fquads_x, Fquads_y);
 

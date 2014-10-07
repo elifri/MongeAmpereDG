@@ -423,7 +423,7 @@ void Tsolver::assemble_rhs_MA(leafcell_type* pLC, const grid_type::id_type idLC,
 }
 
 
-bool Tsolver::convexify(Eigen::VectorXd &solution)
+bool Tsolver::convexify(Eigen::VectorXd &solution, bool grid_changed)
 {
 
 	bool solution_changed = false;
@@ -431,8 +431,9 @@ bool Tsolver::convexify(Eigen::VectorXd &solution)
 	setleafcellflags(0, false); //reset flags
 	assert(!interpolating_basis && "This only works with a bezier basis!");
 
+	//set up quadratic program matrices
 	SparseMatrixD A,C;
-	convexifier.init_matrices_for_quadr_program(grid, c0_converter, shape, A,C, number_of_dofs, c0_converter.get_number_of_dofs_C(), false);
+	convexifier.init_matrices_for_quadr_program(grid, c0_converter, shape, A,C, number_of_dofs, c0_converter.get_number_of_dofs_C(), grid_changed);
 
 	//adjust DG solution, such that it represents a continuous function
 	Eigen::VectorXd coefficients_C;
@@ -440,9 +441,10 @@ bool Tsolver::convexify(Eigen::VectorXd &solution)
 	c0_converter.convert_coefficients_toDG(coefficients_C, solution);
 	Eigen::VectorXd test;
 
-	//check if c version of current dg version is right
+	//check if continuous version of current dg version is right
 	{
 		c0_converter.convert_coefficients_toC(solution, test);
+		cout << "error " << (coefficients_C-test.cwiseAbs()).maxCoeff() << endl;
 		assert ((coefficients_C-test.cwiseAbs()).maxCoeff() < 1e-10 && "c inversion is not right");
 	}
 
@@ -459,14 +461,15 @@ bool Tsolver::convexify(Eigen::VectorXd &solution)
 		grid.findLeafCell(idLC, pLC);
 
 		for (int ishape = 0; ishape < shapedim; ishape++) // loop over shapes
-				{
+		{
+			//evaluate at its controlpoint
 			state_type val;
 			shape.assemble_state_beziercontrolpoint(pLC->u, ishape, val);
 			values_DG(pLC->m_offset + ishape) = val(0);
 		}
 	}
 
-	cout.precision(10);
+	cout.precision(10); //increase precision for output
 
 	assert ((A*solution+-values_DG).cwiseAbs().maxCoeff() < 1e-12 && " Check evaluation matrix and value extraction from leaf cell!");
 
@@ -930,25 +933,8 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 
 									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
 
-//									A = pNC->A;
-
 									A_times_normal_BC = pBC->A_grad_times_normal(A,ishape,iqLC),
 									A_times_normal_NBC = pNBC->A_grad_times_normal(A,ishape,iqNC);
-
-									// ({{phi}}*[[cof(D^2w)grad(v)]]
-/*
-
-									LM.coeffRef(row_LC, col_LC) += -0.5 // to average
-											* shape.get_Fquadw(iqLC) * length//quadrature weights
-											* A_times_normal_BC/ facLevelLength[level] //jump
-											* shape.get_Fquads(ishape,iqLC); //gradient times normal
-
-									LM.coeffRef(row_LC, col_NC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * A_times_normal_NBC / facLevelLength[levelNC];
-
-									LM.coeffRef(row_NC, col_LC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* A_times_normal_BC / facLevelLength[level];
-
-									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
-*/
 
 
 									// b(phi, u)
@@ -1294,13 +1280,13 @@ void Tsolver::init_start_solution_MA(const int stabsign, penalties_type gamma,st
 			}
 	}
 
-	plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
+//	plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
 
 	state_type error = calculate_L2_error(get_exacttemperature_MA_callback());
 	if (start_solution == SQRT_F)
 		plotter.get_plot_stream("L2_rel") << 0 << " " << error(0)/L2_norm_exact_sol(0) << endl;
 	else
-		plotter.get_plot_stream("rel_L2_without_convex") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
+		plotter.get_plot_stream("L2_without_convex") << -1 << " " << error(0) << endl;
 
 	if (start_solution != SQRT_F && start_solution != EXACT)
 	{
@@ -1313,15 +1299,14 @@ void Tsolver::init_start_solution_MA(const int stabsign, penalties_type gamma,st
 		igpm::processtimer pt;
 		pt.start();
 		write_solution_vector(coeffs);
-		convexify(coeffs);
+		convexify(coeffs, true);
 		pt.stop();
 		cout << "done. " << pt << " s." << endl;
 
 		restore_MA(coeffs); //writes solution and additional data in leaf cells
 
 		//plot solution
-		plotter.write_numericalsolution_VTK(iteration,
-				"grid_startsolutionConvexified");
+//		plotter.write_numericalsolution_VTK(iteration,"grid_startsolutionConvexified");
 	}
 
 	error = calculate_L2_error(get_exacttemperature_MA_callback());
@@ -1352,13 +1337,11 @@ void Tsolver::stepping_MA() {
 	if (levelmax < level)
 		level = levelmax;
 
+	bool grid_changed;//stores whether the grid has been refined in the last iteration step
 
 	igpm::processtimer pt; //start timer
 
-	//  int refine_count = 0;
-	//  value_type t = 0.0;
-	//  dt = 1e10;
-
+	//update base cell information
 	update_baseGeometry();
 
 	set_leafcellmassmatrix();
@@ -1372,23 +1355,25 @@ void Tsolver::stepping_MA() {
 	plotter.set_exact_sol(get_exacttemperature_MA_callback());
 	convexifier.init();
 
+	//get maximal number of steps on one grid
 	singleton_config_file::instance().getValue("monge ampere", "maximal_iterations", maxits, 3);
+	//get maximal grid refinements
 	singleton_config_file::instance().getValue("monge ampere", "iterations_refinement", maxlevel_refinement, level+2);
 
 	sum_coefficients.resize(maxits*maxlevel_refinement+1);
 
 	maxlevel_refinement += level;
 
-	//=======add streams to plot data ========
-	plotter.add_plot_stream("plot_data", "data/s/plot_data");
-	plotter.add_plot_stream("rel_L2_without_convex", "data/s/plot_data_rel_L2_without_convex");
-	plotter.add_plot_stream("L2_rel", "data/s/plot_data_L2_rel");
-	plotter.add_plot_stream("plot_data_min_constraints", "data/s/plot_data_min_constraints");
-	plotter.add_plot_stream("plot_data_constraints_l2", "data/s/plot_data_constraints_l2");
-	plotter.add_plot_stream("sum_coefficients", "data/s/plot_data_sum_coefficients");
+	//=======add streams to write data into files ========
+	plotter.add_plot_stream("plot_data", "data/s/plot_data/"+plotter.get_output_prefix()+"data"); //write L2 error in this file
+	plotter.add_plot_stream("L2_without_convex", "data/s/plot_data/"+plotter.get_output_prefix()+"L2_without_convex"); //write L2 error before convexification in this file
+	plotter.add_plot_stream("L2_rel", "data/s/plot_data/"+plotter.get_output_prefix()+"L2_rel"); //write relative L2 error in this file
+	plotter.add_plot_stream("plot_data_min_constraints", "data/s/plot_data/"+plotter.get_output_prefix()+"min_constraints"); //plot min(Cc) (during convexification process) in this file
+	plotter.add_plot_stream("plot_data_constraints_l2", "data/s/plot_data/"+plotter.get_output_prefix()+"constraints_l2"); //
+	plotter.add_plot_stream("L2_ipopt", "data/s/plot_data/"+plotter.get_output_prefix()+"L2_ipopt"); //write L2 error after convexification in this file
 
 
-	plotter.add_plot_stream("system_matrices", "data/s/plots/system_matrices.m");
+	plotter.add_plot_stream("system_matrices", "data/s/plots/system_matrices.m"); //write system matrices in this file
 
 	//========================================
 
@@ -1396,6 +1381,7 @@ void Tsolver::stepping_MA() {
 	iteration = 0;
 	residuum_equal_since = 0;
 
+	//init variable for size of system matrix
 	unsigned int LM_size;
 
 
@@ -1403,7 +1389,7 @@ void Tsolver::stepping_MA() {
 	L2_norm_exact_sol(0) = calculate_L2_norm(get_exacttemperature_MA_callback())(0);
 	cout << "L2 norm of exact sol " << L2_norm_exact_sol << endl;
 
-	//assign matrix cooordinates, especially initialises leafcell offsets
+	//assign matrix cooordinates(i.e. enumerate dofs), especially initialises leafcell offsets
 	cout << "Assign matrix coordinates..." << endl;
 	pt.start();
 	assignViews_MA(LM_size);
@@ -1411,8 +1397,8 @@ void Tsolver::stepping_MA() {
 	cout << "done. " << pt << " s." << endl;
 
 	//init continuous formulation
-//	assert(!interpolating_basis && "this only works with a bezier basis");
-//	c0_converter.init(grid, number_of_dofs);
+	assert(!interpolating_basis && "this only works with a bezier basis");
+	c0_converter.init(grid, number_of_dofs);
 
 	//init boundary handler
 	if (strongBoundaryCond) {
@@ -1435,7 +1421,7 @@ void Tsolver::stepping_MA() {
 	{
 		start_solution = USE_IDENTITY;
 		init_startsolution_from_function(General_functions::get_easy_convex_polynomial_callback());
-		plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
+//		plotter.write_numericalsolution_VTK(iteration, "grid_startsolution");
 
 		state_type error = calculate_L2_error(get_exacttemperature_MA_callback());
 		plotter.get_plot_stream("L2_rel") << -1 << " " << error(0)/L2_norm_exact_sol(0) << endl;
@@ -1454,8 +1440,8 @@ void Tsolver::stepping_MA() {
 		cout << "done. " << pt << " s." << endl;
 
 		//init continuous formulation
-//		assert(!interpolating_basis && "this only works with a bezier basis");
-//		c0_converter.init(grid, number_of_dofs);
+		assert(!interpolating_basis && "this only works with a bezier basis");
+		c0_converter.init(grid, number_of_dofs);
 
 		//init boundary handler
 		if (strongBoundaryCond) {
@@ -1466,12 +1452,12 @@ void Tsolver::stepping_MA() {
 						get_exacttemperature_MA_callback(), &shape, c0_converter);
 		}
 
-		//just to make sure
+		//just to be sure
 		write_solution_vector(solution_lastiteration);
 		restore_MA(solution_lastiteration);
 
-		plotter.write_numericalsolution_VTK(iteration, "grid_refinedsolution");
-
+//		plotter.write_numericalsolution_VTK(iteration, "grid_refinedsolution");
+		grid_changed = true;
 
 		int cur_it = 0;
 		while (cur_it < maxits) {
@@ -1524,18 +1510,18 @@ void Tsolver::stepping_MA() {
 
 			//==============solve system============================
 
+/*
 			std::string matrix_name("A_iteration");
 			ostringstream convert;   // stream used for the conversion
 			convert << iteration;      // insert the textual representation of 'Number' in the characters in the stream
 			matrix_name+= convert.str();
 
 			MATLAB_export(plotter.get_plot_stream("system_matrices"), LM, matrix_name);
+*/
 
 
 			pt.start();
 			Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
-//			Eigen::SparseQR<Eigen::SparseMatrixD, Eigen::COLAMDOrdering<int> > solver;
-			LM.makeCompressed();
 			solver.compute(LM);
 			if (solver.info() != Eigen::Success) {
 				std::cerr << "Decomposition of stiffness matrix failed" << endl;
@@ -1584,29 +1570,31 @@ void Tsolver::stepping_MA() {
 
 			//calculate current l2 error
 			state_type error =  calculate_L2_error(get_exacttemperature_MA_callback());
-			plotter.get_plot_stream("rel_L2_without_convex") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
+			plotter.get_plot_stream("L2_without_convex") << iteration << " " << error(0) << endl;
 
 
 
 			//==============convexify============================
-	//		cout << "Convexifying solution ..." << endl;
-	//		pt.start();
-	//		bool solution_was_not_convex = convexify(Lsolution);
-	//		pt.stop();
-	//		cout << "done. " << pt << " s." << endl;
-	//
-	//		//write convexified poisson solution in leaf cells
-	//		restore_MA(Lsolution);
-	//		if (solution_was_not_convex)
-	//		{
-	//			//calc current l2 error of
-	//			error =  calculate_L2_error(get_exacttemperature_MA_callback());
-	//			plotter.get_plot_stream("rel_L2_ipopt") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
-	//		}
-	//
-	//		//plot solution
-	//		plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionConvexified");
-	//
+/*
+			cout << "Convexifying solution ..." << endl;
+			pt.start();
+			bool solution_was_not_convex = convexify(Lsolution, grid_changed);
+			pt.stop();
+			cout << "done. " << pt << " s." << endl;
+
+			//write convexified poisson solution in leaf cells
+			restore_MA(Lsolution);
+			if (solution_was_not_convex)
+			{
+				//calc current l2 error of
+				error =  calculate_L2_error(get_exacttemperature_MA_callback());
+				plotter.get_plot_stream("L2_ipopt") << iteration << " " << error(0) << endl;
+			}
+*/
+
+			//plot solution
+//			plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionConvexified");
+
 
 			//==============convex combination of two steps (damping)============================
 			Eigen::VectorXd solution;
@@ -1622,7 +1610,7 @@ void Tsolver::stepping_MA() {
 			restore_MA(solution);
 
 			//plot solution
-			plotter.write_numericalsolution_VTK(iteration);
+//			plotter.write_numericalsolution_VTK(iteration);
 
 			error =  calculate_L2_error(get_exacttemperature_MA_callback());
 			cout << "Current L2 error is " << error << endl;
@@ -1630,13 +1618,13 @@ void Tsolver::stepping_MA() {
 			if (L2_norm_exact_sol(0) != 0)
 				plotter.get_plot_stream("L2_rel") << iteration << " " << error(0)/L2_norm_exact_sol(0) << endl;
 
-			plotter.get_plot_stream("sum_coefficients") << iteration << " " << std::setprecision(9) << sum_coefficients(iteration);
+	/*		plotter.get_plot_stream("sum_coefficients") << iteration << " " << std::setprecision(9) << sum_coefficients(iteration);
 			if (iteration > 0)
 			{
 				plotter.get_plot_stream("sum_coefficients") << " "<< std::setprecision(9) <<  (sum_coefficients(iteration) - sum_coefficients(iteration-1))/sum_coefficients(iteration);
 			}
 			plotter.get_plot_stream("sum_coefficients") << endl;
-
+*/
 			// reset flag 0
 			setleafcellflags(0, false);
 
@@ -1663,6 +1651,7 @@ void Tsolver::stepping_MA() {
 					break;
 				}
 */
+			grid_changed = false;
 			iteration++;
 			cur_it++;
 

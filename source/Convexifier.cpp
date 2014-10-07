@@ -381,13 +381,6 @@ Eigen::VectorXd Convexifier::solve_quad_prog_with_ie_constraints_iterative(const
 	assert (A.rows() == b.size());
 	assert (C.rows() == c_lowerbound.size());
 
-//	MATLAB_export(A, "A");
-//	MATLAB_export(C, "C");
-//	MATLAB_export(b, "b");
-//	MATLAB_export(c_lowerbound, "c0");
-//	MATLAB_export(x0, "x0");
-
-
 	SparseMatrixD H_over_C (A.rows()+C.rows(), A.cols());
 
 	if (grid_changed || !matrix_iterative_is_initialized)

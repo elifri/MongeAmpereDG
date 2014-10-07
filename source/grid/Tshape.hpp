@@ -14,6 +14,7 @@
 
 using namespace config;
 
+///< Class handling all general information about ansatz functions
 class Tshape {
 private:
 	mass_type mass;
@@ -96,7 +97,7 @@ public:
 
 	////////////// handling of bezier polynomials ///////////
 
-	void get_baryc_coord_bezier(const int no, baryc_type &b) const;
+	void get_baryc_coord_bezier(const int no, baryc_type &b) const; ///< calculates the barycentric coordinates of the control point no
 
 	///return the local no of the function belonging to the control coefficient c_ijk
 	int get_local_bezier_no(const int i, const int j, const int k) const;

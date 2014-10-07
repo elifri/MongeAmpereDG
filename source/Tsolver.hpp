@@ -271,7 +271,7 @@ public:
 
    		   penalties_type& operator*=(const value_type c)///< Scale all penatlies by scalar
    		   {
-   			   gamma_gradient *= c;
+//   			   gamma_gradient *= c;
    			   gamma_boundary *= c;
    			   gamma_continuous *= c;
    			   return *this;
@@ -425,7 +425,7 @@ public:
     *
     *  @return true, if solution is changed
     */
-   bool convexify(Eigen::VectorXd &solution); ///<Convexifies the solution globally (convexifying bezier control polygon)
+   bool convexify(Eigen::VectorXd &solution, bool grid_changed); ///<Convexifies the solution globally (convexifying bezier control polygon)
 
    void get_exacttemperature_MA (const space_type & x, state_type & u); ///< provides the exact solution (if known)
    vector_function_type get_exacttemperature_MA_callback() { return MEMBER_FUNCTION(&Tsolver::get_exacttemperature_MA, this);} ///< return function pointer of exact solution

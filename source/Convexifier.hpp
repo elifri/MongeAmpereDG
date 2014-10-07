@@ -53,7 +53,15 @@ typedef std::vector<bezier_baryc_entry_type> bezier_baryc_list;
 
 typedef std::pair<Eigen::Vector2i, Eigen::Vector2i> difference_type;
 
-void Delta(const int i, const int j, const bezier_baryc_entry_type& c, bezier_baryc_list &c_output);
+
+void Delta(const int i, const int j, const bezier_baryc_entry_type& c, bezier_baryc_list &c_output); ///< performs the difference operatore \Delta_ij on c
+
+/*! @brief performes two difference operator on c
+ *@param diff1 the indices of the first difference operator
+ *@param diff2 the indices of the second difference operator
+ *@param c		input (in baryc coordinates)
+ *@param c_output	returns result
+ */
 void Delta_twice(Eigen::Vector2i diff1, Eigen::Vector2i diff2, const bezier_baryc_list& c, bezier_baryc_list &c_output);
 
 class Convexifier
