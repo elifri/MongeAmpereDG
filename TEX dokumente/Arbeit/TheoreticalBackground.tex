@@ -59,6 +59,7 @@ There are problems such that no such solution exists. A PDE of order $k$ require
 %\section{Functional Spaces}
 According to the literature we refer by $W^{s,p}(\Omega)$ to the H\"older space, a set consisting of all $L^p(\Omega)$ functions whose distributional derivates up to order $s$ are contained in $L^ p(\Omega)$.
 \todo{Sollte ich  distributional derivates erklaeren?} The special case $p=2$ are referred to as Sobolev spaces $H^s(\Omega):=W^{s,2}(\Omega)$. An additional subscript $0$ denotes the set where all functions are zero at the boundary, i.e. $H^s_0 :=\{f \in H^s(\Omega); f(x)=0 \; \forall x \in \partial \Omega\}$
+\todo{norms}
 
 Let $T$ be a triangle in $\Omega$ and spanned by the points $v_0, v_1, v_2$. We also write 
 \[
@@ -94,8 +95,9 @@ We define some function spaces associated to a triangulation
 \begin{align}
 	H^s(\triang) = \prod\limits_{T\in \triang}  H^s(T), \qquad W^{s,p}(\Omega) = \prod\limits_{T\in \triang} W^{s,p}(T).
 \end{align}	
-
 \end{definition}
+\todo{broken norms and norm}
+
 \begin{definition}[Piecewise Polynomial Spaces] \label{def: piecewise polySpace}
 	Further we denote the finite-dimensional space of piecewise polynomials by
 \[	
@@ -103,7 +105,7 @@ We define some function spaces associated to a triangulation
 \]
 \end{definition}
 
-%\todo{norms}
+\todo{norm equivalence}
 We use a subscript $h$ to indicate a piecewise evaluation/interpretation. Subsequently differential operators with a subscript $h$ imply separate differentiations on every triangle.
 
 To formulate a method capable of handling discontinuities along triangle edges we introduce edge operators.   
@@ -310,6 +312,74 @@ $  \textnormal{for all } \varphi \in V_h$.
 
 Just like in the finite element method we can derive a linear system of equations $M \mathbf{u} = \mathbf{b}$ with $M$ sparse and $\mathbf{u}$ representing the coefficient vector of $u_h$ with respect to the basis $B_V$.
 This particular discontinuous Galerkin method is called \emph{Symmetric Interior Penalty Galerkin method} (SIPG).
+
+\section{Well-posedness of the SIPG Method}
+
+In this section we want to prove the derived SIPG method is well-posed.
+
+Therefore, we have to show the following statement
+\begin{lemma}\label{la: SIPG continuous}
+	If $A$ is positive definite it holds
+	\[
+		|a_S(\varphi, v) + J^\sigma(\varphi,v)| \leq C \norm{\varphi}_{1,h} \norm{v}_{1,h} \qquad \forall \varphi,v \in V_h
+	\]
+\end{lemma}
+\begin{proof}
+
+Let us consider the terms of \eqref{eq:inner product SIPG} separately.
+For the first term we have
+\begin{align}
+	\sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v \leq \norm A_{L_2(\Omega)}  \norm{\nabla \varphi}_{L_2(\Omega)} \norm{\nabla v}_{L_2(\Omega)}. \label{eq: estimate first term}
+\end{align}
+
+To estimate the remaining terms we need a standard trace and inverse estimate as can be found in \cite{BS2002}.
+\begin{lemma}\label{la: trace estimate}
+	For any quasi-uniform trianguliaton $\triang$, there holds
+	\[
+%	\norm{v}_{L2 (\partial T)}^2 \leq C\left(\frac 1 {h_T} \norm{v}_{L2(T)}^2  + h_T \norm{\nabla v}_{L2(T)}^2\right) \qquad \forall v \in H^1(T).
+	\sum_{e \in \edges} \LTwonormE{v}^2 \leq C\left(\frac 1 {h} \LTwonorm{v}^2  + h \HOnenorm{v}^2\right) \qquad \forall v \in H^1(T).
+	\]
+\end{lemma}
+Considering the sum of the second and the fourth term we find using the discrete Schwarz' inequality
+\begin{align}
+	\sum\limits_{e \in \edges}\int_{e} \jump {\varphi \average{A \nabla v} } &=
+	\sum\limits_{e \in \edges}  \LTwonormE{\jump {\varphi}} \LTwonormE {\average{A \nabla v}} \nonumber \\
+	& \leq
+		\left( \sum\limits_{e \in \edges}\int_{e} \frac 1 {|e|}\LTwonormE{\jump {\varphi}}^2 \right)^{\frac 1 2}
+		\left( \sum\limits_{e \in \edges}\int_{e} |e|\LTwonormE{\average{A \nabla v}}^2 \right)^{\frac 1 2}
+\end{align}	
+Applying now Lemma \ref{la: trace estimate} yields
+\begin{align}
+	\sum\limits_{e \in \edges}\int_{e} \frac 1 {|e|} \jump{\varphi \average{A \nabla v} } 
+%	\leq&
+%		C \left( \sum\limits_{T \in \triang}\frac 1 {h_T^2}\LTwonormT{ {\varphi}}^2 
+%		+ \HOnenormT{ {\varphi}}^2 \right)^{\frac 1 2} \nonumber \\
+%		&\cdot \left( \sum\limits_{T \in \triang}\frac 1 {h_T^2}\LTwonormT{\average{A \nabla v}}^2 
+%		+ \HOnenormT{\average{A \nabla v}}^2 \right)^{\frac 1 2} \\
+	\leq&
+		C \left( \frac 1 {h^2}\LTwonorm{ {\varphi}}^2 
+		+ \HOnenorm{ {\varphi}}^2 \right)^{\frac 1 2} \nonumber \\
+		&\cdot \left( \frac 1 {h^2}\LTwonorm{\average{A \nabla v}}^2 
+		+ \HOnenorm{\average{A \nabla v}}^2 \right)^{\frac 1 2} 
+	\end{align}
+Using the Poincar\'e inequality and the definition of the discrete $H^1$ norm we find for any $w \in V_h$
+\begin{align}
+\frac 1 {h^2}\LTwonorm{ {w}}^2 + \HOnenorm{ {w}}^2 
+\leq& C \LTwonorm{ {\nabla w}}^2 + \LTwonorm{ {\nabla w}}^2 +\sum_{e \in \edges} \LTwonormE{ {\average{\nabla w}}}^2 \nonumber\\
+\leq& C \HOnenorm{ {\nabla w}}^2.
+\end{align}
+Hence we get
+\begin{align}
+\sum\limits_{e \in \edges}\int_{e} \frac 1 {|e|}\jump {\varphi \average{A \nabla v} } \leq&
+	C \HOnenorm{\nabla \varphi}\HOnenorm{\average A}\HOnenorm{\average{\nabla v}}\label{eq: estimate second fourth term}
+\end{align}
+Since the third and the last term in \eqref{eq:inner product SIPG} are the symmetrising terms, we analogously have for their sum
+\begin{align}
+\sum\limits_{e \in \edgesi}\int_{e} \frac 1 {|e|}\jump {v \average{A \nabla \varphi} } \leq&
+C \HOnenorm{\nabla v}\HOnenorm{\average A}\HOnenorm{\average{\nabla \varphi}}. \label{eq: estimate third fifth term}
+\end{align}
+Combining \eqref{eq: estimate first term}, \eqref{eq: estimate second fourth term} and \eqref{eq: estimate third fifth term} together with the norm equivalence yields the claim.
+\end{proof}
 
 \section{Implementation of a SIPG Method}
 

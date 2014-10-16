@@ -26,7 +26,16 @@
 
 
 %=======
+
+%norms
 \newcommand{\norm}[1]{\ensuremath{\lVert #1 \rVert}}
+
+\newcommand{\LTwonorm}[1]{\ensuremath{\norm {#1}_{L^2(\Omega)}}}
+\newcommand{\LTwonormE}[1]{\ensuremath{\norm {#1}_{L^2(e)}}}
+\newcommand{\LTwonormT}[1]{\ensuremath{\norm {#1}_{L^2(T)}}}
+
+\newcommand{\HOnenorm}[1]{\ensuremath{\norm {#1}_{H^1(\Omega)}}}
+\newcommand{\HOnenormT}[1]{\ensuremath{\norm {#1}_{H^1(T)}}}
 
 %edge operators
 \newcommand{\laverage}{\{\!\!\{}
