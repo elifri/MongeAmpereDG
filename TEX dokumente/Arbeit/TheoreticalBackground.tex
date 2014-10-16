@@ -104,6 +104,15 @@ We define some function spaces associated to a triangulation
 	\mathcal P^k_h = \{ f \in L^\infty(\Omega); f \arrowvert_T \textnormal{ is a polynomial of (total) degree } \leq k \textnormal{ for every } t \in \mathcal T_h\}.
 \]
 \end{definition}
+Next we define the corresponding norm.
+\begin{definition}[Discrete $H^1$ norm] \label{def: discrete h1 norm}
+	The discrete $H^1$norm is defined as 
+\[	
+		\HOneDnorm w ^2 = \LTwonorm {\nabla v }^2 + \sum_{e \in \edges} |e| \LTwonormE{\average{\nabla v }}.
+\]
+\end{definition}
+Note, that restricted to $\mathcal P^k_h$ this norm is equivalent to $\HOnenorm \cdot$.
+
 
 \todo{norm equivalence}
 We use a subscript $h$ to indicate a piecewise evaluation/interpretation. Subsequently differential operators with a subscript $h$ imply separate differentiations on every triangle.
@@ -332,7 +341,7 @@ For the first term we have
 	\sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v \leq \norm A_{L_2(\Omega)}  \norm{\nabla \varphi}_{L_2(\Omega)} \norm{\nabla v}_{L_2(\Omega)}. \label{eq: estimate first term}
 \end{align}
 
-To estimate the remaining terms we need a standard trace and inverse estimate as can be found in \cite{BS2002}.
+To estimate the remaining terms we need a standard trace and inverse estimate as can be found in \cite[Section 4.5]{BS2002}.
 \begin{lemma}\label{la: trace estimate}
 	For any quasi-uniform trianguliaton $\triang$, there holds
 	\[
@@ -371,14 +380,54 @@ Using the Poincar\'e inequality and the definition of the discrete $H^1$ norm we
 Hence we get
 \begin{align}
 \sum\limits_{e \in \edges}\int_{e} \frac 1 {|e|}\jump {\varphi \average{A \nabla v} } \leq&
-	C \HOnenorm{\nabla \varphi}\HOnenorm{\average A}\HOnenorm{\average{\nabla v}}\label{eq: estimate second fourth term}
+	C \HOnenorm{ \varphi}\HOnenorm{\average A}\HOnenorm{\average{v}}\label{eq: estimate second fourth term}
 \end{align}
 Since the third and the last term in \eqref{eq:inner product SIPG} are the symmetrising terms, we analogously have for their sum
 \begin{align}
 \sum\limits_{e \in \edgesi}\int_{e} \frac 1 {|e|}\jump {v \average{A \nabla \varphi} } \leq&
-C \HOnenorm{\nabla v}\HOnenorm{\average A}\HOnenorm{\average{\nabla \varphi}}. \label{eq: estimate third fifth term}
+C \HOnenorm{v}\HOnenorm{\average A}\HOnenorm{\average{\varphi}}. \label{eq: estimate third fifth term}
 \end{align}
 Combining \eqref{eq: estimate first term}, \eqref{eq: estimate second fourth term} and \eqref{eq: estimate third fifth term} together with the norm equivalence yields the claim.
+\end{proof}
+
+We define the $H^{-1}$ semi-norm as 
+\begin{definition}[$H^{-1}$ Semi-norm] \label{def: h-1 seminorm}
+	The semi-norm is defined by 
+	\[
+		\HMinusOneDnorm r ^2 = \sup_{0 \neq w \in V_h} \frac {{\bilin r w } } {\HOneDnorm{w}}.
+	\]
+\end{definition}
+
+\begin{theorem}[Stability]
+There holds for $a (v):=a_S(\cdot, v)+J^\sigma(\cdot, v)$
+	\begin{align}
+	 	\HMinusOneDnorm{a (v)} \leq C \HOneDnorm v \qquad \forall v \in H^2(\Omega; \triang) \cap H^1(\Omega). \label{eq: bilin continuity}
+	 \end{align}
+	 Moreover, there exists a $h_0 > 0$ such that for $h \leq h_0 $, the operator $a$ is invertible with 
+	 \begin{align}
+	 	\HOneDnorm {a^{-1} r} \leq C \HMinusOneDnorm r \qquad \forall r \in V_h \label{eq: bilin stability}
+	 \end{align}
+\end{theorem}
+\begin{proof}
+	The first estimate follows directly from Lemma \ref{la: SIPG continuous} and the definition of the norm \ref{def: h-1 seminorm}. W-e are able to reduce the proof of \eqref{eq: bilin stability} to showing $a$ is coercive on $V_h$.
+	
+	Since the diffusion matrix $A$ is positive definite it holds
+	\[
+		\int_\Omega  w \cdot A \nabla w \geq \lambda \LTwonorm {\nabla w }^2 
+	\]
+	for a $\lambda >0$.
+	Hence, we find
+	\[
+		\bilin {a(v)} {v}  \geq \lambda \LTwonorm {\nabla v }^2 + 2 \sum\limits_{e \in \edges}\int_{e} \frac 1 {|e|}\jump {v \average{A \nabla v} }
+	\] 
+	By the estimation of \eqref{eq: estimate second fourth term} it holds 
+		\[
+			\bilin {a(v)} {v}  \geq \lambda \LTwonorm {\nabla v }^2 + C \HOnenorm{v} \HOnenorm{v}^2
+		\] 
+	For sufficiently small $h$ it holds by the Poincar\'e inequality and the norm equivalence of the discrete and non-discrete $H^1$ norm
+	\[
+		\bilin {a(v)} {v}  \geq C  \HOnenorm{v}^2 \geq C  \HOneDnorm{v}^2
+	\]
 \end{proof}
 
 \section{Implementation of a SIPG Method}

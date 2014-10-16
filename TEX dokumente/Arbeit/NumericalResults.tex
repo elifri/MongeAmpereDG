@@ -180,299 +180,13 @@ We denote the degree of the trial space $V_h=\mathcal P_h^k$ by $k$ and the degr
 Most parameters were set to the default PETSc values %which includes the solver uses cubic backtracking 
 but the absolute tolerance was adjusted to $1e-8$ and the number of maximum iteration was restricted to 100. 
 
-Figure \ref{fig: l2 errors test 1} shows the $L^2$ error of all performances of the first test case that have converged, the polynomial degrees $k$ were taken to be $1,\dots,3$ and $k_{DH}$ equal to all variants $0, \dots, k$. In Figure \ref{fig: h1 errors test 1} the corresponding $H^1$ errors are plotted.
-\begin{figure}[H]
-\centering
-	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA1_Neilan_l2.pdf}
-	\caption{$L^2$ errors for test case \ref{test smooth}}
-	\label{fig: l2 errors test 1}
-\end{figure}
-\begin{figure}[H]
-\centering
-	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA1_Neilan_h1.pdf}
-	\caption{$H^1$ errors for test case \ref{test smooth}}
-	\label{fig: h1 errors test 1}
-\end{figure}
+\input{NumericalResultsNeilan1.tex}
 
-Due to the large number of degree of freedoms the I could not obtain any results for the cases $k=2,3$ and $k_{DH}=2,3$ on the finest grid, for $k=3$ and $k_{DH}=3$ even on a mesh with $h=1/64$ the requested memory was too much.
+\input{NumericalResultsNeilan2.tex}
 
-As also experienced by Neilan the method does not work for the polynomial degree $k=1$. Similarly, in runs with a low polynomial degree $k_{DH}$ Newton's method did not converge. \todo{LU hat nicht funktioniert}
-The results for the runs with $k=3$ are shown more detailed in Table \ref{tab: l2 errors test 1 deg 2}, in both tables the column $N$ refers to the number of iterations the Newton solver needed to reach the desired tolerance. 
-\begin{table}[H]
-	\begin{subtable}[b]{0.45\textwidth}
-		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-				    every row 0 column 0/.style={set content=init},
-		]\MAOnedegThreeThree
-    	\caption{Error for $k=3, k_{DH}=3$}
-   \end{subtable}
-   ~
-	\begin{subtable}[b]{0.45\textwidth}
-		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-				    every row 0 column 0/.style={set content=init},
-		]\MAOnedegThreeTwo
- 	\caption{Error for $k=3, k_{DH}=2$}
-	\end{subtable}
-	\caption{Errors for test case \ref{test smooth}}
-	\label{tab: l2 errors test 1 deg 2}
-\end{table}
-Considering this results in the smooth test scenario we observe that the error almost do not alter for different polynomial degrees $k_{DH}$ if both converge. Albeit for fine grids the methods with less difference between the two degrees seem to perform better. The calculated numerical orders as shown in table \ref{tab: order} supports this first intuition.
+\input{NumericalResultsNeilan3.tex}
 
-\begin{table}[H]
-\begin{subtable}[b]{0.45\textwidth}
-\centering
-	\pgfplotstabletypeset
-	{
-		k $k_{DH}$ {numerical order}
-		2 1  1.50338
-		2 2  2.24427
-		3 2 2.63597
-		3 3 3.64758
-	}
-	\caption{numerical order in $L2$ norm}
-\end{subtable}
-\begin{subtable}[b]{0.45\textwidth}
-	\pgfplotstabletypeset
-	{
-		k $k_{DH}$ {numerical order}
-		2 1  1.65382 
-		2 2  1.973
-		3 2 2.39616
-		3 3 2.97876
-	}
-	\caption{numerical order in $H1$ norm}
-	\end{subtable}
-\caption{numerical order in test \ref{test smooth}}
-\label{tab: order}
-\end{table}
-
-This test scenario was also performed with the additional normal jump penalty term as stated in \eqref{eq: neilan eq1 + jump} weighted with $\eta$ equal to 50 leading to the results shown in figure \ref{fig: l2 errors test 1 jump} and the tables \ref{tab: l2 errors test 1 deg 2 jump}.
-
-\begin{figure}[h!]
-\centering
-	\includegraphics[scale=0.4]{../../FEniCS/diagrams/MA1_Neilan_GradJump_l2.pdf}
-	\caption{$L^2$ errors for test case \ref{test smooth} and additional gradient jump penalty}
-	\label{fig: l2 errors test 1 jump}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA1_Neilan_GradJump_h1.pdf}
-	\caption{$H^1$ errors for test case \ref{test smooth} and additional gradient jump penalty}
-	\label{fig: h1 errors test 1 jump}
-\end{figure}
-\begin{table}[H]
-	\begin{subtable}[b]{0.45\textwidth}
-		\centering
-		\pgfplotstabletypeset[
-		columns={iterations, l2error, h1error,N},
-		    every row 0 column 0/.style={set content=init},
-		    every row 7 column 1/.style={set content={-}},
-		    every row 7 column 2/.style={set content={-}},
-		    every row 7 column 3/.style={set content={-}},
-		]\MAOneJumpdegTwoTwo
-    	\caption{Error for $k=2, k_{DH}=2$}
-   \end{subtable}
-   ~
-	\begin{subtable}[b]{0.45\textwidth}
-		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-		    every row 0 column 0/.style={set content=init},
-		]\MAOneJumpdegTwoZero
-	\caption{Error for $k=2, k_{DH}=0$}
-	\end{subtable}
-	\caption{Errors for test case \ref{test smooth}}
-	\label{tab: l2 errors test 1 deg 2 jump}
-\end{table}
-As claimed by Neilan the additional penalisation leads to a convergend method even for low polynomial degrees, even in the cases where only $k_{DH}$ was taken to be small. The calculated error norms indicate more clearly than in the non penalised runs that variation of $k_{DH}$ yields only to a slight loss of accuracy. The corresponding numerical orders can be found in \ref{tab: order jump}.
-\begin{table}[H]
-\centering
-\begin{subtable}[b]{0.45\textwidth}
-	\pgfplotstabletypeset
-	{
-		k $k_{DH}$ {numerical order}
-		1 0 1.32061
-		2 0 2.69871
-		2 1 2.93488
-		2 2 3.0406
-		3 1 3.63116
-		3 2 4.01895
-		3 3 4.0588
-	}
-	\caption{numerical order in $L2$ norm}
-	\end{subtable}
-	\begin{subtable}[b]{0.45\textwidth}
-	\pgfplotstabletypeset
-	{
-		k $k_{DH}$ {numerical order}
-		1 0 0.978853
-		2 0 2.24561
-		2 1 2.24836
-		2 2 2.28606
-		3 1 3.03434
-		3 2 3.0359
-		3 3  3.0343
-	}
-	\caption{numerical order in $H1$ norm}
-	\end{subtable}
-	\caption{numerical order with jump penalty in test \ref{test smooth}}
-\label{tab: order jump}
-\end{table}
-
-
-The second test was carried out with the same configuration. Again the size of the system matrices exceeded memory and therefore there are not data points for polynomial degrees $k=2,3$ on fine grids. Table \ref{tab: l2 errors test 2} show the decreasing error norms, it shows only two degree pairs for other degree pairs behaved similarly as we can already see in figure \ref{fig: l2 errors test 2} and \ref{fig: h1 errors test 2}.
-\begin{figure}[h]
-\centering
-	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA2_Neilan_l2.pdf}
-	\caption{$L^2$ errors for test case \ref{test sqrt} }
-	\label{fig: l2 errors test 2}
-\end{figure}
-\begin{figure}[h]
-	\centering
-	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA2_Neilan_h1.pdf}
-	\caption{$H^1$ errors for test case \ref{test sqrt} }
-	\label{fig: h1 errors test 2}
-\end{figure}
-\begin{table}[H]
-	\begin{subtable}[b]{0.45\textwidth}
-		\centering
-		\pgfplotstabletypeset[
-		columns={iterations, l2error, h1error,N},
-		    every row 0 column 0/.style={set content=init},
-		]{\MATwodegTwoTwo}
-    	\caption{Error for $k=2, k_{DH}=2$}
-   \end{subtable}
-   ~
-	\begin{subtable}[b]{0.45\textwidth}
-		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-		    every row 0 column 0/.style={set content=init},
-		]{\MATwodegThreeThree}
-	\caption{Error for $k=3, k_{DH}=3$}
-	\end{subtable}
-	\caption{Errors for test case \ref{test sqrt}}
-	\label{tab: l2 errors test 2}
-\end{table}
-
-Switching the penalisation of gradient jumps on the method performs again well, its results are shown in figure \ref{fig: l2 errors test 2 jump} and the tables . 
-\begin{figure}[H]
-\centering
-\begin{subfigure}{\textwidth}
-\centering
-	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA2_Neilan_GradJump_l2.pdf}
-\end{subfigure}
-
-\begin{subfigure}{\textwidth}
-\centering
-	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA2_Neilan_GradJump_h1.pdf}
-\end{subfigure}
-	\caption{$L^2$ and $H^1$ errors for test case \ref{test sqrt} and additional gradient jump penalty}
-	\label{fig: l2 errors test 2 jump}
-\end{figure}
-\begin{table}[H]
-	\begin{subtable}[b]{0.45\textwidth}
-		\centering
-		\pgfplotstabletypeset[
-		columns={iterations, l2error, h1error,N},
-		every row 0 column 0/.style={set content=init},
-		]{\MATwoJumpdegTwoTwo}
-		\caption{Error for $k=2, k_{DH}=2$}
-	\end{subtable}
-	~
-	\begin{subtable}[b]{0.45\textwidth}
-		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-		every row 0 column 0/.style={set content=init},
-		]{\MATwoJumpdegThreeThree}
-		\caption{Error for $k=3, k_{DH}=3$}
-	\end{subtable}
-	\caption{Errors for test case \ref{test sqrt} with additional }
-	\label{tab: l2 errors test 2 jump}
-\end{table}
-
-Similar are results for the third case, the first problem without a classical solution. . All converged iteration steps are given in the tables \ref{tab: l2 errors test 3} and \ref{tab: l2 errors test 3 jump}. For higher polynomial degrees we obtain the same results as without additional penalisation. 
-\begin{figure}[H]
-	\centering
-	\begin{subfigure}{\textwidth}
-		\centering
-		\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA3_Neilan_l2.pdf}
-	\end{subfigure}
-	
-	\begin{subfigure}{\textwidth}
-		\centering
-		\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA3_Neilan_h1.pdf}
-	\end{subfigure}
-	\caption{$L^2$ and $H^1$ errors for test case \ref{test sqrt} and additional gradient jump penalty}
-	\label{fig: l2 errors test 3}
-\end{figure}
-\begin{table}[H]
-	\begin{subtable}[b]{0.45\textwidth}
-		\centering
-%		\pgfplotstabletypeset[
-%		columns={iterations, l2error, h1error,N},
-%		    every row 0 column 0/.style={set content=init},
-%		]{\MAThreedegTwoTwo}
-    	\caption{Error for $k=2, k_{DH}=2$}
-   \end{subtable}
-   ~
-	\begin{subtable}[b]{0.45\textwidth}
-		\centering
-%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-%		    every row 0 column 0/.style={set content=init},
-%		]{\MAThreedegThreeThree}
-	\caption{Error for $k=3, k_{DH}=3$}
-	\end{subtable}
-	\caption{Errors for test case \ref{test singularity}}
-	\label{tab: l2 errors test 3}
-\end{table}
-
-The corresponding results for the method with additional jump penalisation can be found in figure \ref{fig: l2 errors test 3 jump} and table \ref{tab: l2 errors test 3 jump}. As we can see the method with higher polynomial degree performs better albeit for $k=3$ Newton's method do not converge on the provided initial guess on a grid with $h=1/2$.
-\begin{figure}[H]
-	\centering
-	\begin{subfigure}{\textwidth}
-		\centering
-		\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA3_Neilan_GradJump_l2.pdf}
-	\end{subfigure}
-	
-	\begin{subfigure}{\textwidth}
-		\centering
-		\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA3_Neilan_GradJump_h1.pdf}
-	\end{subfigure}
-	\caption{$L^2$ and $H^1$ errors for test case \ref{test sqrt} and additional gradient jump penalty}
-	\label{fig: l2 errors test 3 jump}
-\end{figure}
-
-\begin{table}[H]
-\begin{subtable}[b]{0.45\textwidth}
-  	\centering
-  	\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-  	every row 0 column 0/.style={set content=init},
-  	]{\MAThreeJumpdegOneZero}
-  	\caption{Error for $k=1, k_{DH}=0$}
-  \end{subtable}
-  ~
-	\begin{subtable}[b]{0.45\textwidth}
-		\centering
-		  		\pgfplotstabletypeset[
-		columns={iterations, l2error, h1error,N},
-		    every row 0 column 0/.style={set content=init},
-		]{\MAThreeJumpdegTwoTwo}
-    	\caption{Error for $k=2, k_{DH}=2$}
-   \end{subtable}
- 	\caption{Errors for test case \ref{test singularity} and additional gradient jump penalty}
-	\label{tab: l2 errors test 3 jump}
-\end{table}
-
-
-%\begin{figure}[H]
-%\centering
-%\begin{subfigure}{\textwidth}
-%	\includegraphics[scale =0.4]{../../FEniCS/diagrams/MA3_Neilan_GradJump_l2.pdf}
-%\end{subfigure}
-%	\caption{$L^2$ and $H^1$ errors for test case \ref{test sqrt} and additional gradient jump penalty}
-%	\label{fig: l2 errors test 3 jump}
-%\end{figure}
+\input{NumericalResultsNeilan4.tex}
 
 
 \newpage
@@ -481,7 +195,7 @@ The corresponding results for the method with additional jump penalisation can b
 
 Our method was implemented in pure C++. The underlying grid structure was taken from the implementation of \cite{BMV2009}, handling vectors and matrices as well as was linear solver were provided by the Eigen library \cite{eigenweb}. To solve the quadratic program arising in the context of convexification the C++ library ipopt \cite{ipopt} was used.
 
-\todo{mesh}
+The C++ implementation uses the same nested grids as also have been used in the latter FEniCS implementations. It is obtained by dividing the unitsquare along the diagonals into four triangles and then refining uniformly as explained in \ref{subsec: refinement and base cells}.
 
 \subsection{Implementation Details}
 
@@ -489,7 +203,6 @@ The main class of the implementation is the Tsolver class. Here come all informa
 We make the clear looking at a . The main method can be found in mesh.cpp. At the beginning all input data is fed into the program. With this information the solver can initialise the grid and the reference cell. 
 The grid is taken from the igpm\_t2\_lib and based on the work of \cite{BMV2009} and all reference data is handled in the class Tshape.
 
-\subsubsection{alternative 1}
 The main work is done in Tsolver's function stepping\_MA(). It starts with an initialisation process where it reads specific problem data which includes
 \begin{enumerate}
  \item  the problem we want to solve,
@@ -502,21 +215,18 @@ The main work is done in Tsolver's function stepping\_MA(). It starts with an in
 During the initialisation it also updates all base cell data, the leaf cell data, enumerate the degree of freedoms and the initial guess.
 Afterwards the fixed point iterations begin, in every step the General Poisson Problem is solved, eventually convexified and afterwards with the last solution step combined. If the specified number of iterations has been carried out, the grid is refined, the leaf cell data updated and we start the fixed point iterations again.
 We repeat this process until the maximal number of grid refinements is reached.
-
-
-\subsubsection{alternative 2}
-The main work is done in Tsolver's function stepping\_MA(). Algorithm \ref{alg: stepping} illustrates how this function works.
+To illustrate this procedure Algorithm \ref{alg: stepping} shows the function stepping\_MA() in pseudo code.
 \begin{algorithm}[H]
 \begin{algorithmic}
-	\State Read problem specific data:
-		\begin{enumerate}
-			 \item  problem\_name \Comment {to choose right-hand side and boundary conditions}
-			 \item penalty parameters   \Comment {  to enforce continuity and penalise the gradient jump}
-			 \item start\_level  \Comment { the start level of refinement with respect to the input grid}
-			 \item $\alpha$  \Comment {the damping paramter}
-			 \item maxits \Comment{ the number of fixed point iterations per grid}
-			 \item max\_levelrefinement \Comment{ the maximal refinement level }
-		\end{enumerate}
+	\State Read problem specific data
+%		\begin{enumerate}
+%			 \item  problem\_name \Comment {to choose right-hand side and boundary conditions}
+%			 \item penalty parameters   \Comment {  to enforce continuity and penalise the gradient jump}
+%			 \item start\_level  \Comment { the start level of refinement with respect to the input grid}
+%			 \item $\alpha$  \Comment {the damping paramter}
+%			 \item maxits \Comment{ the number of fixed point iterations per grid}
+%			 \item max\_levelrefinement \Comment{ the maximal refinement level }
+%		\end{enumerate}
 	\State Initialise base cell data
 	\State Refine to start\_level
 	\State Initialise leaf cell data
@@ -567,7 +277,7 @@ The quadratic program was solved with the C++ library ipopt \cite{ipopt}. Fortun
 The results shown in figure \ref{fig: l2 errors test smooth ourMethodConvex} are very disillusioning.
 \begin{figure}[H]
 \centering
-%	\includegraphics[scale =0.4]{plots/MA1_convexify.pdf}
+	\includegraphics[scale =0.4]{plots/MA1_convexify.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth} and additional convexification}
 	\label{fig: l2 errors test smooth ourMethodConvex}
 \end{figure}
@@ -599,13 +309,13 @@ The other test cases produce similar results as can be seen in figure \ref{fig: 
 
 \begin{figure}[H]
 \centering
-%	\includegraphics[scale =0.4]{plots/MA2_convexify.pdf}
+	\includegraphics[scale =0.4]{plots/MA2_convexify.pdf}
 	\caption{$L^2$ errors for test case \ref{test singularity} and additional convexification}
 	\label{fig: l2 errors test singularity ourMethodConvex}
 \end{figure}
 \begin{figure}[H]
 \centering
-%	\includegraphics[scale =0.4]{plots/MA2_convexComp.pdf}
+	\includegraphics[scale =0.4]{plots/MA2_convexComp.pdf}
 	\caption{$L^2$ errors for test case \ref{test singularity} and additional convexification}
 	\label{fig: Compare test singularity ourMethodConvex}
 \end{figure}
@@ -618,7 +328,7 @@ We used the same code basis as in the previous tests but turned off every direct
 In the first figure \ref{fig: l2 errors test smooth ourMethod} we can see the results for the the smooth test case \ref{test smooth}.
 \begin{figure}[h!]
 	\centering
-%	\includegraphics[scale =0.4]{plots/MA1.pdf}
+	\includegraphics[scale =0.4]{plots/MA1.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth}}
 	\label{fig: l2 errors test smooth ourMethod}
 \end{figure}

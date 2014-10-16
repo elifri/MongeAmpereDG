@@ -1,6 +1,6 @@
 \section{Comparison with Newton's method}
 
-Before we start the anlaysis of our Method we shortly see what happens if we apply Newton's method on the anlaytical form of the \MA equation \ref{MA eq}.
+Before we start the anlaysis of our Method we shortly see what happens if we apply Newton's method on the analytical form of the \MA equation \ref{MA eq}.
 Let $F$ be the function such that its root solves the \MA equation, i.e. 
 \[
 	F(u) = \mydet{D^2 u} -f
@@ -18,7 +18,7 @@ where $DF[u]$ denotes the G\^ateaux derivative. We derived the G\^ateaux derivat
 Similar to the derivation of the fixed point iteration we can apply Lemma \ref{la: An application of the divergernce product rule} to rewrite \eqref{eq: Newton iteration pre} and we have the problem
 \begin{align}
 	\nabla \cdot \left( \cof(D^2 u^0) \nabla u^{i+1} \right) &= -\mydet {D^2u^i} +f+\nabla \cdot \left( \cof(D^2 u^i) \nabla u^{i} \right)  \textnormal{ in } \Omega,  \label{eq: Newton iteration}\\
-	u^{i+1} &= g. \textnormal{ on } \partial \Omega 
+	u^{i+1} &= g \textnormal{ on } \partial \Omega .
 \end{align}
 
 Hence, considering once again the fact 
@@ -43,6 +43,26 @@ And indeed this is the variational form of \eqref{eq: Newton iteration}
 His chosen trial space were piecewise polynomials contained in $C^1(\Omega)$. He claims that this ansatz breaks down for problems with non-smooth solutions, in his numerical results he cites test \ref{test sqrt} as an example where Newton's method diverges.
 
 \todo{existence theory}
+\section{Comparison with the $C^0$ penalty method}
+It is also interesting to compare our linearisation with the linearisations of the two other methods.
+Consider a Newton step made in the $C^0$ penalty method (cf. \ref{sec: Brenner method}).
+\begin{align}
+	&\int_\Omega \cofHess {u^i} \nabla (u^{i+1}-u^i) \nabla v - \sum_{e \in \edgesb} \int_e \cofHess {u^i} \nabla (u^{i+1}-u^i) \cdot \mathbf n \; v \nonumber \\
+	&- \sum_{e \in \edgesb} \int_e \cofHess {u^i} \nabla v \cdot \mathbf n (u^{i+1}-u^i) + \sigma \sum_{e \in \edgesb} \frac 1 {|e|} \int_e v (u^{i+1}-u^i)\nonumber \\
+	=&-\int_\Omega \left(f - \detHess{u^i)}\right) v  
+			- \sum_{e \in \edgesi} \int_e \jump { \average{\cofHess {u^i}} \nabla {u^i} } v \nonumber \\
+&	- \sum_{e \in \edgesb} \int_e \cofHess {u^i} \nabla v \cdot \mathbf n \; (u^i-g) - \sigma \sum_{e \in \edgesb} \frac 1 {|e|} \int_e v (u^{i}-g) \label{eq: a newton step Brenner}
+\end{align}
+To compare both linearisations we first reorder and remove cancelling terms in \eqref{eq: a newton step Brenner}.
+\begin{align}
+	&\int_\Omega \cofHess {u^i} \nabla u^{i+1} \nabla v \\
+	&- \sum_{e \in \edgesb} \int_e \cofHess {u^i} \nabla u^{i+1} \cdot \mathbf n \; v 
+		- \sum_{e \in \edgesb} \int_e \cofHess {u^i} \nabla v \cdot \mathbf n \; u^{i+1} \\
+	=
+	&-\int_\Omega \left(f - \detHess{u^i)}\right) v \\
+	&+ \sum_{e \in \edgesb} \int_e \cofHess {u^i} \nabla v \cdot \mathbf n \; g 
+	+\sigma \sum_{e \in \edgesb} \frac 1 {|e|} \int_e v (-u^{i}+g) \label{eq: ordered newton step Brenner}
+\end{align}
 
 \section{Conclusion}
 

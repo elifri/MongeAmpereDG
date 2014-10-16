@@ -5,16 +5,17 @@ The most natural attempt for a formulation of a DG method is to exploit the equa
 	\int_{\Omega} \mydet {D^2 u} v = \int_\Omega fv \qquad \text{ for all test functions } v. \label{eq: naiv ansatz}
 \end{align}
 
-In 2008 B\"ohmer investigated this ansatz for $C^1$ elements in \cite{Boehmer2008}. He derives a general $C^1$ method including statements on its stability and consistency. He is able to reduce the convergence analysis to the linearised case \cite[Section 9]{Boehmer2008}, and discovers that the weak and strong linear operators even coincide for his ansatz spaces meaning the diagram in figure \ref{fig: fe diagram} commutes.
-
+In 2008 B\"ohmer investigated this ansatz for $C^1$ elements in \cite{Boehmer2008}. He derives a general $C^1$ method including statements on its stability and consistency. 
+He is able to reduce the convergence analysis to the linearised case \cite[Section 9]{Boehmer2008}, and discovers even a connection between the weak and strong linearised forms: For his chosen elements these operators even coincide meaning the diagram in figure \ref{fig: fe diagram} commutes.
 \begin{figure}[H]
 	\input{feDiagram.pgf}
 	\label{fig: fe diagram}
 	\caption{An abstract commuting diagram about the relation between weak and strong linear operators.\\ The analytical \MA operator is hereby denoted by $F:=\detHess u$ and its linearisation $L_u(w) = -\nabla \cdot (\cofHess u \nabla w)$, compare \ref{sec: linearisation}. $F_h[u]=0$ denots the discretised formulation, for B\"ohmer's method this is given by \eqref{eq: naiv ansatz}. The diagram is taken of \cite[Fig 2.2]{FGN2013}}
 \end{figure}
-
 However, this formulation has two major disadvantages. 
-At first we cannot throw the high derivatives onto the test functions using integration py parts, thus we do not cannot easily solve the arising system of equations. Secondly \eqref{eq: naiv ansatz} seems to work only for test and ansatz functions contained in $C^1(\Omega)$ whereas usual finite elements are contained in $C^0$. Brenner et alter make the inconsistency between the linearisation of the discrete problem and the the linearisation of the continuous problem, figuratively the non commutating of the diagram in figure \ref{fig: fe diagram} for less regular spaces,  responsible\cite{BGN+2011}. Their idea is to improve the discretised formulation by adding DG terms to force consistency and add stability.
+At first we cannot throw the high derivatives onto the test functions using integration by parts, thus we we have to handle the high derivatives. Secondly \eqref{eq: naiv ansatz} seems to work only for test and ansatz functions contained in $C^1(\Omega)$ whereas usual finite elements are contained in $C^0$. B\"ohmer claims '" We require FEs in $C^1$, since for FEs in $C^0$ we did not see a possibility to handle the interior variational crimes. The standard interplay between the weak and strong form is impossible for fully nonlinear problems and \emph{excludes, e.g. discontinuous Galerkin methods.}'"\cite[p.1214]{Boehmer2008}.
+
+Indeed the diagram in figure \ref{fig: fe diagram} does not commute for less regular spaces and Brenner et alter make this inconsistency responsible for the failure of $C^0$ methods\cite{BGN+2011}. Their idea is to improve the discretised formulation by adding DG terms to force consistency between the linearisation of the discrete problem and the linearisation of the continuous problem.
 
 \subsection{A $C^0$ Penalty Method }\label{sec: Brenner method}
 
@@ -40,7 +41,7 @@ Considering the last identity the variational form of the linearisation reads
 	    + \sum_{e \in \edges} \int_{e} \llbracket \{\{\mycof{D^2 u_h} \}\} \nabla w_h\rrbracket v_h \nonumber \\
 	    &+ \sum_{e \in \edges} \int_{e} \llbracket \{\{\mycof{D^2 u_h} \}\} \nabla v_h\rrbracket w_h \label{eq: var of linearisation}
 \end{align}
-Plugging the terms missing in \eqref{eq: linearOperator} but appearing in \eqref{eq: var of linearisation} into the original naive ansatz \eqref{eq: naiv ansatz} and adding further terms to enforce weak boundary conditions they formulate the problem: Find $u_h \in V_h$ such that
+Plugging the terms missing in \eqref{eq: linearOperator} but appearing in \eqref{eq: var of linearisation} into the original naive ansatz \eqref{eq: naiv ansatz} and adding further terms to enforce weak boundary conditions they end up with the problem: Find $u_h \in V_h$ such that
 \begin{align}
 \begin{split}
 	&\int_{\Omega} (f-\mydet {D^2_h u_h} v 
@@ -49,11 +50,21 @@ Plugging the terms missing in \eqref{eq: linearOperator} but appearing in \eqref
 	+ \sigma  \sum_{e \in \edgesb} \frac 1 {h_e} \int_{e} (u_h -g)  = 0 \; \forall v_h \in V_h \label{eq: brenner method}
 \end{split}
 \end{align}
-They choose their ansatz and test space $V_h$ to be the space of continuous functionous being piecewise polynomials up to degree $k$ for a $k \geq 3$. For these degrees and the case of classical solutions they provide a detailed analysis consisting of a proof of well-posedness and some error estimates. Their numerical results suggest optimal convergence rates for smooth solutions although they cannot confirm those with theoretical evidence. \\
+They choose their ansatz and test space $V_h$ to be the space of continuous functionous being piecewise polynomials up to degree $k$ for a $k \geq 3$. For their analysis they assume the \MA problem has strictly convex solution $u\in H^s(\Omega)$ for $s>3$. Then they are able to derive stability of the linearisation of their operator and using the Banach fixed point theorem existence of a solution to \eqref{eq: brenner method} in $V_h$. In the end they also prove an error estimate for their numerical solution:
+\begin{theorem}[Error Estimate{\cite[Theorem 3.1 and 3.2]{BGN+2011}}]\label{thm: error estimate brenner}
+	There exists an $h_0(\sigma) > 0$ such that for $h \leq h_0(\sigma)$ there exists a solution $u_h$ to the penalty method \eqref{eq: brenner method}. Moreover, if $u \in W^{3,\infty}$ then holds
+	\begin{align*}
+%		\norm{u-u_h}_{1,h} \lesssim (1+\sigma) h^{l-1} \norm{u}_H
+		\norm{u-u_h}_{L^2(\Omega)} \lesssim (1+\sigma)^2 
+		                        \left(h^{l} \norm{u}_{H^l(\Omega)} + (1+ | \ln h |^{\frac 1 2 }) h^{2(l-2)} \norm{u}_{H^l(\Omega)} \right)
+	\end{align*}
+where $l=\min\{k+1,s\}$ and $u \in H^s(\Omega)$. 
+	
+\end{theorem}
+Their numerical results suggest optimal convergence rates for smooth solutions although they cannot confirm those with theoretical evidence. \\
 However, their approach has a drawback. In order to find $u_h$ one has to solve the from \eqref{eq: brenner method} resulting nonlinear system. Brenner et alt. make use of Newton's method in the numerical results to solve their example problems. For a good initial guess they inquire a vanishing moments method which internally again solves nonlinear systems based on a Newton's method which uses a nested iteration to create initial guesses. 
 
-Neilan claims when presenting his method in \cite{Neilan2014} that this methods fails to converge for the test case
-$u = -\sqrt{2 - x_1^2 - x_2^2 }$ and $f = \frac 2 {{2 - x_1^2 - x_2^2}^2}$ which lacks $H^2$ regularity and our computations confirm this result, see also test \ref{test sqrt}. Generally the presented method is more appropriate for classical solutions, Brenner et alt. say they plan to address less regular solution in future work.
+Neilan claims when presenting another DG method in \cite{Neilan2014} that this methods fails to converge for the test case $u = -\sqrt{2 - x_1^2 - x_2^2 }$ and $f = \frac 2 {{2 - x_1^2 - x_2^2}^2}$ which lacks $H^2$ regularity and our computations confirm this result, see also test \ref{test sqrt}. In chapter \ref{ch:NumericalResults} we provide some numerical experiments for a nested iteration variant of this method. Generally speaking, the presented method is more appropriate for classical solutions, Brenner et alt. say they plan to address less regular solution in future work. 
 
 
 \subsection{A Finite Element Method based on a Discrete Hessian} \label{subsec: disrete Hessian} \label{sec: FEM discrete Hessian}
@@ -118,7 +129,21 @@ where
 		= \int_\Omega D_h u: B -\sum_{ e \in \edgesi} \int_e  \jump {\average B \nabla u }\qquad \forall B \in \Sigma_h. \tag{\ref{eq: discrete hessian}}
 	\end{align}
 
-Neilan shows the well-posedness and optimal error estimates of this methods for $k \geq 3$ in case the solution lies in $H^2(\Omega)$. Albeit he cannot prove it his numerical experiments suggest that it even works for smaller polynomial degrees and problems which's solution lacks $H^2$ regularity. Although for $k=1$ he adds an additional penalty term forcing thereby a smooth gradient to obtain convergence. Thus, he instead solves:
+Neilan proceeds analogously to the prove of the well-posedness of the method mentioned in the previous section \ref{sec: Brenner method}. At the beginning he derives stability estimates for the linearisation of his operator and then he uses the Banach fixed point theorem to obtain his main theorem. Note, that the new notion of an discrete Hessian makes the stability of this unconventional linearisation hard to handle. The linearisation used in the other $C^0$ penalty method is more common and hence the arguments for deriving stability were already well known.
+He ends up with the following error estimation:
+\begin{theorem}
+	Let $u$ be the convex solution to the \MA equation und suppose $k>3$. Then there exists a $h_1$ such that there exists a solution $u_h \in V_h$ to \eqref{eq: neilan eq1} with
+	\[
+		\norm{u-u_h}_{1,h} \leq C h^k
+	\]
+	where $C$ is a constant independent on $h$ and $\norm{\cdot }_{1,h}$ is the discrete semi-norm 
+	\[
+		\norm{v}_{1,h}^2 = \norm {\nabla v }^2_{L^2(\Omega)} + \sum_{e \in \edges} |e| \norm {\average {\nabla v}}^2_{L^2(\Omega)}.
+	\]
+\end{theorem}
+
+Albeit he cannot prove his numerical experiments suggest that his method even works for smaller polynomial degrees and problems which's solution lacks $H^2$ regularity. 
+\\However, for $k=1$ he has to add an additional penalty term to obtain convergence. Thus, for piecewise affine functions he instead solves:
 \begin{align}
 		\int_\Omega \left(\mydet{D_{DH}^2 u} - f \right) v + \eta \sum_{e \in \edgesi} |e| \int_e \jump{ \nabla u_h} \jump{\nabla v}
 		= 0 \qquad \forall v \in V_h \label{eq: neilan eq1 + jump}
@@ -130,4 +155,4 @@ where
 	\end{align*}
 and $\eta$ is an additional penalty parameter which Neilan takes to be 50 in his numerical tests.
 
-He does not present any proofs for convergence rates, but in the numerical results his method performs with optimal convergence rates. We check the performance of this algorithms later in chapter \ref{ch:NumericalResults}.
+In the numerical results his method performs with optimal convergence rates given a smooth solution, even for polynomials degrees $k<3$. We check the performance of this algorithms later in chapter \ref{ch:NumericalResults}.
