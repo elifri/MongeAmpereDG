@@ -58,10 +58,14 @@ To compare both linearisations we first reorder and remove cancelling terms in \
 	&\int_\Omega \cofHess {u^i} \nabla u^{i+1} \nabla v \\
 	&- \sum_{e \in \edgesb} \int_e \cofHess {u^i} \nabla u^{i+1} \cdot \mathbf n \; v 
 		- \sum_{e \in \edgesb} \int_e \cofHess {u^i} \nabla v \cdot \mathbf n \; u^{i+1} \\
+	&+\sigma \sum_{e \in \edgesb} \frac 1 {|e|} \int_e v u^{i+1}\\
 	=
 	&-\int_\Omega \left(f - \detHess{u^i)}\right) v \\
-	&+ \sum_{e \in \edgesb} \int_e \cofHess {u^i} \nabla v \cdot \mathbf n \; g 
-	+\sigma \sum_{e \in \edgesb} \frac 1 {|e|} \int_e v (-u^{i}+g) \label{eq: ordered newton step Brenner}
+	&- \sum_{e \in \edgesi} \int_e \jump { \average{\cofHess {u^i}} \nabla {u^i} } v 
+		+ \sum_{e \in \edgesb} \int_e \cofHess {u^i} \nabla {u^i} \cdot \mathbf n \; v\\
+	&- 2\sum_{e \in \edgesb} \int_e \cofHess {u^i} \nabla v \cdot \mathbf n \; {u^i}
+		+ \sum_{e \in \edgesb} \int_e \cofHess {u^i} \nabla v \cdot \mathbf n \; g \\
+	&+\sigma \sum_{e \in \edgesb} \frac 1 {|e|} \int_e v g \label{eq: ordered newton step Brenner}
 \end{align}
 
 \section{Conclusion}
