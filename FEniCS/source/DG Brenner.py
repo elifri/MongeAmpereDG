@@ -1,53 +1,18 @@
 """
-"""
+"""#source ~/Work/FEniCS/share/dolfin/dolfin.conf, damit dolfin geladen werden kann
 
 from dolfin import *
 import scipy.io
 import numpy as np
-from MA_iterated import MA_iteration
-from convexify import convexify
+from MA_iterated_August import start_iteration
+from DG_neilan import neilan_start
+from MA_problem import *
+
 import math
+import time
+import sys
 
-
-if __name__ == "__main__":
-  
-  # Create mesh and define function space
-  deg = 3
-  Nh = 2
-  
-  mesh = UnitSquareMesh(Nh, Nh, 'crossed')
-  V = FunctionSpace(mesh, 'CG', deg)
-  bigMesh = refine(mesh)
-  bigV = FunctionSpace(bigMesh, 'CG', deg)
-  
-  #define penalty
-  sigma = 20*deg*deg
-
-  #-------define problem------------
-  
-  # Define boundary conditions
-  #u0 = Constant(0.0) #const rhs
-  u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
-  #u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
-  #u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
-  #u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
-  
-  #rhs
-  f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
-  #f = Constant(7.0)#simpleMongeAmpere
-  #f = Constant(1.0) #simpleMongeAmpere2
-  #f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
-  
-  #define exact solution
-  u_e = interpolate(u0, V)
-  
-  
-
-  #define startsolution
-  #choose between "identity" and disturbed exact solution
-  u_ = start_iteration(mesh, V, u0, f, sigma)
-  u_.assign(u_e-0.01*interpolate(error, V))
-  
+def Brenner_step(mesh, V, u0, sigma, u_):
   #====================================
   #define brenner's iteration
   #====================================
@@ -72,6 +37,8 @@ if __name__ == "__main__":
   
   F = action(F, u_)
   
+  print 'Start error ', errornorm(u0, u_)
+  
   J  = derivative(F, u_, u)   # Gateaux derivative in dir. of u
   
   def boundary(x, on_boundary):
@@ -83,45 +50,139 @@ if __name__ == "__main__":
   solver  = NonlinearVariationalSolver(problem)
   
   prm = solver.parameters
-  #info(prm, True)
+  #info(prm['snes_solver'], True)
+  
+  prm['nonlinear_solver']='snes'
+  
+  prm['snes_solver']['absolute_tolerance'] = 1E-6
+  prm['snes_solver']['maximum_iterations'] = 50
+  prm['snes_solver']['linear_solver']= 'petsc'
+  #prm['snes_solver']['preconditioner']= 'lu'
+  prm['snes_solver']['line_search'] = 'basic' 
   
   prm['newton_solver']['absolute_tolerance'] = 1E-8
-  prm['newton_solver']['relative_tolerance'] = 1E-10
-  prm['newton_solver']['maximum_iterations'] = 30
-  prm['newton_solver']['relaxation_parameter'] = 1.0
-  prm['newton_solver']['report'] = True
-  #prm['linear_solver'] = 'gmres'
-  #prm['preconditioner'] = 'ilu'
-  #prm['krylov_solver']['absolute_tolerance'] = 1E-9
-  #prm['krylov_solver']['relative_tolerance'] = 1E-7
-  #prm['krylov_solver']['maximum_iterations'] = 1000
-  #prm['krylov_solver']['gmres']['restart'] = 40
-  #prm['krylov_solver']['preconditioner']['ilu']['fill_level'] = 0
+  prm['newton_solver']['relative_tolerance'] = 1E-7
+  prm['newton_solver']['maximum_iterations'] = 300
+  prm['newton_solver']['relaxation_parameter'] = 0.2
   set_log_level(PROGRESS)
   
-  solver.solve()
+  nb_iterations, converged = solver.solve()
   
-  #examine error
-  u_e_array = u_e.vector().array()
-  u_array = u_.vector().array()
-  print 'Errornorm:', errornorm(u_,u_e)
+  #write Newton steps required to file 
+  newtonStepsfile.write(str(it)+' '+str(nb_iterations)+'\n')
   
-  # Plot solution and mesh
-  plot(project(u_,bigV), title = 'solution')
-  plot(project(abs(u_-u_e),bigV), title = 'error')
+  return u_
+
+
+if __name__ == "__main__":
   
-  plot(det(grad(grad(u_))), title = 'determinant of hessian')
+  start = time.clock()
+  # Create mesh and define function space
+  deg = 3
+  Nh = 2
   
-  plot(project(abs(f-det(grad(grad(u_)))), bigV), title = 'rhs - determinant of hessian')
+  if len(sys.argv) != 3:
+    print 'Error, please specify the problem, the polynomial degrees of the trial and the Hessian trial fcts!'
+    sys.exit(-1)
   
-  #plot(mesh)
+  problem_name = sys.argv[1]
   
-  #Hold plot
-  interactive()
+  deg = int(sys.argv[2])
   
+  parameters['form_compiler']['quadrature_degree']=2*deg+2
   
-  # Dump solution to file in VTK format
-  s = 'MongeAmpere.pvd'
-  file = File(s)
-  file << u_
+  mesh = UnitSquareMesh(Nh, Nh, 'crossed')
+  V = FunctionSpace(mesh, 'CG', deg)
+  bigMesh = refine(mesh)
+  bigV = FunctionSpace(bigMesh, 'CG', deg)
+  
+  #define penalty
+  sigma = 50
+
+  #-------define problem------------
+  g, f, u0 = MA_problem(problem_name, Nh, parameters['form_compiler']['quadrature_degree'], mesh)
+  
+  #define exact solution
+  u_e = interpolate(u0, V)
+  
+  fileprefix = problem_name+'_BrennerTest_deg'+str(deg)+'_'
+  print "processing files ", fileprefix
+  
+  errorfile = open('data/'+fileprefix+'l2errornorm','wa',1)
+  errorfile.write('iterations l2error\n');
+  fitdata_file = open('data/'+fileprefix+'fitData','wa',1)
+  errorfileh1 = open('data/'+fileprefix+'h1errornorm','wa',1)
+  errorfileh1.write('iterations h1error\n');
+  newtonStepsfile = open('data/'+fileprefix+'newtonSteps','wa',1)
+  newtonStepsfile.write('iterations steps\n');
+  
+
+  #define startsolution
+  #choose between "identity" and disturbed exact solution
+  u_ = start_iteration(mesh, V, u0, f, sigma)
+  #u_=u_e
+  
+  newtonStepsfile.write('0 0\n')
+  errorfile.write('0 '+str(errornorm(u0, u_))+'\n')
+  errorfileh1.write('0 '+str(errornorm(u0, u_, norm_type='h1'))+'\n')
+  fitdata_file.write(str(math.log(1.0/Nh))+' '+str(math.log(errornorm(u0, u_)))+'\n')
+
+  
+ # deg_hessian=deg
+ # Nh, V, bigV, uTemp = neilan_start(u0, f, Nh, deg, deg_hessian, sigma, sigma, sigma, 2)
+ # a,b = uTemp.split(True)
+  
+  #u_.vector()[:]=a.vector().array()
+ # u_.assign(a)
+  
+  for it in range(1,8):
+    print 'Starting Brenner with ', Nh
+    w = Brenner_step(mesh, V, u0, sigma, u_)
+  
+    #examine error
+    error_norm = errornorm(u0, w)
+    print 'Errornorm:', error_norm
+    errorfile.write(str(it)+' '+str(error_norm)+'\n')
+    fitdata_file.write(str(math.log(1.0/Nh))+' '+str(math.log(error_norm))+'\n')
+
+    error_norm = errornorm(u0, w, norm_type='H1')
+    print 'Errornorm H1:', error_norm
+    errorfileh1.write(str(it)+' '+str(error_norm)+'\n')
+  
+    # ----Plot solution and mesh-------
+    if True:
+      s = 'plots/'+fileprefix+'_Nh'+str(Nh)+'.pvd'
+      file = File(s)
+      solution = Function(bigV, name='u')
+      solution.assign(project(w,bigV))
+      file << solution
     
+      s = 'plots/'+fileprefix+'error_Nh'+str(Nh)+'.pvd'
+      file = File(s)
+      error = Function(bigV, name='error')
+      error.assign(project(abs(w-u0),bigV))
+      file << error
+    
+    #------refine grid---------
+    #mesh = refine(mesh)
+    Nh = Nh *2
+    mesh = UnitSquareMesh(Nh, Nh, 'crossed')
+    V = FunctionSpace(mesh, 'CG', deg)
+    
+    u_ = Function(V)
+    u_= interpolate(w,V)
+  
+    #examine error
+    #print 'Errornorm1:', errornorm(u0, w)
+    #print 'Errornorm2:', errornorm(u0, interpolate(w,V))
+    #print 'Errornorm3:', errornorm(u0, u_)
+  
+  end = time.clock()
+  time_file = open('data/timing','a')
+  time_file.write(fileprefix+' '+str(end-start)+'\n')
+  
+  print "%.2gs" % (end-start)
+  
+  errorfile.close()
+  errorfileh1.close()
+  time_file.close()

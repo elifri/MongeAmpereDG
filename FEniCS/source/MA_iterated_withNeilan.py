@@ -4,15 +4,27 @@ from MA_iterated_August import start_iteration
 from MA_problem import *
 import DG_neilan2 as neilan
 import sys, math, time
-from DG_iterated import neilan_step
 
 #Calculates the cofactor matrix of the piecewise Hessian
-def calc_CofacpiecewiseHessian(mesh, Sigma, u_):
+def calc_pos_def(A):
+  rad = A[0,0] * A[0,0] + (A[1,1] - 2 * A[0,0]) * A[1,1] + 4 * A[0,1] * A[1,0];
+  #fetch numerical zeroes
+  if math.fabs(rad) < 1e-10:  
+    rad = 0;
 
-  dh = Function(Sigma)
-  #calculate cofac current hessian
-  dh = project(as_matrix(((u_.dx(1,1), -u_.dx(0,1)),(-u_.dx(0,1), u_.dx(0,0)))), Sigma)
-  return dh
+  s = sqrt(rad);
+  ev0 = (A[0,0] + A[1,1] - s) / 0.2e1;
+  ev1 = (A[0,0] + A[1,1] + s) / 0.2e1;
+ 
+  if ev0 < eps:
+    if ev0 < 0:
+      print 'found negative eigenvalue'
+      A = A+as_matrix(((-ev0+eps, 0),(0,-ev0+eps)))
+    else:
+      print 'correcting eigenvalue'
+      A = A+as_matrix(((ev0+eps, 0),(0,ev0+eps)))
+  
+  return A
 
 #Calculates the cofactor matrix of the discrete Hessian (Neilan's approach)
 def calc_CofacdiscreteHessian(mesh, Sigma, u_):
@@ -21,27 +33,34 @@ def calc_CofacdiscreteHessian(mesh, Sigma, u_):
   h = CellSize(mesh)
   n = FacetNormal(mesh)
   
-  dh = TrialFunction(Sigma)
-  mu = TestFunction(Sigma)
+  dh_ = TrialFunctions(Sigma)
+  mu_ = TestFunctions(Sigma)
+  
+  dh = as_tensor(((dh_[0], dh_[1]), (dh_[1], dh_[2])))
+  mu = as_tensor(((mu_[0], mu_[1]), (mu_[1], mu_[2])))
   
   #define bilinearform to caculate discrete Hessian
   
   #test with hessian
-  a_DH = neilan.frobenius_product(dh, mu)*dx
+  a_DH = neilan.frobenius_product(dh,mu)*dx
 
   #piecewise hessian
   l_DH = neilan.frobenius_product(grad(grad(u_)),mu)*dx
 
-  #correction term
-  l_DH = l_DH - (dot(avg(mu)*nabla_grad(u_)('+'),n('+'))+dot(avg(mu)*nabla_grad(u_)('-'),n('-')))*dS
+  l_DH = l_DH - dot(avg(mu)*nabla_grad(u_)('+') ,n('+'))*dS \
+              - dot(avg(mu)*nabla_grad(u_)('-') ,n('-'))*dS
   
   dh = Function(Sigma)
   solve(a_DH == l_DH, dh)
   
-  #calc cofactor matrix  
-  cofactorM = Function(Sigma)
-  #assign(cofactorM, project(as_matrix(((dh[1,1],-dh[1,0]),(dh[0,1], dh[0,0]))), Sigma))
-  assign(cofactorM, project(as_matrix(((dh[1,1],-dh[1,0]-dh[0,1]/2.0),(-dh[1,0]-dh[0,1]/2.0, dh[0,0]))), Sigma))
+  #calc cofactor matrix and symmetrise
+  cofactorM = as_matrix(((dh[2],-dh[1]),(-dh[1], dh[0])))
+  #assign(cofactorM, project(as_matrix(((dh[1,1],-dh[1,0]-dh[0,1]/2.0),(-dh[1,0]-dh[0,1]/2.0, dh[0,0]))), Sigma))
+  
+  #plot(cofactorM[0,1], title = 'numer derivative01 '+str(Nh))
+  #plot(cofactorM[1,0], title = 'numer derivative10 '+str(Nh))
+  #interactive()
+  
   return cofactorM
 
 
@@ -62,7 +81,6 @@ def MA_iteration_withNeilan(mesh, V, Sigma, u0, f, max_it, w, sigmaC, sigmaG, al
 
     #cofactor matrix of startsolution's hessian, choose between piecewise evaluation and Neilan's discrete version
     #cofactor = calc_CofacdiscreteHessian(mesh, Sigma, w)
-    #cofactor = calc_CofacpiecewiseHessian(mesh, Sigma, w)
     cofactor = cofac(grad(grad(w)))
 
     #define bilinear form
@@ -76,6 +94,9 @@ def MA_iteration_withNeilan(mesh, V, Sigma, u0, f, max_it, w, sigmaC, sigmaG, al
       - v*inner(n,cofactor*nabla_grad(u))*ds \
       - u*inner(n,cofactor*nabla_grad(v))*ds \
       + Constant(sigmaC)/h*v*u*ds
+      #- avg(v) * jump(cofactor*nabla_grad(u),n)*dS \
+
+ 
 
     #define rhs functional
     L = inner(Constant(-2.0)*f,v)*dx - u0*dot(n,cofactor*nabla_grad(v))*ds +Constant(sigmaC)/h *u0*v*ds
@@ -120,11 +141,13 @@ if __name__ == "__main__":
   
   deg = int(sys.argv[2])
   deg_hessian = int(sys.argv[3])
+  #damping
+  alpha = 0.3
 
-  parameters['form_compiler']['quadrature_rule'] = 'canonical'
-  parameters['form_compiler']['quadrature_degree'] = 2*deg+2
+  #parameters['form_compiler']['quadrature_rule'] = 'canonical'
+  parameters['form_compiler']['quadrature_degree'] = 2*deg
 
-  fileprefix = problem_name+'_iteratedNeilan_deg'+str(deg)+str(deg_hessian)+'_'
+  fileprefix = problem_name+'_iterated_deg'+str(deg)+'_alpha'+str(alpha)
   print "processing files ", fileprefix
   
   errorfile = open('data/'+fileprefix+'l2errornorm','wa',1)
@@ -136,26 +159,27 @@ if __name__ == "__main__":
   Nh = 2
   
   #define mesh and functions spaces 
-  mesh = UnitSquareMesh(Nh, Nh, 'crossed')
-  V = FunctionSpace(mesh, 'DG', deg)
+  init_mesh = UnitSquareMesh(1, 1, 'crossed')
+  mesh = []
+  mesh.append( adapt(init_mesh))
+  V = FunctionSpace(mesh[0], 'DG', deg)
   #space for discrete hessian
-  Sigma = TensorFunctionSpace(mesh, 'DG', deg_hessian, shape=(2,2))
+  Sigma = VectorFunctionSpace(mesh[0], 'DG', deg_hessian, dim=3)
   
-  bigMesh = refine(mesh)
+  bigMesh = refine(mesh[0])
   bigV = FunctionSpace(bigMesh, 'DG', deg)
 
   #define poblem
-  g, f, u0 = MA_problem(problem_name, Nh, parameters['form_compiler']['quadrature_degree'], mesh)
+  g, f, u0 = MA_problem(problem_name, Nh, parameters['form_compiler']['quadrature_degree'], mesh[0])
   
     #penalty
-  sigmaG = 30.0*deg*deg
-  sigmaC = 30.0*deg*deg
+  sigmaG = 50.0
+  sigmaC = 20.0*deg*deg
   
-  #damping
-  alpha = 0.5
   
   #start solution
-  u_ = start_iteration(mesh, V, u0, f, sigmaC)
+  u_=[]
+  u_.append(start_iteration(mesh[0], V, u0, f, sigmaC))
 
   #maximum number of iterations per grid
   max_it = 15
@@ -169,16 +193,16 @@ if __name__ == "__main__":
       plot(project(abs(u-u0),bigV), title = 'starterror')
       plot(det(grad(grad(u))), title = 'determinant of starthessian')
       
-    w = MA_iteration_withNeilan(mesh, V, Sigma, u0, f, max_it,u_, sigmaC, sigmaG, alpha)
+    w = MA_iteration_withNeilan(mesh[it-1], V, Sigma, u0, f, max_it,u_[it-1], sigmaC, sigmaG, alpha)
     #w = neilan_step(mesh, V, Sigma, u_, u0, f, sigmaC, sigmaG, sigmaC, max_it, alpha)
-
+    
     #examine error
-    error_norm = errornorm(u0, w)
-    print 'Errornorm:', error_norm
+    #error_norm = errornorm(u0, w)
+    #print 'Errornorm:', error_norm
     #errorfile.write(str(it)+' '+str(error_norm)+'\n')
 
-    error_norm = errornorm(u0, w, norm_type='H1')
-    print 'Errornorm H1:', error_norm
+    #error_norm = errornorm(u0, w, norm_type='H1')
+    #print 'Errornorm H1:', error_norm
     #errorfileh1.write(str(it)+' '+str(error_norm)+'\n')
 
     # Plot solution and mesh
@@ -186,25 +210,29 @@ if __name__ == "__main__":
     #------refine----------
     Nh = Nh*2
     
-    mesh = UnitSquareMesh(Nh, Nh, 'crossed')
-    V = FunctionSpace(mesh, 'DG', deg)
-    Sigma = TensorFunctionSpace(mesh, 'DG', deg_hessian, shape=(2,2))
+    #plot(mesh)
+    
+    #mesh = UnitSquareMesh(Nh, Nh, 'crossed')
+    mesh.append(adapt(mesh[it-1]))
+    #plot(mesh)
+    V = FunctionSpace(mesh[it], 'DG', deg)
+    Sigma = VectorFunctionSpace(mesh[it], 'DG', deg_hessian, dim=3)
 
-    bigMesh = refine(mesh)
+    bigMesh = refine(mesh[it])
     bigV = FunctionSpace(bigMesh, 'DG', deg)
-    u_ = Function(V)
-    u_ = project(w,V)
+    
+    g, f, u0 = MA_problem(problem_name, Nh, parameters['form_compiler']['quadrature_degree'], mesh[it])
+
+    #u_ = project(w,V)
+    u_.append(Function(adapt(w, mesh[it])))
     error_norm = errornorm(u0, w)
     print 'Errornorm after projection:', error_norm
     
-    g, f, u0 = MA_problem(problem_name, Nh, parameters['form_compiler']['quadrature_degree'], mesh)
-    if True:
+    if False:
       #plot(project(u,bigV), title = 'solution'+str(Nh))
-      plot(project(abs(u_-u0),bigV), title = 'error'+str(Nh))
+      #plot(project(abs(u_-u0),bigV), title = 'error'+str(Nh))
       interactive()
-
-    
-    print 'Errornorm after projection to bigger space :', errornorm(u0, u_)
+    print 'Errornorm after projection to bigger space :', errornorm(u0, u_[it])
     
   end = time.clock()
   time_file = open('data/timing','a')

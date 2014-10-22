@@ -5,9 +5,10 @@ from dolfin import *
 import scipy.io
 from convexify import convexify
 from MA_iterated_benamour import MA_iteration_Benamou
+from MA_problem import *
 
 import math
-import time
+import time, sys
 
 def MA_iteration(mesh, V, u0, f, max_it,w, sigmaB, sigmaC, sigmaG):
   
@@ -78,41 +79,33 @@ if __name__ == "__main__":
     
   #store start time
   start = time.clock()
+    
+  if len(sys.argv) != 3:
+    print 'Error, please specify the problem, the polynomial degrees of the trial and the Hessian trial fcts!'
+    sys.exit(-1)
+  
+  problem_name = sys.argv[1]
+  
+  deg = int(sys.argv[2])
+  
+  parameters['form_compiler']['quadrature_degree']=2*deg
   
   # Create mesh and define function space
-  deg = 3
   Nh = 2
-  
   mesh = UnitSquareMesh(Nh, Nh, 'crossed')
   V = FunctionSpace(mesh, 'CG', deg)
   bigMesh = refine(mesh)
-  bigV = FunctionSpace(bigMesh, 'DG', deg)
+  bigV = FunctionSpace(bigMesh, 'CG', deg)
+  
+  #define penalty
+  sigma = 50
 
+  #-------define problem------------
+  g, f, u0 = MA_problem(problem_name, Nh, parameters['form_compiler']['quadrature_degree'], mesh)
+  
   #define poblem
 
-  # Define boundary conditions
-  #u0 = Constant(0.0) #const rhs
-  #u0 = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
-  #u0 = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
-  u0 = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
-  #u0 = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
-  #u0 = Expression('-sqrt(2-pow(x[0],2)-pow(x[1],2))') 
-  
-  #rhs
-  #f = Constant(1.0) #const rhs
-  #f = Constant(7.0) #simpleMongeAmpere
-  #f = Constant(1.0) #simpleMongeAmpere2
-  f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])')#MongeAmpere1
-  #f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)')#BrennerEx1
-  #f = Expression('2.0/(pow(2.12-pow(x[0],2)-pow(x[1],2), 2))')
-  
-  class rhs(Expression):
-    def eval(self, v, x):
-      val = 2-x[0]**2-x[1]**2
-      if val < 0:
-        v[0] = 0
-      else:
-        v[0]=sqrt(val)
+
 
   #penalty
   sigmaB = 30.0*deg*deg
@@ -121,11 +114,11 @@ if __name__ == "__main__":
 
   #open files for output
   fileprefix = 'MA1_deg'+str(deg)+'_'
-  errorfile = open('data/'+fileprefix+'l2errornorm','wa')
+  errorfile = open('data/'+fileprefix+'l2errornorm','wa', 1)
   errorfile.write('iterations l2error\n');
-  errorfileh1 = open('data/'+fileprefix+'h1errornorm','wa')
+  errorfileh1 = open('data/'+fileprefix+'h1errornorm','wa', 1)
   errorfileh1.write('iterations h1error\n');
-  newtonStepsfile = open('data/'+fileprefix+'newtonSteps','wa')
+  newtonStepsfile = open('data/'+fileprefix+'newtonSteps','wa', 1)
   newtonStepsfile.write('iterations steps\n');
   newtonStepsfile.write('0 \n');
 

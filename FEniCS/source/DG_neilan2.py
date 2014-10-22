@@ -101,7 +101,7 @@ if __name__ == "__main__":
   start = time.clock()
   
   #------------ Create mesh and define function space-----------
-  Nh = 2
+  Nh = 1
   
   if len(sys.argv) != 4:
     print 'Error, please specify the problem, the polynomial degrees of the trial and the Hessian trial fcts!'
@@ -131,7 +131,9 @@ if __name__ == "__main__":
 
   print "problem", problem_name, "deg ", deg, " deg_hessian", deg_hessian
 
-  mesh = UnitSquareMesh(Nh, Nh, "crossed")
+  initial_mesh = UnitSquareMesh(Nh, Nh, "crossed")
+  mesh = adapt(initial_mesh)
+  Nh = Nh +1
   
     #space for function
   V = FunctionSpace(mesh, 'DG', deg)
@@ -177,7 +179,7 @@ if __name__ == "__main__":
 
 #  assign(u_.sub(1), project(MA_exact_derivativeEx(problem_name), Sigma))
 
-  for it in range(1,7):
+  for it in range(1,8):
     print 'Starting Neilan with ', Nh
     w = neilan_step(mesh, V, Sigma, W, u0, f, sigmaC, sigmaG, sigmaB, u_)
 
@@ -205,14 +207,14 @@ if __name__ == "__main__":
       error.assign(project(w.sub(0)-u0,bigV))
       file << error
 
-    if True:
+    if False:
       #w_ = Expression('1.0')
       #wTemp = Function(Sigma_single)
       #wTemp = project(w.sub(1)[0,0], Sigma_single)
       #print 'l2 error in first component', errornorm(w_, wTemp)
       
-      w_ = project(MA_exact_derivativeEx(problem_name), Sigma)
-      plot(mesh, title='mesh h=1/'+str(Nh))
+      #w_ = project(MA_exact_derivativeEx(problem_name), Sigma)
+      #plot(mesh, title='mesh h=1/'+str(Nh))
       #plot(project(u0,bigV), title = 'solution'+str(it))
       plot(w.sub(0)-u0, title = 'error for h=1/'+str(Nh))
       #plot(w_[0,0], title = 'exact derivative'+str(Nh))
@@ -225,7 +227,7 @@ if __name__ == "__main__":
     #------refine grid---------
     #mesh = refine(mesh)
     Nh = Nh *2
-    mesh = UnitSquareMesh(Nh, Nh, 'crossed')
+    mesh = adapt(mesh)
     
     V = FunctionSpace(mesh, 'DG', deg)
     Sigma_single = FunctionSpace(mesh, 'DG', deg_hessian)
