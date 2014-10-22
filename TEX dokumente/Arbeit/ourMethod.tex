@@ -69,127 +69,127 @@ Since in every iteration \eqref{eq:fixed point iteration} states a generalised p
 \end{align}
 
 Brenner et. alter emphasised that a convergent scheme needs to retain the consistency between the discretisation of the linearisation and the linearisation of the discretisation. Since the linearisation of the \MA operator is $\nabla \cdot \left( \cofHess u \nabla v \right)$ (cf. Theorem \ref{thm: linearisation}) the stiffness bilinear form of the SIPG method is the linearisation of the \MA equation at $u_i$. Therefore it is consistent if $u_i$ equals the exact solution. 
-
-\section{Wellposedness of the method}
-
-The stability of the linearisation, i.e. an iteration step follows from the fact that the SIPG method is stable with the General Poisson problem. As before we denote the polynomial degree of the ansatz space $V_h=\mathcal P_h^k$ by $k$. We denote further the function space $H^2(\Omega; \triang) \cap H^1(\Omega)$ by $V$. 
-
-Let $L_u:V \rightarrow V'$ for $u \in V$ be the defined by the left hand side of an iteration step, namely
-\begin{align}
-	\bilin {L_u w} v =   &\int_{\Omega} \nabla v \cdot \cof(D_h^2 u) \nabla w \nonumber\\
-	& -\sum\limits_{e \in \edges}\int_{e} \jump {v \average { \cof(D_h^2 u) \nabla w} }
-	- \sum\limits_{e \in \edges}\int_{e} \jump {u \average{ \cof(D^2 u) \nabla v} } \nonumber\\  
-	&+\sum\limits_{e \in \edges} \int_e \frac \sigma {|e|} \jump {v}  \jump {w}
-\end{align}
-Furthermore let $L_{u,h}:V_h \rightarrow V_h'$ be the restriction from $L_u$ to $V_h$. 
-Since for convex $u$ the cofactor matrix is always positive definite we showed in Theorem \ref{thm: SIPG stability} that $L_{u,h}$ is invertible. We denote its inverse by $L_{u,h}^{-1}$.
-
-The following lemma follows directly from the definition of $L_u$
-\begin{lemma}\label{la: addition L}
-	For $u,v \in V$ holds
-	\[
-		L_{u+v}w = L_{u}w + L_{v}w - Jw
-	\]
-	where $J \in V'$ is given by
-\[
-	\bilin {Jw} v = \sum\limits_{e \in \edges} \int_e \frac \sigma {|e|} \jump {v}  \jump {w} \qquad \forall w \in V
-\] 
-\end{lemma}
-
-Additionally we introduce the functional $R_u \in V'$ for the right-hand side of \eqref{eq: sipg iteration} defined by
-\[
-	\bilin {R_u} v = - 2 \int_{\Omega}v f
-	-\sum\limits_{e \in \edgesb}\int_{e} g \cof(D^2 u) \nabla v \cdot n 
-	+\sum\limits_{e \in \edgesb} \int_e \frac \sigma {|e|} v g
-\]
-
-Our desired Picard iteration fixed point $w_h \in V_h$ is then described by the equation
-\begin{align}
-	\bilin {L_{w_h, h} w_h} v =  \bilin {R_{w_h}} v   \qquad \forall v \in V \label{eq: fixed point functional}
-\end{align}
-or as the fixed point in $V_h$ of the function $F:V \rightarrow V'$ defined by
-\begin{align}
-\bilin {Fu} v =  \bilin {L_u u - R_u} v   \qquad \forall v \in V. \label{eq: root functional}
-% F = L_{w,h}^{-1} R_w
-\end{align}
-
-The goal is to prove \eqref{eq: fixed point functional} has a solution in $V_h$. To this end, we consider for the rest of the analysis a convex and polyhedral domain $\Omega\in \R^2$, a positive $f \in C^{k+1}$ and $g\in C^{k+3}(\partial \Omega)$. By the results of \cite{CNS1984} the \MA problem then has a convex solution $u$. Note, that $u$ denotes from now on a fixed function.
-
-Consider the operator $\mathcal M: V \rightarrow V_h$
-\begin{align}
-	\mathcal M = L_{u,h}^{-1}(L_{u} - F)
-\end{align}
-and let $\mathcal M_h:V_h \rightarrow V_h$ be its restriction to $V_h$. Clearly, $\mathcal M_h$ reduces to 
-\begin{align}
-\mathcal M = id_h - L_{u,h}^{-1}F
-\end{align}
-Since $L_{u,h}$ is a isomorphism the existence of a fixed point of $\mathcal M_h$ implies the existence of a root to \eqref{eq: root functional} and hence a fixed point to our Picard Iteration restriced to $V_h$.
-
-By Lemma \ref{la: addition L} it holds for any $w \in V$ that $L_{u}w = L_{w}w + L_{u-w}w -Jw$. Thus,we have using the definition of $F$ \eqref{eq: root functional}
-\begin{align*}
-	\mathcal M w &= L_{u,h}^{-1}(L_u w - Fw) \\
-				 &= L_{u,h}^{-1}(L_uw - L_w w + R_w)
- \end{align*}
-and hence
-\begin{align*}
-	\HOneDnorm{\mathcal M w_1 - \mathcal M w_2} =& \HOneDnorm{L_{u,h}^{-1}(L_{u}(w_1-w_2)-L_{w_1}w_1+L_{w_2}w_2+ R_{w_1} - R_{w_2})}. \\
-\end{align*}
-Applying theorem \ref{thm: SIPG stability} yields
-\begin{align}
-	\HOneDnorm{\mathcal M w_1 - \mathcal M w_2}	\leq C \HMinusOneDnorm{L_{u}(w_1-w_2)-L_{w_1}w_1+L_{w_2}w_2+ R_{w_1} - R_{w_2} } \label{eq: estimate M}
-\end{align}
-Let us consider the terms separately:
-We have again by theorem \ref{thm: SIPG stability}
-\begin{align}
-\HMinusOneDnorm{L_{u}(w_1-w_2)} \leq C \HOneDnorm{w_1 - w_2}.
-\end{align}	
-It holds 
-\begin{align}
-	\bilin{L_{w_1}w_1-L_{w_2}w_2} v =& \int_{\Omega} \left( \nabla w_1 \cofHess{w_1} \nabla v- \nabla w_2 \cofHess{w_2} \nabla v \right) \nonumber\\
-	& -\sum\limits_{e \in \edges}\int_{e} \left( \jump {v \average { \cof(D_h^2 w_1) \nabla w_1} } 
-					- \jump {v \average { \cof(D_h^2 w_2) \nabla w_2} }\right) \nonumber \\
-	&- \sum\limits_{e \in \edges}\int_{e} \left(\jump {w_1 \average{ \cof(D^2 w_1) \nabla v} } 
-					- \jump {w_2 \average{ \cof(D^2 w_2) \nabla v} }\right)\nonumber\\  
-	&+\sum\limits_{e \in \edges} \int_e \frac \sigma {|e|} \left( \jump {v}  \jump {w_1}-\jump {v}  \jump {w_2} \right).
- \end{align}
-Adding and substracting terms we can rewrite this to
-\begin{align}
-%\bilin{L_{w_1}w_1-L_{w_2}w_2} v =
-& \int_{\Omega} \left( \nabla (w_1-w_2) \cofHess{w_1} \nabla v- \nabla w_2 \cofHess{w_1 - w_2} \nabla v \right) \nonumber\\
-& -\sum\limits_{e \in \edges}\int_{e} \left( \jump {v \average { \cof(D_h^2 w_1) \nabla (w_1-w_2)} } 
-- \jump {v \average { \cof(D_h^2 (w_1-w_2)) \nabla w_2} }\right) \nonumber \\
-&- \sum\limits_{e \in \edges}\int_{e} \left(\jump {(w_1-w_2) \average{ \cof(D^2 w_1) \nabla v} } 
-- \jump {w_2 \average{ \cof(D^2 (w_1-w_2)) \nabla v} }\right)\nonumber\\  
-&+\sum\limits_{e \in \edges} \int_e \frac \sigma {|e|} \jump {v}  \jump {w_1-w_2}.
-\end{align}
-Therefore it follows with the Cauchy-Schwarz inequality that
-\begin{align}
-\bilin{L_{w_1}w_1-L_{w_2}w_2} v \leq &  \LTwonorm{w_1-w_2} \LTwonorm{\cofHess{w_1}} \LTwonorm{\nabla v} \nonumber\\
-			&+ \LTwonorm{w_2} \LTwonorm{\cofHess{(w_1-w_2)}} \LTwonorm{\nabla{v}} \nonumber \\
-		&+ \sum_{e \in \edges} 
-			\norm{v}_{L^\infty(\Omega)}( %\left(
-				\LTwonormE{ \average{ \cof(D_h^2 (w_1))}} \LTwonormE{ \average{\nabla (w_1-w_2)}} \nonumber\\
-			  &\phantom++\LTwonormE{ \average{ \cof(D_h^2 (w_1-w_2))}} \LTwonormE{ \average{\nabla (w_2)}} 
-			) \nonumber \\%\right)
-		&+ \sum_{e \in \edges} 
-			( %\left(
-				\LTwonormE{ \average{(w_1-w_2)}} \LTwonormE{ \average{ \cof(D_h^2 (w_1))}} \nonumber\\
-				&\phantom++\LTwonormE{ \average{(w_2)}} \LTwonormE{ \average{ \cof(D_h^2 (w_1-w_2))}} 
-		) \norm{\nabla v}_{L^\infty(\Omega)}%\right)
-\end{align}
-Considering the definition of the cofactor matrix it is easy to deduce that $\norm{\cofHess{v}}_* =\norm{D^2_h{v}}_*$ holds.
-Using this fact and Lemma \ref{la: trace estimate} we find
-\begin{align}
-\bilin{L_{w_1}w_1-L_{w_2}w_2} v \leq & %(1+|\ln( h) |^{\frac 1 2 } 
-\LTwonorm{w_1-w_2} \LTwonorm{\hess{w_1}} \LTwonorm{\hess{v}} \nonumber\\
-&+ \LTwonorm{w_2} \LTwonorm{\hess{(w_1-w_2)}} \LTwonorm{\hess{v}} \nonumber \\
-	&+ \sum_{e \in \edges} (
-		\LTwonormE{ \average{ \hess{w_1 }}} \LTwonormE{ \average{\nabla (w_1-w_2)}} \nonumber\\
-		&\phantom+ +\LTwonormE{ \average{ \hess{w_1-w_2}}} \LTwonormE{ \average{\nabla (w_2)}}  \nonumber \\%\right)
-		&\phantom+ +\LTwonormE{ \average{(w_1-w_2)}} \LTwonormE{ \average{ \hess{w_1}}} \nonumber\\
-		&\phantom+ +\LTwonormE{ \average{(w_2)}} \LTwonormE{ \average{ D_h^2 (w_1-w_2)}} 
-	)
-\end{align}
+%
+%\section{Wellposedness of the method}
+%
+%The stability of the linearisation, i.e. an iteration step follows from the fact that the SIPG method is stable with the General Poisson problem. As before we denote the polynomial degree of the ansatz space $V_h=\mathcal P_h^k$ by $k$. We denote further the function space $H^2(\Omega; \triang) \cap H^1(\Omega)$ by $V$. 
+%
+%Let $L_u:V \rightarrow V'$ for $u \in V$ be the defined by the left hand side of an iteration step, namely
+%\begin{align}
+%	\bilin {L_u w} v =   &\int_{\Omega} \nabla v \cdot \cof(D_h^2 u) \nabla w \nonumber\\
+%	& -\sum\limits_{e \in \edges}\int_{e} \jump {v \average { \cof(D_h^2 u) \nabla w} }
+%	- \sum\limits_{e \in \edges}\int_{e} \jump {u \average{ \cof(D^2 u) \nabla v} } \nonumber\\  
+%	&+\sum\limits_{e \in \edges} \int_e \frac \sigma {|e|} \jump {v}  \jump {w}
+%\end{align}
+%Furthermore let $L_{u,h}:V_h \rightarrow V_h'$ be the restriction from $L_u$ to $V_h$. 
+%Since for convex $u$ the cofactor matrix is always positive definite we showed in Theorem \ref{thm: SIPG stability} that $L_{u,h}$ is invertible. We denote its inverse by $L_{u,h}^{-1}$.
+%
+%The following lemma follows directly from the definition of $L_u$
+%\begin{lemma}\label{la: addition L}
+%	For $u,v \in V$ holds
+%	\[
+%		L_{u+v}w = L_{u}w + L_{v}w - Jw
+%	\]
+%	where $J \in V'$ is given by
+%\[
+%	\bilin {Jw} v = \sum\limits_{e \in \edges} \int_e \frac \sigma {|e|} \jump {v}  \jump {w} \qquad \forall w \in V
+%\] 
+%\end{lemma}
+%
+%Additionally we introduce the functional $R_u \in V'$ for the right-hand side of \eqref{eq: sipg iteration} defined by
+%\[
+%	\bilin {R_u} v = - 2 \int_{\Omega}v f
+%	-\sum\limits_{e \in \edgesb}\int_{e} g \cof(D^2 u) \nabla v \cdot n 
+%	+\sum\limits_{e \in \edgesb} \int_e \frac \sigma {|e|} v g
+%\]
+%
+%Our desired Picard iteration fixed point $w_h \in V_h$ is then described by the equation
+%\begin{align}
+%	\bilin {L_{w_h, h} w_h} v =  \bilin {R_{w_h}} v   \qquad \forall v \in V \label{eq: fixed point functional}
+%\end{align}
+%or as the fixed point in $V_h$ of the function $F:V \rightarrow V'$ defined by
+%\begin{align}
+%\bilin {Fu} v =  \bilin {L_u u - R_u} v   \qquad \forall v \in V. \label{eq: root functional}
+%% F = L_{w,h}^{-1} R_w
+%\end{align}
+%
+%The goal is to prove \eqref{eq: fixed point functional} has a solution in $V_h$. To this end, we consider for the rest of the analysis a convex and polyhedral domain $\Omega\in \R^2$, a positive $f \in C^{k+1}$ and $g\in C^{k+3}(\partial \Omega)$. By the results of \cite{CNS1984} the \MA problem then has a convex solution $u$. Note, that $u$ denotes from now on a fixed function.
+%
+%Consider the operator $\mathcal M: V \rightarrow V_h$
+%\begin{align}
+%	\mathcal M = L_{u,h}^{-1}(L_{u} - F)
+%\end{align}
+%and let $\mathcal M_h:V_h \rightarrow V_h$ be its restriction to $V_h$. Clearly, $\mathcal M_h$ reduces to 
+%\begin{align}
+%\mathcal M = id_h - L_{u,h}^{-1}F
+%\end{align}
+%Since $L_{u,h}$ is a isomorphism the existence of a fixed point of $\mathcal M_h$ implies the existence of a root to \eqref{eq: root functional} and hence a fixed point to our Picard Iteration restriced to $V_h$.
+%
+%By Lemma \ref{la: addition L} it holds for any $w \in V$ that $L_{u}w = L_{w}w + L_{u-w}w -Jw$. Thus,we have using the definition of $F$ \eqref{eq: root functional}
+%\begin{align*}
+%	\mathcal M w &= L_{u,h}^{-1}(L_u w - Fw) \\
+%				 &= L_{u,h}^{-1}(L_uw - L_w w + R_w)
+% \end{align*}
+%and hence
+%\begin{align*}
+%	\HOneDnorm{\mathcal M w_1 - \mathcal M w_2} =& \HOneDnorm{L_{u,h}^{-1}(L_{u}(w_1-w_2)-L_{w_1}w_1+L_{w_2}w_2+ R_{w_1} - R_{w_2})}. \\
+%\end{align*}
+%Applying theorem \ref{thm: SIPG stability} yields
+%\begin{align}
+%	\HOneDnorm{\mathcal M w_1 - \mathcal M w_2}	\leq C \HMinusOneDnorm{L_{u}(w_1-w_2)-L_{w_1}w_1+L_{w_2}w_2+ R_{w_1} - R_{w_2} } \label{eq: estimate M}
+%\end{align}
+%Let us consider the terms separately:
+%We have again by theorem \ref{thm: SIPG stability}
+%\begin{align}
+%\HMinusOneDnorm{L_{u}(w_1-w_2)} \leq C \HOneDnorm{w_1 - w_2}.
+%\end{align}	
+%It holds 
+%\begin{align}
+%	\bilin{L_{w_1}w_1-L_{w_2}w_2} v =& \int_{\Omega} \left( \nabla w_1 \cofHess{w_1} \nabla v- \nabla w_2 \cofHess{w_2} \nabla v \right) \nonumber\\
+%	& -\sum\limits_{e \in \edges}\int_{e} \left( \jump {v \average { \cof(D_h^2 w_1) \nabla w_1} } 
+%					- \jump {v \average { \cof(D_h^2 w_2) \nabla w_2} }\right) \nonumber \\
+%	&- \sum\limits_{e \in \edges}\int_{e} \left(\jump {w_1 \average{ \cof(D^2 w_1) \nabla v} } 
+%					- \jump {w_2 \average{ \cof(D^2 w_2) \nabla v} }\right)\nonumber\\  
+%	&+\sum\limits_{e \in \edges} \int_e \frac \sigma {|e|} \left( \jump {v}  \jump {w_1}-\jump {v}  \jump {w_2} \right).
+% \end{align}
+%Adding and substracting terms we can rewrite this to
+%\begin{align}
+%%\bilin{L_{w_1}w_1-L_{w_2}w_2} v =
+%& \int_{\Omega} \left( \nabla (w_1-w_2) \cofHess{w_1} \nabla v- \nabla w_2 \cofHess{w_1 - w_2} \nabla v \right) \nonumber\\
+%& -\sum\limits_{e \in \edges}\int_{e} \left( \jump {v \average { \cof(D_h^2 w_1) \nabla (w_1-w_2)} } 
+%- \jump {v \average { \cof(D_h^2 (w_1-w_2)) \nabla w_2} }\right) \nonumber \\
+%&- \sum\limits_{e \in \edges}\int_{e} \left(\jump {(w_1-w_2) \average{ \cof(D^2 w_1) \nabla v} } 
+%- \jump {w_2 \average{ \cof(D^2 (w_1-w_2)) \nabla v} }\right)\nonumber\\  
+%&+\sum\limits_{e \in \edges} \int_e \frac \sigma {|e|} \jump {v}  \jump {w_1-w_2}.
+%\end{align}
+%Therefore it follows with the Cauchy-Schwarz inequality that
+%\begin{align}
+%\bilin{L_{w_1}w_1-L_{w_2}w_2} v \leq &  \LTwonorm{w_1-w_2} \LTwonorm{\cofHess{w_1}} \LTwonorm{\nabla v} \nonumber\\
+%			&+ \LTwonorm{w_2} \LTwonorm{\cofHess{(w_1-w_2)}} \LTwonorm{\nabla{v}} \nonumber \\
+%		&+ \sum_{e \in \edges} 
+%			\norm{v}_{L^\infty(\Omega)}( %\left(
+%				\LTwonormE{ \average{ \cof(D_h^2 (w_1))}} \LTwonormE{ \average{\nabla (w_1-w_2)}} \nonumber\\
+%			  &\phantom++\LTwonormE{ \average{ \cof(D_h^2 (w_1-w_2))}} \LTwonormE{ \average{\nabla (w_2)}} 
+%			) \nonumber \\%\right)
+%		&+ \sum_{e \in \edges} 
+%			( %\left(
+%				\LTwonormE{ \average{(w_1-w_2)}} \LTwonormE{ \average{ \cof(D_h^2 (w_1))}} \nonumber\\
+%				&\phantom++\LTwonormE{ \average{(w_2)}} \LTwonormE{ \average{ \cof(D_h^2 (w_1-w_2))}} 
+%		) \norm{\nabla v}_{L^\infty(\Omega)}%\right)
+%\end{align}
+%Considering the definition of the cofactor matrix it is easy to deduce that $\norm{\cofHess{v}}_* =\norm{D^2_h{v}}_*$ holds.
+%Using this fact and Lemma \ref{la: trace estimate} we find
+%\begin{align}
+%\bilin{L_{w_1}w_1-L_{w_2}w_2} v \leq & %(1+|\ln( h) |^{\frac 1 2 } 
+%\LTwonorm{w_1-w_2} \LTwonorm{\hess{w_1}} \LTwonorm{\hess{v}} \nonumber\\
+%&+ \LTwonorm{w_2} \LTwonorm{\hess{(w_1-w_2)}} \LTwonorm{\hess{v}} \nonumber \\
+%	&+ \sum_{e \in \edges} (
+%		\LTwonormE{ \average{ \hess{w_1 }}} \LTwonormE{ \average{\nabla (w_1-w_2)}} \nonumber\\
+%		&\phantom+ +\LTwonormE{ \average{ \hess{w_1-w_2}}} \LTwonormE{ \average{\nabla (w_2)}}  \nonumber \\%\right)
+%		&\phantom+ +\LTwonormE{ \average{(w_1-w_2)}} \LTwonormE{ \average{ \hess{w_1}}} \nonumber\\
+%		&\phantom+ +\LTwonormE{ \average{(w_2)}} \LTwonormE{ \average{ D_h^2 (w_1-w_2)}} 
+%	)
+%\end{align}
 
 
 \section{Challenges for a \MA DG method}
@@ -359,7 +359,7 @@ Hence, we add the following normal derivatives penalty term
 to the formulation in \eqref{eq: sipg iteration}.
 Note, that this avoids variational crimes by interior jumps of derivatives along interior edges of the triangulation. But we implicitly imply that the desired solution is contained in $H^2(\Omega)$, it is not yet clear how this term behaves for less regular solution.
 But, indeed with the new penalisation of the gradient the implementation is consistent with the previous example. The consistency check was carried out with the choice $\sigma_g$ equal to $\sigma=30$, as well as for much smaller choices.
-\todo{Noelle gluecklich machen querschnitt}
+%\todo{Noelle gluecklich machen querschnitt}
 
 Nevertheless, starting over with the initial guess from \eqref{eq: start sqrt_f} the method is instable and diverges. But the results yet are very remarkable. As shown in figure \ref{fig: oscillation} the error is oscillating while diverging  to infinity.
 \begin{figure}[h]

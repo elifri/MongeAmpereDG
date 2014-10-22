@@ -51,6 +51,8 @@ Plugging the terms missing in \eqref{eq: linearOperator} but appearing in \eqref
 \end{split}
 \end{align}
 They choose their ansatz and test space $V_h$ to be the space of continuous functionous being piecewise polynomials up to degree $k$ for a $k \geq 3$. For their analysis they assume the \MA problem has strictly convex solution $u\in H^s(\Omega)$ for $s>3$. Then they are able to derive stability of the linearisation of their operator and using the Banach fixed point theorem existence of a solution to \eqref{eq: brenner method} in $V_h$. In the end they also prove an error estimate for their numerical solution:
+\todo{mehr zum beweis}
+
 \begin{theorem}[Error Estimate{\cite[Theorem 3.1 and 3.2]{BGN+2011}}]\label{thm: error estimate brenner}
 	There exists an $h_0(\sigma) > 0$ such that for $h \leq h_0(\sigma)$ there exists a solution $u_h$ to the penalty method \eqref{eq: brenner method}. Moreover, if $u \in W^{3,\infty}$ then holds
 	\begin{align*}

@@ -177,7 +177,7 @@ We denote the degree of the trial space $V_h=\mathcal P_h^k$ by $k$ and the degr
     %  total number of mallocs used during MatSetValues calls =0
       %  using I-node routines: found 80 nodes, limit used is 5
 
-Most parameters were set to the default PETSc values %which includes the solver uses cubic backtracking 
+Most parameters were set to the default PETSc values \todo{ilu}%which includes the solver uses cubic backtracking 
 but the absolute tolerance was adjusted to $1e-8$ and the number of maximum iteration was restricted to 100. 
 
 \input{NumericalResultsNeilan1.tex}
@@ -188,6 +188,7 @@ but the absolute tolerance was adjusted to $1e-8$ and the number of maximum iter
 
 \input{NumericalResultsNeilan4.tex}
 
+\todo{symmetrised neilan and not crossed grid}
 
 \newpage
 

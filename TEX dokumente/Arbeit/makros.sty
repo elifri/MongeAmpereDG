@@ -29,7 +29,12 @@
 %=======
 
 %norms
+\newcommand{\singleNorm}[1]{\ensuremath{\left| #1 \right|}}
 \newcommand{\norm}[1]{\ensuremath{\lVert #1 \rVert}}
+
+\newcommand{\lefttriplenorm}{\ensuremath{\left| \! \left| \! \left|}}
+\newcommand{\righttriplenorm}{\ensuremath{\right| \! \right| \! \right|}}
+\newcommand{\tripleNorm}[1]{\ensuremath{\lefttriplenorm #1 \righttriplenorm}}
 
 \newcommand{\LTwonorm}[1]{\ensuremath{\norm {#1}_{L^2(\Omega)}}}
 \newcommand{\LTwonormE}[1]{\ensuremath{\norm {#1}_{L^2(e)}}}
@@ -39,6 +44,12 @@
 \newcommand{\HOnenormT}[1]{\ensuremath{\norm {#1}_{H^1(T)}}}
 \newcommand{\HOneDnorm}[1]{\ensuremath{\norm {#1}_{1,h}}}
 \newcommand{\HMinusOneDnorm}[1]{\ensuremath{\norm {#1}_{-1,h}}}
+
+\newcommand{\eNorm}[1]{\ensuremath{\norm {#1}_{h}}}
+\newcommand{\eNormTwo}[1]{\ensuremath{\tripleNorm {#1}_{h}}}
+
+\newcommand{\bilinA}[2] {\ensuremath{  \bilin {#1} {#2} _A}}
+
 
 %edge operators
 \newcommand{\laverage}{\{\!\!\{}

@@ -68,6 +68,7 @@ and the $H^s$ semi-norms
 \[ 
  	|f|_{H^{s}(\Omega)}=\left( \sum_{|\alpha| = s} \norm{D^\alpha f}^2_{L^2(\Omega)}\right)^{\frac 1 2 }.
 \]
+\end{definition}
 By this definition it is clear that the $H^0$ norm and the $L^2$ norm conincide.
 
 Let $T$ be a triangle in $\Omega$ and spanned by the points $v_0, v_1, v_2$. We also write 
@@ -114,19 +115,21 @@ We define some function spaces associated to a triangulation
 \end{definition}
 Next we define the corresponding norm.
 \begin{definition}[Discrete $H^1$ Semi-norm] \label{def: discrete h1 norm}
-	The discrete $H^1$ norm is defined as 
+	The discrete mesh-dependent $H^1$ norm of a functon $v \in H^1(\Omega;\triang)$is defined as 
 \[	
-		\HOneDnorm w ^2 = \LTwonorm {\nabla v }^2 + \sum_{e \in \edges} |e| \LTwonormE{\average{\nabla v }}.
+		\HOneDnorm w ^2 = \LTwonorm {\nabla v }^2 + \sum_{e \in \edges} |e| \LTwonormE{\average{\nabla v }}^2.
 \]
 \end{definition}
 
-For later analysis we need a standard trace and inverse estimate as proven in \cite[Section 1.6 and Section 4.5]{BS2002}.
+\todo{cite vom neilan paper}
+For later analysis we need standard trace and inverse estimates as proven in \cite[Section 1.6 and Section 4.5]{BS2002}.
 \begin{lemma}[Trace estimate]\label{la: trace estimate}
-	For any quasi-uniform trianguliaton $\triang$, there holds for a positive Constant $C\in \R$
+	For any quasi-uniform trianguliaton $\triang$, there holds
 	\[
 	%	\norm{v}_{L2 (\partial T)}^2 \leq C\left(\frac 1 {h_T} \norm{v}_{L2(T)}^2  + h_T \norm{\nabla v}_{L2(T)}^2\right) \qquad \forall v \in H^1(T).
 	\sum_{e \in \edges} \LTwonormE{v}^2 \leq C\left(\frac 1 {h} \LTwonorm{v}^2  + h \HOnenorm{v}^2\right) \qquad \forall v \in H^1(T).
 	\]
+	 where $C$ is a positive constant depending only on the mesh but not on the function $v$.
 \end{lemma}
 
 \begin{lemma}[Inverse Estimate]\label{la: inverse estimate}
