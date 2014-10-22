@@ -75,16 +75,15 @@ The first method, introduced by Brenner et alter yields a good result for the sm
 Brenner et alter used a vanishing moment method to find a proper initial guess. This seems rather costly and our numerical results show the method could be improved using a nested iterations and a simple linear PDE for the first initial guess.
 
 The results Neilan showed in his paper for our second examined method look very promising.
-Note, that this method has if polynomial degree of $V_h$ and $\Sigma_h$ are chosen equally has as five times as many degree of freedoms compared to both other methods.
+Note, that this method has if polynomial degree of $V_h$ and $\Sigma_h$ are chosen equally has as five times as many degree of freedoms compared to both other methods. However, our numerical results suggests that decreasing the polynomial degree of $\Sigma_h$ results only in a small loss of accuracy.
 
 The last presented method turned out to be a variant of an classical damped Newton approach. 
 \todo{verbesserung mit modifizierter cofactor matrix}
-The classical approach is known to fail for elements which are not at least contained in $C^1(\Omega)$. Unfortunately the fixed point iteration do also diverge for finer grids. Yet it may serve for an initial guess during a multilevel method. For big grid widths in our test cases the $L2$ error even decreased for problems which do not have a classical solution.
+The classical approach is known to fail for elements which are not at least contained in $C^1(\Omega)$. Unfortunately the fixed point iteration do also diverge for finer grids. Yet it may serve for an initial guess during a multilevel method, even in the case of problem which do not have a classical solutions. For big grid widths in our test cases the $L2$ error even decreased for problems which do not have a classical solution.
 
-Comparing the three methods for the smooth test case the first and second method produce similar convergence orders while the first has less degree of freedoms. The Picard type method yields even for the first four refinement a much smaller convergence rate.
-
-We saw that recent DG methods perform well on problems with classical solution, but have problems with problems with only viscocity solution or Aleksandrov solutions. Most rely on Newton's method to solve their nonlinear system and how to provide good initial guesses is not answered yet.
-My numerical results show that a nested iteration approach often does not provide suitable starting points for further refinements.
+Comparing the three methods in the smooth test case the first and second method produce similar convergence orders % while the first has less degree of freedoms. 
+The Picard type method yields even during the first four refinements a smaller convergence rate. We can say recent DG methods perform well on problems with classical solution, but we also experienced they have problems if the \MA solution is only a viscocity solution or Aleksandrov solution. Most rely on Newton's method to solve their nonlinear system and how to provide good initial guesses is not answered satisfactorily yet.
+Our numerical results indicate that a nested iteration approach often does not provide suitable starting points for further refinements, especially if the method employs a lot of degrees of freedom in every cell.
 
 \section{Perspective}
 Handling fully nonlinear PDEs is a complex domain and results on this domain are very unsatisfactory when compared to the linear case. Even when restrict ourselves to the prototype of nonlinear PDEs, the \MA equation, the theory is far from being complete for both the analytical and the numerical point of view.

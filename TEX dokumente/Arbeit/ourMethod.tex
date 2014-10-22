@@ -182,12 +182,12 @@ Using this fact and Lemma \ref{la: trace estimate} we find
 \begin{align}
 \bilin{L_{w_1}w_1-L_{w_2}w_2} v \leq & %(1+|\ln( h) |^{\frac 1 2 } 
 \LTwonorm{w_1-w_2} \LTwonorm{\hess{w_1}} \LTwonorm{\hess{v}} \nonumber\\
-&+ \LTwonorm{w_2} \LTwonorm{\hess{(w_1-w_2)}} \LTwonorm{\cofHess{v}} \nonumber \\
+&+ \LTwonorm{w_2} \LTwonorm{\hess{(w_1-w_2)}} \LTwonorm{\hess{v}} \nonumber \\
 	&+ \sum_{e \in \edges} (
 		\LTwonormE{ \average{ \hess{w_1 }}} \LTwonormE{ \average{\nabla (w_1-w_2)}} \nonumber\\
 		&\phantom+ +\LTwonormE{ \average{ \hess{w_1-w_2}}} \LTwonormE{ \average{\nabla (w_2)}}  \nonumber \\%\right)
 		&\phantom+ +\LTwonormE{ \average{(w_1-w_2)}} \LTwonormE{ \average{ \hess{w_1}}} \nonumber\\
-		&\phantom+ +\LTwonormE{ \average{(w_2)}} \LTwonormE{ \average{ \cof(D_h^2 (w_1-w_2))}} 
+		&\phantom+ +\LTwonormE{ \average{(w_2)}} \LTwonormE{ \average{ D_h^2 (w_1-w_2)}} 
 	)
 \end{align}
 

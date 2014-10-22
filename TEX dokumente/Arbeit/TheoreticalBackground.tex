@@ -56,10 +56,19 @@ for some $g:\partial \Omega \rightarrow \R$ is called a \emph{Dirichlet-boundary
 
 There are problems such that no such solution exists. A PDE of order $k$ requires its classical solution to be at least $k$ times differentiable, which is a very strong demand. To admit less regular solutions one aims for a weaker notion of a solution. Before doing this we specify some function spaces.
 
-%\section{Functional Spaces}
+\begin{definition} [Function Spaces and Norms]\label{def: function spaces and norms}
 According to the literature we refer by $W^{s,p}(\Omega)$ to the H\"older space, a set consisting of all $L^p(\Omega)$ functions whose distributional derivates up to order $s$ are contained in $L^ p(\Omega)$.
 \todo{Sollte ich  distributional derivates erklaeren?} The special case $p=2$ are referred to as Sobolev spaces $H^s(\Omega):=W^{s,2}(\Omega)$. An additional subscript $0$ denotes the set where all functions are zero at the boundary, i.e. $H^s_0 :=\{f \in H^s(\Omega); f(x)=0 \; \forall x \in \partial \Omega\}$
-\todo{norms}
+
+The corresponding function space norms are defined by
+\[
+	\norm f _{W^{s,p}(\Omega)} = \left( \sum_{|\alpha| \leq s} \norm{D^\alpha f}^p_{L^p(\Omega)}\right)^{\frac 1 p }, \text{   especially } \norm f _{H^{s}(\Omega)}=\left( \sum_{|\alpha| \leq s} \norm{D^\alpha f}^2_{L^2(\Omega)}\right)^{\frac 1 2 }
+\]
+and the $H^s$ semi-norms
+\[ 
+ 	|f|_{H^{s}(\Omega)}=\left( \sum_{|\alpha| = s} \norm{D^\alpha f}^2_{L^2(\Omega)}\right)^{\frac 1 2 }.
+\]
+By this definition it is clear that the $H^0$ norm and the $L^2$ norm conincide.
 
 Let $T$ be a triangle in $\Omega$ and spanned by the points $v_0, v_1, v_2$. We also write 
 \[
@@ -96,7 +105,6 @@ We define some function spaces associated to a triangulation
 	H^s(\triang) = \prod\limits_{T\in \triang}  H^s(T), \qquad W^{s,p}(\Omega) = \prod\limits_{T\in \triang} W^{s,p}(T).
 \end{align}	
 \end{definition}
-\todo{broken norms and norm}
 
 \begin{definition}[Piecewise Polynomial Spaces] \label{def: piecewise polySpace}
 	Further we denote the finite-dimensional space of piecewise polynomials by
@@ -105,21 +113,33 @@ We define some function spaces associated to a triangulation
 \]
 \end{definition}
 Next we define the corresponding norm.
-\begin{definition}[Discrete $H^1$ norm] \label{def: discrete h1 norm}
-	The discrete $H^1$norm is defined as 
+\begin{definition}[Discrete $H^1$ Semi-norm] \label{def: discrete h1 norm}
+	The discrete $H^1$ norm is defined as 
 \[	
 		\HOneDnorm w ^2 = \LTwonorm {\nabla v }^2 + \sum_{e \in \edges} |e| \LTwonormE{\average{\nabla v }}.
 \]
 \end{definition}
-Note, that restricted to $\mathcal P^k_h$ this norm is equivalent to $\HOnenorm \cdot$.
 
+For later analysis we need a standard trace and inverse estimate as proven in \cite[Section 1.6 and Section 4.5]{BS2002}.
+\begin{lemma}[Trace estimate]\label{la: trace estimate}
+	For any quasi-uniform trianguliaton $\triang$, there holds for a positive Constant $C\in \R$
+	\[
+	%	\norm{v}_{L2 (\partial T)}^2 \leq C\left(\frac 1 {h_T} \norm{v}_{L2(T)}^2  + h_T \norm{\nabla v}_{L2(T)}^2\right) \qquad \forall v \in H^1(T).
+	\sum_{e \in \edges} \LTwonormE{v}^2 \leq C\left(\frac 1 {h} \LTwonorm{v}^2  + h \HOnenorm{v}^2\right) \qquad \forall v \in H^1(T).
+	\]
+\end{lemma}
 
-\todo{norm equivalence}
-We use a subscript $h$ to indicate a piecewise evaluation/interpretation. Subsequently differential operators with a subscript $h$ imply separate differentiations on every triangle.
+\begin{lemma}[Inverse Estimate]\label{la: inverse estimate}
+	For any piecewise polynomial $v$ there holds
+	\[
+	\norm v_{H^m(\triang)} \leq C h^{s-m} \norm v_{H^s(\triang)}
+	\]
+\end{lemma}
+Note, that these lemmas and the Poincar\'e inequality also imply that restricted to $\mathcal P^k_h$ the discrete $H^1$ norm (cf. Definition \ref{def: discrete h1 norm}) is equivalent to $\HOnenorm \cdot$.
 
 To formulate a method capable of handling discontinuities along triangle edges we introduce edge operators.   
 
-\begin{definition}[Edge Operators]
+\begin{definition}[Edge Operators] \label{def: edge operators}
 We denote the \emph{normal jump} of  a piecewise smooth function $u_h:\Omega \rightarrow \R$ across an edge $e \in \edges$ by
 \begin{align*}
 	\jump {u_h}&:= 
@@ -150,13 +170,16 @@ The \emph{average} of a piecewise smooth function $u_h:\Omega \rightarrow X$ for
 \end{align*}
 \end{definition}
 
+We end this section with the note that we use a subscript $h$ to indicate a piecewise evaluation/interpretation.  Subsequently differential operators with a subscript $h$ imply differentiations were carried out seperately on every triangle. for example $\nabla_h f |_T = \nabla f |_T \; \forall T \in \triang$. 
+
+
 
 \section{Finite Element Method}
 Before we discuss numerical schemes for the \MA equation we shortly recall how a finite element method works, for a deeper insight in finite element methods we recommend \cite{Braess2003, BS2002}. Since the finite element method bases on a variational formulation we talk about finite element methods by the example of the general Poisson equation. 
 
 %\subsection{The Poisson Problem}
 
-\begin{definition}[Generalised Poisson Problem]
+\begin{definition}[Generalised Poisson Problem] \label{def: General Poisson Problem}
 The \emph{Generalised Poisson Problem} is finding a function $u:\Omega \rightarrow \R$ such that 
 \begin{align}
 	-\nabla \cdot (A \nabla u) = f \qquad &\text{ in }\Omega \label{eq: poisson eq} \\
@@ -224,7 +247,7 @@ Furthermore we can express $u_h$ as the linear combination of basis functions, n
 
 Altogether a finite element method for the general Poisson equation is defined by the bilinearform $a$ and the functional $b$ together with the choice of $W_h$ and $V_h$. Its computations consist of the assembling process where the matrices $M$ and the right-hand side vector $b$ are computed and the solving process of the resulting linear system of equations.\\
 The error made by restriction to finite elements is characterised by the following Lemma.
-\begin{lemma}[C\'ea Lemma{, \cite[4.2]{Braess2003}}]
+\begin{lemma}[C\'ea Lemma{, \cite[4.2]{Braess2003}}] \label{la: Ceas lemma}
 	Let the bilinear form $a$ be $V$ elliptic with $H_0^m \subset V \subset H^m(\Omega) $, i.e. $0 < \alpha \leq C$ exist with
 	\[
 		a(u,u) \geq \alpha  \norm u ^2_V \text{ and } |a(u,v)| \leq C \norm u ^2_V \norm v ^2_V.
@@ -237,10 +260,10 @@ The error made by restriction to finite elements is characterised by the followi
 This result shows the quality of the finite element solution depends on one side on the problem parameters $\alpha$ and $C$, but on the other side particularly on the approximation properties of $V_h$. A typical choice for the function spaces $W_h$ and $V_h$ are piecewise polynomials spaces which have good approximation properties and are easy to handle.
 
 \section{Discontinuous Galerkin (DG)} \label{sec: SIPG}
-A recent idea is to choose the test and ansatz spaces to include discontinuous functions. This approach arised in the context of hyperbolic PDEs of which solutions eventually contain discontinuities, later it was also applied to ellipitic PDEs \cite{ABC+2002}. Although the Generalised Poissson Problem is not hyperbolic and its solutions are continuous we use this example to explain the issues arising when the finite element spaces is extended to discontinuities. The crux is the handling function evaluations along discontinuities.
+A recent idea is to choose the test and ansatz spaces to include discontinuous functions. This approach arised in the context of hyperbolic PDEs of which solutions eventually contain discontinuities, later it was also applied to ellipitic PDEs \cite{ABC+2002}. Although the Generalised Poissson Problem is not hyperbolic and its solutions are continuous we use this example to explain the issues arising when the finite element spaces is extended to discontinuities. The crux is the handling function evaluations along discontinuities. Not that for discontinuous ansatz spaces it is no longer true that they are subspaces of $H^1$ which is the space our weak solutions is contained. That implies that C\'eas Lemma \ref{la: Ceas lemma} is not valid. Elements which include ansatz space no contained in $H^1$ also referred to as non-conforming elements.
 
 %We recall our triangulation $\mathcal{T}_h$ of $\Omega$. 
-If we modify the finite element procedure a bit we can use $V_h = \mathcal P_h^k$ as defined in Definition \ref*{def: piecewise polySpace} for the ansatz and test space: Due to fact we have discontinuities pnly along edges we perform the integration by parts in \eqref{eq: variational form} piecewise on every triangle leading to
+If we modify the finite element procedure a bit we can use $V_h = \mathcal P_h^k$ as defined in Definition \ref*{def: piecewise polySpace} for the ansatz and test space: Due to fact we have discontinuities only along edges we perform the integration by parts in \eqref{eq: variational form} piecewise on every triangle leading to
 \begin{align}
 	a(\varphi, v) = & \sum_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v - \sum_{T \in \triang} \int_{\partial T} \varphi A \nabla v \cdot \mathbf n.
 \end{align}
@@ -313,122 +336,16 @@ To enforce continuity in the numerical solution we penalise the jump across edge
 \end{align}
 
 Thus, we end up with the problem finding $v \in V_h$ such that
-\[
-	a_S(\phi,v) + J^\sigma(\varphi,v) = l(\varphi) + J^\sigma_0(\varphi)
-\] 
+\begin{align}
+	a_S(\phi,v) + J^\sigma(\varphi,v) = l(\varphi) + J^\sigma_0(\varphi) \label{eq: DG system}
+\end{align}
 $  \textnormal{for all } \varphi \in V_h$. 
 %The authors of \cite{PPO+2000} suggest to choose the penalty term $\sigma$ as $10 k^2$ and undergird that 
 
 Just like in the finite element method we can derive a linear system of equations $M \mathbf{u} = \mathbf{b}$ with $M$ sparse and $\mathbf{u}$ representing the coefficient vector of $u_h$ with respect to the basis $B_V$.
 This particular discontinuous Galerkin method is called \emph{Symmetric Interior Penalty Galerkin method} (SIPG).
 
-\section{Well-posedness of the SIPG Method}
-
-In this section we want to prove the derived SIPG method is well-posed.
-
-Therefore, we have to show the following statement
-\begin{lemma}\label{la: SIPG continuous}
-	If $A$ is positive definite it holds
-	\[
-		|a_S(\varphi, v) + J^\sigma(\varphi,v)| \leq C \norm{\varphi}_{1,h} \norm{v}_{1,h} \qquad \forall \varphi,v \in V_h
-	\]
-\end{lemma}
-\begin{proof}
-
-Let us consider the terms of \eqref{eq:inner product SIPG} separately.
-For the first term we have
-\begin{align}
-	\sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v \leq \norm A_{L_2(\Omega)}  \norm{\nabla \varphi}_{L_2(\Omega)} \norm{\nabla v}_{L_2(\Omega)}. \label{eq: estimate first term}
-\end{align}
-
-To estimate the remaining terms we need a standard trace and inverse estimate as can be found in \cite[Section 4.5]{BS2002}.
-\begin{lemma}\label{la: trace estimate}
-	For any quasi-uniform trianguliaton $\triang$, there holds
-	\[
-%	\norm{v}_{L2 (\partial T)}^2 \leq C\left(\frac 1 {h_T} \norm{v}_{L2(T)}^2  + h_T \norm{\nabla v}_{L2(T)}^2\right) \qquad \forall v \in H^1(T).
-	\sum_{e \in \edges} \LTwonormE{v}^2 \leq C\left(\frac 1 {h} \LTwonorm{v}^2  + h \HOnenorm{v}^2\right) \qquad \forall v \in H^1(T).
-	\]
-\end{lemma}
-Considering the sum of the second and the fourth term we find using the discrete Schwarz' inequality
-\begin{align}
-	\sum\limits_{e \in \edges}\int_{e} \jump {\varphi \average{A \nabla v} } &=
-	\sum\limits_{e \in \edges}  \LTwonormE{\jump {\varphi}} \LTwonormE {\average{A \nabla v}} \nonumber \\
-	& \leq
-		\left( \sum\limits_{e \in \edges}\int_{e} \frac 1 {|e|}\LTwonormE{\jump {\varphi}}^2 \right)^{\frac 1 2}
-		\left( \sum\limits_{e \in \edges}\int_{e} |e|\LTwonormE{\average{A \nabla v}}^2 \right)^{\frac 1 2}
-\end{align}	
-Applying now Lemma \ref{la: trace estimate} yields
-\begin{align}
-	\sum\limits_{e \in \edges}\int_{e} \frac 1 {|e|} \jump{\varphi \average{A \nabla v} } 
-%	\leq&
-%		C \left( \sum\limits_{T \in \triang}\frac 1 {h_T^2}\LTwonormT{ {\varphi}}^2 
-%		+ \HOnenormT{ {\varphi}}^2 \right)^{\frac 1 2} \nonumber \\
-%		&\cdot \left( \sum\limits_{T \in \triang}\frac 1 {h_T^2}\LTwonormT{\average{A \nabla v}}^2 
-%		+ \HOnenormT{\average{A \nabla v}}^2 \right)^{\frac 1 2} \\
-	\leq&
-		C \left( \frac 1 {h^2}\LTwonorm{ {\varphi}}^2 
-		+ \HOnenorm{ {\varphi}}^2 \right)^{\frac 1 2} \nonumber \\
-		&\cdot \left( \frac 1 {h^2}\LTwonorm{\average{A \nabla v}}^2 
-		+ \HOnenorm{\average{A \nabla v}}^2 \right)^{\frac 1 2} 
-	\end{align}
-Using the Poincar\'e inequality and the definition of the discrete $H^1$ norm we find for any $w \in V_h$
-\begin{align}
-\frac 1 {h^2}\LTwonorm{ {w}}^2 + \HOnenorm{ {w}}^2 
-\leq& C \LTwonorm{ {\nabla w}}^2 + \LTwonorm{ {\nabla w}}^2 +\sum_{e \in \edges} \LTwonormE{ {\average{\nabla w}}}^2 \nonumber\\
-\leq& C \HOnenorm{ {\nabla w}}^2.
-\end{align}
-Hence we get
-\begin{align}
-\sum\limits_{e \in \edges}\int_{e} \frac 1 {|e|}\jump {\varphi \average{A \nabla v} } \leq&
-	C \HOnenorm{ \varphi}\HOnenorm{\average A}\HOnenorm{\average{v}}\label{eq: estimate second fourth term}
-\end{align}
-Since the third and the last term in \eqref{eq:inner product SIPG} are the symmetrising terms, we analogously have for their sum
-\begin{align}
-\sum\limits_{e \in \edgesi}\int_{e} \frac 1 {|e|}\jump {v \average{A \nabla \varphi} } \leq&
-C \HOnenorm{v}\HOnenorm{\average A}\HOnenorm{\average{\varphi}}. \label{eq: estimate third fifth term}
-\end{align}
-Combining \eqref{eq: estimate first term}, \eqref{eq: estimate second fourth term} and \eqref{eq: estimate third fifth term} together with the norm equivalence yields the claim.
-\end{proof}
-
-We define the $H^{-1}$ semi-norm as 
-\begin{definition}[$H^{-1}$ Semi-norm] \label{def: h-1 seminorm}
-	The semi-norm is defined by 
-	\[
-		\HMinusOneDnorm r ^2 = \sup_{0 \neq w \in V_h} \frac {{\bilin r w } } {\HOneDnorm{w}}.
-	\]
-\end{definition}
-
-\begin{theorem}[Stability]\label{thm: SIPG stability}
-There holds for $a (v):=a_S(\cdot, v)+J^\sigma(\cdot, v)$
-	\begin{align}
-	 	\HMinusOneDnorm{a (v)} \leq C \HOneDnorm v \qquad \forall v \in H^2(\Omega; \triang) \cap H^1(\Omega). \label{eq: bilin continuity}
-	 \end{align}
-	 Moreover, there exists a $h_0 > 0$ such that for $h \leq h_0 $, the operator $a$ is invertible with 
-	 \begin{align}
-	 	\HOneDnorm {a^{-1} r} \leq C \HMinusOneDnorm r \qquad \forall r \in V_h \label{eq: bilin stability}
-	 \end{align}
-\end{theorem}
-\begin{proof}
-	The first estimate follows directly from Lemma \ref{la: SIPG continuous} and the definition of the norm \ref{def: h-1 seminorm}. W-e are able to reduce the proof of \eqref{eq: bilin stability} to showing $a$ is coercive on $V_h$.
-	
-	Since the diffusion matrix $A$ is positive definite it holds
-	\[
-		\int_\Omega  w \cdot A \nabla w \geq \lambda \LTwonorm {\nabla w }^2 
-	\]
-	for a $\lambda >0$.
-	Hence, we find
-	\[
-		\bilin {a(v)} {v}  \geq \lambda \LTwonorm {\nabla v }^2 + 2 \sum\limits_{e \in \edges}\int_{e} \frac 1 {|e|}\jump {v \average{A \nabla v} }
-	\] 
-	By the estimation of \eqref{eq: estimate second fourth term} it holds 
-		\[
-			\bilin {a(v)} {v}  \geq \lambda \LTwonorm {\nabla v }^2 + C \HOnenorm{v} \HOnenorm{v}^2
-		\] 
-	For sufficiently small $h$ it holds by the Poincar\'e inequality and the norm equivalence of the discrete and non-discrete $H^1$ norm
-	\[
-		\bilin {a(v)} {v}  \geq C  \HOnenorm{v}^2 \geq C  \HOneDnorm{v}^2
-	\]
-\end{proof}
+\input{wellposedness_DG.tex}
 
 \section{Implementation of a SIPG Method}
 
