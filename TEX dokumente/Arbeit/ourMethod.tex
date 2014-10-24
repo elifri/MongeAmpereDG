@@ -54,7 +54,7 @@ Thus, it is natural to examine the fixed point iteration
 for its applicability for numerical schemes approximating a \MA solution.
 
 \section{SIPG formulation of the Iteration}\label{sec: SIPG MA}
-Since in every iteration \eqref{eq:fixed point iteration} states a generalised poisson equation we can apply the derived  SIPG method of section \ref{sec: SIPG} directly: Given $u^i_h$ find $u^{i+1}_h \in \mathcal P^k_h$ satisfying
+Since in every iteration \eqref{eq:fixed point iteration} states a Generalised Poisson Equation we can apply the derived  SIPG method of section \ref{sec: SIPG} directly: Given $u^i_h$ find $u^{i+1}_h \in \mathcal P^k_h$ satisfying
 \begin{align}
  &\int_{\Omega} \nabla v_h \cdot \cof(D_h^2 u_h^{i}) \nabla u_h^{i+1}  \nonumber\\
  & -\sum\limits_{e \in \bigEps^i}\int_{e} \jump {v_h \average { \cof(D_h^2 u^{i}) \nabla u_h^{i+1}} }
@@ -68,7 +68,8 @@ Since in every iteration \eqref{eq:fixed point iteration} states a generalised p
     	\label{eq: sipg iteration}
 \end{align}
 
-Brenner et. alter emphasised that a convergent scheme needs to retain the consistency between the discretisation of the linearisation and the linearisation of the discretisation. Since the linearisation of the \MA operator is $\nabla \cdot \left( \cofHess u \nabla v \right)$ (cf. Theorem \ref{thm: linearisation}) the stiffness bilinear form of the SIPG method is the linearisation of the \MA equation at $u_i$. Therefore it is consistent if $u_i$ equals the exact solution. 
+We showed well-posedness of the SIPG method given the diffusion matrix is positive definite. The diffusion matrix is given by the cofactor of the Hessian of $u^i$. If $u^i$ is convex, its Hessian is positive definite. Since the eigenvalues of the Hessian and the cofactor of the Hessian are the same also $\cofHess{u}$ is positive definite. Thus, every iteration step is well-defined.
+
 %
 %\section{Wellposedness of the method}
 %
@@ -191,7 +192,7 @@ Brenner et. alter emphasised that a convergent scheme needs to retain the consis
 %	)
 %\end{align}
 
-
+Before we see some performances of this approach solving the \MA problem we want to review some of the problem that may arise.
 \section{Challenges for a \MA DG method}
 Reviewing existing DG methods for the \MA we learned some ?(subjects, matter, points) we have to pay attention to  while examining the fixed point iteration. The next subsections treat the most challenging points.
 

@@ -36,7 +36,7 @@ Summing over the whole triangulation it becomes
 \end{align*}
 Considering the last identity the variational form of the linearisation reads
 \begin{align}
-	\langle L^L_{u,h}(w_h),v_h\rangle 
+	\langle L^L_{u}(w_h),v_h\rangle 
 	    =&- \sum_{T \in \triang}  \int_T \nabla \cdot (\mycof{D^2 u_h} \nabla w_h) v_h
 	    + \sum_{e \in \edges} \int_{e} \llbracket \{\{\mycof{D^2 u_h} \}\} \nabla w_h\rrbracket v_h \nonumber \\
 	    &+ \sum_{e \in \edges} \int_{e} \llbracket \{\{\mycof{D^2 u_h} \}\} \nabla v_h\rrbracket w_h \label{eq: var of linearisation}
@@ -50,21 +50,26 @@ Plugging the terms missing in \eqref{eq: linearOperator} but appearing in \eqref
 	+ \sigma  \sum_{e \in \edgesb} \frac 1 {h_e} \int_{e} (u_h -g)  = 0 \; \forall v_h \in V_h \label{eq: brenner method}
 \end{split}
 \end{align}
-They choose their ansatz and test space $V_h$ to be the space of continuous functionous being piecewise polynomials up to degree $k$ for a $k \geq 3$. For their analysis they assume the \MA problem has strictly convex solution $u\in H^s(\Omega)$ for $s>3$. Then they are able to derive stability of the linearisation of their operator and using the Banach fixed point theorem existence of a solution to \eqref{eq: brenner method} in $V_h$. In the end they also prove an error estimate for their numerical solution:
-\todo{mehr zum beweis}
+They choose their ansatz and test space $V_h$ to be the space of continuous functionous being piecewise polynomials up to degree $k$ for a $k \geq 3$. For their analysis they assume the \MA problem has strictly convex solution $u\in H^s(\Omega)$ for $s>3$. %Then they are able to derive stability of the linearisation of their operator. 
+
+The key for the convergence proof is a fixed point argument: They expanded the mapping given by the right-hand side of \eqref{eq: brenner method} to a linearisation at the solution $u$ (cf. \eqref{eq: var of linearisation}  and a remaining quadratic mapping $R$. That means they can write \eqref{eq: brenner method} by 
+\begin{align}
+	\bilin {F (u+w)} v = \bilin {L^L_{u_h}w} v + \bilin {Rw} v. \label{eq: brenner entwicklung}
+\end{align}
+With this at their hand they define a mapping $\mathcal M_h$. The choice of their $\mathcal M$ has two important properties. At first, its fixed point is the solution to their finite element. At second, $\mathcal M$ is chosen in such a way that its contraction property almost follows directly from a contraction property of $R$.
+Using the Banach fixed point theorem they can show existence of a fixed point of $\mathcal M$ in $V_h$. Fortunately, the Banach fixed point theorem also provides an error estimate for their numerical solution:
 
 \begin{theorem}[Error Estimate{\cite[Theorem 3.1 and 3.2]{BGN+2011}}]\label{thm: error estimate brenner}
-	There exists an $h_0(\sigma) > 0$ such that for $h \leq h_0(\sigma)$ there exists a solution $u_h$ to the penalty method \eqref{eq: brenner method}. Moreover, if $u \in W^{3,\infty}$ then holds
+	There exists an $h_0(\sigma) > 0$ such that for $h \leq h_0(\sigma)$ there exists a solution $u_h$ to the penalty method \eqref{eq: brenner method}. Moreover, if $u \in W^{s,\infty}$ with $s>3$ then holds
 	\begin{align*}
 %		\norm{u-u_h}_{1,h} \lesssim (1+\sigma) h^{l-1} \norm{u}_H
 		\norm{u-u_h}_{L^2(\Omega)} \lesssim (1+\sigma)^2 
 		                        \left(h^{l} \norm{u}_{H^l(\Omega)} + (1+ | \ln h |^{\frac 1 2 }) h^{2(l-2)} \norm{u}_{H^l(\Omega)} \right)
 	\end{align*}
-where $l=\min\{k+1,s\}$ and $u \in H^s(\Omega)$. 
-	
+where $l=\min\{k+1,s\}$. 
 \end{theorem}
-Their numerical results suggest optimal convergence rates for smooth solutions although they cannot confirm those with theoretical evidence. \\
-However, their approach has a drawback. In order to find $u_h$ one has to solve the from \eqref{eq: brenner method} resulting nonlinear system. Brenner et alt. make use of Newton's method in the numerical results to solve their example problems. For a good initial guess they inquire a vanishing moments method which internally again solves nonlinear systems based on a Newton's method which uses a nested iteration to create initial guesses. 
+This theorem ensure almost optimal convergence orders provided a smooth solution. Although there analysis assumes the polynomial degree $k\geq 3$ their numerical results also suggest optimal convergence rates for $k=2$.\\
+However, their approach has a drawback. In order to find $u_h$ one has to solve the from \eqref{eq: brenner method} resulting nonlinear system. Brenner et alt. make use of Newton's method in the numerical results to solve their example problems. For a good initial guess they inquire a vanishing moments method which internally again solves a nonlinear systems based on a Newton's method. The starting point required of this internal Newton solver is calculated using a nested iteration.
 
 Neilan claims when presenting another DG method in \cite{Neilan2014} that this methods fails to converge for the test case $u = -\sqrt{2 - x_1^2 - x_2^2 }$ and $f = \frac 2 {{2 - x_1^2 - x_2^2}^2}$ which lacks $H^2$ regularity and our computations confirm this result, see also test \ref{test sqrt}. In chapter \ref{ch:NumericalResults} we provide some numerical experiments for a nested iteration variant of this method. Generally speaking, the presented method is more appropriate for classical solutions, Brenner et alt. say they plan to address less regular solution in future work. 
 
@@ -131,10 +136,10 @@ where
 		= \int_\Omega D_h u: B -\sum_{ e \in \edgesi} \int_e  \jump {\average B \nabla u }\qquad \forall B \in \Sigma_h. \tag{\ref{eq: discrete hessian}}
 	\end{align}
 
-Neilan proceeds analogously to the prove of the well-posedness of the method mentioned in the previous section \ref{sec: Brenner method}. At the beginning he derives stability estimates for the linearisation of his operator and then he uses the Banach fixed point theorem to obtain his main theorem. Note, that the new notion of an discrete Hessian makes the stability of this unconventional linearisation hard to handle. The linearisation used in the other $C^0$ penalty method is more common and hence the arguments for deriving stability were already well known.
+Neilan proceeds analogously to the prove of the well-posedness of the method mentioned in the previous section \ref{sec: Brenner method}. At the beginning he expands the nonlinear mapping at the solution $u$ and then he uses an analogous mapping $\mathcal M$ to obtaining convergence with the Banach fixed point theorem. Note, that the new notion of an discrete Hessian makes the estimates of this unconventional linearisation hard to handle. The linearisation used in the other $C^0$ penalty method is more common and hence the arguments for deriving estimates for the linear part were already well known.
 He ends up with the following error estimation:
 \begin{theorem}
-	Let $u$ be the convex solution to the \MA equation und suppose $k>3$. Then there exists a $h_1$ such that there exists a solution $u_h \in V_h$ to \eqref{eq: neilan eq1} with
+	Let $u$ be the convex solution to the \MA equation and suppose $u$ to be in the Hölder space $C^{k+3,\alpha}$ for $\alpha \in (0,1)$ and the polynomial degree $k\geq3$. Then there exists a $h_0$ such that for all $h > h_0$ there exists a solution $u_h \in V_h$ to \eqref{eq: neilan eq1} with
 	\[
 		\norm{u-u_h}_{1,h} \leq C h^k
 	\]
@@ -144,7 +149,7 @@ He ends up with the following error estimation:
 	\]
 \end{theorem}
 
-Albeit he cannot prove his numerical experiments suggest that his method even works for smaller polynomial degrees and problems which's solution lacks $H^2$ regularity. 
+Albeit he cannot prove any further relaxations, his numerical experiments suggest that his method even works for smaller polynomial degrees and problems which's solution lacks $H^2$ regularity. 
 \\However, for $k=1$ he has to add an additional penalty term to obtain convergence. Thus, for piecewise affine functions he instead solves:
 \begin{align}
 		\int_\Omega \left(\mydet{D_{DH}^2 u} - f \right) v + \eta \sum_{e \in \edgesi} |e| \int_e \jump{ \nabla u_h} \jump{\nabla v}
@@ -157,4 +162,4 @@ where
 	\end{align*}
 and $\eta$ is an additional penalty parameter which Neilan takes to be 50 in his numerical tests.
 
-In the numerical results his method performs with optimal convergence rates given a smooth solution, even for polynomials degrees $k<3$. We check the performance of this algorithms later in chapter \ref{ch:NumericalResults}.
+We check the performance of this algorithms later in chapter \ref{ch:NumericalResults}.

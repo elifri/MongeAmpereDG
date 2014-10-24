@@ -68,8 +68,12 @@ and the $H^s$ semi-norms
 \[ 
  	|f|_{H^{s}(\Omega)}=\left( \sum_{|\alpha| = s} \norm{D^\alpha f}^2_{L^2(\Omega)}\right)^{\frac 1 2 }.
 \]
+If not stated otherwise $\bilin f g$ always refer to the standard $L^2$ scalar product 
+\[
+	\bilinLTwo{f}{g} = \int_{\Omega } f g.
+\]
 \end{definition}
-By this definition it is clear that the $H^0$ norm and the $L^2$ norm conincide.
+By this definition it is clear that the $H^0$ norm and the $L^2$ norm conincide. 
 
 Let $T$ be a triangle in $\Omega$ and spanned by the points $v_0, v_1, v_2$. We also write 
 \[
@@ -103,7 +107,7 @@ On this basis we define the piecewise spaces
 \begin{definition}[Broken Spaces]
 We define some function spaces associated to a triangulation
 \begin{align}
-	H^s(\triang) = \prod\limits_{T\in \triang}  H^s(T), \qquad W^{s,p}(\Omega) = \prod\limits_{T\in \triang} W^{s,p}(T).
+	H^s(\Omega;\triang) = \prod\limits_{T\in \triang}  H^s(T), \qquad W^{s,p}(\Omega;\triang) = \prod\limits_{T\in \triang} W^{s,p}(T).
 \end{align}	
 \end{definition}
 
@@ -113,35 +117,30 @@ We define some function spaces associated to a triangulation
 	\mathcal P^k_h = \{ f \in L^\infty(\Omega); f \arrowvert_T \textnormal{ is a polynomial of (total) degree } \leq k \textnormal{ for every } t \in \mathcal T_h\}.
 \]
 \end{definition}
-Next we define the corresponding norm.
-\begin{definition}[Discrete $H^1$ Semi-norm] \label{def: discrete h1 norm}
-	The discrete mesh-dependent $H^1$ norm of a functon $v \in H^1(\Omega;\triang)$is defined as 
-\[	
-		\HOneDnorm w ^2 = \LTwonorm {\nabla v }^2 + \sum_{e \in \edges} |e| \LTwonormE{\average{\nabla v }}^2.
-\]
-\end{definition}
 
-\todo{cite vom neilan paper}
 For later analysis we need standard trace and inverse estimates as proven in \cite[Section 1.6 and Section 4.5]{BS2002}.
-\begin{lemma}[Trace estimate]\label{la: trace estimate}
-	For any quasi-uniform trianguliaton $\triang$, there holds
-	\[
+\begin{lemma}[Trace estimate{,\cite[Theorem(1.6.6)]{BS2002}}]\label{la: trace estimate}
+	Given any quasi-uniform trianguliaton $\triang$, there holds for $ v \in H^1(\Omega;\triang)$
+	\begin{align*}
 	%	\norm{v}_{L2 (\partial T)}^2 \leq C\left(\frac 1 {h_T} \norm{v}_{L2(T)}^2  + h_T \norm{\nabla v}_{L2(T)}^2\right) \qquad \forall v \in H^1(T).
-	\sum_{e \in \edges} \LTwonormE{v}^2 \leq C\left(\frac 1 {h} \LTwonorm{v}^2  + h \HOnenorm{v}^2\right) \qquad \forall v \in H^1(T).
-	\]
-	 where $C$ is a positive constant depending only on the mesh but not on the function $v$.
+	\sum_{e \in \edges} \LTwonormE{v}^2 
+		\leq C_1
+		 \sum_{T \in \triang} \LTwonormT{v}^2 \HOnenormT{v}^2
+	\leq 
+		C_2 \sum_{T \in \triang} \left(\frac 1 {h} \LTwonormT{v}^2  + h \HOnenormT{v}^2\right).
+	\end{align*}
+	 where $C_1,C_2$ are positive constants depending only on the mesh but not on $v$.
 \end{lemma}
+Note, the second inequality follows from the identity $\sqrt{a} \sqrt{b} \leq \varepsilon a + \frac 1 \varepsilon b$ for arbitrary $a,b \in R$ and $\varepsilon \geq 0$. This identity can be easily verified taking the root of the inequality $ab \leq \varepsilon^2 a^2 + 2ab + {\frac 1 \varepsilon}^2b^2 = \left( \varepsilon a + \frac 1 \varepsilon b\right)^2$.
 
-\begin{lemma}[Inverse Estimate]\label{la: inverse estimate}
-	For any piecewise polynomial $v$ there holds
+\begin{lemma}[Inverse Estimate{, \cite[Lemma 2.4]{BGN+2011}}]\label{la: inverse estimate}
+	For any piecewise polynomial $v \in \mathcal P_h^k$ there holds
 	\[
-	\norm v_{H^m(\triang)} \leq C h^{s-m} \norm v_{H^s(\triang)}
+	\norm v_{H^m(T)} \leq C h^{s-m} \norm v_{H^s(T)} \qquad \forall T \in \triang
 	\]
 \end{lemma}
-Note, that these lemmas and the Poincar\'e inequality also imply that restricted to $\mathcal P^k_h$ the discrete $H^1$ norm (cf. Definition \ref{def: discrete h1 norm}) is equivalent to $\HOnenorm \cdot$.
 
 To formulate a method capable of handling discontinuities along triangle edges we introduce edge operators.   
-
 \begin{definition}[Edge Operators] \label{def: edge operators}
 We denote the \emph{normal jump} of  a piecewise smooth function $u_h:\Omega \rightarrow \R$ across an edge $e \in \edges$ by
 \begin{align*}
@@ -335,14 +334,18 @@ and
 
 To enforce continuity in the numerical solution we penalise the jump across edges as described in  \cite[3.2.2.]{PPO+2000} with the following terms
 \begin{align}
-	J^\sigma(\varphi, v) = \sum\limits_{e \in \edges} \int_e \frac \sigma {|e|} \jump \varphi \jump v \textnormal{ and } 	J^\sigma_0(\varphi, v) = \sum\limits_{e \in \edgesb} \int_e \frac \sigma {|e|} \varphi g .
+	J^\sigma(\varphi, v) = \sum\limits_{e \in \edges} \int_e \frac \sigma {|e|} \jump \varphi \jump v \textnormal{ and } 	J^\sigma_0(\varphi, v) = \sum\limits_{e \in \edgesb} \int_e \frac \sigma {|e|} \varphi g . \label{eq: penalty term}
 \end{align}
 
 Thus, we end up with the problem finding $v \in V_h$ such that
 \begin{align}
-	a_S(\phi,v) + J^\sigma(\varphi,v) = l(\varphi) + J^\sigma_0(\varphi) \label{eq: DG system}
+	a_h^{DG}(\varphi, v) = l^{DG}_h (v) \qquad \forall \varphi \in V \label{eq: DG system}
 \end{align}
-$  \textnormal{for all } \varphi \in V_h$. 
+where
+\[ 	
+	a_h^{DG} (\varphi, v) := a_S(\phi,v) + J^\sigma(\varphi,v) \text{ and } l_h^{DG}(\varphi) := l(\varphi) + J^\sigma_0(\varphi).
+\]
+
 %The authors of \cite{PPO+2000} suggest to choose the penalty term $\sigma$ as $10 k^2$ and undergird that 
 
 Just like in the finite element method we can derive a linear system of equations $M \mathbf{u} = \mathbf{b}$ with $M$ sparse and $\mathbf{u}$ representing the coefficient vector of $u_h$ with respect to the basis $B_V$.
