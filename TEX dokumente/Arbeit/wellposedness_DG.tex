@@ -263,13 +263,13 @@ At first, we show the following statement
 	\left( \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{A \nabla v}}^2 \right)^{\frac 1 2} 	 \\
 	& \leq
 	\left( \sum\limits_{e \in \edges} \frac {\sigma}{|e|} \LTwonormE{\jump {\varphi}}^2 \right)^{\frac 1 2}
-	\sup\limits_{e \in \edges} \LTwonormE{\average{A}} \left( \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v}}^2 \right)^{\frac 1 2} \label{eq: CS estimate}
+	 \left( \sup\limits_{e \in \edges} \LTwonormE{\average{A}}\sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v}}^2 \right)^{\frac 1 2} \label{eq: CS estimate}
 	\end{align}
-	As mentioned before we will from now on denote positive terms depending only on $A$ with the Constant $C$ whose value may vary between two inequalities. Since the third and the last term in \eqref{eq:inner product SIPG} are the symmetric to the second and fourth summands, we analogously have for their sum
+	For shorter notation we abbreviate $\sup\limits_{e \in \edges} \LTwonormE{\average{A}}$ by $\bar A$. Since the third and the last term in \eqref{eq:inner product SIPG} are the symmetric to the second and fourth summands, we analogously have for their sum
 	\begin{align}
 	\sum\limits_{e \in \edges}\int_{e} \frac 1 {|e|}\jump {v \average{A \nabla \varphi} } \leq&
 	\left( \sum\limits_{e \in \edges} \frac {\sigma}{|e|}\LTwonormE{\jump {v}}^2 \right)^{\frac 1 2}
-	\left( C \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla \varphi}}^2 \right)^{\frac 1 2}.\label{eq: CS estimate2}
+	\left( \bar A \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla \varphi}}^2 \right)^{\frac 1 2}.\label{eq: CS estimate2}
 	\end{align}
 	Now only the penalty term (cf. \eqref{eq: penalty term}) needs to be estimated. Again we apply at first the Cauchy-Schwarz inequality and then the discrete Cauchy-Schwarz inequality:
 	\begin{align}
@@ -278,24 +278,24 @@ At first, we show the following statement
 	\leq \left( \sum\limits_{e \in \edges} \frac \sigma{|e|} \LTwonormE{\jump{\varphi}}^2 \right)^{\frac 1 2} \left( \sum\limits_{e \in \edges} \frac \sigma {|e|} \LTwonormE{\jump{v}}^2 \right)^{\frac 1 2} \label{eq: CS estimate3}
 	\end{align}
 	Adding \eqref{eq: CS estimate 0}, \eqref{eq: CS estimate}, \eqref{eq: CS estimate2} and \eqref{eq: CS estimate3} we find using the discrete Schwarz inequality once more
-	\begin{align*}
+	\begin{align}
 	|a_h^{DG}(\varphi,v)| \leq& 
-	\LTwonorm {\nabla \varphi} \LTwonorm{\nabla v} \nonumber\\
+	 \LTwonorm{A} \LTwonorm {\nabla \varphi} \LTwonorm{\nabla v} \nonumber\\
 	& +\left( \sum\limits_{e \in \edges}\frac {\sigma}{|e|}\LTwonormE{\jump {\varphi}}^2 \right)^{\frac 1 2}
-	\left( C \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v}}^2 \right)^{\frac 1 2} \nonumber\\
+	\left( \bar A \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v}}^2 \right)^{\frac 1 2} \nonumber\\
 	& +	\left( \sum\limits_{e \in \edges} \frac {\sigma} {|e|}\LTwonormE{\jump {v}}^2 \right)^{\frac 1 2}
-	\left( C \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla \varphi}}^2 \right)^{\frac 1 2}\nonumber \\
+	\left( \bar A \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla \varphi}}^2 \right)^{\frac 1 2}\nonumber \\
 	& + \left( \sum\limits_{e \in \edges} \frac \sigma{|e|} \LTwonormE{\jump{\varphi}}^2 \right)^{\frac 1 2} \left( \sum\limits_{e \in \edges} \frac \sigma {|e|} \LTwonormE{\jump{v}}^2 \right)^{\frac 1 2} \nonumber \\
 	\leq& 
 	\left( 
-	\LTwonorm{\nabla \varphi}^2+2\sum\limits_{e \in \edges} \frac {\sigma} {|e|}\LTwonormE{\jump {\varphi}}^2+ C\sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla \varphi}}^2
+	\LTwonorm{A}\LTwonorm{\nabla \varphi}^2+2\sum\limits_{e \in \edges} \frac {\sigma} {|e|}\LTwonormE{\jump {\varphi}}^2+ \bar A\sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla \varphi}}^2
 	\right)^{\frac 1 2} \nonumber \\
 	&\times
 	\left( 
-	\LTwonorm{\nabla v}^2+2\sum\limits_{e \in \edges} \frac {\sigma}{|e|}\LTwonormE{\jump {v}}^2+ C\sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v}}^2
+	\LTwonorm{A} \LTwonorm{\nabla v}^2+2\sum\limits_{e \in \edges} \frac {\sigma}{|e|}\LTwonormE{\jump {v}}^2+ \bar A\sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v}}^2
 	\right) ^{\frac 1 2} \nonumber \\
-	\leq & C \eNorm \varphi \eNorm v 
-	\end{align*}
+	\leq & \maxTriple {\LTwonorm{A}}{2} {\sup_{e \in \edges }\LTwonormE{\average A}} \eNorm \varphi \eNorm v  \leq \label{eq: exact estimate boundedness} % \eNorm{A} \eNorm{\varphi}
+	\end{align}
 \end{proof}
 
 The next step in our analysis considers the stability of the SIPG method. To do we first need to define a norm measuring ???\todo{yeah what} 

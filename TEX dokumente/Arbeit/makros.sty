@@ -22,7 +22,9 @@
 
 \DeclareMathOperator*{\argmin}{argmin}
 \renewcommand{\max}[2]{\ensuremath{\operatorname{max} \left\{ #1, #2  \right\}  }}
+\newcommand{\maxTriple}[3]{\ensuremath{\operatorname{max} \left\{ #1, #2, #3  \right\}  }}
 
+\newcommand{\M}{\ensuremath{\mathcal M}}
 
 %======color text=====
 \newcommand{\blue}[1]{\textcolor{blue}{#1}}
@@ -38,6 +40,10 @@
 \newcommand{\righttriplenorm}{\ensuremath{\right| \! \right| \! \right|}}
 \newcommand{\tripleNorm}[1]{\ensuremath{\lefttriplenorm #1 \righttriplenorm}}
 
+\newcommand{\LInftynorm}[1]{\ensuremath{\norm {#1}_{L^\infty(\Omega)}}}
+\newcommand{\LInftynormE}[1]{\ensuremath{\norm {#1}_{L^\infty(e)}}}
+\newcommand{\LInftynormPOm}[1]{\ensuremath{\norm {#1}_{L^\infty(\partial \Omega)}}}
+
 \newcommand{\LTwonorm}[1]{\ensuremath{\norm {#1}_{L^2(\Omega)}}}
 \newcommand{\LTwonormE}[1]{\ensuremath{\norm {#1}_{L^2(e)}}}
 \newcommand{\LTwonormT}[1]{\ensuremath{\norm {#1}_{L^2(T)}}}
@@ -48,6 +54,7 @@
 \newcommand{\HMinusOneDnorm}[1]{\ensuremath{\norm {#1}_{-1,h}}}
 
 \newcommand{\eNorm}[1]{\ensuremath{\norm {#1}_{h}}}
+\newcommand{\eNormDTwo}[1]{\ensuremath{\norm {#1}_{2,h}}}
 \newcommand{\eNormTwo}[1]{\ensuremath{\tripleNorm {#1}_{h}}}
 
 \newcommand{\bilinLTwo}[2] {\ensuremath{  \bilin {#1} {#2} _{L_2}}}
