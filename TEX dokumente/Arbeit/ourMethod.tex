@@ -53,7 +53,7 @@ Thus, it is natural to examine the fixed point iteration
 \end{align}
 for its applicability for numerical schemes approximating a \MA solution.
 
-\section{SIPG formulation of the Iteration}\label{sec: SIPG MA}
+\section{SIPG formulation of an Iteration Step}\label{sec: SIPG MA}
 Since in every iteration \eqref{eq:fixed point iteration} states a Generalised Poisson Equation we can apply the derived  SIPG method of section \ref{sec: SIPG} directly: Given $u^i_h$ find $u^{i+1}_h \in \mathcal P^k_h$ satisfying
 \begin{align}
  &\int_{\Omega} \nabla v_h \cdot \cof(D_h^2 u_h^{i}) \nabla u_h^{i+1}  \nonumber\\
@@ -68,11 +68,9 @@ Since in every iteration \eqref{eq:fixed point iteration} states a Generalised P
     	\label{eq: sipg iteration}
 \end{align}
 
-We showed well-posedness of the SIPG method given the diffusion matrix is positive definite. The diffusion matrix is given by the cofactor of the Hessian of $u^i$. If $u^i$ is convex, its Hessian is positive definite. Since the eigenvalues of the Hessian and the cofactor of the Hessian are the same also $\cofHess{u}$ is positive definite. Thus, every iteration step is well-defined.
+\input{comparison.tex}
 
-
-
-Before we see some performances of this approach solving the \MA problem we want to review some of the problem that may arise.
+The analysis revealed some problems of this Picard iteration approach solving the \MA problem. The next section addresses the major obstacles for a DG method solving the \MA equation and ideas how to solve those.
 \section{Challenges for a \MA DG method}
 Reviewing existing DG methods for the \MA we learned some ?(subjects, matter, points) we have to pay attention to  while examining the fixed point iteration. The next subsections treat the most challenging points.
 
@@ -191,13 +189,13 @@ In \cite[Remark 2.1]{DG2006a} has been shown a strong connection between the \MA
 \end{align}
 An advantage of this approach is the compliance of boundary conditions.
 
-Alternatively a nested iteration or multilevel ansatz can be utilised. At a the coarsest level $h_1$ one chooses any convex function as initial guess$u^0_{h_1}$, mostly $\frac 1 2 ({x_1^2} + {x_2^2}) $ for it is convex polynomial with a low degree. For finer triangulations $\mathcal{T}_{h_{l}}$ the solution of the previously computed solution $u_{h_{l-1}}$is taken for a starting point. Of course both approaches can be combined using the Poisson solution on the coarsest grid whereas later taking quasi-interpolants.
+Alternatively a nested iteration or multilevel ansatz can be utilised. At a the coarsest level $h_1$ one chooses any convex function as initial guess $u^0_{h_1}$, mostly $\frac 1 2 ({x_1^2} + {x_2^2}) $ for it is convex polynomial with a low degree. For finer triangulations $\mathcal{T}_{h_{l}}$ the solution of the previously computed solution $u_{h_{l-1}}$is taken for a starting point. Of course both approaches can be combined using the Poisson solution on the coarsest grid whereas later taking quasi-interpolants.
 
 The second approach regards the fact that probably the method's robustness decreases for finer meshes.
 
 
 \subsection{An additional Penalty Parameter}
-At the beginning we implemented the SIPG method exactly as stated in section \ref{sec: SIPG MA}.
+At the beginning we implemented the SIPG method exactly as stated in section \ref{sec: SIPG MA}. The polynomial degree $k$ of the ansatz and trial space $\mathcal V_h^k$ was taken to be two.
 As an initial guess served the solution of \eqref{eq: start sqrt_f} , the penalty parameter was chosen to be 30 and the domain $\Omega$ the unit square$[0,1]^2$.
 
 For first numerical results we consider the rather simple equation
@@ -205,7 +203,7 @@ For first numerical results we consider the rather simple equation
 	\mydet {D^2 u} &= 1 \text{ in } \Omega \\ 
 	u &= \frac 1 2 (x_1^2 + x_2^2 )\text{ on }\partial \Omega.	
 \end{align}
-with the exact classical solution $\frac 1 2 (x_1^2 + x_2^2 )$. However, even for this rather simple example the iteration does not converge. This implementation even fails the consistency check. Given the exact solution as starting point the $L2$ error steadily increases, as shown in figure \ref{fig: consisctency_first_try}
+with the exact classical solution $\frac 1 2 (x_1^2 + x_2^2 )$. However, as one may expect by the results given in the analysis in Section \ref{sec: DG analysis}, even for this rather simple example the implementation fails the consistency check. Given the exact solution which is already contained in $V_h$ as starting point the $L2$ error steadily increases, as shown in figure \ref{fig: consisctency_first_try}
 \begin{figure}[h]
 	\centering
 	\includegraphics[trim = 2cm 4cm 1cm 4cm, width=1\textwidth]{plots/consisctency_first_try.pdf}
