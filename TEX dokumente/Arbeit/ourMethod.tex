@@ -274,9 +274,9 @@ To suffice this criteria we introduce a modified cofactor matrix
 \]
 where $\lambda$ is the minimal eigenvalue of $ \mycof {D^2_h u_h}$ and $Id$ is the $d \times d$-Identity matrix. Now we replace all occurrences of $\mycof {D^2_h u_h}$ in \eqref{eq: sipg iteration} by $\mycofMod {D^2_h u_h}$ to stabilise the problem condition.
 
-\section{The Algorithm}
+\section{The Picard Iteration Algorithm}
 
-Bringing those points together our method to carry out the fixed point iteration works as Algorithm \ref{alg: final} describes.
+Bringing the suggestions of the last section together the method to carry out the fixed point iteration works as Algorithm \ref{alg: final} describes.
 
 \begin{algorithm}
 \begin{algorithmic}
@@ -296,7 +296,7 @@ Bringing those points together our method to carry out the fixed point iteration
 	\State $h, \triang \gets h/2, \triangFine$
 \EndWhile
 \end{algorithmic}
-\caption{Final Algorithm}
+\caption{Picard Iteration Algorithm to Solve the \MA Equation}
 \label{alg: final}
 \end{algorithm}
 
