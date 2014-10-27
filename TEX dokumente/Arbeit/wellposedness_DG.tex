@@ -233,7 +233,7 @@ To start with the analysis we first have to define the norm the analysis will be
 \begin{definition}[Energy Norm] \label{def: energy norm}
 	The mesh-dependent energy norm for a function $v \in V$ is defined by
 	\[
-	\eNorm v ^2 := \LTwonorm{\nabla v} + \frac 1 \sigma \sum_{e \in \edges} |e|\LTwonormE{\average{\nabla v}} + \sigma \sum_{e \in \edges} \frac 1 {|e|}\LTwonormE{\jump{\nabla v}}.
+	\eNorm v ^2 := \LTwonorm{\nabla v} + \frac 1 \sigma \sum_{e \in \edges} |e|\LTwonormE{\average{\nabla v}} + \sigma \sum_{e \in \edges} \frac 1 {|e|}\LTwonormE{\jump{v}}.
 	\]
 \end{definition}
 \todo{$\Omega,\triang$ erklaren}
@@ -298,9 +298,9 @@ At first, we show the following statement
 	\end{align}
 \end{proof}
 
-The next step in our analysis considers the stability of the SIPG method. To do we first need to define a norm measuring ???\todo{yeah what} 
-\begin{definition}[$H^{-1}$ Semi-norm] \label{def: h-1 seminorm}
-	The semi-norm is given by 
+The next step in our analysis considers the stability of the SIPG method. To do we first need to define a norm measuring elements in $V'$
+\begin{definition} \label{def: h-1 seminorm}
+	The semi-norm $\HMinusOneDnorm \cdot $ of an element $r \in V_h'$ is given by 
 	\[
 	\HMinusOneDnorm r ^2 := \sup_{0 \neq w \in V_h} \frac {{\bilin r w } } {\eNorm{w}}.
 	\]

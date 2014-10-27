@@ -1,3 +1,10 @@
+%==========Anführungszeichen
+\newcommand{\quoting}[1]{``{#1}''}
+
+%==========Integration
+\newcommand{\myIntX}[2]{\ensuremath{\int_{#1} {{#2}\;dx}}}
+\newcommand{\myIntS}[2]{\ensuremath{\int_{#1} {{#2}\;ds}}}
+
 %============Zahlenbereiche
 \newcommand{\N}[0]{\mathbb{N}}
 \newcommand{\Z}[0]{\mathbb{Z}}
@@ -52,6 +59,9 @@
 \newcommand{\HOnenormT}[1]{\ensuremath{\norm {#1}_{H^1(T)}}}
 \newcommand{\HOneDnorm}[1]{\ensuremath{\norm {#1}_{1,h}}}
 \newcommand{\HMinusOneDnorm}[1]{\ensuremath{\norm {#1}_{-1,h}}}
+
+\newcommand{\epsilonTwoZeroArg}[0]{\ensuremath{E_{2,h}}}
+\newcommand{\epsilonTwo}[1]{\ensuremath{E_{2,h}(#1)}}
 
 \newcommand{\eNorm}[1]{\ensuremath{\norm {#1}_{h}}}
 \newcommand{\eNormDTwo}[1]{\ensuremath{\norm {#1}_{2,h}}}

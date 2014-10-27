@@ -1,4 +1,4 @@
-This chapter covers the main results on the \MA equation. After a definition of our main PDE we very briefly discuss solution concepts, as well as existence and uniqueness results. Thereafter we derive a linearisation of the \MA operator and conclude with a short overview of existing numerical schemes solving \MA equations. 
+This chapter covers the main results on the \MA equation: After a definition of the PDE we briefly discuss solution concepts, as well as existence and uniqueness results. Thereafter we derive a linearisation of the \MA operator and conclude with a short overview of existing numerical schemes solving \MA equations. 
 
 
 \section{The \MA Equation}
@@ -11,16 +11,17 @@ The \MA Equation with Dirichlet boundary data states
 where $D^2 u$ denotes the Hessian of $u$.
 It is a general fully nonlinear partial differential equation meaning it is nonlinear in the highest order derivatives, namely the second derivatives.
 
+Under some restrictions we can expect ellipticity of the \MA operator.
 \begin{proposition}
 	The \MA equation is elliptic for strictly convex function $u$ and $f > 0$.
 \end{proposition}
-For a proof of this result we refer to \cite{CC1995, GT1977}. In other words only restricted to convex solutions and for a positive right-hand side the \MA operator is elliptic.
+For a proof of this result we refer to \cite{CC1995, GT1977}. In other words we have to restrict ourselves to convex solutions to apply classical existence and uniqueness theory.
 
-Note, different from the well-known linear case we cannot derive a weak formulation based on weak derivatives/integration by parts. Because of the nonlinearity in the highest derivatives we are not able to shift derivatives to test functions. To the author's knowledge there is no general variational or weak formulation for fully nonlinear PDEs \cite{FGN2013}.
-However, there are attempts to establish less regular weak solutions to the \MA equation:
+Note, different from the well-known linear case we cannot derive a weak formulation based on integration by parts. Because of the nonlinearity in the highest derivatives we are not able to shift derivatives to test functions. To the author's knowledge there is no general variational or weak formulation for fully nonlinear PDEs \cite{FGN2013}.
+However, there are attempts to establish less regular weak solutions to the \MA equation.
 
 \section{Weak Solution Concepts}
-First Crandall and Lions \cite{CL1983} introduced the notion of \emph{viscosity solutions} for fully nonlinear first order PDEs. The developed theory was later extended to also handle second order PDEs.
+First Crandall and Lions \cite{CL1983} introduced the notion of \emph{viscosity solutions} for fully nonlinear first order PDEs. The developed theory was later extended to handle second order PDEs.
 \begin{definition}[Viscosity Solution{\cite[Definition 1.1]{FGN2013}}]
 	Let $F$ be an elliptic  fully nonlinear second order operator.
 	$u \in C^0(\Omega)$ is called a \emph{viscosity subsolution (supersolution)} of $F(D^2u(x), \nabla u(x), u(x), x)=0$  if, for every point $x_0 \in \Omega$ and function $\varphi \in C^2(\Omega)$ satisfying $u \leq \varphi (\geq \varphi)$ in $\Omega$ and $u(x_0) = \varphi(x_0)$, there holds $\mydet{D^2 \varphi(x_0)} - f \leq 0 (\geq 0)$. 
@@ -34,7 +35,7 @@ First Crandall and Lions \cite{CL1983} introduced the notion of \emph{viscosity 
 \end{definition}
 
 We see directly that a convex classical solution is also a viscosity solution. Conversely, viscosity solutions are solutions in a weaker sense and there are examples where only a viscosity solution exists, see for example a later Benchmark test \ref{test sqrt}.
-It proved very hard to develop reliable numerical schemes converging to the viscosity solution and even harder to come up with proves of convergence to the viscosity solution.
+It proved very hard to develop reliable numerical schemes converging to the viscosity solution and even harder to come up with evidence of this convergence.
 
 %\subsection{Aleksandrov Solution}
 A different kind of solution concept is derived by reformulating the \MA problem in two dimensions via a differential geometry interpretation.

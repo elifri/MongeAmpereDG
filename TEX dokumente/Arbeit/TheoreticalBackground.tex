@@ -68,10 +68,12 @@ and the $H^s$ semi-norms
 \[ 
  	|f|_{H^{s}(\Omega)}=\left( \sum_{|\alpha| = s} \norm{D^\alpha f}^2_{L^2(\Omega)}\right)^{\frac 1 2 }.
 \]
-If not stated otherwise $\bilin f g$ always refer to the standard $L^2$ scalar product 
-\[
-	\bilinLTwo{f}{g} = \int_{\Omega } f g.
-\]
+%If not stated otherwise $\bilin f g$ always refer to the standard $L^2$ scalar product 
+%\[
+%	\bilinLTwo{f}{g} = \myInt_{\Omega } f g.
+%\]
+For a normed function space $X$ we denote its dual by $X'$ and by $\bilin{\cdot}{\cdot}$ the pairing between $X$ and $X'$.
+
 \end{definition}
 By this definition it is clear that the $H^0$ norm and the $L^2$ norm conincide. 
 
@@ -79,18 +81,19 @@ Let $T$ be a triangle in $\Omega$ and spanned by the points $v_0, v_1, v_2$. We 
 \[
 	T= \langle v_0, v_1, v_2 \rangle := \{\beta_0 v_0+ \beta_1 v_1 +\beta2 v_2; 0 \leq \beta_i \leq 1, i= 0,1,2\}.
 \]
-The \emph{diameter} $diam(T)$ of a triangle $T$ we define as the diameter of the smallest circle containing it.
+The \emph{diameter} $diam(T)$ of a triangle $T$ we define as the diameter of the smallest circle containing $T$.
+
 To discretise our domain $\Omega$ we subdivide it into simplices, more precisely we divide them into triangles.
 \begin{definition}[Triangulation, {\cite[Definition 5.1]{Braess2003}}]
 	We call a finite partition of $\Omega$ into triangles $\{T_1, \dots, T_n\}$ a feasible \emph{triangulation} $\mathcal{T}$, such that
 	\begin{enumerate}[(i)]
 		\item	$\overline \Omega = \bigcup_{T \in \triang} T_i$
-		\item If $T_i \cap T_j$ is a point for, it is a vertex of both $T_i$ and $T_j$
-		\item If $T_i \cap T_j$ is more than one point for $i \neq j$, it is an edge of both $T_i$ and $T_j$
+		\item If $T_i \cap T_j$ is a point for $i \neq j$ , it is a vertex of both $T_i$ and $T_j$.
+		\item If $T_i \cap T_j$ is more than one point for $i \neq j$, it is an edge of both $T_i$ and $T_j$.
 	\end{enumerate}
 	Let $h$ denote the maximal diameter $h:= \operatorname{max}\limits_{T\in \mathcal T} diam(T)$ in the triangulation $\mathcal T$, we then also refer to $\mathcal{T}$ by $\triang$. We call a triangulation \emph{regular} if every element is congruent.
 \end{definition}
-Note that this definition requires $\Omega$ to be a polygonal domain. However, there are extension to domain with curved boundaries: In those triangles lying at the boundary are replaced by "triangles" which have curved sides. 
+Note that this definition requires $\Omega$ to be a polygonal domain. However, there are extensions to domains with curved boundaries: In those triangles lying at the boundary are replaced by \quoting{triangles} which have curved sides. 
 
 \begin{figure}[H]
 \input{grid.pgf}
@@ -98,27 +101,35 @@ Note that this definition requires $\Omega$ to be a polygonal domain. However, t
  \label{fig: triangulation}
 \end{figure}
 
-Figure \ref{fig: triangulation} shows a triangulation of the unitsquare. Since the edges uniquely define a triangulation of $\Omega$, we later use the terms grid and mesh to refer to a subdivision into triangles.
+Figure \ref{fig: triangulation} shows a triangulation of the unitsquare. Since the edges uniquely define a triangulation of $\Omega$, we later also use the terms grid and mesh to refer to a subdivision into triangles.
 An edge $e$ is called an interior edge if $e=T^+ \cap T^-$ holds for some $T^+,T^- \in \triang$, whereas it is called a boundary edge if $e \subset \partial \Omega$.
 We divide the edges $\edges$ into the subsets $\edgesi$ and $\edgesb$ containing all interior edges and boundary edges, respectively. 
-When we refer to a normal of an edge we always refer to an outward directed normal of one of the adjacent triangles. If it is not clear from the context a superscript denotes which triangle we chose.
+When we refer to a normal of an edge we always refer to an outward directed normal of one of the adjacent triangles. If it is not clear from the context to which triangle is referred we clarify that with a superscript.
 
-On this basis we define the piecewise spaces
+On this basis we define some piecewise spaces.
 \begin{definition}[Broken Spaces]
-We define some function spaces associated to a triangulation
-\begin{align}
-	H^s(\Omega;\triang) = \prod\limits_{T\in \triang}  H^s(T), \qquad W^{s,p}(\Omega;\triang) = \prod\limits_{T\in \triang} W^{s,p}(T).
-\end{align}	
+We define function spaces associated to a triangulation $\triang$ by
+\begin{align*}
+	H^s(\Omega;\triang) &:= \{f \in L^2(\Omega); f|_T \in H^s(T) \text{ for every } T \in \triang\}, \\
+	\text{and }
+	W^{s,p}(\Omega;\triang) &:= \{f \in L^p(\Omega); f|_T \in H^s(T) \text{ for every } T \in \triang\}.
+\end{align*}	
 \end{definition}
 
 \begin{definition}[Piecewise Polynomial Spaces] \label{def: piecewise polySpace}
 	Further we denote the finite-dimensional space of piecewise polynomials by
 \[	
-	\mathcal P^k_h = \{ f \in L^\infty(\Omega); f \arrowvert_T \textnormal{ is a polynomial of (total) degree } \leq k \textnormal{ for every } t \in \mathcal T_h\}.
+	\mathcal P^k_h = \{ f \in L^2(\Omega); f \arrowvert_T \textnormal{ is a polynomial of (total) degree } \leq k \textnormal{ for every } T \in \triang\}.
 \]
 \end{definition}
 
-For later analysis we need standard trace and inverse estimates as proven in \cite[Section 1.6 and Section 4.5]{BS2002}.
+For later analysis we need the approximation properties of $\mathcal P_h^k$ proven in \cite[Chapter 4]{BS2002}, as well as standard trace and inverse estimates as proven in \cite[Section 1.6 and Section 4.5]{BS2002}.
+\begin{lemma}[Approximation properties of $\mathcal P_h^k${,\cite[Theorem(4.4.20)]{BS2002}}]  \label{la: approximation properties}
+Let $m,s \in \N$ with $0 \leq s \leq m\leq k+1$. Then for any $u \in H^l(\Omega)$, there exists $v_h \in \mathcal P^k_h$ such that 
+\[
+	\left( \sum_{T \in \triang} \norm{u-v_h}^2_{H^m(T)} \right)^{\frac 1 2} \leq C h^{m-s} \norm{u}_{H^{s}(\Omega)}.
+\]
+\end{lemma}
 \begin{lemma}[Trace estimate{,\cite[Theorem(1.6.6)]{BS2002}}]\label{la: trace estimate}
 	Given any quasi-uniform trianguliaton $\triang$, there holds for $ v \in H^1(\Omega;\triang)$
 	\begin{align*}
@@ -150,7 +161,7 @@ We denote the \emph{normal jump} of  a piecewise smooth function $u_h:\Omega \ri
 		u_h \mathbf n 	 &\text{ if } \partial T \cap \partial \Omega = e \text{ for } T \in \triang,
 	\end{cases}	
 \end{align*}
-where $n^\pm$ are the normals with respect to $T^\pm$ and  $u_h^\pm(x) = \lim_{\varepsilon \rightarrow 0} u_h(x-n^\pm \varepsilon)$.
+where $n^\pm$ are the normals with respect to $T^\pm$ and  $u_h^\pm(x) := \lim_{\varepsilon \rightarrow 0} u_h(x-n^\pm \varepsilon)$.
 Likewise we define the normal jump of a piecewise smooth function $u_h:\Omega \rightarrow \R^2$ across an edge $e \in \edges$ by
 \begin{align*}
 	\jump {u_h}&:= 
@@ -172,12 +183,12 @@ The \emph{average} of a piecewise smooth function $u_h:\Omega \rightarrow X$ for
 \end{align*}
 \end{definition}
 
-We end this section with the note that we use a subscript $h$ to indicate a piecewise evaluation/interpretation.  Subsequently differential operators with a subscript $h$ imply differentiations were carried out seperately on every triangle. for example $\nabla_h f |_T = \nabla f |_T \; \forall T \in \triang$. 
+We end this section with the note that we use a subscript $h$ to indicate a piecewise evaluation or interpretation.  Subsequently differential operators with a subscript $h$ imply that differentiations were carried out seperately on every triangle, for example the piecewise gradient is defined by $\nabla_h f |_T = \nabla f |_T \; \forall T \in \triang$. 
 
 
 
 \section{Finite Element Method}
-Before we discuss numerical schemes for the \MA equation we shortly recall how a finite element method works, for a deeper insight in finite element methods we recommend \cite{Braess2003, BS2002}. Since the finite element method bases on a variational formulation we talk about finite element methods by the example of the general Poisson equation. 
+Before we discuss numerical schemes for the \MA equation we shortly recall how a finite element method works, for a deeper insight in finite element methods we recommend \cite{Braess2003, BS2002}. Since the finite element method bases on a variational formulation we talk about finite element methods by the well known example of the Generalised Poisson equation. 
 
 %\subsection{The Poisson Problem}
 
@@ -188,63 +199,67 @@ The \emph{Generalised Poisson Problem} is finding a function $u:\Omega \rightarr
 	u = g \qquad &\text{ on } \partial \Omega    \label{eq: poisson bc}
 \end{align}
 for $ A:\Omega^d \rightarrow \R^{d \times d}$ symmetric and functions $f,g:\Omega \rightarrow \R $. 
-Because of the physical meaning of this PDE $A$ is also referred to as \emph{diffusion matrix}.
+Because of the physical context of this PDE the matrix $A$ is also referred to as \emph{diffusion matrix}.
 \end{definition}
 
 We are able to set up a weak formulation of the Generalised Poisson Problem based on variational principles. A weak formulation of the problem is the key element for deriving a finite element method.
 
 Due to the main theorem of variational analysis every classical solution to \eqref{eq: poisson eq} is equivalent to 
 \begin{align}
-	-\int_\Omega \varphi \nabla \cdot (A \nabla u) = \int_\Omega \varphi f \qquad \forall \varphi \in C^\infty(\Omega).\label{eq: variational form}
+	-\myIntX \Omega {\varphi \nabla \cdot (A \nabla u)}=
+	 \myIntX \Omega {\varphi f} \qquad \forall \varphi \in C^\infty(\Omega). \label{eq: variational form}
 \end{align}
 Integration by parts yields to
-\begin{align}
-	\int_\Omega \nabla \varphi  \cdot A\nabla u -\int_{\partial \Omega} \varphi (A\nabla u) \mathbf{n}  = \int_\Omega \varphi f \qquad \forall \varphi \in C^\infty(\Omega). \label{eq: FE integration by parts}
-\end{align}
+\begin{align*}
+	\myIntX \Omega {\nabla \varphi  \cdot A\nabla u}
+		-\myIntS  {\partial \Omega} { \varphi (A\nabla u) \mathbf{n} }
+	= \myIntX  \Omega { \varphi f } \qquad \forall \varphi \in C^\infty(\Omega). %\label{eq: FE integration by parts}
+\end{align*}
 The last statement can be reformulated to the so called variational form 
 \begin{align}
 a(\varphi,u)  = b(\varphi) \qquad \forall \varphi \in C^\infty(\Omega). \label{eq: variational formulation}
 \end{align}
 with the bilinear form $a:C^\infty(\Omega) \times X \rightarrow \R$
 \begin{align*}
-a(\varphi,u) = \int_\Omega \nabla \varphi  \cdot A\nabla u -\int_{\partial \Omega} \varphi (A\nabla u) \mathbf{n}
+a(\varphi,u) = \myIntX  \Omega { \nabla \varphi  \cdot A\nabla u }
+	 -\myIntS  {\partial \Omega} { \varphi (A\nabla u) \mathbf{n}}
 \end{align*}
 where $X$ is a function space we define in a moment and the functional $b:C^\infty(\Omega) \rightarrow \R$
 \begin{align*}
- b(\varphi)  = \int_\Omega \varphi f.
+ b(\varphi)  = \myIntX  \Omega { \varphi f}.
 \end{align*}
 
 
 \begin{definition}[Weak Solution]
 	Functions satisfying \eqref{eq: variational formulation} are called \emph{weak solutions} of \eqref{eq: poisson eq}.
 \end{definition}
-Note, due to the lack of regularity it is possible that we cannot restrict a weak solution to the boundary of $\Omega$. However one can reformulate boundary conditions for weak solution with trace operators \cite[Section 5.5]{Evans1998}.
+Note, due to the lack of regularity weak solution may not be restriced to the boundary of $\Omega$. However one can reformulate boundary conditions for weak solution with trace operators \cite[Section 5.5]{Evans1998}.
 
-The generalised poisson problem is well-posed in the sense that it has a unique weak solutions if $A$ is positive definite and $f\in L^2(\Omega)$. This is mainly due to the ellipticity of the PDE (and as a consequence thereof the ellipticity of $a$) allowing to apply the Lax-Milgram theory and a maximum principle. For an analysis we refer the interested reader to \cite[Chapter~6]{Evans1998}.
+The generalised poisson problem is well-posed in the sense that it has a unique weak solution if $A$ is positive definite and $f\in L^2(\Omega)$. This is mainly due to the ellipticity of the PDE (and as a consequence thereof the ellipticity of $a$). Thus, it is possible to apply the Lax-Milgram theorem and a maximum principle. For an analysis we refer the interested reader to \cite[Chapter~6]{Evans1998}.
 
-On the left-hand side in the weak notation only first derivatives of $u$ appear, hence \eqref{eq: variational formulation} is also applicable for functions $u$ not twice differentiable. It turned out that the previously defined Sobolev spaces are well-suited candidates for the space $X$ where we find weak solutions \cite[Chapter 1]{BS2002}. Therefore we search for the solution of the infinite-dimensional problem: Find $u\in H^1(\Omega)$ such that  $a(\varphi,u)  = b(\varphi) \;\forall \varphi \in C^\infty(\Omega)$ holds. % $\forall \varphi \in C^\infty(\Omega)$.
+On the left-hand side in the weak notation only first derivatives of $u$ appear, hence \eqref{eq: variational formulation} is also applicable for functions $u$ which are not twice differentiable. It turned out that the previously defined Sobolev spaces are well-suited candidates for the space $X$ containing weak solutions \cite[Chapter 1]{BS2002}. Therefore we search for the solution of the infinite-dimensional problem: Find $u\in H^1(\Omega)$ such that  $a(\varphi,u)  = b(\varphi) \;\forall \varphi \in C^\infty(\Omega)$ holds. \\% $\forall \varphi \in C^\infty(\Omega)$.
 The main idea of the finite element method is to approximate the two function spaces, namely the spaces $H^1(\Omega)$ and $C^\infty(\Omega)$ containing $\varphi$ and $u$, respectively by finite dimensional spaces $W_h$ and $V_h$. For those spaces should hold a analogous equation as we have in the variational form stated in \eqref{eq: variational formulation}.\\
 The limited space $W_h$ is called \emph{test space} and its elements are called \emph{test functions}. $V_h$ is referred to as \emph{ansatz} or \emph{trial space}, the contained functions accordingly \emph{ansatz} or \emph{trial functions}. To assert the boundary condition \eqref{eq: poisson bc} we demand $u_h|_{\partial \Omega} = g$ for every $u_h \in V_h$.
 
-As the subscript $h$ suggests the two spaces normally are based on a discretisation of $\Omega$ and often only piecewise smooth. Consequently, since we are searching for an analogue of the bilinearform $a$ we require differential operators defined on $W_h \cup V_h$. We denote these extended versions using the subscript $h$.
+Normally the limited spaces are based on a discretisation of $\Omega$ and only piecewise smooth. Consequently, we have to replace all operators appearing in $a$ by operators defined on $W_h \cup V_h$. We denote these extended versions using the subscript $h$.
 
 With these preliminaries we can define the finite element methods as searching for $u_h \in V_h$ such that 
 \begin{align}
-a_h(\varphi_h,u_h) = b_h(\varphi_h) \qquad \forall \varphi \in W_h. \label{eq: FE variational formulation}
+a_h(w_h,u_h) = b_h(w_h) \qquad \forall w \in W_h. \label{eq: FE variational formulation}
 \end{align}
 with the bilinearform  $a_h:W_h \times V_h \rightarrow \R$
 \begin{align*}
-a_h(\varphi_h,u_h)  = \int_\Omega \nabla \varphi_h  \cdot A\nabla u_h -\int_{\partial \Omega} \varphi_h (A\nabla u_h) \mathbf{n}
+a_h(w_h,u_h)  = \myIntX  \Omega { \nabla w_h  \cdot A\nabla u_h} -\myIntS  {\partial \Omega} { w_h (A\nabla u_h) \mathbf{n}}
 \end{align*}
-and the functions $b:W_h \rightarrow \R$
+and the function $b:W_h \rightarrow \R$
 \begin{align*}
-b_h(\varphi_h) = \int_\Omega \varphi_h f.
+b_h(w_h) = \myIntX  \Omega { w_h f}.
 \end{align*}
 
 This general proceeding is called a \emph{Galerkin approach}. Choosing $W_h = V_h$ yields to the so-called \emph{Galerkin methods}, otherwise the methods are referred to as \emph{Petrov-Galerkin methods}.
 
-To construct $u_h$ in this linear case we first choose a basis $B_W$ of $W_h$ and a basis $B_V$ of $V_h$.
-Since the left-hand side is linear in $\varphi_h$ we only need to check the equations in \eqref{eq: FE variational formulation} for all $\varphi_h \in B_W$. 
+To construct $u_h$ we first choose a basis $B_W$ of $W_h$ and a basis $B_V$ of $V_h$.
+Since the left-hand side is linear in $w_h$ we only need to check the equations in \eqref{eq: FE variational formulation} for all $w_h \in B_W$. 
 Furthermore we can express $u_h$ as the linear combination of basis functions, namely $\sum_{b \in B_V} \mathbf{c}_b \; b$ and hence, we can rewrite \eqref{eq: FE variational formulation} as a linear system of equations $M \mathbf{c} = \mathbf{b}$ where  $\mathbf{c}$ is the unknown coefficient vector of $u_h$ to the basis $B_V$.  The matrix $M$ sometimes is named the \emph{system} or \emph{stiffness matrix}.
 
 Altogether a finite element method for the general Poisson equation is defined by the bilinearform $a$ and the functional $b$ together with the choice of $W_h$ and $V_h$. Its computations consist of the assembling process where the matrices $M$ and the right-hand side vector $b$ are computed and the solving process of the resulting linear system of equations.\\
@@ -262,88 +277,92 @@ The error made by restriction to finite elements is characterised by the followi
 This result shows the quality of the finite element solution depends on one side on the problem parameters $\alpha$ and $C$, but on the other side particularly on the approximation properties of $V_h$. A typical choice for the function spaces $W_h$ and $V_h$ are piecewise polynomials spaces which have good approximation properties and are easy to handle.
 
 \section{Discontinuous Galerkin (DG)} \label{sec: SIPG}
-A recent idea is to choose the test and ansatz spaces to include discontinuous functions. This approach arised in the context of hyperbolic PDEs of which solutions eventually contain discontinuities, later it was also applied to ellipitic PDEs \cite{ABC+2002}. Although the Generalised Poissson Problem is not hyperbolic and its solutions are continuous we use this example to explain the issues arising when the finite element spaces is extended to discontinuities. The crux is the handling function evaluations along discontinuities. Not that for discontinuous ansatz spaces it is no longer true that they are subspaces of $H^1$ which is the space our weak solutions is contained. That implies that C\'eas Lemma \ref{la: Ceas lemma} is not valid. Elements which include ansatz space no contained in $H^1$ also referred to as non-conforming elements.
+A recent idea is to choose the test and ansatz spaces to include discontinuous functions. This approach arised in the context of hyperbolic PDEs of which solutions eventually contain discontinuities, later it was also applied to ellipitic PDEs \cite{ABC+2002}. Although the Generalised Poissson Problem is not hyperbolic and its solutions are continuous we use this example to explain the issues arising when the finite element spaces is extended to discontinuities. The crux is the handling of function evaluations along discontinuities. Note that for discontinuous ansatz spaces it is no longer true that they are subspaces of $H^1(\Omega)$ which contains the weak solution of the Generalised Poisson problem. That implies that C\'eas Lemma \ref{la: Ceas lemma} is not valid. Elements which include ansatz space no contained in $H^1(\Omega)$ also referred to as non-conforming elements.
 
 %We recall our triangulation $\mathcal{T}_h$ of $\Omega$. 
-If we modify the finite element procedure a bit we can use $V_h = \mathcal P_h^k$ as defined in Definition \ref*{def: piecewise polySpace} for the ansatz and test space: Due to fact we have discontinuities only along edges we perform the integration by parts in \eqref{eq: variational form} piecewise on every triangle leading to
+If we modify the derivation of the bilinear form defining the finite element method we can develop bilinear forms defined on the function space $V_h = \mathcal P_h^k$ (cf. Definition \ref{def: piecewise polySpace}): Due to fact we have discontinuities only along edges we perform the integration by parts in \eqref{eq: variational form} piecewise on every triangle leading to
 \begin{align}
-	a(\varphi, v) = & \sum_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v - \sum_{T \in \triang} \int_{\partial T} \varphi A \nabla v \cdot \mathbf n.
+	a(v, u) = & \sum_{T \in \triang} \myIntX T {\nabla v \cdot A \nabla u }
+		- \sum_{T \in \triang} \myIntS  {\partial T} { v A \nabla u \cdot \mathbf n}.
 \end{align}
 Since two adjacent elements share the same edge only with opposite directed normal vectors we can rewrite the last term by
 \begin{align*}
-\sum\limits_{T \in \triang}\int_{\partial T} \varphi A \nabla v \cdot \mathbf n 
-= &\sum\limits_{e \in \edgesi}\int_{e} \left( \varphi^+ A^+ \nabla v^+ \cdot \mathbf n^+ + \varphi^- A^- \nabla v^- \cdot \mathbf n^- \right) \\
-& + \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot \mathbf n,
+\sum\limits_{T \in \triang}\myIntS  {\partial T} { v A \nabla u \cdot \mathbf n }
+= &\sum\limits_{e \in \edgesi}\myIntS e { \left( v^+ A^+ \nabla u^+ \cdot \mathbf n^+ + v^- A^- \nabla u^- \cdot \mathbf n^- \right)} \\
+& + \sum\limits_{e \in \edgesb}\myIntS e { v A \nabla u \cdot \mathbf n},
 \end{align*}
 where $h^\pm $ is $h$ evaluated in one of the two adjadecent elements $T^\pm$ with $T^+ \cap T^- = e$. With the identity $\mathbf n^- = -\mathbf n^+$ we can extend
 \begin{align*}
-	&\varphi^+ A^+ \nabla v^+ \cdot \mathbf n^+ - \varphi^- A^- \nabla v^- \cdot \mathbf n^+ \\
-		= & \phantom{+} \varphi^+ A^+ \nabla v^+ \cdot \mathbf n^+ 
-		     + \frac 1 2  \varphi^+ A^- \nabla v^- \cdot \mathbf n^- + \frac 1 2 \varphi^+ A^- \nabla v^- \cdot \mathbf n^+ \\
-		& + \frac 1 2  \varphi^- A^+ \nabla v^+ \cdot \mathbf n^+ + \frac 1 2 \varphi^- A^+ \nabla v^+ \cdot \mathbf n^-
-		   + \varphi^- A^- \nabla v^- \cdot \mathbf n^+
+	&v^+ A^+ \nabla u^+ \cdot \mathbf n^+ - v^- A^- \nabla u^- \cdot \mathbf n^+ \\
+		= & \phantom{+} v^+ A^+ \nabla u^+ \cdot \mathbf n^+ 
+		     + \frac 1 2  v^+ A^- \nabla u^- \cdot \mathbf n^- + \frac 1 2 v^+ A^- \nabla u^- \cdot \mathbf n^+ \\
+		& + \frac 1 2  v^- A^+ \nabla u^+ \cdot \mathbf n^+ + \frac 1 2 v^- A^+ \nabla u^+ \cdot \mathbf n^-
+		   + v^- A^- \nabla u^- \cdot \mathbf n^+
 \end{align*}
 Splitting up first and last term and reordering and we find this equals to
 \begin{align*}
-		 & \phantom{+} \frac 1 2 \varphi^+ A^+ \nabla v^+ \cdot \mathbf n^+ 
-		     + \frac 1 2  \varphi^+ A^- \nabla v^- \cdot \mathbf n^- + \frac 1 2  \varphi^- A^+ \nabla v^+ \cdot \mathbf n^+ + \frac 1 2 \varphi^- A^- \nabla v^- \cdot \mathbf n^- \\
-		& + \frac 1 2  \varphi^+ A^+ \nabla v^+ \cdot \mathbf n^+  + \frac 1 2 \varphi^+ A^- \nabla v^- \cdot \mathbf n^+ +\frac 1 2 \varphi^- A^+ \nabla v^+ \cdot \mathbf n^- + \frac 1 2 \varphi^- A^- \nabla v^- \cdot \mathbf n^-\\
-		    	  = & \phantom{+} \frac 1 2 \left(\varphi^+ + \varphi^- \right) \left(A^+ \nabla v^+ \cdot \mathbf n^+ + A^- \nabla v^- \cdot \mathbf n^- \right) \\
-  &+  \varphi^+ \frac 1 2  \left(A^+ \nabla v^+ + A^- \nabla v^-\right) \cdot \mathbf n^+ + \varphi^- \frac 1 2 \left(A^+ \nabla v^+ + A^- \nabla v^-\right) \cdot \mathbf n^- \\
-  = &  \jump {\average \varphi  A \nabla v}+ \jump {\varphi \average{ A \nabla v}}.
+		 & \phantom{+} \frac 1 2 v^+ A^+ \nabla u^+ \cdot \mathbf n^+ 
+		     + \frac 1 2  v^+ A^- \nabla u^- \cdot \mathbf n^- + \frac 1 2  v^- A^+ \nabla u^+ \cdot \mathbf n^+ + \frac 1 2 v^- A^- \nabla u^- \cdot \mathbf n^- \\
+		& + \frac 1 2  v^+ A^+ \nabla u^+ \cdot \mathbf n^+  + \frac 1 2 v^+ A^- \nabla u^- \cdot \mathbf n^+ +\frac 1 2 v^- A^+ \nabla u^+ \cdot \mathbf n^- + \frac 1 2 v^- A^- \nabla u^- \cdot \mathbf n^-\\
+		    	  = & \phantom{+} \frac 1 2 \left(v^+ + v^- \right) \left(A^+ \nabla u^+ \cdot \mathbf n^+ + A^- \nabla u^- \cdot \mathbf n^- \right) \\
+  &+  v^+ \frac 1 2  \left(A^+ \nabla u^+ + A^- \nabla u^-\right) \cdot \mathbf n^+ + v^- \frac 1 2 \left(A^+ \nabla u^+ + A^- \nabla u^-\right) \cdot \mathbf n^- \\
+  = &  \jump {\average v  A \nabla u}+ \jump {v \average{ A \nabla u}}.
 \end{align*}
-Therefore the weak formulation can be written as $a(v,\varphi) = l(\varphi)$ with 
+Therefore the weak formulation can be written as $a(v,v) = l(v)$ with 
 \begin{align*}
-  a(v, \varphi) = & \sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v \\
-	& - \sum\limits_{e \in \edgesi}\int_{e} \left( \jump {\average \varphi A \nabla v} + \jump {\varphi \average{ A \nabla v}} \right)\\
-& - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot \mathbf n
+  a(v, v) = & \sum\limits_{T \in \triang} \myIntX  T { \nabla v \cdot A \nabla u} \\
+	& - \sum\limits_{e \in \edgesi}\myIntS {e} {\left( \jump {\average v A \nabla u} + \jump {v \average{ A \nabla u}} \right)}\\
+& - \sum\limits_{e \in \edgesb}\myIntS {e} {v A \nabla u \cdot \mathbf n}
 \end{align*}
 and
 \[
-l(\varphi) = \sum_{T \in \triang} \int_T v f.
+l(v) = \sum_{T \in \triang} \myIntX  T { u f}.
 \]
 Due to the smoothness of the exact solution $u$ we neglect the jump in $A \nabla u$ and find
 \begin{align*}
- a(v, \varphi) = & \sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot \left(A \nabla v\right) %\\
-	- \sum\limits_{e \in \edgesi} \int _e\jump{ \varphi \average{ A \nabla v}} %\right)
+ a(v, v) = & \sum\limits_{T \in \triang} \myIntX  T { \nabla v \cdot \left(A \nabla u\right)} %\\
+	- \sum\limits_{e \in \edgesi} \myIntS e {\jump{ v \average{ A \nabla u}}} %\right)
 	\\
-& - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot \mathbf n.
+& - \sum\limits_{e \in \edgesb}\myIntS e { v A \nabla u \cdot \mathbf n}.
 \end{align*}
 
 To get a symmetric system matrix we symmetrise our bilinear form $a$ by adding terms. 
-The first term we add is  $- \sum\limits_{e \in \edgesi}\int_{e} \jump{ v \average{ A \nabla \varphi}}$ which equals to zero evaluating the integral for a smooth $v$. Hence it will vanish for the solution of the generalised Poissson problem. The second term required to achieve symmetry is  $-\sum\limits_{e \in \edgesb}\int_{e} v A \nabla \varphi \cdot \mathbf n$. Since the Dirichlet boundary condition gives us solution values at the boundary this term equals to $\sum\limits_{e \in \edgesb}\int_{e} g A \nabla \varphi \cdot \mathbf n$ and thus, we simply add both to the bilinear form and to the right-hand side functional.
+The first term we add is  $- \sum\limits_{e \in \edgesi}\myIntS e { \jump{ u \average{ A \nabla v}}}$ which equals to zero evaluating the integral for a smooth $v$. Hence it will uanish for the solution of the generalised Poissson problem. The second term required to achieve symmetry is  $-\sum\limits_{e \in \edgesb}\myIntS e { u A \nabla v \cdot \mathbf n}$. Since the Dirichlet boundary condition gives us solution ualues at the boundary this term equals to $\sum\limits_{e \in \edgesb}\myIntS e { g A \nabla v \cdot \mathbf n}$ and thus, we simply add both to the bilinear form and to the right-hand side functional.
 \begin{align}
- a_S(v, \varphi) = &\sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v \nonumber \\
-  &-\sum\limits_{e \in \edgesi}\int_{e} \jump {\varphi \average{A \nabla v} }
- - \sum\limits_{e \in \edgesi}\int_{e} \jump{ v \average{ A \nabla \varphi}} \nonumber\\ 
- & - \sum\limits_{e \in \edgesb}\int_{e} \varphi A \nabla v \cdot \mathbf n 
-    - \sum\limits_{e \in \edgesb}\int_{e} v A \nabla \varphi \cdot \mathbf n. \label{eq:inner product SIPG}
+ a_S(v, v) = &\sum\limits_{T \in \triang} \myIntX  T { \nabla v \cdot A \nabla u} \nonumber \\
+  &-\sum\limits_{e \in \edgesi}\myIntS e { \jump {v \average{A \nabla u} }}
+ - \sum\limits_{e \in \edgesi}\myIntS e { \jump{ u \average{ A \nabla v}}} \nonumber\\ 
+ & - \sum\limits_{e \in \edgesb}\myIntS e { v A \nabla u \cdot \mathbf n} 
+    - \sum\limits_{e \in \edgesb}\myIntS e { u A \nabla v \cdot \mathbf n}. \label{eq:inner product SIPG}
 \end{align}
 and 
 \begin{align}
-	l(\varphi) =& \sum\limits_{T \in \triang} \int_T \varphi f -\sum\limits_{e \in \edgesb}\int_{e} g A \nabla \varphi \cdot \mathbf n.
+	l(v) =& \sum\limits_{T \in \triang} \myIntX  T { v f}
+		 -\sum\limits_{e \in \edgesb}\myIntS e { g A \nabla v \cdot \mathbf n}.
 \end{align} 
 
 %and $f$
 %\begin{align}
-%	f_S(v,\varphi) = && \sum\limits_{T \in \triang} \int_T \varphi f \\
-%	 				&+ &\sum\limits_{e \in \edgesb}\int_{e} \varphi \cof(D^2 w) \nabla v \cdot n \\
-% &+ &\sum\limits_{e \in \edgesi}\int_{e} v \llbracket \cof(D^2 w) \nabla \varphi \cdot n\rrbracket \\
-%	&-  &\sum\limits_{T \in \triang} \int_T v (\nabla \cdot \cof(D^2w)) \cdot \nabla \varphi \\
+%	f_S(v,v) = && \sum\limits_{T \in \triang} \myIntX  T { v f \\
+%	 				&+ &\sum\limits_{e \in \edgesb}\myIntS e { v \cof(D^2 w) \nabla u \cdot n \\
+% &+ &\sum\limits_{e \in \edgesi}\myIntS e { u \llbracket \cof(D^2 w) \nabla v \cdot n\rrbracket \\
+%	&-  &\sum\limits_{T \in \triang} \myIntX  T { u (\nabla \cdot \cof(D^2w)) \cdot \nabla v \\
 %\end{align} 
 
 To enforce continuity in the numerical solution we penalise the jump across edges as described in  \cite[3.2.2.]{PPO+2000} with the following terms
 \begin{align}
-	J^\sigma(\varphi, v) = \sum\limits_{e \in \edges} \int_e \frac \sigma {|e|} \jump \varphi \jump v \textnormal{ and } 	J^\sigma_0(\varphi, v) = \sum\limits_{e \in \edgesb} \int_e \frac \sigma {|e|} \varphi g . \label{eq: penalty term}
+	J^\sigma(v, u) = \sum\limits_{e \in \edges} \myIntS e { \frac \sigma {|e|} \jump v \jump u}
+		 \textnormal{ and } 	
+		 J^\sigma_0(v, u) = \sum\limits_{e \in \edgesb} \myIntS e {\frac \sigma {|e|} v g} . \label{eq: penalty term}
 \end{align}
 
 Thus, we end up with the problem finding $v \in V_h$ such that
 \begin{align}
-	a_h^{DG}(\varphi, v) = l^{DG}_h (v) \qquad \forall \varphi \in V \label{eq: DG system}
+	a_h^{DG}(v, u) = l^{DG}_h (v) \qquad \forall v \in V \label{eq: DG system}
 \end{align}
 where
 \[ 	
-	a_h^{DG} (\varphi, v) := a_S(\phi,v) + J^\sigma(\varphi,v) \text{ and } l_h^{DG}(\varphi) := l(\varphi) + J^\sigma_0(\varphi).
+	a_h^{DG} (v, u) := a_S(\phi,v) + J^\sigma(v,v) \text{ and } l_h^{DG}(v) := l(v) + J^\sigma_0(v).
 \]
 
 %The authors of \cite{PPO+2000} suggest to choose the penalty term $\sigma$ as $10 k^2$ and undergird that 
@@ -353,159 +372,7 @@ This particular discontinuous Galerkin method is called \emph{Symmetric Interior
 
 \input{wellposedness_DG.tex}
 
-\section{Implementation of a SIPG Method}
-
-In this section we mention the main problems arising at an implementation of a finite element method. A detailed survey can be also found in \cite[Section 0.6]{BS2002} and \cite[Chapter 8]{Braess2003}.
-We assume that $\Omega$ is polygonal and we have a regular triangulation of $\Omega$ given. One main problem in the implementation of a SIPG method (or any finite element method) is the assembly of matrix defined by the left-hand side inner product. As suggest in the form in \eqref{eq:inner product SIPG} we evaluate the integrals on every triangle, edge respectively individually.
-
-\subsection{Integration scheme}
-First, to evaluate an integral numerically we need an integration scheme. Usually Gauss quadrature is the method of choice. To estimate the integral $\int h(x) dx$ a Gauss quadrature formula $\sum_{i=1}^{N} w_i h(q_i)$ needs to evaluate $h$ at certain quadrature points $q$. For the case $N=7$ we show the quadrature points for a triangular domain in figure \ref{fig: quadrature}.
-\begin{figure}[!h]
-	\centering
-	\input{quadrature.pgf}
-	\caption{Quadrature points for a integral over a triangle domain with $N=7$}
-	 \label{fig: quadrature}
-\end{figure}
-Quadrature formulas, i.e. quadrature points and weights, especially for handling volume integrals can be found in \cite{Strout1971}.
-To assemble the stiffness matrix $M$ the data we have to provide reduces to the data at the element, face respectively quadrature points.  
-At an element quadrature point these are the gradients, whereas at a face quadrature point we need information about  the function values $u$ and the normal derivatives, i.e. $\nabla u \cdot \mathbf{n}$ of all test functions.
-
-\subsection{A Reference Cell}
-To reduce the storage space one usually specifies a reference cell $T_{ref}$ such that every triangle $T \in \triang$ is the image of $T_{ref}$ under an affine transformation $\Phi_T:T_{ref} \rightarrow T$. 
-%We make use of the triangle spanned by the points $(0,0)^t, (0,1)^t$ and $(1,0)^t$ for our reference cell. 
-Since the DG spaces also allow discontinuous functions a basis $p^1_{ref},\dots,p^n_{ref}$ of $T_{ref}$ also induces a basis on every $T$, namely the basis consisting of 
-\[
-	p_T^i(x) := p^i_{ref}(\Phi_T^{-1}(x)), \qquad x \in T, 1 \leq i \leq n.
-\]
-The most famous basis polynomials are the Lagrange elements, i.e. given a set of points $P$ each Lagrange basis element evaluate at exactly one point of $P$ to one and vanishes at every other point. Due to this property this basis is also referred as a nodal basis. 
-A huge benefit of the Lagrange elements are their interpolation properties. 
-
-Now most of the required data on a triangle $T$ can be easily derived knowing $\Phi_T$ and the reference cell $T_{ref}$. We explain how to do that in detail for the two-dimensional case.
-
-\begin{example}\label{ex: base cell trafo}
-From now an we consider $\Omega \subset \R^2$ and we choose the reference triangle to be the triangle spanned by the points $\point 0 0, \point 0 1$ and $\point 1 0$.
-Suppose we want to figure out the transformation for the triangle $T = \langle v_1,v_2,v_3 \rangle$.
-It has to hold
-\[
-\Phi\left(\point 0 0\right) = v_0, \Phi\left(\point 0 1\right) = v_1 \textnormal{ and } \Phi\left(\point 1 0\right) = v_2
-\]
-Since every two-dimensional affine transformation can be written in the form $\Phi(x) = Ax+b$ for some $A \in \R^{2 \times 2}$ and $b \in \R^2$ it is easy to verify that we have $A = \begin{pmatrix} v_1-v_0 & v_2-v_0\end{pmatrix}$ and $b = v_0$.
-Having determined the transformation we are able to easily calculate its inverse $\Phi_T^{-1}(x) = A^{-1} (x-b) =: A^{-1} x- \tilde b$. \\
-Let $\beta_0, \beta_1$ and $\beta_2$ be the barycentric coordinates of $x \in T$. Because of $\Phi^{-1}$'s linearity we find
-\begin{align*}
-	p^i_T(x) =& p_T^i( \beta_0 v_0 +\beta_1 v_1 + \beta_2 v_2  ) \\
-	=& p^i_{ref}(\Phi_T^{-1}(\beta_0 v_0 +\beta_1 v_1 + \beta_2 v_2)) \\
-	=& p^i_{ref}(\beta_0 \Phi_T^{-1}(v_0) +\beta_1 \Phi_T^{-1}(v_1) + \beta_2 \Phi_T^{-1}(v_2)) \\
-		=& p^i_{ref}(\beta_0 \point 0 0 +\beta_1 \point 0 1 + \beta_2 \point 1 0 ), \qquad 1 \leq i \leq n.
-\end{align*}
-Thus, basis function values in $T$ can be simply determined by barycentric coordinates. Henceforth we refer with $x_{ref}$  to the point $\beta_0 \point 0 0 +\beta_1 \point 0 1 + \beta_2 \point 1 0$ which is the to $x$ corresponding point in the reference triangle . In Figure \ref{fig: transformation} the connection between $x_{ref}$ and $x$ is shown.
-
-\begin{figure}[!h]
-	\input{transformation.pgf}
-	\caption{Transformation of reference cell}
-	 \label{fig: transformation}
-\end{figure}
-
-Similarly we can affiliate the determination of the gradient in $T$ to a calculation in $T_{ref}$. With the chain rule we have
-\begin{align*}
-	\left(\nabla_x p_T^i(x)\right)^t = D_x p_T^i(x) =& D_x p^i_{ref}(\Phi_T^{-1}(x)) \\
-	  =& D_{\Phi_T^{-1}(x)}p^i_{ref}(\Phi_T^{-1}(x)) \cdot D_x  \Phi_T^{-1}(x) \\
-	  =& D_{x_{ref}}p^i_{ref}(x_{ref}) \cdot  A^{-1}
-\end{align*}
-and thus
-\begin{align}
-	\nabla_x p_T^i(x) = A^{-t} \cdot \nabla_{x_{ref}}(x_{ref}), \qquad 1 \leq i \leq n. \label{eq: ref gradient}
-\end{align}
-
-Analogous proceeding yields for the Hessian matrix
-\begin{align}
-D_x^2p_T^i(x) = A^{-t} D_{x_{ref}}^2p^i_{ref}(x_{ref})  A^{-1}, \qquad 1 \leq i \leq n.
-\end{align}
-
-Concluding, if we need to determine function values, gradient and Hessian of a basis function on a cell, we only need the Jacobian of its transformation, i.e. $A$. We are able to calculate all further information with the data provided by the reference triangle.
-\end{example}
-
-\subsection{Refinement and Base Cells}\label{subsec: refinement and base cells}
-Let us in the rest of this section further assume we have a triangulation of a two-dimensional domain $\Omega$. 
-Suppose the mesh of our triangulation is created by refinement of a coarser mesh. We use a specific kind of refinement: Given a triangulation $\triang$ every triangle $T \in \triang$ is divided into four congruent triangles as is shown in figure \ref{pic: refinement}. We note, the finer grid $\triangFine$ for the diameter of each triangle is halved.
-
-\begin{figure}[h]
-\input{refinement.pgf}
-\caption{Refinement of a triangle}
- \label{pic: refinement}
-\end{figure}
-
-We identify the new refined triangles with their original cell in $T$ calling it their basecell $T^T_b$. Repeating the refinement we can always relate a cell in the finest mesh with a basecell in the original triangulation. We can find an affine mapping $\Psi_T:T^T_b \rightarrow T$ transforming the $T^T_b$ to $T$ such that $\Phi_T = \Psi_T \circ \Phi_B$. This implies also that for the jacobians $A_{\Phi_T}, A_{\Psi_T}, A_{\Phi_B}$ of the affine transformations $\Phi_T, \Psi_T,\Phi_B$ holds
-\begin{align}
-A_{\Phi_T}=A_{\Psi_T} A_{\Phi_B}
-\end{align} 
-
-This makes saving information about the basecell very beneficial for the transformation matrix $A_{\Psi_T}$ is a diagonal matrix which even has the same entries along the diagonal. It even follows basis function data on two triangles with the same basecell only differ in a constant. Yet another benefit of the relation between cells and their basecells is they hav the same, or for the innermost triangle($T_0$ in figure \ref{pic: refinement}) opposite directed, normals.
-
-\begin{example}\label{ex: leaf cell trafo}
-In the two-dimensional case the Jacobian $A_{\Psi_T}$ of a transformation $\Psi_T$ from the base cell $B$ to a $l$ times refined triangle $T$ is $
-	\begin{pmatrix}
-		\frac 1 {2^l} & 0 \\ 0 & \frac 1 {2^l}
-	\end{pmatrix} \text{ or }
-	\begin{pmatrix}
-		-\frac 1 {2^l} & 0 \\ 0 & -\frac 1 {2^l}
-	\end{pmatrix}$, respectively if the number of intermediate basecells being an inner triangle during refinement  has been odd.
-
- To a point $x \in T$ we can determine a corresponding base cell point $x_B$, namely the point which satisfies $x = \Psi_T(x_B)$. With the help of \eqref{eq: ref gradient} we find the identity
-\begin{align}
-\nabla_x p_T^i(x) &= A_{\Phi_T}^{-t} \nabla_{x_{ref}} p^i_{ref} (x_{ref}) \nonumber\\
- &= A_{\Psi_T}^{-t} A_{\Phi_B}^{-t} \nabla_{x_{ref}} p^i_{ref} (x_{ref}) \nonumber\\
-&= \epsilon 2^l A_{\Phi_B}^{-t} \nabla_{x_{ref}} p^i_{ref}(x_{ref}), \qquad \epsilon \in \{+,-\} \label{eq: trafo grad},
-\end{align}
-with $l \in \N$ indicating how often $T$ is refined with respect to the original mesh.\\
-Analogously we have
-\begin{align}
-\nabla_x p^i(x) \mathbf n &= 2^l  A_{\Phi_B}^{-t} \cdot \nabla_{ref}p^i_{ref}(x_{ref}) \mathbf{ n_{b}} \qquad \text{ and } \label{eq: trafo normal der} \\
-D_x^2 p^i(x) &= 2^{2l}  A_{\Phi_B}^{-t} D_{x_{ref}}^2 p^i_{ref}(x_{ref}), \qquad 1 \leq i \leq n,
-\end{align}
-where $\mathbf n_b$ is the to $n$ corresponding normal in the base cell. Note, that \eqref{eq: trafo normal der} even holds for inner refined triangles: The minus sign of the gradient cancels with the minus sign of the base cell normal $n_B$ since $n_B$ is opposite directed as the corresponding normal $n$ of a inner triangle.\\
-Another case where the sign of the gradient \eqref{eq: trafo grad} could be important when we evaluate of the first part of the bilinearform, i.e. $\nabla \phi \cdot A \nabla v$. We first note, that two basis functions $p_T^i, p_T^j$ having only support on $T$ are created with the same affine mapping $\Phi_T$. Hence they have the same transposed, inversed Jacobian $A^{-t}_{\Phi_T}=\epsilon 2^l A_{\Phi_b}^{-t}$ and therefore the sign on the right-hand side in \eqref{eq: trafo grad} is for both gradients the same. Because we multiply both gradients a sign change between base and the actual cell does not affect the evaluation of our bilinear form. 
-Of course for other combinations of basis polynomials the latter volume integral always equals zero because the polynomials' support is chosen in such a way that all other gradients vanish in the inner of $T$.
-
-A usual error source are the signs of the terms
-\[
-	\jump {\varphi \average{ A \nabla v }} = \varphi^+ \frac 1 2  \left(A^+ \nabla v^+ + A^- \nabla v^-\right) \cdot \mathbf n^+ + \varphi^- \frac 1 2 \left(A^+ \nabla v^+ + A^- \nabla v^-\right) \cdot \mathbf n^-.
-\]
-Since for two adjacent triangles always $\mathbf n^+ = - \mathbf n^-$ holds, we also have $A^+ \nabla v^+ \mathbf n^-= -A^+ \nabla v^+ \mathbf n^+$ and $A^- \nabla v^- \mathbf n^+= -A^- \nabla v^- \mathbf n^-$. Hence we can calculate the expression using \ref{eq: trafo normal der}. Note that all basic functions have support on only one triangle, such that for a evaluation of a basic functions $\varphi_B$ either $\varphi_B^+$ or $\varphi_B^-$, just as for a basic functions $v_B$ either $v_B^+$ or $v_B^-$ equals to zero.
-
-So, we are able to save a lot of memory if we store instead of all data at every quadrature points in each refined cell just the data of the base cell and the number of refinements. The refined cells contained in the actual mesh are referred as \emph{leaf cells}.
-\end{example}
-
-\subsection{Assembly Loop}
-Another crux of the implementation is the handling of face terms, more specific: We mentioned earlier that we evaluate the bilinearform cell-wise. Hence the volume integrals are calculated visiting every cell only once. When do we compute the edge integrals?\\
-Face terms can be collected either by assemble them in two steps or a more complex one.
-For the two step variant the face terms are split up into the contributions of their two adjacent cells, such that the first part is assembled when processing the first adjacent cell and the second during the processing of the other adjacent cell. \\
-In the one step variant we handle a face term when visiting an adjacent cell for first time. To detect the first time we introduce a cell flag for every leaf cell indicating whether the cell has been processed yet. Now, each time the assembling algorithm visits a face it determines the neighbouring cell and checks if the face has already been processed. The following algorithm \ref{alg: assembling} from \cite{BMV2009} illustrates how to perform this one step approach. 
-\begin{algorithm}[H]
-\caption{An assembling loop for a DG method}
-\label{alg: assembling}
-\begin{algorithmic}
-\Ensure every cell flag is false
-\For {cell in all leaf cells}  
-\State get cell data
-\State assemble volume integrals 
-	\For {face in faces(cell)}
-		\If {neighbour across the face exists} 
-			\If {not neighbour flag}
-					\State get neighbour cell data
-					\State assemble face terms
-			\EndIf
-		\Else
-			\State assemble boundary terms
-		\EndIf
-\EndFor
-	\State cell flag to true 
-\EndFor
-\State Reset every cell flag to false
-\end{algorithmic}
-\end{algorithm}
-
-In \cite{BMV2009} Brix et. alter also develop a data structure efficiently handling all the mentioned requirements among a lot of other features. On this structure our implementation used for the later numerical results is based on.
+\input{implementationDG.tex}
 
 After we saw the main implementation points of a DG method we need some algebraic and analytic identities for the Hessian matrix to develop a DG method handling the \MA equation.
 \section{Hessian Identities}
@@ -584,18 +451,23 @@ The divergence-free property yields to a integration by parts rule:
 \begin{lemma}[Integration by parts for the Frobenius product] \label{la: integration by parts Frobenius}
 For a Frobenius product with the Hessian's cofactor matrix  the following integration by parts rule holds for smooth $u$
 \[
-	\int_\Omega (D^2 u : B) = - \int_\Omega (\nabla \cdot B) \cdot \nabla u + \int_{\partial \Omega}  B \nabla u \bf n
+	\myIntX  \Omega { (D^2 u : B)} = 
+		- \myIntX  \Omega { (\nabla \cdot B) \cdot \nabla u }
+		+ \myIntS  {\partial \Omega} {  B \nabla u \bf n}
 \] 
 \end{lemma}
 
 \begin{proof}
 The proof is based on applying integration by parts row-wise
 \begin{align*}
-- \int_\Omega (\nabla \cdot B) \cdot \nabla u &= 
-- \int_\Omega \sum_{i = 1}^{d} (\nabla \cdot B_i) \dx {x_i} u \\
-&=  \int_\Omega \sum_{i = 1}^{d} B_i \cdot  (\nabla \dx {x_i} u) - \int_{\partial \Omega} \sum_{i = 1}^{d} (B_i) \dx {x_i} u \mathbf{n} \\
-&=  \int_\Omega \sum_{i = 1}^{d}\sum_{j= 1}^{d} B_{ij} \dxy {x_i}{x_j} u- \int_{\partial \Omega} B \nabla u \mathbf{n} \\
-&=  \int_\Omega (D^2 u : B)- \int_{\partial \Omega} B \nabla u \mathbf{n} 
+- \myIntX  \Omega { (\nabla \cdot B) \cdot \nabla u} &= 
+- \myIntX  \Omega { \sum_{i = 1}^{d} (\nabla \cdot B_i) \dx {x_i} u} \\
+&=  \myIntX  \Omega { \sum_{i = 1}^{d} B_i \cdot  (\nabla \dx {x_i} u)} 
+	- \myIntS  {\partial \Omega} { \sum_{i = 1}^{d} (B_i) \dx {x_i} u \mathbf{n}} \\
+&=  \myIntX  \Omega { \sum_{i = 1}^{d}\sum_{j= 1}^{d} B_{ij} \dxy {x_i}{x_j} u}
+	- \myIntS  {\partial \Omega} { B \nabla u \mathbf{n}} \\
+&=  \myIntX  \Omega { (D^2 u : B)}
+	- \myIntS  {\partial \Omega} { B \nabla u \mathbf{n} }
 \end{align*}
 \end{proof}
 
