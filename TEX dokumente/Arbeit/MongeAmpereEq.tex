@@ -87,6 +87,7 @@ The comparison principle yields uniqueness of viscosity solutions. If $u$ and $v
 
 \section{The Linearisation of the \MA operator}\label{sec: linearisation}
 
+For later methods, as for example Newton's method it is important to derive the linearisation of the \MA equation. 
 	\begin{theorem}[Linearisation] \label{thm: linearisation}
 		The Linearisation of the \MA operator $F(u)=\mydet{D^2u}-f$ is given by
 		\begin{align}
@@ -100,13 +101,13 @@ The comparison principle yields uniqueness of viscosity solutions. If $u$ and $v
 	\begin{proof}
 	We define the \MA bilinear form by
 	\[
-	\bilin v w = \mycof{D^2 v}:D^2w.
+	\bilin v w_{MA} = \mycof{D^2 v}:D^2w.
 	\]
 	Note that by Lemma \ref{la: rel det cofactor} then $\mydet {D^2 u} = \frac 1 2 \bilin u u$ holds.
 	
 	Since the \MA form is bilinear and symmetric we have the identity
 	\begin{align}
-		\mydet{D^2 (v+w)} =& \frac 1 2 \bilin{v+w}{v+w} = \frac 1 2 \left(\bilin v v + 2 \bilin v w + \bilin w w \right)  \\
+		\mydet{D^2 (v+w)} =& \frac 1 2 \bilin{v+w}{v+w}_{MA} = \frac 1 2 \left(\bilin v v_{MA} + 2 \bilin v w_{MA} + \bilin w w_{MA} \right) \nonumber\\
 		=&  \detHess v  + \cofHess v : D^2 w + \detHess w \label{eq: det addition}
 	\end{align}
 	 Let us now look at the G\^ateaux derivative of $F$
@@ -154,7 +155,7 @@ To make use of least square methods one needs at first to formulate the \MA prob
 Find $(u,p) \in \mathcal{S}$ such that
 \begin{align}
 	j(u,p) \leq& j(v,q) \qquad \forall \{v,q\} \in \mathcal{S}, \text{ where }\\
-	j(v,q)  =& \frac 1 2 \int_{\Omega} |\triangle v |^2, \\
+	j(v,q)  =& \frac 1 2 \myIntX{\Omega} {|\triangle v |^2}, \\
 	\mathcal{S} =& \{(v,q)\in V_g \times Q^+_f, D^2v-q =0\},\\
 	V_g =& \{v \in H^2(\Omega), v \arrowvert_{\delta \Omega}=g\} \\
 	Q^+_f =& \{q \in [L^2(\Omega)]^{2\times2} , q_{12} =q_{21},  q_{11} > 0,q_{22} > 0, \mydet q = f\}.

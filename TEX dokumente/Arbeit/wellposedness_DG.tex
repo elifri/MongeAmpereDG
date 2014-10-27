@@ -3,7 +3,7 @@
 %In this section we want to prove th derived SIPG method is well-posed. The norm to carry out an analysis easily is the discrete energy norm.
 %Let $V$ be $H^1(\Omega; \triang)$ and the bilinear form $\bilin \cdot \cdot_A:V \times V$ be given by
 %\begin{align}
-%	\bilin \varphi v _ A =  \sum_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v
+%	\bilin \varphi v _ A =  \sum_{T \in \triang} \myIntX  T { \nabla \varphi \cdot A \nabla v
 %\end{align}
 %\begin{definition}[Energy Norm] \label{def: energy norm}
 %		The mesh-dependent energy norm for a function $v \in V$ is defined by
@@ -26,11 +26,11 @@
 %Let us consider the terms of \eqref{eq:inner product SIPG} separately.
 %For the first term we have by the Cauchy-Schwarz inequality
 %\begin{align}
-%	|\sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v| =& |\bilinA {\nabla \varphi} {\nabla v} | \leq \left( {\bilinA {\nabla \varphi} {\nabla \varphi}}\right)^{\frac 1 2 } \left( {\bilinA {\nabla v}{\nabla v}}\right)^{\frac 1 2 }. \label{eq: CS estimate 0}
+%	|\sum\limits_{T \in \triang} \myIntX  T { \nabla \varphi \cdot A \nabla v| =& |\bilinA {\nabla \varphi} {\nabla v} | \leq \left( {\bilinA {\nabla \varphi} {\nabla \varphi}}\right)^{\frac 1 2 } \left( {\bilinA {\nabla v}{\nabla v}}\right)^{\frac 1 2 }. \label{eq: CS estimate 0}
 %\end{align}
 %Considering the sum of the second and the fourth term we find using Cauchy-Schwarz and using also the discrete Cauchy-Schwarz inequality
 %\begin{align}
-%	|\sum\limits_{e \in \edges}\int_{e} \jump {\varphi \average{A \nabla v} }| &\leq
+%	|\sum\limits_{e \in \edges}\myIntS e { \jump {\varphi \average{A \nabla v} }| &\leq
 %	\sum\limits_{e \in \edges}  \LTwonormE{\jump {\varphi}} \LTwonormE {\average{A \nabla v}} \nonumber \\
 %	& \leq
 %		\left( \sum\limits_{e \in \edges} \frac {\sigma}{|e|} \LTwonormE{\jump {\varphi}}^2 \right)^{\frac 1 2}
@@ -38,7 +38,7 @@
 %\end{align}
 %Since the third and the last term in \eqref{eq:inner product SIPG} are the symmetrising terms, we analogously have for their sum
 %\begin{align}
-%\sum\limits_{e \in \edges}\int_{e} \frac 1 {|e|}\jump {v \average{A \nabla \varphi} } \leq&
+%\sum\limits_{e \in \edges}\myIntS e { \frac 1 {|e|}\jump {v \average{A \nabla \varphi} } \leq&
 %			\left( \sum\limits_{e \in \edges} \frac {\sigma}{|e|}\LTwonormE{\jump {v}}^2 \right)^{\frac 1 2}
 %			\left( \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{A \nabla \varphi}}^2 \right)^{\frac 1 2}.\label{eq: CS estimate2}
 %\end{align}
@@ -127,17 +127,17 @@
 %	for a $\lambda >0$.
 %	Thus, we have 
 %	\begin{align}
-%	\bilin {a_h(v)} {v}  = \bilinA {\nabla v} {\nabla v} - 2 \sum\limits_{e \in \edges}\int_{e} \jump {v \average{A \nabla v} } + \sum_{e\in \edgesi} \frac \sigma {|e|} \int_e \jump v^2 .\label{eq: coerc first estimate}
+%	\bilin {a_h(v)} {v}  = \bilinA {\nabla v} {\nabla v} - 2 \sum\limits_{e \in \edges}\myIntS e { \jump {v \average{A \nabla v} } + \sum_{e\in \edgesi} \frac \sigma {|e|} \int_e \jump v^2 .\label{eq: coerc first estimate}
 %	\end{align}
 %	We derived in \eqref{eq: CS estimate} the estimate 
 %	\begin{align}
-%	\sum\limits_{e \in \edges}\int_{e} \jump {v \average{A \nabla v} }
+%	\sum\limits_{e \in \edges}\myIntS e { \jump {v \average{A \nabla v} }
 %	\leq		\left( \sum\limits_{e \in \edges} \frac {\sigma}{|e|} \LTwonormE{\jump {v}}^2 \right)^{\frac 1 2}
 %	\left( \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{A \nabla v}}^2 \right)^{\frac 1 2} \label{eq: inter estimate}
 %	\end{align}
 %	Taking the root of the trivial identity $ab \leq \varepsilon^2 a^2 + 2ab + {\frac 1 \varepsilon}^2b^2 = \left( \varepsilon a + \frac 1 \varepsilon b\right)^2$ yields the inequality $\sqrt{a} \sqrt{b} \leq \varepsilon a + \frac 1 \varepsilon b$ for arbitrary $a,b \in R$ and $\varepsilon \geq 0$. Thus, we can derive from \eqref{eq: inter estimate}
 %	\begin{align*}
-%	\sum\limits_{e \in \edges}\int_{e} \jump {v \average{A \nabla v} } \leq \frac 1 \varepsilon \sum\limits_{e \in \edges}\frac \sigma {|e|}\LTwonormE{\jump {v}}^2 
+%	\sum\limits_{e \in \edges}\myIntS e { \jump {v \average{A \nabla v} } \leq \frac 1 \varepsilon \sum\limits_{e \in \edges}\frac \sigma {|e|}\LTwonormE{\jump {v}}^2 
 %	+ \varepsilon  \sum\limits_{e \in \edges}  \frac {|e|} \sigma \LTwonormE{\average{A \nabla v}}^2
 %	\end{align*}
 %	Using this estimate in \eqref{eq: coerc first estimate} we can derive
@@ -172,7 +172,7 @@
 %	
 %	Let $\lambda (>0$) be the largest eigenvalue of $A$. Then it holds
 %	\[
-%	\LTwonormT{A \nabla v} = \int_T A \nabla v \cdot A\nabla v \leq \int_T \lambda \nabla v \cdot A\nabla v \leq \lambda \bilinA {\nabla v}{\nabla v}
+%	\LTwonormT{A \nabla v} = \myIntX  T { A \nabla v \cdot A\nabla v \leq \myIntX  T { \lambda \nabla v \cdot A\nabla v \leq \lambda \bilinA {\nabla v}{\nabla v}
 %	\]	
 %	where $C$ is a positive constant depending only on the triangulation and the diffusion matrix $A$ and $\lambda$ is also a positive constant (cf. \eqref{eq: estimate pos def}).
 %	Choosing $0 < \varepsilon < \frac \lambda C$ and $\sigma^* > \frac 1 \varepsilon$ then implies that 
@@ -236,7 +236,6 @@ To start with the analysis we first have to define the norm the analysis will be
 	\eNorm v ^2 := \LTwonorm{\nabla v} + \frac 1 \sigma \sum_{e \in \edges} |e|\LTwonormE{\average{\nabla v}} + 2 \sigma \sum_{e \in \edges} \frac 1 {|e|}\LTwonormE{\jump{v}}.
 	\]
 \end{definition}
-\todo{$\Omega,\triang$ erklaren}
 
 Note that through this section $C$ denotes a generic positive constant independent of $h$ that may take different values in each equation.
 
@@ -252,11 +251,11 @@ At first, we show the following statement
 	Let us consider the terms of \eqref{eq:inner product SIPG} and \eqref{eq: penalty term} separately.
 	For the first term we have by the Cauchy-Schwarz inequality
 	\begin{align}
-	|\sum\limits_{T \in \triang} \int_T \nabla \varphi \cdot A \nabla v| =& |\bilinLTwo {\nabla \varphi} {\nabla v} | \leq \LTwonorm{\nabla \varphi} \LTwonorm{A} \LTwonorm{\nabla v}. \label{eq: CS estimate 0}
+	|\sum\limits_{T \in \triang} \myIntX  T { \nabla \varphi \cdot A \nabla v}| =& |\bilinLTwo {\nabla \varphi} {\nabla v} | \leq \LTwonorm{\nabla \varphi} \LTwonorm{A} \LTwonorm{\nabla v}. \label{eq: CS estimate 0}
 	\end{align}
 	Considering the sum of the second and the fourth term we find using Cauchy-Schwarz and using also the discrete Cauchy-Schwarz inequality
 	\begin{align}
-	|\sum\limits_{e \in \edges}\int_{e} \jump {\varphi \average{A \nabla v} }| &\leq
+	|\sum\limits_{e \in \edges}\myIntS e { \jump {\varphi \average{A \nabla v} }}| &\leq
 	\sum\limits_{e \in \edges}  \LTwonormE{\jump {\varphi}} \LTwonormE {\average{A \nabla v}} \nonumber \\
 	& \leq
 	\left( \sum\limits_{e \in \edges} \frac {\sigma}{|e|} \LTwonormE{\jump {\varphi}}^2 \right)^{\frac 1 2}
@@ -267,14 +266,14 @@ At first, we show the following statement
 	\end{align}
 	For shorter notation we abbreviate $\sup\limits_{e \in \edges} \LTwonormE{\average{A}}$ by $\bar A$. Since the third and the last term in \eqref{eq:inner product SIPG} are the symmetric to the second and fourth summands, we analogously have for their sum
 	\begin{align}
-	\sum\limits_{e \in \edges}\int_{e} \frac 1 {|e|}\jump {v \average{A \nabla \varphi} } \leq&
+	|\sum\limits_{e \in \edges}\myIntS e { \frac 1 {|e|}\jump {v \average{A \nabla \varphi} }}| \leq&
 	\left( \sum\limits_{e \in \edges} \frac {\sigma}{|e|}\LTwonormE{\jump {v}}^2 \right)^{\frac 1 2}
 	\left( \bar A \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla \varphi}}^2 \right)^{\frac 1 2}.\label{eq: CS estimate2}
 	\end{align}
 	Now only the penalty term (cf. \eqref{eq: penalty term}) needs to be estimated. Again we apply at first the Cauchy-Schwarz inequality and then the discrete Cauchy-Schwarz inequality:
 	\begin{align}
-	\singleNorm {\sum_{e \in \edgesi} \frac \sigma {|e|} \int_e \jump \varphi \jump v }
-	\leq& \sum_{e \in \edgesi} \frac \sigma  {|e|} \int_e \singleNorm {\jump \varphi \jump v }
+	\singleNorm {\sum_{e \in \edgesi} \frac \sigma {|e|} \myIntS e {\jump \varphi \jump v }}
+	\leq& \sum_{e \in \edgesi} \frac \sigma  {|e|} \myIntS{e}{ \singleNorm {\jump \varphi \jump v }}
 	\leq \left( \sum\limits_{e \in \edges} \frac \sigma{|e|} \LTwonormE{\jump{\varphi}}^2 \right)^{\frac 1 2} \left( \sum\limits_{e \in \edges} \frac \sigma {|e|} \LTwonormE{\jump{v}}^2 \right)^{\frac 1 2} \label{eq: CS estimate3}
 	\end{align}
 	Adding \eqref{eq: CS estimate 0}, \eqref{eq: CS estimate}, \eqref{eq: CS estimate2} and \eqref{eq: CS estimate3} we find using the discrete Schwarz inequality once more
@@ -376,28 +375,28 @@ Calling this norm also an energy norm is justified as both norms are equivalent 
 		
 	Since the diffusion matrix $A$ is positive definite it holds for any $w \in V$
 	\begin{align}
-	\int_\Omega \nabla w \cdot A \nabla w \geq \lambda \LTwonorm {\nabla w }^2  \label{eq: estimate pos def}
+	\myIntX \Omega {\nabla w \cdot A \nabla w} \geq \lambda \LTwonorm {\nabla w }^2  \label{eq: estimate pos def}
 	\end{align}
 	for $\lambda >0$, the smallest eigenvalue of $A$.
 	Therefore we find
 	\begin{align}
-	a_h^{DG}(v_h,v_h) \geq \lambda \LTwonorm{\nabla v_h} - 2 \sum\limits_{e \in \edges}\int_{e} \jump {v \average{A \nabla v_h} } + \sum_{e\in \edgesi} \frac \sigma {|e|} \int_e \jump {v_h}^2 .\label{eq: coerc first estimate}
+	a_h^{DG}(v_h,v_h) \geq \lambda \LTwonorm{\nabla v_h} - 2 \sum\limits_{e \in \edges}\myIntS e { \jump {v \average{A \nabla v_h} }} + \sum_{e\in \edgesi} \frac \sigma {|e|} \myIntS e {\jump {v_h}^2} .\label{eq: coerc first estimate}
 	\end{align}
 	We derived in \eqref{eq: CS estimate} the estimate 
 	\begin{align}
-	\sum\limits_{e \in \edges}\int_{e} \jump {v_h \average{A \nabla v_h} }
+	\sum\limits_{e \in \edges}\myIntS e { \jump {v_h \average{A \nabla v_h} }}
 	\leq		\left( \sum\limits_{e \in \edges} \frac {\sigma}{|e|} \LTwonormE{\jump {v_h}}^2 \right)^{\frac 1 2}
 	\left(C \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v_h}}^2 \right)^{\frac 1 2} \label{eq: inter estimate}
 	\end{align}
 	Taking the root of the trivial identity $ab \leq \varepsilon^2 a^2 + 2ab + {\frac 1 \varepsilon}^2b^2 = \left( \varepsilon a + \frac 1 \varepsilon b\right)^2$ yields the inequality $\sqrt{a} \sqrt{b} \leq \varepsilon a + \frac 1 \varepsilon b$ for arbitrary $a,b \in R$ and $\varepsilon \geq 0$. Thus, we can derive from \eqref{eq: inter estimate}
 	\begin{align*}
-	\sum\limits_{e \in \edges}\int_{e} \jump {v_h \average{A \nabla v_h} } 
+	\sum\limits_{e \in \edges}\myIntS e { \jump {v_h \average{A \nabla v_h} }} 
 	\leq \frac 1 \varepsilon \sum\limits_{e \in \edges}\frac \sigma {|e|}\LTwonormE{\jump {v_h}}^2 
 	+ C\varepsilon  \sum\limits_{e \in \edges}  \frac {|e|} \sigma \LTwonormE{\average{\nabla v_h}}^2
 	\end{align*}
 	By \eqref{eq: estimate average} it follows that 
 	\begin{align*}
-		\sum\limits_{e \in \edges}\int_{e} \jump {v_h \average{A \nabla v_h} } 
+		\sum\limits_{e \in \edges}\myIntS e { \jump {v_h \average{A \nabla v_h} }} 
 		\leq \frac 1 \varepsilon \sum\limits_{e \in \edges}\frac \sigma {|e|}\LTwonormE{\jump {v_h}}^2 
 		+ C\varepsilon  \frac C \sigma \LTwonorm{\nabla v_h}^2
 	\end{align*}			
