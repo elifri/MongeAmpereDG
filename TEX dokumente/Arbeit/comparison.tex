@@ -289,19 +289,29 @@ No we are able to establish an estimate of the consistency error of $Fu$.
 	The consistency error estimate then follows from \eqref{eq: Fu first estimate}, Lemma \ref{la: L dependence paramter}, \eqref{eq: right solution L+U} and \eqref{eq: contraction R}.
 \end{proof}
 
-This result is very important to understand the performances of the derived method. It states the consistency error depends proportionally on the error $\eNormDTwo{u-u^i_h}$ and $(1+|\ln h|^{\frac 1 2})$. That means the consistency error made is not controllable and in particular the introduced method is not consistent.
+This result is very important to understand the performances of the derived method. It states the consistency error depends proportionally on the error $\eNormDTwo{u-u^i_h}$ and $(1+|\ln h|^{\frac 1 2})$. That means the method is only consistent if $\eNormDTwo{u-u^i_h}$ depends proportionally on $h^l$ for a $l \geq 1$. If not the consistency error made is not controllable and in particular the introduced method is not consistent.
 
-%\subsection{rest}
-%Consider the operator $\mathcal M: V \rightarrow V_h$
-%\begin{align}
-%	\mathcal M = L_{u,h}^{-1}(L_{u} - F)
-%\end{align}
-%and let $\mathcal M_h:V_h \rightarrow V_h$ be its restriction to $V_h$. Clearly, $\mathcal M_h$ reduces to 
-%\begin{align}
-%\mathcal M = id_h - L_{u,h}^{-1}F
-%\end{align}
-%Since $L_{u,h}$ is a isomorphism the existence of a fixed point of $\mathcal M_h$ implies the existence of a root to $F$ and hence a fixed point to our Picard Iteration restriced to $V_h$.
-%
+\subsection{rest}
+Consider we want to transfer the argument structure given by Brenner et alt. We first define the operator $\mathcal M: V \rightarrow V_h$
+\begin{align}
+	\mathcal M = L_{u,h}^{-1}(L_{u} - F)
+\end{align}
+and let $\mathcal M_h:V_h \rightarrow V_h$ be its restriction to $V_h$. Clearly, $\mathcal M_h$ reduces to 
+\begin{align}
+\mathcal M = id_h - L_{u,h}^{-1}F
+\end{align}
+Since $L_{u,h}$ is a isomorphism the existence of a fixed point of $\mathcal M_h$ implies the existence of a root to $F$ and hence a fixed point to our Picard Iteration restriced to $V_h$.
+
+We would have to derive a contraction property as well as a mapping property to apply Banach's fixed point theorem.
+
+Brenner et alt. showed that $\M_h$ restriced to an arbitrary small ball centered around $u_{c,h}\in V_h$, where
+\[
+u_{c_h} = L_{u,h}^{-1} L_u u.
+\]
+becomes a self-mapping. Thereby we could locate the fixed point of $\M_h$ up to an arbitrary precision and derive error estimates.
+
+Mimicking this procedure I was able to reproduce a contraction property given the $u_h^i$ sufficiently close to $u$, but not a mapping property satisfying the demand that the restriced domain could be arbitrarily downsized.
+
 %By \eqref{eq: add our method} for all $w \in V$
 %\begin{align}
 %	\mathcal M w &= L_{u,h}^{-1}(L_u w - Fw) \nonumber\\
@@ -322,8 +332,8 @@ This result is very important to understand the performances of the derived meth
 %\end{align*}
 %\end{lemma}
 %It is easy to see that the contraction property of $\mathcal{M}$ holds on the approximation quality of the last step's solution. %If this estimation is sharp it also means that 
-%
-%
+
+
 %To apply Banach' fixed point theorem we have to find a set such that $\M$ maps this set into itself. Let us consider a small ball centered around $u_{c,h}\in V_h$, where
 %\[
 %	u_{c_h} = L_{u,h}^{-1} L_u u.
@@ -343,60 +353,68 @@ This result is very important to understand the performances of the derived meth
 %	\end{align}
 %	Since $v_h \in V_h$ was arbitrary the desired estimate follows.
 %\end{proof}
-%
-%\begin{lemma}[Mapping Property of $\M$] \label{la: mapping property of M}
-%	Let 
-%	\[
-%		\mathbb B_\rho(u_{c,h}):=\{v_h \in V_h: \eNorm{v_h - u_{c,h}} \leq \rho\}
-%	\]
-%	denote a small ball in $V_h$ centered at $u_{c,h}$. 
-%	Then, there holds for any $v \in \mathbb B_\rho(u_{c,h})$
-%	\[
-%		\eNorm{u_{c,h} - \M_h v} \leq C (1+|\ln h|^{\frac 1 2}) \eNormDTwo{u - u^i_h} (\rho+ \inf_{w_h \in V_h} \eNorm{v_h-u} +1)
-%	\] 
-%\end{lemma}
-%\begin{proof}
-%	By \eqref{eq: expand M} we have for any $w \in V$
-%	\begin{align}
-%		\eNorm{u_{c,h} - \M_h v} = \eNorm{L_{u,h}^{-1}(L_u w - L_{u^i_h} w + L_{u^i_h}u - L_u u - Fu)}
-%	\end{align}
-%	and hence using Theorem \ref{thm: SIPG stability} and \ref{la: L dependence paramter}
-%	\begin{align*}
-%		\eNorm{u_{c,h} - \M_h w} 
-%		\leq& C\HMinusOneDnorm{(L_u w - L_{u^i_h} w + L_{u^i_h} u- L_u u - Fu)} \nonumber\\
-%		\leq& C\HMinusOneDnorm{(L_u (w-u) - L_{u^i_h} (w-u) - Fu)} \nonumber\\
-%				\leq& C (1+|\ln h|^{\frac 1 2}) \eNormDTwo{u - u^i_h} (\eNorm{w-u}) +\HMinusOneDnorm{Fu}.
-%	\end{align*}
-%	Using the result in Lemma \ref{la: consistency error F} we obtain
-%	\begin{align*}
-%		\eNorm{u_{c,h} - \M_h w} \leq C (1+|\ln h|^{\frac 1 2}) \eNormDTwo{u - u^i_h} (\eNorm{w-u}+1).
-%	\end{align*}
-%	Consider now $v_h \in B_\rho(u_{c,h})$, by the triangle inequality we find 
-%	\begin{align}
-%		\eNorm{u_{c,h} - \M_h v} 
-%			\leq& C (1+|\ln h|^{\frac 1 2}) \eNormDTwo{u - u^i_h} (\eNorm{v_h-u_{c,h}}+ \eNorm{u_{c,h}-u} +1) \nonumber \\
-%			\leq& C (1+|\ln h|^{\frac 1 2}) \eNormDTwo{u - u^i_h} (\rho+ \eNorm{u_{c,h}-u} +1)			
-%	\end{align}
+
+\begin{lemma}[Mapping Property of $\M$] \label{la: mapping property of M}
+	Let 
+	\[
+		\mathbb B_\rho(u_{c,h}):=\{v_h \in V_h: \eNorm{v_h - u_{c,h}} \leq \rho\}
+	\]
+	denote a small ball in $V_h$ centered at $u_{c,h}$. 
+	Then, there holds for any $v \in \mathbb B_\rho(u_{c,h})$
+	\[
+		\eNorm{u_{c,h} - \M_h v} \leq C (1+|\ln h|^{\frac 1 2}) \eNormDTwo{u - u^i_h} (\rho+ \eNorm{u_{c,h}-u}+1)
+	\] 
+\end{lemma}
+\begin{proof}
+By \eqref{eq: add our method} for all $w \in V$
+\begin{align}
+	\mathcal M w &= L_{u,h}^{-1}(L_u w - Fw) \nonumber\\
+				 &= L_{u,h}^{-1}(L_u w - F(u+w-u) \nonumber\\
+				 &= L_{u,h}^{-1}(L_u w - Fu - L_{u^i_h} (w-u)) \nonumber\\
+				 &=  L_{u,h}^{-1}(L_u w - L_{u^i_h} w + L_{u^i_h}u - L_u u + L_u u - Fu) \nonumber\\
+				 & = L_{u,h}^{-1} L_u u + L_{u,h}^{-1}(L_u w - L_{u^i_h} w + L_{u^i_h}u - L_u u - Fu) \label{eq: expand M}
+ \end{align}	
+ and hence we have for any $w \in V$
+	\begin{align}
+		\eNorm{u_{c,h} - \M_h v} = \eNorm{L_{u,h}^{-1}(L_u w - L_{u^i_h} w + L_{u^i_h}u - L_u u - Fu)}
+	\end{align}
+	and hence using Theorem \ref{thm: SIPG stability} and \ref{la: L dependence paramter}
+	\begin{align*}
+		\eNorm{u_{c,h} - \M_h w} 
+		\leq& C\HMinusOneDnorm{(L_u w - L_{u^i_h} w + L_{u^i_h} u- L_u u - Fu)} \nonumber\\
+		\leq& C\HMinusOneDnorm{(L_u (w-u) - L_{u^i_h} (w-u) - Fu)} \nonumber\\
+				\leq& C (1+|\ln h|^{\frac 1 2}) \eNormDTwo{u - u^i_h} (\eNorm{w-u}) +\HMinusOneDnorm{Fu}.
+	\end{align*}
+	Using the result in Lemma \ref{la: consistency error F} we obtain
+	\begin{align*}
+		\eNorm{u_{c,h} - \M_h w} \leq C (1+|\ln h|^{\frac 1 2}) \eNormDTwo{u - u^i_h} (\eNorm{w-u}+1).
+	\end{align*}
+	Consider now $v_h \in B_\rho(u_{c,h})$, by the triangle inequality we find 
+	\begin{align}
+		\eNorm{u_{c,h} - \M_h v} 
+			\leq& C (1+|\ln h|^{\frac 1 2}) \eNormDTwo{u - u^i_h} (\eNorm{v_h-u_{c,h}}+ \eNorm{u_{c,h}-u} +1) \nonumber \\
+			\leq& C (1+|\ln h|^{\frac 1 2}) \eNormDTwo{u - u^i_h} (\rho+ \eNorm{u_{c,h}-u} +1)			
+	\end{align}
 %	and using the estimate of Lemma \ref{la: difference u uch} implies the claimed estimate.
-%\end{proof}
-%
-%Now we are able to combine the preceding results and thereby prove the main result
-%\begin{theorem}\label{main result}
-%	Given a sufficiently large $\sigma$ and $u_h^i$ sufficiently close to the exact solution, there exists a solution to the penalty method \eqref{eq: fixed point functional}
-%\end{theorem}
-%\begin{proof}
-%	Let $u_h^i$ suffice
-%	\begin{align}
-%		%\max
-%		\delta := { 2 \max{C_1}{C_2} (1 + |\ln h|^{\frac 1 2}) \eNormDTwo{u-u_h^i} } < 1,
-%	\end{align}
-%	where $C_1$ is the constant of Lemma \ref{la: contraction property M} and $C_2$ the constant of Lemma \ref{la: mapping property of M}. Thereby it follows that $M$ fulfills the contraction property stated in Lemma \ref{la: contraction property M} with the constant $\delta<1$.
-%	
-%	Furthermore fix $\rho_0$ to be $\inf_{v_h \in V_h} \eNorm{u-v_h}+1$, then Lemma \ref{la: mapping property of M} implies for any $v_h \in \mathbb{B}_{\rho_0}(u_{c,h})$
-%	 \[
-%	 	\eNorm{u_{c,h} - M_h v_h} \leq  \frac \delta 2 (\rho_0 + \inf_{v_h \in V_h} \eNorm{u-v_h}+1) < \rho_0.
-%	 \]
-%	 
-%	 Using the Banach fixed point theorem yields the existence of a unique fixed point of $\M_h$ and by the definition of $\M$ follows the claim.
-%\end{proof}
-%
+\end{proof}
+
+Now we are able to combine the preceding results and thereby prove the main result
+\begin{theorem}\label{main result}
+	Given a sufficiently large $\sigma$ and $u_h^i$ sufficiently close to the exact solution, there exists a solution to the penalty method \eqref{eq: fixed point functional}
+\end{theorem}
+\begin{proof}
+	Let $u_h^i$ suffice
+	\begin{align}
+		%\max
+		\delta := { 2 \max{C_1}{C_2} (1 + |\ln h|^{\frac 1 2}) \eNormDTwo{u-u_h^i} } < 1,
+	\end{align}
+	where $C_1$ is the constant of Lemma \ref{la: contraction property M} and $C_2$ the constant of Lemma \ref{la: mapping property of M}. Thereby it follows that $M$ fulfills the contraction property stated in Lemma \ref{la: contraction property M} with the constant $\delta<1$.
+	
+	Furthermore fix $\rho_0$ to be $\inf_{v_h \in V_h} \eNorm{u-v_h}+1$, then Lemma \ref{la: mapping property of M} implies for any $v_h \in \mathbb{B}_{\rho_0}(u_{c,h})$
+	 \[
+	 	\eNorm{u_{c,h} - M_h v_h} \leq  \frac \delta 2 (\rho_0 + \inf_{v_h \in V_h} \eNorm{u-v_h}+1) < \rho_0.
+	 \]
+	 
+	 Using the Banach fixed point theorem yields the existence of a unique fixed point of $\M_h$ and by the definition of $\M$ follows the claim.
+\end{proof}
+
