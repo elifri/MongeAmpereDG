@@ -233,7 +233,7 @@ To start with the analysis we first have to define the norm the analysis will be
 \begin{definition}[Energy Norm] \label{def: energy norm}
 	The mesh-dependent energy norm for a function $v \in V$ is defined by
 	\[
-	\eNorm v ^2 := \LTwonorm{\nabla v} + \frac 1 \sigma \sum_{e \in \edges} |e|\LTwonormE{\average{\nabla v}} + \sigma \sum_{e \in \edges} \frac 1 {|e|}\LTwonormE{\jump{v}}.
+	\eNorm v ^2 := \LTwonorm{\nabla v} + \frac 1 \sigma \sum_{e \in \edges} |e|\LTwonormE{\average{\nabla v}} + 2 \sigma \sum_{e \in \edges} \frac 1 {|e|}\LTwonormE{\jump{v}}.
 	\]
 \end{definition}
 \todo{$\Omega,\triang$ erklaren}
@@ -260,7 +260,7 @@ At first, we show the following statement
 	\sum\limits_{e \in \edges}  \LTwonormE{\jump {\varphi}} \LTwonormE {\average{A \nabla v}} \nonumber \\
 	& \leq
 	\left( \sum\limits_{e \in \edges} \frac {\sigma}{|e|} \LTwonormE{\jump {\varphi}}^2 \right)^{\frac 1 2}
-	\left( \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{A \nabla v}}^2 \right)^{\frac 1 2} 	 \\
+	\left( \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{A \nabla v}}^2 \right)^{\frac 1 2} 	 \nonumber \\
 	& \leq
 	\left( \sum\limits_{e \in \edges} \frac {\sigma}{|e|} \LTwonormE{\jump {\varphi}}^2 \right)^{\frac 1 2}
 	 \left( \sup\limits_{e \in \edges} \LTwonormE{\average{A}}\sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v}}^2 \right)^{\frac 1 2} \label{eq: CS estimate}
@@ -294,7 +294,7 @@ At first, we show the following statement
 	\left( 
 	\LTwonorm{A} \LTwonorm{\nabla v}^2+2\sum\limits_{e \in \edges} \frac {\sigma}{|e|}\LTwonormE{\jump {v}}^2+ \bar A\sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v}}^2
 	\right) ^{\frac 1 2} \nonumber \\
-	\leq & \maxTriple {\LTwonorm{A}}{2} {\sup_{e \in \edges }\LTwonormE{\average A}} \eNorm \varphi \eNorm v  \leq \label{eq: exact estimate boundedness} % \eNorm{A} \eNorm{\varphi}
+	\leq & \max {\LTwonorm{A}} {\sup_{e \in \edges }\LTwonormE{\average A}} \eNorm \varphi \eNorm v   \label{eq: exact estimate boundedness} % \leq \eNorm{A} \eNorm{\varphi}
 	\end{align}
 \end{proof}
 

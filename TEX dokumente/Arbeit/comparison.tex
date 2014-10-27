@@ -156,12 +156,28 @@ Let for $w \in V$ the mapping $L_{w,h}:V_h \rightarrow V_h'$ be the restriction 
 
 For further analysis we want to examine the dependence of $L_w$ on the parameter $w$.
 \begin{lemma}\label{la: L dependence paramter}
-	For $w_1, w_2 \in H^3(\Omega; \triang)$ holds
+	For $w_1, w_2 \in V$ holds
 	\[
-		\HMinusOneDnorm{L_{w_1} v - L_{w_2} v} \leq C (1+|\ln h|^{\frac 1 2})\epsilonTwo{w_1 - w_2} \eNorm{v} \qquad \forall v \in V. 
+		\HMinusOneDnorm{L_{w_1} v - L_{w_2} v} \leq \epsilonTwo{w_1 - w_2} \eNorm{v} \qquad \forall v \in V,
 	\]
+	where $\epsilonTwoZeroArg:V \rightarrow \R$ is defined by
+	\[
+		\epsilonTwo{v} = \max{ \LTwonorm{\hess v}}{ \sup_{e \in \edges} \LTwonormE{\average{\hess v}}}
+	\]	
 \end{lemma}
 \begin{proof}
+	It holds for a positive definite matrix $A$ that 
+	\begin{align}
+		\LTwonorm{A} =  \sup_{v \in L^2(\Omega), \LTwonorm{v}=1} \int v^t A^t A v = \lambda^2
+	\end{align}
+	where $\lambda$ is the largest eigenvalue of $A$. Since for every $w \in V$ the eigenvalues of $\cofHessH{w}$ and $\hess{w}$ coincide on every $T \in \triang$ we obtain 
+	\begin{align}
+		\LTwonormT{\cofHessH{w}} = \LTwonormT{\hess{w}} \qquad \forall T \in \triang.\label{eq: equality norm}
+	\end{align}
+	Furthermore holds for any positive definite matrices $A,B$ that the sum of their eigenvalues are the eigenvalues of $A+B$. Thus, we find
+	\begin{align}
+		\LTwonormE{\average {\cofHessH{w}}} = \LTwonormE{\average {\hess{w}}} \qquad \forall e \in \edges. \label{eq: equality norm average}
+	\end{align}
 	Let $w_1, w_2, v$ be in $V$. For any $\varphi_h \in V_h$ we have by the definition of $L$ (cf. \eqref{eq: linearisation our}
 	\begin{align}
 		\bilin{L_{w_1}v- L_{w_2} v} {\varphi_h} =  
@@ -169,89 +185,110 @@ For further analysis we want to examine the dependence of $L_w$ on the parameter
 			& -\sum\limits_{e \in \edges}\int_{e} \jump {\varphi_h \average { \cofHessH{(w_1-w_2)} \nabla v} } \nonumber \\
 			& - \sum\limits_{e \in \edges}\int_{e} \jump {v \average{ \cofHessH{(w_1-w_2)} \nabla \varphi_h} } \label{eq: diff linear}
 	\end{align}
-	Estimating $\varphi_h$ by its supremum and using the Cauchy-Schwarz inequality we obtain
-	\begin{align}
-		\eqref{eq: diff linear}
+	As already done in \eqref{eq: CS estimate} we use once the Cauchy-Schwarz inequality and once the discrete Cauchy-Schwarz inequality on every summand and obtain
+	\begin{align*}
+		\eqref{eq: diff linear}%\bilin{L_{w_1}v- L_{w_2} v} {\varphi_h} 
 		\leq& \LTwonorm{\nabla \varphi_h} \LTwonorm{\cofHessH{(w_1 -w_2)}} \LTwonorm {\nabla v} \nonumber \\
-			&+ \LInftynorm{\varphi_h} \sum_{e \in \edges} \LTwonormE{\average{\cofHessH{(w_1-w_2}}} \LTwonormE{\average{\nabla v}} \nonumber \\
-			&+ \sum_{e \in \edges} \LTwonorm{v} \LTwonormE{\average{\cofHessH{(w_1-w_2}}} \LInftynorm{\average{\nabla \varphi_h}}.\label{eq: diff linear 2}
-	\end{align}
-	Since the eigenvalues of $\cofHessH{(w_1-w_2}$ and $\hess{(w_1-w_2)}$ coincide their $L^2$ norm also coincides. Hence, by this and the discrete Cauchy-Schwarz inequality it follows
-	\begin{align}
-		\eqref{eq: diff linear 2} %\bilin{L_{w_1}v- L_{w_2} v} {\varphi_h} 
-		\leq& \LTwonorm{\nabla \varphi_h} \LTwonorm{\hess{(w_1 -w_2)}} \LTwonorm {\nabla v} \nonumber \\
-			&+ \LInftynorm{\jump {\varphi_h}} 
-				\left(\sum_{e \in \edges} \LTwonormE{\average{\hess{(w_1-w_2}}}^2 \right)^{\frac 1 2} 
-				\left(\sum_{e \in \edges} \LTwonormE{\average{\nabla v}}^2 \right)^{\frac 1 2} \nonumber \\
-			&+ 	\left(\sum_{e \in \edges} \LTwonormE{\jump v}^2 \right)^{\frac 1 2} 
-				\left(\sum_{e \in \edges} \LTwonormE{\average{\hess{(w_1-w_2}}}^2 \right)^{\frac 1 2} 
-				\LInftynorm{\average{\nabla \varphi_h}}. \label{eq: estimate diff L}
-	\end{align}
-	By the definition of jump and average it is clear that 
-	\[
-		\LInftynorm{\jump {\varphi_h}} = \LInftynorm{\varphi_h}\text{ and }\LInftynorm{\average{\nabla \varphi_h}}= \LInftynorm{\nabla \varphi_h}
-	\]
-	hold. Further we can estimate the $L^\infty$ norm using the discrete Sobolev inequality (\todo{discrete sobolev}) and we find
-	\begin{align}
-		\LInftynorm{\average {\nabla \varphi_h}} \leq C (1+|\ln h|^{\frac 1 2}) \LTwonorm{\nabla \varphi_h} \leq C (1+|\ln h|^{\frac 1 2}) \eNorm{\nabla \varphi_h}, \label{eq: estimate average phi}
-	\end{align}
-	and
-	\begin{align}
-		\LInftynorm{\jump {\varphi_h}} \leq C (1+|\ln h|^{\frac 1 2}) \LTwonorm{\varphi_h}. \label{eq: first estimate jump phi}
-	\end{align}
-	To further estimate \eqref{eq: first estimate jump phi} we apply the inverse estimate from Lemma \ref{la: inverse estimate} and the Poincar\'e inequality (\todo{poincare inequality}) and obtain
-	\begin{align}
-		\LTwonorm{\varphi_h} = \sum_{T \in \triang} \LTwonormT{\varphi_h} \leq C h \sum_{T \in \triang} \HOnenormT{\varphi_h} \leq C h \sum_{T \in \triang} \singleNorm{\varphi_h}_{H^1(T)} \leq Ch \eNorm{\varphi_h} \label{eq: estimate phi}
-	\end{align}
-	By \eqref{eq: estimate average phi}, \eqref{eq: first estimate jump phi} and \eqref{eq: estimate phi} and $h<1$, we have
-	\begin{align}
-		\maxTriple{\LTwonorm{\nabla \varphi}}{\LInftynorm{\jump{\varphi_h}}}{\LInftynorm{\average{\nabla \varphi_h}}} \leq C (1+|\ln h|^{\frac 1 2}) \eNorm{\varphi_h}
-	\end{align} 
-	and hence by \eqref{eq: estimate diff L}
+			&+ \left( \sum_{e \in \edges} \frac {\sigma}{|e|}\LTwonormE{\jump {\varphi_h}}^2 \right)^{\frac 1 2}
+			   \left( \sum_{e \in \edges} \frac {|e|} \sigma\LTwonormE{\average{\cofHessH{(w_1-w_2} \nabla v}}^2 \right)^{\frac 1 2} \\
+			&+ \left( \sum_{e \in \edges} \frac {\sigma}{|e|}\LTwonormE{\jump v}^2 \right)^{\frac 1 2}
+			\left( \sum_{e \in \edges} \frac {|e|} \sigma\LTwonormE{\average{\cofHessH{(w_1-w_2} \nabla \varphi_h}}^2 \right)^{\frac 1 2}
+	\end{align*}
+	and hence with \eqref{eq: equality norm} and \eqref{eq: equality norm average}
+	\begin{align*}
+		\bilin{L_{w_1}v- L_{w_2} v} {\varphi_h} =  
+		\leq& \epsilonTwo{w_1 - w_2} \left( \LTwonorm{\nabla \varphi_h} \LTwonorm {\nabla v} 
+		\phantom{\left( \sum_{e \in \edges} \frac {|e|} \sigma\LTwonormE{\average{\nabla \varphi_h}}^2 \right)^{\frac 1 2}} \right.\nonumber			&\phantom{\epsilonTwo{w_1 - w_2}}+ \left( \sum_{e \in \edges} \frac {\sigma}{|e|}\LTwonormE{\jump {\varphi_h}}^2 \right)^{\frac 1 2}
+			\left( \sum_{e \in \edges} \frac {|e|} \sigma\LTwonormE{\average{\nabla v}}^2 \right)^{\frac 1 2} \\
+			&\phantom {\epsilonTwo{w_1 - w_2}}+ \left( \sum_{e \in \edges} \frac {\sigma}{|e|}\LTwonormE{\jump v}^2 \right)^{\frac 1 2}
+			\left. \left( \sum_{e \in \edges} \frac {|e|} \sigma\LTwonormE{\average{\nabla \varphi_h}}^2 \right)^{\frac 1 2} \right).
+	\end{align*}
+	Using now the discrete Cauchy-Schwarz inequality on the whole term yields
 	\begin{align}
 		\bilin{L_{w_1}v- L_{w_2} v} {\varphi_h} 
-		\leq& C (1+|\ln h|^{\frac 1 2})\eNorm{\varphi} 
-			\left[ 
-				\LTwonorm{\hess{(w_1 -w_2)}} \LTwonorm {\nabla v} \nonumber \right.\\
-				&+ 	\left(\sum_{e \in \edges} \LTwonormE{\average{\hess{(w_1-w_2}}}^2 \right)^{\frac 1 2} 
-					\left(\sum_{e \in \edges} \LTwonormE{\average{\nabla v}}^2 \right)^{\frac 1 2} \nonumber \\
-				&+ 	\left(\sum_{e \in \edges} \LTwonormE{\jump v}^2 \right)^{\frac 1 2} 
-				\left. \left(\sum_{e \in \edges} \LTwonormE{\average{\hess{(w_1-w_2}}}^2 \right)^{\frac 1 2} 
-			\right] \label{eq: difference estimate number two}
+		\leq& \epsilonTwo{w_1 - w_2}
+			\left( 
+				\LTwonorm{\nabla \varphi}^2+ \sum\limits_{e \in \edges} \frac {\sigma} {|e|}\LTwonormE{\jump {\varphi}}^2+ \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla \varphi}}^2
+				\right)^{\frac 1 2} \nonumber \\
+			&\times
+			\left( 
+				\LTwonorm{\nabla v}^2+\sum\limits_{e \in \edges} \frac {\sigma}{|e|}\LTwonormE{\jump {v}}^2+ \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v}}^2
+			\right) ^{\frac 1 2} \nonumber \\
+			\leq & \epsilonTwo{w_1 - w_2} \eNorm \varphi \eNorm v.
 	\end{align}
-\todo{brackets}	
-	Using the discrete Cauchy-Schwarz inequality we find
-	\begin{align}
-	\bilin{L_{w_1}v- L_{w_2} v} {\varphi_h} 
-		\leq& C (1+|\ln h|^{\frac 1 2})\eNorm{\varphi} 
-		\nonumber \\
-		&\times
-			\left(
-				\LTwonorm{\hess{(w_1 -w_2)}}^2 
-				+ 2\sum_{e \in \edges} \LTwonormE{\average{\hess{(w_1-w_2}}}^2
-			\right)^{\frac 1 2} \nonumber \\
-	   	&\times
-			\left(
-			\LTwonorm{\nabla v}^2 
-			+ \sum_{e \in \edges} \frac {|e|}\sigma \LTwonormE{\average{\nabla v}}^2
-			+\sum_{e \in \edges} \frac \sigma {|e|}\LTwonormE{\jump {v}}^2
-			\right)^{\frac 1 2} \nonumber \\
-		\leq& C (1+|\ln h|^{\frac 1 2})\eNorm{\varphi} 	\epsilonTwo{{(w_1-w_2)}} \eNorm{v}
-	\end{align}
- \phantom{blub}
+	The result follows then with Definition \ref{def: h-1 seminorm}.
+%	Since the eigenvalues of $\cofHessH{(w_1-w_2}$ and $\hess{(w_1-w_2)}$ coincide their $L^2$ norm also coincides. Hence, by this and the discrete Cauchy-Schwarz inequality it follows
+%	\begin{align}
+%		\eqref{eq: diff linear 2} %\bilin{L_{w_1}v- L_{w_2} v} {\varphi_h} 
+%		\leq& \LTwonorm{\nabla \varphi_h} \LTwonorm{\hess{(w_1 -w_2)}} \LTwonorm {\nabla v} \nonumber \\
+%			&+ \LInftynorm{\jump {\varphi_h}} 
+%				\left(\sum_{e \in \edges} \LTwonormE{\average{\hess{(w_1-w_2}}}^2 \right)^{\frac 1 2} 
+%				\left(\sum_{e \in \edges} \LTwonormE{\average{\nabla v}}^2 \right)^{\frac 1 2} \nonumber \\
+%			&+ 	\left(\sum_{e \in \edges} \LTwonormE{\jump v}^2 \right)^{\frac 1 2} 
+%				\left(\sum_{e \in \edges} \LTwonormE{\average{\hess{(w_1-w_2}}}^2 \right)^{\frac 1 2} 
+%				\LInftynorm{\average{\nabla \varphi_h}}. \label{eq: estimate diff L}
+%	\end{align}
+%	By the definition of jump and average it is clear that 
+%	\[
+%		\LInftynorm{\jump {\varphi_h}} = \LInftynorm{\varphi_h}\text{ and }\LInftynorm{\average{\nabla \varphi_h}}= \LInftynorm{\nabla \varphi_h}
+%	\]
+%	hold. Further we can estimate the $L^\infty$ norm using the discrete Sobolev inequality (\todo{discrete sobolev}) and we find
+%	\begin{align}
+%		\LInftynorm{\average {\nabla \varphi_h}} \leq C (1+|\ln h|^{\frac 1 2}) \LTwonorm{\nabla \varphi_h} \leq C (1+|\ln h|^{\frac 1 2}) \eNorm{\nabla \varphi_h}, \label{eq: estimate average phi}
+%	\end{align}
+%	and
+%	\begin{align}
+%		\LInftynorm{\jump {\varphi_h}} \leq C (1+|\ln h|^{\frac 1 2}) \LTwonorm{\varphi_h}. \label{eq: first estimate jump phi}
+%	\end{align}
+%	To further estimate \eqref{eq: first estimate jump phi} we apply the inverse estimate from Lemma \ref{la: inverse estimate} and the Poincar\'e inequality (\todo{poincare inequality}) and obtain
+%	\begin{align}
+%		\LTwonorm{\varphi_h} = \sum_{T \in \triang} \LTwonormT{\varphi_h} \leq C h \sum_{T \in \triang} \HOnenormT{\varphi_h} \leq C h \sum_{T \in \triang} \singleNorm{\varphi_h}_{H^1(T)} \leq Ch \eNorm{\varphi_h} \label{eq: estimate phi}
+%	\end{align}
+%	By \eqref{eq: estimate average phi}, \eqref{eq: first estimate jump phi} and \eqref{eq: estimate phi} and $h<1$, we have
+%	\begin{align}
+%		\maxTriple{\LTwonorm{\nabla \varphi}}{\LInftynorm{\jump{\varphi_h}}}{\LInftynorm{\average{\nabla \varphi_h}}} \leq C (1+|\ln h|^{\frac 1 2}) \eNorm{\varphi_h}
+%	\end{align} 
+%	and hence by \eqref{eq: estimate diff L}
+%	\begin{align}
+%		\bilin{L_{w_1}v- L_{w_2} v} {\varphi_h} 
+%		\leq& C (1+|\ln h|^{\frac 1 2})\eNorm{\varphi} 
+%			\left[ 
+%				\LTwonorm{\hess{(w_1 -w_2)}} \LTwonorm {\nabla v} \nonumber \right.\\
+%				&+ 	\left(\sum_{e \in \edges} \LTwonormE{\average{\hess{(w_1-w_2}}}^2 \right)^{\frac 1 2} 
+%					\left(\sum_{e \in \edges} \LTwonormE{\average{\nabla v}}^2 \right)^{\frac 1 2} \nonumber \\
+%				&+ 	\left(\sum_{e \in \edges} \LTwonormE{\jump v}^2 \right)^{\frac 1 2} 
+%				\left. \left(\sum_{e \in \edges} \LTwonormE{\average{\hess{(w_1-w_2}}}^2 \right)^{\frac 1 2} 
+%			\right] \label{eq: difference estimate number two}
+%	\end{align}
+%\todo{brackets}	
+%	Using the discrete Cauchy-Schwarz inequality we find
+%	\begin{align}
+%	\bilin{L_{w_1}v- L_{w_2} v} {\varphi_h} 
+%		\leq& C (1+|\ln h|^{\frac 1 2})\eNorm{\varphi} 
+%		\nonumber \\
+%		&\times
+%			\left(
+%				\LTwonorm{\hess{(w_1 -w_2)}}^2 
+%				+ 2\sum_{e \in \edges} \LTwonormE{\average{\hess{(w_1-w_2}}}^2
+%			\right)^{\frac 1 2} \nonumber \\
+%	   	&\times
+%			\left(
+%			\LTwonorm{\nabla v}^2 
+%			+ \sum_{e \in \edges} \frac {|e|}\sigma \LTwonormE{\average{\nabla v}}^2
+%			+\sum_{e \in \edges} \frac \sigma {|e|}\LTwonormE{\jump {v}}^2
+%			\right)^{\frac 1 2} \nonumber \\
+%		\leq& C (1+|\ln h|^{\frac 1 2})\eNorm{\varphi} 	\epsilonTwo{{(w_1-w_2)}} \eNorm{v}
+%	\end{align}
+% \phantom{blub}
 \end{proof}
 
 No we are able to establish an estimate of the consistency error of $Fu$.
 \begin{theorem}[Consistency Error of $F$] \label{la: consistency error F}
 	There holds
 	\begin{align*}
-	\HMinusOneDnorm{Fu} \leq& C (1+|\ln h|^{\frac 1 2}) \epsilonTwo{u-u_h^i}
+	\HMinusOneDnorm{Fu} \leq& \epsilonTwo{u-u_h^i}
 	\end{align*}
-	where $\epsilonTwoZeroArg:V \rightarrow \R$ is defined by
-	\[
-		\epsilonTwo{v} = \max{ \LTwonorm{\hess v}}{ \sup_{e \in \edges \LTwonormE{\average{\hess v}}}
-	\]	
-	and the positive constant $C$ depends on the mesh and $u^i_h$, but not on $h$ and $u$. 
+	where $C$ is a positive constant $C$ that depends on the mesh and $u^i_h$, but not on $h$ and $u$. 
 \end{theorem}
 \begin{proof}
 	We have for $v \in V_h$
