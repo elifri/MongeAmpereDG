@@ -5,15 +5,15 @@ This chapter covers the main results on the \MA equation: After a definition of 
 
 The \MA Equation with Dirichlet boundary data states
 \begin{align}
-	 \mydet{D^2 u} &= f \textnormal{ in } \Omega \label{MA eq}\\
-	 u & = g \textnormal{ on } \partial \Omega,
+	 \mydet{D^2 u} &= f \textnormal{ in } \Omega \label{eq: MA eq}\\
+	 u & = g \textnormal{ on } \partial \Omega, \label{eq: MA equation dirilecht}
 \end{align}
-where $D^2 u$ denotes the Hessian of $u$.
+given a bounded domain $\Omega$, $f:\Omega \rightarrow \R$ and $g:\partial \Omega \rightarrow \R$.
 It is a general fully nonlinear partial differential equation meaning it is nonlinear in the highest order derivatives, namely the second derivatives.
 
 Under some restrictions we can expect ellipticity of the \MA operator.
 \begin{proposition}
-	The \MA equation is elliptic for strictly convex function $u$ and $f > 0$.
+	The \MA equation is elliptic for strictly convex functions $u$ and $f > 0$.
 \end{proposition}
 For a proof of this result we refer to \cite{CC1995, GT1977}. In other words we have to restrict ourselves to convex solutions to apply classical existence and uniqueness theory.
 
@@ -64,26 +64,27 @@ u &= g  \text{ on } \partial \Omega
 is called \emph{Aleksandrov solution} of the \MA equation.
 \end{definition}
 
-Aleksandrov solution are also viscosity solutions if $\mu$ is absolutely continuous with Lebesgue measure with a continuous density $f$ \cite[proposition 1.3.4.]{Gutierrez2001} . For $f > 0$ the two solution concepts even coincide \cite[proposition 1.7.1]{Gutierrez2001}. 
+Aleksandrov solutions are also viscosity solutions if $\mu$ is absolutely continuous with Lebesgue measure with a continuous density $f$ \cite[proposition 1.3.4.]{Gutierrez2001} . For $f > 0$ the two solution concepts even coincide \cite[proposition 1.7.1]{Gutierrez2001}. 
 
-\section{Existence and Uniqueness}
-Showing existence of fully nonlinear PDEs is a hard challenge compared to the linear case. The framework used for existence of solution to linear PDEs bases on the Lax-Milgram theorem which is not applicable to the nonlinear case. Nevertheless uniqueness (at least locally) is an important part of the well-posedness of a numerical problem. 
+\section{Existence and Uniqueness} \label{sec: Existence and Uniqueness}
+Showing existence of fully nonlinear PDEs is a hard challenge compared to the linear case. The framework used for existence of solution to linear PDEs bases on the Lax-Milgram theorem which is not applicable in the nonlinear case. Nevertheless uniqueness (at least locally) is an important part of the well-posedness of a numerical problem. 
 For simplicity we constraint ourselves to the elliptic case. 
 
-The existence of classical solutions hangs on the regularity of the right-hand side $f$ and boundary data $g$, as well as on the problem domain $\Omega$. There are several variants and relaxations on assumptions made on $\Omega,f$ and $g$, mostly $\Omega$ is taken to be convex with a smooth boundary and $f,g$ to be smooth, results can be found e.g. in \cite{Gutierrez2001, GT1983, Urbas1998}.
+The existence of classical solutions hangs on the regularity of the right-hand side $f$ and boundary data $g$, as well as on the problem domain $\Omega$. There are several variants and relaxations on assumptions made on $\Omega,f$ and $g$. \\
+One case where existence is assured is if $\Omega$ is taken to be convex with a smooth boundary $\partial \Omega \in C^\infty$,  and $f \in C^{2,\alpha}(\overline \Omega)$ and $g \in C^{4,\alpha}$. This result is taken from \cite[p.357]{Neilan2014}, a prove and more results can be found e.g. in \cite{Gutierrez2001, GT1983, Urbas1998}.
 
 The \MA equation is known for its notorious ambiguity: If $\Omega$ is a domain, one can proof it has at most two solutions, compare \cite[Kap.IV, \S 5,3]{CH1968}. In general these two solutions also exist.
-These is very challenging for numerical schemes. For example the finite difference method with the standard nine-point stencil and Newton's method to solve the resulting nonlinear system produce for different initial guesses sixteen different numerical solutions on a $4 \times 4$ grid\cite{FGN2013}. 
+This is very challenging for numerical schemes. Consider for example the finite difference method with the standard nine-point stencil and Newton's method to solve the resulting nonlinear system, for different initial guesses this approach produces even sixteen different numerical solutions on a $4 \times 4$ grid\cite{FGN2013}. 
 
-In 1989 Ishii proved existence of viscosity solution using the comparison principle and Perron's method \cite{Ishii1989}. For the uniqueness theory a main thesis is the comparison principle for second order equations.
+In 1989 Ishii proved existence of viscosity solutions using the comparison principle and Perron's method \cite{Ishii1989}. For their uniqueness theory a main thesis is the comparison principle for second order equations.
 
-\begin{theorem}[Comparison Principle]
+\begin{theorem}[Comparison Principle{,\cite[p.209]{FGN2013}}]
 	Let $F$ be a fully nonlinear second order operator continuous in all of its arguments.
 	If $F$ is elliptic,	u,v are, respectively a viscosity subsolution and a viscosity supersolution to $F[u](x)=0$ and $u \leq v$ on $\partial \Omega$, then $u \leq v$ in all of $\overline \Omega$.
 \end{theorem}
 A proof can be found for example in \cite[Theorem 17.1]{GT1983}
 
-The comparison principle yields uniqueness of viscosity solutions. If $u$ and $v$ are two viscosity solutions of $\mydet{D^2 u}=f$ with $u=v$ on $\partial \Omega$, then especially holds $u \leq v$ on $\partial \Omega$ and hence by the comparison principle $u \leq v$ in  $\overline \Omega$. Applying the same argument for $v \leq u$ on $\partial \Omega$ we find equality of the solutions. Note, that a viscosity has to be convex since otherwise the \MA operator is not elliptic, hence we have uniqueness in the case of viscosity solutions although classical solution are ambiguous.
+The comparison principle yields uniqueness of viscosity solutions. If $u$ and $v$ are two viscosity solutions of $\mydet{D^2 u}=f$ with $u=v$ on $\partial \Omega$, then especially holds $u \leq v$ on $\partial \Omega$ and hence by the comparison principle $u \leq v$ in  $\overline \Omega$. Applying the same argument for $v \leq u$ on $\partial \Omega$ we find equality of the solutions. Note, that a viscosity has to be convex since otherwise the \MA operator is not elliptic, hence we have uniqueness in the case of viscosity solutions although classical solutions are ambiguous.
 
 \section{The Linearisation of the \MA operator}\label{sec: linearisation}
 
@@ -103,7 +104,7 @@ For later methods, as for example Newton's method it is important to derive the 
 	\[
 	\bilin v w_{MA} = \mycof{D^2 v}:D^2w.
 	\]
-	Note that by Lemma \ref{la: rel det cofactor} then $\mydet {D^2 u} = \frac 1 2 \bilin u u$ holds.
+	Note that by Lemma \ref{la: rel det cofactor} then $\mydet {D^2 u} = \frac 1 2 \bilin u u_{MA}$ holds.
 	
 	Since the \MA form is bilinear and symmetric we have the identity
 	\begin{align}
@@ -129,27 +130,27 @@ Considering also the result of Lemma \ref{la: An application of the divergernce 
 
 
 \section{Types of Numerical Methods for the \MA Equation}
-Since equations of \MA type arise in many areas such as optics, transportation etc. there has been an active research on how to solve. Except for some simple special cases there is no analytical solution known resulting in a widely varied numerical set of methods.
+Since equations of \MA type arise in many areas such as optics, transportation etc. there has been an active research on how to solve those. Except for some simple special cases there is no analytical solution known resulting in a widely varied numerical set of methods.
 
-They can roughly be divided in four categories: Direct Finite difference schemes, methods based on variational principles and approximating infinite-dimensional spaces by finite-dimensional spaces, methods based on finite basis expansions and approximating PDEs at sampling points and the rest. \\
+They can roughly be divided into four categories: Direct Finite difference schemes, methods based on variational principles and approximating infinite-dimensional spaces by finite-dimensional spaces, methods based on finite basis expansions and approximating PDEs at sampling points and the rest. \\
 In the last category one can mainly find methods as the lattice Boltzmann method, these are often designed for special applications.
 
-A lot of the methods result in hard to handle nonlinear system. The most favoured method to solve this system is Newton's method // Often the method of choice is Newton's method. However, it requires an appropriate initial guess//accurate starting value. Finding//providing those is sometimes as tricky//hard as the problem itself.
+A lot of the methods result in a hard to handle nonlinear system. Often the method of choice is Newton's method. However, it requires an appropriate initial guess. Providing those is sometimes as tricky as the problem itself.
 
-We give now an short overview of the different methods and some of their most known representatives. For a more detailed survey we refer the interested reader to the overview article \cite[Section 2.1]{FGN2013}.
+We give now an short overview of the different methods and some of their most known representatives. For a more detailed survey we refer the interested reader to the overview article \cite{FGN2013}.
 
 
 \subsection{Direct Finite Difference Schemes}
 
 We recall the first category consists of direct finite difference schemes, where the term Direct refers to the fact that these schemes directly approximate the in \eqref{MA eq} occurring derivatives. 
-There are two points in favor of those schemes. First, because of their simplicity methods finite difference schemes widely used in "application areas".  And second Barles and Souganidis set up a general framework to analyse finite difference schemes for fully nonlinear elliptic PDEs satisfying a comparison principle \cite{BS1991}, this work especially reduces the convergence analysis for monotone schemes to the verification of stability and consistency.
+There are two points in favor of those schemes. First, because of their simplicity methods finite difference schemes widely used in \quoting{application areas}.  And second Barles and Souganidis set up a general framework to analyse finite difference schemes for fully nonlinear elliptic PDEs satisfying a comparison principle \cite{BS1991}. In particular this work reduces the convergence analysis for monotone schemes to the verification of stability and consistency.
 %As one desires monotone schemes for there exist theorems on their convergence, compare \cite[Theorem 2.1]{BS1991} and monotone schemes even for linear PDEs require wide stencil, compare \cite{MW1953} many finite difference schemes are wide-stencil schemes. 
-Built on this structure and are the works of Benamou, Oberman and Froese \cite{BFO2010, Oberman2008, FO2011}, where they provide some monotone wide-stencil for the \MA equation.
-They are able to prove convergence to the unique convex viscosity solution and experiments show the mentioned methods turn out to be very robust. To the author's knowledge until today all methods proven to converge to the viscosity solution are finite difference schemes.
-Nevertheless these methods have a huge drawback. Monotone schemes even for linear PDEs require wide stencils, compare \cite{MW1953}  and in order to increase accuracy one has not only to refine the grid, but also to increase the size of the stencil. These stencils make the methods difficult to apply if the problem domain $\Omega$ is not easily approximated by rectangles. Another disadvantage is that in general there are no rate of convergence is given, even for classical solutions.
+Built on this structure are the works of Benamou, Oberman and Froese \cite{BFO2010, Oberman2008, FO2011}, where they provide monotone wide-stencil finite difference schemes for the \MA equation.
+They are able to prove convergence to the unique convex viscosity solution and experiments show these methods turn out to be very robust. To the author's knowledge until today all methods proven to converge to the viscosity solution are finite difference schemes.
+Nevertheless these methods have a huge drawback. Monotone schemes even for linear PDEs require wide stencils, compare \cite{MW1953}  and in order to increase accuracy one has not only to refine the grid, but also to increase the size of the stencil. These stencils make the methods difficult to apply if the problem domain $\Omega$ is not easily approximated by rectangles. Another disadvantage is that in general no rate of convergence are given, even if one assumes the existence of classical smooth solutions.
 
 \subsection{Methods based on Variational Principles and Approximating Infinite-dimensional Spaces by Finite-dimensional Spaces}
- We concentrate ourselves in this work to methods of the second area to which beside DG methods methods such as finite element methods, augmented Lagrangian methods, least squares methods and boundary element methods belong. Current DG methods we discuss in the next chapter \ref{ch:DGMongeAmpere} in detail.
+ We concentrate ourselves in this work to methods of the second area to which beside DG methods methods such as finite element methods, augmented Lagrangian methods, least squares methods and boundary element methods belong. Current DG methods we discuss in the next chapter in detail.
 To make use of least square methods one needs at first to formulate the \MA problem as a constrained minimalisation problem.
 \begin{definition}[Constrained Minimalisation Formulation, \cite{FGN2013}]
 Find $(u,p) \in \mathcal{S}$ such that
@@ -165,9 +166,9 @@ Find $(u,p) \in \mathcal{S}$ such that
 %Ensuing from this formulation Dean and Glowinski formulated a saddle point with an augmented Lagrangian and provided an algorithm computing its solution in \cite{DG2004}. The algorithm splits the nonlinear \MA problem to 
 Based on this formulation Dean and Glowinski developed augmented Lagrangian methods and least square approaches \cite{DG2004,DG2006,DG2006a}.
 
-Another approach in this category are the so called \emph{vanishing moment methods}. First introduced in \cite{FN2009} they try to transfer the idea of the vanishing viscosity method: Feng and Neilan add higher order terms to obtain a higher order PDE that is easier to handle than the original one. Then the contribution of this higher order terms is decreased approximating thereby the \MA solution. \\
-One choice for those higher order terms is the square of the Laplacian of $u$ such that the new PDE is fourth order but linear. Additionally to more terms the newly derived PDE gets further boundary conditions to gain well-posedness , yielding to the problem
-\begin{definition}[Vanishing Moment Equations]
+Another approach in this category are the so called \emph{vanishing moment methods}. First introduced in \cite{FN2009} they try to transfer the idea of the vanishing viscosity method: Feng and Neilan add higher order terms to obtain a higher order PDE that is easier to handle than the original one. Then the coefficients of this higher order terms are decreased to gain an approximation of the \MA solution. \\
+One choice for those higher order terms is the square of the Laplacian of $u$ such that the new PDE is fourth order but linear. Additionally the newly derived PDE has to demand further boundary conditions to gain well-posedness , yielding to the problem
+\begin{definition}[Vanishing Moment Equations{\cite[(4.6)]{FGN2013}}]
 	The vanishing moment method approximates \eqref{MA eq} by the sequence
 	\begin{align}
 		\varepsilon \triangle^2 u^\varepsilon - \mydet{D^2 u^\varepsilon} =& -f \text{ in } \Omega \label{eq: VMM 1}\\ 
@@ -175,7 +176,7 @@ One choice for those higher order terms is the square of the Laplacian of $u$ su
 		\triangle u^\varepsilon = & \varepsilon \text{ on } \partial \Omega \label{eq: VMM 3}
 	\end{align}
 The limit $\lim\limits_{\varepsilon \rightarrow 0 } u^\varepsilon$, if exists is called a \emph{moment solution} of the \MA equation.
-Of course the vanishing moments is not directly connected to a solution method, for example one could solve \eqref{eq: VMM 1}-\eqref{eq: VMM 3} with a finite difference scheme or a appropriate Galerkin Method.
+Vanishing moment methods are not directly connected to a solution method, for example one could solve \eqref{eq: VMM 1}-\eqref{eq: VMM 3} with a finite difference scheme or a appropriate Galerkin Method.
 Feng and Neilan provide a theoretical analysis for the radially symmetric case and numerical experiments in \cite{FN2009, Neilan2010, FN2011a}. One interesting point is that this method autonomously chooses the unique convex viscosity solution, in even dimensions substituting $\varepsilon$ by $-\varepsilon$ in  \eqref{eq: VMM 1} yields to the other, concave solution to the \MA problem.  
 \end{definition}
 

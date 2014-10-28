@@ -1,17 +1,21 @@
+\todo{introduction}
+
 \section{A Picard Iteration for the \MA equation}
-
-For quasilinear PDEs such as $\nabla \cdot (A(u) \nabla u ) = f$ it is common to determine the solution via a fixed point iteration. \todo{cite}The key aspect lies in a decoupling of the coefficient matrix $A(u)$ and $\nabla u$. Hence, one solves the equations
+For quasilinear PDEs (cf. Definition \ref{def: categories of PDEs}) such as the convection equation $\nabla \cdot (A(u) \nabla u ) = f$ it is common to determine the solution via a fixed point iteration. The key aspect is a decoupling of the coefficient matrix $A(u)$ and $\nabla u$. Hence, one solves iteratively  for $i\in \N$ the equations
 \[
-	\nabla \cdot (A(u^{i} )\nabla u^{i+1}) = f  \text{ and } \nabla \cdot (A(u^{i+1}) \nabla u^{i}) = f, \text{ respectively}
+	\nabla \cdot (A(u^{i} )\nabla u^{i+1}) = f   \quad \text{      and      }\quad \nabla \cdot (A(u^{i+1}) \nabla u^{i}) = f, \text{ respectively}.
 \] 
-iteratively.
+This kind of linearisation is also called Picard linearisation method and is very favoured to linearise the convection terms in the Navier-Stokes equations.
 
-In this spirit we want to decouple the derivates in the \MA equation. Recall, the \MA equation states
+In this spirit we aim to decouple of the derivatives in the strongly nonlinear \MA such that the decoupled PDEs are only linear. 
+
+Before we start, we slightly change a notation. Differing to the preceding sections we denote the elements of $\Omega \subset \R^2$ by  $(x,y)^t$. To shorten and facilitate terms we refer to their partial derivatives with subscripts as for example $\dxy{x}{y} u = u_{xy}$.
+Thus, the two-dimensional \MA equation \eqref{eq: MA eq} states
 \begin{align}
  \mydet{D^2 u} &= f \nonumber \\
  	\Leftrightarrow \qquad  \dxx{x_1} u \dxx{x_2} u -\dxy {x_1}{x_2} u \dxy{x_2}{x_1} u  &= f. \label{eq:mongeAmpere detForm}
 \end{align}
-To shorten and facilitate terms we will denote $x \in \Omega \subset {\R^2} $ by $(x,y)^t$ and the partial derivates with subscripts as for example $\dxx{x_1} u = u_{xx}$.
+To shorten we will denote $x \in \Omega \subset {\R^2} $ byand 
 
 At first, we multiply \eqref{eq:mongeAmpere detForm} by $2$ and expand the left-hand side
 \begin{align}
@@ -19,42 +23,46 @@ At first, we multiply \eqref{eq:mongeAmpere detForm} by $2$ and expand the left-
  	\dyy u {x} \dyy u {y}+\dyy u {x} \dyy u {y} -\dyx u {x}{y} \dyx u{y}{x} -\dyx u {x}{y} \dyx u{y}{x} &=2 f. 
 \end{align}
 
-Decoupling into the two functions $v = u ,w = u$ and reordering terms we have
+Formally decoupling into the two functions $v = u ,w = u$ and reordering terms we have
 \begin{align}
-	w_{yy} v_{xx}- w_{xy} v_{yx} - w_{yx} v_{xy} +w_{xx} v_{yy} = 2f \label{eq:decoupled PDE start}
+	w_{yy} v_{xx}- w_{xy} v_{yx} - w_{yx} v_{xy} +w_{xx} v_{yy} = 2f. \label{eq:decoupled PDE start}
 \end{align}
-Rewriting this by matrix frobenius product yields to
+Rewriting this by matrix Frobenius product (cf. Definition \ref{def: frobenius product})
 \begin{align}
  \begin{pmatrix} w_{yy} & -w_{xy}  \\ -w_{yx} & w_{xx} \end{pmatrix}: \begin{pmatrix} v_{xx} & v_{yx}  \\  v_{xy} & v_{yy} \end{pmatrix} = 2f.
 \end{align}
-We see that the left matrix is the cofactor matrix of the hessian (Definition \ref{def: cof matrix}) and the right one the hessian itself and find
+We see that the left matrix is the cofactor matrix of the Hessian (cf. Definition \ref{def: cof matrix}) and the right one is the Hessian itself and find
 \begin{align}
-		\mycof {D^2 w }:D^2 v  = 2f  \label{eq:short formula}
+		\mycof {D^2 w }:D^2 v  = 2f. \label{eq:short formula}
 \end{align}
-Note, that this derivation of decoupling of $v,w$ is chosen for it is a very intuitive approach. Alternatively \eqref{eq:short formula} can quickly be derived from the identity $\mycof {D^2 u }:D^2 u  = d \mydet{D^2 u}$ of Lemma \ref{la: rel det cofactor}
+Note that this derivation of decoupling of $v$ and $w$ is chosen for it is a very intuitive. Alternatively \eqref{eq:short formula} can directly be derived from the identity $\mycof {D^2 u }:D^2 u  = d \mydet{D^2 u}$ of Lemma \ref{la: rel det cofactor}.
 
 Substituting the identity of Lemma \ref{la: An application of the divergernce product rule} and multiplying with -1 we find
 \begin{align}
 	- \nabla \cdot \left( \mycof{ D^2 w} \nabla v \right)  = -2f.  \label{eq:decoupled PDE}
 \end{align}
-For a fixed $w$ the left-hand side now is quasilinear in $v$ opposed to the nonlinearity in $u$ in the original PDE. Since we did not use any independence between $v,w$ for any smooth functions $u$ satisfying the classical formulation of the \MA equation also 
-\begin{align}
-- \nabla \cdot \left( \mycof{ D^2 u} \nabla u \right)  = -2f.  \label{eq: analytical fixed point iteration}
-\end{align}
-holds. 
 
-Thus, it is natural to examine the fixed point iteration
+For a fixed $w$ the left-hand side now is linear in $v$ opposed to the strong nonlinearity in $u$ in the original PDE, it is a Generalised Poisson equation in $v$ as we have defined in Definition \ref{def: General Poisson Problem}. 
+Furthermore as it is easy to see in \eqref{eq:decoupled PDE start} the left-hand side is symmetric in $v$ and $w$. Thus, it is natural to examine a sequence of PDEs where alternating either $v$ or $w$ is fixed. 
+
+Adding also the Dirichlet boundary condition we obtain the Picard iteration
 \begin{align}
 	\begin{split}
 	- \nabla \cdot \left( \mycof{ D^2 u^i} \nabla u^{i+1} \right)  &= -2f  \text{ in } \Omega \\
-		u^{i+1} &= g \textnormal{ on } \partial \Omega
+		u^{i+1} &= g \textnormal{ on } \partial \Omega.
 	\label{eq:fixed point iteration}
 	\end{split}
 \end{align}
-for its applicability for numerical schemes approximating a \MA solution.
 
-\section{SIPG formulation of an Iteration Step}\label{sec: SIPG MA}
-Since in every iteration \eqref{eq:fixed point iteration} states a Generalised Poisson Equation we can apply the derived  SIPG method of section \ref{sec: SIPG} directly: Given $u^i_h$ find $u^{i+1}_h \in \mathcal P^k_h$ satisfying
+Taking a closer look at the derivation of \eqref{eq:decoupled PDE} we see only rearrangements and the smoothness of $w$ were used. Hence, for any smooth functions $u$ the \MA equation can also be written as
+\begin{align}
+- \nabla \cdot \left( \mycof{ D^2 u} \nabla u \right)  = -2f.  \label{eq: analytical fixed point iteration}
+\end{align}
+This also implies that every solution of an \MA problem is a fixed point of the Picard iteration. It remains to test the Picard iteration converges to its fixed point and hence yields an approximation of the solution of a \MA equation. 
+
+
+\section{SIPG formulation of an Picard Iteration Step}\label{sec: SIPG MA}
+Since in every iteration \eqref{eq:fixed point iteration} states a Generalised Poisson equation we can apply the derived  SIPG method of Section \ref{sec: SIPG} directly: Given $u^i_h\in \mathcal P^k_h$ find $u^{i+1}_h \in \mathcal P^k_h$ satisfying
 \begin{align}
  &\myIntX {\Omega} {\nabla v_h \cdot \cof(D_h^2 u_h^{i}) \nabla u_h^{i+1}}  \nonumber\\
  & -\sum\limits_{e \in \edges}\myIntS e { \jump {v_h \average { \cof(D_h^2 u^{i}) \nabla u_h^{i+1}} }}
@@ -66,180 +74,62 @@ Since in every iteration \eqref{eq:fixed point iteration} states a Generalised P
     	\label{eq: sipg iteration}
 \end{align}
 
+Now that we derived a new iterated DG method to solve the \MA equation we compare of \eqref{eq: sipg iteration} to Newton's method and the method introduced in Section \ref{sec: Brenner method}. 
+
 \input{comparison.tex}
 
-The analysis revealed some problems of this Picard iteration approach solving the \MA problem. The next section addresses the major obstacles for a DG method solving the \MA equation and ideas how to solve those.
-\section{Challenges for a \MA DG method}
-Reviewing existing DG methods for the \MA we learned some ?(subjects, matter, points) we have to pay attention to  while examining the fixed point iteration. The next subsections treat the most challenging points.
-
-\subsection{Convexfication} \label{subsec: convexification}
- The \MA equation in general does not define a unique solution. For most applications the unique convex solution is required. The question is there a appropriate method to oblige a numerical method to select only convex solutions.
-The most intuitive way is to convexify the solution after every step. Thereby, on one hand we make sure the right solution is approximated and on another hand we smooth the Generalised Poisson solution. This could also improve the quality of second derivatives of our interim solution. % aiming for a better approximation of the second derivatives.
-Unfortunately convexification is not simple. For our approach we choose a Bernstein basis for the ansatz space at first.
-\begin{definition}[Bernstein-B\'ezier form]\label{def: BernsteinBezierForm}
-	Any univariate polynomial of degree $k$ on a triangle $T$ can be represented in \emph{Bernstein-B\'ezier form} as
-\begin{align}
-	p(x) = \sum_{i+j+k = d}  c_{ijk} B^d_{ijk}(x),\label{eq: BernsteinBezierForm}
-\end{align}
-where
-\[
-	B^d_{ijk}(x) = \frac {d!}{i!j!k!} \beta_1^i \beta_2^j \beta_3^k
-\]
-are the \emph{Bernstein polynomials} of degree $k$ and $\beta = (\beta_1, \beta_2, \beta_3)$ are the barycentric coordinates of $x$ relative to the triangle $T$.
-The points $c_{ijk}$ are called \emph{control points} and the polygon defined by the control points \emph{B\'ezier control polygon}.
-\end{definition}
-
-The benefit of the Bernstein-B\'ezier form is that there can be formed conditions ensuring the convexity of the polynomial on a triangle. Namely there is a connection between the convexity of the control polygon and the convexity of the polynomial.
-\begin{theorem}[ {\cite[Theorem 4.6]{Dahmen1991}}]
-	The convexity of the control polygon implies the convexity of the represented polynomial.
-\end{theorem}
-Note, that this result holds only for a single triangle and not for the convexity of the whole patch. Nevertheless, piecewise convexity is very important for the condition of the Generalised Poisson problem such that it is worth a try to convexify the union of all control polygons.
-Due to their importance in computer graphics, there are a lot of convex hull algorithm available. Hence it suggests itself to apply a convex hull algorithm on given Bernstein-B\'ezier coefficients to enforce convexity. However, this approach is designated to go amiss for a convex hull algorithm only operate on a set of point and does not necessarily produce the same connectivity the control polygon implies. An example for that is given in figure \ref{fig: diff connectivity}:
-\begin{figure}[h]
-\begin{subfigure}[b]{.5\textwidth}
-	\includegraphics[trim=3cm 8cm 3cm 8cm, width=1.\textwidth]{control_polygon2.pdf}
-	\caption{control polygon}
-\end{subfigure}
-\begin{subfigure}[b]{.5\textwidth}
-	\includegraphics[trim=3cm 8cm 3cm 8cm, width=1.\textwidth]{convex_hull2.pdf}
-	\caption{lower convex hull}
-\end{subfigure}
-\caption{The control polygon and lower convex hull of a given set of control points}
-\label{fig: diff connectivity}
-\end{figure}
-While the the control polygon is obviously not convex, the surface of the lower convex hull of the control points is convex because it connects the inner control points differently.
-
-\todo{altere idee nur fur c0 splines}
-In the eighties mathematicians pursuit an approach based on the Hessian. They derived quadratic conditions on the B\'ezier coefficients equivalent to its convexity. Later this conditios were relaxed to a set of linear conditions, yet loosing necessity. To set up these convexity constraints we first need to define the difference operator
-\begin{definition}[Difference Operator]
-	$\Delta_{\mu \nu}$ is the \emph{difference operator} along the edge $(v_\mu, v_\nu)$ as for example
-	\begin{align*}
-		\Delta_{21} c_{ijk} &= c_{i,j+1,k} -c_{i+1, j,k}  \\
-		\Delta_{31}^2 c_{ijk} &= c_{i,j,k+2} -2c_{i, j+1,k+1} +c_{i, j+2,k} \\
-		\Delta_{12} \Delta_{32} c_{ijk} &= c_{i,j+1,k+1} -c_{i+1, j,k+1} - c_{i,j+2,k} +c_{i+1, j+1,k}\\	\end{align*}
-\end{definition}
- 
-A result due to Chang and Feng \cite{CD1984} are the following quadratic constraints.
-\begin{theorem}[{\cite[p.2]{LS2007}}]
-	A polynomial $p:\Omega \rightarrow \R$ for $\Omega \subseteq \R$ is convex on a triangle $T$ if and only if the matrix
-	\[
-		\begin{pmatrix}
-			\Delta_{21}^2 c_{ijk} & \Delta_{31} c_{ijk} \Delta_{32} c_{ijk}\\
-			\Delta_{31}c_{ijk} \Delta_{32} c_{ijk} & \Delta_{31}^2 c_{ijk} 
-		\end{pmatrix}
-	\]
-	is nonnegative definite for each $i + j + k =2 $.
-\end{theorem}
-For an overview of relaxations of these conditions, we refer to \cite{SS2010}. An example with 12 inequalities is 
-\begin{theorem}[Sufficient Linear Convexity Conditions, {\cite[Colloray 2.8]{SS2010}}]
-\label{thm: convex cond on triangle}
-	A polynomial $p$ is convex on a triangle $T$ if its B\'ezier coefficient $c_{ijk}$ satisfy
-	\begin{align*}
-		&(\Delta_{21} + 2\Delta_{31}) \Delta_{31} c_{ijk} \geq 0, 
-		&   (\Delta_{21}^2 + 3\Delta_{21} \Delta_{31} + 2 \Delta_{31}^2) c_{ijk} \geq 0, \\
-		& \Delta_{21}(2\Delta_{21} + \Delta_{31})  c_{ijk} \geq 0, 
-		&   (2\Delta_{21}^2 + 3\Delta_{21} \Delta_{31} +  \Delta_{31}^2) c_{ijk} \geq 0, \\  
-		&(\Delta_{32} + 2\Delta_{12}) \Delta_{12} c_{ijk} \geq 0, 
-		&   (\Delta_{32}^2 + 3\Delta_{32} \Delta_{12} + 2 \Delta_{12}^2) c_{ijk} \geq 0, \\
-		&\Delta_{32} (2\Delta_{32} + \Delta_{12}) c_{ijk} \geq 0, 
-		&   (2\Delta_{32}^2 + 3\Delta_{32} \Delta_{12} +  \Delta_{12}^2) c_{ijk} \geq 0, \\  
-		&(\Delta_{13} + 2\Delta_{23}) \Delta_{23} c_{ijk} \geq 0, 
-		&   (\Delta_{13}^2 + 3\Delta_{13} \Delta_{23} + 2 \Delta_{23}^2) c_{ijk} \geq 0, \\
-		& \Delta_{13}(2\Delta_{13} + \Delta_{23})  c_{ijk} \geq 0, 
-		&   (2\Delta_{13}^2 + 3\Delta_{13} \Delta_{23} +  \Delta_{23}^2) c_{ijk} \geq 0   
-	\end{align*}
-	for all $i + j + k =2 $.
-\end{theorem}
-Note, the latter conditions only ensure convexity on a single triangle. That would suffice for piecewise polynomials contained $C^1$ because for them unlike to splines contained in $C^0$ convexity on each triangle implies global convexity. To patch this matter Schumaker and Speleers introduce further conditions making sure $C^0$ splines are convex across triangle boundaries.
-\begin{theorem}[Sufficient Conditions across Edges,{ \cite[Theoerem 3.6]{SS2014} }]\label{thm: convex cond across edge}
-	Let $p$ be a piecewise polynomial being convex on every triangle. Suppose its B\'ezier coefficients for every interior edge $e =(v_\kappa, v_\mu)$ fulfill 
-	\begin{align}
-		{\hat c_{i,j,1}} = \beta_1^c c_{i+1, 0,j} +\beta_2^c c_{i,1,j} + \beta_1^c c_{i, 0,j+1}, \; i+j=d-1, \label{eq: convexity across edge}
-	\end{align}
-where  $\{c_{i,j,k}\}_{i+j+k=d}$ and $\{ {\hat c_{i,j,k}}\}_{i+j+k=d}$ are the B\'ezier coefficients of $p$ relative to the two triangles $T_1 = \langle v_\kappa, v_\lambda, v_\mu \rangle$ and $T_2 = \langle v_\kappa, v_\mu, v_\nu \rangle$ sharing the edge $e$, and $(\beta_1^c,\beta_2^c,\beta_3^c)$ are the barycentric coordinates of $v_\nu$ with respect to $T_1$. Then $p$ is convex.
-\end{theorem}
-
-\begin{figure}[h]
-	\input{triangle_convexity_condition.pgf}
-	\caption{Two triangles and B\'ezier control points for polynomials of degree $k=2$}
-\end{figure}
-
-For quadratic splines Schumaker and Speleers even prove the inversion on convex domains $\Omega$, namely if for every interior edge its coefficients satisfy \eqref{eq: convexity across edge} then the corresponding spline is convex.
-This result does not generalise for higher degrees. In fact they give a counterexample for degree $k = 3$.
-
-Now we apply the new insights//methods to the function given after solving the generalised poisson problem stated in \ref{sec: SIPG MA}.
-Given the DG solution of the Generalised Poisson problem $u^{gp}_h$ we seek for a convex spline minimising the error at the B\'ezier control points, i.e. we want to find the B\'ezier coefficients $c$ minimising
-\begin{align}
-		\lVert A c - b \rVert_2, \qquad \text{ such that } Cc \geq 0, \label{eq: convex lsq}
-\end{align}
-where $A$ is the matrix evaluating the to $c$ corresponding piecewise polynomial at the B\'ezier control points, $b$ are the function values of $u^{gp}_h$ at the B\'ezier control points and $C$ is the matrix containing the conditions ensuring convexity on the whole domain.
-
-However, solving a linearly constrained least squares problem, respectively is nontrivial. So, when using this approach one should ensure a convexification is justified. Also, one has to keep in mind that the constraints in $C$ are sufficient but not necessary. We discuss in the numerical results whether this approach fulfills our requirements on a convexificiation.
-
+After this analysis it is not clear how the Picard iteration practically behaves. The next section addresses some first numerical results of the Picard iteration and first obstacles when solving simple problems.  
+\section{Challenges for the Picard iterations}
+Reviewing existing DG methods for the \MA we learned some issues we have to pay attention to  while examining the performances of the Picard iteration. The next subsections treat the most challenging points.
+At the beginning there always is the question of a starting point $u_h^0$.
 \subsection{Initial Guess}\label{sec: initial guess}
 Just as most methods for the \MA equation the fixed point iteration requires an initial guess. Two approaches are very favoured in the literature.
 In \cite[Remark 2.1]{DG2006a} has been shown a strong connection between the \MA problem, and  the following Poisson problem
 \begin{align}
 	\begin{split}
-	\triangledown u &= \sqrt{2f} \text{ in } \Omega \\ 
+	\triangledown u &= \sqrt{2f} \text{ in } \Omega, \\ 
 	u &= g \text{ on }\partial \Omega.
 	\end{split}\label{eq: start sqrt_f}
 \end{align}
 An advantage of this approach is the compliance of boundary conditions.
 
-Alternatively a nested iteration or multilevel ansatz can be utilised. At a the coarsest level $h_1$ one chooses any convex function as initial guess $u^0_{h_1}$, mostly $\frac 1 2 ({x_1^2} + {x_2^2}) $ for it is convex polynomial with a low degree. For finer triangulations $\mathcal{T}_{h_{l}}$ the solution of the previously computed solution $u_{h_{l-1}}$is taken for a starting point. Of course both approaches can be combined using the Poisson solution on the coarsest grid whereas later taking quasi-interpolants.
+Alternatively a nested iteration can be utilised. At a the coarsest level with a grid width $h_1$ one chooses any convex function as initial guess $u^0_{h_1}$. Often the polymial $\frac 1 2 ({x_1^2} + {x_2^2}) $ is taken for it is convex and has a low degree. For finer triangulations $\mathcal{T}_{h_{l}}$ the solution of the previously computed solution $u_{h_{l-1}}$is taken as a starting point. Of course both approaches can be combined using the Poisson solution of \ref{eq: start sqrt_f} on the coarsest grid whereas later taking quasi-interpolants.
 
-The second approach regards the fact that probably the method's robustness decreases for finer meshes.
+In favour of the second approach is that it takes into account that the method's robustness may decrease for finer meshes.
 
-
+Now we are able to perform the Picard iteration on some simple example cases.
 \subsection{An additional Penalty Parameter}
-At the beginning we implemented the SIPG method exactly as stated in section \ref{sec: SIPG MA}. The polynomial degree $k$ of the ansatz and trial space $\mathcal V_h^k$ was taken to be two.
-As an initial guess served the solution of \eqref{eq: start sqrt_f} , the penalty parameter was chosen to be 30 and the domain $\Omega$ the unit square$[0,1]^2$.
+At the beginning the SIPG method is implemented exactly as stated in section \ref{sec: SIPG MA}. The polynomial degree $k$ of the ansatz and trial space $\mathcal V_h^k$ was taken to be two.
+As an initial guess served the solution of \eqref{eq: start sqrt_f} , the penalty parameter $\sigma$ was chosen to be 30 and the domain $\Omega$ to be the unit square $[0,1]^2$.
 
 For first numerical results we consider the rather simple equation
 \begin{align}
-	\mydet {D^2 u} &= 1 \text{ in } \Omega \\ 
-	u &= \frac 1 2 (x_1^2 + x_2^2 )\text{ on }\partial \Omega.	
+	\mydet {D^2 u} &= 1 \text{ in } \Omega, \\ 
+	u &= \frac 1 2 (x_1^2 + x_2^2 )\text{ on }\partial \Omega,
 \end{align}
-with the exact classical solution $\frac 1 2 (x_1^2 + x_2^2 )$. However, as one may expect by the results given in the analysis in Section \ref{sec: DG analysis}, even for this rather simple example the implementation fails the consistency check. Given the exact solution which is already contained in $V_h$ as starting point the $L2$ error steadily increases, as shown in figure \ref{fig: consisctency_first_try}
-\begin{figure}[h]
+which has the exact classical solution $\frac 1 2 (x_1^2 + x_2^2 )$. 
+
+However, even for this rather simple example the implementation shows inconsistencies: Given the exact solution which is already contained in $V_h$ as starting point the $L^2$ error steadily increases, as shown in Figure \ref{fig: consisctency_first_try}.
+\begin{figure}[H]
 	\centering
 	\includegraphics[trim = 2cm 4cm 1cm 4cm, width=1\textwidth]{plots/consisctency_first_try.pdf}
 	\caption{Relative $L2$ error on a grid with $h=\frac 1 2$}
 	\label{fig: consisctency_first_try}
 \end{figure}
-Looking at steps shortly before the method diverges one is able see in the solution the underlying grid structure. Everywhere a triangle edge lies sharps edges arise. Besides continuity the solution on two triangles seems independent although the exact solution is absolutely  regular.
+Examining the plots of solutions $u^i_h$ shortly before the method diverges it catches the eye that they have developed some sharp edges although the initial function and the solution are absolutely smooth. In particular the sharp edges of the solution coincide with the edges of the finite element grid. A visual inspection suggest that these solution $u^i_h$ are $C^0$ continuous, but lack higher regularity.
 
-As the decoupling approach works for quasilinear methods, so it is a good starting to analyse the main differences. This leads us to the question: How good serves the second derivative of the Poisson solution for an approximation of the second derivative of the exact solution?
-We illustrate the significance of this question by a example
-\begin{example}
-	Let $\tilde u$ be an approximation of $u\in C^2(\R)$ with $u-\tilde u \in \bigO(h)$. 
-	%Differentiating twice we are left with $\dxx{x} u(x)-\dxx{x} \tilde u(x)\in \bigO(h^{-1})$ meaning a decrease of the grid size comes along with a increase of the error in the second derivatives.
-	%????????//
-	Differentiating twice we are left with the taylor approximation
-	\begin{align*}
-		\dxx{x} u(x)-\dxx{x} \tilde u(x) \approx \frac{\tilde u(x+2h) - 2\tilde u(x) - \tilde u(x-2h) - (u(x+2h) - 2u(x) - u(x-2h))} {4h^2} \\
-		 \in \bigO(h^{-1})
-	\end{align*}
-	This shows, even for small $h$ a good approximation of $u$ does not imply that its second derivatives are good approximations for second derivatives of $u$.
-\end{example}
-
-Let us recall the geometric interpretation of the second derivative, it indicates the curvature of a function and hence also describes the convexity, concavity respectively.
-
-One improvement could be the smoothing process during a convexification for it will smooth away all unintended concave curvatures. But probably the result will be still unsatisfiable because convexification does not affect sharp edges at triangle transitions.
-
-Another idea is force more regularity on the first derivative and thus, implicitly obtain a more steady solution. This suits to the ansatz pursued by Neilan described in section \ref{subsec: disrete Hessian}, his proposed correction terms vanish as the gradient jump across internal edges tends to zero.
-Hence, we add the following normal derivatives penalty term 
+An idea is force more regularity on the first derivative and thus, implicitly obtain a more smooth solution. This suits to the improvement Neilan introduced for low degrees \cite[Section 5]{Neilan2014} which is also described at the end of Section \ref{subsec: disrete Hessian}. His proposed correction terms vanish as the gradient jump across internal edges tends to zero.
+Hence, we add the same normal derivatives penalty term 
 \begin{align}
 	\sum_{e \in \edgesi} \sigma_g |e |\myIntS e {\jump{ \nabla u} \jump {\nabla v}} \label{eq: grad penalty term}
 \end{align}
-to the formulation in \eqref{eq: sipg iteration}.
-Note, that this avoids variational crimes by interior jumps of derivatives along interior edges of the triangulation. But we implicitly imply that the desired solution is contained in $H^2(\Omega)$, it is not yet clear how this term behaves for less regular solution.
-But, indeed with the new penalisation of the gradient the implementation is consistent with the previous example. The consistency check was carried out with the choice $\sigma_g$ equal to $\sigma=30$, as well as for much smaller choices.
+to the left-hand side of \eqref{eq: sipg iteration}.
+Note that this avoids variational crimes by interior jumps of derivatives along interior edges of the triangulation. We implicitly assume that the desired solution is contained in $H^2(\Omega)$, it is not yet clear how this term behaves for a less regular solution.
+But, indeed with the new penalisation of the gradient we observe that an modified implementation is consistent with the previous example. The same test as at the beginning of this section was carried out with the choice $\sigma_g$ equal to $\sigma=30$ and now the $L^2$ errors stayed for 200 iterations numerically zero.
 %\todo{Noelle gluecklich machen querschnitt}
 
-Nevertheless, starting over with the initial guess from \eqref{eq: start sqrt_f} the method is instable and diverges. But the results yet are very remarkable. As shown in figure \ref{fig: oscillation} the error is oscillating while diverging  to infinity.
-\begin{figure}[h]
+Nevertheless, starting over with the initial guess from \eqref{eq: start sqrt_f} the method is unstable and diverges. But the results yet are very remarkable. As shown in Figure \ref{fig: oscillation} the error is oscillating while diverging  to infinity.
+\begin{figure}[H]
 	\centering
 	\includegraphics[trim = 2cm 4cm 1cm 4cm, width=1\textwidth]{plots/oscillation.pdf}
 	\caption{Relative $L2$ error on a grid with $h=\frac 1 4$ and gradient penalty}
@@ -258,13 +148,15 @@ Nevertheless, starting over with the initial guess from \eqref{eq: start sqrt_f}
 \caption{The solution in two consecutive iterations}
 \label{fig: diff iteration}
 \end{figure}
-Figure \ref{fig: diff iteration} shows to consecutive steps, the error $u-u_{exact}$ is denoted by the surface color. We see that the solution after 23 steps lies above of the exact solution, while one iteration later the Poisson solution lies below of it. These frames are exemplary for the behaviour of our numerical solution. After a step above the solution one below follows, it looks like the solution is split into two subsequences.  And as we have also seen in the devolution of the error, these subsequences seem even to drive each other away from the actual solution.
+Figure \ref{fig: diff iteration} shows two consecutive steps, the error $u-u_{exact}$ is denoted by the surface color. We see that the solution after 23 steps is mostly red, i.e. it is pointwise greater than the exact solution, while one iteration later the Poisson solution is mostly blue, i.e. it is pointwise smaller than the exact solution. These frames are generic for the behaviour of the intermediate Picard solutions. After a step with a solution $u_h^i$ with $u_h^i \geq u_{exact}$ the solution of the next intermediate function $u`{i+1}_h$ fulfills $u^{i+1_h} \leq u_{exact}$. It looks like the solution is split into two subsequences.  And as we have also seen in the devolution of the error, these subsequences diverge from the exact solution.
 
-To prevent our algorithm from doing so we couple the two subsequences by a damping. Before we continue iterating we combine the current solution with the function calculated one step before by an affine composition. Hence we got a further parameter $\alpha$, namely the amount with that the new solution contributes to the iteration.
+%Theoretically it is possible there are two different functions $v,w\in V$ such that $v$ is the solution to the decoupled PDE (cf. \eqref{eq:decoupled PDE}) fixing $w$ and vice versa $w$ the solution of \eqref{eq:decoupled PDE} fixing $v_h$. 
+To prevent our algorithm from doing so we couple the two subsequences by a damping. After calculating the new Picard step $u^{i+1}_h$ we combine the current solution with the function calculated one step before by a convex composition $ \alpha u_h^{i+1} + (1- \alpha) u_h^i$ for $\alpha \in (0,1)$. Hence we got a further parameter $\alpha$ to adjust the Picard iteration.
 
+Another parameter sensible to introduce is a parameter to control the ellipticity constant of the used SIPG method.
 \subsection{Modification of the Cofactor Matrix}\label{sec: mod cofactor}
-For the condition of the problem it is necessary that the eigenvalues of the diffusion matrix, namely $\mycof{D_h^2 u_h^i}$ are positive for all $x$. Even better is if they are constrained from below with some constant $\varepsilon$. 
-To suffice this criteria we introduce a modified cofactor matrix
+For a better ellipticity constant of the Generalised Poisson problem as stated in Section \ref{sec: SIPG MA} it is necessary that the eigenvalues of the diffusion matrix, namely $\mycof{D_h^2 u_h^i}$ are constrained from below with some constant $\varepsilon$ (cf. results of Section \ref{sec: SIPG}, in particular Theorem \ref{thm: SIPG stability}).
+To fulfill this criterion we just add positive multiples of the identity matrix until the smallest eigenvalue becomes $\varepsilon$. Hence, we introduce a modified cofactor matrix
 \[ 
 	\mycofMod {D^2_h u_h} = \begin{cases}
 	\mycof {D^2_h u_h} & \lambda \geq \varepsilon	\\
@@ -272,7 +164,140 @@ To suffice this criteria we introduce a modified cofactor matrix
 	& else
 	\end{cases}
 \]
-where $\lambda$ is the minimal eigenvalue of $ \mycof {D^2_h u_h}$ and $Id$ is the $d \times d$-Identity matrix. Now we replace all occurrences of $\mycof {D^2_h u_h}$ in \eqref{eq: sipg iteration} by $\mycofMod {D^2_h u_h}$ to stabilise the problem condition.
+where $\lambda$ is the minimal eigenvalue of $ \mycof {D^2_h u_h}$ and $Id$ is the $d \times d$-Identity matrix. 
+Now we replace all occurrences of $\mycof {D^2_h u_h}$ in \eqref{eq: sipg iteration} by $\mycofMod {D^2_h u_h}$ to stabilise the problem.
+
+The case that a cofactor matrix $\mycof {D^2_h u_h} $ does have a negative eigenvalue or even a complex one \todo{HIER}
+
+%Let us recall the geometric interpretation of the second derivative, it indicates the curvature of a function and hence also describes the convexity, concavity respectively.
+%One improvement could be the smoothing process during a convexification for it will smooth away all unintended concave curvatures. But probably the result will be still unsatisfiable because convexification does not affect sharp edges at triangle transitions.
+
+\subsection{Convexfication} \label{subsec: convexification}
+ The \MA equation in general does not posses a unique solution (cf. Section \ref{sec: Existence and Uniqueness}). Yet for most applications the (unique) convex solution is required. The question is if there exists an appropriate way to oblige the Picard iteration to select only convex solutions.\\
+The most intuitive way is to convexify the solution after every step. %Thereby, on one hand we make sure the right solution is approximated and on another hand we smooth the Generalised Poisson solution. This could also improve the quality of second derivatives of our interim solution. % aiming for a better approximation of the second derivatives.
+Unfortunately convexification is not simple. As there are a lot of results on the convexity of Bernstein polynomials, we choose a Bernstein basis for the ansatz space.
+\begin{definition}[Bernstein-B\'ezier form{, \cite[Section.2]{SS2010}}]\label{def: BernsteinBezierForm}
+	Any univariate polynomial $p:T \rightarrow \R$ of degree $d$ on a triangle $T$ can be represented in \emph{Bernstein-B\'ezier form} as
+\begin{align}
+	p(x) = \sum_{\stackrel{i,j,k \in \N}{i+j+k = d}}  c_{ijk} B^d_{ijk}(x),\label{eq: BernsteinBezierForm}
+\end{align}
+where
+\[
+	B^d_{ijk}(x) := \frac {d!}{i!j!k!} \beta_1^i \beta_2^j \beta_3^k
+\]
+are the \emph{Bernstein polynomials} of degree $k$ and $\beta = (\beta_1, \beta_2, \beta_3)\in \R^3$ are the barycentric coordinates of $x \in \R^2$ relative to the triangle $T$.
+
+We call $c=\left(c_{ijk}\right)_{i,j,k \in \N, i+j+k=d}$ also the \emph{B\'ezier coefficents}.
+\end{definition}
+
+The B\'ezier coefficients also induce a geometric interpretation. Suppose $T=\langle v_1, v_2, v_3 \rangle$ and the domain points
+\begin{align}
+	\xi_{ijk} := (i v_1+jv_2 + k v_3) / (i+j+k). \label{eq: domain points}
+\end{align} 
+Then we call 
+\begin{align}
+	Q_{ijk} := (\xi_{ijk}, c_{ijk}) \label{eq: control points}
+\end{align} the \emph{control points} of a polynomial $p$ defined on $T$. Further we denote the polygon defined by the points $Q_{ijk}$ as the \emph{B\'ezier control polygon}.
+
+\todo{bild von domain points}
+
+The benefit of the Bernstein-B\'ezier form is that there can be formed simple conditions ensuring the convexity of the polynomial on a triangle. Namely there is a connection between the convexity of the control polygon and the convexity of the polynomial.
+\begin{theorem}[ Connection Control Polygon Convexity{\cite[Theorem 4.6]{Dahmen1991}}]
+	The convexity of the control polygon implies the convexity of the represented polynomial.
+\end{theorem}
+Note that this result holds only for a single triangle and not for a function defined on a grid triangular cells. Nevertheless, piecewise convexity is already very important for the well-posedness of our intermediate SIPG iteration step (cf. Section \ref{sec: SIPG}) such that it is worth a try to convexify the union of all control polygons.
+
+Due to their importance in computer graphics, there are a lot of convex hull algorithm available. Hence it suggests itself to apply a convex hull algorithm on given Bernstein-B\'ezier coefficients to enforce convexity. However, this approach fails for a convex hull algorithm for it only operates on a set of points and hence does not necessarily produce the same connectivity the control polygon implies. An counterexample where those two polygons differ is given in Figure \ref{fig: diff connectivity}:
+\begin{figure}[h]
+\begin{subfigure}[b]{.5\textwidth}
+	\includegraphics[trim=3cm 8cm 3cm 8cm, width=1.\textwidth]{control_polygon2.pdf}
+	\caption{Control polygon}
+\end{subfigure}
+\begin{subfigure}[b]{.5\textwidth}
+	\includegraphics[trim=3cm 8cm 3cm 8cm, width=1.\textwidth]{convex_hull2.pdf}
+	\caption{Lower convex hull}
+\end{subfigure}
+\caption{The control polygon and lower convex hull of a given set of control points}
+\label{fig: diff connectivity}
+\end{figure}
+While the the control polygon is obviously not convex, the surface of the lower convex hull of the control points is convex only because it connects the inner control points differently.
+
+\todo{altere idee nur fur c0 splines}
+In the eighties mathematicians pursuit an approach based on the Hessian. They derived quadratic conditions on the B\'ezier coefficients equivalent to its convexity. Later this conditions were relaxed to a set of linear sufficient conditions, yet loosing necessity.  To formulate those conditions we use the difference operator $\Delta_{\mu \nu}$ along the edge $(v_\mu, v_\nu)$. 
+Thus for the triangle $T=\langle v_1, v_2,v_3 \rangle$ 
+%as seen in Figure \ref{fig: domain points} 
+we obtain
+	\begin{align*}
+		\Delta_{21} c_{ijk} &= c_{i,j+1,k} -c_{i+1, j,k}  \\
+		\Delta_{31}^2 c_{ijk} &= c_{i,j,k+2} -2c_{i, j+1,k+1} +c_{i, j+2,k} \\
+		\Delta_{12} \Delta_{32} c_{ijk} &= c_{i,j+1,k+1} -c_{i+1, j,k+1} - c_{i,j+2,k} +c_{i+1, j+1,k}.
+	\end{align*}
+ 
+ For the following theorems  we always refer to the same setting: We have a triangle $T=\langle v_1, v_2,v_3 \rangle$ and a polynomial $p$ of degree $d$ defined on this triangle $T$. Further the B\'ezier coefficents of $p$ are denoted by $c_{ijk}$.
+ 
+A result due to Chang and Feng \cite{CD1984} are the following quadratic constraints.
+\begin{theorem}[Convexity on Triangles{\cite[p.2]{LS2007}}] \label{thm: convex cond quadr}
+	A polynomial $p$is convex on a triangle $T$ if and only if the matrix
+	\[
+		\begin{pmatrix}
+			\Delta_{21}^2 c_{ijk} & \Delta_{31} c_{ijk} \Delta_{32} c_{ijk}\\
+			\Delta_{31}c_{ijk} \Delta_{32} c_{ijk} & \Delta_{31}^2 c_{ijk} 
+		\end{pmatrix} \in \R^2
+	\]
+	is nonnegative definite for each $i + j + k =d-2 $.
+\end{theorem}
+For an overview of relaxations of these conditions, we refer to \cite{SS2010}. An example with 12 inequalities is given in the following theorem.
+\begin{theorem}[Sufficient Linear Convexity Conditions, {\cite[Corollary 2.8]{SS2010}}]
+\label{thm: convex cond on triangle}
+	A polynomial $p$ is convex on a triangle $T$ if its B\'ezier coefficients $c_{ijk}$ satisfy
+	\begin{align*}
+		&(\Delta_{21} + 2\Delta_{31}) \Delta_{31} c_{ijk} \geq 0, 
+		&   (\Delta_{21}^2 + 3\Delta_{21} \Delta_{31} + 2 \Delta_{31}^2) c_{ijk} \geq 0, \\
+		& \Delta_{21}(2\Delta_{21} + \Delta_{31})  c_{ijk} \geq 0, 
+		&   (2\Delta_{21}^2 + 3\Delta_{21} \Delta_{31} +  \Delta_{31}^2) c_{ijk} \geq 0, \\  
+		&(\Delta_{32} + 2\Delta_{12}) \Delta_{12} c_{ijk} \geq 0, 
+		&   (\Delta_{32}^2 + 3\Delta_{32} \Delta_{12} + 2 \Delta_{12}^2) c_{ijk} \geq 0, \\
+		&\Delta_{32} (2\Delta_{32} + \Delta_{12}) c_{ijk} \geq 0, 
+		&   (2\Delta_{32}^2 + 3\Delta_{32} \Delta_{12} +  \Delta_{12}^2) c_{ijk} \geq 0, \\  
+		&(\Delta_{13} + 2\Delta_{23}) \Delta_{23} c_{ijk} \geq 0, 
+		&   (\Delta_{13}^2 + 3\Delta_{13} \Delta_{23} + 2 \Delta_{23}^2) c_{ijk} \geq 0, \\
+		& \Delta_{13}(2\Delta_{13} + \Delta_{23})  c_{ijk} \geq 0, 
+		&   (2\Delta_{13}^2 + 3\Delta_{13} \Delta_{23} +  \Delta_{23}^2) c_{ijk} \geq 0   
+	\end{align*}
+	for all $i + j + k = d-2 $.
+\end{theorem}
+Note that the latter conditions of Theorem \ref{thm: convex cond quadr} and Theorem \ref{thm: convex cond on triangle} ensure convexity on a single triangle $T$. That would suffice for piecewise polynomials contained in $C^1$ because for them, unlike to splines contained in $C^0$ convexity on each triangle implies global convexity \cite[Theorem 3.1.]{SS2010}. To patch this matter Schumaker and Speleers introduce further conditions making sure $C^0$ splines are convex across triangle boundaries.
+\begin{theorem}[Sufficient Conditions across Edges,{ \cite[Theorem 3.6]{SS2014} }]\label{thm: convex cond across edge}
+	Let $p \in \mathcal P^d_h \cap C^0(\Omega)$ be a piecewise polynomial being convex on every triangle $T \in \triang$. Suppose its B\'ezier coefficients for every interior edge $e =(v_\kappa, v_\mu)$ fulfill 
+	\begin{align}
+		{\hat c_{i,j,1}}  \geq  \beta_1^c c_{i+1, 0,j} +\beta_2^c c_{i,1,j} + \beta_1^c c_{i, 0,j+1}, \qquad i+j=d-1, \label{eq: convexity across edge}
+	\end{align}
+where  $\{c_{i,j,k}\}_{i+j+k=d}$ and $\{ {\hat c_{i,j,k}}\}_{i+j+k=d}$ are the B\'ezier coefficients of $p$ relative to the two triangles $T_1 = \langle v_\kappa, v_\lambda, v_\mu \rangle$ and $T_2 = \langle v_\kappa, v_\mu, v_\nu \rangle$ sharing the edge $e$, and $(\beta_1^c,\beta_2^c,\beta_3^c)$ are the barycentric coordinates of $v_\nu$ with respect to $T_1$. Then $p$ is convex.
+\end{theorem}
+
+Figure \ref{fig: convexity condition} shows the domain points $\xi_{ijk}$ (cf. \eqref{eq: domain points} corresponding to the B\'ezier coefficients of the scenario of Theorem \ref{thm: convex cond across edge} for the case $d+2$.
+\begin{figure}[H]
+	\input{triangle_convexity_condition.pgf}
+	\caption{Two triangles and B\'ezier control points for polynomials of degree $k=2$ \\($T_1 = \langle v_\kappa, v_\lambda, v_\mu \rangle$ and $T_2 = \langle v_\kappa, v_\mu, v_\nu \rangle$)}
+	\label{fig: convexity condition}
+\end{figure}
+ Let us consider the condition
+\[
+		{\hat c_{101}} \geq \beta_1^c c_{200} +\beta_2^c c_{110} + \beta_1^c c_{101}	
+\]
+Geometrically  this ensures the control point $Q_{101}$ (cf. \eqref{eq: control points})is above the plane where the triangle $\langle Q_{200}, Q_{110}, Q_{101} \rangle$ is embedded. Or in particular the surface consisting of the triangle $\langle Q_{200}, Q_{110}, Q_{101} \rangle= \langle \hat Q_{200}, Q_{110}, \hat Q_{110} \rangle$  and the triangle $\langle \hat Q_{200}, \hat Q_{110}, \hat Q_{101} \rangle$ is convex.
+
+For quadratic splines Schumaker and Speleers even prove the inversion of Theorem \ref{thm: convex cond across edge} on convex domains $\Omega$, namely if for every interior edge its coefficients satisfy \eqref{eq: convexity across edge} then the corresponding spline is convex.
+This result does not generalise for higher degrees. In fact they give a counterexample for degree $k = 3$ \cite[Example 3.11]{SS2014}.
+
+Now we apply the new insights to the solution of the Generalised Poisson problem stated in Section \ref{sec: SIPG MA}.
+Given the DG solution of the Generalised Poisson problem $u^{gp}_h$ we seek for a convex spline minimising the error at the B\'ezier control points, i.e. we want to find the B\'ezier coefficients $c$ minimising
+\begin{align}
+		\lVert A c - b \rVert_2, \qquad \text{ such that } Cc \geq 0, \label{eq: convex lsq}
+\end{align}
+where $A$ is the matrix evaluating the piecewise polynomial induced by the B\'ezier coefficients $c$ corresponding  at the domain points (cf. \eqref{eq: domain points}), $b$ are the function values of $u^{gp}_h$ at the B\'ezier control points and $C$ is the matrix containing the conditions ensuring convexity on the whole domain.
+
+However, solving a linearly constrained least squares problem is nontrivial. So, when using this approach one should ensure that a convexification is justified. Also, one has to keep in mind that the constraints in the matrix $C$ are sufficient but not necessary. We discuss in the section on numerical results whether this approach fulfills our requirements on a convexificiation.
 
 \section{The Picard Iteration Algorithm}
 

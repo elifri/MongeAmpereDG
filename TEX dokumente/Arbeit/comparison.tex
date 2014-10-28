@@ -1,9 +1,9 @@
 \section{Comparison with Newton's method}
 
-Before we start the anlaysis of our Method we shortly see what happens if we apply Newton's method on the analytical form of the \MA equation \ref{MA eq}.
-Let $F$ be the function such that its root solves the \MA equation, i.e. 
+Let us apply Newton's method directly on the analytical form of the \MA equation (cf. \eqref{eq: MA eq}).
+Let $F$ be the \MA operator, i.e. 
 \[
-	F(u) = \mydet{D^2 u} -f
+	F(u) = \mydet{D^2 u} -f.
 \]
 Applying Newton's method on $F(u) =0$ we have
 \begin{align}
@@ -43,8 +43,6 @@ In a earlier work \cite{Awanou2010} Awanou examined a discrete Version of a vani
 \]
 And indeed this is the variational form of \eqref{eq: Newton iteration}
 His chosen trial space were piecewise polynomials contained in $C^1(\Omega)$. He claims that this ansatz breaks down for problems with non-smooth solutions, in his numerical results he cites test \ref{test sqrt} as an example where Newton's method diverges.
-
-\todo{existence theory}
 
 %\begin{align}
 %	&\myInt_\Omega \cofHess {u^i} \nabla (u^{i+1}-u^i) \nabla v - \sum_{e \in \edgesb} \myIntS e { \cofHess {u^i} \nabla (u^{i+1}-u^i) \cdot \mathbf n \; v \nonumber \\
