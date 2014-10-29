@@ -1,6 +1,6 @@
 \section{Benchmark Examples}
 
-Since the \MA equation became a benchmark problem for fully nonlinear second order PDEs there are same classical test problems for the two-dimensional case. All test cases are solved on the unitsquare $\Omega=[0,1]^2$.
+Since the \MA equation became a benchmark problem for fully nonlinear second order PDEs there are some classical test problems for the two-dimensional case. All test cases are formulate for the domain $\Omega$ to be the unitsquare $[0,1]^2$.
 
 \begin{test} \label{test smooth}
 The first classical \MA test is the problem with the data
@@ -36,70 +36,130 @@ The third \MA test is yet more regular. Its solution lies in $C^1$ and it is giv
 
 
 \begin{test}\label{test dirac}
-A test determined by
+The last test is determined by
 \[
 	u = \lVert x - x_0 \rVert_2
 	\text { and } 
 	f = \pi \delta_{x_0}
 \]
-describes a cone with origin $x_0$. Note, $f$ is highly non regular. This example does not have a viscosity solution, but $u$ is only an Aleksandrov solution of the problem \cite[Section 2.3.]{FO2011}.
+and its solution $u$ describes a cone with origin $x_0$. This example does not have a viscosity solution, but $u$ is only an Aleksandrov solution of the problem \cite[Section 2.3.]{FO2011}.
+
+Note that $f$ is highly non regular. Motivated by \cite[Section 6.1.]{FO2011} we discretise $f$ by
+\begin{align*}
+	f_h = \begin{cases}
+		\frac \pi {4h^2} & \text{ if} \singleNorm{x_1 - 0.5} \leq h \text{ and } \singleNorm{x_e - 0.5} \leq h \\
+		0	& \text{otherwise}
+	\end{cases}.
+\end{align*}
 \end{test}
 
 
-\begin{test}\label{test rhsConst}
-A test where the analytical solution is unknown is determined by
-\[
-	u = 0 \text{ on } \partial \Omega
-	\text { and } 
-	f = 1
-\]
-defines the last example.
-\end{test}
+%\begin{test}\label{test rhsConst}
+%A test where the analytical solution is unknown is determined by
+%\[
+%	u = 0 \text{ on } \partial \Omega
+%	\text { and } 
+%	f = 1
+%\]
+%defines the last example.
+%\end{test}
 
-\section{Numerical Results of a $C^0$ Penalty Method}
+\section{Numerical Results of a $C^0$ Penalty Method}\label{sec: numerical results brenner}
 
 \input{load_Neilan_data.tex}
 
 For reference I implemented the algorithm introduced in Section \ref{sec: Brenner method}.
 We implemented their presented method using the finite element tool FEniCS \cite{FEniCS}, the Code is append in Appendix. 
-To create our initial guess I did not use a vanishing moment method as Brenner suggested, but the solution of $\triangle u = -\sqrt{2f}$ as introduced in \ref{sec: initial guess}. 
+To create our initial guess I did not use a vanishing moment method as Brenner suggested, but the solution of $\triangle u = -\sqrt{2f}$ as introduced in Section \ref{sec: initial guess}. 
 
-I solved the arising nonlinear system of equations with PETSc' basic line search Newton method. 
+The triangulation $\triang$ was obtained by a standard refinement as explained in Section ref{subsec: refinement and base cells}: First the domain was split into four triangles by drawing both diagonals and afterwards each triangle was successively divided into four congruent triangles.
+\begin{figure}[H]
+	\centering
+	\begin{subfigure}{0.45\textwidth}
+		\includegraphics[scale=0.25]{plots/grid1.pdf}
+		\caption{Triangulation with $h=\frac 1 2$}
+		\label{fig: grid1}
+	\end{subfigure}
+	\begin{subfigure}{0.45\textwidth}
+		\includegraphics[scale=0.25]{plots/grid2.pdf}
+		\caption{Triangulation with $h=\frac 1 4$}
+		\label{fig: grid}
+	\end{subfigure}	
+	\caption{Triangulation with $h=\frac 1 4$}
+	\label{fig: grids}
+\end{figure}
+
+The arising nonlinear system is solved by PETSc configured with FEniCS default solver choice: That is a Newton based nonlinear solver that uses a line search and the arising linear systems are solved by a $LU$ decomposition.
+%SNES Object: 1 MPI processes
+%  type: newtonls
+%  SNES has not been set up so information may be incomplete
+% maximum iterations=10, maximum function evaluations=2000
+% tolerances: relative=1e-09, absolute=1e-08, solution=1e-16
+%total number of linear solver iterations=0
+%total number of function evaluations=0
+%SNESLineSearch Object:   1 MPI processes
+% type: bt
+%  interpolation: cubic
+%   alpha=1.000000e-04
+%  maxstep=1.000000e+08, minlambda=1.000000e-12
+%   tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
+%  maximum iterations=40
+%KSP Object:   1 MPI processes
+%type: preonly
+%maximum iterations=10000, initial guess is zero
+% tolerances:  relative=1e-05, absolute=1e-50, divergence=10000
+% left preconditioning
+% using DEFAULT norm type for convergence test
+%PC Object:   1 MPI processes
+%  type: lu
+%  PC has not been set up so information may be incomplete
+%  LU: out-of-place factorization
+%   tolerance for zero pivot 2.22045e-14
+%   matrix ordering: nd
+% linear system matrix = precond matrix:
+% Matrix Object:     1 MPI processes
+%  type: seqaij
+%  rows=112, cols=112
+%  total: nonzeros=2744, allocated nonzeros=2744
+%  total number of mallocs used during MatSetValues calls =0
+%  using I-node routines: found 80 nodes, limit used is 5
+Only the absolute tolerance and the number of maximum iteration are changed from the original default values, the absolute tolerance is adjusted to $1e-8$ and the number of maximum iteration restricted to 100. 
+
 The results can be found in figure \ref{fig: Brenner test1} and in table \ref{tab: l2 errors test 1 Brenner} where $h$ denotes the grid width and $N$ denotes the iterations needed to reach the desired tolerance. 
 
 \begin{table}[h]
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-%				    every row 0 column 0/.style={set content=init},
-%		]\MAOneBrennerTwo
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+				    every row 0 column 0/.style={set content=init},
+		]\MAOneBrennerTwo
     	\caption{Error for $k=2$}
    \end{subtable}
    ~
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-%				    every row 0 column 0/.style={set content=init},
-%		]\MAOneBrennerThree
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+				    every row 0 column 0/.style={set content=init},
+		]\MAOneBrennerThree
  	\caption{Error for $k=3$}
 	\end{subtable}
 	\caption{Errors for test case \ref{test smooth}}
 	\label{tab: l2 errors test 1 Brenner}
 \end{table}
-\begin{figure}[h!]
+\begin{figure}[H]
 \centering
-	\includegraphics[scale=0.35]{../../FEniCS/diagrams/MA1_Brenner_l2.pdf}
+	\includegraphics[scale=0.4]{../../FEniCS/diagrams/MA1_Brenner_l2.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth}}
 	\label{fig: Brenner test1}
 \end{figure}
 Fitting the data we can calculate then convergence order  $2.576$ for $k=2$ and $3.306$ for $k=3$.
 
-For the second test case the Newton did not even on the coarsest grid converge. Also in the third test case our Newton solver had problems. You can see results of the runs for $h=1/2, \dots, 1/16$ in table \ref{tab: l2 errors test 3 Brenner}, for finer grid the solver did not converge. My attempts to solve this example with FEniCS' built in damped Newton method with different relaxation parameters did also not succeed on any grid finer than $1/16$.
+For the second test case the Newton did not even on the coarsest grid converge. Also in the third test case our Newton solver had problems. You can see results of the runs for $h=1/2, \dots, 1/16$ in table \ref{tab: l2 errors test 3 Brenner}, for finer grid the solver did not converge. Attempts to solve this example with FEniCS' built in damped Newton method with different relaxation parameters did also not succeed on any grid finer than $1/16$.
 \begin{table}[h]
 		\centering
-%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-%				    every row 0 column 0/.style={set content=init},
-%		]\MAThreeBrennerTwo
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+				    every row 0 column 0/.style={set content=init},
+		]\MAThreeBrennerTwo
     	\caption{Error for $k=2$}
 	\caption{Errors for test case \ref{test singularity}}
 	\label{tab: l2 errors test 3 Brenner}
@@ -107,78 +167,42 @@ For the second test case the Newton did not even on the coarsest grid converge. 
 
 The fourth example does not have not a classical solution. As in the previous cases the method does not converge. The corresponding results are shown in table \ref{tab: l2 errors test 4 Brenner}.
 
-\begin{table}[h]
+\begin{table}[H]
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-%				    every row 0 column 0/.style={set content=init},
-%				    columns/l2error/.style={ /pgf/number format/sci precision=6}     % print 14 digits
-%		]\MAFourBrennerTwo
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+				    every row 0 column 0/.style={set content=init},
+				    columns/l2error/.style={ /pgf/number format/sci precision=6}     % print 14 digits
+		]\MAFourBrennerTwo
     	\caption{Error for $k=2$}
    \end{subtable}
    ~
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
-%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-%				    every row 0 column 0/.style={set content=init},
-%				    columns/l2error/.style={ /pgf/number format/sci precision=6}     % print 14 digits
-%		]\MAFourBrennerThree
+		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+				    every row 0 column 0/.style={set content=init},
+				    columns/l2error/.style={ /pgf/number format/sci precision=6}     % print 14 digits
+		]\MAFourBrennerThree
  	\caption{Error for $k=3$}
 	\end{subtable}
 	\caption{Errors for test case \ref{test dirac}}
 	\label{tab: l2 errors test 4 Brenner}
 \end{table}
 
-For the last test case with constant right-hand side and zero Dirichlet boundary data Newton's method only converged on the coarsest grid such that we cannot make any statement on this test.
+%For the last test case with constant right-hand side and zero Dirichlet boundary data Newton's method only converged on the coarsest grid such that we cannot make any statement on this test.
 
-We see that this method behaves well for smooth solutions. This method was designed to detect classical solutions and indeed to solve problems with non smooth solution and viscosity solutions the method is inappropriate.
+We see that this method behaves well for smooth solutions for which it was designed. The results show that it is inappropriate for problems with non smooth-solution or viscosity solutions.
 
-\newpage
 \section{Numerical Results of a Finite Element Method based on a Disrete Hessian}
 
-I also implemented the algorithm introduced in Section \ref{sec: FEM discrete Hessian}.
-Additional to the numerical results Neilan presented it is interesting to explore what happens if we vary the polynomial degree for the Hessian ansatz space. 
+Also the Neilan's algorithm \cite{Neilan2014} introduced in Section \ref{sec: FEM discrete Hessian} was implemented.
+Additional to the numerical results on convergence which Neilan already presented it is interesting to explore what happens if we vary the polynomial degree for the Hessian ansatz space. 
 
 The implementation was also done with the Finite Element Tool FEniCS \cite{FEniCS}, the corresponding source code can be found in the appendix \ref{app: Code Neilan}. \\
-The uniform triangulation $\triang$ was obtained as also explained in \ref{subsec: refinement and base cells}: First the domain was split into four triangles by drawing both diagonals and afterwards each triangle was successively divided into four congruent triangles. \\
-Different to the initial guess suggested in \cite{Neilan2014} I used the solution of $\triangle u = -\sqrt{2f}$ as introduced in \ref{sec: initial guess}. All results presented base on discontinuous ansatz spaces, namely piecewise polynomial spaces as introduced in \ref{def: piecewise polySpace}.
-We denote the degree of the trial space $V_h=\mathcal P_h^k$ by $k$ and the degree chosen for the Hessian ansatz space $\Sigma_h = [\mathcal{P}_h^{k_{DH}}]^{d \times d}$ by $k_{DH}$. The nonlinear system of equations given by \eqref{eq: neilan eq1} and \eqref{eq: discrete hessian} or \eqref{eq: neilan eq1 + jump} and \eqref{eq: discrete hessian}, respectively was solved with PETSc' basic line search Newton method. 
-%SNES Object: 1 MPI processes
-%  type: newtonls
-%  SNES has not been set up so information may be incomplete
- % maximum iterations=10, maximum function evaluations=2000
- % tolerances: relative=1e-09, absolute=1e-08, solution=1e-16
-  %total number of linear solver iterations=0
-  %total number of function evaluations=0
-  %SNESLineSearch Object:   1 MPI processes
-   % type: bt
-    %  interpolation: cubic
-   %   alpha=1.000000e-04
-  %  maxstep=1.000000e+08, minlambda=1.000000e-12
- %   tolerances: relative=1.000000e-08, absolute=1.000000e-15, lambda=1.000000e-08
-  %  maximum iterations=40
-  %KSP Object:   1 MPI processes
-    %type: preonly
-    %maximum iterations=10000, initial guess is zero
-   % tolerances:  relative=1e-05, absolute=1e-50, divergence=10000
-   % left preconditioning
-   % using DEFAULT norm type for convergence test
-  %PC Object:   1 MPI processes
-  %  type: lu
-  %  PC has not been set up so information may be incomplete
-    %  LU: out-of-place factorization
-   %   tolerance for zero pivot 2.22045e-14
-   %   matrix ordering: nd
-   % linear system matrix = precond matrix:
-   % Matrix Object:     1 MPI processes
-    %  type: seqaij
-    %  rows=112, cols=112
-    %  total: nonzeros=2744, allocated nonzeros=2744
-    %  total number of mallocs used during MatSetValues calls =0
-      %  using I-node routines: found 80 nodes, limit used is 5
+The uniform triangulation $\triang$ is the same as in the scenarios for the $C^0$ penalty method (cf. Section \ref{sec: numerical results brenner})
+Different to the initial guess suggested in \cite{Neilan2014} I used the solution of $\triangle u = -\sqrt{2f}$ as introduced in Section \ref{sec: initial guess}. All results presented base on discontinuous ansatz spaces, namely piecewise polynomial spaces as introduced in \ref{def: piecewise polySpace}.
 
-Most parameters were set to the default PETSc values \todo{ilu}%which includes the solver uses cubic backtracking 
-but the absolute tolerance was adjusted to $1e-8$ and the number of maximum iteration was restricted to 100. 
+We denote the degree of the trial space $V_h=\mathcal P_h^k$ by $k$ and the degree chosen for the Hessian ansatz space $\Sigma_h = [\mathcal{P}_h^{k_{DH}}]^{d \times d}$ by $k_{DH}$. The solver for nonlinear system of equations given by \eqref{eq: neilan eq1} and \eqref{eq: discrete hessian} or \eqref{eq: neilan eq1 + jump} and \eqref{eq: discrete hessian} is configured with the same paramters as in the previous section if not stated otherwise. 
 
 \input{NumericalResultsNeilan1.tex}
 

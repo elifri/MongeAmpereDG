@@ -1,51 +1,57 @@
+In this chapter we want to give an short overview of current DG methods solving the \MA equation. We focus on two recent methods in particular which later use as our reference DG methods.
+
 \section{State of the Art for Discontinuous Galerkin Methods} % for the \MA equation}
 
-The most natural attempt for a formulation of a DG method is to exploit the equations
+The most natural attempt for a formulation of a DG method solving the \MA equation is to exploit the equations
 \begin{align}
 	\myIntX {\Omega} {\mydet {D^2 u} v} = \myIntX \Omega {fv} \qquad \text{ for all test functions } v. \label{eq: naiv ansatz}
 \end{align}
 
 In 2008 B\"ohmer investigated this ansatz for $C^1$ elements in \cite{Boehmer2008}. He derives a general $C^1$ method including statements on its stability and consistency. 
-He is able to reduce the convergence analysis to the linearised case \cite[Section 9]{Boehmer2008}, and discovers even a connection between the weak and strong linearised forms: For his chosen elements these operators even coincide meaning the diagram in Figure \ref{fig: fe diagram} commutes.
+The convergence analysis he reduces to the linearised case \cite[Section 9]{Boehmer2008}, and thereby discovers and exploits a connection between the weak and strong linearised forms: For $C^1$ elements these operators even coincide meaning the diagram in Figure \ref{fig: fe diagram} commutes.
 \begin{figure}[H]
 	\input{feDiagram.pgf}
-	\caption{An abstract commuting diagram about the relation between weak and strong linear operators.\\ The analytical \MA operator is hereby denoted by $F:=\detHess u$ and its linearisation $L_u(w) = -\nabla \cdot (\cofHess u \nabla w)$, compare \ref{sec: linearisation}. $F_h[u]=0$ denots the discretised formulation, for B\"ohmer's method this is given by \eqref{eq: naiv ansatz}. The diagram is taken of \cite[Fig 2.2]{FGN2013}}
+	\caption{An abstract commuting diagram about the relation between weak and strong linear operators.\\ The analytical \MA operator is hereby denoted by $F:=\detHess u -f $ and its linearisation $L_u(w) = -\nabla \cdot (\cofHess u \nabla w)$ (cf. Section \ref{sec: linearisation}). $F_h[u]=0$ denotes the discretised formulation, for B\"ohmer's method this is given by \eqref{eq: naiv ansatz}. The diagram is taken of \cite[Fig 2.2]{FGN2013}}
 	\label{fig: fe diagram}	
 \end{figure}
-However, this formulation has two major disadvantages. 
-At first we cannot throw the high derivatives onto the test functions using integration by parts, thus we we have to handle the high derivatives. Secondly \eqref{eq: naiv ansatz} seems to work only for test and ansatz functions contained in $C^1(\Omega)$ whereas usual finite elements are contained in $C^0$. B\"ohmer claims \quoting{ We require FEs in $C^1$, since for FEs in $C^0$ we did not see a possibility to handle the interior variational crimes. The standard interplay between the weak and strong form is impossible for fully nonlinear problems and \emph{excludes, e.g. discontinuous Galerkin methods.}}\cite[p.1214]{Boehmer2008}.
+However, this finite element method has two major disadvantages. 
+At first we cannot throw the high derivatives onto the test functions using integration by parts, thus we we have to handle the high derivatives. Secondly \eqref{eq: naiv ansatz} seems to work only for elements in $C^1(\Omega)$ which are more complex than the usual $C^0$ elements. B\"ohmer claims \quoting{ We require FEs in $C^1$, since for FEs in $C^0$ we did not see a possibility to handle the interior variational crimes. The standard interplay between the weak and strong form is impossible for fully nonlinear problems and \emph{excludes, e.g. discontinuous Galerkin methods.}}\cite[p.1214]{Boehmer2008}.
 
 Indeed the diagram in Figure \ref{fig: fe diagram} does not commute for less regular spaces and Brenner et alter make this inconsistency responsible for the failure of $C^0$ methods\cite{BGN+2011}. Their idea is to improve the discretised formulation by adding DG terms to force consistency between the linearisation of the discrete problem and the linearisation of the continuous problem.
 
 \subsection{A $C^0$ Penalty Method }\label{sec: Brenner method}
 
-Given zero boundary conditions the linearisation of the left-hand side of \eqref{eq: naiv ansatz} can be derived exactly as in the proof of theorem \ref{thm: linearisation} leading to the bilinear form
+In this section we present the just mentioned method of Brenner et al. \cite{BGN+2011}. Let $u$ denote the exact solution of the \MA equation. 
+At the beginning we take a look at $L_{u,h}(w_h)$ given in Figure \ref{fig: fe diagram}, namely the discretisation of the linearisation of \eqref{eq: naiv ansatz} at the point $u$.
+
+Implying weak boundary conditions linearisation at $u$ of the left-hand side of \eqref{eq: naiv ansatz} can be derived exactly as in the proof of Theorem \ref{thm: linearisation} leading to a mapping $L_{u,h}$ defined by
 \begin{align}
-\langle L_{u,h}(w_h),v_h\rangle =& \myIntX {\Omega} {\nabla \cdot \left( \mycof {D^2 u_h } \nabla w_h \right) v_h}
+\langle L_{u,h}(w_h),v_h\rangle =& \myIntX {\Omega} {\nabla \cdot \left( \mycof {D^2 u_h } \nabla w_h \right) v_h} 
++ \sigma \sum_{e \in \edgesb} \myIntS {e} {\frac 1 {|e|}{w_h}{g}}
 %=& \int_{\Omega} \left( \mycof {D^2 u_h } \nabla w_h \right) \nabla v_h. 
 \label{eq: linearOperator}
 \end{align}
 
-Now we analyse the variational form of the linearisation of the \MA equation. Due to integration by parts it holds
+We already calculated the linearisation of the \MA equation in Theorem \ref{thm: linearisation} and now have to analyse its variational form. We suppose $w \in H^3(\Omega; \triang) \cap H^1(\Omega)$ and $v \in H^2(\Omega; \triang)$. Due to integration by parts it holds
 \begin{align*}
-  \myIntX  T { \nabla \cdot (\mycof{D^2 u_h} \nabla w_h) v_h}
-  	=& -\myIntX  T { (\mycof{D^2 u_h} \nabla w_h) \nabla v_h} \\
-  	&	+ \myIntS  {\partial T} { (\mycof{D^2 u_h} \nabla w_h) v_h}.
+  -\myIntX  \Omega { \nabla \cdot (\mycof{D^2 u} \nabla w) v}
+  	=& \myIntX  \Omega { (\mycof{D^2 u} \nabla w) \nabla v} \\
+  	 &	- \sum_{e \in \edgesb} \myIntS e { \mycof{D^2 u} \nabla w \mathbf n \; v}
+  	 + \sigma \sum_{e \in \edgesb} \myIntS {e} {\frac 1 {|e|}{w}{g}}.
 \end{align*}
-Summing over the whole triangulation it becomes
-\begin{align*}
-  \myIntX  \Omega { \nabla \cdot (\mycof{D^2 u_h} \nabla w_h) v_h}
-  	=& -\myIntX  \Omega { (\mycof{D^2 u_h} \nabla w_h) \nabla v_h} \\
-  	 &	+ \sum_{e \in \edgesi} \myIntS e { \llbracket \{\{\mycof{D^2 u_h} \}\} \nabla w_h\rrbracket v_h}.
-\end{align*}
-Considering the last identity the variational form of the linearisation reads
+Adding an additional term to symmetrise we obtain the variational form of the linearisation
 \begin{align}
-	\langle L^L_{u}(w_h),v_h\rangle 
-	    =&- \sum_{T \in \triang}  \myIntX  T { \nabla \cdot (\mycof{D^2 u_h} \nabla w_h) v_h} \nonumber \\
-	    	&+ \sum_{e \in \edges} \myIntS e { \llbracket \{\{\mycof{D^2 u_h} \}\} \nabla w_h\rrbracket v_h} \nonumber \\
-	    	&+ \sum_{e \in \edges} \myIntS e { \llbracket \{\{\mycof{D^2 u_h} \}\} \nabla v_h\rrbracket w_h} \label{eq: var of linearisation}
+	\langle L^L_{u}(w),v\rangle 
+	    =& \sum_{T \in \triang}  \myIntX  T { \nabla \cdot (\mycof{D^2 u} \nabla w) v} \nonumber \\
+	    	&- \sum_{e \in \edgesb} \myIntS e { \llbracket \{\{\mycof{D^2 u} \}\} \nabla w\rrbracket v} 
+	    	- \sum_{e \in \edgesb} \myIntS e { \llbracket \{\{\mycof{D^2 u} \}\} \nabla v\rrbracket w} \nonumber \\
+	    	& + \sigma \sum_{e \in \edgesb} \myIntS {e} {\frac 1 {|e|}{w}{g}} \label{eq: var of linearisation}
 \end{align}
-Plugging the terms missing in \eqref{eq: linearOperator} but appearing in \eqref{eq: var of linearisation} into the original naive ansatz \eqref{eq: naiv ansatz} and adding further terms to enforce weak boundary conditions they end up with the problem: Find $u_h \in V_h$ such that
+We observe a discrepancy between $L^L_{u}$ and $L_{u,h}$. To overcome this, Brenner et al. rewrite the original nonlinear naive ansatz \eqref{eq: naiv ansatz} to obtain a nonlinear operator $F$ which can be written as the sum of $L^L_{u}$ and a remaining mapping $R$, i.e.
+\begin{align}
+	\bilin {F (u+w)} v = \bilin {L^L_{u_h}w} v + \bilin {Rw} v. \label{eq: brenner entwicklung}
+\end{align}
+Their approach yields the following method: Find $u_h \in V_h$ such that
 \begin{align}
 \begin{split}
 	&\myIntX {\Omega} {(f-\mydet {D^2_h u_h} v} 
@@ -54,14 +60,10 @@ Plugging the terms missing in \eqref{eq: linearOperator} but appearing in \eqref
 	+ \sigma  \sum_{e \in \edgesb} \frac 1 {h_e} \myIntS e { (u_h -g)}  = 0 \; \forall v_h \in V_h \label{eq: brenner method}
 \end{split}
 \end{align}
-They choose their ansatz and test space $V_h$ to be the space of continuous functionous being piecewise polynomials up to degree $k$ for a $k \geq 3$. For their analysis they assume the \MA problem has strictly convex solution $u\in H^s(\Omega)$ for $s>3$. %Then they are able to derive stability of the linearisation of their operator. 
+To analyse this method they choose the ansatz and test space $V_h$ to be the space of continuous functions being piecewise polynomials up to degree $k$ for a $k \geq 3$ and assumed the \MA problem has strictly convex solution $u\in H^s(\Omega)$ for $s>3$. %Then they are able to derive stability of the linearisation of their operator. 
 
-The key for the convergence proof is a fixed point argument: They expanded the mapping given by the right-hand side of \eqref{eq: brenner method} to a linearisation at the solution $u$ (cf. \eqref{eq: var of linearisation}  and a remaining quadratic mapping $R$. That means they can write \eqref{eq: brenner method} by 
-\begin{align}
-	\bilin {F (u+w)} v = \bilin {L^L_{u_h}w} v + \bilin {Rw} v. \label{eq: brenner entwicklung}
-\end{align}
-With this at their hand they define a mapping $\mathcal M_h$. The choice of their $\mathcal M$ has two important properties. At first, its fixed point is the solution to their finite element. At second, $\mathcal M$ is chosen in such a way that its contraction property almost follows directly from a contraction property of $R$.
-Using the Banach fixed point theorem they can show existence of a fixed point of $\mathcal M$ in $V_h$ and locate it within an arbitrary small set. Fortunately, this yields an error estimate for their numerical solution:
+The key for the convergence proof is a fixed point argument: They already derived an expansion of the finite element operator in \eqref{eq: brenner entwicklung}. With this at their hand they define a mapping $\mathcal M_h$. The choice of their $\mathcal M$ has two important properties. At first, its fixed point is the solution to their finite element. At second, $\mathcal M$ is chosen in such a way that its contraction property almost follows directly from a contraction property of $R$.
+Using the Banach fixed point theorem they can show existence of a fixed point of $\mathcal M$ in $V_h$ and further locate it within an arbitrary small set. The proceeding is explained in more detail, when we compare this method to a newly derived DG method. Fortunately, their convergence proof also yields an error estimate for their numerical solution:
 \todo{reference auf später}
 \begin{theorem}[Error Estimate{\cite[Theorem 3.1 and 3.2]{BGN+2011}}]\label{thm: error estimate brenner}
 	There exists an $h_0(\sigma) > 0$ such that for $h \leq h_0(\sigma)$ there exists a solution $u_h$ to the penalty method \eqref{eq: brenner method}. Moreover, if $u \in W^{s,\infty}$ with $s>3$ then holds
@@ -72,10 +74,12 @@ Using the Banach fixed point theorem they can show existence of a fixed point of
 	\end{align*}
 where $l=\min\{k+1,s\}$. 
 \end{theorem}
-This theorem ensure almost optimal convergence orders provided a smooth solution. Although there analysis assumes the polynomial degree $k\geq 3$ their numerical results also suggest optimal convergence rates for $k=2$.\\
-However, their approach has a drawback. In order to find $u_h$ one has to solve the from \eqref{eq: brenner method} resulting nonlinear system. Brenner et alt. make use of Newton's method in the numerical results to solve their example problems. For a good initial guess they inquire a vanishing moments method which internally again solves a nonlinear systems based on a Newton's method. The starting point required of this internal Newton solver is calculated using a nested iteration.
+This theorem ensure almost optimal convergence orders provided a smooth solution and the polynomial degree $k\geq 3$. Otherwise the given bound do not converge to zero given $h \rightarrow 0$. However, their numerical results suggest optimal convergence rates for $k=2$.\\
+Their approach has a drawback. In order to find $u_h$ one has to solve the from \eqref{eq: brenner method} resulting nonlinear system. To present numerical results Brenner et al. make use of Newton's method to solve their example problems. 
+For a good initial they used a rather complex procedure: They inquire a vanishing moments method which internally again solves a nonlinear systems based on Newton's method. The starting point required of this internal Newton solver is calculated using a nested iteration.
 
-Neilan claims when presenting another DG method in \cite{Neilan2014} that this methods fails to converge for the test case $u = -\sqrt{2 - x_1^2 - x_2^2 }$ and $f = \frac 2 {{2 - x_1^2 - x_2^2}^2}$ which lacks $H^2$ regularity and our computations confirm this result, see also test \ref{test sqrt}. In chapter \ref{ch:NumericalResults} we provide some numerical experiments for a nested iteration variant of this method. Generally speaking, the presented method is more appropriate for classical solutions, Brenner et alt. say they plan to address less regular solution in future work. 
+In \cite{Neilan2014} Neilan introduces another DG method. During the presentation of his numerical results Neilan claims that the $C^0$ penaly method fails to converge for the test case $u = -\sqrt{2 - x_1^2 - x_2^2 }$ and $f = \frac 2 {{2 - x_1^2 - x_2^2}^2}$ which lacks $H^2$ regularity. 
+In chapter \ref{ch:NumericalResults} we provide some numerical experiments for a nested iteration variant of this method and our computations confirm Neilan's claim, see also test \ref{test sqrt}. In general we shall see, the presented method is more appropriate for classical solutions, Brenner et al. say they plan to address less regular solution in future work. 
 
 
 \subsection{A Finite Element Method based on a Discrete Hessian} \label{subsec: disrete Hessian} \label{sec: FEM discrete Hessian}
@@ -88,7 +92,7 @@ While the real Hessian fulfills due to integration by parts as we have seen in L
 			- \myIntX  \Omega { \left(\nabla \cdot B\right) \cdot \nabla u} 
 			+ \myIntS {\partial \Omega}  {B \nabla u \mathbf {n}} \qquad \forall B \in [H^1(\Omega)]^{d \times d}, \label{eq: part int hessian}
 	\end{align}
-often the piecewise derived Hessian $D_h^2 v$ of $ v \in V_h$ for less regular ansatz spaces $V_h$ does not inherit this property. Considering that most weak formulations base on a integration by parts approach, the idea of a discretisation of the Hessian retaining this quality is standing to reason. To create this discretisation Neilan carries the integration from \eqref{eq: part int hessian} piecewise on every triangle out and rewrites the edge terms by a combination of jump and averages as usual leading to
+the piecewise derived Hessian $D_h^2 v$ of $ v \in V_h$ for less regular ansatz spaces $V_h$ does not inherit this property. Considering that most weak formulations base on a integration by parts approach, it stands to reason that a discretisation of the Hessian should retain this quality. To create such a discretisation Neilan integrates \eqref{eq: part int hessian} piecewise on every triangle and rewrites as usual the edge terms by a combination of jump and averages leading to
 	\begin{align}
 		\begin{split}
 		\myIntX  \Omega { (D^2 u : B)}
@@ -100,7 +104,6 @@ often the piecewise derived Hessian $D_h^2 v$ of $ v \in V_h$ for less regular a
 Observing, that the last step admits test functions $B$ only piecewise smooth, Neilan suggests the ansatz space $V_h = \mathcal{P}_h^k \cap H^1(\Omega)$ and the test space $\Sigma_h = [\mathcal{P}_h^k]^{d \times d}$.
 
 Substituting in \eqref{eq: part int hessian omega} $\nabla u$ across the edges with its numerical counterpart, namely the numerical trace chosen as $\laverage \nabla u \raverage$ one has as predefinition of the discrete Hessian
-\todo{lifting erwaehnen?}
 	\begin{align}
 		\myIntX  \Omega { (D_{DH}^2 u : B) }
 		&= - \myIntX  \Omega { \left(\nabla \cdot B\right) \cdot \nabla u}
@@ -120,7 +123,7 @@ Applying once more integration by parts for a Frobenius product on every triangl
 			 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average B  \nabla u }	}
 	\end{align}
 
-Hence,
+Hence,we are able to define the discrete Hessian.
 \begin{definition}[Discrete Hessian] \label{def: discrete Hessian}
 	The discrete Hessian $D_{DH}^2 u$ of a function $u$ is the unique function satisfying
 	\begin{align}
@@ -130,19 +133,19 @@ Hence,
 	\end{align}
 \end{definition}
 
-Even though the Hessian is symmetric, in general the discrete Hessian is owing to the face terms not obligatory symmetric. \\
+Even though the Hessian is symmetric, in general the discrete Hessian is owing to the face terms not obligatory symmetric. Neilan suggested to replace the ansatz space $\Sigma_h$ by a space of symmetric matrices and supposes the analysis given in \cite{Neilan2014} would carry through.\\
 Note, that for a discontinuous $\Sigma_h$ the computations for $D_{DH}^2 u$ reduce to purely local efforts. For piecewise constant space $\Sigma_h$ the discrete Hessian $D_{DH}^2 u$ can even be computed explicitly.
 
-The next natural step is to plug the newly deduced Hessian into the original \MA PDE resulting in the method: Find $u \in V_h$ such that
+The next natural step is to plug the newly deduced Hessian into the original \MA PDE resulting in the method: Find $u_h \in V_h$ such that
 
 \begin{align}
-		\myIntX  \Omega { \left(\mydet{D_{DH}^2 u} - f \right) v} = 0 \qquad \forall v \in V_h \label{eq: neilan eq1}
+		\myIntX  \Omega { \left(\mydet{D_{DH}^2 u_h} - f \right) v} = 0 \qquad \forall v_h \in V_h, \label{eq: neilan eq1}
 \end{align}
 where
 	\begin{align}
-		\myIntX  \Omega { (D_{DH}^2 u : B) }
-		= \myIntX  \Omega { D_h u: B}
-			 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average B \nabla u }}\qquad \forall B \in \Sigma_h. \tag{\ref{eq: discrete hessian}}
+		\myIntX  \Omega { (D_{DH}^2 u_h : B_h) }
+		= \myIntX  \Omega { D_h u_h: B_h}
+			 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average {B_h} \nabla u_h }}\qquad \forall B_h \in \Sigma_h. \tag{\ref{eq: discrete hessian}}
 	\end{align}
 
 Neilan proceeds analogously to the prove of the well-posedness of the method mentioned in the previous section \ref{sec: Brenner method}. At the beginning he expands the nonlinear mapping at the solution $u$ and then he uses an analogous mapping $\mathcal M$ to obtaining convergence with the Banach fixed point theorem. Note, that the new notion of an discrete Hessian makes the estimates of this unconventional linearisation hard to handle. The linearisation used in the other $C^0$ penalty method is more common and hence the arguments for deriving estimates for the linear part were already well known.
@@ -150,27 +153,28 @@ He ends up with the following error estimation:
 \begin{theorem}
 	Let $u$ be the convex solution to the \MA equation and suppose $u$ to be in the Hölder space $C^{k+3,\alpha}$ for $\alpha \in (0,1)$ and the polynomial degree $k\geq3$. Then there exists a $h_0$ such that for all $h > h_0$ there exists a solution $u_h \in V_h$ to \eqref{eq: neilan eq1} with
 	\[
-		\norm{u-u_h}_{1,h} \leq C h^k
+		\norm{u-u_h}_{1,h} \leq C h^k, 
 	\]
-	where $C$ is a constant independent on $h$ and $\norm{\cdot }_{1,h}$ is the discrete semi-norm 
+	where $C$ is a constant independent on $h$ and $\norm{\cdot }_{1,h}$ is the mesh-dependent discrete semi-norm 
 	\[
 		\norm{v}_{1,h}^2 = \norm {\nabla v }^2_{L^2(\Omega)} + \sum_{e \in \edges} |e| \norm {\average {\nabla v}}^2_{L^2(\Omega)}.
 	\]
 \end{theorem}
+The $\norm {\cdot}_{1,h}$ is equivalent to the norm $\eNorm{\cdot}$ on $V_h$ regarding the fact $V_h$ only contains continuous functions.
 
 Albeit he cannot prove any further relaxations, his numerical experiments suggest that his method even works for smaller polynomial degrees and problems which's solution lacks $H^2$ regularity. 
-\\However, for $k=1$ he has to add an additional penalty term to obtain convergence. Thus, for piecewise affine functions he instead solves:
+\\However, for $k=1$ he has to add an additional penalty term to obtain convergence. Thus, for piecewise affine functions $u_h \in V_h :=\mathcal P_h^1(\Omega) \cap W^{1,\infty}(\Omega)$ e instead solves:
 \begin{align}
-		\myIntX  \Omega { \left(\mydet{D_{DH}^2 u} - f \right) v} 
-			+ \eta \sum_{e \in \edgesi} |e| \myIntS e { \jump{ \nabla u_h} \jump{\nabla v}}
-		= 0 \qquad \forall v \in V_h \label{eq: neilan eq1 + jump}
+		\myIntX  \Omega { \left(\mydet{D_{DH}^2 u_h} - f \right) v_h} 
+			+ \eta \sum_{e \in \edgesi} |e| \myIntS e { \jump{ \nabla u_h} \jump{\nabla v_h}}
+		= 0 \qquad \forall v_h \in V_h, \label{eq: neilan eq1 + jump}
 \end{align}
 where
 	\begin{align*}
-		\myIntX  \Omega { (D_{DH}^2 u : B) }
-		= \myIntX  \Omega { D_h u: B}
-			 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average B \nabla u }}\qquad \forall B \in \Sigma_h \tag{\ref{eq: discrete hessian}}
+		\myIntX  \Omega { (D_{DH}^2 u_h : B_h) }
+		= \myIntX  \Omega { D_h u_h: B_h}
+			 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average {B_h} \nabla u_h }}\qquad \forall B_h \in \Sigma_h \tag{\ref{eq: discrete hessian}}
 	\end{align*}
-and $\eta$ is an additional penalty parameter which Neilan takes to be 50 in his numerical tests.
+for $\Sigma_h = \mathcal P^0_k(\Omega)$ and $\eta$ is an additional penalty parameter which Neilan takes to be 50 in his numerical tests.
 
 We check the performance of this algorithms later in chapter \ref{ch:NumericalResults}.

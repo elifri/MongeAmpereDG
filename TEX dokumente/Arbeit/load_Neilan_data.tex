@@ -1,23 +1,34 @@
 %read data for case deg=22 and merge into one file
 \newcommand{\readDataN}[2]{
-\pgfplotstableread{../../FEniCS/data/#1_l2errornorm} #2
+\pgfplotstableread{../../FEniCS/dataCur/#1_l2errornorm} #2
 
-\pgfplotstablecreatecol[copy column from table={../../FEniCS/data/#1_h1errornorm}{h1error}] {h1error} #2
+\pgfplotstablecreatecol[copy column from table={../../FEniCS/dataCur/#1_h1errornorm}{h1error}] {h1error} #2
 
-\pgfplotstablecreatecol[copy column from table={../../FEniCS/data/#1_newtonSteps}{steps}] {N} #2
+\pgfplotstablecreatecol[copy column from table={../../FEniCS/dataCur/#1_newtonSteps}{steps}] {N} #2
 }
 
-%\readDataN{MA1_Brenner_deg2}{\MAOneBrennerTwo}
-%\readDataN{MA1_Brenner_deg3}{\MAOneBrennerThree}
+\newcommand{\readData}[2]{
+	\pgfplotstableread{data/#1_l2errornorm} #2
+	
+	\pgfplotstablecreatecol[copy column from table={data/#1_h1errornorm}{h1error}] {h1error} #2
+	
+	\pgfplotstablecreatecol[copy column from table={data/#1_newtonSteps}{steps}] {N} #2
+}
 
-%\readDataN{MA3_Brenner_deg2}{\MAThreeBrennerTwo}
 
-%\readDataN{MA4_Brenner_deg2}{\MAFourBrennerTwo}
-%\readDataN{MA4_Brenner_deg3}{\MAFourBrennerThree}
+\readData{MA1_Brenner_deg2}{\MAOneBrennerTwo}
+\readData{MA1_Brenner_deg3}{\MAOneBrennerThree}
+%
+\readData{MA3_Brenner_deg2}{\MAThreeBrennerTwo}
+%
+\readData{MA4_Brenner_deg2}{\MAFourBrennerTwo}
+\readData{MA4_Brenner_deg3}{\MAFourBrennerThree}
 
 
 \readDataN{MA1_Neilan_GradJump_deg22}{\MAOneJumpdegTwoTwo}
 \readDataN{MA1_Neilan_GradJump_deg20}{\MAOneJumpdegTwoZero}
+\readDataN{MA1_Neilan_GradJump_deg33}{\MAOneJumpdegThreeThree}
+\readDataN{MA1_Neilan_GradJump_deg32}{\MAOneJumpdegThreeTwo}
 
 \readDataN{MA1_Neilan_deg33}{\MAOnedegThreeThree}
 \readDataN{MA1_Neilan_deg32}{\MAOnedegThreeTwo}

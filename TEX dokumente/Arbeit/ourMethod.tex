@@ -1,6 +1,11 @@
 \todo{introduction}
+In this we develop a Picard iteration aiming to solve the \MA equation. To the author's knowledge this is the first try to apply the Picard linearisation on the \MA equation. 
+To start this chapter we first motivate and derive the Picard iteration and its discretisation.
+After that we compare the method with the classical Netwon's method and the $C^0$ penalty method presented in the last chapter (cf. Section \ref{sec: Brenner method}). We try to transfer results on the penalty method on the newly derived Picard iteration method. 
+In the last section we see first numerical results. Since the presented Picard iteration do not perform well on a first example we discuss improvements of the newly derived method.
 
-\section{A Picard Iteration for the \MA equation}
+
+\section{A Picard Iteration for the \MA equation} \label{sec: motivation picard iteration}
 For quasilinear PDEs (cf. Definition \ref{def: categories of PDEs}) such as the convection equation $\nabla \cdot (A(u) \nabla u ) = f$ it is common to determine the solution via a fixed point iteration. The key aspect is a decoupling of the coefficient matrix $A(u)$ and $\nabla u$. Hence, one solves iteratively  for $i\in \N$ the equations
 \[
 	\nabla \cdot (A(u^{i} )\nabla u^{i+1}) = f   \quad \text{      and      }\quad \nabla \cdot (A(u^{i+1}) \nabla u^{i}) = f, \text{ respectively}.
@@ -74,11 +79,11 @@ Since in every iteration \eqref{eq:fixed point iteration} states a Generalised P
     	\label{eq: sipg iteration}
 \end{align}
 
-Now that we derived a new iterated DG method to solve the \MA equation we compare of \eqref{eq: sipg iteration} to Newton's method and the method introduced in Section \ref{sec: Brenner method}. 
+Now that we derived a new iterated DG method to solve the \MA equation we compare \eqref{eq: sipg iteration} to Newton's method and the method introduced in Section \ref{sec: Brenner method}. 
 
 \input{comparison.tex}
 
-After this analysis it is not clear how the Picard iteration practically behaves. The next section addresses some first numerical results of the Picard iteration and first obstacles when solving simple problems.  
+%After this analysis it is not clear how the Picard iteration practically behaves. The next section addresses some first numerical results of the Picard iteration and first obstacles when solving simple problems.  
 \section{Challenges for the Picard iterations}
 Reviewing existing DG methods for the \MA we learned some issues we have to pay attention to  while examining the performances of the Picard iteration. The next subsections treat the most challenging points.
 At the beginning there always is the question of a starting point $u_h^0$.
@@ -93,14 +98,14 @@ In \cite[Remark 2.1]{DG2006a} has been shown a strong connection between the \MA
 \end{align}
 An advantage of this approach is the compliance of boundary conditions.
 
-Alternatively a nested iteration can be utilised. At a the coarsest level with a grid width $h_1$ one chooses any convex function as initial guess $u^0_{h_1}$. Often the polymial $\frac 1 2 ({x_1^2} + {x_2^2}) $ is taken for it is convex and has a low degree. For finer triangulations $\mathcal{T}_{h_{l}}$ the solution of the previously computed solution $u_{h_{l-1}}$is taken as a starting point. Of course both approaches can be combined using the Poisson solution of \ref{eq: start sqrt_f} on the coarsest grid whereas later taking quasi-interpolants.
+Alternatively a nested iteration can be utilised. On a the coarsest level with a grid width $h_1$ one chooses any convex function as initial guess $u^0_{h_1}$. Often the polymial $\frac 1 2 ({x_1^2} + {x_2^2}) $ is taken for it is convex and has a low degree. For finer triangulations $\mathcal{T}_{h_{l}}$ the solution of the previously computed solution $u_{h_{l-1}}$is taken as a starting point. Of course both approaches can be combined using the Poisson solution of \ref{eq: start sqrt_f} on the coarsest grid whereas later taking quasi-interpolants.
 
 In favour of the second approach is that it takes into account that the method's robustness may decrease for finer meshes.
 
 Now we are able to perform the Picard iteration on some simple example cases.
 \subsection{An additional Penalty Parameter}
-At the beginning the SIPG method is implemented exactly as stated in section \ref{sec: SIPG MA}. The polynomial degree $k$ of the ansatz and trial space $\mathcal V_h^k$ was taken to be two.
-As an initial guess served the solution of \eqref{eq: start sqrt_f} , the penalty parameter $\sigma$ was chosen to be 30 and the domain $\Omega$ to be the unit square $[0,1]^2$.
+At the beginning the SIPG method is implemented exactly as stated in Section \ref{sec: SIPG MA}. The polynomial degree $k$ of the ansatz and trial space $\mathcal V_h^k$ was taken to be two.
+The solution of \eqref{eq: start sqrt_f} served as an initial guess, the penalty parameter $\sigma$ was chosen to be 30 and the domain $\Omega$ to be the unit square $[0,1]^2$.
 
 For first numerical results we consider the rather simple equation
 \begin{align}
@@ -109,11 +114,11 @@ For first numerical results we consider the rather simple equation
 \end{align}
 which has the exact classical solution $\frac 1 2 (x_1^2 + x_2^2 )$. 
 
-However, even for this rather simple example the implementation shows inconsistencies: Given the exact solution which is already contained in $V_h$ as starting point the $L^2$ error steadily increases, as shown in Figure \ref{fig: consisctency_first_try}.
+However, even for this rather simple example the implementation shows inconsistencies: Given the exact solution which is already contained in $V_h$ as starting point the $L^2$ error increases, as shown in Figure \ref{fig: consisctency_first_try}.
 \begin{figure}[H]
 	\centering
 	\includegraphics[trim = 2cm 4cm 1cm 4cm, width=1\textwidth]{plots/consisctency_first_try.pdf}
-	\caption{Relative $L2$ error on a grid with $h=\frac 1 2$}
+	\caption{Relative $L^2$ error on a uniform grid with $h=\frac 1 2$}
 	\label{fig: consisctency_first_try}
 \end{figure}
 Examining the plots of solutions $u^i_h$ shortly before the method diverges it catches the eye that they have developed some sharp edges although the initial function and the solution are absolutely smooth. In particular the sharp edges of the solution coincide with the edges of the finite element grid. A visual inspection suggest that these solution $u^i_h$ are $C^0$ continuous, but lack higher regularity.
@@ -132,7 +137,7 @@ Nevertheless, starting over with the initial guess from \eqref{eq: start sqrt_f}
 \begin{figure}[H]
 	\centering
 	\includegraphics[trim = 2cm 4cm 1cm 4cm, width=1\textwidth]{plots/oscillation.pdf}
-	\caption{Relative $L2$ error on a grid with $h=\frac 1 4$ and gradient penalty}
+	\caption{Relative $L^2$ error on a grid with $h=\frac 1 4$ and gradient penalty}
 	\label{fig: oscillation}
 \end{figure}
 
@@ -167,14 +172,16 @@ To fulfill this criterion we just add positive multiples of the identity matrix 
 where $\lambda$ is the minimal eigenvalue of $ \mycof {D^2_h u_h}$ and $Id$ is the $d \times d$-Identity matrix. 
 Now we replace all occurrences of $\mycof {D^2_h u_h}$ in \eqref{eq: sipg iteration} by $\mycofMod {D^2_h u_h}$ to stabilise the problem.
 
-The case that a cofactor matrix $\mycof {D^2_h u_h} $ does have a negative eigenvalue or even a complex one \todo{HIER}
+The case that a cofactor matrix $\mycof {D^2_h u_h} $ does have a negative eigenvalue or even a complex one implies that also the Hessian of $u_h$ is not positive definite. Hence, $u_h$ is not piecewise convex, we discuss this issue in more detail in the next section.
 
 %Let us recall the geometric interpretation of the second derivative, it indicates the curvature of a function and hence also describes the convexity, concavity respectively.
 %One improvement could be the smoothing process during a convexification for it will smooth away all unintended concave curvatures. But probably the result will be still unsatisfiable because convexification does not affect sharp edges at triangle transitions.
 
 \subsection{Convexfication} \label{subsec: convexification}
  The \MA equation in general does not posses a unique solution (cf. Section \ref{sec: Existence and Uniqueness}). Yet for most applications the (unique) convex solution is required. The question is if there exists an appropriate way to oblige the Picard iteration to select only convex solutions.\\
-The most intuitive way is to convexify the solution after every step. %Thereby, on one hand we make sure the right solution is approximated and on another hand we smooth the Generalised Poisson solution. This could also improve the quality of second derivatives of our interim solution. % aiming for a better approximation of the second derivatives.
+The most intuitive way is to convexify the solution after every step. Thereby, we hope to ensure that the right solution is approximated. There may be additional benefit by a convexification:
+Let us recall the geometric interpretation of the second derivative, it indicates the curvature of a function and hence also describes the convexity, concavity respectively. A convexification will smooth away small wiggles and by definition will force the function to be convex.  Thus, a convexification could also improve the approximation quality of second derivatives of our interim solution which we need to set up the cofactor of the Hessian for the next Picard step. % aiming for a better approximation of the second derivatives.
+
 Unfortunately convexification is not simple. As there are a lot of results on the convexity of Bernstein polynomials, we choose a Bernstein basis for the ansatz space.
 \begin{definition}[Bernstein-B\'ezier form{, \cite[Section.2]{SS2010}}]\label{def: BernsteinBezierForm}
 	Any univariate polynomial $p:T \rightarrow \R$ of degree $d$ on a triangle $T$ can be represented in \emph{Bernstein-B\'ezier form} as
@@ -275,7 +282,7 @@ Note that the latter conditions of Theorem \ref{thm: convex cond quadr} and Theo
 where  $\{c_{i,j,k}\}_{i+j+k=d}$ and $\{ {\hat c_{i,j,k}}\}_{i+j+k=d}$ are the B\'ezier coefficients of $p$ relative to the two triangles $T_1 = \langle v_\kappa, v_\lambda, v_\mu \rangle$ and $T_2 = \langle v_\kappa, v_\mu, v_\nu \rangle$ sharing the edge $e$, and $(\beta_1^c,\beta_2^c,\beta_3^c)$ are the barycentric coordinates of $v_\nu$ with respect to $T_1$. Then $p$ is convex.
 \end{theorem}
 
-Figure \ref{fig: convexity condition} shows the domain points $\xi_{ijk}$ (cf. \eqref{eq: domain points} corresponding to the B\'ezier coefficients of the scenario of Theorem \ref{thm: convex cond across edge} for the case $d+2$.
+Figure \ref{fig: convexity condition} shows the domain points $\xi_{ijk}$ (cf. \eqref{eq: domain points}) corresponding to the B\'ezier coefficients of the scenario of Theorem \ref{thm: convex cond across edge} for the case $d+2$.
 \begin{figure}[H]
 	\input{triangle_convexity_condition.pgf}
 	\caption{Two triangles and B\'ezier control points for polynomials of degree $k=2$ \\($T_1 = \langle v_\kappa, v_\lambda, v_\mu \rangle$ and $T_2 = \langle v_\kappa, v_\mu, v_\nu \rangle$)}
@@ -285,7 +292,8 @@ Figure \ref{fig: convexity condition} shows the domain points $\xi_{ijk}$ (cf. \
 \[
 		{\hat c_{101}} \geq \beta_1^c c_{200} +\beta_2^c c_{110} + \beta_1^c c_{101}	
 \]
-Geometrically  this ensures the control point $Q_{101}$ (cf. \eqref{eq: control points})is above the plane where the triangle $\langle Q_{200}, Q_{110}, Q_{101} \rangle$ is embedded. Or in particular the surface consisting of the triangle $\langle Q_{200}, Q_{110}, Q_{101} \rangle= \langle \hat Q_{200}, Q_{110}, \hat Q_{110} \rangle$  and the triangle $\langle \hat Q_{200}, \hat Q_{110}, \hat Q_{101} \rangle$ is convex.
+Geometrically in the case of $d=2$ this ensures the control point $Q_{101}$ (cf. \eqref{eq: control points})is above the plane where the triangle $\langle Q_{200}, Q_{110}, Q_{101} \rangle$ is embedded. %Note that the first two coordinates are the coordinates of the domain points. Thus, we can identify the 
+Or in particular the surface consisting of the triangle $\langle Q_{200}, Q_{110}, Q_{101} \rangle= \langle \hat Q_{200}, Q_{110}, \hat Q_{110} \rangle$  and the triangle $\langle \hat Q_{200}, \hat Q_{110}, \hat Q_{101} \rangle$ is convex.
 
 For quadratic splines Schumaker and Speleers even prove the inversion of Theorem \ref{thm: convex cond across edge} on convex domains $\Omega$, namely if for every interior edge its coefficients satisfy \eqref{eq: convexity across edge} then the corresponding spline is convex.
 This result does not generalise for higher degrees. In fact they give a counterexample for degree $k = 3$ \cite[Example 3.11]{SS2014}.
@@ -301,20 +309,20 @@ However, solving a linearly constrained least squares problem is nontrivial. So,
 
 \section{The Picard Iteration Algorithm}
 
-Bringing the suggestions of the last section together the method to carry out the fixed point iteration works as Algorithm \ref{alg: final} describes.
+Combining the suggestions of the last sections we obtain a method to carry out the fixed point iteration working as Algorithm \ref{alg: final} describes.
 
 \begin{algorithm}
 \begin{algorithmic}
 \Require triangulation \triang, desired mesh width $h$, maximimal number of intermediate steps $i_{max}$
 \State $u_0\gets $ solution of  $
 	\triangle u = \sqrt{2f} \text{ in } \Omega $ with $
-	u = g \text{ on }\partial \Omega$
+	u = g \text{ on }\partial \Omega$ \Comment initialisation
 \While {$h < H$}
 	\State $i \gets 0$
 %	\While {$|u_i-u_{i-1}| < \varepsilon$}
 	\While {$i < i_{max} $}
 		\State $u_i \gets$ solution of \ref{sec: SIPG} with modified cofactor matrix (\ref{sec: mod cofactor})
-		\State $u_i \gets \alpha u_{i-1} + (1-\alpha)u_i $
+		\State $u_i \gets \alpha u_{i-1} + (1-\alpha)u_i $ \Comment convex combination
 		\State (convexify)
 		\State $i \gets i+1$
 	\EndWhile
@@ -325,5 +333,5 @@ Bringing the suggestions of the last section together the method to carry out th
 \label{alg: final}
 \end{algorithm}
 
-The step convexify is put into brackets for it is not clear whether a convexification is necessary and actually helps the convergence. A lot of the methods mentioned in the chapters \ref{ch:MongeAmpereEq} and \ref{ch:DGMongeAmpere} work without an explicit convexification, although most require a convex initial guess. 
-Additionally the approach described in section \ref{subsec: convexification} is intricately to implement, increases significantly the computation costs and it may modify functions even though they already are convex. We note, that for the condition of the stiffness matrix of the used SIPG method we need the cofactor matrix to be positive definit which is equivalent to the piecewise convexity of the last iteration step. However, our modification of the cofactor matrix  may avert the problems arising for slightly non convex intermediate solutions.
+The step convexify is put into brackets for it is not clear whether a convexification is necessary and actually helps the convergence. A lot of the methods mentioned in the Chapters \ref{ch:MongeAmpereEq} and \ref{ch:DGMongeAmpere} work without an explicit convexification, although most require a convex initial guess. 
+Additionally the approach described in Section \ref{subsec: convexification} is intricately to implement, significantly increases the computation costs and it may modify functions even though they already are convex. We note, that for the well-posedness of the used SIPG method we need the cofactor matrix to be positive definite which is equivalent to the piecewise convexity of the last iteration step. However, our modification of the cofactor matrix  may avert the problems arising for slightly non-convex intermediate solutions.
