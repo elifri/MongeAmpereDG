@@ -1,11 +1,4 @@
 %read data for case deg=22 and merge into one file
-\newcommand{\readDataN}[2]{
-\pgfplotstableread{../../FEniCS/dataCur/#1_l2errornorm} #2
-
-\pgfplotstablecreatecol[copy column from table={../../FEniCS/dataCur/#1_h1errornorm}{h1error}] {h1error} #2
-
-\pgfplotstablecreatecol[copy column from table={../../FEniCS/dataCur/#1_newtonSteps}{steps}] {N} #2
-}
 
 \newcommand{\readData}[2]{
 	\pgfplotstableread{data/#1_l2errornorm} #2
@@ -14,6 +7,15 @@
 	
 	\pgfplotstablecreatecol[copy column from table={data/#1_newtonSteps}{steps}] {N} #2
 }
+
+\newcommand{\readDataO}[2]{
+	\pgfplotstableread{data/#1_l2errornorm} #2
+	
+	\pgfplotstablecreatecol[copy column from table={data/#1_h1errornorm}{h1error}] {h1error} #2
+	
+	\pgfplotstablecreatecol[copy column from table={data/#1_newtonSteps}{steps}] {N} #2
+}
+
 
 
 \readData{MA1_Brenner_deg2}{\MAOneBrennerTwo}
@@ -25,29 +27,29 @@
 \readData{MA4_Brenner_deg3}{\MAFourBrennerThree}
 
 
-\readDataN{MA1_Neilan_GradJump_deg22}{\MAOneJumpdegTwoTwo}
-\readDataN{MA1_Neilan_GradJump_deg20}{\MAOneJumpdegTwoZero}
-\readDataN{MA1_Neilan_GradJump_deg33}{\MAOneJumpdegThreeThree}
-\readDataN{MA1_Neilan_GradJump_deg32}{\MAOneJumpdegThreeTwo}
+\readData{MA1_Neilan_GradJump_deg22}{\MAOneJumpdegTwoTwo}
+\readData{MA1_Neilan_GradJump_deg20}{\MAOneJumpdegTwoZero}
+\readData{MA1_Neilan_GradJump_deg33}{\MAOneJumpdegThreeThree}
+\readData{MA1_Neilan_GradJump_deg32}{\MAOneJumpdegThreeTwo}
 
-\readDataN{MA1_Neilan_deg33}{\MAOnedegThreeThree}
-\readDataN{MA1_Neilan_deg32}{\MAOnedegThreeTwo}
+\readData{MA1_Neilan_deg33}{\MAOnedegThreeThree}
+\readData{MA1_Neilan_deg32}{\MAOnedegThreeTwo}
 
-\readDataN{MA2_Neilan_deg22}{\MATwodegTwoTwo}
-\readDataN{MA2_Neilan_deg33}{\MATwodegThreeThree}
-\readDataN{MA2_Neilan_GradJump_deg22}{\MATwoJumpdegTwoTwo}
-\readDataN{MA2_Neilan_GradJump_deg33}{\MATwoJumpdegThreeThree}
+\readData{MA2_Neilan_deg22}{\MATwodegTwoTwo}
+\readData{MA2_Neilan_deg33}{\MATwodegThreeThree}
+\readData{MA2_Neilan_GradJump_deg22}{\MATwoJumpdegTwoTwo}
+\readData{MA2_Neilan_GradJump_deg33}{\MATwoJumpdegThreeThree}
 
-\readDataN{MA3_Neilan_deg22}{\MAThreedegTwoTwo}
+\readData{MA3_Neilan_deg22}{\MAThreedegTwoTwo}
 %\readDataN{MA3_Neilan_deg33}{\MAThreedegThreeThree}
-\readDataN{MA3_Neilan_GradJump_deg10}{\MAThreeJumpdegOneZero}
-\readDataN{MA3_Neilan_GradJump_deg22}{\MAThreeJumpdegTwoTwo}
-\readDataN{MA3_Neilan_GradJump_deg20}{\MAThreeJumpdegTwoZero}
-\readDataN{MA3_Neilan_GradJump_deg33}{\MAThreeJumpdegThreeThree}
+\readData{MA3_Neilan_GradJump_deg10}{\MAThreeJumpdegOneZero}
+\readData{MA3_Neilan_GradJump_deg22}{\MAThreeJumpdegTwoTwo}
+\readData{MA3_Neilan_GradJump_deg20}{\MAThreeJumpdegTwoZero}
+\readData{MA3_Neilan_GradJump_deg33}{\MAThreeJumpdegThreeThree}
 
-\readDataN{MA4_Neilan_GradJump_deg10}{\MAFourJumpdegOneZero}
-\readDataN{MA4_Neilan_GradJump_deg22}{\MAFourJumpdegTwoTwo}
-\readDataN{MA4_Neilan_GradJump_deg33}{\MAFourJumpdegThreeThree}
+\readData{MA4_Neilan_GradJump_deg10}{\MAFourJumpdegOneZero}
+\readData{MA4_Neilan_GradJump_deg22}{\MAFourJumpdegTwoTwo}
+\readData{MA4_Neilan_GradJump_deg33}{\MAFourJumpdegThreeThree}
 
 
 %\pgfplotstableread{../../FEniCS/data/MA1_Neilan_deg22_l2errornorm} \MAOnedegTwoTwoL

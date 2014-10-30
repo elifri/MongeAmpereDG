@@ -103,7 +103,7 @@ Alternatively a nested iteration can be utilised. On a the coarsest level with a
 In favour of the second approach is that it takes into account that the method's robustness may decrease for finer meshes.
 
 Now we are able to perform the Picard iteration on some simple example cases.
-\subsection{An additional Penalty Parameter}
+\subsection{An additional Penalty Parameter} \label{subsec: add penalty param}
 At the beginning the SIPG method is implemented exactly as stated in Section \ref{sec: SIPG MA}. The polynomial degree $k$ of the ansatz and trial space $\mathcal V_h^k$ was taken to be two.
 The solution of \eqref{eq: start sqrt_f} served as an initial guess, the penalty parameter $\sigma$ was chosen to be 30 and the domain $\Omega$ to be the unit square $[0,1]^2$.
 

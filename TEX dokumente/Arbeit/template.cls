@@ -113,7 +113,6 @@
 
 \pgfplotsset{compat=1.8}
 \pgfplotstableset{
-	sci e, /pgf/number format/sci precision=5,
     columns/iterations/.style={column name={$h$},% Set the name to be used for the first column
     	preproc/expr={2^##1}, %preposs (calculate 2^i) 
 		postproc cell content/.append style={
@@ -128,7 +127,7 @@
         /pgf/number format/sci precision=4     % print 14 digits
     },
     columns/h1error/.style={
-        column name=$H^1$ error,  % ... and the second
+		column name=$H^1$ error,  % ... and the second
         dec sep align,      % align on the decimal marker
         /pgf/number format/sci e, 
         /pgf/number format/fixed zerofill,  % print trailing zeros

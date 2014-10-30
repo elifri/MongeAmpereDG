@@ -76,12 +76,16 @@ The triangulation $\triang$ was obtained by a standard refinement as explained i
 \begin{figure}[H]
 	\centering
 	\begin{subfigure}{0.45\textwidth}
-		\includegraphics[scale=0.25]{plots/grid1.pdf}
+		\centering
+		\edef \n {2}
+		\input{triangulation.pgf}
 		\caption{Triangulation with $h=\frac 1 2$}
 		\label{fig: grid1}
 	\end{subfigure}
 	\begin{subfigure}{0.45\textwidth}
-		\includegraphics[scale=0.25]{plots/grid2.pdf}
+		\centering
+		\edef \n {4}
+		\input{triangulation.pgf}
 		\caption{Triangulation with $h=\frac 1 4$}
 		\label{fig: grid}
 	\end{subfigure}	
@@ -127,7 +131,7 @@ Only the absolute tolerance and the number of maximum iteration are changed from
 
 The results can be found in figure \ref{fig: Brenner test1} and in table \ref{tab: l2 errors test 1 Brenner} where $h$ denotes the grid width and $N$ denotes the iterations needed to reach the desired tolerance. 
 
-\begin{table}[h]
+\begin{table}[H]
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
 		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
@@ -146,15 +150,24 @@ The results can be found in figure \ref{fig: Brenner test1} and in table \ref{ta
 	\caption{Errors for test case \ref{test smooth}}
 	\label{tab: l2 errors test 1 Brenner}
 \end{table}
+
+Fitting the data we can calculate the numerical convergence order $2.502$ for $k=2$ and $3.584$ for $k=3$ in the $L^2$ error norm as well as $2.007$ for $k=2$ and $3.028$ in the $H^1$ error norm. Thus, the results in the $H^1$ confirm the almost convergence rate $k$ as predicted by the authors (cf. also Theorem \ref{thm: error estimate brenner}).
+Additionally we observe that the method also converges for polynomial degree $k=2$ with optimal rates although the prove of the error estimate do not cover the case $k<3$.
+
 \begin{figure}[H]
 \centering
-	\includegraphics[scale=0.4]{../../FEniCS/diagrams/MA1_Brenner_l2.pdf}
+	\includegraphics[scale=0.45]{../../FEniCS/diagrams/MA1_Brenner_l2.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth}}
 	\label{fig: Brenner test1}
 \end{figure}
-Fitting the data we can calculate then convergence order  $2.576$ for $k=2$ and $3.306$ for $k=3$.
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.45]{../../FEniCS/diagrams/MA1_Brenner_l2.pdf}
+	\caption{$H^1$ errors for test case \ref{test smooth}}
+	\label{fig: Brenner test1 h1}
+\end{figure}
 
-For the second test case the Newton did not even on the coarsest grid converge. Also in the third test case our Newton solver had problems. You can see results of the runs for $h=1/2, \dots, 1/16$ in table \ref{tab: l2 errors test 3 Brenner}, for finer grid the solver did not converge. Attempts to solve this example with FEniCS' built in damped Newton method with different relaxation parameters did also not succeed on any grid finer than $1/16$.
+For the second test case the Newton did not converge, not even on the coarsest grid. Also in the third test case our Newton solver had problems. You can see results of the runs for $h=1/2, \dots, 1/16$ in table \ref{tab: l2 errors test 3 Brenner}, for finer grid the solver did not converge. Attempts to solve this example with FEniCS' built in damped Newton method with different relaxation parameters did also not succeed on any grid finer than $1/16$.
 \begin{table}[h]
 		\centering
 		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
@@ -216,29 +229,29 @@ We denote the degree of the trial space $V_h=\mathcal P_h^k$ by $k$ and the degr
 
 \newpage
 
-\section{Numerical Results of Our DG Method}
+\section{Numerical Results of DG Picard Iteration Method}
 
-Our method was implemented in pure C++. The underlying grid structure was taken from the implementation of \cite{BMV2009}, handling vectors and matrices as well as was linear solver were provided by the Eigen library \cite{eigenweb}. To solve the quadratic program arising in the context of convexification the C++ library ipopt \cite{ipopt} was used.
+The Picard iteration is implemented in C++. All vector and matrix handling as well as was linear solvers are provided by the Eigen library \cite{eigenweb}. To solve the quadratic program arising in the context of a convexification (cf. \eqref{eq: convex lsq}) the C++ library ipopt \cite{ipopt} was used.
 
-The C++ implementation uses the same nested grids as also have been used in the latter FEniCS implementations. It is obtained by dividing the unitsquare along the diagonals into four triangles and then refining uniformly as explained in \ref{subsec: refinement and base cells}.
+The C++ implementation uses the same nested grids as also have been used in the latter FEniCS implementations (cf. Figure \ref{fig: grids}). It is obtained by dividing the unitsquare along the diagonals into four triangles and then refining uniformly as explained in \ref{subsec: refinement and base cells}.
 
 \subsection{Implementation Details}
 
-The main class of the implementation is the Tsolver class. Here come all information together and the solver controls the assembly and solving process. 
-We make the clear looking at a . The main method can be found in mesh.cpp. At the beginning all input data is fed into the program. With this information the solver can initialise the grid and the reference cell. 
-The grid is taken from the igpm\_t2\_lib and based on the work of \cite{BMV2009} and all reference data is handled in the class Tshape.
+The main class of the implementation is the Tsolver class. The solver collects all information and controls the assembly and solving process.
+Hence, the main method which can be found in mesh.cpp just initialises solver and starts the solving process: Via a configuration file all input data is fed into the main routine. With this information the solver can initialise its members grid and Tshape, Those represent the underlying grid structure and the reference cell. 
+The grid implemenation is taken from the igpm\_t2\_lib and is based on the work of \cite{BMV2009}.
 
-The main work is done in Tsolver's function stepping\_MA(). It starts with an initialisation process where it reads specific problem data which includes
+The main method, i.e. the algorithm from Algorithm \ref{alg: final} is implemented in Tsolver's function stepping\_MA(). It starts with an initialisation process where it reads specific problem data which includes
 \begin{enumerate}
- \item  the problem we want to solve,
+ \item the problem we want to solve,
  \item penalty parameters to enforce continuity and penalise the gradient jump,
- \item the start level of refinement with respect to the initial grid,
- \item the damping paramter alpha,
- \item the number of fixed point iterations per grid,
- \item the maximal grid refinements.
+ \item the start level of refinement with respect to the initial grid $start\_level$,
+ \item the damping paramter $\alpha$,
+ \item the number of fixed point iterations per grid $max\_its$,
+ \item the maximal grid refinements $max\_levelrefinement$.
 \end{enumerate}
-During the initialisation it also updates all base cell data, the leaf cell data, enumerate the degree of freedoms and the initial guess.
-Afterwards the fixed point iterations begin, in every step the General Poisson Problem is solved, eventually convexified and afterwards with the last solution step combined. If the specified number of iterations has been carried out, the grid is refined, the leaf cell data updated and we start the fixed point iterations again.
+During the initialisation the methods also updates all base cell data and leaf cell data, enumerates the degree of freedoms and computes the initial guess.\\
+Afterwards the fixed point iterations begins, in every step the General Poisson problem (cf. Section \ref{sec: SIPG MA}) solved, eventually convexified (cf. Section \ref{subsec: convexification}) and afterwards with the last solution step combined \ref{subsec: add penalty param}). If the specified number of iterations has been carried out, the grid is refined, the leaf cell data updated and we start the fixed point iterations again.
 We repeat this process until the maximal number of grid refinements is reached.
 To illustrate this procedure Algorithm \ref{alg: stepping} shows the function stepping\_MA() in pseudo code.
 \begin{algorithm}[H]
@@ -253,18 +266,20 @@ To illustrate this procedure Algorithm \ref{alg: stepping} shows the function st
 %			 \item max\_levelrefinement \Comment{ the maximal refinement level }
 %		\end{enumerate}
 	\State Initialise base cell data
-	\State Refine to start\_level
+	\State Refine to $start\_level$
 	\State Initialise leaf cell data
 	\State Enumerate degree of freedoms
 	\State (Initialise Convexifier)
 	\State Initialise initial guess $u_{-1}$
+	\State level $\gets start\_level$
 	\State $i \gets 0$
-	\While {level < max\_levelrefinement}
+	\While {level < $max\_levelrefinement$}
 		\State Enumerate degree of freedoms
+		\State Update base and leaf cell data
 		\State (Initialise C0 converter) \Comment{only needed for convexification}
 		\State cur\_it$ \gets 0$
-		\While {cur\_it < maxits}
-			\State  assemble\_MA()                              \Comment Assemble system for General Poisson Problem
+		\While {cur\_it < $maxits$}
+			\State  assemble\_MA()                              \Comment Assemble system for General Poisson problem
 			\State $u_i \gets$ solution of assembled system
 			\State (Convexify $u_i$)		 
 			\State $u_i \gets \alpha u_{i-1}  +(1-\alpha) u_i$
@@ -279,12 +294,16 @@ To illustrate this procedure Algorithm \ref{alg: stepping} shows the function st
 \label{alg: stepping}
 \end{algorithm}
 
-Direct at the beginning of system assembly the diffusion matrix in every cell has to be updated with the current cofactor matrix of the Hessian. Note, that this matrix is constant for polynomial degree $k=2$ and otherwise has to be calculated for every quadrature point. Since in general here is no connection between diffusion matrix values at the reference cell and in the leaf cell, the values of the diffusion matrix are stored in the leaf cells.
-The assembly process is carried out as already mentioned in algorithm \ref{alg: assembling}. Hereby one has to pay attention to the right scaling of quadrature weights and the right calculation of quadrature data from reference cell data as described in Examples \ref{ex: base cell trafo} and \ref{ex: leaf cell trafo}. 
+After we have seen the program structure I shortly remark some of arising programming issues:
 
-If a convexification is desired the class Convexifier takes care of the assembly of the matrices $A$ and $C$ for \eqref{eq: convex lsq} and deals with ipopt's interface to solve the quadratic program.
+Before the actual system assembly the diffusion matrix in every cell has to be updated with the modified cofactor matrix of the Hessian of the last Picard step. Note that this matrix is constant for polynomial degree $k=2$ and otherwise has to be calculated at every quadrature point. Since in general here is no connection between diffusion matrix values at the reference cell and in the leaf cell, we cannot save easily any memory as we did for function values and normal gradients (cf. Section \ref{subsec: ref cell} and \ref{subsec: refinement and base cells}). Hence, we store the diffusion matrix at every quadrature point on the grid in the corresponding leaf cell.
+The rest of the assembly process is carried out as already mentioned in algorithm \ref{alg: assembling}. Hereby one has to pay attention to the right scaling of quadrature weights and the right calculation of quadrature data from reference cell data as described in Examples \ref{ex: base cell trafo} and \ref{ex: leaf cell trafo}. 
 
-Additionally the Tsolver has a member Plotter handling all export to files. It is able to write the solution which's coefficients are currently stored in the leaf cells to a .vtu file or .dat file. Besides plotting it also administers all file stream to which information such as $L2$ errors are written into.
+If a convexification is desired, the class Convexifier takes care of the execution of the method described in Section \ref{subsec: convexification}. The linear constraints ensuring convexity on a triangle are chosen the one from theorem \ref{thm: convex cond on triangle} and the constrains for convexity across edges were given by theorem \ref{thm: convex cond across edge}. Due to the error-proneness during the assembly of $C$ the convexification was only implement for the case $k=2$. Note that before applying the theorems we have to convert our numerical solution from the DG formulation to a $C^0$ spline.
+Hence, the Convexifier computes at first using the C0converter the $C^0$ spline representation of the Poisson solution and then assembles the matrices $A$ and $C$ of \eqref{eq: convex lsq}. To solve the problem it makes use of the open source library ipopt \cite{ipopt}.\\
+Fortunately the evaluation matrix $A$, and the constraint matrix $C$ of \eqref{eq: convex lsq} only depend on the grid and thus, need only to be assembled once in every refinement.
+
+Additionally the Tsolver has a member Plotter handling all export to external files. It is able to write the solution which's coefficients are currently stored in the leaf cells to a .vtu file or .dat file. Besides plotting it also administers all file streams to which information such as $L^2$ errors are written into.
 
 \subsection{Results with Convexification}
 
@@ -293,36 +312,37 @@ The arising linear system of equations was solved with Eigen's internal Cholesky
 The parameters were if not other specified taken to be $\sigma=10 k^2, \sigma_G = 50, \alpha =
 0.3$ and $\varepsilon = 1e-2$. We always carry out 15 steps including a convexification after every step before we refine further. The implemented convexification followed the ideas of Section \ref{subsec: convexification}. 
 
-The linear constraints ensuring convexity on a triangle are chosen the one from theorem \ref{thm: convex cond on triangle} and the constrains for convexity across edges were given by theorem \ref{thm: convex cond across edge}. Due to the error-proneness during the assembly of $C$ the convexification was only implement for the case $k=2$. Note, that before applying the theorems of section \ref{subsec: convexification} we have to convert our numerical solution from the DG formulation to a $C^0$ spline.
 
-The linearly constrained least square problem \eqref{eq: convex lsq}  was reformulated as a quadratic program with linear constraints using normal equations. 
-The quadratic program was solved with the C++ library ipopt \cite{ipopt}. Fortunately the evaluation matrix $A$, and the constraint matrix $C$ of \eqref{eq: convex lsq} only depend on the grid. Hence they need only to be assembled once after every refinement.
-
-
-The results shown in figure \ref{fig: l2 errors test smooth ourMethodConvex} are very disillusioning.
+The results shown in figure \ref{fig: l2 errors test smooth ourMethodConvex} show the method does not work as expected.
 \begin{figure}[H]
 \centering
 	\includegraphics[scale =0.4]{plots/MA1_convexify.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth} and additional convexification}
 	\label{fig: l2 errors test smooth ourMethodConvex}
 \end{figure}
-We plotted in figure \ref{fig: convex before after} the $L2$ errors before the convexification step and after it. As we can see the convexification process increases the error. There are several possible explanations for that:\\
-Though the used convexification algorithm produces a convex result it does not garantuee that it leaves convex input functions unchanged.\\
-The convex function in $\mathcal P^2_h$ approximating the numerical solution $u_h$ best is not necessarily closer to the exact solution $u$ than $u_h$. Then the convexification gives a push into the wrong direction. \\
-Also the best approximation of $u$ into $\mathcal P^2_h$ does not have to be convex\todo{aguilera}. I have examined for the triangulation with $h=1/2$ the vector $Cc_u$ where $c_u$ are the coefficients of $L2$ projection into $\mathcal P^2_h$ and its minimal entry is -9.77e-03, for a grid with $h=1/16$ the minimal entry is -4.26e-04. Thus, the $L2$ projection of the exact solution does not comply with the convexity conditions.
-Figure \ref{fig: convex min coeffs} plots the minimal entry of $Cc$ for every Generalised Poisson solution vector $c$. We see that especially for small grid widths the solutions do not fulfill the convexity conditions. \todo{grid structure maxima etc.}
+To investigate the cause of this failure we give in Figure \ref{fig: convex before after} the plot of the $L^2$ error before the convexification step and the plot after it. As we can see the convexification process increases the error. There are several possible explanations for that:
 
+Though the convexification algorithm produces a convex result it does not garantuee that it leaves convex input functions unchanged.
+
+The convex function in $\mathcal P^2_h$ approximating the numerical solution $u_h$ best is not necessarily closer to the exact solution $u$ than $u_h$. Then the convexification gives a push into the wrong direction.
+
+The best approximation of $u$ into $\mathcal P^2_h$ does not have to be convex, for example the affine Lagrange interpolant of a convex function does not to be convex\cite[p.3142]{AM2009}. 
+
+To understand how \quoting{unconvex} the function was before the convexification process I have examined the vector $Cc_u$ where $C$ is the matrix containing the convexity conditions and $c_u$ are the coefficients of $L2$ projection into $\mathcal P^2_h$: The minimal entry for a grid with $h=1/2$ is -9.77e-03, for a grid with $h=1/16$ the minimal entry is -4.26e-04. Thus, the $L2$ projection of the exact solution does not comply with the convexity conditions.
+Figure \ref{fig: convex min coeffs} plots the minimal entry of $Cc$ during the Picard iterations. We see that especially for small grid widths the Poisson solutions do not fulfill the convexity conditions. 
 
 \begin{figure}[H]
 \centering
 	\begin{subfigure}{0.45\textwidth}
+		\centering
 		\includegraphics[scale=0.25]{plots/MA1_convexComp.pdf}
-		\caption{Comparison of $L2$ errors directly before and after convexification}
+		\caption{Comparison of $L^2$ errors directly before and after convexification}
 		\label{fig: convex before after}
 	\end{subfigure}
 	\begin{subfigure}{0.45\textwidth}
+		\centering
 		\includegraphics[scale=0.25]{plots/MA1_minCoeff.pdf}
-		\caption{Comparison of $L2$ errors directly before and after convexification}
+		\caption{Comparison of $L^2$ errors directly before and after convexification}
 		\label{fig: convex min coeffs}
 	\end{subfigure}	
 	\caption{$L^2$ errors for test case \ref{test smooth} and additional convexification}
@@ -330,36 +350,90 @@ Figure \ref{fig: convex min coeffs} plots the minimal entry of $Cc$ for every Ge
 \end{figure}
 
 
-The other test cases produce similar results as can be seen in figure \ref{fig: l2 errors test singularity ourMethodConvex} ... \todo{}
+The other test cases produce similar results such that we can assume the presented convexification is not sensible in the context of the Picard iteration.
 
-\begin{figure}[H]
-\centering
-	\includegraphics[scale =0.4]{plots/MA2_convexify.pdf}
-	\caption{$L^2$ errors for test case \ref{test singularity} and additional convexification}
-	\label{fig: l2 errors test singularity ourMethodConvex}
-\end{figure}
-\begin{figure}[H]
-\centering
-	\includegraphics[scale =0.4]{plots/MA2_convexComp.pdf}
-	\caption{$L^2$ errors for test case \ref{test singularity} and additional convexification}
-	\label{fig: Compare test singularity ourMethodConvex}
-\end{figure}
+%\begin{figure}[H]
+%\centering
+%	\includegraphics[scale =0.4]{plots/MA2_convexify.pdf}
+%	\caption{$L^2$ errors for test case \ref{test singularity} and additional convexification}
+%	\label{fig: l2 errors test singularity ourMethodConvex}
+%\end{figure}
+%\begin{figure}[H]
+%\centering
+%	\includegraphics[scale =0.4]{plots/MA2_convexComp.pdf}
+%	\caption{$L^2$ errors for test case \ref{test singularity} and additional convexification}
+%	\label{fig: Compare test singularity ourMethodConvex}
+%\end{figure}
 
 
+	
 
 \subsection{Results without Convexification}
 
 We used the same code basis as in the previous tests but turned off every direct convexification.
-In the first figure \ref{fig: l2 errors test smooth ourMethod} we can see the results for the the smooth test case \ref{test smooth}.
-\begin{figure}[h!]
+In Figure \ref{fig: l2 errors test smooth ourMethod} and Table \ref{tab: l2 errors our method} can see the results for the the smooth test case \ref{test smooth}.
+\begin{figure}[H]
 	\centering
 	\includegraphics[scale =0.4]{plots/MA1.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth}}
 	\label{fig: l2 errors test smooth ourMethod}
 \end{figure}
- For the first four refinements the method behaves well for both $k=2$ and $k=3$. Afterwards the numerical solution departs from the actual solution although the $L^2$ error seems to not excel $1$.
+\begin{table}[H]
+	\centering
+	\begin{subtable}[b]{0.45\textwidth}
+		\centering
+		\pgfplotstabletypeset[
+			every first column/.style={string type},
+		    every second column/.style={
+		    dec sep align,      % align on the decimal marker
+		    /pgf/number format/sci e, 
+		    /pgf/number format/fixed zerofill=true,  % print trailing zeros
+		    /pgf/number format/sci precision=4     % print 14 digits
+			}
+		]
+		{
+		{$h$}  l2error
+		{init}  0.117041 
+		{$1/2$}  0.0247946 
+		{$1/4$}  0.0094535 
+		{$1/8$}  0.00181535 
+		{$1/{16}$}  0.000435754 
+		{$1/{32}$}  0.00015778 
+		{$1/{64}$}  0.248114				
+		}
+		\caption{$L^2$ error for $k=2$}
+	\end{subtable}
+	\begin{subtable}[b]{0.45\textwidth}
+		\centering
+		\pgfplotstabletypeset[
+		every first column/.style={string type},
+		every second column/.style={
+			dec sep align,      % align on the decimal marker
+			/pgf/number format/sci e, 
+			/pgf/number format/fixed zerofill=true,  % print trailing zeros
+			/pgf/number format/sci precision=4     % print 14 digits
+		}
+		]
+		{
+			{$h$}  l2error
+			{init}  0.151794
+			{$1/2$} 0.00101133
+			{$1/4$}  0.000140753
+			{$1/8$}  2.10612e-05
+			{$1/{16}$}  3.9589e-06
+			{$1/{32}$}  3.46521e-06
+			{$1/{64}$}  0.557331				
+		}
+		\caption{$L^2$ error for $k=3$}
+	\end{subtable}
+	\caption{$L^2$ errors for test \ref{test smooth}}
+	\label{tab: l2 errors our method}
+\end{table}
+
+
+ For the first four refinements the method behaves well for both $k=2$ and $k=3$. Afterwards the numerical solution departs from the actual solution.
  
- We get similiar results in the next two cases albeit the fixed point iterations performs worse in the second case which lacks $H^2$ regularity. The $L2$ errors are shown in the figures \ref{fig: l2 errors test sqrt ourMethod} and \ref{fig: l2 errors test singularity ourMethod}.
+ We get similiar results in the next two cases albeit the fixed point iterations performs worse in the second case which lacks $H^2$ regularity. The $L2$ errors are shown in the Figures \ref{fig: l2 errors test sqrt ourMethod} and \ref{fig: l2 errors test singularity ourMethod}.
  
 \begin{figure}[H]
 \centering
