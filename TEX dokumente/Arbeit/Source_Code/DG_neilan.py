@@ -92,7 +92,7 @@ if __name__ == "__main__":
   sigmaC = 20.0*deg*deg
   sigmaG = 50.0
 
-  g, f, u0 = MA_problem(problem_name, Nh, parameters['form_compiler']['quadrature_degree'], mesh)
+  f, u0 = MA_problem(problem_name, Nh, parameters['form_compiler']['quadrature_degree'], mesh)
   
   #get start function
   u1_ = start_iteration(mesh, V, u0, f, sigmaC)
@@ -132,4 +132,4 @@ if __name__ == "__main__":
     u_=project(w,W)
  
     #update problem information
-    g, f, u0 = MA_problem(problem_name, Nh, parameters['form_compiler']['quadrature_degree'], mesh)
+    f, u0 = MA_problem(problem_name, Nh, parameters['form_compiler']['quadrature_degree'], mesh)

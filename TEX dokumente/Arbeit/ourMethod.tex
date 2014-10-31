@@ -1,5 +1,5 @@
 \todo{introduction}
-In this we develop a Picard iteration aiming to solve the \MA equation. To the author's knowledge this is the first try to apply the Picard linearisation on the \MA equation. 
+In this we develop a \emph{Picard iteration} aiming to solve the \MA equation. To the author's knowledge this is the first try to apply the Picard linearisation on the \MA equation. 
 To start this chapter we first motivate and derive the Picard iteration and its discretisation.
 After that we compare the method with the classical Netwon's method and the $C^0$ penalty method presented in the last chapter (cf. Section \ref{sec: Brenner method}). We try to transfer results on the penalty method on the newly derived Picard iteration method. 
 In the last section we see first numerical results. Since the presented Picard iteration do not perform well on a first example we discuss improvements of the newly derived method.
@@ -10,7 +10,7 @@ For quasilinear PDEs (cf. Definition \ref{def: categories of PDEs}) such as the 
 \[
 	\nabla \cdot (A(u^{i} )\nabla u^{i+1}) = f   \quad \text{      and      }\quad \nabla \cdot (A(u^{i+1}) \nabla u^{i}) = f, \text{ respectively}.
 \] 
-This kind of linearisation is also called Picard linearisation method and is very favoured to linearise the convection terms in the Navier-Stokes equations.
+This kind of linearisation is also called \emph{Picard linearisation} method and is very favoured to linearise the convection terms in the Navier-Stokes equations.
 
 In this spirit we aim to decouple of the derivatives in the strongly nonlinear \MA such that the decoupled PDEs are only linear. 
 

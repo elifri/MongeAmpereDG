@@ -26,7 +26,7 @@ defines the second example. This test is especially interesting because the conv
 For the next two tests we define $x_0 = \left(\frac 1 2, \frac 1 2  \right)^t$.
 
 \begin{test}\label{test singularity}
-The third \MA test is yet more regular. Its solution lies in $C^1$ and it is given by
+The third \MA test is also irregular. Its solution lies in $C^1$ and it is given by
 \[
 	u=\frac 1 2 \left( \max 0 {\lVert x - x_0 \rVert_2-0.2 }  \right)^2 
 	\text { and } 
@@ -328,7 +328,7 @@ The convex function in $\mathcal P^2_h$ approximating the numerical solution $u_
 
 The best approximation of $u$ into $\mathcal P^2_h$ does not have to be convex, for example the affine Lagrange interpolant of a convex function does not to be convex\cite[p.3142]{AM2009}. 
 
-To understand how \quoting{unconvex} the function was before the convexification process I have examined the vector $Cc_u$ where $C$ is the matrix containing the convexity conditions and $c_u$ are the coefficients of $L2$ projection into $\mathcal P^2_h$: The minimal entry for a grid with $h=1/2$ is -9.77e-03, for a grid with $h=1/16$ the minimal entry is -4.26e-04. Thus, the $L2$ projection of the exact solution does not comply with the convexity conditions.
+To understand how \quoting{unconvex} the function was before the convexification process I have examined the vector $Cc_u$ where $C$ is the matrix containing the convexity conditions and $c_u$ are the coefficients of $L2$ projection (cf. \eqref{eq: convex lsq} )into $\mathcal P^2_h$: The minimal entry for a grid with $h=1/2$ is -9.77e-03, for a grid with $h=1/16$ the minimal entry is -4.26e-04. Thus, the $L2$ projection of the exact solution does not comply with the convexity conditions.
 Figure \ref{fig: convex min coeffs} plots the minimal entry of $Cc$ during the Picard iterations. We see that especially for small grid widths the Poisson solutions do not fulfill the convexity conditions. 
 
 \begin{figure}[H]
@@ -433,7 +433,9 @@ In Figure \ref{fig: l2 errors test smooth ourMethod} and Table \ref{tab: l2 erro
 
  For the first four refinements the method behaves well for both $k=2$ and $k=3$. Afterwards the numerical solution departs from the actual solution.
  
- We get similiar results in the next two cases albeit the fixed point iterations performs worse in the second case which lacks $H^2$ regularity. The $L2$ errors are shown in the Figures \ref{fig: l2 errors test sqrt ourMethod} and \ref{fig: l2 errors test singularity ourMethod}.
+ We get similiar results in the next two cases albeit the fixed point iterations performs worse in the second case which lacks $H^2$ regularity. The $L2$ errors are shown in the Figures \ref{fig: l2 errors test sqrt ourMethod} and \ref{fig: l2 errors test singularity ourMethod}. In the last example \ref{test dirac} the Picard iteration showed no signs of convergence at all.
+
+To exclude a break down of the linear solver, I verified that the condition of the system matrices is handled by Eigen's cholesky solver.
  
 \begin{figure}[H]
 \centering
@@ -449,6 +451,7 @@ In Figure \ref{fig: l2 errors test smooth ourMethod} and Table \ref{tab: l2 erro
 	\caption{$L^2$ errors for test case \ref{test singularity}}
 	\label{fig: l2 errors test singularity ourMethod}
 \end{figure}
+
 
 The results were validated by a reference implementation using the finite element tool FEniCS. Albeit I was not able to include the modified cofactor matrix to the bilinear form the error behaved as in the computational results of the C++ code. It decreased for the first four refinements and diverged afterwards. 
 
