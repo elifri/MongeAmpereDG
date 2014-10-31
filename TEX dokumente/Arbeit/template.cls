@@ -4,7 +4,7 @@
 \LoadClass[a4paper,bibliography=totoc,BCOR=5mm]{scrbook}
 
 %% auxiliary packages
-\usepackage[english]{babel}
+\usepackage[english, ngerman]{babel}
 \usepackage{bold-extra}
 \usepackage{cite}
 %\usepackage{amsthm}

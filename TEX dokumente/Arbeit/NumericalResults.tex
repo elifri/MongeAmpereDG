@@ -452,7 +452,23 @@ To exclude a break down of the linear solver, I verified that the condition of t
 	\label{fig: l2 errors test singularity ourMethod}
 \end{figure}
 
+To test the choice of the parameter $\alpha$ test case \ref{test smooth} was carried out for different choices of $\alpha$. The results can be found in Figure \ref{fig: alpha variation}, Figure \ref{fig: alpha close up} shows a Close up of the first iterations.
+ 
+\begin{figure}[H]
+\centering
+	\includegraphics[scale =0.4]{plots/MA1_deg2_alpha.pdf}
+	\caption{$L^2$ errors for different choices of $\alpha$}
+	\label{fig: alpha variation}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+	\includegraphics[scale =0.4]{plots/MA1_deg2_alphaCloseUp.pdf}
+	\caption{$L^2$ errors for different choices of $\alpha$}
+	\label{fig: alpha close up}
+\end{figure}
+
 
 The results were validated by a reference implementation using the finite element tool FEniCS. Albeit I was not able to include the modified cofactor matrix to the bilinear form the error behaved as in the computational results of the C++ code. It decreased for the first four refinements and diverged afterwards. 
 
-Additionally one can in the FEniCS variant the cofactor matrix of the Hessian which is evaluated piecewise replace by the discrete Hessian as defined in \ref{def: discrete Hessian} for a symmetric ansatz space $\Sigma_h$. The code can be found in the Appendix \todo{ref}.
+Additionally one can in the FEniCS variant the cofactor matrix of the Hessian which is evaluated piecewise replace by the discrete Hessian as defined in \ref{def: discrete Hessian} for a symmetric ansatz space $\Sigma_h$. The code can be found in the Appendix \todo{add Code in appendix}.
