@@ -62,6 +62,8 @@ void Tsolver::read_problem_parameters_MA(int &stabsign, penalties_type &gamma, d
 		problem = MONGEAMPERE2;
 	else if (problem_name == "MONGEAMPERE3")
 		problem = MONGEAMPERE3;
+	else if (problem_name == "MONGEAMPERE4")
+		problem = MONGEAMPERE4;
 	else if (problem_name == "CONST_RHS")
 		problem = CONST_RHS;
 	else if (problem_name == "BRENNER_EX1")
@@ -770,6 +772,12 @@ void Tsolver::get_exacttemperature_MA(const space_type & x, state_type & u) // s
 		if (val < 0) u[0] = 0;
 		else	u[0] = -sqrt(val);
 		break;
+	case MONGEAMPERE4:
+	{
+		space_type x0 (0.5,0.5);
+		u[0] = (x- x0).squaredNorm();
+	}
+	break;
 	case SIMPLEMONGEAMPERE:
 		u[0] = 2*sqr(x[0]) + 2*sqr(x[1]) + 3 * x[0]*x[1];
 		break;
@@ -936,6 +944,16 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 									A_times_normal_BC = pBC->A_grad_times_normal(A,ishape,iqLC),
 									A_times_normal_NBC = pNBC->A_grad_times_normal(A,ishape,iqNC);
 
+									LM.coeffRef(row_LC, col_LC) += -0.5 // to average
+											* shape.get_Fquadw(iqLC) * length//quadrature weights
+											* shape.get_Fquads(ishape,iqLC) //jump
+											* A_times_normal_BC/ facLevelLength[level]; //gradient times normal
+
+									LM.coeffRef(row_LC, col_NC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * A_times_normal_NBC / facLevelLength[levelNC];
+
+									LM.coeffRef(row_NC, col_LC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* A_times_normal_BC / facLevelLength[level];
+
+									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
 
 									// b(phi, u)
 
@@ -1141,6 +1159,15 @@ void Tsolver::get_rhs_MA(const space_type & x, state_type & u_rhs) // state_type
 		else
 			u_rhs[0] = 2. / sqr(2 - x.squaredNorm());
 		break;
+	case MONGEAMPERE4:
+		u_rhs[0]=0;
+		{
+			value_type h= 1.0/dual_pow(level);
+			if (x[0] < h)
+				if (x[1] < h)
+					u_rhs[0]= M_PI /4.0 /h / h;
+		}
+		break;
 	case SIMPLEMONGEAMPERE:
 		u_rhs[0] = 7;
 		break;
@@ -1211,7 +1238,9 @@ void Tsolver::init_start_solution_MA_sqrt_f(const int stabsign, penalties_type g
 
 	//==============solve system============================
 	pt.start();
-	Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
+//	Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
+	Eigen::SparseLU < Eigen::SparseMatrix<double> > solver;
+	LM.makeCompressed();
 	solver.compute(LM);
 	if (solver.info() != Eigen::Success) {
 		std::cerr << "Decomposition of stiffness matrix failed" << endl;
@@ -1521,7 +1550,9 @@ void Tsolver::stepping_MA() {
 
 
 			pt.start();
-			Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
+//			Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
+			Eigen::SparseLU < Eigen::SparseMatrix<double> > solver;
+			LM.makeCompressed();
 			solver.compute(LM);
 			if (solver.info() != Eigen::Success) {
 				std::cerr << "Decomposition of stiffness matrix failed" << endl;
@@ -1565,7 +1596,7 @@ void Tsolver::stepping_MA() {
 			//plot poisson solution
 //			plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
 	//		plotter.write_exactsolution(get_exacttemperature_MA_callback(),iteration);
-//			plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionPoisson");
+			plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionPoisson");
 	//		plotter.write_numericalsolution(iteration, "grid_numericalsolutionPoisson");
 
 			//calculate current l2 error

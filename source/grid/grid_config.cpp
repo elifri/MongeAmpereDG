@@ -37,6 +37,9 @@ std::ostream& operator <<(std::ostream &output, const Monge_Ampere_Problem &p)
 	case MONGEAMPERE3:
 		output << "Monge Ampere Problem 3 (solution: -sqrt(2-|x|^2))";
 		break;
+	case MONGEAMPERE4:
+		output << "Monge Ampere Problem 4 (solution: ||x-x0||_2)";
+		break;
 	case CONST_RHS:
 		output << "rhs = 1, exact solution unknown";
 		break;

@@ -70,6 +70,7 @@ enum Monge_Ampere_Problem
 	MONGEAMPERE1, ///< exp(|x|_2^2 / 2)
 	MONGEAMPERE2, ///< 1/2 * max{0,|x-x0|-0.2}^2
 	MONGEAMPERE3, ///<-sqrt(2-|x|^2)
+	MONGEAMPERE4, /// norm2 (x-x0)
 	SIMPLEMONGEAMPERE, ///< solution is 2x^2+2y^2-3xy
 	SIMPLEMONGEAMPERE2, ///< solution is x^2/2+y^2/2
 	CONST_RHS, ///<exact solution not known
