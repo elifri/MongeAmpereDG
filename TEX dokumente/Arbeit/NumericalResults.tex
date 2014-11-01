@@ -156,13 +156,13 @@ Additionally we observe that the method also converges for polynomial degree $k=
 
 \begin{figure}[H]
 \centering
-	\includegraphics[scale=0.45]{../../FEniCS/diagrams/MA1_Brenner_l2.pdf}
+	\includegraphics[scale=0.45]{plots/MA1_Brenner_l2.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth}}
 	\label{fig: Brenner test1}
 \end{figure}
 \begin{figure}[H]
 	\centering
-	\includegraphics[scale=0.45]{../../FEniCS/diagrams/MA1_Brenner_l2.pdf}
+	\includegraphics[scale=0.45]{plots/MA1_Brenner_h1.pdf}
 	\caption{$H^1$ errors for test case \ref{test smooth}}
 	\label{fig: Brenner test1 h1}
 \end{figure}
@@ -225,7 +225,7 @@ We denote the degree of the trial space $V_h=\mathcal P_h^k$ by $k$ and the degr
 
 \input{NumericalResultsNeilan4.tex}
 
-\todo{symmetrised neilan and not crossed grid}
+%\todo{symmetrised neilan and not crossed grid}
 
 \newpage
 
@@ -439,7 +439,7 @@ To exclude a break down of the linear solver, I verified that the condition of t
  
 \begin{figure}[H]
 \centering
-	\includegraphics[scale =0.4]{plots/MA3.pdf}
+	\includegraphics[scale =0.37]{plots/MA3.pdf}
 	\caption{$L^2$ errors for test case \ref{test sqrt}}
 	\label{fig: l2 errors test sqrt ourMethod}
 \end{figure}
@@ -447,12 +447,12 @@ To exclude a break down of the linear solver, I verified that the condition of t
 
 \begin{figure}[H]
 \centering
-	\includegraphics[scale =0.4]{plots/MA2.pdf}
+	\includegraphics[scale =0.37]{plots/MA2.pdf}
 	\caption{$L^2$ errors for test case \ref{test singularity}}
 	\label{fig: l2 errors test singularity ourMethod}
 \end{figure}
 
-To test the choice of the parameter $\alpha$ test case \ref{test smooth} was carried out for different choices of $\alpha$. The results can be found in Figure \ref{fig: alpha variation}, Figure \ref{fig: alpha close up} shows a Close up of the first iterations.
+To test the choice of the parameter $\alpha$ test case \ref{test smooth} was carried out for different choices of $\alpha$. The results can be found in Figure \ref{fig: alpha variation}. %, Figure \ref{fig: alpha close up} shows a Close up of the first iterations.
  
 \begin{figure}[H]
 \centering
@@ -460,14 +460,15 @@ To test the choice of the parameter $\alpha$ test case \ref{test smooth} was car
 	\caption{$L^2$ errors for different choices of $\alpha$}
 	\label{fig: alpha variation}
 \end{figure}
-
-\begin{figure}[H]
-\centering
-	\includegraphics[scale =0.4]{plots/MA1_deg2_alphaCloseUp.pdf}
-	\caption{$L^2$ errors for different choices of $\alpha$}
-	\label{fig: alpha close up}
-\end{figure}
-
+%
+%\begin{figure}[H]
+%\centering
+%	\includegraphics[scale =0.35]{plots/MA1_deg2_alphaCloseUp.pdf}
+%	\caption{$L^2$ errors for different choices of $\alpha$}
+%	\label{fig: alpha close up}
+%\end{figure}
+As to expect a larger choice of $\alpha$ leads to a faster decrease of the error. Surprising is the fact the solution converge against different solutions: After 15 iterations, i.e. all data points before $h=1/4$ every method stagnates at a different $L^2$ error. This repeats itself after 30 iterations, i.e. before $h=1/8$. Although for $\alpha=0.7$ we had the smallest error on the coarsest grid, after 30 iterations this method yields the largest error.
+Since all methods use the same discretisation we can exclude the error after 15 Picard iterations is due to the discretisation error. It may be possible those method found different fixed points. Since the error decreases after a refinement these fixed points have to be connected to the exact solution and $h$.
 
 The results were validated by a reference implementation using the finite element tool FEniCS. Albeit I was not able to include the modified cofactor matrix to the bilinear form the error behaved as in the computational results of the C++ code. It decreased for the first four refinements and diverged afterwards. 
 

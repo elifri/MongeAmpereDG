@@ -22,7 +22,7 @@ Similar are results for the third case, also a problem without a classical solut
 
 The results of the corresponding method with additional jump penalisation can be found in Figure \ref{fig: l2 errors test 3 jump} and \ref{fig: l2 errors test 3 jump}, as well as in Table \ref{tab: l2 errors test 3 jump}. 
 
-We note that the method with $k=2$ performs on the coarsest grids well, whereas for $k=3$ Newton's method do not converge on the provided initial guess given a grid with $h=1/2$. 
+As in the first test case the pair $k=1, k_{DH}$ induces a unstable method. We further observe that the method with $k=2$ performs well on coarse grids, whereas for $k=3$ Newton's method do not converge on the coarsest grid. 
 
 The numerical orders given in table \ref{tab: order jump 3} show the error decreases faster for quadratic polynomials during the first refinements. Yet, for grids with $h \geq \frac 1 {32}$ only the pairing $k=1$ and $k_{DH} =0$ yields to convergence.
 

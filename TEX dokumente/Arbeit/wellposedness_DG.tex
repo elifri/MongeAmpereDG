@@ -273,8 +273,8 @@ At first, we show the following statement
 	Now only the penalty term (cf. \eqref{eq: penalty term}) needs to be estimated. Again we apply at first the Cauchy-Schwarz inequality and then the discrete Cauchy-Schwarz inequality:
 	\begin{align}
 	\singleNorm {\sum_{e \in \edgesi} \frac \sigma {|e|} \myIntS e {\jump \varphi \jump v }}
-	\leq& \sum_{e \in \edgesi} \frac \sigma  {|e|} \myIntS{e}{ \singleNorm {\jump \varphi \jump v }}
-	\leq \left( \sum\limits_{e \in \edges} \frac \sigma{|e|} \LTwonormE{\jump{\varphi}}^2 \right)^{\frac 1 2} \left( \sum\limits_{e \in \edges} \frac \sigma {|e|} \LTwonormE{\jump{v}}^2 \right)^{\frac 1 2} \label{eq: CS estimate3}
+	\leq& \sum_{e \in \edgesi} \frac \sigma  {|e|} \myIntS{e}{ \singleNorm {\jump \varphi \jump v }} \nonumber \\
+	\leq& \left( \sum\limits_{e \in \edges} \frac \sigma{|e|} \LTwonormE{\jump{\varphi}}^2 \right)^{\frac 1 2} \left( \sum\limits_{e \in \edges} \frac \sigma {|e|} \LTwonormE{\jump{v}}^2 \right)^{\frac 1 2} \label{eq: CS estimate3}
 	\end{align}
 	Adding \eqref{eq: CS estimate 0}, \eqref{eq: CS estimate}, \eqref{eq: CS estimate2} and \eqref{eq: CS estimate3} we find using the discrete Schwarz inequality once more
 	\begin{align}

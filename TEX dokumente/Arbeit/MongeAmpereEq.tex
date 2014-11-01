@@ -1,4 +1,4 @@
-This chapter covers the main results on the \MA equation: After a definition of the PDE we briefly discuss solution concepts, as well as existence and uniqueness results. Thereafter we derive a linearisation of the \MA operator and conclude with a short overview of existing numerical schemes solving \MA equations. 
+This chapter covers the main results on the \MA equation: After a definition of the PDE we briefly discuss existing solution concepts, as well as existence and uniqueness results. Thereafter we derive a linearisation of the \MA operator and conclude with a short overview of numerical schemes solving \MA equations. 
 
 
 \section{The \MA Equation}
@@ -142,7 +142,7 @@ We give now an short overview of the different methods and some of their most kn
 
 \subsection{Direct Finite Difference Schemes}
 
-We recall the first category consists of direct finite difference schemes, where the term Direct refers to the fact that these schemes directly approximate the in \eqref{MA eq} occurring derivatives. 
+We recall the first category consists of direct finite difference schemes, where the term Direct refers to the fact that these schemes directly approximate the in \eqref{eq: MA eq} occurring derivatives. 
 There are two points in favor of those schemes. First, because of their simplicity methods finite difference schemes widely used in \quoting{application areas}.  And second Barles and Souganidis set up a general framework to analyse finite difference schemes for fully nonlinear elliptic PDEs satisfying a comparison principle \cite{BS1991}. In particular this work reduces the convergence analysis for monotone schemes to the verification of stability and consistency.
 %As one desires monotone schemes for there exist theorems on their convergence, compare \cite[Theorem 2.1]{BS1991} and monotone schemes even for linear PDEs require wide stencil, compare \cite{MW1953} many finite difference schemes are wide-stencil schemes. 
 Built on this structure are the works of Benamou, Oberman and Froese \cite{BFO2010, Oberman2008, FO2011}, where they provide monotone wide-stencil finite difference schemes for the \MA equation.
@@ -169,7 +169,7 @@ Based on this formulation Dean and Glowinski developed augmented Lagrangian meth
 Another approach in this category are the so called \emph{vanishing moment methods}. First introduced in \cite{FN2009} they try to transfer the idea of the vanishing viscosity method: Feng and Neilan add higher order terms to obtain a higher order PDE that is easier to handle than the original one. Then the coefficients of this higher order terms are decreased to gain an approximation of the \MA solution. \\
 One choice for those higher order terms is the square of the Laplacian of $u$ such that the new PDE is fourth order but linear. Additionally the newly derived PDE has to demand further boundary conditions to gain well-posedness , yielding to the problem
 \begin{definition}[Vanishing Moment Equations{\cite[(4.6)]{FGN2013}}]
-	The vanishing moment method approximates \eqref{MA eq} by the sequence
+	The vanishing moment method approximates \eqref{eq: MA eq} by the sequence
 	\begin{align}
 		\varepsilon \triangle^2 u^\varepsilon - \mydet{D^2 u^\varepsilon} =& -f \text{ in } \Omega \label{eq: VMM 1}\\ 
 		u^\varepsilon =& g \text{ on } \partial \Omega \label{eq: VMM 2}\\

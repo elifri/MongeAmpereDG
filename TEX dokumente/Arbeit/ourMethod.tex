@@ -1,4 +1,3 @@
-\todo{introduction}
 In this we develop a \emph{Picard iteration} aiming to solve the \MA equation. To the author's knowledge this is the first try to apply the Picard linearisation on the \MA equation. 
 To start this chapter we first motivate and derive the Picard iteration and its discretisation.
 After that we compare the method with the classical Netwon's method and the $C^0$ penalty method presented in the last chapter (cf. Section \ref{sec: Brenner method}). We try to transfer results on the penalty method on the newly derived Picard iteration method. 
@@ -206,7 +205,13 @@ Then we call
 	Q_{ijk} := (\xi_{ijk}, c_{ijk}) \label{eq: control points}
 \end{align} the \emph{control points} of a polynomial $p$ defined on $T$. Further we denote the polygon defined by the points $Q_{ijk}$ as the \emph{B\'ezier control polygon}.
 
-\todo{bild von domain points}
+\begin{figure}
+	\centering
+	\input{control_net.pgf}
+	\caption{The domain points on a triangle $T=\langle v_1, v_2, v_3 \rangle$ for $d=3$}
+	\label{fig: domain points}
+\end{figure}
+Figure \ref{fig: domain points} shows the distribution of the domain points for the polynomial degree $d=3$.
 
 The benefit of the Bernstein-B\'ezier form is that there can be formed simple conditions ensuring the convexity of the polynomial on a triangle. Namely there is a connection between the convexity of the control polygon and the convexity of the polynomial.
 \begin{theorem}[ Connection Control Polygon Convexity{\cite[Theorem 4.6]{Dahmen1991}}]
