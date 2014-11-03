@@ -77,6 +77,7 @@ void Tsolver::read_problem_parameters_MA(int &stabsign, penalties_type &gamma, d
 	cout << "Read Equation " << problem << endl;
 }
 
+
 ////////////////////////////////////////////////////
 
 void Tsolver::initializeLeafCellData_MA() {
@@ -944,17 +945,6 @@ void Tsolver::assemble_MA(const int & stabsign, penalties_type penalties,
 									A_times_normal_BC = pBC->A_grad_times_normal(A,ishape,iqLC),
 									A_times_normal_NBC = pNBC->A_grad_times_normal(A,ishape,iqNC);
 
-									LM.coeffRef(row_LC, col_LC) += -0.5 // to average
-											* shape.get_Fquadw(iqLC) * length//quadrature weights
-											* shape.get_Fquads(ishape,iqLC) //jump
-											* A_times_normal_BC/ facLevelLength[level]; //gradient times normal
-
-									LM.coeffRef(row_LC, col_NC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqLC) * A_times_normal_NBC / facLevelLength[levelNC];
-
-									LM.coeffRef(row_NC, col_LC) += -0.5 * shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC)* A_times_normal_BC / facLevelLength[level];
-
-									LM.coeffRef(row_NC, col_NC) += -0.5	* shape.get_Fquadw(iqLC) * length * shape.get_Fquads(ishape,iqNC) * A_times_normal_NBC / facLevelLength[levelNC];
-
 									// b(phi, u)
 
 									LM.coeffRef(row_LC, col_LC) += stabsign	* 0.5 * shape.get_Fquadw(iqLC) * length	* A_times_normal_BC / facLevelLength[level]	* shape.get_Fquads(jshape,iqLC);
@@ -1238,9 +1228,7 @@ void Tsolver::init_start_solution_MA_sqrt_f(const int stabsign, penalties_type g
 
 	//==============solve system============================
 	pt.start();
-//	Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
-	Eigen::SparseLU < Eigen::SparseMatrix<double> > solver;
-	LM.makeCompressed();
+	Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
 	solver.compute(LM);
 	if (solver.info() != Eigen::Success) {
 		std::cerr << "Decomposition of stiffness matrix failed" << endl;
@@ -1360,6 +1348,13 @@ void Tsolver::stepping_MA() {
 
 	read_problem_parameters_MA(stabsign, gamma, refine_eps, coarsen_eps, level, alpha);
 
+	//get maximal number of steps on one grid
+	singleton_config_file::instance().getValue("monge ampere", "maximal_iterations", maxits, 3);
+	//get maximal grid refinements
+	singleton_config_file::instance().getValue("monge ampere", "iterations_refinement", maxlevel_refinement, level+2);
+
+	write_problem_parameters_GENERAL();
+
 	gamma *= degreedim*degreedim;
 	cout << "gamma_C" << gamma.gamma_continuous << endl;
 	//check level
@@ -1384,10 +1379,6 @@ void Tsolver::stepping_MA() {
 	plotter.set_exact_sol(get_exacttemperature_MA_callback());
 	convexifier.init();
 
-	//get maximal number of steps on one grid
-	singleton_config_file::instance().getValue("monge ampere", "maximal_iterations", maxits, 3);
-	//get maximal grid refinements
-	singleton_config_file::instance().getValue("monge ampere", "iterations_refinement", maxlevel_refinement, level+2);
 
 	sum_coefficients.resize(maxits*maxlevel_refinement+1);
 
@@ -1550,9 +1541,7 @@ void Tsolver::stepping_MA() {
 
 
 			pt.start();
-//			Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
-			Eigen::SparseLU < Eigen::SparseMatrix<double> > solver;
-			LM.makeCompressed();
+			Eigen::SimplicialLDLT < Eigen::SparseMatrix<double> > solver;
 			solver.compute(LM);
 			if (solver.info() != Eigen::Success) {
 				std::cerr << "Decomposition of stiffness matrix failed" << endl;
@@ -1596,7 +1585,7 @@ void Tsolver::stepping_MA() {
 			//plot poisson solution
 //			plotter.write_exactsolution_VTK(get_exacttemperature_MA_callback(),iteration);
 	//		plotter.write_exactsolution(get_exacttemperature_MA_callback(),iteration);
-			plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionPoisson");
+//			plotter.write_numericalsolution_VTK(iteration, "grid_numericalsolutionPoisson");
 	//		plotter.write_numericalsolution(iteration, "grid_numericalsolutionPoisson");
 
 			//calculate current l2 error
