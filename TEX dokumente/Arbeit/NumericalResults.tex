@@ -69,7 +69,7 @@ Note that $f$ is highly non regular. Motivated by \cite[Section 6.1.]{FO2011} we
 \input{load_Neilan_data.tex}
 
 For reference I implemented the algorithm introduced in Section \ref{sec: Brenner method}.
-We implemented their presented method using the finite element tool FEniCS \cite{FEniCS}, the Code is append in Appendix. 
+We implemented their presented method using the finite element tool FEniCS \cite{FEniCS}, the Code is append in Appendix \ref{app: Code Brenner}. 
 To create our initial guess I did not use a vanishing moment method as Brenner suggested, but the solution of $\triangle u = -\sqrt{2f}$ as introduced in Section \ref{sec: initial guess}. 
 
 The triangulation $\triang$ was obtained by a standard refinement as explained in Section ref{subsec: refinement and base cells}: First the domain was split into four triangles by drawing both diagonals and afterwards each triangle was successively divided into four congruent triangles.
@@ -206,7 +206,7 @@ The fourth example does not have not a classical solution. As in the previous ca
 
 We see that this method behaves well for smooth solutions for which it was designed. The results show that it is inappropriate for problems with non smooth-solution or viscosity solutions.
 
-\section{Numerical Results of a Finite Element Method based on a Disrete Hessian}
+\section{Numerical Results of a Finite Element Method based on a Disrete Hessian}\label{sec: numerical results neilan}
 
 Also the Neilan's algorithm \cite{Neilan2014} introduced in Section \ref{sec: FEM discrete Hessian} was implemented.
 Additional to the numerical results on convergence which Neilan already presented it is interesting to explore what happens if we vary the polynomial degree for the Hessian ansatz space. 
@@ -452,7 +452,48 @@ To exclude a break down of the linear solver, I verified that the condition of t
 	\label{fig: l2 errors test singularity ourMethod}
 \end{figure}
 
-To test the choice of the parameter $\alpha$ test case \ref{test smooth} was carried out for different choices of $\alpha$. The results can be found in Figure \ref{fig: alpha variation}. %, Figure \ref{fig: alpha close up} shows a Close up of the first iterations.
+To decrease the influence of the penalty paramter $\sigma$ for quadratic polynomials strong boundary conditions were introduced, i.e. instead of forcing the boundary conditions weakly by the penalty term 
+\[
+	\sum_{e \in \edgesb} \frac \sigma {|e|} \myIntS {e} { v g}
+\]
+all coefficients of base polynomials, which have support at the boundary, were fixed such that they satisfy the boundary condition given by $g$ at a set of equidistant boundary points. 
+Since the influence of the gradient penalty term (cf. Section \ref{subsec: add penalty param}) on the solution is not clear, Figure \ref{fig: sigma variation} shows runs with different choices of $\sigma^G$.
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale =0.4]{plots/MA1_deg2_P.pdf}
+	\caption{$L^2$ errors for different choices of $\sigma^G$}
+	\label{fig: sigma variation}
+\end{figure}
+
+\begin{table}[H]
+	\centering
+	\pgfplotstabletypeset[
+	columns/0/.style={column name=$h$},
+	columns/1/.style={column name={$\alpha$=0.1 }},
+	columns/2/.style={column name={$\alpha=0.3$ }},
+	columns/3/.style={column name={$\alpha=0.5$ }},
+	columns/4/.style={column name={$\alpha=0.7$ }},
+	every first column/.style={string type},
+	%		every/.style={
+	%		dec sep align,      % align on the decimal marker
+	/pgf/number format/sci e, 
+	/pgf/number format/fixed zerofill=true,  % print trailing zeros
+	/pgf/number format/sci precision=4     % print 14 digits
+	%	}
+	]{
+		{$h$} 1 2 3 4
+		{1/2} 0.0199431 0.022534 0.0192453 0.010306
+		{1/4} 0.00451277 0.00441324 0.00403522 0.00641527
+		{1/8} 0.00139369 0.000528091 0.000857927 0.00219968
+		{1/16} 0.000667909 0.000127571 0.000334139 0.000576772
+		{1/32} 0.000332824  {5.91847e-05} 0.264761 0.0569364
+		{1/64} 0.000320034 0.104151 0.336712 0.0634047
+	}
+	\caption{$L^2$ errors for different choices of $\alpha$}
+	\label{tab: sigma variation}
+\end{table}
+
+Further, to test the choice of the parameter $\alpha$ test case \ref{test smooth} was carried out for different choices of $\alpha$. The results can be found in Figure \ref{fig: alpha variation} and Table \ref{tab: alpha variation}. %, Figure \ref{fig: alpha close up} shows a Close up of the first iterations.
  
 \begin{figure}[H]
 \centering
@@ -467,9 +508,40 @@ To test the choice of the parameter $\alpha$ test case \ref{test smooth} was car
 %	\caption{$L^2$ errors for different choices of $\alpha$}
 %	\label{fig: alpha close up}
 %\end{figure}
-As to expect a larger choice of $\alpha$ leads to a faster decrease of the error. Surprising is the fact the solution converge against different solutions: After 15 iterations, i.e. all data points before $h=1/4$ every method stagnates at a different $L^2$ error. This repeats itself after 30 iterations, i.e. before $h=1/8$. Although for $\alpha=0.7$ we had the smallest error on the coarsest grid, after 30 iterations this method yields the largest error.
+
+\begin{table}[H]
+	\centering
+	\pgfplotstabletypeset[
+		columns/0/.style={column name=$h$},
+		columns/1/.style={column name={$\alpha$=0.1 }},
+		columns/2/.style={column name={$\alpha=0.3$ }},
+		columns/3/.style={column name={$\alpha=0.5$ }},
+		columns/4/.style={column name={$\alpha=0.7$ }},
+		every first column/.style={string type},
+%		every/.style={
+%		dec sep align,      % align on the decimal marker
+		/pgf/number format/sci e, 
+		/pgf/number format/fixed zerofill=true,  % print trailing zeros
+		/pgf/number format/sci precision=4     % print 14 digits
+%	}
+	]{
+	{$h$} 1 2 3 4
+	{1/2} 0.0199431 0.022534 0.0192453 0.010306
+	{1/4} 0.00451277 0.00441324 0.00403522 0.00641527
+	{1/8} 0.00139369 0.000528091 0.000857927 0.00219968
+	{1/16} 0.000667909 0.000127571 0.000334139 0.000576772
+	{1/32} 0.000332824  {5.91847e-05} 0.264761 0.0569364
+	{1/64} 0.000320034 0.104151 0.336712 0.0634047
+	}
+	\caption{$L^2$ errors for different choices of $\alpha$}
+	\label{tab: alpha variation}
+\end{table}
+
+As to expect a larger choice of $\alpha$ leads to a faster decrease of the error. But as in the previous setting at same point all methods become instable diverge. Even the method with $\alpha=0.3$ begins in the last refinement to decrease, although the error is not to identify in the plot shown in Figure \ref{fig: alpha variation}.
+
+Surprising is the fact the solution converge against different solutions: After 15 iterations, i.e. all data points before $h=1/4$ every method stagnates at a different $L^2$ error. This repeats itself after 30 iterations, i.e. before $h=1/8$. Although for $\alpha=0.7$ we had the smallest error on the coarsest grid, after 30 iterations this method yields the largest error.
 Since all methods use the same discretisation we can exclude the error after 15 Picard iterations is due to the discretisation error. It may be possible those method found different fixed points. Since the error decreases after a refinement these fixed points have to be connected to the exact solution and $h$.
 
 The results were validated by a reference implementation using the finite element tool FEniCS. Albeit I was not able to include the modified cofactor matrix to the bilinear form the error behaved as in the computational results of the C++ code. It decreased for the first four refinements and diverged afterwards. 
 
-Additionally one can in the FEniCS variant the cofactor matrix of the Hessian which is evaluated piecewise replace by the discrete Hessian as defined in \ref{def: discrete Hessian} for a symmetric ansatz space $\Sigma_h$. The code can be found in the Appendix \todo{add Code in appendix}.
+Additionally one can in the FEniCS variant the cofactor matrix of the Hessian which is evaluated piecewise replace by the discrete Hessian as defined in \ref{def: discrete Hessian} for a symmetric ansatz space $\Sigma_h$. The code can be found in the Appendix \ref{app: our code}.

@@ -11,8 +11,8 @@ Brenner et alter used a vanishing moment method to find a proper initial guess. 
 The results Neilan shows in his paper for our second examined method look very promising. Even in the non-smooth cases it his method converges. However, the Section \ref{sec: numerical results neilan} showed the Newton solver for his finite element method has to be chosen very carefully. In particular for many degrees of freedom only a few nonlinear solver converge, for higher polynomial degree I often could not find any solver solving the nonlinear equation system.
 Note that this method requires a lot of freedom. If the polynomial degree of $V_h$ and $\Sigma_h$ are chosen equally, it has as five times as many degree of freedoms compared to both other methods. However, our numerical results suggests that decreasing the polynomial degree of $\Sigma_h$ results only in a small loss of accuracy.
 
-The last presented method turned out to be a variant of an classical damped Newton approach which is said to fail for elements which are not at least contained in $C^1(\Omega)$.
-Unfortunately the Picard iteration do also diverge for finer grids, especially if the solution is not smooth. Yet it may serve for an initial guess during a multilevel method, even in the case of problem which do not have a classical solutions.
+The last presented method, derived by a Picard linearisation turned out to be a variant of an classical damped Newton approach which is said to fail for elements which are not at least contained in $C^1(\Omega)$.
+Unfortunately the Picard iteration do also diverge for finer grids, especially if the solution is not smooth. Introducing several improvements and varying parameters may slow down, but cannot prevent the divergence process. Yet it may serve for an initial guess during a multilevel method, even in the case of problem which do not have a classical solutions.
 
 Comparing the three methods in the smooth test case the first and second method produce similar convergence orders % while the first has less degree of freedoms. 
 The Picard type method yields even during the first four refinements a smaller convergence rate. 

@@ -1,6 +1,5 @@
 from dolfin import *
 import scipy.io, numpy as np
-from MA_iterated_August import start_iteration
 from MA_problem import *
 import math, time, sys
 
