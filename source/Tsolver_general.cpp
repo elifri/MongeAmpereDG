@@ -599,7 +599,8 @@ void Tsolver::write_problem_parameters_GENERAL ()
    exit(1);
   }
 
-  outparameters << "levelmax           = " << levelmax << endl;
+  singleton_config_file::instance().write_to_file(fname);
+
 #if (EQUATION!=POISSON_EQ && EQUATION!=POISSON_PREC_EQ && EQUATION!=IMPLICIT_HEAT_EQ && EQUATION != MONGE_AMPERE_EQ)
   outparameters << "CFL                = " << CFL << endl;
   outparameters << "tend               = " << tend << endl;

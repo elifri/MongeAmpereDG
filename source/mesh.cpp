@@ -158,7 +158,7 @@ int main(int argc, char **argv) {
 
   //
   solver.read_problem_parameters_GENERAL (outputdir, output_prefix);
-  solver.write_problem_parameters_GENERAL ();
+//  solver.write_problem_parameters_GENERAL ();
 
 #if (EQUATION == EULER_EQ)
   cerr << "EQUATION = EULER" << endl;
