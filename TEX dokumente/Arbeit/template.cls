@@ -111,28 +111,50 @@
 % -----
 %---define pgfplottablestyle
 
+\pgfkeys{
+	/pgfplots/table/string type in dec sep align/.style={
+		string type,
+		postproc cell content/.code={%
+			\ifnum\pgfplotstablepartno=0%
+			\pgfkeys{/pgfplots/table/@cell content/.add={}{&}}
+			\fi
+		}%
+	}
+}
+
 \pgfplotsset{compat=1.8}
 \pgfplotstableset{
     columns/iterations/.style={column name={$h$},% Set the name to be used for the first column
+    	/pgf/number format/precision=0,
     	preproc/expr={2^##1}, %preposs (calculate 2^i) 
 		postproc cell content/.append style={
 			/pgfplots/table/@cell content/.add={1/{}}{}, %add 1/ before every number
 		},
     },
-    columns/l2error/.style={
+    %make sure, dec sep align does not affect the iterations column
+    columns/iterations/in dec sep align/.style={
+		postproc cell content/.code={%
+			\ifnum\pgfplotstablepartno=0%
+			\pgfkeys{/pgfplots/table/@cell content/.add={}{&}}
+			\fi
+		}%
+	},
+	columns/l2error/.style={
         column name=$L^2$ error,  % ... and the second
         dec sep align,      % align on the decimal marker
         /pgf/number format/sci e, 
         /pgf/number format/fixed zerofill=false,  % print trailing zeros
-        /pgf/number format/sci precision=4     % print 14 digits
-    },
+        /pgf/number format/sci precision=4 ,    % print 4 digits
+        /pgf/number format/precision=4     % print 4 digits
+            },
     columns/h1error/.style={
 		column name=$H^1$ error,  % ... and the second
         dec sep align,      % align on the decimal marker
         /pgf/number format/sci e, 
         /pgf/number format/fixed zerofill,  % print trailing zeros
-        /pgf/number format/sci precision=4     % print 14 digits
-    },
+        /pgf/number format/sci precision=4,     % print 4 digits
+        /pgf/number format/precision=4     % print 4 digits
+            },
     every row 0 column N/.style={set content={-}},
     every head row/.style={
         before row=\toprule,    % booktabs rules

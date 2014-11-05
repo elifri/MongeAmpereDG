@@ -299,37 +299,37 @@ After we have seen the program structure I shortly remark some of arising progra
 Before the actual system assembly the diffusion matrix in every cell has to be updated with the modified cofactor matrix of the Hessian of the last Picard step. Note that this matrix is constant for polynomial degree $k=2$ and otherwise has to be calculated at every quadrature point. Since in general here is no connection between diffusion matrix values at the reference cell and in the leaf cell, we cannot save easily any memory as we did for function values and normal gradients (cf. Section \ref{subsec: ref cell} and \ref{subsec: refinement and base cells}). Hence, we store the diffusion matrix at every quadrature point on the grid in the corresponding leaf cell.
 The rest of the assembly process is carried out as already mentioned in algorithm \ref{alg: assembling}. Hereby one has to pay attention to the right scaling of quadrature weights and the right calculation of quadrature data from reference cell data as described in Examples \ref{ex: base cell trafo} and \ref{ex: leaf cell trafo}. 
 
-If a convexification is desired, the class Convexifier takes care of the execution of the method described in Section \ref{subsec: convexification}. The linear constraints ensuring convexity on a triangle are chosen the one from theorem \ref{thm: convex cond on triangle} and the constrains for convexity across edges were given by theorem \ref{thm: convex cond across edge}. Due to the error-proneness during the assembly of $C$ the convexification was only implement for the case $k=2$. Note that before applying the theorems we have to convert our numerical solution from the DG formulation to a $C^0$ spline.
-Hence, the Convexifier computes at first using the C0converter the $C^0$ spline representation of the Poisson solution and then assembles the matrices $A$ and $C$ of \eqref{eq: convex lsq}. To solve the problem it makes use of the open source library ipopt \cite{ipopt}.\\
-Fortunately the evaluation matrix $A$, and the constraint matrix $C$ of \eqref{eq: convex lsq} only depend on the grid and thus, need only to be assembled once in every refinement.
+If a convexification is desired, the class Convexifier takes care of the execution of the method described in Section \ref{subsec: convexification}. The linear constraints ensuring convexity on a triangle are chosen to be the ones from theorem \ref{thm: convex cond on triangle} and the constrains for convexity across edges are given by theorem \ref{thm: convex cond across edge}. Due to the error-proneness during the assembly of the constraint matrix $C$ the convexification is only implemented for the case $k=2$. \\
+Note that before applying the theorems we have to convert our numerical solution from the DG formulation to a $C^0$ spline.
+Hence, at first the Convexifier computes the $C^0$ spline representation of the Poisson solution using the C0converter, and then assembles the matrices $A$ and $C$ of \eqref{eq: convex lsq}. To solve this quadratic problem it makes use of the open source library ipopt \cite{ipopt}.\\
+Fortunately the evaluation matrix $A$, and the constraint matrix $C$ of \eqref{eq: convex lsq} only depend on the grid and thus, need only to be computed once in every refinement.
 
 Additionally the Tsolver has a member Plotter handling all export to external files. It is able to write the solution which's coefficients are currently stored in the leaf cells to a .vtu file or .dat file. Besides plotting it also administers all file streams to which information such as $L^2$ errors are written into.
 
 \subsection{Results with Convexification}
 
-For a initial guess I also used the solution of $\triangle u = -\sqrt{2f}$ combined with the multilevel approach as described in \ref{sec: initial guess}.
-The arising linear system of equations was solved with Eigen's internal Cholesky solver.
-The parameters were if not other specified taken to be $\sigma=10 k^2, \sigma_G = 50, \alpha =
-0.3$ and $\varepsilon = 1e-2$. We always carry out 15 steps including a convexification after every step before we refine further. The implemented convexification followed the ideas of Section \ref{subsec: convexification}. 
-
-
-The results shown in figure \ref{fig: l2 errors test smooth ourMethodConvex} show the method does not work as expected.
+For a initial guess I also use the solution of $\triangle u = -\sqrt{2f}$ combined with the nested iteration approach as described in \ref{sec: initial guess}. The grid is chosen as in previous FEniCS implementations to be a refinement of a crisscrossed unit square (cf. Section \ref{sec: numerical results brenner}).
+The arising linear system of equations is solved with Eigen's internal Cholesky solver.
+The parameters are if not other specified taken to be $\sigma=20 k^2, \sigma_G = 50, \alpha =
+0.3$ and $\varepsilon = 1e-2$. We always carry out 15 steps including a convexification after every step before we refine further.
 \begin{figure}[H]
 \centering
 	\includegraphics[scale =0.4]{plots/MA1_convexify.pdf}
 	\caption{$L^2$ errors for test case \ref{test smooth} and additional convexification}
 	\label{fig: l2 errors test smooth ourMethodConvex}
 \end{figure}
-To investigate the cause of this failure we give in Figure \ref{fig: convex before after} the plot of the $L^2$ error before the convexification step and the plot after it. As we can see the convexification process increases the error. There are several possible explanations for that:
+The implemented convexification follows the ideas of Section \ref{subsec: convexification}. \\
+The plots given in Figure \ref{fig: l2 errors test smooth ourMethodConvex} show the $L^2$ error of $u_i$ obtained by the calculations as described in Section \ref{sec: Picard Iteration Algo}. We recall that means $u_i$ is obtained by combining the old step with a convexified Poisson solution. Unfortunately, the method with the convexification process does not work as expected.
+To investigate this failure we give in Figure \ref{fig: convex before after} the plot of the $L^2$ error before the convexification step and the plot after it. As we can see the convexification process increases the error. There are several possible explanations for that:
 
 Though the convexification algorithm produces a convex result it does not garantuee that it leaves convex input functions unchanged.
 
-The convex function in $\mathcal P^2_h$ approximating the numerical solution $u_h$ best is not necessarily closer to the exact solution $u$ than $u_h$. Then the convexification gives a push into the wrong direction.
+The convex function in the space of piecewise polynomials $\mathcal P^2_h$ approximating the numerical solution $u_h$ best is not necessarily closer to the exact solution $u$ than $u_h$. %Then the convexification gives a push into the wrong direction.
 
 The best approximation of $u$ into $\mathcal P^2_h$ does not have to be convex, for example the affine Lagrange interpolant of a convex function does not to be convex\cite[p.3142]{AM2009}. 
 
-To understand how \quoting{unconvex} the function was before the convexification process I have examined the vector $Cc_u$ where $C$ is the matrix containing the convexity conditions and $c_u$ are the coefficients of $L2$ projection (cf. \eqref{eq: convex lsq} )into $\mathcal P^2_h$: The minimal entry for a grid with $h=1/2$ is -9.77e-03, for a grid with $h=1/16$ the minimal entry is -4.26e-04. Thus, the $L2$ projection of the exact solution does not comply with the convexity conditions.
-Figure \ref{fig: convex min coeffs} plots the minimal entry of $Cc$ during the Picard iterations. We see that especially for small grid widths the Poisson solutions do not fulfill the convexity conditions. 
+To understand how \quoting{unconvex} the function was before the convexification process I have examined the vector $Cc_u$ where $C$ is the matrix containing the convexity conditions and $c_u$ are the coefficients of $L^2$ projection into $\mathcal P^2_h$ (cf. \eqref{eq: convex lsq}): The minimal entry for a grid with $h=1/2$ is -9.77e-03, for a grid with $h=1/16$ the minimal entry is -4.26e-04. Thus, the $L2$ projection of the exact solution does not comply with the convexity conditions.
+Figure \ref{fig: convex min coeffs} plots the minimal entry of $Cc$ during the Picard iterations, where $c$ are the B\'ezier coefficients of the Poisson solutions. We see that especially for small grid widths the Poisson solutions do not fulfill the convexity conditions. 
 
 \begin{figure}[H]
 \centering
@@ -342,7 +342,7 @@ Figure \ref{fig: convex min coeffs} plots the minimal entry of $Cc$ during the P
 	\begin{subfigure}{0.45\textwidth}
 		\centering
 		\includegraphics[scale=0.25]{plots/MA1_minCoeff.pdf}
-		\caption{Comparison of $L^2$ errors directly before and after convexification}
+		\caption{Minimal entry in the vector $C c$}
 		\label{fig: convex min coeffs}
 	\end{subfigure}	
 	\caption{$L^2$ errors for test case \ref{test smooth} and additional convexification}
@@ -370,8 +370,8 @@ The other test cases produce similar results such that we can assume the present
 
 \subsection{Results without Convexification}
 
-We used the same code basis as in the previous tests but turned off every direct convexification.
-In Figure \ref{fig: l2 errors test smooth ourMethod} and Table \ref{tab: l2 errors our method} can see the results for the the smooth test case \ref{test smooth}.
+We use the same code basis as in the previous tests but turn off every direct convexification. Additionally the basis polynomials are chosen to be the Lagrange basis polynomials. Beside that the settings are not altered, i.e. the parameter were taken to be $\sigma = 20 k^2$, $\sigma_G$=50, $\alpha=0.3$ and $\varepsilon = 1e-2$. 
+In Figure \ref{fig: l2 errors test smooth ourMethod} and Table \ref{tab: l2 errors our method} can see the results for the the smooth test case \ref{test smooth}: Again in the plot every point represents the $L^2$ error after a Picard step, whereas the table shows the error value after 15 iterations on the same grid.
 \begin{figure}[H]
 	\centering
 	\includegraphics[scale =0.4]{plots/MA1.pdf}
@@ -383,117 +383,103 @@ In Figure \ref{fig: l2 errors test smooth ourMethod} and Table \ref{tab: l2 erro
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
 		\pgfplotstabletypeset[
-			every first column/.style={string type},
-		    every second column/.style={
-		    dec sep align,      % align on the decimal marker
-		    /pgf/number format/sci e, 
-		    /pgf/number format/fixed zerofill=true,  % print trailing zeros
-		    /pgf/number format/sci precision=4     % print 14 digits
-			}
+			every row 0 column 0/.style={set content=init},
 		]
 		{
-		{$h$}  l2error
-		{init}  0.117041 
-		{$1/2$}  0.0247946 
-		{$1/4$}  0.0094535 
-		{$1/8$}  0.00181535 
-		{$1/{16}$}  0.000435754 
-		{$1/{32}$}  0.00015778 
-		{$1/{64}$}  0.248114				
+		iterations  l2error
+		0 0.116217
+		1 0.0149796
+		2 0.00439385
+		3 0.00116137
+		4 0.000413233
+		5 0.0332876
+		6 0.341691
 		}
 		\caption{$L^2$ error for $k=2$}
 	\end{subtable}
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
 		\pgfplotstabletypeset[
-		every first column/.style={string type},
-		every second column/.style={
-			dec sep align,      % align on the decimal marker
-			/pgf/number format/sci e, 
-			/pgf/number format/fixed zerofill=true,  % print trailing zeros
-			/pgf/number format/sci precision=4     % print 14 digits
-		}
+			every row 0 column 0/.style={set content=init},
 		]
 		{
-			{$h$}  l2error
-			{init}  0.151794
-			{$1/2$} 0.00101133
-			{$1/4$}  0.000140753
-			{$1/8$}  2.10612e-05
-			{$1/{16}$}  3.9589e-06
-			{$1/{32}$}  3.46521e-06
-			{$1/{64}$}  0.557331				
+			iterations  l2error
+			0 0.151798
+			1 0.00100398
+			2 0.000145466
+			3 2.2412e-05
+			4 4.23972e-06
+			5 0.000469984
+			6 0.433164
+				
 		}
 		\caption{$L^2$ error for $k=3$}
 	\end{subtable}
 	\caption{$L^2$ errors for test \ref{test smooth}}
 	\label{tab: l2 errors our method}
 \end{table}
-
-
  For the first four refinements the method behaves well for both $k=2$ and $k=3$. Afterwards the numerical solution departs from the actual solution.
  
- We get similiar results in the next two cases albeit the fixed point iterations performs worse in the second case which lacks $H^2$ regularity. The $L2$ errors are shown in the Figures \ref{fig: l2 errors test sqrt ourMethod} and \ref{fig: l2 errors test singularity ourMethod}. In the last example \ref{test dirac} the Picard iteration showed no signs of convergence at all.
+ To exclude a break down of the linear solver, I verified that the condition of the system matrices is handled by Eigen's cholesky solver.
 
-To exclude a break down of the linear solver, I verified that the condition of the system matrices is handled by Eigen's cholesky solver.
- 
-\begin{figure}[H]
-\centering
-	\includegraphics[scale =0.37]{plots/MA3.pdf}
-	\caption{$L^2$ errors for test case \ref{test sqrt}}
-	\label{fig: l2 errors test sqrt ourMethod}
-\end{figure}
-
-
-\begin{figure}[H]
-\centering
-	\includegraphics[scale =0.37]{plots/MA2.pdf}
-	\caption{$L^2$ errors for test case \ref{test singularity}}
-	\label{fig: l2 errors test singularity ourMethod}
-\end{figure}
-
-To decrease the influence of the penalty paramter $\sigma$ for quadratic polynomials strong boundary conditions were introduced, i.e. instead of forcing the boundary conditions weakly by the penalty term 
-\[
-	\sum_{e \in \edgesb} \frac \sigma {|e|} \myIntS {e} { v g}
-\]
-all coefficients of base polynomials, which have support at the boundary, were fixed such that they satisfy the boundary condition given by $g$ at a set of equidistant boundary points. 
-Since the influence of the gradient penalty term (cf. Section \ref{subsec: add penalty param}) on the solution is not clear, Figure \ref{fig: sigma variation} shows runs with different choices of $\sigma^G$.
+%To decrease the influence of the penalty paramter $\sigma$ for quadratic polynomials strong boundary conditions were introduced, i.e. instead of forcing the boundary conditions weakly by the penalty term 
+%\[
+%	\sum_{e \in \edgesb} \frac \sigma {|e|} \myIntS {e} { v g}
+%\]
+%all coefficients of base polynomials, which have support at the boundary, were fixed such that they satisfy the boundary condition given by $g$ at a set of equidistant boundary points. 
+Since the influence of the gradient penalty term (cf. Section \ref{subsec: add penalty param}) on the solution is not clear, Figure \ref{fig: sigma variation} and Table \ref{tab: sigma variation} show runs with different choices of $\sigma^G$, where $\alpha$ is still fixed to $\alpha=0.3$.
 \begin{figure}[H]
 	\centering
-	\includegraphics[scale =0.4]{plots/MA1_deg2_P.pdf}
+	\includegraphics[scale =0.4]{plots/MA1_deg2_sigma.pdf}
 	\caption{$L^2$ errors for different choices of $\sigma^G$}
 	\label{fig: sigma variation}
 \end{figure}
 
+\pgfkeys{
+	/pgfplots/table/string type in dec sep align/.style={
+		string type,
+		postproc cell content/.code={%
+			\ifnum\pgfplotstablepartno=0%
+			\pgfkeys{/pgfplots/table/@cell content/.add={}{&}}
+			\fi
+		}%
+	}
+}
+
 \begin{table}[H]
 	\centering
 	\pgfplotstabletypeset[
-	columns/0/.style={column name=$h$},
-	columns/1/.style={column name={$\alpha$=0.1 }},
-	columns/2/.style={column name={$\alpha=0.3$ }},
-	columns/3/.style={column name={$\alpha=0.5$ }},
-	columns/4/.style={column name={$\alpha=0.7$ }},
-	every first column/.style={string type},
+	columns={iterations, 10, 30,50,10,100,200},
+%	columns/0/.style={column name=$h$},
+	columns/10/.style={column name={$\sigma^G$=10 }, dec sep align},
+	columns/30/.style={column name={$\sigma^G=$30 }, dec sep align},
+	columns/50/.style={column name={$\sigma^G=50$ }, dec sep align},
+	columns/70/.style={column name={$\sigma^G=70$ }, dec sep align},
+	columns/100/.style={column name={$\sigma^G=100$ }, dec sep align},
+	columns/200/.style={column name={$\sigma^G=200$ }, dec sep align},
+	every first column/.style={/pgf/number format/precision=0},
 	%		every/.style={
-	%		dec sep align,      % align on the decimal marker
 	/pgf/number format/sci e, 
 	/pgf/number format/fixed zerofill=true,  % print trailing zeros
-	/pgf/number format/sci precision=4     % print 14 digits
-	%	}
+	/pgf/number format/sci precision=4,     % print 14 digits
+	/pgf/number format/precision=4     % print 14 digits
+		%	}
 	]{
-		{$h$} 1 2 3 4
-		{1/2} 0.0199431 0.022534 0.0192453 0.010306
-		{1/4} 0.00451277 0.00441324 0.00403522 0.00641527
-		{1/8} 0.00139369 0.000528091 0.000857927 0.00219968
-		{1/16} 0.000667909 0.000127571 0.000334139 0.000576772
-		{1/32} 0.000332824  {5.91847e-05} 0.264761 0.0569364
-		{1/64} 0.000320034 0.104151 0.336712 0.0634047
+		iterations 10 30 50 70 100 200
+		1 0.0086428 0.0130318 0.0149796 0.016074 0.0170381 0.0183565
+		2 0.00182679 0.00334291 0.00439385 0.00522693 0.00624324 0.00857697
+		3 0.000407317 0.000845756 0.00116137 0.0014516 0.00184986 0.00297013
+		4 0.000115474 0.000309124 0.000413233 0.00050331 0.000628928 0.00101445
+		5 0.0226132 0.0328956 0.0332876 0.0322666 0.0297026 0.0207637
+		6 0.331674 0.360471 0.341691 0.360872 0.338608 0.326064
 	}
-	\caption{$L^2$ errors for different choices of $\alpha$}
+	\caption{$L^2$ errors for different choices of $\sigma^G$}
 	\label{tab: sigma variation}
 \end{table}
 
-Further, to test the choice of the parameter $\alpha$ test case \ref{test smooth} was carried out for different choices of $\alpha$. The results can be found in Figure \ref{fig: alpha variation} and Table \ref{tab: alpha variation}. %, Figure \ref{fig: alpha close up} shows a Close up of the first iterations.
+As we already experienced in Section \ref{subsec: add penalty param} switching the gradient penalty off, i.e. $\sigma^G=0$, proves useless. However, decreasing the penalty parameter yields better approximation results, yet varying $\sigma^G$ does not change the instability of the method.
+
+Further, to test the choice of the parameter $\alpha$ test case \ref{test smooth} was carried out for different choices of $\alpha$, the penalty parameter $\sigma^G$ was taken to be 10. The results can be found in Figure \ref{fig: alpha variation} and Table \ref{tab: alpha variation}. %, Figure \ref{fig: alpha close up} shows a Close up of the first iterations.
  
 \begin{figure}[H]
 \centering
@@ -513,35 +499,53 @@ Further, to test the choice of the parameter $\alpha$ test case \ref{test smooth
 	\centering
 	\pgfplotstabletypeset[
 		columns/0/.style={column name=$h$},
-		columns/1/.style={column name={$\alpha$=0.1 }},
-		columns/2/.style={column name={$\alpha=0.3$ }},
-		columns/3/.style={column name={$\alpha=0.5$ }},
-		columns/4/.style={column name={$\alpha=0.7$ }},
+		columns/1/.style={column name={$\alpha$=0.1 }, dec sep align,      % align on the decimal marker
+			},
+		columns/2/.style={column name={$\alpha=0.3$ }, dec sep align},
+		columns/3/.style={column name={$\alpha=0.5$ }, dec sep align},
+		columns/4/.style={column name={$\alpha=0.7$ }, dec sep align},
 		every first column/.style={string type},
 %		every/.style={
-%		dec sep align,      % align on the decimal marker
 		/pgf/number format/sci e, 
-		/pgf/number format/fixed zerofill=true,  % print trailing zeros
-		/pgf/number format/sci precision=4     % print 14 digits
-%	}
+%		/pgf/number format/fixed zerofill=true,  % print trailing zeros
+		/pgf/number format/sci precision=4 ,    % print 14 digits
+		/pgf/number format/precision=4     % print 14 digits
+		%	}
 	]{
-	{$h$} 1 2 3 4
-	{1/2} 0.0199431 0.022534 0.0192453 0.010306
-	{1/4} 0.00451277 0.00441324 0.00403522 0.00641527
-	{1/8} 0.00139369 0.000528091 0.000857927 0.00219968
-	{1/16} 0.000667909 0.000127571 0.000334139 0.000576772
-	{1/32} 0.000332824  {5.91847e-05} 0.264761 0.0569364
-	{1/64} 0.000320034 0.104151 0.336712 0.0634047
+		{$h$} 1 2 3 4
+		{1/2} 0.00999324  0.00864529 0.00864962 0.00864956
+		{1/4} 0.00260673 0.00182038 0.00180498 0.00180486
+		{1/8} 0.000986361 0.000407317 0.000395512 0.000395319
+		{1/16} 0.000363884 0.000115474 0.000154169 0.213579
+		{1/32} 0.000144468 0.0226132 0.30321 0.331661
+		{1/64} 0.000967598 0.331674 0.361392 0.320555
+
 	}
 	\caption{$L^2$ errors for different choices of $\alpha$}
 	\label{tab: alpha variation}
 \end{table}
 
-As to expect a larger choice of $\alpha$ leads to a faster decrease of the error. But as in the previous setting at same point all methods become instable diverge. Even the method with $\alpha=0.3$ begins in the last refinement to decrease, although the error is not to identify in the plot shown in Figure \ref{fig: alpha variation}.
+As to expect a larger choice of $\alpha$ leads to a faster decrease of the error, on the coarsest grids all solutions Picard iterations converge to approximations with the same error norm. One can verify that those approximations are numerically equal. We observe that for $\alpha=0.1$ the choice of 15 iterations is too small as we obtain a larger $L^2$ error than with the other values.\\
+But as in the previous setting at same point all methods become instable and diverge. Though we note that choosing a smaller $\alpha$ slows down this process. 
 
-Surprising is the fact the solution converge against different solutions: After 15 iterations, i.e. all data points before $h=1/4$ every method stagnates at a different $L^2$ error. This repeats itself after 30 iterations, i.e. before $h=1/8$. Although for $\alpha=0.7$ we had the smallest error on the coarsest grid, after 30 iterations this method yields the largest error.
-Since all methods use the same discretisation we can exclude the error after 15 Picard iterations is due to the discretisation error. It may be possible those method found different fixed points. Since the error decreases after a refinement these fixed points have to be connected to the exact solution and $h$.
+  \begin{figure}[H]
+  	\centering
+  	\includegraphics[scale =0.37]{plots/MA3.pdf}
+  	\caption{$L^2$ errors for test case \ref{test sqrt}}
+  	\label{fig: l2 errors test sqrt ourMethod}
+  \end{figure}
+  
+  
+  \begin{figure}[H]
+  	\centering
+  	\includegraphics[scale =0.37]{plots/MA2.pdf}
+  	\caption{$L^2$ errors for test case \ref{test singularity}}
+  	\label{fig: l2 errors test singularity ourMethod}
+  \end{figure}
+We get similiar results in the next two cases albeit the fixed point iterations performs worse in the second case which lacks $H^2$ regularity. The $L^2$ errors are shown in the Figures \ref{fig: l2 errors test sqrt ourMethod} and \ref{fig: l2 errors test singularity ourMethod}, $\alpha$ was taken to be 0.3 and $\sigma^G$ to be 10. In the last example \ref{test dirac} the Picard iteration showed no signs of convergence at all.
+
+  
 
 The results were validated by a reference implementation using the finite element tool FEniCS. Albeit I was not able to include the modified cofactor matrix to the bilinear form the error behaved as in the computational results of the C++ code. It decreased for the first four refinements and diverged afterwards. 
 
-Additionally one can in the FEniCS variant the cofactor matrix of the Hessian which is evaluated piecewise replace by the discrete Hessian as defined in \ref{def: discrete Hessian} for a symmetric ansatz space $\Sigma_h$. The code can be found in the Appendix \ref{app: our code}.
+Additionally one can in the FEniCS variant the cofactor matrix of the Hessian which is evaluated piecewise replace by the discrete Hessian as defined in \ref{def: discrete Hessian} for a symmetric ansatz space $\Sigma_h$. The code can be found in the Appendix \ref{app: our code}. Also experiments with this symmetric discrete Hessian ended in an unstable method.

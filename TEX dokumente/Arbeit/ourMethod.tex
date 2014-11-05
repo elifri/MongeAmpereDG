@@ -311,11 +311,11 @@ where $A$ is the matrix evaluating the piecewise polynomial induced by the B\'ez
 
 However, solving a linearly constrained least squares problem is nontrivial. So, when using this approach one should ensure that a convexification is justified. Also, one has to keep in mind that the constraints in the matrix $C$ are sufficient but not necessary. We discuss in the section on numerical results whether this approach fulfills our requirements on a convexificiation.
 
-\section{The Picard Iteration Algorithm}
+\section{The Picard Iteration Algorithm} \label{sec: Picard Iteration Algo}
 
 Combining the suggestions of the last sections we obtain a method to carry out the fixed point iteration working as Algorithm \ref{alg: final} describes.
 
-\begin{algorithm}
+\begin{algorithm}[H]
 \begin{algorithmic}
 \Require triangulation \triang, desired mesh width $h$, maximimal number of intermediate steps $i_{max}$
 \State $u_0\gets $ solution of  $
@@ -326,8 +326,8 @@ Combining the suggestions of the last sections we obtain a method to carry out t
 %	\While {$|u_i-u_{i-1}| < \varepsilon$}
 	\While {$i < i_{max} $}
 		\State $u_i \gets$ solution of \ref{sec: SIPG} with modified cofactor matrix (\ref{sec: mod cofactor})
-		\State $u_i \gets \alpha u_{i-1} + (1-\alpha)u_i $ \Comment convex combination
 		\State (convexify)
+		\State $u_i \gets \alpha u_{i-1} + (1-\alpha)u_i $ \Comment convex combination
 		\State $i \gets i+1$
 	\EndWhile
 	\State $h, \triang \gets h/2, \triangFine$
