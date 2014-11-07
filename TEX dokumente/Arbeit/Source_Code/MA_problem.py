@@ -49,45 +49,24 @@ def MA_problem(name, Nh, degree, mesh):
           v[0] = 0
   
   if name=='MA1':
-    f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])', element = FiniteElement("Quadrature", triangle, degree))#MongeAmpere1
-  elif name == 'MA1Reverse':
-    f = Expression('(1 + (1-x[0])*(1-x[0])+x[1]*x[1]) * exp((1-x[0])*(1-x[0])+x[1]*x[1])', element = FiniteElement("Quadrature", triangle,degree))
-  elif name == 'simpleMA':
-    f = Constant(7.0)#simpleMongeAmpere
-  elif name == 'simpleMA2':
-    f = Constant(1.0) #simpleMongeAmpere2
-  elif name == 'Brenner1':
-    f = Expression('2000*pow(exp(pow(x[0],6)/6+x[1]),2)*pow(x[0],4)', element = FiniteElement("Quadrature", triangle, degree))#BrennerEx1
+    f = Expression('(1 + x[0]*x[0]+x[1]*x[1]) * exp(x[0]*x[0]+x[1]*x[1])', element = FiniteElement("Quadrature", triangle, degree))
   elif name == 'MA2':
-    #f = rhs(element = FiniteElement("Quadrature", triangle, degree))
     element = FiniteElement("Quadrature", triangle, degree)
     f = rhs(mesh, element=element)
   elif name == 'MA3':
     f = rhs(mesh, element = FiniteElement("Quadrature", triangle, degree))
   elif name == 'MA4':
     f = rhs(mesh, element = FiniteElement("Quadrature", triangle, degree))
-  elif name == 'const rhs':
-    f = Constant(1.0)
    
   # Define boundary conditions
   if name=='MA1':
-    g = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')#MongeAmpere1
-  elif name=='MA1Reverse':
-    g = Expression('exp( (pow((1-x[0]),2)+pow(x[1],2))/2. )')#MongeAmpere1
-  elif name == 'simpleMA':
-    g = Expression('2*x[0]*x[0] + 2*x[1]*x[1] + 3*x[0]*x[1]') #simpleMongeAmpere
-  elif name == 'simpleMA2':
-    g = Expression('x[0]*x[0]/2.0 + x[1]*x[1]/2.0') #simpleMongeAmpere2
-  elif name == 'Brenner1':
-    g = Expression('20*exp(pow(x[0],6)/6.0+x[1])')#BrennerEx1
+    g = Expression('exp( (pow(x[0],2)+pow(x[1],2))/2. )')
   elif name == 'MA2':
-    g = Expression('-sqrt(2-pow(x[0],2)-pow(x[1],2))') #test 2
+    g = Expression('-sqrt(2-pow(x[0],2)-pow(x[1],2))')
   elif name == 'MA3':
     g  = exact_sol(mesh)
   elif name == 'MA4':
-    g  = Expression('sqrt( pow(x[0]-0.5,2) + pow(x[1]-0.5,2))') #test 4
-  elif name == 'const rhs':
-    g = Expression('0.0') #const rhs
+    g  = Expression('sqrt( pow(x[0]-0.5,2) + pow(x[1]-0.5,2))')
   return f, g
   
 def start_iteration(mesh, V, u0, f, sigma):
@@ -110,7 +89,8 @@ def start_iteration(mesh, V, u0, f, sigma):
     - inner(jump(v,n),avg(nabla_grad(u)))*dS\
     - inner(jump(u,n),avg(nabla_grad(v)))*dS\
     + Constant(sigma)('+')/h('+')* jump(u)*jump(v)*dS \
-    + Constant(sigma/2.0)('+')/h('+')*jump(nabla_grad(u),n)*jump(nabla_grad(v),n)*dS \
+    + Constant(sigma/2.0)('+')/h('+')\
+	*jump(nabla_grad(u),n)*jump(nabla_grad(v),n)*dS \
     - v*inner(n,nabla_grad(u))*ds \
     - u*inner(n,nabla_grad(v))*ds \
     + Constant(sigma)/h*v*u*ds

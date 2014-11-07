@@ -120,6 +120,7 @@ if __name__ == "__main__":
 
     #------refine grid---------
     mesh = adapt(mesh)
+    Nh = Nh*2
     
     #update function spaces
     V = FunctionSpace(mesh, 'DG', deg)
