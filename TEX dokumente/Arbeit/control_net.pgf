@@ -1,0 +1,31 @@
+\usetikzlibrary{calc}
+\begin{tikzpicture}[scale=5]
+
+	\draw (0,0) -- (1,0) -- (0,1) -- cycle;
+
+	\edef \n {3}
+
+	\foreach \x in {0,1,...,\n}
+{
+	\pgfmathtruncatemacro \m {\n -\x}
+
+			\foreach \y in  {0,...,\m}
+			{
+				\draw [fill]  (\x/\n,\y/\n ) circle [radius=.5pt];
+				\if\x 0\else \draw [dashed] (\x/\n,\y/\n ) -- (\x/\n-1/\n,\y/\n); \fi
+				\if\y 0\else \if \x 0 \else \draw [dashed] (\x/\n,\y/\n ) -- (\x/\n,\y/\n-1/\n); \fi \fi
+			}
+
+}
+
+	\node (v_0) at (0,0)[below=4pt] {$v_0=\xi_{200}$};
+	\node (v_1) at (1,0)[below=4pt] {$v_1=\xi_{020}$};
+	\node (v_2) at (0,1)[above=4pt] {$v_2=\xi_{002}$};
+	
+	\pgfmathtruncatemacro \bOne {\n-1}
+	\pgfmathtruncatemacro \bTwo {\n-2}
+	\node (v_2) at (0,1/\n)[left=4pt] {$\xi_{\bOne 1 0} $};
+	\node (v_2) at (1/\n,\bOne/\n)[right=4pt] {$\xi_{0 1 \bOne} $};
+	\node[fill=white] (v_2) at (1/\n,1/\n)[below=4pt] {$\xi_{1 1 \bTwo} $};
+
+\end{tikzpicture}
