@@ -363,7 +363,7 @@ Calling this norm also an energy norm is justified as both norms are equivalent 
 	
 	Further there exists $\alpha > 0 $ such that for all $v_h \in V_h$
 	\begin{align}
-		a_h^{DG}(v_h, v_h) \geq \alpha \eNorm{v_h} \label{eq: coercivity DG form}
+		a_h^{DG}(v_h, v_h) \geq \alpha \eNorm{v_h}^2 \label{eq: coercivity DG form}
 	\end{align}	
 	Moreover, this implies the existence of $\sigma^* > 0$ such that for $\sigma \leq \sigma^* $, the operator $a_h$ is invertible with 
 	\begin{align*}
@@ -404,10 +404,10 @@ Calling this norm also an energy norm is justified as both norms are equivalent 
 	Using this estimate in \eqref{eq: coerc first estimate} and we can derive
 	\begin{align*}
 	a_h^{DG}(v_h,v_h)  \geq& (\lambda- \varepsilon \frac C \sigma)
-	\LTwonorm{\nabla v_h}
+	\LTwonorm{\nabla v_h}^2
 	+ \left(-\frac 1 \varepsilon +1\right) \sum_{e\in \edgesi}  \frac \sigma {|e|} \LTwonormE{\jump {v_h}}^2
 	\end{align*}
-	If we can find values for $\sigma$ and $\varepsilon$ such that $\lambda-\varepsilon \frac C \sigma$ and $-\frac 1 \varepsilon +1$ are positive we can estimate the right-hand side by $\min{\{\lambda-\varepsilon \frac C \sigma,-\frac 1 \varepsilon +1\}} \eNormTwo{v}$ and proved the desired coercivity. 
+	If we can find values for $\sigma$ and $\varepsilon$ such that $\lambda-\varepsilon \frac C \sigma$ and $-\frac 1 \varepsilon +1$ are positive we can estimate the right-hand side by $\min{\{\lambda-\varepsilon \frac C \sigma,-\frac 1 \varepsilon +1\}} \eNormTwo{v}^2$ and proved the desired coercivity. 
 	Clearly, taking $\varepsilon$ to be larger than one ensures that the second term is positive. The first term is also positive if we choose $\sigma$ to be larger than $\frac {\varepsilon C} \lambda$.
 	
 	Now, that we have seen that $a_h^{DG}$ is coercive on $V_h$, we may apply classical existence and uniqueness theory, namely the Lax-Milgram theorem and thus deduce the inversibilty in $V_h$.

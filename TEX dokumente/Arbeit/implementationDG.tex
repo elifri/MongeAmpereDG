@@ -28,8 +28,8 @@ A huge benefit of the Lagrange elements are their interpolation properties.
 Now most of the required data on a triangle $T$ can be easily derived knowing $\Phi_T$ and the reference cell $T_{ref}$. We explain how to do that in detail for the two-dimensional case.
 
 \begin{example}\label{ex: base cell trafo}
-From now an we consider $\Omega \subset \R^2$ and we choose the reference triangle to be the triangle spanned by the points $\point 0 0, \point 0 1$ and $\point 1 0$.
-Suppose we want to figure out the transformation for the triangle $T = \langle v_1,v_2,v_3 \rangle$.
+From now on we consider $\Omega \subset \R^2$ and we choose the reference triangle to be the triangle spanned by the points $\point 0 0, \point 0 1$ and $\point 1 0$.
+Suppose we want to figure out the transformation for the triangle $T = \langle v_0,v_1,v_2 \rangle$.
 It has to hold
 \[
 \Phi\left(\point 0 0\right) = v_0, \Phi\left(\point 0 1\right) = v_1 \textnormal{ and } \Phi\left(\point 1 0\right) = v_2
@@ -71,7 +71,7 @@ Concluding, if we need to determine function values, gradient and Hessian of a b
 \end{example}
 
 \subsection{Refinement and Base Cells}\label{subsec: refinement and base cells}
-Let us in the rest of this section further assume we have a triangulation of a two-dimensional domain $\Omega$. 
+In the rest of this section let us assume we have a triangulation of a two-dimensional domain $\Omega$. 
 Suppose the mesh of our triangulation is created by refinement of a coarser mesh. We use a specific kind of refinement: Given a triangulation $\triang$ every triangle $T \in \triang$ is divided into four congruent triangles as is shown in figure \ref{pic: refinement}. We note, the finer grid $\triangFine$ for the diameter of each triangle is halved.
 
 \begin{figure}[h]
@@ -85,7 +85,7 @@ We identify the new refined triangles with their original cell in $T$ calling it
 A_{\Phi_T}=A_{\Psi_T} A_{\Phi_B}
 \end{align} 
 
-This makes saving information about the basecell very beneficial for the transformation matrix $A_{\Psi_T}$ is a diagonal matrix which even has the same entries along the diagonal. It even follows basis function data on two triangles with the same basecell only differ in a constant. Yet another benefit of the relation between cells and their basecells is they hav the same, or for the innermost triangle($T_0$ in figure \ref{pic: refinement}) opposite directed, normals.
+This makes saving information about the basecell very beneficial for the transformation matrix $A_{\Psi_T}$ is a diagonal matrix which even has the same entries along the diagonal. It even follows that basis function data on two triangles with the same basecell only differ in a constant. Yet another benefit of the relation between cells and their basecells is they have the same, or for the innermost triangle ($T_0$ in figure \ref{pic: refinement}) opposite directed, normals.
 
 \begin{example}\label{ex: leaf cell trafo}
 In the two-dimensional case the Jacobian $A_{\Psi_T}$ of a transformation $\Psi_T$ from the base cell $B$ to a $l$ times refined triangle $T$ is $

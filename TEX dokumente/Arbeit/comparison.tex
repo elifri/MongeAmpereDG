@@ -24,17 +24,17 @@ Similar to the derivation of the Picard iteration in Section \ref{sec: motivatio
 Hence, considering once again the fact 
 \[
 \nabla \cdot \left( \mycof {D^2 u } \nabla v \right)
-\stackrel{La.\ref{la: An application of the divergernce product rule}}=\nabla \cdot {}\mycof{D^2 u}:D^2u
+\stackrel{La.\ref{la: An application of the divergernce product rule}}=\mycof{D^2 u}:D^2u
 =\frac 1 2 \mydet{D^2u}
 \]
-we can see our method as a variant of Newton's method. 
+we can interpret our method as a variant of Newton's method. 
 
 In \cite{Awanou2014} Awanou analysed an iteration process similar to ours:
 \begin{align}
 	\nabla \cdot \left( \cof(D^2 u^0) \nabla u^{i+1} \right) &= \nabla \cdot \left( \cof(D^2 u^0) \nabla u^{i} \right) + f - \operatorname{det} (D^2u^i) \textnormal{ in } \Omega,  \label{eq: Awanout eq}\\
 	u^{i+1} &= g \textnormal{ on } \partial \Omega.
 \end{align}
-He proves convergence for the analytical solution $u$ and a sufficent close initial guess $u^0$. 
+For this analytical formulation he proves convergence to the \MA solution $u$ under the assumption that the initial guess $u^0$ is sufficent close to $u$. Unfortunately, his analysis is not applicable to the Picard iteration as he relies on the fact that the left-hand side of \eqref{eq: Awanout eq} does not alter for different $u^i$.\\
 In an earlier work \cite{Awanou2010} Awanou examined a discrete version of a vanishing moment method, herein he mentioned a method he calls Newton's method \cite[(1.3)]{Awanou2010}: Find $u_h^{i+1}\in V_h$ such that for all $v_h \in V_h \cap H^1_0 (\Omega)$
 \[
 	\myIntX {\Omega} {[\mycof{ D^2 u_h^i} Du_h^{i+1}] \cdot Dv_h} 
@@ -67,13 +67,13 @@ He chooses the trial space to consist of piecewise polynomials contained in $C^1
 %\end{align}
 
 \section{Analysis of the DG Method} \label{sec: DG analysis}
-This section compares on a analytical basis the newly derived method with the $C^0$ penalty method by Brenner et al. \cite{BGN+2011} already presented in Section \ref{sec: Brenner method}. In particular we examine how we can transfer the analysis of the penalty method to the Picard Iteration.
+This section compares the newly derived method with the $C^0$ penalty method by Brenner et al. \cite{BGN+2011}, already presented in Section \ref{sec: Brenner method}, on a analytical basis. In particular we examine how we can transfer the analysis of the penalty method to the Picard Iteration.
 
 \subsection{Comparison with a $C^0$ Penalty method}
-Brenner et al. emphasis it is important that this linearisation is a consistent and stable discretatisation of the linearisation of the \MA equation, namely $\nabla \cdot \left( \mycof {D^2 u } \nabla (v) \right)$ \cite[Remark 2.2]{BGN+2011}.
+Brenner et al. emphasis it is important that the linearisation of a \MA method is a consistent and stable discretatisation of the linearisation of the \MA equation, namely $\nabla \cdot \left( \mycof {D^2 u } \nabla (v) \right)$ \cite[Remark 2.2]{BGN+2011}.
 Therefore we first compare the linearisation of the Picard iteration with the linearisation of the method introduced by Brenner et al. \cite{BGN+2011}.
 
-Let us consider again the linearisation of the finite element method mentioned in Section \ref{sec: Brenner method}. The authors develop the linear mapping $L^B_u:H^2(\Omega; \triang) \rightarrow [H^2(\Omega; \triang) \cap H^1(\Omega)]'$ given by
+Let us consider again the linearisation of the finite element method mentioned in Section \ref{sec: Brenner method}, namely the mapping $L^B_u:H^2(\Omega; \triang) \rightarrow [H^2(\Omega; \triang) \cap H^1(\Omega)]'$ given by
 \begin{align}
 \bilin {L^B_{u} w} v
 	=&\myIntX  \Omega { (\cofHess{ u}\nabla w) \nabla v}
@@ -84,7 +84,7 @@ Let us consider again the linearisation of the finite element method mentioned i
 \end{align}
 
 
-Looking now at our Picard iteration given by \eqref{eq:fixed point iteration} we see that we aim to solve the discretised linearisation of the \MA equation at the point $u^i$ in every step.
+Looking at the Picard iteration in \eqref{eq:fixed point iteration} we see that we aim to solve the discretised linearisation of the \MA equation at the point $u^i$ in every step.\\
 Let $V$ be $H^2(\Omega; \triang) \cap L^2(\Omega)$ and $L_u: V \rightarrow V'$ denote the linear mapping describing the left-hand side of the SIPG method to perform an iteration step, i.e.
 \begin{align}
 	\bilin {L_u w} v =
@@ -108,11 +108,11 @@ Consider $u\in H^s(\Omega)$ for $s>3$ to be the convex solution of the \MA probl
 % 		&- \sum_{e\in \edgesb} \myIntS e { \cofHessH{w} \nabla v \cdot \mathbf{n} \; w ds 
 % \end{align}.
 % 
-The goal is to prove \eqref{eq: fixed point functional} has a solution in $V_h$. 
+We want to derive a similar identity for the Picard iteration. 
 
-For the rest of the analysis, we consider for the rest of the analysis a convex and polyhedral domain $\Omega\subset \R^2$ and such $f,g$ that the \MA problem then has a unique convex solution $u \in H^s(\Omega)$ with $s\geq 2$. 
+For the rest of the analysis, we consider a convex and polyhedral domain $\Omega\subset \R^2$ and such $f,g$ that the \MA problem then has a unique convex solution $u \in H^s(\Omega)$ with $s\geq 2$. 
 
-Note, that $u$ denotes from now on a fixed function. Whereas Brenner et al. only linearise $F$ at the point $u$ the Picard method linearise at the last step's solution. Thus, $L_u^B$ defined in \eqref{eq: linearisation brenner} has always the same paramter $u$, namely the exact solution, while the parameter $u$ in the definition of $L_u$ (cf. \eqref{eq: linearisation our}) varies. 
+Note, that from now on $u$ denotes a fixed function. While Brenner et al. only linearise $F$ at the point $u$ the Picard method linearise at the last step's solution. Thus, $L_u^B$ defined in \eqref{eq: linearisation brenner} has always the same paramter $u$, namely the exact solution, whereas the parameter $u$ in the definition of $L_u$ (cf. \eqref{eq: linearisation our}) varies. 
 
 To derive results on the Picard Iteration, we follow the argumentative structure Brenner et al. used to show convergence of their method \cite{BGN+2011}. At first, we introduce the functional $R_u \in V'$ for the right-hand side of the SIPG method defined by
 \[
@@ -120,29 +120,30 @@ To derive results on the Picard Iteration, we follow the argumentative structure
 -\sum\limits_{e \in \edgesb}\myIntS e { g \cofHessH{u} \nabla v \cdot n }
 +\sum\limits_{e \in \edgesb} \myIntS e { \frac \sigma {|e|} v g}. \label{eq: definition R}
 \]
-Our desired Picard iteration then states: Find $u^{i+1}_h \in V_h$ such that
+The desired Picard iteration then states: Find $u^{i+1}_h \in V_h$ such that
 \begin{align}
 \bilin {L_{u^i_h} w_h} v =  \bilin {-R_{u^i_h}} v   \qquad \forall v \in V. \label{eq: fixed point functional}
 \end{align}
-Formulating as an operator equation yields: Find $u_h^{i+1}V_h$ being the root of the function $F:V \rightarrow V'$ defined by
-\begin{align*}
- {Fw} =  L_{u^i_h} w + R_{u^i_h}  \qquad \text{ for } w \in V.
-\end{align*}
+Formulating this as an operator equation yields: Find $u_h^{i+1} \in V_h$ being a root of the function $F:V \rightarrow V'$ defined by
+\begin{align}
+ {Fw} =  L_{u^i_h} w + R_{u^i_h}  \qquad \text{ for } w \in V. \label{eq: definition F}
+\end{align}
+
+
 
 Thus we have the identity 
 \begin{align}
 	F(u+w) = L_{u^i_h} (u+w) + R_{u^i_h} = L_{u^i_h} u +L_{u^i_h}w + R_{u^i_h} = Fu + L_{u^i_h}w. \label{eq: add our method}
 \end{align}
 
-Let us compare \eqref{eq: add brenner method} with \eqref{eq: add our method}: We have already seen the commonality of both methods, they base on the same linearisation and thereby try to recover the permutability between linearisation and discretisation. 
+Let us compare \eqref{eq: add brenner method} with \eqref{eq: add our method}: We have already seen the commonality of both methods, they base on the same linearisation and thereby gain the permutability between linearisation and discretisation. 
 But there are also two major differences: While the right-hand side of \eqref{eq: add brenner method} contains a nonlinear mapping $R^B$, \eqref{eq: add our method} contains the additional term $Fu$. \\
 Note, that the first equation can also be written as 
  \begin{align*}
  F^B(u +w ) = F^B u + L^B_u w + R^Bw,
  \end{align*}
 since the exact \MA solution is a root of the finite element method operator. 
-
-These differences also distinct these two approaches. While the first one reproduces the nonlinearity of the \MA equation with a nonlinear term, the second ansatz fixes parts of the equation and trades nonlinearity for consistency errors.
+Hence, the distinction between both approachs can be characterised: While the first one reproduces the nonlinearity of the \MA equation with a nonlinear term, the second ansatz replaces parts of the nonlinear terms of the equation by an approximation and thus, trades nonlinearity for consistency errors.
 
 \subsection{Consistency Estimates}
 
@@ -167,7 +168,7 @@ The following lemma shows $\epsilonTwo{\cdot}$ is not only a measure for the Hes
 	\begin{align}
 	\LTwonormT{\cofHessH{w}} = \LTwonormT{\hess{w}} \qquad \forall T \in \triang.\label{eq: equality norm}
 	\end{align}
-	Furthermore using the definition of the average (cf. Definition \ref{def: edge operators}) and $w$ is linear in $\cofHessH{w}$ and $\hess{w}$ for all $w \in V$ we find
+	Furthermore using the definition of the average (cf. Definition \ref{def: edge operators}) and that $w$ is linear in $\cofHessH{w}$ and $\hess{w}$ for all $w \in V$ we find
 	\begin{align}
 	\LTwonormE{\average {\cofHessH{w}}} 
 	=& \LTwonormE{\frac 1 2 {\cofHessH{(w^+ + w^-)}}} \nonumber\\
@@ -193,6 +194,8 @@ Let for $w \in V$ the mapping $L_{w,h}:V_h \rightarrow V_h'$ be the restriction 
 	Since for convex $w$ the cofactor matrix is always positive definite the claim follows from Theorem \ref{thm: SIPG stability}.
 \end{proof}
 
+Note that this means $F$ defined in \eqref{eq: definition F} has a unique solution in $V_h$ as $R$ is constant in $v$.
+
 For further analysis we want to examine the dependence of $L_w$ on the parameter $w$.
 \begin{lemma}\label{la: L dependence paramter}
 	For $w_1, w_2 \in V$ holds
@@ -206,7 +209,7 @@ For further analysis we want to examine the dependence of $L_w$ on the parameter
 		\bilin{L_{w_1}v- L_{w_2} v} {\varphi_h} =  
 			&\myIntX  \Omega { \nabla \varphi_h \cdot \cofHessH{(w_1-w_2)} \nabla v}  \nonumber\\
 			& -\sum\limits_{e \in \edges}\myIntS e { \jump {\varphi_h \average { \cofHessH{(w_1-w_2)} \nabla v} }} \nonumber \\
-			& - \sum\limits_{e \in \edges}\myIntS e { \jump {v \average{ \cofHessH{(w_1-w_2)} \nabla \varphi_h} }} \label{eq: diff linear}
+			& - \sum\limits_{e \in \edges}\myIntS e { \jump {v \average{ \cofHessH{(w_1-w_2)} \nabla \varphi_h} }}. \label{eq: diff linear}
 	\end{align}
 	As already done in \eqref{eq: CS estimate} we use the Cauchy-Schwarz inequality and the discrete Cauchy-Schwarz inequality on every summand and obtain $\bilin{L_{w_1}v- L_{w_2} v} {\varphi_h}$ is smaller than
 	\begin{align*}
@@ -315,6 +318,7 @@ For further analysis we want to examine the dependence of $L_w$ on the parameter
 % \phantom{blub}
 \end{proof}
 
+
 Now we are able to establish an estimate of the consistency error of $Fu$.
 \begin{theorem}[Consistency Error of $Fu$] \label{la: consistency error F}
 	There holds
@@ -371,11 +375,11 @@ and let $\mathcal M_h:V_h \rightarrow V_h$ be its restriction to $V_h$. Clearly,
 \begin{align}
 \mathcal M = id_h - L_{u,h}^{-1}F.
 \end{align}
-Since $L_{u,h}$ is a isomorphism every fixed point of $\mathcal M_h$ is also a root of $F$ and hence a fixed point to our Picard iteration.
+Since $L_{u,h}$ is a isomorphism every fixed point of $\mathcal M_h$ is also a root of $F$ and hence a fixed point to the Picard iteration.
 
 We want to apply a contraction property as well as a mapping property to apply Banach's fixed point theorem. If we are able to show that $\M_h$ restricted to an arbitrary small set is a self-mapping we can locate the fixed point with an arbitrary precision. As Brenner et al. \cite[(3.3)]{BGN+2011} we choose this set to be a small ball centered around $u_{c,h}\in V_h$, where
 \[
-u_{c_h} = L_{u,h}^{-1} L_u u.
+u_{c,h} = L_{u,h}^{-1} L_u u.
 \]
 
 By \eqref{eq: add our method} for all $w \in V$
@@ -474,14 +478,14 @@ Now we are able to combine the preceding results and thereby prove the main resu
 \begin{theorem}\label{main result}
 	Given a sufficiently large $\sigma$ and $u_h^i$ sufficiently close to the exact solution, there exists a solution $u_h$ to the penalty method \eqref{eq: fixed point functional} satisfying
 	\begin{align}
-		\eNorm{u-u_h} \leq C h^{s-1} \norm{u}_{H^{s}(\Omega)} \label{eq: error estimate}
+		\eNorm{u-u_h} \leq C h^{s-1} \label{eq: error estimate}
 	\end{align}
 	where $0 \leq s \leq \min\{k+1, t\}$ for $u$ contained in $H^t(\Omega)$. Hereby $C$ denotes a positive constant depending on the mesh, $g$, $\sigma$, $u^i_h$, and $u$, but not on $h$.\\
 	Furthermore if
 	\begin{align}
-		\epsilonTwo{u-u_h^i} \leq C^* h^{s}\norm{u}_{H^{s}(\Omega)} \label{eq: estimate error}
+		\epsilonTwo{u-u_h^i} \leq C^* h^{s} \label{eq: estimate error}
 	\end{align}
-	there exist a $h^*> 0$ such that $u_h^i$ is sufficiently close to $u$ for all $h > h^*$.
+	there exist a $h^*> 0$ such that $u_h^i$ fulfills the requirements to apply \eqref{eq: error estimate} for all $h > h^*$.
 	
 \end{theorem}
 \begin{proof}
@@ -522,8 +526,8 @@ Now we are able to combine the preceding results and thereby prove the main resu
 	 		\frac \delta 2 \rho_0 
 	 		+ \frac {\rho_0} 2  < \rho_0. \label{eq: self mapping M}
 	 \end{align} 
-	 			 	  		 
-	 Using the Banach fixed point theorem yields the existence of a unique fixed point $u_h$ of $\M_h$ in $\mathbb B_{\rho_0}$.
+	 
+	 Now we fulfill all requirements to apply Banach's fixed point theorem: $\mathbb{B}_{\rho_0}(u_{c,h}), $ is a closed subset of the Banach space $(V_h, \eNorm{\cdot})$, and $\mathcal M_h$ is a contraction mapping on $ \mathbb{B}_{\rho_0}(u_{c,h})$. Hence, the theorem yields the existence of a unique fixed point $u_h$ of $\M_h$ in $\mathbb B_{\rho_0}$.
 	 Moreover, by Lemma \ref{la: difference u uch} it holds
 	 \begin{align}
 	 	\eNorm{u-u_h} \leq \eNorm{u-u_ch} + \eNorm{u_ch - u_h} \leq \inf_{v_h \in V_h} \eNorm{u-v_h} +\rho_0 
