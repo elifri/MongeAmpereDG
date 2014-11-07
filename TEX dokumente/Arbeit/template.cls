@@ -105,6 +105,7 @@
         commentstyle=\color{comments},
         stringstyle=\color{red},
         showstringspaces=false,
+        breaklines     = true,
 %        identifierstyle=\color{green},
         procnamekeys={def,class}}
 

@@ -1,12 +1,12 @@
 This chapter discusses mathematical foundation for the numerical schemes which are presented in later chapters.
-At the beginning of this chapter we repeat the basic definitions and notation for the analysis of partial differential equations as they are introduced for example in \cite[Introduction]{Evans1998}. Afterwards we introduce the finite element, as well as a discontinuous Galerkin method, for the latter we provide also a proof of its well-posedness. To prepare later calculations we end this chapter with some algebraic identities about the Hessian.
+At the beginning of this chapter we repeat the basic definitions and notation for an analysis of partial differential equations as they are introduced for example in \cite[Introduction]{Evans1998}. Afterwards we introduce the finite element, as well as a discontinuous Galerkin method, for the latter we provide also a proof of its well-posedness. To prepare later calculations we end this chapter with some algebraic identities about the Hessian.
 
 \section{ Preliminaries and Notation}
 Let $\Omega \subset \R^d $ be an open, bounded area and $\partial \Omega$ its boundary.
 \begin{definition}[Partial Differential Equation{\cite[Introduction]{Evans1998}}]
  A \emph{partial differential equation} (PDE) of order $k\in \N$ is an expression of the form
 \begin{align}
-	F(D^k u(x), D^{k-1}u(x), \dots, Du(x), u(x), x) = 0, (x \in \Omega)\label{eq:general PDE}
+	F(D^k u(x), D^{k-1}u(x), \dots, Du(x), u(x), x) = 0, \; (x \in \Omega)\label{eq:general PDE}
 \end{align}
 where $F:\R^{n^k} \times \R^{n^{k-1}} \times \dots \times \R^n \times \R \times \Omega \rightarrow \R $ is given and $u:\Omega \rightarrow \R$ is unknown.
 \end{definition}
@@ -30,12 +30,12 @@ We focus in this thesis on second-order PDEs for our main PDE, namely the \emph{
 		\[
 			\sum_{|\alpha| = k} a_{\alpha}(D^{k-1}u, \dots, Du, u, x) D^{\alpha} u + a_0(D^{k-1}u, Du, u, x)= f(x),
 		\]	
-		i.e. a quasilinear PDE is nonlinear in (at least) on lower derivate, but linear in the highest order derivates.
+		i.e. a quasilinear PDE is nonlinear in (at least) one lower derivate, but linear in the highest order derivates.
 		
 		\item \emph{fully nonlinear} if it depends nonlinearly upon the highest order derivatives.
 	\end{enumerate}
 \end{definition}
-A famous example for linear PDEs is the \emph{Poisson equation} $-\triangle u = f$,
+The standard example for linear PDEs is the \emph{Poisson equation} $-\triangle u = f$,
 % a semilinear PDE is for example the \emph{nonlinear Poisson equation} $-\triangle u = f(u)$.
 a well-known example for quasilinear PDEs are equations of the type $\nabla \cdot (A(u) \nabla u) = f$, where $A: \R^d \rightarrow \R^{d \times d}  $. The \MA equation $\mydet {D^2 u} = f$ is part of the last category, the nonlinear PDEs. 
 
@@ -45,9 +45,9 @@ Another important property to classify second-order PDEs is ellipticity.
 	\begin{align}
 		F(A,p,z,x) \leq F(B,p,z,x) \label{eq: ellipitic PDE}
 	\end{align}
-for all $x \in \Omega, z \in \R, p \in \R^d$ and $A,B \in \R^{d \times d}_{sym}$  with $A-B$ positive definite.
+for all $x \in \Omega, z \in \R, p \in \R^d$ and $A,B \in \R^{d \times d}_{sym}$  with $A-B$ positive semidefinite.
 
-This notion is a natural extension of the ellipticity concept for first order PDEs. Interpreting a first order PDE operator as a Function depending on $D^2u, Du, u, x$, \eqref{eq: ellipitic PDE} characterises an elliptic PDE.
+%This notion is a natural extension of the ellipticity concept for first order PDEs. Interpreting a first order PDE operator as a function depending on $D^2u, Du, u, x$, \eqref{eq: ellipitic PDE} characterises an elliptic PDE.
 \end{definition}
 
 Searching for a function $u:\Omega \rightarrow \R$ with 
@@ -56,11 +56,11 @@ u=g \text{ on } \partial \Omega \label{eq: boundary}
 \end{align}
 for some $g:\partial \Omega \rightarrow \R$ is called a \emph{Dirichlet-boundary problem}. The function $u:\Omega \rightarrow \R$ fulfilling \eqref{eq:general PDE} and \eqref{eq: boundary} is called a classical solution of the problem. 
 
-There are problems such that no such solution exists. A PDE of order $k$ requires its classical solution to be at least $k$ times differentiable, which is a very strong demand. To admit less regular solutions one aims for a weaker notion of a solution. Before doing this we specify some function spaces.
+There are problems such that no classical solution exists. A PDE of order $k$ requires its classical solution to be at least $k$ times differentiable, which is a very strong demand. To admit less regular solutions one aims for a weaker notion of a solution. Before doing this we specify some function spaces.
 
 \begin{definition} [Function Spaces and Norms]\label{def: function spaces and norms}
-According to the literature we refer by $W^{s,p}(\Omega)$ to the H\"older space, a set consisting of all $L^p(\Omega)$ functions whose distributional derivates up to order $s$ are contained in $L^ p(\Omega)$.
-The special case $p=2$ are referred to as Sobolev spaces $H^s(\Omega):=W^{s,2}(\Omega)$. An additional subscript $0$ denotes the set where all functions are zero at the boundary, i.e. $H^s_0 :=\{f \in H^s(\Omega); f(x)=0 \; \forall x \in \partial \Omega\}$
+Accordingly to the majority of the literature we refer by $W^{s,p}(\Omega)$ to the H\"older space, a set consisting of all $L^p(\Omega)$ functions whose distributional derivates up to order $s$ are contained in $L^ p(\Omega)$.
+The special case $p=2$ are referred to as Sobolev spaces $H^s(\Omega):=W^{s,2}(\Omega)$. An additional subscript $0$ denotes the set where all functions are zero at the boundary, i.e. $H^s_0 :=\{f \in H^s(\Omega); f(x)=0 \; \forall x \in \partial \Omega\}$.
 
 The corresponding function space norms are defined by
 \[
@@ -81,7 +81,7 @@ By this definition it is clear that the $H^0$ norm and the $L^2$ norm conincide.
 
 Let $T$ be a triangle in $\Omega$ and spanned by the points $v_0, v_1, v_2$. We also write 
 \[
-	T= \langle v_0, v_1, v_2 \rangle := \{\beta_0 v_0+ \beta_1 v_1 +\beta2 v_2; 0 \leq \beta_i \leq 1, i= 0,1,2\}.
+	T= \langle v_0, v_1, v_2 \rangle := \{\beta_0 v_0+ \beta_1 v_1 +\beta_2 v_2; 0 \leq \beta_i \leq 1, i= 0,1,2\}.
 \]
 The \emph{diameter} $diam(T)$ of a triangle $T$ we define as the diameter of the smallest circle containing $T$.
 
@@ -204,7 +204,7 @@ for $ A:\Omega^d \rightarrow \R^{d \times d}$ symmetric and functions $f,g:\Omeg
 Because of the physical context of this PDE the matrix $A$ is also referred to as \emph{diffusion matrix}.
 \end{definition}
 
-We are able to set up a weak formulation of the Generalised Poisson Problem based on variational principles. A weak formulation of the problem is the key element for deriving a finite element method.
+We are now able to set up a \emph{weak formulation} of the Generalised Poisson Problem based on variational principles, this formulation is the key element for deriving a finite element method.
 
 Due to the main theorem of variational analysis every classical solution to \eqref{eq: poisson eq} is equivalent to 
 \begin{align}
@@ -239,7 +239,7 @@ Note, due to the lack of regularity weak solution may not be restriced to the bo
 
 The generalised poisson problem is well-posed in the sense that it has a unique weak solution if $A$ is positive definite and $f\in L^2(\Omega)$. This is mainly due to the ellipticity of the PDE (and as a consequence thereof the ellipticity of $a$). Thus, it is possible to apply the Lax-Milgram theorem and a maximum principle. For an analysis we refer the interested reader to \cite[Chapter~6]{Evans1998}.
 
-On the left-hand side in the weak notation only first derivatives of $u$ appear, hence \eqref{eq: variational formulation} is also applicable for functions $u$ which are not twice differentiable. It turned out that the previously defined Sobolev spaces are well-suited candidates for the space $X$ containing weak solutions \cite[Chapter 1]{BS2002}. Therefore we search for the solution of the infinite-dimensional problem: Find $u\in H^1(\Omega)$ such that  $a(\varphi,u)  = b(\varphi) \;\forall \varphi \in C^\infty(\Omega)$ holds. \\% $\forall \varphi \in C^\infty(\Omega)$.
+On the left-hand side in the weak notation only first derivatives of $u$ appear, hence \eqref{eq: variational formulation} is also applicable for functions $u$ which are not twice differentiable. It turns out that the previously defined Sobolev spaces are well-suited candidates for the space $X$ containing weak solutions \cite[Chapter 1]{BS2002}. Therefore we search for the solution of the infinite-dimensional problem: Find $u\in H^1(\Omega)$ such that  $a(\varphi,u)  = b(\varphi) \;\forall \varphi \in C^\infty(\Omega)$ holds. \\% $\forall \varphi \in C^\infty(\Omega)$.
 The main idea of the finite element method is to approximate the two function spaces, namely the spaces $H^1(\Omega)$ and $C^\infty(\Omega)$ containing $\varphi$ and $u$, respectively by finite dimensional spaces $W_h$ and $V_h$. For those spaces should hold a analogous equation as we have in the variational form stated in \eqref{eq: variational formulation}.\\
 The limited space $W_h$ is called \emph{test space} and its elements are called \emph{test functions}. $V_h$ is referred to as \emph{ansatz} or \emph{trial space}, the contained functions accordingly \emph{ansatz} or \emph{trial functions}. To assert the boundary condition \eqref{eq: poisson bc} we demand $u_h|_{\partial \Omega} = g$ for every $u_h \in V_h$.
 
@@ -247,7 +247,7 @@ Normally the limited spaces are based on a discretisation of $\Omega$ and only p
 
 With these preliminaries we can define the finite element methods as searching for $u_h \in V_h$ such that 
 \begin{align}
-a_h(w_h,u_h) = b_h(w_h) \qquad \forall w \in W_h. \label{eq: FE variational formulation}
+a_h(w_h,u_h) = b_h(w_h) \qquad \forall w_h \in W_h. \label{eq: FE variational formulation}
 \end{align}
 with the bilinearform  $a_h:W_h \times V_h \rightarrow \R$
 \begin{align*}
@@ -262,7 +262,7 @@ This general proceeding is called a \emph{Galerkin approach}. Choosing $W_h = V_
 
 To construct $u_h$ we first choose a basis $B_W$ of $W_h$ and a basis $B_V$ of $V_h$.
 Since the left-hand side is linear in $w_h$ we only need to check the equations in \eqref{eq: FE variational formulation} for all $w_h \in B_W$. 
-Furthermore we can express $u_h$ as the linear combination of basis functions, namely $\sum_{b \in B_V} \mathbf{c}_b \; b$ and hence, we can rewrite \eqref{eq: FE variational formulation} as a linear system of equations $M \mathbf{c} = \mathbf{b}$ where  $\mathbf{c}$ is the unknown coefficient vector of $u_h$ to the basis $B_V$.  The matrix $M$ sometimes is named the \emph{system} or \emph{stiffness matrix}.
+Furthermore we can express $u_h$ as the linear combination of basis functions, namely $\sum_{p \in B_V} \mathbf{c}_p \; p$ and hence, we can rewrite \eqref{eq: FE variational formulation} as a linear system of equations $M \mathbf{c} = \mathbf{b}$ where  $\mathbf{c}$ is the unknown coefficient vector of $u_h$ to the basis $B_V$.  The matrix $M$ sometimes is named the \emph{system} or \emph{stiffness matrix}.
 
 Altogether a finite element method for the general Poisson equation is defined by the bilinearform $a$ and the functional $b$ together with the choice of $W_h$ and $V_h$. Its computations consist of the assembling process where the matrices $M$ and the right-hand side vector $b$ are computed and the solving process of the resulting linear system of equations.\\
 The error made by restriction to finite elements is characterised by the following Lemma.
@@ -276,10 +276,10 @@ The error made by restriction to finite elements is characterised by the followi
 		\norm {u - u_h}_V \leq \frac C \alpha \inf\limits_{v_h \in V_h} \norm {u-v_h}_V.
 	\end{align}
 \end{lemma}
-This result shows the quality of the finite element solution depends on one side on the problem parameters $\alpha$ and $C$, but on the other side particularly on the approximation properties of $V_h$. A typical choice for the function spaces $W_h$ and $V_h$ are piecewise polynomials spaces which have good approximation properties and are easy to handle.
+This result shows that the quality of the finite element solution depends on one side on the problem parameters $\alpha$ and $C$, but on the other side particularly on the approximation properties of $V_h$. A typical choice for the function spaces $W_h$ and $V_h$ are piecewise polynomials spaces which have good approximation properties and are easy to handle.
 
-\section{Discontinuous Galerkin (DG)} \label{sec: SIPG}
-A recent idea is to choose the test and ansatz spaces to include discontinuous functions. This approach arised in the context of hyperbolic PDEs of which solutions eventually contain discontinuities, later it was also applied to ellipitic PDEs \cite{ABC+2002}. Although the Generalised Poissson Problem is not hyperbolic and its solutions are continuous we use this example to explain the issues arising when the finite element spaces is extended to discontinuities. The crux is the handling of function evaluations along discontinuities. Note that for discontinuous ansatz spaces it is no longer true that they are subspaces of $H^1(\Omega)$ which contains the weak solution of the Generalised Poisson problem. That implies that C\'eas Lemma \ref{la: Ceas lemma} is not valid. Elements which include ansatz space no contained in $H^1(\Omega)$ also referred to as non-conforming elements.
+\section{Discontinuous Galerkin} \label{sec: SIPG}
+A recent idea is to to include discontinuous functions when choosing the test and ansatz spaces. This approach arised in the context of hyperbolic PDEs of which solutions eventually contain discontinuities, later it was also applied to ellipitic PDEs \cite{ABC+2002}. Although the Generalised Poissson Problem is not hyperbolic and its solutions are continuous we use this example to explain the issues arising when the finite element spaces are extended to discontinuities. The crux is the handling of function evaluations along discontinuities. Note that for discontinuous ansatz spaces it is no longer true that they are subspaces of $H^1(\Omega)$ which contains the weak solution of the Generalised Poisson problem. That implies that C\'eas Lemma \ref{la: Ceas lemma} is not valid. Elements which include ansatz space no contained in $H^1(\Omega)$ also referred to as non-conforming elements.
 
 %We recall our triangulation $\mathcal{T}_h$ of $\Omega$. 
 If we modify the derivation of the bilinear form defining the finite element method we can develop bilinear forms defined on the function space $V_h = \mathcal P_h^k$ (cf. Definition \ref{def: piecewise polySpace}): Due to fact we have discontinuities only along edges we perform the integration by parts in \eqref{eq: variational form} piecewise on every triangle leading to
@@ -293,13 +293,13 @@ Since two adjacent elements share the same edge only with opposite directed norm
 = &\sum\limits_{e \in \edgesi}\myIntS e { \left( v^+ A^+ \nabla u^+ \cdot \mathbf n^+ + v^- A^- \nabla u^- \cdot \mathbf n^- \right)} \\
 & + \sum\limits_{e \in \edgesb}\myIntS e { v A \nabla u \cdot \mathbf n},
 \end{align*}
-where $h^\pm $ is $h$ evaluated in one of the two adjadecent elements $T^\pm$ with $T^+ \cap T^- = e$. With the identity $\mathbf n^- = -\mathbf n^+$ we can extend
+where $h^\pm $ is $h$ evaluated in one of the two adjacent elements $T^\pm$ with $T^+ \cap T^- = e$. With the identity $\mathbf n^- = -\mathbf n^+$ we can extend
 \begin{align*}
-	&v^+ A^+ \nabla u^+ \cdot \mathbf n^+ - v^- A^- \nabla u^- \cdot \mathbf n^+ \\
+	&v^+ A^+ \nabla u^+ \cdot \mathbf n^+ + v^- A^- \nabla u^- \cdot \mathbf n^- \\
 		= & \phantom{+} v^+ A^+ \nabla u^+ \cdot \mathbf n^+ 
 		     + \frac 1 2  v^+ A^- \nabla u^- \cdot \mathbf n^- + \frac 1 2 v^+ A^- \nabla u^- \cdot \mathbf n^+ \\
 		& + \frac 1 2  v^- A^+ \nabla u^+ \cdot \mathbf n^+ + \frac 1 2 v^- A^+ \nabla u^+ \cdot \mathbf n^-
-		   + v^- A^- \nabla u^- \cdot \mathbf n^+
+		   + v^- A^- \nabla u^- \cdot \mathbf n^-
 \end{align*}
 Splitting up first and last term and reordering and we find this equals to
 \begin{align*}
@@ -355,7 +355,7 @@ To enforce continuity in the numerical solution we penalise the jump across edge
 \begin{align}
 	J^\sigma(v, u) = \sum\limits_{e \in \edges} \myIntS e { \frac \sigma {|e|} \jump v \jump u}
 		 \textnormal{ and } 	
-		 J^\sigma_0(v, u) = \sum\limits_{e \in \edgesb} \myIntS e {\frac \sigma {|e|} v g} . \label{eq: penalty term}
+		 J^\sigma_0(v) = \sum\limits_{e \in \edgesb} \myIntS e {\frac \sigma {|e|} v g} . \label{eq: penalty term}
 \end{align}
 
 Thus, we end up with the problem finding $v \in V_h$ such that
@@ -369,7 +369,7 @@ where
 
 %The authors of \cite{PPO+2000} suggest to choose the penalty term $\sigma$ as $10 k^2$ and undergird that 
 
-Just like in the finite element method we can derive a linear system of equations $M \mathbf{u} = \mathbf{b}$ with $M$ sparse and $\mathbf{u}$ representing the coefficient vector of $u_h$ with respect to the basis $B_V$.
+Just like in the finite element method we can derive a linear system of equations $M \mathbf{u} = \mathbf{l}$ with $M$ sparse and $\mathbf{u}$ representing the coefficient vector of $u_h$ with respect to the basis $B_V$.
 This particular discontinuous Galerkin method is called \emph{Symmetric Interior Penalty Galerkin method} (SIPG).
 
 \input{wellposedness_DG.tex}
@@ -396,10 +396,10 @@ We observe that in the two-dimensional case the cofactor matrix of the Hessian s
 							\end{pmatrix}.
 \end{align}
 
-\begin{definition}[Frobenius product] \label{def: frobenius product}
-	The Frobenius product : of two matrices $A, B \in R^{d \times d}$ is defined by
+\begin{definition}[Frobenius Product] \label{def: frobenius product}
+	The \emph{Frobenius product} : of two matrices $A, B \in R^{d \times d}$ is defined by
 	\[
-		A:B := \sum_{1 = i,j} ^d a_{i,j} b_{i,j}
+		A:B := \sum_{1 = i,j} ^d a_{i,j} b_{i,j}.
 	\]
 \end{definition}
 
@@ -407,7 +407,7 @@ Very helpful is the relation between the determinant and the cofactor matrix.
 \begin{lemma}\label{la: rel det cofactor}
 	For every matrix $A  \in \R^{d \times d}$ it holds
 	\[
-		d \mydet A = \mycof A: A
+		d \mydet A = \mycof A: A.
 	\]
 \end{lemma}
 \begin{proof}
@@ -417,7 +417,7 @@ Very helpful is the relation between the determinant and the cofactor matrix.
 	\]
 	Summing over all $j$ yields
 	\[
-		d \mydet A = \sum\limits_{j= 1}^{d} \sum\limits_{i = 1}^{d} (\mycof A )_{i,j}  a_{i,j}  = \mycof A: A
+		d \mydet A = \sum\limits_{j= 1}^{d} \sum\limits_{i = 1}^{d} (\mycof A )_{i,j}  a_{i,j}  = \mycof A: A.
 	\]
 \end{proof}
 
@@ -433,7 +433,7 @@ where $A_i$ denotes the $i$-th row of $A$.
 \end{definition}
 
 \begin{lemma}[Divergence-Free Property of Cofactor Matrices] \label{la: divergence free cof}
-For smooth functions $u:\Omega \rightarrow \R$ with $\Omega \subset \R^2$ the cofactor matrix of the Hessian is divergence-free:
+For smooth functions $u:\Omega \rightarrow \R$ with $\Omega \subset \R^2$ the cofactor matrix of the Hessian is divergence-free, i.e.
 \[
 	\nabla \cdot \mycof{D^2 u} = 0.
 \] 
@@ -449,7 +449,7 @@ For smooth functions $u:\Omega \rightarrow \R$ with $\Omega \subset \R^2$ the co
 By Schwarz' theorem the latter equals zero if $u$ is twice continuous differentiable.
 \end{proof}
 
-The divergence-free property yields to a integration by parts rule:
+The divergence-free property yields to a integration by parts rule.
 \begin{lemma}[Integration by parts for the Frobenius product] \label{la: integration by parts Frobenius}
 For a Frobenius product with the Hessian's cofactor matrix  the following integration by parts rule holds for smooth $u$
 \[
@@ -473,7 +473,7 @@ The proof is based on applying integration by parts row-wise
 \end{align*}
 \end{proof}
 
-When later talking about weak formulations it is handy to have a divergence form of the latter Frobenius product.
+In future talking about weak formulations it is handy to have a divergence form of the latter Frobenius product.
 \begin{lemma}[Divergence form of the Frobenius Product] \label{la: An application of the divergernce product rule}
 \[
 		\nabla \cdot \left( \mycof {D^2 u } \nabla v \right) %- \nabla \cdot \left(\mycof {D^2 u }\right) \nabla v
