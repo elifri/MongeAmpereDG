@@ -54,7 +54,7 @@ def Brenner_step(mesh, V, u0, sigma, u_):
   
   prm['nonlinear_solver']='snes'
   
-  prm['snes_solver']['absolute_tolerance'] = 1E-6
+  prm['snes_solver']['absolute_tolerance'] = 1E-8
   prm['snes_solver']['maximum_iterations'] = 50
   prm['snes_solver']['linear_solver']= 'petsc'
   #prm['snes_solver']['preconditioner']= 'lu'
@@ -91,7 +91,9 @@ if __name__ == "__main__":
   
   parameters['form_compiler']['quadrature_degree']=2*deg+2
   
-  mesh = UnitSquareMesh(Nh, Nh, 'crossed')
+  initial_mesh = UnitSquareMesh(1, 1, "crossed")
+  mesh = adapt(initial_mesh)
+
   V = FunctionSpace(mesh, 'CG', deg)
   bigMesh = refine(mesh)
   bigV = FunctionSpace(bigMesh, 'CG', deg)
@@ -105,12 +107,11 @@ if __name__ == "__main__":
   #define exact solution
   u_e = interpolate(u0, V)
   
-  fileprefix = problem_name+'_BrennerTest_deg'+str(deg)+'_'
+  fileprefix = problem_name+'_Brenner_deg'+str(deg)+'_'
   print "processing files ", fileprefix
   
   errorfile = open('data/'+fileprefix+'l2errornorm','wa',1)
   errorfile.write('iterations l2error\n');
-  fitdata_file = open('data/'+fileprefix+'fitData','wa',1)
   errorfileh1 = open('data/'+fileprefix+'h1errornorm','wa',1)
   errorfileh1.write('iterations h1error\n');
   newtonStepsfile = open('data/'+fileprefix+'newtonSteps','wa',1)
@@ -125,8 +126,7 @@ if __name__ == "__main__":
   newtonStepsfile.write('0 0\n')
   errorfile.write('0 '+str(errornorm(u0, u_))+'\n')
   errorfileh1.write('0 '+str(errornorm(u0, u_, norm_type='h1'))+'\n')
-  fitdata_file.write(str(math.log(1.0/Nh))+' '+str(math.log(errornorm(u0, u_)))+'\n')
-
+  
   
  # deg_hessian=deg
  # Nh, V, bigV, uTemp = neilan_start(u0, f, Nh, deg, deg_hessian, sigma, sigma, sigma, 2)
@@ -143,8 +143,7 @@ if __name__ == "__main__":
     error_norm = errornorm(u0, w)
     print 'Errornorm:', error_norm
     errorfile.write(str(it)+' '+str(error_norm)+'\n')
-    fitdata_file.write(str(math.log(1.0/Nh))+' '+str(math.log(error_norm))+'\n')
-
+ 
     error_norm = errornorm(u0, w, norm_type='H1')
     print 'Errornorm H1:', error_norm
     errorfileh1.write(str(it)+' '+str(error_norm)+'\n')
@@ -166,7 +165,7 @@ if __name__ == "__main__":
     #------refine grid---------
     #mesh = refine(mesh)
     Nh = Nh *2
-    mesh = UnitSquareMesh(Nh, Nh, 'crossed')
+    mesh = adapt(mesh)
     V = FunctionSpace(mesh, 'CG', deg)
     
     u_ = Function(V)
