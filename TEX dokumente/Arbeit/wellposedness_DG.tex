@@ -228,12 +228,12 @@
 
 \section{Well-posedness of the SIPG Method}
 
-In this section we want to prove th derived SIPG method is well-posed. The proofs were taken from \cite{BS2002, PPO+2000} and extended to the case of a Generalised Poisson Problem. 
-To start with the analysis we first have to define the norm the analysis will be carried out with. Let $V$ be $L^2(\Omega) \cup H^1(\Omega; \triang)$ 
+In this section we want to prove that the derived SIPG method is well-posed. The proofs were taken from \cite{BS2002, PPO+2000} and extended to the case of a Generalised Poisson Problem. 
+To start we first have to define the norm in which the analysis will be carried out with. Let $V$ be $L^2(\Omega) \cup H^1(\Omega; \triang)$ 
 \begin{definition}[Energy Norm] \label{def: energy norm}
 	The mesh-dependent energy norm for a function $v \in V$ is defined by
 	\[
-	\eNorm v ^2 := \LTwonorm{\nabla v} + \frac 1 \sigma \sum_{e \in \edges} |e|\LTwonormE{\average{\nabla v}} + 2 \sigma \sum_{e \in \edges} \frac 1 {|e|}\LTwonormE{\jump{v}}.
+	\eNorm v ^2 := \LTwonorm{\nabla v}^2 + \frac 1 \sigma \sum_{e \in \edges} |e|\LTwonormE{\average{\nabla v}}^2 + 2 \sigma \sum_{e \in \edges} \frac 1 {|e|}\LTwonormE{\jump{v}}^2.
 	\]
 \end{definition}
 
@@ -241,7 +241,7 @@ Note that through this section $C$ denotes a generic positive constant independe
 
 At first, we show the following statement
 \begin{lemma}[Boundedness of the SIPG method]\label{la: SIPG continuous}
-	For the SIPG method holds
+	For the SIPG method it holds
 	\[
 	|a_h^{DG}(\varphi, v) | \leq C \eNorm{\varphi} \eNorm{v} \qquad \forall \varphi,v \in V
 	\]
@@ -251,11 +251,13 @@ At first, we show the following statement
 	Let us consider the terms of \eqref{eq:inner product SIPG} and \eqref{eq: penalty term} separately.
 	For the first term we have by the Cauchy-Schwarz inequality
 	\begin{align}
-	|\sum\limits_{T \in \triang} \myIntX  T { \nabla \varphi \cdot A \nabla v}| =& |\bilinLTwo {\nabla \varphi} {\nabla v} | \leq \LTwonorm{\nabla \varphi} \LTwonorm{A} \LTwonorm{\nabla v}. \label{eq: CS estimate 0}
+	\singleNorm{\sum\limits_{T \in \triang} \myIntX  T { \nabla \varphi \cdot A \nabla v}}
+	 =& \singleNorm{\bilinLTwo {\nabla \varphi} {\nabla v} }
+	  \leq \LTwonorm{\nabla \varphi} \LTwonorm{A} \LTwonorm{\nabla v}. \label{eq: CS estimate 0}
 	\end{align}
 	Considering the sum of the second and the fourth term we find using Cauchy-Schwarz and using also the discrete Cauchy-Schwarz inequality
 	\begin{align}
-	|\sum\limits_{e \in \edges}\myIntS e { \jump {\varphi \average{A \nabla v} }}| &\leq
+	\singleNorm{\sum\limits_{e \in \edges}\myIntS e { \jump {\varphi \average{A \nabla v} }}} &\leq
 	\sum\limits_{e \in \edges}  \LTwonormE{\jump {\varphi}} \LTwonormE {\average{A \nabla v}} \nonumber \\
 	& \leq
 	\left( \sum\limits_{e \in \edges} \frac {\sigma}{|e|} \LTwonormE{\jump {\varphi}}^2 \right)^{\frac 1 2}
@@ -266,14 +268,14 @@ At first, we show the following statement
 	\end{align}
 	For shorter notation we abbreviate $\sup\limits_{e \in \edges} \LTwonormE{\average{A}}$ by $\bar A$. Since the third and the last term in \eqref{eq:inner product SIPG} are the symmetric to the second and fourth summands, we analogously have for their sum
 	\begin{align}
-	|\sum\limits_{e \in \edges}\myIntS e { \frac 1 {|e|}\jump {v \average{A \nabla \varphi} }}| \leq&
+	\singleNorm{\sum\limits_{e \in \edges}\myIntS e { \jump {v \average{A \nabla \varphi} }}} \leq&
 	\left( \sum\limits_{e \in \edges} \frac {\sigma}{|e|}\LTwonormE{\jump {v}}^2 \right)^{\frac 1 2}
 	\left( \bar A \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla \varphi}}^2 \right)^{\frac 1 2}.\label{eq: CS estimate2}
 	\end{align}
 	Now only the penalty term (cf. \eqref{eq: penalty term}) needs to be estimated. Again we apply at first the Cauchy-Schwarz inequality and then the discrete Cauchy-Schwarz inequality:
 	\begin{align}
-	\singleNorm {\sum_{e \in \edgesi} \frac \sigma {|e|} \myIntS e {\jump \varphi \jump v }}
-	\leq& \sum_{e \in \edgesi} \frac \sigma  {|e|} \myIntS{e}{ \singleNorm {\jump \varphi \jump v }} \nonumber \\
+	\singleNorm {\sum_{e \in \edges} \frac \sigma {|e|} \myIntS e {\jump \varphi \jump v }}
+	\leq& \sum_{e \in \edges} \frac \sigma  {|e|} \myIntS{e}{ \singleNorm {\jump \varphi \jump v }} \nonumber \\
 	\leq& \left( \sum\limits_{e \in \edges} \frac \sigma{|e|} \LTwonormE{\jump{\varphi}}^2 \right)^{\frac 1 2} \left( \sum\limits_{e \in \edges} \frac \sigma {|e|} \LTwonormE{\jump{v}}^2 \right)^{\frac 1 2} \label{eq: CS estimate3}
 	\end{align}
 	Adding \eqref{eq: CS estimate 0}, \eqref{eq: CS estimate}, \eqref{eq: CS estimate2} and \eqref{eq: CS estimate3} we find using the discrete Schwarz inequality once more
@@ -298,68 +300,67 @@ At first, we show the following statement
 	\phantom{blub}
 \end{proof}
 
-The next step in our analysis considers the stability of the SIPG method. To do we first need to define a norm measuring elements in $V'$
+The next step in our analysis considers the stability of the SIPG method. To do we first need to define a norm measuring elements of $V'$.
 \begin{definition} \label{def: h-1 seminorm}
 	The semi-norm $\HMinusOneDnorm \cdot $ of an element $r \in V_h'$ is given by 
 	\[
-	\HMinusOneDnorm r ^2 := \sup_{0 \neq w \in V_h} \frac {{\bilin r w } } {\eNorm{w}}.
+	\HMinusOneDnorm r  := \sup_{0 \neq w \in V_h} \frac {{\bilin r w } } {\eNorm{w}}.
 	\]
 \end{definition}
-Before we can start we need to define yet another mesh-dependent energy norm which simplifies the proof that the left-hand side's bilinear form of the SIPG method is coercive.
+Before we can start we need to define a second mesh-dependent energy norm which simplifies the proof that the bilinear form in the SIPG method is coercive.
 \begin{definition}[Energy Norm]\label{energy norm2}
 	The mesh-dependent discrete energy norm $\eNormTwo \cdot $ is defined by
 	\[
-	\eNormTwo v^2 :=  \LTwonorm v +  \sigma \sum_{e \in \edges} \frac 1 {|e|}\LTwonormE{\jump{\nabla v}}.
+	\eNormTwo v^2 :=  \LTwonorm v^2 +  \sigma \sum_{e \in \edges} \frac 1 {|e|}\LTwonormE{\jump{\nabla v}}^2.
 	\]
 \end{definition}
 Calling this norm also an energy norm is justified as both norms are equivalent on $V_h$.
 \begin{lemma}[Equivalence of Energy Norms in $V_h$]
 	For any $w \in V_h$ holds
 	\[
-	c \eNormTwo w \leq \eNorm w \leq C(1+\sigma)\eNormTwo w
+	c \eNormTwo w \leq \eNorm w \leq C(1+\frac  1 \sigma)\eNormTwo w
 	\]
 	with positive Constants $c, C$ depending only on the mesh.
 \end{lemma}
 \begin{proof}
 	By definition the inequality $c \eNormTwo w \leq \eNorm w$ is clear and holds for example for $c=1$. 
-	By the trace estimate we have
+	By the trace estimate from Lemma \ref{la: trace estimate} we have
 	\begin{align*}
-	\sum_{e \in \edges} \singleNorm e \LTwonormE{\average{\nabla w}} 
-	\leq C \sum_{T \in \triang} \left( \LTwonormT{\average{\nabla w}} +\HOnenormT{\average{\nabla w}}   \right).
+	\sum_{e \in \edges} \singleNorm e \LTwonormE{\average{\nabla w}}^2 
+	\leq C \sum_{T \in \triang} \left( \LTwonormT{\average{\nabla w}}^2 +\HOnenormT{\average{\nabla w}}^2   \right).
 	\end{align*}
 	Recalling the definition of the average (cf. Definition \ref{def: edge operators}) it is clear we can further simplify to
 	\begin{align*}
-	\sum_{e \in \edges} \singleNorm e \LTwonormE{\average{\nabla w}} 
-	\leq C \sum_{T \in \triang} \left( \LTwonormT{\nabla w} +h^2 \HOnenormT{ \nabla w}   \right).
+	\sum_{e \in \edges} \singleNorm e \LTwonormE{\average{\nabla w}}^2 
+	\leq C \sum_{T \in \triang} \left( \LTwonormT{\nabla w}^2 +h^2 \HOnenormT{ \nabla w}^2   \right).
 	\end{align*}
 	By the inverse estimate from Lemma \ref{la: inverse estimate} we have 
 	\begin{align}
-	\sum_{e \in \edges} \singleNorm e \LTwonormE{\average{\nabla w}} \leq C \LTwonormT{\nabla w}. \label{eq: estimate average}
+	\sum_{e \in \edges} \singleNorm e  \LTwonormE{\average{\nabla w}}^2 \leq C \LTwonorm{\nabla w}^2. \label{eq: estimate average}
 	\end{align}
 	Therefore it can be derived
 	\begin{align*}
-		\eNorm{w} 
-		&= \LTwonorm{\nabla w} 
-			+ \frac 1 \sigma \sum_{e \in \edges} \singleNorm e \LTwonormE{\average{\nabla w}}  
-			+ \sum_{e \in \edges} \singleNorm e \LTwonormE{\jump{w}} \\
-		&\leq C \LTwonorm{\nabla w} 
-			+ \sigma \sum_{e \in \edges} \singleNorm e \LTwonormE{\jump{w}} 
-		\leq C(1+\frac 1 \sigma) \eNormTwo{w}.
+		\eNorm{w}^2 
+		&= \LTwonorm{\nabla w}^2
+			+ \frac 1 \sigma \sum_{e \in \edges} \singleNorm e \LTwonormE{\average{\nabla w}}^2  
+			+ 2 \sigma \sum_{e \in \edges} \frac 1 {|e|} \LTwonormE{\jump{w}}^2 \\
+		&\leq (1+\frac C \sigma) \LTwonorm{\nabla w}^2 
+			+ 2 \sigma \sum_{e \in \edges} \frac 1 {|e|} \LTwonormE{\jump{w}}^2 
+		\leq C(1+\frac 1 \sigma) \eNormTwo{w}^2.
 	\end{align*}
-	
-	
+The result follows from the monotonicity of the square root and the fact $a \geq \sqrt a$ for all $a > 1$.
 \end{proof}
 
 \begin{theorem}[Stability]\label{thm: SIPG stability}
 	For $\mathcal A_h:V \rightarrow V'$ defined by 
 	\[
-	\bilin {\mathcal A_h v} \varphi := a_h^{DG}(\cdot, v)
+	\bilin {\mathcal A_h v} \varphi := a_h^{DG}(\varphi, v) \qquad \forall \varphi \in V
 	\]
 	it holds that  
 	\begin{align*}
 	\HMinusOneDnorm{\mathcal A_h v} \leq C \eNorm v \qquad \forall v \in V. %\label{eq: bilin continuity}
 	\end{align*}
-	for a positive Constant $C$ depending only on the mesh and the diffusion matrix $A$. 
+	for a positive constant $C$ depending only on the mesh and the diffusion matrix $A$. 
 	
 	Further there exists $\alpha > 0 $ such that for all $v_h \in V_h$
 	\begin{align}
@@ -381,31 +382,31 @@ Calling this norm also an energy norm is justified as both norms are equivalent 
 	for $\lambda >0$, the smallest eigenvalue of $A$.
 	Therefore we find
 	\begin{align}
-	a_h^{DG}(v_h,v_h) \geq \lambda \LTwonorm{\nabla v_h} - 2 \sum\limits_{e \in \edges}\myIntS e { \jump {v \average{A \nabla v_h} }} + \sum_{e\in \edgesi} \frac \sigma {|e|} \myIntS e {\jump {v_h}^2} .\label{eq: coerc first estimate}
+	a_h^{DG}(v_h,v_h) \geq \lambda \LTwonorm{\nabla v_h}^2 - 2 \sum\limits_{e \in \edges}\myIntS e { \jump {v \average{A \nabla v_h} }} + \sum_{e\in \edgesi} \frac \sigma {|e|} \myIntS e {\jump {v_h}^2} .\label{eq: coerc first estimate}
 	\end{align}
 	We derived in \eqref{eq: CS estimate} the estimate 
 	\begin{align}
 	\sum\limits_{e \in \edges}\myIntS e { \jump {v_h \average{A \nabla v_h} }}
 	\leq		\left( \sum\limits_{e \in \edges} \frac {\sigma}{|e|} \LTwonormE{\jump {v_h}}^2 \right)^{\frac 1 2}
-	\left(C \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v_h}}^2 \right)^{\frac 1 2} \label{eq: inter estimate}
+	\left(C \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v_h}}^2 \right)^{\frac 1 2}. \label{eq: inter estimate}
 	\end{align}
-	Taking the root of the trivial identity $ab \leq \varepsilon^2 a^2 + 2ab + {\frac 1 \varepsilon}^2b^2 = \left( \varepsilon a + \frac 1 \varepsilon b\right)^2$ yields the inequality $\sqrt{a} \sqrt{b} \leq \varepsilon a + \frac 1 \varepsilon b$ for arbitrary $a,b \in R$ and $\varepsilon \geq 0$. Thus, we can derive from \eqref{eq: inter estimate}
+	Taking the root of the trivial identity $ab \leq \varepsilon^2 a^2 + 2ab + {\frac 1 \varepsilon}^2b^2 = \left( \varepsilon a + \frac 1 \varepsilon b\right)^2$ yields the inequality $\sqrt{a} \sqrt{b} \leq \varepsilon a + \frac 1 \varepsilon b$ for arbitrary $a,b \in R$ and $\varepsilon \geq 0$. Thus, we have using \eqref{eq: inter estimate}
 	\begin{align*}
 	\sum\limits_{e \in \edges}\myIntS e { \jump {v_h \average{A \nabla v_h} }} 
 	\leq \frac 1 \varepsilon \sum\limits_{e \in \edges}\frac \sigma {|e|}\LTwonormE{\jump {v_h}}^2 
-	+ C\varepsilon  \sum\limits_{e \in \edges}  \frac {|e|} \sigma \LTwonormE{\average{\nabla v_h}}^2
+	+ C\varepsilon  \sum\limits_{e \in \edges}  \frac {|e|} \sigma \LTwonormE{\average{\nabla v_h}}^2.
 	\end{align*}
 	By \eqref{eq: estimate average} it follows that 
 	\begin{align*}
 		\sum\limits_{e \in \edges}\myIntS e { \jump {v_h \average{A \nabla v_h} }} 
 		\leq \frac 1 \varepsilon \sum\limits_{e \in \edges}\frac \sigma {|e|}\LTwonormE{\jump {v_h}}^2 
-		+ C\varepsilon  \frac C \sigma \LTwonorm{\nabla v_h}^2
+		+ C\varepsilon  \frac C \sigma \LTwonorm{\nabla v_h}^2.
 	\end{align*}			
 	Using this estimate in \eqref{eq: coerc first estimate} and we can derive
 	\begin{align*}
 	a_h^{DG}(v_h,v_h)  \geq& (\lambda- \varepsilon \frac C \sigma)
 	\LTwonorm{\nabla v_h}^2
-	+ \left(-\frac 1 \varepsilon +1\right) \sum_{e\in \edgesi}  \frac \sigma {|e|} \LTwonormE{\jump {v_h}}^2
+	+ \left(-\frac 1 \varepsilon +1\right) \sum_{e\in \edgesi}  \frac \sigma {|e|} \LTwonormE{\jump {v_h}}^2.
 	\end{align*}
 	If we can find values for $\sigma$ and $\varepsilon$ such that $\lambda-\varepsilon \frac C \sigma$ and $-\frac 1 \varepsilon +1$ are positive we can estimate the right-hand side by $\min{\{\lambda-\varepsilon \frac C \sigma,-\frac 1 \varepsilon +1\}} \eNormTwo{v}^2$ and proved the desired coercivity. 
 	Clearly, taking $\varepsilon$ to be larger than one ensures that the second term is positive. The first term is also positive if we choose $\sigma$ to be larger than $\frac {\varepsilon C} \lambda$.
@@ -417,14 +418,14 @@ Additionally a small eigenvalue forces the penalty parameter to be chosen large.
 
 To conclude our analysis of the SIPG method we derive a statement similar to C\'eas Lemma. The proof was taken from \cite[Lemma 10.5.2]{BS2002} and fitted to our context.
 \begin{theorem}[Approximation Properties]\label{thm: error estimate}
-	Let $u$ be the solution of the General Poisson Problem \ref{def: General Poisson Problem} and $\sigma \geq \sigma^*$ of Theorem \ref{thm: SIPG stability}. Let $u_h \in V_h$ satisfy \eqref{eq: DG system}, namely
+	Let $u$ be the exact solution of the General Poisson Problem (cf. Definition \ref{def: General Poisson Problem}) and $\sigma \geq \sigma^*$ such that it satisfy the requirements of Theorem \ref{thm: SIPG stability}. Let $u_h \in V_h$ satisfy \eqref{eq: DG system}, namely
 	\[
 	a_h^{DG}(v_h, u_h) = l^{DG}_h(v_h) \qquad \forall v_h \in V_h.
 	\]
 \end{theorem}
 Then there exists a positive constant $C$ independent of $h$ such that 
 \[
-\eNorm{u - u_h } \leq \frac C \alpha \inf_{v \in v_h} \eNorm{u - v_h}
+\eNorm{u - u_h } \leq (1+\frac C \alpha) \inf_{v \in v_h} \eNorm{u - v_h}
 \]
 where $\alpha$ is the coercivity constant of \eqref{eq: coercivity DG form}. % and $\frac C \alpha > 1$ holds.
 
@@ -434,27 +435,27 @@ where $\alpha$ is the coercivity constant of \eqref{eq: coercivity DG form}. % a
 	Then it holds
 	\[
 		\eNorm{v_h} \leq \frac 1 \alpha \frac {a_h^{DG}(v_h, v_h)} {\eNorm{v_h}} 
-		 \leq \frac 1 \alpha \sup_{w \in V_h, w \neq 0} \frac {a_h^{DG}(v_h,w_h)} {\eNorm{w_h}} 	
+		 \leq \frac 1 \alpha \sup_{w_h \in V_h, w_h \neq 0} \frac {a_h^{DG}(v_h,w_h)} {\eNorm{w_h}}.
 	\]
 	Therefore, we have
 	\begin{align*}
 	\eNorm{u-u_h} \leq& \eNorm{u-v_h} + \eNorm{u_h-v_h} \\
 	%  \leq& \eNorm{u-v_h} + \frac 1  \alpha \sqrt{a_h(u_h-v_h, u_h-v_h)} \\
-	\leq& \eNorm{u-v_h} + \frac 1 \alpha \sup_{w \in V_h, w \neq 0} \frac {a_h^{DG}(u_h-v_h, w_h) }{\eNorm{w_h}}
+	\leq& \eNorm{u-v_h} + \frac 1 \alpha \sup_{w_h \in V_h, w_h \neq 0} \frac {a_h^{DG}(u_h-v_h, w_h) }{\eNorm{w_h}}.
 	\end{align*}
-	Since both $u$ and $u$ satisfy
+	Since both $u$ and $u_h$ satisfy
 	\[
 	a_h^{DG}(u,v_h) = l_h^{DG}(v_h) = a_h^{DG}(u_h,v_h) \qquad \forall v_h \in V_h
 	\]
-	it holds
+	it holds that
 	\begin{align*}
-	\eNorm{u-u_h} \leq& \eNorm{u-v_h} + \frac 1 \alpha \sup_{w \in V_h, w \neq 0} \frac {a_h^{DG}(u-v_h, w_h) }{\eNorm{w_h}}
+	\eNorm{u-u_h} \leq& \eNorm{u-v_h} + \frac 1 \alpha \sup_{w \in V_h, w \neq 0} \frac {a_h^{DG}(u-v_h, w_h) }{\eNorm{w_h}}.
 	\end{align*}
 	By theorem \ref{thm: SIPG stability} it then follows that
 	\begin{align*}
-	\eNorm{u-u_h} \leq& \eNorm{u-v_h} + \frac C \alpha \eNorm{u-v_h} \leq \frac C \alpha \eNorm{u-v_h}
+	\eNorm{u-u_h} \leq& \eNorm{u-v_h} + \frac C \alpha \eNorm{u-v_h}.
 	\end{align*}
-	Since $v_h$ was arbitrary this implies the claim.
+	Since $v_h$ is arbitrary this implies the claim.
 \end{proof}
 
 

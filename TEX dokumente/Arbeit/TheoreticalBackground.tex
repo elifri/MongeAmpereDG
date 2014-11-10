@@ -89,7 +89,7 @@ To discretise our domain $\Omega$ we subdivide it into simplices, more precisely
 \begin{definition}[Triangulation, {\cite[Definition 5.1]{Braess2003}}]
 	We call a finite partition of $\Omega$ into triangles $\{T_1, \dots, T_n\}$ a feasible \emph{triangulation} $\mathcal{T}$, such that
 	\begin{enumerate}[(i)]
-		\item	$\overline \Omega = \bigcup_{T \in \triang} T_i$
+		\item	$\overline \Omega = \bigcup_{T \in \triang} T$
 		\item If $T_i \cap T_j$ is a point for $i \neq j$ , it is a vertex of both $T_i$ and $T_j$.
 		\item If $T_i \cap T_j$ is more than one point for $i \neq j$, it is an edge of both $T_i$ and $T_j$.
 	\end{enumerate}
@@ -243,7 +243,7 @@ On the left-hand side in the weak notation only first derivatives of $u$ appear,
 The main idea of the finite element method is to approximate the two function spaces, namely the spaces $H^1(\Omega)$ and $C^\infty(\Omega)$ containing $\varphi$ and $u$, respectively by finite dimensional spaces $W_h$ and $V_h$. For those spaces should hold a analogous equation as we have in the variational form stated in \eqref{eq: variational formulation}.\\
 The limited space $W_h$ is called \emph{test space} and its elements are called \emph{test functions}. $V_h$ is referred to as \emph{ansatz} or \emph{trial space}, the contained functions accordingly \emph{ansatz} or \emph{trial functions}. To assert the boundary condition \eqref{eq: poisson bc} we demand $u_h|_{\partial \Omega} = g$ for every $u_h \in V_h$.
 
-Normally the limited spaces are based on a discretisation of $\Omega$ and only piecewise smooth. Consequently, we have to replace all operators appearing in $a$ by operators defined on $W_h \cup V_h$. We denote these extended versions using the subscript $h$.
+Normally the limited spaces are based on a discretisation of $\Omega$ and are only piecewise smooth. Consequently, we have to replace all operators appearing in $a$ by operators defined on $W_h \cup V_h$. We denote these extended versions using the subscript $h$.
 
 With these preliminaries we can define the finite element methods as searching for $u_h \in V_h$ such that 
 \begin{align}
@@ -312,7 +312,7 @@ Splitting up first and last term and reordering and we find this equals to
 \end{align*}
 Therefore the weak formulation can be written as $a(v,v) = l(v)$ with 
 \begin{align*}
-  a(v, v) = & \sum\limits_{T \in \triang} \myIntX  T { \nabla v \cdot A \nabla u} \\
+  a(v, u) = & \sum\limits_{T \in \triang} \myIntX  T { \nabla v \cdot A \nabla u} \\
 	& - \sum\limits_{e \in \edgesi}\myIntS {e} {\left( \jump {\average v A \nabla u} + \jump {v \average{ A \nabla u}} \right)}\\
 & - \sum\limits_{e \in \edgesb}\myIntS {e} {v A \nabla u \cdot \mathbf n}
 \end{align*}
@@ -322,7 +322,7 @@ l(v) = \sum_{T \in \triang} \myIntX  T { u f}.
 \]
 Due to the smoothness of the exact solution $u$ we neglect the jump in $A \nabla u$ and find
 \begin{align*}
- a(v, v) = & \sum\limits_{T \in \triang} \myIntX  T { \nabla v \cdot \left(A \nabla u\right)} %\\
+ a(v, u) = & \sum\limits_{T \in \triang} \myIntX  T { \nabla v \cdot \left(A \nabla u\right)} %\\
 	- \sum\limits_{e \in \edgesi} \myIntS e {\jump{ v \average{ A \nabla u}}} %\right)
 	\\
 & - \sum\limits_{e \in \edgesb}\myIntS e { v A \nabla u \cdot \mathbf n}.
@@ -331,17 +331,22 @@ Due to the smoothness of the exact solution $u$ we neglect the jump in $A \nabla
 To get a symmetric system matrix we symmetrise our bilinear form $a$ by adding terms. 
 The first term we add is  $- \sum\limits_{e \in \edgesi}\myIntS e { \jump{ u \average{ A \nabla v}}}$ which equals to zero evaluating the integral for a smooth $v$. Hence it will uanish for the solution of the generalised Poissson problem. The second term required to achieve symmetry is  $-\sum\limits_{e \in \edgesb}\myIntS e { u A \nabla v \cdot \mathbf n}$. Since the Dirichlet boundary condition gives us solution ualues at the boundary this term equals to $\sum\limits_{e \in \edgesb}\myIntS e { g A \nabla v \cdot \mathbf n}$ and thus, we simply add both to the bilinear form and to the right-hand side functional.
 \begin{align}
- a_S(v, v) = &\sum\limits_{T \in \triang} \myIntX  T { \nabla v \cdot A \nabla u} \nonumber \\
+ a_S(v, u) = &\sum\limits_{T \in \triang} \myIntX  T { \nabla v \cdot A \nabla u} \nonumber \\
   &-\sum\limits_{e \in \edgesi}\myIntS e { \jump {v \average{A \nabla u} }}
  - \sum\limits_{e \in \edgesi}\myIntS e { \jump{ u \average{ A \nabla v}}} \nonumber\\ 
  & - \sum\limits_{e \in \edgesb}\myIntS e { v A \nabla u \cdot \mathbf n} 
-    - \sum\limits_{e \in \edgesb}\myIntS e { u A \nabla v \cdot \mathbf n}. \label{eq:inner product SIPG}
+    - \sum\limits_{e \in \edgesb}\myIntS e { u A \nabla v \cdot \mathbf n} \nonumber
 \end{align}
 and 
 \begin{align}
 	l(v) =& \sum\limits_{T \in \triang} \myIntX  T { v f}
 		 -\sum\limits_{e \in \edgesb}\myIntS e { g A \nabla v \cdot \mathbf n}.
 \end{align} 
+Since we defined the jump and average also on boundary edges (cf. Definition \ref{def: edge operators}) we can shorten the term to 
+\begin{align}
+a_S(v, u)= &\sum\limits_{T \in \triang} \myIntX  T { \nabla v \cdot A \nabla u} \nonumber \\  &-\sum\limits_{e \in \edges}\myIntS e { \jump {v \average{A \nabla u} }}
+ - \sum\limits_{e \in \edges}\myIntS e { \jump{ u \average{ A \nabla v}}} \label{eq:inner product SIPG}
+\end{align}
 
 %and $f$
 %\begin{align}
@@ -351,10 +356,10 @@ and
 %	&-  &\sum\limits_{T \in \triang} \myIntX  T { u (\nabla \cdot \cof(D^2w)) \cdot \nabla v \\
 %\end{align} 
 
-To enforce continuity in the numerical solution we penalise the jump across edges as described in  \cite[3.2.2.]{PPO+2000} with the following terms
+To enforce continuity and compliance with the boundary conditions in the numerical solution we penalise the jump across edges as described in  \cite[3.2.2.]{PPO+2000} with the two following terms
 \begin{align}
-	J^\sigma(v, u) = \sum\limits_{e \in \edges} \myIntS e { \frac \sigma {|e|} \jump v \jump u}
-		 \textnormal{ and } 	
+	J^\sigma(v, u) = \sum\limits_{e \in \edgesi} \myIntS e { \frac \sigma {|e|} \jump v \jump u}
+		 \;\; \textnormal{ and } \;	\;
 		 J^\sigma_0(v) = \sum\limits_{e \in \edgesb} \myIntS e {\frac \sigma {|e|} v g} . \label{eq: penalty term}
 \end{align}
 
@@ -364,7 +369,7 @@ Thus, we end up with the problem finding $v \in V_h$ such that
 \end{align}
 where
 \[ 	
-	a_h^{DG} (v, u) := a_S(\phi,v) + J^\sigma(v,v) \text{ and } l_h^{DG}(v) := l(v) + J^\sigma_0(v).
+	a_h^{DG} (v, u) := a_S(v,u) + J^\sigma(v,u) \text{ and } l_h^{DG}(v) := l(v) + J^\sigma_0(v).
 \]
 
 %The authors of \cite{PPO+2000} suggest to choose the penalty term $\sigma$ as $10 k^2$ and undergird that 
