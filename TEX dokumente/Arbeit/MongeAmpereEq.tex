@@ -23,8 +23,9 @@ However, there are attempts to establish less regular weak solutions to the \MA 
 \section{Weak Solution Concepts}
 In \cite{CL1983} Crandall and Lions introduced at first the notion of \emph{viscosity solutions} for fully nonlinear first order PDEs. The developed theory was later extended to handle second order PDEs.
 \begin{definition}[Viscosity Solution{\cite[Definition 1.1]{FGN2013}}]
-	Let $F$ be an elliptic  fully nonlinear second order operator.
+	Let $F$ be an elliptic fully nonlinear second order operator.
 	Then we call $u \in C^0(\Omega)$ a \emph{viscosity subsolution (supersolution)} of $F(D^2u(x), \nabla u(x), u(x), x)=0$  if, for every point $x_0 \in \Omega$ and function $\varphi \in C^2(\Omega)$ satisfying $u \leq \varphi (\geq \varphi)$ in $\Omega$ and $u(x_0) = \varphi(x_0)$, there holds $\mydet{D^2 \varphi(x_0)} - f \leq 0 (\geq 0)$. 
+	\todo{det durch f ersetzen}
 %	\[
 %	\forall x_0 \in \Omega \forall \varphi \in C^2(\Omega), u \leq \varphi (\geq \varphi)
 %	\] holds
@@ -93,9 +94,9 @@ As it is important for later methods, as for example Newton's method, we derive 
 		The linearisation of the \MA operator $F(u)=\mydet{D^2u}-f$ is given by
 		\begin{align}
 			DF[u]v = \nabla \cdot \left( \mycof {D^2 u } \nabla (v) \right) \text{ or } DF[u]v=\mycof{D^2 u}:D^2 (v)		\end{align}
-	where $DG[u]$ denotes the \emph{G\^ateaux derivative} of $G$ given by
+	where $DF[u]$ denotes the \emph{G\^ateaux derivative} of $F$ given by
 	\[
-		DG[u]v = \lim\limits_{\varepsilon \rightarrow 0} \frac { G(u+\varepsilon v) - G(u)}\varepsilon.
+		DF[u]v = \lim\limits_{\varepsilon \rightarrow 0} \frac { F(u+\varepsilon v) - F(u)}\varepsilon.
 	\]
 	\end{theorem}
 		
