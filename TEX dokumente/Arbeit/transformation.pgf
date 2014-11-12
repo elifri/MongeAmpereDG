@@ -62,7 +62,7 @@
 			postaction = {decorate},
 			shorten >=5,
 			shorten <=5,
-			bend right] (PRef) to ($(xT)-(0.005,0.005)$);
+			bend right] (PRef) to node [below] {{\Large $\Phi$}} ($(xT)-(0.005,0.005)$) ;
 
 	%draw axes
 	\draw[thick,->] (0, 0) -- (1.3,0);
