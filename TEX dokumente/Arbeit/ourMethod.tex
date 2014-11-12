@@ -5,7 +5,7 @@ In the last section we see first numerical results. Since the presented Picard i
 
 
 \section{A Picard Iteration for the \MA equation} \label{sec: motivation picard iteration}
-For quasilinear PDEs (cf. Definition \ref{def: categories of PDEs}) such as the convection equation $\nabla \cdot (A(u) \nabla u ) = f$ it is common to determine the solution via a fixed point iteration. The key aspect is a decoupling of the coefficient matrix $A(u)$ and $\nabla u$. Hence, one solves iteratively  for $i\in \N$ the equations
+For quasilinear PDEs (cf. Definition \ref{def: categories of PDEs}) such as the convection equation $\nabla \cdot (A(u) \nabla u ) = f$ it is common to determine the solution via a fixed point iteration \cite{Deblois1997,LL1995,MNK2009}. The key aspect is a decoupling of the coefficient matrix $A(u)$ and $\nabla u$. Hence, one solves iteratively  for $i\in \N$ the equations
 \[
 	\nabla \cdot (A(u^{i} )\nabla u^{i+1}) = f   \quad \text{      and      }\quad \nabla \cdot (A(u^{i+1}) \nabla u^{i}) = f, \text{ respectively}.
 \] 
