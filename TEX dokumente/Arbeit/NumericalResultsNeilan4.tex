@@ -1,5 +1,5 @@
 
-For the last test case the method without additional gradient jump were did not work out just as in the previous test cases. We therefore only concentrate on the performances penalising the normal gradient jump across edges. The error made is to be found in the plots in Figures \ref{fig: l2 errors test 3 jump} \ref{fig: h1 errors test 3 jump}, as wells as in Table \ref{tab: l2 errors test 4 jump}. Again Newton's method did not converge for $k=2,3$ on fine grids. 
+For the last test case the method without additional gradient jump lacks convergence, as in the previous test cases. We therefore concentrate on the performances penalising the normal gradient jump across edges. The plots of the error can to be found in Figure \ref{fig: l2 errors test 4 jump} and Figure \ref{fig: h1 errors test 4 jump}, as well as in Table \ref{tab: l2 errors test 4 jump}. Again Newton's method did not converge for $k=2,3$ on fine grids. 
 \begin{table}[H]
 	\begin{subtable}[b]{0.45\textwidth}
 		\centering
@@ -26,7 +26,7 @@ For the last test case the method without additional gradient jump were did not 
 		]{\MAFourJumpdegTwoTwo}
 		\caption{Error for $k=2, k_{DH}=2$}
 	\end{subtable}
-	\caption{Errors for test case \ref{test dirac} and additional gradient jump penalty}
+	\caption{Errors for Test \ref{test dirac} and additional gradient jump penalty}
 	\label{tab: l2 errors test 4 jump}
 \end{table}
 
@@ -35,14 +35,14 @@ For the last test case the method without additional gradient jump were did not 
 	\centering
 		\centering
 		\includegraphics[scale =0.4]{plots/MA4_Neilan_GradJump_l2.pdf}
-	\caption{$L^2$ errors for test case \ref{test dirac} and additional gradient jump penalty}
+	\caption{$L^2$ errors for Test \ref{test dirac} and additional gradient jump penalty}
 	\label{fig: l2 errors test 4 jump}
 \end{figure}
 	
 \begin{figure}[H]
 		\centering
 		\includegraphics[scale =0.4]{plots/MA4_Neilan_GradJump_h1.pdf}
-	\caption{$H^1$ errors for test case \ref{test dirac} and additional gradient jump penalty}
+	\caption{$H^1$ errors for Test \ref{test dirac} and additional gradient jump penalty}
 	\label{fig: h1 errors test 4 jump}
 \end{figure}
 As before we do not observe much difference between the choices $k=2$ and $k=3$ during the first (converged) refinements. But as the Aleksandrov solution of this test case lacks regularity it is not surprising that increasing the polynomial degree does not effect the error.

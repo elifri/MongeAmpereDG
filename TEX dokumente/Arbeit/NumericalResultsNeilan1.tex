@@ -1,12 +1,12 @@
 
 Figure \ref{fig: l2 errors test 1} shows the $L^2$ error of all performances of the first test case that have converged, the polynomial degrees $k$ were taken to be $1,\dots,3$ and $k_{DH}$ equal to all variants $0, \dots, k$. In Figure \ref{fig: h1 errors test 1} the corresponding $H^1$ errors are plotted.
 
-Due to the large number of degree of freedoms the requested memory for the cases $k=2,3$ and $k_{DH}=2,3$ on the finest grid, for $k=3$ and $k_{DH}=3$ all meshes with $h\geq 1/64$ is too much. Replacing the linear solver by different iterative solvers\footnote{GMRES with an algebraic multigrid preconditioner, GMRES with an incomplete $LU$ factorisation, GMRES with Jacobi preconditioning, bicgstab with preconditioning} yielded to divergence of either the Newton or the linear solver.
+Due to the large number of degree of freedoms the requested memory for the cases $k=2,3$ and $k_{DH}=2,3$ on the finest grid, and for $k=3$ and $k_{DH}=3$ all meshes with $h\geq 1/64$ is too much. Replacing the linear solver by different iterative solvers\footnote{GMRES with an algebraic multigrid preconditioner, GMRES with an incomplete $LU$ factorisation, GMRES with Jacobi preconditioning, bicgstab with preconditioning} yielded to divergence of either the Newton or the linear solver.
 
 \begin{figure}[H]
 \centering
 	\includegraphics[scale =0.45]{plots/MA1_Neilan_l2.pdf}
-	\caption{$L^2$ errors for test case \ref{test smooth}}
+	\caption{$L^2$ errors for Test \ref{test smooth}}
 	\label{fig: l2 errors test 1}
 \end{figure}
 The results for the runs with $k=3$ are shown more detailed in Table \ref{tab: l2 errors test 1 deg 2}, in both tables the column $N$ refers to the number of iterations the Newton solver needed to reach the desired tolerance. 
@@ -29,7 +29,7 @@ The results for the runs with $k=3$ are shown more detailed in Table \ref{tab: l
 		]\MAOnedegThreeTwo
 		\caption{Error for $k=3, k_{DH}=2$}
 	\end{subtable}
-	\caption{Errors for test case \ref{test smooth}}
+	\caption{Errors for Test \ref{test smooth}}
 	\label{tab: l2 errors test 1 deg 2}
 \end{table}
 
@@ -37,12 +37,12 @@ The results for the runs with $k=3$ are shown more detailed in Table \ref{tab: l
 \begin{figure}[H]
 \centering
 	\includegraphics[scale =0.45]{plots/MA1_Neilan_h1.pdf}
-	\caption{$H^1$ errors for test case \ref{test smooth}}
+	\caption{$H^1$ errors for Test \ref{test smooth}}
 	\label{fig: h1 errors test 1}
 \end{figure}
 
 As also experienced by Neilan the method does not work for the polynomial degree $k=1$. Similarly, in runs with a low polynomial degree $k_{DH}$ Newton's method did not converge.
-Considering this results in the smooth test scenario we observe that the error almost do not alter for different polynomial degrees $k_{DH}$ if both converge. Albeit for fine grids the methods with less difference between the two degrees seem to perform better. The calculated numerical orders as shown in table \ref{tab: order} supports this first intuition.
+Considering this results in the smooth test scenario we observe that the error almost do not alter for different polynomial degrees $k_{DH}$ if both converge. Nevertheless for fine grids the methods with less difference between the two degrees seem to perform better. The calculated numerical orders as shown in Table \ref{tab: order} supports this first intuition.
 
 \begin{table}[H]
 \begin{subtable}[b]{0.45\textwidth}
@@ -68,16 +68,16 @@ Considering this results in the smooth test scenario we observe that the error a
 	}
 	\caption{numerical order in $H1$ norm}
 	\end{subtable}
-\caption{numerical order in test \ref{test smooth}}
+\caption{Numerical order in Test \ref{test smooth}}
 \label{tab: order}
 \end{table}
 
-This test scenario was also performed with the additional normal jump penalty term as proposed by Neilan and stated in \eqref{eq: neilan eq1 + jump} weighted with $\eta$. Fortunately, the method also converges if the linear solver was set to GMRES preconditioned by an incomplete $LU$ factorisation. Thus, the nonlinear solver was adjusted. The results are shown in Figure \ref{fig: l2 errors test 1 jump} and the Tables \ref{tab: l2 errors test 1 deg 2 jump} and \ref{tab: l2 errors test 1 deg 3 jump}. 
+This test scenario was also performed with the additional normal jump penalty term as proposed by Neilan and stated in \eqref{eq: neilan eq1 + jump} weighted with $\eta$. Fortunately, the method converges if the linear solver was set to GMRES preconditioned by an incomplete $LU$ factorisation. Thus, the nonlinear solver was adjusted. The results are shown in Figure \ref{fig: l2 errors test 1 jump}, Table \ref{tab: l2 errors test 1 deg 2 jump} and Table \ref{tab: l2 errors test 1 deg 3 jump}. 
 
 \begin{figure}[h!]
 \centering
 	\includegraphics[scale=0.45]{plots/MA1_Neilan_GradJump_l2.pdf}
-	\caption{$L^2$ errors for test case \ref{test smooth} and additional gradient jump penalty}
+	\caption{$L^2$ errors for Test \ref{test smooth} and additional gradient jump penalty}
 	\label{fig: l2 errors test 1 jump}
 \end{figure}
 \begin{table}[H]
@@ -97,7 +97,7 @@ This test scenario was also performed with the additional normal jump penalty te
 		]\MAOneJumpdegTwoZero
 		\caption{Error for $k=2, k_{DH}=0$}
 	\end{subtable}
-	\caption{Errors for test case \ref{test smooth} with additional jump penalty}
+	\caption{Errors for Test \ref{test smooth} with additional jump penalty}
 	\label{tab: l2 errors test 1 deg 2 jump}
 \end{table}
 \begin{table}[h]
@@ -117,22 +117,22 @@ This test scenario was also performed with the additional normal jump penalty te
 		]\MAOneJumpdegThreeTwo
 		\caption{Error for $k=3, k_{DH}=2$}
 	\end{subtable}
-	\caption{Errors for test case \ref{test smooth} with additional jump penalty}
+	\caption{Errors for Test \ref{test smooth} with additional jump penalty}
 	\label{tab: l2 errors test 1 deg 3 jump}
 \end{table}
 
 \begin{figure}[H]
 \centering
 	\includegraphics[scale =0.45]{plots/MA1_Neilan_GradJump_h1.pdf}
-	\caption{$H^1$ errors for test case \ref{test smooth} and additional gradient jump penalty}
+	\caption{$H^1$ errors for Test \ref{test smooth} and additional gradient jump penalty}
 	\label{fig: h1 errors test 1 jump}
 \end{figure}
 
-As claimed by Neilan the additional penalisation leads to a convergend method even for low polynomial degrees, even in the cases where only $k_{DH}$ was taken to be small. The only exception is the case $k=1, k_{DH}=1$, for some reason here the method fails. Neilan does not provide any results on this choice of polynomial degrees, he only provides results for $k=1, k_{DH}=0$, $k=2, k_{DH}=2$ and $k=3, k_{DH}=3$. 
+As claimed by Neilan the additional penalisation leads to a convergent method even for low polynomial degrees, even in the cases where only $k_{DH}$ was taken to be small. The only exception is the case $k=1, k_{DH}=1$, for some reason here the method fails. Neilan does not provide any results on this choice of polynomial degrees, he only provides results for $k=1, k_{DH}=0$, $k=2, k_{DH}=2$ and $k=3, k_{DH}=3$. 
 
-Note that the penalised method also for higher degrees performs better than the original ones. This is especially true if $k_{DH}$ was chosen lower than $k$. The numerical orders given in \ref{tab: order jump} confirm this impression and we observe again that the $L^2$ error decreases with order $k+1$ and the $H^1$ error with order $k$. 
+Note that the penalised method performs also for higher degrees better than the original ones. This is especially true if $k_{DH}$ was chosen lower than $k$. The numerical orders given in Table \ref{tab: order jump} confirm this impression and we observe again that the $L^2$ error decreases with order $k+1$ and the $H^1$ error with order $k$. 
 
-Again the calculated error norms indicate that variation of $k_{DH}$ results only in a slight loss of accuracy. For the cases $k=$ and $k_{DH} = 2,3$ the errors and hence, in particular the order, are almost equal. 
+Again the calculated error norms indicate that variation of $k_{DH}$ results only in a slight loss of accuracy. For the cases $k=3$ and $k_{DH} = 2,3$ the errors and hence, in particular the order, are almost equal. 
 
 
 \begin{table}[H]
@@ -165,6 +165,6 @@ Again the calculated error norms indicate that variation of $k_{DH}$ results onl
 	}
 	\caption{numerical order in $H1$ norm}
 	\end{subtable}
-	\caption{numerical order with jump penalty in test \ref{test smooth}}
+	\caption{Numerical order with jump penalty in Test \ref{test smooth}}
 \label{tab: order jump}
 \end{table}

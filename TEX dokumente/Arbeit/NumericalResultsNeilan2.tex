@@ -1,15 +1,14 @@
 
-The second test was carried out with the same configurations. Just as before the method by Brenner et al. (cf. Section \ref{sec: numerical results brenner}) Newton's method did not converge for finer grids. 
-Table \ref{tab: l2 errors test 2} shows the error for the pair $k=2$ and $k_{DH}=2$ which is the configuration that converged for the most refinements, namely 3.
+The second test was carried out with the same configurations. Just as before, the method by Brenner et al. (cf. Section \ref{sec: numerical results brenner}) Newton's method did not converge for finer grids. 
+Table \ref{tab: l2 errors test 2} shows the error for the pair $k=2$ and $k_{DH}=2$ which is the configuration that converged for the most refinements.
 
 \begin{table}[H]
-%	\begin{subtable}[b]{0.45\textwidth}
 		\centering
 		\pgfplotstabletypeset[
 		columns={iterations, l2error, h1error,N},
 		every row 0 column 0/.style={set content=init},
 		]{\MATwodegTwoTwo}
-		\caption{Error for $k=2, k_{DH}=2$}
+		\caption{Error for $k=2, k_{DH}=2$ for Test \ref{test sqrt}}
 %	\end{subtable}
 %	~
 %	\begin{subtable}[b]{0.45\textwidth}
@@ -19,23 +18,23 @@ Table \ref{tab: l2 errors test 2} shows the error for the pair $k=2$ and $k_{DH}
 %		]{\MATwodegThreeThree}
 %		\caption{Error for $k=3, k_{DH}=3$}
 %	\end{subtable}
-	\caption{Errors for test case \ref{test sqrt}}
+%	\caption{Errors }
 	\label{tab: l2 errors test 2}
 \end{table}
  
-Note that Neilan did not give any numerical results for the original method, i.e. without penalty terms, for any test cases with non-smooth solutions. The performance on this test suggest that the non penalised method is not suitable for irregular solutions. 
+Note that Neilan did not give any numerical results for the original method, i.e. without penalty terms, for any test cases with non-smooth solutions. The performance on this test suggest that the non-penalised method is not suitable for irregular solutions. 
 % Again the size of the system matrices exceeded memory and therefore the configuration was adjusted for $k=2,3$.
 
 %\begin{figure}[H]
 %\centering
 %	\includegraphics[scale =0.45]{../../FEniCS/diagrams/MA2_Neilan_l2.pdf}
-%	\caption{$L^2$ errors for test case \ref{test sqrt} }
+%	\caption{$L^2$ errors for Test \ref{test sqrt} }
 %	\label{fig: l2 errors test 2}
 %\end{figure}
 %\begin{figure}[H]
 %	\centering
 %	\includegraphics[scale =0.45]{../../FEniCS/diagrams/MA2_Neilan_h1.pdf}
-%	\caption{$H^1$ errors for test case \ref{test sqrt} }
+%	\caption{$H^1$ errors for Test \ref{test sqrt} }
 %	\label{fig: h1 errors test 2}
 %\end{figure}
 
@@ -67,18 +66,18 @@ Note that Neilan did not give any numerical results for the original method, i.e
 %\label{tab: order jump test 2}
 %\end{table}
 
-Switching the penalisation of gradient jumps on the method performs better, its results are shown in the Figures \ref{fig: l2 errors test 2 jump} and the tables \ref{tab: l2 errors test 2 jump}. The best results were obtained changing the configuration of the Newton solver again: PETSc's trust region method combined with a $LU$ factorisation was chosen. For the $k=2,3$ again occured memory issues, unfortunately I was not able to find a more memory-friendly configuration such that Newton's method still converges..
+Switching the penalisation of gradient jumps on the method performs better, its results are shown in Figure \ref{fig: l2 errors test 2 jump} and Table \ref{tab: l2 errors test 2 jump}. The best results were obtained changing the configuration of the Newton solver again: PETSc's trust region method combined with a $LU$ factorisation was chosen. For the $k=2,3$ memory issues occurred, a more memory-friendly configuration such that Newton's method still converges could not be found. % although an extensive parameter research was preformed.
 
 \begin{figure}[H]
 	\centering
 	\includegraphics[scale =0.4]{plots/MA2_Neilan_GradJump_l2.pdf}
-	\caption{$L^2$ errors for test case \ref{test sqrt}  and additional gradient jump penalty}
+	\caption{$L^2$ errors for Test \ref{test sqrt}  and additional gradient jump penalty}
 	\label{fig: l2 errors test 2 jump}
 \end{figure}
 \begin{figure}[H]
 	\centering
 	\includegraphics[scale =0.4]{plots/MA2_Neilan_GradJump_h1.pdf}
-	\caption{$H^1$ errors for test case \ref{test sqrt}  and additional gradient jump penalty}
+	\caption{$H^1$ errors for Test \ref{test sqrt}  and additional gradient jump penalty}
 	\label{fig: h1 errors test 2 jump}
 \end{figure}
 \begin{table}[H]
@@ -101,11 +100,11 @@ Switching the penalisation of gradient jumps on the method performs better, its 
 		]{\MATwoJumpdegThreeThree}
 		\caption{Error for $k=3, k_{DH}=3$}
 	\end{subtable}
-	\caption{Errors for test case \ref{test sqrt} with additional jump penalty}
+	\caption{Errors for Test \ref{test sqrt} with additional jump penalty}
 	\label{tab: l2 errors test 2 jump}
 \end{table}
 
-Since the exact solution lacks $H^2$ regularity we not expect that we benefit from choosing large polynomial degrees. The results also show that the runs with $k=3$ yield only slightly better approximations and the numerical orders for both do not 
+Since the exact solution lacks $H^2$ regularity we not expect that we benefit from choosing large polynomial degrees. The results also show that the runs with $k=3$ yield only slightly better approximations. % and the numerical orders for both do not 
 
 %\begin{table}[H]
 %\centering

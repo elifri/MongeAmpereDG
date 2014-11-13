@@ -55,8 +55,8 @@ Their approach yields the following method: Find $u_h \in V_h$ such that
 \begin{align}
 \begin{split}
 	&\myIntX {\Omega} {\left(f-\mydet {D^2_h u_h}\right) v_h} 
-	+ \sum_{e \in \edgesi} \myIntS e { \llbracket \{\{\mycof{D^2 u_h} \}\} \nabla u_h\rrbracket v_h} \\
-	&- \sum_{e \in \edgesb} \myIntS e { \llbracket \{\{\mycof{D^2 u_h} \}\} \nabla v_h\rrbracket (u_h -g)} 
+	+ \sum_{e \in \edgesi} \myIntS e { \jump{ \average{\mycof{D^2 u_h} } \nabla u_h } v_h} \\
+	&- \sum_{e \in \edgesb} \myIntS e { \jump{ \average{\mycof{D^2 u_h} } \nabla v_h } (u_h -g)} 
 	+ \sigma  \sum_{e \in \edgesb} \frac 1 {h_e} \myIntS e { (u_h -g)}  = 0 \; \forall v_h \in V_h \label{eq: brenner method}
 \end{split}
 \end{align}
@@ -117,7 +117,7 @@ Substituting in \eqref{eq: part int hessian omega} $\nabla u$ across the edges w
 Applying once more integration by parts for a Frobenius product on every triangle in the right-hande side integral results in
 	\begin{align}
 		\myIntX  \Omega { (D_{DH}^2 u : B) }
-		=& \myIntX  \Omega { D_h u: B }
+		=& \myIntX  \Omega { D^2_h u: B }
 			-\sum_{ e \in \edgesi} \myIntS e {  \jump {\average B  \nabla u }}
 			- \sum_{ e \in \edges} \myIntS e { \jump {B \average {\nabla u} }}\nonumber \\		
 			&+ \sum_{ e \in \edges} \myIntS e {  \jump {B \average {\nabla u} }}		\nonumber \\
@@ -130,7 +130,7 @@ Hence,we are able to define the discrete Hessian.
 	The discrete Hessian $D_{DH}^2 u$ of a function $u$ is the unique function satisfying
 	\begin{align}
 		\myIntX  \Omega { (D_{DH}^2 u : B) }
-		= \myIntX  \Omega { D_h u: B}
+		= \myIntX  \Omega { D^2_h u: B}
 			 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average B \nabla u }}\qquad \forall B \in \Sigma_h. \label{eq: discrete hessian}
 	\end{align}
 \end{definition}
@@ -146,7 +146,7 @@ The next natural step is to plug the newly deduced Hessian into the original \MA
 where
 	\begin{align}
 		\myIntX  \Omega { (D_{DH}^2 u_h : B_h) }
-		= \myIntX  \Omega { D_h u_h: B_h}
+		= \myIntX  \Omega { D^2_h u_h: B_h}
 			 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average {B_h} \nabla u_h }}\qquad \forall B_h \in \Sigma_h. \tag{\ref{eq: discrete hessian}}
 	\end{align}
 

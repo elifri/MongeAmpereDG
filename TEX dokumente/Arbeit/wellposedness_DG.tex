@@ -218,7 +218,7 @@
 %\begin{align*}
 %  \eNorm{u-u_h} \leq& \eNorm{u-v_h} + \frac 1 \alpha \sup_{w \in V_h, w \neq 0} \frac {a(u-v_h, w_h) }{\eNorm{w_h}}
 %\end{align*}
-%By theorem \ref{thm: SIPG stability} it then follows that
+%By Theorem \ref{thm: SIPG stability} it then follows that
 %\begin{align*}
 %\eNorm{u-u_h} \leq& \eNorm{u-v_h} + \frac C \alpha \eNorm{u-v_h} \leq \frac C \alpha \eNorm{u-v_h}
 %\end{align*}
@@ -315,7 +315,7 @@ Before we can start we need to define a second mesh-dependent energy norm which 
 	\]
 \end{definition}
 Calling this norm also an energy norm is justified as both norms are equivalent on $V_h$.
-\begin{lemma}[Equivalence of Energy Norms in $V_h$]
+\begin{lemma}[Equivalence of Energy Norms in $V_h$] \label{la: equivalence energy norm}
 	For any $w \in V_h$ holds
 	\[
 	c \eNormTwo w \leq \eNorm w \leq C(1+\frac  1 \sigma)\eNormTwo w
@@ -451,7 +451,7 @@ where $\alpha$ is the coercivity constant of \eqref{eq: coercivity DG form}. % a
 	\begin{align*}
 	\eNorm{u-u_h} \leq& \eNorm{u-v_h} + \frac 1 \alpha \sup_{w \in V_h, w \neq 0} \frac {a_h^{DG}(u-v_h, w_h) }{\eNorm{w_h}}.
 	\end{align*}
-	By theorem \ref{thm: SIPG stability} it then follows that
+	By Theorem \ref{thm: SIPG stability} it then follows that
 	\begin{align*}
 	\eNorm{u-u_h} \leq& \eNorm{u-v_h} + \frac C \alpha \eNorm{u-v_h}.
 	\end{align*}

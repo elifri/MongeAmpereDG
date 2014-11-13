@@ -128,7 +128,7 @@ Since for two adjacent triangles always $\mathbf n^+ = - \mathbf n^-$ holds, we 
 So, we are able to save a lot of memory if we store instead of all data at every quadrature points in each refined cell just the data of the base cell and the number of refinements. The refined cells contained in the actual mesh are referred to as \emph{leaf cells}.
 \end{example}
 
-\subsection{Assembly Loop}
+\subsection{Assembly Loop}\label{subsec: assembly loop}
 Another crux of the implementation is the handling of face terms, let us be more specific: We mentioned earlier that we evaluate the bilinear form cell-wise. Hence the volume integrals are calculated visiting every cell only once. Let us now consider when do we compute the edge integrals.\\
 \begin{algorithm}[H]
 \caption{An assembling loop for a DG method}
