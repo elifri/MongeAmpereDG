@@ -24,8 +24,14 @@ However, there are attempts to establish less regular weak solutions to the \MA 
 In \cite{CL1983} Crandall and Lions introduced at first the notion of \emph{viscosity solutions} for fully nonlinear first order PDEs. The developed theory was later extended to handle second order PDEs.
 \begin{definition}[Viscosity Solution{\cite[Definition 1.1]{FGN2013}}]
 	Let $F$ be an elliptic fully nonlinear second order operator.
-	Then we call $u \in C^0(\Omega)$ a \emph{viscosity subsolution (supersolution)} of $F(D^2u(x), \nabla u(x), u(x), x)=0$  if, for every point $x_0 \in \Omega$ and function $\varphi \in C^2(\Omega)$ satisfying $u \leq \varphi (\geq \varphi)$ in $\Omega$ and $u(x_0) = \varphi(x_0)$, there holds $\mydet{D^2 \varphi(x_0)} - f \leq 0 (\geq 0)$. 
-	\todo{det durch f ersetzen}
+	Then we call $u \in C^0(\Omega)$ a \emph{viscosity subsolution (supersolution)} of $F(D^2u(x), \nabla u(x), u(x), x)=0$  if, for every point $x_0 \in \Omega$ and function $\varphi \in C^2(\Omega)$ satisfying
+	\[
+		u \leq \varphi (\geq \varphi) \text{ in }\Omega \quad \text{ and }\quad(x_0) = \varphi(x_0),
+	\]
+	there holds
+	\[
+		F(D^2\varphi(x_0),\nabla \varphi(x_0), \varphi(x_0), x_0) \leq 0 (\geq 0). 
+	\]
 %	\[
 %	\forall x_0 \in \Omega \forall \varphi \in C^2(\Omega), u \leq \varphi (\geq \varphi)
 %	\] holds
