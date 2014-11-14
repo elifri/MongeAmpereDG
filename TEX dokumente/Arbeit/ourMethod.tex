@@ -69,10 +69,10 @@ Since every iteration \eqref{eq:fixed point iteration} states a Generalised Pois
 \begin{align}
  &\myIntX {\Omega} {\nabla v_h \cdot \cof(D_h^2 u_h^{i}) \nabla u_h^{i+1}}  \nonumber\\
  & -\sum\limits_{e \in \edges}\myIntS e { \jump {v_h \average { \cof(D_h^2 u^{i}) \nabla u_h^{i+1}} }}
- - \sum\limits_{e \in \edges}\myIntS e { \jump {u_h^{i+1} \average{ \cof(D^2 u_h^{i}) \nabla v_h} }} \nonumber\\  
+ - \sum\limits_{e \in \edges}\myIntS e { \jump {u_h^{i+1} \average{ \cof(D_h^2 u_h^{i}) \nabla v_h} }} \nonumber\\  
  &  +\sum\limits_{e \in \edgesi} \myIntS e { \frac \sigma {|e|} \jump {v_h}  \jump {u_h^{i+1}}}\nonumber\\
     =& - 2 \myIntX {\Omega} {v_h f}
-    	 				-\sum\limits_{e \in \edgesb}\myIntS e {g \cof(D^2 u_h^{i}) \nabla v_h \cdot n }
+    	 				-\sum\limits_{e \in \edgesb}\myIntS e {g \cof(D_h^2 u_h^{i}) \nabla v_h \cdot n }
     	 				+\sum\limits_{e \in \edgesb} \myIntS e { \frac \sigma {|e|} v_h g}    \qquad \forall v_h \in  \mathcal P^k_h.
     	\label{eq: sipg iteration}
 \end{align}
@@ -82,7 +82,7 @@ Now that we derived a new iterated DG method to solve the \MA equation we compar
 \input{comparison.tex}
 
 %After this analysis it is not clear how the Picard iteration practically behaves. The next section addresses some first numerical results of the Picard iteration and first obstacles when solving simple problems.  
-\section{Challenges for the Picard iterations}
+\section{Challenges for the Picard Iteration}
 Reviewing existing DG methods for the \MA equation we learned some issues we have to pay attention to, while examining the performances of the Picard iteration. The next subsections treat the most challenging points.
 At the beginning there always is the question of a starting point $u_h^0$.
 \subsection{Initial Guess}\label{sec: initial guess}
@@ -90,13 +90,13 @@ Just as most methods for the \MA equation the fixed point iteration requires an 
 In \cite[Remark 2.1]{DG2006a} has been shown a strong connection between the \MA problem, and  the following Poisson problem
 \begin{align}
 	\begin{split}
-	\triangledown u &= \sqrt{2f} \text{ in } \Omega, \\ 
+	\triangle u &= \sqrt{2f} \text{ in } \Omega, \\ 
 	u &= g \text{ on }\partial \Omega.
 	\end{split}\label{eq: start sqrt_f}
 \end{align}
 An advantage of this approach is the compliance of boundary conditions.
 
-Alternatively a nested iteration can be utilised. On the coarsest level with a grid width $h_1$ one chooses any convex function as initial guess $u^0_{h_1}$. Often the polynomial $\frac 1 2 ({x_1^2} + {x_2^2}) $ is taken for it is convex and has a low degree. For finer triangulations $\mathcal{T}_{h_{l}}$ the solution of the previously computed solution $u_{h_{l-1}}$is taken as a starting point. Of course both approaches can be combined using the Poisson solution of \eqref{eq: start sqrt_f} on the coarsest grid whereas later taking quasi-interpolants.\\
+Alternatively a nested iteration can be utilised. On the coarsest level with a grid width $h_1$ one chooses any convex function as initial guess $u^0_{h_1}$. Often the polynomial $\frac 1 2 ({x_1^2} + {x_2^2})$ is taken for it is convex and has a low degree. For finer triangulations $\mathcal{T}_{h_{l}}$ the solution of the previously computed solution $u_{h_{l-1}}$is taken as a starting point. Of course both approaches can be combined using the Poisson solution of \eqref{eq: start sqrt_f} on the coarsest grid whereas later taking quasi-interpolants of previous steps.\\
 The second approach is preferable as it takes into account that the robustness of the method may decrease for finer meshes.
 
 Now we are able to perform the Picard iteration on some simple example cases.
@@ -119,7 +119,14 @@ with the exact classical solution $\frac 1 2 (x_1^2 + x_2^2 )$.
 \end{figure}
 However, even for this rather simple example the implementation shows inconsistencies: Given the exact solution which is already contained in $V_h$ as starting point the $L^2$ error increases, as shown in Figure \ref{fig: consisctency_first_try}.
 
-Examining the plots of solutions $u^i_h$ shortly before the method diverges it catches the eye that they have developed some sharp edges although the initial function and the solution are absolutely smooth. In particular the sharp edges of the solution coincide with the edges of the finite element grid. A visual inspection suggest that these solution $u^i_h$ are $C^0$ continuous, but lack higher regularity.
+Figure \ref{fig: sharp edges} shows an example of a solution $u^i_h$ after 114 steps. Examining this plot it catches the eye that the solution has developed some sharp edges although the initial function and the exact solution are absolutely smooth. In particular the sharp edges of this numerical solution coincide with the edges of the finite element grid. A visual inspection suggests that this solution $u^i_h$ are $C^0$ continuous, but lack higher regularity.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.6\textwidth]{plots/sharp_edges.png}
+	\caption{Numerical solution after 114 iterations}
+	\label{fig: sharp edges}
+\end{figure}
 
 An idea is to force more regularity on the first derivative and thus, implicitly obtain a more smooth solution. This suits to the improvement Neilan introduced for low degrees \cite[Section 5]{Neilan2014} which is also described at the end of Section \ref{subsec: disrete Hessian}. His proposed correction terms vanish as the gradient jump across internal edges tends to zero.
 Hence, we add the same normal derivatives penalty term 
@@ -204,7 +211,7 @@ Then we call
 	Q_{ijk} := (\xi_{ijk}, c_{ijk}) \label{eq: control points}
 \end{align} the \emph{control points} of a polynomial $p$ defined on $T$. Further we denote the polygon defined by the points $Q_{ijk}$ as the \emph{B\'ezier control polygon}.
 
-\begin{figure}
+\begin{figure}[H]
 	\centering
 	\input{control_net.pgf}
 	\caption{The domain points on a triangle $T=\langle v_1, v_2, v_3 \rangle$ for $d=3$}
@@ -219,7 +226,7 @@ The benefit of the Bernstein-B\'ezier form is that there can be formed simple co
 Note that this result holds only for a single triangle and not for a function defined on a grid of triangular cells. Nevertheless, piecewise convexity is already very important for the well-posedness of our intermediate SIPG iteration step (cf. Section \ref{sec: SIPG}) such that it is worth a try to convexify the union of all control polygons.
 
 Due to their importance in computer graphics, there are a lot of convex hull algorithm available. Hence it suggests itself to apply a convex hull algorithm on given Bernstein-B\'ezier coefficients to enforce convexity. However, this approach fails for a convex hull algorithm for it only operates on a set of points and hence does not necessarily produce the same connectivity the control polygon implies. An counterexample where those two polygons differ is given in Figure \ref{fig: diff connectivity}:
-\begin{figure}[h]
+\begin{figure}[H]
 \begin{subfigure}[b]{.5\textwidth}
 	\includegraphics[trim=3cm 8cm 3cm 8cm, width=1.\textwidth]{control_polygon2.pdf}
 	\caption{Control polygon}
@@ -236,7 +243,7 @@ While the the control polygon is obviously not convex, the surface of the lower 
 In the eighties mathematicians derived quadratic conditions on the B\'ezier coefficients equivalent to its convexity\cite{CD1984, Dahmen1991}. Later this conditions were relaxed to a set of linear sufficient conditions, yet loosing necessity. To formulate those conditions we use the difference operator $\Delta_{\mu \nu}$ along the edge $(v_\mu, v_\nu)$. 
 Thus for the triangle $T=\langle v_1, v_2,v_3 \rangle$ 
 %as seen in Figure \ref{fig: domain points} 
-we obtain
+we obtain for example
 	\begin{align*}
 		\Delta_{21} c_{ijk} &= c_{i,j+1,k} -c_{i+1, j,k}  \\
 		\Delta_{31}^2 c_{ijk} &= c_{i,j,k+2} -2c_{i, j+1,k+1} +c_{i, j+2,k} \\
@@ -317,7 +324,7 @@ Combining the suggestions of the last sections we obtain a method to carry out t
 
 \begin{algorithm}[H]
 \begin{algorithmic}
-\Require triangulation \triang, desired mesh width $h$, maximimal number of intermediate steps $i_{max}$
+\Require triangulation \triang, desired mesh width $h$, maximal number of intermediate steps $i_{max}$
 \State $u_0\gets $ solution of  $
 	\triangle u = \sqrt{2f} \text{ in } \Omega $ with $
 	u = g \text{ on }\partial \Omega$ \Comment initialisation
