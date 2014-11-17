@@ -103,7 +103,7 @@ Note that this definition requires $\Omega$ to be a polygonal domain. However, t
  \label{fig: triangulation}
 \end{figure}
 
-Figure \ref{fig: triangulation} shows a triangulation of the unitsquare. Since the edges uniquely define a triangulation of $\Omega$, we later also use the terms grid and mesh to refer to a subdivision into triangles.
+Figure \ref{fig: triangulation} shows a triangulation of the unit square. Since the edges uniquely define a triangulation of $\Omega$, we later also use the terms grid and mesh to refer to a subdivision into triangles.
 An edge $e$ is called an interior edge if $e=T^+ \cap T^-$ holds for some $T^+,T^- \in \triang$, whereas it is called a boundary edge if $e \subset \partial \Omega$.
 We divide the edges $\edges$ into the subsets $\edgesi$ and $\edgesb$ containing all interior edges and boundary edges, respectively. 
 When we refer to a normal of an edge we always refer to an outward directed normal of one of the adjacent triangles. If it is not clear from the context to which triangle is referred we clarify that with a superscript.
@@ -127,9 +127,9 @@ We define function spaces associated to a triangulation $\triang$ by
 
 For later analysis we need the approximation properties of $\mathcal P_h^k$ proven in \cite[Chapter 4]{BS2002}, as well as standard trace and inverse estimates as proven in \cite[Section 1.6 and Section 4.5]{BS2002}.
 \begin{lemma}[Approximation properties of $\mathcal P_h^k${,\cite[Theorem(4.4.20)]{BS2002}}]  \label{la: approximation properties}
-Let $m,s \in \N$ with $0 \leq s \leq m\leq k+1$. Then for any $u \in H^l(\Omega)$, there exists $v_h \in \mathcal P^k_h$ such that 
+Let $s,m \in \N$ with $0 \leq m \leq s\leq k+1$. Then for any $u \in H^s(\Omega)$, there exists $v_h \in \mathcal P^k_h$ such that 
 \[
-	\left( \sum_{T \in \triang} \norm{u-v_h}^2_{H^m(T)} \right)^{\frac 1 2} \leq C h^{m-s} \norm{u}_{H^{s}(\Omega)},
+	\left( \sum_{T \in \triang} \norm{u-v_h}^2_{H^m(T)} \right)^{\frac 1 2} \leq C h^{s-m} \norm{u}_{H^{s}(\Omega)},
 \]
 where $C$ is a constant depending only on the mesh, but not in $h$ or $u$.
 \end{lemma}

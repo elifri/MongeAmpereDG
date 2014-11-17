@@ -66,7 +66,7 @@ Note that Neilan did not give any numerical results for the original method, i.e
 %\label{tab: order jump test 2}
 %\end{table}
 
-Switching the penalisation of gradient jumps on the method performs better, its results are shown in Figure \ref{fig: l2 errors test 2 jump} and Table \ref{tab: l2 errors test 2 jump}. The best results were obtained changing the configuration of the Newton solver again: PETSc's trust region method combined with a $LU$ factorisation was chosen. For the $k=2,3$ memory issues occurred, a more memory-friendly configuration such that Newton's method still converges could not be found. % although an extensive parameter research was preformed.
+Switching the penalisation of gradient jumps on the method performs better. Its results are shown in Figure \ref{fig: l2 errors test 2 jump} and Table \ref{tab: l2 errors test 2 jump}. The best results were obtained changing the configuration of the Newton solver again: PETSc's trust region method combined with a $LU$ factorisation was chosen. For the $k=2,3$ memory issues occurred, a more memory-friendly configuration such that Newton's method still converges could not be found. % although an extensive parameter research was preformed.
 
 \begin{figure}[H]
 	\centering
@@ -104,33 +104,36 @@ Switching the penalisation of gradient jumps on the method performs better, its 
 	\label{tab: l2 errors test 2 jump}
 \end{table}
 
-Since the exact solution lacks $H^2$ regularity we not expect that we benefit from choosing large polynomial degrees. The results also show that the runs with $k=3$ yield only slightly better approximations. % and the numerical orders for both do not 
+Since the exact solution lacks $H^2$ regularity we do not expect that we benefit from choosing large polynomial degrees. The results also show that the runs with $k=3$ yield only slightly better approximations. The numerical orders given in Table \ref{tab: order jump test 2} confirm this impression. % and the numerical orders for both do not 
 
-%\begin{table}[H]
-%\centering
-%\begin{subtable}[b]{0.45\textwidth}
-%	\pgfplotstabletypeset
-%	{
-%		k $k_{DH}$ {numerical order}
-%		1 0 1.03719 
-%		2 1 1.55213
-%		2 2 
-%		3 2 
-%		3 3 
-%	}
-%	\caption{numerical order in $L2$ norm}
-%	\end{subtable}
-%	\begin{subtable}[b]{0.45\textwidth}
-%	\pgfplotstabletypeset
-%	{
-%		k $k_{DH}$ {numerical order}
-%		2 1 
-%		2 2 
-%		3 2 
-%		3 3  
-%	}
-%	\caption{numerical order in $H1$ norm}
-%	\end{subtable}
-%	\caption{numerical order with jump penalty in test \ref{test smooth}}
-%\label{tab: order jump test 2}
-%\end{table}
+\begin{table}[H]
+\centering
+\begin{subtable}[b]{0.45\textwidth}
+	\pgfplotstabletypeset
+	{
+		k $k_{DH}$ {numerical order}
+		1 0 1.08946 
+	%	2 0 1.49949
+		2 1 1.55213
+		2 2 1.63088
+		3 2 1.64644
+		3 3 1.64841 
+	}
+	\caption{Numerical order in $L^2$ norm}
+	\end{subtable}
+	\begin{subtable}[b]{0.45\textwidth}
+	\pgfplotstabletypeset
+	{
+		k $k_{DH}$ {numerical order}
+		1 0 0.532518 
+	%	2 0 0.445152
+		2 1 0.465187
+		2 2 0.473759
+		3 2 0.475829
+		3 3 0.495565
+	}
+	\caption{Numerical order in $H^1$ norm}
+	\end{subtable}
+	\caption{Numerical order with jump penalty in test \ref{test singularity}}
+\label{tab: order jump test 2}
+\end{table}

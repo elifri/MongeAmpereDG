@@ -12,7 +12,7 @@
 			\foreach \y in  {0,...,\m}
 			{
 				\draw [fill]  (\x/\n,\y/\n ) circle [radius=.5pt];
-				\if\x 0\else \draw [dashed] (\x/\n,\y/\n ) -- (\x/\n-1/\n,\y/\n); \fi
+				\if\x 0\else \if \y 0 \else \draw [dashed] (\x/\n,\y/\n ) -- (\x/\n-1/\n,\y/\n); \fi \fi
 				\if\y 0\else \if \x 0 \else \draw [dashed] (\x/\n,\y/\n ) -- (\x/\n,\y/\n-1/\n); \fi \fi
 			}
 

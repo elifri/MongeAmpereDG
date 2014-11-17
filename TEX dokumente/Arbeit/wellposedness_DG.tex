@@ -228,7 +228,7 @@
 
 \section{Well-posedness of the SIPG Method}
 
-In this section we want to prove that the derived SIPG method is well-posed. The proofs were taken from \cite{BS2002, PPO+2000} and extended to the case of a Generalised Poisson Problem. 
+In this section we want to prove that the derived SIPG method is well-posed. The proofs presented are taken from \cite{BS2002, PPO+2000} and extended to the case of a Generalised Poisson Problem. 
 To start we first have to define the norm in which the analysis will be carried out with. Let $V$ be $L^2(\Omega) \cup H^1(\Omega; \triang)$ 
 \begin{definition}[Energy Norm] \label{def: energy norm}
 	The mesh-dependent energy norm for a function $v \in V$ is defined by
@@ -252,10 +252,10 @@ At first, we show the following statement
 	For the first term we have by the Cauchy-Schwarz inequality
 	\begin{align}
 	\singleNorm{\sum\limits_{T \in \triang} \myIntX  T { \nabla \varphi \cdot A \nabla v}}
-	 =& \singleNorm{\bilinLTwo {\nabla \varphi} {\nabla v} }
+	 =& \singleNorm{\bilinLTwo {\nabla \varphi} {A\nabla v} }
 	  \leq \LTwonorm{\nabla \varphi} \LTwonorm{A} \LTwonorm{\nabla v}. \label{eq: CS estimate 0}
 	\end{align}
-	Considering the sum of the second and the fourth term we find using Cauchy-Schwarz and using also the discrete Cauchy-Schwarz inequality
+	Considering the sum of the second and the fourth term we find using Cauchy-Schwarz, as well as the discrete Cauchy-Schwarz inequality
 	\begin{align}
 	\singleNorm{\sum\limits_{e \in \edges}\myIntS e { \jump {\varphi \average{A \nabla v} }}} &\leq
 	\sum\limits_{e \in \edges}  \LTwonormE{\jump {\varphi}} \LTwonormE {\average{A \nabla v}} \nonumber \\
@@ -300,7 +300,7 @@ At first, we show the following statement
 	\phantom{blub}
 \end{proof}
 
-The next step in our analysis considers the stability of the SIPG method. To do we first need to define a norm measuring elements of $V'$.
+The next step in our analysis considers the stability of the SIPG method. To do this we first need to define a norm measuring elements of the dual space $V'$.
 \begin{definition} \label{def: h-1 seminorm}
 	The semi-norm $\HMinusOneDnorm \cdot $ of an element $r \in V_h'$ is given by 
 	\[
@@ -311,10 +311,10 @@ Before we can start we need to define a second mesh-dependent energy norm which 
 \begin{definition}[Energy Norm]\label{energy norm2}
 	The mesh-dependent discrete energy norm $\eNormTwo \cdot $ is defined by
 	\[
-	\eNormTwo v^2 :=  \LTwonorm v^2 +  \sigma \sum_{e \in \edges} \frac 1 {|e|}\LTwonormE{\jump{\nabla v}}^2.
+	\eNormTwo v^2 :=  \LTwonorm {\nabla v}^2 +  \sigma \sum_{e \in \edges} \frac 1 {|e|}\LTwonormE{\jump{\nabla v}}^2.
 	\]
 \end{definition}
-Calling this norm also an energy norm is justified as both norms are equivalent on $V_h$.
+Calling this norm an energy norm, too is justified as both norms are equivalent on $V_h$.
 \begin{lemma}[Equivalence of Energy Norms in $V_h$] \label{la: equivalence energy norm}
 	For any $w \in V_h$ holds
 	\[
@@ -360,20 +360,20 @@ The result follows from the monotonicity of the square root and the fact $a \geq
 	\begin{align*}
 	\HMinusOneDnorm{\mathcal A_h v} \leq C \eNorm v \qquad \forall v \in V. %\label{eq: bilin continuity}
 	\end{align*}
-	for a positive constant $C$ depending only on the mesh and the diffusion matrix $A$. 
+	for a positive constant $C$ depending only on the diffusion matrix $A$. 
 	
-	Further there exists $\alpha > 0 $ such that for all $v_h \in V_h$
+	Further $a^{DG}_h$ is coercive, i.e., there exists $\alpha > 0 $ such that for all $v_h \in V_h$
 	\begin{align}
-		a_h^{DG}(v_h, v_h) \geq \alpha \eNorm{v_h}^2 \label{eq: coercivity DG form}
+		a_h^{DG}(v_h, v_h) \geq \alpha \eNorm{v_h}^2. \label{eq: coercivity DG form}
 	\end{align}	
-	Moreover, this implies the existence of $\sigma^* > 0$ such that for $\sigma \leq \sigma^* $, the operator $a_h$ is invertible with 
+	Moreover, this implies the existence of $\sigma^* > 0$ such that for $\sigma \leq \sigma^* $, the operator $a^{DG}_h$ is invertible with 
 	\begin{align*}
 	\eNorm {\mathcal A_h^{-1} {r_h}} \leq C \HMinusOneDnorm {r_h} \qquad \forall r_h \in V_h %\label{eq: bilin stability}
 	\end{align*}
 	where $C$ is independent of $h$. 
 \end{theorem}
 \begin{proof}
-	The first estimate follows directly from Lemma \ref{la: SIPG continuous} and the definition of the norm \ref{def: h-1 seminorm}. 
+	The first estimate follows directly from Lemma \ref{la: SIPG continuous} and the definition of the norm (cf. Definition \ref{def: h-1 seminorm}). 
 		
 	Since the diffusion matrix $A$ is positive definite it holds for any $w \in V$
 	\begin{align}
@@ -382,7 +382,7 @@ The result follows from the monotonicity of the square root and the fact $a \geq
 	for $\lambda >0$, the smallest eigenvalue of $A$.
 	Therefore we find
 	\begin{align}
-	a_h^{DG}(v_h,v_h) \geq \lambda \LTwonorm{\nabla v_h}^2 - 2 \sum\limits_{e \in \edges}\myIntS e { \jump {v \average{A \nabla v_h} }} + \sum_{e\in \edgesi} \frac \sigma {|e|} \myIntS e {\jump {v_h}^2} .\label{eq: coerc first estimate}
+	a_h^{DG}(v_h,v_h) \geq \lambda \LTwonorm{\nabla v_h}^2 - 2 \sum\limits_{e \in \edges}\myIntS e { \jump {v_h \average{A \nabla v_h} }} + \sum_{e\in \edgesi} \frac \sigma {|e|} \myIntS e {\jump {v_h}^2} .\label{eq: coerc first estimate}
 	\end{align}
 	We derived in \eqref{eq: CS estimate} the estimate 
 	\begin{align}
@@ -390,7 +390,7 @@ The result follows from the monotonicity of the square root and the fact $a \geq
 	\leq		\left( \sum\limits_{e \in \edges} \frac {\sigma}{|e|} \LTwonormE{\jump {v_h}}^2 \right)^{\frac 1 2}
 	\left(C \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v_h}}^2 \right)^{\frac 1 2}. \label{eq: inter estimate}
 	\end{align}
-	Taking the root of the trivial identity $ab \leq \varepsilon^2 a^2 + 2ab + {\frac 1 \varepsilon}^2b^2 = \left( \varepsilon a + \frac 1 \varepsilon b\right)^2$ yields the inequality $\sqrt{a} \sqrt{b} \leq \varepsilon a + \frac 1 \varepsilon b$ for arbitrary $a,b \in R$ and $\varepsilon \geq 0$. Thus, we have using \eqref{eq: inter estimate}
+	Taking the root of the trivial identity $ab \leq \varepsilon^2 a^2 + 2ab + {\frac 1 \varepsilon}^2b^2 = \left( \varepsilon a + \frac 1 \varepsilon b\right)^2$ yields the inequality $\sqrt{a} \sqrt{b} \leq \varepsilon a + \frac 1 \varepsilon b$ for arbitrary $a,b \in \R^+$ and $\varepsilon \geq 0$. Thus, we have using \eqref{eq: inter estimate}
 	\begin{align*}
 	\sum\limits_{e \in \edges}\myIntS e { \jump {v_h \average{A \nabla v_h} }} 
 	\leq \frac 1 \varepsilon \sum\limits_{e \in \edges}\frac \sigma {|e|}\LTwonormE{\jump {v_h}}^2 
@@ -400,7 +400,7 @@ The result follows from the monotonicity of the square root and the fact $a \geq
 	\begin{align*}
 		\sum\limits_{e \in \edges}\myIntS e { \jump {v_h \average{A \nabla v_h} }} 
 		\leq \frac 1 \varepsilon \sum\limits_{e \in \edges}\frac \sigma {|e|}\LTwonormE{\jump {v_h}}^2 
-		+ C\varepsilon  \frac C \sigma \LTwonorm{\nabla v_h}^2.
+		+ \varepsilon  \frac C \sigma \LTwonorm{\nabla v_h}^2.
 	\end{align*}			
 	Using this estimate in \eqref{eq: coerc first estimate} and we can derive
 	\begin{align*}
@@ -411,9 +411,9 @@ The result follows from the monotonicity of the square root and the fact $a \geq
 	If we can find values for $\sigma$ and $\varepsilon$ such that $\lambda-\varepsilon \frac C \sigma$ and $-\frac 1 \varepsilon +1$ are positive we can estimate the right-hand side by $\min{\{\lambda-\varepsilon \frac C \sigma,-\frac 1 \varepsilon +1\}} \eNormTwo{v}^2$ and proved the desired coercivity. 
 	Clearly, taking $\varepsilon$ to be larger than one ensures that the second term is positive. The first term is also positive if we choose $\sigma$ to be larger than $\frac {\varepsilon C} \lambda$.
 	
-	Now, that we have seen that $a_h^{DG}$ is coercive on $V_h$, we may apply classical existence and uniqueness theory, namely the Lax-Milgram theorem and thus deduce the inversibilty in $V_h$.
+	Now that we have seen that $a_h^{DG}$ is coercive on $V_h$, we may apply classical existence and uniqueness theory, namely the Lax-Milgram theorem and thus deduce the inversibilty in $V_h$.
 \end{proof}
-Note that this proof depends highly on the smallest eigenvalue of the diffusion matrix $A$. If it has a very small eigenvalues also the coercivity constant $\alpha$ is small.
+Note that this proof depends highly on the smallest eigenvalue of the diffusion matrix $A$. If it has a very small eigenvalue then the coercivity constant $\alpha$ is also small.
 Additionally a small eigenvalue forces the penalty parameter to be chosen large. But a large penalty parameter yields to a larger condition number of the stiffness matrix.
 
 To conclude our analysis of the SIPG method we derive a statement similar to C\'eas Lemma. The proof was taken from \cite[Lemma 10.5.2]{BS2002} and fitted to our context.
@@ -425,13 +425,13 @@ To conclude our analysis of the SIPG method we derive a statement similar to C\'
 \end{theorem}
 Then there exists a positive constant $C$ independent of $h$ such that 
 \[
-\eNorm{u - u_h } \leq (1+\frac C \alpha) \inf_{v \in v_h} \eNorm{u - v_h}
+\eNorm{u - u_h } \leq (1+\frac C \alpha) \inf_{v_h \in V_h} \eNorm{u - v_h}
 \]
 where $\alpha$ is the coercivity constant of \eqref{eq: coercivity DG form}. % and $\frac C \alpha > 1$ holds.
 
 \begin{proof}
 	Let $v_h$ be in $V_h$.
-	The bilinear form $a$ is coercive on $V_h$, let $\alpha$ be the corresponding coercive constant. 
+	The bilinear form $a$ is coercive on $V_h$, let $\alpha$ be the corresponding coercivity constant. 
 	Then it holds
 	\[
 		\eNorm{v_h} \leq \frac 1 \alpha \frac {a_h^{DG}(v_h, v_h)} {\eNorm{v_h}} 
@@ -447,9 +447,9 @@ where $\alpha$ is the coercivity constant of \eqref{eq: coercivity DG form}. % a
 	\[
 	a_h^{DG}(u,v_h) = l_h^{DG}(v_h) = a_h^{DG}(u_h,v_h) \qquad \forall v_h \in V_h
 	\]
-	it holds that
+	and $a_h^{DG}$ is bilinear, it holds that
 	\begin{align*}
-	\eNorm{u-u_h} \leq& \eNorm{u-v_h} + \frac 1 \alpha \sup_{w \in V_h, w \neq 0} \frac {a_h^{DG}(u-v_h, w_h) }{\eNorm{w_h}}.
+	\eNorm{u-u_h} \leq& \eNorm{u-v_h} + \frac 1 \alpha \sup_{w_h \in V_h, w_h \neq 0} \frac {a_h^{DG}(u-v_h, w_h) }{\eNorm{w_h}}.
 	\end{align*}
 	By Theorem \ref{thm: SIPG stability} it then follows that
 	\begin{align*}

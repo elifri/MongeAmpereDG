@@ -1,6 +1,6 @@
 \section{Benchmark Examples}
 
-Since the \MA equation became a benchmark problem for fully nonlinear second order PDEs there are some classical test problems for the two-dimensional case. All test cases are formulate for the domain $\Omega$ to be the unitsquare $[0,1]^2$.
+Since the \MA equation became a benchmark problem for fully nonlinear second order PDEs there are some classical test problems for the two-dimensional case. All test cases are formulate for the domain $\Omega$ to be the unit square $[0,1]^2$.
 
 \begin{test} \label{test smooth}
 The first classical \MA test is the problem with the data
@@ -40,11 +40,11 @@ The last test is determined by
 \[
 	u = \lVert x - x_0 \rVert_2
 	\text { and } 
-	f = \pi \delta_{x_0}
+	f = \pi \delta_{x_0},
 \]
-and its solution $u$ describes a cone with origin $x_0$. This example does not have a viscosity solution, but $u$ is only an Aleksandrov solution of the problem \cite[Section 2.3.]{FO2011}.
+where $\delta_{x_0}$ denotes the dirac measure with mass concentrated at $x_0$. Its solution $u$ describes a cone with origin $x_0$. This example does not have a viscosity solution, but $u$ is only an Aleksandrov solution of the problem \cite[Section 2.3.]{FO2011}.
 
-Note that $f$ is highly non regular. Motivated by \cite[Section 6.1.]{FO2011} we discretise $f$ by
+Note that $f$ is highly non-regular. Motivated by \cite[Section 6.1.]{FO2011} we discretise $f$ by
 \begin{align*}
 	f_h = \begin{cases}
 		\frac \pi {4h^2} & \text{ if} \singleNorm{x_1 - 0.5} \leq h \text{ and } \singleNorm{x_2 - 0.5} \leq h \\
@@ -68,9 +68,9 @@ Note that $f$ is highly non regular. Motivated by \cite[Section 6.1.]{FO2011} we
 
 \input{load_Neilan_data.tex}
 
-First, we analyse the performances of the algorithm, developed by Brenner et alt. \cite{BGN+2011} which was introduced in Section \ref{sec: Brenner method}.
-We implemented their presented method using the finite element tool FEniCS \cite{FEniCS}, the code is appended in \ref{app: Code Brenner}. 
-To create the initial not a vanishing moment method, as Brenner suggested, but the solution of $\triangle u = -\sqrt{2f}$ as introduced in Section \ref{sec: initial guess} was used. 
+First, we analyse the performances of the algorithm, developed by Brenner et al. \cite{BGN+2011} which was introduced in Section \ref{sec: Brenner method}.
+We implemented their method using the finite element tool FEniCS \cite{FEniCS}, the code is appended in \ref{app: Code Brenner}. 
+To create the initial guess not a vanishing moment method, as Brenner suggested, but the solution of $\triangle u = -\sqrt{2f}$ as introduced in Section \ref{sec: initial guess} was used. 
 
 The triangulation $\triang$ was obtained by a standard refinement as explained in Section \ref{subsec: refinement and base cells}: First the domain was split into four triangles by drawing both diagonals and afterwards each triangle was successively divided into four congruent triangles.
 \begin{figure}[H]
@@ -93,7 +93,7 @@ The triangulation $\triang$ was obtained by a standard refinement as explained i
 	\label{fig: grids}
 \end{figure}
 
-The arising nonlinear system is solved by PETSc configured with FEniCS default solver choice: That is a Newton based nonlinear solver that uses a line search and the arising linear systems are solved by a $LU$ decomposition.
+The arising nonlinear system is solved by PETSc configured with FEniCS default solver choice: That is a Newton based nonlinear solver that uses a line search and solves arising linear systems by a $LU$ decomposition.
 %SNES Object: 1 MPI processes
 %  type: newtonls
 %  SNES has not been set up so information may be incomplete
@@ -129,7 +129,7 @@ The arising nonlinear system is solved by PETSc configured with FEniCS default s
 %  using I-node routines: found 80 nodes, limit used is 5
 Only the absolute tolerance and the number of maximum iteration are changed from the original default values, the absolute tolerance is adjusted to $1e-8$ and the number of maximum iteration restricted to 100. 
 
-The results can be found in figure \ref{fig: Brenner test1} and in Table \ref{tab: l2 errors test 1 Brenner} where $h$ denotes the grid width and $N$ denotes the iterations needed to reach the desired tolerance. 
+The results can be found in figure \ref{fig: Brenner test1} and in Table \ref{tab: l2 errors test 1 Brenner} where $h$ denotes the grid width and $N$ denotes the iterations the Newton solver needed to reach the desired tolerance. 
 
 \begin{table}[H]
 	\begin{subtable}[b]{0.45\textwidth}
@@ -167,7 +167,7 @@ Additionally we observe that the method also converges for polynomial degree $k=
 	\label{fig: Brenner test1 h1}
 \end{figure}
 
-For the second test case the Newton did not converge, not even on the coarsest grid. Also in the third test case our Newton solver had problems. You can see results of the runs for $h=1/2, \dots, 1/16$ in Table \ref{tab: l2 errors test 3 Brenner}, for finer grid the solver did not converge. Attempts to solve this example with FEniCS built in damped Newton method with different relaxation parameters did also not succeed on any grid finer than $1/16$.
+For the second test case the Newton did not converge, not even on the coarsest grid. Also in the third test case our Newton solver had problems. You can see results of the runs for $h=1/2, \dots, 1/16$ in Table \ref{tab: l2 errors test 3 Brenner}, for finer grid the solver did not converge. Attempts to solve this example with FEniCS built in damped Newton method with different relaxation parameters did neither succeed on any grid finer than $1/16$.
 \begin{table}[h]
 \centering
 	\begin{subtable}[b]{0.45\textwidth}
@@ -254,14 +254,14 @@ We denote the degree of the trial space $V_h=\mathcal P_h^k$ by $k$ and the degr
 
 \section{Numerical Results of DG Picard Iteration Method} \label{sec: numerical results our Method}
 
-The Picard iteration is implemented in C++. All vector and matrix handling as well as was linear solvers are provided by the Eigen library \cite{eigenweb}. To solve the quadratic program arising in the context of a convexification (cf. \eqref{eq: convex lsq}) the C++ library ipopt \cite{ipopt} was used.
+The Picard iteration is implemented in C++. All vector and matrix handling as well as linear solvers are provided by the Eigen library \cite{eigenweb}. To solve the quadratic program arising in the context of a convexification (cf. \eqref{eq: convex lsq}) the C++ library ipopt \cite{ipopt} was used.
 
-The C++ implementation uses the same nested grids as also have been used in the FEniCS implementations of the other DG methods (cf. Figure \ref{fig: grids}). It is obtained by dividing the unitsquare along the diagonals into four triangles and then refining uniformly as explained in \ref{subsec: refinement and base cells}.
+The C++ implementation uses the same nested grids as have been used in the FEniCS implementations of the other DG methods (cf. Figure \ref{fig: grids}). It is obtained by dividing the unit square along the diagonals into four triangles and then refining uniformly as explained in \ref{subsec: refinement and base cells}.
 
 \subsection{Implementation Details}
 
 The main class of the implementation is the Tsolver class. The solver collects all information and controls the assembly and solving process.
-Hence, the main method which can be found in mesh.cpp just initialises solver and starts the solving process: Via a configuration file all input data is fed into the main routine. With this information the solver can initialise its members grid and Tshape, which represent the underlying grid structure and the reference cell. 
+Hence, the main method which can be found in mesh.cpp just initialises an instance of Tsolver and starts the solving process: Via a configuration file all input data is fed into the main routine. With this information the solver can initialise its members grid and Tshape, which represent the underlying grid structure and the reference cell. 
 The grid implemenation is taken from the igpm\_t2\_lib and is based on the work of \cite{BMV2009}.
 
 The main method, i.e. the algorithm from Algorithm \ref{alg: final} is implemented in Tsolver's function stepping\_MA(). It starts with an initialisation process where it reads specific problem data including
@@ -274,7 +274,7 @@ The main method, i.e. the algorithm from Algorithm \ref{alg: final} is implement
  \item the maximal grid refinements $max\_levelrefinement$.
 \end{enumerate}
 During the initialisation the methods also updates all base cell data and leaf cell data, enumerates the degree of freedoms and computes the initial guess.\\
-Afterwards the fixed point iterations begin, where in every step the General Poisson problem (cf. Section \ref{sec: SIPG MA}) is solved, eventually convexified (cf. Section \ref{subsec: convexification}) and afterwards with the last solution step combined (cf. Section \ref{subsec: add penalty param}). If the specified number of iterations has been carried out, the grid is refined, the leaf cell data updated and we start the fixed point iterations again.
+Afterwards the fixed point iterations begin. In every step the Generalised Poisson problem (cf. Section \ref{sec: SIPG MA}) is solved, eventually convexified (cf. Section \ref{subsec: convexification}) and afterwards combined with the solution of the last step (cf. Section \ref{subsec: add penalty param}). If the specified number of iterations has been carried out, the grid is refined, the leaf cell data updated and we start the fixed point iterations again.
 We repeat this process until the maximal number of grid refinements is reached.
 To illustrate this procedure, Algorithm \ref{alg: stepping} shows the function stepping\_MA() in pseudo code.
 \begin{algorithm}[H]
@@ -296,7 +296,7 @@ To illustrate this procedure, Algorithm \ref{alg: stepping} shows the function s
 	\State Initialise initial guess $u_{-1}$
 	\State level $\gets start\_level$
 	\State $i \gets 0$
-	\While {level < $max\_levelrefinement$}
+	\While {level $\leq max\_levelrefinement$}
 		\State Enumerate degree of freedoms
 		\State Update base and leaf cell data
 		\State (Initialise C0 converter) \Comment{only needed for convexification}
@@ -317,21 +317,21 @@ To illustrate this procedure, Algorithm \ref{alg: stepping} shows the function s
 \label{alg: stepping}
 \end{algorithm}
 
-After we have seen the program structure a shortly remark of some of the arising programming issues is presented:
+After we have seen the program structure a short remark of some of the arising programming issues is presented:
 
-Before the actual system assembly, the diffusion matrix in every cell has to be updated with the modified cofactor matrix of the Hessian of the last Picard step. Note that this matrix is constant for polynomial degree $k=2$ and otherwise has to be calculated at every quadrature point. Since in general there is no connection between diffusion matrix values at the reference cell and in the leaf cell, we cannot save any memory as we did for function values and normal gradients (cf. Section \ref{subsec: ref cell} and \ref{subsec: refinement and base cells}). Hence, we store the diffusion matrix at every quadrature point on the grid in the corresponding leaf cell.
+Before the actual system assembly, the diffusion matrix in every cell has to be updated with the modified cofactor matrix of the Hessian of the last Picard step. Note that this matrix is constant for polynomial degree $k=2$, but otherwise has to be calculated at every quadrature point. Since in general there is no connection between diffusion matrix values at the reference cell and in the leaf cell, we cannot save any memory as we did for function values and normal gradients (cf. Section \ref{subsec: ref cell} and \ref{subsec: refinement and base cells}). Hence, we store the diffusion matrix evaluated at every quadrature point in the corresponding leaf cell.
 The rest of the assembly process is carried out as already mentioned in Section \ref{subsec: assembly loop}. Hereby one has to pay attention to the right scaling of quadrature weights and the right calculation of quadrature data from reference cell data as described in Examples \ref{ex: base cell trafo} and \ref{ex: leaf cell trafo}. 
 
-If a convexification is desired, the class Convexifier takes care of the execution of the method described in Section \ref{subsec: convexification}. The linear constraints ensuring convexity on a triangle are chosen to be the ones from Theorem \ref{thm: convex cond on triangle} and the constrains for convexity across edges are given by Theorem \ref{thm: convex cond across edge}. Due to the error-proneness during the assembly of the constraint matrix $C$ the convexification is only implemented for the case $k=2$.
+If a convexification is desired, the class Convexifier takes care of the execution of the method described in Section \ref{subsec: convexification}. The linear constraints ensuring convexity on a triangle are chosen to be the ones from Theorem \ref{thm: convex cond on triangle} and the constraints for convexity across edges are given by Theorem \ref{thm: convex cond across edge}. Due to the error-proneness during the assembly of the constraint matrix $C$ the convexification is only implemented for the case $k=2$.
 Note that before applying the theorems we have to convert our numerical solution from the DG formulation to a $C^0$ spline.
-Hence, at first the Convexifier computes the $C^0$ spline representation of the Poisson solution using the C0converter, and then assembles the matrices $A$ and $C$ of \eqref{eq: convex lsq}. To solve this quadratic problem it makes use of the open source library ipopt \cite{ipopt}.\\
-Fortunately the evaluation matrix $A$, and the constraint matrix $C$ of \eqref{eq: convex lsq} only depend on the grid and thus, need only to be computed once in every refinement.
+Hence, at first the Convexifier computes the $C^0$ spline representation of the Poisson solution using the C0converter, and then assembles the matrices $A$ and $C$ of \eqref{eq: convex lsq}. To solve this quadratic problem it uses of the open source library ipopt \cite{ipopt}.\\
+Fortunately the evaluation matrix $A$ and the constraint matrix $C$ of \eqref{eq: convex lsq} depend only on the grid and thus, need only to be computed once in every refinement.
 
-Additionally the Tsolver has a member Plotter handling all export to external files. It is able to write the solution which's coefficients are currently stored in the leaf cells to a .vtu file or .dat file. Besides plotting it also administers all file streams to which information such as $L^2$ errors are written into.
+Additionally the Tsolver has a member Plotter handling all export to external files. It is able to write the solution whose coefficients are currently stored in the leaf cells to a .vtu or .dat file. Besides plotting it also administers all file streams to which information such as $L^2$ errors are written into.
 
 \subsection{Results with Convexification}
 
-For an initial guess the solution of $\triangle u = -\sqrt{2f}$ combined with the nested iteration approach as described in \ref{sec: initial guess} is used. The grid is chosen as in previous FEniCS implementations to be a refinement of a crisscrossed unit square (cf. Section \ref{sec: numerical results brenner}).
+For an initial guess the solution of $\triangle u = -\sqrt{2f}$ combined with the nested iteration approach as described in \ref{sec: initial guess} is used. The grid is chosen as in all previous implementations, i.e., a uniform refinement of a criss-crossed unit square (cf. Section \ref{sec: numerical results brenner}).
 The arising linear system of equations is solved with Eigen's internal Cholesky solver.
 The parameters are, if not specified differently, taken to be $\sigma=20 k^2, \sigma_G = 50, \alpha =
 0.3$ and $\varepsilon = 1e-2$. We always carry out 15 steps including a convexification after every step before we refine further.
@@ -351,7 +351,7 @@ The convex function in the space of piecewise polynomials $\mathcal P^2_h$ appro
 
 An approximation of $u$ in $\mathcal P^2_h$ does not have to be convex. There exists an example where the affine Lagrange interpolant of a convex function is not convex\cite[p.3142]{AM2009}. 
 
-To understand how \quoting{unconvex} the function was before the convexification process an examination of the vector $Cc_u$, where $C$ is the matrix containing the convexity conditions and $c_u$ are the coefficients of $L^2$ projection into $\mathcal P^2_h$ (cf. \eqref{eq: convex lsq}), is carried out: The smallest entry for a grid with $h=1/2$ is -9.77e-03, for a grid with $h=1/16$ the smallest entry is -4.26e-04. Thus, the $L2$ projection of the exact solution does not comply with the convexity conditions.
+To understand how \quoting{unconvex} the function was before the convexification process an examination of the vector $Cc_u$, where $C$ is the matrix containing the convexity conditions and $c_u$ are the coefficients of $L^2$ projection into $\mathcal P^2_h$ (cf. \eqref{eq: convex lsq}), is carried out: The smallest entry for a grid with $h=1/2$ is -9.77e-03, for a grid with $h=1/16$ the smallest entry is -4.26e-04. Thus, the $L^2$ projection of the exact solution does not comply with the convexity conditions.
 Figure \ref{fig: convex min coeffs} shows the smallest entry of $Cc$ during the Picard iterations, where $c$ are the B\'ezier coefficients of the Poisson solutions. We see that especially for small grid widths the Poisson solutions do not fulfill the convexity conditions. 
 
 \begin{figure}[H]
@@ -472,8 +472,9 @@ Since the influence of the gradient penalty term (cf. Section \ref{subsec: add p
 \begin{table}[H]
 	\centering
 	\pgfplotstabletypeset[
-	columns={iterations, 10, 30,50,10,100,200},
+	columns={iterations, 0, 10, 30,50,100,200},
 %	columns/0/.style={column name=$h$},
+	columns/0/.style={column name={$\sigma^G$=0 }, dec sep align},
 	columns/10/.style={column name={$\sigma^G$=10 }, dec sep align},
 	columns/30/.style={column name={$\sigma^G=$30 }, dec sep align},
 	columns/50/.style={column name={$\sigma^G=50$ }, dec sep align},
@@ -488,13 +489,13 @@ Since the influence of the gradient penalty term (cf. Section \ref{subsec: add p
 	/pgf/number format/precision=4     % print 14 digits
 		%	}
 	]{
-		iterations 10 30 50 70 100 200
-		1 0.0086428 0.0130318 0.0149796 0.016074 0.0170381 0.0183565
-		2 0.00182679 0.00334291 0.00439385 0.00522693 0.00624324 0.00857697
-		3 0.000407317 0.000845756 0.00116137 0.0014516 0.00184986 0.00297013
-		4 0.000115474 0.000309124 0.000413233 0.00050331 0.000628928 0.00101445
-		5 0.0226132 0.0328956 0.0332876 0.0322666 0.0297026 0.0207637
-		6 0.331674 0.360471 0.341691 0.360872 0.338608 0.326064
+		iterations  0 10 30 50 70 100 200
+		1 0.0335905 0.0086428 0.0130318 0.0149796 0.016074 0.0170381 0.0183565
+		2 0.0611877 0.00182679 0.00334291 0.00439385 0.00522693 0.00624324 0.00857697
+		3 0.0837569 0.000407317 0.000845756 0.00116137 0.0014516 0.00184986 0.00297013
+		4 0.185084 0.000115474 0.000309124 0.000413233 0.00050331 0.000628928 0.00101445
+		5 0.276482 0.0226132 0.0328956 0.0332876 0.0322666 0.0297026 0.0207637
+		6 0.351239 0.331674 0.360471 0.341691 0.360872 0.338608 0.326064
 	}
 	\caption{$L^2$ errors for different choices of $\sigma^G$}
 	\label{tab: sigma variation}
@@ -567,6 +568,6 @@ But as in the previous setting at some point all methods become instable and div
   \end{figure}
 We get similiar results in the next two cases albeit the fixed point iterations performs worse in the second case which lacks $H^2$ regularity. The $L^2$ errors are shown in the Figures \ref{fig: l2 errors test sqrt ourMethod} and \ref{fig: l2 errors test singularity ourMethod}, $\alpha$ was taken to be 0.3 and $\sigma^G$ to be 10. In the last example \ref{test dirac} the Picard iteration showed no signs of convergence at all.
 
-The results are validated by a reference implementation using the finite element tool FEniCS. Although it was not possible to include the modified cofactor matrix to the bilinear form, the error behaves as in the computational results of the C++ code. It decreases for the first four refinements and diverges afterwards. 
+The results are validated by a reference implementation using again the finite element tool FEniCS. Although it was not possible to include the modified cofactor matrix to the bilinear form, the error behaves as in the computational results of the C++ code. It decreases for the first four refinements and diverges afterwards. 
 
 Additionally in the FEniCS variant one can replace the cofactor matrix of the Hessian, which is evaluated piecewise, by the discrete Hessian as defined in Section \ref{def: discrete Hessian} for a symmetric ansatz space $\Sigma_h$. The code can be found in \ref{app: our code}. Experiments with this symmetric discrete Hessian also end in an unstable method.

@@ -7,7 +7,7 @@ Let $F$ be the \MA operator, i.e.
 \]
 To apply Newton's method on $F(u) =0$ we have to find $u^{i+1}$ satisfying
 \begin{align}
-	DF[u^n](u^{i+1}-u^i) = -F[u^i]
+	DF[u^i](u^{i+1}-u^i) = -F[u^i]
 \end{align}
 where $DF[u]$ denotes the G\^ateaux derivative of $F$ at $u$. We derived the G\^ateaux derivative $DF[u] v = \mycof{D^2 u}:D^2v$ already in Theorem \ref{thm: linearisation}, leading us to the Newton iteration
 \begin{align}
@@ -75,19 +75,19 @@ This section compares the newly derived method with the $C^0$ penalty method by 
 Brenner et al. emphasis that it is important that the linearisation of a \MA method is a consistent and stable discretatisation of the linearisation of the \MA equation, namely $\nabla \cdot \left( \mycof {D^2 u } \nabla (v) \right)$ \cite[Remark 2.2]{BGN+2011}.
 Therefore we first compare the linearisation of the Picard iteration with the linearisation of the method introduced by Brenner et al. \cite{BGN+2011}.
 
-Let us consider again the linearisation of the finite element method mentioned in Section \ref{sec: Brenner method}, namely the mapping $L^B_u:H^2(\Omega; \triang) \rightarrow [H^2(\Omega; \triang) \cap H^1(\Omega)]'$ given by
+Let us consider again the linearisation of the finite element method mentioned in Section \ref{sec: Brenner method}, namely the mapping $L^B_u:H^2(\Omega; \triang) \rightarrow [H^2(\Omega; \triang) \cap H^1(\Omega)]'$ (cf. \eqref{eq: var of linearisation}) given by
 \begin{align}
 \bilin {L^B_{u} w} v
-	=&\myIntX  \Omega { (\cofHess{ u}\nabla w) \nabla v}
+	=&\myIntX  \Omega { (\cofHess{ u}\nabla w) \cdot \nabla v}
 		- \sum_{e \in \edgesb} \myIntS e { (\cofHess{u}\nabla w) \cdot \mathbf n \; v} \nonumber \\
-		&-  \sum_{e \in \edgesb} \myIntS e { (\cofHess{u}\nabla w) \cdot \mathbf n \; v} 
+		&-  \sum_{e \in \edgesb} \myIntS e { (\cofHess{u}\nabla v) \cdot \mathbf n \; w} 
 		+ \sigma \sum_{e \in \edgesb} \frac 1 {|e|} \myIntS e { v w}.
 		\label{eq: linearisation brenner}
 \end{align}
 
 
 Looking at the Picard iteration in \eqref{eq:fixed point iteration} we see that we aim to solve the discretised linearisation of the \MA equation at the point $u^i$ in every step.\\
-Let $V$ be $H^2(\Omega; \triang) \cap L^2(\Omega)$ and $L_u: V \rightarrow V'$ denote the linear mapping describing the left-hand side of the SIPG method to perform an iteration step, i.e.
+Let $V$ be $H^2(\Omega; \triang) \cap L^2(\Omega)$ and $L_u: V \rightarrow V'$ denote the linear mapping describing the left-hand side of the SIPG method (cf. \eqref{eq: sipg iteration}) to perform an iteration step, i.e.
 \begin{align}
 	\bilin {L_u w} v =
  &\myIntX  \Omega { \nabla v \cdot \cof(D_h^2 u) \nabla w } \nonumber\\
@@ -101,7 +101,7 @@ Consider $u\in H^s(\Omega)$ for $s>3$ to be the convex solution of the \MA probl
  \begin{align}
  	F^B(u +w ) = L^B_u w + R^Bw \label{eq: add brenner method}
  \end{align}
- with a mapping $R^B:H^3(\Omega; \triang) \rightarrow [H^2(\Omega; \triang) \cap H^1(\Omega)]'$. 
+ with a (nonlinear) mapping $R^B:H^3(\Omega; \triang) \rightarrow [H^2(\Omega; \triang) \cap H^1(\Omega)]'$. 
 % They compute $R^B$ to be given by
 % \begin{align}
 % 	\bilin {R^B w} v 
@@ -112,19 +112,19 @@ Consider $u\in H^s(\Omega)$ for $s>3$ to be the convex solution of the \MA probl
 % 
 We want to derive a similar identity for the Picard iteration. 
 
-For the rest of the analysis, we consider a convex and polyhedral domain $\Omega\subset \R^2$ and $f,g$ such that the \MA problem then has a unique convex solution $u \in H^s(\Omega)$ with $s\geq 2$. 
+For the rest of the analysis, we consider a convex and polyhedral domain $\Omega\subset \R^2$ and $f,g$ such that the \MA problem has a unique convex solution $u \in H^s(\Omega)$ with $s\geq 2$. 
 
 Note that from now on $u$ denotes a fixed function. While Brenner et al. only linearise $F$ at the point $u$ the Picard method linearises at the last step's solution. Thus, $L_u^B$ defined in \eqref{eq: linearisation brenner} has always the same parameter $u$, namely the exact solution, whereas the parameter $u$ in the definition of $L_u$ (cf. \eqref{eq: linearisation our}) varies. 
 
-To derive results on the Picard Iteration, we follow the argumentative structure Brenner et al. used to show convergence of their method in \cite{BGN+2011}. At first, we introduce the functional $R_u \in V'$ for the right-hand side of the SIPG method defined by
+To derive results on the Picard iteration, we follow the argumentative structure Brenner et al. used to show convergence of their method in \cite{BGN+2011}. At first, we introduce the functional $R_u \in V'$ for the right-hand side of the SIPG method defined by
 \begin{align}
 \bilin {-R_u} v = - 2 \myIntX  \Omega {v f}
--\sum\limits_{e \in \edgesb}\myIntS e { g \cofHessH{u} \nabla v \cdot n }
+-\sum\limits_{e \in \edgesb}\myIntS e { g \cofHessH{u} \nabla v \cdot \mathbf n }
 +\sum\limits_{e \in \edgesb} \myIntS e { \frac \sigma {|e|} v g}. \label{eq: definition R}
 \end{align}
 The desired discretised Picard iteration then states: Find $u^{i+1}_h \in V_h$ such that
 \begin{align}
-\bilin {L_{u^i_h} w_h} v_h =  \bilin {-R_{u^i_h}} v_h   \qquad \forall v_h \in V_h. \label{eq: fixed point functional}
+\bilin {L_{u^i_h} w_h} {v_h} =  \bilin {-R_{u^i_h}} {v_h}   \qquad \forall v_h \in V_h. \label{eq: fixed point functional}
 \end{align}
 Formulating this as an operator equation yields: Find $u_h^{i+1} \in V_h$ being a root of the function $F:V \rightarrow V'$ defined by
 \begin{align}
@@ -149,9 +149,9 @@ Hence, the distinction between both approachs can be characterised: While the fi
 
 \subsection{Consistency Estimates}
 
-To characterise the error in the second derivative we introduce a new quantity. Let $\epsilonTwoZeroArg:V \rightarrow \R$ be defined by
+To measure the error in the second derivative we introduce a new quantity. Let $\epsilonTwoZeroArg:V \rightarrow \R$ be defined by
 \[
-	\epsilonTwo{v} = \max{ \LTwonorm{\hess v}}{ \sup_{e \in \edges} \LTwonormE{\average{\hess v}}}.
+	\epsilonTwo{v} := \max{ \LTwonorm{\hess v}}{ \sup_{e \in \edges} \LTwonormE{\average{\hess v}}}.
 \]	
 
 The following lemma shows $\epsilonTwo{\cdot}$ is not only a measure for the Hessian, but also for the cofactor of the Hessian.
@@ -170,7 +170,7 @@ The following lemma shows $\epsilonTwo{\cdot}$ is not only a measure for the Hes
 	\begin{align}
 	\LTwonormT{\cofHessH{w}} = \LTwonormT{\hess{w}} \qquad \forall T \in \triang.\label{eq: equality norm}
 	\end{align}
-	Furthermore using the definition of the average (cf. Definition \ref{def: edge operators}) and that $w$ is linear in $\cofHessH{w}$ and $\hess{w}$ for all $w \in V$ we find
+	Furthermore using the definition of the average (cf. Definition \ref{def: edge operators}) and that $\cofHessH{w}$ and $\hess{w}$ are linear in $w$ for all $w \in V$ we find
 	\begin{align}
 	\LTwonormE{\average {\cofHessH{w}}} 
 	=& \LTwonormE{\frac 1 2 {\cofHessH{(w^+ + w^-)}}} \nonumber\\
@@ -180,7 +180,7 @@ The following lemma shows $\epsilonTwo{\cdot}$ is not only a measure for the Hes
 	\phantom{blub}
 \end{proof}
 
-Let for $w \in V$ the mapping $L_{w,h}:V_h \rightarrow V_h'$ be the restriction from $L_w$ to $V_h$. Then all further analysis is based on the following lemma.
+Let for $w \in V$ the mapping $L_{w,h}:V_h \rightarrow V_h'$ be the restriction from $L_w$ to $V_h$. All further analysis is based on the following lemma.
 \begin{lemma}[Stability] \label{la: stability L}
 	Suppose $w \in V$ to be convex. Then 
 	\begin{align}
@@ -193,7 +193,7 @@ Let for $w \in V$ the mapping $L_{w,h}:V_h \rightarrow V_h'$ be the restriction 
 	$C$ denotes a positive constant independent on $h$ and $r_h$. 
 \end{lemma}
 \begin{proof}
-	Since for convex $w$ the cofactor matrix is always positive definite the claim follows from Theorem \ref{thm: SIPG stability}.
+	Since for convex $w$ the cofactor matrix is always positive definite the claim follows from the proof of Theorem \ref{thm: SIPG stability}.
 \end{proof}
 
 Note that this means $F$ defined in \eqref{eq: definition F} has a unique solution in $V_h$ as $R$ is constant in $w$.
@@ -206,7 +206,7 @@ For further analysis we want to examine the dependence of $L_w$ on the parameter
 	\]
 \end{lemma}
 \begin{proof}
-	Let $w_1, w_2, v$ be in $V$. For any $\varphi_h \in V_h$ we have by the definition of $L$ in \eqref{eq: linearisation our} and linearity
+	Let $w_1, w_2, v$ be in $V$. For any $\varphi_h \in V_h$ we have by the definition of $L$ in \eqref{eq: linearisation our} and by linearity
 	\begin{align}
 		\bilin{L_{w_1}v- L_{w_2} v} {\varphi_h} =  
 			&\myIntX  \Omega { \nabla \varphi_h \cdot \cofHessH{(w_1-w_2)} \nabla v}  \nonumber\\
@@ -366,10 +366,10 @@ Now we are able to establish an estimate of the consistency error of $Fu$.
 	The consistency error estimate then follows from \eqref{eq: Fu first estimate}, Lemma \ref{la: L dependence parameter}, \eqref{eq: right solution L+U} and \eqref{eq: contraction R}.
 \end{proof}
 
-This result is very important to understand the performances of the derived method. It states the consistency error depends linearly on the error $\epsilonTwo{u-u^i_h}$. That means the method is only consistent if $\epsilonTwo{u-u^i_h}$ depends linearly on $h^l$ for a $l \geq 1$. Otherwise the consistency error is not controllable and in particular the introduced method is not consistent.
+This result is very important to understand the derived method. It states that the consistency error depends linearly on the error $\epsilonTwo{u-u^i_h}$. That means the method is only consistent if $\epsilonTwo{u-u^i_h}$ depends linearly on $h^l$ for a $l \geq 1$. Otherwise the consistency error is not controllable and in particular the introduced method is not consistent.
 
 \subsection{Error estimates}
-Now we want to transfer the argument structure given by Brenner et al. So, analogously to their definition in \cite[(3.1)]{BGN+2011} we define the operator $\mathcal M: V \rightarrow V_h$ by
+Now we want to transfer the argument structure given by Brenner et al. to derive error estimates. So, analogously to their definition in \cite[(3.1)]{BGN+2011} we define the operator $\mathcal M: V \rightarrow V_h$ by
 \begin{align}
 	\mathcal M = L_{u,h}^{-1}(L_{u} - F).
 \end{align}
@@ -379,7 +379,7 @@ Let $\mathcal M_h:V_h \rightarrow V_h$ be its restriction to $V_h$. Clearly, $\m
 \end{align}
 Since $L_{u,h}$ is a isomorphism every fixed point of $\mathcal M_h$ is also a root of $F$ and hence a fixed point to the Picard iteration.
 
-We want to derive a contraction property as well as a mapping property to apply Banach's fixed point theorem. If we are able to show that $\M_h$ restricted to an arbitrary small set is a self-mapping we can locate the fixed point with arbitrary precision. As Brenner et al. \cite[(3.3)]{BGN+2011} we choose this set to be a small ball centered around $u_{c,h}\in V_h$, where
+We want to derive a contraction property as well as a mapping property to apply Banach's fixed point theorem. If we are able to show that $\M_h$ restricted to an arbitrary small set is a self-mapping we can locate the fixed point with arbitrary precision. Like Brenner et al. \cite[(3.3)]{BGN+2011} we choose this set to be a small ball centered around $u_{c,h}\in V_h$, where
 \[
 u_{c,h} = L_{u,h}^{-1} L_u u.
 \]
@@ -396,11 +396,11 @@ and hence for $w_1, w_2 \in V$
 \begin{align*}
 	\eNorm{\mathcal M w_1 - \mathcal M w_2} =& \eNorm{L_{u,h}^{-1}(L_u (w_1-w_2) - L_{u^i_h} (w_1-w_2))}.
 \end{align*}
-Applying Theorem \ref{thm: SIPG stability} and Lemma \ref{la: L dependence parameter} yields the following contraction result which is motivated by \cite[Lemma 3.4]{BGN+2011}.
+Applying Lemma \ref{la: stability L} and Lemma \ref{la: L dependence parameter} yields the following contraction result which is motivated by \cite[Lemma 3.4]{BGN+2011}.
 \begin{lemma}[Contraction property of $\mathcal{M}$] \label{la: contraction property M}
 	For any $w_1, w_2 \in V$ it holds for a positive constant $C$ independent on $h$
 \begin{align*}
-	\HOneDnorm{\mathcal M w_1 - \mathcal M w_2}	\leq C \epsilonTwo{u - u^i_h}. \label{eq: estimate M}
+	\HOneDnorm{\mathcal M w_1 - \mathcal M w_2}	\leq C \epsilonTwo{u - u^i_h} \eNorm{w_1 - w_2}. \label{eq: estimate M}
 \end{align*}
 \end{lemma}
 It is easy to see that the contraction property of $\mathcal{M}$ depends strongly on the approximation quality of the last step's solution. %If this estimation is sharp it also means that 
@@ -412,15 +412,15 @@ Before we prove the self-mapping property, we want justify the choice of $u_{c,h
 	\[
 		\eNorm{u-u_{c,h}} \leq C \inf_{v_h \in V_h} \eNorm{u-v_h},
 	\]
-	where $C>1$ denotes a constant independent on $h$.
+	where $C>1$ denotes a constant independent on $h$, but dependent on $u$.
 \end{lemma}
 \begin{proof}
-	For any $v_h \in V_h$ holds by applying the definition of $u_{c,h}$ and both statements given in Lemma \ref{la: stability L}
+	For any $v_h \in V_h$ holds applying the definition of $u_{c,h}$ and both statements given in Lemma \ref{la: stability L}
 	\begin{align}
 		\eNorm{u-u_{c,h}} \leq& \eNorm{u- v_h} + \eNorm{ v_h- L_{u,h}^{-1}L_u u} \nonumber \\
-			\leq& \eNorm{u- v_h} + \eNorm{L_{u,h}^{-1}L_{u,h} v_h- L_{u,h}^{-1}L_u u} \nonumber \\
+			=& \eNorm{u- v_h} + \eNorm{L_{u,h}^{-1}L_{u,h} v_h- L_{u,h}^{-1}L_u u} \nonumber \\
 			\leq& \eNorm{u- v_h} + C \HMinusOneDnorm{L_{u,h} v_h-  L_u u} \nonumber \\
-			\leq& \eNorm{u- v_h} + C \eNorm{v_h -u} \nonumber
+			\leq& \eNorm{u- v_h} + C \epsilonTwo{u}\eNorm{v_h -u} \nonumber
 	\end{align}
 	Since $v_h \in V_h$ was arbitrary the desired estimate follows.
 \end{proof}
@@ -452,7 +452,8 @@ By \eqref{eq: expand M} we have for any $w \in V$
 	\end{align*}
 	Using the result in Lemma \ref{la: consistency error F} we obtain
 	\begin{align*}
-		\eNorm{u_{c,h} - \M_h w} \leq C \epsilonTwo{u - u^i_h} (\eNorm{w-u}+1).
+		\eNorm{u_{c,h} - \M_h w} \leq& C \epsilonTwo{u - u^i_h} (\eNorm{w-u}+\eNorm{u} +1)\nonumber \\
+		\leq & C \epsilonTwo{u - u^i_h} (\eNorm{w-u}+1).
 	\end{align*}
 	Consider now $v_h \in \mathbb B_\rho(u_{c,h})$, by the triangle inequality we find 
 	\begin{align}
@@ -463,7 +464,7 @@ By \eqref{eq: expand M} we have for any $w \in V$
 Using the estimate of Lemma \ref{la: difference u uch} implies the claimed estimate.
 \end{proof}
 
-This result is inspired by Lemma 3.6 in \cite{BGN+2011}. Once again, we observe the differences of the two methods: While the statement in this Lemma relies on the previous consistency estimates, the estimate derived by Brenner et alt. depends on the contraction property of the nonlinear part $R^B$ from \eqref{eq: add brenner method}. 
+This result is inspired by Lemma 3.6 in \cite{BGN+2011}. Once again, we observe the differences of the two methods: While the statement in this Lemma relies on the previous consistency estimates, the estimate derived by Brenner et al. depends on the contraction property of the nonlinear part $R^B$ from \eqref{eq: add brenner method}. 
 
 %which states 
 %\begin{align}
@@ -479,11 +480,11 @@ Now we are able to combine the preceding results and thereby derive an estimate 
 		\eNorm{u-u_h} \leq C h^{s-1}, \label{eq: error estimate}
 	\end{align}
 	where $0 \leq s \leq \min\{k+1, t\}$ for $u$ contained in $H^t(\Omega)$. Hereby $C$ denotes a positive constant depending on the mesh, $g$, $\sigma$, $u^i_h$, and $u$, but not on $h$.\\
-	Furthermore if
+	Furthermore if there exists $C^*$ independent on $h$ such that
 	\begin{align}
 		\epsilonTwo{u-u_h^i} \leq C^* h^{s}, \label{eq: estimate error}
 	\end{align}
-	there exist a $h^*> 0$ such that $u_h^i$ fulfils the requirements to apply \eqref{eq: error estimate} for all $h > h^*$.
+	then there exist a $h^*> 0$ such that $u_h^i$ fulfils the requirements to apply \eqref{eq: error estimate} for all $h > h^*$.
 	
 \end{theorem}
 \begin{proof}
@@ -505,12 +506,12 @@ Now we are able to combine the preceding results and thereby derive an estimate 
 		%\max
 		\delta := \maxTriple {\tau_1} {\tau_2} {\tau_3}< 1,
 	\end{align}
-	Thereby it follows from \eqref{eq: tau1} that $\M$ fulfils the contraction property stated in Lemma \ref{la: contraction property M} with the constant $\delta<1$.
+	Thereby it follows from \eqref{eq: tau1} that $\M$ fulfils the contraction property stated in Lemma \ref{la: contraction property M} with the constant $\tau_1\leq \delta<1$.
 	
 	Lemma \ref{la: mapping property of M} implies for any $v_h \in \mathbb{B}_{\rho_0}(u_{c,h})$
 	 \[
 	 	\eNorm{u_{c,h} - \M_h v_h} \leq 
-	 		C_2 \epsilonTwo{u - u^i_h} (\rho+ \inf_{v_h \in V_h} \eNorm{u-v_h}+1) 
+	 		C_2 \epsilonTwo{u - u^i_h} (\rho_0+ \inf_{v_h \in V_h} \eNorm{u-v_h}+1) 
 	 \]
 	By \eqref{eq: tau2} we have 
 	 \[
@@ -528,24 +529,24 @@ Now we are able to combine the preceding results and thereby derive an estimate 
 	 Now we fulfil all requirements to apply Banach's fixed point theorem: $\mathbb{B}_{\rho_0}(u_{c,h}), $ is a closed subset of the Banach space $(V_h, \eNorm{\cdot})$, and $\mathcal M_h$ is a contraction mapping on $ \mathbb{B}_{\rho_0}(u_{c,h})$. Hence, the theorem yields the existence of a unique fixed point $u_h$ of $\M_h$ in $\mathbb B_{\rho_0}$.
 	 Moreover, by Lemma \ref{la: difference u uch} it holds
 	 \begin{align}
-	 	\eNorm{u-u_h} \leq \eNorm{u-u_{c,h}} + \eNorm{u_{c,h} - u_h} \leq \inf_{v_h \in V_h} \eNorm{u-v_h} +\rho_0 
+	 	\eNorm{u-u_h} \leq \eNorm{u-u_{c,h}} + \eNorm{u_{c,h} - u_h} \leq C \inf_{v_h \in V_h} \eNorm{u-v_h} +\rho_0 
 	\end{align}
-	\eqref{eq: error estimate} then follows by the approximation property given in Lemma \ref{la: approximation properties}.
+	\eqref{eq: error estimate} then follows by the approximation property given in Lemma \ref{la: approximation properties} and scaling.
 	
-	Given $\epsilonTwo{u-u_h^i} \leq h^{s+1} \norm{u}_H^s(\Omega)$ we find using the definitions of $\rho_0$ and $\tau_3$ (cf. \eqref{eq: definition rho0} and \eqref{eq: tau3}
+	Given $\epsilonTwo{u-u_h^i} \leq h^{s+1} \norm{u}_H^s(\Omega)$ we find using the definitions of $\rho_0$ and $\tau_3$ (cf. \eqref{eq: definition rho0} and \eqref{eq: tau3})
 	\begin{align*}
-		\tau_3  \leq C h^{s} \left(h^{s-1} \norm{u}_H^s(\Omega)+1\right) h^{-s+1} \norm{u}_{H^{s}(\Omega)}^{-1} \xrightarrow{h \rightarrow 0}  0.
+		\tau_3  \leq C h^{s} \left(h^{s-1} \norm{u}_{H^s(\Omega)}+1\right) h^{-s+1} \norm{u}_{H^{s}(\Omega)}^{-1} \xrightarrow{h \rightarrow 0}  0.
 	\end{align*}
-	Since analogously $\tau_1, \tau_2 \xrightarrow[]{h\rightarrow 0} 0$ holds there exist $h^*$ such that their maximum, i.e. $\delta$ is smaller than 1.
+	Since analogously $\tau_1, \tau_2 \xrightarrow[]{h\rightarrow 0} 0$ holds there exist $h^*$ such that their maximum, namely $\delta$, is smaller than 1.
 \end{proof}
 	
-Note that $\mathcal P^k_h$ for $u \in H^t(\Omega)$ has the approximation property 
+Note that $\mathcal P^k_h$ for $u \in H^t(\Omega)$ has the approximation property  (cf. Lemma \ref{la: approximation properties})
 \begin{align}
-	\inf_{v \in V_h} \sum_{T \in \triang} \singleNorm{u-v_h}_{H^2(\Omega)} \leq h^{l-2} \singleNorm{u}_{H^l(\Omega)}, \label{eq: approx hess}
+	\inf_{v \in V_h} \sum_{T \in \triang} \singleNorm{u-v_h}_{H^2(T)} \leq h^{l-2} \singleNorm{u}_{H^l(\Omega)}, \label{eq: approx hess}
 \end{align}
-where $l = \min\{k+1,t\}$. Thus, we have even for a reliable approximation of $u$ by Theorem \ref{main result} no satisfying result on the Picard Iteration. Furthermore, if we have a guess that fulfils \eqref{eq: estimate error} this theorem does not ensure $u_h$ is a better approximation to $u$ than $u^i_h$. 
+where $l = \min\{k+1,t\}$. $\singleNorm{u-u^i_h}_{H^2(\Omega)} = \LTwonorm{\hess {(u-u^i_h)}}$ influences $\epsilonTwo{u-u^i_h}$ and thus, Theorem \ref{main result} yields even for a reliable approximation of $u$ no satisfying result on the Picard Iteration. Furthermore, if we have a guess that fulfils \eqref{eq: estimate error} this theorem does not ensure $u_h$ is a better approximation to $u$ than $u^i_h$. 
 
-The analogue result for the method of Brenner et al. \cite[Theorem 3.1]{BGN+2011} yields optimal convergence results, but they depend on the property that $l$ defined as in \eqref{eq: approx hess} is strictly greater than $3$ to control the mapping property of $\mathcal M$. However, we depend on the error in the second derivatives, i.e. $\epsilonTwo{u-u_h^i}$ to control this mapping property. The problem is that derived mapping property in Lemma \ref{la: mapping property of M} is not sufficient to imitate the results of Brenner et alt. as it does not decrease linearly with a power of $h$.
+The analogue result for the method of Brenner et al. \cite[Theorem 3.1]{BGN+2011} yields optimal convergence results, but they depend on the property that $l$ defined as in \eqref{eq: approx hess} is strictly greater than $3$ to control the mapping property of $\mathcal M$. However, we depend on the error in the second derivatives, i.e. $\epsilonTwo{u-u_h^i}$ to control this mapping property. The problem is that derived mapping property in Lemma \ref{la: mapping property of M} is not sufficient to imitate the results of Brenner et al. as it does not decrease linearly with a power of $h$.
 
-Unfortunately, also later numerical results suggest that this formulation of a Picard Iteration do not converge to the \MA solution.	
+Unfortunately, later numerical results suggest that this formulation of a Picard Iteration do not converge to the \MA solution.	
 	
