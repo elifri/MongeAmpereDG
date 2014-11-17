@@ -186,7 +186,7 @@ The case that a cofactor matrix $\mycof {D^2_h u_h} $ does have a negative eigen
 %Let us recall the geometric interpretation of the second derivative, it indicates the curvature of a function and hence also describes the convexity, concavity respectively.
 %One improvement could be the smoothing process during a convexification for it will smooth away all unintended concave curvatures. But probably the result will be still unsatisfiable because convexification does not affect sharp edges at triangle transitions.
 
-\subsection{Convexfication} \label{subsec: convexification}
+\subsection{Convexification} \label{subsec: convexification}
  The \MA equation in general does not posses a unique solution (cf. Section \ref{sec: Existence and Uniqueness}). Yet for most applications the (unique) convex solution is required. The question arises if there exists an appropriate way to oblige the Picard iteration to select only convex solutions.\\
 The most intuitive way is to convexify the solution after every step. Thereby, we hope to ensure that the right solution is approximated. There may be additional benefit by a convexification:
 Let us recall the geometric interpretation of the second derivative, it indicates the curvature of a function and hence also describes the convexity, concavity respectively. A convexification will smooth away small wiggles and by definition will force the function to be convex.  Thus, a convexification could also improve the approximation quality of second derivatives of our interim solution which we is needed to set up the cofactor of the Hessian for the next Picard step. % aiming for a better approximation of the second derivatives.
@@ -203,7 +203,7 @@ where
 \]
 are the \emph{Bernstein polynomials} of degree $k$ and $\beta = (\beta_1, \beta_2, \beta_3)\in \R^3$ are the barycentric coordinates of $x \in \R^2$ relative to the triangle $T$.
 
-We call $c=\left(c_{ijk}\right)_{i,j,k \in \N, i+j+k=d}$ also the \emph{B\'ezier coefficents}.
+We call $c=\left(c_{ijk}\right)_{i,j,k \in \N, i+j+k=d}$ also the \emph{B\'ezier coefficients}.
 \end{definition}
 
 The B\'ezier coefficients also induce a geometric interpretation: Suppose $T=\langle v_1, v_2, v_3 \rangle$ and the domain points
@@ -320,7 +320,7 @@ Given the DG solution of the Generalised Poisson problem $u^{gp}_h$ we seek for 
 \end{align}
 where $A$ is the matrix evaluating the piecewise polynomial induced by the B\'ezier coefficients $c$ corresponding  at the domain points (cf. \eqref{eq: domain points}), $b$ are the function values of $u^{gp}_h$ at the B\'ezier control points and $C$ is the matrix containing the conditions ensuring convexity on the whole domain.
 
-However, solving a linearly constrained least squares problem is nontrivial. So, when using this approach one should ensure that a convexification is justified. Also, one has to keep in mind that the constraints in the matrix $C$ are sufficient but not necessary. We discuss in Chapter \ref{ch:NumericalResults} whether this approach fulfils our requirements on a convexificiation.
+However, solving a linearly constrained least squares problem is non-trivial. So, when using this approach one should ensure that a convexification is justified. Also, one has to keep in mind that the constraints in the matrix $C$ are sufficient but not necessary. We discuss in Chapter \ref{ch:NumericalResults} whether this approach fulfils our requirements on a convexification
 
 \section{The Picard Iteration Algorithm} \label{sec: Picard Iteration Algo}
 

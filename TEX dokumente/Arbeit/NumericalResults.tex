@@ -42,7 +42,7 @@ The last test is determined by
 	\text { and } 
 	f = \pi \delta_{x_0},
 \]
-where $\delta_{x_0}$ denotes the dirac measure with mass concentrated at $x_0$. Its solution $u$ describes a cone with origin $x_0$. This example does not have a viscosity solution, but $u$ is only an Aleksandrov solution of the problem \cite[Section 2.3.]{FO2011}.
+where $\delta_{x_0}$ denotes the Dirac measure with mass concentrated at $x_0$. Its solution $u$ describes a cone with origin $x_0$. This example does not have a viscosity solution, but $u$ is only an Aleksandrov solution of the problem \cite[Section 2.3.]{FO2011}.
 
 Note that $f$ is highly non-regular. Motivated by \cite[Section 6.1.]{FO2011} we discretise $f$ by
 \begin{align*}
@@ -229,12 +229,12 @@ The fourth example does not have not a classical solution. As in the previous ca
 
 We see that this method behaves well for smooth solutions for which it was designed. The results show that it is inappropriate for problems with non smooth-solution or viscosity solutions.
 
-\section{Numerical Results of a Finite Element Method based on a Disrete Hessian}\label{sec: numerical results neilan}
+\section{Numerical Results of a Finite Element Method based on a Discrete Hessian}\label{sec: numerical results neilan}
 
 Neilan's algorithm from \cite{Neilan2014} introduced in Section \ref{sec: FEM discrete Hessian} was also implemented.
 Additional to the numerical results on convergence that Neilan presented, it is interesting to explore what happens if we vary the polynomial degree for the Hessian ansatz space. 
 
-The implementation was also done with the Finite Element Tool FEniCS \cite{FEniCS}, the corresponding source code can be found in \ref{app: Code Neilan}. \\
+The implementation was also done with the finite element tool FEniCS \cite{FEniCS}, the corresponding source code can be found in \ref{app: Code Neilan}. \\
 The uniform triangulation $\triang$ is the same as in the scenarios for the $C^0$ penalty method (cf. Section \ref{sec: numerical results brenner}).
 Different to the initial guess suggested in \cite{Neilan2014} the solution of $\triangle u = -\sqrt{2f}$ as introduced in Section \ref{sec: initial guess} was used. All results presented base on discontinuous ansatz spaces, namely piecewise polynomial spaces as introduced in \ref{def: piecewise polySpace}.
 
@@ -262,7 +262,7 @@ The C++ implementation uses the same nested grids as have been used in the FEniC
 
 The main class of the implementation is the Tsolver class. The solver collects all information and controls the assembly and solving process.
 Hence, the main method which can be found in mesh.cpp just initialises an instance of Tsolver and starts the solving process: Via a configuration file all input data is fed into the main routine. With this information the solver can initialise its members grid and Tshape, which represent the underlying grid structure and the reference cell. 
-The grid implemenation is taken from the igpm\_t2\_lib and is based on the work of \cite{BMV2009}.
+The grid implementation is taken from the igpm\_t2\_lib and is based on the work of \cite{BMV2009}.
 
 The main method, i.e. the algorithm from Algorithm \ref{alg: final} is implemented in Tsolver's function stepping\_MA(). It starts with an initialisation process where it reads specific problem data including
 \begin{enumerate}
@@ -302,7 +302,7 @@ To illustrate this procedure, Algorithm \ref{alg: stepping} shows the function s
 		\State (Initialise C0 converter) \Comment{only needed for convexification}
 		\State cur\_it$ \gets 0$
 		\While {cur\_it < $maxits$}
-			\State  assemble\_MA()                              \Comment Assemble system for General Poisson problem
+			\State  assemble\_MA()                              \Comment Assemble system for Generalised Poisson problem
 			\State $u_i \gets$ solution of assembled system
 			\State (Convexify $u_i$)		 
 			\State $u_i \gets \alpha u_{i-1}  +(1-\alpha) u_i$
@@ -345,14 +345,14 @@ The implemented convexification follows the ideas of Section \ref{subsec: convex
 The plots given in Figure \ref{fig: l2 errors test smooth ourMethodConvex} show the $L^2$ error of $u_i$ obtained by the calculations as described in Section \ref{sec: Picard Iteration Algo}. We recall that means $u_i$ is obtained by combining the old step with a convexified Poisson solution. Unfortunately, the method with the convexification process does not work as expected.
 To investigate this failure a comparison of the $L^2$ error before the convexification and after is presented in Figure \ref{fig: convex before after}. As we can see the convexification process increases the error. There are several possible explanations for that:
 
-Though the convexification algorithm produces a convex result it does not garantuee that it leaves convex input functions unchanged.
+Though the convexification algorithm produces a convex result it does not guarantee that it leaves convex input functions unchanged.
 
 The convex function in the space of piecewise polynomials $\mathcal P^2_h$ approximating the numerical solution $u_h$ best, is not necessarily closer to the exact solution $u$ than $u_h$. %Then the convexification gives a push into the wrong direction.
 
 An approximation of $u$ in $\mathcal P^2_h$ does not have to be convex. There exists an example where the affine Lagrange interpolant of a convex function is not convex\cite[p.3142]{AM2009}. 
 
 To understand how \quoting{unconvex} the function was before the convexification process an examination of the vector $Cc_u$, where $C$ is the matrix containing the convexity conditions and $c_u$ are the coefficients of $L^2$ projection into $\mathcal P^2_h$ (cf. \eqref{eq: convex lsq}), is carried out: The smallest entry for a grid with $h=1/2$ is -9.77e-03, for a grid with $h=1/16$ the smallest entry is -4.26e-04. Thus, the $L^2$ projection of the exact solution does not comply with the convexity conditions.
-Figure \ref{fig: convex min coeffs} shows the smallest entry of $Cc$ during the Picard iterations, where $c$ are the B\'ezier coefficients of the Poisson solutions. We see that especially for small grid widths the Poisson solutions do not fulfill the convexity conditions. 
+Figure \ref{fig: convex min coeffs} shows the smallest entry of $Cc$ during the Picard iterations, where $c$ are the B\'ezier coefficients of the Poisson solutions. We see that especially for small grid widths the Poisson solutions do not fulfil the convexity conditions. 
 
 \begin{figure}[H]
 \centering
@@ -443,7 +443,7 @@ In Figure \ref{fig: l2 errors test smooth ourMethod} and Table \ref{tab: l2 erro
 \end{table}
  For the first four refinements the method behaves well for both $k=2$ and $k=3$. Afterwards the numerical solution departs from the actual solution.
  
- To exclude a break down of the linear solver, it was verified that the conditions of the system matrices could be handled by Eigen's cholesky solver.
+ To exclude a break down of the linear solver, it was verified that the conditions of the system matrices could be handled by Eigen's Cholesky solver.
 
 %To decrease the influence of the penalty parameter $\sigma$ for quadratic polynomials strong boundary conditions were introduced, i.e., instead of forcing the boundary conditions weakly by the penalty term 
 %\[
@@ -550,7 +550,7 @@ Furthermore, to test the choice of the parameter $\alpha$, Test \ref{test smooth
 \end{table}
 
 As expected a larger choice of $\alpha$ leads to a faster decrease of the error, on the coarsest grids all solutions Picard iterations converge to approximations with the same error norm. One can verify that those approximations are numerically equal. We observe that for $\alpha=0.1$ the choice of 15 iterations is too small as we obtain a larger $L^2$ error than with the other values.\\
-But as in the previous setting at some point all methods become instable and diverge. Though we note that choosing a smaller $\alpha$ slows down this process. 
+But as in the previous setting at some point all methods become unstable and diverge. Though we note that choosing a smaller $\alpha$ slows down this process. 
 
   \begin{figure}[H]
   	\centering
@@ -566,7 +566,7 @@ But as in the previous setting at some point all methods become instable and div
   	\caption{$L^2$ errors for Test \ref{test singularity}}
   	\label{fig: l2 errors test singularity ourMethod}
   \end{figure}
-We get similiar results in the next two cases albeit the fixed point iterations performs worse in the second case which lacks $H^2$ regularity. The $L^2$ errors are shown in the Figures \ref{fig: l2 errors test sqrt ourMethod} and \ref{fig: l2 errors test singularity ourMethod}, $\alpha$ was taken to be 0.3 and $\sigma^G$ to be 10. In the last example \ref{test dirac} the Picard iteration showed no signs of convergence at all.
+We get similar results in the next two cases albeit the fixed point iterations performs worse in the second case which lacks $H^2$ regularity. The $L^2$ errors are shown in the Figures \ref{fig: l2 errors test sqrt ourMethod} and \ref{fig: l2 errors test singularity ourMethod}, $\alpha$ was taken to be 0.3 and $\sigma^G$ to be 10. In the last example \ref{test dirac} the Picard iteration showed no signs of convergence at all.
 
 The results are validated by a reference implementation using again the finite element tool FEniCS. Although it was not possible to include the modified cofactor matrix to the bilinear form, the error behaves as in the computational results of the C++ code. It decreases for the first four refinements and diverges afterwards. 
 

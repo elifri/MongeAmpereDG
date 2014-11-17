@@ -61,7 +61,7 @@ A different kind of solution concept is derived by reformulating the \MA problem
 The corresponding \MA problem is then defined by
 
 \begin{definition}[Aleksandrov Solution {\cite[2.1.1.]{FGN2013}}]\label{def:aleksandrov solution}
-A convex function $u$ such that for a given Radon measure $\mu$ it fulfills
+A convex function $u$ such that for a given Radon measure $\mu$ it fulfils
 \begin{align}
 \begin{split}
 \mathcal M_u&= \mu \text{ in } \Omega\\ 
@@ -156,7 +156,7 @@ We give now a short overview of the different methods and some of their most kno
 \subsection{Direct Finite Difference Schemes}
 
 The first category consists of direct finite difference schemes, where the term direct refers to the fact that these schemes directly approximate the in \eqref{eq: MA eq} occurring derivatives. 
-There are two points in favor of those schemes. First, because of their simplicity finite difference schemes are widely used in \quoting{application areas}. Furthermore Barles and Souganidis set up a general framework to analyse finite difference schemes for fully nonlinear elliptic PDEs satisfying a comparison principle \cite{BS1991}. In particular this work reduces the convergence analysis for monotone schemes to the verification of stability and consistency.
+There are two points in favour of those schemes. First, because of their simplicity finite difference schemes are widely used in \quoting{application areas}. Furthermore Barles and Souganidis set up a general framework to analyse finite difference schemes for fully nonlinear elliptic PDEs satisfying a comparison principle \cite{BS1991}. In particular this work reduces the convergence analysis for monotone schemes to the verification of stability and consistency.
 %As one desires monotone schemes for there exist theorems on their convergence, compare \cite[Theorem 2.1]{BS1991} and monotone schemes even for linear PDEs require wide stencil, compare \cite{MW1953} many finite difference schemes are wide-stencil schemes. 
 Built on this structure are the works of Benamou, Oberman and Froese \cite{BFO2010, Oberman2008, FO2011}, where they provide monotone wide-stencil finite difference schemes for the \MA equation.
 They are able to prove convergence to the unique convex viscosity solution and experiments show that these methods turn out to be very robust. To the author's knowledge until today all methods proven to converge to the viscosity solution are finite difference schemes.
@@ -164,8 +164,8 @@ Nevertheless these methods have a huge drawback. Monotone schemes even for linea
 
 \subsection{Methods based on Variational Principles and Approximating Infinite-dimensional Spaces by Finite-dimensional Spaces}
  We concentrate ourselves in this work on DG methods which belong to are of the second type. Beside those methods the second category contains finite element methods, augmented Lagrangian methods, least squares methods and boundary element methods. Chapter \ref{ch:DGMongeAmpere} discusses DG methods used in current literature in detail.\\
-To make use of least square methods one needs at first to formulate the \MA problem as a constrained minimalisation problem.
-\begin{definition}[Constrained Minimalisation Formulation, \cite{FGN2013}]
+To make use of least square methods one needs at first to formulate the \MA problem as a constrained minimisation problem.
+\begin{definition}[Constrained Minimisation Formulation, \cite{FGN2013}]
 Find $(u,p) \in \mathcal{S}$ such that
 \begin{align}
 	j(u,p) \leq& j(v,q) \qquad \forall \{v,q\} \in \mathcal{S}, \text{ where }\\

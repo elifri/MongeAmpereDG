@@ -36,7 +36,7 @@ In \cite{Awanou2014} Awanou analysed an iteration process similar to just presen
 	u^{i+1} &= g \textnormal{ on } \partial \Omega.
 \end{align}
 Note that term $\mycof{D^2 u^i}:D^2(u^i)$ in \eqref{eq: Newton iteration} equals to $\nabla \cdot \left( \cof(D^2 u^i) \nabla u^{i} \right)$ by \eqref{eq: cof identities}. Thus, Awanou's formulation is the Newton iteration with fixed diffusion matrices.\\
-For this analytical formulation he proves convergence to the \MA solution $u$ under the assumption that the initial guess $u^0$ is sufficent close to $u$. Unfortunately, his analysis is not applicable to the Picard iteration as he relies on the fact that the left-hand side of \eqref{eq: Awanout eq} does not alter for different $u^i$.\\
+For this analytical formulation he proves convergence to the \MA solution $u$ under the assumption that the initial guess $u^0$ is sufficient close to $u$. Unfortunately, his analysis is not applicable to the Picard iteration as he relies on the fact that the left-hand side of \eqref{eq: Awanout eq} does not alter for different $u^i$.\\
 In an earlier work \cite{Awanou2010} Awanou examined a discrete version of a vanishing moment method, herein he mentioned a method he calls Newton's method \cite[(1.3)]{Awanou2010}: Find $u_h^{i+1}\in V_h$ such that for all $v_h \in V_h \cap H^1_0 (\Omega)$
 \[
 	\myIntX {\Omega} {[\mycof{ D^2 u_h^i} Du_h^{i+1}] \cdot Dv_h} 
@@ -72,7 +72,7 @@ He chooses the trial space to consist of piecewise polynomials contained in $C^1
 This section compares the newly derived method with the $C^0$ penalty method by Brenner et al. \cite{BGN+2011}, already presented in Section \ref{sec: Brenner method}, on a analytical basis. In particular we examine how we can transfer the analysis of the penalty method to the Picard iteration.
 
 \subsection{Comparison with a $C^0$ Penalty method}\label{subsec: comparison brenner}
-Brenner et al. emphasis that it is important that the linearisation of a \MA method is a consistent and stable discretatisation of the linearisation of the \MA equation, namely $\nabla \cdot \left( \mycof {D^2 u } \nabla (v) \right)$ \cite[Remark 2.2]{BGN+2011}.
+Brenner et al. emphasis that it is important that the linearisation of a \MA method is a consistent and stable discretisation of the linearisation of the \MA equation, namely $\nabla \cdot \left( \mycof {D^2 u } \nabla (v) \right)$ \cite[Remark 2.2]{BGN+2011}.
 Therefore we first compare the linearisation of the Picard iteration with the linearisation of the method introduced by Brenner et al. \cite{BGN+2011}.
 
 Let us consider again the linearisation of the finite element method mentioned in Section \ref{sec: Brenner method}, namely the mapping $L^B_u:H^2(\Omega; \triang) \rightarrow [H^2(\Omega; \triang) \cap H^1(\Omega)]'$ (cf. \eqref{eq: var of linearisation}) given by
@@ -145,7 +145,7 @@ Note that \eqref{eq: add brenner method} also be written as
  F^B(u +w ) = F^B u + L^B_u w + R^Bw,
  \end{align*}
 since the exact \MA solution is a root of the finite element method operator. 
-Hence, the distinction between both approachs can be characterised: While the first one reproduces the nonlinearity of the \MA equation with a nonlinear term, the second ansatz replaces parts of the nonlinear terms of the equation by an approximation and thus, trades nonlinearity for consistency errors.
+Hence, the distinction between both approaches can be characterised: While the first one reproduces the nonlinearity of the \MA equation with a nonlinear term, the second ansatz replaces parts of the nonlinear terms of the equation by an approximation and thus, trades nonlinearity for consistency errors.
 
 \subsection{Consistency Estimates}
 
@@ -379,7 +379,7 @@ Let $\mathcal M_h:V_h \rightarrow V_h$ be its restriction to $V_h$. Clearly, $\m
 \end{align}
 Since $L_{u,h}$ is a isomorphism every fixed point of $\mathcal M_h$ is also a root of $F$ and hence a fixed point to the Picard iteration.
 
-We want to derive a contraction property as well as a mapping property to apply Banach's fixed point theorem. If we are able to show that $\M_h$ restricted to an arbitrary small set is a self-mapping we can locate the fixed point with arbitrary precision. Like Brenner et al. \cite[(3.3)]{BGN+2011} we choose this set to be a small ball centered around $u_{c,h}\in V_h$, where
+We want to derive a contraction property as well as a mapping property to apply Banach's fixed point theorem. If we are able to show that $\M_h$ restricted to an arbitrary small set is a self-mapping we can locate the fixed point with arbitrary precision. Like Brenner et al. \cite[(3.3)]{BGN+2011} we choose this set to be a small ball centred around $u_{c,h}\in V_h$, where
 \[
 u_{c,h} = L_{u,h}^{-1} L_u u.
 \]
@@ -425,13 +425,13 @@ Before we prove the self-mapping property, we want justify the choice of $u_{c,h
 	Since $v_h \in V_h$ was arbitrary the desired estimate follows.
 \end{proof}
 
-Let us now derive an estimate for the image of a small ball centered at $u_{c,h}$ inspired by the estimate \cite[Lemma 3.6]{BGN+2011}.
+Let us now derive an estimate for the image of a small ball centred at $u_{c,h}$ inspired by the estimate \cite[Lemma 3.6]{BGN+2011}.
 \begin{lemma}[Mapping Property of $\M$] \label{la: mapping property of M}
 	Let 
 	\[
 		\mathbb B_\rho(u_{c,h}):=\{v_h \in V_h: \eNorm{v_h - u_{c,h}} \leq \rho\}
 	\]
-	denote a small ball in $V_h$ centered at $u_{c,h}$. 
+	denote a small ball in $V_h$ centred at $u_{c,h}$. 
 	Then, there holds for any $v \in \mathbb B_\rho(u_{c,h})$
 	\[
 		\eNorm{u_{c,h} - \M_h v} \leq C \epsilonTwo{u - u^i_h} (\rho+ \inf_{v_h \in V_h} \eNorm{u-v_h}+1),

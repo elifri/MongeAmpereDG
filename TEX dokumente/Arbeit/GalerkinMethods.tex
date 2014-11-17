@@ -89,7 +89,7 @@ In chapter \ref{ch:NumericalResults} we provide some numerical experiments for a
 
 In \cite{Neilan2014} Neilan generalises a finite element method that Lakkis and Pryer presented in \cite{LP2011}.
 The crux of this idea is the notion of a \emph{discrete Hessian}. 
-While the Hessian of the exact solution fulfills as we have seen in Lemma \ref{la: integration by parts Frobenius}
+While the Hessian of the exact solution fulfils as we have seen in Lemma \ref{la: integration by parts Frobenius}
 	\begin{align}
 		\myIntX  \Omega { (D^2 u : B)} = 
 			- \myIntX  \Omega { \left(\nabla \cdot B\right) \cdot \nabla u} 
@@ -115,7 +115,7 @@ Substituting in \eqref{eq: part int hessian omega} $\nabla u$ across the edges w
 		&= - \myIntX  \Omega { \left(\nabla \cdot B\right) \cdot \nabla u}
 				+ \sum_{ e \in \edges} \myIntS e {  \jump{B \average {\nabla u} }}.	
 	\end{align}
-Applying once more integration by parts for a Frobenius product on every triangle in the right-hande side integral results in
+Applying once more integration by parts for a Frobenius product on every triangle in the right-hand side integral results in
 	\begin{align}
 		\myIntX  \Omega { (D_{DH}^2 u : B) }
 		=& \myIntX  \Omega { D^2_h u: B }

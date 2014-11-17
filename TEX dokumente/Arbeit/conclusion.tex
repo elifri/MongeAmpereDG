@@ -17,7 +17,7 @@ Unfortunately, the Picard iteration also diverges for finer grids, especially if
 Comparing the three methods in the smooth test case the first and second method produce similar convergence orders. % while the first has less degree of freedoms. 
 The Picard type method yields even during the first four refinements a smaller convergence rate. 
 
-We can say recent DG methods perform well on problems with classical solution, but we also experienced they have problems if the \MA solution is only a viscocity solution or Aleksandrov solution. Most rely on Newton's method to solve their nonlinear system and how to provide good initial guesses is not answered satisfactorily yet.
+We can say recent DG methods perform well on problems with classical solution, but we also experienced they have problems if the \MA solution is only a viscosity solution or Aleksandrov solution. Most rely on Newton's method to solve their nonlinear system and how to provide good initial guesses is not answered satisfactorily yet.
 Our numerical results indicate that a nested iteration approach often does not provide suitable starting points for further refinements, especially if the method employs a lot of degrees of freedom in every cell.
 
 \section{Perspective}
@@ -30,7 +30,7 @@ As the Picard iteration is motivated by the Picard linearisation of convection t
 
 The implemented convexification did not support the solution process. Yet, it is worth to address this approach further. Maybe it is useful to convexify intermediate solution only on fine grids as those better capture the convexity of the exact solution.
 
-We presented methods for the \MA equation given that the right-hand side only depend on $x$ and the left-hand side only on the determinant of the Hessian. Currently DG methods are not extended to more general PDEs: There is an extension of the $C^0$ penalty method to the three-dimensional case\cite{BN2012}, but to the authors' knowledge there exist no works on other extensions. It has to be analysed, if  discretisations for right-hand sides depending on $u$ and $\nabla u$ and more complicated left-hand sides may be derived analogously. An example for one of those more complicated left-hand sides is $\mydet {D^2 u +A}$ for $A:\Omega \rightarrow \R^{d \times d}$, a PDE arising in the context of imaging optics \cite{BHP2014}.
+We presented methods for the \MA equation given that the right-hand side only depend on $x$ and the left-hand side only on the determinant of the Hessian. Currently DG methods are not extended to more general PDEs: There is an extension of the $C^0$ penalty method to the three-dimensional case\cite{BN2012}, but to the authors' knowledge there exist no works on other extensions. It has to be analysed, if discretisations for right-hand sides depending on $u$ and $\nabla u$ and more complicated left-hand sides may be derived analogously. An example for one of those more complicated left-hand sides is $\mydet {D^2 u +A}$ for $A:\Omega \rightarrow \R^{d \times d}$, a PDE arising in the context of imaging optics \cite{BHP2014}.
  
 But the most interesting part is the effect of the gradient penalty term introduced in Section \ref{subsec: add penalty param}:
 \begin{align}
