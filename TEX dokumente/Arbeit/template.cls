@@ -142,15 +142,15 @@
 	},
 	columns/l2error/.style={
         column name=$L^2$ error,  % ... and the second
-        dec sep align,      % align on the decimal marker
+		sci,sci zerofill,sci sep align,
+%		dec sep align,      % align on the decimal marker
         /pgf/number format/sci e, 
-        /pgf/number format/fixed zerofill=false,  % print trailing zeros
         /pgf/number format/sci precision=4 ,    % print 4 digits
         /pgf/number format/precision=4     % print 4 digits
             },
     columns/h1error/.style={
 		column name=$H^1$ error,  % ... and the second
-        dec sep align,      % align on the decimal marker
+		sci,sci zerofill,sci sep align,
         /pgf/number format/sci e, 
         /pgf/number format/fixed zerofill,  % print trailing zeros
         /pgf/number format/sci precision=4,     % print 4 digits

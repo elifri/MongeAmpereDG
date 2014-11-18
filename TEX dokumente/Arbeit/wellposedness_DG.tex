@@ -182,7 +182,7 @@
 %
 %To conclude our analysis of the SIPG method we derive a statement similar to C\'eas Lemma. The proof was taken from \cite[Lemma 10.5.2]{BS2002} and fitted to our context.
 %\begin{theorem}[Approximation Properties]\label{thm: error estimate}
-%	Let $u$ be the solution of the Generalised Poisson Problem \ref{def: General Poisson Problem} and $\sigma \geq \sigma^*$ of Theorem \ref{thm: SIPG stability}. Let $u_h \in V_h$ satisfy \eqref{eq: DG system}, namely
+%	Let $u$ be the solution of the generalised Poisson Problem \ref{def: General Poisson Problem} and $\sigma \geq \sigma^*$ of Theorem \ref{thm: SIPG stability}. Let $u_h \in V_h$ satisfy \eqref{eq: DG system}, namely
 %	\[
 %	a_h(u_h, v_h) = l(v_h) + J^\sigma_0(v_h)  \qquad \forall v_h \in V_h.
 %	\]
@@ -228,7 +228,7 @@
 
 \section{Well-posedness of the SIPG Method}
 
-In this section we want to prove that the derived SIPG method is well-posed. The proofs presented are taken from \cite{BS2002, PPO+2000} and extended to the case of a Generalised Poisson Problem. 
+In this section we want to prove that the derived SIPG method is well-posed. The proofs presented are taken from \cite{BS2002, PPO+2000} and extended to the case of a generalised Poisson Problem. 
 To start we first have to define the norm in which the analysis will be carried out with. Let $V$ be $L^2(\Omega) \cup H^1(\Omega; \triang)$ 
 \begin{definition}[Energy Norm] \label{def: energy norm}
 	The mesh-dependent energy norm for a function $v \in V$ is defined by
@@ -330,10 +330,10 @@ Calling this norm an energy norm, too is justified as both norms are equivalent 
 	\leq C \sum_{T \in \triang} \left( \LTwonormT{\average{\nabla w}}^2 +\HOnenormT{\average{\nabla w}}^2   \right).
 	\end{align*}
 	Recalling the definition of the average (cf. Definition \ref{def: edge operators}) it is clear we can further simplify to
-	\begin{align*}
+	\begin{align}
 	\sum_{e \in \edges} \singleNorm e \LTwonormE{\average{\nabla w}}^2 
-	\leq C \sum_{T \in \triang} \left( \LTwonormT{\nabla w}^2 +h^2 \HOnenormT{ \nabla w}^2   \right).
-	\end{align*}
+	\leq C \sum_{T \in \triang} \left( \LTwonormT{\nabla w}^2 +h^2 \HOnenormT{ \nabla w}^2   \right).\label{eq: estimate avg term}
+	\end{align}
 	By the inverse estimate from Lemma \ref{la: inverse estimate} we have 
 	\begin{align}
 	\sum_{e \in \edges} \singleNorm e  \LTwonormE{\average{\nabla w}}^2 \leq C \LTwonorm{\nabla w}^2. \label{eq: estimate average}
@@ -418,7 +418,7 @@ Additionally a small eigenvalue forces the penalty parameter to be chosen large.
 
 To conclude our analysis of the SIPG method we derive a statement similar to C\'eas Lemma. The proof was taken from \cite[Lemma 10.5.2]{BS2002} and fitted to our context.
 \begin{theorem}[Approximation Properties]\label{thm: error estimate}
-	Let $u$ be the exact solution of the Generalised Poisson Problem (cf. Definition \ref{def: General Poisson Problem}) and $\sigma \geq \sigma^*$ such that it satisfy the requirements of Theorem \ref{thm: SIPG stability}. Let $u_h \in V_h$ satisfy \eqref{eq: DG system}, namely
+	Let $u$ be the exact solution of the generalised Poisson Problem (cf. Definition \ref{def: General Poisson Problem}) and $\sigma \geq \sigma^*$ such that it satisfy the requirements of Theorem \ref{thm: SIPG stability}. Let $u_h \in V_h$ satisfy \eqref{eq: DG system}, namely
 	\[
 	a_h^{DG}(v_h, u_h) = l^{DG}_h(v_h) \qquad \forall v_h \in V_h.
 	\]
@@ -458,4 +458,31 @@ where $\alpha$ is the coercivity constant of \eqref{eq: coercivity DG form}. % a
 	Since $v_h$ is arbitrary this implies the claim.
 \end{proof}
 
+To characterise the approximation properties of of $\mathcal P_h^k$ in the energy norm we have the following lemma.
+\begin{lemma}[Approximation properties of $\mathcal P_h^k$]  \label{la: approximation properties energy norm}
+Let $s,k \in \N$ with. Then for any $u \in H^s(\Omega)$, there exists $v_h \in \mathcal P^k_h$ such that 
+\[
+	\eNormTwo{u-v_h} \leq C h^{l-1} \norm{u}_{H^{s}(\Omega)},
+\]
+where $l = \min\{k+1,s\}$  and $C$ is a constant depending only on the mesh and the polynomial degree $k$, but not on $h$ or $u$.
+\end{lemma}
+A proof is given in \cite[Section 4.1.1.]{PPO+2000}.
 
+Note that this approximation property also holds for the norm $\eNorm{\cdot}$ since we have proven their equivalence in Lemma \ref{la: equivalence energy norm}.
+
+%\begin{proof}
+%	We denote $u-v_h$ by w and start with the estimate from \eqref{eq: estimate avg term} 
+%	\begin{align}
+%		\sum_{e \in \edges} \singleNorm e \LTwonormE{\average{\nabla w}}^2 
+%		\leq& C \sum_{T \in \triang} \left( \LTwonormT{\nabla w}^2 +h^2 \HOnenormT{ \nabla w}^2   \right) \nonumber\\
+%		\leq& C \sum_{T \in \triang} \left( \HOnenormT{w}^2 +h^2 \HTwoSeminormT{w}^2   \right).
+%	\end{align}
+%	By the trace estimate of Lemma \ref{la: trace estimate} and the definition of the jump (cf. Definition \ref{def: edge operators}) we also have the estimate 
+%	\begin{align}
+%		\sum_{e \in \edges} \frac 1 {|e|} \LTwonormE{\jump w}
+%		\leq& C \sum_{T \in \triang} \left( \frac 1 {h^2} \LTwonormT{w}^2 +\HOnenormT{w}^2   \right) %\nonumber\\
+%%		\leq& C \sum_{T \in \triang} \left( \frac 1{h^2}\LTwonormT{w}^2 + \HOnenormT{w}^2   \right).
+%	\end{align}
+%	
+
+%\end{proof}

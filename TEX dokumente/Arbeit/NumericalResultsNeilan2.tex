@@ -1,6 +1,6 @@
 
-The second test was carried out with the same configurations. Just as before, the method by Brenner et al. (cf. Section \ref{sec: numerical results brenner}) Newton's method did not converge for finer grids. 
-Table \ref{tab: l2 errors test 2} shows the error for the pair $k=2$ and $k_{DH}=2$ which is the configuration that converged for the most refinements.
+The second test was carried out with the same configurations. Just as for the method by Brenner et al. (cf. Section \ref{sec: numerical results brenner}) Newton's method did not converge for finer grids. 
+Table \ref{tab: l2 errors test 2} shows the errors for the pair $k=2$ and $k_{DH}=2$ which is the configuration that converged for the largest number of refinements.
 
 \begin{table}[H]
 		\centering
@@ -22,7 +22,7 @@ Table \ref{tab: l2 errors test 2} shows the error for the pair $k=2$ and $k_{DH}
 	\label{tab: l2 errors test 2}
 \end{table}
  
-Note that Neilan did not give any numerical results for the original method, i.e. without penalty terms, for any test cases with non-smooth solutions. The performance on this test suggest that the non-penalised method is not suitable for irregular solutions. 
+Note that Neilan did not give any numerical results for the original method, i.e. without penalty terms, for any test cases with non-smooth solutions \cite{Neilan2014}. The performance on this test suggest that the non-penalised method is not suitable for irregular solutions. 
 % Again the size of the system matrices exceeded memory and therefore the configuration was adjusted for $k=2,3$.
 
 %\begin{figure}[H]
@@ -66,7 +66,7 @@ Note that Neilan did not give any numerical results for the original method, i.e
 %\label{tab: order jump test 2}
 %\end{table}
 
-Switching the penalisation of gradient jumps on the method performs better. Its results are shown in Figure \ref{fig: l2 errors test 2 jump} and Table \ref{tab: l2 errors test 2 jump}. The best results were obtained changing the configuration of the Newton solver again: PETSc's trust region method combined with a $LU$ factorisation was chosen. For the $k=2,3$ memory issues occurred, a more memory-friendly configuration such that Newton's method still converges could not be found. % although an extensive parameter research was preformed.
+Switching on the penalisation of gradient jumps the method performs better. Its results are shown in Figure \ref{fig: l2 errors test 2 jump} and Table \ref{tab: l2 errors test 2 jump}. The best results were obtained changing the configuration of the Newton solver again: PETSc's trust region method combined with a $LU$ factorisation was chosen. For the $k=2,3$ again memory issues occurred, a more memory-friendly configuration such that Newton's method still converges could not be found. % although an extensive parameter research was performed.
 
 \begin{figure}[H]
 	\centering
@@ -104,11 +104,12 @@ Switching the penalisation of gradient jumps on the method performs better. Its 
 	\label{tab: l2 errors test 2 jump}
 \end{table}
 
-Since the exact solution lacks $H^2$ regularity we do not expect that we benefit from choosing large polynomial degrees. The results also show that the runs with $k=3$ yield only slightly better approximations. The numerical orders given in Table \ref{tab: order jump test 2} confirm this impression. % and the numerical orders for both do not 
+Since the exact solution lacks $H^2$ regularity we do not expect that we benefit from choosing large polynomial degrees. The results also show that the simulations with $k=3$ yield only slightly better approximations. The numerical orders given in Table \ref{tab: order jump test 2} confirm this impression. % and the numerical orders for both do not 
 
 \begin{table}[H]
 \centering
 \begin{subtable}[b]{0.45\textwidth}
+	\centering
 	\pgfplotstabletypeset
 	{
 		k $k_{DH}$ {numerical order}
@@ -122,6 +123,7 @@ Since the exact solution lacks $H^2$ regularity we do not expect that we benefit
 	\caption{Numerical order in $L^2$ norm}
 	\end{subtable}
 	\begin{subtable}[b]{0.45\textwidth}
+	\centering
 	\pgfplotstabletypeset
 	{
 		k $k_{DH}$ {numerical order}

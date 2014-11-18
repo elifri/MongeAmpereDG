@@ -45,7 +45,7 @@ Substituting the identity of Lemma \ref{la: An application of the divergernce pr
 	- \nabla \cdot \left( \mycof{ D^2 w} \nabla v \right)  = -2f.  \label{eq:decoupled PDE}
 \end{align}
 
-For a fixed $w$ the left-hand side now is linear in $v$ opposed to the strong nonlinearity in $u$ in the original PDE. It is a Generalised Poisson equation in $v$ as we have defined in Definition \ref{def: General Poisson Problem}. 
+For a fixed $w$ the left-hand side now is linear in $v$ opposed to the strong nonlinearity in $u$ in the original PDE. It is a generalised Poisson equation in $v$ as we have defined in Definition \ref{def: General Poisson Problem}. 
 Furthermore as it is easy to see in \eqref{eq:decoupled PDE start} the left-hand side is symmetric in $v$ and $w$. Thus, it is natural to examine a sequence of PDEs where alternating either $v$ or $w$ is fixed. 
 
 Adding the Dirichlet boundary condition we obtain the Picard iteration
@@ -65,7 +65,7 @@ This also implies that every solution of a \MA problem is a fixed point of the P
 
 
 \section{Discretisation of a Picard Iteration Step}\label{sec: SIPG MA}
-Since every iteration \eqref{eq:fixed point iteration} states a Generalised Poisson equation we can apply the SIPG method presented in Section \ref{sec: SIPG} directly: Given $u^i_h\in \mathcal P^k_h$ find $u^{i+1}_h \in \mathcal P^k_h$ satisfying
+Since every iteration \eqref{eq:fixed point iteration} states a generalised Poisson equation we can apply the SIPG method presented in Section \ref{sec: SIPG} directly: Given $u^i_h\in \mathcal P^k_h$ find $u^{i+1}_h \in \mathcal P^k_h$ satisfying
 \begin{align}
  &\sum_{T \in \triang} \myIntX {T} {\nabla v_h \cdot \cof(D_h^2 u_h^{i}) \nabla u_h^{i+1}}  \nonumber\\
  & -\sum\limits_{e \in \edges}\myIntS e { \jump {v_h \average { \cof(D_h^2 u^{i}) \nabla u_h^{i+1}} }}
@@ -169,7 +169,7 @@ To prevent our algorithm from doing so we couple the two subsequences by a dampi
 
 Another parameter sensible to introduce is a parameter to control the ellipticity constant of the used SIPG method.
 \subsection{Modification of the Cofactor Matrix}\label{sec: mod cofactor}
-For a better ellipticity constant of the Generalised Poisson problem as stated in Section \ref{sec: SIPG MA} it is necessary that the eigenvalues of the diffusion matrix, namely $\mycof{D_h^2 u_h^i}$, are bounded below with some constant $\varepsilon$ (cf. results of Section \ref{sec: SIPG}, in particular Theorem \ref{thm: SIPG stability}).
+For a better ellipticity constant of the generalised Poisson problem as stated in Section \ref{sec: SIPG MA} it is necessary that the eigenvalues of the diffusion matrix, namely $\mycof{D_h^2 u_h^i}$, are bounded below with some constant $\varepsilon$ (cf. results of Section \ref{sec: SIPG}, in particular Theorem \ref{thm: SIPG stability}).
 To fulfil this criterion we add positive multiples of the identity matrix until the smallest eigenvalue becomes $\varepsilon$. Hence, we introduce a modified cofactor matrix
 \[ 
 	\mycofMod {D^2_h u_h} = \begin{cases}
@@ -313,8 +313,8 @@ Or in particular the surface consisting of the triangle $\langle Q_{200}, Q_{110
 For quadratic splines Schumaker and Speleers prove the inversion of Theorem \ref{thm: convex cond across edge} on convex domains $\Omega$, namely if for every interior edge its coefficients satisfy \eqref{eq: convexity across edge} then the corresponding spline is convex \cite[Corollary 3.10]{SS2014}.
 This result does not generalise for higher degrees. In fact they give a counterexample for degree $k = 3$ \cite[Example 3.11]{SS2014}.
 
-Now we apply the new insights to the solution of the Generalised Poisson problem stated in Section \ref{sec: SIPG MA}.
-Given the DG solution of the Generalised Poisson problem $u^{gp}_h$ we seek for a convex spline minimising the error at the B\'ezier control points, i.e. we want to find the B\'ezier coefficients $c$ minimising
+Now we apply the new insights to the solution of the generalised Poisson problem stated in Section \ref{sec: SIPG MA}.
+Given the DG solution of the generalised Poisson problem $u^{gp}_h$ we seek for a convex spline minimising the error at the B\'ezier control points, i.e. we want to find the B\'ezier coefficients $c$ minimising
 \begin{align}
 		\lVert A c - b \rVert_2, \qquad \text{ such that } Cc \geq 0, \label{eq: convex lsq}
 \end{align}
