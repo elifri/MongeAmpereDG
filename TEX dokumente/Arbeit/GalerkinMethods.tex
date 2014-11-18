@@ -15,7 +15,7 @@ He reduces The convergence analysis to the linearised case \cite[Section 9]{Boeh
 	\label{fig: fe diagram}	
 \end{figure}
 However, this finite element method has two major disadvantages. 
-First we cannot shift the high derivatives onto the test functions using integration by parts, thus we have to handle the high derivatives. Secondly \eqref{eq: naiv ansatz} seems to work only for elements in $C^1(\Omega)$ which are more complex than the usual $C^0$ elements. B\"ohmer claims that \quoting{We require FEs in $C^1$, since for FEs in $C^0$ we did not see a possibility to handle the interior variational crimes. The standard interplay between the weak and strong form is impossible for fully nonlinear problems and \emph{excludes, e.g. discontinuous Galerkin methods.}}\cite[p.1214]{Boehmer2008}.
+First we cannot shift the high derivatives onto the test functions using integration by parts, thus we have to handle the high derivatives. Secondly \eqref{eq: naiv ansatz} seems to work only for elements in $C^1(\Omega)$ which are more complex than the usual $C^0$ elements. B\"ohmer claims that \quoting{We require FEs in $C^1$, since for FEs in $C^0$ we did not see a possibility to handle the interior variational crimes. The standard interplay between the weak and strong form is impossible for fully nonlinear problems and \emph{excludes, e.g. discontinuous Galerkin methods.}}\cite[p. 1214]{Boehmer2008}.
 
 Indeed the diagram in Figure \ref{fig: fe diagram} does not commute for less regular spaces and Brenner et al. make this inconsistency responsible for the failure of $C^0$ methods\cite{BGN+2011}. Their idea is to improve the discretised formulation by adding DG terms to force consistency between the linearisation of the discrete problem and the linearisation of the continuous problem.
 
@@ -93,16 +93,14 @@ While the Hessian of the exact solution fulfils as we have seen in Lemma \ref{la
 	\begin{align}
 		\myIntX  \Omega { (D^2 u : B)} = 
 			- \myIntX  \Omega { \left(\nabla \cdot B\right) \cdot \nabla u} 
-			+ \myIntS {\partial \Omega}  {B \nabla u \mathbf {n}} \qquad \forall B \in [H^1(\Omega)]^{d \times d}, \label{eq: part int hessian}
+			+ \myIntS {\partial \Omega}  {B \nabla u \; \mathbf {n}} \qquad \forall B \in [H^1(\Omega)]^{d \times d}, \label{eq: part int hessian}
 	\end{align}
 the piecewise derived Hessian $D_h^2 v$ of $ v \in V_h$ for not so regular ansatz spaces $V_h$ does not inherit this property. Considering that most weak formulations base on an integration by parts approach, it stands to reason that a discretisation of the Hessian should also fulfil this quality. To create such a discretisation Neilan integrates \eqref{eq: part int hessian} piecewise on every triangle and rewrites the edge terms by a combination of jump and averages leading to
 	\begin{align}
-		\begin{split}
 		\myIntX  \Omega { (D^2 u : B)}
-		=& - \myIntX  \Omega { \left(\nabla \cdot B\right) \cdot \nabla u} \\
+		=& - \myIntX  \Omega { \left(\nabla \cdot B\right) \cdot \nabla u} \nonumber \\
 			&+ \sum_{ e \in \edgesi} \myIntS e { \jump {\average B \nabla u }}
 			+ \sum_{ e \in \edges} \myIntS e {  \jump{B \average {\nabla u} }}  \qquad \forall B \in \Sigma_h. \label{eq: part int hessian omega}
-		\end{split}
 	\end{align}
 Observing, that the last step admits test functions $B$ being only piecewise smooth, Neilan suggests the ansatz space $V_h = \mathcal{P}_h^k \cap H^1(\Omega)$ and the test space $\Sigma_h = [\mathcal{P}_h^k]^{d \times d}$.
 
@@ -123,7 +121,7 @@ Applying once more integration by parts for a Frobenius product on every triangl
 			- \sum_{ e \in \edges} \myIntS e { \jump {B \average {\nabla u} }}\nonumber \\		
 			&+ \sum_{ e \in \edges} \myIntS e {  \jump {B \average {\nabla u} }}		\nonumber \\
 		=& \myIntX  \Omega { D_h u: B}
-			 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average B  \nabla u }	}
+			 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average B  \nabla u }	}.
 	\end{align}
 
 Hence, we are able to define the discrete Hessian.
@@ -176,7 +174,7 @@ where
 	\begin{align*}
 		\myIntX  \Omega { (D_{DH}^2 u_h : B_h) }
 		= \myIntX  \Omega { D_h u_h: B_h}
-			 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average {B_h} \nabla u_h }}\qquad \forall B_h \in \Sigma_h \tag{\ref{eq: discrete hessian}}
+			 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average {B_h} \nabla u_h }}\qquad \forall B_h \in \Sigma_h \tag{\ref{eq: discrete hessian}}.
 	\end{align*}
 for $\Sigma_h = \mathcal P^0_k(\Omega)$ and $\eta$ is an additional penalty parameter which Neilan takes to be 50 in his numerical tests.
 

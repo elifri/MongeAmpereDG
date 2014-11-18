@@ -51,7 +51,7 @@ Furthermore as it is easy to see in \eqref{eq:decoupled PDE start} the left-hand
 Adding the Dirichlet boundary condition we obtain the Picard iteration
 \begin{align}
 	\begin{split}
-	- \nabla \cdot \left( \mycof{ D^2 u^i} \nabla u^{i+1} \right)  &= -2f  \text{ in } \Omega \\
+	- \nabla \cdot \left( \mycof{ D^2 u^i} \nabla u^{i+1} \right)  &= -2f  \text{ in } \Omega, \\
 		u^{i+1} &= g \textnormal{ on } \partial \Omega.
 	\label{eq:fixed point iteration}
 	\end{split}
@@ -305,10 +305,10 @@ Figure \ref{fig: convexity condition} shows the domain points $\xi_{ijk}$ (cf. \
 
  Let us consider the condition
 \[
-		{\hat c_{101}} \geq \beta_1^c c_{200} +\beta_2^c c_{110} + \beta_1^c c_{101}	
+		{\hat c_{101}} \geq \beta_1^c c_{200} +\beta_2^c c_{110} + \beta_1^c c_{101}.
 \]
-Geometrically in the case of $d=2$ this ensures the control point $Q_{101}$ (cf. \eqref{eq: control points})is above the plane where the triangle $\langle Q_{200}, Q_{110}, Q_{101} \rangle$ is embedded. %Note that the first two coordinates are the coordinates of the domain points. Thus, we can identify the 
-Or in particular the surface consisting of the triangle $\langle Q_{200}, Q_{110}, Q_{101} \rangle= \langle \hat Q_{200}, Q_{110}, \hat Q_{110} \rangle$  and the triangle $\langle \hat Q_{200}, \hat Q_{110}, \hat Q_{101} \rangle$ is convex.
+Geometrically in the case of $d=2$ this ensures the control point $Q_{101}$ (cf. \eqref{eq: control points}) lies above the plane where the triangle $\langle Q_{200}, Q_{110}, Q_{101} \rangle$ is embedded. %Note that the first two coordinates are the coordinates of the domain points. Thus, we can identify the 
+Or in other words the surface consisting of the triangle $\langle Q_{200}, Q_{110}, Q_{101} \rangle= \langle \hat Q_{200}, Q_{110}, \hat Q_{110} \rangle$  and the triangle $\langle \hat Q_{200}, \hat Q_{110}, \hat Q_{101} \rangle$ is convex.
 
 For quadratic splines Schumaker and Speleers prove the inversion of Theorem \ref{thm: convex cond across edge} on convex domains $\Omega$, namely if for every interior edge its coefficients satisfy \eqref{eq: convexity across edge} then the corresponding spline is convex \cite[Corollary 3.10]{SS2014}.
 This result does not generalise for higher degrees. In fact they give a counterexample for degree $k = 3$ \cite[Example 3.11]{SS2014}.

@@ -301,7 +301,7 @@ where $h^\pm $ is $h$ evaluated in one of the two adjacent elements $T^\pm$ with
 		= & \phantom{+} v^+ A^+ \nabla u^+ \cdot \mathbf n^+ 
 		     + \frac 1 2  v^+ A^- \nabla u^- \cdot \mathbf n^- + \frac 1 2 v^+ A^- \nabla u^- \cdot \mathbf n^+ \\
 		& + \frac 1 2  v^- A^+ \nabla u^+ \cdot \mathbf n^+ + \frac 1 2 v^- A^+ \nabla u^+ \cdot \mathbf n^-
-		   + v^- A^- \nabla u^- \cdot \mathbf n^-
+		   + v^- A^- \nabla u^- \cdot \mathbf n^-.
 \end{align*}
 Splitting up first and last term, we find this equals to
 \begin{align*}
@@ -347,7 +347,7 @@ and
 Since we defined the jump and average also on boundary edges (cf. Definition \ref{def: edge operators}) we can shorten the term to 
 \begin{align}
 a_S(v, u)= &\sum\limits_{T \in \triang} \myIntX  T { \nabla v \cdot A \nabla u} \nonumber \\  &-\sum\limits_{e \in \edges}\myIntS e { \jump {v \average{A \nabla u} }}
- - \sum\limits_{e \in \edges}\myIntS e { \jump{ u \average{ A \nabla v}}} \label{eq:inner product SIPG}
+ - \sum\limits_{e \in \edges}\myIntS e { \jump{ u \average{ A \nabla v}}}. \label{eq:inner product SIPG}
 \end{align}
 
 %and $f$
@@ -419,7 +419,7 @@ Very helpful is the relation between the determinant and the cofactor matrix.
 \begin{proof}
 	By Laplace's formula it holds for any $1 \leq j \leq d$
 	\[
-		\mydet A = \sum\limits_{i = 1}^{d} a_{i,j} (\mycof A )_{i,j} 
+		\mydet A = \sum\limits_{i = 1}^{d} a_{i,j} (\mycof A )_{i,j}.
 	\]
 	Summing over all $j$ yields
 	\[
@@ -448,7 +448,7 @@ For smooth functions $u:\Omega \rightarrow \R$ with $\Omega \subset \R^2$ the co
 \begin{proof}
 It holds that
 \begin{align*}
-	\nabla \cdot \mycof{D^2 u} = \sum_{i=1}^{2standard} \dx{ x_i}\mycof{D^2 u}_i = 
+	\nabla \cdot \mycof{D^2 u} = \sum_{i=1}^{2} \dx{ x_i}\mycof{D^2 u}_i = 
 	\begin{pmatrix}
 		\frac {\partial^3} {\partial x_1 {x_2}^2 } u -\frac {\partial^3} {\partial{x_2} x_1 {x_2}} u\\
 				\frac {\partial^3} {\partial {x_1}x_2 {x_1}} u-\frac {\partial^3} {\partial x_2 {x_1}^2 } u
@@ -459,44 +459,46 @@ By Schwarz' theorem the latter equals zero if $u$ is twice continuous differenti
 
 The divergence-free property yields to an integration by parts rule.
 \begin{lemma}[Integration by parts for the Frobenius product] \label{la: integration by parts Frobenius}
-For a Frobenius product with the Hessian's cofactor matrix  the following integration by parts rule holds for smooth $u$
+For a Frobenius product with the Hessian's cofactor matrix  the following integration by parts rule holds for smooth $u$ and any $B \in [H^1(\Omega)]^{2 \times 2}$
 \[
 	\myIntX  \Omega { (D^2 u : B)} = 
 		- \myIntX  \Omega { (\nabla \cdot B) \cdot \nabla u }
-		+ \myIntS  {\partial \Omega} {  B \nabla u \bf n}
+		+ \myIntS  {\partial \Omega} {  B \nabla u \;\bf n}.
 \] 
 \end{lemma}
 
 \begin{proof}
-The proof is based on applying integration by parts row-wise
+The proof is based on applying integration by parts row-wise. Hence, we have
 \begin{align*}
 - \myIntX  \Omega { (\nabla \cdot B) \cdot \nabla u} &= 
 - \myIntX  \Omega { \sum_{i = 1}^{d} (\nabla \cdot B_i) \dx {x_i} u} \\
 &=  \myIntX  \Omega { \sum_{i = 1}^{d} B_i \cdot  (\nabla \dx {x_i} u)} 
-	- \myIntS  {\partial \Omega} { \sum_{i = 1}^{d} (B_i) \dx {x_i} u \mathbf{n}} \\
+	- \myIntS  {\partial \Omega} { \sum_{i = 1}^{d} (B_i) \dx {x_i} u \;\mathbf{n}} \\
 &=  \myIntX  \Omega { \sum_{i = 1}^{d}\sum_{j= 1}^{d} B_{ij} \dxy {x_i}{x_j} u}
-	- \myIntS  {\partial \Omega} { B \nabla u \mathbf{n}} \\
+	- \myIntS  {\partial \Omega} { B \nabla u \;\mathbf{n}} \\
 &=  \myIntX  \Omega { (D^2 u : B)}
-	- \myIntS  {\partial \Omega} { B \nabla u \mathbf{n} }
+	- \myIntS  {\partial \Omega} { B \nabla u \;\mathbf{n} }.
 \end{align*}
 \end{proof}
 
 In future talking about weak formulations it is handy to have a divergence form of the latter Frobenius product.
 \begin{lemma}[Divergence form of the Frobenius Product] \label{la: An application of the divergernce product rule}
+For smooth $u:\Omega \rightarrow \R$ with $\Omega \subset \R$ and $v\in H^2(\Omega)$, there holds
 \[
 		\nabla \cdot \left( \mycof {D^2 u } \nabla v \right) %- \nabla \cdot \left(\mycof {D^2 u }\right) \nabla v
-		= \mycof {D^2 u}: D^2 v
+		= \mycof {D^2 u}: D^2 v.
 \] 
 \end{lemma}
 
 \begin{proof}
+By the definition of the divergence and the product rule we obtain
 \begin{align*}
 \nabla \cdot \left( \mycof {D^2 u } \nabla v \right) =&%- \nabla \cdot \left(\mycof {D^2 u }\right) \nabla =& 
 \sum_{i= 1}^{d} \dx {x_i} 	\left( \sum_{j= 1}^{d} \mycof {D^2 u }_{i,j} \dx{x_j} v \right)\\
 %&-  \sum_{j= 1}^{d}  \sum_{i= 1}^{d} \left(\dx {x_i} \mycof {D^2 u }_{i,j}  \right) \dx{x_j} v \\
 =&  \sum_{i= 1}^{d} \sum_{j= 1}^{d}  \left(\dx {x_i} \mycof {D^2 u }_{i,j}  \right) \dx{x_j}v + \sum_{i= 1}^{d} \sum_{j= 1}^{d}  \mycof {D^2 u }_{i,j} \dxy{x_j}{x_i}v\\
 =&  \sum_{j= 1}^{d}  \nabla \cdot \left(\mycof {D^2 u }\right)_j \dx{x_j}v + \sum_{i= 1}^{d} \sum_{j= 1}^{d}  \mycof {D^2 u }_{i,j} \dxy{x_j}{x_i}v\\
-=&   \nabla \cdot \left(\mycof {D^2 u }\right) \nabla v+ \mycof {D^2 u }:D^2v
+=&   \nabla \cdot \left(\mycof {D^2 u }\right) \nabla v+ \mycof {D^2 u }:D^2v.
 \end{align*}
 The statement results from the fact that the cofactor matrix of the Hessian is divergence-free.
 \end{proof}

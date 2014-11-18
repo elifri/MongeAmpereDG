@@ -7,7 +7,7 @@ Let $F$ be the \MA operator, i.e.
 \]
 To apply Newton's method on $F(u) =0$ we have to find $u^{i+1}$ satisfying
 \begin{align}
-	DF[u^i](u^{i+1}-u^i) = -F[u^i]
+	DF[u^i](u^{i+1}-u^i) = -F[u^i],
 \end{align}
 where $DF[u]$ denotes the G\^ateaux derivative of $F$ at $u$. We derived the G\^ateaux derivative $DF[u] v = \mycof{D^2 u}:D^2v$ already in Theorem \ref{thm: linearisation}, leading us to the Newton iteration
 \begin{align}
@@ -158,7 +158,7 @@ The following lemma shows $\epsilonTwo{\cdot}$ is not only a measure for the Hes
 \begin{lemma} \label{la: epsilon cof hess equal}
 	For any convex $v \in V$ it holds
 	\[
-		\epsilonTwo{v} = \max{ \LTwonorm{\cofHessH v}}{ \sup_{e \in \edges} \LTwonormE{\average{\cofHessH{v}}}}
+		\epsilonTwo{v} = \max{ \LTwonorm{\cofHessH v}}{ \sup_{e \in \edges} \LTwonormE{\average{\cofHessH{v}}}}.
 	\]
 \end{lemma}
 \begin{proof}
@@ -202,7 +202,7 @@ For further analysis we want to examine the dependence of $L_w$ on the parameter
 \begin{lemma}\label{la: L dependence parameter}
 	For $w_1, w_2 \in V$ holds
 	\[
-		\HMinusOneDnorm{L_{w_1} v - L_{w_2} v} \leq \epsilonTwo{w_1 - w_2} \eNorm{v} \qquad \forall v \in V,
+		\HMinusOneDnorm{L_{w_1} v - L_{w_2} v} \leq \epsilonTwo{w_1 - w_2} \eNorm{v} \qquad \forall v \in V.
 	\]
 \end{lemma}
 \begin{proof}
@@ -420,7 +420,7 @@ Before we prove the self-mapping property, we want justify the choice of $u_{c,h
 		\eNorm{u-u_{c,h}} \leq& \eNorm{u- v_h} + \eNorm{ v_h- L_{u,h}^{-1}L_u u} \nonumber \\
 			=& \eNorm{u- v_h} + \eNorm{L_{u,h}^{-1}L_{u,h} v_h- L_{u,h}^{-1}L_u u} \nonumber \\
 			\leq& \eNorm{u- v_h} + C \HMinusOneDnorm{L_{u,h} v_h-  L_u u} \nonumber \\
-			\leq& \eNorm{u- v_h} + C \epsilonTwo{u}\eNorm{v_h -u} \nonumber
+			\leq& \eNorm{u- v_h} + C \epsilonTwo{u}\eNorm{v_h -u}. \nonumber
 	\end{align}
 	Since $v_h \in V_h$ was arbitrary the desired estimate follows.
 \end{proof}
@@ -459,7 +459,7 @@ By \eqref{eq: expand M} we have for any $w \in V$
 	\begin{align}
 		\eNorm{u_{c,h} - \M_h v} 
 			\leq& C \epsilonTwo{u - u^i_h} (\eNorm{v_h-u_{c,h}}+ \eNorm{u_{c,h}-u} +1) \nonumber \\
-			\leq& C \epsilonTwo{u - u^i_h} (\rho+ \eNorm{u_{c,h}-u} +1)			
+			\leq& C \epsilonTwo{u - u^i_h} (\rho+ \eNorm{u_{c,h}-u} +1).
 	\end{align}
 Using the estimate of Lemma \ref{la: difference u uch} implies the claimed estimate.
 \end{proof}
@@ -501,17 +501,17 @@ Now we are able to combine the preceding results and thereby derive an estimate 
 	\end{align}
 	where $C_1$ is the constant of Lemma \ref{la: contraction property M} and $C_2$ the constant of Lemma \ref{la: mapping property of M}. 
 	
-	Let $u_h^i$ suffice
+	Let $u_h^i$ fulfil
 	\begin{align}
 		%\max
-		\delta := \maxTriple {\tau_1} {\tau_2} {\tau_3}< 1,
+		\delta := \maxTriple {\tau_1} {\tau_2} {\tau_3}< 1.
 	\end{align}
 	Thereby it follows from \eqref{eq: tau1} that $\M$ fulfils the contraction property stated in Lemma \ref{la: contraction property M} with the constant $\tau_1\leq \delta<1$.
 	
 	Lemma \ref{la: mapping property of M} implies for any $v_h \in \mathbb{B}_{\rho_0}(u_{c,h})$
 	 \[
 	 	\eNorm{u_{c,h} - \M_h v_h} \leq 
-	 		C_2 \epsilonTwo{u - u^i_h} (\rho_0+ \inf_{v_h \in V_h} \eNorm{u-v_h}+1) 
+	 		C_2 \epsilonTwo{u - u^i_h} (\rho_0+ \inf_{v_h \in V_h} \eNorm{u-v_h}+1).
 	 \]
 	By \eqref{eq: tau2} we have 
 	 \[
@@ -529,7 +529,7 @@ Now we are able to combine the preceding results and thereby derive an estimate 
 	 Now we fulfil all requirements to apply Banach's fixed point theorem: $\mathbb{B}_{\rho_0}(u_{c,h}), $ is a closed subset of the Banach space $(V_h, \eNorm{\cdot})$, and $\mathcal M_h$ is a contraction mapping on $ \mathbb{B}_{\rho_0}(u_{c,h})$. Hence, the theorem yields the existence of a unique fixed point $u_h$ of $\M_h$ in $\mathbb B_{\rho_0}$.
 	 Moreover, by Lemma \ref{la: difference u uch} it holds
 	 \begin{align}
-	 	\eNorm{u-u_h} \leq \eNorm{u-u_{c,h}} + \eNorm{u_{c,h} - u_h} \leq C \inf_{v_h \in V_h} \eNorm{u-v_h} +\rho_0 
+	 	\eNorm{u-u_h} \leq \eNorm{u-u_{c,h}} + \eNorm{u_{c,h} - u_h} \leq C \inf_{v_h \in V_h} \eNorm{u-v_h} +\rho_0.
 	\end{align}
 	\eqref{eq: error estimate} then follows by the approximation property given in Lemma \ref{la: approximation properties energy norm}.
 	

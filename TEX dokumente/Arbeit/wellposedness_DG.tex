@@ -264,7 +264,7 @@ At first, we show the following statement
 	\left( \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{A \nabla v}}^2 \right)^{\frac 1 2} 	 \nonumber \\
 	& \leq
 	\left( \sum\limits_{e \in \edges} \frac {\sigma}{|e|} \LTwonormE{\jump {\varphi}}^2 \right)^{\frac 1 2}
-	 \left( \sup\limits_{e \in \edges} \LTwonormE{\average{A}}\sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v}}^2 \right)^{\frac 1 2} \label{eq: CS estimate}
+	 \left( \sup\limits_{e \in \edges} \LTwonormE{\average{A}}\sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v}}^2 \right)^{\frac 1 2}. \label{eq: CS estimate}
 	\end{align}
 	For shorter notation we abbreviate $\sup\limits_{e \in \edges} \LTwonormE{\average{A}}$ by $\bar A$. Since the third and the last term in \eqref{eq:inner product SIPG} are the symmetric to the second and fourth summands, we analogously have for their sum
 	\begin{align}
@@ -276,7 +276,7 @@ At first, we show the following statement
 	\begin{align}
 	\singleNorm {\sum_{e \in \edges} \frac \sigma {|e|} \myIntS e {\jump \varphi \jump v }}
 	\leq& \sum_{e \in \edges} \frac \sigma  {|e|} \myIntS{e}{ \singleNorm {\jump \varphi \jump v }} \nonumber \\
-	\leq& \left( \sum\limits_{e \in \edges} \frac \sigma{|e|} \LTwonormE{\jump{\varphi}}^2 \right)^{\frac 1 2} \left( \sum\limits_{e \in \edges} \frac \sigma {|e|} \LTwonormE{\jump{v}}^2 \right)^{\frac 1 2} \label{eq: CS estimate3}
+	\leq& \left( \sum\limits_{e \in \edges} \frac \sigma{|e|} \LTwonormE{\jump{\varphi}}^2 \right)^{\frac 1 2} \left( \sum\limits_{e \in \edges} \frac \sigma {|e|} \LTwonormE{\jump{v}}^2 \right)^{\frac 1 2}. \label{eq: CS estimate3}
 	\end{align}
 	Adding \eqref{eq: CS estimate 0}, \eqref{eq: CS estimate}, \eqref{eq: CS estimate2} and \eqref{eq: CS estimate3} we find using the discrete Schwarz inequality once more
 	\begin{align}
@@ -295,7 +295,7 @@ At first, we show the following statement
 	\left( 
 	\LTwonorm{A} \LTwonorm{\nabla v}^2+2\sum\limits_{e \in \edges} \frac {\sigma}{|e|}\LTwonormE{\jump {v}}^2+ \bar A\sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v}}^2
 	\right) ^{\frac 1 2} \nonumber \\
-	\leq & \max {\LTwonorm{A}} {\sup_{e \in \edges }\LTwonormE{\average A}} \eNorm \varphi \eNorm v   \label{eq: exact estimate boundedness} % \leq \eNorm{A} \eNorm{\varphi}
+	\leq & \max {\LTwonorm{A}} {\sup_{e \in \edges }\LTwonormE{\average A}} \eNorm \varphi \eNorm v.   \label{eq: exact estimate boundedness} % \leq \eNorm{A} \eNorm{\varphi}
 	\end{align}
 	\phantom{blub}
 \end{proof}

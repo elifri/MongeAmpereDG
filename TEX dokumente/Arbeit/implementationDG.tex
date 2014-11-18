@@ -6,7 +6,7 @@ We assume that $\Omega$ is polygonal and that we have given a regular triangulat
 
 \subsection{Integration scheme}
 First, to evaluate an integral numerically we need a quadrature rule. Usually Gauss quadrature is the method of choice as it provides a good order of exactness using only a few points. To approximate the integral $\myIntX {\phantom{x}} {h(x)} $ a Gauss quadrature formula $\sum_{i=1}^{N} w_i h(q_i)$ needs to evaluate $h$ at certain quadrature points $q_i$. For the case $N=7$ we show the quadrature points for a triangular domain in Figure \ref{fig: quadrature} approximations calculated with these point are exact up to a polynomial degree of 5 \cite[p.314]{Strout1971}.
-\begin{figure}[!h]
+\begin{figure}[H]
 	\centering
 	\input{quadrature.pgf}
 	\caption{Quadrature points for a integral over a triangle domain with $N=7$}
@@ -41,7 +41,7 @@ Combining the reference cell concept with barycentric coordinates we gain a conn
 \begin{align*}
 	p^i_T(x) =& p_T^i( \beta_0 v_0 +\beta_1 v_1 + \beta_2 v_2  ) \\
 	=& p^i_{ref}(\Phi_T^{-1}(\beta_0 v_0 +\beta_1 v_1 + \beta_2 v_2)) \\
-	=& p^i_{ref}(A^{-1}(\beta_0 v_0 +\beta_1 v_1 + \beta_2 v_2)- \tilde b)
+	=& p^i_{ref}(A^{-1}(\beta_0 v_0 +\beta_1 v_1 + \beta_2 v_2)- \tilde b).
 \end{align*}
 We recall that for barycentric coordinates $\sum_{i=0}^2 \beta_i = 1$ is valid and thus,
 \begin{align*}
@@ -52,7 +52,8 @@ We recall that for barycentric coordinates $\sum_{i=0}^2 \beta_i = 1$ is valid a
 \end{align*}
 Thus, basis function values in $T$ can be simply determined using barycentric coordinates. Henceforth we refer with $x_{ref}$  to the point $\beta_0 \point 0 0 +\beta_1 \point 0 1 + \beta_2 \point 1 0$ which is the to $x$ corresponding point in the reference triangle. In Figure \ref{fig: transformation} the connection between $x_{ref}$ and $x$ is shown.
 
-\begin{figure}[H]
+\begin{figure}[h]
+	\centering
 	\input{transformation.pgf}
 	\caption{Transformation of reference cell}
 	 \label{fig: transformation}
