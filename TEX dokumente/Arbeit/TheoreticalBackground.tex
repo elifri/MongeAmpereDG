@@ -99,7 +99,7 @@ Note that this definition requires $\Omega$ to be a polygonal domain. However, t
 
 \begin{figure}[H]
 \input{grid.pgf}
-\caption{A regular triangulation of the unitsquare}
+\caption{A regular triangulation of the unit square}
  \label{fig: triangulation}
 \end{figure}
 
@@ -139,13 +139,13 @@ where $C$ is a constant depending only on the mesh, but not in $h$ or $u$.
 	%	\norm{v}_{L2 (\partial T)}^2 \leq C\left(\frac 1 {h_T} \norm{v}_{L2(T)}^2  + h_T \norm{\nabla v}_{L2(T)}^2\right) \qquad \forall v \in H^1(T).
 	\sum_{e \in \edges} \LTwonormE{v}^2 
 		\leq C_1
-		 \sum_{T \in \triang} \LTwonormT{v}^2 \HOnenormT{v}^2
+		 \sum_{T \in \triang} \LTwonormT{v} \HOnenormT{v}
 	\leq 
 		C_2 \sum_{T \in \triang} \left(\frac 1 {h} \LTwonormT{v}^2  + h \HOnenormT{v}^2\right).
 	\end{align*}
 	 where $C_1,C_2$ are positive constants depending only on the mesh but not on $v$.
 \end{lemma}
-Note that the second inequality follows from the identity $\sqrt{a} \sqrt{b} \leq \varepsilon a + \frac 1 \varepsilon b$ for arbitrary $a,b \in \R^+$ and $\varepsilon \geq 0$. This identity can be easily verified taking the root of the inequality $ab \leq \varepsilon^2 a^2 + 2ab + {\frac 1 \varepsilon}^2b^2 = \left( \varepsilon a + \frac 1 \varepsilon b\right)^2$.
+Note that the second inequality follows from Young's inequality $\sqrt{a} \sqrt{b} \leq \varepsilon a + \frac 1 \varepsilon b$ for arbitrary $a,b \in \R^+$ and $\varepsilon \geq 0$. This inequality can be easily verified taking the root of the inequality $ab \leq \varepsilon^2 a^2 + 2ab + {\frac 1 \varepsilon}^2b^2 = \left( \varepsilon a + \frac 1 \varepsilon b\right)^2$.
 
 \begin{lemma}[Inverse Estimate{, \cite[Lemma 2.4]{BGN+2011}}]\label{la: inverse estimate}
 	For any piecewise polynomial $v \in \mathcal P_h^k$ there holds
@@ -204,6 +204,8 @@ The \emph{generalised Poisson Problem} is finding a function $u:\Omega \rightarr
 for $ A:\Omega^d \rightarrow \R^{d \times d}$ symmetric and functions $f,g:\Omega \rightarrow \R $. 
 Because of the physical context of this PDE the matrix $A$ is also referred to as \emph{diffusion matrix}.
 \end{definition}
+
+\todo{homogene randdaten}
 
 We are now able to set up a \emph{weak formulation} of the generalised Poisson problem based on variational principles, this formulation is the key element for deriving a finite element method.
 
@@ -271,14 +273,15 @@ The error made by restriction to finite elements is characterised by the followi
 \begin{lemma}[C\'ea Lemma{, \cite[4.2]{Braess2003}}] \label{la: Ceas lemma}
 	Let the bilinear form $a$ be $V$ elliptic with $H_0^m \subset V \subset H^m(\Omega) $, i.e. $0 < \alpha \leq C$ exist with
 	\[
-		a(u,u) \geq \alpha  \norm u ^2_V \text{ and } |a(v,u)| \leq C \norm u ^2_V \norm v ^2_V.
+		a(u,u) \geq \alpha  \norm u ^2_V \text{ and } |a(v,u)| \leq C \norm u _V \norm v _V.
 	\]
 	Then for the solution $u_h$ of \eqref{eq: FE variational formulation}  holds
 	\begin{align}
 		\norm {u - u_h}_V \leq \frac C \alpha \inf\limits_{v_h \in V_h} \norm {u-v_h}_V.
 	\end{align}
 \end{lemma}
-This result shows that the quality of the finite element solution depends on the one side on the problem parameters $\alpha$ and $C$, but on the other side particularly on the approximation properties of $V_h$. A typical choice for the function spaces $W_h$ and $V_h$ are piecewise polynomials spaces which have good approximation properties and are easy to handle.
+This result shows that the quality of the finite element solution depends on the one hand on the problem parameters $\alpha$ and $C$, but on the other hand particularly on the approximation properties of $V_h$. A typical choice for the function spaces $W_h$ and $V_h$ are piecewise polynomials spaces which have good approximation properties and are easy to handle.
+\todo{sqrt}
 
 \section{Discontinuous Galerkin} \label{sec: SIPG}
 A recent idea is to to include discontinuous functions when choosing the test and ansatz spaces. This approach arose in the context of hyperbolic PDEs whose solutions eventually contain discontinuities, later it was also applied to elliptic PDEs \cite{ABC+2002}. Although the generalised Poisson problem is not hyperbolic and its solutions are continuous we use this example to explain the issues arising when the finite element spaces are extended to discontinuities. The crux is the handling of function evaluations along discontinuities. Note that for discontinuous ansatz spaces it is no longer true that they are subspaces of $H^1(\Omega)$ which contains the weak solution of the generalised Poisson problem. That implies that C\'eas Lemma \ref{la: Ceas lemma} is not valid. Elements which include ansatz space not contained in $H^1(\Omega)$ are also referred to as non-conforming elements.
@@ -405,7 +408,7 @@ We observe that in the two-dimensional case the cofactor matrix of the Hessian s
 \begin{definition}[Frobenius Product] \label{def: frobenius product}
 	The \emph{Frobenius product} : of two matrices $A, B \in \R^{d \times d}$ is defined by
 	\[
-		A:B := \sum_{1 = i,j} ^d a_{i,j} b_{i,j}.
+		A:B := \sum_{i,j=1} ^d a_{i,j} b_{i,j}.
 	\]
 \end{definition}
 

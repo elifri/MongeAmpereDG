@@ -79,7 +79,7 @@ where $l=\min\{k+1,s\}$.
 \end{theorem}
 This theorem ensure almost optimal convergence orders provided a smooth solution and the polynomial degree $k\geq 3$. Otherwise the given bound does not converge to zero given $h \rightarrow 0$. However, their numerical results suggest optimal convergence rates for $k=2$.\\
 This approach has a drawback. In order to find $u_h$ one has to solve the nonlinear system resulting from \eqref{eq: brenner method}. To present numerical results Brenner et al. make use of Newton's method to solve their example problems. 
-For a good initial guess they use a rather complex procedure: They inquire a vanishing moments method which internally again solves a nonlinear systems based on Newton's method. The starting point required by this internal Newton solver is calculated using a nested iteration.
+To obtain a good initial guess they use a rather complex procedure: They inquire a vanishing moments method which internally again solves a nonlinear systems based on Newton's method. The starting point required by this internal Newton solver is calculated using a nested iteration.
 
 In \cite{Neilan2014} Neilan introduces another DG method. During the presentation of his numerical results Neilan claims that the $C^0$ penalty method fails to converge for the test case $u = -\sqrt{2 - x_1^2 - x_2^2 }$ and $f = \frac 2 {{2 - x_1^2 - x_2^2}^2}$ which lacks $H^2$ regularity. 
 In chapter \ref{ch:NumericalResults} we provide some numerical experiments for a nested iteration variant of this method and our computations confirm Neilan's claim, see also Test \ref{test sqrt}. In general we shall see, the presented method is more appropriate for classical solutions, Brenner et al. say they plan to address less regular solution in future work. 
@@ -95,7 +95,7 @@ While the Hessian of the exact solution fulfils as we have seen in Lemma \ref{la
 			- \myIntX  \Omega { \left(\nabla \cdot B\right) \cdot \nabla u} 
 			+ \myIntS {\partial \Omega}  {B \nabla u \; \mathbf {n}} \qquad \forall B \in [H^1(\Omega)]^{d \times d}, \label{eq: part int hessian}
 	\end{align}
-the piecewise derived Hessian $D_h^2 v$ of $ v \in V_h$ for not so regular ansatz spaces $V_h$ does not inherit this property. Considering that most weak formulations base on an integration by parts approach, it stands to reason that a discretisation of the Hessian should also fulfil this quality. To create such a discretisation Neilan integrates \eqref{eq: part int hessian} piecewise on every triangle and rewrites the edge terms by a combination of jump and averages leading to
+the piecewise derived Hessian $D_h^2 v$ of $ v \in V_h$ for not so regular ansatz spaces $V_h$ does not inherit this property. Considering that most weak formulations base on an integration by parts approach, it stands to reason that a discretisation of the Hessian should also have this property. To create such a discretisation Neilan integrates \eqref{eq: part int hessian} piecewise on every triangle and rewrites the edge terms by a combination of jump and averages leading to
 	\begin{align}
 		\myIntX  \Omega { (D^2 u : B)}
 		=& - \myIntX  \Omega { \left(\nabla \cdot B\right) \cdot \nabla u} \nonumber \\
@@ -134,7 +134,7 @@ Hence, we are able to define the discrete Hessian.
 	\end{align}
 \end{definition}
 
-Even though the Hessian is symmetric, in general the discrete Hessian is owing to the face terms not obligatory symmetric. Neilan suggested to replace the ansatz space $\Sigma_h$ by a space of symmetric matrices and supposes the analysis given in \cite{Neilan2014} would carry through.\\
+Even though the Hessian is symmetric, in general the discrete Hessian is owing to the face terms not necessarily symmetric. Neilan suggests to replace the ansatz space $\Sigma_h$ by a space of symmetric matrices. Without having this explicitly verified he assumes the analysis given in \cite{Neilan2014} would carry through.\\
 Note that for a discontinuous $\Sigma_h$ the computations for $D_{DH}^2 u$ reduce to purely local efforts. For piecewise constant space $\Sigma_h$ the discrete Hessian $D_{DH}^2 u$ can even be computed explicitly.
 
 The next natural step is to plug the newly deduced Hessian into the original \MA PDE resulting in the method: Find $u_h \in V_h$ such that
@@ -149,10 +149,10 @@ where
 			 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average {B_h} \nabla u_h }}\qquad \forall B_h \in \Sigma_h. \tag{\ref{eq: discrete hessian}}
 	\end{align}
 
-Neilan proceeds analogously to the prove of the well-posedness of the method mentioned in the previous Section \ref{sec: Brenner method}. At the beginning he expands the nonlinear mapping at the exact solution $u$ and then uses an analogous mapping $\mathcal M$ to obtaining convergence with the Banach fixed point theorem. Note that the new notion of an discrete Hessian makes the estimates of this unconventional linearisation hard to handle. The linearisation used in the other $C^0$ penalty method is more common and hence the arguments for deriving estimates for the linear part were already well known.
+Neilan proceeds analogously to the prove of the well-posedness of the method mentioned in the previous Section \ref{sec: Brenner method}. At the beginning he expands the nonlinear mapping at the exact solution $u$ and then uses an analogous mapping $\mathcal M$ to obtain convergence with the Banach fixed point theorem. Note that the new notion of an discrete Hessian makes the estimates of this unconventional linearisation hard to handle. The linearisation used in the other $C^0$ penalty method is more common and hence the arguments for deriving estimates for the linear part were already well known.
 He ends up with the following error estimation:
 \begin{theorem}[Error Estimate {,\cite[Theorem 4.2.]{Neilan2014}}] \label{thm: error estimate Neilan}
-	Let $u$ be the convex solution to the \MA equation and suppose $u$ to be in the Hölder space $C^{k+3,\alpha}$ for $\alpha \in (0,1)$ and the polynomial degree $k\geq3$. Then there exists a $h_0$ such that for all $h > h_0$ there exists a solution $u_h \in V_h$ to \eqref{eq: neilan eq1} with
+	Let $u$ be the convex solution to the \MA equation and suppose $u$ to be in the Hölder space $C^{k+3,\alpha}$ for $\alpha \in (0,1)$ and $V_h = \mathcal P^k_h \cap H^1(\Omega)$ with $k\geq3$. Then there exists a $h_0$ such that for all $h > h_0$ there exists a solution $u_h \in V_h$ to \eqref{eq: neilan eq1} with
 	\[
 		\norm{u-u_h}_{1,h} \leq C h^k, 
 	\]
@@ -161,7 +161,7 @@ He ends up with the following error estimation:
 		\norm{v}_{1,h}^2 = \norm {\nabla v }^2_{L^2(\Omega)} + \sum_{e \in \edges} |e| \norm {\average {\nabla v}}^2_{L^2(\Omega)}.
 	\]
 \end{theorem}
-The norm $\norm {\cdot}_{1,h}$ is equivalent to the norm $\eNorm{\cdot}$ on $V_h$ regarding the fact that $V_h$ only contains continuous functions.
+The norm $\norm {\cdot}_{1,h}$ is equivalent to the norm $\eNorm{\cdot}$ on $V_h$ due the fact that $V_h$ only contains continuous functions.
 
 Albeit Neilan cannot prove any further relaxations, his numerical experiments suggest that his method even works for smaller polynomial degrees and problems whose solution lacks $H^2$ regularity. 
 \\However, for $k=1$ he has to add an additional penalty term to obtain convergence. Thus, for piecewise affine functions $u_h \in V_h :=\mathcal P_h^1(\Omega) \cap W^{1,\infty}(\Omega)$ he instead solves:

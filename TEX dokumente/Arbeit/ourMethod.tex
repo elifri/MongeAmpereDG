@@ -5,15 +5,15 @@ In the last section first numerical results are presented. Since the Picard iter
 
 
 \section{A Picard Iteration for the \MA equation} \label{sec: motivation picard iteration}
-For quasilinear PDEs (cf. Definition \ref{def: categories of PDEs}) such as the convection equation $\nabla \cdot (A(u) \nabla u ) = f$ it is common to determine the solution via a fixed point iteration \cite{Deblois1997,LL1995,MNK2009}. The key aspect is a decoupling of the coefficient matrix $A(u)$ and $\nabla u$. Hence, one solves iteratively for $i\in \N$ the equations
+For quasilinear PDEs (cf. Definition \ref{def: categories of PDEs}) such as the diffusion equation $\nabla \cdot (A(u) \nabla u ) = f$ it is common to determine the solution via a fixed point iteration \cite{Deblois1997,LL1995,MNK2009}. The key aspect is a decoupling of the coefficient matrix $A(u)$ and $\nabla u$. Hence, one solves iteratively for $i\in \N$ the equations
 \[
 	\nabla \cdot (A(u^{i} )\nabla u^{i+1}) = f. %  \quad \text{      and      }\quad \nabla \cdot (A(u^{i+1}) \nabla u^{i}) = f, \text{ respectively}.
 \] 
-This kind of linearisation is also called \emph{Picard linearisation} method and is very favoured to linearise the convection term in the Navier-Stokes equations.
+This kind of linearisation is also called \emph{Picard linearisation} method and is very favoured to linearise the diffusion term in the Navier-Stokes equations.
 
 In this spirit we aim to decouple the derivatives in the strongly nonlinear \MA equation such that the decoupled PDEs are linear. 
 
-Before we start, we slightly change the notation: Differing to the preceding sections we denote the elements of $\Omega \subset \R^2$ by  $(x,y)^t$. To shorten and facilitate terms we refer to their partial derivatives with subscripts as for example $\dxy{x}{y} u = u_{xy}$.
+Before we start, we slightly change the notation: In contrast to the preceding sections we denote the elements of $\Omega \subset \R^2$ by  $(x,y)^t$. To shorten and facilitate terms we refer to their partial derivatives with subscripts as for example $\dxy{x}{y} u = u_{xy}$.
 Thus, the two-dimensional \MA equation \eqref{eq: MA eq} states
 \begin{align}
  \mydet{D^2 u} &= f \nonumber \\
@@ -38,7 +38,7 @@ We observe that the left matrix is the cofactor matrix of the Hessian of $w$ (cf
 \begin{align}
 		\mycof {D^2 w }:D^2 v  = 2f. \label{eq:short formula}
 \end{align}
-Note that this derivation of decoupling of $v$ and $w$ is chosen for it is very intuitive. Alternatively \eqref{eq:short formula} can be derived directly from the identity $\mycof {D^2 u }:D^2 u  = d \mydet{D^2 u}$ stated in Lemma \ref{la: rel det cofactor}.
+Note that this derivation of decoupling of $v$ and $w$ is chosen because it is very intuitive. Alternatively \eqref{eq:short formula} can be derived directly from the identity $\mycof {D^2 u }:D^2 u  = d \mydet{D^2 u}$ stated in Lemma \ref{la: rel det cofactor}.
 
 Substituting the identity of Lemma \ref{la: An application of the divergernce product rule} and multiplying with -1 we find
 \begin{align}
@@ -46,7 +46,7 @@ Substituting the identity of Lemma \ref{la: An application of the divergernce pr
 \end{align}
 
 For a fixed $w$ the left-hand side now is linear in $v$ opposed to the strong nonlinearity in $u$ in the original PDE. It is a generalised Poisson equation in $v$ as we have defined in Definition \ref{def: General Poisson Problem}. 
-Furthermore as it is easy to see in \eqref{eq:decoupled PDE start} the left-hand side is symmetric in $v$ and $w$. Thus, it is natural to examine a sequence of PDEs where alternating either $v$ or $w$ is fixed. 
+Furthermore, as it is easy to see in \eqref{eq:decoupled PDE start} the left-hand side is symmetric in $v$ and $w$. Thus, it is natural to examine a sequence of PDEs where alternating either $v$ or $w$ is fixed. 
 
 Adding the Dirichlet boundary condition we obtain the Picard iteration
 \begin{align}
@@ -84,7 +84,7 @@ Now that we derived a new iterated DG method to solve the \MA equation we compar
 %After this analysis it is not clear how the Picard iteration practically behaves. The next section addresses some first numerical results of the Picard iteration and first obstacles when solving simple problems.  
 \section{Challenges for the Picard Iteration}
 Reviewing existing DG methods for the \MA equation we learned some issues we have to pay attention to, while examining the performances of the Picard iteration. The next subsections treat the most challenging points.
-At the beginning there always is the question of a good starting point $u_h^0$.
+At the beginning there always is the question of a good initial guess $u_h^0$.
 \subsection{Initial Guess}\label{sec: initial guess}
 Just as most methods for the \MA equation the fixed point iteration requires an initial guess. Two approaches are widely favoured in the literature.
 In \cite[Remark 2.1]{DG2006a} a strong connection between the \MA problem, and  the following Poisson problem has been shown
@@ -103,7 +103,7 @@ Now we are able to perform the Picard iteration on some simple example cases.
 \subsection{An additional Penalty Parameter} \label{subsec: add penalty param}
 At the beginning we look at the SIPG method which is implemented exactly as stated in Section \ref{sec: SIPG MA}. The polynomial degree $k$ of the ansatz and trial space $\mathcal V_h^k$ is taken to be two.
 %The solution of \eqref{eq: start sqrt_f} serves as an initial guess, 
-The penalty parameter $\sigma$ is chosen to be 30 and the domain $\Omega$ to be the unit square $[0,1]^2$.
+The penalty parameter $\sigma$ is chosen to be 30 and the domain $\Omega$ to be the unit square $(0,1)^2$.
 
 For first numerical results we consider the rather simple equation
 \begin{align}
@@ -160,12 +160,12 @@ With the new penalisation of the gradient we observe that an modified implementa
 \label{fig: diff iteration}
 \end{figure}
 
-Nevertheless, starting over with the initial guess from \eqref{eq: start sqrt_f} the method is unstable and diverges. But the results yet are very remarkable. As shown in Figure \ref{fig: oscillation} the error is oscillating while diverging  to infinity.
+Nevertheless, starting over the test with the initial guess from \eqref{eq: start sqrt_f} instead of the exact solution the method is unstable and diverges. But the results yet are very remarkable. As shown in Figure \ref{fig: oscillation} the error is oscillating while diverging  to infinity.
 
-Figure \ref{fig: diff iteration} shows two consecutive steps, the error $u-u_{exact}$ is denoted by the surface colour. We see that the solution after 23 steps is mostly red, i.e. it is pointwise greater than the exact solution, while one iteration later the Poisson solution is mostly blue, i.e. it is pointwise smaller than the exact solution. These frames are generic for the behaviour of the intermediate Picard solutions. After a step with a solution $u_h^i$ with $u_h^i \geq u_{exact}$ the solution of the next intermediate function $u^{i+1}_h$ fulfils $u^{i+1}_h \leq u_{exact}$. It looks like the solution is split into two subsequences.  And as we have also seen in the devolution of the error, these subsequences diverge from the exact solution.
+Figure \ref{fig: diff iteration} shows two consecutive steps, the error $u-u_{exact}$ is denoted by the surface colour. We see that the solution after 23 steps is mostly red, i.e. it is pointwise greater than the exact solution, while one iteration later the Poisson solution is mostly blue, i.e. it is pointwise smaller than the exact solution. These frames are generic for the behaviour of the intermediate Picard solutions. After a step with a solution $u_h^i$ with $u_h^i \geq u_{exact}$ the solution of the next intermediate function $u^{i+1}_h$ fulfils $u^{i+1}_h \leq u_{exact}$. It seems like the iterations are split into two subsequences. And as we have also seen in the devolution of the error, these subsequences diverge from the exact solution.
 
 %Theoretically it is possible there are two different functions $v,w\in V$ such that $v$ is the solution to the decoupled PDE (cf. \eqref{eq:decoupled PDE}) fixing $w$ and vice versa $w$ the solution of \eqref{eq:decoupled PDE} fixing $v_h$. 
-To prevent our algorithm from doing so we couple the two subsequences by a damping. After calculating the new Picard step $u^{i+1}_h$ we combine the current solution with the function calculated one step before by a convex composition $ \alpha u_h^{i+1} + (1- \alpha) u_h^i$ for $\alpha \in (0,1)$. Hence we got a further parameter $\alpha$ to adjust the Picard iteration.
+To prevent our algorithm from doing so we couple the two subsequences by a damping. After calculating the new Picard step $u^{i+1}_h$ we combine the current solution with the function calculated in the preceding step by a convex composition $ \alpha u_h^{i+1} + (1- \alpha) u_h^i$ for $\alpha \in (0,1)$. Hence we got a further parameter $\alpha$ to adjust the Picard iteration.
 
 Another parameter sensible to introduce is a parameter to control the ellipticity constant of the used SIPG method.
 \subsection{Modification of the Cofactor Matrix}\label{sec: mod cofactor}
