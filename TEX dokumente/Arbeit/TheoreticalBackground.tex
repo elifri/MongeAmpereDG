@@ -214,7 +214,7 @@ Hence, we can restrict ourselves to the case with homogeneous boundary data.
 
 We are now able to set up a \emph{weak formulation} of the generalised Poisson problem based on variational principles, this formulation is the key element for deriving a finite element method.
 
-Due to the main theorem of variational analysis every classical solution to \eqref{eq: poisson eq} is fulfils 
+Due to the main theorem of variational analysis every classical solution to \eqref{eq: poisson eq} fulfils 
 \begin{align}
 	-\myIntX \Omega {\varphi \nabla \cdot (A \nabla u)}=
 	 \myIntX \Omega {\varphi f} \qquad \forall \varphi \in C_0^\infty(\Omega), \label{eq: variational form}
@@ -293,7 +293,7 @@ This result shows that the quality of the finite element solution depends on the
 A recent idea is to to include discontinuous functions when choosing the test and ansatz spaces. This approach arose in the context of hyperbolic PDEs whose solutions eventually contain discontinuities, later it was also applied to elliptic PDEs \cite{ABC+2002}. Although the generalised Poisson problem is not hyperbolic and its solutions are continuous we use this example to explain the issues arising when the finite element spaces are extended to discontinuities. The crux is the handling of function evaluations along discontinuities. Note that for discontinuous ansatz spaces it is no longer true that they are subspaces of $H_0^1(\Omega)$ which contains the weak solution of the generalised Poisson problem. That implies that C\'eas Lemma \ref{la: Ceas lemma} is not valid. Elements which include ansatz space not contained in $H_0^1(\Omega)$ are also referred to as non-conforming elements.
 
 %We recall our triangulation $\mathcal{T}_h$ of $\Omega$. 
-If we modify the derivation of the bilinear form defining the finite element method we can develop bilinear forms defined on the function space $V_h = \mathcal P_h^k$ (cf. Definition \ref{def: piecewise polySpace}). The method that we derive asserts the boundary conditions not by the choice of function spaces but force them implicitly in the bilinear form. Hence, we do no assume necessarily homogeneous boundary conditions anymore.
+If we modify the derivation of the bilinear form defining the finite element method we can develop bilinear forms defined on the function space $V_h = \mathcal P_h^k$ (cf. Definition \ref{def: piecewise polySpace}). The method that we derive asserts the boundary conditions not by the choice of function spaces but force them implicitly in the bilinear form. Hence, we do not assume necessarily homogeneous boundary conditions anymore.
 
 Due to the fact that we have discontinuities only along edges we perform the integration by parts in \eqref{eq: variational form} piecewise on every triangle leading to
 \begin{align}

@@ -278,7 +278,7 @@ At first, we show the following statement
 	\leq& \sum_{e \in \edges} \frac \sigma  {|e|} \myIntS{e}{ \singleNorm {\jump \varphi \jump v }} \nonumber \\
 	\leq& \left( \sum\limits_{e \in \edges} \frac \sigma{|e|} \LTwonormE{\jump{\varphi}}^2 \right)^{\frac 1 2} \left( \sum\limits_{e \in \edges} \frac \sigma {|e|} \LTwonormE{\jump{v}}^2 \right)^{\frac 1 2}. \label{eq: CS estimate3}
 	\end{align}
-	Adding \eqref{eq: CS estimate 0}, \eqref{eq: CS estimate}, \eqref{eq: CS estimate2} and \eqref{eq: CS estimate3} we find using the discrete Schwarz inequality once more
+	Adding \eqref{eq: CS estimate 0}, \eqref{eq: CS estimate}, \eqref{eq: CS estimate2} and \eqref{eq: CS estimate3} we find 
 	\begin{align}
 	|a_h^{DG}(\varphi,v)| \leq& 
 	 \LTwonorm{A} \LTwonorm {\nabla \varphi} \LTwonorm{\nabla v} \nonumber\\
@@ -286,7 +286,11 @@ At first, we show the following statement
 	\left( \bar A \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla v}}^2 \right)^{\frac 1 2} \nonumber\\
 	& +	\left( \sum\limits_{e \in \edges} \frac {\sigma} {|e|}\LTwonormE{\jump {v}}^2 \right)^{\frac 1 2}
 	\left( \bar A \sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla \varphi}}^2 \right)^{\frac 1 2}\nonumber \\
-	& + \left( \sum\limits_{e \in \edges} \frac \sigma{|e|} \LTwonormE{\jump{\varphi}}^2 \right)^{\frac 1 2} \left( \sum\limits_{e \in \edges} \frac \sigma {|e|} \LTwonormE{\jump{v}}^2 \right)^{\frac 1 2} \nonumber \\
+	& + \left( \sum\limits_{e \in \edges} \frac \sigma{|e|} \LTwonormE{\jump{\varphi}}^2 \right)^{\frac 1 2} \left( \sum\limits_{e \in \edges} \frac \sigma {|e|} \LTwonormE{\jump{v}}^2 \right)^{\frac 1 2} \nonumber
+	\end{align}
+	and thus, using the discrete Schwarz inequality once more
+	\begin{align}
+		|a_h^{DG}(\varphi,v)|
 	\leq& 
 	\left( 
 	\LTwonorm{A}\LTwonorm{\nabla \varphi}^2+2\sum\limits_{e \in \edges} \frac {\sigma} {|e|}\LTwonormE{\jump {\varphi}}^2+ \bar A\sum\limits_{e \in \edges} \frac {|e|} \sigma \LTwonormE{\average{\nabla \varphi}}^2

@@ -9,7 +9,7 @@ To apply Newton's method on $F(u) =0$ we have to find $u^{i+1}$ satisfying
 \begin{align}
 	DF[u^i](u^{i+1}-u^i) = -F[u^i],
 \end{align}
-where $DF[u]$ denotes the G\^ateaux derivative of $F$ at $u$. We derived the G\^ateaux derivative $DF[u] v = \mycof{D^2 u}:D^2v$ already in Theorem \ref{thm: linearisation}, leading us to the Newton iteration
+where $DF[u]$ denotes the Fr\'echet derivative of $F$ at $u$. We derived the Fr\'echet derivative $DF[u] v = \mycof{D^2 u}:D^2v$ already in Theorem \ref{thm: linearisation}, leading us to the Newton iteration
 \begin{align}
 	\mycof{D^2 u^i}:D^2\left(u^{i+1}-u^i\right) &= -\mydet{D^2 u^i}+f \nonumber \\
 	\Leftrightarrow \qquad \qquad  \mycof{D^2 u^i}:D^2(u^{i+1}) &= -\mydet{D^2 u^i} +f  +\mycof{D^2 u^i}:D^2(u^i). \label{eq: Newton iteration pre}
