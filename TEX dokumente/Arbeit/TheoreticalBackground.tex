@@ -243,7 +243,11 @@ Note that due to the lack of regularity weak solutions may not be restricted to 
 
 The generalised Poisson problem is well-posed in the sense that it has a unique weak solution if $A$ is positive definite and $f\in L^2(\Omega)$. This is mainly due to the ellipticity of the PDE (and as a consequence thereof the ellipticity of $a$). Thus, it is possible to apply the Lax-Milgram theorem and a maximum principle. For an analysis we refer the interested reader to \cite[Chapter~6]{Evans1998}.
 
-On the left-hand side in the weak notation only first derivatives of $u$ appear, hence \eqref{eq: variational formulation} is also applicable for functions $u$ which are not twice differentiable. It turns out that the previously defined Sobolev spaces are well-suited candidates for the space $X$ containing weak solutions \cite[Chapter 1]{BS2002}. Therefore we search for the solution of the infinite-dimensional problem: Find $u\in H^1(\Omega)$ such that  $a(\varphi,u)  = b(\varphi) \;\forall \varphi \in C^\infty(\Omega)$ holds. \\% $\forall \varphi \in C^\infty(\Omega)$.
+On the left-hand side in the weak notation only first derivatives of $u$ appear, hence \eqref{eq: variational formulation} is also applicable for functions $u$ which are not twice differentiable. It turns out that the previously defined Sobolev spaces are well-suited candidates for the space $X$ containing weak solutions \cite[Chapter 1]{BS2002}. Therefore we search for the solution of the infinite-dimensional problem: Find $u\in H^1(\Omega)$ such that  $a(\varphi,u)  = b(\varphi) \;\forall \varphi \in C^\infty(\Omega)$ holds. % $\forall \varphi \in C^\infty(\Omega)$.
+
+First, we can reduce all general Poisson problems with Dirichlet boundary data to \emph{problems with homogen boundary data}, i.e. $g \equiv 0$. Let us assume an $\tilde g \in H^1(\Omega)$ such that $g=\tilde g$ on $\partial \Omega$. Hence we can rewrite the problem as: Find  $u-g \in H^1_0(\Omega)$ such that  $a(\varphi,u)  = b(\varphi) \;\forall \varphi \in C^\infty(\Omega)$ holds.
+
+
 The main idea of the finite element method is to approximate the two function spaces, namely the spaces $H^1(\Omega)$ and $C^\infty(\Omega)$ containing $\varphi$ and $u$, respectively by finite dimensional spaces $W_h$ and $V_h$. For those spaces should hold a analogous equation as we have in the variational form stated in \eqref{eq: variational formulation}.\\
 The finite space $W_h$ is called \emph{test space} and its elements are called \emph{test functions}. $V_h$ is referred to as \emph{ansatz} or \emph{trial space}, the contained functions accordingly \emph{ansatz} or \emph{trial functions}. To ensure the boundary condition \eqref{eq: poisson bc} we demand $u_h|_{\partial \Omega} = g$ for every $u_h \in V_h$.
 
@@ -270,18 +274,17 @@ Furthermore we can express $u_h$ as the linear combination of basis functions, n
 
 Altogether a finite element method for the generalised Poisson equation is defined by the bilinearform $a$ and the functional $b$ together with the choice of $W_h$ and $V_h$. Its computations consist of the assembling process where the matrices $M$ and the right-hand side vector $b$ are computed and the solving process of the resulting linear system of equations.\\
 The error made by restriction to finite elements is characterised by the following Lemma.
-\begin{lemma}[C\'ea Lemma{, \cite[4.2]{Braess2003}}] \label{la: Ceas lemma}
+\begin{lemma}[C\'ea Lemma{, \cite[(2.8.5)]{BS2002}}] \label{la: Ceas lemma}
 	Let the bilinear form $a$ be $V$ elliptic with $H_0^m \subset V \subset H^m(\Omega) $, i.e. $0 < \alpha \leq C$ exist with
 	\[
 		a(u,u) \geq \alpha  \norm u ^2_V \text{ and } |a(v,u)| \leq C \norm u _V \norm v _V.
 	\]
 	Then for the solution $u_h$ of \eqref{eq: FE variational formulation}  holds
 	\begin{align}
-		\norm {u - u_h}_V \leq \frac C \alpha \inf\limits_{v_h \in V_h} \norm {u-v_h}_V.
+		\norm {u - u_h}_V \leq \frac C {\sqrt \alpha} \inf\limits_{v_h \in V_h} \norm {u-v_h}_V.
 	\end{align}
 \end{lemma}
 This result shows that the quality of the finite element solution depends on the one hand on the problem parameters $\alpha$ and $C$, but on the other hand particularly on the approximation properties of $V_h$. A typical choice for the function spaces $W_h$ and $V_h$ are piecewise polynomials spaces which have good approximation properties and are easy to handle.
-\todo{sqrt}
 
 \section{Discontinuous Galerkin} \label{sec: SIPG}
 A recent idea is to to include discontinuous functions when choosing the test and ansatz spaces. This approach arose in the context of hyperbolic PDEs whose solutions eventually contain discontinuities, later it was also applied to elliptic PDEs \cite{ABC+2002}. Although the generalised Poisson problem is not hyperbolic and its solutions are continuous we use this example to explain the issues arising when the finite element spaces are extended to discontinuities. The crux is the handling of function evaluations along discontinuities. Note that for discontinuous ansatz spaces it is no longer true that they are subspaces of $H^1(\Omega)$ which contains the weak solution of the generalised Poisson problem. That implies that C\'eas Lemma \ref{la: Ceas lemma} is not valid. Elements which include ansatz space not contained in $H^1(\Omega)$ are also referred to as non-conforming elements.

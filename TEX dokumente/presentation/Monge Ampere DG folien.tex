@@ -30,7 +30,7 @@
 \usepackage{subcaption}
 \usepackage{ltxtable}
 \usepackage{float}
-\usepackage{pgfplotstable, booktabs} %to generate tables from data files
+%\usepackage{pgfplotstable, booktabs} %to generate tables from data files
 
 
 \usepackage{../Arbeit/makros}
@@ -122,7 +122,7 @@ Applications areas of equation of \MA type
 \end{itemize} 
 \end{frame}
 
-\subsection{Existence and Uniqueness}
+%\subsection{Existence and Uniqueness}
 \begin{frame}{Existence}
 	Let $F$ be the \MA operator, i.e. $F= \detHess{u} - f$
 	\begin{itemize}
@@ -149,7 +149,7 @@ Applications areas of equation of \MA type
 	%u-\varphi hat ein maximum(minimum), d.h. DF(u-\varphi)\leq(\geq)
 \end{frame}
 
-\subsection{Numerical Schemes}
+%\subsection{Numerical Schemes}
 \begin{frame}{Numerical Schemes}
 They can roughly be divided into four categories \cite[p.210]{FGN2013}: 
 \begin{enumerate}
@@ -161,119 +161,8 @@ They can roughly be divided into four categories \cite[p.210]{FGN2013}:
 
 \end{frame}
 
-
-\section {DG Methods}
-
-\begin{frame}
-Naive Ansatz:
-\begin{align*}
-	\myIntX {\Omega} {\mydet {D^2 u} v} = \myIntX \Omega {fv} \qquad \text{ for all test functions } v. %\label{eq: naiv ansatz}
-\end{align*}
-
-\begin{figure}[H]
-	\input{../Arbeit/feDiagram.pgf}
-	\caption{An abstract diagram about the relation between weak and strong linear operators. The diagram is taken from \cite[Fig 2.2]{FGN2013}}
-%		\label{fig: fe diagram}	
-	\end{figure}
-\end{frame}
-
-\subsection{A $C^0$ Penalty Method }
-\begin{frame}
-In \cite{BGN+2011} Brenner et alt. develop a method for $C^0$ elements
-\pause
-
-They add terms to the \quoting{naive ansatz} such that 
-\begin{align*}
-	\bilin {F (u+w)} v = \bilin {L_{u,h} w} v + \bilin {Rw} v,
-\end{align*}
-where $L_{u,h}$ is a stable and consistent discretisation of $L_u$.
-
-\end{frame}
-
-\begin{frame}
-Let $V_h$ be ...
-\begin{block}{A $C^0$ penalty method for the MA problem }
-Find $u_h \in V_h$ such that
-\begin{align*}
-	&\myIntX {\Omega} {\left(f-\mydet {D^2_h u_h}\right) v_h} 
-	+ \sum_{e \in \edgesi} \myIntS e { \jump {\average{\mycof{D^2 u_h} } \nabla u_h} v_h} \\
-	&- \sum_{e \in \edgesb} \myIntS e { \jump{ \average{\mycof{D^2 u_h} } \nabla v_h} (u_h -g)} \\
-	&+ \sigma  \sum_{e \in \edgesb} \frac 1 {h_e} \myIntS e { (u_h -g)} \; = 0 \qquad \forall v_h \in V_h %\label{eq: brenner method}
-\end{align*}
-\end{block}
-\end{frame}
-
-\subsection{A Finite Element Method based on a Discrete Hessian}
-
-
-\def \boxContent {		The discrete Hessian $D_{DH}^2 u$ of $u$ is the unique function which satisfy for all $B \in \Sigma_h=[\mathcal{P}_h^k]^{d \times d}$
-		\begin{align*}
-			\myIntX  \Omega { (D_{DH}^2 u : B) }
-			= \myIntX  \Omega { D^2_h u: B}
-				 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average B \nabla u }}. %\label{eq: discrete hessian}
-		\end{align*}}
-
-\begin{frame}
-The Hessian fulfils for all $B \in [H^1(\Omega)]^{d \times d}$
-	\begin{align}
-		\myIntX  \Omega { (D^2 u : B)} = 
-			- \myIntX  \Omega { \left(\nabla \cdot B\right) \cdot \nabla u} 
-			+ \myIntS {\partial \Omega}  {B \nabla u \; \mathbf {n}}, \label{eq: part int hessian}
-	\end{align}
-	\onslide<2->{ the piecewise Hessian in general not.}
-\begin{overlayarea}{\textwidth}{0.7\textheight}
-	\only<3>{
-		\vspace{1cm}
-		Idea by Lakkis and Pryer \cite{LP2011} and generalised by Neilan \cite{Neilan2014}: \\
-		Replace Hessian by a discrete counterpart such that \eqref{eq: part int hessian} holds.		
-	}
-	\onslide<4->
-	{
-	\begin{block}{Definition of Discrete Hessian}
-		\boxContent
-	\end{block}
-	}
-	
-	\onslide<5-> {Note that in general the discrete Hessian is not symmetric.}
-	\end{overlayarea}
-\end{frame}
-
-\begin{frame}
-\begin{block}{A FE Method based on a Discrete Hessian}
-Find $u_h \in V_h$ such that
-\begin{align*}
-		\myIntX  \Omega { \left(\mydet{D_{DH}^2 u_h} - f \right) v_h} = 0 \qquad \forall v_h \in V_h, %\label{eq: neilan eq1}
-\end{align*}
-where $D_{DH}^2 u_h$ satisfies for all $B_h \in \Sigma_h$
-	\begin{align*}
-		\myIntX  \Omega { (D_{DH}^2 u_h : B_h) }
-		= \myIntX  \Omega { D^2_h u_h: B_h}
-			 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average {B_h} \nabla u_h }}. %\tag{\ref{eq: discrete hessian}}
-	\end{align*}
-\end{block}
-\end{frame}
-
-\begin{frame}
-Special case for polynomial degree $k=1$
-
-\begin{block}{A FE Method based on a Discrete Hessian}
-Find $u_h$ in $V_h$ such that for all $v \in V_h$
-\begin{align*}
-		\myIntX  \Omega { \left(\mydet{D_{DH}^2 u_h} - f \right) v_h}+ \textcolor{red}{\sum_{e \in \edgesi} \sigma |e |\myIntS e {\jump{ \nabla u} \jump {\nabla v}}} = 0, %\label{eq: neilan eq1}
-\end{align*}
-where $D_{DH}^2 u_h$ satisfies for all $B_h \in \Sigma_h$
-	\begin{align*}
-		\myIntX  \Omega { (D_{DH}^2 u_h : B_h) }
-		= \myIntX  \Omega { D^2_h u_h: B_h}
-			 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average {B_h} \nabla u_h }}. %\tag{\ref{eq: discrete hessian}}
-	\end{align*}
-\end{block}
-\end{frame}
-
-
-
 \section{A Discontinuous Galerkin Method for the \MA Equation}
-\subsection{Motivation}
+%\subsection{Motivation}
 \begin{frame}{Picard Linearisation}
 \begin{itemize}
 \item Convection term: $\nabla \cdot (A(u) \nabla u )$
@@ -301,32 +190,32 @@ where $D_{DH}^2 u_h$ satisfies for all $B_h \in \Sigma_h$
 	\visible<4->{\Leftrightarrow \;& \begin{pmatrix} w_{yy} & -w_{xy}  \\ -w_{yx} & w_{xx} \end{pmatrix}: \begin{pmatrix} v_{xx} & v_{yx}  \\  v_{xy} & v_{yy} \end{pmatrix} = 2f.} \\
 	\visible<5->{\Leftrightarrow \; &\mycof {D^2 w }:D^2 v  = 2f.} \\
 	\visible<6->{\Leftrightarrow \; &
-		- \nabla \cdot \left( \mycof{ D^2 w} \nabla v \right)  = -2f.  %\label{eq:decoupled PDE}
+		- \nabla \cdot \left( \mycof{ D^2 w} \nabla v \right)  = -2f. 
 	}
 \end{align*}
 \visible<7->{$\Rightarrow$ For fixed $w$ it is a Generalised Poisson equation in $v$}
 \end{frame}
 
-\begin{frame}{SIPG Formulation of a Picard Step}
-	%\begin{block}
-	Symmetric Interior Penalty Galerkin (SIPG) formulation: \\
-	Find $u_h \in \mathcal P^k_h$ such that for all $v_h \in \mathcal P^k_h$
-	\begin{align*}
-	 &\myIntX {\Omega} {\nabla v_h \cdot \cof(D_h^2 u_h^{i}) \nabla u_h^{i+1}}
-	  -\sum\limits_{e \in \edges}\myIntS e { \jump {v_h \average { \cof(D_h^2 u^{i}) \nabla u_h^{i+1}} }} \\
-	 &- \sum\limits_{e \in \edges}\myIntS e { \jump {u_h^{i+1} \average{ \cof(D^2 u_h^{i}) \nabla v_h} }} %\nonumber\\  
-	   +\sum\limits_{e \in \edgesi} \myIntS e { \frac \sigma {|e|} \jump {v_h}  \jump {u_h^{i+1}}}\nonumber\\
-	    =& - 2 \myIntX {\Omega} {v_h f}
-	    	 				-\sum\limits_{e \in \edgesb}\myIntS e {g \cof(D_h^2 u_h^{i}) \nabla v_h \cdot n }
-	    	 				+\sum\limits_{e \in \edgesb} \myIntS e { \frac \sigma {|e|} v_h g}    \qquad \forall v_h \in  \mathcal P^k_h.
-	    	\label{eq: sipg iteration}
-	\end{align*}	
-	\ %end{block}
+\begin{frame}{Picard Iteration}
+	Given an initial guess $u_h^0$ solve for $n \in \N$
+	\begin{align}
+		- \nabla \cdot \left( \cofHessH{u_h^n} \nabla u_h^{n+1} \right)  = -2f \label{eq: Picard Iteration}
+	\end{align}
+	via the Symmetric Interior Penalty Galerkin (SIPG) method.
+
+	\pause
+	\begin{itemize}
+		\item \eqref{eq: Picard Iteration} is a generalised Poisson equation \\
+			\pause $\rightarrow$ i.e. linear in the second derivatives of $u_h^{n+1}$
+		\item discontinuous elements because $\cofHessH{u_h^n}$ is discontinuous for low polynomial degrees
+	\end{itemize}
+
 \end{frame}
 
-\subsection{Challenges for the Picard Iteration}
+%\subsection{Challenges for the Picard Iteration}
 \begin{frame}{Initial Guess}
-In \cite[Remark 2.1]{DG2006a} has been shown a good guess is the solution of
+%In \cite[Remark 2.1]{DG2006a} 
+It has been shown a good guess is the solution of
 \begin{align*}
 	\triangle u &= \sqrt{2f} \text{ in } \Omega, \\ 
 	u &= g \text{ on }\partial \Omega.
@@ -490,7 +379,7 @@ Find the B\'ezier coefficients $c$ minimising
 \end{frame}
 
 
-\subsection{Algorithm for the Picard Iteration}
+%\subsection{Algorithm for the Picard Iteration}
 
 \begin{frame}
 \begin{algorithm}[H]
@@ -502,7 +391,8 @@ Find the B\'ezier coefficients $c$ minimising
 \While {$h < H$}
 	\State $i \gets 0$
 	\While {$i < i_{max} $}
-		\State $u_i \gets$ solution of Generalised Poisson problem with modified cofactor matrix
+		\State $\sigma \gets \sigma /\lambda(\hess{u_h^{i-1}}) $
+		\State $u_i \gets$ sol of generalised Poisson problem w. modified cofactor matrix
 		\State (convexify)
 		\State $u_i \gets \alpha u_{i-1} + (1-\alpha)u_i $ \Comment convex combination
 		\State $i \gets i+1$
@@ -515,6 +405,114 @@ Find the B\'ezier coefficients $c$ minimising
 \end{algorithm}
 \end{frame}
 
+
+
+\section {DG Methods}
+
+\begin{frame}
+Naive Ansatz:
+\begin{align*}
+	\myIntX {\Omega} {\mydet {D^2 u} v} = \myIntX \Omega {fv} \qquad \text{ for all test functions } v. %\label{eq: naiv ansatz}
+\end{align*}
+
+\begin{figure}[H]
+	\input{../Arbeit/feDiagram.pgf}
+	\caption{An abstract diagram about the relation between weak and strong linear operators. The diagram is taken from \cite[Fig 2.2]{FGN2013}}
+%		\label{fig: fe diagram}	
+	\end{figure}
+\end{frame}
+
+\subsection{A $C^0$ Penalty Method }
+\begin{frame}{A $C^0$ Penalty Method of Brenner et al.}
+In \cite{BGN+2011} Brenner et alt. develop a method for $C^0$ elements
+\pause
+
+They add terms to the \quoting{naive ansatz} such that 
+\begin{align*}
+	\bilin {F (u+w)} v = \bilin {L_{u,h} w} v + \bilin {Rw} v,
+\end{align*}
+where $L_{u,h}$ is a stable and consistent discretisation of $L_u$.
+
+\end{frame}
+
+%\begin{frame}
+%Let $V_h$ be ...
+%\begin{block}{A $C^0$ penalty method for the MA problem }
+%Find $u_h \in V_h$ such that
+%\begin{align*}
+%	&\myIntX {\Omega} {\left(f-\mydet {D^2_h u_h}\right) v_h} 
+%	+ \sum_{e \in \edgesi} \myIntS e { \jump {\average{\mycof{D^2 u_h} } \nabla u_h} v_h} \\
+%	&- \sum_{e \in \edgesb} \myIntS e { \jump{ \average{\mycof{D^2 u_h} } \nabla v_h} (u_h -g)} \\
+%	&+ \sigma  \sum_{e \in \edgesb} \frac 1 {h_e} \myIntS e { (u_h -g)} \; = 0 \qquad \forall v_h \in V_h %\label{eq: brenner method}
+%\end{align*}
+%\end{block}
+%\end{frame}
+
+\subsection{A Finite Element Method based on a Discrete Hessian}
+
+\def \boxContent {	The discrete Hessian $D_{DH}^2 u$ of $u$ is the unique function which satisfy for all $B \in \Sigma_h=[\mathcal{P}_h^k]^{d \times d}$
+		\begin{align*}
+			\myIntX  \Omega { (D_{DH}^2 u : B) }
+			= \myIntX  \Omega { D^2_h u: B}
+				 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average B \nabla u }}. %\label{eq: discrete hessian}
+		\end{align*}}
+
+\begin{frame}
+The Hessian fulfils for all $B \in [H^1(\Omega)]^{d \times d}$
+	\begin{align}
+		\myIntX  \Omega { (D^2 u : B)} = 
+			- \myIntX  \Omega { \left(\nabla \cdot B\right) \cdot \nabla u} 
+			+ \myIntS {\partial \Omega}  {B \nabla u \; \mathbf {n}}, \label{eq: part int hessian}
+	\end{align}
+	\onslide<2->{ the piecewise Hessian in general not.}
+\begin{overlayarea}{\textwidth}{0.7\textheight}
+	\only<3>{
+		\vspace{1cm}
+		Idea by Lakkis and Pryer \cite{LP2011} and generalised by Neilan \cite{Neilan2014}: \\
+		Replace Hessian by a discrete counterpart such that \eqref{eq: part int hessian} holds.		
+	}
+	\onslide<4->
+	{
+	\begin{block}{Definition of Discrete Hessian}
+		\boxContent
+	\end{block}
+	}
+	
+	\onslide<5-> {Note that in general the discrete Hessian is not symmetric.}
+	\end{overlayarea}
+\end{frame}
+
+\begin{frame}
+\begin{block}{A FE Method based on a Discrete Hessian}
+Find $u_h \in V_h$ such that
+\begin{align*}
+		\myIntX  \Omega { \left(\mydet{D_{DH}^2 u_h} - f \right) v_h} = 0 \qquad \forall v_h \in V_h, %\label{eq: neilan eq1}
+\end{align*}
+where $D_{DH}^2 u_h$ satisfies for all $B_h \in \Sigma_h$
+	\begin{align*}
+		\myIntX  \Omega { (D_{DH}^2 u_h : B_h) }
+		= \myIntX  \Omega { D^2_h u_h: B_h}
+			 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average {B_h} \nabla u_h }}. %\tag{\ref{eq: discrete hessian}}
+	\end{align*}
+\end{block}
+\end{frame}
+
+\begin{frame}
+Special case for polynomial degree $k=1$
+
+\begin{block}{A FE Method based on a Discrete Hessian}
+Find $u_h$ in $V_h$ such that for all $v \in V_h$
+\begin{align*}
+		\myIntX  \Omega { \left(\mydet{D_{DH}^2 u_h} - f \right) v_h}+ \textcolor{red}{\sum_{e \in \edgesi} \sigma |e |\myIntS e {\jump{ \nabla u} \jump {\nabla v}}} = 0, %\label{eq: neilan eq1}
+\end{align*}
+where $D_{DH}^2 u_h$ satisfies for all $B_h \in \Sigma_h$
+	\begin{align*}
+		\myIntX  \Omega { (D_{DH}^2 u_h : B_h) }
+		= \myIntX  \Omega { D^2_h u_h: B_h}
+			 -\sum_{ e \in \edgesi} \myIntS e {  \jump {\average {B_h} \nabla u_h }}. %\tag{\ref{eq: discrete hessian}}
+	\end{align*}
+\end{block}
+\end{frame}
 
 
 \section{Numerical Results}
@@ -543,51 +541,51 @@ Smooth Test Problem:
 \begin{figure}[H]
 \centering
 	\includegraphics[width=0.95\textwidth]{../Arbeit/plots/MA1_Brenner_l2.pdf}
-	\caption{$L^2$ errors for Test \ref{test smooth}}
+	\caption{$L^2$ errors for the smooth test case}
 	\label{fig: Brenner test1}
 \end{figure}
 \end{frame}
 
-\newcommand{\readData}[2]{
-	\pgfplotstableread{../Arbeit/data/#1_l2errornorm} #2
-	
-	\pgfplotstablecreatecol[copy column from table={../Arbeit/data/#1_h1errornorm}{h1error}] {h1error} #2
-	
-	\pgfplotstablecreatecol[copy column from table={../Arbeit/data/#1_newtonSteps}{steps}] {N} #2
-}
+%\newcommand{\readData}[2]{
+%	\pgfplotstableread{../Arbeit/data/#1_l2errornorm} #2
+%	
+%	\pgfplotstablecreatecol[copy column from table={../Arbeit/data/#1_h1errornorm}{h1error}] {h1error} #2
+%	
+%	\pgfplotstablecreatecol[copy column from table={../Arbeit/data/#1_newtonSteps}{steps}] {N} #2
+%}
 
-\readData{MA3_Brenner_deg2}{\MAThreeBrennerTwo}
-\readData{MA3_Brenner_deg3}{\MAThreeBrennerThree}
+%\readData{MA3_Brenner_deg2}{\MAThreeBrennerTwo}
+%\readData{MA3_Brenner_deg3}{\MAThreeBrennerThree}
 
-\begin{frame}
-
-\begin{table}[h]
-\centering
-	\begin{subtable}[b]{0.45\textwidth}
-		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-				    every row 0 column 0/.style={set content=init},
-		]\MAThreeBrennerTwo
-    	\caption{Error for $k=2$}
-    \end{subtable}
-   ~
-	\begin{subtable}[b]{0.45\textwidth}
-		\centering
-		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
-				    every row 0 column 0/.style={set content=init},
-				    every row 0 column 0/.style={set content=init},
-				    every row 3 column 1/.style={set content=-},
-				    every row 3 column 2/.style={set content=-},
-				    every row 3 column 3/.style={set content=-},
-				    every row 4 column 1/.style={set content=-},
-				    every row 4 column 2/.style={set content=-},
-				    every row 4 column 3/.style={set content=-},
-		]\MAThreeBrennerThree
-    	\caption{Error for $k=3$}
-    \end{subtable}	\caption{Errors for Test \ref{test singularity}}
-	\label{tab: l2 errors test 3 Brenner}
-\end{table}
-\end{frame}
+%\begin{frame}
+%
+%\begin{table}[h]
+%\centering
+%	\begin{subtable}[b]{0.45\textwidth}
+%		\centering
+%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+%				    every row 0 column 0/.style={set content=init},
+%		]\MAThreeBrennerTwo
+%    	\caption{Error for $k=2$}
+%    \end{subtable}
+%   ~
+%	\begin{subtable}[b]{0.45\textwidth}
+%		\centering
+%		\pgfplotstabletypeset[columns={iterations, l2error, h1error,N},
+%				    every row 0 column 0/.style={set content=init},
+%				    every row 0 column 0/.style={set content=init},
+%				    every row 3 column 1/.style={set content=-},
+%				    every row 3 column 2/.style={set content=-},
+%				    every row 3 column 3/.style={set content=-},
+%				    every row 4 column 1/.style={set content=-},
+%				    every row 4 column 2/.style={set content=-},
+%				    every row 4 column 3/.style={set content=-},
+%		]\MAThreeBrennerThree
+%    	\caption{Error for $k=3$}
+%    \end{subtable}	\caption{Errors for Test \ref{test singularity}}
+%	\label{tab: l2 errors test 3 Brenner}
+%\end{table}
+%\end{frame}
 
 \subsection{A FE Method based on the Discrete Hessian}
 
@@ -623,12 +621,54 @@ Smooth Problem solved with additional gradient penalty
 	\begin{figure}[H]
 	\centering
 	\includegraphics[ %trim = 3cm 4cm 0cm 2cm,
-	width=\textwidth]{../Arbeit/plots/MA1_Neilan_GradJump_l2.pdf}
+	width=\textwidth]{../Arbeit/plots/MA1_Neilan_GradJump_h1.pdf}
 %		\caption{$L^2$ error with grad penalty}
 	\end{figure}
 \end{frame}
 
+\subsection{Picard Iteration}
 \begin{frame}
+Smooth Problem solved with Picard Iteration
+\vspace{-.75cm}
+	\begin{figure}[H]
+	\centering
+	\includegraphics[ %trim = 3cm 4cm 0cm 2cm,
+	width=\textwidth]{../Arbeit/plots/MA1.pdf}
+%		\caption{$L^2$ error with grad penalty}
+	\end{figure}
+\end{frame}
+
+
+\section{Conclusion and Perspective}
+
+\begin{frame}{Conclusion}
+	\begin{itemize}
+		\item derived a new DG using Picard linearisation
+		\item the $C^0$ penalty method developed by Brenner et al. yields good results for smooth cases, but fails in non-smooth cases
+		\item the method based on a discrete Hessian improved by Neilan converges in smooth cases as well as in non-smooth tests
+		\item the Picard type iteration converges on coarse grids, but is unstable on finer grids
+		\item Neilan's method requires a lot of degrees of freedom
+		\item current DG methods are applicable for problems with smooth solutions
+	\end{itemize}
+\end{frame}
+
+%\subsection{Conclusion}
+	
+\begin{frame}{Perspective}
+	\begin{itemize}
+		\item decoupled PDE has more solutions than the solution $v=w$
+		\item apply theory developed for Picard linearisations of convection terms
+		\item implemented convexification not useful, may only convexify on finer grids
+		\item extension to right-hand sides depending on $u$ and $\nabla u$ and more complicated left-hand sides
+		\item three-dimensional case
+		\item analysis of the impact of the gradient penalty term
+	\end{itemize}
+\end{frame}
+
+
+%\subsection{Perspective}
+
+\begin{frame}[allowframebreaks]{References}
 \bibliography{../Arbeit/my_additional_bibliography.bib}
 \bibliographystyle{plain}
 \end{frame}
