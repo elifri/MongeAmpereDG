@@ -411,7 +411,7 @@ The result follows from the monotonicity of the square root and the fact $a \geq
 	If we can find values for $\sigma$ and $\varepsilon$ such that $\lambda-\varepsilon \frac C \sigma$ and $-\frac 1 \varepsilon +1$ are positive we can estimate the right-hand side by $\min{\{\lambda-\varepsilon \frac C \sigma,-\frac 1 \varepsilon +1\}} \eNormTwo{v}^2$ and proved the desired coercivity. 
 	Clearly, taking $\varepsilon$ to be larger than one ensures that the second term is positive. The first term is also positive if we choose $\sigma$ to be larger than $\frac {\varepsilon C} \lambda$.
 	
-	Now that we have seen that $a_h^{DG}$ is coercive on $V_h$, we may apply classical existence and uniqueness theory, namely the Lax-Milgram theorem and thus deduce the inversibilty in $V_h$.
+	Hence, we have that $a_h^{DG}$ is coercive on $V_h$. Since $V_h$ equipped with $\eNorm{\cdot}$ is a Hilbert space we may apply classical existence and uniqueness theory, namely the Lax-Milgram theorem and thus deduce the inversibility in $V_h$.
 \end{proof}
 Note that this proof depends highly on the smallest eigenvalue of the diffusion matrix $A$. If it has a very small eigenvalue then the coercivity constant $\alpha$ is also small.
 Additionally a small eigenvalue forces the penalty parameter to be chosen large. But a large penalty parameter yields to a larger condition number of the stiffness matrix.

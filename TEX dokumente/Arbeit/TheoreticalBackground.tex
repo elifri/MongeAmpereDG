@@ -195,8 +195,8 @@ Before we discuss numerical schemes for the \MA equation we shortly recall how a
 
 %\subsection{The Poisson Problem}
 
-\begin{definition}[generalised Poisson Problem] \label{def: General Poisson Problem}
-The \emph{generalised Poisson Problem} is finding a function $u:\Omega \rightarrow \R$ such that 
+\begin{definition}[Generalised Poisson Problem] \label{def: General Poisson Problem}
+The \emph{generalised Poisson problem} is finding a function $u:\Omega \rightarrow \R$ such that 
 \begin{align}
 	-\nabla \cdot (A \nabla u) = f \qquad &\text{ in }\Omega \label{eq: poisson eq} \\
 	u = g \qquad &\text{ on } \partial \Omega    \label{eq: poisson bc}
@@ -205,32 +205,37 @@ for $ A:\Omega^d \rightarrow \R^{d \times d}$ symmetric and functions $f,g:\Omeg
 Because of the physical context of this PDE the matrix $A$ is also referred to as \emph{diffusion matrix}.
 \end{definition}
 
-\todo{homogene randdaten}
+First, we note that we can reduce all general Poisson problems with Dirichlet boundary data to problems with \emph{homogeneous boundary data}, i.e. $g(x) = 0$ for all $x \in \partial \Omega$: Let us assume $\tilde g$ is defined on all of $\Omega$ with $\tilde g = g$ on $\partial \Omega$. Due to the linearity of the differential operators we have that $v:=u-\tilde g$ satisfies
+\begin{align}
+	-\nabla \cdot (A \nabla v) &= f + \nabla \cdot (A \nabla \tilde g)  \qquad &&\text{ in }\Omega \label{eq: poisson homogeneous eq} \\
+	v &= 0 \qquad &&\text{ on } \partial \Omega.    \label{eq: poisson homogeneous bc}
+\end{align}
+Hence, we can restrict ourselves to the case with homogeneous boundary data.
 
 We are now able to set up a \emph{weak formulation} of the generalised Poisson problem based on variational principles, this formulation is the key element for deriving a finite element method.
 
 Due to the main theorem of variational analysis every classical solution to \eqref{eq: poisson eq} is fulfils 
 \begin{align}
 	-\myIntX \Omega {\varphi \nabla \cdot (A \nabla u)}=
-	 \myIntX \Omega {\varphi f} \qquad \forall \varphi \in C^\infty(\Omega), \label{eq: variational form}
+	 \myIntX \Omega {\varphi f} \qquad \forall \varphi \in C_0^\infty(\Omega), \label{eq: variational form}
 \end{align}
 and vice versa.
 Integration by parts yields to
 \begin{align*}
 	\myIntX \Omega {\nabla \varphi  \cdot A\nabla u}
-		-\myIntS  {\partial \Omega} { \varphi (A\nabla u) \mathbf{n} }
-	= \myIntX  \Omega { \varphi f } \qquad \forall \varphi \in C^\infty(\Omega). %\label{eq: FE integration by parts}
+		%-\myIntS  {\partial \Omega} { \varphi (A\nabla u) \mathbf{n} }
+	= \myIntX  \Omega { \varphi f } \qquad \forall \varphi \in C_0^\infty(\Omega). %\label{eq: FE integration by parts}
 \end{align*}
 The last statement can be reformulated to the so called variational form 
 \begin{align}
-a(\varphi,u)  = b(\varphi) \qquad \forall \varphi \in C^\infty(\Omega). \label{eq: variational formulation}
+a(\varphi,u)  = b(\varphi) \qquad \forall \varphi \in C_0^\infty(\Omega). \label{eq: variational formulation}
 \end{align}
-with the bilinear form $a:C^\infty(\Omega) \times X \rightarrow \R$
+with the bilinear form $a:C_0^\infty(\Omega) \times X \rightarrow \R$
 \begin{align*}
 a(\varphi,u) = \myIntX  \Omega { \nabla \varphi  \cdot A\nabla u }
-	 -\myIntS  {\partial \Omega} { \varphi (A\nabla u) \mathbf{n}}
+	% -\myIntS  {\partial \Omega} { \varphi (A\nabla u) \mathbf{n}}
 \end{align*}
-where $X$ is a function space we define in a moment and the functional $b:C^\infty(\Omega) \rightarrow \R$
+where $X$ is a function space we define in a moment and the functional $b:C_0^\infty(\Omega) \rightarrow \R$
 \begin{align*}
  b(\varphi)  = \myIntX  \Omega { \varphi f}.
 \end{align*}
@@ -243,13 +248,11 @@ Note that due to the lack of regularity weak solutions may not be restricted to 
 
 The generalised Poisson problem is well-posed in the sense that it has a unique weak solution if $A$ is positive definite and $f\in L^2(\Omega)$. This is mainly due to the ellipticity of the PDE (and as a consequence thereof the ellipticity of $a$). Thus, it is possible to apply the Lax-Milgram theorem and a maximum principle. For an analysis we refer the interested reader to \cite[Chapter~6]{Evans1998}.
 
-On the left-hand side in the weak notation only first derivatives of $u$ appear, hence \eqref{eq: variational formulation} is also applicable for functions $u$ which are not twice differentiable. It turns out that the previously defined Sobolev spaces are well-suited candidates for the space $X$ containing weak solutions \cite[Chapter 1]{BS2002}. Therefore we search for the solution of the infinite-dimensional problem: Find $u\in H^1(\Omega)$ such that  $a(\varphi,u)  = b(\varphi) \;\forall \varphi \in C^\infty(\Omega)$ holds. % $\forall \varphi \in C^\infty(\Omega)$.
+On the left-hand side in the weak notation only first derivatives of $u$ appear, hence \eqref{eq: variational formulation} is also applicable for functions $u$ which are not twice differentiable. It turns out that the previously defined Sobolev spaces are well-suited candidates for the space $X$ containing weak solutions \cite[Chapter 1]{BS2002}. Therefore we search for the solution of the infinite-dimensional problem: Find $u\in H_0^1(\Omega)$ such that  $a(\varphi,u)  = b(\varphi) \;\forall \varphi \in C_0^\infty(\Omega)$ holds. % $\forall \varphi \in C^\infty(\Omega)$.
 
-First, we can reduce all general Poisson problems with Dirichlet boundary data to \emph{problems with homogen boundary data}, i.e. $g \equiv 0$. Let us assume an $\tilde g \in H^1(\Omega)$ such that $g=\tilde g$ on $\partial \Omega$. Hence we can rewrite the problem as: Find  $u-g \in H^1_0(\Omega)$ such that  $a(\varphi,u)  = b(\varphi) \;\forall \varphi \in C^\infty(\Omega)$ holds.
+The main idea of the finite element method is to approximate the two function spaces, namely the spaces $H_0^1(\Omega)$ and $C_0^\infty(\Omega)$ containing $\varphi$ and $u$, respectively by finite dimensional spaces $W_h$ and $V_h$. For those spaces should hold a analogous equation as we have in the variational form stated in \eqref{eq: variational formulation}.
 
-
-The main idea of the finite element method is to approximate the two function spaces, namely the spaces $H^1(\Omega)$ and $C^\infty(\Omega)$ containing $\varphi$ and $u$, respectively by finite dimensional spaces $W_h$ and $V_h$. For those spaces should hold a analogous equation as we have in the variational form stated in \eqref{eq: variational formulation}.\\
-The finite space $W_h$ is called \emph{test space} and its elements are called \emph{test functions}. $V_h$ is referred to as \emph{ansatz} or \emph{trial space}, the contained functions accordingly \emph{ansatz} or \emph{trial functions}. To ensure the boundary condition \eqref{eq: poisson bc} we demand $u_h|_{\partial \Omega} = g$ for every $u_h \in V_h$.
+The finite space $W_h$ is called \emph{test space} and its elements are called \emph{test functions}. $V_h$ is referred to as \emph{ansatz} or \emph{trial space}, the contained functions accordingly \emph{ansatz} or \emph{trial functions}. According to the boundary conditions of the original function spaces we demand for the finite spaces that $u_h|_{\partial \Omega} = 0$ for every $u_h \in V_h \cup W_h$.
 
 Usually these limited function spaces are based on a discretisation of $\Omega$ and are only piecewise smooth. Consequently, we have to replace all operators appearing in $a$ by operators defined on $W_h \cup V_h$. We denote these discretised versions using the subscript $h$.
 
@@ -259,7 +262,7 @@ a_h(w_h,u_h) = b_h(w_h) \qquad \forall w_h \in W_h. \label{eq: FE variational fo
 \end{align}
 with the bilinearform  $a_h:W_h \times V_h \rightarrow \R$
 \begin{align*}
-a_h(w_h,u_h)  = \myIntX  \Omega { \nabla w_h  \cdot A\nabla u_h} -\myIntS  {\partial \Omega} { w_h (A\nabla u_h) \mathbf{n}}
+a_h(w_h,u_h)  = \myIntX  \Omega { \nabla w_h  \cdot A\nabla u_h} %-\myIntS  {\partial \Omega} { w_h (A\nabla u_h) \mathbf{n}}
 \end{align*}
 and the function $b:W_h \rightarrow \R$
 \begin{align*}
@@ -287,10 +290,12 @@ The error made by restriction to finite elements is characterised by the followi
 This result shows that the quality of the finite element solution depends on the one hand on the problem parameters $\alpha$ and $C$, but on the other hand particularly on the approximation properties of $V_h$. A typical choice for the function spaces $W_h$ and $V_h$ are piecewise polynomials spaces which have good approximation properties and are easy to handle.
 
 \section{Discontinuous Galerkin} \label{sec: SIPG}
-A recent idea is to to include discontinuous functions when choosing the test and ansatz spaces. This approach arose in the context of hyperbolic PDEs whose solutions eventually contain discontinuities, later it was also applied to elliptic PDEs \cite{ABC+2002}. Although the generalised Poisson problem is not hyperbolic and its solutions are continuous we use this example to explain the issues arising when the finite element spaces are extended to discontinuities. The crux is the handling of function evaluations along discontinuities. Note that for discontinuous ansatz spaces it is no longer true that they are subspaces of $H^1(\Omega)$ which contains the weak solution of the generalised Poisson problem. That implies that C\'eas Lemma \ref{la: Ceas lemma} is not valid. Elements which include ansatz space not contained in $H^1(\Omega)$ are also referred to as non-conforming elements.
+A recent idea is to to include discontinuous functions when choosing the test and ansatz spaces. This approach arose in the context of hyperbolic PDEs whose solutions eventually contain discontinuities, later it was also applied to elliptic PDEs \cite{ABC+2002}. Although the generalised Poisson problem is not hyperbolic and its solutions are continuous we use this example to explain the issues arising when the finite element spaces are extended to discontinuities. The crux is the handling of function evaluations along discontinuities. Note that for discontinuous ansatz spaces it is no longer true that they are subspaces of $H_0^1(\Omega)$ which contains the weak solution of the generalised Poisson problem. That implies that C\'eas Lemma \ref{la: Ceas lemma} is not valid. Elements which include ansatz space not contained in $H_0^1(\Omega)$ are also referred to as non-conforming elements.
 
 %We recall our triangulation $\mathcal{T}_h$ of $\Omega$. 
-If we modify the derivation of the bilinear form defining the finite element method we can develop bilinear forms defined on the function space $V_h = \mathcal P_h^k$ (cf. Definition \ref{def: piecewise polySpace}): Due to the fact that we have discontinuities only along edges we perform the integration by parts in \eqref{eq: variational form} piecewise on every triangle leading to
+If we modify the derivation of the bilinear form defining the finite element method we can develop bilinear forms defined on the function space $V_h = \mathcal P_h^k$ (cf. Definition \ref{def: piecewise polySpace}). The method that we derive asserts the boundary conditions not by the choice of function spaces but force them implicitly in the bilinear form. Hence, we do no assume necessarily homogeneous boundary conditions anymore.
+
+Due to the fact that we have discontinuities only along edges we perform the integration by parts in \eqref{eq: variational form} piecewise on every triangle leading to
 \begin{align}
 	a(v, u) = & \sum_{T \in \triang} \myIntX T {\nabla v \cdot A \nabla u }
 		- \sum_{T \in \triang} \myIntS  {\partial T} { v A \nabla u \cdot \mathbf n}.
