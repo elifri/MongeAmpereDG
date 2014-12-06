@@ -205,37 +205,36 @@ for $ A:\Omega^d \rightarrow \R^{d \times d}$ symmetric and functions $f,g:\Omeg
 Because of the physical context of this PDE the matrix $A$ is also referred to as \emph{diffusion matrix}.
 \end{definition}
 
-First, we note that we can reduce all general Poisson problems with Dirichlet boundary data to problems with \emph{homogeneous boundary data}, i.e. $g(x) = 0$ for all $x \in \partial \Omega$: Let us assume $\tilde g$ is defined on all of $\Omega$ with $\tilde g = g$ on $\partial \Omega$. Due to the linearity of the differential operators we have that $v:=u-\tilde g$ satisfies
-\begin{align}
-	-\nabla \cdot (A \nabla v) &= f + \nabla \cdot (A \nabla \tilde g)  \qquad &&\text{ in }\Omega \label{eq: poisson homogeneous eq} \\
-	v &= 0 \qquad &&\text{ on } \partial \Omega.    \label{eq: poisson homogeneous bc}
-\end{align}
-Hence, we can restrict ourselves to the case with homogeneous boundary data.
+First, we consider problems with \emph{homogeneous boundary data}, i.e. $g(x) = 0$ for all $x \in \partial \Omega$.
 
 We are now able to set up a \emph{weak formulation} of the generalised Poisson problem based on variational principles, this formulation is the key element for deriving a finite element method.
 
 Due to the main theorem of variational analysis every classical solution to \eqref{eq: poisson eq} fulfils 
+\begin{align*}
+	-\myIntX \Omega {\varphi \nabla \cdot (A \nabla u)}=
+	 \myIntX \Omega {\varphi f} \qquad \forall \varphi \in C_0^\infty(\Omega),
+\end{align*}
+and vice versa. Since the Sobolev space $H_0^1(\Omega)$ is the closure of $C_0^\infty(\Omega)$ with respect to the Sobolev norm $\norm \cdot _{H_0^1(\Omega)}$ it holds that
 \begin{align}
 	-\myIntX \Omega {\varphi \nabla \cdot (A \nabla u)}=
-	 \myIntX \Omega {\varphi f} \qquad \forall \varphi \in C_0^\infty(\Omega), \label{eq: variational form}
+	 \myIntX \Omega {\varphi f} \qquad \forall \varphi \in H_0^1(\Omega). \label{eq: variational form}
 \end{align}
-and vice versa.
-Integration by parts yields to
+Integration by parts yields
 \begin{align*}
 	\myIntX \Omega {\nabla \varphi  \cdot A\nabla u}
 		%-\myIntS  {\partial \Omega} { \varphi (A\nabla u) \mathbf{n} }
-	= \myIntX  \Omega { \varphi f } \qquad \forall \varphi \in C_0^\infty(\Omega). %\label{eq: FE integration by parts}
+	= \myIntX  \Omega { \varphi f } \qquad \forall \varphi \in H_0^1(\Omega). %\label{eq: FE integration by parts}
 \end{align*}
 The last statement can be reformulated to the so called variational form 
 \begin{align}
-a(\varphi,u)  = b(\varphi) \qquad \forall \varphi \in C_0^\infty(\Omega). \label{eq: variational formulation}
+a(\varphi,u)  = b(\varphi) \qquad \forall \varphi \in H_0^1(\Omega). \label{eq: variational formulation}
 \end{align}
-with the bilinear form $a:C_0^\infty(\Omega) \times X \rightarrow \R$
+with the bilinear form $a:H_0^1(\Omega) \times X \rightarrow \R$
 \begin{align*}
 a(\varphi,u) = \myIntX  \Omega { \nabla \varphi  \cdot A\nabla u }
 	% -\myIntS  {\partial \Omega} { \varphi (A\nabla u) \mathbf{n}}
 \end{align*}
-where $X$ is a function space we define in a moment and the functional $b:C_0^\infty(\Omega) \rightarrow \R$
+where $X$ is a function space we define in a moment and the functional $b:H_0^1(\Omega)) \rightarrow \R$
 \begin{align*}
  b(\varphi)  = \myIntX  \Omega { \varphi f}.
 \end{align*}
@@ -275,7 +274,7 @@ To construct $u_h$ we first choose a basis $B_W$ of $W_h$ and a basis $B_V$ of $
 Since the left-hand side is linear in $w_h$ we only need to check the equations in \eqref{eq: FE variational formulation} for all $w_h \in B_W$. 
 Furthermore we can express $u_h$ as the linear combination of basis functions, namely $\sum_{p \in B_V} \mathbf{c}_p \; p$ and hence, we can rewrite \eqref{eq: FE variational formulation} as a linear system of equations $M \mathbf{c} = \mathbf{b}$ where  $\mathbf{c}$ is the unknown coefficient vector of $u_h$ to the basis $B_V$.  The matrix $M$ sometimes is named the \emph{system} or \emph{stiffness matrix}.
 
-Altogether a finite element method for the generalised Poisson equation is defined by the bilinearform $a$ and the functional $b$ together with the choice of $W_h$ and $V_h$. Its computations consist of the assembling process where the matrices $M$ and the right-hand side vector $b$ are computed and the solving process of the resulting linear system of equations.\\
+Altogether a finite element method for the generalised Poisson equation with homogeneous boundary data is defined by the bilinearform $a$ and the functional $b$ together with the choice of $W_h$ and $V_h$. Its computations consist of the assembling process where the matrices $M$ and the right-hand side vector $b$ are computed and the solving process of the resulting linear system of equations.\\
 The error made by restriction to finite elements is characterised by the following Lemma.
 \begin{lemma}[C\'ea Lemma{, \cite[(2.8.5)]{BS2002}}] \label{la: Ceas lemma}
 	Let the bilinear form $a$ be $V$ elliptic with $H_0^m \subset V \subset H^m(\Omega) $, i.e. $0 < \alpha \leq C$ exist with
@@ -288,6 +287,13 @@ The error made by restriction to finite elements is characterised by the followi
 	\end{align}
 \end{lemma}
 This result shows that the quality of the finite element solution depends on the one hand on the problem parameters $\alpha$ and $C$, but on the other hand particularly on the approximation properties of $V_h$. A typical choice for the function spaces $W_h$ and $V_h$ are piecewise polynomials spaces which have good approximation properties and are easy to handle.
+
+In the case of inhomogeneous boundary data, namely $g\in H^{1/ 2}(\partial \Omega)$ with $g(x) \neq 0$ for a $x \in \partial \Omega$, we can consider an equivalent problem: Let us assume $\tilde g \in H^1(\Omega)$ with $T\tilde g = g$, where $T$ is the trace operator. Due to the linearity of the differential operators we have that $v:=u-\tilde g \in H^1_0(\Omega)$ satisfies
+\begin{align}
+		a(w,v) &= \langle f,v \rangle + a(\tilde g, v) \qquad &&\forall v \in H_0^1(\Omega). \label{eq: poisson homogeneous eq} %\\
+%	T v &= 0 \qquad %&&\text{ on } \partial \Omega.    \label{eq: poisson homogeneous bc}
+\end{align}
+Hence, we can treat problems with inhomogeneous boundary data by solving corresponding problems with homogeneous boundary data as stated in \eqref{eq: poisson homogeneous eq}.
 
 \section{Discontinuous Galerkin} \label{sec: SIPG}
 A recent idea is to to include discontinuous functions when choosing the test and ansatz spaces. This approach arose in the context of hyperbolic PDEs whose solutions eventually contain discontinuities, later it was also applied to elliptic PDEs \cite{ABC+2002}. Although the generalised Poisson problem is not hyperbolic and its solutions are continuous we use this example to explain the issues arising when the finite element spaces are extended to discontinuities. The crux is the handling of function evaluations along discontinuities. Note that for discontinuous ansatz spaces it is no longer true that they are subspaces of $H_0^1(\Omega)$ which contains the weak solution of the generalised Poisson problem. That implies that C\'eas Lemma \ref{la: Ceas lemma} is not valid. Elements which include ansatz space not contained in $H_0^1(\Omega)$ are also referred to as non-conforming elements.
