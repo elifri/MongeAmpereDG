@@ -1,4 +1,4 @@
-In this chapter we develop a \emph{Picard iteration} aiming to solve the \MA equation. To the author's knowledge this is the first try to apply the \emph{Picard linearisation} on the \MA equation. 
+In this chapter we develop a \emph{Picard iteration} aiming to solve the \MA equation. To the author's knowledge this is the first attempt to apply the \emph{Picard linearisation} on the \MA equation. 
 We first motivate and derive the Picard iteration and its discretisation.
 Afterwards we compare the method with the classical Netwon's method and the $C^0$ penalty method presented in the previous chapter (cf. Section \ref{sec: Brenner method}). We try to transfer results on the penalty method to the newly derived Picard iteration method. 
 In the last section first numerical results are presented. Since the Picard iteration does not perform well on a first example we discuss improvements of the newly derived method.
@@ -9,9 +9,9 @@ For quasilinear PDEs (cf. Definition \ref{def: categories of PDEs}) such as the 
 \[
 	\nabla \cdot (A(u^{i} )\nabla u^{i+1}) = f. %  \quad \text{      and      }\quad \nabla \cdot (A(u^{i+1}) \nabla u^{i}) = f, \text{ respectively}.
 \] 
-This kind of linearisation is also called \emph{Picard linearisation} method and is very favoured to linearise the diffusion term in the Navier-Stokes equations.
+This kind of linearisation is also called \emph{Picard linearisation} method and is very convenient to linearise the diffusion term in the Navier-Stokes equations.
 
-In this spirit we aim to decouple the derivatives in the strongly nonlinear \MA equation such that the decoupled PDEs are linear. 
+In this spirit we aim at decoupling the derivatives in the strongly nonlinear \MA equation such that the decoupled PDEs are linear. 
 
 Before we start, we slightly change the notation: In contrast to the preceding sections we denote the elements of $\Omega \subset \R^2$ by  $(x,y)^t$. To shorten and facilitate terms we refer to their partial derivatives with subscripts as for example $\dxy{x}{y} u = u_{xy}$.
 Thus, the two-dimensional \MA equation \eqref{eq: MA eq} states
@@ -38,7 +38,7 @@ We observe that the left matrix is the cofactor matrix of the Hessian of $w$ (cf
 \begin{align}
 		\mycof {D^2 w }:D^2 v  = 2f. \label{eq:short formula}
 \end{align}
-Note that this derivation of decoupling of $v$ and $w$ is chosen because it is very intuitive. Alternatively \eqref{eq:short formula} can be derived directly from the identity $\mycof {D^2 u }:D^2 u  = d \mydet{D^2 u}$ stated in Lemma \ref{la: rel det cofactor}.
+Note that this derivation of decoupling of $v$ and $w$ is chosen because it is very intuitive. Alternatively, \eqref{eq:short formula} can be derived directly from the identity $\mycof {D^2 u }:D^2 u  = 2 \mydet{D^2 u}$ stated in Lemma \ref{la: rel det cofactor}.
 
 Substituting the identity of Lemma \ref{la: An application of the divergernce product rule} and multiplying with -1 we find
 \begin{align}
@@ -46,7 +46,7 @@ Substituting the identity of Lemma \ref{la: An application of the divergernce pr
 \end{align}
 
 For a fixed $w$ the left-hand side now is linear in $v$ opposed to the strong nonlinearity in $u$ in the original PDE. It is a generalised Poisson equation in $v$ as we have defined in Definition \ref{def: General Poisson Problem}. 
-Furthermore, as it is easy to see in \eqref{eq:decoupled PDE start} the left-hand side is symmetric in $v$ and $w$. Thus, it is natural to examine a sequence of PDEs where alternating either $v$ or $w$ is fixed. 
+Furthermore, as it is easy to see in \eqref{eq:decoupled PDE start} the left-hand side is symmetric in $v$ and $w$. Thus, it is natural to examine a sequence of PDEs where alternately either $v$ or $w$ is fixed. 
 
 Adding the Dirichlet boundary condition we obtain the Picard iteration
 \begin{align}
@@ -57,7 +57,7 @@ Adding the Dirichlet boundary condition we obtain the Picard iteration
 	\end{split}
 \end{align}
 
-Taking a closer look at the derivation of \eqref{eq:decoupled PDE} we see only rearrangements and the smoothness of $w$ were used. Hence, for any smooth solution $u$ the \MA equation can also be written as
+Taking a closer look at the derivation of \eqref{eq:decoupled PDE} we see only the smoothness of $w$ has been used. Hence, for any smooth solution $u$ the \MA equation can also be written as
 \begin{align}
 - \nabla \cdot \left( \mycof{ D^2 u} \nabla u \right)  = -2f.  \label{eq: analytical fixed point iteration}
 \end{align}
