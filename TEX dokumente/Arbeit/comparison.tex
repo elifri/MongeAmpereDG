@@ -86,13 +86,13 @@ Let us consider again the linearisation of the finite element method mentioned i
 \end{align}
 
 
-Looking at the Picard iteration in \eqref{eq:fixed point iteration} we see that we aim to solve the discretised linearisation of the \MA equation at the point $u^i$ in every step.\\
-Let $V$ be $H^2(\Omega; \triang) \cap L^2(\Omega)$ and $L_u: V \rightarrow V'$ denote the linear mapping describing the left-hand side of the SIPG method (cf. \eqref{eq: sipg iteration}) to perform an iteration step, i.e.
+Looking at the Picard iteration in \eqref{eq:fixed point iteration} we see that we aim to solve the linearisation of the \MA equation at the point $u^i$ in every step.\\
+Let us consider the discretisation of \eqref{eq:fixed point iteration}: Let $V$ be $H^2(\Omega; \triang) \cap L^2(\Omega)$ and $L_u: V \rightarrow V'$ denote the linear mapping describing the left-hand side of the SIPG method (cf. \eqref{eq: sipg iteration}) to perform an iteration step, i.e.
 \begin{align}
 	\bilin {L_u w} v =
  &\myIntX  \Omega { \nabla v \cdot \cof(D_h^2 u) \nabla w } \nonumber\\
  & -\sum\limits_{e \in \edges}\myIntS e { \jump {v \average { \cof(D_h^2 u) \nabla w} }}
- - \sum\limits_{e \in \edges}\myIntS e { \jump {w \average{ \cof(D^2 u) \nabla v} }} \nonumber\\  
+ - \sum\limits_{e \in \edges}\myIntS e { \jump {w \average{ \cof(D_h^2 u) \nabla v} }} \nonumber\\  
  & +\sum\limits_{e \in \bigEps} \myIntS e { \frac \sigma {|e|} \jump {v}  \jump {w}}. \label{eq: linearisation our}
 \end{align}
 Comparing now \eqref{eq: linearisation our} with \eqref{eq: linearisation brenner} we notice that they are equal except for the interior edge integrals. But this difference is only due to the different choice of ansatz spaces: While in \cite{BGN+2011} Brenner et al. use $C^0$ elements, the Picard iteration is based on $DG$ elements. For the continuous ansatz functions all function jumps across interior edges vanish and hence all interior edge integrals equal to zero.
@@ -133,7 +133,7 @@ Formulating this as an operator equation yields: Find $u_h^{i+1} \in V_h$ being 
 
 
 
-Thus we have the identity 
+Thus, we have the identity 
 \begin{align}
 	F(u+w) = L_{u^i_h} (u+w) + R_{u^i_h} = L_{u^i_h} u +L_{u^i_h}w + R_{u^i_h} = Fu + L_{u^i_h}w. \label{eq: add our method}
 \end{align}
@@ -457,7 +457,7 @@ By \eqref{eq: expand M} we have for any $w \in V$
 	\end{align*}
 	Consider now $v_h \in \mathbb B_\rho(u_{c,h})$, by the triangle inequality we find 
 	\begin{align}
-		\eNorm{u_{c,h} - \M_h v} 
+		\eNorm{u_{c,h} - \M_h v_h} 
 			\leq& C \epsilonTwo{u - u^i_h} (\eNorm{v_h-u_{c,h}}+ \eNorm{u_{c,h}-u} +1) \nonumber \\
 			\leq& C \epsilonTwo{u - u^i_h} (\rho+ \eNorm{u_{c,h}-u} +1).
 	\end{align}
@@ -546,7 +546,7 @@ Note that $\mathcal P^k_h$ for $u \in H^t(\Omega)$ has the approximation propert
 \end{align}
 where $l = \min\{k+1,t\}$. $\singleNorm{u-u^i_h}_{H^2(\Omega)} = \LTwonorm{\hess {(u-u^i_h)}}$ influences $\epsilonTwo{u-u^i_h}$ and thus, Theorem \ref{main result} yields even for a reliable approximation of $u$ no satisfying result on the Picard Iteration. Furthermore, if we have a guess that fulfils \eqref{eq: estimate error} this theorem does not ensure $u_h$ is a better approximation to $u$ than $u^i_h$. 
 
-The analogue result for the method of Brenner et al. \cite[Theorem 3.1]{BGN+2011} yields optimal convergence results, but they depend on the property that $l$ defined as in \eqref{eq: approx hess} is strictly greater than $3$ to control the mapping property of $\mathcal M$. However, we depend on the error in the second derivatives, i.e. $\epsilonTwo{u-u_h^i}$ to control this mapping property. The problem is that derived mapping property in Lemma \ref{la: mapping property of M} is not sufficient to imitate the results of Brenner et al. as it does not decrease linearly with a power of $h$.
+The analogue result for the method of Brenner et al. \cite[Theorem 3.1]{BGN+2011} yields optimal convergence results, but they depend on the property that $l$ defined as in \eqref{eq: approx hess} is strictly greater than $3$ to control the mapping property of $\mathcal M$. However, we depend on the error in the second derivatives, i.e. $\epsilonTwo{u-u_h^i}$ to control this mapping property. The problem is that the derived mapping property in Lemma \ref{la: mapping property of M} is not sufficient to imitate the results of Brenner et al. as it does not decrease linearly with a power of $h$.
 
 Unfortunately, later numerical results suggest that this formulation of a Picard Iteration do not converge to the \MA solution.	
 	
