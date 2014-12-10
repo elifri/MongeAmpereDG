@@ -24,23 +24,25 @@ Indeed the diagram in Figure \ref{fig: fe diagram} does not commute for less reg
 In this section we present the just mentioned method of Brenner et al. \cite{BGN+2011}. Let $u$ denote the exact solution of the \MA equation. 
 At the beginning we take a look at $L_{u,h}(w_h)$ given in Figure \ref{fig: fe diagram}, namely the discretisation of the linearisation of \eqref{eq: naiv ansatz} at the exact solution $u$.
 
+ We suppose $w \in H^3(\Omega; \triang) \cap H^1(\Omega)$ and the test functions $v \in H^2(\Omega; \triang) \cap H^1(\Omega)$. 
+\\
 After implying weak boundary conditions the linearisation at $u$ of the left-hand side of \eqref{eq: naiv ansatz} can be derived exactly as in the proof of Theorem \ref{thm: linearisation} leading to a mapping $L_{u,h}$ defined by
 \begin{align}
-\langle L_{u,h}(w),v\rangle =& -\myIntX {\Omega} {\nabla \cdot \left( \mycof {D^2 u } \nabla w \right) v} 
-+ \sigma \sum_{e \in \edgesb} \myIntS {e} {\frac 1 {|e|}{w}{g}}.
-%=& \int_{\Omega} \left( \mycof {D^2 u } \nabla w \right) \nabla v. 
+\langle L_{u,h}(w),v\rangle %=& -\myIntX {\Omega} {\nabla \cdot \left( \mycof {D^2 u } \nabla w \right) v} 
+%+ \sigma \sum_{e \in \edgesb} \myIntS {e} {\frac 1 {|e|}{w}{g}} \nonumber \\
+= \int_{\Omega} \left( \mycof {D^2 u } \nabla w \right) \cdot \nabla v + \sigma \sum_{e \in \edgesb} \myIntS {e} {\frac 1 {|e|}{w}{g}} . 
 \label{eq: linearOperator}
 \end{align}
 
 That corresponds to calculating $L_{u,h}$ by first going to the right and then down on the diagram in Figure \ref{fig: fe diagram}. Let us now check what happens if we want to calculate $L_{u,h}$ going first down and then to the right.
-We already calculated the linearisation of the \MA equation in Theorem \ref{thm: linearisation} and now have to analyse its variational form. We suppose $w \in H^3(\Omega; \triang) \cap H^1(\Omega)$ and the test functions $v \in H^2(\Omega; \triang) \cap H^1(\Omega)$. Due to integration by parts it holds
+We already calculated the linearisation of the \MA equation in Theorem \ref{thm: linearisation} and now have to analyse its variational form. Due to integration by parts it holds
 \begin{align*}
   -\myIntX  \Omega { \nabla \cdot (\mycof{D^2 u} \nabla w) v}
   	=& \myIntX  \Omega { (\mycof{D^2 u} \nabla w) \cdot \nabla v} \\
   	 &	- \sum_{e \in \edgesb} \myIntS e { \mycof{D^2 u} \nabla w \cdot \mathbf n \; v}.
 %  	 + \sigma \sum_{e \in \edgesb} \myIntS {e} {\frac 1 {|e|}{w}{g}}.
 \end{align*}
-Adding again the weak boundary conditions and an additional term to symmetrise we obtain the variational form of the linearisation
+Adding again the weak boundary conditions and an additional term to symmetrise we obtain %the variational form of the linearisation
 \begin{align}
 	\langle L^B_{u}(w),v\rangle 
 	    =& \myIntX  \Omega {(\mycof{D^2 u} \nabla w) \cdot \nabla v} \nonumber \\
@@ -67,8 +69,21 @@ The key for the convergence proof is a fixed point argument: %They already deriv
 %With this at their hand they define a mapping . 
 They define a mapping $\mathcal M_h$ such that its fixed point is the solution to their finite element method. 
 %The choice of their $\mathcal M$ has two important properties. At first, its fixed point is the solution to their finite element. At second, $\mathcal M$ is chosen in such a way that its contraction property almost follows directly from a contraction property of $R$.
-Using the Banach fixed point theorem they can show existence of a fixed point of $\mathcal M$ in $V_h$ and further locate it within an arbitrary small set. This idea is adopted in Section \ref{subsec: comparison brenner}, when we compare this method to a newly derived DG method. Fortunately, their convergence proof also yields an error estimate for their numerical solution:
-\begin{theorem}[Error Estimate{\cite[Theorem 3.1 and 3.2]{BGN+2011}}]\label{thm: error estimate brenner}
+Using the Banach fixed point theorem they can show existence of a fixed point of $\mathcal M$ in $V_h$ and further locate it within an arbitrary small set. This idea is adopted in Section \ref{subsec: comparison brenner}, when we compare this method to a newly derived DG method. Fortunately, their convergence proof also yields error estimates for their numerical solution:
+\begin{theorem}[Error Estimate I{\cite[Theorem 3.1]{BGN+2011}}]\label{thm: error estimate brenner}
+	There exists an $h_0(\sigma) > 0$ such that for $h \leq h_0(\sigma)$ there exists a solution $u_h$ to the penalty method \eqref{eq: brenner method}. Moreover, if the exact solution $u \in H^{s}$ with $s>3$ then holds
+	\begin{align*}
+		\norm{u-u_h}_{1,h} \lesssim (1+\sigma) h^{l-1} \norm{u}_H
+	\end{align*}
+where $l=\min\{k+1,s\}$ and $\norm{\cdot }_{1,h}$ is the mesh-dependent discrete semi-norm 
+	\[
+		\norm{v}_{1,h}^2 = \norm {\nabla v }^2_{L^2(\Omega)} + \sum_{e \in \edges} |e| \norm {\average {\nabla v}}^2_{L^2(e)}.
+	\]
+which is equivalent to the norm $\eNorm{\cdot}$ (cf. Definition \ref{def: energy norm}) on the test space, because this method uses $C^0$ elements.
+
+\end{theorem}
+
+\begin{theorem}[Error Estimate II{\cite[Theorem 3.2]{BGN+2011}}]\label{thm: error estimate brenner 2}
 	There exists an $h_0(\sigma) > 0$ such that for $h \leq h_0(\sigma)$ there exists a solution $u_h$ to the penalty method \eqref{eq: brenner method}. Moreover, if the exact solution $u \in W^{s,\infty}$ with $s>3$ then holds
 	\begin{align*}
 %		\norm{u-u_h}_{1,h} \lesssim (1+\sigma) h^{l-1} \norm{u}_H
@@ -161,7 +176,7 @@ He ends up with the following error estimation:
 		\norm{v}_{1,h}^2 = \norm {\nabla v }^2_{L^2(\Omega)} + \sum_{e \in \edges} |e| \norm {\average {\nabla v}}^2_{L^2(e)}.
 	\]
 \end{theorem}
-The norm $\norm {\cdot}_{1,h}$ is equivalent to the norm $\eNorm{\cdot}$ on $V_h$ due the fact that $V_h$ only contains continuous functions.
+Note that the norm $\norm {\cdot}_{1,h}$ is equivalent to the norm $\eNorm{\cdot}$ (cf. Definition \ref{def: energy norm}) on $V_h$ due the fact that $V_h$ only contains continuous functions.
 
 Albeit Neilan cannot prove any further relaxations, his numerical experiments suggest that his method even works for smaller polynomial degrees and problems whose solution lacks $H^2$ regularity. 
 \\However, for $k=1$ he has to add an additional penalty term to obtain convergence. Thus, for piecewise affine functions $u_h \in V_h :=\mathcal P_h^1(\Omega) \cap W^{1,\infty}(\Omega)$ he instead solves:

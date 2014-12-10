@@ -61,7 +61,16 @@ Taking a closer look at the derivation of \eqref{eq:decoupled PDE} we see only t
 \begin{align}
 - \nabla \cdot \left( \mycof{ D^2 u} \nabla u \right)  = -2f.  \label{eq: analytical fixed point iteration}
 \end{align}
-This also implies that every solution of a \MA problem is a fixed point of the Picard iteration. It remains to test if the Picard iteration converges to its fixed point and hence yields an approximation of the solution of the \MA equation. 
+This also implies that every solution of a \MA problem is a fixed point of the Picard iteration. 
+We can formulate \eqref{eq: analytical fixed point iteration} weakly: By integration by parts and forcing the boundary conditions with a penalty term we obtain for a test space $V=H^2(\triang; \Omega) \cap H^1$
+\begin{align*}
+	\myIntX{\Omega} {\mycof{ D^2 u} \nabla u \cdot \nabla v} 
+	-\sum\limits_{e \in \edgesb}\myIntS e { \jump {v \average { \cof(D_h^2 u) \nabla u} }}& \\
+	+ \sum\limits_{e \in \edgesb} \myIntS e { \frac \sigma {|e|} v (u-g)}& 
+	= \myIntX \Omega {-2f v} \qquad \forall v \in V.  
+\end{align*}
+
+It remains to test if the Picard iteration converges to its fixed point and hence yields an approximation of the solution of the \MA equation. 
 
 
 \section{Discretisation of a Picard Iteration Step}\label{sec: SIPG MA}

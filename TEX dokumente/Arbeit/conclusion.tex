@@ -26,7 +26,7 @@ Handling fully nonlinear PDEs is a complex domain and results on this domain are
 Recent DG methods work provably well for classical solutions, but to the author's knowledge there are no proven statement on their performance for viscosity solutions or Aleksandrov solutions. Even in the case we have a classical solution convergence of DG method is only proven for polynomial degrees greater or equal than three. Though most numerical experiment suggest a relaxation it could not be proved yet.
 
 The Picard iteration relies on the decoupling of the solution into two functions $v$ and $w$(cf. \ref{sec: motivation picard iteration}). It has to be examined if this decoupled PDE has more solutions than the solution $v=w$. If there are more solutions, it has to be analysed if those interfere during the Picard iterations. \\
-As the Picard iteration is motivated by the Picard linearisation of convection terms, one can try to apply the theory developed for those linearisations.
+As the Picard iteration is motivated by the Picard linearisation of diffusion terms, one can attempt to apply the theory developed for those linearisations.
 
 The implemented convexification did not support the solution process. Yet, it is worth to address this approach further. Maybe it is useful to convexify intermediate solution only on fine grids as those better capture the convexity of the exact solution.
 
