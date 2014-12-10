@@ -153,28 +153,64 @@ Since $u$ is the exact solution we may see $F_i u$ as the consistency error of t
 
 To measure the error in the second derivative we introduce a new quantity. Let $\epsilonTwoZeroArg:V \rightarrow \R$ be defined by
 \[
-	\epsilonTwo{v} := \max{ \LTwonorm{\hess v}}{ \sup_{e \in \edges} \LTwonormE{\average{\hess v}}}.
+	\epsilonTwo{v} := \max{ \LTwonorm{\cofHessH v}}{ \sup_{e \in \edges} \LTwonormE{\average{\cofHessH v}}}.
 \]	
 
-The following lemma shows $\epsilonTwo{\cdot}$ is not only a measure for the Hessian, but also for the cofactor of the Hessian.
-\todo{verbessern}
+The following lemma shows $\epsilonTwo{\cdot}$ is not only a measure for the cofactor of the Hessian, but also for the Hessian.
 
 \begin{lemma} \label{la: epsilon cof hess equal}
 	For any convex $v \in V$ it holds
 	\[
-		\epsilonTwo{v} = \max{ \LTwonorm{\cofHessH v}}{ \sup_{e \in \edges} \LTwonormE{\average{\cofHessH{v}}}}.
+		\epsilonTwo{v} = \max{ \LTwonorm{\hess v}}{ \sup_{e \in \edges} \LTwonormE{\average{\hess{v}}}}.
 	\]
 \end{lemma}
 \begin{proof}
-	We have for a positive definite matrix $A$ that 
+	Let $\triangM$ for $n \in \N$ be triangulations of $\Omega$. By Lemma \ref{la: approximation properties} there exists a sequence $p_n$ such that $p_n \in \mathcal {P}^2_{1/n}(\triangM)$ so that with respect to $\norm{\cdot}_{H^2(T)}$ it holds
+	\[
+		p_n \xrightarrow{n \rightarrow \infty} v \qquad \text{ on every } T \in \triang.
+	\]	
+	By the definition of the cofactor matrix (cf. Definition \ref{def: cof matrix}) we find
+	\[
+		\cofHess{p_n} \xrightarrow{n \rightarrow \infty} \cofHess{v} \qquad \text{ on every } T \in \triang
+	\]	
+	with respect to $\norm{\cdot}_{L^2(T)}$. Note that the entries of $\cofHess{p_n}$ are piecewise constant.
+	
+	Let $\lambda_w$ denote the function that maps $x$ to the greatest eigenvalue of $\cofHessH{w}$ evaluated at $x$. 
+	Due to the choice of $p_n$, $\lambda_{p_n}$ is constant on every $\tilde T \in \triangM$ for every $n \in \N$. We denote the set of normalised, piecewise constant eigenvectors by
+	\[
+		M_n = \{v \in L^2(\Omega); \LTwonorm{v}=1, \cofHessH{p_n} v = \lambda_{p_n} v\}.
+	\]	
+	Hence, we find for $n \in \N$
 	\begin{align*}
-	\LTwonorm{A} =  \sup_{v \in L^2(\Omega), \LTwonorm{v}=1} \myIntX \Omega {v^t A^t A v} = \lambda^2,
+	\LTwonorm{ \cofHessH {p_n} } &=  \sup_{w \in L^2(\Omega), \LTwonorm{w}=1} \myIntX \Omega {w^t \cofHessH{p_n}^t \cofHessH{p_n} w} \\
+	&= \sup_{w \in M_n} \sum_{\tilde T \in \triangM} \myIntX {\tilde T} {w^t \lambda_{p_n}^2 w} 
+		= \sup_{w \in M_n}\sum_{\tilde T \in \tilde \triangM} \left. \lambda_{p_n}^2 \right\vert_{\tilde T} \norm{w}_{L^2(\tilde T)},
 	\end{align*}
-	where $\lambda$ is the largest eigenvalue of $A$. Since for every $w \in V$ the eigenvalues of $\cofHessH{w}$ and $\hess{w}$ coincide on every $T \in \triang$ we obtain 
+	Since the eigenvalues of $\cofHessH{p_n}$ and $\hess{p_n}$ coincide we obtain analogously 
 	\begin{align}
-	\LTwonormT{\cofHessH{w}} = \LTwonormT{\hess{w}} \qquad \forall T \in \triang.\label{eq: equality norm}
+	\LTwonorm{ \hess {p_n} } = \sup_{y \in N_n} \sum_{\tilde T \in \triangM} \left. \lambda_{p_n}^2\right\vert_{\tilde T} \norm{y}_{L^2(\tilde T)},\label{eq: sup cof hess}
 	\end{align}
-	Furthermore using the definition of the average (cf. Definition \ref{def: edge operators}) and that $\cofHessH{w}$ and $\hess{w}$ are linear in $w$ for all $w \in V$ we find
+	where $N_n$ is the set of eigenvectors to $\hess v$, namely
+	\begin{align}
+			N_n = \{v \in L^2(\Omega); \LTwonorm{v}=1, \hess{p_n} \; v = \lambda_{p_n} v\}. \label{eq: sup hess}
+	\end{align}
+	Note that we have to show that these two suprema coincide.
+	On one hand we have for every function $w \in M_n \cup N_n$ that $\sum_{\tilde T \in \triangM} \norm w _{L^2(\tilde T)} = 1$. On the other hand for every convex combination $\sum_{\tilde T \in \triangM} \alpha_{\tilde T} =1$  there exist a $w \in M_n \cup N_n$ such that $\alpha_{\tilde T} = \norm w _{L^2(\tilde T)}$. Thus, the two suprema in \eqref{eq: sup cof hess} and \eqref{eq: sup hess} have to be equal and we obtain 
+	\begin{align*}
+	 	\LTwonorm{\cofHessH{p_n}} = \LTwonorm{\hess{p_n}} \qquad \forall n \in \N. 
+	 \end{align*}
+	Taking again the limit $n \rightarrow \infty$ yields
+	 \begin{align}
+	 	\LTwonorm{\cofHessH{v}} = \LTwonorm{\hess{v}} \qquad \forall v \in V.
+	 	\label{eq: equality norm}
+	 \end{align}
+
+	Analogously we obtain on edges
+	\begin{align}
+		 	\LTwonormE{\cofHessH{v}} = \LTwonormE{\hess{v}} \qquad \forall v \in V.
+		 	\label{eq: equality norm edge}
+	\end{align}
+	Furthermore, using the definition of the average (cf. Definition \ref{def: edge operators}) and that $\cofHessH{w}$ and $\hess{w}$ are linear in $w$ for all $w \in V$ we find
 	\begin{align}
 	\LTwonormE{\average {\cofHessH{w}}} 
 	=& \LTwonormE{\frac 1 2 {\cofHessH{(w^+ + w^-)}}} \nonumber\\
@@ -194,7 +230,7 @@ Let for $w \in V$ the mapping $L_{w,h}:V_h \rightarrow V_h'$ be the restriction 
 	\begin{align}
 		\eNorm{L_{w,h}^{-1} r_h} \leq C \HMinusOneDnorm{r_h} \qquad \forall r_h \in V_h'.
 	\end{align}
-	$C$ denotes a positive constant indepenedent of$h$ and $r_h$. 
+	$C$ denotes a positive constant independent of $h$ and $r_h$. 
 \end{lemma}
 \begin{proof}
 	Since for convex $w$ the cofactor matrix is always positive definite the claim follows from the proof of Theorem \ref{thm: SIPG stability}.
@@ -354,10 +390,10 @@ Now we are able to establish an estimate of the consistency error of $F_i u$.
 		\left( \sum_{e \in \edgesb} \frac {|e|} \sigma \LTwonormE{ \cofHessH{(u-u_h^i)}}^2  \right)^{\frac 1 2}
 		\left( \sum_{e \in \edgesb} \frac \sigma {|e|} \LTwonormE{\nabla v }^2  \right)^{\frac 1 2}. \label{eq: R first estimate}
 	\end{align}
-	Using again \eqref{eq: equality norm}, namely that the $L^2$ norm of a matrix and its cofactor matrix coincide \todo{verbessern}, as well as the standard combination of the trace estimate from Lemma \ref{la: trace estimate} and the inverse estimate from Lemma \ref{la: inverse estimate}\footnote{for more detailed steps of the combination of trace and inverse estimate see the proof of Lemma \ref{la: equivalence energy norm}} we find
+	Using again the standard combination of the trace estimate from Lemma \ref{la: trace estimate} and the inverse estimate from Lemma \ref{la: inverse estimate}\footnote{for more detailed steps of the combination of trace and inverse estimate see the proof of Lemma \ref{la: equivalence energy norm}} we find
 	\begin{align}
 	\sum_{e \in \edgesb} \frac 1 {|e|} \LTwonormE{ \cofHessH{(u-u_h^i)}}^2 
-	\leq C \sum_{T \in \triang} \LTwonormT{\hess{(u-u_h^i)}}^2.
+	\leq C \sum_{T \in \triang} \LTwonormT{\cofHessH{(u-u_h^i)}}^2.
 	\end{align}
 	Combining this with \eqref{eq: R first estimate} yields
 	\begin{align*}
@@ -402,7 +438,7 @@ and hence for $w_1, w_2 \in V$
 \end{align*}
 Applying Lemma \ref{la: stability L} and Lemma \ref{la: L dependence parameter} yields the following contraction result which is motivated by \cite[Lemma 3.4]{BGN+2011}.
 \begin{lemma}[Contraction property of $\mathcal{M}$] \label{la: contraction property M}
-	For any $w_1, w_2 \in V$ it holds for a positive constant $C$ indepenedent of$h$
+	For any $w_1, w_2 \in V$ it holds for a positive constant $C$ independent of $h$
 \begin{align*}
 	\HOneDnorm{\mathcal M w_1 - \mathcal M w_2}	\leq C \epsilonTwo{u - u^i_h} \eNorm{w_1 - w_2}. \label{eq: estimate M}
 \end{align*}
@@ -416,7 +452,7 @@ Before we prove the self-mapping property, we want justify the choice of $u_{c,h
 	\[
 		\eNorm{u-u_{c,h}} \leq C \inf_{v_h \in V_h} \eNorm{u-v_h},
 	\]
-	where $C>1$ denotes a constant indepenedent of$h$, but dependent on $u$.
+	where $C>1$ denotes a constant independent of $h$, but dependent on $u$.
 \end{lemma}
 \begin{proof}
 	For any $v_h \in V_h$ holds applying the definition of $u_{c,h}$ and both statements given in Lemma \ref{la: stability L}
@@ -440,7 +476,7 @@ Let us now derive an estimate for the image of a small ball centred at $u_{c,h}$
 	\[
 		\eNorm{u_{c,h} - \M_h v} \leq C \epsilonTwo{u - u^i_h} (\rho+ \inf_{v_h \in V_h} \eNorm{u-v_h}+1),
 	\]
-	where $C$ is a positive constant indepenedent of$h$, but dependent on $u$.
+	where $C$ is a positive constant independent of $h$, but dependent on $u$.
 \end{lemma}
 \begin{proof}
 By \eqref{eq: expand M} we have for any $w \in V$
@@ -484,7 +520,7 @@ Now we are able to combine the preceding results and thereby derive an estimate 
 		\eNorm{u-u_h} \leq C h^{s-1}, \label{eq: error estimate}
 	\end{align}
 	where $0 \leq s \leq \min\{k+1, t\}$ for $u$ contained in $H^t(\Omega)$. Hereby $C$ denotes a positive constant depending on the mesh, $g$, $\sigma$, $u^i_h$, and $u$, but not on $h$.\\
-	Furthermore if there exists $C^*$ indepenedent of$h$ such that
+	Furthermore if there exists $C^*$ independent of $h$ such that
 	\begin{align}
 		\epsilonTwo{u-u_h^i} \leq C^* h^{s}, \label{eq: estimate error}
 	\end{align}
