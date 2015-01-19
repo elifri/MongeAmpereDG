@@ -34,7 +34,7 @@
 \usepackage{cancel} %um durchzustreichen
 
 
-\usepackage{bibunits} %to split bibliography
+%\usepackage{bibunits} %to split bibliography
 
 \usepackage{../Arbeit/makros}
 \usepackage{todo}
@@ -96,8 +96,9 @@
 %}
 
 \subject{Master Thesis}
-\title{Discontinuous Galerkin Methods for the \MA Equation}
-\subtitle{\Large Discontinuous Galerkin Verfahren zur Lösung der Monge-Amp\`ere-Gleichung}
+\title{ %Discontinuous Galerkin Methods for the \MA Equation}
+%\subtitle{\Large 
+Discontinuous Galerkin Verfahren zur Lösung der Monge-Amp\`ere-Gleichung}
 \author{Elisa Friebel} %\\ Matrikelnummer: 295932
 \date{\today}
 %\publishers{Gutachter: Prof. Dr. rer. nat. W. Dahmen\\ Prof. Dr. rer. nat. S. Noelle}
@@ -106,15 +107,16 @@
 \begin{document}
 \frame{\maketitle}
 
-\begin{bibunit}[plain]
+%\begin{bibunit}[plain]
 
 \section{\MA Gleichung}
 
 \begin{frame}{Die \MA Gleichung}
 \begin{block}{\MA (MA) Gleichung mit Dirichlet-Randdaten}
+Sei $\Omega$ ein beschränktes Gebiet und $u:\Omega \rightarrow \R, f:\Omega \rightarrow \R$ und $g:\partial \Omega \rightarrow \R$. Dann lautet die \MA-Gleichung
  \begin{align*}
-	 \mydet{D^2 u} &= f \textnormal{ in } \Omega \\ %\label{eq: MA eq}\\
-	 u & = g \textnormal{ on } \partial \Omega, %\label{eq: MA equation dirilecht} 
+	 \mydet{D^2 u} &= f \textnormal{ in } \Omega, \\ %\label{eq: MA eq}\\
+	 u & = g \textnormal{ on } \partial \Omega. %\label{eq: MA equation dirilecht} 
  \end{align*}
  \end{block}
 \pause
@@ -146,11 +148,11 @@ Anwendungsgebiete für Gleichung vom Typ \MA
 \end{frame}
 
 \begin{frame}{Schwacher Lösungsbegriff}
-	\begin{block}{Viskositätslösung{\cite[Definition 1.1]{FGN2013}}}
-		We nennen eine strikt konvexe Funktion $u \in C^0(\Omega)$ eine \emph{Viskositäts-Unterlösung(-Überlösung)} der \MA Gleichung, falls für jeden Punkt $x_0 \in \Omega$ und Funktion $\varphi \in C^2(\Omega)$, die
+	\begin{block}{Viskositätslösung {\cite[Definition 1.1]{FGN2013}}}
+		Wir nennen eine strikt konvexe Funktion $u \in C^0(\Omega)$ eine \emph{Viskositäts-Unterlösung(-Überlösung)} der \MA Gleichung, falls für jeden Punkt $x_0 \in \Omega$ und Funktion $\varphi \in C^2(\Omega)$ mit
 		\[
 		   u \leq \varphi \;(\geq \varphi) \text{ in }\Omega \text{  and  } u(x_0) = \varphi(x_0)
-		\] erfüllen, es gilt, dass
+		\] gilt, dass
 		\[
 			F[\varphi](x_0) \leq 0 \;(\geq 0).%\mydet{D^2 \varphi(x_0)} - f \leq 0 (\geq 0).
 		\]
@@ -162,9 +164,9 @@ Anwendungsgebiete für Gleichung vom Typ \MA
 
 %\subsection{Numerical Schemes}
 \begin{frame}{Numersiche Verfahren}
-Numerische Verfahren für die \MA Gleichung können in 4 Kategorien eingeteilt werden \cite[p.210]{FGN2013}: 
+Numerische Verfahren für die \MA Gleichung können in vier Kategorien eingeteilt werden \cite[p.210]{FGN2013}: 
 \begin{enumerate}
-	\item Direkte finite Differenzen Schemata,
+	\item direkte finite Differenzen Schemata,
 	\item Methoden basierend auf variationellen Prinzipien und Methoden basierend auf der Approximation unendlich-dimensionaler Räume durch endlich-dimensionaler Räume,
 	\item Methoden basierend auf endlichen Basiserweiterungen und Approximieren von partiellen Differentialgleichungen an Stichprobenpunkten,
 	\item Methoden, die in keiner der vorher genannten Bereiche gehören.
@@ -174,10 +176,10 @@ Numerische Verfahren für die \MA Gleichung können in 4 Kategorien eingeteilt w
 
 \begin{frame}{Finite Differenzen Schemata (FDS)}
 Standard FDS (z.B. der 9-Punkte-Stern) sind uneindeutig lösbar:\\
-	Lösen des nichtlinearen System mit einem Newton-Verfahren liefert verschiedene Ergebnisse für unterschiedlich gewählte Startwerte
+	Lösen des nichtlinearen System mit einem Newton-Verfahren liefert verschiedene Ergebnisse für unterschiedlich gewählte Startwerte.
 \pause
 
-Vorteile der FDS
+Vorteile der FDS:
 \begin{itemize}
 	\item Beweisrahmen für Konvergenzbeweise
 	\item es existieren FDS, die bewiesen gegen die Viskositätslösung konvergieren
@@ -186,11 +188,11 @@ Vorteile der FDS
 \begin{column}{0.55\textwidth}
 \pause
 
-Nachteile der FDS
+Nachteile der FDS:
 \begin{itemize}
 	\item keine bewiesenen Konvergenzraten
 	\item große Sterne, nicht anwendbar für viele Gebiete
-	\item keine genesteten Iterationen 
+	\item keine geschachtelte Iterationen 
 \end{itemize}
 \end{column}
 
@@ -207,27 +209,27 @@ Nachteile der FDS
 \end{frame}
 
 \begin{frame}{Finite Element Methoden (FEM)}
-Vorteil der FEM
+Vorteil der FEM:
 \begin{itemize}
 	\item erweiterbar auf komplexere Gebiete
-	\item gut parallelisierbar
+	\item geschachtelte Iterationen sind einfach zu realisieren
+	\item gut parallelisierbar	
 \end{itemize}
 \pause
-Nachteile der FEM
+Nachteile der FEM:
 \begin{itemize}
 	\item keine variationelle Formulierung der \MA Gleichung
 	\item bisher existiert keine FEM, die bewiesen gegen Viskositätslösungen konvergiert
-	\item Genestete Iterationen sind einfach zu realisieren
 \end{itemize}
 \end{frame}
 
-\section{Eine Discontinuous Galerkin Methode zur Lösung der \MA Gleichung}
+\section{Eine DG Methode zur Lösung der \MA Gleichung}
 \subsection{Motivation}
-\begin{frame}{Picard Linearisierung}
+\begin{frame}{Picard-Linearisierung}
 \begin{itemize}
 \item Konvektionsterm: $\nabla \cdot (A(u) \nabla u )$
 \item Entkoppeln der Koeffizientenmatrix $A(u)$ und $\nabla u$
-\item Für $i\in \N$ wiederholtes Lösen der Gleichungen 
+\item für $i\in \N$ wiederholtes Lösen der Gleichungen 
 	\begin{align}
 	\nabla \cdot (A(u^{i} )\nabla u^{i+1}) \label{eq: Picard linearisation}
 	\end{align}
@@ -242,17 +244,17 @@ Nachteile der FEM
 	&\dyy u{x}  \dyy u{y}  -\dyx u {x}{y} \dyx u {y}{x} = f} \\
 	\visible<2->{\Leftrightarrow \; &\mycof {D^2 u }:D^2 u  = 2f,}
 \end{align*}
-\visible<2->{dabei ist im zwei-dimensionalen Fall die Kofaktormatrix von $D^2 u$ definiert durch
+\visible<2->{dabei ist im zweidimensionalen Fall die Kofaktormatrix von $D^2 u$ definiert durch
 \[
-	\cofHess u := \begin{pmatrix}
+	\cofHess u = \begin{pmatrix}
 		u_{xx} & - u_{xy} \\
-		-u_{yx} & - u_{yy} 
+		-u_{yx} &  u_{yy} 
 	\end{pmatrix}.
 \]}
 \visible<3->{
-Divergenz-Form
+Divergenz-Form:
 \begin{align*}
-	- \nabla \cdot \left( \mycof{ D^2 u} \nabla u \right)  = -2f. 
+	- \nabla \cdot \left( \mycof{ D^2 u} \nabla u \right)  = -2f
 \end{align*}
 }
 \end{frame}
@@ -260,14 +262,15 @@ Divergenz-Form
 \begin{frame}{Picard Iteration zur Lösung der MA Gleichung}
 	Sei ein Startwert $u^0$ gegeben. Löse für $i \in \N$
 	\begin{align}
-		- \nabla \cdot \left( \cofHessH{u^i} \nabla u^{i+1} \right)  = -2f \label{eq: Picard Iteration}
+		- \nabla \cdot \left( \cofHess{u^i} \nabla u^{i+1} \right)  = -2f \label{eq: Picard Iteration}
 	\end{align}
-	\pause mithilfe des symmetrischen Interior-penalty-Galerkin (SIPG) Verfahrens
+	\pause mithilfe des symmetrischen Interior-penalty-Galerkin (SIPG) Verfahrens.
 
 	\pause
 	\begin{itemize}
 		\item \eqref{eq: Picard Iteration} ist ein verallgemeinertes Poisson  Problem (GPP)\\
-			\pause $\rightarrow$ d.h. linear in den zweiten Ableitungen von $u_h^{n+1}$
+			 $\rightarrow$ d.h. linear in den zweiten Ableitungen von $u^{n+1}$
+		\pause
 		\item unstetige Elemente, da $\cofHessH{u_h^n}$ unstetig ist (für Standard finite Elemente)
 	\end{itemize}
 
@@ -278,11 +281,13 @@ Divergenz-Form
 \begin{frame}{Diskrete variationelle Formulierung des GPP}
 Sei $\triang$ eine Triangulierung von $\Omega $ und der FE-Raum \[V_h =  \{f \in L^2(\Omega);  f|_T \in \mathcal P_k (T) \text{ for every } T \in \triang\}\] gegeben. 
 \pause
+Die variationelle Formulierung des GPP lautet
 			\begin{align*}
 				-\myIntX \Omega {v_h \nabla \cdot (A \nabla u_h)}=
 				 \myIntX \Omega {v_h f} \qquad \forall v_h \in V_h. %\label{eq: variational form}
 			\end{align*}
-Partielle Integration auf jeder Zelle ergibt
+\pause
+Partielle Integration der linken Seite auf jeder Zelle ergibt
 			\begin{align*}
 				%a(v, u) = & 
 				\sum_{T \in \triang} \myIntX T {\nabla v_h \cdot A \nabla u_h }
@@ -325,7 +330,7 @@ Partielle Integration auf jeder Zelle ergibt
 	{}<4->
 \end{frame}
 
-\begin{frame}{Penalty terms to enforce continuity and Dirichlet boundary conditions}
+\begin{frame}{Penalty-Terme für Stetigkeit der numerischen Lsg. und Di\-rich\-let\--Rand\-be\-dingungen}
 %	\Alt{Add penalties to enforce continuity and Dirichlet boundary conditions}{}<3>
 	\begin{align*}
 	a(v_h,u_h) =  &\sum\limits_{T \in \triang} \myIntX  T { \nabla v_h \cdot A \nabla u_h} \\
@@ -357,7 +362,7 @@ Partielle Integration auf jeder Zelle ergibt
 \begin{frame}{Korrektheit des SIPG Verfahrens}
 Die Energie-Norm $\eNorm \cdot$ ist definiert durch
 \[
-	\eNorm v ^2 := \LTwonorm{\nabla v}^2 + \frac 1 \sigma \sum_{e \in \edges} |e|\LTwonormE{\average{\nabla v}}^2 + 2 \sigma \sum_{e \in \edges} \frac 1 {|e|}\LTwonormE{\jump{v}}^2\]
+	\eNorm v ^2 := \LTwonorm{\nabla v}^2 + \frac 1 \sigma \sum_{e \in \edges} |e|\LTwonormE{\average{\nabla v}}^2 + 2 \sigma \sum_{e \in \edges} \frac 1 {|e|}\LTwonormE{\jump{v}}^2.\]
 \pause
 	\begin{itemize}
 		\pause
@@ -365,9 +370,9 @@ Die Energie-Norm $\eNorm \cdot$ ist definiert durch
 		\pause
 		\item $a$ ist beschränkt bzgl. der Energie-Norm $\eNorm \cdot$, falls $\sigma \geq \sigma^*$
 		\pause
-		\item $a$ is koerziv bzgl. der Energie-Norm $\eNorm \cdot$, falls $\sigma \geq \sigma^*$
+		\item $a$ ist koerziv bzgl. der Energie-Norm $\eNorm \cdot$, falls $A$ pos. def ist und $\sigma \geq \sigma^*$
 		\pause
-		\item es existiert ein eindeutiges $u \in V_h$, so dass $a(u,v) = l(v) \forall v \in V_h$
+		\item es existiert ein eindeutiges $u \in V_h$, so dass $a(u,v) = l(v) \qquad \forall v \in V_h$
 	\end{itemize}
 \end{frame}
 
@@ -393,22 +398,23 @@ Die Energie-Norm $\eNorm \cdot$ ist definiert durch
 Es wurde gezeigt, dass eine gute Schätzung für die Lösung der MA Gleichung, die Lösung von 
 \begin{align*}
 	\triangle u &= \sqrt{2f} \text{ in } \Omega, \\ 
-	u &= g \text{ on }\partial \Omega.
+	u &= g \text{ on }\partial \Omega
 \end{align*}
 ist.
 \pause
-Genestete Iteration
+
+Geschachtelte Iteration:
 \begin{itemize}
 \item auf dem gröbsten Gitter die Startfunktion $u^0_{h_1}$, e.g. $\frac 1 2 ({x_1^2} + {x_2^2}) $ 
 \item auf dem Gitter $\mathcal{T}_{h_{l}}$ wird als Startwert die letzte Lösung vom vorherigen Gitter genutzt
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Konsistenz-Test der Picard iteration}
-Simples MA Problem mit der exakten klassischen Lösung $\frac 1 2 (x_1^2 + x_2^2 )$. 
+\begin{frame}{Konsistenz-Test der Picard-Iteration}
+Simples MA Problem mit der exakten klassischen Lösung $\frac 1 2 (x_1^2 + x_2^2 )$:
 \begin{align*}
 	\mydet {D^2 u} = 1 \text{ in } \Omega \quad \text{  and  }\quad 
-	u = \frac 1 2 (x_1^2 + x_2^2 )\text{ on }\partial \Omega,
+	u = \frac 1 2 (x_1^2 + x_2^2 )\text{ on }\partial \Omega
 \end{align*}
 %\vspace{-0.5cm}
 \pause
@@ -431,7 +437,7 @@ Rel. $L^2$-Fehler auf einem Gitter mit $h=\frac 1 2$ und dem exakten Startwert $
 %			\includemovie[ 
 %			 poster,controls, 
 %			 label=mylabel]{5cm}{5cm}{sharp_edges.u3d} 
-			\caption{Numerische Lösung}
+%			\caption{Numerische Lösung}
 			\label{fig: sharp edges}
 %	\end{wrapfigure}
 		\end{figure}
@@ -459,65 +465,66 @@ Rel. $L^2$-Fehler auf einem Gitter mit $h=\frac 1 2$ und dem exakten Startwert $
 \]
 \pause
 \vspace{1cm}
-$\Rightarrow$ die so verbesserte Methode besteht den vorher erwähnen Konsistenz-Test ($\sigma^G$ =50)
+$\Rightarrow$ die so verbesserte Methode besteht den vorher erwähnten Konsistenz-Test ($\sigma^G$ =50)
 \end{frame}
 
-\begin{frame}{Ein weiterer Penalty-parameter}
+\begin{frame}{Ein weiterer Penalty-Parameter}
 
 	\begin{figure}[H]
 	\begin{subfigure}[b]{.45\textwidth}
 		\includegraphics[width=1.\textwidth]{../Arbeit/plots/with_penalty_it22.pdf}
-		\caption{Solution after 23 steps}
+		\caption{Lösung nach 23 Iterationen}
 	\end{subfigure}
 	~
 	\begin{subfigure}[b]{.45\textwidth}
 		\includegraphics[width=1.\textwidth]{../Arbeit/plots/with_penalty_it23.pdf}
-		\caption{Solution after 24 steps}
+		\caption{Lösung nach 24 Iterationen}
 	\end{subfigure}
 	\caption{Die Lösung zweier aufeinander folgender Iterationen}
 	\end{figure}
 \end{frame}
 
-\begin{frame}{Damping of the Picard iteration}
+\begin{frame}{Dämpfung der Picard-Iteration}
+Relativer $L^2$-Fehler auf einem Gitter mit $h=\frac 1 4$ und zusätzlichen Gradient-Penalty-Term
 	\begin{figure}[H]
 		\centering
 		\includegraphics[trim = 2cm 4cm 1cm 4cm, height = 0.6\textheight]{../Arbeit/plots/oscillation.pdf}
-		\caption{Relative $L^2$ error on a grid with $h=\frac 1 4$ and gradient penalty}
+%		\caption{Relative $L^2$ error on a grid with $h=\frac 1 4$ and gradient penalty}
 		\label{fig: oscillation}
 	\end{figure}
 	\pause
 	\vspace{-0.5cm}
-	$\Rightarrow$ Convex combination $ \alpha u_h^{i+1} + (1- \alpha) u_h^i$ for $\alpha \in (0,1)$
+	$\Rightarrow$ Konvexkombination $ \alpha u_h^{i+1} + (1- \alpha) u_h^i$ für $\alpha \in (0,1)$
 \end{frame}
 
 
-\begin{frame}{Well-posedness of SIPG formulation}
+\begin{frame}{Korrektheit der SIPG-Formulierung}
 \begin{itemize}
-	\item The ellipticity constant of the SIPG bilinear form is only positive for $\sigma > \sigma^*$. 
+	\item die SIPG-Bilinearform ist nur koerziv für $\sigma > \sigma^*$
 	\pause
 	
-	\item $\sigma^*$ depends on $1/\lambda(\cofHess u)$, where  $\lambda(A)$ denotes the smallest eigenvalue of $A$.
+	\item $\sigma^*$ hängt von $1/\lambda(\cofHess u)$ ab, hierbei bezeichnet $\lambda(A)$ den kleinste Eigenwert einer Matrix $A$
 \end{itemize}
 	\pause
-	$\Rightarrow$ scale $\sigma$ by $\frac 1 {\lambda^*}$ where $\lambda^*$ is an approximation of the smallest eigenvalue.\pause We choose
+	$\Rightarrow$ Skaliere $\sigma$ mit $\frac 1 {\lambda^*}$,  wobei $\lambda^*$ eine Approximation des kleinsten Eigenwertes $\cofHess u$ ist. \pause Wir wählen
 	
-	\begin{block}{Approximation of $\lambda$}
+	\begin{block}{Approximation von $\lambda(\cofHess u)$}
+	Sei $Q$ die Menge aller Quadraturpunkte. Dann definieren wir
 	\[
-		\lambda^* = \min_{q \in Q} \lambda(\cofHess {u_h(q)}),
+		\lambda^* = \min_{q \in Q} \lambda(\cofHess {u_h(q)}).
 	\]
-	where $Q$ are the quadrature points.
 	\end{block} 
 	
 \end{frame}
 
-\begin{frame}{Well-posedness of SIPG formulation}
+\begin{frame}{Korrektheit der SIPG-Formulierung}
 \begin{itemize}
-	\item For ellipticity of the SIPG bilinear form we need $\mycof {D^2_h u_h}$ to be positive definite.\\
+	\item für die Koerzivität der SIPG-Bilinearform muss $\mycof {D^2_h u_h}$ positiv definit sein\\
 	\pause
-	\item Bound ellipticity constant from below with a constant
+	\item beschränke die Koerzitivitätskonstante von unten
 \end{itemize}
 	\pause
-	\begin{block}{Modified Cofactor Matrix}
+	\begin{block}{Modifizierte Kofaktormatrix}
 		\[ 
 			\mycofMod {D^2_h u_h} = \begin{cases}
 			\mycof {D^2_h u_h} & \lambda \geq \varepsilon	\\
@@ -528,26 +535,25 @@ $\Rightarrow$ die so verbesserte Methode besteht den vorher erwähnen Konsistenz
 	\end{block}
 	\pause
 	\[
-		\mycof {D^2_h u_h} \text{ pos. def.} \Leftrightarrow \hess u \text{ pos. def.} \pause \Leftrightarrow u_h \text{ is convex}
+		\mycof {D^2_h u_h} \text{ pos. def.} \Leftrightarrow \hess u \text{ pos. def.} \pause \Leftrightarrow u_h \text{ ist konvex}
 	\]
-	
 	
 \end{frame}
 
 
 
-\begin{frame}{Convexification of intermediate solutions}
+\begin{frame}{Konvexifizierung von Zwischenlösungen}
 \begin{itemize}
-	\item \MA equation in general does not posses a unique solution
-	\item often (unique) convex solution required
+	\item \MA Gleichungen haben im allgemeinem keine eindeutige Lösung
+	\item in vielen Anwendungen wird die (eindeutige) konvexe Lösung gesucht
 \end{itemize} 
 \pause
-	$\Rightarrow$ convexify the solution after every step
+	$\Rightarrow$ konvexifiziere die Lösung nach jedem Schritt
 \begin{itemize}
 \pause
-	\item connection between convexity and B\'ezier polynomials
-	\item convexification is not simple
-	\item discussion in numerical results
+	\item Zusammenhang zwischen Konvexität und B\'ezier Polynomen
+	\item Konvexifizierung ist nicht einfach
+	\item Diskussion in numerischen Ergebnissen
 \end{itemize} 
 \end{frame}
 
@@ -573,41 +579,41 @@ $\Rightarrow$ die so verbesserte Methode besteht den vorher erwähnen Konsistenz
 \begin{frame}
 \begin{algorithm}[H]
 \begin{algorithmic}
-\Require triangulation \triang, desired mesh width $H$, maximal number of intermediate steps $i_{max}$
-\State $u_{0}\gets $ solution of  $
-	\triangle u = \sqrt{2f} \text{ in } \Omega $ with $
+\Require Triangulation \triang, min. Gitterweite $H$, max. Anzahl an Zwischenschritten $i_{max}$
+\State $u^{0}\gets $ Lösung von $
+	\triangle u = \sqrt{2f} \text{ in } \Omega $ mit $
 	u = g \text{ on }\partial \Omega$ %\Comment initialisation
 \While {$h < H$}
-	\For {$i$ from 1 to $i_{max}$}
-		\State $\sigma \gets \sigma /\lambda(\hess{u_h^{i-1}}) $
-		\State $u_i \gets$ sol of generalised Poisson problem w. modified cofactor matrix
-		\State (convexify)
-		\State $u_i \gets \alpha u_{i-1} + (1-\alpha)u_i $ \Comment convex combination
+	\For {$i$ von 1 bis $i_{max}$}
+		\State $\sigma \gets \sigma /\lambda^*(\cofHess{u^{i-1}}) $
+		\State $u^i \gets$ Lösung des GPP mit mod. Kofaktormatrix
+		\State (konvexifizieren)
+		\State $u^i \gets \alpha u^{i-1} + (1-\alpha)u^i $ \Comment Konvexkombination
 	\EndFor
-	\State $h, \triang, u_{0} \gets h/2, \triangFine, u_{i_{max}}$
+	\State $h, \triang, u^{0} \gets h/2, \triangFine, u^{i_{max}}$
 \EndWhile
 \end{algorithmic}
-\caption{Picard Iteration Algorithm to Solve the MA Equation}
+\caption{Picard-Iteration-Algorithmus zur Lösung der MA-Gleichung}
 \label{alg: final}
 \end{algorithm}
 \end{frame}
 
 
-\section{Numerical Results}
+\section{Numerische Ergebnisse}
 
-\subsection{Implementation}
-\begin{frame}{Implementation}
+\subsection{Implementierung}
+\begin{frame}{Implementierung}
 	\begin{itemize}
-		\item implemented in C++
-		\item linear system solved directly by a cholesky decomposition
-		\item convexification via a quadratic program (c.f. {\cite{SS2014}}) solved by the library IPOPT
-		\item 15 steps on each grid before refinement
-		\item uniform standard grid refinement
+		\item implementiert in C++
+		\item Lineares Gleichungssystem wird direkt mit einer Choleskyzerlegung gelöst
+		\item Konvexifizierung mittels eines quadratischen Programms(c.f. {\cite{SS2014}}), das mit der C++-Bibliothek IPOPT gelöst wird
+		\item 15 Iteration auf jedem Gitter vor Gitterverfeinerung
+		\item uniforme Stand Gitterverfeinerung
 	\end{itemize}
 \end{frame}
 
-\subsection{Results with Convexification}
-\begin{frame}{Smooth test problem}
+\subsection{Ergenibbse mit Konvexifizierung}
+\begin{frame}{Glattes Testproblem}
 \vspace{-0.5cm}
 \[
 	u=\exp( \lVert x \rVert_2^2  /2) 
@@ -622,8 +628,8 @@ $\Rightarrow$ die so verbesserte Methode besteht den vorher erwähnen Konsistenz
 \end{figure}
 \end{frame}
 
-\begin{frame}{Impact of convexifaction}
-Comparison of $L^2$ errors before and after convexification
+\begin{frame}{Einfluss der Konvexifizierung}
+Vergleich des $L^2$-Fehlers bevor und nach der Konvexifizierung
 \vspace{-0.75cm}
 \begin{figure}[H]
 	\centering
@@ -631,8 +637,8 @@ Comparison of $L^2$ errors before and after convexification
 \end{figure}
 \end{frame}
 
-\subsection{Results without Convexification}
-\begin{frame}{Smooth test problem without convexification}
+\subsection{Ergebnisse ohne Konvexifizierung}
+\begin{frame}{Glattes Testproblem ohne Konvexifizierung}
 %\end{block}
 \vspace{-0.75cm}
 	\begin{figure}[H]
@@ -643,23 +649,23 @@ Comparison of $L^2$ errors before and after convexification
 	\end{figure}
 \end{frame}
 
-\begin{frame}{Penalty parameter $\sigma^G$}
-$L^2$ errors for different choices of $\sigma^G$
+\begin{frame}{Penalty-Parameter $\sigma^G$}
+$L^2$-Fehler für verschiedene Wahlen von $\sigma^G$
 \vspace{-0.75cm}
 \begin{figure}[H]
 	\centering
 	\includegraphics[height=0.95\textheight]{../Arbeit/plots/MA1_deg2_sigma.pdf}\end{figure}
 \end{frame}
 
-\begin{frame}{Convex combination with parameter $\alpha$}
-$L^2$ errors for different choices of $\alpha$
+\begin{frame}{Konvexkombination mit Parameter $\alpha$}
+$L^2$-Fehler für verschiedene Wahlen von $\alpha$
 \vspace{-0.75cm}
 \begin{figure}[H]
 	\centering
 	\includegraphics[height=0.95\textheight]{../Arbeit/plots/MA1_deg2_alpha.pdf}\end{figure}
 \end{frame}
 
-\begin{frame}{$C^1$ test problem}
+\begin{frame}{$C^1$-Testproblem}
 \vspace{-0.5cm}
 \[
 	u=\frac 1 2 \left( \max 0 {\lVert x - x_0 \rVert_2-0.2 }  \right)^2 
@@ -674,7 +680,7 @@ $L^2$ errors for different choices of $\alpha$
 \end{figure}
 \end{frame}
 
-\begin{frame}{Singular test problem}
+\begin{frame}{Singuläres Testproblem}
 \vspace{-0.5cm}
 \[
 	u = - \sqrt{ 2-  \lVert x \rVert_2^2}
@@ -690,36 +696,36 @@ $L^2$ errors for different choices of $\alpha$
 \end{frame}
 
 
-\section{Conclusion and Perspective}
+\section{Fazit und Ausblick}
 
-\begin{frame}{Conclusion}
+\begin{frame}{Fazit}
 	\begin{itemize}
-		\item reviewed current DG methods
-		\item derived a new DG method using Picard linearisation
-		\item explored several improvements of the Picard DG method
-		\item the Picard type iteration converges on coarse grids, but is unstable on finer grids
-		\item current DG methods are applicable for problems with smooth solutions, but have problems or even fail on singular problems
+		\item Herleitung einer neuen DG-Methode mittels einer Picard-Linearisierung
+		\item Untersuchung verschiedener Verbesserungen der Picard-DG-Methode
+		\item die Picard-Iteration konvergiert auf groben Gittern, jedoch instabil auf feinen Gittern
+		\item Überblick über aktuelle DG-Methoden
+		\item aktuelle DG-Methoden geeignet für Probleme mit glatten Lösungen, in anderen Fällen müssen Konfigurationsparameter sehr sorgfältig gewählt werden und oft keine Konvergenz
 	\end{itemize}
 \end{frame}
 
 %\subsection{Conclusion}
 	
-\begin{frame}{Perspective}
+\begin{frame}{Perspektive}
 	\begin{itemize}
-		\item investigate if decoupled PDE has more solutions than the solution $v=w$
-		\item implemented convexification not useful, may only convexify on finer grids
-		\item analysis of the impact of the gradient penalty term
-		\item apply theory developed for Picard linearisations of convection terms
-		\item extension to right-hand sides depending on $u$ and $\nabla u$ and more complicated left-hand sides
-		\item three-dimensional case
+		\item Lösungen der entkoppelten PDG, insbesondere ob es weitere Lösungen als $v=w$ gibt
+		\item implementierte Konvexifizierung nicht brauchbar, möglicherweise nur anwendbar auf feineren Gittern
+		\item Analysis des Einflusses des Gradienten-Penalty-Terms
+		\item Anwendung der Theorie, die für Picard-Linearisierungen von Konvektionstermen entwickelt wurde
+		\item Erweiterung auf rechte Seiten, die von $u$ und $\nabla u$ abhöngen, sowie kompliziertere linke Seiten
+		\item dreidimensionaler Fall
 	\end{itemize}
 \end{frame}
 
 
-\begin{frame}[allowframebreaks]{References}
-\putbib[../Arbeit/my_additional_bibliography.bib]
-\end{frame}
-\end{bibunit}
+%\begin{frame}[allowframebreaks]{References}
+%\putbib[../Arbeit/my_additional_bibliography.bib]
+%\end{frame}
+%\end{bibunit}
 
 
 \end{document}
