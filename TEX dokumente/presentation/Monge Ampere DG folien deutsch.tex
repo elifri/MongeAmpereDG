@@ -22,6 +22,7 @@
 %\usepackage{caption}
 \usepackage{subcaption} %for subfigure
 \usepackage[3D]{movie15} %for interactve 3d plot 
+\usepackage{hyperref}
 
 \usepackage{bigdelim}
 \usepackage{caption}
@@ -234,21 +235,21 @@ Nachteile der FDS:
 \end{columns}
 \end{frame}
 
-\begin{frame}{Finite Element Methoden (FEM)}
-Vorteil der FEM:
+\begin{frame}{Galerkin-Methoden}
+Vorteil der Galerkin-Methoden:
 \begin{itemize}
 	\item erweiterbar auf komplexere Gebiete
 	\item geschachtelte Iterationen sind einfach zu realisieren
 \end{itemize}
 
 \pause
-Nachteile der FEM:
+Nachteile der Galerkin-Methoden:
 \begin{itemize}
 	\item keine variationelle Formulierung der \MA-Gleichung
-	\item bisher existiert keine FEM, die bewiesen gegen Viskositätslösungen konvergiert
+	\item bisher existiert kein Galerkin-Verfahren, das bewiesen gegen Viskositätslösungen konvergiert
 \end{itemize}
 \pause
-Beispiele für FEM für die \MA-Gleichung
+Beispiele für Galerkin-Methoden für die \MA-Gleichung
 \begin{itemize}
 	{\small  
 	\item \quoting{$C^{{0}}$ penalty methods for the fully nonlinear MA equation} \citep{BGN+2011}
@@ -265,13 +266,17 @@ Beispiele für FEM für die \MA-Gleichung
 \begin{frame}{Picard-Linearisierung}
 \begin{itemize}
 \item Diffusionsgleichung: $\nabla \cdot (A(u) \nabla u ) = f$
+\pause
 \item Entkoppeln der Koeffizientenmatrix $A(u)$ und $\nabla u$
+\pause
 \item für $i\in \N$ wiederholtes Lösen der Gleichungen 
 	\begin{align}
 	\nabla \cdot (A(u^{i} )\nabla u^{i+1}) = f \label{eq: Picard linearisation}
 	\end{align}
 \item \eqref{eq: Picard linearisation} ist linear in $u^{i+1}$
+\pause
 \item konvergiert langsamer als ein Newton-Verfahren, konvergiert für mehr Startwerte %\citep{Deblois1997}
+\pause
 \item Idee: eine ähnliche Linearisierung für die MA-Gleichung finden
 \end{itemize}
 \end{frame}
@@ -300,12 +305,12 @@ Divergenz-Form:
 \begin{frame}{Picard-Iteration zur Lösung der MA-Gleichung}
 	Sei ein Startwert $u^0$ gegeben. Löse für $i \in \N$
 	\begin{align}
-		- \nabla \cdot \left( \cofHess{u^i} \nabla u^{i+1} \right)  = -2f. \label{eq: Picard Iteration}
+		- \nabla \cdot \left( \cofHess{u^i} \nabla u^{i+1} \right)  = -2f. \label{eq: Picard-Iteration}
 	\end{align}
 
 	\pause
 	\begin{itemize}
-		\item \eqref{eq: Picard Iteration} ist ein verallgemeinertes Poisson  Problem (GPP)\\
+		\item \eqref{eq: Picard-Iteration} ist ein verallgemeinertes Poisson  Problem (GPP)\\
 			 $\rightarrow$ d.h. linear in den zweiten Ableitungen von $u^{i+1}$
 		\pause
 		\item unstetige Elemente, da $\cofHessH{u_h^i}$ unstetig ist (für finite Elemente, die nicht in $C^2(\Omega)$ enthalten sind)
@@ -320,7 +325,7 @@ Divergenz-Form:
 \begin{frame}{Diskrete variationelle Formulierung des GPP}
 Sei $\triang$ eine Triangulierung von $\Omega $ und der FE-Raum \[V_h =  \{f \in L^2(\Omega);  f|_T \in \mathcal P_k (T) \text{ for every } T \in \triang\}\] gegeben. 
 \pause
-Die variationelle Formulierung des GPP lautet
+Aus dem GPP folgt
 			\begin{align*}
 				-\myIntX \Omega {v_h \nabla \cdot (A \nabla u_h)}=
 				 \myIntX \Omega {v_h f} \qquad \forall v_h \in V_h. %\label{eq: variational form}
@@ -431,8 +436,8 @@ Die Energie-Norm $\eNorm \cdot$ ist definiert durch
 \end{frame}
 
 
-\subsection{Herausforderungen für die Picard Iteration}
-\begin{frame}{Startwert für die Picard Iteration}
+\subsection{Herausforderungen für die Picard-Iteration}
+\begin{frame}{Startwert für die Picard-Iteration}
 %In \citep[Remark 2.1]{DG2006a} 
 Es wurde gezeigt \citep{DG2006a}, dass die Lösung von 
 \begin{align*}
@@ -467,7 +472,7 @@ Rel. $L^2$-Fehler auf einem Gitter mit $h=\frac 1 2$ und dem exakten Startwert $
 \end{figure}
 \end{frame}
 
-\begin{frame}{Ein weiterer Penalty-parameter}
+\begin{frame}{Ein weiterer Penalty-Parameter}
   \begin{columns}
 	\begin{column}{0.9\textwidth}
 %	\begin{wrapfigure}{r}{0.5\textwidth}
@@ -559,6 +564,7 @@ Relativer $L^2$-Fehler auf einem Gitter mit $h=\frac 1 4$ und zusätzlichem Grad
 \begin{frame}{Korrektheit der SIPG-Formulierung}
 \begin{itemize}
 	\item für die Koerzivität der SIPG-Bilinearform muss $\mycof {D^2_h u_h}$ positiv definit sein\\
+	\item je kleiner der kleinste Eigenwert von $\mycof {D^2_h u_h}$, desto kleiner ist die Koerzivitätskonstante $\alpha$
 	\pause
 	\item beschränke den kleinsten Eigenwert von $\mycof {D^2_h u_h}$ von unten mit einer positiven Konstante $\varepsilon$
 \end{itemize}
@@ -613,7 +619,7 @@ Relativer $L^2$-Fehler auf einem Gitter mit $h=\frac 1 4$ und zusätzlichem Grad
 %\end{frame}
 
 
-%\subsection{Algorithm for the Picard Iteration}
+%\subsection{Algorithm for the Picard-Iteration}
 
 \begin{frame}
 \begin{algorithm}[H]
