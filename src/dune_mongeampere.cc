@@ -34,7 +34,7 @@ try {
 	// ///////////////////////////////////////////////////////
 	// Assemble the system
 	// ///////////////////////////////////////////////////////
-	MA_solver<Solver_config> ma_solver(unitcube.grid(), gridView);
+	MA_solver<Solver_config> ma_solver(unitcube.grid_ptr(), gridView);
 
 	MA_solver<Solver_config>::Operator op(ma_solver);
 

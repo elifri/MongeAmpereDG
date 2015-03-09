@@ -69,6 +69,11 @@ public:
 	GridType& grid() {
 		return *grid_;
 	}
+
+	const std::shared_ptr<GridType>& grid_ptr() const{
+		return grid_;
+	}
+
 };
 
 template<int dim>

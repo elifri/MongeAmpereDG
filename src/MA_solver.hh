@@ -39,8 +39,8 @@ public:
 	MA_solver() :
 			initialised(false) {
 	}
-	MA_solver(GridType& grid, GridViewType& gridView) :
-			initialised(true), grid_ptr(&grid), gridView_ptr(&gridView) {
+	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView) :
+			initialised(true), grid_ptr(grid), gridView_ptr(&gridView) {
 		initialise_dofs();
 	}
 
@@ -49,16 +49,16 @@ public:
 
 	int get_n_dofs(){return n_dofs;}
 
-	void assemble(const VectorType& x, VectorType& v) const;
-	void assemble_Jacobian(const VectorType& x, MatrixType& m) const;
+	void assemble_DG(const VectorType& x, VectorType& v) const;
+	void assemble_Jacobian_DG(const VectorType& x, MatrixType& m) const;
 
 
 	struct Operator {
 		Operator(const MA_solver &solver):solver_ptr(&solver){}
 
-		void evaluate(const VectorType& x, VectorType& v) const {solver_ptr->assemble(x,v);}
-		void Jacobian(const VectorType& x, MatrixType& m) const {solver_ptr->assemble_Jacobian(x,m);}
-		void derivative(const VectorType& x, MatrixType& m) const {solver_ptr->assemble_Jacobian(x,m);}
+		void evaluate(const VectorType& x, VectorType& v) const {solver_ptr->assemble_DG(x,v);}
+		void Jacobian(const VectorType& x, MatrixType& m) const {solver_ptr->assemble_Jacobian_DG(x,m);}
+		void derivative(const VectorType& x, MatrixType& m) const {solver_ptr->assemble_Jacobian_DG(x,m);}
 
 		const MA_solver* solver_ptr;
 	};
@@ -70,7 +70,7 @@ public:
 	 * returns a vector containing the function with coefficients x evaluated at the vertices
 	 * @return
 	 */
-	VectorType return_vertex_vector(const VectorType &x);
+	VectorType return_vertex_vector(const VectorType &x) const;
 
 	//--------Attributes--
 
@@ -80,8 +80,10 @@ private:
 
 	bool initialised;
 
-	shared_ptr<GridType> grid_ptr;
-	shared_ptr<GridViewType> gridView_ptr;
+	const shared_ptr<GridType> grid_ptr;
+//	const GridType* grid_ptr;
+//	shared_ptr<const GridViewType> gridView_ptr;
+	const GridViewType* gridView_ptr;
 
 //	shared_ptr<GridType> plotGrid_ptr;
 
@@ -102,7 +104,7 @@ void copy_to_sparse_matrix(const DenseMatrixType &m_local, int offset_row, int o
 }
 
 template<class Config>
-void MA_solver<Config>::assemble(const VectorType& x,
+void MA_solver<Config>::assemble_DG(const VectorType& x,
 		VectorType& v) const {
 
 	assert(x.size() == n_dofs);
@@ -181,7 +183,7 @@ void MA_solver<Config>::assemble(const VectorType& x,
 }
 
 template<class Config>
-void MA_solver<Config>::assemble_Jacobian(const VectorType& x, MatrixType &m) const
+void MA_solver<Config>::assemble_Jacobian_DG(const VectorType& x, MatrixType &m) const
 {
 	m.resize(n_dofs, n_dofs);
 	m.setZero();
@@ -347,7 +349,7 @@ void MA_solver<Config>::initialise_dofs() {
 }
 
 template<class Config>
-typename MA_solver<Config>::VectorType MA_solver<Config>::return_vertex_vector(const VectorType &x)
+typename MA_solver<Config>::VectorType MA_solver<Config>::return_vertex_vector(const VectorType &x) const
 {
 	assert(x.size() == n_dofs);
 

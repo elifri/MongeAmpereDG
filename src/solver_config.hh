@@ -35,8 +35,10 @@ struct Solver_config{
 	typedef UnitCubeType::GridType GridType;
 	typedef GridType::LeafGridView GridView;
 
+	static const int degree = 3;
+
 //	typedef Q1LocalFiniteElement<double, double, dim> LocalFiniteElementType;
-	typedef Pk2DLocalFiniteElement<double, double, 1> LocalFiniteElementType;
+	typedef Pk2DLocalFiniteElement<double, double, degree> LocalFiniteElementType;
 
 	static const bool require_skeleton_two_sided = false; ///if enabled every face is assembled twice
 
@@ -58,10 +60,11 @@ struct Solver_config{
 #ifdef SIPG
      // SIPG
     static constexpr double epsilon = -1.0;
-    static constexpr double sigma = 20;   // should be < 5 for stability reasons
+    static constexpr double sigma = 10;   // should be < 5 for stability reasons
     static constexpr double beta = 2.0 - 0.5*dim;  // 2D => 1, 3D => 0.5
 #endif
 };
+
 
 
 
