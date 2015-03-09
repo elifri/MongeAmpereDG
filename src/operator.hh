@@ -143,7 +143,7 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 	const FieldVector<double,dimw> normal = intersection.unitOuterNormal(face_center);
 
 	// penalty weight for NIPG / SIPG
-	double penalty_weight = Solver_config::sigma / std::pow(intersection.geometry().volume(), Solver_config::beta);
+	double penalty_weight = Solver_config::sigma*(Solver_config::degree*Solver_config::degree) / std::pow(intersection.geometry().volume(), Solver_config::beta);
 
 	// Loop over all quadrature points
 	for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -262,7 +262,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
 	const FieldVector<double,dimw> normal = intersection.unitOuterNormal(face_center);
 
 	// penalty weight for NIPG / SIPG
-	double penalty_weight = Solver_config::sigma / std::pow(intersection.geometry().volume(), Solver_config::beta);
+	double penalty_weight = Solver_config::sigma*(Solver_config::degree*Solver_config::degree) / std::pow(intersection.geometry().volume(), Solver_config::beta);
 
     Dirichletdata bc;
 
@@ -422,7 +422,7 @@ void assemble_inner_face_Jacobian(const Intersection& intersection,
 	const FieldVector<double,dimw> normal = intersection.unitOuterNormal(face_center);
 
 	// penalty weight for NIPG / SIPG
-	double penalty_weight = Solver_config::sigma / std::pow(intersection.geometry().volume(), Solver_config::beta);
+	double penalty_weight = Solver_config::sigma*(Solver_config::degree*Solver_config::degree) / std::pow(intersection.geometry().volume(), Solver_config::beta);
 
 	// Loop over all quadrature points
 	for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -512,7 +512,7 @@ void assemble_boundary_face_Jacobian(const Intersection& intersection,
 	const FieldVector<double,dimw> normal = intersection.unitOuterNormal(face_center);
 
 	// penalty weight for NIPG / SIPG
-	double penalty_weight = Solver_config::sigma / std::pow(intersection.geometry().volume(), Solver_config::beta);
+	double penalty_weight = Solver_config::sigma*(Solver_config::degree*Solver_config::degree) / std::pow(intersection.geometry().volume(), Solver_config::beta);
 
 	// Loop over all quadrature points
 	for (size_t pt = 0; pt < quad.size(); pt++) {
