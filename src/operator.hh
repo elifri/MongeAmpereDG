@@ -68,6 +68,10 @@ void assemble_cell_term(const Element& element, const LocalElement &localFiniteE
 		// The multiplicative factor in the integral transformation formula
 		const double integrationElement = geometry.integrationElement(quadPos);
 
+		//the shape function values
+		std::vector<FieldVector<double,1> > referenceFunctionValues;
+		localFiniteElement.localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+
 		// The gradients of the shape functions on the reference element
 		std::vector<FieldMatrix<double, 1, dim> > referenceGradients;
 		localFiniteElement.localBasis().evaluateJacobian(quadPos,
@@ -88,8 +92,10 @@ void assemble_cell_term(const Element& element, const LocalElement &localFiniteE
 
 		//calculate system
 		for (size_t j = 0; j < v.size(); j++) // loop over test fcts
-				v(j) -= ((gradu * gradients[j])-f)
+		{
+				v(j) -= ((gradu * gradients[j])-f*referenceFunctionValues[j])
 						* quad[pt].weight() * integrationElement;
+		}
 	}
 }
 
