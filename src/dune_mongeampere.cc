@@ -26,7 +26,7 @@ try {
 //	FieldVector<double, dim> l(1);
 //	std::array<int, dim> elements = { 10, 10 };
 
-	Solver_config::UnitCubeType unitcube(20);
+	Solver_config::UnitCubeType unitcube(1);
 
 	Solver_config::GridType &grid = unitcube.grid();
 	Solver_config::GridView gridView = grid.leafGridView();
@@ -34,7 +34,7 @@ try {
 	// ///////////////////////////////////////////////////////
 	// Assemble the system
 	// ///////////////////////////////////////////////////////
-	MA_solver<Solver_config> ma_solver(unitcube.grid_ptr(), gridView);
+	MA_solver<Solver_config> ma_solver(unitcube.grid_ptr(), gridView, "u", "u_DH");
 
 	MA_solver<Solver_config>::Operator op(ma_solver);
 
@@ -82,7 +82,12 @@ try {
 
 	doglegMethod(op, opts, x);
 
+
 	std::cout << "x " << x.transpose() << endl;
+	Solver_config::VectorType f;
+	op.evaluate(x, f);
+
+	std::cout << "f(x) " << f << endl;
 
 	x = ma_solver.return_vertex_vector(x);
 

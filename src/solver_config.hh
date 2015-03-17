@@ -13,9 +13,12 @@
 
 #include <config.h>
 #include <dune/grid/yaspgrid.hh>
-#include <dune/localfunctions/lagrange/pk2d.hh>
+#include "localfunctions/pk2d.hh"
 
 #include "UnitCube.hh"
+
+#include "TensorElement.hh"
+#include "mixedElement.hpp"
 
 using namespace Dune;
 
@@ -35,10 +38,15 @@ struct Solver_config{
 	typedef UnitCubeType::GridType GridType;
 	typedef GridType::LeafGridView GridView;
 
-	static const int degree = 3;
+	static const int degree = 2;
+	static const int degreeHessian = 2;
 
 //	typedef Q1LocalFiniteElement<double, double, dim> LocalFiniteElementType;
-	typedef Pk2DLocalFiniteElement<double, double, degree> LocalFiniteElementType;
+	typedef Pk2DLocalFiniteElement<double, double, degree> LocalFiniteElementuType;
+	typedef Pk2DLocalFiniteElement<double, double, degreeHessian> LocalFiniteElementHessianSingleType;
+	typedef TensorElement<LocalFiniteElementHessianSingleType, dim, dim>	LocalFiniteElementHessianType;
+	typedef MixedElement<LocalFiniteElementuType, LocalFiniteElementHessianType> LocalFiniteElementType;
+
 
 	static const bool require_skeleton_two_sided = false; ///if enabled every face is assembled twice
 

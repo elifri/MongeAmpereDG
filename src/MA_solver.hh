@@ -11,7 +11,9 @@
 #include <memory>
 
 #include "solver_config.hh"
-#include "operator.hh"
+//#include "operator_poisson_DG.hh"
+#include "operator_poisson_mixed_DG.hh"
+
 
 using namespace Dune;
 using namespace std;
@@ -44,6 +46,11 @@ public:
 		initialise_dofs();
 	}
 
+	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const string& name0, const string &name1) :
+			initialised(true), grid_ptr(grid), gridView_ptr(&gridView), localFiniteElement(name0, name1) {
+		initialise_dofs();
+	}
+
 	//-----functions--------
 public:
 
@@ -51,6 +58,7 @@ public:
 
 	void assemble_DG(const VectorType& x, VectorType& v) const;
 	void assemble_Jacobian_DG(const VectorType& x, MatrixType& m) const;
+	void assemble_rhs_DG(const VectorType& x, VectorType& v) const;
 
 
 	struct Operator {
@@ -64,7 +72,7 @@ public:
 	};
 
 	VectorType calculate_local_coefficients(
-			const IndexType id, const LocalFiniteElementType& localfiniteElement, const VectorType &x) const;
+			const IndexType id, const VectorType &x) const;
 
 	/**
 	 * returns a vector containing the function with coefficients x evaluated at the vertices
@@ -91,6 +99,8 @@ private:
 	std::map<IndexType, int> id_to_offset;
 	std::map<int, std::pair<double, IndexType> > dof_to_vertex;
 	Eigen::VectorXi dof_to_vertex_ratio; ///counts how many degree of freedom
+
+	LocalFiniteElementType localFiniteElement;
 
 	int n_dofs;
 };
@@ -122,15 +132,14 @@ void MA_solver<Config>::assemble_DG(const VectorType& x,
 		VectorType local_vector;
 
 		// Get set of shape functions for this element
-		LocalFiniteElementType localFiniteElement;
 		assert(localFiniteElement.type() == e.type()); // This only works for cube grids
 
-				// Set all entries to zero
-		local_vector.setZero(localFiniteElement.localBasis().size());
+		// Set all entries to zero
+		local_vector.setZero(localFiniteElement.size());
 
 		//get id
 		IndexType id = indexSet.index(e);
-		VectorType xLocal = calculate_local_coefficients(id, localFiniteElement, x);
+		VectorType xLocal = calculate_local_coefficients(id, x);
 
 		assemble_cell_term(e, localFiniteElement, xLocal, local_vector);
 
@@ -156,7 +165,7 @@ void MA_solver<Config>::assemble_DG(const VectorType& x,
 									== (iit->outside())->type()); //assert the neighbour element hast the same local basis
 									//extract neighbour
 					VectorType xLocaln = calculate_local_coefficients(
-							idn, localFiniteElement, x);
+							idn, x);
 					VectorType local_vectorn = VectorType::Zero(xLocaln.size());
 
 //					std::cout << "offsets " << id_to_offset.at(id) << "neighbor "<< id_to_offset.at(idn) << endl;
@@ -198,15 +207,14 @@ void MA_solver<Config>::assemble_Jacobian_DG(const VectorType& x, MatrixType &m)
 		DenseMatrixType m_m;
 
 		// Get set of shape functions for this element
-		LocalFiniteElementType localFiniteElement;
 		assert(localFiniteElement.type() == it->type()); // This only works for cube grids
 
 		// Set all entries to zero
-		m_m.setZero(localFiniteElement.localBasis().size(), localFiniteElement.localBasis().size());
+		m_m.setZero(localFiniteElement.size(), localFiniteElement.size());
 
 		//get id
 		IndexType id = indexSet.index(*it);
-		VectorType xLocal = calculate_local_coefficients(id, localFiniteElement, x);
+		VectorType xLocal = calculate_local_coefficients(id, x);
 
 		assemble_cell_Jacobian(*it, localFiniteElement, xLocal, m_m);
 
@@ -232,11 +240,11 @@ void MA_solver<Config>::assemble_Jacobian_DG(const VectorType& x, MatrixType &m)
 									== (iit->outside())->type()); //assert the neighbour element hast the same local basis
 									//extract neighbour
 					VectorType xLocaln = calculate_local_coefficients(
-							idn, localFiniteElement, x);
+							idn, x);
 					DenseMatrixType mn_m, m_mn, mn_mn;
-					mn_m.setZero(localFiniteElement.localBasis().size(), localFiniteElement.localBasis().size());
-					m_mn.setZero(localFiniteElement.localBasis().size(), localFiniteElement.localBasis().size());
-					mn_mn.setZero(localFiniteElement.localBasis().size(), localFiniteElement.localBasis().size());
+					mn_m.setZero(localFiniteElement.size(), localFiniteElement.size());
+					m_mn.setZero(localFiniteElement.size(), localFiniteElement.size());
+					mn_mn.setZero(localFiniteElement.size(), localFiniteElement.size());
 
 					assemble_inner_face_Jacobian(*iit, localFiniteElement, xLocal,
 							localFiniteElement, xLocaln, m_m, mn_m,
@@ -266,9 +274,54 @@ void MA_solver<Config>::assemble_Jacobian_DG(const VectorType& x, MatrixType &m)
 }
 
 template<class Config>
+void MA_solver<Config>::assemble_rhs_DG(const VectorType& x,
+		VectorType& v) const {
+
+	assert(x.size() == n_dofs);
+
+	//assuming Galerkin
+	v = VectorType::Zero(x.size());
+
+	// The index set gives you indices for each element , edge , face , vertex , etc .
+	const GridViewType::IndexSet& indexSet = gridView_ptr->indexSet();
+
+	// A loop over all elements of the grid
+	for (auto&& e : elements(*gridView_ptr)) {
+		VectorType local_vector;
+
+		// Get set of shape functions for this element
+		assert(localFiniteElement.type() == e.type()); // This only works for cube grids
+
+		// Set all entries to zero
+		local_vector.setZero(localFiniteElement.size());
+
+		//get id
+		IndexType id = indexSet.index(e);
+		VectorType xLocal = calculate_local_coefficients(id, localFiniteElement, x);
+
+		assemble_cell_term_rhs(e, localFiniteElement, xLocal, local_vector);
+
+		// Traverse intersections
+		unsigned int intersection_index = 0;
+		IntersectionIterator endit = gridView_ptr->iend(e);
+		IntersectionIterator iit = gridView_ptr->ibegin(e);
+
+		for (; iit != endit; ++iit, ++intersection_index) {
+			if (iit->boundary()) {
+				// Boundary integration
+				assemble_boundary_face_term_rhs(*iit, localFiniteElement, xLocal,
+						local_vector);
+			}
+		}
+		v.segment(id_to_offset.at(id), local_vector.size()) += local_vector;
+	}
+
+}
+
+template<class Config>
 typename MA_solver<Config>::VectorType MA_solver<Config>::calculate_local_coefficients(
-		const IndexType id, const LocalFiniteElementType& localfiniteElement, const VectorType& x) const{
-	return x.segment(id_to_offset.at(id), localfiniteElement.localBasis().size());
+		const IndexType id, const VectorType& x) const{
+	return x.segment(id_to_offset.at(id), localFiniteElement.size());
 }
 
 template <class Config>
@@ -288,7 +341,6 @@ void MA_solver<Config>::initialise_dofs() {
 	for (; it != endIt; ++it) {
 
 		// Get set of shape functions for this element
-		LocalFiniteElementType localFiniteElement;
 		assert(localFiniteElement.type() == it->type());// This only works for cube grids
 
 		auto geometry = it->geometry();
@@ -305,6 +357,7 @@ void MA_solver<Config>::initialise_dofs() {
 
 			// The shape functions on the reference elements
 			std::vector<StateType> referenceFunctionValues;
+			Solver_config::LocalFiniteElementuType localFiniteElement;
 			localFiniteElement.localBasis().evaluateFunction(local_vertex_coords, referenceFunctionValues);
 
 			std::cout << "referenceFunctionValues ";
@@ -340,7 +393,7 @@ void MA_solver<Config>::initialise_dofs() {
 
 		id_to_offset[id] = count_dofs;
 
-		count_dofs += localFiniteElement.localBasis().size();
+		count_dofs += localFiniteElement.size();
 	}
 
 	cout << "dof_to_vertex_ratio " << dof_to_vertex_ratio.transpose() << std::endl;
@@ -356,7 +409,10 @@ typename MA_solver<Config>::VectorType MA_solver<Config>::return_vertex_vector(c
 	VectorType x_vertex = VectorType::Zero(gridView_ptr->size(Config::dim));
 
 	for (const auto& e: dof_to_vertex)
+	{
 			x_vertex(e.second.second) += e.second.first*x(e.first);
+			std::cout << "vertex " << e.second.second <<" +="<<e.second.first<<"*" << x(e.first) << std::endl;
+	}
 
 	std::cout << "x_vertex before " << x_vertex.transpose() << std::endl;
 
