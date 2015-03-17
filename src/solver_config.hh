@@ -31,7 +31,6 @@ struct Solver_config{
 	typedef Eigen::SparseMatrix<double> MatrixType;
 
 	typedef FieldVector<double, dim> SpaceType;
-	typedef FieldVector<double, 1> StateType;
 
 //	typedef YaspGrid<dim> GridType;
 	typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > UnitCubeType;
@@ -46,6 +45,10 @@ struct Solver_config{
 	typedef Pk2DLocalFiniteElement<double, double, degreeHessian> LocalFiniteElementHessianSingleType;
 	typedef TensorElement<LocalFiniteElementHessianSingleType, dim, dim>	LocalFiniteElementHessianType;
 	typedef MixedElement<LocalFiniteElementuType, LocalFiniteElementHessianType> LocalFiniteElementType;
+
+
+	typedef LocalFiniteElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
+	typedef LocalFiniteElementuType::Traits::LocalBasisType::Traits::DomainType DomainType;
 
 
 	static const bool require_skeleton_two_sided = false; ///if enabled every face is assembled twice

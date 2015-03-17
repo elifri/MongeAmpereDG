@@ -43,6 +43,14 @@ public:
 		return m*n*basis.size();
 	}
 
+	unsigned int order() const
+	{
+		return basis.order();
+	}
+
+private:
+
+
 	LocalBasis basis;
 };
 

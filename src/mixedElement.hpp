@@ -59,6 +59,14 @@ unsigned int size() const
 unsigned int size(const FirstVariable &v0) const { return lfu0.size();}
 unsigned int size(const SecondVariable &v0) const { return lfu1.size();}
 
+unsigned int order() const
+{
+	return std::max(lfu0.localBasis().order(), lfu1.localBasis().order());
+}
+
+unsigned int order(const FirstVariable &v0) const { return lfu0.localBasis().order();}
+unsigned int order(const SecondVariable &v0) const { return lfu1.localBasis().order();}
+
 
 private:
 	LocalFiniteElement0 lfu0;
