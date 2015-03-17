@@ -11,9 +11,12 @@
 #include <memory>
 
 #include "solver_config.hh"
+#include "Callback/Callback_utility.hpp"
+
 //#include "operator_poisson_DG.hh"
 #include "operator_poisson_mixed_DG.hh"
 
+#include <Eigen/Dense>
 
 using namespace Dune;
 using namespace std;
@@ -29,7 +32,7 @@ class MA_solver {
 	typedef GridViewType::IndexSet::IndexType IndexType;
 
 	typedef Solver_config::SpaceType SpaceType;
-	typedef Solver_config::StateType StateType;
+	typedef Solver_config::RangeType RangeType;
 
 	typedef typename Solver_config::VectorType VectorType;
 	typedef typename Solver_config::DenseMatrixType DenseMatrixType;
@@ -73,6 +76,14 @@ public:
 
 	VectorType calculate_local_coefficients(
 			const IndexType id, const VectorType &x) const;
+
+	/**
+	 * projects a function into the grid space
+	 * @param f	callback function representing the function
+	 * @param V	returns the coefficient vector of the projection of f
+	 */
+	void project(const MA_function_type f, VectorType &V) const;
+
 
 	/**
 	 * returns a vector containing the function with coefficients x evaluated at the vertices
@@ -356,7 +367,7 @@ void MA_solver<Config>::initialise_dofs() {
 		              general(geometry.type()).position(i, Config::dim);
 
 			// The shape functions on the reference elements
-			std::vector<StateType> referenceFunctionValues;
+			std::vector<RangeType> referenceFunctionValues;
 			Solver_config::LocalFiniteElementuType localFiniteElement;
 			localFiniteElement.localBasis().evaluateFunction(local_vertex_coords, referenceFunctionValues);
 
@@ -406,6 +417,8 @@ typename MA_solver<Config>::VectorType MA_solver<Config>::return_vertex_vector(c
 {
 	assert(x.size() == n_dofs);
 
+	std::cout << "x " << x.transpose() << std::endl;
+
 	VectorType x_vertex = VectorType::Zero(gridView_ptr->size(Config::dim));
 
 	for (const auto& e: dof_to_vertex)
@@ -422,5 +435,75 @@ typename MA_solver<Config>::VectorType MA_solver<Config>::return_vertex_vector(c
 
 	return x_vertex;
 }
+
+//TODO mass matrix does not alter for different elements!!!
+template<class Config>
+void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
+{
+	v.resize(n_dofs);
+
+	// The index set gives you indices for each element , edge , face , vertex , etc .
+	const GridViewType::IndexSet& indexSet = gridView_ptr->indexSet();
+
+	//loop over all cells and solve in every cell the equation \int l2proj(f) *phi = \int f *phi \forall phi
+	for (auto&& e : elements(*gridView_ptr)) {
+		assert(localFiniteElement.type() == e.type());
+
+
+		typedef decltype(e) ConstElementRefType;
+		typedef std::remove_reference<ConstElementRefType>::type ConstElementType;
+
+		const int dim =  ConstElementType::dimension;
+		auto geometry = e.geometry();
+		//get id
+		IndexType id = indexSet.index(e);\
+
+		// Get a quadrature rule
+		int order = std::max(1, 2 * ((int)localFiniteElement.order()));
+		const QuadratureRule<double, dim>& quad =
+				QuadratureRules<double, dim>::rule(e.type(), order);
+
+		//local rhs = \int f *v
+		VectorType localVector = VectorType::Zero(localFiniteElement.size(u()));
+
+		//local mass matrix m_ij = \int v_i *v_j
+		DenseMatrixType localMassMatrix = DenseMatrixType::Zero(localFiniteElement.size(u()), localFiniteElement.size(u()));
+
+		// Loop over all quadrature points
+		for (size_t pt = 0; pt < quad.size(); pt++) {
+
+			// Position of the current quadrature point in the reference element
+			const FieldVector<double, dim> &quadPos = quad[pt].position();
+			//the shape function values
+			std::vector<RangeType> referenceFunctionValues;
+			localFiniteElement(u())->localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+
+
+
+			//get value of f at quadrature point
+			RangeType f_value;
+			f(geometry.global(quad[pt].position()), f_value);
+
+			const double integrationElement = geometry.integrationElement(quadPos);
+
+			//assemble integrals
+			for (size_t j = 0; j < localFiniteElement.size(u()); j++) // loop over test fcts
+			{
+				//int f * v
+				localVector(j) += f_value*referenceFunctionValues[j]* quad[pt].weight() * integrationElement;
+
+				//int v_i*v_j, as mass matrix is symmetric only fill lower part
+				for (size_t i = 0; i <= j; i++)
+					localMassMatrix(j,i) += referenceFunctionValues[i]*referenceFunctionValues[j]*quad[pt].weight() *integrationElement;
+			}
+		}
+
+
+		//solve arising system
+		VectorType x_local =  localMassMatrix.ldlt().solve(localVector);
+		v.segment(id_to_offset.at(id), x_local.size()) = x_local;
+	}
+}
+
 
 #endif /* SRC_MA_SOLVER_HH_ */
