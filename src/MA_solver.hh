@@ -39,6 +39,7 @@ class MA_solver {
 	typedef typename Solver_config::MatrixType MatrixType;
 
 	typedef typename Solver_config::LocalFiniteElementType LocalFiniteElementType;
+	typedef typename Solver_config::LocalFiniteElementuType::Traits::LocalBasisType::Traits::HessianType HessianType;
 
 public:
 	MA_solver() :
@@ -137,24 +138,23 @@ void MA_solver<Config>::assemble_DG(const VectorType& x,
 	const GridViewType::IndexSet& indexSet = gridView_ptr->indexSet();
 
 	// A loop over all elements of the grid
-//	auto it = gridView_ptr->template begin<0>();
-//	auto endIt = gridView_ptr->template end<0>();
 	for (auto&& e : elements(*gridView_ptr)) {
-		VectorType local_vector;
 
-		// Get set of shape functions for this element
 		assert(localFiniteElement.type() == e.type()); // This only works for cube grids
 
-		// Set all entries to zero
-		local_vector.setZero(localFiniteElement.size());
+		VectorType local_vector;
+		local_vector.setZero(localFiniteElement.size());		// Set all entries to zero
 
 		//get id
 		IndexType id = indexSet.index(e);
+
+		//calculate local coefficients
 		VectorType xLocal = calculate_local_coefficients(id, x);
 
 		assemble_cell_term(e, localFiniteElement, xLocal, local_vector);
 
 		// Traverse intersections
+/*
 		unsigned int intersection_index = 0;
 		IntersectionIterator endit = gridView_ptr->iend(e);
 		IntersectionIterator iit = gridView_ptr->ibegin(e);
@@ -197,6 +197,7 @@ void MA_solver<Config>::assemble_DG(const VectorType& x,
 				exit(-1);
 			}
 		}
+*/
 		v.segment(id_to_offset.at(id), local_vector.size()) += local_vector;
 	}
 
@@ -371,9 +372,9 @@ void MA_solver<Config>::initialise_dofs() {
 			Solver_config::LocalFiniteElementuType localFiniteElement;
 			localFiniteElement.localBasis().evaluateFunction(local_vertex_coords, referenceFunctionValues);
 
-			std::cout << "referenceFunctionValues ";
-			for (auto e:referenceFunctionValues)	std::cout << e << " ";
-			std::cout << std::endl;
+//			std::cout << "referenceFunctionValues ";
+//			for (auto e:referenceFunctionValues)	std::cout << e << " ";
+//			std::cout << std::endl;
 
 			//get vertex id
 			auto vertex = it->subEntity<Config::dim>(i); //Attention this returns a point in alugrid, but a entity in newer versions as yaspgrid
@@ -388,7 +389,7 @@ void MA_solver<Config>::initialise_dofs() {
 					assert(Config::ansatzpolynomials == Solver_config::Lagrange); //if the ansatz polynomials are change a dof may contribute to more than one vertex
 
 					dof_to_vertex[count_dofs+i] = std::pair<double, IndexType>(referenceFunctionValues[i], vertex_id);
-					std::cout << "Add dof " << count_dofs+i << " to vertex " << vertex_id << std::endl;
+//					std::cout << "Add dof " << count_dofs+i << " to vertex " << vertex_id << std::endl;
 
 
 					dof_to_vertex_ratio[vertex_id] ++;
@@ -417,17 +418,17 @@ typename MA_solver<Config>::VectorType MA_solver<Config>::return_vertex_vector(c
 {
 	assert(x.size() == n_dofs);
 
-	std::cout << "x " << x.transpose() << std::endl;
+//	std::cout << "x " << x.transpose() << std::endl;
 
 	VectorType x_vertex = VectorType::Zero(gridView_ptr->size(Config::dim));
 
 	for (const auto& e: dof_to_vertex)
 	{
 			x_vertex(e.second.second) += e.second.first*x(e.first);
-			std::cout << "vertex " << e.second.second <<" +="<<e.second.first<<"*" << x(e.first) << std::endl;
+//			std::cout << "vertex " << e.second.second <<" +="<<e.second.first<<"*" << x(e.first) << std::endl;
 	}
 
-	std::cout << "x_vertex before " << x_vertex.transpose() << std::endl;
+//	std::cout << "x_vertex before " << x_vertex.transpose() << std::endl;
 
 	for (int i=0; i < x_vertex.size(); i++)
 		x_vertex(i) /= (double) dof_to_vertex_ratio(i);
@@ -460,48 +461,113 @@ void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
 
 		// Get a quadrature rule
 		int order = std::max(1, 2 * ((int)localFiniteElement.order()));
+		std::cout << "order " << order << std::endl;
 		const QuadratureRule<double, dim>& quad =
 				QuadratureRules<double, dim>::rule(e.type(), order);
 
-		//local rhs = \int f *v
-		VectorType localVector = VectorType::Zero(localFiniteElement.size(u()));
+		//vector to store the local projection
+		VectorType x_local;
+		{
+			//local rhs = \int f *v
+			VectorType localVector = VectorType::Zero(localFiniteElement.size(u()));
 
-		//local mass matrix m_ij = \int v_i *v_j
-		DenseMatrixType localMassMatrix = DenseMatrixType::Zero(localFiniteElement.size(u()), localFiniteElement.size(u()));
+			//local mass matrix m_ij = \int v_i *v_j
+			DenseMatrixType localMassMatrix = DenseMatrixType::Zero(localFiniteElement.size(u()), localFiniteElement.size(u()));
 
-		// Loop over all quadrature points
-		for (size_t pt = 0; pt < quad.size(); pt++) {
+			// Loop over all quadrature points
+			for (size_t pt = 0; pt < quad.size(); pt++) {
 
-			// Position of the current quadrature point in the reference element
-			const FieldVector<double, dim> &quadPos = quad[pt].position();
-			//the shape function values
-			std::vector<RangeType> referenceFunctionValues;
-			localFiniteElement(u())->localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+				// Position of the current quadrature point in the reference element
+				const FieldVector<double, dim> &quadPos = quad[pt].position();
+				//the shape function values
+				std::vector<RangeType> referenceFunctionValues;
+				localFiniteElement(u())->localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
+				//get value of f at quadrature point
+				RangeType f_value;
+				f(geometry.global(quad[pt].position()), f_value);
 
+				cout << "f_value at " <<  quad[pt].position() << " " << f_value << std::endl;
+				const double integrationElement = geometry.integrationElement(quadPos);
 
-			//get value of f at quadrature point
-			RangeType f_value;
-			f(geometry.global(quad[pt].position()), f_value);
+				//assemble integrals
+				for (size_t j = 0; j < localFiniteElement.size(u()); j++) // loop over test fcts
+				{
+					//int f * v
+					localVector(j) += f_value*referenceFunctionValues[j]* quad[pt].weight() * integrationElement;
 
-			const double integrationElement = geometry.integrationElement(quadPos);
-
-			//assemble integrals
-			for (size_t j = 0; j < localFiniteElement.size(u()); j++) // loop over test fcts
-			{
-				//int f * v
-				localVector(j) += f_value*referenceFunctionValues[j]* quad[pt].weight() * integrationElement;
-
-				//int v_i*v_j, as mass matrix is symmetric only fill lower part
-				for (size_t i = 0; i <= j; i++)
-					localMassMatrix(j,i) += referenceFunctionValues[i]*referenceFunctionValues[j]*quad[pt].weight() *integrationElement;
+					//int v_i*v_j, as mass matrix is symmetric only fill lower part
+					for (size_t i = 0; i <= j; i++)
+						localMassMatrix(j,i) += referenceFunctionValues[i]*referenceFunctionValues[j]*quad[pt].weight() *integrationElement;
+				}
 			}
+
+
+			//solve arising system
+			x_local =  localMassMatrix.ldlt().solve(localVector);
+			v.segment(id_to_offset.at(id), x_local.size()) = x_local;
 		}
+		{
+			const int size_u = localFiniteElement.size(u());
+			const int size_u_DH = localFiniteElement.size(u_DH());
+
+			//local rhs = \int D_h^2 u:mu
+			VectorType  localVector = VectorType::Zero(size_u_DH);
+
+			//local mass matrix m_ij = \int mu_i : mu_j
+			DenseMatrixType localMassMatrix = DenseMatrixType::Zero(size_u_DH, size_u_DH);
+
+			// Loop over all quadrature points
+			for (size_t pt = 0; pt < quad.size(); pt++) {
+
+				// Position of the current quadrature point in the reference element
+				const FieldVector<double, dim> &quadPos = quad[pt].position();
+
+				//the shape function values
+				std::vector<HessianType> referenceFunctionValues(size_u_DH);
+				localFiniteElement(u_DH())->localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+
+				//-------calulcate piecewise hessian---------
+				//get reference data
+				std::vector<HessianType> Hessians(size_u);
+				localFiniteElement(u())->localBasis().evaluateHessian(quadPos, Hessians);
+
+				//transform data
+				const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
+
+				auto jacobianTransposed = jacobian;
+				jacobianTransposed [1][0] = jacobian [0][1];
+				jacobianTransposed [0][1] = jacobian [1][0];
+				for (size_t i = 0; i < Hessians.size(); i++)
+				{
+					Hessians[i].leftmultiply(jacobianTransposed);
+					Hessians[i].rightmultiply(jacobian);
+				}
+
+				// Compute Hessian u
+				HessianType Hessu(0);
+				for (size_t i = 0; i < x_local.size(); i++)
+					Hessu.axpy(x_local(i), Hessians[i]);
 
 
-		//solve arising system
-		VectorType x_local =  localMassMatrix.ldlt().solve(localVector);
-		v.segment(id_to_offset.at(id), x_local.size()) = x_local;
+				//-----assemble integrals---------
+				const double integrationElement = geometry.integrationElement(quadPos);
+
+				for (size_t j = 0; j < localFiniteElement.size(u_DH()); j++) // loop over test fcts
+				{
+					//int f * v
+					localVector(j) += cwiseProduct(referenceFunctionValues[j],Hessu)* quad[pt].weight() * integrationElement;
+
+					//int v_i*v_j, as mass matrix is symmetric only fill lower part
+					for (size_t i = 0; i <= j; i++)
+						localMassMatrix(j,i) += cwiseProduct(referenceFunctionValues[i],referenceFunctionValues[j])*quad[pt].weight() *integrationElement;
+				}
+			}
+
+			//solve arising system
+			x_local =  localMassMatrix.ldlt().solve(localVector);
+			v.segment(id_to_offset.at(id)+size_u, x_local.size()) = x_local;
+		}
 	}
 }
 
