@@ -64,6 +64,9 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 	typedef typename LocalElement0::Traits::LocalBasisType::Traits::RangeType RangeType;
 //	assert(typeid(typename LocalElement1::TensorRangeType) == typeid(HessianType));
 
+	const int size_u = localFiniteElement.size(u());
+	const int size_u_DH = localFiniteElement.size(u_DH());
+
 	// Get a quadrature rule
 	int order = std::max( 0, 2 * ( (int)localFiniteElement.order()));
 	const QuadratureRule<double, dim>& quad =
@@ -83,11 +86,11 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 		const double integrationElement = geometry.integrationElement(quadPos);
 
 		//the shape function values
-		std::vector<RangeType> referenceFunctionValues;
+		std::vector<RangeType> referenceFunctionValues(size_u);
 		localFiniteElement(u())->localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
 		// The hessian of the shape functions on the reference element
-		std::vector<HessianType> Hessians(localFiniteElement.size(u()));
+		std::vector<HessianType> Hessians(size_u);
 		localFiniteElement(u())->localBasis().evaluateHessian(quadPos,
 				Hessians);
 
@@ -96,7 +99,7 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 //		std::cout << std::endl;
 
 		//the shape function values of hessian ansatz functions
-		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessian;
+		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessian(size_u_DH);
 		localFiniteElement(u_DH())->localBasis().evaluateFunction(quadPos, referenceFunctionValuesHessian);
 
 
@@ -115,15 +118,18 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 
 		//---------evaluate Hess u and  u_DH -----------
 
-		// Compute Hessian u
+		// Compute piecewise Hessian u
 		HessianType Hessu(0);
-		for (size_t i = 0; i < x.size(); i++)
+		for (size_t i = 0; i < size_u; i++)
 			Hessu.axpy(x(i), Hessians[i]);
 
 
+
 		typename LocalElement1::TensorRangeType uDH;
-		for (size_t i = localFiniteElement.size(u()); i < localFiniteElement.size(); i++)
-			uDH.axpy(x(i),referenceFunctionValuesHessian[i]);
+		for (size_t i = 0; i < size_u_DH; i++)
+		{
+			uDH.axpy(x(size_u+i), referenceFunctionValuesHessian[i]);
+		}
 
 		//--------assemble cell integrals in variational form--------
 
@@ -131,15 +137,14 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 		rhs.evaluate(quad[pt].position(), f);
 
 		//calculate system for first test functions
-		for (size_t j = 0; j < localFiniteElement.size(u()); j++) // loop over test fcts
+		for (size_t j = 0; j < size_u; j++) // loop over test fcts
 		{
 				v(j) += (uDH.determinant()-f)*referenceFunctionValues[j]
 						* quad[pt].weight() * integrationElement;
 		}
 
 		//calculate system for second tensor functions
-		int size_u = localFiniteElement.size(u());
-		for (size_t j = 0; j < localFiniteElement.size(u_DH()); j++) // loop over test fcts
+		for (size_t j = 0; j < size_u_DH; j++) // loop over test fcts
 		{
 				v(size_u+j) += cwiseProduct(uDH,referenceFunctionValuesHessian[j])* quad[pt].weight() * integrationElement;
 				v(size_u+j) -= cwiseProduct(Hessu, referenceFunctionValuesHessian[j])*quad[pt].weight() * integrationElement;
