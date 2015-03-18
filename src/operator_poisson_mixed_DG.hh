@@ -87,9 +87,9 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 		localFiniteElement(u())->localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
 		// The hessian of the shape functions on the reference element
-		std::vector<HessianType> referenceHessian;
+		std::vector<HessianType> Hessians(localFiniteElement.size(u()));
 		localFiniteElement(u())->localBasis().evaluateHessian(quadPos,
-				referenceHessian);
+				Hessians);
 
 //		std::cout << "reference hessian at " << quadPos << std::endl;
 //		for (const auto &e: referenceHessian)	std::cout << e << ", ";
@@ -103,8 +103,6 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 		//--------transform data------------------------
 
 		// Compute the shape function hessians on the real element
-		std::vector<HessianType> Hessians(
-				referenceHessian.size());
 
 		auto jacobianTransposed = jacobian;
 		jacobianTransposed [1][0] = jacobian [0][1];
