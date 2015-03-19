@@ -30,7 +30,8 @@ public:
 class Dirichletdata: public VirtualFunction<FieldVector<double, Solver_config::dim>, double> {
 public:
 	void evaluate(const FieldVector<double, Solver_config::dim>& in, double& out) const {
-		out = 0;
+//		out = 0;
+		out = (in[0]*in[0]+in[1]*in[1])/2.;
 	}
 };
 

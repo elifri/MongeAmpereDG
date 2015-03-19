@@ -18,8 +18,6 @@ using namespace Dune;
 int main(int argc, char *argv[])
 try {
 
-	const int dim = Solver_config::dim;
-
 	// ////////////////////////////////
 // Generate the grid
 // ////////////////////////////////
@@ -41,7 +39,14 @@ try {
 	// ///////////////////////////////////////////////
 	// Choose an initial iterate
 	// ///////////////////////////////////////////////
-	Solver_config::VectorType x = Solver_config::VectorType::Zero(ma_solver.get_n_dofs());
+	Solver_config::VectorType initial_guess;
+//	ma_solver.project(General_functions::get_easy_convex_polynomial_callback(), initial_guess);
+	ma_solver.project(General_functions::get_constant_one_callback(), initial_guess);
+
+	Solver_config::VectorType x = initial_guess;
+
+	std::cout << "n dofs" << ma_solver.get_n_dofs()<< std::endl;
+
 
 	// /////////////////////////
 	// Compute solution
@@ -69,32 +74,22 @@ try {
 	opts.maxsteps = 100;
 	opts. silentmode = false;
 
-	Solver_config::MatrixType m;
-	op.Jacobian(x, m);
-
-	Solver_config::VectorType v1, v2;
-	v1 = m*x;
-	op.evaluate(x,v2);
-	std::cout << "v1-v2 " << (v1-v2).transpose() << endl;
-	std::cout << "v1 " << (v1).transpose() << endl;
-	std::cout << "v2 " << (v2).transpose() << endl;
-
-
 	doglegMethod(op, opts, x);
 
-
-	std::cout << "x " << x.transpose() << endl;
 	Solver_config::VectorType f;
 	op.evaluate(x, f);
 
 	std::cout << "f(x) " << f << endl;
 
 	x = ma_solver.return_vertex_vector(x);
+	initial_guess = ma_solver.return_vertex_vector(initial_guess);
 
 // Output result
 	VTKWriter<Solver_config::GridView> vtkWriter(gridView);
+	vtkWriter.addVertexData(initial_guess, "initial");
 	vtkWriter.addVertexData(x, "solution");
 	vtkWriter.write("poissonequation result");
+	std::cout << "done" << std::endl;
 }
 // Error handling
 catch (Exception e) {

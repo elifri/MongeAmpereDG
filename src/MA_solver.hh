@@ -154,7 +154,7 @@ void MA_solver<Config>::assemble_DG(const VectorType& x,
 		assemble_cell_term(e, localFiniteElement, xLocal, local_vector);
 
 		// Traverse intersections
-/*
+
 		unsigned int intersection_index = 0;
 		IntersectionIterator endit = gridView_ptr->iend(e);
 		IntersectionIterator iit = gridView_ptr->ibegin(e);
@@ -197,7 +197,7 @@ void MA_solver<Config>::assemble_DG(const VectorType& x,
 				exit(-1);
 			}
 		}
-*/
+
 		v.segment(id_to_offset.at(id), local_vector.size()) += local_vector;
 	}
 
