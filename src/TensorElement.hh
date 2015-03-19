@@ -28,13 +28,15 @@ public:
 		std::vector<RangeType> out_single(out.size());
 		basis.evaluateFunction(x, out_single);
 
+		int fct_no = 0;
 		//TODO works not as expected
 		for (int i = 0; i < m; i++)
 			for (int j = 0; j < n; j++)
 				for (int k = 0; k < out_single.size(); k++)
 				{
-					out[k]=0;
-					out[k][i][j] = out_single[k];
+					out[fct_no]=0;
+					out[fct_no][i][j] = out_single[k];
+					fct_no++;
 				}
 	}
 
