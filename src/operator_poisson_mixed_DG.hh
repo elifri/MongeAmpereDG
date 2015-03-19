@@ -409,10 +409,10 @@ void assemble_boundary_face_term(const Intersection& intersection,
  * @param x			         local solution coefficients
  * @param v					 local residual (to be returned)
 */
-template<class Element, class LocalElement, class VectorType, class MatrixType>
-void assemble_cell_Jacobian(const Element& element, const LocalElement &localFiniteElement, const VectorType &x,
+template<class Element, class LocalElement0, class LocalElement1, class VectorType, class MatrixType>
+void assemble_cell_Jacobian(const Element& element, const MixedElement<LocalElement0, LocalElement1> &localFiniteElement, const VectorType &x,
 		MatrixType& m) {
-/*	const int dim = Element::dimension;
+	const int dim = Element::dimension;
 	auto geometry = element.geometry();
 
 	//assuming galerkin ansatz = test space
@@ -421,13 +421,21 @@ void assemble_cell_Jacobian(const Element& element, const LocalElement &localFin
 	assert(m.rows() == localFiniteElement.size());
 	assert(m.cols() == localFiniteElement.size());
 
+	typedef typename LocalElement0::Traits::LocalBasisType::Traits::HessianType HessianType;
+	typedef typename LocalElement0::Traits::LocalBasisType::Traits::RangeType RangeType;
+	assert(typeid(typename LocalElement1::TensorRangeType) == typeid(HessianType));
+
+	const int size_u = localFiniteElement.size(u());
+	const int size_u_DH = localFiniteElement.size(u_DH());
 	// Get a quadrature rule
-	int order = 2 * (dim - 1);
+	int order = std::max( 0, 2 * ( (int)localFiniteElement.order()));
 	const QuadratureRule<double, dim>& quad =
 			QuadratureRules<double, dim>::rule(element.type(), order);
 
 	// Loop over all quadrature points
 	for (size_t pt = 0; pt < quad.size(); pt++) {
+
+		//--------get data------------------------
 		// Position of the current quadrature point in the reference element
 		const FieldVector<double, dim> &quadPos = quad[pt].position();
 		// The transposed inverse Jacobian of the map from the reference element to the element
@@ -435,29 +443,68 @@ void assemble_cell_Jacobian(const Element& element, const LocalElement &localFin
 		// The multiplicative factor in the integral transformation formula
 		const double integrationElement = geometry.integrationElement(quadPos);
 
-		// The gradients of the shape functions on the reference element
-		std::vector<FieldMatrix<double, 1, dim> > referenceGradients;
-		auto uElement = localFiniteElement("u");
-		uElement->localBasis().evaluateJacobian(quadPos,
-				referenceGradients);
-		// Compute the shape function gradients on the real element
-		std::vector<FieldVector<double, dim> > gradients(
-				referenceGradients.size());
-		for (size_t i = 0; i < gradients.size(); i++)
-			jacobian.mv(referenceGradients[i][0], gradients[i]);
+		//the shape function values
+		std::vector<RangeType> referenceFunctionValues(size_u);
+		localFiniteElement(u())->localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
-		// Compute gradient u
-		FieldVector<double, dim> gradu(0);
-		for (size_t i = 0; i < x.size(); i++)
-			gradu.axpy(x(i), gradients[i]);
+		// The hessian of the shape functions on the reference element
+		std::vector<HessianType> Hessians(size_u);
+		localFiniteElement(u())->localBasis().evaluateHessian(quadPos,
+				Hessians);
 
-		//calculate system
-		for (size_t j = 0; j < x.size(); j++) // loop over test fcts
-			for (size_t i = 0; i < x.size(); i++)
-				m(j,i) -= (gradients[i] * gradients[j])
+
+		//the shape function values of hessian ansatz functions
+		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessian(size_u_DH);
+		localFiniteElement(u_DH())->localBasis().evaluateFunction(quadPos, referenceFunctionValuesHessian);
+
+
+		//--------transform data------------------------
+
+		// Compute the shape function hessians on the real element
+
+		auto jacobianTransposed = jacobian;
+		jacobianTransposed [1][0] = jacobian [0][1];
+		jacobianTransposed [0][1] = jacobian [1][0];
+		for (size_t i = 0; i < Hessians.size(); i++)
+		{
+			Hessians[i].leftmultiply(jacobianTransposed);
+			Hessians[i].rightmultiply(jacobian);
+		}
+
+		//---------evaluate cofac u_DH------------
+		typename LocalElement1::TensorRangeType cofac_uDH;
+		//evaluate u_DH
+		for (size_t i = 0; i < size_u_DH; i++)
+			cofac_uDH.axpy(x(size_u+i), referenceFunctionValuesHessian[i]);
+		//calc cofactor matrix
+		assert(dim == 2);
+		const auto temp = cofac_uDH[0][0];
+		cofac_uDH[0][0] = cofac_uDH[1][1];
+		cofac_uDH[1][1] = temp;
+		cofac_uDH[1][0] *= -1;
+		cofac_uDH[0][1] *= -1;
+
+		//--------assemble cell integrals in variational form--------
+
+		for (size_t j = 0; j < size_u; j++) // loop over test fcts
+			for (size_t i = 0; i < size_u_DH; i++)
+				m(j,size_u+i) += cwiseProduct(cofac_uDH, referenceFunctionValuesHessian[i])*referenceFunctionValues[j]
 						* quad[pt].weight() * integrationElement;
+
+		//calculate system for second tensor functions
+		for (size_t j = 0; j < size_u_DH; j++) // loop over test fcts
+		{
+
+			for (size_t i = 0; i < size_u_DH; i++) //loop over hessian ansatz fcts
+				m(size_u+j,size_u+i) += cwiseProduct(referenceFunctionValuesHessian[i],referenceFunctionValuesHessian[j])* quad[pt].weight() * integrationElement;
+
+			//derivative of D_h^2 u: mu
+			for (size_t i = 0; i < size_u; i++)//loop over ansatz fcts
+				m(size_u+j, i) -= cwiseProduct(Hessians[i], referenceFunctionValuesHessian[j])*quad[pt].weight() * integrationElement;
+		}
+
 	}
-*/
+
 }
 
 /**
