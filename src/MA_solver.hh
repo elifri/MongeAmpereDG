@@ -217,25 +217,25 @@ void MA_solver<Config>::assemble_Jacobian_DG(const VectorType& x, MatrixType &m)
 	// A loop over all elements of the grid
 	auto it = gridView_ptr->template begin<0>();
 	auto endIt = gridView_ptr->template end<0>();
-	for (; it != endIt; ++it) {
+	for (auto&& e : elements(*gridView_ptr)) {
 		DenseMatrixType m_m;
 
 		// Get set of shape functions for this element
-		assert(localFiniteElement.type() == it->type()); // This only works for cube grids
+		assert(localFiniteElement.type() == e.type()); // This only works for cube grids
 
 		// Set all entries to zero
 		m_m.setZero(localFiniteElement.size(), localFiniteElement.size());
 
 		//get id
-		IndexType id = indexSet.index(*it);
+		IndexType id = indexSet.index(e);
 		VectorType xLocal = calculate_local_coefficients(id, x);
 
 		assemble_cell_Jacobian(*it, localFiniteElement, xLocal, m_m);
 
 		// Traverse intersections
 		unsigned int intersection_index = 0;
-		IntersectionIterator endit = gridView_ptr->iend(*it);
-		IntersectionIterator iit = gridView_ptr->ibegin(*it);
+		IntersectionIterator endit = gridView_ptr->iend(e);
+		IntersectionIterator iit = gridView_ptr->ibegin(e);
 
 		for (; iit != endit; ++iit, ++intersection_index) {
 			if (iit->neighbor()) {
