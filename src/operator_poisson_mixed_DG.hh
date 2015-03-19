@@ -187,7 +187,11 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 	assert(vn.size() == localFiniteElementn.size());
 
 	typedef typename LocalElement0::Traits::LocalBasisType::Traits::RangeType RangeType;
+	const int size_u = localFiniteElement.size(u());
+	const int size_u_DH = localFiniteElement.size(u_DH());
 
+	assert(size_u == localFiniteElementn.size(u()));
+	assert(size_u_DH == localFiniteElementn.size(u_DH()));
 
 	// Get a quadrature rule
     const int order = std::max( 1, std::max(
@@ -218,22 +222,22 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 		const FieldVector<double,dim> &quadPosn = intersection.geometryInOutside().global(quad[pt].position());
 
 		// The shape functions on the reference elements
-		std::vector<RangeType > referenceFunctionValues;
+		std::vector<RangeType > referenceFunctionValues(size_u);
 		localFiniteElement(u())->localBasis().evaluateFunction(quadPos, referenceFunctionValues);
-		std::vector<RangeType > referenceFunctionValuesn;
+		std::vector<RangeType > referenceFunctionValuesn(size_u);
 		localFiniteElementn(u())->localBasis().evaluateFunction(quadPosn, referenceFunctionValuesn);
 
 		// The gradients of the shape functions on the reference element
-		std::vector<FieldMatrix<double, 1, dim> > referenceGradients;
+		std::vector<FieldMatrix<double, 1, dim> > referenceGradients(size_u);
 		localFiniteElement(u())->localBasis().evaluateJacobian(quadPos,referenceGradients);
 		std::vector<FieldMatrix<double, 1, dim> > referenceGradientsn(size_u);
 		localFiniteElementn(u())->localBasis().evaluateJacobian(quadPosn,referenceGradientsn);
 
 
 		//the shape function values of hessian ansatz functions
-		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessian;
+		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessian(size_u_DH);
 		localFiniteElement(u_DH())->localBasis().evaluateFunction(quadPos, referenceFunctionValuesHessian);
-		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessiann;
+		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessiann(size_u_DH);
 		localFiniteElementn(u_DH())->localBasis().evaluateFunction(quadPosn, referenceFunctionValuesHessiann);
 
 
@@ -253,18 +257,18 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 		//---------evaluate u and grad u-----------
 	    // compute gradient of u
 	    FieldVector<double,dim> gradu(0.0);
-	    for (int i=0; i<x.size(); i++)
+	    for (int i=0; i<size_u; i++)
 	    	gradu.axpy(x(i),gradients[i]);
 	    FieldVector<double,dim> gradun(0.0);
-	    for (int i=0; i<xn.size(); i++)
+	    for (int i=0; i<size_u; i++)
 	    	gradun.axpy(xn(i),gradientsn[i]);
 
 	    // evaluate u in both elements self and neighbor
 	    double u_value = 0.0;
-	    for (int i=0; i<x.size(); i++)
+	    for (int i=0; i<size_u; i++)
 	    	u_value += x(i)*referenceFunctionValues[i];
 	    double un_value = 0.0;
-	    for (int i=0; i<xn.size(); i++)
+	    for (int i=0; i<size_u; i++)
 	    	un_value += xn(i)*referenceFunctionValuesn[i];
 
 	    //assemble jump and averages
