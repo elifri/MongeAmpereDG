@@ -22,6 +22,19 @@
 
 using namespace Dune;
 
+
+enum PolynomialType {LAGRANGE};
+enum ProblemType
+{
+	SIMPLE_MA, /// solution is x^2/2+y^2/2
+	MA_SMOOTH, /// exp(|x|_2^2 / 2)
+	MA_C1, /// 1/2 * max{0,|x-x0|-0.2}^2
+	MA_SQRT, /////-sqrt(2-|x|^2)
+};
+
+std::ostream& operator <<(std::ostream &output, const ProblemType &p);
+
+
 struct Solver_config{
 
 	static const int dim = 2;
@@ -38,7 +51,7 @@ struct Solver_config{
 	typedef GridType::LeafGridView GridView;
 
 	static const int degree = 2;
-	static const int degreeHessian = 2;
+	static const int degreeHessian = 1;
 
 //	typedef Q1LocalFiniteElement<double, double, dim> LocalFiniteElementType;
 	typedef Pk2DLocalFiniteElement<double, double, degree> LocalFiniteElementuType;
@@ -53,9 +66,10 @@ struct Solver_config{
 
 	static const bool require_skeleton_two_sided = false; ///if enabled every face is assembled twice
 
-	enum PolynomialType {Lagrange};
 
-	static const PolynomialType ansatzpolynomials = Lagrange;
+	static const PolynomialType ansatzpolynomials = LAGRANGE;
+
+	static ProblemType problem;
 
 #define SIPG
 #ifdef OBB    // OBB
