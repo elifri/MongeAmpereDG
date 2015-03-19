@@ -382,9 +382,9 @@ void assemble_boundary_face_term(const Intersection& intersection,
 */
 
 	    // evaluate u
-	    double u = 0.0;
-	    for (size_t i=0; i<x.size(); i++)
-	    	u += x(i)*referenceFunctionValues[i];
+	    double u_value = 0.0;
+	    for (size_t i=0; i<localFiniteElement.size(u()); i++)
+	    	u_value += x(i)*referenceFunctionValues[i];
 
     	double g;
 //    	auto temp = quad[pt].position();
