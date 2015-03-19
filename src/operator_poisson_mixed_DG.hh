@@ -306,9 +306,9 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 			//neighbour parts
 	    	// dicr. hessian correction term: jump{avg{mu} grad_u}
 			referenceFunctionValuesHessiann[j].mv(gradu, temp);
-			v(size_u+j) += 0.5*( temp*normal);
+			vn(size_u+j) += 0.5*( temp*normal);
 			referenceFunctionValuesHessiann[j].mv(gradun, temp);
-			v(size_u+j) += -0.5*( temp*normal); //a - sign for the normal
+			vn(size_u+j) += -0.5*( temp*normal); //a - sign for the normal
 		}
 	}
 }
