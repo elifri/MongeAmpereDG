@@ -226,8 +226,8 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 		// The gradients of the shape functions on the reference element
 		std::vector<FieldMatrix<double, 1, dim> > referenceGradients;
 		localFiniteElement(u())->localBasis().evaluateJacobian(quadPos,referenceGradients);
-		std::vector<FieldMatrix<double, 1, dim> > referenceGradientsn;
-		localFiniteElementn(u())->localBasis().evaluateJacobian(quadPos,referenceGradientsn);
+		std::vector<FieldMatrix<double, 1, dim> > referenceGradientsn(size_u);
+		localFiniteElementn(u())->localBasis().evaluateJacobian(quadPosn,referenceGradientsn);
 
 
 		//the shape function values of hessian ansatz functions
