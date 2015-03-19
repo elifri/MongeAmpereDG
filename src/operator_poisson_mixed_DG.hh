@@ -389,7 +389,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
 
     	double g;
 //    	auto temp = quad[pt].position();
-    	bc.evaluate(quadPos, g);
+    	bc.evaluate(intersection.inside()->geometry().global(quadPos), g);
 //    	std:: cout << "g " << g << std::endl;
 
 	    //-------calculate integral--------
