@@ -279,7 +279,7 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 //	    const double integrationElement = geometry.integrationElement(quadPos);
 	    double factor = quad[pt].weight()*integrationElement;
 
-	    for (unsigned int j=0; j<x.size(); j++)
+	    for (unsigned int j=0; j<size_u; j++)
 	    {
 
 	    	//parts from self
@@ -291,8 +291,7 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 	    	vn(j) += penalty_weight * u_jump*(-referenceFunctionValuesn[j])*factor;
 	    }
 
-		int size_u = localFiniteElement.size(u());
-		for (size_t j = 0; j < localFiniteElement.size(u_DH()); j++) // loop over test fcts
+		for (size_t j = 0; j < size_u_DH; j++) // loop over test fcts
 		{
 
 	    	//parts from self
