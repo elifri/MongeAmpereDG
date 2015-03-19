@@ -206,6 +206,8 @@ void MA_solver<Config>::assemble_DG(const VectorType& x,
 template<class Config>
 void MA_solver<Config>::assemble_Jacobian_DG(const VectorType& x, MatrixType &m) const
 {
+	assert (x.size() == n_dofs);
+
 	m.resize(n_dofs, n_dofs);
 	m.setZero();
 
@@ -262,7 +264,6 @@ void MA_solver<Config>::assemble_Jacobian_DG(const VectorType& x, MatrixType &m)
 							localFiniteElement, xLocaln, m_m, mn_m,
 							m_mn, mn_mn );
 
-//					copy_to_sparse_matrix(m_m, id_to_offset.at(id), id_to_offset.at(id), m);
 					copy_to_sparse_matrix(mn_m, id_to_offset.at(idn), id_to_offset.at(id), m);
 					copy_to_sparse_matrix(m_mn, id_to_offset.at(id), id_to_offset.at(idn), m);
 					copy_to_sparse_matrix(mn_mn, id_to_offset.at(idn), id_to_offset.at(idn), m);
