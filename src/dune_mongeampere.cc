@@ -9,6 +9,7 @@
 
 #include "solver_config.hh"
 #include "MA_solver.hh"
+#include "Plotter.hh"
 
 #include "Dogleg/doglegMethod.hpp"
 
@@ -86,6 +87,8 @@ try {
 
 	std::cout << "f(x) " << f << endl;
 
+
+
 	x = ma_solver.return_vertex_vector(x);
 	initial_guess = ma_solver.return_vertex_vector(initial_guess);
 
@@ -94,6 +97,12 @@ try {
 	vtkWriter.addVertexData(initial_guess, "initial");
 	vtkWriter.addVertexData(x, "solution");
 	vtkWriter.write("poissonequation result");
+
+	Plotter vtkplotter(ma_solver);
+	vtkplotter.set_output_directory("../plots");
+	vtkplotter.write_numericalsolution_VTK(0);
+
+
 	std::cout << "done" << std::endl;
 }
 // Error handling
