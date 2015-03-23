@@ -16,12 +16,13 @@ enum {
 };
 
 
+/*
 template < typename T >
-/** Convert number to string.
+* Convert number to string.
  *
  * @param number number to convert
  * @return string containing number
- */
+
 std::string NumberToString(const T number)
 {
   std::stringstream str;
@@ -35,6 +36,7 @@ std::string NumberToString(const T number)
 
   return s;
 }
+*/
 
 /*!
  *
@@ -190,9 +192,9 @@ void Plotter::read_quadratic_grid(std::string filename, 	int &n_x, int &n_y,
 //-----------------convert data---------------------
 //==================================================
 
-void Plotter::extract_solution(Eigen::Matrix<Solver_config::RangeType, Eigen::Dynamic, 1> v) const
+void Plotter::extract_solution(PointdataVectorType &v) const
 {
-	v.resize(Nnodes());
+	assert(v.size() == Nnodes());
 	if (refinement == 0)
 	{
 		v = solver->return_vertex_vector(solver->solution);
@@ -244,12 +246,12 @@ void Plotter::write_vtk_header(std::ofstream& file) const
 }
 
 template <typename T>
-void Plotter::write_point_data(std::ofstream &file, const string name, std::vector<T> celldata) const
+void Plotter::write_point_data(std::ofstream &file, const string name, Eigen::Matrix<T, Eigen::Dynamic, 1> celldata) const
 {
 	file << "\t\t\t\t<DataArray  Name=\" "<< name << "\" type=\"Float32\" format=\"ascii\">\n";
 
-	for (const auto& e: celldata )
-		file << "\t\t\t\t\t" << e << endl;
+	for (int i = 0 ; i < celldata.size(); i++)
+		file << "\t\t\t\t\t" << celldata(i) << endl;
 	file << "\t\t\t\t</DataArray>\n";
 }
 
@@ -301,7 +303,8 @@ void Plotter::write_cells(std::ofstream &file) const
 	}
 	else{ //refined
 		int offset = 0;
-		for (auto&& element : elements(*grid)) {
+//		for (auto&& element : elements(*grid)) {
+		for (int i = 0; i < grid->size(0); i++){
 			for (auto it = PlotRefinementType::eBegin(refinement); it != PlotRefinementType::eEnd(refinement); it++)
 			{
 				file << "\t\t\t\t\t";
@@ -384,8 +387,6 @@ void Plotter::read_VTK(const std::string filename)
 void Plotter::writeLeafCellVTK(std::string filename) const {
 
 	//--------------------------------------
-	std::vector <std::vector<Solver_config::DomainType> > v;
-
 	// open file
 	check_file_extension(filename, ".vtu");
 	std::ofstream file(filename.c_str(), std::ios::out);
@@ -394,14 +395,16 @@ void Plotter::writeLeafCellVTK(std::string filename) const {
 		return;
 	}
 
+	//write file
+
 	write_vtk_header(file);
 
-//	file << "\t\t\t<PointData>\n";
-//	write_error(file, v, refine);
-////	write_residuum(file, v, refine);
-//	write_smallest_EW(file, v, refine);
-//	write_solution_data_array(file, v, refine);
-//	file << "\t\t\t</PointData>\n";
+	file << "\t\t\t<PointData>\n";
+
+	PointdataVectorType v(Nnodes());
+	extract_solution(v);
+	write_point_data(file, "solution", v);
+	file << "\t\t\t</PointData>\n";
 
 //	write_function_depending_on_sol(fct, file, v, refine, true);
 	write_points(file); //define if with 3rd coordinate or without

@@ -41,6 +41,8 @@ private:
 	inline int Nnodes() const;
 
 public:
+	typedef Eigen::Matrix<Solver_config::RangeType, Eigen::Dynamic, 1> PointdataVectorType;
+
 	Plotter(const MA_solver<Solver_config>& ma_solver) : solver(&ma_solver),
 										localFiniteElement(&ma_solver.localFiniteElement), grid(ma_solver.gridView_ptr),
 										refinement(Solver_config::degree-1),
@@ -54,7 +56,7 @@ public:
 
 	std::map<std::string, std::ofstream*> plot_streams;
 
-	void extract_solution(Eigen::Matrix<Solver_config::RangeType, Eigen::Dynamic, 1>) const;
+	void extract_solution(PointdataVectorType& v) const;
 
 	//helper for vtk parts
 
@@ -64,7 +66,7 @@ public:
 
 
 	template <typename T>
-	void write_point_data(std::ofstream &file, const string name, std::vector<T> celldata) const;///write point data array
+	void write_point_data(std::ofstream &file, const string name, Eigen::Matrix<T, Eigen::Dynamic, 1> celldata) const;///write point data array
 
 	void write_points(std::ofstream &file) const;///writes the point coordinates into file
 	void write_cells(std::ofstream &file) const; ///write cells into file
