@@ -15,14 +15,18 @@
 
 //#include "operator_poisson_DG.hh"
 #include "operator_poisson_mixed_DG.hh"
+#include "Dogleg/doglegMethod.hpp"
 
 #include <Eigen/Dense>
 
 using namespace Dune;
 using namespace std;
 
+class Plotter;
+
 template<class Config = Solver_config>
 class MA_solver {
+public:
 
 	//-----typedefs---------
 	typedef Solver_config::GridType GridType;
@@ -39,9 +43,9 @@ class MA_solver {
 	typedef typename Solver_config::MatrixType MatrixType;
 
 	typedef typename Solver_config::LocalFiniteElementType LocalFiniteElementType;
+	typedef typename Solver_config::LocalFiniteElementuType LocalFiniteElementuType;
 	typedef typename Solver_config::LocalFiniteElementuType::Traits::LocalBasisType::Traits::HessianType HessianType;
 
-public:
 	MA_solver() :
 			initialised(false) {
 	}
@@ -86,6 +90,7 @@ public:
 	void project(const MA_function_type f, VectorType &V) const;
 
 
+	void run(const VectorType& initial_guess);
 	/**
 	 * returns a vector containing the function with coefficients x evaluated at the vertices
 	 * @return
@@ -417,6 +422,7 @@ void MA_solver<Config>::initialise_dofs() {
 template<class Config>
 typename MA_solver<Config>::VectorType MA_solver<Config>::return_vertex_vector(const VectorType &x) const
 {
+	assert (initialised);
 	assert(x.size() == n_dofs);
 
 //	std::cout << "x " << x.transpose() << std::endl;
@@ -442,6 +448,7 @@ typename MA_solver<Config>::VectorType MA_solver<Config>::return_vertex_vector(c
 template<class Config>
 void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
 {
+	assert (initialised);
 	v.resize(n_dofs);
 
 	// The index set gives you indices for each element , edge , face , vertex , etc .
@@ -462,7 +469,6 @@ void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
 
 		// Get a quadrature rule
 		int order = std::max(1, 2 * ((int)localFiniteElement.order()));
-		std::cout << "order " << order << std::endl;
 		const QuadratureRule<double, dim>& quad =
 				QuadratureRules<double, dim>::rule(e.type(), order);
 
@@ -488,7 +494,6 @@ void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
 				RangeType f_value;
 				f(geometry.global(quad[pt].position()), f_value);
 
-				cout << "f_value at " <<  quad[pt].position() << " " << f_value << std::endl;
 				const double integrationElement = geometry.integrationElement(quadPos);
 
 				//assemble integrals
@@ -571,6 +576,40 @@ void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
 		}
 	}
 }
+
+template<class Config>
+void MA_solver<Config>::run(const VectorType& initial_guess)
+{
+
+	//get operator
+	MA_solver<Solver_config>::Operator op(*this);
+
+	solution = initial_guess;
+
+	std::cout << "n dofs" << n_dofs << std::endl;
+	std::cout << "initial guess "<< initial_guess.transpose() << std::endl;
+
+	// /////////////////////////
+	// Compute solution
+	// /////////////////////////
+
+	DogLeg_optionstype opts;
+	opts.iradius = 1;
+	for (int i=0; i < 3; i++)	opts.stopcriteria[i] = 1e-9;
+	opts.maxsteps = 100;
+	opts. silentmode = false;
+
+	doglegMethod(op, opts, solution);
+
+	Solver_config::VectorType f;
+	op.evaluate(solution, f);
+
+	std::cout << "f(x) " << f << endl;
+
+	std::cout << "x " << solution.transpose() << endl;
+
+
+	}
 
 
 #endif /* SRC_MA_SOLVER_HH_ */
