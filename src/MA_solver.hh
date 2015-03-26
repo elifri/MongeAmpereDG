@@ -18,8 +18,11 @@
 #include "igpm_t2_lib.hpp"
 
 //#include "operator_poisson_DG.hh"
+#include "problem_data.hh"
 #include "linear_system_operator_poisson_DG.hh"
 #include "operator_MA_Neilan_DG.hh"
+
+#include "Plotter.hh"
 
 #include "Dogleg/doglegMethod.hpp"
 
@@ -55,8 +58,9 @@ public:
 			initialised(false) {
 	}
 	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView) :
-			initialised(true), grid_ptr(grid), gridView_ptr(&gridView), localFiniteElement(), localFiniteElementu(localFiniteElement(u())) {
+			initialised(true), grid_ptr(grid), gridView_ptr(&gridView), localFiniteElement(), localFiniteElementu(localFiniteElement(u())), vtkplotter(*this) {
 		initialise_dofs();
+		vtkplotter.set_output_directory("../plots");
 	}
 
 /*
@@ -91,7 +95,7 @@ public:
 			timer.start();
 			Local_Operator_MA_mixed_Neilan lop;
 			solver_ptr->assemble_DG(lop, x,v); timer.stop();
-			std::cout << "needed " << timer << " seconds for function evaluation" << std::endl;
+//			std::cout << "needed " << timer << " seconds for function evaluation" << std::endl;
 		}
 		void Jacobian(const VectorType& x, MatrixType& m) const
 		{
@@ -193,6 +197,8 @@ private:
 	int n_dofs_u; /// number of degrees of freedom for ansatz function (whithout hessian ansatz functions)
 
 	friend Plotter;
+
+	Plotter vtkplotter;
 };
 
 template<class MatrixType, class DenseMatrixType>
@@ -650,7 +656,9 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 {
 	assert (initialised);
 	//calculate initial solution
-	Linear_System_Local_Operator_Poisson_DG lop;
+	Linear_System_Local_Operator_Poisson_DG<RightHandSideInitial, Dirichletdata> lop;
+
+
 	MatrixType m(n_dofs_u, n_dofs_u);
 	VectorType rhs(n_dofs_u);
 	assemble_linear_system_DG(lop, m, rhs);
@@ -673,8 +681,11 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 	}
 
 	init_mixed_element_without_second_derivatives(solution_u, solution);
+	vtkplotter.write_numericalsolution_VTK(0);
 
-//	solve_nonlinear_step();
+	solve_nonlinear_step();
+	vtkplotter.write_numericalsolution_VTK(1);
+
 
 	return solution;
 }
