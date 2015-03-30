@@ -7,6 +7,7 @@
 
 
 #include "Plotter.hh"
+#include "MA_solver.hh"
 
 using namespace std;
 
@@ -16,13 +17,13 @@ enum {
 };
 
 
-/*
+#ifdef USE_PETSC
 template < typename T >
-* Convert number to string.
+/* Convert number to string.
  *
  * @param number number to convert
  * @return string containing number
-
+*/
 std::string NumberToString(const T number)
 {
   std::stringstream str;
@@ -36,7 +37,7 @@ std::string NumberToString(const T number)
 
   return s;
 }
-*/
+#endif
 
 /*!
  *
@@ -106,6 +107,16 @@ void check_file_extension(std::string &name, std::string extension) {
 
 
 //==========================================================================================
+
+Plotter::Plotter(const MA_solver<Solver_config>& ma_solver) : solver(&ma_solver),
+									localFiniteElement(&ma_solver.localFiniteElement), grid(ma_solver.gridView_ptr),
+									refinement(Solver_config::degree-1),
+									output_directory("."),output_prefix("function")
+{
+	if (refinement < 0)
+		refinement = 0;
+}
+
 
 int Plotter::Nelements() const
 {
@@ -230,6 +241,52 @@ void Plotter::extract_solution(PointdataVectorType &v) const
 
 }
 
+void Plotter::extract_solutionAndError(const Dirichletdata &exact_sol, PointdataVectorType& sol, PointdataVectorType& error) const
+{
+	assert(sol.size() == Nnodes());
+	assert(error.size() == Nnodes());
+	if (refinement == 0)
+	{
+		sol = solver->return_vertex_vector(solver->solution);
+		assert(false && "not implemented");
+	}else {		// save points in file after refinement
+
+		int size_u = localFiniteElement->size(u());
+
+		int vertex_count = 0;
+
+		for (auto&& element: elements(*grid))
+		{
+			const auto geometry = element.geometry();
+			const MA_solver<Solver_config>::IndexType id = grid->indexSet().index(element);
+
+			std::vector<Solver_config::RangeType> referenceFunctionValues(size_u);
+
+			for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
+
+				//get reference function values at refined points
+				(*localFiniteElement)(u())->localBasis().evaluateFunction(it.coords(), referenceFunctionValues);
+
+				//evaluate solution at refined points
+				double u = 0;
+				for (int i = 0; i < size_u; i++)
+					u += solver->solution(solver->id_to_offset.at(id)+i)*referenceFunctionValues[i];
+
+				//evaluate exact solution at refined points
+				auto global_coords = geometry.global(it.coords());
+				double exact_u;
+				exact_sol.evaluate(global_coords, exact_u);
+
+				//write solution into vector
+				sol[vertex_count] = u;
+				error[vertex_count] = u - exact_u;
+				vertex_count++;
+			}
+		}
+	}
+
+}
+
 
 //==================================================
 //-----------------vtk-helper-----------------------
@@ -313,7 +370,6 @@ void Plotter::write_cells(std::ofstream &file) const
 					file << offset+e << " ";
 			}
 			offset += PlotRefinementType::nVertices(refinement);
-			std::cout << "offset " << offset << std::endl;
 		}
 	}
 
@@ -402,8 +458,12 @@ void Plotter::writeLeafCellVTK(std::string filename) const {
 	file << "\t\t\t<PointData>\n";
 
 	PointdataVectorType v(Nnodes());
+	PointdataVectorType v_error(Nnodes());
 	extract_solution(v);
+	write_point_data(file, "solution_old", v);
+	extract_solutionAndError(Dirichletdata(), v, v_error);
 	write_point_data(file, "solution", v);
+	write_point_data(file, "error", v_error);
 	file << "\t\t\t</PointData>\n";
 
 //	write_function_depending_on_sol(fct, file, v, refine, true);

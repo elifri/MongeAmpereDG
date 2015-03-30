@@ -24,7 +24,13 @@
 
 #include "Plotter.hh"
 
+#ifdef USE_DOGLEG
 #include "Dogleg/doglegMethod.hpp"
+#endif
+
+#ifdef USE_PETSC
+#include "Dogleg/Petsc_utility.hh"
+#endif
 
 
 using namespace Dune;
@@ -663,8 +669,8 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 	VectorType rhs(n_dofs_u);
 	assemble_linear_system_DG(lop, m, rhs);
 
-	MATLAB_export(m, "stiffness_matrix");
-	MATLAB_export(rhs, "rhs");
+//	MATLAB_export(m, "stiffness_matrix");
+//	MATLAB_export(rhs, "rhs");
 	assert(m.nonZeros() > 0);
 
 	Eigen::SimplicialLDLT<MatrixType> CholeskySolver(m);
@@ -797,7 +803,7 @@ void MA_solver<Config>::solve_nonlinear_step()
 	assert(solution.size() == n_dofs && "Error: start solution is not initialised");
 
 	//get operator
-	MA_solver<Solver_config>::Operator op(*this);
+	const MA_solver<Solver_config>::Operator op(*this);
 
 
 	std::cout << "n dofs" << n_dofs << std::endl;
@@ -807,14 +813,26 @@ void MA_solver<Config>::solve_nonlinear_step()
 	// Compute solution
 	// /////////////////////////
 
-	DogLeg_optionstype opts;
-	opts.iradius = 1;
-	for (int i=0; i < 3; i++)	opts.stopcriteria[i] = 1e-9;
-	opts.maxsteps = 100;
-	opts. silentmode = false;
-	opts.exportJacobianIfSingular= true;
+#ifdef USE_DOGLEG
+//	DogLeg_optionstype opts;
+//	opts.iradius = 1;
+//	for (int i=0; i < 3; i++)	opts.stopcriteria[i] = 1e-9;
+//	opts.maxsteps = 100;
+//	opts. silentmode = false;
+//	opts.exportJacobianIfSingular= true;
+//
+//	doglegMethod(op, opts, solution);
+#endif
+#ifdef USE_PETSC
+//	PETSC_SNES_Wrapper<MA_solver<Config>::Operator>::op = op;
+//	PETSC_SNES_Wrapper<MA_solver<Config>::Operator> snes;
+//	snes.init(n_dofs);
+//	snes.solve(solution);
+#endif
 
-	doglegMethod(op, opts, solution);
+
+
+
 
 	Solver_config::VectorType f;
 	op.evaluate(solution, f);

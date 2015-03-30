@@ -17,6 +17,11 @@ using namespace Dune;
 int main(int argc, char *argv[])
 try {
 
+
+	struct utsname unameData;
+	uname(&unameData);
+	printf("%s", unameData.nodename);
+
 	/////////////////////////////
 	// setup problem parameter //
 	/////////////////////////////

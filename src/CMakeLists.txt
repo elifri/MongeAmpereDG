@@ -8,7 +8,10 @@ add_library(test_utils "/home/data/friebel/workspace/MongeAmpereDG2/source/test/
 add_executable("dune_mongeampere" dune_mongeampere.cc)
 message("ZLIB libraries ${ZLIB_LIBRARIES}")
 target_link_dune_default_libraries("dune_mongeampere")
-target_link_libraries(dune_mongeampere Plotter Dogleg Solver_Config test_utils ${ZLIB_LIBRARIES})
+target_link_libraries(dune_mongeampere Plotter ${SNES_LIBRARY} Solver_Config test_utils ${ZLIB_LIBRARIES})
 
 add_executable("poisson" poisson.cc)
 target_link_dune_default_libraries("poisson")
+
+#add_executable("petscnes" Petsc_utility.cc)
+#target_link_libraries(petscnes petsc)
