@@ -27,8 +27,8 @@ private:
 public:
 	MixedElement()
 	{
-		assert(false && "Error, you cannot initialise a mixed element without names");
-		exit(-1);
+//		assert(false && "Error, you cannot initialise a mixed element without names");
+//		exit(-1);
 	}
 
 	MixedElement(const std::string name0, const std::string name2)
