@@ -17,7 +17,13 @@
 
 #include <dune/grid/yaspgrid.hh>
 
-#include <dune/alugrid/grid.hh>
+#if HAVE_ALUGRID
+# include <dune/grid/alugrid.hh>
+# include <dune/grid/alugrid/3d/alu3dgridfactory.hh>
+# elif HAVE_DUNE_ALUGRID
+# include <dune/alugrid/grid.hh>
+# include <dune/alugrid/3d/gridfactory.hh>
+# endif
 
 // default implementation for any template parameter
 template<typename T>

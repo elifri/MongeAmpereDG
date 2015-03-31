@@ -27,6 +27,13 @@ try {
 	/////////////////////////////
 	Solver_config::problem = SIMPLE_MA;
 
+#ifdef USE_DOGLEG
+	std::cout <<"using dogleg " << std::endl;
+#endif
+#ifdef USE_PETSC
+	std::cout <<"using petsc" << std::endl;
+#endif
+
 	// ////////////////////////////////
 // Generate the grid
 // ////////////////////////////////

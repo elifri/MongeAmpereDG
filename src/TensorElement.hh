@@ -16,11 +16,12 @@
 namespace Dune {
 template<class LocalBasis, int m, int n>
 class TensorBasis {
+
+public:
 	typedef typename LocalBasis::Traits::DomainType DomainType;
 	typedef typename LocalBasis::Traits::RangeType RangeType;
 	typedef FieldMatrix<RangeType, m, n> TensorRangeType;
 
-public:
 	inline void evaluateFunction(const DomainType x,
 			std::vector<TensorRangeType>& out) const {
 

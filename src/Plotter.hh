@@ -12,12 +12,20 @@
 #include <string>
 #include "solver_config.hh"
 //#include "Callback_utility.hpp"
-#include "MA_solver.hh"
+//#include "MA_solver.hh"
+
+#if USE_DOGLEG
+#include "Dogleg/doglegMethod.hpp"
+#endif
+
+#include "problem_data.hh"
 
 #include <dune/geometry/refinement.hh>
 
 #include <fstream>
 
+template<class Config>
+class MA_solver;
 
 typedef StaticRefinement<GenericGeometry::SimplexTopology<2>::type::id,
         Solver_config::GridType::ctype,
@@ -43,20 +51,18 @@ private:
 public:
 	typedef Eigen::Matrix<Solver_config::RangeType, Eigen::Dynamic, 1> PointdataVectorType;
 
-	Plotter(const MA_solver<Solver_config>& ma_solver) : solver(&ma_solver),
-										localFiniteElement(&ma_solver.localFiniteElement), grid(ma_solver.gridView_ptr),
-										refinement(Solver_config::degree-1),
-										output_directory("."),output_prefix("function")
-	{
-		if (refinement < 0)
-			refinement = 0;
-	}
+	Plotter(const MA_solver<Solver_config>& ma_solver);
 
 	std::string output_directory, output_prefix;
 
 	std::map<std::string, std::ofstream*> plot_streams;
 
 	void extract_solution(PointdataVectorType& v) const;
+
+//	template <typename ExactSol>
+	void extract_solutionAndError(const Dirichletdata &exact_sol, PointdataVectorType& sol, PointdataVectorType& error) const;
+
+	void calc_error(PointdataVectorType& v) const;
 
 	//helper for vtk parts
 
@@ -66,7 +72,7 @@ public:
 
 
 	template <typename T>
-	void write_point_data(std::ofstream &file, const string name, Eigen::Matrix<T, Eigen::Dynamic, 1> celldata) const;///write point data array
+	void write_point_data(std::ofstream &file, const std::string name, Eigen::Matrix<T, Eigen::Dynamic, 1> celldata) const;///write point data array
 
 	void write_points(std::ofstream &file) const;///writes the point coordinates into file
 	void write_cells(std::ofstream &file) const; ///write cells into file

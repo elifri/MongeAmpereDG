@@ -350,7 +350,7 @@ void Plotter::write_cells(std::ofstream &file) const
 		const Solver_config::GridView::IndexSet& indexSet = grid->indexSet();
 
 		for (auto&& e : elements(*grid)) {
-			for (int i = 0; i < e.subEntities(Solver_config::dim); i++)
+			for (unsigned int i = 0; i < e.subEntities(Solver_config::dim); i++)
 				{file << "\t\t\t\t\t";
 //				for (const auto& vertex : geometry.corners()) {
 					file << indexSet.index(*(e.subEntity<Solver_config::dim>(i))) << " ";
