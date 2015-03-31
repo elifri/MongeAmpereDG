@@ -93,10 +93,12 @@ private:
 
 public:
 	struct Operator {
+		Operator():solver_ptr(){}
 		Operator(const MA_solver &solver):solver_ptr(&solver){}
 
 		void evaluate(const VectorType& x, VectorType& v) const
 		{
+			assert(solver_ptr != NULL);
 			igpm::processtimer timer;
 			timer.start();
 			Local_Operator_MA_mixed_Neilan lop;
@@ -105,11 +107,13 @@ public:
 		}
 		void Jacobian(const VectorType& x, MatrixType& m) const
 		{
+			assert(solver_ptr != NULL);
 			Local_Operator_MA_mixed_Neilan lop;
 			solver_ptr->assemble_Jacobian_DG(lop, x,m);
 		}
 		void derivative(const VectorType& x, MatrixType& m) const
 		{
+			assert(solver_ptr != NULL);
 			Local_Operator_MA_mixed_Neilan lop;
 			solver_ptr->assemble_Jacobian_DG(lop, x,m);
 		}
@@ -814,20 +818,21 @@ void MA_solver<Config>::solve_nonlinear_step()
 	// /////////////////////////
 
 #ifdef USE_DOGLEG
-//	DogLeg_optionstype opts;
-//	opts.iradius = 1;
-//	for (int i=0; i < 3; i++)	opts.stopcriteria[i] = 1e-9;
-//	opts.maxsteps = 100;
-//	opts. silentmode = false;
-//	opts.exportJacobianIfSingular= true;
+	DogLeg_optionstype opts;
+	opts.iradius = 1;
+	for (int i=0; i < 3; i++)	opts.stopcriteria[i] = 1e-9;
+	opts.maxsteps = 100;
+	opts. silentmode = false;
+	opts.exportJacobianIfSingular= true;
 //
-//	doglegMethod(op, opts, solution);
+	doglegMethod(op, opts, solution);
 #endif
 #ifdef USE_PETSC
-//	PETSC_SNES_Wrapper<MA_solver<Config>::Operator>::op = op;
-//	PETSC_SNES_Wrapper<MA_solver<Config>::Operator> snes;
-//	snes.init(n_dofs);
-//	snes.solve(solution);
+	PETSC_SNES_Wrapper<MA_solver<Config>::Operator>::op = op;
+
+	PETSC_SNES_Wrapper<MA_solver<Config>::Operator> snes;
+	snes.init(n_dofs);
+	snes.solve(solution);
 #endif
 
 
@@ -837,9 +842,9 @@ void MA_solver<Config>::solve_nonlinear_step()
 	Solver_config::VectorType f;
 	op.evaluate(solution, f);
 
-	std::cout << "f(x) " << f << endl;
+	std::cout << "f(x) norm " << f.norm() << endl;
 
-	std::cout << "x " << solution.transpose() << endl;
+//	std::cout << "x " << solution.transpose() << endl;
 	}
 
 
