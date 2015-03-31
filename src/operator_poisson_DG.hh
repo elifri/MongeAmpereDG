@@ -8,31 +8,15 @@
 #ifndef SRC_OPERATOR_HH_
 #define SRC_OPERATOR_HH_
 
-#include <dune/common/function.hh>
 #include <dune/geometry/quadraturerules.hh>
 
 #include "solver_config.hh"
+#include "problem_data.hh"
 
 using namespace Dune;
 
 
-// A class implementing the analytical right hand side . Here simply constant '1'
-class RightHandSide: public VirtualFunction<FieldVector<double, Solver_config::dim>, double> {
-public:
-	void evaluate(const FieldVector<double, Solver_config::dim>& in, double& out) const {
-		out = 1;
-	}
-};
-
-// A class implementing the analytical right hand side . Here simply constant '1'
-class Dirichletdata: public VirtualFunction<FieldVector<double, Solver_config::dim>, double> {
-public:
-	void evaluate(const FieldVector<double, Solver_config::dim>& in, double& out) const {
-		out = 0;
-	}
-};
-
-
+class Local_Operator_Poisson_DG{
 
 /**
  * implements the local volume integral
@@ -43,7 +27,7 @@ public:
  */
 template<class Element, class LocalElement, class VectorType>
 void assemble_cell_term(const Element& element, const LocalElement &localFiniteElement, const VectorType &x,
-		VectorType& v) {
+		VectorType& v) const {
 	const int dim = Element::dimension;
 	auto geometry = element.geometry();
 
@@ -57,7 +41,6 @@ void assemble_cell_term(const Element& element, const LocalElement &localFiniteE
 	const QuadratureRule<double, dim>& quad =
 			QuadratureRules<double, dim>::rule(element.type(), order);
 
-	RightHandSide rhs;
 
 	// Loop over all quadrature points
 	for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -119,7 +102,7 @@ template<class IntersectionType, class LocalElement, class VectorType>
 void assemble_inner_face_term(const IntersectionType& intersection,
 								const LocalElement &localFiniteElement, const VectorType &x,
 								const LocalElement &localFiniteElementn, const VectorType &xn,
-								VectorType& v, VectorType& vn) {
+								VectorType& v, VectorType& vn) const {
 	const int dim = IntersectionType::dimension;
 	const int dimw = IntersectionType::dimensionworld;
 
@@ -243,7 +226,7 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 template<class Intersection, class LocalElement, class VectorType>
 void assemble_boundary_face_term(const Intersection& intersection,
 								const LocalElement &localFiniteElement, const VectorType &x,
-								VectorType& v) {
+								VectorType& v) const {
 	const int dim = Intersection::dimension;
 	const int dimw = Intersection::dimensionworld;
 
@@ -264,7 +247,6 @@ void assemble_boundary_face_term(const Intersection& intersection,
 	// penalty weight for NIPG / SIPG
 	double penalty_weight = Solver_config::sigma*(Solver_config::degree*Solver_config::degree) / std::pow(intersection.geometry().volume(), Solver_config::beta);
 
-    Dirichletdata bc;
 
 	// Loop over all quadrature points
 	for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -305,7 +287,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
     	double g;
 //    	auto temp = quad[pt].position();
     	bc.evaluate(quadPos, g);
-    	std:: cout << "g " << g << std::endl;
+//    	std:: cout << "g " << g << std::endl;
 
 	    //-------calculate integral--------
 	    auto integrationElement = intersection.geometry().integrationElement(quad[pt].position());
@@ -336,7 +318,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
  */
 template<class Element, class LocalElement, class VectorType, class MatrixType>
 void assemble_cell_Jacobian(const Element& element, const LocalElement &localFiniteElement, const VectorType &x,
-		MatrixType& m) {
+		MatrixType& m) const {
 	const int dim = Element::dimension;
 	auto geometry = element.geometry();
 
@@ -400,7 +382,7 @@ void assemble_inner_face_Jacobian(const Intersection& intersection,
 								const LocalElement &localFiniteElement, const VectorType &x,
 								const LocalElement &localFiniteElementn, const VectorType &xn,
 								MatrixType& m_m, MatrixType& mn_m,
-								MatrixType& m_mn, MatrixType& mn_mn ) {
+								MatrixType& m_mn, MatrixType& mn_mn) const {
 	const int dim = Intersection::dimension;
 	const int dimw = Intersection::dimensionworld;
 
@@ -492,7 +474,7 @@ void assemble_inner_face_Jacobian(const Intersection& intersection,
 template<class Intersection, class LocalElement, class VectorType, class MatrixType>
 void assemble_boundary_face_Jacobian(const Intersection& intersection,
 								const LocalElement &localFiniteElement, const VectorType &x,
-								MatrixType& m) {
+								MatrixType& m) const {
 
 	const int dim = Intersection::dimension;
 	const int dimw = Intersection::dimensionworld;
@@ -561,4 +543,131 @@ void assemble_boundary_face_Jacobian(const Intersection& intersection,
 }
 
 
+/**
+ * implements the local volume integral
+ * @param element		     the element the integral is evaluated on
+ * @param localFiniteElement the local finite elemnt (on the reference element)
+ * @param x			         local solution coefficients
+ * @param v					 local residual (to be returned)
+ */
+template<class Element, class LocalElement, class VectorType>
+void assemble_cell_term_rhs(const Element& element, const LocalElement &localFiniteElement, const VectorType &x,
+		VectorType& v) const {
+	const int dim = Element::dimension;
+	auto geometry = element.geometry();
+
+	//assuming galerkin ansatz = test space
+	assert(x.size() == localFiniteElement.localBasis().size());
+	assert(v.size() == localFiniteElement.localBasis().size());
+
+	// Get a quadrature rule
+	int order = 2 * (dim - 1);
+	const QuadratureRule<double, dim>& quad =
+			QuadratureRules<double, dim>::rule(element.type(), order);
+
+	RightHandSide rhs;
+
+	// Loop over all quadrature points
+	for (size_t pt = 0; pt < quad.size(); pt++) {
+		// Position of the current quadrature point in the reference element
+		const FieldVector<double, dim> &quadPos = quad[pt].position();
+		// The transposed inverse Jacobian of the map from the reference element to the element
+		const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
+		// The multiplicative factor in the integral transformation formula
+		const double integrationElement = geometry.integrationElement(quadPos);
+
+		//function values of shape functions
+		std::vector<FieldVector<double,1> > referenceFunctionValues;
+		localFiniteElement.localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+
+		double f;
+		rhs.evaluate(quad[pt].position(), f);
+
+		//calculate system
+		for (size_t j = 0; j < v.size(); j++) // loop over test fcts
+		{
+				v(j) += f*referenceFunctionValues[j]
+						* quad[pt].weight() * integrationElement;
+		}
+	}
+}
+
+
+template<class Intersection, class LocalElement, class VectorType>
+void assemble_boundary_face_term_rhs(const Intersection& intersection,
+								const LocalElement &localFiniteElement, const VectorType &x,
+								VectorType& v) const {
+	const int dim = Intersection::dimension;
+	const int dimw = Intersection::dimensionworld;
+
+	//assuming galerkin
+	assert(x.size() == localFiniteElement.localBasis().size());
+
+	// Get a quadrature rule
+    const int order = std::max( 0, 2 * ( (int)localFiniteElement.localBasis().order() - 1 ));
+	GeometryType gtface = intersection.geometryInInside().type();
+	const QuadratureRule<double, dim-1>& quad =
+			QuadratureRules<double, dim-1>::rule(gtface, order);
+
+	// normal of center in face's reference element
+	const FieldVector<double,dim-1>& face_center = ReferenceElements<double,dim-1>::
+	          general(intersection.geometry().type()).position(0,0);
+	const FieldVector<double,dimw> normal = intersection.unitOuterNormal(face_center);
+
+	// penalty weight for NIPG / SIPG
+	double penalty_weight = Solver_config::sigma*(Solver_config::degree*Solver_config::degree) / std::pow(intersection.geometry().volume(), Solver_config::beta);
+
+    Dirichletdata bc;
+
+	// Loop over all quadrature points
+	for (size_t pt = 0; pt < quad.size(); pt++) {
+
+		//------get reference data----------
+
+		// Position of the current quadrature point in the reference element and neighbour element //TODO sollte das nicht lokal sein?
+		const FieldVector<double, dim> &quadPos = intersection.geometryInInside().global(quad[pt].position());
+
+		// The shape functions on the reference elements
+		std::vector<FieldVector<double, 1> > referenceFunctionValues;
+		localFiniteElement.localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+
+		// The gradients of the shape functions on the reference element
+		std::vector<FieldMatrix<double, 1, dim> > referenceGradients;
+		localFiniteElement.localBasis().evaluateJacobian(quadPos,referenceGradients);
+
+		//-------transform data---------------
+		// The transposed inverse Jacobian of the map from the reference element to the element
+		const auto& jacobian = intersection.inside()->geometry().jacobianInverseTransposed(quadPos);
+
+		// Compute the shape function gradients on the real element
+		std::vector<FieldVector<double, dim> > gradients(referenceGradients.size());
+		for (size_t i = 0; i < gradients.size(); i++)
+			jacobian.mv(referenceGradients[i][0], gradients[i]);
+
+    	double g;
+//    	auto temp = quad[pt].position();
+    	bc.evaluate(quadPos, g);
+//    	std:: cout << "g " << g << std::endl;
+
+	    //-------calculate integral--------
+	    auto integrationElement = intersection.geometry().integrationElement(quad[pt].position());
+	    double factor = quad[pt].weight()*integrationElement;
+	    for (unsigned int j=0; j<x.size(); j++) //parts from self
+	    {
+
+			// NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
+			v(j) += penalty_weight *g*referenceFunctionValues[j]*factor;
+
+			// epsilon * <Kgradv*my>[u]
+			v(j) += Solver_config::epsilon*(gradients[j]*normal)*g*factor;
+	    }
+
+	}
+
+}
+
+
+RightHandSide rhs;
+Dirichletdata bc;
+};
 #endif /* SRC_OPERATOR_HH_ */

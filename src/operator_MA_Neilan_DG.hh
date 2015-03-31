@@ -12,91 +12,22 @@
 #include <dune/geometry/quadraturerules.hh>
 
 #include "solver_config.hh"
-
-#include "mixedElement.hpp"
+#include "problem_data.hh"
 
 using namespace Dune;
 
 
-// A class implementing the analytical right hand side . Here simply constant '1'
-class RightHandSide: public VirtualFunction<FieldVector<double, Solver_config::dim>, double> {
-public:
-	void evaluate(const FieldVector<double, Solver_config::dim>& in, double& out) const {
-		switch (Solver_config::problem)
-		{
-		case SIMPLE_MA:
-			out = 1;
-			break;
-		case MA_SMOOTH:
-			out = 1 + in.two_norm2(); //1+||x||^2
-			out *= std::exp(in.two_norm2()); //*exp(||x||^2)
-			break;
-		case MA_C1:
-			{
-			Solver_config::DomainType x0;
-			x0 = {0.5,0.5};
-			auto f = 0.2 / (in-x0).two_norm();
-			f = 1 - f;
-			if (f > 0)
-				out = f;
-			else
-				out = 0;
-			}
-			break;
-		case MA_SQRT:
-			if (std::abs(in.two_norm2() -2) < 1e-6)
-				out = 1e19;
-			else
-				out = 2. / (2 - in.two_norm2())/(2 - in.two_norm2());
-			break;
-		default:
-			std::cerr << "Unknown problem ... " << std::endl;
-			exit(-1);
-		}
-	}
-};
-
-// A class implementing the analytical right hand side . Here simply constant '1'
-class Dirichletdata: public VirtualFunction<FieldVector<double, Solver_config::dim>, double> {
-public:
-	void evaluate(const FieldVector<double, Solver_config::dim>& in, double& out) const {
-		switch (Solver_config::problem)
-		{
-		case SIMPLE_MA:
-			out = in.two_norm2()/2.0;;
-			break;
-		case MA_SMOOTH:
-			out = exp( in.two_norm2()/2. );
-			break;
-		case MA_C1:
-			{
-				Solver_config::DomainType x0;
-				x0 = {0.5,0.5};
-				double val = (in-x0).two_norm() - 0.2;
-				if (val > 0)	out = val*val/2.;
-				else out = 0;
-			}
-			break;
-		case MA_SQRT:
-		{
-			double val = 2.0-in.two_norm2();
-			if (val < 0) out = 0;
-			else	out = -std::sqrt(val);
-		}
-		default:
-			std::cerr << "Unknown problem ... " << std::endl;
-			exit(-1);
-		}
-	}
-};
-
 template <class R, class R2>
+inline
 R cwiseProduct(const Dune::FieldMatrix<R,2,2>& A, const Dune::FieldMatrix<R2,2,2> &B)
 {
 	return A[0][0]*B[0][0]+A[1][0]*B[1][0]+A[0][1]*B[0][1]+A[1][1]*B[1][1];
 }
 
 
+class Local_Operator_MA_mixed_Neilan
+{
+public:
 
 /**
  * implements the local volume integral
@@ -107,7 +38,7 @@ R cwiseProduct(const Dune::FieldMatrix<R,2,2>& A, const Dune::FieldMatrix<R2,2,2
  */
 template<class Element, class LocalElement0, class LocalElement1, class VectorType>
 void assemble_cell_term(const Element& element, const MixedElement<LocalElement0, LocalElement1> &localFiniteElement, const VectorType &x,
-		VectorType& v) {
+		VectorType& v) const {
 	const int dim = Element::dimension;
 	auto geometry = element.geometry();
 
@@ -127,8 +58,6 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 	int order = std::max( 0, 2 * ( (int)localFiniteElement.order()));
 	const QuadratureRule<double, dim>& quad =
 			QuadratureRules<double, dim>::rule(element.type(), order);
-
-	RightHandSide rhs;
 
 	// Loop over all quadrature points
 	for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -179,13 +108,21 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 		for (size_t i = 0; i < size_u; i++)
 			Hessu.axpy(x(i), Hessians[i]);
 
+//		std::cout << "piecewise hessian " << std::endl;
+//		std::cout << Hessu << ", ";
+//		std::cout << std::endl;
 
 
 		typename LocalElement1::TensorRangeType uDH;
 		for (size_t i = 0; i < size_u_DH; i++)
 		{
 			uDH.axpy(x(size_u+i), referenceFunctionValuesHessian[i]);
+//			std::cout << "uDH +=" <<x(size_u+i)<<"*"<< std::endl<< referenceFunctionValuesHessian[i]<<"=" << std::endl << uDH << std::endl;
 		}
+
+//		std::cout << "discrete hessian " << std::endl;
+//		std::cout << uDH << ", ";
+//		std::cout << std::endl;
 
 		//--------assemble cell integrals in variational form--------
 
@@ -197,6 +134,7 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 		{
 				v(j) += (uDH.determinant()-f)*referenceFunctionValues[j]
 						* quad[pt].weight() * integrationElement;
+//				std::cout << "det(u)-f=" << uDH.determinant()<<"-"<< f <<"="<< uDH.determinant()-f<< std::endl;
 		}
 
 		//calculate system for second tensor functions
@@ -232,7 +170,7 @@ template<class IntersectionType, class LocalElement0, class LocalElement1, class
 void assemble_inner_face_term(const IntersectionType& intersection,
 								const MixedElement<LocalElement0, LocalElement1> &localFiniteElement, const VectorType &x,
 								const MixedElement<LocalElement0, LocalElement1> &localFiniteElementn, const VectorType &xn,
-								VectorType& v, VectorType& vn) {
+								VectorType& v, VectorType& vn) const {
 	const int dim = IntersectionType::dimension;
 	const int dimw = IntersectionType::dimensionworld;
 
@@ -270,7 +208,6 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 	// Loop over all quadrature points
 	for (size_t pt = 0; pt < quad.size(); pt++) {
 
-//		std::cout << "pt " << pt << std::endl;
 		//------get reference data----------
 
 		// Position of the current quadrature point in the reference element and neighbour element
@@ -296,6 +233,9 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessiann(size_u_DH);
 		localFiniteElementn(u_DH())->localBasis().evaluateFunction(quadPosn, referenceFunctionValuesHessiann);
 
+//		std::cout << "reference hessian ansatz at " << quadPos << std::endl;
+//		for (const auto &e: referenceFunctionValuesHessian)	std::cout << e << ", ";
+//		std::cout << std::endl;
 
 		//-------transform data---------------
 		// The transposed inverse Jacobian of the map from the reference element to the element
@@ -372,7 +312,7 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 template<class Intersection, class LocalElement0, class LocalElement1, class VectorType>
 void assemble_boundary_face_term(const Intersection& intersection,
 								const MixedElement<LocalElement0, LocalElement1> &localFiniteElement, const VectorType &x,
-								VectorType& v) {
+								VectorType& v) const {
 	const int dim = Intersection::dimension;
 	const int dimw = Intersection::dimensionworld;
 
@@ -396,17 +336,14 @@ void assemble_boundary_face_term(const Intersection& intersection,
 	// penalty weight for NIPG / SIPG
 	double penalty_weight = Solver_config::sigma*(Solver_config::degree*Solver_config::degree) / std::pow(intersection.geometry().volume(), Solver_config::beta);
 
-    Dirichletdata bc;
 
 	// Loop over all quadrature points
 	for (size_t pt = 0; pt < quad.size(); pt++) {
 
 		//------get reference data----------
 
-		// Position of the current quadrature point in the reference element and neighbour element //TODO sollte das nicht lokal sein?
+		// Position of the current quadrature point in the reference element
 		const FieldVector<double, dim> &quadPos = intersection.geometryInInside().global(quad[pt].position());
-
-		//TODO ich glaube so ist das falsch
 
 		// The shape functions on the reference elements
 		std::vector<RangeType > referenceFunctionValues;
@@ -453,6 +390,8 @@ void assemble_boundary_face_term(const Intersection& intersection,
 
 			// NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
 			v(j) += penalty_weight *(u_value-g)*referenceFunctionValues[j]*factor;
+//			std::cout << "v(j) += " << penalty_weight << "*(" << u_value<<"-" << g << ")*" << referenceFunctionValues[j] << "*" << factor;
+//			std::cout << "-> " << v(j) << std::endl;
 	    }
 
 	}
@@ -467,7 +406,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
 */
 template<class Element, class LocalElement0, class LocalElement1, class VectorType, class MatrixType>
 void assemble_cell_Jacobian(const Element& element, const MixedElement<LocalElement0, LocalElement1> &localFiniteElement, const VectorType &x,
-		MatrixType& m) {
+		MatrixType& m) const {
 	const int dim = Element::dimension;
 	auto geometry = element.geometry();
 
@@ -481,8 +420,8 @@ void assemble_cell_Jacobian(const Element& element, const MixedElement<LocalElem
 	typedef typename LocalElement0::Traits::LocalBasisType::Traits::RangeType RangeType;
 	assert(typeid(typename LocalElement1::TensorRangeType) == typeid(HessianType));
 
-	const int size_u = localFiniteElement.size(u());
-	const int size_u_DH = localFiniteElement.size(u_DH());
+	const size_t size_u = localFiniteElement.size(u());
+	const size_t size_u_DH = localFiniteElement.size(u_DH());
 	// Get a quadrature rule
 	int order = std::max( 0, 2 * ( (int)localFiniteElement.order()));
 	const QuadratureRule<double, dim>& quad =
@@ -508,6 +447,9 @@ void assemble_cell_Jacobian(const Element& element, const MixedElement<LocalElem
 		localFiniteElement(u())->localBasis().evaluateHessian(quadPos,
 				Hessians);
 
+//		std::cout << "reference hessian at " << quadPos << std::endl;
+//		for (const auto &e: referenceHessian)	std::cout << e << ", ";
+//		std::cout << std::endl;
 
 		//the shape function values of hessian ansatz functions
 		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessian(size_u_DH);
@@ -580,7 +522,7 @@ void assemble_inner_face_Jacobian(const Intersection& intersection,
 								const MixedElement<LocalElement0, LocalElement1> &localFiniteElement, const VectorType &x,
 								const MixedElement<LocalElement0, LocalElement1> &localFiniteElementn, const VectorType &xn,
 								MatrixType& m_m, MatrixType& mn_m,
-								MatrixType& m_mn, MatrixType& mn_mn ) {
+								MatrixType& m_mn, MatrixType& mn_mn) const {
 	const int dim = Intersection::dimension;
 	const int dimw = Intersection::dimensionworld;
 
@@ -598,8 +540,8 @@ void assemble_inner_face_Jacobian(const Intersection& intersection,
 	assert(mn_mn.cols() == localFiniteElementn.size());
 
 	typedef typename LocalElement0::Traits::LocalBasisType::Traits::RangeType RangeType;
-	const int size_u = localFiniteElement.size(u());
-	const int size_u_DH = localFiniteElement.size(u_DH());
+	const size_t size_u = localFiniteElement.size(u());
+	const size_t size_u_DH = localFiniteElement.size(u_DH());
 
 	assert(size_u == localFiniteElementn.size(u()));
 	assert(size_u_DH == localFiniteElementn.size(u_DH()));
@@ -679,7 +621,7 @@ void assemble_inner_face_Jacobian(const Intersection& intersection,
 		for (size_t j = 0; j < size_u_DH; j++) // loop over test fcts
 		{
 
-	    	for (int i = 0; i < size_u; i++)
+	    	for (size_t i = 0; i < size_u; i++)
 	    	{
 	    		// discr. hessian correction term: jump{avg{mu} grad_u}
 	    		FieldVector<double,dim> temp;
@@ -703,7 +645,7 @@ void assemble_inner_face_Jacobian(const Intersection& intersection,
 template<class Intersection, class LocalElement0, class LocalElement1, class VectorType, class MatrixType>
 void assemble_boundary_face_Jacobian(const Intersection& intersection,
 		const MixedElement<LocalElement0, LocalElement1> &localFiniteElement, const VectorType &x,
-								MatrixType& m) {
+								MatrixType& m) const {
 
 	const int dim = Intersection::dimension;
 	const int dimw = Intersection::dimensionworld;
@@ -762,9 +704,9 @@ void assemble_boundary_face_Jacobian(const Intersection& intersection,
 	    //-------calculate integral--------
 	    const auto integrationElement = intersection.geometry().integrationElement(quad[pt].position());
 	    const double factor = quad[pt].weight()*integrationElement;
-	    for (unsigned int j=0; j<localFiniteElement.size(u()); j++) //parts from self
+	    for (size_t j=0; j<localFiniteElement.size(u()); j++) //parts from self
 	    {
-	    	for (int i = 0; i < localFiniteElement.size(u()); i++)
+	    	for (size_t i = 0; i < localFiniteElement.size(u()); i++)
 	    	{
 	    		// NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
 	    		m(j,i) += penalty_weight * referenceFunctionValues[i]*referenceFunctionValues[j]*factor;
@@ -785,7 +727,7 @@ void assemble_boundary_face_Jacobian(const Intersection& intersection,
 */
 template<class Element, class LocalElement, class VectorType>
 void assemble_cell_term_rhs(const Element& element, const LocalElement &localFiniteElement, const VectorType &x,
-		VectorType& v) {
+		VectorType& v) const {
 /*	const int dim = Element::dimension;
 	auto geometry = element.geometry();
 
@@ -830,7 +772,7 @@ void assemble_cell_term_rhs(const Element& element, const LocalElement &localFin
 template<class Intersection, class LocalElement, class VectorType>
 void assemble_boundary_face_term_rhs(const Intersection& intersection,
 								const LocalElement &localFiniteElement, const VectorType &x,
-								VectorType& v) {
+								VectorType& v) const {
 /*	const int dim = Intersection::dimension;
 	const int dimw = Intersection::dimensionworld;
 
@@ -900,5 +842,10 @@ void assemble_boundary_face_term_rhs(const Intersection& intersection,
 
 */
 }
+
+
+RightHandSide rhs;
+Dirichletdata bc;
+};
 
 #endif /* SRC_OPERATOR_HH_ */

@@ -73,8 +73,6 @@ void assemble_cell_term(const Element& element, const LocalElement &localFiniteE
 
 		double f;
 		rhs.evaluate(geometry.global(pt.position()), f);
-		std::cout << "f " << f << std::endl;
-
 
 		//calculate system
 		for (size_t j = 0; j < m.rows(); j++) // loop over test fcts
