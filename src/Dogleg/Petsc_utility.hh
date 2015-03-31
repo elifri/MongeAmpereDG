@@ -8,6 +8,8 @@
 #ifndef SRC_DOGLEG_PETSC_TTILITY_HH_
 #define SRC_DOGLEG_PETSC_TTILITY_HH_
 
+#include "/home/data/friebel/workspace/MongeAmpereDG2/include/matlab_export.hpp"
+
 
 static char help[] = "Newton method to solve u'' + u^{2} = f, sequentially.\n\
 This example employs a user-defined monitoring routine.\n\n";
@@ -36,11 +38,31 @@ T*/
    User-defined routines
 */
 inline
-int from_eigen_to_petsvec(Solver_config::VectorType& v, Vec& v_pets)
+int from_eigen_to_petsvec(Solver_config::VectorType& v, Vec& v_petsc)
 {
 //	assert(v.size()==n);
-	PetscScalar* a = v.data();
-	int ierr = VecRestoreArray(v_pets, &a);
+//	std::cout <<"v eigen " << v.transpose() << std::endl;
+
+//	PetscScalar* a = v.data();
+//	int ierr = VecRestoreArray(v_pets, &a);
+
+
+	PetscInt rows[v.size()];
+	PetscScalar values[v.size()];
+
+	for (int i=0; i<v.size(); ++i)
+	{
+		rows[i] = i;   // row index
+	    values[i] = v(i);
+	}
+
+	int ierr;
+	ierr = VecSetValues(v_petsc, v.size(), rows, values, INSERT_VALUES);
+	ierr = VecAssemblyBegin(v_petsc);CHKERRQ(ierr);
+	ierr = VecAssemblyEnd(v_petsc);CHKERRQ(ierr);
+
+//	VecView(v_pets, PETSC_VIEWER_STDOUT_WORLD);
+
 	return ierr;
 }
 
@@ -48,10 +70,24 @@ inline
 int from_petsvec_to_eigen(const Vec& v_pets, Solver_config::VectorType& v)
 {
 //	assert(v.size() == n);
-	std::cout << "v before " << v.transpose() << std::endl;
-	PetscScalar* a = v.data();
-	int ierr = VecGetArray (v_pets, &a);
-	std::cout << "v after " << v.transpose() << std::endl;
+//	VecView(v_pets, PETSC_VIEWER_STDOUT_WORLD);
+
+//	PetscScalar* a = v.data();
+//	int ierr = VecGetArray (v_pets, &a);
+
+	PetscInt rows[v.size()];
+	PetscScalar values[v.size()];
+
+	for (int i=0; i<v.size(); ++i)
+	{
+		rows[i] = i;   // row index
+	}
+	int ierr = VecGetValues(v_pets, v.size(), rows, values);
+	for (int i=0; i<v.size(); ++i)
+	{
+		v(i) = values[i];   // row index
+	}
+
 	return ierr;
 //	v.data() =
 }
@@ -59,23 +95,27 @@ int from_petsvec_to_eigen(const Vec& v_pets, Solver_config::VectorType& v)
 inline
 int from_eigen_to_petscmat(const Solver_config::MatrixType& mat, Mat& mat_petsc)
 {
-	PetscInt rows[mat.rows()];
-	PetscInt cols[mat.cols()];
+	int ierr = MatSeqAIJSetPreallocation(mat_petsc,mat.nonZeros(),NULL);CHKERRQ(ierr);
+
+	assert (ierr == 0);
+
+	PetscInt rows[mat.nonZeros()];
+	PetscInt cols[mat.nonZeros()];
 	PetscScalar values[mat.nonZeros()];
 
-	int i = 0;
+	MATLAB_export(mat, "a_eigen");
 
 	for (int k=0; k<mat.outerSize(); ++k)
 	  for (Solver_config::MatrixType::InnerIterator it(mat,k); it; ++it)
 	  {
-	    rows[i] = it.row();   // row index
-	    cols[i] = it.col();   // col index (here it is equal to k)
-	    values[i] = it.value();
-	    i++;
+		  int i = it.row();
+		  int j = it.col();
+		  PetscScalar value = it.value();
+
+		ierr = MatSetValues(mat_petsc, 1, &i, 1, &j, &value, INSERT_VALUES);
+		assert(ierr ==0);
 	  }
 
-	int ierr;
-	ierr = MatSetValues(mat_petsc, mat.rows(), rows, mat.cols(), cols, values, INSERT_VALUES);
 	ierr = MatAssemblyBegin(mat_petsc,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 	ierr = MatAssemblyEnd(mat_petsc,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 
@@ -104,22 +144,28 @@ private:
 	static PetscErrorCode Monitor(SNES,PetscInt,PetscReal,void*);
 
 	PetscInt       its,maxit,maxf;
-	static int 	   n;
 	PetscMPIInt    size;
 	PetscReal      abstol,rtol,stol,norm;
 
 	SNES           snes;                   /* SNES context */
-	static Vec     x,r;             /* vectors */
-	static Mat	   J;
+	Vec     x,r;             /* vectors */
+	Mat	   J;
 
 	MonitorCtx     monP;                   /* monitoring context */
-	static PetscErrorCode ierr;
 //	PetscScalar    h,xp,v,none = -1.0;
 
 public:
-	static const OperatorType&	op;
+	static OperatorType	op;
+	static int 	   n;
+	static PetscErrorCode ierr;
 
 };
+
+template<class T> int PETSC_SNES_Wrapper<T>::n = 0;
+template<class T> T PETSC_SNES_Wrapper<T>::op;
+template<class T> int PETSC_SNES_Wrapper<T>::ierr = 0;
+
+
 
 template <typename OperatorType>
 int PETSC_SNES_Wrapper<OperatorType>::init(int n_dofs)
@@ -229,6 +275,7 @@ int PETSC_SNES_Wrapper<OperatorType>::solve(Solver_config::VectorType v)
 
 	ierr = from_eigen_to_petsvec(v, x);CHKERRQ(ierr);
   ierr = SNESSolve(snes,NULL,x);CHKERRQ(ierr);
+  assert(ierr == 0);
   ierr = SNESGetIterationNumber(snes,&its);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"number of SNES iterations = %D\n\n",its);CHKERRQ(ierr);
 
@@ -284,7 +331,11 @@ PetscErrorCode PETSC_SNES_Wrapper<OperatorType>::FormFunction(SNES snes,Vec x,Ve
 	Solver_config::VectorType v(n);
 	ierr = from_petsvec_to_eigen(x, v);CHKERRQ(ierr);
 
-	op.evaluate(x,f);
+	Solver_config::VectorType f_eigen(n);
+	op.evaluate(v,f_eigen);
+
+	ierr = from_eigen_to_petsvec(f_eigen, f);
+
   return 0;
 }
 /* ------------------------------------------------------------------- */
