@@ -11,18 +11,11 @@
 #include <dune/common/function.hh>
 #include <dune/geometry/quadraturerules.hh>
 
+#include "utils.hpp"
 #include "solver_config.hh"
 #include "problem_data.hh"
 
 using namespace Dune;
-
-
-template <class R, class R2>
-inline
-R cwiseProduct(const Dune::FieldMatrix<R,2,2>& A, const Dune::FieldMatrix<R2,2,2> &B)
-{
-	return A[0][0]*B[0][0]+A[1][0]*B[1][0]+A[0][1]*B[0][1]+A[1][1]*B[1][1];
-}
 
 
 class Local_Operator_MA_mixed_Neilan
