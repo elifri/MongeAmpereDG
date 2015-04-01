@@ -72,7 +72,7 @@ public:
 			grid_ptr(grid), gridView_ptr(&gridView),
 			localFiniteElement(), localFiniteElementu(localFiniteElement(u())),
 			dof_handler(&gridView, localFiniteElement),
-			assembler(gridView_ptr, dof_handler, localFiniteElement, *localFiniteElementu),
+			assembler(gridView_ptr, dof_handler, localFiniteElement, localFiniteElementu),
 			vtkplotter(*this) {
 		vtkplotter.set_output_directory("../plots");
 	}
@@ -192,7 +192,7 @@ private:
 
 
 	LocalFiniteElementType localFiniteElement;
-	const LocalFiniteElementuType* localFiniteElementu;
+	const LocalFiniteElementuType& localFiniteElementu;
 
 	Dof_handler<Config> dof_handler;
 	Assembler assembler;
@@ -222,7 +222,7 @@ void MA_solver<Config>::init_mixed_element_without_second_derivatives(const Vect
 
 	//local mass matrix m_ij = \int mu_i : mu_j
 	DenseMatrixType localMassMatrix;
-	assembler.calculate_local_mass_matrix_ansatz(*localFiniteElement(u_DH()), localMassMatrix);
+	assembler.calculate_local_mass_matrix_ansatz(localFiniteElement(u_DH()), localMassMatrix);
 
 	//loop over all cells and solve in every cell the equation \int l2proj(f) *phi = \int f *phi \forall phi
 	for (auto&& e : elements(*gridView_ptr)) {
@@ -234,7 +234,7 @@ void MA_solver<Config>::init_mixed_element_without_second_derivatives(const Vect
 		//local rhs = \int D_h^2 u:mu
 		VectorType  localVector = VectorType::Zero(size_u_DH);
 
-		VectorType x_local = assembler.calculate_local_coefficients_u(id, coeff_u);
+		VectorType x_local = dof_handler.calculate_local_coefficients_u(id, coeff_u);
 		//copy ansatz dofs
 		coeff_mixed.segment(dof_handler.get_offset(id), x_local.size()) = x_local;
 
@@ -246,13 +246,13 @@ void MA_solver<Config>::init_mixed_element_without_second_derivatives(const Vect
 
 			//the shape function values
 			std::vector<HessianType> referenceFunctionValues(size_u_DH);
-			localFiniteElement(u_DH())->localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+			localFiniteElement(u_DH()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
 
 			//-------calulcate piecewise hessian---------
 			//get reference data
 			std::vector<HessianType> Hessians(size_u);
-			localFiniteElement(u())->localBasis().evaluateHessian(quadPos, Hessians);
+			localFiniteElement(u()).localBasis().evaluateHessian(quadPos, Hessians);
 
 			//transform data
 			const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
@@ -364,7 +364,7 @@ void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
 
 	//local mass matrix m_ij = \int mu_i : mu_j
 	DenseMatrixType localMassMatrix;
-	assembler.calculate_local_mass_matrix_ansatz(*localFiniteElement(u()), localMassMatrix);
+	assembler.calculate_local_mass_matrix_ansatz(localFiniteElement(u()), localMassMatrix);
 
 
 	//loop over all cells and solve in every cell the equation \int l2proj(f) *phi = \int f *phi \forall phi
@@ -398,7 +398,7 @@ void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
 				const FieldVector<double, dim> &quadPos = quad[pt].position();
 				//the shape function values
 				std::vector<RangeType> referenceFunctionValues;
-				localFiniteElement(u())->localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+				localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
 				//get value of f at quadrature point
 				RangeType f_value;
@@ -436,7 +436,7 @@ void MA_solver<Config>::adapt(const int level)
 	vtkWriterCoarse.write("../plots/gridcoarse");
 
 	grid_ptr->globalRefine(level);
-	dof_handler.initialise_dofs();
+	dof_handler.update_dofs();
 
 	GridViewType gv = grid_ptr->leafGridView();
 
