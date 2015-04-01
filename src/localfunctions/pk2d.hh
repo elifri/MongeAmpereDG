@@ -28,6 +28,9 @@ namespace Dune
         Pk2DLocalCoefficients<k>,
         Pk2DLocalInterpolation<Pk2DLocalBasis<D,R,k> > > Traits;
 
+    typedef typename Traits::LocalBasisType::Traits::DomainType DomainType;
+    typedef typename Traits::LocalBasisType::Traits::RangeType RangeType;
+
     /** \todo Please doc me !
      */
     Pk2DLocalFiniteElement ()

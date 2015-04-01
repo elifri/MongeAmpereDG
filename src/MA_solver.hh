@@ -300,7 +300,6 @@ void MA_solver<Config>::init_mixed_element_without_second_derivatives(const Vect
 
 	//local mass matrix m_ij = \int mu_i : mu_j
 	DenseMatrixType localMassMatrix;
-//	assembler.calculate_local_mass_matrix_hessian_ansatz(localMassMatrix);
 	assembler.calculate_local_mass_matrix_ansatz(*localFiniteElement(u_DH()), localMassMatrix);
 
 	//loop over all cells and solve in every cell the equation \int l2proj(f) *phi = \int f *phi \forall phi
@@ -441,6 +440,11 @@ void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
 	// The index set gives you indices for each element , edge , face , vertex , etc .
 	const GridViewType::IndexSet& indexSet = gridView_ptr->indexSet();
 
+	//local mass matrix m_ij = \int mu_i : mu_j
+	DenseMatrixType localMassMatrix;
+	assembler.calculate_local_mass_matrix_ansatz(*localFiniteElement(u()), localMassMatrix);
+
+
 	//loop over all cells and solve in every cell the equation \int l2proj(f) *phi = \int f *phi \forall phi
 	for (auto&& e : elements(*gridView_ptr)) {
 		assert(localFiniteElement.type() == e.type());
@@ -465,9 +469,6 @@ void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
 			//local rhs = \int f *v
 			VectorType localVector = VectorType::Zero(localFiniteElement.size(u()));
 
-			//local mass matrix m_ij = \int v_i *v_j
-			DenseMatrixType localMassMatrix = DenseMatrixType::Zero(localFiniteElement.size(u()), localFiniteElement.size(u()));
-
 			// Loop over all quadrature points
 			for (size_t pt = 0; pt < quad.size(); pt++) {
 
@@ -481,17 +482,13 @@ void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
 				RangeType f_value;
 				f(geometry.global(quad[pt].position()), f_value);
 
-				const double integrationElement = geometry.integrationElement(quadPos);
+//				const double integrationElement = geometry.integrationElement(quadPos);
 
-				//assemble integrals
+				//assemble integrals (on reference element)
 				for (size_t j = 0; j < localFiniteElement.size(u()); j++) // loop over test fcts
 				{
 					//int f * v
-					localVector(j) += f_value*referenceFunctionValues[j]* quad[pt].weight() * integrationElement;
-
-					//int v_i*v_j, as mass matrix is symmetric only fill lower part
-					for (size_t i = 0; i <= j; i++)
-						localMassMatrix(j,i) += referenceFunctionValues[i]*referenceFunctionValues[j]*quad[pt].weight() *integrationElement;
+					localVector(j) += f_value*referenceFunctionValues[j]* quad[pt].weight();// * integrationElement;
 				}
 			}
 

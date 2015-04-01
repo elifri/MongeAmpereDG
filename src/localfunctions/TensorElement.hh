@@ -63,6 +63,7 @@ public:
 	typedef TensorBasis<typename LocalFiniteElementType::Traits::LocalBasisType,
 			m, n> TensorBasisType;
 	typedef typename TensorBasisType::TensorRangeType TensorRangeType;
+	typedef typename TensorBasisType::TensorRangeType RangeType;
 
 	TensorElement() {
 		gt.makeTriangle();
