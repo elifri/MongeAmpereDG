@@ -39,16 +39,9 @@ public:
 				const Dof_handler<Solver_config> &dof_handler,
 				const LocalFiniteElementType &localFiniteElement, const LocalFiniteElementuType &localFiniteElementu)
 			:	gridView_ptr(gridView_ptr),
-				n_dofs(dof_handler.get_n_dofs()), n_dofs_u(dof_handler.get_n_dofs_u()),
 				dof_handler(dof_handler),
 				localFiniteElement(localFiniteElement), localFiniteElementu(localFiniteElementu) {
 	}
-
-	void init(const GridViewType* gridView_ptr,
-				const int n_dofs, const int n_dofs_u,
-				const std::map<IndexType, int> &id_to_offset, const std::map<IndexType, int> &id_to_offset_u,
-				const LocalFiniteElementType &localFiniteElement, const LocalFiniteElementuType &localFiniteElementu);
-
 
 	/**
 	 * extracts local degree of freedoom
@@ -85,9 +78,6 @@ public:
 
 private:
 	const GridViewType* gridView_ptr;
-
-	int n_dofs;
-	int n_dofs_u; /// number of degrees of freedom for ansatz function (whithout hessian ansatz functions)
 
 	const Dof_handler<Solver_config>& dof_handler;
 
@@ -136,7 +126,7 @@ void Assembler::calculate_local_mass_matrix_ansatz(const LocalFiniteElement &lfu
 //template<class Config>
 template<typename LocalOperatorType>
 void Assembler::assemble_DG(LocalOperatorType lop, const VectorType& x, VectorType& v) const{
-	assert(x.size() == n_dofs);
+	assert(x.size() == dof_handler.get_n_dofs());
 
 	//assuming Galerkin
 	v = VectorType::Zero(x.size());
@@ -211,9 +201,9 @@ template<typename LocalOperatorType>
 void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const VectorType& x, MatrixType &m) const
 {
 //	assert (initialised);
-	assert (x.size() == n_dofs);
+	assert (x.size() == dof_handler.get_n_dofs());
 
-	m.resize(n_dofs, n_dofs);
+	m.resize(dof_handler.get_n_dofs(), dof_handler.get_n_dofs());
 	m.setZero();
 
 	// The index set gives you indices for each element , edge , face , vertex , etc .
@@ -296,8 +286,8 @@ void Assembler::assemble_linear_system_DG(LocalOperatorType lop, MatrixType &m, 
 
 	//assuming Galerkin
 	m.setZero();
-	m.resize(n_dofs_u, n_dofs_u);
-	rhs = VectorType::Zero(n_dofs_u);
+	m.resize(dof_handler.get_n_dofs_u(), dof_handler.get_n_dofs_u());
+	rhs = VectorType::Zero(dof_handler.get_n_dofs_u());
 
 	// The index set gives you indices for each element , edge , face , vertex , etc .
 	const GridViewType::IndexSet& indexSet = gridView_ptr->indexSet();
