@@ -20,6 +20,7 @@
 #include "igpm_t2_lib.hpp"
 
 //#include "operator_poisson_DG.hh"
+#include "Dof_handler.hpp"
 #include "Assembler.hh"
 #include "problem_data.hh"
 #include "linear_system_operator_poisson_DG.hh"
@@ -67,8 +68,12 @@ public:
 			initialised(false) {
 	}
 	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView) :
-			initialised(true), grid_ptr(grid), gridView_ptr(&gridView), localFiniteElement(), localFiniteElementu(localFiniteElement(u())), vtkplotter(*this) {
-		initialise_dofs();
+			initialised(true),
+			grid_ptr(grid), gridView_ptr(&gridView),
+			localFiniteElement(), localFiniteElementu(localFiniteElement(u())),
+			dof_handler(&gridView, localFiniteElement),
+			assembler(gridView_ptr, dof_handler, localFiniteElement, *localFiniteElementu),
+			vtkplotter(*this) {
 		vtkplotter.set_output_directory("../plots");
 	}
 
@@ -82,7 +87,7 @@ public:
 	//-----functions--------
 public:
 
-	int get_n_dofs(){return n_dofs;}
+	int get_n_dofs(){return dof_handler.get_n_dofs();}
 
 
 public:
@@ -185,109 +190,26 @@ private:
 
 //	shared_ptr<GridType> plotGrid_ptr;
 
-	/// returns for every cell the offset in a coefficient vector given a mixed formulation
-	std::map<IndexType, int> id_to_offset;
-	/// returns for every cell the offset in a coefficient vector given only dofs for u
-	std::map<IndexType, int> id_to_offset_u;
-	std::map<int, std::pair<double, IndexType> > dof_to_vertex;
-	Eigen::VectorXi dof_to_vertex_ratio; ///counts how many degree of freedom
 
 	LocalFiniteElementType localFiniteElement;
 	const LocalFiniteElementuType* localFiniteElementu;
 
+	Dof_handler<Config> dof_handler;
 	Assembler assembler;
 
 
 	VectorType solution;
-
-	int n_dofs; /// number of degrees of freedom
-	int n_dofs_u; /// number of degrees of freedom for ansatz function (whithout hessian ansatz functions)
 
 	friend Plotter;
 
 	Plotter vtkplotter;
 };
 
-template <class Config>
-void MA_solver<Config>::initialise_dofs() {
-	assert(gridView_ptr != NULL && grid_ptr != NULL);
-
-	//empty variables
-	id_to_offset.clear();
-	dof_to_vertex.clear();
-	dof_to_vertex_ratio = Eigen::VectorXi::Zero(gridView_ptr->size(Config::dim));
-
-	int count_dofs = 0;
-	int count_dofs_u = 0;
-
-	const GridViewType::IndexSet& indexSet = gridView_ptr->indexSet();
-	// A loop over all elements of the grid
-	auto it = gridView_ptr->template begin<0>();
-	auto endIt = gridView_ptr->template end<0>();
-	for (; it != endIt; ++it) {
-
-		// Get set of shape functions for this element
-		assert(localFiniteElement.type() == it->type());// This only works for cube grids
-
-		auto geometry = it->geometry();
-
-		//get contribution to vertices
-		std::vector<SpaceType> local_vertex_coords(geometry.corners());
-
-		for (int i = 0; i < geometry.corners(); i++)
-		{
-//			std:: cout << "i " << i << "/" << geometry.corners() << std::endl;
-			//corner coordinates
-			SpaceType local_vertex_coords = ReferenceElements<double,Solver_config::dim>::
-		              general(geometry.type()).position(i, Config::dim);
-
-			// The shape functions on the reference elements
-			std::vector<RangeType> referenceFunctionValues;
-			Solver_config::LocalFiniteElementuType localFiniteElement;
-			localFiniteElement.localBasis().evaluateFunction(local_vertex_coords, referenceFunctionValues);
-
-			//get vertex id
-			auto vertex = it->subEntity<Config::dim>(i); //Attention this returns a point in alugrid, but a entity in newer versions as yaspgrid
-			IndexType vertex_id =	gridView_ptr->indexSet().index(*vertex);
-
-			//write contributation to vertex in map
-			for (int i = 0; i < referenceFunctionValues.size(); i++)
-			{
-				if (std::abs(referenceFunctionValues[i]>1e-10))
-				{//current ansatz function contributes to vertex
-					assert(Config::ansatzpolynomials == LAGRANGE); //if the ansatz polynomials are change a dof may contribute to more than one vertex
-
-					dof_to_vertex[count_dofs+i] = std::pair<double, IndexType>(referenceFunctionValues[i], vertex_id);
-					dof_to_vertex_ratio[vertex_id] ++;
-				}
-			}
-		}
-
-		//get id
-		const IndexType id = indexSet.index(*it);
-
-		//set offset
-		id_to_offset[id] = count_dofs;
-		id_to_offset_u[id] = count_dofs_u;
-
-		//update counts
-		count_dofs += localFiniteElement.size();
-		count_dofs_u += localFiniteElement.size(u());
-	}
-
-	cout << "dof_to_vertex_ratio " << dof_to_vertex_ratio.transpose() << std::endl;
-
-	n_dofs = count_dofs;
-	n_dofs_u = count_dofs_u;
-
-	assembler.init(gridView_ptr, n_dofs, n_dofs_u, id_to_offset, id_to_offset_u, localFiniteElement, *localFiniteElementu);
-}
-
 template<class Config>
 void MA_solver<Config>::init_mixed_element_without_second_derivatives(const VectorType& coeff_u, VectorType &coeff_mixed) const
 {
-	assert (coeff_u.size() == n_dofs_u);
-	coeff_mixed.resize(n_dofs);
+	assert (coeff_u.size() == dof_handler.get_n_dofs_u());
+	coeff_mixed.resize(dof_handler.get_n_dofs());
 
 	//calculate mass matrix for hessian ansatz functions
 	const int size_u = localFiniteElement.size(u());
@@ -314,7 +236,7 @@ void MA_solver<Config>::init_mixed_element_without_second_derivatives(const Vect
 
 		VectorType x_local = assembler.calculate_local_coefficients_u(id, coeff_u);
 		//copy ansatz dofs
-		coeff_mixed.segment(id_to_offset.at(id), x_local.size()) = x_local;
+		coeff_mixed.segment(dof_handler.get_offset(id), x_local.size()) = x_local;
 
 		// Loop over all quadrature points
 		for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -360,7 +282,7 @@ void MA_solver<Config>::init_mixed_element_without_second_derivatives(const Vect
 
 		//solve arising system
 		x_local =  localMassMatrix.ldlt().solve(localVector);
-		coeff_mixed.segment(id_to_offset.at(id)+size_u, x_local.size()) = x_local;
+		coeff_mixed.segment(dof_handler.get_offset(id)+size_u, x_local.size()) = x_local;
 	}
 }
 
@@ -373,8 +295,8 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 	Linear_System_Local_Operator_Poisson_DG<RightHandSideInitial, Dirichletdata> lop;
 
 
-	MatrixType m(n_dofs_u, n_dofs_u);
-	VectorType rhs(n_dofs_u);
+	MatrixType m(dof_handler.get_n_dofs_u(), dof_handler.get_n_dofs_u());
+	VectorType rhs(dof_handler.get_n_dofs_u());
 	assemble_linear_system_DG(lop, m, rhs);
 
 //	MATLAB_export(m, "stiffness_matrix");
@@ -409,13 +331,13 @@ template<class Config>
 typename MA_solver<Config>::VectorType MA_solver<Config>::return_vertex_vector(const VectorType &x) const
 {
 	assert (initialised);
-	assert(x.size() == n_dofs);
+	assert(x.size() == dof_handler.get_n_dofs());
 
 //	std::cout << "x " << x.transpose() << std::endl;
 
 	VectorType x_vertex = VectorType::Zero(gridView_ptr->size(Config::dim));
 
-	for (const auto& e: dof_to_vertex)
+	for (const auto& e: dof_handler.get_dof_to_vertex())
 	{
 			x_vertex(e.second.second) += e.second.first*x(e.first);
 //			std::cout << "vertex " << e.second.second <<" +="<<e.second.first<<"*" << x(e.first) << std::endl;
@@ -424,7 +346,7 @@ typename MA_solver<Config>::VectorType MA_solver<Config>::return_vertex_vector(c
 //	std::cout << "x_vertex before " << x_vertex.transpose() << std::endl;
 
 	for (int i=0; i < x_vertex.size(); i++)
-		x_vertex(i) /= (double) dof_to_vertex_ratio(i);
+		x_vertex(i) /= (double) dof_handler.get_dof_to_vertex_ratio()(i);
 	std::cout << "x_vertex after " << x_vertex.transpose() << std::endl;
 
 	return x_vertex;
@@ -435,7 +357,7 @@ template<class Config>
 void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
 {
 	assert (initialised);
-	VectorType coeff_u(n_dofs_u);
+	VectorType coeff_u(dof_handler.get_n_dofs_u());
 
 	// The index set gives you indices for each element , edge , face , vertex , etc .
 	const GridViewType::IndexSet& indexSet = gridView_ptr->indexSet();
@@ -495,7 +417,7 @@ void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
 
 			//solve arising system
 			x_local =  localMassMatrix.ldlt().solve(localVector);
-			coeff_u.segment(id_to_offset_u.at(id), x_local.size()) = x_local;
+			coeff_u.segment(dof_handler.get_offset_u(id), x_local.size()) = x_local;
 		}
 	}
 
@@ -514,7 +436,7 @@ void MA_solver<Config>::adapt(const int level)
 	vtkWriterCoarse.write("../plots/gridcoarse");
 
 	grid_ptr->globalRefine(level);
-	initialise_dofs();
+	dof_handler.initialise_dofs();
 
 	GridViewType gv = grid_ptr->leafGridView();
 
@@ -529,13 +451,13 @@ void MA_solver<Config>::adapt(const int level)
 template<class Config>
 void MA_solver<Config>::solve_nonlinear_step()
 {
-	assert(solution.size() == n_dofs && "Error: start solution is not initialised");
+	assert(solution.size() == dof_handler.get_n_dofs() && "Error: start solution is not initialised");
 
 	//get operator
 	const MA_solver<Solver_config>::Operator op(*this);
 
 
-	std::cout << "n dofs" << n_dofs << std::endl;
+	std::cout << "n dofs" << dof_handler.get_n_dofs() << std::endl;
 	std::cout << "initial guess "<< solution.transpose() << std::endl;
 
 	// /////////////////////////

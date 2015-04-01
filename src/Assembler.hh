@@ -10,9 +10,11 @@
 
 #include "utils.hpp"
 #include "solver_config.hh"
+
+#include "Dof_handler.hpp"
 #include <dune/geometry/quadraturerules.hh>
 
-
+/// a class handling all assembling processes, in particular it provides assembling processes for systems and local mass matrices
 class Assembler{
 public:
 	//-----typedefs---------
@@ -33,14 +35,13 @@ public:
 	typedef typename Solver_config::LocalFiniteElementuType LocalFiniteElementuType;
 	typedef typename Solver_config::LocalFiniteElementuType::Traits::LocalBasisType::Traits::HessianType HessianType;
 
-//	Assembler(const GridViewType* gridView_ptr,
-//				const int n_dofs, const int n_dofs_u,
-//				const std::map<IndexType, int> &id_to_offset, const std::map<IndexType, int> &id_to_offset_u,
-//				const LocalFiniteElementType &localFiniteElement, const LocalFiniteElementuType &localFiniteElementu)
-//			:	gridView_ptr(gridView_ptr),
-//				n_dofs(n_dofs), n_dofs_u(n_dofs_u),
-//				id_to_offset(id_to_offset), id_to_offset_u(id_to_offset_u),
-//				localFiniteElement(localFiniteElement), localFiniteElementu(localFiniteElementu) {}
+	Assembler(const GridViewType* gridView_ptr,
+				const Dof_handler<Solver_config> &dof_handler,
+				const LocalFiniteElementType &localFiniteElement, const LocalFiniteElementuType &localFiniteElementu)
+			:	gridView_ptr(gridView_ptr),
+				n_dofs(dof_handler.get_n_dofs()), n_dofs_u(dof_handler.get_n_dofs_u()),
+				id_to_offset(&dof_handler.get_id_to_offset()), id_to_offset_u(&dof_handler.get_id_to_offset_u()),
+				localFiniteElement(&localFiniteElement), localFiniteElementu(&localFiniteElementu) {}
 
 	void init(const GridViewType* gridView_ptr,
 				const int n_dofs, const int n_dofs_u,
@@ -117,7 +118,7 @@ void Assembler::calculate_local_mass_matrix_ansatz(const LocalFiniteElement &lfu
 		const FieldVector<double, Solver_config::dim> &quadPos = quad[pt].position();
 
 		//the shape function values
-		std::vector<HessianType> referenceFunctionValues(size);
+		std::vector<typename LocalFiniteElement::RangeType> referenceFunctionValues(size);
 		lfu.localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
 		//-----assemble integrals---------
