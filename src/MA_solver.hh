@@ -300,7 +300,8 @@ void MA_solver<Config>::init_mixed_element_without_second_derivatives(const Vect
 
 	//local mass matrix m_ij = \int mu_i : mu_j
 	DenseMatrixType localMassMatrix;
-	assembler.calculate_local_mass_matrix_hessian_ansatz(localMassMatrix);
+//	assembler.calculate_local_mass_matrix_hessian_ansatz(localMassMatrix);
+	assembler.calculate_local_mass_matrix_ansatz(*localFiniteElement(u_DH()), localMassMatrix);
 
 	//loop over all cells and solve in every cell the equation \int l2proj(f) *phi = \int f *phi \forall phi
 	for (auto&& e : elements(*gridView_ptr)) {

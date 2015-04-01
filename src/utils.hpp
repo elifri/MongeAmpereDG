@@ -19,6 +19,12 @@ R cwiseProduct(const Dune::FieldMatrix<R,2,2>& A, const Dune::FieldMatrix<R2,2,2
 	return A[0][0]*B[0][0]+A[1][0]*B[1][0]+A[0][1]*B[0][1]+A[1][1]*B[1][1];
 }
 
+inline
+double cwiseProduct(const double& A, const double &B)
+{
+	return A*B;
+}
+
 template<class MatrixType, class DenseMatrixType>
 inline
 void copy_to_sparse_matrix(const DenseMatrixType &m_local, int offset_row, int offset_col, MatrixType &m)

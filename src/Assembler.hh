@@ -72,10 +72,6 @@ public:
 	template<typename LocalFiniteElement>
 	void calculate_local_mass_matrix_ansatz(const LocalFiniteElement &lfu, DenseMatrixType& m) const;
 
-	///calculates the mass matrix of the hessian ansatz functions (these are given by the member localFiniteElement)
-	void calculate_local_mass_matrix_hessian_ansatz(DenseMatrixType& m) const;
-
-
 	template<typename LocalOperatorType>
 	void assemble_DG(LocalOperatorType LOP, const VectorType& x, VectorType& v) const;
 
@@ -107,7 +103,7 @@ void Assembler::calculate_local_mass_matrix_ansatz(const LocalFiniteElement &lfu
 	const int size = lfu.size();
 
 	// Get a quadrature rule
-	int order = std::max(1, 2 * ((int)lfu.order()));
+	int order = std::max(1, 2 * ((int)lfu.localBasis().order()));
 	const QuadratureRule<double, Solver_config::dim>& quad =
 			QuadratureRules<double, Solver_config::dim>::rule(lfu.type(), order);
 
