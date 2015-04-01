@@ -350,13 +350,12 @@ void MA_solver<Config>::init_mixed_element_without_second_derivatives(const Vect
 			for (size_t i = 0; i < x_local.size(); i++)
 				Hessu.axpy(x_local(i), Hessians[i]);
 
-			//-----assemble integrals---------
-			const double integrationElement = geometry.integrationElement(quadPos);
+			//-----assemble integrals (on reference cell)---------
 
 			for (size_t j = 0; j < localFiniteElement.size(u_DH()); j++) // loop over test fcts
 			{
 				//int f * v
-				localVector(j) += cwiseProduct(referenceFunctionValues[j],Hessu)* quad[pt].weight() * integrationElement;
+				localVector(j) += cwiseProduct(referenceFunctionValues[j],Hessu)* quad[pt].weight();
 			}
 		}
 

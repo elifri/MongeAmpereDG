@@ -121,16 +121,13 @@ void Assembler::calculate_local_mass_matrix_ansatz(const LocalFiniteElement &lfu
 		lfu.localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
 		//-----assemble integrals---------
-		//TODO nasty
 		assert(no_hanging_nodes);
-
-		const double integrationElement = gridView_ptr->begin<0>()->geometry().integrationElement(quadPos);
 
 		for (size_t j = 0; j < lfu.size(); j++) // loop over test fcts
 		{
 			//int v_i*v_j, as mass matrix is symmetric only fill lower part
 			for (size_t i = 0; i <= j; i++)
-				m(j,i) += cwiseProduct(referenceFunctionValues[i],referenceFunctionValues[j])*quad[pt].weight() *integrationElement;
+				m(j,i) += cwiseProduct(referenceFunctionValues[i],referenceFunctionValues[j])*quad[pt].weight();
 		}
 	}
 }
