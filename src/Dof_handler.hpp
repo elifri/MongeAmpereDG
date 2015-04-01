@@ -27,18 +27,15 @@ public:
 
 	Dof_handler(const GridViewType* gridView_ptr, const LocalFiniteElementType &lfu): gridView_ptr(gridView_ptr), localFiniteElement(lfu)
 	{
-		initialise_dofs();
+		update_dofs();
 	}
 
 
 	///enumerates the dofs. has to be called every time the grid changes
-	void initialise_dofs();
+	void update_dofs();
 
 	const int get_n_dofs() const{return n_dofs;}
 	const int get_n_dofs_u() const {return n_dofs_u;}
-
-	const IndexMap& get_id_to_offset() const{	return id_to_offset;}
-	const IndexMap& get_id_to_offset_u() const{	return id_to_offset_u;}
 
 	const int get_offset(const IndexType& id) const {	return id_to_offset.at(id);}
 	const int get_offset_u(const IndexType& id) const {	return id_to_offset_u.at(id);}
@@ -68,7 +65,7 @@ private:
 
 
 template <class Config>
-void Dof_handler<Config>::initialise_dofs() {
+void Dof_handler<Config>::update_dofs() {
 	assert(gridView_ptr != NULL);
 
 	//empty variables

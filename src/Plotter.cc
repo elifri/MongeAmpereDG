@@ -230,7 +230,7 @@ void Plotter::extract_solution(PointdataVectorType &v) const
 				//evaluate solution at refined points
 				double u = 0;
 				for (int i = 0; i < size_u; i++)
-					u += solver->solution(solver->dof_handler.get_id_to_offset().at(id)+i)*referenceFunctionValues[i];
+					u += solver->solution(solver->dof_handler.get_offset(id)+i)*referenceFunctionValues[i];
 
 				//write solution into vector
 				v[vertex_count] = u;
@@ -270,7 +270,7 @@ void Plotter::extract_solutionAndError(const Dirichletdata &exact_sol, Pointdata
 				//evaluate solution at refined points
 				double u = 0;
 				for (int i = 0; i < size_u; i++)
-					u += solver->solution(solver->dof_handler.get_id_to_offset().at(id)+i)*referenceFunctionValues[i];
+					u += solver->solution(solver->dof_handler.get_offset(id)+i)*referenceFunctionValues[i];
 
 				//evaluate exact solution at refined points
 				auto global_coords = geometry.global(it.coords());
