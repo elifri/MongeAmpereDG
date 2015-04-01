@@ -17,8 +17,8 @@
 
 #include "UnitCube.hh"
 
-#include "TensorElement.hh"
-#include "mixedElement.hpp"
+#include "localfunctions/TensorElement.hh"
+#include "localfunctions/mixedElement.hpp"
 
 using namespace Dune;
 
