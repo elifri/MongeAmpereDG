@@ -65,11 +65,11 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 
 		//the shape function values
 		std::vector<RangeType> referenceFunctionValues(size_u);
-		localFiniteElement(u())->localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+		localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
 		// The hessian of the shape functions on the reference element
 		std::vector<HessianType> Hessians(size_u);
-		localFiniteElement(u())->localBasis().evaluateHessian(quadPos,
+		localFiniteElement(u()).localBasis().evaluateHessian(quadPos,
 				Hessians);
 
 //		std::cout << "reference hessian at " << quadPos << std::endl;
@@ -78,7 +78,7 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 
 		//the shape function values of hessian ansatz functions
 		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessian(size_u_DH);
-		localFiniteElement(u_DH())->localBasis().evaluateFunction(quadPos, referenceFunctionValuesHessian);
+		localFiniteElement(u_DH()).localBasis().evaluateFunction(quadPos, referenceFunctionValuesHessian);
 
 
 		//--------transform data------------------------
@@ -209,22 +209,22 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 
 		// The shape functions on the reference elements
 		std::vector<RangeType > referenceFunctionValues(size_u);
-		localFiniteElement(u())->localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+		localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 		std::vector<RangeType > referenceFunctionValuesn(size_u);
-		localFiniteElementn(u())->localBasis().evaluateFunction(quadPosn, referenceFunctionValuesn);
+		localFiniteElementn(u()).localBasis().evaluateFunction(quadPosn, referenceFunctionValuesn);
 
 		// The gradients of the shape functions on the reference element
 		std::vector<FieldMatrix<double, 1, dim> > referenceGradients(size_u);
-		localFiniteElement(u())->localBasis().evaluateJacobian(quadPos,referenceGradients);
+		localFiniteElement(u()).localBasis().evaluateJacobian(quadPos,referenceGradients);
 		std::vector<FieldMatrix<double, 1, dim> > referenceGradientsn(size_u);
-		localFiniteElementn(u())->localBasis().evaluateJacobian(quadPosn,referenceGradientsn);
+		localFiniteElementn(u()).localBasis().evaluateJacobian(quadPosn,referenceGradientsn);
 
 
 		//the shape function values of hessian ansatz functions
 		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessian(size_u_DH);
-		localFiniteElement(u_DH())->localBasis().evaluateFunction(quadPos, referenceFunctionValuesHessian);
+		localFiniteElement(u_DH()).localBasis().evaluateFunction(quadPos, referenceFunctionValuesHessian);
 		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessiann(size_u_DH);
-		localFiniteElementn(u_DH())->localBasis().evaluateFunction(quadPosn, referenceFunctionValuesHessiann);
+		localFiniteElementn(u_DH()).localBasis().evaluateFunction(quadPosn, referenceFunctionValuesHessiann);
 
 //		std::cout << "reference hessian ansatz at " << quadPos << std::endl;
 //		for (const auto &e: referenceFunctionValuesHessian)	std::cout << e << ", ";
@@ -340,12 +340,12 @@ void assemble_boundary_face_term(const Intersection& intersection,
 
 		// The shape functions on the reference elements
 		std::vector<RangeType > referenceFunctionValues;
-		localFiniteElement(u())->localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+		localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
 /*
 		// The gradients of the shape functions on the reference element
 		std::vector<FieldMatrix<double, 1, dim> > referenceGradients;
-		localFiniteElement(u())->localBasis().evaluateJacobian(quadPos,referenceGradients);
+		localFiniteElement(u()).localBasis().evaluateJacobian(quadPos,referenceGradients);
 */
 
 		//-------transform data---------------
@@ -433,11 +433,11 @@ void assemble_cell_Jacobian(const Element& element, const MixedElement<LocalElem
 
 		//the shape function values
 		std::vector<RangeType> referenceFunctionValues(size_u);
-		localFiniteElement(u())->localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+		localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
 		// The hessian of the shape functions on the reference element
 		std::vector<HessianType> Hessians(size_u);
-		localFiniteElement(u())->localBasis().evaluateHessian(quadPos,
+		localFiniteElement(u()).localBasis().evaluateHessian(quadPos,
 				Hessians);
 
 //		std::cout << "reference hessian at " << quadPos << std::endl;
@@ -446,7 +446,7 @@ void assemble_cell_Jacobian(const Element& element, const MixedElement<LocalElem
 
 		//the shape function values of hessian ansatz functions
 		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessian(size_u_DH);
-		localFiniteElement(u_DH())->localBasis().evaluateFunction(quadPos, referenceFunctionValuesHessian);
+		localFiniteElement(u_DH()).localBasis().evaluateFunction(quadPos, referenceFunctionValuesHessian);
 
 
 		//--------transform data------------------------
@@ -566,22 +566,22 @@ void assemble_inner_face_Jacobian(const Intersection& intersection,
 
 		// The shape functions on the reference elements
 		std::vector<RangeType > referenceFunctionValues(size_u);
-		localFiniteElement(u())->localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+		localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 		std::vector<RangeType > referenceFunctionValuesn(size_u);
-		localFiniteElementn(u())->localBasis().evaluateFunction(quadPosn, referenceFunctionValuesn);
+		localFiniteElementn(u()).localBasis().evaluateFunction(quadPosn, referenceFunctionValuesn);
 
 		// The gradients of the shape functions on the reference element
 		std::vector<FieldMatrix<double, 1, dim> > referenceGradients(size_u);
-		localFiniteElement(u())->localBasis().evaluateJacobian(quadPos,referenceGradients);
+		localFiniteElement(u()).localBasis().evaluateJacobian(quadPos,referenceGradients);
 		std::vector<FieldMatrix<double, 1, dim> > referenceGradientsn(size_u);
-		localFiniteElementn(u())->localBasis().evaluateJacobian(quadPosn,referenceGradientsn);
+		localFiniteElementn(u()).localBasis().evaluateJacobian(quadPosn,referenceGradientsn);
 
 
 		//the shape function values of hessian ansatz functions
 		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessian(size_u_DH);
-		localFiniteElement(u_DH())->localBasis().evaluateFunction(quadPos, referenceFunctionValuesHessian);
+		localFiniteElement(u_DH()).localBasis().evaluateFunction(quadPos, referenceFunctionValuesHessian);
 		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessiann(size_u_DH);
-		localFiniteElementn(u_DH())->localBasis().evaluateFunction(quadPosn, referenceFunctionValuesHessiann);
+		localFiniteElementn(u_DH()).localBasis().evaluateFunction(quadPosn, referenceFunctionValuesHessiann);
 
 		//-------transform data---------------
 		// The transposed inverse Jacobian of the map from the reference element to the element
@@ -641,7 +641,6 @@ void assemble_boundary_face_Jacobian(const Intersection& intersection,
 								MatrixType& m) const {
 
 	const int dim = Intersection::dimension;
-	const int dimw = Intersection::dimensionworld;
 
 	//assuming galerkin
 	assert(x.size() == localFiniteElement.size());
@@ -657,9 +656,9 @@ void assemble_boundary_face_Jacobian(const Intersection& intersection,
 			QuadratureRules<double, dim-1>::rule(gtface, order);
 
 	// normal of center in face's reference element
-	const FieldVector<double,dim-1>& face_center = ReferenceElements<double,dim-1>::
-	          general(intersection.geometry().type()).position(0,0);
-	const FieldVector<double,dimw> normal = intersection.unitOuterNormal(face_center);
+//	const FieldVector<double,dim-1>& face_center = ReferenceElements<double,dim-1>::
+//	          general(intersection.geometry().type()).position(0,0);
+//	const FieldVector<double,dimw> normal = intersection.unitOuterNormal(face_center);
 
 	// penalty weight for NIPG / SIPG
 	double penalty_weight = Solver_config::sigma*(Solver_config::degree*Solver_config::degree) / std::pow(intersection.geometry().volume(), Solver_config::beta);
@@ -675,12 +674,12 @@ void assemble_boundary_face_Jacobian(const Intersection& intersection,
 
 		// The shape functions on the reference elements
 		std::vector<RangeType > referenceFunctionValues;
-		localFiniteElement(u())->localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+		localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
 /*
 		// The gradients of the shape functions on the reference element
 		std::vector<FieldMatrix<double, 1, dim> > referenceGradients;
-		localFiniteElement(u())->localBasis().evaluateJacobian(quadPos,referenceGradients);
+		localFiniteElement(u()).localBasis().evaluateJacobian(quadPos,referenceGradients);
 */
 
 		//-------transform data---------------

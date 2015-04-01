@@ -109,7 +109,7 @@ void check_file_extension(std::string &name, std::string extension) {
 //==========================================================================================
 
 Plotter::Plotter(const MA_solver<Solver_config>& ma_solver) : solver(&ma_solver),
-									localFiniteElement(&ma_solver.localFiniteElement), grid(ma_solver.gridView_ptr),
+									grid(ma_solver.gridView_ptr),
 									refinement(Solver_config::degree-1),
 									output_directory("."),output_prefix("function")
 {
@@ -211,7 +211,7 @@ void Plotter::extract_solution(PointdataVectorType &v) const
 		v = solver->return_vertex_vector(solver->solution);
 	}else {		// save points in file after refinement
 
-		int size_u = localFiniteElement->size(u());
+		int size_u = solver->localFiniteElement.size(u());
 
 		int vertex_count = 0;
 
@@ -225,12 +225,12 @@ void Plotter::extract_solution(PointdataVectorType &v) const
 			for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
 
 				//get reference function values at refined points
-				(*localFiniteElement)(u())->localBasis().evaluateFunction(it.coords(), referenceFunctionValues);
+				solver->localFiniteElement(u()).localBasis().evaluateFunction(it.coords(), referenceFunctionValues);
 
 				//evaluate solution at refined points
 				double u = 0;
 				for (int i = 0; i < size_u; i++)
-					u += solver->solution(solver->id_to_offset.at(id)+i)*referenceFunctionValues[i];
+					u += solver->solution(solver->dof_handler.get_id_to_offset().at(id)+i)*referenceFunctionValues[i];
 
 				//write solution into vector
 				v[vertex_count] = u;
@@ -251,7 +251,7 @@ void Plotter::extract_solutionAndError(const Dirichletdata &exact_sol, Pointdata
 		assert(false && "not implemented");
 	}else {		// save points in file after refinement
 
-		int size_u = localFiniteElement->size(u());
+		int size_u = solver->localFiniteElement.size(u());
 
 		int vertex_count = 0;
 
@@ -265,12 +265,12 @@ void Plotter::extract_solutionAndError(const Dirichletdata &exact_sol, Pointdata
 			for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
 
 				//get reference function values at refined points
-				(*localFiniteElement)(u())->localBasis().evaluateFunction(it.coords(), referenceFunctionValues);
+				solver->localFiniteElement(u()).localBasis().evaluateFunction(it.coords(), referenceFunctionValues);
 
 				//evaluate solution at refined points
 				double u = 0;
 				for (int i = 0; i < size_u; i++)
-					u += solver->solution(solver->id_to_offset.at(id)+i)*referenceFunctionValues[i];
+					u += solver->solution(solver->dof_handler.get_id_to_offset().at(id)+i)*referenceFunctionValues[i];
 
 				//evaluate exact solution at refined points
 				auto global_coords = geometry.global(it.coords());

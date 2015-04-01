@@ -23,6 +23,8 @@ public:
 	typedef GridViewType::IndexSet::IndexType IndexType;
 	typedef std::map<IndexType, int> IndexMap;
 
+	typedef Solver_config::VectorType VectorType;
+
 	Dof_handler(const GridViewType* gridView_ptr, const LocalFiniteElementType &lfu): gridView_ptr(gridView_ptr), localFiniteElement(lfu)
 	{
 		initialise_dofs();
@@ -44,6 +46,8 @@ public:
 	const std::map<int, std::pair<double, IndexType> >& get_dof_to_vertex() const {return dof_to_vertex;}
 	const Eigen::VectorXi& get_dof_to_vertex_ratio() const {return dof_to_vertex_ratio;}
 
+	VectorType calculate_local_coefficients(const IndexType id, const VectorType& x) const;
+	VectorType calculate_local_coefficients_u(const IndexType id, const VectorType& x) const;
 private:
 	const GridViewType* gridView_ptr;
 
@@ -135,6 +139,26 @@ void Dof_handler<Config>::initialise_dofs() {
 	n_dofs = count_dofs;
 	n_dofs_u = count_dofs_u;
 }
+
+template <class Config>
+inline
+typename Dof_handler<Config>::VectorType Dof_handler<Config>::calculate_local_coefficients(
+		const IndexType id, const VectorType& x) const{
+	assert(x.size() == n_dofs);
+//	assert (initialised);
+	return x.segment(id_to_offset.at(id), localFiniteElement.size());
+}
+
+
+template <class Config>
+inline
+typename Dof_handler<Config>::VectorType Dof_handler<Config>::calculate_local_coefficients_u(
+		const IndexType id, const VectorType& x) const{
+	assert (x.size() == n_dofs_u);
+//	assert (initialised);
+	return x.segment(id_to_offset_u.at(id), localFiniteElement.size(u()));
+}
+
 
 
 #endif /* SRC_DOF_HANDLER_HPP_ */

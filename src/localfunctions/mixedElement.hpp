@@ -73,8 +73,8 @@ private:
 	LocalFiniteElement1 lfu1;
 
 public:
-const LocalFiniteElement0* operator()(const FirstVariable &v0) const	{return &lfu0;}
-const LocalFiniteElement1* operator()(const SecondVariable &v0) const {return &lfu1;}
+const LocalFiniteElement0& operator()(const FirstVariable &v0) const	{return lfu0;}
+const LocalFiniteElement1& operator()(const SecondVariable &v0) const {return lfu1;}
 
 
 private:

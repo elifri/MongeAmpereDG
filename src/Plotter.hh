@@ -36,7 +36,6 @@ class Plotter{
 private:
 
 	const MA_solver<Solver_config>* solver; ///solver providing function space data
-	const Solver_config::LocalFiniteElementType* localFiniteElement; /// pointer to the used (mixed) finite element
 
 	const Solver_config::GridView* grid;
 	PlotRefinementType refined_grid;
@@ -87,7 +86,6 @@ public:
 	void writeLeafCellVTK(std::string filename) const;
 
 	void set_grid(Solver_config::GridView* grid){	this->grid = grid;}
-	void set_shapes(const Solver_config::LocalFiniteElementType* shape){	this->localFiniteElement = localFiniteElement;}
 	void set_refinement(const int refinement){	this->refinement = refinement;}
 	void set_output_directory(std::string outputdir) {this->output_directory = outputdir;}
 	void set_output_prefix(std::string prefix) {this->output_prefix = prefix;}

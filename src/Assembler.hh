@@ -40,8 +40,9 @@ public:
 				const LocalFiniteElementType &localFiniteElement, const LocalFiniteElementuType &localFiniteElementu)
 			:	gridView_ptr(gridView_ptr),
 				n_dofs(dof_handler.get_n_dofs()), n_dofs_u(dof_handler.get_n_dofs_u()),
-				id_to_offset(&dof_handler.get_id_to_offset()), id_to_offset_u(&dof_handler.get_id_to_offset_u()),
-				localFiniteElement(&localFiniteElement), localFiniteElementu(&localFiniteElementu) {}
+				dof_handler(dof_handler),
+				localFiniteElement(localFiniteElement), localFiniteElementu(localFiniteElementu) {
+	}
 
 	void init(const GridViewType* gridView_ptr,
 				const int n_dofs, const int n_dofs_u,
@@ -88,11 +89,10 @@ private:
 	int n_dofs;
 	int n_dofs_u; /// number of degrees of freedom for ansatz function (whithout hessian ansatz functions)
 
-	const std::map<IndexType, int>* id_to_offset;
-	const std::map<IndexType, int>* id_to_offset_u;
+	const Dof_handler<Solver_config>& dof_handler;
 
-	const LocalFiniteElementType* localFiniteElement;
-	const LocalFiniteElementuType* localFiniteElementu;
+	const LocalFiniteElementType& localFiniteElement;
+	const LocalFiniteElementuType& localFiniteElementu;
 
 	bool no_hanging_nodes;
 };
@@ -147,18 +147,18 @@ void Assembler::assemble_DG(LocalOperatorType lop, const VectorType& x, VectorTy
 	// A loop over all elements of the grid
 	for (auto&& e : elements(*gridView_ptr)) {
 
-		assert(localFiniteElement->type() == e.type()); // This only works for cube grids
+		assert(localFiniteElement.type() == e.type()); // This only works for cube grids
 
 		VectorType local_vector;
-		local_vector.setZero(localFiniteElement->size());		// Set all entries to zero
+		local_vector.setZero(localFiniteElement.size());		// Set all entries to zero
 
 		//get id
 		IndexType id = indexSet.index(e);
 
 		//calculate local coefficients
-		VectorType xLocal = calculate_local_coefficients(id, x);
+		VectorType xLocal = dof_handler.calculate_local_coefficients(id, x);
 
-		lop.assemble_cell_term(e, *localFiniteElement, xLocal, local_vector);
+		lop.assemble_cell_term(e, localFiniteElement, xLocal, local_vector);
 
 		// Traverse intersections
 
@@ -179,21 +179,20 @@ void Assembler::assemble_DG(LocalOperatorType lop, const VectorType& x, VectorTy
 				// unique vist of intersection
 				if (visit_face) {
 					assert(
-							localFiniteElement->type()
+							localFiniteElement.type()
 									== (iit->outside())->type()); //assert the neighbour element hast the same local basis
 									//extract neighbour
-					VectorType xLocaln = calculate_local_coefficients(
-							idn, x);
+					VectorType xLocaln = dof_handler.calculate_local_coefficients(idn, x);
 					VectorType local_vectorn = VectorType::Zero(xLocaln.size());
 
-					lop.assemble_inner_face_term(*iit, *localFiniteElement, xLocal,
-							*localFiniteElement, xLocaln, local_vector, local_vectorn);
+					lop.assemble_inner_face_term(*iit, localFiniteElement, xLocal,
+							localFiniteElement, xLocaln, local_vector, local_vectorn);
 
-					v.segment(id_to_offset->at(idn), local_vectorn.size()) += local_vectorn;
+					v.segment(dof_handler.get_offset(idn), local_vectorn.size()) += local_vectorn;
 				}
 			} else if (iit->boundary()) {
 				// Boundary integration
-				lop.assemble_boundary_face_term(*iit, *localFiniteElement, xLocal,
+				lop.assemble_boundary_face_term(*iit, localFiniteElement, xLocal,
 						local_vector);
 			} else {
 				std::cerr << " I do not know how to handle this intersection"
@@ -202,7 +201,7 @@ void Assembler::assemble_DG(LocalOperatorType lop, const VectorType& x, VectorTy
 			}
 		}
 
-		v.segment(id_to_offset->at(id), local_vector.size()) += local_vector;
+		v.segment(dof_handler.get_offset(id), local_vector.size()) += local_vector;
 	}
 
 }
@@ -225,16 +224,16 @@ void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const VectorType& x,
 		DenseMatrixType m_m;
 
 		// Get set of shape functions for this element
-		assert(localFiniteElement->type() == e->type()); // This only works for cube grids
+		assert(localFiniteElement.type() == e->type()); // This only works for cube grids
 
 		// Set all entries to zero
-		m_m.setZero(localFiniteElement->size(), localFiniteElement->size());
+		m_m.setZero(localFiniteElement.size(), localFiniteElement.size());
 
 		//get id
 		IndexType id = indexSet.index(e);
-		VectorType xLocal = calculate_local_coefficients(id, x);
+		VectorType xLocal = dof_handler.calculate_local_coefficients(id, x);
 
-		lop.assemble_cell_Jacobian(e, *localFiniteElement, xLocal, m_m);
+		lop.assemble_cell_Jacobian(e, localFiniteElement, xLocal, m_m);
 
 		// Traverse intersections
 		unsigned int intersection_index = 0;
@@ -254,28 +253,27 @@ void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const VectorType& x,
 				// unique vist of intersection
 				if (visit_face) {
 					assert(
-							localFiniteElement->type()
+							localFiniteElement.type()
 									== (iit->outside())->type()); //assert the neighbour element hast the same local basis
 									//extract neighbour
-					VectorType xLocaln = calculate_local_coefficients(
-							idn, x);
+					VectorType xLocaln = dof_handler.calculate_local_coefficients(idn, x);
 					DenseMatrixType mn_m, m_mn, mn_mn;
-					mn_m.setZero(localFiniteElement->size(), localFiniteElement->size());
-					m_mn.setZero(localFiniteElement->size(), localFiniteElement->size());
-					mn_mn.setZero(localFiniteElement->size(), localFiniteElement->size());
+					mn_m.setZero(localFiniteElement.size(), localFiniteElement.size());
+					m_mn.setZero(localFiniteElement.size(), localFiniteElement.size());
+					mn_mn.setZero(localFiniteElement.size(), localFiniteElement.size());
 
-					lop.assemble_inner_face_Jacobian(*iit, *localFiniteElement, xLocal,
-							*localFiniteElement, xLocaln, m_m, mn_m,
+					lop.assemble_inner_face_Jacobian(*iit, localFiniteElement, xLocal,
+							localFiniteElement, xLocaln, m_m, mn_m,
 							m_mn, mn_mn );
 
-					copy_to_sparse_matrix(mn_m, id_to_offset->at(idn), id_to_offset->at(id), m);
-					copy_to_sparse_matrix(m_mn, id_to_offset->at(id), id_to_offset->at(idn), m);
-					copy_to_sparse_matrix(mn_mn, id_to_offset->at(idn), id_to_offset->at(idn), m);
+					copy_to_sparse_matrix(mn_m, dof_handler.get_offset(idn), dof_handler.get_offset(id), m);
+					copy_to_sparse_matrix(m_mn, dof_handler.get_offset(id), dof_handler.get_offset(idn), m);
+					copy_to_sparse_matrix(mn_mn, dof_handler.get_offset(idn), dof_handler.get_offset(idn), m);
 				}
 
 			} else if (iit->boundary()) {
 				// Boundary integration
-				lop.assemble_boundary_face_Jacobian(*iit, *localFiniteElement, xLocal,
+				lop.assemble_boundary_face_Jacobian(*iit, localFiniteElement, xLocal,
 						m_m);
 			} else {
 				std::cerr << " I do not know how to handle this intersection"
@@ -283,7 +281,7 @@ void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const VectorType& x,
 				exit(-1);
 			}
 		}
-		copy_to_sparse_matrix(m_m, id_to_offset->at(id), id_to_offset->at(id), m);
+		copy_to_sparse_matrix(m_m, dof_handler.get_offset(id), dof_handler.get_offset(id), m);
 	}
 
 //	cout << "Jacobian " << m << endl;
@@ -307,9 +305,9 @@ void Assembler::assemble_linear_system_DG(LocalOperatorType lop, MatrixType &m, 
 	// A loop over all elements of the grid
 	for (auto&& e : elements(*gridView_ptr)) {
 
-		int size_u = localFiniteElementu->size();
+		int size_u = localFiniteElementu.size();
 		// Get set of shape functions for this element
-		assert(localFiniteElementu->type() == e.type()); // This only works for cube grids
+		assert(localFiniteElementu.type() == e.type()); // This only works for cube grids
 
 		//get local system
 		VectorType local_vector = VectorType::Zero(size_u);
@@ -318,7 +316,7 @@ void Assembler::assemble_linear_system_DG(LocalOperatorType lop, MatrixType &m, 
 		//get id
 		IndexType id = indexSet.index(e);
 
-		lop.assemble_cell_term(e, *localFiniteElementu, local_matrix, local_vector);
+		lop.assemble_cell_term(e, localFiniteElementu, local_matrix, local_vector);
 
 		// Traverse intersections
 		for (auto&& is : intersections(*gridView_ptr, e)) {
@@ -332,34 +330,34 @@ void Assembler::assemble_linear_system_DG(LocalOperatorType lop, MatrixType &m, 
 						|| Solver_config::require_skeleton_two_sided;
 				// unique vist of intersection
 				if (visit_face) {
-					assert(localFiniteElementu->type()== (is.outside())->type()); //assert the neighbour element hast the same local basis
+					assert(localFiniteElementu.type()== (is.outside())->type()); //assert the neighbour element hast the same local basis
 
 					//variables for neighbour part
-					VectorType local_vectorn = VectorType::Zero(localFiniteElementu->size());
+					VectorType local_vectorn = VectorType::Zero(localFiniteElementu.size());
 
 					DenseMatrixType mn_m, m_mn, mn_mn;
 					mn_m.setZero(size_u, size_u);
 					m_mn.setZero(size_u, size_u);
 					mn_mn.setZero(size_u, size_u);
 
-					lop.assemble_inner_face_term(is, *localFiniteElementu, *localFiniteElementu,
+					lop.assemble_inner_face_term(is, localFiniteElementu, localFiniteElementu,
 							local_matrix, mn_m, m_mn, mn_mn,
 							local_vector, local_vectorn);
 
-					copy_to_sparse_matrix(mn_m, id_to_offset_u->at(idn), id_to_offset_u->at(id), m);
-					copy_to_sparse_matrix(m_mn, id_to_offset_u->at(id), id_to_offset_u->at(idn), m);
-					copy_to_sparse_matrix(mn_mn, id_to_offset_u->at(idn), id_to_offset_u->at(idn), m);
+					copy_to_sparse_matrix(mn_m, dof_handler.get_offset_u(idn), dof_handler.get_offset_u(id), m);
+					copy_to_sparse_matrix(m_mn, dof_handler.get_offset_u(id), dof_handler.get_offset_u(idn), m);
+					copy_to_sparse_matrix(mn_mn, dof_handler.get_offset_u(idn), dof_handler.get_offset_u(idn), m);
 
-					rhs.segment(id_to_offset_u->at(idn), local_vectorn.size()) += local_vectorn;
+					rhs.segment(dof_handler.get_offset_u(idn), local_vectorn.size()) += local_vectorn;
 				}
 			}
 			else if (is.boundary()) {
 				// Boundary integration
-				lop.assemble_boundary_face_term(is, *localFiniteElementu, local_matrix, local_vector);
+				lop.assemble_boundary_face_term(is, localFiniteElementu, local_matrix, local_vector);
 			}
 		}
-		copy_to_sparse_matrix(local_matrix, id_to_offset_u->at(id), id_to_offset_u->at(id), m);
-		rhs.segment(id_to_offset_u->at(id), local_vector.size()) += local_vector;
+		copy_to_sparse_matrix(local_matrix, dof_handler.get_offset_u(id), dof_handler.get_offset_u(id), m);
+		rhs.segment(dof_handler.get_offset_u(id), local_vector.size()) += local_vector;
 	}
 }
 
