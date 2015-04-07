@@ -64,11 +64,17 @@ public:
 
 
 
-	///calculates the mass matrix of the hessian ansatz functions (these are given by the member localFiniteElement)
+	///calculates the mass matrix of the ansatz functions (these are given by the member localFiniteElement)
 	template<typename LocalFiniteElement>
 	void calculate_local_mass_matrix_ansatz(const LocalFiniteElement &lfu, DenseMatrixType& m) const;
 
-	///calculates the mass matrix of the hessian ansatz functions (these are given by the member localFiniteElement)
+	/**calculates the mass matrix of the ansatz functions and refined ansatz functions (red-green refinement)
+	 * Note that since the matrices are symmetric, only the lower part is filled
+	 *
+	 * @param lfu	local ansatz functions
+	 * @param m		return the matrices (one for every refined child)
+	 * @param level how many level are to refine (currently only level=1 working)
+	 */
 	template<typename LocalFiniteElement>
 	void calculate_refined_local_mass_matrix_ansatz(const LocalFiniteElement &lfu, std::vector<DenseMatrixType>& m, const int level=1) const;
 
@@ -132,7 +138,11 @@ void Assembler::calculate_local_mass_matrix_ansatz(const LocalFiniteElement &lfu
 template<typename LocalFiniteElement>
 void Assembler::calculate_refined_local_mass_matrix_ansatz(const LocalFiniteElement &lfu, std::vector<DenseMatrixType>& m, const int level) const
 {
+
+//	assert(m.size() == std::pow(Solver_config::childdim, level));
+	assert(level == 1);
 	assert(m.size() == Solver_config::childdim);
+
 	const int size = lfu.size();
 
 	assert(Solver_config::dim == 2);
@@ -173,8 +183,6 @@ void Assembler::calculate_refined_local_mass_matrix_ansatz(const LocalFiniteElem
 			if (child == 3)		A3.umv(quadPosChild,quadPosFather);
 			else				A.umv(quadPosChild, quadPosFather);
 
-//			if (!ReferenceElements<double,Solver_config::dim>::general(lfu.type()).checkInside(quadPosFather))	continue;
-
 			std::vector<typename LocalFiniteElement::RangeType> fatherFunctionValues(size);
 			lfu.localBasis().evaluateFunction(quadPosFather, fatherFunctionValues);
 
@@ -190,7 +198,6 @@ void Assembler::calculate_refined_local_mass_matrix_ansatz(const LocalFiniteElem
 			}
 		}
 	}
-
 }
 
 //template<class Config>

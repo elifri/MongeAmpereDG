@@ -426,8 +426,6 @@ void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
 					localVector(j) += f_value*referenceFunctionValues[j]* quad[pt].weight();// * integrationElement;
 				}
 			}
-
-
 			//solve arising system
 			x_local =  localMassMatrix.ldlt().solve(localVector);
 			coeff_u.segment(dof_handler.get_offset_u(id), x_local.size()) = x_local;
@@ -497,17 +495,11 @@ void MA_solver<Config>::adapt_solution(VectorType &v, const Dof_handler<Config>&
 			VectorType localVector_DH = localrefinementMatrices_DH[i]*x_local.segment(size_u,size_u_DH);
 
 			//solve arising system
-			if (true)
-			{
-				x_adapt.segment(0,size_u) =  localMassMatrix.ldlt().solve(localVector);
-				x_adapt.segment(size_u,size_u_DH) =  localMassMatrix_DH.ldlt().solve(localVector_DH);
-			}
-			else
-				x_adapt.setConstant(size, 1, i);
+			x_adapt.segment(0,size_u) =  localMassMatrix.ldlt().solve(localVector);
+			x_adapt.segment(size_u,size_u_DH) =  localMassMatrix_DH.ldlt().solve(localVector_DH);
 
 			const IndexType id_child = gridView_ptr->indexSet().index(child);
 			v_adapt.segment(dof_handler.get_offset(id_child), size) = x_adapt;
-
 
 			i++;
 		}

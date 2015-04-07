@@ -38,7 +38,7 @@ std::ostream& operator <<(std::ostream &output, const ProblemType &p);
 
 struct Solver_config{
 
-	static const int dim = 2;
+	enum{ dim = 2, childdim = 4, degree = 2, degreeHessian = 1};
 
 	typedef Eigen::VectorXd VectorType;
 	typedef Eigen::MatrixXd DenseMatrixType;
@@ -49,12 +49,13 @@ struct Solver_config{
 //	typedef YaspGrid<dim> GridType;
 	typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > UnitCubeType;
 	typedef UnitCubeType::GridType GridType;
+	typedef GridType::LevelGridView LevelGridView;
 	typedef GridType::LeafGridView GridView;
 	typedef GridType::Codim<0>::Entity ElementType;
 
 
-	static const int degree = 2;
-	static const int degreeHessian = 1;
+//	static const int degree = 2;
+//	static const int degreeHessian = 1;
 
 //	typedef Q1LocalFiniteElement<double, double, dim> LocalFiniteElementType;
 	typedef Pk2DLocalFiniteElement<double, double, degree> LocalFiniteElementuType;
