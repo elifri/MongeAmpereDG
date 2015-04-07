@@ -137,7 +137,7 @@ void Assembler::calculate_refined_local_mass_matrix_ansatz(const LocalFiniteElem
 
 	assert(Solver_config::dim == 2);
 	//calculate affine transformation form ref cell to child cell (g:R->C, g(x) = Ax+b)
-	FieldMatrix<double, 2, 2> A3 = {{0,-0.5},{-0.5,0}};
+	FieldMatrix<double, 2, 2> A3 = {{-0.5,0},{0,-0.5}};
 	FieldMatrix<double, 2, 2> A = {{0.5,0},{0,0.5}};
 	std::vector<FieldVector<double, 2> > b(Solver_config::childdim);
 	b[3] = {0.5,0.5};
@@ -185,7 +185,7 @@ void Assembler::calculate_refined_local_mass_matrix_ansatz(const LocalFiniteElem
 				//int v_i*v_j, as mass matrix is symmetric only fill lower part
 				for (size_t i = 0; i < lfu.size(); i++)
 				{
-					m[child](j,i) += cwiseProduct(referenceFunctionValues[i],fatherFunctionValues[j])*quad[pt].weight()/Solver_config::childdim;
+					m[child](j,i) += cwiseProduct(referenceFunctionValues[j],fatherFunctionValues[i])*quad[pt].weight();
 				}
 			}
 		}

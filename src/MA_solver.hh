@@ -49,6 +49,7 @@ public:
 	//-----typedefs---------
 	typedef Solver_config::GridType GridType;
 	typedef Solver_config::GridView GridViewType;
+	typedef Solver_config::LevelGridView LevelGridViewType;
 	typedef GridViewType::IntersectionIterator IntersectionIterator;
 	typedef IntersectionIterator::Intersection Intersection;
 	typedef GridViewType::IndexSet::IndexType IndexType;
@@ -73,6 +74,7 @@ public:
 			localFiniteElement(), localFiniteElementu(localFiniteElement(u())),
 			dof_handler(&gridView, localFiniteElement),
 			assembler(gridView_ptr, dof_handler, localFiniteElement, localFiniteElementu),
+			count_refined(0),
 			vtkplotter(*this) {
 		vtkplotter.set_output_directory("../plots");
 	}
@@ -87,7 +89,7 @@ public:
 	//-----functions--------
 public:
 
-	int get_n_dofs(){return dof_handler.get_n_dofs();}
+	int get_n_dofs() const{return dof_handler.get_n_dofs();}
 
 
 public:
@@ -147,6 +149,17 @@ public:
 	 */
 	void project(const MA_function_type f, VectorType &V) const;
 
+
+	/**
+	 * adapts a grid function with coeffs v into the global refined space
+	 * @param v	coeffs of grid function
+	 */
+	void adapt_solution(VectorType &v, const Dof_handler<Config>& dof_handler_old, const int level) const;
+
+	/**
+	 * refines the grid globally and sets up all necessary information for the next step
+	 * @param level	how often the grid is refined
+	 */
 	void adapt(const int level=1);
 
 private:
@@ -197,8 +210,8 @@ private:
 	Dof_handler<Config> dof_handler;
 	Assembler assembler;
 
-
 	VectorType solution;
+	int count_refined; ///counts how often the original grid was refined
 
 	friend Plotter;
 
@@ -427,24 +440,107 @@ void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
 }
 
 template <class Config>
+void MA_solver<Config>::adapt_solution(VectorType &v, const Dof_handler<Config>& dof_handler_old, const int level=1) const
+{
+	assert(v.size() == get_n_dofs()/4);
+	assert(initialised);
+	assert(level == 1);
+
+	const int size = localFiniteElement.size();
+	const int size_u = localFiniteElement.size(u());
+	const int size_u_DH = localFiniteElement.size(u_DH());
+
+	VectorType v_adapt(get_n_dofs());
+
+	// The index set gives you indices for each element , edge , face , vertex , etc .
+	const auto levelGridView = grid_ptr->levelGridView(count_refined-level);
+	const LevelGridViewType::IndexSet& indexSet = levelGridView.indexSet();
+
+	//local refined mass matrix m_ij = \int mu_child_i * mu_j
+	std::vector<DenseMatrixType> localrefinementMatrices(Solver_config::childdim);
+	assembler.calculate_refined_local_mass_matrix_ansatz(localFiniteElement(u()), localrefinementMatrices);
+	//local mass matrix m_ij = \int mu_i * mu_j
+	DenseMatrixType localMassMatrix;
+	assembler.calculate_local_mass_matrix_ansatz(localFiniteElement(u()), localMassMatrix);
+
+	//everything for the hessian ansatz function as well
+	//local refined mass matrix m_ij = \int mu_child_i * mu_j
+	std::vector<DenseMatrixType> localrefinementMatrices_DH(Solver_config::childdim);
+	assembler.calculate_refined_local_mass_matrix_ansatz(localFiniteElement(u_DH()), localrefinementMatrices_DH);
+	//local mass matrix m_ij = \int mu_i * mu_j
+	DenseMatrixType localMassMatrix_DH;
+	assembler.calculate_local_mass_matrix_ansatz(localFiniteElement(u_DH()), localMassMatrix_DH);
+
+	//loop over all cells and solve in every cell the equation \int l2proj(f) *phi = \int f *phi \forall phi
+	for (auto&& e : elements(levelGridView)) {
+		assert(localFiniteElement.type() == e.type());
+
+//		typedef decltype(e) ConstElementRefType;
+//		typedef std::remove_reference<ConstElementRefType>::type ConstElementType;
+//
+//		const int dim =  ConstElementType::dimension;
+		auto geometry = e.geometry();
+
+		//get id
+		IndexType id = indexSet.index(e);
+
+		//vector to store the local projection
+		VectorType x_local = dof_handler_old.calculate_local_coefficients(id, v);
+
+		int i = 0;
+		for (auto&& child : descendantElements(e, count_refined))
+		{
+			VectorType x_adapt(size);
+
+			//local rhs = \int v_adapt*test = refinementmatrix*v
+			VectorType localVector = localrefinementMatrices[i]*x_local.segment(0,size_u);
+			VectorType localVector_DH = localrefinementMatrices_DH[i]*x_local.segment(size_u,size_u_DH);
+
+			//solve arising system
+			if (true)
+			{
+				x_adapt.segment(0,size_u) =  localMassMatrix.ldlt().solve(localVector);
+				x_adapt.segment(size_u,size_u_DH) =  localMassMatrix_DH.ldlt().solve(localVector_DH);
+			}
+			else
+				x_adapt.setConstant(size, 1, i);
+
+			const IndexType id_child = gridView_ptr->indexSet().index(child);
+			v_adapt.segment(dof_handler.get_offset(id_child), size) = x_adapt;
+
+
+			i++;
+		}
+	}
+	v = v_adapt;
+}
+
+template <class Config>
 void MA_solver<Config>::adapt(const int level)
 {
 	assert(level==1);
+	count_refined += level;
 
 	std::cout << "vertices before " <<	gridView_ptr->size(Config::dim) << std::endl;
 	VTKWriter<Solver_config::GridView> vtkWriterCoarse(*gridView_ptr);
 	vtkWriterCoarse.write("../plots/gridcoarse");
 
 	grid_ptr->globalRefine(level);
+	Dof_handler<Config> dof_handler_old = dof_handler;
 	dof_handler.update_dofs();
+
+	VectorType projection;
+	project(General_functions::get_easy_convex_polynomial_callback(), projection);
+
+	adapt_solution(solution, dof_handler_old, level);
 
 	GridViewType gv = grid_ptr->leafGridView();
 
 	std::cout << "vertices after " <<	gridView_ptr->size(Config::dim) << std::endl;
-
 	VTKWriter<Solver_config::GridView> vtkWriter(*gridView_ptr);
-
 	vtkWriter.write("../plots/gridrefined");
+
+	vtkplotter.write_numericalsolution_VTK(0,"refined");
 
 }
 
