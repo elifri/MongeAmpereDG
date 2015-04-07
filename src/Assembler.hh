@@ -43,6 +43,7 @@ public:
 				localFiniteElement(localFiniteElement), localFiniteElementu(localFiniteElementu) {
 	}
 
+
 	/**
 	 * extracts local degree of freedoom
 	 * @param id	id of local element
@@ -66,6 +67,11 @@ public:
 	///calculates the mass matrix of the hessian ansatz functions (these are given by the member localFiniteElement)
 	template<typename LocalFiniteElement>
 	void calculate_local_mass_matrix_ansatz(const LocalFiniteElement &lfu, DenseMatrixType& m) const;
+
+	///calculates the mass matrix of the hessian ansatz functions (these are given by the member localFiniteElement)
+	template<typename LocalFiniteElement>
+	void calculate_refined_local_mass_matrix_ansatz(const LocalFiniteElement &lfu, std::vector<DenseMatrixType>& m, const int level=1) const;
+
 
 	template<typename LocalOperatorType>
 	void assemble_DG(LocalOperatorType LOP, const VectorType& x, VectorType& v) const;
@@ -121,6 +127,70 @@ void Assembler::calculate_local_mass_matrix_ansatz(const LocalFiniteElement &lfu
 				m(j,i) += cwiseProduct(referenceFunctionValues[i],referenceFunctionValues[j])*quad[pt].weight();
 		}
 	}
+}
+
+template<typename LocalFiniteElement>
+void Assembler::calculate_refined_local_mass_matrix_ansatz(const LocalFiniteElement &lfu, std::vector<DenseMatrixType>& m, const int level) const
+{
+	assert(m.size() == Solver_config::childdim);
+	const int size = lfu.size();
+
+	assert(Solver_config::dim == 2);
+	//calculate affine transformation form ref cell to child cell (g:R->C, g(x) = Ax+b)
+	FieldMatrix<double, 2, 2> A3 = {{0,-0.5},{-0.5,0}};
+	FieldMatrix<double, 2, 2> A = {{0.5,0},{0,0.5}};
+	std::vector<FieldVector<double, 2> > b(Solver_config::childdim);
+	b[3] = {0.5,0.5};
+	b[0] = {0,0};
+	b[1] = {0.5,0};
+	b[2] = {0,0.5};
+
+
+	// Get a quadrature rule
+	int order = std::max(1, 4 * ((int)lfu.localBasis().order()));
+	const QuadratureRule<double, Solver_config::dim>& quad =
+			QuadratureRules<double, Solver_config::dim>::rule(lfu.type(), order);
+
+	//local mass matrix m_ij = \int mu_i : mu_j
+	for (int i = 0; i < m.size(); i++)
+		m[i].setZero(size, size);
+
+	// Loop over all quadrature points
+	for (size_t pt = 0; pt < quad.size(); pt++) {
+
+		// Position of the current quadrature point in the child element
+		const FieldVector<double, Solver_config::dim> &quadPosChild = quad[pt].position();
+
+		//the shape function values
+		std::vector<typename LocalFiniteElement::RangeType> referenceFunctionValues(size);
+		lfu.localBasis().evaluateFunction(quadPosChild, referenceFunctionValues);
+
+		for (int child = 0 ; child < Solver_config::childdim; child++)
+		{
+			//calculate quadrature point with respect to the reference element
+			SpaceType quadPosFather = b[child];
+			//the trafo to child 0 has a different A;
+			if (child == 3)		A3.umv(quadPosChild,quadPosFather);
+			else				A.umv(quadPosChild, quadPosFather);
+
+//			if (!ReferenceElements<double,Solver_config::dim>::general(lfu.type()).checkInside(quadPosFather))	continue;
+
+			std::vector<typename LocalFiniteElement::RangeType> fatherFunctionValues(size);
+			lfu.localBasis().evaluateFunction(quadPosFather, fatherFunctionValues);
+
+			//-----assemble integrals---------
+			for (size_t j = 0; j < lfu.size(); j++) // loop over ansatz fcts of child
+			{
+				//loop over ansatz functions in base cell
+				//int v_i*v_j, as mass matrix is symmetric only fill lower part
+				for (size_t i = 0; i < lfu.size(); i++)
+				{
+					m[child](j,i) += cwiseProduct(referenceFunctionValues[i],fatherFunctionValues[j])*quad[pt].weight()/Solver_config::childdim;
+				}
+			}
+		}
+	}
+
 }
 
 //template<class Config>
