@@ -126,7 +126,7 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 
 		for (size_t j = 0; j < size_u; j++) // loop over test fcts
 		{
-				v(j) += (uDH.determinant()-f)*referenceFunctionValues[j]
+				v(j) += (f-uDH.determinant())*referenceFunctionValues[j]
 						* quad[pt].weight() * integrationElement;
 //				std::cout << "det(u)-f=" << uDH.determinant()<<"-"<< f <<"="<< uDH.determinant()-f<< std::endl;
 		}
@@ -491,7 +491,7 @@ void assemble_cell_Jacobian(const Element& element, const MixedElement<LocalElem
 
 		for (size_t j = 0; j < size_u; j++) // loop over test fcts
 			for (size_t i = 0; i < size_u_DH; i++)
-				m(j,size_u+i) += cwiseProduct(cofac_uDH, referenceFunctionValuesHessian[i])*referenceFunctionValues[j]
+				m(j,size_u+i) -= cwiseProduct(cofac_uDH, referenceFunctionValuesHessian[i])*referenceFunctionValues[j]
 						* quad[pt].weight() * integrationElement;
 
 		//calculate system for second tensor functions
