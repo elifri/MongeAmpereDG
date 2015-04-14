@@ -120,9 +120,10 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 		//--------assemble cell integrals in variational form--------
 
 		double f;
-		rhs.evaluate(quad[pt].position(), f);
+		rhs.evaluate(geometry.global(quad[pt].position()), f);
 
 		//calculate system for first test functions
+
 		for (size_t j = 0; j < size_u; j++) // loop over test fcts
 		{
 				v(j) += (uDH.determinant()-f)*referenceFunctionValues[j]
