@@ -131,13 +131,13 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 //				std::cout << "det(u)-f=" << uDH.determinant()<<"-"<< f <<"="<< uDH.determinant()-f<< std::endl;
 		}
 
+
 		//calculate system for second tensor functions
 		for (size_t j = 0; j < size_u_DH; j++) // loop over test fcts
 		{
 				v(size_u+j) += cwiseProduct(uDH,referenceFunctionValuesHessian[j])* quad[pt].weight() * integrationElement;
 				v(size_u+j) -= cwiseProduct(Hessu, referenceFunctionValuesHessian[j])*quad[pt].weight() * integrationElement;
 		}
-
 	}
 }
 
@@ -330,14 +330,15 @@ void assemble_boundary_face_term(const Intersection& intersection,
 	const QuadratureRule<double, dim-1>& quad =
 			QuadratureRules<double, dim-1>::rule(gtface, order);
 
+
 	// normal of center in face's reference element
 	const FieldVector<double,dim-1>& face_center = ReferenceElements<double,dim-1>::
 	          general(intersection.geometry().type()).position(0,0);
 	const FieldVector<double,dimw> normal = intersection.unitOuterNormal(face_center);
 
 	// penalty weight for NIPG / SIPG
+	//note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
 	double penalty_weight = Solver_config::sigma*(Solver_config::degree*Solver_config::degree) / std::pow(intersection.geometry().volume(), Solver_config::beta);
-
 
 	// Loop over all quadrature points
 	for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -359,7 +360,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
 
 		//-------transform data---------------
 		// The transposed inverse Jacobian of the map from the reference element to the element
-		const auto& jacobian = intersection.inside()->geometry().jacobianInverseTransposed(quadPos);
+//		const auto& jacobian = intersection.inside()->geometry().jacobianInverseTransposed(quadPos);
 
 /*
 		// Compute the shape function gradients on the real element
@@ -382,7 +383,8 @@ void assemble_boundary_face_term(const Intersection& intersection,
 	    	u_value += x(i)*referenceFunctionValues[i];
 
     	double g;
-    	bc.evaluate(intersection.inside()->geometry().global(quadPos), g);
+    	Dirichletdata bcTEmp; //todo dirichletdata const machen
+    	bcTEmp.evaluate(intersection.inside()->geometry().global(quadPos), g);
 
 	    //-------calculate integral--------
 	    const auto integrationElement = intersection.geometry().integrationElement(quad[pt].position());
@@ -391,7 +393,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
 	    {
 
 			// NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
-			v(j) += penalty_weight *(u_value-g)*referenceFunctionValues[j]*factor;
+			v(j) += penalty_weight*(u_value-g)*referenceFunctionValues[j]*factor;
 //			std::cout << "v(j) += " << penalty_weight << "*(" << u_value<<"-" << g << ")*" << referenceFunctionValues[j] << "*" << factor;
 //			std::cout << "-> " << v(j) << std::endl;
 	    }
