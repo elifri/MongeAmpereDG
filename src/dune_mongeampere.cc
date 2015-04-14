@@ -11,6 +11,10 @@
 #include "MA_solver.hh"
 #include "Plotter.hh"
 
+#ifdef USE_PETSC
+#include "Dogleg/Petsc_utility.hh"
+#endif
+
 using namespace Dune;
 
 
@@ -31,6 +35,7 @@ try {
 	std::cout <<"using dogleg " << std::endl;
 #endif
 #ifdef USE_PETSC
+	PetscInitialize(&argc,&argv,NULL,help);
 	std::cout <<"using petsc" << std::endl;
 #endif
 
@@ -66,6 +71,11 @@ try {
 //	vtkWriter.write("poissonequation result");
 
 	std::cout << "done" << std::endl;
+
+#ifdef USE_PETSC
+	int ierr = PetscFinalize();
+	std::cout <<"Petsc ended with " << ierr << std::endl;
+#endif
 }
 // Error handling
 catch (Exception e) {

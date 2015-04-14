@@ -135,8 +135,8 @@ public:
 
 //	PETSC_SNES_Wrapper(const OperatorType &op): op(op){}
 
-	int init(int n_dofs);
-	int solve(Solver_config::VectorType v);
+	int init(int n_dofs, int guess_nonzeros_J);
+	int solve(Solver_config::VectorType &v);
 
 private:
 	static PetscErrorCode FormJacobian(SNES,Vec,Mat,Mat,void*);
@@ -148,6 +148,8 @@ private:
 	PetscReal      abstol,rtol,stol,norm;
 
 	SNES           snes;                   /* SNES context */
+
+
 	Vec     x,r;             /* vectors */
 	Mat	   J;
 
@@ -168,11 +170,9 @@ template<class T> int PETSC_SNES_Wrapper<T>::ierr = 0;
 
 
 template <typename OperatorType>
-int PETSC_SNES_Wrapper<OperatorType>::init(int n_dofs)
+int PETSC_SNES_Wrapper<OperatorType>::init(int n_dofs, int guess_nonzeros_J)
 {
 	n = n_dofs;
-
-  PetscInitialize(0,(char***)0,(char*)0,help);
 
   ierr = MPI_Comm_size(PETSC_COMM_WORLD,&size);CHKERRQ(ierr);
   if (size != 1) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_SUP,"This is a uniprocessor example only!");
@@ -210,8 +210,7 @@ int PETSC_SNES_Wrapper<OperatorType>::init(int n_dofs)
   ierr = MatCreate(PETSC_COMM_WORLD,&J);CHKERRQ(ierr);
   ierr = MatSetSizes(J,PETSC_DECIDE,PETSC_DECIDE,n,n);CHKERRQ(ierr);
   ierr = MatSetFromOptions(J);CHKERRQ(ierr);
-  ierr = MatSeqAIJSetPreallocation(J,n*n/2,NULL);CHKERRQ(ierr);
-  //TODO verbesserung bei sparsity abschaetzung
+  ierr = MatSeqAIJSetPreallocation(J,guess_nonzeros_J,NULL);CHKERRQ(ierr);
 
   /*
      Set Jacobian matrix data structure and default Jacobian evaluation
@@ -247,7 +246,6 @@ int PETSC_SNES_Wrapper<OperatorType>::init(int n_dofs)
          -snes_view -snes_monitor -ksp_type <ksp> -pc_type <pc>
   */
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
-
   /*
      Print parameters used for convergence testing (optional) ... just
      to demonstrate this routine; this information is also printed with
@@ -259,7 +257,7 @@ int PETSC_SNES_Wrapper<OperatorType>::init(int n_dofs)
 }
 
 template <typename OperatorType>
-int PETSC_SNES_Wrapper<OperatorType>::solve(Solver_config::VectorType v)
+int PETSC_SNES_Wrapper<OperatorType>::solve(Solver_config::VectorType &v)
 {
 	assert(v.size() == n);
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -286,6 +284,11 @@ int PETSC_SNES_Wrapper<OperatorType>::solve(Solver_config::VectorType v)
   /*
      Check the error
   */
+  SNESConvergedReason reason;
+  SNESGetConvergedReason(snes,&reason);
+  std::cout << "The reason the solver converges was " << reason << std::endl;
+
+
   ierr = VecNorm(x,NORM_2,&norm);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"Norm of error %g, Iterations %D\n",(double)norm,its);CHKERRQ(ierr);
 
@@ -369,6 +372,8 @@ PetscErrorCode PETSC_SNES_Wrapper<OperatorType>::FormJacobian(SNES snes,Vec x,Ma
   */
 	Solver_config::MatrixType J;
     op.derivative(v,J);
+
+    assert(J.nonZeros() < 2147483647);
 
     ierr = from_eigen_to_petscmat(J, jac);
 
