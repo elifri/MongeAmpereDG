@@ -198,6 +198,7 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 
 	// penalty weight for NIPG / SIPG
 	double penalty_weight = Solver_config::sigma*(Solver_config::degree*Solver_config::degree) / std::pow(intersection.geometry().volume(), Solver_config::beta);
+	double penalty_weight_gradient = Solver_config::sigmaGrad*(Solver_config::degree*Solver_config::degree) * std::pow(intersection.geometry().volume(), Solver_config::beta);
 
 	// Loop over all quadrature points
 	for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -263,6 +264,7 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 
 	    //assemble jump and averages
 	    double u_jump = u_value - un_value;
+	    double grad_u_normaljump = (gradu-gradun)*normal;
 
 	    //-------calculate integral--------
 	    auto integrationElement = intersection.geometry().integrationElement(quad[pt].position());
@@ -275,10 +277,16 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 	    	//parts from self
 	    	// NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
 	    	v(j) += penalty_weight * u_jump*referenceFunctionValues[j]*factor;
+	    	// gradient penalty
+	    	auto grad_times_normal = gradients[j]*normal;
+	    	v(j) += penalty_weight_gradient * (grad_u_normaljump) * (grad_times_normal)*factor;
 
 	    	//neighbour parts
 	    	// NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
 	    	vn(j) += penalty_weight * u_jump*(-referenceFunctionValuesn[j])*factor;
+	    	// gradient penalty
+	    	grad_times_normal = gradientsn[j]*normal;
+	    	vn(j) += penalty_weight_gradient * (grad_u_normaljump) * (-grad_times_normal)*factor;
 	    }
 
 		for (size_t j = 0; j < size_u_DH; j++) // loop over test fcts
@@ -555,6 +563,7 @@ void assemble_inner_face_Jacobian(const Intersection& intersection,
 
 	// penalty weight for NIPG / SIPG
 	double penalty_weight = Solver_config::sigma*(Solver_config::degree*Solver_config::degree) / std::pow(intersection.geometry().volume(), Solver_config::beta);
+	double penalty_weight_gradient = Solver_config::sigmaGrad*(Solver_config::degree*Solver_config::degree) * std::pow(intersection.geometry().volume(), Solver_config::beta);
 
 	// Loop over all quadrature points
 	for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -610,6 +619,13 @@ void assemble_inner_face_Jacobian(const Intersection& intersection,
 				mn_m(j,i) += penalty_weight * referenceFunctionValues[i]*(-referenceFunctionValuesn[j])*factor;
 				m_mn(j,i) += penalty_weight * (-referenceFunctionValuesn[i])*referenceFunctionValues[j]*factor;
 				mn_mn(j,i) += penalty_weight * (-referenceFunctionValuesn[i])*(-referenceFunctionValuesn[j])*factor;
+
+				// gradient penalty
+				m_m(j,i) += penalty_weight_gradient * ((gradients[i]*normal)) * (gradients[j]*normal)*factor;
+				mn_m(j,i) += penalty_weight_gradient * (gradients[i]*normal) * -(gradientsn[j]*normal)*factor;
+				m_mn(j,i) += penalty_weight_gradient * -(gradientsn[i]*normal) * (gradients[j]*normal)*factor;
+				mn_mn(j,i) += penalty_weight_gradient * -(gradientsn[i]*normal) * -(gradientsn[j]*normal)*factor;
+
 	    	}
 	    }
 		for (size_t j = 0; j < size_u_DH; j++) // loop over test fcts
