@@ -478,11 +478,12 @@ void assemble_cell_Jacobian(const Element& element, const MixedElement<LocalElem
 			cofac_uDH.axpy(x(size_u+i), referenceFunctionValuesHessian[i]);
 		//calc cofactor matrix
 		assert(dim == 2);
-		const auto temp = cofac_uDH[0][0];
+		auto temp = cofac_uDH[0][0];
 		cofac_uDH[0][0] = cofac_uDH[1][1];
 		cofac_uDH[1][1] = temp;
-		cofac_uDH[1][0] *= -1;
-		cofac_uDH[0][1] *= -1;
+		temp = cofac_uDH[1][0];
+		cofac_uDH[1][0] = -cofac_uDH[0][1];
+		cofac_uDH[0][1] = -temp;
 
 		//--------assemble cell integrals in variational form--------
 
