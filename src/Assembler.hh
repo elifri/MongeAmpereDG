@@ -40,7 +40,7 @@ public:
 				const LocalFiniteElementType &localFiniteElement, const LocalFiniteElementuType &localFiniteElementu)
 			:	gridView_ptr(gridView_ptr),
 				dof_handler(dof_handler),
-				localFiniteElement(localFiniteElement), localFiniteElementu(localFiniteElementu) {
+				localFiniteElement(localFiniteElement), localFiniteElementu(localFiniteElementu), no_hanging_nodes(true) {
 	}
 
 
