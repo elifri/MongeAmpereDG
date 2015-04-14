@@ -11,6 +11,9 @@
 #include <dune/common/function.hh>
 
 #include "solver_config.hh"
+#include "Callback/callback.hpp"
+#include "Callback/Callback_utility.hpp"
+#include "Dogleg/utils.hpp"
 
 using namespace Dune;
 
@@ -57,9 +60,10 @@ public:
 };
 
 // A class implementing the analytical dirichlet boundary
-class Dirichletdata: public VirtualFunction<FieldVector<double, Solver_config::dim>, double> {
+class Dirichletdata//: public VirtualFunction<FieldVector<double, Solver_config::dim>, double>
+{
 public:
-	void evaluate(const FieldVector<double, Solver_config::dim>& in, double& out) const {
+	void evaluate(const FieldVector<double, Solver_config::dim>& in, double& out){
 		switch (Solver_config::problem)
 		{
 		case SIMPLE_MA:
@@ -69,7 +73,7 @@ public:
 			out = 0.0;
 			break;
 		case MA_SMOOTH:
-			out = exp( in.two_norm2()/2. );
+			out = std::exp( in.two_norm2()/2. );
 			break;
 		case MA_C1:
 			{
@@ -86,8 +90,29 @@ public:
 			if (val < 0) out = 0;
 			else	out = -std::sqrt(val);
 		}
+			break;
 		default:
 			std::cerr << "Unknown problem ... " << std::endl;
+			exit(-1);
+		}
+	}
+
+	void derivative(const FieldVector<double, Solver_config::dim>& in, Solver_config::HessianRangeType& out)
+	{
+		switch(Solver_config::problem)
+		{
+		case SIMPLE_MA:
+			out[0][0] = 1; out[1][0] =0;
+			out[0][1] = 0; out[1][1] =1;
+			break;
+		case	MA_SMOOTH:
+			out[0][0] = std::exp( in.two_norm2()/2. )*(sqr(in[0])+1);
+			out[1][0] = std::exp( in.two_norm2()/2. )*(in[0]*in[1]);
+			out[0][1] = std::exp( in.two_norm2()/2. )*(in[0]*in[1]);
+			out[1][1] = std::exp( in.two_norm2()/2. )*(sqr(in[1])+1);
+			break;
+		default:
+			std::cerr << "No known derivatives for this problem ... " << std::endl;
 			exit(-1);
 		}
 	}

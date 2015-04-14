@@ -59,7 +59,7 @@ public:
 	void extract_solution(PointdataVectorType& v) const;
 
 //	template <typename ExactSol>
-	void extract_solutionAndError(const Dirichletdata &exact_sol, PointdataVectorType& sol, PointdataVectorType& error) const;
+	void extract_solutionAndError(Dirichletdata &exact_sol, const Solver_config::VectorType &solution, PointdataVectorType& sol, PointdataVectorType& error) const;
 
 	void calc_error(PointdataVectorType& v) const;
 
@@ -83,7 +83,7 @@ public:
 	    * \param filename the name of the file the solution should be written into
 	    */
 
-	void writeLeafCellVTK(std::string filename) const;
+	void writeLeafCellVTK(std::string filename, const Solver_config::VectorType &solution) const;
 
 	void set_grid(Solver_config::GridView* grid){	this->grid = grid;}
 	void set_refinement(const int refinement){	this->refinement = refinement;}
@@ -112,6 +112,7 @@ public:
 													Eigen::MatrixXd &solution);
 
 	void write_numericalsolution_VTK(const unsigned int i, std::string = "grid_numericalsolution") const;
+	void write_gridfunction_VTK(const unsigned int i, const Solver_config::VectorType& solution, std::string = "grid_fct") const;
 
 	void write_numericalsolution() const;
 

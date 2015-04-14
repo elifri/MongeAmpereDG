@@ -263,7 +263,8 @@ void assemble_boundary_face_term(const Intersection& intersection,
 			jacobian.mv(referenceGradients[i][0], gradients[i]);
 
     	double g;
-    	bc.evaluate(intersection.inside()->geometry().global(quadPos), g);
+    	Dirichletdata bcTEmp; //TODO dirichletdata const machen
+    	bcTEmp.evaluate(intersection.inside()->geometry().global(quadPos), g);
 
 	    //-------calculate integral--------
 	    const auto integrationElement = intersection.geometry().integrationElement(pt.position());

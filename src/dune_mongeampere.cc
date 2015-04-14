@@ -11,6 +11,8 @@
 #include "MA_solver.hh"
 #include "Plotter.hh"
 
+#include <sys/utsname.h>
+
 #ifdef USE_PETSC
 #include "Dogleg/Petsc_utility.hh"
 #endif
@@ -21,15 +23,11 @@ using namespace Dune;
 int main(int argc, char *argv[])
 try {
 
-
-	struct utsname unameData;
-	uname(&unameData);
-	printf("%s", unameData.nodename);
-
 	/////////////////////////////
 	// setup problem parameter //
 	/////////////////////////////
 	Solver_config::problem = SIMPLE_MA;
+	std::cout << "we are solving the problem " << Solver_config::problem << std::endl;
 
 #ifdef USE_DOGLEG
 	std::cout <<"using dogleg " << std::endl;
@@ -45,18 +43,23 @@ try {
 //	FieldVector<double, dim> l(1);
 //	std::array<int, dim> elements = { 10, 10 };
 
-	Solver_config::UnitCubeType unitcube(5);
+	Solver_config::UnitCubeType unitcube(Solver_config::startlevel);
 
 	Solver_config::GridType &grid = unitcube.grid();
 	Solver_config::GridView gridView = grid.leafGridView();
+
+	// Output result
+	VTKWriter<Solver_config::GridView> vtkWriter(gridView);
+	vtkWriter.write("grid");
+
 
 	MA_solver<Solver_config> ma_solver(unitcube.grid_ptr(), gridView);
 
 	// ///////////////////////////////////////////////
 	// Choose an initial iterate
 	// ///////////////////////////////////////////////
-	Solver_config::VectorType initial_guess;
-	ma_solver.project(General_functions::get_easy_convex_polynomial_callback(), initial_guess);
+//	Solver_config::VectorType initial_guess;
+//	ma_solver.project(General_functions::get_easy_convex_polynomial_callback(), initial_guess);
 //	ma_solver.project(General_functions::get_constant_one_callback(), initial_guess);
 
 	ma_solver.solve();

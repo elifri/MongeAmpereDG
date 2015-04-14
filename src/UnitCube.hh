@@ -14,6 +14,8 @@
 #include <config.h>
 #include <vector>
 # include <dune/grid/utility/structuredgridfactory.hh>
+#include <dune/grid/common/gridfactory.hh>
+#include <dune/common/parallel/mpihelper.hh>
 
 #include <dune/grid/yaspgrid.hh>
 
@@ -24,6 +26,8 @@
 # include <dune/alugrid/grid.hh>
 # include <dune/alugrid/3d/gridfactory.hh>
 # endif
+
+using namespace Dune;
 
 // default implementation for any template parameter
 template<typename T>
@@ -66,10 +70,84 @@ public:
 		Dune::FieldVector<typename GridType::ctype, dim> lowerLeft(0);
 		Dune::FieldVector<typename GridType::ctype, dim> upperRight(1);
 		std::array<unsigned int, dim> elements;
-		std::fill(elements.begin(), elements.end(), n);
+		std::fill(elements.begin(), elements.end(), 2);
 
-		grid_ = Dune::StructuredGridFactory<GridType>::createSimplexGrid(
-				lowerLeft, upperRight, elements);
+//		grid_ = Dune::StructuredGridFactory<GridType>::createSimplexGrid(
+//				lowerLeft, upperRight, elements);
+
+		GridFactory<GridType> factory;
+
+	    if(MPIHelper::getCollectiveCommunication().rank() == 0)
+	    {
+	        // Insert uniformly spaced vertices
+	        std::array<unsigned int,dim> vertices = elements;
+	        for (std::size_t i=0; i<vertices.size(); i++)
+	          vertices[i]++;
+
+	        // Create vertices
+			FieldVector<double, GridType::dimensionworld> pos(0);
+			pos[0] = lowerLeft[0];
+			pos[1] = lowerLeft[1];
+			factory.insertVertex(pos);
+
+			pos[0] = upperRight[0];
+			pos[1] = lowerLeft[1];
+			factory.insertVertex(pos);
+
+			pos[0] = (lowerLeft[0]+upperRight[0])/2.;
+			pos[1] = (lowerLeft[1]+upperRight[1])/2.;
+			factory.insertVertex(pos);
+
+
+			pos[0] = lowerLeft[0];
+			pos[1] = upperRight[1];
+			factory.insertVertex(pos);
+
+			pos[0] = upperRight[0];
+			pos[1] = upperRight[1];
+			factory.insertVertex(pos);
+
+
+	        // Insert the elements
+	        std::vector<unsigned int> corners(dim+1);
+
+	        corners[0] = 0;
+	        corners[1] = 2;
+	        corners[2] = 1;
+
+            factory.insertElement
+	              (GeometryType(GeometryType::simplex, dim),
+	              corners);
+
+	        // 'base' is the index of the lower left element corner
+	        corners[0] = 1;
+	        corners[1] = 2;
+	        corners[2] = 4;
+
+            factory.insertElement
+	              (GeometryType(GeometryType::simplex, dim),
+	              corners);
+
+	        // 'base' is the index of the lower left element corner
+	        corners[0] = 4;
+	        corners[1] = 2;
+	        corners[2] = 3;
+
+            factory.insertElement
+	              (GeometryType(GeometryType::simplex, dim),
+	              corners);
+
+	        corners[0] = 3;
+	        corners[1] = 2;
+	        corners[2] = 0;
+
+            factory.insertElement
+	              (GeometryType(GeometryType::simplex, dim),
+	              corners);
+	      }
+	    grid_ = shared_ptr<GridType>(factory.createGrid());
+
+		grid_->globalRefine(n);
 	}
 
 	GridType& grid() {

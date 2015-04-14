@@ -67,6 +67,7 @@ struct Solver_config{
 	typedef LocalFiniteElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
 	typedef LocalFiniteElementuType::Traits::LocalBasisType::Traits::DomainType DomainType;
 
+	typedef LocalFiniteElementHessianType::RangeType HessianRangeType;
 
 	static const bool require_skeleton_two_sided = false; ///if enabled every face is assembled twice
 

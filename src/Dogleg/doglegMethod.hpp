@@ -49,6 +49,9 @@ typedef struct {
     /// do not show any output if silentmode=true;
     bool silentmode;
 
+    bool check_Jacobian;
+    bool exportFDJacobianifFalse;
+
     /// export Jacobian for MATLAB if the matrix is singular
     bool exportJacobianIfSingular;
 
@@ -57,15 +60,16 @@ typedef struct {
 
 template<typename FunctorType>
 bool checkJacobian(
-          FunctorType &f,
-          Eigen::VectorXd &x)
+          const FunctorType &f,
+          const Eigen::VectorXd &x,
+		  const bool exportFDJacobianifFalse= false)
 {
 	int n = x.size();
 	Eigen::SparseMatrix<double> J(n,n);
 	f.derivative(x,J);
 	J.prune(1,1e-10);
 
-	double tol = 1e-6;
+	double tol = 1e-7;
 
 	Eigen::VectorXd f_minus = Eigen::VectorXd::Zero(n), f_plus= Eigen::VectorXd::Zero(n);
 
@@ -74,8 +78,11 @@ bool checkJacobian(
 	make_FD_Jacobian(f,x,estimated_J);
 	igpm::testblock b(std::cout);
 
-//	MATLAB_export(J, "Jacobian");
-//	MATLAB_export(estimated_J, "FDJacobian");
+	if (exportFDJacobianifFalse)
+	{
+		MATLAB_export(J, "Jacobian");
+		MATLAB_export(estimated_J, "FDJacobian");
+	}
 //	MATLAB_export(x, "startvector");
 
 	compare_matrices(b, J, estimated_J, "Jacobian", "FD Jacobian", true, tol);
@@ -84,8 +91,8 @@ bool checkJacobian(
 
 template<typename FunctorType>
 void make_FD_Jacobian(
-          FunctorType &f,
-          Eigen::VectorXd &x,
+          const FunctorType &f,
+          const Eigen::VectorXd &x,
           Eigen::SparseMatrixD& estimated_J)
 {
 	int n = x.size();
@@ -129,7 +136,7 @@ void make_FD_Jacobian(
 */
 template<typename FunctorType>
 void doglegMethod (
-          FunctorType &functor,
+          const FunctorType &functor,
     const DogLeg_optionstype opts,
           Eigen::VectorXd &x
 ){
@@ -149,7 +156,8 @@ void doglegMethod (
 
     functor.evaluate(x,f);
     functor.derivative(x,J);
-//    checkJacobian(functor, x);
+//    if (opts.check_Jacobian)	checkJacobian(functor, x);
+    MATLAB_export(J, "J");
 
     // Check result of function calls for correct length of vectors
     if (x.size() != f.size()) {
@@ -181,9 +189,10 @@ void doglegMethod (
 //    lu_of_J.factorize(J);
     if (lu_of_J.info()!= Eigen::Success) {
         // decomposition failed
-        std::cerr << "\nError: "<< lu_of_J.info() << " Could not compute LU decomposition!\n";
+        std::cout << "\nError: "<< lu_of_J.info() << " Could not compute LU decomposition!\n";
         if (opts.exportJacobianIfSingular) {
-//            MATLAB_export(J,"J");
+            MATLAB_export(J,"J");
+//        	std::cout << J << std::endl;
         }
         exit(1);
     }
@@ -347,6 +356,8 @@ void doglegMethod (
             {
                 // new evaluation of Jacobian and its LU decomposition
                 functor.derivative(xnew,J);
+                if (opts.check_Jacobian)
+                	checkJacobian(functor, xnew);
 //                make_FD_Jacobian(functor, x, J);
                 lu_of_J.factorize(J);
                 if (lu_of_J.info()!=0) {

@@ -241,14 +241,15 @@ void Plotter::extract_solution(PointdataVectorType &v) const
 
 }
 
-void Plotter::extract_solutionAndError(const Dirichletdata &exact_sol, PointdataVectorType& sol, PointdataVectorType& error) const
+void Plotter::extract_solutionAndError(Dirichletdata &exact_sol, const Solver_config::VectorType &solution,  PointdataVectorType& sol, PointdataVectorType& error) const
 {
 	assert(sol.size() == Nnodes());
 	assert(error.size() == Nnodes());
+	assert(solution.size() == solver->get_n_dofs());
+
 	if (refinement == 0)
 	{
-		sol = solver->return_vertex_vector(solver->solution);
-		assert(false && "not implemented");
+		sol = solver->return_vertex_vector(solution);
 	}else {		// save points in file after refinement
 
 		int size_u = solver->localFiniteElement.size(u());
@@ -270,7 +271,7 @@ void Plotter::extract_solutionAndError(const Dirichletdata &exact_sol, Pointdata
 				//evaluate solution at refined points
 				double u = 0;
 				for (int i = 0; i < size_u; i++)
-					u += solver->solution(solver->dof_handler.get_offset(id)+i)*referenceFunctionValues[i];
+					u += solution(solver->dof_handler.get_offset(id)+i)*referenceFunctionValues[i];
 
 				//evaluate exact solution at refined points
 				auto global_coords = geometry.global(it.coords());
@@ -350,7 +351,7 @@ void Plotter::write_cells(std::ofstream &file) const
 		const Solver_config::GridView::IndexSet& indexSet = grid->indexSet();
 
 		for (auto&& e : elements(*grid)) {
-			for (unsigned int i = 0; i < e.subEntities(Solver_config::dim); i++)
+			for (unsigned int i = 0; i < e.subEntities(Solver_config::dim); i++) //loop over corners
 				{file << "\t\t\t\t\t";
 //				for (const auto& vertex : geometry.corners()) {
 					file << indexSet.index(*(e.subEntity<Solver_config::dim>(i))) << " ";
@@ -440,49 +441,67 @@ void Plotter::read_VTK(const std::string filename)
 }*/
 
 
-void Plotter::writeLeafCellVTK(std::string filename) const {
+void Plotter::writeLeafCellVTK(std::string filename, const Solver_config::VectorType &solution) const {
 
 	//--------------------------------------
-	// open file
-	check_file_extension(filename, ".vtu");
-	std::ofstream file(filename.c_str(), std::ios::out);
-	if (file.rdstate()) {
-		std::cerr << "Error: Couldn't open '" << filename << "'!\n";
-		return;
+
+
+	if (refinement > 0)
+	{
+		// open file
+		check_file_extension(filename, ".vtu");
+		std::ofstream file(filename.c_str(), std::ios::out);
+		if (file.rdstate()) {
+			std::cerr << "Error: Couldn't open '" << filename << "'!\n";
+			return;
+		}
+
+		//write file
+
+		write_vtk_header(file);
+
+		file << "\t\t\t<PointData>\n";
+
+		PointdataVectorType v(Nnodes());
+		PointdataVectorType v_error(Nnodes());
+	//	extract_solution(v);
+	//	write_point_data(file, "solution_old", v);
+		Dirichletdata data;
+		extract_solutionAndError(data, solution, v, v_error);
+		write_point_data(file, "solution", v);
+		write_point_data(file, "error", v_error);
+		file << "\t\t\t</PointData>\n";
+
+	//	write_function_depending_on_sol(fct, file, v, refine, true);
+		write_points(file); //define if with 3rd coordinate or without
+		write_cells(file);
+
+		write_vtk_end(file);
 	}
-
-	//write file
-
-	write_vtk_header(file);
-
-	file << "\t\t\t<PointData>\n";
-
-	PointdataVectorType v(Nnodes());
-	PointdataVectorType v_error(Nnodes());
-	extract_solution(v);
-	write_point_data(file, "solution_old", v);
-	extract_solutionAndError(Dirichletdata(), v, v_error);
-	write_point_data(file, "solution", v);
-	write_point_data(file, "error", v_error);
-	file << "\t\t\t</PointData>\n";
-
-//	write_function_depending_on_sol(fct, file, v, refine, true);
-	write_points(file); //define if with 3rd coordinate or without
-	write_cells(file);
-
-	write_vtk_end(file);
+	else
+	{
+		// Output result
+		VTKWriter<Solver_config::GridView> vtkWriter(*solver->gridView_ptr);
+		Solver_config::VectorType solution_v = solver->return_vertex_vector(solution);
+		std::cout << "solution vertex " << solution_v.transpose() << std::endl;
+		vtkWriter.addVertexData(solution_v, "solution");
+		vtkWriter.write(filename);
+	}
 }
 
 
-
-void Plotter::write_numericalsolution_VTK(const unsigned int i, std::string name) const {
+void Plotter::write_gridfunction_VTK(const unsigned int i, const Solver_config::VectorType& solution, std::string name) const{
 	std::string fname(output_directory);
 	fname += "/"+ output_prefix + name + NumberToString(i) + ".vtu";
 
+	writeLeafCellVTK(fname, solution);
+
 	std::cout << "plot written into " << fname << std::endl;
+}
 
-	writeLeafCellVTK(fname);
 
+void Plotter::write_numericalsolution_VTK(const unsigned int i, std::string name) const {
+	write_gridfunction_VTK(i, solver->solution, name);
 }
 
 
