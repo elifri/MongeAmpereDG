@@ -43,7 +43,13 @@ try {
 //	FieldVector<double, dim> l(1);
 //	std::array<int, dim> elements = { 10, 10 };
 
-	Solver_config::UnitCubeType unitcube(Solver_config::startlevel);
+	Solver_config::lowerLeft = {-0.2,0};
+	Solver_config::upperRight = {0.2,0.4};
+	Solver_config::UnitCubeType unitcube(Solver_config::lowerLeft, Solver_config::upperRight, Solver_config::startlevel);
+
+	Solver_config::lowerLeftTarget = {0.3,0};
+	Solver_config::upperRightTarget = {0.6,0.6};
+
 
 	Solver_config::GridType &grid = unitcube.grid();
 	Solver_config::GridView gridView = grid.leafGridView();
