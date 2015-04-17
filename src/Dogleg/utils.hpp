@@ -11,8 +11,11 @@
 #include <iostream>
 #include <fstream>
 #include <Eigen/Core>
+#include <Eigen/Sparse>
 #include <cmath>
 
+#include "igpm_t2_lib.hpp"
+#include "../utils.hpp"
 
 
 template<typename T>
@@ -156,5 +159,8 @@ inline void checkFileExtension (std::string &name, std::string extension=".vtu")
     name.insert(name.length(), extension);
 }
 
+void compare_matrices(igpm::testblock &b, const Eigen::MatrixXd &A, const Eigen::MatrixXd &B, const std::string &Aname, const std::string &Bname, bool output, const double tol);
+
+void compare_matrices(igpm::testblock &b, const Eigen::SparseMatrix<double> &A, const Eigen::SparseMatrix<double> &B, const std::string &Aname, const std::string &Bname, bool output, const double tol);
 
 #endif // MAGICMIRRORTOOLS_UTILS_HPP

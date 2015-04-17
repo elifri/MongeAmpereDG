@@ -17,28 +17,6 @@ enum {
 };
 
 
-#ifdef USE_PETSC
-template < typename T >
-/* Convert number to string.
- *
- * @param number number to convert
- * @return string containing number
-*/
-std::string NumberToString(const T number)
-{
-  std::stringstream str;
-
-  str << number;
-  if(str.fail())
-  {
-    throw("Conversion from number to string failed.");
-  }
-  std::string s(str.str());
-
-  return s;
-}
-#endif
-
 /*!
  *
  */

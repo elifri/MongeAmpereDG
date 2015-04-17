@@ -20,7 +20,6 @@
 #include <Eigen/UmfPackSupport>
 
 #include "utils.hpp"
-#include "/home/data/friebel/workspace/MongeAmpereDG2/source/test/test_utils.hpp"
 #include "/home/data/friebel/workspace/MongeAmpereDG2/include/matlab_export.hpp"
 #include "igpm_t2_lib.hpp"
 //#include "../test/test_utils.hpp"
@@ -73,7 +72,7 @@ bool checkJacobian(
 
 	Eigen::VectorXd f_minus = Eigen::VectorXd::Zero(n), f_plus= Eigen::VectorXd::Zero(n);
 
-	Eigen::SparseMatrixD estimated_J(n,n);
+	Eigen::SparseMatrix<double> estimated_J(n,n);
 
 	make_FD_Jacobian(f,x,estimated_J);
 	igpm::testblock b(std::cout);
@@ -93,7 +92,7 @@ template<typename FunctorType>
 void make_FD_Jacobian(
           const FunctorType &f,
           const Eigen::VectorXd &x,
-          Eigen::SparseMatrixD& estimated_J)
+          Eigen::SparseMatrix<double>& estimated_J)
 {
 	int n = x.size();
 
@@ -184,7 +183,7 @@ void doglegMethod (
 
 
     J.makeCompressed();
-    Eigen::SparseLU<Eigen::SparseMatrixD, Eigen::COLAMDOrdering<int> > lu_of_J;
+    Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int> > lu_of_J;
     lu_of_J.compute(J);
 //    lu_of_J.factorize(J);
     if (lu_of_J.info()!= Eigen::Success) {

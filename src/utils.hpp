@@ -34,5 +34,29 @@ void copy_to_sparse_matrix(const DenseMatrixType &m_local, int offset_row, int o
 			m.coeffRef(offset_row+i,offset_col+j) += m_local(i,j);
 }
 
+bool is_close(const double a, const double b, const double tolerance=1e-10);
 
+template<typename Ta, typename Tb>
+bool is_equal(const Ta a, const Tb b) { return (a==b); };
+
+
+template < typename T >
+/** Convert number to string.
+ *
+ * @param number number to convert
+ * @return string containing number
+ */
+std::string NumberToString(const T number)
+{
+  std::stringstream str;
+
+  str << number;
+  if(str.fail())
+  {
+    throw("Conversion from number to string failed.");
+  }
+  std::string s(str.str());
+
+  return s;
+}
 #endif
