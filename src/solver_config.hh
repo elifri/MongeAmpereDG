@@ -45,6 +45,8 @@ struct Solver_config{
 	typedef Eigen::SparseMatrix<double> MatrixType;
 
 	typedef FieldVector<double, dim> SpaceType;
+	typedef FieldVector<double, 2> SpaceType2d;
+	typedef FieldVector<double, 3> SpaceType3d;
 
 //	typedef YaspGrid<dim> GridType;
 	typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > UnitCubeType;
@@ -54,8 +56,12 @@ struct Solver_config{
 	typedef GridType::Codim<0>::Entity ElementType;
 
 
-//	static const int degree = 2;
-//	static const int degreeHessian = 1;
+	static UnitCubeType::SpaceType lowerLeft;
+	static UnitCubeType::SpaceType upperRight;
+
+	static UnitCubeType::SpaceType lowerLeftTarget;
+	static UnitCubeType::SpaceType upperRightTarget;
+
 
 //	typedef Q1LocalFiniteElement<double, double, dim> LocalFiniteElementType;
 	typedef Pk2DLocalFiniteElement<double, double, degree> LocalFiniteElementuType;

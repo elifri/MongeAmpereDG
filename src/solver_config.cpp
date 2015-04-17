@@ -14,6 +14,11 @@ using namespace Dune;
 using namespace std;
 
 ProblemType Solver_config::problem = SIMPLE_MA;
+Solver_config::UnitCubeType::SpaceType Solver_config::lowerLeft;
+Solver_config::UnitCubeType::SpaceType Solver_config::upperRight;
+
+Solver_config::UnitCubeType::SpaceType Solver_config::lowerLeftTarget;
+Solver_config::UnitCubeType::SpaceType Solver_config::upperRightTarget;
 
 std::ostream& operator <<(std::ostream &output, const ProblemType &p)
 {

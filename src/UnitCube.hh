@@ -29,6 +29,32 @@
 
 using namespace Dune;
 
+template <typename T>
+struct Class {
+    Class () {
+        std::cout << "Default constructor" << std::endl;
+    }
+    template <typename U>
+    Class (const Class<U>& rhs) {
+        std::cout << "Const copy constructor" << std::endl;
+    }
+    template <typename U>
+    Class (Class<U>& rhs)
+        : Class (const_cast<const Class<U>&> (rhs))
+    {
+        std::cout << "Copy constructor (templated)" << std::endl;
+    }
+/* // DOES NOT WORK WITHOUT THE NEXT:
+    Class (Class& rhs)
+        : Class (const_cast<const Class&> (rhs))
+    {
+        std::cout << "Copy constructor (not templated)" << std::endl;
+    }
+*/
+};
+
+
+
 // default implementation for any template parameter
 template<typename T>
 class UnitCube {
@@ -61,14 +87,12 @@ template<int dim>
 class UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > {
 public:
 	typedef Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> GridType;
-
+	typedef Dune::FieldVector<typename GridType::ctype, dim> SpaceType;
 private:
 	std::shared_ptr<GridType> grid_;
 
 public:
-	UnitCube(int n) {
-		Dune::FieldVector<typename GridType::ctype, dim> lowerLeft(0);
-		Dune::FieldVector<typename GridType::ctype, dim> upperRight(1);
+	UnitCube(SpaceType lowerLeft, SpaceType upperRight, int n) {
 		std::array<unsigned int, dim> elements;
 		std::fill(elements.begin(), elements.end(), 2);
 
@@ -149,6 +173,8 @@ public:
 
 		grid_->globalRefine(n);
 	}
+
+	UnitCube(int n) : UnitCube(SpaceType(0), SpaceType(1), n) {}
 
 	GridType& grid() {
 		return *grid_;
