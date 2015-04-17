@@ -14,6 +14,47 @@
 #include "Dof_handler.hpp"
 #include <dune/geometry/quadraturerules.hh>
 
+/**
+ * assembles the gradients at global scope
+ * @param lfu			local finite element
+ * @param jacobian		jacobian of the cell transformation
+ * @param x				local position of x
+ * @param gradients		return the gradients
+ */
+template< class FiniteElement, class JacobianType>
+inline
+void assemble_gradients(const FiniteElement &lfu, const JacobianType &jacobian,
+						const Solver_config::SpaceType& x, std::vector<typename FiniteElement::JacobianType>& gradients)
+{
+	assert(gradients.size() == lfu.size());
+
+	// The gradients of the shape functions on the reference element
+	std::vector<typename FiniteElement::JacobianType> referenceGradients(lfu.size());
+	lfu.localBasis().evaluateJacobian(x,referenceGradients);
+
+	//compute the gradients on the real element
+	for (size_t i = 0; i < gradients.size(); i++)
+		jacobian.mv(referenceGradients[i], gradients[i]);
+}
+
+template< class FiniteElement, class JacobianType>
+inline
+void assemble_gradients_gradu(const FiniteElement &lfu, const JacobianType &jacobian,
+		const Solver_config::SpaceType& x, std::vector<typename FiniteElement::JacobianType>& gradients,
+		const Solver_config::VectorType& x_local, typename FiniteElement::JacobianType& gradu)
+{
+	assert(gradients.size() == lfu.size());
+	assert(x_local.size() == lfu.size());
+
+	assemble_gradients(lfu, jacobian, x, gradients);
+
+//    assert( gradu.one_norm() == 0);
+
+    for (int i=0; i<lfu.size(); i++)
+    	gradu.axpy(x_local(i),gradients[i]);
+}
+
+
 /// a class handling all assembling processes, in particular it provides assembling processes for systems and local mass matrices
 class Assembler{
 public:

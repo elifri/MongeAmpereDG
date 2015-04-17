@@ -62,14 +62,9 @@ void assemble_cell_term(const Element& element, const LocalElement &localFiniteE
 		localFiniteElement.localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
 		// The gradients of the shape functions on the reference element
-		std::vector<FieldMatrix<double, 1, dim> > referenceGradients;
-		localFiniteElement.localBasis().evaluateJacobian(quadPos,
-				referenceGradients);
 		// Compute the shape function gradients on the real element
-		std::vector<FieldVector<double, dim> > gradients(
-				referenceGradients.size());
-		for (size_t i = 0; i < gradients.size(); i++)
-			jacobian.mv(referenceGradients[i][0], gradients[i]);
+		std::vector<typename LocalElement::JacobianType> gradients(localFiniteElement.size());
+		assemble_gradients(localFiniteElement, jacobian, quadPos, gradients);
 
 		double f;
 		rhs.evaluate(geometry.global(pt.position()), f);
@@ -160,9 +155,9 @@ void assemble_inner_face_term(const Intersection& intersection,
 		localFiniteElementn.localBasis().evaluateFunction(quadPosn, referenceFunctionValuesn);
 
 		// The gradients of the shape functions on the reference element
-		std::vector<FieldMatrix<double, 1, dim> > referenceGradients;
+		std::vector<typename LocalElement::JacobianType> referenceGradients;
 		localFiniteElement.localBasis().evaluateJacobian(quadPos,referenceGradients);
-		std::vector<FieldMatrix<double, 1, dim> > referenceGradientsn;
+		std::vector<typename LocalElement::JacobianType> referenceGradientsn;
 		localFiniteElementn.localBasis().evaluateJacobian(quadPos,referenceGradientsn);
 
 		//-------transform data---------------
@@ -171,12 +166,12 @@ void assemble_inner_face_term(const Intersection& intersection,
 		const auto& jacobiann = intersection.outside()->geometry().jacobianInverseTransposed(quadPosn);
 
 		// Compute the shape function gradients on the real element
-		std::vector<FieldVector<double, dim> > gradients(referenceGradients.size());
+		std::vector<typename LocalElement::JacobianType> gradients(referenceGradients.size());
 		for (size_t i = 0; i < gradients.size(); i++)
-			jacobian.mv(referenceGradients[i][0], gradients[i]);
+			jacobian.mv(referenceGradients[i], gradients[i]);
 		std::vector<FieldVector<double, dim> > gradientsn(referenceGradientsn.size());
 		for (size_t i = 0; i < gradientsn.size(); i++)
-			jacobiann.mv(referenceGradientsn[i][0], gradientsn[i]);
+			jacobiann.mv(referenceGradientsn[i], gradientsn[i]);
 
 	    //-------calculate integral--------
 	    const auto integrationElement = intersection.geometry().integrationElement(pt.position());
@@ -250,7 +245,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
 		localFiniteElement.localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
 		// The gradients of the shape functions on the reference element
-		std::vector<FieldMatrix<double, 1, dim> > referenceGradients;
+		std::vector<typename LocalElement::JacobianType> referenceGradients;
 		localFiniteElement.localBasis().evaluateJacobian(quadPos,referenceGradients);
 
 		//-------transform data---------------
@@ -260,7 +255,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
 		// Compute the shape function gradients on the real element
 		std::vector<FieldVector<double, dim> > gradients(referenceGradients.size());
 		for (size_t i = 0; i < gradients.size(); i++)
-			jacobian.mv(referenceGradients[i][0], gradients[i]);
+			jacobian.mv(referenceGradients[i], gradients[i]);
 
     	double g;
     	Dirichletdata bcTEmp; //TODO dirichletdata const machen

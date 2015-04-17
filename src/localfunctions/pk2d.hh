@@ -30,6 +30,8 @@ namespace Dune
 
     typedef typename Traits::LocalBasisType::Traits::DomainType DomainType;
     typedef typename Traits::LocalBasisType::Traits::RangeType RangeType;
+    typedef typename Traits::LocalBasisType::Traits::JacobianType JacobianType;
+
 
     /** \todo Please doc me !
      */

@@ -34,7 +34,7 @@ public:
 	enum {O = k};
 
 	typedef LocalBasisTraits<D,2,Dune::FieldVector<D,2>,R,1,R,
-	Dune::FieldMatrix<R,1,2>, Dune::FieldMatrix<R,2,2> > Traits;
+	Dune::FieldVector<R,2>, Dune::FieldMatrix<R,2,2> > Traits;
 
 	//! \brief Standard constructor
 	Pk2DLocalBasis ()
@@ -84,7 +84,7 @@ public:
 
 		// specialization for k==0, not clear whether that is needed
 		if (k==0) {
-			out[0][0][0] = 0; out[0][0][1] = 0;
+			out[0][0] = 0; out[0][1] = 0;
 			return;
 		}
 
@@ -93,7 +93,7 @@ public:
 		for (unsigned int i=0; i<=k-j; i++)
 		{
 			// x_0 derivative
-			out[n][0][0] = 0.0;
+			out[n][0] = 0.0;
 			R factor=1.0;
 			for (unsigned int beta=0; beta<j; beta++)
 			factor *= (x[1]-pos[beta])/(pos[j]-pos[beta]);
@@ -107,7 +107,7 @@ public:
 				product *= (x[0]-pos[alpha])/(pos[i]-pos[alpha]);
 				for (unsigned int gamma=i+j+1; gamma<=k; gamma++)
 				product *= (pos[gamma]-x[0]-x[1])/(pos[gamma]-pos[i]-pos[j]);
-				out[n][0][0] += product;
+				out[n][0] += product;
 			}
 			for (unsigned int c=i+j+1; c<=k; c++)
 			{
@@ -119,11 +119,11 @@ public:
 				product *= -1.0/(pos[gamma]-pos[i]-pos[j]);
 				else
 				product *= (pos[gamma]-x[0]-x[1])/(pos[gamma]-pos[i]-pos[j]);
-				out[n][0][0] += product;
+				out[n][0] += product;
 			}
 
 			// x_1 derivative
-			out[n][0][1] = 0.0;
+			out[n][1] = 0.0;
 			factor = 1.0;
 			for (unsigned int alpha=0; alpha<i; alpha++)
 			factor *= (x[0]-pos[alpha])/(pos[i]-pos[alpha]);
@@ -137,7 +137,7 @@ public:
 				product *= (x[1]-pos[beta])/(pos[j]-pos[beta]);
 				for (unsigned int gamma=i+j+1; gamma<=k; gamma++)
 				product *= (pos[gamma]-x[0]-x[1])/(pos[gamma]-pos[i]-pos[j]);
-				out[n][0][1] += product;
+				out[n][1] += product;
 			}
 			for (unsigned int c=i+j+1; c<=k; c++)
 			{
@@ -149,7 +149,7 @@ public:
 				product *= -1.0/(pos[gamma]-pos[i]-pos[j]);
 				else
 				product *= (pos[gamma]-x[0]-x[1])/(pos[gamma]-pos[i]-pos[j]);
-				out[n][0][1] += product;
+				out[n][1] += product;
 			}
 
 			n++;
