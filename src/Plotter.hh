@@ -76,6 +76,12 @@ public:
 	void write_points(std::ofstream &file) const;///writes the point coordinates into file
 	void write_cells(std::ofstream &file) const; ///write cells into file
 
+	void write_points_reflector(std::ofstream &file, const PointdataVectorType & solution_vertex) const;
+
+	void write_pov_setting(std::ofstream &file) const;///write the setting for photons, camera and light source
+	void write_target_plane(std::ofstream &file) const;
+	void write_mirror(std::ofstream &file, const Solver_config::VectorType &solution) const;
+
 public:
 
 	/*! \brief writes the solution in a vtu file
@@ -84,6 +90,9 @@ public:
 	    */
 
 	void writeLeafCellVTK(std::string filename, const Solver_config::VectorType &solution) const;
+
+	void writeReflectorPOV(std::string filename, const Solver_config::VectorType &solution) const;
+	void writeReflectorVTK(std::string filename, const Solver_config::VectorType &solution) const;
 
 	void set_grid(Solver_config::GridView* grid){	this->grid = grid;}
 	void set_refinement(const int refinement){	this->refinement = refinement;}
@@ -112,6 +121,8 @@ public:
 													Eigen::MatrixXd &solution);
 
 	void write_numericalsolution_VTK(const unsigned int i, std::string = "grid_numericalsolution") const;
+	void write_numericalmirror_VTK(const unsigned int i, std::string = "numericalMirror") const;
+	void write_numericalmirror_pov(const unsigned int i, std::string = "numericalMirror") const;
 	void write_gridfunction_VTK(const unsigned int i, const Solver_config::VectorType& solution, std::string = "grid_fct") const;
 
 	void write_numericalsolution() const;
