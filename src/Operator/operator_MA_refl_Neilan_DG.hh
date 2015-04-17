@@ -5,23 +5,36 @@
  *      Author: friebel
  */
 
-#ifndef SRC_OPERATOR_HH_
-#define SRC_OPERATOR_HH_
+#ifndef REFL_OPERATOR_HH_
+#define REFL_OPERATOR_HH_
 
 #include <dune/common/function.hh>
 #include <dune/geometry/quadraturerules.hh>
 
 #include "../utils.hpp"
 #include "../solver_config.hh"
+#include "../Assembler.hh"
 #include "../problem_data.hh"
 
 using namespace Dune;
 
 
-class Local_Operator_MA_mixed_Neilan
+class Local_Operator_MA_refl_Neilan
 {
+
 public:
 
+	/// projects the 2d reference plane omega to the ball surface in 3d
+	static double omega(Solver_config::SpaceType2d x)
+	{
+		assert(x.two_norm2() <= 1);
+		return std::sqrt(1-x.two_norm2());
+	}
+
+	static double a_tilde(const double u_value, const Solver_config::SpaceType2d& gradu, const Solver_config::SpaceType2d& x)
+	{
+		return gradu*gradu - sqr(u_value - (gradu*x));
+	}
 /**
  * implements the local volume integral
  * @param element		     the element the integral is evaluated on
@@ -63,18 +76,20 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 		// The multiplicative factor in the integral transformation formula
 		const double integrationElement = geometry.integrationElement(quadPos);
 
+
 		//the shape function values
 		std::vector<RangeType> referenceFunctionValues(size_u);
 		localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+
+		// The gradients
+		std::vector<typename LocalElement0::JacobianType> gradients(size_u);
+		typename LocalElement0::JacobianType gradu(0.0);
+		assemble_gradients_gradu(localFiniteElement(u()), jacobian, quadPos, gradients, x, gradu);
 
 		// The hessian of the shape functions on the reference element
 		std::vector<HessianType> Hessians(size_u);
 		localFiniteElement(u()).localBasis().evaluateHessian(quadPos,
 				Hessians);
-
-//		std::cout << "reference hessian at " << quadPos << std::endl;
-//		for (const auto &e: referenceHessian)	std::cout << e << ", ";
-//		std::cout << std::endl;
 
 		//the shape function values of hessian ansatz functions
 		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessian(size_u_DH);
@@ -84,7 +99,6 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 		//--------transform data------------------------
 
 		// Compute the shape function hessians on the real element
-
 		auto jacobianTransposed = jacobian;
 		jacobianTransposed [1][0] = jacobian [0][1];
 		jacobianTransposed [0][1] = jacobian [1][0];
@@ -94,39 +108,64 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 			Hessians[i].rightmultiply(jacobian);
 		}
 
-		//---------evaluate Hess u and  u_DH -----------
+		//---------evaluate u -----------
+
+		//evaluate u
+	    double u_value = 0.0;
+	    for (int i=0; i<size_u; i++)
+	    	u_value += x(i)*referenceFunctionValues[i];
+
 
 		// Compute piecewise Hessian u
 		HessianType Hessu(0);
 		for (size_t i = 0; i < size_u; i++)
 			Hessu.axpy(x(i), Hessians[i]);
 
-//		std::cout << "piecewise hessian " << std::endl;
-//		std::cout << Hessu << ", ";
-//		std::cout << std::endl;
-
-
+		//evaluate discrete hessian
 		typename LocalElement1::TensorRangeType uDH;
 		for (size_t i = 0; i < size_u_DH; i++)
-		{
 			uDH.axpy(x(size_u+i), referenceFunctionValuesHessian[i]);
-//			std::cout << "uDH +=" <<x(size_u+i)<<"*"<< std::endl<< referenceFunctionValuesHessian[i]<<"=" << std::endl << uDH << std::endl;
-		}
-
-//		std::cout << "discrete hessian " << std::endl;
-//		std::cout << uDH << ", ";
-//		std::cout << std::endl;
 
 		//--------assemble cell integrals in variational form--------
 
-		double f;
-		rhs.evaluate(geometry.global(quad[pt].position()), f);
+		assert(Solver_config::dim == 2);
+
+		auto x_value = geometry.global(quad[pt].position());
+		Solver_config::SpaceType3d X = {x_value[0], x_value[1], omega(x_value)};
+
+		auto a_tilde_value = a_tilde(u_value, gradu,x_value);
+		auto b_tilde = gradu*gradu + sqr(u_value) - sqr(gradu*x_value);
+		Solver_config::SpaceType3d grad_hat = {gradu[0], gradu[1], 0};
+		//N = Id + xx^t/omega^2
+//		Solver_config::HessianRangeType N = {1+x[0]*x[0],x[0]*x[1],x[0]*x[1],1+x[1]*x[1]};
+//		N /= sqr(omega);
+
+		auto Y = X;
+		Y *= a_tilde_value/b_tilde; Y.axpy(- 2*u_value/b_tilde,grad_hat);
+		auto t = 1 - u_value *z_3/omega(x_value);
+		assert ( t > 0);
+
+		Solver_config::SpaceType2d z_0 = gradu; z_0 *= 2.0/a_tilde_value;
+		Solver_config::SpaceType2d z = x_value;
+		z *= (1.0/u_value);
+		z.axpy(t,z_0); z.axpy(-t/u_value,x_value);
+
+//		assert( D_psi * (Z - X/u_value) > 0);
+
+		Solver_config::HessianRangeType pertubed_matrix = uDH;
+//		pertubed_matrix += a_tilde*(z_3/2/t/x_3)*N;
+
+		double f_value;
+		rhs.f(x_value, f_value);
+		double g_value;
+		rhs.g(z, g_value);
+		double PDE_rhs = -a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde*omega(x_value)*g_value);
 
 		//calculate system for first test functions
 
 		for (size_t j = 0; j < size_u; j++) // loop over test fcts
 		{
-				v(j) += (f-uDH.determinant())*referenceFunctionValues[j]
+				v(j) += (PDE_rhs-pertubed_matrix.determinant())*referenceFunctionValues[j]
 						* quad[pt].weight() * integrationElement;
 //				std::cout << "det(u)-f=" << uDH.determinant()<<"-"<< f <<"="<< uDH.determinant()-f<< std::endl;
 		}
@@ -144,8 +183,7 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 
 
 
-/*
- * implements the operator for inner integrals
+/** implements the operator for inner integrals
  * @param intersection		  the intersection on which the integral is evaluated
  * @param localFiniteElement  the local finite elements on the element
  * @param x					  element coefficients of u
@@ -154,12 +192,6 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
  * @param v					  return residual
  * @param vn				  return residual for neighbour element
 */
-
-//typedef Dune::Q1LocalFiniteElement<double, double, 2> LocalElement;
-//typedef Dune::Intersection<const Dune::YaspGrid<2>, Dune::YaspIntersection<const Dune::YaspGrid<2> > > IntersectionType;
-//typedef Solver_config::VectorType VectorType;
-//typedef Solver_config::MatrixType MatrixType;
-
 template<class IntersectionType, class LocalElement0, class LocalElement1, class VectorType>
 void assemble_inner_face_term(const IntersectionType& intersection,
 								const MixedElement<LocalElement0, LocalElement1> &localFiniteElement, const VectorType &x,
@@ -216,9 +248,9 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 		localFiniteElementn(u()).localBasis().evaluateFunction(quadPosn, referenceFunctionValuesn);
 
 		// The gradients of the shape functions on the reference element
-		std::vector<FieldMatrix<double, 1, dim> > referenceGradients(size_u);
+		std::vector<typename LocalElement0::JacobianType> referenceGradients(size_u);
 		localFiniteElement(u()).localBasis().evaluateJacobian(quadPos,referenceGradients);
-		std::vector<FieldMatrix<double, 1, dim> > referenceGradientsn(size_u);
+		std::vector<typename LocalElement0::JacobianType> referenceGradientsn(size_u);
 		localFiniteElementn(u()).localBasis().evaluateJacobian(quadPosn,referenceGradientsn);
 
 
@@ -240,10 +272,10 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 		// Compute the shape function gradients on the real element
 		std::vector<FieldVector<double, dim> > gradients(referenceGradients.size());
 		for (size_t i = 0; i < gradients.size(); i++)
-			jacobian.mv(referenceGradients[i][0], gradients[i]);
+			jacobian.mv(referenceGradients[i], gradients[i]);
 		std::vector<FieldVector<double, dim> > gradientsn(referenceGradientsn.size());
 		for (size_t i = 0; i < gradientsn.size(); i++)
-			jacobiann.mv(referenceGradientsn[i][0], gradientsn[i]);
+			jacobiann.mv(referenceGradientsn[i], gradientsn[i]);
 
 		//---------evaluate u and grad u-----------
 	    // compute gradient of u
@@ -343,48 +375,36 @@ void assemble_boundary_face_term(const Intersection& intersection,
 	// Loop over all quadrature points
 	for (size_t pt = 0; pt < quad.size(); pt++) {
 
-		//------get reference data----------
+		//------get data----------
 
 		// Position of the current quadrature point in the reference element
 		const FieldVector<double, dim> &quadPos = intersection.geometryInInside().global(quad[pt].position());
+	    auto x_value = intersection.inside()->geometry().global(quadPos);
+
+		// The transposed inverse Jacobian of the map from the reference element to the element
+		const auto& jacobian = intersection.inside()->geometry().jacobianInverseTransposed(quadPos);
 
 		// The shape functions on the reference elements
 		std::vector<RangeType > referenceFunctionValues;
 		localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
-/*
+
 		// The gradients of the shape functions on the reference element
-		std::vector<FieldMatrix<double, 1, dim> > referenceGradients;
-		localFiniteElement(u()).localBasis().evaluateJacobian(quadPos,referenceGradients);
-*/
-
-		//-------transform data---------------
-		// The transposed inverse Jacobian of the map from the reference element to the element
-//		const auto& jacobian = intersection.inside()->geometry().jacobianInverseTransposed(quadPos);
-
-/*
-		// Compute the shape function gradients on the real element
-		std::vector<FieldVector<double, dim> > gradients(referenceGradients.size());
-		for (size_t i = 0; i < gradients.size(); i++)
-			jacobian.mv(referenceGradients[i][0], gradients[i]);
-*/
+		std::vector<typename LocalElement0::JacobianType> gradients(localFiniteElement.size(u()));
+	    FieldVector<double,dim> gradu(0.0);
+		assemble_gradients_gradu(localFiniteElement(u()), jacobian, quadPos, gradients, x, gradu);
 
 		//---------evaluate u and grad u-----------
-/*
-	    // compute gradient of u
-	    FieldVector<double,dim> gradu(0.0);
-	    for (size_t i=0; i<x.size(); i++)
-	    	gradu.axpy(x(i),gradients[i]);
-*/
-
 	    // evaluate u
 	    double u_value = 0.0;
 	    for (size_t i=0; i<localFiniteElement.size(u()); i++)
 	    	u_value += x(i)*referenceFunctionValues[i];
 
-    	double g;
-    	Dirichletdata bcTEmp; //todo dirichletdata const machen
-    	bcTEmp.evaluate(intersection.inside()->geometry().global(quadPos), g);
+
+	    auto phi_value = rhs.phi(x_value);
+
+    	auto a_tilde_value = a_tilde(u_value, gradu, x_value);
+    	auto T_value = gradu; T_value *= 2./a_tilde_value;
 
 	    //-------calculate integral--------
 	    const auto integrationElement = intersection.geometry().integrationElement(quad[pt].position());
@@ -393,9 +413,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
 	    {
 
 			// NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
-			v(j) += penalty_weight*(u_value-g)*referenceFunctionValues[j]*factor;
-//			std::cout << "v(j) += " << penalty_weight << "*(" << u_value<<"-" << g << ")*" << referenceFunctionValues[j] << "*" << factor;
-//			std::cout << "-> " << v(j) << std::endl;
+			v(j) += penalty_weight*((T_value*normal)-phi_value)*referenceFunctionValues[j]*factor;
 	    }
 
 	}
@@ -446,14 +464,15 @@ void assemble_cell_Jacobian(const Element& element, const MixedElement<LocalElem
 		std::vector<RangeType> referenceFunctionValues(size_u);
 		localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
+		// The gradients
+		std::vector<typename LocalElement0::JacobianType> gradients(size_u);
+		typename LocalElement0::JacobianType gradu(0.0);
+		assemble_gradients_gradu(localFiniteElement(u()), jacobian, quadPos, gradients, x, gradu);
+
 		// The hessian of the shape functions on the reference element
 		std::vector<HessianType> Hessians(size_u);
 		localFiniteElement(u()).localBasis().evaluateHessian(quadPos,
 				Hessians);
-
-//		std::cout << "reference hessian at " << quadPos << std::endl;
-//		for (const auto &e: referenceHessian)	std::cout << e << ", ";
-//		std::cout << std::endl;
 
 		//the shape function values of hessian ansatz functions
 		std::vector<typename LocalElement1::TensorRangeType> referenceFunctionValuesHessian(size_u_DH);
@@ -473,7 +492,9 @@ void assemble_cell_Jacobian(const Element& element, const MixedElement<LocalElem
 			Hessians[i].rightmultiply(jacobian);
 		}
 
-		//---------evaluate cofac u_DH------------
+		//----------evaluate data-------------------
+
+		//evaluate cofac u_DH
 		typename LocalElement1::TensorRangeType cofac_uDH;
 		//evaluate u_DH
 		for (size_t i = 0; i < size_u_DH; i++)
@@ -489,10 +510,26 @@ void assemble_cell_Jacobian(const Element& element, const MixedElement<LocalElem
 
 		//--------assemble cell integrals in variational form--------
 
+
+		//derivative : det(u)*v
 		for (size_t j = 0; j < size_u; j++) // loop over test fcts
 			for (size_t i = 0; i < size_u_DH; i++)
 				m(j,size_u+i) -= cwiseProduct(cofac_uDH, referenceFunctionValuesHessian[i])*referenceFunctionValues[j]
 						* quad[pt].weight() * integrationElement;
+
+
+		//derivative a^3/4b f(x)/omega g(Z)
+		auto x_value = geometry.global(quad[pt].position());
+		double f_value;
+		rhs.f(x_value, f_value);
+		auto factor = f_value /4.0/omega(x_value);
+
+		for (size_t j = 0; j < size_u; j++) // loop over test fcts
+			for (size_t i = 0; i < size_u_DH; i++)
+			{
+				auto Da = 2;
+
+			}
 
 		//calculate system for second tensor functions
 		for (size_t j = 0; j < size_u_DH; j++) // loop over test fcts
@@ -584,9 +621,9 @@ void assemble_inner_face_Jacobian(const Intersection& intersection,
 		localFiniteElementn(u()).localBasis().evaluateFunction(quadPosn, referenceFunctionValuesn);
 
 		// The gradients of the shape functions on the reference element
-		std::vector<FieldMatrix<double, 1, dim> > referenceGradients(size_u);
+		std::vector<typename LocalElement0::JacobianType> referenceGradients(size_u);
 		localFiniteElement(u()).localBasis().evaluateJacobian(quadPos,referenceGradients);
-		std::vector<FieldMatrix<double, 1, dim> > referenceGradientsn(size_u);
+		std::vector<typename LocalElement0::JacobianType> referenceGradientsn(size_u);
 		localFiniteElementn(u()).localBasis().evaluateJacobian(quadPosn,referenceGradientsn);
 
 
@@ -604,10 +641,10 @@ void assemble_inner_face_Jacobian(const Intersection& intersection,
 		// Compute the shape function gradients on the real element
 		std::vector<FieldVector<double, dim> > gradients(referenceGradients.size());
 		for (size_t i = 0; i < gradients.size(); i++)
-			jacobian.mv(referenceGradients[i][0], gradients[i]);
+			jacobian.mv(referenceGradients[i], gradients[i]);
 		std::vector<FieldVector<double, dim> > gradientsn(referenceGradientsn.size());
 		for (size_t i = 0; i < gradientsn.size(); i++)
-			jacobiann.mv(referenceGradientsn[i][0], gradientsn[i]);
+			jacobiann.mv(referenceGradientsn[i], gradientsn[i]);
 
 	    //-------calculate integral--------
 	    const auto integrationElement = intersection.geometry().integrationElement(quad[pt].position());
@@ -856,7 +893,8 @@ void assemble_boundary_face_term_rhs(const Intersection& intersection,
 }
 
 
-RightHandSide rhs;
+RightHandSideReflector rhs;
+static constexpr double z_3 = 0;
 Dirichletdata bc;
 };
 
