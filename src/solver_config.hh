@@ -38,7 +38,8 @@ std::ostream& operator <<(std::ostream &output, const ProblemType &p);
 
 struct Solver_config{
 
-	enum{ dim = 2, childdim = 4, degree = 2, degreeHessian = 1};
+	enum{ dim = 2, childdim = 4, degree = 2, degreeHessian = 1,
+		  nonlinear_steps = 5, startlevel = 0};
 
 	typedef Eigen::VectorXd VectorType;
 	typedef Eigen::MatrixXd DenseMatrixType;

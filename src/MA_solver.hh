@@ -103,26 +103,31 @@ public:
 			assert(solver_ptr != NULL);
 			igpm::processtimer timer;
 			timer.start();
-			Local_Operator_MA_mixed_Neilan lop;
+//			Local_Operator_MA_mixed_Neilan lop;
+			Local_Operator_MA_refl_Neilan lop;
+
 			solver_ptr->assemble_DG(lop, x,v); timer.stop();
 //			std::cout << "needed " << timer << " seconds for function evaluation" << std::endl;
 		}
 		void Jacobian(const VectorType& x, MatrixType& m) const
 		{
 			assert(solver_ptr != NULL);
-			Local_Operator_MA_mixed_Neilan lop;
+//			Local_Operator_MA_mixed_Neilan lop;
+			Local_Operator_MA_refl_Neilan lop;
 			solver_ptr->assemble_Jacobian_DG(lop, x,m);
 		}
 		void derivative(const VectorType& x, MatrixType& m) const
 		{
 			assert(solver_ptr != NULL);
-			Local_Operator_MA_mixed_Neilan lop;
+//			Local_Operator_MA_mixed_Neilan lop;
+			Local_Operator_MA_refl_Neilan lop;
 			solver_ptr->assemble_Jacobian_DG(lop, x,m);
 		}
 
 		const MA_solver* solver_ptr;
 	};
 
+	///assembles the (global) integrals (for every test function) specified by lop
 	template<typename LocalOperatorType>
 	void assemble_DG(LocalOperatorType lop, const VectorType& x,
 			VectorType& v) const {
@@ -130,18 +135,19 @@ public:
 		assembler.assemble_DG(lop, x, v);
 	}
 
+	///assembles the (global) Jacobian of the FE function as specified in LOP
 	template<typename LocalOperatorType>
 	void assemble_Jacobian_DG(LocalOperatorType LOP, const VectorType& x, MatrixType& m) const {
 		assert (initialised);
 		assembler.assemble_Jacobian_DG(LOP, x, m);
 	}
 
+	///assembles the (global) FE-System given by the operator lop
 	template<typename LocalOperatorType>
 	void assemble_linear_system_DG(LocalOperatorType lop, MatrixType &m, VectorType& rhs) const {
 		assert (initialised);
 		assembler.assemble_linear_system_DG(lop, m, rhs);
 	}
-
 
 	/**
 	 * projects a function into the grid space
@@ -201,31 +207,23 @@ public:
 
 private:
 
-	void initialise_dofs();
-
-	bool initialised;
+	bool initialised; ///asserts the important member, such as the dof_handler, assembler ... are initialised
 
 	const shared_ptr<GridType> grid_ptr;
-//	const GridType* grid_ptr;
-//	shared_ptr<const GridViewType> gridView_ptr;
 	const GridViewType* gridView_ptr;
 
-//	shared_ptr<GridType> plotGrid_ptr;
+	LocalFiniteElementType localFiniteElement; ///specify the local (mixed Element)
+	const LocalFiniteElementuType& localFiniteElementu; ///reference to the local Finite Element to assemble u
 
+	Dof_handler<Config> dof_handler; ///handles dof enumeration
+	Assembler assembler; ///handles all (integral) assembly processes
 
-	LocalFiniteElementType localFiniteElement;
-	const LocalFiniteElementuType& localFiniteElementu;
-
-	Dof_handler<Config> dof_handler;
-	Assembler assembler;
-
-	VectorType solution;
-	VectorType exactsol_projection;
+	VectorType solution; /// stores the current solution vector
+	VectorType exactsol_projection; /// if exact solution is known, stores a L2 projection to the current grid
 	int count_refined; ///counts how often the original grid was refined
 
 	friend Plotter;
-
-	Plotter vtkplotter;
+	Plotter vtkplotter; /// handles I/O
 };
 
 template<class Config>
@@ -465,18 +463,21 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 	init_mixed_element_without_second_derivatives(solution_u, solution);
 */
 
-	solution = VectorType::Zero(dof_handler.get_n_dofs());
+//	solution = VectorType::Zero(dof_handler.get_n_dofs());
 
 
 	//init exact solution
 	Dirichletdata exact_sol;
-//	project(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol), exactsol_projection);
-	project(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol), MEMBER_FUNCTION(&Dirichletdata::derivative, &exact_sol), exactsol_projection);
+	if (Solver_config::problem == MA_SMOOTH || Solver_config::problem == SIMPLE_MA)
+		project(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol), MEMBER_FUNCTION(&Dirichletdata::derivative, &exact_sol), exactsol_projection);
+	else
+		project(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol), exactsol_projection);
+
 	vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
 
 	std::cout << "x projected " << exactsol_projection.transpose() << std::endl;
 
-//	project(General_functions::get_easy_convex_polynomial_callback(), solution);
+	project(General_functions::get_easy_convex_polynomial_callback(), solution);
 //	solution = exactsol_projection;
 
 	vtkplotter.write_numericalsolution_VTK(0, "initial_guess");
@@ -485,7 +486,9 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 	for (int i = 0; i < Solver_config::nonlinear_steps; i++)
 	{
 		solve_nonlinear_step();
-		vtkplotter.write_numericalsolution_VTK(count_refined);
+//		vtkplotter.write_numericalsolution_VTK(count_refined);
+		vtkplotter.write_numericalmirror_VTK(count_refined);
+		vtkplotter.write_numericalmirror_pov(count_refined);
 		adapt();
 	}
 
@@ -512,7 +515,7 @@ typename MA_solver<Config>::VectorType MA_solver<Config>::return_vertex_vector(c
 
 	for (int i=0; i < x_vertex.size(); i++)
 		x_vertex(i) /= (double) dof_handler.get_dof_to_vertex_ratio()(i);
-	std::cout << "x_vertex after " << x_vertex.transpose() << std::endl;
+//	std::cout << "x_vertex after " << x_vertex.transpose() << std::endl;
 
 	return x_vertex;
 }
@@ -707,7 +710,7 @@ void MA_solver<Config>::solve_nonlinear_step()
 
 	Dirichletdata exact_sol;
 
-	std::cout << "initial f " << f.transpose() << std::endl;
+//	std::cout << "initial f " << f.transpose() << std::endl;
 	std::cout << "initial f(x) norm " << f.norm() << endl;
 	std::cout << "initial l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
 	std::cout << "approximate error " << (solution-exactsol_projection).norm() << std::endl;

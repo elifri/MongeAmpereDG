@@ -13,7 +13,7 @@
 using namespace Dune;
 using namespace std;
 
-ProblemType Solver_config::problem = SIMPLE_MA;
+ProblemType Solver_config::problem = MA_SMOOTH;
 Solver_config::UnitCubeType::SpaceType Solver_config::lowerLeft;
 Solver_config::UnitCubeType::SpaceType Solver_config::upperRight;
 
@@ -36,9 +36,9 @@ std::ostream& operator <<(std::ostream &output, const ProblemType &p)
 	case MA_SQRT:
 		output << "Monge Ampere Problem 3 (solution: -sqrt(2-|x|^2))";
 		break;
-//	case CONST_RHS:
-//		output << "rhs = 1, exact solution unknown";
-//		break;
+	case CONST_RHS:
+		output << "rhs = 1, exact solution unknown";
+		break;
 	default:
 		cerr << "Error: Unknown Monge Ampere Problem" << endl;
 		exit(-1);

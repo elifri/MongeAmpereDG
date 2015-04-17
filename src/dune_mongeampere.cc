@@ -26,7 +26,7 @@ try {
 	/////////////////////////////
 	// setup problem parameter //
 	/////////////////////////////
-	Solver_config::problem = SIMPLE_MA;
+	Solver_config::problem = CONST_RHS;
 	std::cout << "we are solving the problem " << Solver_config::problem << std::endl;
 
 #ifdef USE_DOGLEG
