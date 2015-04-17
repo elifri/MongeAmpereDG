@@ -24,7 +24,8 @@
 #include "Assembler.hh"
 #include "problem_data.hh"
 #include "linear_system_operator_poisson_DG.hh"
-#include "operator_MA_Neilan_DG.hh"
+#include "Operator/operator_MA_Neilan_DG.hh"
+#include "Operator/operator_MA_refl_Neilan_DG.hh"
 
 #include "Plotter.hh"
 
