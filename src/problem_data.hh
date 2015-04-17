@@ -14,6 +14,8 @@
 #include "Callback/callback.hpp"
 #include "Callback/Callback_utility.hpp"
 #include "Dogleg/utils.hpp"
+#include "Integrator.hpp"
+#include "utils.hpp"
 
 using namespace Dune;
 
@@ -128,6 +130,52 @@ public:
 
 private:
 	RightHandSide rhs;
+};
+
+namespace PDE_functions{
+
+	void f(const Solver_config::SpaceType2d& x, double &out);
+
+	void g_initial(const Solver_config::SpaceType2d& z, double &out);
+}
+
+
+class RightHandSideReflector{
+public:
+	RightHandSideReflector():g_initial_callback(FREE_FUNCTION(&PDE_functions::g_initial)), f_callback(FREE_FUNCTION(&PDE_functions::f)) {}
+	RightHandSideReflector(const MA_function_type g_initial, const MA_function_type f):g_initial_callback(g_initial), f_callback(f) {}
+
+
+	void init();
+	void init(const Integrator<Solver_config::GridType>& integrator);
+
+	void f(const Solver_config::SpaceType2d& x, double &out) const{
+		f_callback(x, out);
+	}
+
+	///this function asserts to fulfill the (mass) conservation int f = int g
+	void g(const Solver_config::SpaceType2d& z, double &out) const{
+		g_initial_callback(z, out);
+		out *= integral_f/integral_g;
+	}
+
+	double phi(const Solver_config::SpaceType& x) const{
+		Solver_config::SpaceType T;
+		if(is_close(x[0], Solver_config::lowerLeft[0])) //x_0 = r_1 in andreas' notion
+			return Solver_config::upperRightTarget[0];
+		if(is_close(x[0], Solver_config::upperRight[0])) //x_0 = s_1
+			return Solver_config::lowerLeftTarget[0];
+		if(is_close(x[1], Solver_config::lowerLeft[1]))
+			return Solver_config::upperRightTarget[1];
+		if(is_close(x[0], Solver_config::upperRight[1]))
+			return Solver_config::lowerLeftTarget[1];
+	}
+
+private:
+	MA_function_type g_initial_callback, f_callback;
+
+	double integral_g;
+	double integral_f;
 };
 
 #endif /* SRC_PROBLEM_DATA_HH_ */

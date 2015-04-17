@@ -1,5 +1,5 @@
 
-add_library(Solver_Config solver_config.cpp)
+add_library(Solver_Config problem_data.cpp solver_config.cpp)
 add_library(Plotter Plotter.cc)
 add_library(Dogleg Dogleg/utils.cpp)
 add_library(Assembler Assembler.cpp)
