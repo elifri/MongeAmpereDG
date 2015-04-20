@@ -14,8 +14,55 @@
 #include "Dof_handler.hpp"
 #include <dune/geometry/quadraturerules.hh>
 
+
 /**
- * assembles the gradients at global scope
+ * evaluate the gradients of test functions at global scope
+ * @param lfu			local finite element
+ * @param jacobian		jacobian of the cell transformation
+ * @param x				local position of x
+ * @param gradients		return the gradients
+ */
+template< class FiniteElement>
+inline
+void assemble_functionValues_u(const FiniteElement &lfu,const Solver_config::SpaceType& x, std::vector<double>& values,
+								const Solver_config::VectorType& x_local, double& u_value)
+{
+	assert(values.size() == lfu.size());
+	assert(x_local.size() == lfu.size());
+	assert(typeid(typename FiniteElement::RangeType) == typeid(double));
+
+	// The gradients of the shape functions on the reference element
+	lfu.localBasis().evaluateFunction(x,values);
+
+	assert(u_value == 0);
+
+	//compute the gradients on the real element
+	for (size_t i = 0; i < values.size(); i++)
+		u_value += x_local(i)*values[i];
+}
+
+template< class FiniteElement, int m, int n>
+inline
+void assemble_functionValues_u(const FiniteElement &lfu,const Solver_config::SpaceType& x, std::vector<Dune::FieldMatrix<double, m, n>>& values,
+								const Solver_config::VectorType& x_local, typename Dune::FieldMatrix<double, m, n>& u_value)
+{
+	assert(values.size() == lfu.size());
+	assert(x_local.size() == lfu.size());
+	assert(typeid(typename FiniteElement::RangeType) == typeid(Dune::FieldMatrix<double, m, n>));
+
+	// The gradients of the shape functions on the reference element
+	lfu.localBasis().evaluateFunction(x,values);
+
+	assert(u_value.frobenius_norm() == 0);
+
+	//compute the gradients on the real element
+	for (size_t i = 0; i < values.size(); i++)
+		u_value.axpy(x_local(i),values[i]);
+}
+
+
+/**
+ * evaluate the gradients of test functions at global scope
  * @param lfu			local finite element
  * @param jacobian		jacobian of the cell transformation
  * @param x				local position of x
@@ -37,6 +84,13 @@ void assemble_gradients(const FiniteElement &lfu, const JacobianType &jacobian,
 		jacobian.mv(referenceGradients[i], gradients[i]);
 }
 
+/**
+ * evaluates the gradients of testfunctions at global scope and assembles the value for a coefficient vector
+ * @param lfu			local finite element
+ * @param jacobian		jacobian of the cell transformation
+ * @param x				local position of x
+ * @param gradients		return the gradients
+ */
 template< class FiniteElement, class JacobianType>
 inline
 void assemble_gradients_gradu(const FiniteElement &lfu, const JacobianType &jacobian,
@@ -48,10 +102,57 @@ void assemble_gradients_gradu(const FiniteElement &lfu, const JacobianType &jaco
 
 	assemble_gradients(lfu, jacobian, x, gradients);
 
-//    assert( gradu.one_norm() == 0);
+    assert( gradu.one_norm() == 0);
 
     for (int i=0; i<lfu.size(); i++)
     	gradu.axpy(x_local(i),gradients[i]);
+}
+
+
+/**
+ * evaluate the hessian of test functions at global scope
+ * @param lfu			local finite element
+ * @param jacobian		jacobian of the cell transformation
+ * @param x				local position of x
+ * @param hessians		return the hessian
+ */
+template< class FiniteElement, class JacobianType>
+inline
+void assemble_hessians(const FiniteElement &lfu, const JacobianType &jacobian,
+						const Solver_config::SpaceType& x, std::vector<typename FiniteElement::HessianType>& hessians)
+{
+	assert(hessians.size() == lfu.size());
+
+	// The hessian of the shape functions on the reference element
+	std::vector<typename FiniteElement::HessianType> referenceHessians(lfu.size());
+	lfu.localBasis().evaluateHessian(x,referenceHessians);
+
+	auto jacobianTransposed = jacobian;
+	jacobianTransposed [1][0] = jacobian [0][1];
+	jacobianTransposed [0][1] = jacobian [1][0];
+	for (size_t i = 0; i < hessians.size(); i++)
+	{
+		hessians[i].leftmultiply(jacobianTransposed);
+		hessians[i].rightmultiply(jacobian);
+	}
+
+}
+
+template< class FiniteElement, class JacobianType>
+inline
+void assemble_hessians_hessu(const FiniteElement &lfu, const JacobianType &jacobian,
+		const Solver_config::SpaceType& x, std::vector<typename FiniteElement::HessianType>& hessians,
+		const Solver_config::VectorType& x_local, typename FiniteElement::HessianType& hessu)
+{
+	assert(hessians.size() == lfu.size());
+	assert(x_local.size() == lfu.size());
+
+	assemble_gradients(lfu, jacobian, x, hessians);
+
+    assert( hessu.infinity_norm() == 0);
+
+    for (int i=0; i<lfu.size(); i++)
+    	hessu.axpy(x_local(i), hessians[i]);
 }
 
 
@@ -300,8 +401,8 @@ void Assembler::assemble_DG(LocalOperatorType lop, const VectorType& x, VectorTy
 				}
 			} else if (iit->boundary()) {
 				// Boundary integration
-				lop.assemble_boundary_face_term(*iit, localFiniteElement, xLocal,
-						local_vector);
+//				lop.assemble_boundary_face_term(*iit, localFiniteElement, xLocal,
+//						local_vector);
 			} else {
 				std::cerr << " I do not know how to handle this intersection"
 						<< std::endl;
@@ -381,8 +482,8 @@ void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const VectorType& x,
 
 			} else if (iit->boundary()) {
 				// Boundary integration
-				lop.assemble_boundary_face_Jacobian(*iit, localFiniteElement, xLocal,
-						m_m);
+//				lop.assemble_boundary_face_Jacobian(*iit, localFiniteElement, xLocal,
+//						m_m);
 			} else {
 				std::cerr << " I do not know how to handle this intersection"
 						<< std::endl;
