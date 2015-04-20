@@ -33,7 +33,7 @@ public:
 
 	static double a_tilde(const double u_value, const Solver_config::SpaceType2d& gradu, const Solver_config::SpaceType2d& x)
 	{
-		return gradu*gradu;// - sqr(u_value);// + (gradu*x));
+		return gradu*gradu - sqr(u_value+ (gradu*x));
 	}
 /**
  * implements the local volume integral
@@ -499,8 +499,7 @@ void assemble_cell_Jacobian(const Element& element, const MixedElement<LocalElem
 		for (size_t j = 0; j < size_u; j++) // loop over test fcts
 			for (size_t i = 0; i < size_u; i++)
 			{
-				double Da = 2*(gradu*gradients[i]);//- u_value//+ (gradu*x_value))
-						 	 	// *(referenceFunctionValues[i]);//+(gradients[i]*x_value));
+				double Da = 2*(gradu*gradients[i])- 2*(u_value+ (gradu*x_value))*(referenceFunctionValues[i]+(gradients[i]*x_value));
 				double Db = 2*(gradu*gradients[i]) - 2.0*u_value*referenceFunctionValues[i] -2.0*(gradu*x_value)*(gradients[i]*x_value);
 
 
