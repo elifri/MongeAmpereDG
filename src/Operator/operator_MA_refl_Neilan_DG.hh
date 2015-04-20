@@ -118,10 +118,12 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 		auto t = 1 - u_value *z_3/omega(x_value);
 		assert ( t > 0);
 
-		Solver_config::SpaceType2d z_0 = gradu; z_0 *= 2.0/a_tilde_value;
-		Solver_config::SpaceType2d z = x_value;
-		z *= (1.0/u_value);
-		z.axpy(t,z_0); z.axpy(-t/u_value,x_value);
+//		Solver_config::SpaceType2d z_0 = {1.0, 1.0};//gradu;
+		auto z_0 = 2.0/a_tilde_value*gradu[0];
+//		Solver_config::SpaceType2d z = x_value;
+//		z *= (1.0/u_value);
+//		z.axpy(t,z_0); z.axpy(-t/u_value,x_value);
+		Solver_config::SpaceType2d z = gradu; z *= (2.0/a_tilde_value);
 
 //		assert( D_psi * (Z - X/u_value) > 0);
 
@@ -134,12 +136,12 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 		rhs.g(z, g_value);
 //		double PDE_rhs = -a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde*omega(x_value)*g_value);
 
-		double PDE_rhs = a_tilde_value;
 
 		//calculate system for first test functions
 
 		for (size_t j = 0; j < size_u; j++) // loop over test fcts
 		{
+				double PDE_rhs = z*gradients[j];
 				v(j) += (PDE_rhs-pertubed_matrix.determinant())*referenceFunctionValues[j]
 						* quad[pt].weight() * integrationElement;
 //				std::cout << "det(u)-f=" << uDH.determinant()<<"-"<< f <<"="<< uDH.determinant()-f<< std::endl;
@@ -494,6 +496,8 @@ void assemble_cell_Jacobian(const Element& element, const MixedElement<LocalElem
 		auto factor = f_value /4.0/omega(x_value);
 		double g_value;
 		rhs.g(z, g_value);
+		Solver_config::SpaceType2d Dg_value;
+		rhs.Dg(z, Dg_value);
 
 
 		for (size_t j = 0; j < size_u; j++) // loop over test fcts
@@ -503,12 +507,16 @@ void assemble_cell_Jacobian(const Element& element, const MixedElement<LocalElem
 				double Db = 2*(gradu*gradients[i]) + 2.0*u_value*referenceFunctionValues[i] -2.0*(gradu*x_value)*(gradients[i]*x_value);
 
 
-				auto DZ = gradu; DZ *= -2.0/sqr(a_tilde_value)*Da; DZ.axpy(2.0/a_tilde_value, gradients[i]);
+				Solver_config::SpaceType2d DZ = gradu;
+				Solver_config::SpaceType2d temp ={gradients[i][0], gradients[i][1]};
+			//	auto DZ = -2.0*Da/sqr(a_tilde_value)*gradu + 2.0*gradients[i][0]/a_tilde_value ;
+				DZ*= -2.0/sqr(a_tilde_value);
+				DZ.axpy(2.0/a_tilde_value, gradients[i]);
 
 //				auto DPDE_rhs = factor*( (-a_tilde_pow3*Db*g_value+ b_tilde_value*(Dg_value*DZ))/sqr(b_tilde_value*g_value)
 //						                 + 3.0*a_tilde_value*Da/b_tilde_value/g_value );
 
-				double DPDE_rhs = Da;
+				double DPDE_rhs = DZ*gradients[j];
 
 				m(j, i) += DPDE_rhs*referenceFunctionValues[j]*quad[pt].weight()*integrationElement;
 			}
