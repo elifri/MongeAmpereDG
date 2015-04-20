@@ -500,7 +500,7 @@ void assemble_cell_Jacobian(const Element& element, const MixedElement<LocalElem
 			for (size_t i = 0; i < size_u; i++)
 			{
 				double Da = 2*(gradu*gradients[i])- 2*(u_value+ (gradu*x_value))*(referenceFunctionValues[i]+(gradients[i]*x_value));
-				double Db = 2*(gradu*gradients[i]) - 2.0*u_value*referenceFunctionValues[i] -2.0*(gradu*x_value)*(gradients[i]*x_value);
+				double Db = 2*(gradu*gradients[i]) + 2.0*u_value*referenceFunctionValues[i] -2.0*(gradu*x_value)*(gradients[i]*x_value);
 
 
 				auto DZ = gradu; DZ *= -2.0/sqr(a_tilde_value)*Da; DZ.axpy(2.0/a_tilde_value, gradients[i]);
