@@ -118,12 +118,11 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 		auto t = 1 - u_value *z_3/omega(x_value);
 		assert ( t > 0);
 
-//		Solver_config::SpaceType2d z_0 = {1.0, 1.0};//gradu;
-		auto z_0 = 2.0/a_tilde_value*gradu[0];
+		Solver_config::SpaceType2d z_0 = gradu; z_0 *= (2.0/a_tilde_value);
 //		Solver_config::SpaceType2d z = x_value;
 //		z *= (1.0/u_value);
 //		z.axpy(t,z_0); z.axpy(-t/u_value,x_value);
-		Solver_config::SpaceType2d z = gradu; z *= (2.0/a_tilde_value);
+		Solver_config::SpaceType2d z = z_0;
 
 //		assert( D_psi * (Z - X/u_value) > 0);
 
@@ -508,9 +507,7 @@ void assemble_cell_Jacobian(const Element& element, const MixedElement<LocalElem
 
 
 				Solver_config::SpaceType2d DZ = gradu;
-				Solver_config::SpaceType2d temp ={gradients[i][0], gradients[i][1]};
-			//	auto DZ = -2.0*Da/sqr(a_tilde_value)*gradu + 2.0*gradients[i][0]/a_tilde_value ;
-				DZ*= -2.0/sqr(a_tilde_value);
+				DZ*= -2.0*Da/sqr(a_tilde_value);
 				DZ.axpy(2.0/a_tilde_value, gradients[i]);
 
 //				auto DPDE_rhs = factor*( (-a_tilde_pow3*Db*g_value+ b_tilde_value*(Dg_value*DZ))/sqr(b_tilde_value*g_value)
