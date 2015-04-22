@@ -46,13 +46,14 @@ include(DuneMacros)
 #fieser hack ... 
 set(EIGEN3_INCLUDE_DIR "/home/data/friebel/workspace/eigen")
 set(IGPM_T2_LIB_INCLUDES "/home/data/friebel/workspace/igpm_t2_lib/include")
-message("eigen include dir ${EIGEN3_INCLUDE_DIR} \n")
+message("CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} \n")
 
 find_package(Umfpack REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(adolc REQUIRED)
 #find_package(IGPM_T2_LIB REQUIRED HINTS ${IGPM_T2_LIB_INCLUDE_DIR})
 
-include_directories(${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${IGPM_T2_LIB_INCLUDES})
+include_directories(${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${IGPM_T2_LIB_INCLUDES} ${ADOLC_INCLUDES})
 
 
 
