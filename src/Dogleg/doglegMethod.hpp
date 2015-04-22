@@ -20,9 +20,7 @@
 #include <Eigen/UmfPackSupport>
 
 #include "utils.hpp"
-#include "/home/data/friebel/workspace/MongeAmpereDG2/include/matlab_export.hpp"
 #include "igpm_t2_lib.hpp"
-//#include "../test/test_utils.hpp"
 
 #include <cmath>
 #include <iomanip>
@@ -79,8 +77,8 @@ bool checkJacobian(
 
 	if (exportFDJacobianifFalse)
 	{
-		MATLAB_export(J, "Jacobian");
-		MATLAB_export(estimated_J, "FDJacobian");
+//		MATLAB_export(J, "Jacobian");
+//		MATLAB_export(estimated_J, "FDJacobian");
 	}
 //	MATLAB_export(x, "startvector");
 
@@ -156,7 +154,7 @@ void doglegMethod (
     functor.evaluate(x,f);
     functor.derivative(x,J);
 //    if (opts.check_Jacobian)	checkJacobian(functor, x);
-    MATLAB_export(J, "J");
+//    MATLAB_export(J, "J");
 
     // Check result of function calls for correct length of vectors
     if (x.size() != f.size()) {
@@ -190,7 +188,7 @@ void doglegMethod (
         // decomposition failed
         std::cout << "\nError: "<< lu_of_J.info() << " Could not compute LU decomposition!\n";
         if (opts.exportJacobianIfSingular) {
-            MATLAB_export(J,"J");
+//            MATLAB_export(J,"J");
 //        	std::cout << J << std::endl;
         }
         exit(1);
@@ -253,7 +251,7 @@ void doglegMethod (
                 // solving failed
                 std::cerr << "\nError "<< lu_of_J.info() << ": Could not solve the linear system of equations!\n";
                 if (opts.exportJacobianIfSingular) {
-                    MATLAB_export(J,"J");
+//                    MATLAB_export(J,"J");
                 }
                 exit(1);
             }
@@ -363,7 +361,7 @@ void doglegMethod (
                     // decomposition failed
                     std::cerr << "\nError: Could not compute LU decomposition!\n";
                     if (opts.exportJacobianIfSingular) {
-                        MATLAB_export(J,"J");
+//                        MATLAB_export(J,"J");
                     }
                     exit(1);
                 }

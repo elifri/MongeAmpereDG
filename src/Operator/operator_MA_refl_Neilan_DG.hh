@@ -329,6 +329,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
 	assert(v.size() == localFiniteElement.size());
 
 	typedef typename LocalElement0::Traits::LocalBasisType::Traits::RangeType RangeType;
+	const int size_u = localFiniteElement.size(u());
 
 	// Get a quadrature rule
     const int order = std::max( 0, 2 * ( (int)localFiniteElement.order() ));
@@ -358,36 +359,31 @@ void assemble_boundary_face_term(const Intersection& intersection,
 		// The transposed inverse Jacobian of the map from the reference element to the element
 		const auto& jacobian = intersection.inside()->geometry().jacobianInverseTransposed(quadPos);
 
-		// The shape functions on the reference elements
-		std::vector<RangeType > referenceFunctionValues;
-		localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+		//the shape function values
+		std::vector<RangeType> referenceFunctionValues(size_u);
+		RangeType u_value(0);
+		assemble_functionValues_u(localFiniteElement(u()), quadPos, referenceFunctionValues, x.segment(0, size_u), u_value);
+
+		// The gradients
+		std::vector<typename LocalElement0::JacobianType> gradients(size_u);
+		typename LocalElement0::JacobianType gradu(0.0);
+		assemble_gradients_gradu(localFiniteElement(u()), jacobian, quadPos, gradients, x.segment(0, size_u), gradu);
 
 
-		// The gradients of the shape functions on the reference element
-		std::vector<typename LocalElement0::JacobianType> gradients(localFiniteElement.size(u()));
-	    FieldVector<double,dim> gradu(0.0);
-		assemble_gradients_gradu(localFiniteElement(u()), jacobian, quadPos, gradients, x.segment(0,localFiniteElement.size(u())), gradu);
-
-		//---------evaluate u and grad u-----------
-	    // evaluate u
-	    double u_value = 0.0;
-	    for (size_t i=0; i<localFiniteElement.size(u()); i++)
-	    	u_value += x(i)*referenceFunctionValues[i];
-
-
+	    //-------calculate integral--------
 	    auto phi_value = rhs.phi(x_value);
 
     	auto a_tilde_value = a_tilde(u_value, gradu, x_value);
     	auto T_value = gradu; T_value *= 2./a_tilde_value;
 
-	    //-------calculate integral--------
 	    const auto integrationElement = intersection.geometry().integrationElement(quad[pt].position());
 	    const double factor = quad[pt].weight()*integrationElement;
 	    for (unsigned int j=0; j<localFiniteElement.size(u()); j++) //parts from self
 	    {
 
 			// NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
-			v(j) += penalty_weight*((T_value*normal)-phi_value)*referenceFunctionValues[j]*factor;
+//			v(j) += penalty_weight*((T_value*normal)-phi_value)*referenceFunctionValues[j]*factor;
+	    	v(j) += penalty_weight*(T_value[0])*referenceFunctionValues[j]*factor;
 	    }
 
 	}
@@ -682,6 +678,7 @@ void assemble_boundary_face_Jacobian(const Intersection& intersection,
 								MatrixType& m) const {
 
 	const int dim = Intersection::dimension;
+	const int dimw = Intersection::dimensionworld;
 
 	//assuming galerkin
 	assert(x.size() == localFiniteElement.size());
@@ -689,6 +686,7 @@ void assemble_boundary_face_Jacobian(const Intersection& intersection,
 	assert(m.cols() == localFiniteElement.size());
 
 	typedef typename LocalElement0::Traits::LocalBasisType::Traits::RangeType RangeType;
+	const int size_u = localFiniteElement.size(u());
 
 	// Get a quadrature rule
     const int order = std::max( 0, 2 * ( (int)localFiniteElement.order() ));
@@ -697,9 +695,9 @@ void assemble_boundary_face_Jacobian(const Intersection& intersection,
 			QuadratureRules<double, dim-1>::rule(gtface, order);
 
 	// normal of center in face's reference element
-//	const FieldVector<double,dim-1>& face_center = ReferenceElements<double,dim-1>::
-//	          general(intersection.geometry().type()).position(0,0);
-//	const FieldVector<double,dimw> normal = intersection.unitOuterNormal(face_center);
+	const FieldVector<double,dim-1>& face_center = ReferenceElements<double,dim-1>::
+	          general(intersection.geometry().type()).position(0,0);
+	const FieldVector<double,dimw> normal = intersection.unitOuterNormal(face_center);
 
 	// penalty weight for NIPG / SIPG
 	double penalty_weight = Solver_config::sigma*(Solver_config::degree*Solver_config::degree) / std::pow(intersection.geometry().volume(), Solver_config::beta);
@@ -712,37 +710,38 @@ void assemble_boundary_face_Jacobian(const Intersection& intersection,
 
 		// Position of the current quadrature point in the reference element
 		const FieldVector<double, dim> &quadPos = intersection.geometryInInside().global(quad[pt].position());
-
-		// The shape functions on the reference elements
-		std::vector<RangeType > referenceFunctionValues;
-		localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
-
-/*
-		// The gradients of the shape functions on the reference element
-		std::vector<FieldMatrix<double, 1, dim> > referenceGradients;
-		localFiniteElement(u()).localBasis().evaluateJacobian(quadPos,referenceGradients);
-*/
-
-		//-------transform data---------------
-/*
-		// The transposed inverse Jacobian of the map from the reference element to the element
 		const auto& jacobian = intersection.inside()->geometry().jacobianInverseTransposed(quadPos);
+	    auto x_value = intersection.inside()->geometry().global(quadPos);
 
-		// Compute the shape function gradients on the real element
-		std::vector<FieldVector<double, dim> > gradients(referenceGradients.size());
-		for (size_t i = 0; i < gradients.size(); i++)
-			jacobian.mv(referenceGradients[i][0], gradients[i]);
-*/
+		//the shape function values
+		std::vector<RangeType> referenceFunctionValues(size_u);
+		RangeType u_value(0);
+		assemble_functionValues_u(localFiniteElement(u()), quadPos, referenceFunctionValues, x.segment(0, size_u), u_value);
+
+		// The gradients
+		std::vector<typename LocalElement0::JacobianType> gradients(size_u);
+		typename LocalElement0::JacobianType gradu(0.0);
+		assemble_gradients_gradu(localFiniteElement(u()), jacobian, quadPos, gradients, x.segment(0, size_u), gradu);
 
 	    //-------calculate integral--------
+	    auto phi_value = rhs.phi(x_value);
+
+    	auto a_tilde_value = a_tilde(u_value, gradu, x_value);
+
 	    const auto integrationElement = intersection.geometry().integrationElement(quad[pt].position());
 	    const double factor = quad[pt].weight()*integrationElement;
 	    for (size_t j=0; j<localFiniteElement.size(u()); j++) //parts from self
 	    {
 	    	for (size_t i = 0; i < localFiniteElement.size(u()); i++)
 	    	{
+				double Da = 2*(gradu*gradients[i])- 2*(u_value+ (gradu*x_value))*(referenceFunctionValues[i]+(gradients[i]*x_value));
+
+				Solver_config::SpaceType2d DT = gradu;
+				DT= -2.0*Da/sqr(a_tilde_value);
+				DT.axpy(2.0/a_tilde_value, gradients[i]);
+
 	    		// NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
-	    		m(j,i) += penalty_weight * referenceFunctionValues[i]*referenceFunctionValues[j]*factor;
+	    		m(j,i) += penalty_weight * (DT[0])*referenceFunctionValues[j]*factor;
 	    	}
 	    }
 

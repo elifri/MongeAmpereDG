@@ -18,6 +18,7 @@ template <class D, class R>
 using const_function_type = util::Function <void (const D&, R&) const>;
 
 typedef function_type<Solver_config::DomainType, Solver_config::RangeType> MA_function_type;
+typedef function_type<Solver_config::DomainType, Solver_config::DomainType> derivative_function_type;
 typedef const_function_type<Solver_config::DomainType, Solver_config::RangeType> MA_const_function_type;
 
 typedef function_type<Solver_config::DomainType, Solver_config::HessianRangeType> MA_derivative_function_type;

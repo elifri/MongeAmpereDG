@@ -5,7 +5,7 @@
  *      Author: friebel
  */
 
-
+#include <cmath>
 
 bool is_close(const double a, const double b, const double tolerance) {
 	bool B=( std::abs(b-a) < tolerance);

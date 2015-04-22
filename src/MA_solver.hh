@@ -103,27 +103,22 @@ public:
 			assert(solver_ptr != NULL);
 			igpm::processtimer timer;
 			timer.start();
-//			Local_Operator_MA_mixed_Neilan lop;
-			Local_Operator_MA_refl_Neilan lop;
-
 			solver_ptr->assemble_DG(lop, x,v); timer.stop();
 //			std::cout << "needed " << timer << " seconds for function evaluation" << std::endl;
 		}
 		void Jacobian(const VectorType& x, MatrixType& m) const
 		{
 			assert(solver_ptr != NULL);
-//			Local_Operator_MA_mixed_Neilan lop;
-			Local_Operator_MA_refl_Neilan lop;
 			solver_ptr->assemble_Jacobian_DG(lop, x,m);
 		}
 		void derivative(const VectorType& x, MatrixType& m) const
 		{
 			assert(solver_ptr != NULL);
-//			Local_Operator_MA_mixed_Neilan lop;
-			Local_Operator_MA_refl_Neilan lop;
 			solver_ptr->assemble_Jacobian_DG(lop, x,m);
 		}
 
+//		Local_Operator_MA_mixed_Neilan lop;
+		Local_Operator_MA_refl_Neilan lop;
 		const MA_solver* solver_ptr;
 	};
 

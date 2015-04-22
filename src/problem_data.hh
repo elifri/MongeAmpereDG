@@ -137,13 +137,15 @@ namespace PDE_functions{
 	void f(const Solver_config::SpaceType2d& x, double &out);
 
 	void g_initial(const Solver_config::SpaceType2d& z, double &out);
+
+	void Dg_initial(const Solver_config::SpaceType2d& z, Solver_config::SpaceType2d &out); /// derivative of g_initial
 }
 
 
 class RightHandSideReflector{
 public:
-	RightHandSideReflector():g_initial_callback(FREE_FUNCTION(&PDE_functions::g_initial)), f_callback(FREE_FUNCTION(&PDE_functions::f)) {}
-	RightHandSideReflector(const MA_function_type g_initial, const MA_function_type f):g_initial_callback(g_initial), f_callback(f) {}
+	RightHandSideReflector():g_initial_callback(FREE_FUNCTION(&PDE_functions::g_initial)), f_callback(FREE_FUNCTION(&PDE_functions::f)), Dg_initial_callback(FREE_FUNCTION(&PDE_functions::Dg_initial)) {}
+	RightHandSideReflector(const MA_function_type g_initial, const derivative_function_type Dg_initial, const MA_function_type f):g_initial_callback(g_initial), f_callback(f), Dg_initial_callback(Dg_initial) {}
 
 
 	void init();
@@ -159,6 +161,13 @@ public:
 		out *= integral_f/integral_g;
 	}
 
+	///this function asserts to fulfill the (mass) conservation int f = int g
+	void Dg(const Solver_config::SpaceType2d& z, Solver_config::SpaceType2d &out) const{
+		Dg_initial_callback(z, out);
+		out *= integral_f/integral_g;
+	}
+
+
 	double phi(const Solver_config::SpaceType& x) const{
 		Solver_config::SpaceType T;
 		if(is_close(x[0], Solver_config::lowerLeft[0])) //x_0 = r_1 in andreas' notion
@@ -173,6 +182,7 @@ public:
 
 private:
 	MA_function_type g_initial_callback, f_callback;
+	derivative_function_type Dg_initial_callback;
 
 	double integral_g;
 	double integral_f;

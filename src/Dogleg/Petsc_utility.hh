@@ -95,15 +95,14 @@ int from_petsvec_to_eigen(const Vec& v_pets, Solver_config::VectorType& v)
 inline
 int from_eigen_to_petscmat(const Solver_config::MatrixType& mat, Mat& mat_petsc)
 {
-	int ierr = MatSeqAIJSetPreallocation(mat_petsc,mat.nonZeros(),NULL);CHKERRQ(ierr);
+//	int ierr = MatSeqAIJSetPreallocation(mat_petsc,mat.nonZeros(),NULL);CHKERRQ(ierr);
 
-	assert (ierr == 0);
+	int ierr = 0;
 
 	PetscInt rows[mat.nonZeros()];
 	PetscInt cols[mat.nonZeros()];
 	PetscScalar values[mat.nonZeros()];
 
-	MATLAB_export(mat, "a_eigen");
 
 	for (int k=0; k<mat.outerSize(); ++k)
 	  for (Solver_config::MatrixType::InnerIterator it(mat,k); it; ++it)
@@ -148,6 +147,7 @@ private:
 	PetscReal      abstol,rtol,stol,norm;
 
 	SNES           snes;                   /* SNES context */
+	SNESLineSearch	linesearch;
 
 
 	Vec     x,r;             /* vectors */
@@ -225,6 +225,13 @@ int PETSC_SNES_Wrapper<OperatorType>::init(int n_dofs, int guess_nonzeros_J)
 
   ierr = SNESSetJacobian(snes,J,J,FormJacobian,NULL);CHKERRQ(ierr);
 
+//  Mat Jmf;
+
+//  MatCreateSNESMF(snes,&Jmf);
+//  SNESSetJacobian(snes,J,J,SNESComputeJacobianDefault,NULL);
+//  SNESSetJacobian(snes,Jmf,J,SNESComputeJacobianDefaultColor,0);
+
+
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Customize nonlinear solver; set runtime options
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -232,8 +239,8 @@ int PETSC_SNES_Wrapper<OperatorType>::init(int n_dofs, int guess_nonzeros_J)
   /*
      Set an optional user-defined monitoring routine
   */
-  ierr = PetscViewerDrawOpen(PETSC_COMM_WORLD,0,0,0,0,400,400,&monP.viewer);CHKERRQ(ierr);
-  ierr = SNESMonitorSet(snes,Monitor,&monP,0);CHKERRQ(ierr);
+//  ierr = PetscViewerDrawOpen(PETSC_COMM_WORLD,0,0,0,0,400,400,&monP.viewer);CHKERRQ(ierr);
+//  ierr = SNESMonitorSet(snes,Monitor,&monP,0);CHKERRQ(ierr);
 
   /*
      Set names for some vectors to facilitate monitoring (optional)
@@ -301,8 +308,7 @@ int PETSC_SNES_Wrapper<OperatorType>::solve(Solver_config::VectorType &v)
   ierr = VecDestroy(&x);CHKERRQ(ierr);  ierr = VecDestroy(&r);CHKERRQ(ierr);
 //  ierr = VecDestroy(&U);CHKERRQ(ierr);  ierr = VecDestroy(&F);CHKERRQ(ierr);
   ierr = MatDestroy(&J);CHKERRQ(ierr);  ierr = SNESDestroy(&snes);CHKERRQ(ierr);
-  ierr = PetscViewerDestroy(&monP.viewer);CHKERRQ(ierr);
-  ierr = PetscFinalize();
+//  ierr = PetscViewerDestroy(&monP.viewer);CHKERRQ(ierr);
 
   return 0;
 }
@@ -376,6 +382,9 @@ PetscErrorCode PETSC_SNES_Wrapper<OperatorType>::FormJacobian(SNES snes,Vec x,Ma
     assert(J.nonZeros() < 2147483647);
 
     ierr = from_eigen_to_petscmat(J, jac);
+
+
+//    MatView(jac, PETSC_VIEWER_STDOUT_WORLD);
 
   return 0;
 }

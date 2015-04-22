@@ -367,7 +367,7 @@ void Assembler::assemble_DG(LocalOperatorType lop, const VectorType& x, VectorTy
 		//calculate local coefficients
 		VectorType xLocal = dof_handler.calculate_local_coefficients(id, x);
 
-		lop.assemble_cell_term(e, localFiniteElement, xLocal, local_vector);
+//		lop.assemble_cell_term(e, localFiniteElement, xLocal, local_vector);
 
 		// Traverse intersections
 
@@ -401,8 +401,8 @@ void Assembler::assemble_DG(LocalOperatorType lop, const VectorType& x, VectorTy
 				}
 			} else if (iit->boundary()) {
 				// Boundary integration
-//				lop.assemble_boundary_face_term(*iit, localFiniteElement, xLocal,
-//						local_vector);
+				lop.assemble_boundary_face_term(*iit, localFiniteElement, xLocal,
+						local_vector);
 			} else {
 				std::cerr << " I do not know how to handle this intersection"
 						<< std::endl;
@@ -442,7 +442,7 @@ void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const VectorType& x,
 		IndexType id = indexSet.index(e);
 		VectorType xLocal = dof_handler.calculate_local_coefficients(id, x);
 
-		lop.assemble_cell_Jacobian(e, localFiniteElement, xLocal, m_m);
+//		lop.assemble_cell_Jacobian(e, localFiniteElement, xLocal, m_m);
 
 		// Traverse intersections
 		unsigned int intersection_index = 0;
@@ -482,8 +482,8 @@ void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const VectorType& x,
 
 			} else if (iit->boundary()) {
 				// Boundary integration
-//				lop.assemble_boundary_face_Jacobian(*iit, localFiniteElement, xLocal,
-//						m_m);
+				lop.assemble_boundary_face_Jacobian(*iit, localFiniteElement, xLocal,
+						m_m);
 			} else {
 				std::cerr << " I do not know how to handle this intersection"
 						<< std::endl;

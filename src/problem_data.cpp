@@ -15,6 +15,12 @@ void PDE_functions::g_initial(const Solver_config::SpaceType2d& z, double &out){
 	out = 1;
 }
 
+void PDE_functions::Dg_initial(const Solver_config::SpaceType2d& z, Solver_config::SpaceType2d &out){
+	out[0] = 0;
+	out[1] = 0;
+}
+
+
 
 void RightHandSideReflector::init(){
 	Solver_config::UnitCubeType unitcube_quadrature(Solver_config::lowerLeft, Solver_config::upperRight, Solver_config::startlevel+Solver_config::nonlinear_steps);
