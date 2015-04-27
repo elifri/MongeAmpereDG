@@ -308,29 +308,29 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 
 	    	//neighbour parts
 	    	// NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
-//	    	vn_adolc(j) += penalty_weight * u_jump*(-referenceFunctionValuesn[j])*factor;
+	    	vn_adolc(j) += penalty_weight * u_jump*(-referenceFunctionValuesn[j])*factor;
 	    	// gradient penalty
-//	    	grad_times_normal = gradientsn[j]*normal;
-//	    	vn_adolc(j) += penalty_weight_gradient * (grad_u_normaljump) * (-grad_times_normal)*factor;
+	    	grad_times_normal = gradientsn[j]*normal;
+	    	vn_adolc(j) += penalty_weight_gradient * (grad_u_normaljump) * (-grad_times_normal)*factor;
 	    }
 
 		for (size_t j = 0; j < size_u_DH; j++) // loop over test fcts
 		{
 
-//	    	//parts from self
-//	    	// dicr. hessian correction term: jump{avg{mu} grad_u}
-//			FieldVector<adouble,dim> temp;
-//			referenceFunctionValuesHessian[j].mv(gradu, temp);
-//			v_adolc(size_u+j) += 0.5*( temp*normal);
-//			referenceFunctionValuesHessian[j].mv(gradun, temp);
-//			v_adolc(size_u+j) += -0.5*( temp*normal); //a - sign for the normal
-//
-//			//neighbour parts
-//	    	// dicr. hessian correction term: jump{avg{mu} grad_u}
-//			referenceFunctionValuesHessiann[j].mv(gradu, temp);
-//			vn_adolc(size_u+j) += 0.5*( temp*normal);
-//			referenceFunctionValuesHessiann[j].mv(gradun, temp);
-//			vn_adolc(size_u+j) += -0.5*( temp*normal); //a - sign for the normal
+	    	//parts from self
+	    	// dicr. hessian correction term: jump{avg{mu} grad_u}
+			FieldVector<adouble,dim> temp;
+			referenceFunctionValuesHessian[j].mv(gradu, temp);
+			v_adolc(size_u+j) += 0.5*( temp*normal);
+			referenceFunctionValuesHessian[j].mv(gradun, temp);
+			v_adolc(size_u+j) += -0.5*( temp*normal); //a - sign for the normal
+
+			//neighbour parts
+	    	// dicr. hessian correction term: jump{avg{mu} grad_u}
+			referenceFunctionValuesHessiann[j].mv(gradu, temp);
+			vn_adolc(size_u+j) += 0.5*( temp*normal);
+			referenceFunctionValuesHessiann[j].mv(gradun, temp);
+			vn_adolc(size_u+j) += -0.5*( temp*normal); //a - sign for the normal
 		}
 	}
 
