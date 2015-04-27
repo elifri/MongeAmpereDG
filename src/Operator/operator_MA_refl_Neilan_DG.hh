@@ -200,7 +200,6 @@ void assemble_inner_face_term(const IntersectionType& intersection,
 								const MixedElement<LocalElement0, LocalElement1> &localFiniteElement, const VectorType &x,
 								const MixedElement<LocalElement0, LocalElement1> &localFiniteElementn, const VectorType &xn,
 								VectorType& v, VectorType& vn, int tag) const {
-//	std::cout << "tag " << tag << std::endl;
 	const int dim = IntersectionType::dimension;
 	const int dimw = IntersectionType::dimensionworld;
 
@@ -510,7 +509,7 @@ void assemble_inner_face_Jacobian(const Intersection& intersection,
 	for (int i = 0; i < n_var; i++)
 		out[i] = new double [n_var];
 	int ierr = jacobian(tag, n_var, n_var, x_xn.data(), out);
-	std::cout <<"ierr " << ierr << std::endl;
+//	std::cout <<"ierr " << ierr << std::endl;
 
 //TODO any better way to initialise matrix?
 	for (int i = 0; i < x.size(); i++)

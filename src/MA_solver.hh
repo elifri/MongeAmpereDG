@@ -427,19 +427,13 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 	assert (initialised);
 	//calculate initial solution
 
-	Linear_System_Local_Operator_Poisson_DG<RightHandSideInitial, Dirichletdata> lop;
-
-
-	MatrixType m(dof_handler.get_n_dofs_u(), dof_handler.get_n_dofs_u());
-	VectorType rhs(dof_handler.get_n_dofs_u());
-	assemble_linear_system_DG(lop, m, rhs);
-
-//	MATLAB_export(m, "stiffness_matrix");
-//	MATLAB_export(rhs, "rhs");
-	assert(m.nonZeros() > 0);
-
-
 	//init solution by laplace u = -sqrt(2f)
+
+//	Linear_System_Local_Operator_Poisson_DG<RightHandSideInitial, Dirichletdata> lop;
+//	MatrixType m(dof_handler.get_n_dofs_u(), dof_handler.get_n_dofs_u());
+//	VectorType rhs(dof_handler.get_n_dofs_u());
+//	assemble_linear_system_DG(lop, m, rhs);
+//	assert(m.nonZeros() > 0);
 
 /*
 	Eigen::SimplicialLDLT<MatrixType> CholeskySolver(m);
@@ -470,13 +464,15 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 
 	vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
 
-	std::cout << "x projected " << exactsol_projection.transpose() << std::endl;
-
-	project(General_functions::get_easy_convex_polynomial_callback(), solution);
+//	project(General_functions::get_easy_convex_polynomial_callback(), solution);
+	solution = VectorType::Ones(dof_handler.get_n_dofs());
 //	solution = exactsol_projection;
 
 	vtkplotter.write_numericalsolution_VTK(0, "initial_guess");
-
+	std::cout << "solution " << solution.transpose() << std::endl;
+	vtkplotter.write_numericalmirror_VTK(count_refined, "initial_guessMirror");
+	vtkplotter.write_numericalmirror_pov(count_refined, "initial_guessMirror");
+	std::cout << "solution " << solution.transpose() << std::endl;
 
 	for (int i = 0; i < Solver_config::nonlinear_steps; i++)
 	{
@@ -721,6 +717,7 @@ void MA_solver<Config>::solve_nonlinear_step()
 	opts.maxsteps = 100;
 	opts. silentmode = false;
 	opts.exportJacobianIfSingular= true;
+	opts.exportFDJacobianifFalse = true;
 	opts.check_Jacobian = false;
 //
 	doglegMethod(op, opts, solution);
