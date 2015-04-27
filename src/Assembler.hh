@@ -354,7 +354,7 @@ void Assembler::assemble_DG(LocalOperatorType lop, const VectorType& x, VectorTy
 	// The index set gives you indices for each element , edge , face , vertex , etc .
 	const GridViewType::IndexSet& indexSet = gridView_ptr->indexSet();
 
-	int intersection_count = 0;
+	int tag_count = 0;
 
 	// A loop over all elements of the grid
 	for (auto&& e : elements(*gridView_ptr)) {
@@ -370,7 +370,8 @@ void Assembler::assemble_DG(LocalOperatorType lop, const VectorType& x, VectorTy
 		//calculate local coefficients
 		VectorType xLocal = dof_handler.calculate_local_coefficients(id, x);
 
-//		lop.assemble_cell_term(e, localFiniteElement, xLocal, local_vector, id);
+		lop.assemble_cell_term(e, localFiniteElement, xLocal, local_vector, tag_count);
+		tag_count++;
 
 		// Traverse intersections
 		for (auto&& is : intersections(*gridView_ptr, e)) {
@@ -394,15 +395,16 @@ void Assembler::assemble_DG(LocalOperatorType lop, const VectorType& x, VectorTy
 					VectorType local_vectorn = VectorType::Zero(xLocaln.size());
 
 					lop.assemble_inner_face_term(is, localFiniteElement, xLocal,
-							localFiniteElement, xLocaln, local_vector, local_vectorn, intersection_count);
+							localFiniteElement, xLocaln, local_vector, local_vectorn, tag_count);
 
 					v.segment(dof_handler.get_offset(idn), local_vectorn.size()) += local_vectorn;
-					intersection_count++;
+					tag_count++;
 				}
 			} else if (is.boundary()) {
 				// Boundary integration
-//				lop.assemble_boundary_face_term(*iit, localFiniteElement, xLocal,
-//						local_vector);
+				lop.assemble_boundary_face_term(is, localFiniteElement, xLocal,
+						local_vector, tag_count);
+				tag_count++;
 			} else {
 				std::cerr << " I do not know how to handle this intersection"
 						<< std::endl;
@@ -425,7 +427,7 @@ void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const VectorType& x,
 	m.resize(dof_handler.get_n_dofs(), dof_handler.get_n_dofs());
 	m.setZero();
 
-	int intersection_count = 0;
+	int tag_count = 0;
 
 	// The index set gives you indices for each element , edge , face , vertex , etc .
 	const GridViewType::IndexSet& indexSet = gridView_ptr->indexSet();
@@ -444,7 +446,8 @@ void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const VectorType& x,
 		IndexType id = indexSet.index(e);
 		VectorType xLocal = dof_handler.calculate_local_coefficients(id, x);
 
-//		lop.assemble_cell_Jacobian(e, localFiniteElement, xLocal, m_m, id);
+		lop.assemble_cell_Jacobian(e, localFiniteElement, xLocal, m_m, tag_count);
+		tag_count++;
 
 		// Traverse intersections
 		for (auto&& is : intersections(*gridView_ptr, e)) {
@@ -472,18 +475,19 @@ void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const VectorType& x,
 
 					lop.assemble_inner_face_Jacobian(is, localFiniteElement, xLocal,
 							localFiniteElement, xLocaln, m_m, mn_m,
-							m_mn, mn_mn,intersection_count );
+							m_mn, mn_mn,tag_count );
 
 					copy_to_sparse_matrix(mn_m, dof_handler.get_offset(idn), dof_handler.get_offset(id), m);
 					copy_to_sparse_matrix(m_mn, dof_handler.get_offset(id), dof_handler.get_offset(idn), m);
 					copy_to_sparse_matrix(mn_mn, dof_handler.get_offset(idn), dof_handler.get_offset(idn), m);
-					intersection_count++;
+					tag_count++;
 				}
 
 			} else if (is.boundary()) {
 				// Boundary integration
-//				lop.assemble_boundary_face_Jacobian(*iit, localFiniteElement, xLocal,
-//						m_m);
+				lop.assemble_boundary_face_Jacobian(is, localFiniteElement, xLocal,
+						m_m, tag_count);
+				tag_count++;
 			} else {
 				std::cerr << " I do not know how to handle this intersection"
 						<< std::endl;
@@ -492,8 +496,6 @@ void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const VectorType& x,
 		}
 		copy_to_sparse_matrix(m_m, dof_handler.get_offset(id), dof_handler.get_offset(id), m);
 	}
-
-	MATLAB_export(m, "Jacobian");
 
 }
 
