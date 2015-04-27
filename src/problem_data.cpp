@@ -7,13 +7,18 @@
 
 #include "problem_data.hh"
 
-void PDE_functions::f(const Solver_config::SpaceType2d& x, double &out){
+void PDE_functions::f(const Solver_config::SpaceType2d& x, Solver_config::value_type &out){
 	out = 1;
 }
 
-void PDE_functions::g_initial(const Solver_config::SpaceType2d& z, double &out){
+void PDE_functions::g_initial(const Solver_config::SpaceType2d& z, Solver_config::value_type &out){
 	out = 1;
 }
+
+void PDE_functions::g_initial_a(const FieldVector<adouble,2>& z, adouble &out){
+	out = 1;
+}
+
 
 void PDE_functions::Dg_initial(const Solver_config::SpaceType2d& z, Solver_config::SpaceType2d &out){
 	out[0] = 0;

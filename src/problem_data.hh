@@ -21,9 +21,9 @@ using namespace Dune;
 
 
 // A class implementing the analytical right hand side
-class RightHandSide: public VirtualFunction<FieldVector<double, Solver_config::dim>, double> {
+class RightHandSide: public VirtualFunction<Solver_config::SpaceType, Solver_config::value_type> {
 public:
-	void evaluate(const FieldVector<double, Solver_config::dim>& in, double& out) const {
+	void evaluate(const Solver_config::SpaceType& in, Solver_config::value_type& out) const {
 		switch (Solver_config::problem)
 		{
 		case SIMPLE_MA:
@@ -38,14 +38,14 @@ public:
 			break;
 		case MA_C1:
 			{
-			Solver_config::DomainType x0;
-			x0 = {0.5,0.5};
-			auto f = 0.2 / (in-x0).two_norm();
-			f = 1 - f;
-			if (f > 0)
-				out = f;
-			else
-				out = 0;
+//			Solver_config::DomainType x0;
+//			x0 = {0.5,0.5};
+//			Solver_config::value_type f = 0.2 / (in-x0).two_norm();
+//			f = 1 - f;
+//			if (f > 0)
+//				out = f;
+//			else
+//				out = 0;
 			}
 			break;
 		case MA_SQRT:
@@ -65,7 +65,7 @@ public:
 class Dirichletdata//: public VirtualFunction<FieldVector<double, Solver_config::dim>, double>
 {
 public:
-	void evaluate(const FieldVector<double, Solver_config::dim>& in, double& out){
+	void evaluate(const Solver_config::SpaceType& in, Solver_config::value_type& out){
 		switch (Solver_config::problem)
 		{
 		case SIMPLE_MA:
@@ -78,13 +78,13 @@ public:
 			out = std::exp( in.two_norm2()/2. );
 			break;
 		case MA_C1:
-			{
-				Solver_config::DomainType x0;
-				x0 = {0.5,0.5};
-				double val = (in-x0).two_norm() - 0.2;
-				if (val > 0)	out = val*val/2.;
-				else out = 0;
-			}
+//			{
+//				Solver_config::DomainType x0;
+//				x0 = {0.5,0.5};
+//				double val = ((in-x0).two_norm() - 0.2).value();
+//				if (val > 0)	out = val*val/2.;
+//				else out = 0;
+//			}
 			break;
 		case MA_SQRT:
 		{
@@ -99,7 +99,7 @@ public:
 		}
 	}
 
-	void derivative(const FieldVector<double, Solver_config::dim>& in, Solver_config::HessianRangeType& out)
+	void derivative(const Solver_config::SpaceType& in, Solver_config::HessianRangeType& out)
 	{
 		switch(Solver_config::problem)
 		{
@@ -108,10 +108,10 @@ public:
 			out[0][1] = 0; out[1][1] =1;
 			break;
 		case	MA_SMOOTH:
-			out[0][0] = std::exp( in.two_norm2()/2. )*(sqr(in[0])+1);
-			out[1][0] = std::exp( in.two_norm2()/2. )*(in[0]*in[1]);
-			out[0][1] = std::exp( in.two_norm2()/2. )*(in[0]*in[1]);
-			out[1][1] = std::exp( in.two_norm2()/2. )*(sqr(in[1])+1);
+//			out[0][0] = std::exp( in.two_norm2()/2. )*(sqr(in[0])+1);
+//			out[1][0] = std::exp( in.two_norm2()/2. )*(in[0]*in[1]);
+//			out[0][1] = std::exp( in.two_norm2()/2. )*(in[0]*in[1]);
+//			out[1][1] = std::exp( in.two_norm2()/2. )*(sqr(in[1])+1);
 			break;
 		default:
 			std::cerr << "No known derivatives for this problem ... " << std::endl;
@@ -120,10 +120,10 @@ public:
 	}
 };
 
-class RightHandSideInitial: public VirtualFunction<FieldVector<double, Solver_config::dim>, double> {
+class RightHandSideInitial: public VirtualFunction<Solver_config::SpaceType, Solver_config::value_type> {
 public:
 //	RightHandSideInitial(RightHandSide rhs)
-	void evaluate(const FieldVector<double, Solver_config::dim>& in, double& out) const{
+	void evaluate(const FieldVector<double, Solver_config::dim>& in, Solver_config::value_type& out) const{
 		rhs.evaluate(in, out);
 		out = std::sqrt(2.0*out);
 	}
@@ -134,9 +134,10 @@ private:
 
 namespace PDE_functions{
 
-	void f(const Solver_config::SpaceType2d& x, double &out);
+	void f(const Solver_config::SpaceType2d& x, Solver_config::value_type &out);
 
-	void g_initial(const Solver_config::SpaceType2d& z, double &out);
+	void g_initial(const Solver_config::SpaceType2d& z, Solver_config::value_type &out);
+	void g_initial_a(const FieldVector<adouble,2>& z, adouble &out);
 
 	void Dg_initial(const Solver_config::SpaceType2d& z, Solver_config::SpaceType2d &out); /// derivative of g_initial
 }
@@ -144,20 +145,30 @@ namespace PDE_functions{
 
 class RightHandSideReflector{
 public:
-	RightHandSideReflector():g_initial_callback(FREE_FUNCTION(&PDE_functions::g_initial)), f_callback(FREE_FUNCTION(&PDE_functions::f)), Dg_initial_callback(FREE_FUNCTION(&PDE_functions::Dg_initial)) {}
+	RightHandSideReflector():
+			g_initial_callback(FREE_FUNCTION(&PDE_functions::g_initial)),
+			g_initial_adouble(FREE_FUNCTION(&PDE_functions::g_initial_a)),
+			f_callback(FREE_FUNCTION(&PDE_functions::f)),
+			Dg_initial_callback(FREE_FUNCTION(&PDE_functions::Dg_initial)) {}
 	RightHandSideReflector(const MA_function_type g_initial, const derivative_function_type Dg_initial, const MA_function_type f):g_initial_callback(g_initial), f_callback(f), Dg_initial_callback(Dg_initial) {}
 
 
 	void init();
 	void init(const Integrator<Solver_config::GridType>& integrator);
 
-	void f(const Solver_config::SpaceType2d& x, double &out) const{
+	void f(const Solver_config::SpaceType2d& x, Solver_config::value_type &out) const{
 		f_callback(x, out);
 	}
 
 	///this function asserts to fulfill the (mass) conservation int f = int g
-	void g(const Solver_config::SpaceType2d& z, double &out) const{
+	void g(const Solver_config::SpaceType2d& z, Solver_config::value_type &out) const{
 		g_initial_callback(z, out);
+		out *= integral_f/integral_g;
+	}
+
+	///this function asserts to fulfill the (mass) conservation int f = int g
+	void g(const FieldVector<adouble, 2>& z, adouble &out) const{
+		g_initial_adouble(z, out);
 		out *= integral_f/integral_g;
 	}
 
@@ -182,6 +193,7 @@ public:
 
 private:
 	MA_function_type g_initial_callback, f_callback;
+	function_type<FieldVector<adouble,2>, adouble> g_initial_adouble;
 	derivative_function_type Dg_initial_callback;
 
 	double integral_g;

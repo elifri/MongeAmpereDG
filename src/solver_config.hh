@@ -14,6 +14,7 @@
 #include <config.h>
 #include <dune/grid/yaspgrid.hh>
 #include "localfunctions/pk2d.hh"
+#include <adolc/adouble.h>
 
 #include "UnitCube.hh"
 
@@ -22,6 +23,17 @@
 
 using namespace Dune;
 
+namespace Dune{
+template<> struct PromotionTraits<adouble, double> {typedef adouble PromotedType; };
+//template<> struct PromotionTraits<int,int>   { typedef int PromotedType; };
+
+template<>
+template<typename Func>
+inline void DenseMatrix<Dune::FieldMatrix<adouble, 2, 2>>::luDecomposition(DenseMatrix<Dune::FieldMatrix<adouble, 2, 2>>& A, Func func) const
+{
+}
+
+};
 
 enum PolynomialType {LAGRANGE};
 enum ProblemType
@@ -45,9 +57,11 @@ struct Solver_config{
 	typedef Eigen::MatrixXd DenseMatrixType;
 	typedef Eigen::SparseMatrix<double> MatrixType;
 
-	typedef FieldVector<double, dim> SpaceType;
-	typedef FieldVector<double, 2> SpaceType2d;
-	typedef FieldVector<double, 3> SpaceType3d;
+	typedef double value_type;
+
+	typedef FieldVector<value_type, dim> SpaceType;
+	typedef FieldVector<value_type, 2> SpaceType2d;
+	typedef FieldVector<value_type, 3> SpaceType3d;
 
 //	typedef YaspGrid<dim> GridType;
 	typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > UnitCubeType;
@@ -65,8 +79,8 @@ struct Solver_config{
 
 
 //	typedef Q1LocalFiniteElement<double, double, dim> LocalFiniteElementType;
-	typedef Pk2DLocalFiniteElement<double, double, degree> LocalFiniteElementuType;
-	typedef Pk2DLocalFiniteElement<double, double, degreeHessian> LocalFiniteElementHessianSingleType;
+	typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementuType;
+	typedef Pk2DLocalFiniteElement<value_type, value_type, degreeHessian> LocalFiniteElementHessianSingleType;
 	typedef TensorElement<LocalFiniteElementHessianSingleType, dim, dim>	LocalFiniteElementHessianType;
 	typedef MixedElement<LocalFiniteElementuType, LocalFiniteElementHessianType> LocalFiniteElementType;
 

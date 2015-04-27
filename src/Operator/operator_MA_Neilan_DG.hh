@@ -31,7 +31,7 @@ public:
  */
 template<class Element, class LocalElement0, class LocalElement1, class VectorType>
 void assemble_cell_term(const Element& element, const MixedElement<LocalElement0, LocalElement1> &localFiniteElement, const VectorType &x,
-		VectorType& v) const {
+		VectorType& v, int tag) const {
 	const int dim = Element::dimension;
 	auto geometry = element.geometry();
 

@@ -8,7 +8,7 @@ SET(CMAKE_BUILD_TYPE DEBUG)
 
 
 # Select flags.
-SET(CMAKE_CXX_FLAGS "-std=c++11 -Wall -fmax-errors=3 -w")
+SET(CMAKE_CXX_FLAGS "-std=c++11 -Wall -fmax-errors=3 -w -ftemplate-backtrace-limit=0")
 SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
 SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 SET(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g")
@@ -19,10 +19,12 @@ IF(MY_SITE STREQUAL "indigo7")
    message( "We are on ${MY_SITE}, use dogleg method." )
    SET(SNES_LIBRARY Dogleg)
    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_DOGLEG")
+   SET(ADOLC_PATH $ENV{HOME}/lib/adolc)
 ELSE()
    message( "We are on ${MY_SITE}, use petsc snes." )
    SET(SNES_LIBRARY petsc)
    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_PETSC")
+   SET(ADOLC_PATH $ENV{HOME}/lib/adolcRapunzel)
 ENDIF()
 
 
@@ -46,16 +48,16 @@ include(DuneMacros)
 #fieser hack ... 
 set(EIGEN3_INCLUDE_DIR "/home/data/friebel/workspace/eigen")
 set(IGPM_T2_LIB_INCLUDES "/home/data/friebel/workspace/igpm_t2_lib/include")
-message("CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} \n")
 
+
+unset(ADOLC_LIBRARY CACHE)
 find_package(Umfpack REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(adolc REQUIRED)
-#find_package(IGPM_T2_LIB REQUIRED HINTS ${IGPM_T2_LIB_INCLUDE_DIR})
 
-include_directories(${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${IGPM_T2_LIB_INCLUDES} ${ADOLC_INCLUDES})
+message("found library ${ADOLC_LIBRARY}")
 
-
+include_directories(${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${IGPM_T2_LIB_INCLUDES} ${ADOLC_INCLUDE_DIRS})
 
 
 # start a dune project with information from dune.module

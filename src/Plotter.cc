@@ -208,7 +208,7 @@ void Plotter::extract_solution(PointdataVectorType &v) const
 				solver->localFiniteElement(u()).localBasis().evaluateFunction(it.coords(), referenceFunctionValues);
 
 				//evaluate solution at refined points
-				double u = 0;
+				Solver_config::value_type u = 0;
 				for (int i = 0; i < size_u; i++)
 					u += solver->solution(solver->dof_handler.get_offset(id)+i)*referenceFunctionValues[i];
 
@@ -249,13 +249,13 @@ void Plotter::extract_solutionAndError(Dirichletdata &exact_sol, const Solver_co
 				solver->localFiniteElement(u()).localBasis().evaluateFunction(it.coords(), referenceFunctionValues);
 
 				//evaluate solution at refined points
-				double u = 0;
+				Solver_config::value_type u = 0;
 				for (int i = 0; i < size_u; i++)
 					u += solution(solver->dof_handler.get_offset(id)+i)*referenceFunctionValues[i];
 
 				//evaluate exact solution at refined points
 				auto global_coords = geometry.global(it.coords());
-				double exact_u;
+				Solver_config::value_type exact_u;
 				exact_sol.evaluate(global_coords, exact_u);
 
 				//write solution into vector

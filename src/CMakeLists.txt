@@ -7,7 +7,7 @@ add_library(Assembler Assembler.cpp)
 add_executable("dune_mongeampere" dune_mongeampere.cc)
 message("ZLIB libraries ${ZLIB_LIBRARIES}")
 target_link_dune_default_libraries("dune_mongeampere")
-target_link_libraries(dune_mongeampere Plotter ${SNES_LIBRARY} Assembler Solver_Config ${ZLIB_LIBRARIES})
+target_link_libraries(dune_mongeampere Plotter ${SNES_LIBRARY} Assembler Solver_Config ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES})
 
 add_executable("poisson" poisson.cc)
 target_link_dune_default_libraries("poisson")

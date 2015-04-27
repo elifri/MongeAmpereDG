@@ -13,6 +13,7 @@
 
 #include "Dof_handler.hpp"
 #include <dune/geometry/quadraturerules.hh>
+#include "matlab_export.hpp"
 
 
 /**
@@ -22,10 +23,10 @@
  * @param x				local position of x
  * @param gradients		return the gradients
  */
-template< class FiniteElement>
+template< class FiniteElement, class VectorType, class RangeType>
 inline
 void assemble_functionValues_u(const FiniteElement &lfu,const Solver_config::SpaceType& x, std::vector<double>& values,
-								const Solver_config::VectorType& x_local, double& u_value)
+								const VectorType& x_local, RangeType& u_value)
 {
 	assert(values.size() == lfu.size());
 	assert(x_local.size() == lfu.size());
@@ -41,10 +42,10 @@ void assemble_functionValues_u(const FiniteElement &lfu,const Solver_config::Spa
 		u_value += x_local(i)*values[i];
 }
 
-template< class FiniteElement, int m, int n>
+template< class FiniteElement, int m, int n, class VectorType, class RangeType>
 inline
 void assemble_functionValues_u(const FiniteElement &lfu,const Solver_config::SpaceType& x, std::vector<Dune::FieldMatrix<double, m, n>>& values,
-								const Solver_config::VectorType& x_local, typename Dune::FieldMatrix<double, m, n>& u_value)
+								const VectorType& x_local, typename Dune::FieldMatrix<RangeType, m, n>& u_value)
 {
 	assert(values.size() == lfu.size());
 	assert(x_local.size() == lfu.size());
@@ -53,7 +54,7 @@ void assemble_functionValues_u(const FiniteElement &lfu,const Solver_config::Spa
 	// The gradients of the shape functions on the reference element
 	lfu.localBasis().evaluateFunction(x,values);
 
-	assert(u_value.frobenius_norm() == 0);
+//	assert(u_value.frobenius_norm() == 0);
 
 	//compute the gradients on the real element
 	for (size_t i = 0; i < values.size(); i++)
@@ -91,18 +92,18 @@ void assemble_gradients(const FiniteElement &lfu, const JacobianType &jacobian,
  * @param x				local position of x
  * @param gradients		return the gradients
  */
-template< class FiniteElement, class JacobianType>
+template< class FiniteElement, class VectorType, class JacobianType, class JacobianRangeType>
 inline
 void assemble_gradients_gradu(const FiniteElement &lfu, const JacobianType &jacobian,
 		const Solver_config::SpaceType& x, std::vector<typename FiniteElement::JacobianType>& gradients,
-		const Solver_config::VectorType& x_local, typename FiniteElement::JacobianType& gradu)
+		const VectorType& x_local, JacobianRangeType& gradu)
 {
 	assert(gradients.size() == lfu.size());
 	assert(x_local.size() == lfu.size());
 
 	assemble_gradients(lfu, jacobian, x, gradients);
 
-    assert( gradu.one_norm() == 0);
+//    assert( gradu.one_norm() == 0);
 
     for (int i=0; i<lfu.size(); i++)
     	gradu.axpy(x_local(i),gradients[i]);
@@ -138,18 +139,18 @@ void assemble_hessians(const FiniteElement &lfu, const JacobianType &jacobian,
 
 }
 
-template< class FiniteElement, class JacobianType>
+template< class FiniteElement, class JacobianType, class VectorType, class FEHessianType>
 inline
 void assemble_hessians_hessu(const FiniteElement &lfu, const JacobianType &jacobian,
 		const Solver_config::SpaceType& x, std::vector<typename FiniteElement::HessianType>& hessians,
-		const Solver_config::VectorType& x_local, typename FiniteElement::HessianType& hessu)
+		const VectorType& x_local, FEHessianType& hessu)
 {
 	assert(hessians.size() == lfu.size());
 	assert(x_local.size() == lfu.size());
 
-	assemble_gradients(lfu, jacobian, x, hessians);
+	assemble_hessians(lfu, jacobian, x, hessians);
 
-    assert( hessu.infinity_norm() == 0);
+//    assert( hessu.infinity_norm() == 0);
 
     for (int i=0; i<lfu.size(); i++)
     	hessu.axpy(x_local(i), hessians[i]);
@@ -353,6 +354,8 @@ void Assembler::assemble_DG(LocalOperatorType lop, const VectorType& x, VectorTy
 	// The index set gives you indices for each element , edge , face , vertex , etc .
 	const GridViewType::IndexSet& indexSet = gridView_ptr->indexSet();
 
+	int intersection_count = 0;
+
 	// A loop over all elements of the grid
 	for (auto&& e : elements(*gridView_ptr)) {
 
@@ -367,20 +370,15 @@ void Assembler::assemble_DG(LocalOperatorType lop, const VectorType& x, VectorTy
 		//calculate local coefficients
 		VectorType xLocal = dof_handler.calculate_local_coefficients(id, x);
 
-//		lop.assemble_cell_term(e, localFiniteElement, xLocal, local_vector);
+//		lop.assemble_cell_term(e, localFiniteElement, xLocal, local_vector, id);
 
 		// Traverse intersections
-
-		unsigned int intersection_index = 0;
-		IntersectionIterator endit = gridView_ptr->iend(e);
-		IntersectionIterator iit = gridView_ptr->ibegin(e);
-
-		for (; iit != endit; ++iit, ++intersection_index) {
-			if (iit->neighbor()) {
+		for (auto&& is : intersections(*gridView_ptr, e)) {
+			if (is.neighbor()) {
 
 				// compute unique id for neighbor
 				const GridViewType::IndexSet::IndexType idn =
-						gridView_ptr->indexSet().index(*(iit->outside()));
+						gridView_ptr->indexSet().index(*(is.outside()));
 
 				// Visit face if id is bigger
 				bool visit_face = id > idn
@@ -389,20 +387,22 @@ void Assembler::assemble_DG(LocalOperatorType lop, const VectorType& x, VectorTy
 				if (visit_face) {
 					assert(
 							localFiniteElement.type()
-									== (iit->outside())->type()); //assert the neighbour element hast the same local basis
-									//extract neighbour
+									== (is.outside())->type()); //assert the neighbour element hast the same local basis
+
+					//extract neighbour
 					VectorType xLocaln = dof_handler.calculate_local_coefficients(idn, x);
 					VectorType local_vectorn = VectorType::Zero(xLocaln.size());
 
-					lop.assemble_inner_face_term(*iit, localFiniteElement, xLocal,
-							localFiniteElement, xLocaln, local_vector, local_vectorn);
+					lop.assemble_inner_face_term(is, localFiniteElement, xLocal,
+							localFiniteElement, xLocaln, local_vector, local_vectorn, intersection_count);
 
 					v.segment(dof_handler.get_offset(idn), local_vectorn.size()) += local_vectorn;
+					intersection_count++;
 				}
-			} else if (iit->boundary()) {
+			} else if (is.boundary()) {
 				// Boundary integration
-				lop.assemble_boundary_face_term(*iit, localFiniteElement, xLocal,
-						local_vector);
+//				lop.assemble_boundary_face_term(*iit, localFiniteElement, xLocal,
+//						local_vector);
 			} else {
 				std::cerr << " I do not know how to handle this intersection"
 						<< std::endl;
@@ -425,6 +425,8 @@ void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const VectorType& x,
 	m.resize(dof_handler.get_n_dofs(), dof_handler.get_n_dofs());
 	m.setZero();
 
+	int intersection_count = 0;
+
 	// The index set gives you indices for each element , edge , face , vertex , etc .
 	const GridViewType::IndexSet& indexSet = gridView_ptr->indexSet();
 
@@ -442,19 +444,15 @@ void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const VectorType& x,
 		IndexType id = indexSet.index(e);
 		VectorType xLocal = dof_handler.calculate_local_coefficients(id, x);
 
-//		lop.assemble_cell_Jacobian(e, localFiniteElement, xLocal, m_m);
+//		lop.assemble_cell_Jacobian(e, localFiniteElement, xLocal, m_m, id);
 
 		// Traverse intersections
-		unsigned int intersection_index = 0;
-		IntersectionIterator endit = gridView_ptr->iend(e);
-		IntersectionIterator iit = gridView_ptr->ibegin(e);
-
-		for (; iit != endit; ++iit, ++intersection_index) {
-			if (iit->neighbor()) {
+		for (auto&& is : intersections(*gridView_ptr, e)) {
+			if (is.neighbor()) {
 				// compute unique id for neighbor
 
 				const GridViewType::IndexSet::IndexType idn =
-						gridView_ptr->indexSet().index(*(iit->outside()));
+						gridView_ptr->indexSet().index(*(is.outside()));
 
 				// Visit face if id is bigger
 				bool visit_face = id > idn
@@ -463,27 +461,29 @@ void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const VectorType& x,
 				if (visit_face) {
 					assert(
 							localFiniteElement.type()
-									== (iit->outside())->type()); //assert the neighbour element hast the same local basis
-									//extract neighbour
+									== (is.outside())->type()); //assert the neighbour element hast the same local basis
+
+					//extract neighbour
 					VectorType xLocaln = dof_handler.calculate_local_coefficients(idn, x);
 					DenseMatrixType mn_m, m_mn, mn_mn;
 					mn_m.setZero(localFiniteElement.size(), localFiniteElement.size());
 					m_mn.setZero(localFiniteElement.size(), localFiniteElement.size());
 					mn_mn.setZero(localFiniteElement.size(), localFiniteElement.size());
 
-					lop.assemble_inner_face_Jacobian(*iit, localFiniteElement, xLocal,
+					lop.assemble_inner_face_Jacobian(is, localFiniteElement, xLocal,
 							localFiniteElement, xLocaln, m_m, mn_m,
-							m_mn, mn_mn );
+							m_mn, mn_mn,intersection_count );
 
 					copy_to_sparse_matrix(mn_m, dof_handler.get_offset(idn), dof_handler.get_offset(id), m);
 					copy_to_sparse_matrix(m_mn, dof_handler.get_offset(id), dof_handler.get_offset(idn), m);
 					copy_to_sparse_matrix(mn_mn, dof_handler.get_offset(idn), dof_handler.get_offset(idn), m);
+					intersection_count++;
 				}
 
-			} else if (iit->boundary()) {
+			} else if (is.boundary()) {
 				// Boundary integration
-				lop.assemble_boundary_face_Jacobian(*iit, localFiniteElement, xLocal,
-						m_m);
+//				lop.assemble_boundary_face_Jacobian(*iit, localFiniteElement, xLocal,
+//						m_m);
 			} else {
 				std::cerr << " I do not know how to handle this intersection"
 						<< std::endl;
@@ -493,7 +493,7 @@ void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const VectorType& x,
 		copy_to_sparse_matrix(m_m, dof_handler.get_offset(id), dof_handler.get_offset(id), m);
 	}
 
-//	cout << "Jacobian " << m << endl;
+	MATLAB_export(m, "Jacobian");
 
 }
 
