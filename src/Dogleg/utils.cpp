@@ -123,7 +123,7 @@ void compare_matrices(igpm::testblock &b, const Eigen::MatrixXd &A, const Eigen:
 			const bool res=is_close( d1, d2, tol * max(1.0, std::fabs(d1)) );
 			b = b && res;
 			if(!res) {
-				std::cerr << "entry (" << i << ", " << j << "): " << Aname << "=" << d1 << ", " << Bname << "=" <<  d2
+				std::cout << "entry (" << i << ", " << j << "): " << Aname << "=" << d1 << ", " << Bname << "=" <<  d2
 						  << ", absolute error=" << std::fabs(d2-d1)
 				          << ", relative error=" << std::fabs((d2-d1)/d2) << std::endl;
 
@@ -156,7 +156,7 @@ void compare_matrices(igpm::testblock &b, const Eigen::SparseMatrix<double> &A, 
 			const bool res=is_close( d1, d2, tol * max(1.0, std::fabs(d1)) );
 			b = b && res;
 			if(!res) {
-				std::cerr << "entry (" << i << ", " << j << "): " << Aname << "=" << d1 << ", " << Bname << "=" <<  d2
+				std::cout << "entry (" << i << ", " << j << "): " << Aname << "=" << d1 << ", " << Bname << "=" <<  d2
 						  << ", absolute error=" << std::fabs(d2-d1)
 				          << ", relative error=" << std::fabs((d2-d1)/d2) << std::endl;
 

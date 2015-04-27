@@ -20,7 +20,9 @@
 #include <Eigen/UmfPackSupport>
 
 #include "utils.hpp"
+#include "../matlab_export.hpp"
 #include "igpm_t2_lib.hpp"
+
 
 #include <cmath>
 #include <iomanip>
@@ -75,14 +77,21 @@ bool checkJacobian(
 	make_FD_Jacobian(f,x,estimated_J);
 	igpm::testblock b(std::cout);
 
-	if (exportFDJacobianifFalse)
+	if (b && exportFDJacobianifFalse)
 	{
-//		MATLAB_export(J, "Jacobian");
-//		MATLAB_export(estimated_J, "FDJacobian");
+		MATLAB_export(J, "Jacobian");
+		MATLAB_export(estimated_J, "FDJacobian");
 	}
-//	MATLAB_export(x, "startvector");
 
 	compare_matrices(b, J, estimated_J, "Jacobian", "FD Jacobian", true, tol);
+
+
+	//	MATLAB_export(x, "startvector");
+
+//	std::cout <<  "J nonzeros " << J.nonZeros() << std::endl;
+//	std::cout << "FD J nonzeros " << estimated_J.nonZeros() << std::endl;
+
+
 	return b;
 }
 
@@ -153,7 +162,7 @@ void doglegMethod (
 
     functor.evaluate(x,f);
     functor.derivative(x,J);
-//    if (opts.check_Jacobian)	checkJacobian(functor, x);
+    if (opts.check_Jacobian)	checkJacobian(functor, x, opts.exportFDJacobianifFalse);
 //    MATLAB_export(J, "J");
 
     // Check result of function calls for correct length of vectors
