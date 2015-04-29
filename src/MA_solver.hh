@@ -464,8 +464,8 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 
 	vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
 
-//	project(General_functions::get_easy_convex_polynomial_callback(), solution);
-	solution = VectorType::Ones(dof_handler.get_n_dofs());
+	project(General_functions::get_easy_convex_polynomial_plus_one_callback(), solution);
+//	solution = VectorType::Ones(dof_handler.get_n_dofs());
 //	solution = exactsol_projection;
 
 	vtkplotter.write_numericalsolution_VTK(0, "initial_guess");
