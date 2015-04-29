@@ -32,14 +32,27 @@ double cwiseProduct(const double& A, const double &B)
 	return A*B;
 }
 
-template<class MatrixType, class DenseMatrixType>
+template<class MatrixType, class R>
 inline
-void copy_to_sparse_matrix(const DenseMatrixType &m_local, int offset_row, int offset_col, MatrixType &m)
+void copy_to_sparse_matrix(const Eigen::Matrix<R,Eigen::Dynamic,Eigen::Dynamic> &m_local, int offset_row, int offset_col, MatrixType &m)
 {
 	for (int i= 0; i < m_local.cols(); i++)
 		for (int j = 0; j < m_local.rows(); j++)
-			m.coeffRef(offset_row+i,offset_col+j) += m_local(i,j);
+		{
+			if (std::abs(m_local(i,j)) > 1e-13 )
+				m.coeffRef(offset_row+i,offset_col+j) += m_local(i,j);
+		}
 }
+
+template<class MatrixType, class R>
+inline
+void copy_to_sparse_matrix(const R** &m_local, int offset_row, int offset_col, int rows, int cols, MatrixType &m)
+{
+	for (int i= 0; i < rows; i++)
+		for (int j = 0; j < cols; j++)
+			m.coeffRef(offset_row+i,offset_col+j) += m_local[i][j];
+}
+
 
 bool is_close(const double a, const double b, const double tolerance=1e-10);
 
