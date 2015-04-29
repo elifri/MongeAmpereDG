@@ -19,12 +19,6 @@
 
 
 template<typename T>
-inline T sqr (const T& x)
-{
- return x*x;
-}
-
-template<typename T>
 inline int sign (const T& x)
 {
     return x<0?-1:x>0;

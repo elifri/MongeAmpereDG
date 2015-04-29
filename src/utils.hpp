@@ -11,6 +11,13 @@
 
 #include <config.h>
 #include <dune/common/fmatrix.hh>
+#include <Eigen/Core>
+
+template<typename T>
+inline T sqr (const T& x)
+{
+ return x*x;
+}
 
 template <class R, class R2>
 inline
