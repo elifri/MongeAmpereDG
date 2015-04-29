@@ -10,6 +10,7 @@
 
 #include "callback.hpp"
 #include "../solver_config.hh"
+#include "../utils.hpp"
 
 template <class D, class R>
 using function_type = util::Function <void (const D&, R&)>;
@@ -84,9 +85,19 @@ struct General_functions{
 		u = (x[0]*x[0]+x[1]*x[1])/2.;
 	}
 
+	static void easy_convex_polynomial_plus_one(const Solver_config::DomainType & x, Solver_config::RangeType & u)
+	{
+		u = (sqr(x[0])+sqr(1-x[1]))/2. +1.0;
+	}
+
 	static MA_function_type get_easy_convex_polynomial_callback()
 	{
 		return FREE_FUNCTION(&General_functions::easy_convex_polynomial);
+	}
+
+	static MA_function_type get_easy_convex_polynomial_plus_one_callback()
+	{
+		return FREE_FUNCTION(&General_functions::easy_convex_polynomial_plus_one);
 	}
 
 	static void constant_one(const Solver_config::DomainType & x, Solver_config::RangeType & u)
