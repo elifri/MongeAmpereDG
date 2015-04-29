@@ -332,7 +332,7 @@ void Plotter::write_points_reflector(std::ofstream &file, const PointdataVectorT
 			// collect points
 			for (auto&& vertex: vertices(*grid)) {
 				auto x_2d = vertex.geometry().center();
-				auto rho = solution_vertex[vertex_no];
+				auto rho = 1.0/solution_vertex[vertex_no];
 				file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  Local_Operator_MA_refl_Neilan::omega(x_2d)*rho << endl;
 				vertex_no++;
 			}
@@ -342,7 +342,7 @@ void Plotter::write_points_reflector(std::ofstream &file, const PointdataVectorT
 				const auto geometry = element.geometry();
 				for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
 					auto x_2d = geometry.global(it.coords());
-					auto rho = solution_vertex[vertex_no];
+					auto rho = 1.0/solution_vertex[vertex_no];
 					file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  Local_Operator_MA_refl_Neilan::omega(x_2d)*rho << endl;
 					vertex_no++;
 				}
@@ -557,7 +557,7 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
 			"\t max_trace_level 2" <<std::endl <<
 			"\t photons {" <<std::endl <<
 			"\t\t // spacing 0.001" <<std::endl <<
-			"\t\t count 10000000" <<std::endl <<
+			"\t\t count 100000" <<std::endl <<
 			"\t\t autostop 0" <<std::endl <<
 			"\t\tjitter 1" <<std::endl <<
 			"\t}" <<std::endl <<
@@ -565,9 +565,9 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
 
 	file << "// Camera" <<std::endl <<
 			"camera {" <<std::endl <<
-			"\t location <-0,2.5,-3.5>" <<std::endl <<
+			"\t location <-0,1,1.5>" <<std::endl <<
 			"\t angle 100" <<std::endl <<
-			"\t look_at <-0.0, 2.5, -5>" <<std::endl <<
+			"\t look_at <-0.0,1, 0>" <<std::endl <<
 			"\t right	x*image_width/image_height" <<std::endl <<
 			"}" <<std::endl <<std::endl;
 
@@ -592,7 +592,80 @@ void Plotter::write_target_plane(std::ofstream &file) const{
 			"\t hollow" <<std::endl <<
 			"}" <<std::endl <<std::endl;
 }
+
+
+void Plotter::write_points_reflector_pov(std::ofstream &file, const PointdataVectorType & solution_vertex) const{
+	// write points
+	file << "\t vertex_vectors {" << std::endl
+			<< "\t\t " << solution_vertex.size() << "," << std::endl;
+
+		int vertex_no = 0;
+
+		//the reflector is given by X*rho, where rho is the PDE solution. X is calculated from the 2d mesh by adding the third coordiante omega(x)
+
+		if (refinement == 0)
+		{
+			// collect points
+			for (auto&& vertex: vertices(*grid)) {
+				auto x_2d = vertex.geometry().center();
+				auto rho = 1.0/solution_vertex[vertex_no];
+				file << "\t\t <" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  Local_Operator_MA_refl_Neilan::omega(x_2d)*rho  << ">,"<< endl;
+				vertex_no++;
+			}
+		}else {		// save points in file after refinement
+			for (auto&& element: elements(*grid))
+			{
+				const auto geometry = element.geometry();
+				for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
+					auto x_2d = geometry.global(it.coords());
+					auto rho = 1.0/solution_vertex[vertex_no];
+					file << "\t\t <"  << x_2d[0]*rho << ", " << x_2d[1]*rho << ", " <<  Local_Operator_MA_refl_Neilan::omega(x_2d)*rho<< ">," << endl;
+					vertex_no++;
+				}
+			}
+		}
+	file << "\t}\n";
+}
+
+void Plotter::write_face_indices_pov(std::ofstream &file) const
+{
+	// write cells
+	file << "\t\t face_indices {\n"
+			<< "\t\t\t" << this->Nelements() << std::endl;
+	// make connectivity
+	if (refinement == 0){
+		const Solver_config::GridView::IndexSet& indexSet = grid->indexSet();
+
+		for (auto&& e : elements(*grid)) {
+			for (unsigned int i = 0; i < e.subEntities(Solver_config::dim); i++) //loop over corners
+				{file << "\t\t\t";
+//				for (const auto& vertex : geometry.corners()) {
+					file << indexSet.index(*(e.subEntity<Solver_config::dim>(i))) << " ";
+					assert(false);
+//				}
+			}
+		}
+	}
+	else{ //refined
+		int offset = 0;
+//		for (auto&& element : elements(*grid)) {
+		for (int i = 0; i < grid->size(0); i++){
+			for (auto it = PlotRefinementType::eBegin(refinement); it != PlotRefinementType::eEnd(refinement); it++)
+			{
+				file << "\t\t\t<";
+				auto vertexIndices = it.vertexIndices();
+				for (const auto& e : vertexIndices)
+					file << offset+e << ", ";
+				file << ">\n";
+			}
+			offset += PlotRefinementType::nVertices(refinement);
+		}
+	}
+	file << "\t}\n";
+}
+
 void Plotter::write_mirror(std::ofstream &file, const Solver_config::VectorType &solution) const{
+/*
 	file << "// Mirror" <<std::endl <<
 			"mesh {" <<std::endl;
 
@@ -613,7 +686,7 @@ void Plotter::write_mirror(std::ofstream &file, const Solver_config::VectorType 
 			Solver_config::SpaceType3d X = {x[0], x[1], Local_Operator_MA_refl_Neilan::omega(x)};
 
 			const auto vertex_id = grid->indexSet().index(*e.subEntity<Solver_config::dim>(i));
-			X *= vertex_vector(vertex_id);
+			X /= vertex_vector(vertex_id);
 			file << "<" << X[0] << " , " << X[1]<< " , " << X[2] << ">" ;
 			if (i < 2) file << ", ";
 		}
@@ -635,7 +708,49 @@ void Plotter::write_mirror(std::ofstream &file, const Solver_config::VectorType 
 		  <<"\t}" <<std::endl<<std::endl;
 
 	file << "}" <<std::endl;
+*/
+
+	file << "// Mirror" <<std::endl <<
+			"mesh2 {" <<std::endl;
+
+	if (refinement > 0)
+	{
+
+		PointdataVectorType v(Nnodes());
+		PointdataVectorType v_error(Nnodes());
+		Dirichletdata data;
+		extract_solutionAndError(data, solution, v, v_error);
+
+		write_points_reflector_pov(file, v); //define if with 3rd coordinate or without
+		write_face_indices_pov(file);
+
+	}
+	else
+	{
+		// Output result
+		VTKWriter<Solver_config::GridView> vtkWriter(*solver->gridView_ptr);
+		Solver_config::VectorType solution_v = solver->return_vertex_vector(solution);
+		std::cout << "solution vertex " << solution_v.transpose() << std::endl;
+		vtkWriter.addVertexData(solution_v, "solution");
+//		vtkWriter.write(filename);
+	}
+	file << "\t material {" << std::endl
+				<< "\t\t texture {" <<std::endl
+					<< "\t\t\t pigment { color rgb <1,1,1> }" <<std::endl
+					<< "\t\t\t finish { reflection 1 } // It reflects all" << std::endl
+				<<"\t\t}" <<std::endl
+		  <<"\t}" <<std::endl<<std::endl;
+
+	file << "\t photons {" << std::endl
+				<< "\t\t target" <<std::endl
+				<< "\t\t reflection on" <<std::endl
+				<< "\t\t refraction off" <<std::endl
+				<< "\t\t collect off" <<std::endl
+		  <<"\t}" <<std::endl<<std::endl;
+	file << "}" <<std::endl;
 }
+
+
 
 
 void Plotter::writeReflectorPOV(std::string filename, const Solver_config::VectorType &solution) const {

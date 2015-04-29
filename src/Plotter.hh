@@ -80,6 +80,9 @@ public:
 
 	void write_pov_setting(std::ofstream &file) const;///write the setting for photons, camera and light source
 	void write_target_plane(std::ofstream &file) const;
+	void write_points_reflector_pov(std::ofstream &file, const PointdataVectorType & solution_vertex) const;
+	void write_face_indices_pov(std::ofstream &file) const;
+
 	void write_mirror(std::ofstream &file, const Solver_config::VectorType &solution) const;
 
 public:
