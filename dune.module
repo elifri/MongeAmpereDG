@@ -7,4 +7,4 @@ Module: dune-mongeampere
 Version: 1.0
 Maintainer: friebel@igpm.rwth-aachen.de
 #depending on
-Depends: dune-common dune-geometry dune-grid dune-localfunctions dune-alugrid
+Depends: dune-common dune-geometry dune-grid dune-localfunctions dune-alugrid dune-typetree dune-functions
