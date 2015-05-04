@@ -48,16 +48,18 @@ include(DuneMacros)
 #fieser hack ... 
 set(EIGEN3_INCLUDE_DIR "/home/data/friebel/workspace/eigen")
 set(IGPM_T2_LIB_INCLUDES "/home/data/friebel/workspace/igpm_t2_lib/include")
+set(METHOD_OF_ELLIPSOIDS_PATH "$ENV{HOME}/workspace/Method\ of\ Ellipsoids")
+set(CIMG_PATH "$ENV{HOME}/workspace/CImg-1.6.0")
 
-
-unset(ADOLC_LIBRARY CACHE)
+unset(CIMG_FOUND CACHE)
 find_package(Umfpack REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(adolc REQUIRED)
+find_package(MethodOfEllipsoids REQUIRED)
+find_package(CImg REQUIRED)
+find_package(Boost REQUIRED COMPONENTS program_options)
 
-message("found library ${ADOLC_LIBRARY}")
-
-include_directories(${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${IGPM_T2_LIB_INCLUDES} ${ADOLC_INCLUDE_DIRS})
+include_directories(${METHOD_OF_ELLIPSOIDS_INCLUDES} ${CIMG_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${IGPM_T2_LIB_INCLUDES} ${ADOLC_INCLUDE_DIRS} ${Boos_INCLUDE_DIRS})
 
 
 # start a dune project with information from dune.module

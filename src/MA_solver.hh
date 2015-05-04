@@ -29,6 +29,8 @@
 
 #include "Plotter.hh"
 
+#include "MethodEllipsoids/init_with_ellipsoid_method.hpp"
+
 #ifdef USE_DOGLEG
 #include "Dogleg/doglegMethod.hpp"
 #endif
@@ -452,7 +454,14 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 	init_mixed_element_without_second_derivatives(solution_u, solution);
 */
 
-//	solution = VectorType::Zero(dof_handler.get_n_dofs());
+	InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data("MethodEllipsoids/ellipsoids.ini", "MethodEllipsoids/geometry.ini");
+	ellipsoidMethod.solve();
+	ellipsoidMethod.write_output();
+
+	project(MEMBER_FUNCTION(&InitEllipsoidMethod::evaluate, &ellipsoidMethod), solution);
+//  project(General_functions::get_easy_convex_polynomial_plus_one_callback(), solution);
+//  solution = VectorType::Ones(dof_handler.get_n_dofs());
+//  solution = exactsol_projection;
 
 
 	//init exact solution
@@ -464,9 +473,6 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 
 	vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
 
-	project(General_functions::get_easy_convex_polynomial_plus_one_callback(), solution);
-//	solution = VectorType::Ones(dof_handler.get_n_dofs());
-//	solution = exactsol_projection;
 
 	vtkplotter.write_numericalsolution_VTK(0, "initial_guess");
 	std::cout << "solution " << solution.transpose() << std::endl;
