@@ -20,6 +20,8 @@
 
 #include "localfunctions/TensorElement.hh"
 #include "localfunctions/mixedElement.hpp"
+#include "localfunctions/MAmixedbasis.hh"
+
 
 using namespace Dune;
 
@@ -85,10 +87,13 @@ struct Solver_config{
 	typedef MixedElement<LocalFiniteElementuType, LocalFiniteElementHessianType> LocalFiniteElementType;
 
 
+	typedef Functions::MAMixedBasis<GridView, degree, degreeHessian> FEBasis;
+
 	typedef LocalFiniteElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
 	typedef LocalFiniteElementuType::Traits::LocalBasisType::Traits::DomainType DomainType;
-
+//	typedef LocalFiniteElementHessianType::Traits::LocalBasisType::Traits::RangeType HessianType;
 	typedef LocalFiniteElementHessianType::RangeType HessianRangeType;
+	typedef HessianRangeType HessianType;
 
 	static const bool require_skeleton_two_sided = false; ///if enabled every face is assembled twice
 

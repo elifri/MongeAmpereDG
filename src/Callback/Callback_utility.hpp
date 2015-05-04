@@ -18,7 +18,7 @@ using function_type = util::Function <void (const D&, R&)>;
 template <class D, class R>
 using const_function_type = util::Function <void (const D&, R&) const>;
 
-typedef function_type<Solver_config::DomainType, Solver_config::RangeType> MA_function_type;
+typedef function_type<Solver_config::DomainType, Solver_config::value_type> MA_function_type;
 typedef function_type<Solver_config::DomainType, Solver_config::DomainType> derivative_function_type;
 typedef const_function_type<Solver_config::DomainType, Solver_config::RangeType> MA_const_function_type;
 
@@ -80,12 +80,12 @@ struct Convex_error_functions{
 */
 
 struct General_functions{
-	static void easy_convex_polynomial(const Solver_config::DomainType & x, Solver_config::RangeType & u)
+	static void easy_convex_polynomial(const Solver_config::DomainType & x, Solver_config::value_type & u)
 	{
 		u = (x[0]*x[0]+x[1]*x[1])/2.;
 	}
 
-	static void easy_convex_polynomial_plus_one(const Solver_config::DomainType & x, Solver_config::RangeType & u)
+	static void easy_convex_polynomial_plus_one(const Solver_config::DomainType & x, Solver_config::value_type & u)
 	{
 		u = (sqr(x[0])+sqr(1-x[1]))/2. +1.0;
 	}
@@ -100,7 +100,7 @@ struct General_functions{
 		return FREE_FUNCTION(&General_functions::easy_convex_polynomial_plus_one);
 	}
 
-	static void constant_one(const Solver_config::DomainType & x, Solver_config::RangeType & u)
+	static void constant_one(const Solver_config::DomainType & x, Solver_config::value_type & u)
 	{
 		u = 1;
 	}

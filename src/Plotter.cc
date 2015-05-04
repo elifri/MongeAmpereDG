@@ -188,7 +188,9 @@ void Plotter::extract_solution(PointdataVectorType &v) const
 	assert(v.size() == Nnodes());
 	if (refinement == 0)
 	{
-		v = solver->return_vertex_vector(solver->solution);
+	    auto temp_vec = solver->return_vertex_vector(solver->solution);
+	    for (int i = 0; i < v.size(); i++)
+	        v[i][0] = temp_vec[i];
 	}else {		// save points in file after refinement
 
 		int size_u = solver->localFiniteElement.size(u());
@@ -229,7 +231,9 @@ void Plotter::extract_solutionAndError(Dirichletdata &exact_sol, const Solver_co
 
 	if (refinement == 0)
 	{
-		sol = solver->return_vertex_vector(solution);
+	    auto temp_vec = solver->return_vertex_vector(solution);
+		  for (int i = 0; i < sol.size(); i++)
+		      sol[i][0] = temp_vec[i];
 	}else {		// save points in file after refinement
 
 		int size_u = solver->localFiniteElement.size(u());

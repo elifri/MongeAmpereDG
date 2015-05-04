@@ -62,9 +62,11 @@ public:
 	typedef typename Solver_config::DenseMatrixType DenseMatrixType;
 	typedef typename Solver_config::MatrixType MatrixType;
 
+	typedef typename Solver_config::FEBasis FEBasisType;
 	typedef typename Solver_config::LocalFiniteElementType LocalFiniteElementType;
 	typedef typename Solver_config::LocalFiniteElementuType LocalFiniteElementuType;
-	typedef typename Solver_config::LocalFiniteElementuType::Traits::LocalBasisType::Traits::HessianType HessianType;
+//	typedef typename Solver_config::LocalFiniteElementuType::Traits::LocalBasisType::Traits::HessianType HessianType;
+	typedef typename Solver_config::HessianType HessianType;
 
 	MA_solver() :
 			initialised(false) {
@@ -72,9 +74,10 @@ public:
 	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView) :
 			initialised(true),
 			grid_ptr(grid), gridView_ptr(&gridView),
+			FEBasis(gridView),
 			localFiniteElement(), localFiniteElementu(localFiniteElement(u())),
 			dof_handler(&gridView, localFiniteElement),
-			assembler(gridView_ptr, dof_handler, localFiniteElement, localFiniteElementu),
+			assembler(gridView_ptr, dof_handler, FEBasis, localFiniteElement, localFiniteElementu),
 			count_refined(Solver_config::startlevel),
 			vtkplotter(*this) {
 		vtkplotter.set_output_directory("../plots");
@@ -207,6 +210,7 @@ private:
 	const shared_ptr<GridType> grid_ptr;
 	const GridViewType* gridView_ptr;
 
+	FEBasisType FEBasis;
 	LocalFiniteElementType localFiniteElement; ///specify the local (mixed Element)
 	const LocalFiniteElementuType& localFiniteElementu; ///reference to the local Finite Element to assemble u
 
@@ -268,24 +272,11 @@ void MA_solver<Config>::init_mixed_element_without_second_derivatives(const Vect
 			//-------calulcate piecewise hessian---------
 			//get reference data
 			std::vector<HessianType> Hessians(size_u);
-			localFiniteElement(u()).localBasis().evaluateHessian(quadPos, Hessians);
+      //transform data
+      const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
+      HessianType Hessu(0);
 
-			//transform data
-			const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
-
-			auto jacobianTransposed = jacobian;
-			jacobianTransposed [1][0] = jacobian [0][1];
-			jacobianTransposed [0][1] = jacobian [1][0];
-			for (size_t i = 0; i < Hessians.size(); i++)
-			{
-				Hessians[i].leftmultiply(jacobianTransposed);
-				Hessians[i].rightmultiply(jacobian);
-			}
-
-			// Compute Hessian u
-			HessianType Hessu(0);
-			for (size_t i = 0; i < x_local.size(); i++)
-				Hessu.axpy(x_local(i), Hessians[i]);
+			assemble_hessians_hessu(localFiniteElement(u()), jacobian, quadPos, Hessians, x_local, Hessu);
 
 			//-----assemble integrals (on reference cell)---------
 
@@ -402,7 +393,7 @@ double MA_solver<Config>::calculate_L2_error(const MA_function_type &f) const
 			const FieldVector<double, Config::dim> &quadPos = pt.position();
 
 			//the shape function values
-			std::vector<double> referenceFunctionValues(size_u);
+			std::vector<typename Config::RangeType> referenceFunctionValues(size_u);
 			localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
 			double u_value = 0;
