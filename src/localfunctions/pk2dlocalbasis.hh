@@ -5,7 +5,7 @@
 
 #include <dune/common/fmatrix.hh>
 
-#include <dune/localfunctions/common/localbasis.hh>
+#include "localbasis.hh"
 
 namespace Dune {
 /**@ingroup LocalBasisImplementation
