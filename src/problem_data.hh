@@ -149,12 +149,12 @@ public:
 			g_initial_callback(FREE_FUNCTION(&PDE_functions::g_initial)),
 			g_initial_adouble(FREE_FUNCTION(&PDE_functions::g_initial_a)),
 			f_callback(FREE_FUNCTION(&PDE_functions::f)),
-			Dg_initial_callback(FREE_FUNCTION(&PDE_functions::Dg_initial)) {}
-	RightHandSideReflector(const MA_function_type g_initial, const derivative_function_type Dg_initial, const MA_function_type f):g_initial_callback(g_initial), f_callback(f), Dg_initial_callback(Dg_initial) {}
+			Dg_initial_callback(FREE_FUNCTION(&PDE_functions::Dg_initial)) {init();}
+	RightHandSideReflector(const MA_function_type g_initial, const derivative_function_type Dg_initial, const MA_function_type f):g_initial_callback(g_initial), f_callback(f), Dg_initial_callback(Dg_initial) { init();}
 
 
 	void init();
-	void init(const Integrator<Solver_config::GridType>& integrator);
+	void init(const Integrator<Solver_config::GridType>& integrator, const Integrator<Solver_config::GridType>& integratorTarget);
 
 	void f(const Solver_config::SpaceType2d& x, Solver_config::value_type &out) const{
 		f_callback(x, out);

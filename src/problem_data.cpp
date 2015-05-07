@@ -29,12 +29,13 @@ void PDE_functions::Dg_initial(const Solver_config::SpaceType2d& z, Solver_confi
 
 void RightHandSideReflector::init(){
 	Solver_config::UnitCubeType unitcube_quadrature(Solver_config::lowerLeft, Solver_config::upperRight, Solver_config::startlevel+Solver_config::nonlinear_steps);
-	init(Integrator<Solver_config::GridType>(unitcube_quadrature.grid_ptr()));
+  Solver_config::UnitCubeType unitcube_quadrature_target(Solver_config::lowerLeftTarget, Solver_config::upperRightTarget, Solver_config::startlevel+Solver_config::nonlinear_steps);
+	init(Integrator<Solver_config::GridType>(unitcube_quadrature.grid_ptr()), Integrator<Solver_config::GridType>(unitcube_quadrature_target.grid_ptr()));
 }
 
-void RightHandSideReflector::init(const Integrator<Solver_config::GridType>& integrator){
-	integral_f = integrator.assemble_integral(f_callback);
-	integral_g = integrator.assemble_integral(g_initial_callback);
+void RightHandSideReflector::init(const Integrator<Solver_config::GridType>& integratorDomain, const Integrator<Solver_config::GridType>& integratorTarget){
+	integral_f = integratorDomain.assemble_integral(f_callback);
+	integral_g = integratorTarget.assemble_integral(g_initial_callback);
 }
 
 
