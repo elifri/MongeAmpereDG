@@ -3,6 +3,7 @@ add_library(Solver_Config problem_data.cpp solver_config.cpp utils.cpp)
 add_library(Plotter Plotter.cc)
 add_library(Dogleg Dogleg/utils.cpp)
 add_library(Assembler Assembler.cpp)
+set_source_files_properties(MethodEllipsoids/init_with_ellipsoid_method.cpp PROPERTIES COMPILE_FLAGS -O3)
 add_library(EllipsoidMethod MethodEllipsoids/init_with_ellipsoid_method.cpp)
 
 add_executable("dune_mongeampere" dune_mongeampere.cc)

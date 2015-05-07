@@ -5,8 +5,8 @@
  *  \brief
  */
 
-#ifndef MAGICMIRRORTOOLS_UTILS_HPP
-#define MAGICMIRRORTOOLS_UTILS_HPP
+#ifndef DOGLEG_UTILS_HPP
+#define DOGLEG_UTILS_HPP
 
 #include <iostream>
 #include <fstream>
@@ -157,4 +157,4 @@ void compare_matrices(igpm::testblock &b, const Eigen::MatrixXd &A, const Eigen:
 
 void compare_matrices(igpm::testblock &b, const Eigen::SparseMatrix<double> &A, const Eigen::SparseMatrix<double> &B, const std::string &Aname, const std::string &Bname, bool output, const double tol);
 
-#endif // MAGICMIRRORTOOLS_UTILS_HPP
+#endif // DOGLEG_UTILS_HPP

@@ -20,11 +20,13 @@ IF(MY_SITE STREQUAL "indigo7")
    SET(SNES_LIBRARY Dogleg)
    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_DOGLEG")
    SET(ADOLC_PATH $ENV{HOME}/lib/adolc)
+  find_package(Boost REQUIRED COMPONENTS program_options)
 ELSE()
    message( "We are on ${MY_SITE}, use petsc snes." )
    SET(SNES_LIBRARY petsc)
    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_PETSC")
    SET(ADOLC_PATH $ENV{HOME}/lib/adolcRapunzel)
+   SET(Boost_LIBRARIES boost_program_options)
 ENDIF()
 
 
@@ -57,9 +59,8 @@ find_package(Eigen3 REQUIRED)
 find_package(adolc REQUIRED)
 find_package(MethodOfEllipsoids REQUIRED)
 find_package(CImg REQUIRED)
-find_package(Boost REQUIRED COMPONENTS program_options)
 
-include_directories(${METHOD_OF_ELLIPSOIDS_INCLUDES} ${CIMG_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${IGPM_T2_LIB_INCLUDES} ${ADOLC_INCLUDE_DIRS} ${Boos_INCLUDE_DIRS})
+include_directories(${METHOD_OF_ELLIPSOIDS_INCLUDES} ${CIMG_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${IGPM_T2_LIB_INCLUDES} ${ADOLC_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 
 
 # start a dune project with information from dune.module

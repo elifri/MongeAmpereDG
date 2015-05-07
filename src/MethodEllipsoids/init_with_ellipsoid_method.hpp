@@ -20,7 +20,7 @@
 #include "../Callback/Callback_utility.hpp"
 
 
-using namespace mirror_problem;
+//using namespace mirror_problem;
 
 
 class InitEllipsoidMethod
@@ -42,15 +42,14 @@ private:
             const double yMin,
             const double yMax,
 
-            const Grid2d &gridLightIn,
-            const EllipsoidContainer::Directions &directionsOut,
+            const mirror_problem::EllipsoidContainer::Directions &directionsOut,
             const std::vector<double> &valuesLightOut,
-                  Function2d &functionLightIn, // incoming light distribution
+            mirror_problem::Function2d &functionLightIn, // incoming light distribution
             const double alpha, const int maxIter
         );
 
-    Grid2dCartesian grid_;
-    MethodOfEllipsoids<AndBjrk> method_;
+    mirror_problem::Grid2dCartesian grid_;
+    mirror_problem::MethodOfEllipsoids<mirror_problem::AndBjrk> method_;
 
     static std::string outputFolder_;
 

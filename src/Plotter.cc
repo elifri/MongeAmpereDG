@@ -563,11 +563,18 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
 			"\t}" <<std::endl <<
 			"}" <<std::endl <<std::endl;
 
+
+	double xMinOut = Solver_config::lowerLeftTarget[0], xMaxOut = Solver_config::upperRightTarget[0],
+	       yMinOut = Solver_config::lowerLeftTarget[1], yMaxOut = Solver_config::upperRightTarget[1];
+
 	file << "// Camera" <<std::endl <<
 			"camera {" <<std::endl <<
-			"\t location <-0,1,1.5>" <<std::endl <<
+			"\t location <" << (Solver_config::lowerLeft[0]+Solver_config::upperRight[0])/2.0
+			                   <<"," << (Solver_config::lowerLeft[1]+Solver_config::upperRight[1])/2.0 << ","
+			                   <<  max(xMaxOut-xMinOut,yMaxOut-yMinOut)*0.5   <<">" <<std::endl <<
 			"\t angle 100" <<std::endl <<
-			"\t look_at <-0.0,1, 0>" <<std::endl <<
+			"\t look_at <" << (Solver_config::lowerLeft[0]+Solver_config::upperRight[0])/2.0
+                    <<"," << (Solver_config::lowerLeft[1]+Solver_config::upperRight[1])/2.0 << ",0>" <<std::endl <<
 			"\t right	x*image_width/image_height" <<std::endl <<
 			"}" <<std::endl <<std::endl;
 

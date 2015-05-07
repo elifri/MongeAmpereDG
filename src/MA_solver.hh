@@ -454,8 +454,9 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 	init_mixed_element_without_second_derivatives(solution_u, solution);
 */
 
-	InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data("MethodEllipsoids/ellipsoids.ini", "MethodEllipsoids/geometry.ini");
-	ellipsoidMethod.solve();
+	InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data("../inputData/ellipsoids.ini", "../inputData/geometry.ini");
+//	 InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data("/home/data/friebel/workspace/Method\ of\ Ellipsoids/example/ellipsoids.ini", "/home/data/friebel/workspace/Method\ of\ Ellipsoids/example/geometry.ini");
+//	ellipsoidMethod.solve();
 	ellipsoidMethod.write_output();
 
 	project(MEMBER_FUNCTION(&InitEllipsoidMethod::evaluate, &ellipsoidMethod), solution);

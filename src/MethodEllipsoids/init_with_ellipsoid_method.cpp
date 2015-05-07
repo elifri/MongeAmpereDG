@@ -15,6 +15,7 @@
 using namespace std;
 using namespace Eigen;
 namespace po = boost::program_options;
+using namespace mirror_problem;
 
 std::string InitEllipsoidMethod::outputFolder_ = "";
 
@@ -50,15 +51,15 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
 
     po::options_description configGeometry("Configuration of the geometry");
     configGeometry.add_options()
-        ("geometry.reflector.xMin",  po::value<double>(&xMin), "")
-        ("geometry.reflector.xMax",  po::value<double>(&xMax), "")
-        ("geometry.reflector.yMin",  po::value<double>(&yMin), "")
-        ("geometry.reflector.yMax",  po::value<double>(&yMax), "")
-        ("geometry.target.xMin",     po::value<double>(&xMinOut), "")
-        ("geometry.target.xMax",     po::value<double>(&xMaxOut), "")
-        ("geometry.target.yMin",     po::value<double>(&yMinOut), "")
-        ("geometry.target.yMax",     po::value<double>(&yMaxOut), "")
-        ("geometry.target.z",        po::value<double>(&zOut),    "")
+//        ("geometry.reflector.xMin",  po::value<double>(&xMin), "")
+//        ("geometry.reflector.xMax",  po::value<double>(&xMax), "")
+//        ("geometry.reflector.yMin",  po::value<double>(&yMin), "")
+//        ("geometry.reflector.yMax",  po::value<double>(&yMax), "")
+//        ("geometry.target.xMin",     po::value<double>(&xMinOut), "")
+//        ("geometry.target.xMax",     po::value<double>(&xMaxOut), "")
+//        ("geometry.target.yMin",     po::value<double>(&yMinOut), "")
+//        ("geometry.target.yMax",     po::value<double>(&yMaxOut), "")
+//        ("geometry.target.z",        po::value<double>(&zOut),    "")
         ("light.in.imageName",       po::value<string>(&lightInImageName), "path to image")
         ("povray.cameraAngle",       po::value<double>(&(povRayOpts.cameraAngle)),       "")
         ("povray.jitter",            po::value<bool>  (&(povRayOpts.jitter)),            "")
@@ -131,17 +132,19 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
 
     outputFolder_ = outputFolder;
 
+
     xMin = Solver_config::lowerLeft[0];
-    xMax = Solver_config::lowerLeft[1];
-    yMin = Solver_config::upperRight[0];
+    xMax = Solver_config::upperRight[0];
+    yMin = Solver_config::lowerLeft[1];
     yMax = Solver_config::upperRight[1];
 
     xMinOut = Solver_config::lowerLeftTarget[0];
-    xMaxOut = Solver_config::lowerLeftTarget[1];
-    yMinOut = Solver_config::upperRightTarget[0];
+    xMaxOut = Solver_config::upperRightTarget[0];
+    yMinOut = Solver_config::lowerLeftTarget[1];
     yMaxOut = Solver_config::upperRightTarget[1];
 
     zOut = 0;
+
 
 
     povRayOpts.cameraLocation(0) = (xMaxOut+xMinOut)/2.0;
@@ -237,8 +240,13 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
         }
     }
 
-    Grid2dCartesian grid(nDirectionsX,xMin,xMax,nDirectionsY,yMin,yMax);
-    grid.setPovRayOpts(povRayOpts);
+    InitEllipsoidMethod method (nDirectionsX, xMin, xMax, nDirectionsY, yMin, yMax, directionsOut, valuesLightOut, lightIn, alpha, maxIter);
+    method.grid_.setPovRayOpts(povRayOpts);
+
+    method.method_.outputFolder() = outputFolder_;
+    method.method_.solve(alpha, maxIter);
+
+    return method;
 }
 
 
@@ -248,18 +256,20 @@ InitEllipsoidMethod::InitEllipsoidMethod(const unsigned int nDirectionsX,
         const unsigned int nDirectionsY,
         const double yMin,
         const double yMax,
-        const Grid2d &gridLightIn,
         const EllipsoidContainer::Directions &directionsOut,
         const std::vector<double> &valuesLightOut,
               Function2d &functionLightIn, // incoming light distribution
               const double alpha, const int maxIter
     ):
-            grid_(nDirectionsX, xMin, xMax, nDirectionsY, yMin, yMax), method_(grid_, gridLightIn, directionsOut, valuesLightOut, functionLightIn), alpha_(alpha), maxIter_(maxIter) {}
+            grid_(nDirectionsX, xMin, xMax, nDirectionsY, yMin, yMax), method_(grid_, directionsOut, valuesLightOut, functionLightIn), alpha_(alpha), maxIter_(maxIter) {}
 
 
 void InitEllipsoidMethod::solve()
 {
+    std::cout << method_.outputFolder() << std::endl;
     method_.outputFolder() = outputFolder_;
+//    method_.outputFolder() = "../plots/EllipsoidData";
+//    outputFolder_.copy(method_.outputFolder(),0,outputFolder_.length());
     method_.solve(alpha_, maxIter_);
 }
 
