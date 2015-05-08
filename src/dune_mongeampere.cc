@@ -29,14 +29,6 @@ try {
 	Solver_config::problem = CONST_RHS;
 	std::cout << "we are solving the problem " << Solver_config::problem << std::endl;
 
-#ifdef USE_DOGLEG
-	std::cout <<"using dogleg " << std::endl;
-#endif
-#ifdef USE_PETSC
-	PetscInitialize(&argc,&argv,NULL,help);
-	std::cout <<"using petsc" << std::endl;
-#endif
-
 	// ////////////////////////////////
 // Generate the grid
 // ////////////////////////////////
@@ -47,6 +39,8 @@ try {
 	Solver_config::upperRight = {0.2,0.4};
 	Solver_config::UnitCubeType unitcube(Solver_config::lowerLeft, Solver_config::upperRight, Solver_config::startlevel);
 
+//	Solver_config::lowerLeftTarget = {0.3,0};
+//	Solver_config::upperRightTarget = {0.6,0.6};
 	Solver_config::lowerLeftTarget = {-0.15,0.1};
 	Solver_config::upperRightTarget = {0.15,0.4};
 
@@ -58,8 +52,17 @@ try {
 	VTKWriter<Solver_config::GridView> vtkWriter(gridView);
 	vtkWriter.write("grid");
 
-
 	MA_solver<Solver_config> ma_solver(unitcube.grid_ptr(), gridView);
+
+
+#ifdef USE_DOGLEG
+  std::cout <<"using dogleg " << std::endl;
+#endif
+#ifdef USE_PETSC
+  PetscInitialize(&argc,&argv,NULL,help);
+  std::cout <<"using petsc" << std::endl;
+#endif
+
 
 	// ///////////////////////////////////////////////
 	// Choose an initial iterate
