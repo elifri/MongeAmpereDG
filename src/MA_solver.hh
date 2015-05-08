@@ -464,6 +464,14 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 //  solution = VectorType::Ones(dof_handler.get_n_dofs());
 //  solution = exactsol_projection;
 
+//  std::cout << "solution " << solution.transpose() << std::endl;
+
+  const MA_solver<Solver_config>::Operator op(*this);
+  VectorType f;
+  op.evaluate(solution, f);
+  MATLAB_export(f, "f_initial");
+  std::cout << "f norm " << f.norm() << std::endl;
+
 
 	//init exact solution
 	Dirichletdata exact_sol;
@@ -476,10 +484,8 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 
 
 	vtkplotter.write_numericalsolution_VTK(0, "initial_guess");
-	std::cout << "solution " << solution.transpose() << std::endl;
 	vtkplotter.write_numericalmirror_VTK(count_refined, "initial_guessMirror");
 	vtkplotter.write_numericalmirror_pov(count_refined, "initial_guessMirror");
-	std::cout << "solution " << solution.transpose() << std::endl;
 
 	for (int i = 0; i < Solver_config::nonlinear_steps; i++)
 	{
@@ -706,6 +712,8 @@ void MA_solver<Config>::solve_nonlinear_step()
 	Solver_config::VectorType f;
 	op.evaluate(solution, f);
 
+//	MATLAB_export(f, "f");
+
 	Dirichletdata exact_sol;
 
 //	std::cout << "initial f " << f.transpose() << std::endl;
@@ -721,7 +729,7 @@ void MA_solver<Config>::solve_nonlinear_step()
 	DogLeg_optionstype opts;
 	opts.iradius = 1;
 	for (int i=0; i < 3; i++)	opts.stopcriteria[i] = 1e-8;
-	opts.maxsteps = 100;
+	opts.maxsteps = 200;
 	opts. silentmode = false;
 	opts.exportJacobianIfSingular= true;
 	opts.exportFDJacobianifFalse = true;
