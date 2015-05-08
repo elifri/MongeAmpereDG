@@ -193,13 +193,21 @@ void Plotter::extract_solution(PointdataVectorType &v) const
 	        v[i][0] = temp_vec[i];
 	}else {		// save points in file after refinement
 
-		int size_u = solver->localFiniteElement.size(u());
+	  typename Solver_config::FEBasis::LocalView localView(&solver->FEBasis);
+	  auto localIndexSet = solver->FEBasis.indexSet().localIndexSet();
+
 
 		int vertex_count = 0;
 
 		for (auto&& element: elements(*grid))
 		{
-			const auto geometry = element.geometry();
+	    localView.bind(element);
+	    localIndexSet.bind(localView);
+
+	    const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
+	    int size_u = localFiniteElementu.size();
+
+	    const auto geometry = element.geometry();
 			const MA_solver<Solver_config>::IndexType id = grid->indexSet().index(element);
 
 			std::vector<Solver_config::RangeType> referenceFunctionValues(size_u);
@@ -207,12 +215,13 @@ void Plotter::extract_solution(PointdataVectorType &v) const
 			for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
 
 				//get reference function values at refined points
-				solver->localFiniteElement(u()).localBasis().evaluateFunction(it.coords(), referenceFunctionValues);
+				localFiniteElementu.localBasis().evaluateFunction(it.coords(), referenceFunctionValues);
 
 				//evaluate solution at refined points
 				Solver_config::value_type u = 0;
 				for (int i = 0; i < size_u; i++)
-					u += solver->solution(solver->dof_handler.get_offset(id)+i)*referenceFunctionValues[i];
+//					u += solver->solution(solver->dof_handler.get_offset(id)+i)*referenceFunctionValues[i];
+				  assert(false);
 
 				//write solution into vector
 				v[vertex_count] = u;

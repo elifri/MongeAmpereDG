@@ -11,7 +11,6 @@
 #include "utils.hpp"
 #include "solver_config.hh"
 
-#include "Dof_handler.hpp"
 #include <dune/geometry/quadraturerules.hh>
 #include "matlab_export.hpp"
 
@@ -181,28 +180,25 @@ public:
     typedef typename Solver_config::DenseMatrixType DenseMatrixType;
     typedef typename Solver_config::MatrixType MatrixType;
 
-    typedef typename Solver_config::LocalFiniteElementType LocalFiniteElementType;
-    typedef typename Solver_config::LocalFiniteElementuType LocalFiniteElementuType;
-//	typedef typename Solver_config::LocalFiniteElementuType::Traits::LocalBasisType::Traits::HessianType HessianType;
-
-    Assembler(const GridViewType* gridView_ptr,
-            const Dof_handler<Solver_config> &dof_handler,
-            const Solver_config::FEBasis& basis,
-            const LocalFiniteElementType &localFiniteElement,
-            const LocalFiniteElementuType &localFiniteElementu) :
-            gridView_ptr(gridView_ptr), dof_handler(dof_handler), basis_(basis), localFiniteElement(
-                    localFiniteElement), localFiniteElementu(
-                    localFiniteElementu), no_hanging_nodes(true) {
-    }
 
     /**
      * extracts local degree of freedoom
-     * @param id	id of local element
+     * @param localIndexSet
      * @param x		global dof vector
      * @return	local dof vector
      */
-    VectorType calculate_local_coefficients(const IndexType id,
-            const VectorType &x) const;
+    template<typename LocalIndexSet>
+    Solver_config::VectorType calculate_local_coefficients(const LocalIndexSet &localIndexSet, const Solver_config::VectorType &v) const;
+
+    /**
+     *  adds the coeffs v_local to the global dof vector
+     * @param localIndexSet indexset bind to the local contex where v_local is added
+     * @param v_local local dof vector (to be added)
+     * @param returns the new global dof vector
+     */
+    template<typename LocalIndexSet>
+    void add_local_coefficients(const LocalIndexSet &localIndexSet, const Solver_config::VectorType &v_local, Solver_config::VectorType& v) const;
+
 
     /**
      * extracts local degree of freedoom (excluding hessian dofs)
@@ -254,15 +250,14 @@ public:
             VectorType& rhs) const;
 
 private:
-    const GridViewType* gridView_ptr;
+/*
+  const GridViewType* gridView_ptr;
 
-    const Dof_handler<Solver_config>& dof_handler;
 
-    const LocalFiniteElementType& localFiniteElement;
-    const LocalFiniteElementuType& localFiniteElementu;
+*/
+
+//    const MA_solver* ma_solver;
     const Solver_config::FEBasis& basis_;
-
-//	const FEBasisType& FEBasis;
 
     bool no_hanging_nodes;
 };
@@ -288,7 +283,7 @@ void Assembler::calculate_local_mass_matrix_ansatz(
                 quad[pt].position();
 
         //the shape function values
-        std::vector<typename LocalFiniteElement::RangeType> referenceFunctionValues(
+        std::vector<typename LocalFiniteElement::Traits::LocalBasisType::Traits::RangeType> referenceFunctionValues(
                 size);
         lfu.localBasis().evaluateFunction(quadPos, referenceFunctionValues);
 
@@ -376,69 +371,100 @@ void Assembler::calculate_refined_local_mass_matrix_ansatz(
     }
 }
 
+
+
+template<typename LocalIndexSet>
+inline
+Solver_config::VectorType Assembler::calculate_local_coefficients(const LocalIndexSet &localIndexSet, const Solver_config::VectorType &v) const
+{
+  Solver_config::VectorType v_local(localIndexSet.size());
+  for (int i = 0; i < localIndexSet.size(); i++)
+  {
+     v_local[i] = localIndexSet.flat_index(i);
+  }
+  return v_local;
+}
+
+template<typename LocalIndexSet>
+inline
+void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const Solver_config::VectorType &v_local, Solver_config::VectorType& v) const
+{
+  assert (v_local == localIndexSet.size());
+  assert (v.size() == basis_.indexSet().dimension());
+  for (int i = 0; i < localIndexSet.size(); i++)
+  {
+     v(localIndexSet.flat_index(i)) = v_local[i];
+  }
+}
+
+
 //template<class Config>
 template<typename LocalOperatorType>
-//void Assembler::assemble_DG_Jacobian(LocalOperatorType lop, const VectorType& x, VectorType& v, MatrixType& m) const
-void Assembler::assemble_DG(LocalOperatorType lop, const VectorType& x,
-        VectorType& v) const {
-    assert(x.size() == dof_handler.get_n_dofs());
+void Assembler::assemble_DG_Jacobian(LocalOperatorType lop, const VectorType& x, VectorType& v, MatrixType& m) const
+//-void Assembler::assemble_DG(LocalOperatorType lop, const VectorType& x,
+//-        VectorType& v) const
+{
+    assert(x.size() == basis_.indexSet().dimension());
+
+    Solver_config::GridView gridView = basis_.gridView();
 
     //assuming Galerkin
     v = VectorType::Zero(x.size());
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
-    const GridViewType::IndexSet& indexSet = gridView_ptr->indexSet();
+    const GridViewType::IndexSet& indexSet = gridView.indexSet();
     auto localView = basis_.localView();
+    auto localViewn = basis_.localView;
     auto localIndexSet = basis_.indexSet().localIndexSet();
+    auto localIndexSetn = basis_.indexSet().localIndexSet();
 
     int tag_count = 0;
 
     // A loop over all elements of the grid
-    for (auto&& e : elements(*gridView_ptr)) {
+    for (auto&& e : elements(gridView)) {
 
         // Bind the local FE basis view to the current element
         localView.bind(e);
         localIndexSet.bind(localView);
 
         VectorType local_vector;
-        local_vector.setZero(localView.size());		// Set all entries to zero
+        local_vector.setZero(localView.size());    // Set all entries to zero
 
         //get id
         IndexType id = indexSet.index(e);
 
         //calculate local coefficients
-        VectorType xLocal = dof_handler.calculate_local_coefficients(id, x);
+        VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
 
         lop.assemble_cell_term(localView, xLocal, local_vector, tag_count);
         tag_count++;
 
-        // Traverse intersections
-        for (auto&& is : intersections(*gridView_ptr, e)) {
+       // Traverse intersections
+        for (auto&& is : intersections(gridView, e)) {
             if (is.neighbor()) {
 
                 // compute unique id for neighbor
                 const GridViewType::IndexSet::IndexType idn =
-                        gridView_ptr->indexSet().index(*(is.outside()));
+                        gridView.indexSet().index(*(is.outside()));
 
                 // Visit face if id is bigger
                 bool visit_face = id > idn
                         || Solver_config::require_skeleton_two_sided;
                 // unique vist of intersection
                 if (visit_face) {
-                    assert(localFiniteElement.type() == (is.outside())->type()); //assert the neighbour element hast the same local basis
 
-                            //extract neighbour
-                    VectorType xLocaln =
-                            dof_handler.calculate_local_coefficients(idn, x);
-                    VectorType local_vectorn = VectorType::Zero(xLocaln.size());
+                  // Bind the local neighbour FE basis view to the neighbour element
+                  localViewn.bind(*(is.outside()));
+                  localIndexSetn.bind(localViewn);
+                  VectorType xLocaln = calculate_local_coefficients(localIndexSetn, x);
+                  VectorType local_vectorn = VectorType::Zero(xLocaln.size());
 
-                    lop.assemble_inner_face_term(is, localFiniteElement, xLocal,
-                            localFiniteElement, xLocaln, local_vector,
-                            local_vectorn, tag_count);
+                  lop.assemble_inner_face_term(is, localView, xLocal,
+                      localViewn, xLocaln, local_vector,
+                      local_vectorn, tag_count);
 
-                    v.segment(dof_handler.get_offset(idn), local_vectorn.size()) +=
-                            local_vectorn;
-                    tag_count++;
+                  add_local_coefficients(localIndexSetn, local_vectorn, v);
+                  tag_count++;
                 }
             } else if (is.boundary()) {
                 // Boundary integration
@@ -456,173 +482,6 @@ void Assembler::assemble_DG(LocalOperatorType lop, const VectorType& x,
                 local_vector;
     }
 
-}
-
-//template<class Config>
-template<typename LocalOperatorType>
-void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const VectorType& x,
-        MatrixType &m) const {
-//	assert (initialised);
-    assert(x.size() == dof_handler.get_n_dofs());
-
-    m.resize(dof_handler.get_n_dofs(), dof_handler.get_n_dofs());
-    m.setZero();
-
-    int tag_count = 0;
-
-    // The index set gives you indices for each element , edge , face , vertex , etc .
-    const GridViewType::IndexSet& indexSet = gridView_ptr->indexSet();
-
-    // A loop over all elements of the grid
-    for (auto&& e : elements(*gridView_ptr)) {
-        DenseMatrixType m_m;
-
-        // Get set of shape functions for this element
-        assert(localFiniteElement.type() == e->type()); // This only works for cube grids
-
-                // Set all entries to zero
-        m_m.setZero(localFiniteElement.size(), localFiniteElement.size());
-
-        //get id
-        IndexType id = indexSet.index(e);
-        VectorType xLocal = dof_handler.calculate_local_coefficients(id, x);
-
-        lop.assemble_cell_Jacobian(e, localFiniteElement, xLocal, m_m,
-                tag_count);
-        tag_count++;
-
-        // Traverse intersections
-        for (auto&& is : intersections(*gridView_ptr, e)) {
-            if (is.neighbor()) {
-                // compute unique id for neighbor
-
-                const GridViewType::IndexSet::IndexType idn =
-                        gridView_ptr->indexSet().index(*(is.outside()));
-
-                // Visit face if id is bigger
-                bool visit_face = id > idn
-                        || Solver_config::require_skeleton_two_sided;
-                // unique vist of intersection
-                if (visit_face) {
-                    assert(localFiniteElement.type() == (is.outside())->type()); //assert the neighbour element hast the same local basis
-
-                            //extract neighbour
-                    VectorType xLocaln =
-                            dof_handler.calculate_local_coefficients(idn, x);
-                    DenseMatrixType mn_m, m_mn, mn_mn;
-                    mn_m.setZero(localFiniteElement.size(),
-                            localFiniteElement.size());
-                    m_mn.setZero(localFiniteElement.size(),
-                            localFiniteElement.size());
-                    mn_mn.setZero(localFiniteElement.size(),
-                            localFiniteElement.size());
-
-                    lop.assemble_inner_face_Jacobian(is, localFiniteElement,
-                            xLocal, localFiniteElement, xLocaln, m_m, mn_m,
-                            m_mn, mn_mn, tag_count);
-
-                    copy_to_sparse_matrix(mn_m, dof_handler.get_offset(idn),
-                            dof_handler.get_offset(id), m);
-                    copy_to_sparse_matrix(m_mn, dof_handler.get_offset(id),
-                            dof_handler.get_offset(idn), m);
-                    copy_to_sparse_matrix(mn_mn, dof_handler.get_offset(idn),
-                            dof_handler.get_offset(idn), m);
-                    tag_count++;
-                }
-
-            } else if (is.boundary()) {
-                // Boundary integration
-                lop.assemble_boundary_face_Jacobian(is, localFiniteElement,
-                        xLocal, m_m, tag_count);
-                tag_count++;
-            } else {
-                std::cerr << " I do not know how to handle this intersection"
-                        << std::endl;
-                exit(-1);
-            }
-        }
-        copy_to_sparse_matrix(m_m, dof_handler.get_offset(id),
-                dof_handler.get_offset(id), m);
-    }
-
-}
-
-//template<class Config>
-template<typename LocalOperatorType>
-void Assembler::assemble_linear_system_DG(LocalOperatorType lop, MatrixType &m,
-        VectorType& rhs) const {
-
-//	assert (initialised);
-
-    //assuming Galerkin
-    m.setZero();
-    m.resize(dof_handler.get_n_dofs_u(), dof_handler.get_n_dofs_u());
-    rhs = VectorType::Zero(dof_handler.get_n_dofs_u());
-
-    // The index set gives you indices for each element , edge , face , vertex , etc .
-    const GridViewType::IndexSet& indexSet = gridView_ptr->indexSet();
-
-    // A loop over all elements of the grid
-    for (auto&& e : elements(*gridView_ptr)) {
-
-        int size_u = localFiniteElementu.size();
-        // Get set of shape functions for this element
-        assert(localFiniteElementu.type() == e.type()); // This only works for cube grids
-
-                //get local system
-        VectorType local_vector = VectorType::Zero(size_u);
-        DenseMatrixType local_matrix = DenseMatrixType::Zero(size_u, size_u);
-
-        //get id
-        IndexType id = indexSet.index(e);
-
-        lop.assemble_cell_term(e, localFiniteElementu, local_matrix, local_vector);
-
-        // Traverse intersections
-        for (auto&& is : intersections(*gridView_ptr, e)) {
-            if (is.neighbor()) {
-                // compute unique id for neighbor
-                const GridViewType::IndexSet::IndexType idn = gridView_ptr->indexSet().index(*is.outside());
-
-                // Visit face if id is bigger
-                bool visit_face = id > idn
-                        || Solver_config::require_skeleton_two_sided;
-                // unique vist of intersection
-                if (visit_face) {
-                    //variables for neighbour part
-                    VectorType local_vectorn = VectorType::Zero(
-                            localFiniteElementu.size());
-
-                    DenseMatrixType mn_m, m_mn, mn_mn;
-                    mn_m.setZero(size_u, size_u);
-                    m_mn.setZero(size_u, size_u);
-                    mn_mn.setZero(size_u, size_u);
-
-                    lop.assemble_inner_face_term(is, localFiniteElementu,
-                            localFiniteElementu, local_matrix, mn_m, m_mn,
-                            mn_mn, local_vector, local_vectorn);
-
-                    copy_to_sparse_matrix(mn_m, dof_handler.get_offset_u(idn),
-                            dof_handler.get_offset_u(id), m);
-                    copy_to_sparse_matrix(m_mn, dof_handler.get_offset_u(id),
-                            dof_handler.get_offset_u(idn), m);
-                    copy_to_sparse_matrix(mn_mn, dof_handler.get_offset_u(idn),
-                            dof_handler.get_offset_u(idn), m);
-
-                    rhs.segment(dof_handler.get_offset_u(idn),
-                            local_vectorn.size()) += local_vectorn;
-                }
-            } else if (is.boundary()) {
-                // Boundary integration
-                lop.assemble_boundary_face_term(is, localFiniteElementu,
-                        local_matrix, local_vector);
-            }
-        }
-        copy_to_sparse_matrix(local_matrix, dof_handler.get_offset_u(id),
-                dof_handler.get_offset_u(id), m);
-        rhs.segment(dof_handler.get_offset_u(id), local_vector.size()) +=
-                local_vector;
-    }
 }
 
 #endif /* SRC_ASSEMBLER_HH_ */
