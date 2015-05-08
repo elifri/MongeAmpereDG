@@ -151,7 +151,9 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 		adouble g_value;
 		rhs.g(z, g_value);
 
+//		cout << "x_value " << x_value << " a_tilde " << a_tilde_value.value() << " omega(x) " << omega(x_value) << " btilde " << b_tilde.value() << " g " << g_value.value() << std::endl;
 		adouble PDE_rhs = a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde*omega(x_value)*g_value);
+//		cout<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value).value() << "/" << (4.0*b_tilde*omega(x_value)*g_value).value() << std::endl;
 
 		//calculate system for first test functions
 
@@ -159,7 +161,7 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 		{
 				v_adolc(j) += (PDE_rhs-uDH.determinant())*referenceFunctionValues[j]
 						* quad[pt].weight() * integrationElement;
-//				std::cout << "det(u)-f=" << uDH.determinant()<<"-"<< f <<"="<< uDH.determinant()-f<< std::endl;
+//				std::cout << "det(u)-f=" << uDH.determinant().value()<<"-"<< PDE_rhs.value() <<"="<< (uDH.determinant()-PDE_rhs).value()<< std::endl;
 		}
 
 
@@ -167,7 +169,9 @@ void assemble_cell_term(const Element& element, const MixedElement<LocalElement0
 		for (size_t j = 0; j < size_u_DH; j++) // loop over test fcts
 		{
 				v_adolc(size_u+j) += cwiseProduct(uDH,referenceFunctionValuesHessian[j])* quad[pt].weight() * integrationElement;
+//				std::cout << " add to v( " << size_u+j << ") "  << cwiseProduct(uDH,referenceFunctionValuesHessian[j]).value() << " -> " << v_adolc(size_u).value() << std::endl;
 				v_adolc(size_u+j) -= cwiseProduct(Hessu, referenceFunctionValuesHessian[j])*quad[pt].weight() * integrationElement;
+//        std::cout << " add to v( " << size_u+j << ")"  << cwiseProduct(Hessu,referenceFunctionValuesHessian[j]).value() <<" -> " << v_adolc(size_u).value() <<  std::endl;
 		}
 	}
 	for (int i = 0; i < localFiniteElement.size(); i++)	v_adolc[i] >>= v[i]; // select dependent variables
@@ -420,7 +424,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
 
 	    FieldVector<adouble, Solver_config::dim> T_value = gradu; T_value *= 2./a_tilde_value;
 
-//	    std::cout << "phi " << phi_value << " atilde " << a_tilde_value << " T " << T_value[0] << " " << T_value[1] << std::endl;
+	    std::cerr << "phi " << phi_value << " T " << T_value[0].value() << " " << T_value[1].value() << std::endl;
 
 	    const auto integrationElement = intersection.geometry().integrationElement(quad[pt].position());
 	    const double factor = quad[pt].weight()*integrationElement;
