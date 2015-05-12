@@ -31,8 +31,8 @@ public:
    * @param x			         local solution coefficients
    * @param v					 local residual (to be returned)
    */
-  template<class LocalView, class LocalElement1, class VectorType>
-  void assemble_cell_term(const LocalView& localView, const VectorType &x,
+  template<class LocalView, class LocalIndexSet, class VectorType>
+  void assemble_cell_term(const LocalView& localView, const LocalIndexSet &localIndexSet, const VectorType &x,
       VectorType& v, const int tag) const {
 
     // Get the grid element from the local FE basis view
@@ -49,21 +49,23 @@ public:
 
     // Get set of shape functions for this element
     const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
-    const auto& localFiniteElementuDH = localView.tree().template child<1>().child(0).finiteElement();
+    const auto& localFiniteElementuDH_entry = localView.tree().template child<1>().child(0).finiteElement();
+
 
     typedef decltype(localFiniteElementu) ConstElementuRefType;
     typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
 
-    typedef decltype(localFiniteElementuDH) ConstElementuDHRefType;
+    typedef decltype(localFiniteElementuDH_entry) ConstElementuDHRefType;
     typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
 
     typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::JacobianType JacobianType;
+    typedef typename Dune::FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
+    typedef typename Dune::FieldMatrix<Solver_config::value_type, Element::dimension, Element::dimension> FEHessianType;
     typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType HessianType;
 
     const int size_u = localFiniteElementu.size();
-    const int size_u_DH = localFiniteElementuDH.size();
-    const int size = size_u + size_u_DH;
+    const int size_u_DH = localFiniteElementuDH_entry.size();
+    const int size = localView.size();
 
 
     //init variables for automatic differentiation
@@ -79,7 +81,7 @@ public:
       x_adolc[i] <<= x[i];
 
     // Get a quadrature rule
-    int order = std::max(0, 2 * ((int) localFiniteElementu.order()));
+    int order = std::max(0, 2 * ((int) localFiniteElementu.localBasis().order()));
     const QuadratureRule<double, dim>& quad =
         QuadratureRules<double, dim>::rule(element.type(), order);
 
@@ -107,17 +109,22 @@ public:
           gradients, x_adolc.segment(0, size_u), gradu);
 
       // The hessian of the shape functions
-      std::vector<HessianType> Hessians(size_u);
+      std::vector<FEHessianType> Hessians(size_u);
       FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> Hessu;
       assemble_hessians_hessu(localFiniteElementu, jacobian, quadPos, Hessians,
           x_adolc.segment(0, size_u), Hessu);
 
       //the shape function values of hessian ansatz functions and assemble u_DH
       std::vector<HessianType> referenceFunctionValuesHessian(size_u_DH);
-      FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> uDH;
-      assemble_functionValues_u(localFiniteElementuDH, quadPos,
-          referenceFunctionValuesHessian, x_adolc.segment(size_u, size_u_DH),
-          uDH);
+      localFiniteElementuDH_entry.localBasis().evaluateFunction(quadPos,
+          referenceFunctionValuesHessian);
+      FieldMatrix<adouble, dim, dim> uDH = 0;
+
+      for (int col = 0; col < dim; col++)
+        for (int row = 0; row < dim; row++)
+          for (int j = 0; j < size_u_DH; j++)
+            uDH[row][col] += x_adolc(localIndexSet.flat_local_index(j, row, col));
+      adouble uDH_det = uDH[0][0]* uDH[1][1] -uDH[1][0]*uDH[0][1];
 
       //--------assemble cell integrals in variational form--------
 
@@ -128,18 +135,21 @@ public:
 
       for (size_t j = 0; j < size_u; j++) // loop over test fcts
           {
-        v(j) += (f - uDH.determinant()) * referenceFunctionValues[j]
+        v_adolc(j) += (f - uDH_det) * referenceFunctionValues[j]
             * quad[pt].weight() * integrationElement;
 //				std::cout << "det(u)-f=" << uDH.determinant()<<"-"<< f <<"="<< uDH.determinant()-f<< std::endl;
       }
 
       //calculate system for second tensor functions
       for (size_t j = 0; j < size_u_DH; j++) // loop over test fcts
-          {
-        v(size_u + j) += cwiseProduct(uDH, referenceFunctionValuesHessian[j])
-            * quad[pt].weight() * integrationElement;
-        v(size_u + j) -= cwiseProduct(Hessu, referenceFunctionValuesHessian[j])
-            * quad[pt].weight() * integrationElement;
+      {
+        for (int row=0; row < dim; row++)
+          for (int col = 0 ; col < dim; col++){
+            v_adolc(localIndexSet.flat_local_index(j, row, col) ) += uDH[row][col]*referenceFunctionValuesHessian[j]
+                                    * quad[pt].weight() * integrationElement;
+            v_adolc(localIndexSet.flat_local_index(j, row, col)) -= Hessu[row][col] * referenceFunctionValuesHessian[j]
+                                    * quad[pt].weight() * integrationElement;
+           }
       }
     }
     for (int i = 0; i < size; i++)
@@ -162,10 +172,10 @@ public:
 //typedef Dune::Intersection<const Dune::YaspGrid<2>, Dune::YaspIntersection<const Dune::YaspGrid<2> > > IntersectionType;
 //typedef Solver_config::VectorType VectorType;
 //typedef Solver_config::MatrixType MatrixType;
-  template<class IntersectionType, class LocalView, class VectorType>
+  template<class IntersectionType, class LocalView, class LocalIndexSet, class VectorType>
   void assemble_inner_face_term(const IntersectionType& intersection,
-      const LocalView &localView, const VectorType &x,
-      const LocalView &localViewn, const VectorType &xn, VectorType& v,
+      const LocalView &localView, const LocalIndexSet &localIndexSet, const VectorType &x,
+      const LocalView &localViewn, const LocalIndexSet &localIndexSetn, const VectorType &xn, VectorType& v,
       VectorType& vn, const int tag) const {
     const int dim = IntersectionType::dimension;
     const int dimw = IntersectionType::dimensionworld;
@@ -192,7 +202,7 @@ public:
     typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
 
     typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::JacobianType JacobianType;
+    typedef FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
     typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType RangeTypeDH;
 
     const int size_u = localFiniteElementu.size();
@@ -224,8 +234,8 @@ public:
 
     // Get a quadrature rule
     const int order = std::max(1,
-        std::max(2 * ((int) localFiniteElementu.order()),
-            2 * ((int) localFiniteElementun.order())));
+        std::max(2 * ((int) localFiniteElementu.localBasis().order()),
+            2 * ((int) localFiniteElementun.localBasis().order())));
     GeometryType gtface = intersection.geometryInInside().type();
     const QuadratureRule<double, dim - 1>& quad = QuadratureRules<double,
         dim - 1>::rule(gtface, order);
@@ -293,7 +303,9 @@ public:
 
       //assemble jump and averages
       adouble u_jump = u_value - un_value;
-      adouble grad_u_normaljump = (gradu - gradun) * normal;
+      //write difference between gradu and gradu_n into temporary vector
+      auto temp_diff = gradu; temp_diff -= gradun;
+      adouble grad_u_normaljump = temp_diff * normal;
 
       //-------calculate integral--------
       auto integrationElement = intersection.geometry().integrationElement(
@@ -305,39 +317,42 @@ public:
 
         //parts from self
         // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
-        v(j) += penalty_weight * u_jump * referenceFunctionValues[j] * factor;
+        v_adolc(j) += penalty_weight * u_jump * referenceFunctionValues[j] * factor;
         // gradient penalty
         auto grad_times_normal = gradients[j] * normal;
-        v(j) += penalty_weight_gradient * (grad_u_normaljump)
+        v_adolc(j) += penalty_weight_gradient * (grad_u_normaljump)
             * (grad_times_normal) * factor;
 
         //neighbour parts
         // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
-        vn(j) += penalty_weight * u_jump * (-referenceFunctionValuesn[j])
+        vn_adolc(j) += penalty_weight * u_jump * (-referenceFunctionValuesn[j])
             * factor;
         // gradient penalty
         grad_times_normal = gradientsn[j] * normal;
-        vn(j) += penalty_weight_gradient * (grad_u_normaljump)
+        vn_adolc(j) += penalty_weight_gradient * (grad_u_normaljump)
             * (-grad_times_normal) * factor;
       }
 
+      int col, row;
       for (size_t j = 0; j < size_u_DH; j++) // loop over test fcts
+      {
+        for (int row = 0; row < dim; row++)
+          for (int col = 0; col < dim; col++)
           {
+          //parts from self
+          // dicr. hessian correction term: jump{avg{mu} grad_u}
+          adouble temp = referenceFunctionValuesHessian[j]*gradu[col];
+          v_adolc(localIndexSet.flat_local_index(j, row, col)) += 0.5 * (temp * normal[row]);
+          temp = referenceFunctionValuesHessian[j]*gradun[col];
+          v_adolc(localIndexSet.flat_local_index(j, row, col)) += -0.5 * (temp * normal[row]); //a - sign for the normal
 
-        //parts from self
-        // dicr. hessian correction term: jump{avg{mu} grad_u}
-        FieldVector<double, dim> temp;
-        referenceFunctionValuesHessian[j].mv(gradu, temp);
-        v(size_u + j) += 0.5 * (temp * normal);
-        referenceFunctionValuesHessian[j].mv(gradun, temp);
-        v(size_u + j) += -0.5 * (temp * normal); //a - sign for the normal
-
-        //neighbour parts
-        // dicr. hessian correction term: jump{avg{mu} grad_u}
-        referenceFunctionValuesHessiann[j].mv(gradu, temp);
-        vn(size_u + j) += 0.5 * (temp * normal);
-        referenceFunctionValuesHessiann[j].mv(gradun, temp);
-        vn(size_u + j) += -0.5 * (temp * normal); //a - sign for the normal
+          //neighbour parts
+          // dicr. hessian correction term: jump{avg{mu} grad_u}
+          temp = referenceFunctionValuesHessiann[j]*gradu[col];
+          vn_adolc(localIndexSetn.flat_local_index(j, row, col)) += 0.5 * (temp * normal[row]);
+          temp = referenceFunctionValuesHessiann[j]*gradun[col];
+          vn_adolc(localIndexSetn.flat_local_index(j, row, col)) += -0.5 * (temp * normal[row]); //a - sign for the normal
+          }
       }
     }
 
@@ -352,10 +367,10 @@ public:
     trace_off();
   }
 
-  template<class Intersection, class LocalView,
+  template<class Intersection, class LocalIndexSet, class LocalView,
       class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
-      const LocalView &localView,
+      const LocalView &localView,  const LocalIndexSet &localIndexSet,
       const VectorType &x, VectorType& v, const int tag) const {
     const int dim = Intersection::dimension;
     const int dimw = Intersection::dimensionworld;
@@ -392,7 +407,7 @@ public:
     // ----start quadrature--------
 
     // Get a quadrature rule
-    const int order = std::max(0, 2 * ((int) localFiniteElementu.order()));
+    const int order = std::max(0, 2 * ((int) localFiniteElementu.localBasis().order()));
     GeometryType gtface = intersection.geometryInInside().type();
     const QuadratureRule<double, dim - 1>& quad = QuadratureRules<double,
         dim - 1>::rule(gtface, order);
@@ -418,39 +433,11 @@ public:
       const FieldVector<double, dim> &quadPos =
           intersection.geometryInInside().global(quad[pt].position());
 
-      // The shape functions on the reference elements
-      std::vector<RangeType> referenceFunctionValues;
-      localFiniteElementu.localBasis().evaluateFunction(quadPos,
-          referenceFunctionValues);
-
-      /*
-       // The gradients of the shape functions on the reference element
-       std::vector<FieldMatrix<double, 1, dim> > referenceGradients;
-       localFiniteElement(u()).localBasis().evaluateJacobian(quadPos,referenceGradients);
-       */
-
-      //-------transform data---------------
-      // The transposed inverse Jacobian of the map from the reference element to the element
-//		const auto& jacobian = intersection.inside()->geometry().jacobianInverseTransposed(quadPos);
-      /*
-       // Compute the shape function gradients on the real element
-       std::vector<FieldVector<double, dim> > gradients(referenceGradients.size());
-       for (size_t i = 0; i < gradients.size(); i++)
-       jacobian.mv(referenceGradients[i][0], gradients[i]);
-       */
-
-      //---------evaluate u and grad u-----------
-      /*
-       // compute gradient of u
-       FieldVector<double,dim> gradu(0.0);
-       for (size_t i=0; i<x.size(); i++)
-       gradu.axpy(x(i),gradients[i]);
-       */
-
-      // evaluate u
-      double u_value = 0.0;
-      for (size_t i = 0; i < localFiniteElementu.size(); i++)
-        u_value += x(i) * referenceFunctionValues[i];
+      //the shape function values
+            std::vector<RangeType> referenceFunctionValues(localFiniteElementu.size());
+            adouble u_value = 0;
+            assemble_functionValues_u(localFiniteElementu, quadPos,
+                referenceFunctionValues, x_adolc.segment(0, localFiniteElementu.size()), u_value);
 
       double g;
       Dirichletdata bcTEmp; //todo dirichletdata const machen
@@ -464,13 +451,17 @@ public:
           {
 
         // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
-        v(j) += penalty_weight * (u_value - g) * referenceFunctionValues[j]
+        v_adolc(j) += penalty_weight * (u_value - g) * referenceFunctionValues[j]
             * factor;
 //			std::cout << "v(j) += " << penalty_weight << "*(" << u_value<<"-" << g << ")*" << referenceFunctionValues[j] << "*" << factor;
 //			std::cout << "-> " << v(j) << std::endl;
       }
 
     }
+    // select dependent variables
+    for (int i = 0; i < localView.size(); i++)
+      v_adolc[i] >>= v[i];
+    trace_off();
   }
 
   RightHandSide rhs;

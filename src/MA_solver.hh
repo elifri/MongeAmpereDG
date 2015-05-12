@@ -140,6 +140,13 @@ public:
 		assembler.assemble_Jacobian_DG(LOP, x, m);
 	}
 
+  ///assembles the (global) Jacobian of the FE function as specified in LOP
+  template<typename LocalOperatorType>
+  void assemble_DG_Jacobian(LocalOperatorType LOP, const VectorType& x, VectorType& v, MatrixType& m) const {
+    assert (initialised);
+    assembler.assemble_Jacobian_DG(LOP, x, v, m);
+  }
+
 	///assembles the (global) FE-System given by the operator lop
 	template<typename LocalOperatorType>
 	void assemble_linear_system_DG(LocalOperatorType lop, MatrixType &m, VectorType& rhs) const {
@@ -315,10 +322,12 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 
 	//init exact solution
 	Dirichletdata exact_sol;
+/*
 	if (Solver_config::problem == MA_SMOOTH || Solver_config::problem == SIMPLE_MA)
 		project(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol), MEMBER_FUNCTION(&Dirichletdata::derivative, &exact_sol), exactsol_projection);
 	else
 		project(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol), exactsol_projection);
+*/
 
 //	vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
 
@@ -335,6 +344,7 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 	  SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
 	  vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
 	  vtkWriter.write("numericalSolution Functions");
+
 
 //	vtkplotter.write_numericalsolution_VTK(0, "initial_guess");
 //	std::cout << "solution " << solution.transpose() << std::endl;
@@ -364,6 +374,8 @@ void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
   std::cout << v_u.transpose() << std::endl;
   v.segment(0, v_u.size()) = v_u;
 }
+
+
 
 /*
 //TODO mass matrix does not alter for different elements!!!
@@ -549,14 +561,14 @@ void MA_solver<Config>::solve_nonlinear_step()
 //	std::cout << "initial guess "<< solution.transpose() << std::endl;
 
 	Solver_config::VectorType f;
-	op.evaluate(solution, f);
+//	op.evaluate(solution, f);
 
 	Dirichletdata exact_sol;
 
 //	std::cout << "initial f " << f.transpose() << std::endl;
-	std::cout << "initial f(x) norm " << f.norm() << endl;
-	std::cout << "initial l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
-	std::cout << "approximate error " << (solution-exactsol_projection).norm() << std::endl;
+//	std::cout << "initial f(x) norm " << f.norm() << endl;
+//	std::cout << "initial l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
+//	std::cout << "approximate error " << (solution-exactsol_projection).norm() << std::endl;
 
 	// /////////////////////////
 	// Compute solution
@@ -583,11 +595,16 @@ void MA_solver<Config>::solve_nonlinear_step()
 	PETSC_SNES_Wrapper<MA_solver<Config>::Operator> snes;
 
 	//estimate number of nonzeros in jacobian
+//	int nnz_jacobian = gridView_ptr->size(0)* //for each element
+//						(localFiniteElement.size()*localFiniteElement.size()  //cell terms
+//						 + 3*        //at most 3 neighbours and only mixed edge terms in
+//						    (localFiniteElementu.size()*localFiniteElementu.size() //in u and v
+//						     + localFiniteElement.size(u_DH())*localFiniteElementu.size())/2)/2 ; //and mu and u
 	int nnz_jacobian = gridView_ptr->size(0)* //for each element
-						(localFiniteElement.size()*localFiniteElement.size()  //cell terms
-						 + 3*        //at most 3 neighbours and only mixed edge terms in
-						    (localFiniteElementu.size()*localFiniteElementu.size() //in u and v
-						     + localFiniteElement.size(u_DH())*localFiniteElementu.size())/2)/2 ; //and mu and u
+	            (18*18  //cell terms
+	             + 3*        //at most 3 neighbours and only mixed edge terms in
+	                (6*6 //in u and v
+	                 + 12*6)/2)/2 ; //and mu and u
 	std::cout << "estimate for nnz_jacobian " << nnz_jacobian << std::endl;
 
 	snes.init(dof_handler.get_n_dofs(), nnz_jacobian);
@@ -603,7 +620,7 @@ void MA_solver<Config>::solve_nonlinear_step()
 	op.evaluate(solution, f);
 
 	std::cout << "f(x) norm " << f.norm() << endl;
-	std::cout << "l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
+//	std::cout << "l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
 
 //	std::cout << "x " << solution.transpose() << endl;
 	}

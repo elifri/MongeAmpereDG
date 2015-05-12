@@ -20,7 +20,8 @@
 
 #include <dune/functions/functionspacebases/gridviewfunctionspacebasis.hh>
 
-#include "lagrangedgbasis.hh"
+//#include "lagrangedgbasis.hh"
+#include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 
 #include <dune/functions/functionspacebases/pq1nodalbasis.hh>
 #include <dune/functions/functionspacebases/pq2nodalbasis.hh>
@@ -46,6 +47,7 @@ class MAMixedBasisTree;
 template<typename GV, int deg, int degHess>
 class MAMixedLocalIndexSet {
     static const int dim = GV::dimension;
+    static const int nDH = dim*dim;
 
 public:
     typedef std::size_t size_type;
@@ -58,8 +60,8 @@ public:
 
     MAMixedLocalIndexSet(const MAMixedIndexSet<GV, deg, degHess> & indexSet) :
             indexSet_(indexSet), uLocalIndexSet_(
-                    indexSet_.pq1IndexSet_.localIndexSet()), uDHLocalIndexSet_(
-                    indexSet_.pq2IndexSet_.localIndexSet()) {
+                    indexSet_.uIndexSet_.localIndexSet()), uDHLocalIndexSet_(
+                    indexSet_.uDHIndexSet_.localIndexSet()) {
     }
 
     void bind(const MAMixedBasisLocalView<GV, deg, degHess>& localView) {
@@ -74,31 +76,36 @@ public:
     }
 
     size_type size() const {
-        return dim * dim * uDHLocalIndexSet_.size() + uLocalIndexSet_.size();
+        return nDH * uDHLocalIndexSet_.size() + uLocalIndexSet_.size();
     }
 
     MultiIndex index(size_type localIndex) const {
         MultiIndex mi;
-        size_type v_size = dim*dim*uDHLocalIndexSet_.size();
+        size_type v_size = nDH*uDHLocalIndexSet_.size();
         mi[0] = localIndex / v_size;
         if (mi[0] == 0) {
-            size_type v_comp = (localIndex % v_size) / uDHLocalIndexSet_.size();
-            size_type v_localIndex = (localIndex % v_size)
-                    % uDHLocalIndexSet_.size();
-            mi[1] = v_comp * indexSet_.pq2IndexSet_.size()
-                    + uDHLocalIndexSet_.index(v_localIndex)[0];
+          size_type p_localIndex = localIndex % v_size;
+          mi[1] = uLocalIndexSet_.index(p_localIndex)[0];
         }
         if (mi[0] == 1) {
-            size_type p_localIndex = localIndex % v_size;
-            mi[1] = uLocalIndexSet_.index(p_localIndex)[0];
+          size_type v_comp = (localIndex % v_size) / uDHLocalIndexSet_.size();
+          size_type v_localIndex = (localIndex % v_size)
+                  % uDHLocalIndexSet_.size();
+          mi[1] = v_comp * indexSet_.uDHIndexSet_.size()
+                  + uDHLocalIndexSet_.index(v_localIndex)[0];
         }
-        return uLocalIndexSet_.size()+mi;
+        return mi;
+    }
+
+    size_type flat_local_index(const int j, const int row, const int col) const
+    {
+      return uLocalIndexSet_.size()+dim*(dim*j+row)*col;
     }
 
     size_type flat_index(MultiIndex mi) const
     {
-        if (mi[0] == 0) return mi[1];\
-        return uLocalIndexSet_.size()+mi[1];
+        if (mi[0] == 0) return mi[1];
+        return uLocalIndexSet_.basisIndexSet_.size()+mi[1];
     }
     size_type flat_index(size_type localIndex) const
     {
@@ -122,6 +129,7 @@ private:
 template<typename GV, int deg, int degHess>
 class MAMixedIndexSet {
     static const int dim = GV::dimension;
+    static const int nDH = dim*dim;
 
     /** \brief The global FE basis that this is a view on */
     typedef MAMixedBasis<GV, deg, degHess> GlobalBasis;
@@ -145,7 +153,7 @@ public:
 
     /** \todo This method has been added to the interface without prior discussion. */
     size_type dimension() const {
-        return dim * uDHIndexSet_.size() + uIndexSet_.size();
+        return nDH * uDHIndexSet_.size() + uIndexSet_.size();
     }
 
     //! Return number of possible values for next position in empty multi index
@@ -160,7 +168,7 @@ public:
             return 2;
         if (prefix.size() == 1) {
             if (prefix[0] == 1)
-                return dim * uDHIndexSet_.size();
+                return nDH * uDHIndexSet_.size();
             if (prefix[0] == 0)
                 return uIndexSet_.size();
         }
@@ -171,7 +179,7 @@ public:
     //! Return number possible values for next position in multi index
     size_type size(std::size_t prefix) const {
       if (prefix == 1)
-        return dim * uDHIndexSet_.size();
+        return nDH * uDHIndexSet_.size();
       if (prefix == 0)
         return uIndexSet_.size();
         assert(false);
@@ -198,6 +206,7 @@ class MAMixedBasis: public GridViewFunctionSpaceBasis<GV,
         MAMixedBasisLocalView<GV, deg, degHess>,
         MAMixedIndexSet<GV, deg, degHess>, std::array<std::size_t, 2> > {
     static const int dim = GV::dimension;
+    static const int nDH = dim*dim;
 
 public:
 
@@ -244,6 +253,7 @@ private:
 template<typename GV, int deg, int degHess>
 class MAMixedBasisLocalView {
     static const int dim = GV::dimension;
+    static const int nDH = dim*dim;
 
 public:
     /** \brief The global FE basis that this is a view on */
@@ -320,7 +330,7 @@ public:
     /** \brief Number of degrees of freedom on this element
      */
     size_type size() const {
-        return dim * uDHlocalView_.size() + ulocalView_.size();
+        return nDH * uDHlocalView_.size() + ulocalView_.size();
     }
 
     /**
@@ -331,7 +341,7 @@ public:
      *
      */
     size_type maxSize() const {
-        return dim * uDHlocalView_.maxSize() + ulocalView_.maxSize();
+        return nDH * uDHlocalView_.maxSize() + ulocalView_.maxSize();
     }
 
     /** \brief Return the global basis that we are a view on
@@ -352,12 +362,12 @@ protected:
 
 template<typename GV, int deg, int degHess>
 class MAMixedHessianTree: public TypeTree::PowerNode<LagrangeDGBasisLeafNode<GV, degHess>,
-        GV::dimension> {
+        GV::dimension*GV::dimension> {
 
     friend class MAMixedBasisLocalView<GV, deg, degHess>;
 
     MAMixedHessianTree(LagrangeDGBasisLeafNode<GV, degHess> & leafNode) :
-            TypeTree::PowerNode<LagrangeDGBasisLeafNode<GV, degHess>, GV::dimension>(
+            TypeTree::PowerNode<LagrangeDGBasisLeafNode<GV, degHess>, GV::dimension*GV::dimension>(
                     leafNode, false /* don't make copies */) {
     }
 };
@@ -367,7 +377,7 @@ class MAMixedBasisTree: public TypeTree::CompositeNode<LagrangeDGBasisLeafNode<G
     friend MAMixedBasisLocalView<GV, deg, degHess> ;
 
     typedef TypeTree::CompositeNode<LagrangeDGBasisLeafNode<GV, deg>,MAMixedHessianTree<GV, deg, degHess> > Base;
-    MAMixedBasisTree(LagrangeDGBasisLeafNode<GV, deg> & uleafNode, MAMixedHessianTree<GV, deg, degHess> & hessianTree) :
+    MAMixedBasisTree(LagrangeDGBasisLeafNode<GV, deg> & uleafNode, const MAMixedHessianTree<GV, deg, degHess> & hessianTree) :
             Base(uleafNode, hessianTree) {
     }
 };
