@@ -68,6 +68,7 @@ public:
 
 	typedef typename Solver_config::FEBasis FEBasisType;
 	typedef typename Solver_config::FEuBasis FEuBasisType;
+	typedef typename Solver_config::FEuDHBasis FEuDHBasisType;
 
 	MA_solver() :
 			initialised(false) {
@@ -76,7 +77,7 @@ public:
 			initialised(true),
 			grid_ptr(grid), gridView_ptr(&gridView),
 			FEBasis(gridView),
-		  uBasis(*gridView_ptr),
+		  uBasis(gridView), uDHBasis(gridView),
 			assembler(FEBasis),
 			count_refined(Solver_config::startlevel) {
 	}
@@ -219,6 +220,7 @@ private:
 
 	FEBasisType FEBasis;
 	FEuBasisType uBasis;
+  FEuDHBasisType uDHBasis;
 
 	Assembler assembler; ///handles all (integral) assembly processes
 
@@ -335,14 +337,44 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 //	solution = VectorType::Ones(get_n_dofs());
 //	solution = exactsol_projection;
 
-	  std::cout << "solution coefficients " << solution.segment(0, get_n_dofs_u()) << std::endl;
+    //write hessian dofs
+	   const int nDH = Solver_config::dim*Solver_config::dim;
+	   for (size_t i=0; i<uDHBasis.indexSet().size(); i++)
+      for (int j=0; j< nDH; j++)
+      {
+        solution[get_n_dofs_u()+ nDH*i+j] = (j == 0 || j ==3)? 1 : 0;
+      }
+
+
+	  std::cout << "solution coefficients " << solution.transpose() << std::endl;
 	  VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
+	  //build gridviewfunction
 	  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(uBasis,solution_u);
 	  auto localnumericalSolution = localFunction(numericalSolution);
 
+	  //extract hessian (3 entries (because symmetry))
+
+
+	  typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
+	  DerivativeVectorType derivativeSolution(uDHBasis.indexSet().size());
+
+	  //extract dofs
+	  for (size_t i=0; i<derivativeSolution.size(); i++)
+	    for (int j=0; j< nDH; j++)
+	    {
+	      if (j == 2) continue;
+	      int index_j = j > 2? 2 : j;
+	      derivativeSolution[i][index_j] = solution[get_n_dofs_u()+ nDH*i+j];
+	    }
+
+	  //build gridview function
+    Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(uDHBasis,derivativeSolution);
+    auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
+
 	  SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
 	  vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
+    vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
 	  vtkWriter.write("numericalSolution Functions");
 
 
@@ -561,12 +593,12 @@ void MA_solver<Config>::solve_nonlinear_step()
 //	std::cout << "initial guess "<< solution.transpose() << std::endl;
 
 	Solver_config::VectorType f;
-//	op.evaluate(solution, f);
+	op.evaluate(solution, f);
 
 	Dirichletdata exact_sol;
 
-//	std::cout << "initial f " << f.transpose() << std::endl;
-//	std::cout << "initial f(x) norm " << f.norm() << endl;
+	std::cout << "initial f " << f.transpose() << std::endl;
+	std::cout << "initial f(x) norm " << f.norm() << endl;
 //	std::cout << "initial l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
 //	std::cout << "approximate error " << (solution-exactsol_projection).norm() << std::endl;
 

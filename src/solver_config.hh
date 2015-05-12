@@ -90,6 +90,7 @@ struct Solver_config{
 
 	typedef Functions::MAMixedBasis<GridView, degree, degreeHessian> FEBasis;
   typedef Functions::LagrangeDGBasis<GridView, degree> FEuBasis;
+  typedef Functions::LagrangeDGBasis<GridView, degreeHessian> FEuDHBasis;
 
 	typedef FieldVector<value_type,1> RangeType;
   typedef FieldMatrix<value_type,2,2> HessianRangeType;
