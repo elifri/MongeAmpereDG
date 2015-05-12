@@ -446,7 +446,7 @@ void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const
   assert (v.size() == basis_.indexSet().dimension());
   for (int i = 0; i < localIndexSet.size(); i++)
   {
-     v(localIndexSet.flat_index(i)) = v_local[i];
+     v(localIndexSet.flat_index(i)) += v_local[i];
   }
 }
 
