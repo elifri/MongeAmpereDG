@@ -81,25 +81,26 @@ public:
 
     MultiIndex index(size_type localIndex) const {
         MultiIndex mi;
-        size_type v_size = nDH*uDHLocalIndexSet_.size();
-        mi[0] = localIndex / v_size;
+        size_type v_size = uLocalIndexSet_.size();
+        mi[0] = localIndex < v_size? 0 : 1;
         if (mi[0] == 0) {
-          size_type p_localIndex = localIndex % v_size;
+          size_type p_localIndex = localIndex;
           mi[1] = uLocalIndexSet_.index(p_localIndex)[0];
         }
         if (mi[0] == 1) {
-          size_type v_comp = (localIndex % v_size) / uDHLocalIndexSet_.size();
-          size_type v_localIndex = (localIndex % v_size)
-                  % uDHLocalIndexSet_.size();
-          mi[1] = v_comp * indexSet_.uDHIndexSet_.size()
-                  + uDHLocalIndexSet_.index(v_localIndex)[0];
+          size_type v_comp = (localIndex - v_size)
+                      / nDH;
+          size_type v_localIndex = (localIndex - v_size)
+                  % nDH;
+          mi[1] = nDH*uDHLocalIndexSet_.index(v_comp)[0]
+                  + v_localIndex;
         }
         return mi;
     }
 
     size_type flat_local_index(const int j, const int row, const int col) const
     {
-      return uLocalIndexSet_.size()+dim*(dim*j+row)*col;
+      return uLocalIndexSet_.size()+dim*(dim*j+row)+col;
     }
 
     size_type flat_index(MultiIndex mi) const
