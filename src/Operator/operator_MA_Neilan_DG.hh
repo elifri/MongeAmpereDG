@@ -123,7 +123,7 @@ public:
       for (int col = 0; col < dim; col++)
         for (int row = 0; row < dim; row++)
           for (int j = 0; j < size_u_DH; j++)
-            uDH[row][col] += x_adolc(localIndexSet.flat_local_index(j, row, col));
+            uDH[row][col] += x_adolc(localIndexSet.flat_local_index(j, row, col))*referenceFunctionValuesHessian[j];
       adouble uDH_det = uDH[0][0]* uDH[1][1] -uDH[1][0]*uDH[0][1];
 
       //--------assemble cell integrals in variational form--------
