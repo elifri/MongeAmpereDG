@@ -14,6 +14,12 @@
 #include <Eigen/Dense>
 
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
+#include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
+#include <dune/grid/io/file/vtk/common.hh>
+
+#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
+#include <dune/functions/gridfunctions/gridviewfunction.hh>
+#include <dune/functions/functionspacebases/interpolate.hh>
 
 #include "solver_config.hh"
 #include "Callback/Callback_utility.hpp"
@@ -61,6 +67,7 @@ public:
 	typedef typename Solver_config::MatrixType MatrixType;
 
 	typedef typename Solver_config::FEBasis FEBasisType;
+	typedef typename Solver_config::FEuBasis FEuBasisType;
 
 	MA_solver() :
 			initialised(false) {
@@ -69,6 +76,8 @@ public:
 			initialised(true),
 			grid_ptr(grid), gridView_ptr(&gridView),
 			FEBasis(gridView),
+		  uBasis(*gridView_ptr),
+			assembler(FEBasis),
 			count_refined(Solver_config::startlevel) {
 	}
 
@@ -202,6 +211,7 @@ private:
 	const GridViewType* gridView_ptr;
 
 	FEBasisType FEBasis;
+	FEuBasisType uBasis;
 
 	Assembler assembler; ///handles all (integral) assembly processes
 
@@ -312,9 +322,19 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 
 //	vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
 
-	project(General_functions::get_easy_convex_polynomial_plus_one_callback(), solution);
-//	solution = VectorType::Ones(dof_handler.get_n_dofs());
+	  project(General_functions::get_easy_convex_polynomial_plus_one_callback(), solution);
+//	solution = VectorType::Ones(get_n_dofs());
 //	solution = exactsol_projection;
+
+	  std::cout << "solution coefficients " << solution.segment(0, get_n_dofs_u()) << std::endl;
+	  VectorType solution_u = solution.segment(0, get_n_dofs_u());
+
+	  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(uBasis,solution_u);
+	  auto localnumericalSolution = localFunction(numericalSolution);
+
+	  SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
+	  vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
+	  vtkWriter.write("numericalSolution Functions");
 
 //	vtkplotter.write_numericalsolution_VTK(0, "initial_guess");
 //	std::cout << "solution " << solution.transpose() << std::endl;
@@ -332,6 +352,17 @@ const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
 	}
 
 	return solution;
+}
+
+
+template<class Config>
+void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
+{
+  v.resize(get_n_dofs());
+  VectorType v_u;
+  interpolate(uBasis, v_u, [](Solver_config::SpaceType x){return x.two_norm2()/2.0;});
+  std::cout << v_u.transpose() << std::endl;
+  v.segment(0, v_u.size()) = v_u;
 }
 
 /*

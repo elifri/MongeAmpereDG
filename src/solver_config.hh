@@ -12,7 +12,6 @@
 #include<Eigen/Sparse>
 
 #include <config.h>
-#include <dune/grid/yaspgrid.hh>
 #include <adolc/adouble.h>
 
 #include "UnitCube.hh"
@@ -31,6 +30,7 @@ template<typename Func>
 inline void DenseMatrix<Dune::FieldMatrix<adouble, 2, 2>>::luDecomposition(DenseMatrix<Dune::FieldMatrix<adouble, 2, 2>>& A, Func func) const
 {
 }
+
 
 };
 
@@ -89,6 +89,8 @@ struct Solver_config{
 
 
 	typedef Functions::MAMixedBasis<GridView, degree, degreeHessian> FEBasis;
+  typedef Functions::LagrangeDGBasis<GridView, degree> FEuBasis;
+
 	typedef FieldVector<value_type,1> RangeType;
   typedef FieldMatrix<value_type,2,2> HessianRangeType;
 
