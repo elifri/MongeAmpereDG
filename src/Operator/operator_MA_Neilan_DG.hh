@@ -269,6 +269,8 @@ public:
 
       const auto& jacobian =
           intersection.inside()->geometry().jacobianInverseTransposed(quadPos);
+      const auto& jacobiann =
+          intersection.outside()->geometry().jacobianInverseTransposed(quadPos);
       // The shape functions on the reference elements
       // The shape functions
       std::vector<RangeType> referenceFunctionValues(size_u);
@@ -285,12 +287,12 @@ public:
 
       // The gradients of the shape functions on the reference element
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, Solver_config::dim> gradu;
+      FieldVector<adouble, Solver_config::dim> gradu(0);
       assemble_gradients_gradu(localFiniteElementu, jacobian, quadPos,
           gradients, x_adolc.segment(0, size_u), gradu);
       std::vector<JacobianType> gradientsn(size_u);
-      FieldVector<adouble, Solver_config::dim> gradun;
-      assemble_gradients_gradu(localFiniteElementun, jacobian, quadPosn,
+      FieldVector<adouble, Solver_config::dim> gradun(0);
+      assemble_gradients_gradu(localFiniteElementun, jacobiann, quadPosn,
           gradientsn, xn_adolc.segment(0, size_u), gradun);
 
       //the shape function values of hessian ansatz functions
