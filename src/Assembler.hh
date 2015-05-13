@@ -187,7 +187,12 @@ public:
   typedef Solver_config::RangeType RangeType;
 
   Assembler(const Solver_config::FEBasis& basis) :
-      basis_(basis) {
+      basis_(&basis) {
+  }
+
+  void bind(const Solver_config::FEBasis& basis)
+  {
+      basis_ = &basis;
   }
 
   /**
@@ -209,6 +214,17 @@ public:
    */
   template<typename LocalIndexSet>
   void add_local_coefficients(const LocalIndexSet &localIndexSet,
+      const Solver_config::VectorType &v_local,
+      Solver_config::VectorType& v) const;
+
+  /**
+   *  sets the coeffs v_local to the global dof vector
+   * @param localIndexSet indexset bind to the local contex where v_local is added
+   * @param v_local local dof vector (to be added)
+   * @param returns the new global dof vector
+   */
+  template<typename LocalIndexSet>
+  void set_local_coefficients(const LocalIndexSet &localIndexSet,
       const Solver_config::VectorType &v_local,
       Solver_config::VectorType& v) const;
 
@@ -310,7 +326,7 @@ private:
 */
 
 //    const MA_solver* ma_solver;
-    const Solver_config::FEBasis& basis_;
+    const Solver_config::FEBasis* basis_;
 
     bool no_hanging_nodes;
 };
@@ -391,7 +407,7 @@ void Assembler::calculate_refined_local_mass_matrix_ansatz(
                 quad[pt].position();
 
         //the shape function values
-        std::vector<typename LocalFiniteElement::RangeType> referenceFunctionValues(
+        std::vector<typename LocalFiniteElement::Traits::LocalBasisType::Traits::RangeType> referenceFunctionValues(
                 size);
         lfu.localBasis().evaluateFunction(quadPosChild,
                 referenceFunctionValues);
@@ -405,7 +421,7 @@ void Assembler::calculate_refined_local_mass_matrix_ansatz(
             else
                 A.umv(quadPosChild, quadPosFather);
 
-            std::vector<typename LocalFiniteElement::RangeType> fatherFunctionValues(
+            std::vector<typename LocalFiniteElement::Traits::LocalBasisType::Traits::RangeType> fatherFunctionValues(
                     size);
             lfu.localBasis().evaluateFunction(quadPosFather,
                     fatherFunctionValues);
@@ -443,7 +459,7 @@ inline
 void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const Solver_config::VectorType &v_local, Solver_config::VectorType& v) const
 {
   assert (v_local.size() == localIndexSet.size());
-  assert (v.size() == basis_.indexSet().dimension());
+  assert (v.size() == basis_->indexSet().dimension());
   for (int i = 0; i < localIndexSet.size(); i++)
   {
      v(localIndexSet.flat_index(i)) += v_local[i];
@@ -452,12 +468,25 @@ void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const
 
 template<typename LocalIndexSet>
 inline
+void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const Solver_config::VectorType &v_local, Solver_config::VectorType& v) const
+{
+  assert (v_local.size() == localIndexSet.size());
+  assert (v.size() == basis_->indexSet().dimension());
+  for (int i = 0; i < localIndexSet.size(); i++)
+  {
+     v(localIndexSet.flat_index(i)) = v_local[i];
+  }
+}
+
+
+template<typename LocalIndexSet>
+inline
 void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexSetTest, const LocalIndexSet &localIndexSetAnsatz, const Solver_config::DenseMatrixType &m_local, Solver_config::MatrixType& m) const
 {
   assert (m_local.rows() == localIndexSetTest.size());
   assert (m_local.cols() == localIndexSetAnsatz.size());
-  assert (m.rows() == basis_.indexSet().dimension());
-  assert (m.cols() == basis_.indexSet().dimension());
+  assert (m.rows() == basis_->indexSet().dimension());
+  assert (m.cols() == basis_->indexSet().dimension());
 
   for (int i = 0; i < m_local.rows(); i++)
   {
@@ -538,19 +567,19 @@ void Assembler::assemble_inner_face_Jacobian(const Intersection& intersection,
 template<typename LocalOperatorType>
 void Assembler::assemble_DG(LocalOperatorType lop, const Solver_config::VectorType& x, Solver_config::VectorType& v) const
 {
-    assert(x.size() == basis_.indexSet().dimension());
+    assert(x.size() == basis_->indexSet().dimension());
 
-    Solver_config::GridView gridView = basis_.gridView();
+    Solver_config::GridView gridView = basis_->gridView();
 
     //assuming Galerkin
     v = Solver_config::VectorType::Zero(x.size());
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
     const GridViewType::IndexSet& indexSet = gridView.indexSet();
-    auto localView = basis_.localView();
-    auto localViewn = basis_.localView();
-    auto localIndexSet = basis_.indexSet().localIndexSet();
-    auto localIndexSetn = basis_.indexSet().localIndexSet();
+    auto localView = basis_->localView();
+    auto localViewn = basis_->localView();
+    auto localIndexSet = basis_->indexSet().localIndexSet();
+    auto localIndexSetn = basis_->indexSet().localIndexSet();
 
     int tag_count = 0;
 
@@ -619,19 +648,19 @@ void Assembler::assemble_DG(LocalOperatorType lop, const Solver_config::VectorTy
 template<typename LocalOperatorType>
 void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const Solver_config::VectorType& x, Solver_config::MatrixType& m) const
 {
-    assert(x.size() == basis_.indexSet().dimension());
+    assert(x.size() == basis_->indexSet().dimension());
 
-    Solver_config::GridView gridView = basis_.gridView();
+    Solver_config::GridView gridView = basis_->gridView();
 
     //assuming Galerkin
     m.resize(x.size(), x.size());
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
     const GridViewType::IndexSet& indexSet = gridView.indexSet();
-    auto localView = basis_.localView();
-    auto localViewn = basis_.localView();
-    auto localIndexSet = basis_.indexSet().localIndexSet();
-    auto localIndexSetn = basis_.indexSet().localIndexSet();
+    auto localView = basis_->localView();
+    auto localViewn = basis_->localView();
+    auto localIndexSet = basis_->indexSet().localIndexSet();
+    auto localIndexSetn = basis_->indexSet().localIndexSet();
 
     int tag_count = 0;
 
@@ -705,19 +734,19 @@ void Assembler::assemble_Jacobian_DG(LocalOperatorType lop, const Solver_config:
 template<typename LocalOperatorType>
 void Assembler::assemble_DG_Jacobian(LocalOperatorType lop, const Solver_config::VectorType& x, Solver_config::VectorType& v, Solver_config::MatrixType& m) const
 {
-    assert(x.size() == basis_.indexSet().dimension());
+    assert(x.size() == basis_->indexSet().dimension());
 
-    Solver_config::GridView gridView = basis_.gridView();
+    Solver_config::GridView gridView = basis_->gridView();
 
     //assuming Galerkin
     v = Solver_config::VectorType::Zero(x.size());
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
     const GridViewType::IndexSet& indexSet = gridView.indexSet();
-    auto localView = basis_.localView();
-    auto localViewn = basis_.localView();
-    auto localIndexSet = basis_.indexSet().localIndexSet();
-    auto localIndexSetn = basis_.indexSet().localIndexSet();
+    auto localView = basis_->localView();
+    auto localViewn = basis_->localView();
+    auto localIndexSet = basis_->indexSet().localIndexSet();
+    auto localIndexSetn = basis_->indexSet().localIndexSet();
 
     int tag_count = 0;
 

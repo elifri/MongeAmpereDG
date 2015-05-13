@@ -81,20 +81,19 @@ public:
 
     MultiIndex index(size_type localIndex) const {
         MultiIndex mi;
-        size_type v_size = uLocalIndexSet_.size();
-        mi[0] = localIndex < v_size? 0 : 1;
+        size_type u_size = uLocalIndexSet_.size();
+        mi[0] = localIndex < u_size? 0 : 1;
         if (mi[0] == 0) {
-          size_type p_localIndex = localIndex;
-          mi[1] = uLocalIndexSet_.index(p_localIndex)[0];
+          size_type u_localIndex = localIndex;
+          mi[1] = uLocalIndexSet_.index(u_localIndex)[0];
         }
         if (mi[0] == 1) {
-          size_type v_comp = (localIndex - v_size)
-                      / nDH;
-          size_type v_localIndex = (localIndex - v_size)
-                  % nDH;
-          mi[1] = nDH*uDHLocalIndexSet_.index(v_comp)[0]
-                  + v_localIndex;
-        }
+          size_type uDH_comp = (localIndex - u_size)
+                                / nDH;
+          size_type uDH_localIndex = (localIndex - u_size)
+                            % nDH;
+          mi[1] = nDH*uDHLocalIndexSet_.index(uDH_comp)[0]
+                            + uDH_localIndex;       }
         return mi;
     }
 
@@ -110,6 +109,11 @@ public:
     }
     size_type flat_index(size_type localIndex) const
     {
+//      std::cout << "local " << localIndex << " ";
+      auto mwi = index(localIndex);
+//      std::cout << "mwi " << mwi[0] << " " << mwi[1] << " ";
+//      std::cout << "global " << flat_index(mwi) << std::endl;
+
         return flat_index(index(localIndex));
     }
 
