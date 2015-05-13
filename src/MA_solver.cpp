@@ -70,12 +70,41 @@ double MA_solver::calculate_L2_error(const MA_function_type &f) const
 }
 */
 
-
-const typename MA_solver::VectorType& MA_solver::solve()
+void MA_solver::plot(std::string filename)
 {
-  assert (initialised);
-  //calculate initial solution
+  const int nDH = Solver_config::dim*Solver_config::dim;
+  VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
+   //build gridviewfunction
+   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,solution_u);
+   auto localnumericalSolution = localFunction(numericalSolution);
+
+   //extract hessian (3 entries (because symmetry))
+   typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
+   DerivativeVectorType derivativeSolution(uDHBasis->indexSet().size());
+
+   //extract dofs
+   for (size_t i=0; i<derivativeSolution.size(); i++)
+     for (int j=0; j< nDH; j++)
+     {
+       if (j == 2) continue;
+       int index_j = j > 2? 2 : j;
+       derivativeSolution[i][index_j] = solution[get_n_dofs_u()+ nDH*i+j];
+     }
+
+   //build gridview function
+   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
+   auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
+
+   SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
+   vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
+   vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
+   vtkWriter.write(filename);
+
+}
+
+void MA_solver::create_initial_guess()
+{
   //init solution by laplace u = -sqrt(2f)
 
 //  Linear_System_Local_Operator_Poisson_DG<RightHandSideInitial, Dirichletdata> lop;
@@ -118,100 +147,39 @@ const typename MA_solver::VectorType& MA_solver::solve()
   solution = VectorType::Zero(get_n_dofs());
 //  solution = exactsol_projection;
 
-    //write hessian dofs
-     const int nDH = Solver_config::dim*Solver_config::dim;
-     for (size_t i=0; i<uDHBasis->indexSet().size(); i++)
-      for (int j=0; j< nDH; j++)
-      {
-        solution[get_n_dofs_u()+ nDH*i+j] = (j == 0 || j ==3)? 1 : 0;
-      }
+//    //write hessian dofs
+//     const int nDH = Solver_config::dim*Solver_config::dim;
+//     for (size_t i=0; i<uDHBasis->indexSet().size(); i++)
+//      for (int j=0; j< nDH; j++)
+//      {
+//        solution[get_n_dofs_u()+ nDH*i+j] = (j == 0 || j ==3)? 1 : 0;
+//      }
 
-//  vtkplotter.write_numericalsolution_VTK(0, "initial_guess");
-//  std::cout << "solution " << solution.transpose() << std::endl;
-//  vtkplotter.write_numericalmirror_VTK(count_refined, "initial_guessMirror");
-//  vtkplotter.write_numericalmirror_pov(count_refined, "initial_guessMirror");
-  std::cout << "solution " << solution.transpose() << std::endl;
+  plot("initialguess");
+}
 
+const typename MA_solver::VectorType& MA_solver::solve()
+{
+  assert (initialised);
+
+  create_initial_guess();
+
+  //calculate initial solution
   for (int i = 0; i < Solver_config::nonlinear_steps; i++)
   {
-
-//    std::cout << "solution coefficients " << solution.transpose() << std::endl;
-    VectorType solution_u = solution.segment(0, get_n_dofs_u());
-
-    //build gridviewfunction
-    Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,solution_u);
-    auto localnumericalSolution = localFunction(numericalSolution);
-
-    //extract hessian (3 entries (because symmetry))
-    typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
-    DerivativeVectorType derivativeSolution(uDHBasis->indexSet().size());
-
-    //extract dofs
-    for (size_t i=0; i<derivativeSolution.size(); i++)
-      for (int j=0; j< nDH; j++)
-      {
-        if (j == 2) continue;
-        int index_j = j > 2? 2 : j;
-        derivativeSolution[i][index_j] = solution[get_n_dofs_u()+ nDH*i+j];
-      }
-
-    //build gridview function
-    Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
-    auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
-
-    SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
-    vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
-    vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
-    vtkWriter.write("numericalSolution Functions");
-
-
-
-
-
-
-
     solve_nonlinear_step();
-    std::cout << "solution " << solution.transpose() << std::endl;
+
+    std::stringstream ss;
+    ss << "numericalSolution" << count_refined;
+    plot(ss.str());
 
 //    VectorType right_sol;
 //    project(General_functions::get_easy_convex_polynomial_plus_one_callback(), right_sol);
-
-
-
-
-
 
 //    vtkplotter.write_numericalmirror_VTK(count_refined);
 //    vtkplotter.write_numericalmirror_pov(count_refined);
 //    solution_u = solution.segment(0, get_n_dofs_u());
 //    std::cout << "error " << (right_sol.segment(0, get_n_dofs_u()) - solution_u).norm() << std::endl;
-
-    //build gridviewfunction
-    Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution2(*uBasis,solution_u);
-    auto localnumericalSolution2 = localFunction(numericalSolution2);
-
-    //extract hessian (3 entries (because symmetry))
-    typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
-    DerivativeVectorType derivativeSolution2(uDHBasis->indexSet().size());
-
-    //extract dofs
-    for (size_t i=0; i<derivativeSolution2.size(); i++)
-      for (int j=0; j< nDH; j++)
-      {
-        if (j == 2) continue;
-        int index_j = j > 2? 2 : j;
-        derivativeSolution2[i][index_j] = solution[get_n_dofs_u()+ nDH*i+j];
-      }
-
-    //build gridview function
-    Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian2(*uDHBasis,derivativeSolution2);
-    auto localnumericalSolutionHessian2 = localFunction(numericalSolutionHessian2);
-
-    SubsamplingVTKWriter<GridViewType> vtkWriter2(*gridView_ptr,2);
-    vtkWriter2.addVertexData(localnumericalSolution2, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
-    vtkWriter2.addVertexData(localnumericalSolutionHessian2, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
-    vtkWriter2.write("numericalSolution FunctionsafterRef");
-
 
     adapt_solution(solution);
   }
@@ -242,7 +210,10 @@ void MA_solver::adapt_solution(VectorType &v, const int level)
 
   typedef GridType::Traits::GlobalIdSet::IdType IdType;
 
+  //map to store grid attached data during the refinement process
   std::map<IdType, VectorType>  preserve_solution;
+
+  //mark elements for refinement
   for (auto&& element : elements(*gridView_ptr))
   {
     // Bind the local FE basis view to the current element
@@ -303,20 +274,25 @@ void MA_solver::adapt_solution(VectorType &v, const int level)
   const int size_u_DH = localFiniteElementuDH.size();
   const int size = size_u +  nDH*size_u_DH;
 
+  //since we are going to calculate the refinement for all children when encountering one of them
+  // we need to store wich data already is refined
   Dune::LeafMultipleCodimMultipleGeomTypeMapper <GridType,Dune::MCMGElementLayout > mapper(*grid_ptr);
   std::vector<bool> already_refined (mapper.size());
   std::fill(already_refined.begin(), already_refined.end(), false);
 
+  //calculate new dof vector
   for (auto&& element : elements(*gridView_ptr))
   {
     if (element.isNew())
     {
+      //check if data was already calculated
       if (already_refined[mapper.index(element)]) continue;
+
+      //get old dof vector
       const auto& father = element.father();
       VectorType x_local = preserve_solution[idSet.id(father)];
 
-      std::cout << "old solution " << x_local.transpose() << std::endl;
-
+      //calculate new dof vector for every child
       int i = 0;
       for (auto&& child : descendantElements(father, count_refined))
       {
@@ -324,16 +300,14 @@ void MA_solver::adapt_solution(VectorType &v, const int level)
         localViewRef.bind(child);
         localIndexSetRef.bind(localViewRef);
 
-
         VectorType x_adapt(size);
 
         //local rhs = \int v_adapt*test = refinementmatrix*v
         VectorType localVector = localrefinementMatrices[i]*x_local.segment(0,size_u);
         x_adapt.segment(0,size_u) =  localMassMatrix.ldlt().solve(localVector);
 
-        //same for hessian
+        //same for hessian (now done seperately for every entry)
         std::vector<VectorType> localVectorDH(nDH);
-
         for (int j = 0; j < nDH; j++)
         {
           //extract dofs for one hessian entry
@@ -350,30 +324,28 @@ void MA_solver::adapt_solution(VectorType &v, const int level)
             x_adapt(size_u+j +nDH*k) = xlocalDH(k);
         }
 
-
+        //set new dof vectors
         assembler.set_local_coefficients(localIndexSetRef, x_adapt, v);
+
+        //mark element as refined
         already_refined[mapper.index(child)] = true;
-
-        std::cout << "new solution " << x_adapt.transpose() << std::endl;
-
 
         i++;
        }
     }
-    else
+    else //element was not refined
     {
       //bind to child
       localViewRef.bind(element);
       localIndexSetRef.bind(localViewRef);
-
 
       IdType id = idSet.id(element);
       assembler.set_local_coefficients(localIndexSetRef, preserve_solution[id], v);
     }
 
   }
+  //reset adaption flags
   grid_ptr->postAdapt();
-
 }
 
 void MA_solver::solve_nonlinear_step()

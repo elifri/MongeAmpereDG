@@ -170,7 +170,14 @@ public:
 	 */
 	void adapt(const int level=1);
 
+	///write the current numerical solution to vtk file
+	void plot(std::string filename);
+
+
 private:
+	///creates the initial guess
+	void create_initial_guess();
+
 	/// solves own nonlinear system given initial point in solution
 	void solve_nonlinear_step();
 
