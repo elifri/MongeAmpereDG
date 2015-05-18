@@ -24,7 +24,7 @@
 #include "Operator/linear_system_operator_poisson_DG.hh"
 //#include "Operator/operator_MA_Neilan_DG.hh"
 #include "Operator/operator_MA_refl_Neilan_DG.hh"
-
+#include "Plotter.hh"
 
 #ifdef USE_DOGLEG
 #include "Dogleg/doglegMethod.hpp"
@@ -68,7 +68,10 @@ public:
 			FEBasis(new FEBasisType(gridView)),
 		  uBasis(new FEuBasisType(gridView)), uDHBasis( new FEuDHBasisType(gridView)),
 			assembler(*FEBasis),
+			plotter(gridView),
 			count_refined(Solver_config::startlevel) {
+	  plotter.set_output_directory("../plots");
+	  plotter.set_refinement(Solver_config::degree);
 	}
 
 /*
@@ -172,7 +175,9 @@ public:
 	void adapt(const int level=1);
 
 	///write the current numerical solution to vtk file
-	void plot(std::string filename);
+	void plot(std::string filename) const;
+
+	void plot_with_mirror(std::string name) const;
 
 
 private:
@@ -220,6 +225,7 @@ private:
 	shared_ptr<FEuDHBasisType> uDHBasis;
 
 	Assembler assembler; ///handles all (integral) assembly processes
+	Plotter plotter;
 
 	VectorType solution; /// stores the current solution vector
 	VectorType exactsol_projection; /// if exact solution is known, stores a L2 projection to the current grid

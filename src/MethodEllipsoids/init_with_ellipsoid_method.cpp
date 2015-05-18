@@ -243,7 +243,7 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
         }
     }
 
-    std::cout << "nx " << nX << " ny " << nY << endl;
+/*    std::cout << "nx " << nX << " ny " << nY << endl;
 
     std::cout << "nDirectionsX " << nDirectionsX << endl
               <<"xMin " << xMin << endl
@@ -266,7 +266,7 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
               <<"  xMin " << lightIn.yMin_ << endl
               <<"  xMin " << lightIn.yMin_ << endl
             <<"  h " << lightIn.h_ << endl
-            <<"  factor " << lightIn.factor_ << endl;
+            <<"  factor " << lightIn.factor_ << endl;*/
 
 
     InitEllipsoidMethod method (nDirectionsX, xMin, xMax, nDirectionsY, yMin, yMax, directionsOut, valuesLightOut, lightIn, alpha, maxIter);
@@ -305,11 +305,11 @@ void InitEllipsoidMethod::solve()
 void InitEllipsoidMethod::write_output() const
 {
     // output
-    grid_.writeVtkSurface(method_.getEllipsoids(),outputFolder_+"ellipsoids.vtk");
-    grid_.writePovReflectorScene(method_.getEllipsoids(),outputFolder_+"ellipsoids.pov");
+    grid_.writeVtkSurface(method_.getEllipsoids(),outputFolder_+"/ellipsoids.vtk");
+    grid_.writePovReflectorScene(method_.getEllipsoids(),outputFolder_+"/ellipsoids.pov");
 
-    method_.getEllipsoids().writeFile(outputFolder_+"ellipsoids_data.txt");
-    method_.writeReportToFile(outputFolder_+"ellipsoids_report.txt");
+    method_.getEllipsoids().writeFile(outputFolder_+"/ellipsoids_data.txt");
+    method_.writeReportToFile(outputFolder_+"/ellipsoids_report.txt");
 }
 
 void InitEllipsoidMethod::evaluate(const Solver_config::DomainType& x, Solver_config::RangeType& u)

@@ -74,7 +74,7 @@ double MA_solver::calculate_L2_error(const MA_function_type &f) const
 }
 */
 
-void MA_solver::plot(std::string filename)
+void MA_solver::plot(std::string filename) const
 {
   const int nDH = Solver_config::dim*Solver_config::dim;
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
@@ -104,7 +104,58 @@ void MA_solver::plot(std::string filename)
    vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
    vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
    vtkWriter.write(filename);
+}
 
+
+void MA_solver::plot_with_mirror(std::string name) const
+{
+
+  const int nDH = Solver_config::dim*Solver_config::dim;
+  VectorType solution_u = solution.segment(0, get_n_dofs_u());
+
+   //build gridviewfunction
+   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,solution_u);
+   auto localnumericalSolution = localFunction(numericalSolution);
+
+   //extract hessian (3 entries (because symmetry))
+   typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
+   DerivativeVectorType derivativeSolution(uDHBasis->indexSet().size());
+
+   //extract dofs
+   for (size_t i=0; i<derivativeSolution.size(); i++)
+     for (int j=0; j< nDH; j++)
+     {
+       if (j == 2) continue;
+       int index_j = j > 2? 2 : j;
+       derivativeSolution[i][index_j] = solution[get_n_dofs_u()+ nDH*i+j];
+     }
+
+   //build gridview function
+   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
+   auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
+
+
+   std::string fname(plotter.get_output_directory());
+   fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(count_refined) + ".vtu";
+
+   SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
+   vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
+   vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
+   vtkWriter.write(fname);
+
+
+   std::string reflname(plotter.get_output_directory());
+   fname += "/"+ plotter.get_output_prefix()+ name + "reflector"+NumberToString(count_refined) + ".vtu";
+
+   plotter.writeReflectorVTK(reflname, localnumericalSolution);
+
+   std::string reflPovname(plotter.get_output_directory());
+   reflPovname += "/"+ plotter.get_output_prefix() + name + "reflector" + NumberToString(count_refined) + ".pov";
+
+    plotter.writeReflectorPOV(reflPovname, localnumericalSolution);
+
+
+    std::cout << "plot written into " << fname << std::endl;
 }
 
 void MA_solver::create_initial_guess()
@@ -164,7 +215,7 @@ void MA_solver::create_initial_guess()
   project([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
   ellipsoidMethod.write_output();
 
-  plot("initialguess");
+  plot_with_mirror("initialguess");
 }
 
 const typename MA_solver::VectorType& MA_solver::solve()
@@ -178,9 +229,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
   {
     solve_nonlinear_step();
 
-    std::stringstream ss;
-    ss << "numericalSolution" << count_refined;
-    plot(ss.str());
+    plot_with_mirror("numericalSolution");
 
 //    VectorType right_sol;
 //    project(General_functions::get_easy_convex_polynomial_plus_one_callback(), right_sol);
