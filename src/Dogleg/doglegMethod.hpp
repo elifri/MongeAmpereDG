@@ -193,7 +193,7 @@ void doglegMethod (
     Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int> > lu_of_J;
     lu_of_J.compute(J);
 //    lu_of_J.factorize(J);
-    if (lu_of_J.info()!= Eigen::Success) {
+    if (lu_of_J.info()!= Eigen::EigenSuccess) {
         // decomposition failed
         std::cout << "\nError: "<< lu_of_J.info() << " Could not compute LU decomposition!\n";
         if (opts.exportJacobianIfSingular) {
@@ -256,7 +256,7 @@ void doglegMethod (
 
             // solve J*b = f using UmfPack:
             Eigen::VectorXd b = lu_of_J.solve(f);
-            if(lu_of_J.info()!= Eigen::Success) {
+            if(lu_of_J.info()!= Eigen::EigenSuccess) {
                 // solving failed
                 std::cerr << "\nError "<< lu_of_J.info() << ": Could not solve the linear system of equations!\n";
                 if (opts.exportJacobianIfSingular) {
