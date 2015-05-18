@@ -9,7 +9,8 @@ add_library(MA_solver MA_solver.cpp)
 
 add_executable("dune_mongeampere" dune_mongeampere.cc)
 message("ZLIB libraries ${ZLIB_LIBRARIES}")
-target_link_libraries(dune_mongeampere MA_solver ${SNES_LIBRARY} EllipsoidMethod Solver_Config ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${Boost_LIBRARIES} -lX11)
+message("Boost libraries ${Boost_LIBRARIES}")
+target_link_libraries(dune_mongeampere MA_solver ${SNES_LIBRARY} EllipsoidMethod Solver_Config ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11)
 target_link_dune_default_libraries("dune_mongeampere")
 
 add_executable("poisson" poisson.cc)
