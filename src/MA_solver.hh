@@ -8,26 +8,23 @@
 #ifndef SRC_MA_SOLVER_HH_
 #define SRC_MA_SOLVER_HH_
 
+#include "solver_config.hh"
+
+
 #include <memory>
 
 #include <Eigen/SparseCholesky>
 #include <Eigen/Dense>
 
-#include <dune/grid/io/file/vtk/vtkwriter.hh>
 
-#include "solver_config.hh"
-#include "Callback/Callback_utility.hpp"
-#include "igpm_t2_lib.hpp"
 
 //#include "operator_poisson_DG.hh"
-#include "Dof_handler.hpp"
 #include "Assembler.hh"
 #include "problem_data.hh"
 #include "Operator/linear_system_operator_poisson_DG.hh"
 #include "Operator/operator_MA_Neilan_DG.hh"
-#include "Operator/operator_MA_refl_Neilan_DG.hh"
+//#include "Operator/operator_MA_refl_Neilan_DG.hh"
 
-#include "Plotter.hh"
 
 #include "MethodEllipsoids/init_with_ellipsoid_method.hpp"
 
@@ -43,9 +40,8 @@
 using namespace Dune;
 using namespace std;
 
-class Plotter;
+//class Plotter;
 
-template<class Config = Solver_config>
 class MA_solver {
 public:
 
@@ -64,22 +60,17 @@ public:
 	typedef typename Solver_config::DenseMatrixType DenseMatrixType;
 	typedef typename Solver_config::MatrixType MatrixType;
 
-	typedef typename Solver_config::LocalFiniteElementType LocalFiniteElementType;
-	typedef typename Solver_config::LocalFiniteElementuType LocalFiniteElementuType;
-	typedef typename Solver_config::LocalFiniteElementuType::Traits::LocalBasisType::Traits::HessianType HessianType;
+	typedef typename Solver_config::FEBasis FEBasisType;
+	typedef typename Solver_config::FEuBasis FEuBasisType;
+	typedef typename Solver_config::FEuDHBasis FEuDHBasisType;
 
-	MA_solver() :
-			initialised(false) {
-	}
 	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView) :
 			initialised(true),
 			grid_ptr(grid), gridView_ptr(&gridView),
-			localFiniteElement(), localFiniteElementu(localFiniteElement(u())),
-			dof_handler(&gridView, localFiniteElement),
-			assembler(gridView_ptr, dof_handler, localFiniteElement, localFiniteElementu),
-			count_refined(Solver_config::startlevel),
-			vtkplotter(*this) {
-		vtkplotter.set_output_directory("../plots");
+			FEBasis(new FEBasisType(gridView)),
+		  uBasis(new FEuBasisType(gridView)), uDHBasis( new FEuDHBasisType(gridView)),
+			assembler(*FEBasis),
+			count_refined(Solver_config::startlevel) {
 	}
 
 /*
@@ -92,7 +83,9 @@ public:
 	//-----functions--------
 public:
 
-	int get_n_dofs() const{return dof_handler.get_n_dofs();}
+	int get_n_dofs() const{return FEBasis->indexSet().dimension();}
+  int get_n_dofs_u() const{
+    size_t i = 0; return FEBasis->indexSet().size({0});}
 
 
 public:
@@ -119,8 +112,8 @@ public:
 			solver_ptr->assemble_Jacobian_DG(lop, x,m);
 		}
 
-//		Local_Operator_MA_mixed_Neilan lop;
-		Local_Operator_MA_refl_Neilan lop;
+		Local_Operator_MA_mixed_Neilan lop;
+//		Local_Operator_MA_refl_Neilan lop;
 		const MA_solver* solver_ptr;
 	};
 
@@ -139,6 +132,13 @@ public:
 		assembler.assemble_Jacobian_DG(LOP, x, m);
 	}
 
+  ///assembles the (global) Jacobian of the FE function as specified in LOP
+  template<typename LocalOperatorType>
+  void assemble_DG_Jacobian(LocalOperatorType LOP, const VectorType& x, VectorType& v, MatrixType& m) const {
+    assert (initialised);
+    assembler.assemble_Jacobian_DG(LOP, x, v, m);
+  }
+
 	///assembles the (global) FE-System given by the operator lop
 	template<typename LocalOperatorType>
 	void assemble_linear_system_DG(LocalOperatorType lop, MatrixType &m, VectorType& rhs) const {
@@ -148,10 +148,11 @@ public:
 
 	/**
 	 * projects a function into the grid space
-	 * @param f	callback function representing the function
+	 * @param f	function representing the function
 	 * @param V	returns the coefficient vector of the projection of f
 	 */
-	void project(const MA_function_type f, VectorType &V) const;
+	template<class F>
+	void project(F f, VectorType &V) const;
 
 	/**
 	 * projects a function into the grid space
@@ -164,7 +165,7 @@ public:
 	 * adapts a grid function with coeffs v into the global refined space
 	 * @param v	coeffs of grid function
 	 */
-	void adapt_solution(VectorType &v, const Dof_handler<Config>& dof_handler_old, const int level=1) const;
+	void adapt_solution(VectorType &v, const int level=1);
 
 	/**
 	 * refines the grid globally and sets up all necessary information for the next step
@@ -172,7 +173,14 @@ public:
 	 */
 	void adapt(const int level=1);
 
+	///write the current numerical solution to vtk file
+	void plot(std::string filename);
+
+
 private:
+	///creates the initial guess
+	void create_initial_guess();
+
 	/// solves own nonlinear system given initial point in solution
 	void solve_nonlinear_step();
 
@@ -209,567 +217,31 @@ private:
 	const shared_ptr<GridType> grid_ptr;
 	const GridViewType* gridView_ptr;
 
-	LocalFiniteElementType localFiniteElement; ///specify the local (mixed Element)
-	const LocalFiniteElementuType& localFiniteElementu; ///reference to the local Finite Element to assemble u
+	shared_ptr<FEBasisType> FEBasis;
+	shared_ptr<FEuBasisType> uBasis;
+	shared_ptr<FEuDHBasisType> uDHBasis;
 
-	Dof_handler<Config> dof_handler; ///handles dof enumeration
 	Assembler assembler; ///handles all (integral) assembly processes
 
 	VectorType solution; /// stores the current solution vector
 	VectorType exactsol_projection; /// if exact solution is known, stores a L2 projection to the current grid
 	int count_refined; ///counts how often the original grid was refined
 
-	friend Plotter;
-	Plotter vtkplotter; /// handles I/O
+//
+//	friend Plotter;
+//	Plotter vtkplotter; /// handles I/O
 };
 
-template<class Config>
-void MA_solver<Config>::init_mixed_element_without_second_derivatives(const VectorType& coeff_u, VectorType &coeff_mixed) const
+template<class F>
+void MA_solver::project(const F f, VectorType& v) const
 {
-	assert (coeff_u.size() == dof_handler.get_n_dofs_u());
-	coeff_mixed.resize(dof_handler.get_n_dofs());
-
-	//calculate mass matrix for hessian ansatz functions
-	const int size_u = localFiniteElement.size(u());
-	const int size_u_DH = localFiniteElement.size(u_DH());
-
-	// Get a quadrature rule
-	int order = std::max(1, 2 * ((int)localFiniteElement.order()));
-	const QuadratureRule<double, Config::dim>& quad =
-			QuadratureRules<double, Config::dim>::rule(localFiniteElement.type(), order);
-
-	//local mass matrix m_ij = \int mu_i : mu_j
-	DenseMatrixType localMassMatrix;
-	assembler.calculate_local_mass_matrix_ansatz(localFiniteElement(u_DH()), localMassMatrix);
-
-	//loop over all cells and solve in every cell the equation \int l2proj(f) *phi = \int f *phi \forall phi
-	for (auto&& e : elements(*gridView_ptr)) {
-		assert(localFiniteElement.type() == e.type());
-
-		auto geometry = e.geometry();
-		IndexType id = gridView_ptr->indexSet().index(e);
-
-		//local rhs = \int D_h^2 u:mu
-		VectorType  localVector = VectorType::Zero(size_u_DH);
-
-		VectorType x_local = dof_handler.calculate_local_coefficients_u(id, coeff_u);
-		//copy ansatz dofs
-		coeff_mixed.segment(dof_handler.get_offset(id), x_local.size()) = x_local;
-
-		// Loop over all quadrature points
-		for (size_t pt = 0; pt < quad.size(); pt++) {
-
-			// Position of the current quadrature point in the reference element
-			const FieldVector<double, Config::dim> &quadPos = quad[pt].position();
-
-			//the shape function values
-			std::vector<HessianType> referenceFunctionValues(size_u_DH);
-			localFiniteElement(u_DH()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
-
-
-			//-------calulcate piecewise hessian---------
-			//get reference data
-			std::vector<HessianType> Hessians(size_u);
-			localFiniteElement(u()).localBasis().evaluateHessian(quadPos, Hessians);
-
-			//transform data
-			const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
-
-			auto jacobianTransposed = jacobian;
-			jacobianTransposed [1][0] = jacobian [0][1];
-			jacobianTransposed [0][1] = jacobian [1][0];
-			for (size_t i = 0; i < Hessians.size(); i++)
-			{
-				Hessians[i].leftmultiply(jacobianTransposed);
-				Hessians[i].rightmultiply(jacobian);
-			}
-
-			// Compute Hessian u
-			HessianType Hessu(0);
-			for (size_t i = 0; i < x_local.size(); i++)
-				Hessu.axpy(x_local(i), Hessians[i]);
-
-			//-----assemble integrals (on reference cell)---------
-
-			for (size_t j = 0; j < localFiniteElement.size(u_DH()); j++) // loop over test fcts
-			{
-				//int f * v
-				localVector(j) += cwiseProduct(referenceFunctionValues[j],Hessu)* quad[pt].weight();
-			}
-		}
-
-		//solve arising system
-		x_local =  localMassMatrix.ldlt().solve(localVector);
-		coeff_mixed.segment(dof_handler.get_offset(id)+size_u, x_local.size()) = x_local;
-	}
+  v.resize(get_n_dofs());
+  VectorType v_u;
+  interpolate(*uBasis, v_u, f);
+  std::cout << v_u.transpose() << std::endl;
+  v.segment(0, v_u.size()) = v_u;
 }
 
-template<class Config>
-void MA_solver<Config>::project(const MA_function_type f, const MA_derivative_function_type f_DH, VectorType &v) const
-{
-	v.resize(dof_handler.get_n_dofs());
-
-	//calculate mass matrix for hessian ansatz functions
-	const int size_u = localFiniteElement.size(u());
-	const int size_u_DH = localFiniteElement.size(u_DH());
-
-	// Get a quadrature rule
-	int order = std::max(1, 2 * ((int)localFiniteElement.order()));
-	const QuadratureRule<double, Config::dim>& quad =
-			QuadratureRules<double, Config::dim>::rule(localFiniteElement.type(), order);
-
-	//local mass matrix m_ij = \int mu_i : mu_j
-	DenseMatrixType localMassMatrix, localMassMatrixDH;
-	assembler.calculate_local_mass_matrix_ansatz(localFiniteElement(u()), localMassMatrix);
-	assembler.calculate_local_mass_matrix_ansatz(localFiniteElement(u_DH()), localMassMatrixDH);
-
-	//loop over all cells and solve in every cell the equation \int l2proj(f) *phi = \int f *phi \forall phi
-	for (auto&& e : elements(*gridView_ptr)) {
-		assert(localFiniteElement.type() == e.type());
-
-		auto geometry = e.geometry();
-		IndexType id = gridView_ptr->indexSet().index(e);
-
-		//local rhs = \int D_h^2 u:mu
-		VectorType  localVector = VectorType::Zero(size_u), localVectorDH = VectorType::Zero(size_u_DH);
-
-		// Loop over all quadrature points
-		for (size_t pt = 0; pt < quad.size(); pt++) {
-
-			// Position of the current quadrature point in the reference element
-			const FieldVector<double, Config::dim> &quadPos = quad[pt].position();
-
-			//the shape function values
-			std::vector<RangeType> referenceFunctionValues;
-			localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
-			std::vector<typename Config::HessianRangeType> referenceFunctionValuesDH;
-			localFiniteElement(u_DH()).localBasis().evaluateFunction(quadPos, referenceFunctionValuesDH);
-
-			//get value of f at quadrature point
-			RangeType f_value;
-			f(geometry.global(quad[pt].position()), f_value);
-			typename Config::HessianRangeType fDH_value;
-			f_DH(geometry.global(quad[pt].position()), fDH_value);
-
-
-			//-----assemble integrals (on reference cell)---------
-
-			for (size_t j = 0; j < localFiniteElement.size(u()); j++) // loop over test fcts
-			{
-				//int f * v
-				localVector(j) += (referenceFunctionValues[j]*f_value)* quad[pt].weight();
-			}
-
-			for (size_t j = 0; j < localFiniteElement.size(u_DH()); j++) // loop over test fcts
-			{
-				//int f * v
-				localVectorDH(j) += cwiseProduct(referenceFunctionValuesDH[j],fDH_value)* quad[pt].weight();
-			}
-		}
-
-		//solve arising system
-		VectorType x_local =  localMassMatrix.ldlt().solve(localVector);
-		v.segment(dof_handler.get_offset(id), size_u) = x_local;
-
-		VectorType x_localDH =  localMassMatrixDH.ldlt().solve(localVectorDH);
-		v.segment(dof_handler.get_offset(id)+size_u, size_u_DH) = x_localDH;
-	}
-}
-
-template<class Config>
-double MA_solver<Config>::calculate_L2_error(const MA_function_type &f) const
-{
-	const int size_u = localFiniteElement.size(u());
-
-	double res = 0;
-
-	for(auto&& e: elements(*gridView_ptr))
-	{
-		assert(localFiniteElement.type() == e.type());
-
-		auto geometry = e.geometry();
-		IndexType id = gridView_ptr->indexSet().index(e);
-
-		// Get a quadrature rule
-		int order = std::max(1, 3 * ((int)localFiniteElement.order()));
-		const QuadratureRule<double, Config::dim>& quad =
-				QuadratureRules<double, Config::dim>::rule(localFiniteElement.type(), order);
-
-		VectorType x_local = dof_handler.calculate_local_coefficients(id, solution);
-
-		// Loop over all quadrature points
-		for (const auto& pt : quad) {
-
-			// Position of the current quadrature point in the reference element
-			const FieldVector<double, Config::dim> &quadPos = pt.position();
-
-			//the shape function values
-			std::vector<double> referenceFunctionValues(size_u);
-			localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
-
-			double u_value = 0;
-			for (int i=0; i<size_u; i++)
-				u_value += x_local(i)*referenceFunctionValues[i];
-
-			double f_value;
-			f(geometry.global(pt.position()), f_value);
-
-		    auto factor = pt.weight()*geometry.integrationElement(pt.position());
-			res += sqr(u_value - f_value)*factor;
-//			cout << "res = " << res << "u_ value " << u_value << " f_value " << f_value << std::endl;
-		}
-	}
-	return std::sqrt(res);
-}
-
-
-template<class Config>
-const typename MA_solver<Config>::VectorType& MA_solver<Config>::solve()
-{
-	assert (initialised);
-	//calculate initial solution
-
-	//init solution by laplace u = -sqrt(2f)
-
-//	Linear_System_Local_Operator_Poisson_DG<RightHandSideInitial, Dirichletdata> lop;
-//	MatrixType m(dof_handler.get_n_dofs_u(), dof_handler.get_n_dofs_u());
-//	VectorType rhs(dof_handler.get_n_dofs_u());
-//	assemble_linear_system_DG(lop, m, rhs);
-//	assert(m.nonZeros() > 0);
-
-/*
-	Eigen::SimplicialLDLT<MatrixType> CholeskySolver(m);
-	if (CholeskySolver.info() != Eigen::Success)
-	{
-		std::cout << "Error, could not compute cholesky decomposition of the system matrix" << std::endl;
-		exit(-1);
-	}
-	VectorType solution_u = CholeskySolver.solve(rhs);
-	if (CholeskySolver.info() != Eigen::Success)
-	{
-		std::cout << "Error, could not solve the linear system" << std::endl;
-		exit(-1);
-	}
-
-	init_mixed_element_without_second_derivatives(solution_u, solution);
-*/
-
-	InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data("../inputData/ellipsoids.ini", "../inputData/geometry.ini");
-//	 InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data("/home/data/friebel/workspace/Method\ of\ Ellipsoids/example/ellipsoids.ini", "/home/data/friebel/workspace/Method\ of\ Ellipsoids/example/geometry.ini");
-//	ellipsoidMethod.solve();
-	ellipsoidMethod.write_output();
-
-	project(MEMBER_FUNCTION(&InitEllipsoidMethod::evaluate, &ellipsoidMethod), solution);
-//  project(General_functions::get_easy_convex_polynomial_plus_one_callback(), solution);
-//  solution = VectorType::Ones(dof_handler.get_n_dofs());
-//  solution = exactsol_projection;
-
-//  std::cout << "solution " << solution.transpose() << std::endl;
-
-  const MA_solver<Solver_config>::Operator op(*this);
-  VectorType f;
-  op.evaluate(solution, f);
-  MATLAB_export(f, "f_initial");
-  std::cout << "f norm " << f.norm() << std::endl;
-
-
-	//init exact solution
-	Dirichletdata exact_sol;
-	if (Solver_config::problem == MA_SMOOTH || Solver_config::problem == SIMPLE_MA)
-		project(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol), MEMBER_FUNCTION(&Dirichletdata::derivative, &exact_sol), exactsol_projection);
-	else
-		project(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol), exactsol_projection);
-
-	vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
-
-
-	vtkplotter.write_numericalsolution_VTK(0, "initial_guess");
-	vtkplotter.write_numericalmirror_VTK(count_refined, "initial_guessMirror");
-	vtkplotter.write_numericalmirror_pov(count_refined, "initial_guessMirror");
-
-	for (int i = 0; i < Solver_config::nonlinear_steps; i++)
-	{
-		solve_nonlinear_step();
-//		vtkplotter.write_numericalsolution_VTK(count_refined);
-		vtkplotter.write_numericalmirror_VTK(count_refined);
-		vtkplotter.write_numericalmirror_pov(count_refined);
-		adapt();
-	}
-
-	return solution;
-}
-
-template<class Config>
-typename MA_solver<Config>::VectorType MA_solver<Config>::return_vertex_vector(const VectorType &x) const
-{
-	assert (initialised);
-	assert(x.size() == dof_handler.get_n_dofs());
-
-//	std::cout << "x " << x.transpose() << std::endl;
-
-	VectorType x_vertex = VectorType::Zero(gridView_ptr->size(Config::dim));
-
-	for (const auto& e: dof_handler.get_dof_to_vertex())
-	{
-			x_vertex(e.second.second) += e.second.first*x(e.first);
-//			std::cout << "vertex " << e.second.second <<" +="<<e.second.first<<"*" << x(e.first) << std::endl;
-	}
-
-//	std::cout << "x_vertex before " << x_vertex.transpose() << std::endl;
-
-	for (int i=0; i < x_vertex.size(); i++)
-		x_vertex(i) /= (double) dof_handler.get_dof_to_vertex_ratio()(i);
-//	std::cout << "x_vertex after " << x_vertex.transpose() << std::endl;
-
-	return x_vertex;
-}
-
-//TODO mass matrix does not alter for different elements!!!
-template<class Config>
-void MA_solver<Config>::project(const MA_function_type f, VectorType& v) const
-{
-	assert (initialised);
-	VectorType coeff_u(dof_handler.get_n_dofs_u());
-
-	// The index set gives you indices for each element , edge , face , vertex , etc .
-	const GridViewType::IndexSet& indexSet = gridView_ptr->indexSet();
-
-	//local mass matrix m_ij = \int mu_i : mu_j
-	DenseMatrixType localMassMatrix;
-	assembler.calculate_local_mass_matrix_ansatz(localFiniteElement(u()), localMassMatrix);
-
-
-	//loop over all cells and solve in every cell the equation \int l2proj(f) *phi = \int f *phi \forall phi
-	for (auto&& e : elements(*gridView_ptr)) {
-		assert(localFiniteElement.type() == e.type());
-
-
-		typedef decltype(e) ConstElementRefType;
-		typedef std::remove_reference<ConstElementRefType>::type ConstElementType;
-
-		const int dim =  ConstElementType::dimension;
-		auto geometry = e.geometry();
-		//get id
-		IndexType id = indexSet.index(e);\
-
-		// Get a quadrature rule
-		int order = std::max(1, 2 * ((int)localFiniteElement.order()));
-		const QuadratureRule<double, dim>& quad =
-				QuadratureRules<double, dim>::rule(e.type(), order);
-
-		//vector to store the local projection
-		VectorType x_local;
-		{
-			//local rhs = \int f *v
-			VectorType localVector = VectorType::Zero(localFiniteElement.size(u()));
-
-			// Loop over all quadrature points
-			for (size_t pt = 0; pt < quad.size(); pt++) {
-
-				// Position of the current quadrature point in the reference element
-				const FieldVector<double, dim> &quadPos = quad[pt].position();
-				//the shape function values
-				std::vector<RangeType> referenceFunctionValues;
-				localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
-
-				//get value of f at quadrature point
-				RangeType f_value;
-				f(geometry.global(quad[pt].position()), f_value);
-
-//				const double integrationElement = geometry.integrationElement(quadPos);
-
-				//assemble integrals (on reference element)
-				for (size_t j = 0; j < localFiniteElement.size(u()); j++) // loop over test fcts
-				{
-					//int f * v
-					localVector(j) += f_value*referenceFunctionValues[j]* quad[pt].weight();// * integrationElement;
-				}
-			}
-			//solve arising system
-			x_local =  localMassMatrix.ldlt().solve(localVector);
-			coeff_u.segment(dof_handler.get_offset_u(id), x_local.size()) = x_local;
-		}
-	}
-
-	init_mixed_element_without_second_derivatives(coeff_u, v);
-}
-
-template <class Config>
-void MA_solver<Config>::adapt_solution(VectorType &v, const Dof_handler<Config>& dof_handler_old, const int level) const
-{
-	assert(v.size() == get_n_dofs()/4);
-	assert(initialised);
-	assert(level == 1);
-
-	const int size = localFiniteElement.size();
-	const int size_u = localFiniteElement.size(u());
-	const int size_u_DH = localFiniteElement.size(u_DH());
-
-	VectorType v_adapt(get_n_dofs());
-
-	// The index set gives you indices for each element , edge , face , vertex , etc .
-	const auto levelGridView = grid_ptr->levelGridView(count_refined-level);
-	const LevelGridViewType::IndexSet& indexSet = levelGridView.indexSet();
-
-	//local refined mass matrix m_ij = \int mu_child_i * mu_j
-	std::vector<DenseMatrixType> localrefinementMatrices(Solver_config::childdim);
-	assembler.calculate_refined_local_mass_matrix_ansatz(localFiniteElement(u()), localrefinementMatrices);
-	//local mass matrix m_ij = \int mu_i * mu_j
-	DenseMatrixType localMassMatrix;
-	assembler.calculate_local_mass_matrix_ansatz(localFiniteElement(u()), localMassMatrix);
-
-	//everything for the hessian ansatz function as well
-	//local refined mass matrix m_ij = \int mu_child_i * mu_j
-	std::vector<DenseMatrixType> localrefinementMatrices_DH(Solver_config::childdim);
-	assembler.calculate_refined_local_mass_matrix_ansatz(localFiniteElement(u_DH()), localrefinementMatrices_DH);
-	//local mass matrix m_ij = \int mu_i * mu_j
-	DenseMatrixType localMassMatrix_DH;
-	assembler.calculate_local_mass_matrix_ansatz(localFiniteElement(u_DH()), localMassMatrix_DH);
-
-	//loop over all cells and solve in every cell the equation \int l2proj(f) *phi = \int f *phi \forall phi
-	for (auto&& e : elements(levelGridView)) {
-		assert(localFiniteElement.type() == e.type());
-
-//		typedef decltype(e) ConstElementRefType;
-//		typedef std::remove_reference<ConstElementRefType>::type ConstElementType;
-//
-//		const int dim =  ConstElementType::dimension;
-		auto geometry = e.geometry();
-
-		//get id
-		IndexType id = indexSet.index(e);
-
-		//vector to store the local projection
-		VectorType x_local = dof_handler_old.calculate_local_coefficients(id, v);
-
-		int i = 0;
-		for (auto&& child : descendantElements(e, count_refined))
-		{
-			VectorType x_adapt(size);
-
-			//local rhs = \int v_adapt*test = refinementmatrix*v
-			VectorType localVector = localrefinementMatrices[i]*x_local.segment(0,size_u);
-			VectorType localVector_DH = localrefinementMatrices_DH[i]*x_local.segment(size_u,size_u_DH);
-
-			//solve arising system
-			x_adapt.segment(0,size_u) =  localMassMatrix.ldlt().solve(localVector);
-			x_adapt.segment(size_u,size_u_DH) =  localMassMatrix_DH.ldlt().solve(localVector_DH);
-
-			const IndexType id_child = gridView_ptr->indexSet().index(child);
-			v_adapt.segment(dof_handler.get_offset(id_child), size) = x_adapt;
-
-			i++;
-		}
-	}
-	v = v_adapt;
-}
-
-template <class Config>
-void MA_solver<Config>::adapt(const int level)
-{
-	VTKWriter<Solver_config::GridView> vtkWriter(*gridView_ptr);
-
-	std::stringstream ss;
-	ss << "../plots/grid" << count_refined;
-
-	vtkWriter.write(ss.str());
-
-	assert(level==1);
-	count_refined += level;
-
-	std::cout << "vertices before " <<	gridView_ptr->size(Config::dim) << std::endl;
-
-	grid_ptr->globalRefine(level);
-	Dof_handler<Config> dof_handler_old = dof_handler;
-	dof_handler.update_dofs();
-
-	Dirichletdata exact_sol;
-	project(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol), exactsol_projection);
-	vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
-
-	adapt_solution(solution, dof_handler_old, level);
-
-	GridViewType gv = grid_ptr->leafGridView();
-
-	std::cout << "vertices after " <<	gridView_ptr->size(Config::dim) << std::endl;
-	vtkplotter.write_numericalsolution_VTK(count_refined,"refined");
-
-}
-
-template<class Config>
-void MA_solver<Config>::solve_nonlinear_step()
-{
-	assert(solution.size() == dof_handler.get_n_dofs() && "Error: start solution is not initialised");
-
-	//get operator
-	const MA_solver<Solver_config>::Operator op(*this);
-
-
-	std::cout << "n dofs" << dof_handler.get_n_dofs() << std::endl;
-//	if (count_refined < 3)	solution = exactsol_projection;
-//	std::cout << "initial guess "<< solution.transpose() << std::endl;
-
-	Solver_config::VectorType f;
-	op.evaluate(solution, f);
-
-//	MATLAB_export(f, "f");
-
-	Dirichletdata exact_sol;
-
-//	std::cout << "initial f " << f.transpose() << std::endl;
-	std::cout << "initial f(x) norm " << f.norm() << endl;
-	std::cout << "initial l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
-	std::cout << "approximate error " << (solution-exactsol_projection).norm() << std::endl;
-
-	// /////////////////////////
-	// Compute solution
-	// /////////////////////////
-
-#ifdef USE_DOGLEG
-	DogLeg_optionstype opts;
-	opts.iradius = 1;
-	for (int i=0; i < 3; i++)	opts.stopcriteria[i] = 1e-8;
-	opts.maxsteps = 200;
-	opts. silentmode = false;
-	opts.exportJacobianIfSingular= true;
-	opts.exportFDJacobianifFalse = true;
-	opts.check_Jacobian = false;
-//
-	doglegMethod(op, opts, solution);
-#endif
-#ifdef USE_PETSC
-	igpm::processtimer timer;
-	timer.start();
-
-	PETSC_SNES_Wrapper<MA_solver<Config>::Operator>::op = op;
-
-	PETSC_SNES_Wrapper<MA_solver<Config>::Operator> snes;
-
-	//estimate number of nonzeros in jacobian
-	int nnz_jacobian = gridView_ptr->size(0)* //for each element
-						(localFiniteElement.size()*localFiniteElement.size()  //cell terms
-						 + 3*        //at most 3 neighbours and only mixed edge terms in
-						    (localFiniteElementu.size()*localFiniteElementu.size() //in u and v
-						     + localFiniteElement.size(u_DH())*localFiniteElementu.size())/2)/2 ; //and mu and u
-	std::cout << "estimate for nnz_jacobian " << nnz_jacobian << std::endl;
-
-	snes.init(dof_handler.get_n_dofs(), nnz_jacobian);
-	int error = snes.solve(solution);
-	timer.stop();
-	std::cout << "needed " << timer << " seconds for nonlinear step, ended with error code " << error << std::endl;
-
-#endif
-
-
-
-
-	op.evaluate(solution, f);
-
-	std::cout << "f(x) norm " << f.norm() << endl;
-	std::cout << "l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
-
-//	std::cout << "x " << solution.transpose() << endl;
-	}
 
 
 #endif /* SRC_MA_SOLVER_HH_ */

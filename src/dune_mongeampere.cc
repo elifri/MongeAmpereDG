@@ -26,7 +26,7 @@ try {
 	/////////////////////////////
 	// setup problem parameter //
 	/////////////////////////////
-	Solver_config::problem = CONST_RHS;
+	Solver_config::problem = SIMPLE_MA;
 	std::cout << "we are solving the problem " << Solver_config::problem << std::endl;
 
 	// ////////////////////////////////
@@ -35,8 +35,11 @@ try {
 //	FieldVector<double, dim> l(1);
 //	std::array<int, dim> elements = { 10, 10 };
 
-	Solver_config::lowerLeft = {-0.2,0};
-	Solver_config::upperRight = {0.2,0.4};
+//	Solver_config::lowerLeft = {-0.2,0};
+//	Solver_config::upperRight = {0.2,0.4};
+
+	Solver_config::lowerLeft = {0,0};
+	Solver_config::upperRight = {1,1};
 	Solver_config::UnitCubeType unitcube(Solver_config::lowerLeft, Solver_config::upperRight, Solver_config::startlevel);
 
 //	Solver_config::lowerLeftTarget = {0.3,0};
@@ -52,7 +55,7 @@ try {
 	VTKWriter<Solver_config::GridView> vtkWriter(gridView);
 	vtkWriter.write("grid");
 
-	MA_solver<Solver_config> ma_solver(unitcube.grid_ptr(), gridView);
+	MA_solver ma_solver(unitcube.grid_ptr(), gridView);
 
 
 #ifdef USE_DOGLEG

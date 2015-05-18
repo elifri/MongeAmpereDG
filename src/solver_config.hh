@@ -12,14 +12,12 @@
 #include<Eigen/Sparse>
 
 #include <config.h>
-#include <dune/grid/yaspgrid.hh>
-#include "localfunctions/pk2d.hh"
 #include <adolc/adouble.h>
 
 #include "UnitCube.hh"
 
-#include "localfunctions/TensorElement.hh"
-#include "localfunctions/mixedElement.hpp"
+#include "localfunctions/MAmixedbasis.hh"
+
 
 using namespace Dune;
 
@@ -32,6 +30,7 @@ template<typename Func>
 inline void DenseMatrix<Dune::FieldMatrix<adouble, 2, 2>>::luDecomposition(DenseMatrix<Dune::FieldMatrix<adouble, 2, 2>>& A, Func func) const
 {
 }
+
 
 };
 
@@ -59,9 +58,6 @@ struct Solver_config{
 
 	typedef double value_type;
 
-	typedef FieldVector<value_type, dim> SpaceType;
-	typedef FieldVector<value_type, 2> SpaceType2d;
-	typedef FieldVector<value_type, 3> SpaceType3d;
 
 //	typedef YaspGrid<dim> GridType;
 	typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > UnitCubeType;
@@ -69,7 +65,13 @@ struct Solver_config{
 	typedef GridType::LevelGridView LevelGridView;
 	typedef GridType::LeafGridView GridView;
 	typedef GridType::Codim<0>::Entity ElementType;
+	typedef Dune::FieldVector<GridView::ctype, GridView::dimension> DomainType;
 
+  typedef FieldVector<value_type, dim> SpaceType;
+  typedef FieldVector<value_type, 2> SpaceType2d;
+  typedef FieldVector<value_type, 3> SpaceType3d;
+
+  static_assert(std::is_same<SpaceType, DomainType>::value, "Grid domain type must be equal to function type");
 
 	static UnitCubeType::SpaceType lowerLeft;
 	static UnitCubeType::SpaceType upperRight;
@@ -78,17 +80,26 @@ struct Solver_config{
 	static UnitCubeType::SpaceType upperRightTarget;
 
 
-//	typedef Q1LocalFiniteElement<double, double, dim> LocalFiniteElementType;
+
 	typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementuType;
 	typedef Pk2DLocalFiniteElement<value_type, value_type, degreeHessian> LocalFiniteElementHessianSingleType;
-	typedef TensorElement<LocalFiniteElementHessianSingleType, dim, dim>	LocalFiniteElementHessianType;
-	typedef MixedElement<LocalFiniteElementuType, LocalFiniteElementHessianType> LocalFiniteElementType;
 
 
+	typedef Functions::MAMixedBasis<GridView, degree, degreeHessian> FEBasis;
+  typedef Functions::LagrangeDGBasis<GridView, degree> FEuBasis;
+  typedef Functions::LagrangeDGBasis<GridView, degreeHessian> FEuDHBasis;
+
+	typedef FieldVector<value_type,1> RangeType;
+  typedef FieldMatrix<value_type,2,2> HessianRangeType;
+
+
+/*
 	typedef LocalFiniteElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
 	typedef LocalFiniteElementuType::Traits::LocalBasisType::Traits::DomainType DomainType;
-
+//	typedef LocalFiniteElementHessianType::Traits::LocalBasisType::Traits::RangeType HessianType;
 	typedef LocalFiniteElementHessianType::RangeType HessianRangeType;
+	typedef HessianRangeType HessianType;
+*/
 
 	static const bool require_skeleton_two_sided = false; ///if enabled every face is assembled twice
 
@@ -111,7 +122,7 @@ struct Solver_config{
 #ifdef SIPG
      // SIPG
     static constexpr double epsilon = -1.0;
-    static constexpr double sigma = 50;   // should be < 5 for stability reasons
+    static constexpr double sigma = 20;   // should be < 5 for stability reasons
     static constexpr double sigmaGrad = 10;   // should be < 5 for stability reasons
     static constexpr double beta = 2.0 - 0.5*dim;  // 2D => 1, 3D => 0.5
 #endif

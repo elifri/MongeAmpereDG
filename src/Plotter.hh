@@ -24,7 +24,6 @@
 
 #include <fstream>
 
-template<class Config>
 class MA_solver;
 
 typedef StaticRefinement<GenericGeometry::SimplexTopology<2>::type::id,
@@ -35,7 +34,7 @@ typedef StaticRefinement<GenericGeometry::SimplexTopology<2>::type::id,
 class Plotter{
 private:
 
-	const MA_solver<Solver_config>* solver; ///solver providing function space data
+	const MA_solver* solver; ///solver providing function space data
 
 	const Solver_config::GridView* grid;
 	PlotRefinementType refined_grid;
@@ -50,7 +49,7 @@ private:
 public:
 	typedef Eigen::Matrix<Solver_config::RangeType, Eigen::Dynamic, 1> PointdataVectorType;
 
-	Plotter(const MA_solver<Solver_config>& ma_solver);
+	Plotter(const MA_solver& ma_solver);
 
 	std::string output_directory, output_prefix;
 

@@ -103,6 +103,7 @@ int from_eigen_to_petscmat(const Solver_config::MatrixType& mat, Mat& mat_petsc)
 	PetscInt cols[mat.nonZeros()];
 	PetscScalar values[mat.nonZeros()];
 
+	MatSetOption(mat_petsc, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
 
 	for (int k=0; k<mat.outerSize(); ++k)
 	  for (Solver_config::MatrixType::InnerIterator it(mat,k); it; ++it)
