@@ -16,6 +16,9 @@
 #include <Eigen/SparseCholesky>
 #include <Eigen/Dense>
 
+#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
+#include <dune/functions/gridfunctions/gridviewfunction.hh>
+#include <dune/functions/functionspacebases/interpolate.hh>
 
 
 //#include "operator_poisson_DG.hh"
@@ -236,6 +239,108 @@ private:
 //	Plotter vtkplotter; /// handles I/O
 };
 
+
+/**
+ * \brief Interpolate given function in discrete function space
+ *
+ * Notice that this will only work if the range type of f and
+ * the block type of coeff are compatible and supported by
+ * FlatIndexContainerAccess.
+ *
+ * \param basis Global function space basis of discrete function space
+ * \param coeff Coefficient vector to represent the interpolation
+ * \param f Function to interpolate
+ * \param bitVector A vector with flags marking ald DOFs that should be interpolated
+ */
+template <class B, class C, class F, class BV>
+void interpolateSecondDerivative(const B& basis, C& coeff, F&& f, BV&& bitVector)
+{
+  using GridView = typename B::GridView;
+  using Element = typename GridView::template Codim<0>::Entity;
+
+  using FiniteElement = typename B::LocalView::Tree::FiniteElement;
+  using FunctionBaseClass = typename Dune::LocalFiniteElementFunctionBase<FiniteElement>::type;
+
+  using LocalBasisRange = typename FiniteElement::Traits::LocalBasisType::Traits::RangeType;
+  using LocalDomain = typename Element::Geometry::LocalCoordinate;
+
+  using GlobalDomain = typename Element::Geometry::GlobalCoordinate;
+
+  using CoefficientBlock = typename std::decay<decltype(coeff[0])>::type;
+  using BitVectorBlock = typename std::decay<decltype(bitVector[0])>::type;
+
+  static_assert(Dune::Functions::Concept::isCallable<F, GlobalDomain>(), "Function passed to interpolate does not model the Callable<GlobalCoordinate> concept");
+
+  auto&& gridView = basis.gridView();
+
+  using FunctionFromCallable = typename Dune::Functions::FunctionFromCallable<LocalBasisRange(LocalDomain), decltype(f), FunctionBaseClass>;
+
+  auto basisIndexSet = basis.indexSet();
+  coeff.resize(basisIndexSet.size());
+
+  auto processed = Dune::BitSetVector<1>(basisIndexSet.size(), false);
+  auto interpolationValues = std::vector<LocalBasisRange>();
+
+  auto localView = basis.localView();
+  auto localIndexSet = basisIndexSet.localIndexSet();
+
+  auto blockSize = Functions::Imp::FlatIndexContainerAccess<CoefficientBlock>::size(coeff[0]);
+
+  for (const auto& e : elements(gridView))
+  {
+    localView.bind(e);
+    localIndexSet.bind(localView);
+    f.bind(e);
+
+    const auto& fe = localView.tree().finiteElement();
+
+    // check if all components have already been processed
+    bool allProcessed = true;
+    for (size_t i=0; i<fe.localBasis().size(); ++i)
+    {
+      // if index was already processed we don't need to do further checks
+      auto index = localIndexSet.index(i)[0];
+      if (processed[index][0])
+        continue;
+
+      // if index was not processed, check if any entry is marked for interpolation
+      auto&& bitVectorBlock = bitVector[index];
+      for(int k=0; k<blockSize; ++k)
+      {
+        if (Functions::Imp::FlatIndexContainerAccess<BitVectorBlock>::getEntry(bitVectorBlock,k))
+        {
+          allProcessed = false;
+          break;
+        }
+      }
+    }
+    int j=0;
+    if (not(allProcessed))
+    {
+      // We loop over j defined above and thus over the components of the
+      // range type of localF.
+      for(j=0; j<blockSize; ++j)
+      {
+
+        // We cannot use localFj directly because interpolate requires a Dune::VirtualFunction like interface
+        fe.localInterpolation().interpolate(f, interpolationValues);
+        for (size_t i=0; i<fe.localBasis().size(); ++i)
+        {
+          size_t index = localIndexSet.index(i)[0];
+          auto interpolateHere = Functions::Imp::FlatIndexContainerAccess<BitVectorBlock>::getEntry(bitVector[index],j);
+
+          if (not(processed[index][0]) and interpolateHere)
+            Functions::Imp::FlatIndexContainerAccess<CoefficientBlock>::setEntry(coeff[index], j, interpolationValues[i]);
+        }
+      }
+      for (size_t i=0; i<fe.localBasis().size(); ++i)
+        processed[localIndexSet.index(i)[0]][0] = true;
+    }
+  }
+}
+
+
+
 template<class F>
 void MA_solver::project(const F f, VectorType& v) const
 {
@@ -244,6 +349,29 @@ void MA_solver::project(const F f, VectorType& v) const
   interpolate(*uBasis, v_u, f);
   std::cout << v_u.transpose() << std::endl;
   v.segment(0, v_u.size()) = v_u;
+
+  //init second derivatives
+
+  //build gridviewfunction
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,v_u);
+
+  for (int row = 0; row < Solver_config::dim; row++)
+    for (int col = 0; col < Solver_config::dim; col++)
+    {
+      VectorType v_uDH_entry;
+      auto localnumericalHessian_entry = localSecondDerivative(numericalSolution, {row,col});
+      interpolateSecondDerivative(*uDHBasis, v_uDH_entry, localnumericalHessian_entry, Functions::Imp::AllTrueBitSetVector());
+
+
+      const int nDH = Solver_config::dim * Solver_config::dim;
+      for (size_t i=0; i<v_uDH_entry.size(); i++)
+      {
+        const int j = row*Solver_config::dim + col;
+        v[get_n_dofs_u()+ nDH*i+  j] = v_uDH_entry[i];
+      }
+
+      std::cout << "hessian " << row << " " << col << v_uDH_entry.transpose() << std::endl;
+    }
 }
 
 

@@ -14,10 +14,6 @@
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk/common.hh>
 
-#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
-#include <dune/functions/gridfunctions/gridviewfunction.hh>
-#include <dune/functions/functionspacebases/interpolate.hh>
-
 
 #include "MethodEllipsoids/init_with_ellipsoid_method.hpp"
 
