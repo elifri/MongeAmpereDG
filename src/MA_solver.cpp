@@ -144,6 +144,7 @@ void MA_solver::create_initial_guess()
 
 //  vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
 
+  project([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
   solution = VectorType::Zero(get_n_dofs());
 //  solution = exactsol_projection;
 
@@ -185,16 +186,6 @@ const typename MA_solver::VectorType& MA_solver::solve()
   }
 
   return solution;
-}
-
-
-void MA_solver::project(const MA_function_type f, VectorType& v) const
-{
-  v.resize(get_n_dofs());
-  VectorType v_u;
-  interpolate(*uBasis, v_u, [](Solver_config::SpaceType x){return x.two_norm2()/2.0;});
-  std::cout << v_u.transpose() << std::endl;
-  v.segment(0, v_u.size()) = v_u;
 }
 
 void MA_solver::adapt_solution(VectorType &v, const int level)
@@ -390,9 +381,9 @@ void MA_solver::solve_nonlinear_step()
   igpm::processtimer timer;
   timer.start();
 
-  PETSC_SNES_Wrapper<MA_solver<Config>::Operator>::op = op;
+  PETSC_SNES_Wrapper<MA_solver::Operator>::op = op;
 
-  PETSC_SNES_Wrapper<MA_solver<Config>::Operator> snes;
+  PETSC_SNES_Wrapper<MA_solver::Operator> snes;
 
   //estimate number of nonzeros in jacobian
 //  int nnz_jacobian = gridView_ptr->size(0)* //for each element
@@ -407,7 +398,8 @@ void MA_solver::solve_nonlinear_step()
                    + 12*6)/2)/2 ; //and mu and u
   std::cout << "estimate for nnz_jacobian " << nnz_jacobian << std::endl;
 
-  snes.init(dof_handler.get_n_dofs(), nnz_jacobian);
+  snes.init(get_n_dofs(), nnz_jacobian);
+  std::cout << " n_dofs " << get_n_dofs() << std::endl;
   int error = snes.solve(solution);
   timer.stop();
   std::cout << "needed " << timer << " seconds for nonlinear step, ended with error code " << error << std::endl;

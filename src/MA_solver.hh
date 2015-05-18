@@ -146,10 +146,11 @@ public:
 
 	/**
 	 * projects a function into the grid space
-	 * @param f	callback function representing the function
+	 * @param f	function representing the function
 	 * @param V	returns the coefficient vector of the projection of f
 	 */
-	void project(const MA_function_type f, VectorType &V) const;
+	template<class F>
+	void project(F f, VectorType &V) const;
 
 	/**
 	 * projects a function into the grid space
@@ -228,6 +229,15 @@ private:
 //	Plotter vtkplotter; /// handles I/O
 };
 
+template<class F>
+void MA_solver::project(const F f, VectorType& v) const
+{
+  v.resize(get_n_dofs());
+  VectorType v_u;
+  interpolate(*uBasis, v_u, f);
+  std::cout << v_u.transpose() << std::endl;
+  v.segment(0, v_u.size()) = v_u;
+}
 
 
 #endif /* SRC_MA_SOLVER_HH_ */
