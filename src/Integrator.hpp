@@ -50,7 +50,7 @@ double Integrator<GT>::assemble_integral(const function_type &f, const int quad_
 		for (const auto& pt : quad) {
 
 			Solver_config::value_type f_value;
-			f(geometry.global(pt.position()), f_value);
+			f.evaluate(geometry.global(pt.position()), f_value);
 
 		    auto factor = pt.weight()*geometry.integrationElement(pt.position());
 			res += f_value*factor;

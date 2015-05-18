@@ -22,11 +22,9 @@
 #include "Assembler.hh"
 #include "problem_data.hh"
 #include "Operator/linear_system_operator_poisson_DG.hh"
-#include "Operator/operator_MA_Neilan_DG.hh"
-//#include "Operator/operator_MA_refl_Neilan_DG.hh"
+//#include "Operator/operator_MA_Neilan_DG.hh"
+#include "Operator/operator_MA_refl_Neilan_DG.hh"
 
-
-#include "MethodEllipsoids/init_with_ellipsoid_method.hpp"
 
 #ifdef USE_DOGLEG
 #include "Dogleg/doglegMethod.hpp"
@@ -112,8 +110,8 @@ public:
 			solver_ptr->assemble_Jacobian_DG(lop, x,m);
 		}
 
-		Local_Operator_MA_mixed_Neilan lop;
-//		Local_Operator_MA_refl_Neilan lop;
+//		Local_Operator_MA_mixed_Neilan lop;
+		Local_Operator_MA_refl_Neilan lop;
 		const MA_solver* solver_ptr;
 	};
 

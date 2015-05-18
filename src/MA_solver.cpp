@@ -18,6 +18,10 @@
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 #include <dune/functions/functionspacebases/interpolate.hh>
 
+
+#include "MethodEllipsoids/init_with_ellipsoid_method.hpp"
+
+
 void MA_solver::project(const MA_function_type f, const MA_derivative_function_type f_DH, VectorType &v) const
 {
   v.resize(get_n_dofs());
@@ -144,8 +148,8 @@ void MA_solver::create_initial_guess()
 
 //  vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
 
-  project([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
-  solution = VectorType::Zero(get_n_dofs());
+//  project([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
+//  solution = VectorType::Zero(get_n_dofs());
 //  solution = exactsol_projection;
 
 //    //write hessian dofs
@@ -155,6 +159,10 @@ void MA_solver::create_initial_guess()
 //      {
 //        solution[get_n_dofs_u()+ nDH*i+j] = (j == 0 || j ==3)? 1 : 0;
 //      }
+
+  InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data("../inputData/ellipsoids.ini", "../inputData/geometry.ini");
+  project([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
+  ellipsoidMethod.write_output();
 
   plot("initialguess");
 }
