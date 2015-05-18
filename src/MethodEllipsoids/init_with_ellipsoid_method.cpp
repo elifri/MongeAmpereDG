@@ -145,6 +145,8 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
 
     zOut = 0;
 
+    inputImageName = Solver_config::TargetImageName;
+    lightInImageName = Solver_config::LightinputImageName;
 
 
     povRayOpts.cameraLocation(0) = (xMaxOut+xMinOut)/2.0;
@@ -158,6 +160,7 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
 
     //LightIn lightIn;
     LightInImage lightIn(lightInImageName,xMin,xMax,yMin,yMax);
+    cout << "opening " << inputImageName.c_str() << endl;
 
     EllipsoidContainer::Directions directionsOut;
     vector<double> valuesLightOut;
@@ -240,6 +243,32 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
         }
     }
 
+    std::cout << "nx " << nX << " ny " << nY << endl;
+
+    std::cout << "nDirectionsX " << nDirectionsX << endl
+              <<"xMin " << xMin << endl
+              <<"xMax " << xMax << endl
+              << "nDirectionsY " << nDirectionsY << endl
+              <<"yMin " << yMin << endl
+              <<"yMin " << yMax << endl;
+
+    std::cout << "directionsOut " << endl;
+    for (const auto& e : directionsOut)   cout << e << " ";
+    cout << endl;
+
+    std::cout << "valuesLightOut " << endl;
+    for (const auto& e : valuesLightOut)   cout << e << " ";
+    cout << endl;
+
+    cout << "lightin " << endl
+            <<"   xMin " << lightIn.xMin_ << endl
+              <<"  xMax " << lightIn.xMax_ << endl
+              <<"  xMin " << lightIn.yMin_ << endl
+              <<"  xMin " << lightIn.yMin_ << endl
+            <<"  h " << lightIn.h_ << endl
+            <<"  factor " << lightIn.factor_ << endl;
+
+
     InitEllipsoidMethod method (nDirectionsX, xMin, xMax, nDirectionsY, yMin, yMax, directionsOut, valuesLightOut, lightIn, alpha, maxIter);
     method.grid_.setPovRayOpts(povRayOpts);
 
@@ -287,3 +316,10 @@ void InitEllipsoidMethod::evaluate(const Solver_config::DomainType& x, Solver_co
 {
     u = method_.getEllipsoids().evaluate2d(x[0], x[1]);
 }
+
+Solver_config::RangeType InitEllipsoidMethod::evaluate(const Solver_config::DomainType& x)
+{
+    return method_.getEllipsoids().evaluate2d(x[0], x[1]);
+}
+
+

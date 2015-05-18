@@ -17,6 +17,8 @@
 #include "Integrator.hpp"
 #include "utils.hpp"
 
+#include <CImg.h>
+
 using namespace Dune;
 
 
@@ -143,52 +145,104 @@ namespace PDE_functions{
 }
 
 
-class RightHandSideReflector{
+
+adouble interpolate_cubic_atXY(cimg_library::CImg<double>, const adouble fx, const adouble fy, const int z=0, const int c=0);
+
+class ImageFunction :  public VirtualFunction<Solver_config::SpaceType, Solver_config::value_type>
+{
 public:
-	RightHandSideReflector():
-			g_initial_callback(FREE_FUNCTION(&PDE_functions::g_initial)),
-			g_initial_adouble(FREE_FUNCTION(&PDE_functions::g_initial_a)),
-			f_callback(FREE_FUNCTION(&PDE_functions::f)) {}
-	RightHandSideReflector(const MA_function_type g_initial, const derivative_function_type Dg_initial, const MA_function_type f):g_initial_callback(g_initial), f_callback(f) {}
+    cimg_library::CImg<double> image_;
+    Solver_config::SpaceType2d lowerLeft_; ///left bottom of image
+    Solver_config::SpaceType2d upperRight_; ///right top of image
+    double h_;
+    double factor_;  /// factor for normalization
+
+  public:
+
+    ImageFunction (
+        const std::string filename,
+        const Solver_config::SpaceType2d lowerLeft = {-0.5,-0.5},
+        const Solver_config::SpaceType2d upperRight = {0.5,0.5}
+    ) : image_(filename.c_str()),
+        factor_(1.0)
+    {
+        assert (lowerLeft[0] < upperRight[0]);
+        assert (lowerLeft[1] < upperRight[1]);
+
+        //image_.resize_doubleXY();
+
+        h_ = std::min( (upperRight[0]-lowerLeft[0])/image_.width(), (upperRight[1]-lowerLeft[1])/image_.height());
+        lowerLeft_[0] = lowerLeft[0]  + (upperRight[0] - lowerLeft[0] - image_.width()*h_)/2.0;
+        upperRight_[0] = lowerLeft_[0] + image_.width()*h_;
+        lowerLeft_[1] = lowerLeft[1]  + (upperRight[1] - lowerLeft[1] - image_.height()*h_)/2.0;
+        upperRight_[1] = lowerLeft_[1] + image_.height()*h_;
+
+        //normalise values to [0,1]
+        image_ /= image_.max();
+    }
+
+    Solver_config::value_type evaluate (const Solver_config::DomainType &x) const
+    {
+        const double fx = std::max( 0.0, std::min( (double) image_.width()-1,  (x[0] - lowerLeft_[0])/h_ - 0.5 ) );
+        const double fy = std::max( 0.0, std::min( (double) image_.height()-1, (upperRight_[1] - x[1])/h_ - 0.5 ) );
+
+        return factor_ * image_._cubic_atXY(fx,fy);
+    }
 
 
-	void init();
-	void init(const Integrator<Solver_config::GridType>& integrator, const Integrator<Solver_config::GridType>& integratorTarget);
+    void evaluate (const Solver_config::DomainType &x, Solver_config::value_type &u) const
+    {
+        const double fx = std::max( 0.0, std::min( (double) image_.width()-1,  (x[0] - lowerLeft_[0])/h_ - 0.5 ) );
+        const double fy = std::max( 0.0, std::min( (double) image_.height()-1, (upperRight_[1] - x[1])/h_ - 0.5 ) );
 
-	void f(const Solver_config::SpaceType2d& x, Solver_config::value_type &out) const{
-		f_callback(x, out);
-	}
+        u = factor_ * image_._cubic_atXY(fx,fy);
+    }
 
-	///this function asserts to fulfill the (mass) conservation int f = int g
-	void g(const Solver_config::SpaceType2d& z, Solver_config::value_type &out) const{
-		g_initial_callback(z, out);
-		out *= integral_f/integral_g;
-	}
+    void evaluate (const FieldVector<adouble, Solver_config::dim> &x, adouble &u) const
+    {
+        const adouble fx = fmax( 0.0, fmin( (double) image_.width()-1,  (x[0] - lowerLeft_[0])/h_ - 0.5 ) );
+        const adouble fy = fmax( 0.0, fmin( (double) image_.height()-1, (upperRight_[1] - x[1])/h_ - 0.5 ) );
 
-	///this function asserts to fulfill the (mass) conservation int f = int g
-	void g(const FieldVector<adouble, 2>& z, adouble &out) const{
-		g_initial_adouble(z, out);
-		out *= integral_f/integral_g;
-	}
+        u = factor_ * interpolate_cubic_atXY(image_, fx, fy);
+    }
 
-	double phi(const Solver_config::SpaceType& x) const{
-		Solver_config::SpaceType T;
-		if(is_close(x[0], Solver_config::lowerLeft[0])) //x_0 = r_1 in andreas' notion
-			return Solver_config::upperRightTarget[0];
-		if(is_close(x[0], Solver_config::upperRight[0])) //x_0 = s_1
-			return Solver_config::lowerLeftTarget[0];
-		if(is_close(x[1], Solver_config::lowerLeft[1]))
-			return Solver_config::upperRightTarget[1];
-		if(is_close(x[0], Solver_config::upperRight[1]))
-			return Solver_config::lowerLeftTarget[1];
-	}
+    void normalize (
+        const unsigned int n = Solver_config::startlevel+Solver_config::nonlinear_steps
+    ) {
+        factor_ = 1.0;
 
-private:
-	MA_function_type g_initial_callback, f_callback;
-	function_type<FieldVector<adouble,2>, adouble> g_initial_adouble;
+        Solver_config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, n);
+        Integrator<Solver_config::GridType> integrator(unitcube_quadrature.grid_ptr());
+        const double integral = integrator.assemble_integral(*this);
 
-	double integral_g;
-	double integral_f;
+        factor_ = 1.0/integral;
+        assert(fabs(integrator.assemble_integral(*this) - 1.0) < 1e-10);
+    }
+
+
 };
+
+struct RightHandSideReflector{
+public:
+  RightHandSideReflector(const std::string& inputfile=Solver_config::LightinputImageName, const std::string& inputTargetfile = Solver_config::TargetImageName):f(inputfile, Solver_config::lowerLeft, Solver_config::upperRight),
+      g(inputTargetfile, Solver_config::lowerLeftTarget, Solver_config::upperRightTarget)
+  {
+    g.normalize();
+  }
+
+  double phi(const Solver_config::SpaceType& x) const{
+    Solver_config::SpaceType T;
+    if(is_close(x[0], Solver_config::lowerLeft[0])) //x_0 = r_1 in andreas' notion
+      return Solver_config::upperRightTarget[0];
+    if(is_close(x[0], Solver_config::upperRight[0])) //x_0 = s_1
+      return Solver_config::lowerLeftTarget[0];
+    if(is_close(x[1], Solver_config::lowerLeft[1]))
+      return Solver_config::upperRightTarget[1];
+    if(is_close(x[0], Solver_config::upperRight[1]))
+      return Solver_config::lowerLeftTarget[1];
+  }
+  ImageFunction g, f;
+};
+
 
 #endif /* SRC_PROBLEM_DATA_HH_ */

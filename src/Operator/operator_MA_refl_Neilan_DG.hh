@@ -48,8 +48,8 @@ public:
    * @param x			         local solution coefficients
    * @param v					 local residual (to be returned)
    */
-  template<class LocalView, class VectorType>
-  void assemble_cell_term(const LocalView& localView, const VectorType &x,
+  template<class LocalView, class LocalIndexSet, class VectorType>
+  void assemble_cell_term(const LocalView& localView, const LocalIndexSet &localIndexSet, const VectorType &x,
       VectorType& v, const int tag) const {
 
     // Get the grid element from the local FE basis view
@@ -175,9 +175,9 @@ public:
 //		pertubed_matrix += a_tilde*(z_3/2/t/x_3)*N;
 
       double f_value;
-      rhs.f(x_value, f_value);
+      rhs.f.evaluate(x_value, f_value);
       adouble g_value;
-      rhs.g(z, g_value);
+      rhs.g.evaluate(z, g_value);
 
 
 //		cout << "x_value " << x_value << " a_tilde " << a_tilde_value.value() << " omega(x) " << omega(x_value) << " btilde " << b_tilde.value() << " g " << g_value.value() << std::endl;
@@ -220,10 +220,10 @@ public:
    * @param v					  return residual
    * @param vn				  return residual for neighbour element
    */
-  template<class IntersectionType, class LocalView, class VectorType>
+  template<class IntersectionType, class LocalView, class LocalIndexSet, class VectorType>
   void assemble_inner_face_term(const IntersectionType& intersection,
-      const LocalView &localView, const VectorType &x,
-      const LocalView &localViewn, const VectorType &xn, VectorType& v,
+      const LocalView &localView,  const LocalIndexSet &localIndexSet, const VectorType &x,
+      const LocalView &localViewn,  const LocalIndexSet &localIndexSetn, const VectorType &xn, VectorType& v,
       VectorType& vn, int tag) const {
     const int dim = IntersectionType::dimension;
     const int dimw = IntersectionType::dimensionworld;
@@ -415,10 +415,9 @@ public:
   }
 
 
-  template<class Intersection, class LocalElement0, class LocalElement1,
-      class VectorType>
+  template<class Intersection, class LocalView, class LocalIndexSet, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
-      const MixedElement<LocalElement0, LocalElement1> &localFiniteElement,
+      const LocalView &localView, const LocalIndexSet &localIndexSet,
       const VectorType &x, VectorType& v, int tag) const {
     const int dim = Intersection::dimension;
     const int dimw = Intersection::dimensionworld;
@@ -432,6 +431,7 @@ public:
     const Element& element = localView.element();
 
     const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
+    const int size_u = localFiniteElementu.size();
 
     typedef decltype(localFiniteElementu) ConstElementuRefType;
     typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
@@ -490,7 +490,7 @@ public:
       //the shape function values
       std::vector<RangeType> referenceFunctionValues(size_u);
       adouble u_value = 0;
-      assemble_functionValues_u(localFiniteElement(u()), quadPos,
+      assemble_functionValues_u(localFiniteElementu, quadPos,
           referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
 
       // The gradients
@@ -512,7 +512,7 @@ public:
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
-      for (unsigned int j = 0; j < localFiniteElement.size(u()); j++) //parts from self
+      for (unsigned int j = 0; j < size_u; j++) //parts from self
           {
 
         // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
@@ -523,7 +523,7 @@ public:
     }
 
     // select dependent variables
-    for (int i = 0; i < localFiniteElement.size(); i++)
+    for (int i = 0; i < localView.size(); i++)
       v_adolc[i] >>= v[i];
     trace_off();
   }

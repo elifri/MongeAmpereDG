@@ -33,6 +33,7 @@ public:
     void write_output() const;
 
     void evaluate(const Solver_config::DomainType& x, Solver_config::RangeType& u);
+    Solver_config::RangeType evaluate(const Solver_config::DomainType& x);
 
 private:
     InitEllipsoidMethod(const unsigned int nDirectionsX,

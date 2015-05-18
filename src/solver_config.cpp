@@ -20,6 +20,9 @@ Solver_config::UnitCubeType::SpaceType Solver_config::upperRight = {1,1};
 Solver_config::UnitCubeType::SpaceType Solver_config::lowerLeftTarget = {0,0};
 Solver_config::UnitCubeType::SpaceType Solver_config::upperRightTarget= {1,1};
 
+std::string Solver_config::LightinputImageName = "../inputData/lightin_lambertian.bmp";
+std::string Solver_config::TargetImageName = "../inputData/one_small.bmp";
+
 std::ostream& operator <<(std::ostream &output, const ProblemType &p)
 {
 	switch(p)
