@@ -222,15 +222,51 @@ public:
 
 };
 
-struct RightHandSideReflector{
+
+/// projects the 2d reference plane omega to the ball surface in 3d
+inline Solver_config::value_type omega(Solver_config::SpaceType2d x) {
+  assert(x.two_norm2() <= 1);
+  return std::sqrt(1 - x.two_norm2());
+}
+
+template<class valueType, class GradientType>
+inline valueType a_tilde(const valueType u_value,
+    const GradientType& gradu, const Solver_config::SpaceType2d& x) {
+//    adouble a_tilde_value = 0;
+  valueType a_tilde_value = gradu * gradu;
+  valueType temp = u_value + (gradu * x);
+  a_tilde_value -= sqr(temp);
+  return a_tilde_value;
+}
+
+template<class valueType, class GradientType>
+inline FieldVector<valueType, Solver_config::dim> T(const valueType& a_tilde_value, const GradientType& gradu) {
+  FieldVector<valueType, Solver_config::dim> T_value = gradu;
+  T_value *= 2. / a_tilde_value;
+  return T_value;
+}
+
+class Local_Operator_MA_refl_Neilan;
+
+class RightHandSideReflector{
 public:
-  RightHandSideReflector(const std::string& inputfile=Solver_config::LightinputImageName, const std::string& inputTargetfile = Solver_config::TargetImageName):f(inputfile, Solver_config::lowerLeft, Solver_config::upperRight),
-      g(inputTargetfile, Solver_config::lowerLeftTarget, Solver_config::upperRightTarget)
+  typedef std::shared_ptr<Solver_config::DiscreteLocalGridFunction> Function_ptr;
+  typedef std::shared_ptr<Solver_config::DiscreteLocalGradientGridFunction> GradFunction_ptr;
+
+  RightHandSideReflector():
+    f(Solver_config::LightinputImageName, Solver_config::lowerLeft, Solver_config::upperRight),
+    g(Solver_config::TargetImageName, Solver_config::lowerLeftTarget, Solver_config::upperRightTarget){}
+  RightHandSideReflector(Function_ptr &solUOld, GradFunction_ptr &gradUOld,
+                        const std::string& inputfile=Solver_config::LightinputImageName,
+                        const std::string& inputTargetfile = Solver_config::TargetImageName):
+                            f(inputfile, Solver_config::lowerLeft, Solver_config::upperRight),
+                            g(inputTargetfile, Solver_config::lowerLeftTarget, Solver_config::upperRightTarget),
+                            solution_u_old(&solUOld), gradient_u_old(&gradUOld)
   {
     g.normalize();
   }
 
-  double phi(const Solver_config::SpaceType& x) const{
+  static double phi_initial(const Solver_config::SpaceType& x){
     Solver_config::SpaceType T;
     if(is_close(x[0], Solver_config::lowerLeft[0])) //x_0 = r_1 in andreas' notion
       return Solver_config::upperRightTarget[0];
@@ -241,7 +277,37 @@ public:
     if(is_close(x[0], Solver_config::upperRight[1]))
       return Solver_config::lowerLeftTarget[1];
   }
+
+  void phi(const Solver_config::SpaceType2d& T, const FieldVector<double, Solver_config::dim> &normal, Solver_config::value_type &phi) const;
+
+public:
+  template<class Element>
+  Solver_config::value_type phi(const Element& element, const Solver_config::DomainType& xLocal, const Solver_config::DomainType& xGlobal
+      , const FieldVector<double, Solver_config::dim> &normal) const
+  {
+    assert(solution_u_old != NULL);
+    assert(gradient_u_old != NULL);
+
+    (*solution_u_old)->bind(element);
+    (*gradient_u_old)->bind(element);
+    Solver_config::value_type u = (**solution_u_old)(xLocal);
+    Solver_config::SpaceType2d gradu = (**gradient_u_old)(xLocal);
+
+    Solver_config::SpaceType2d x = element.geometry().global(xLocal);
+
+    Solver_config::value_type phi_value;
+
+    phi(T(  a_tilde(u, gradu, x), gradu),
+        normal, phi_value);
+  }
+
+private:
   ImageFunction g, f;
+
+  mutable Function_ptr* solution_u_old;
+  mutable GradFunction_ptr* gradient_u_old;
+
+  friend Local_Operator_MA_refl_Neilan;
 };
 
 

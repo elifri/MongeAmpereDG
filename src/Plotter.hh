@@ -13,7 +13,7 @@
 #include "solver_config.hh"
 //#include "Callback_utility.hpp"
 
-#include "Operator/operator_MA_refl_Neilan_DG.hh"
+#include "problem_data.hh"
 
 
 #if USE_DOGLEG
@@ -187,8 +187,8 @@ void Plotter::write_points_reflector(std::ofstream &file, Function &f) const{
         const auto geometry = element.geometry();
         for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
           auto x_2d = geometry.global(it.coords());
-          auto rho = 1.0/f(x_2d);
-          file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  Local_Operator_MA_refl_Neilan::omega(x_2d)*rho << endl;
+          auto rho = 1.0/f(it.coords());
+          file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  omega(x_2d)*rho << endl;
           vertex_no++;
         }
       }
@@ -224,8 +224,8 @@ void Plotter::write_points_reflector_pov(std::ofstream &file, Function & f) cons
         const auto geometry = element.geometry();
         for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
           auto x_2d = geometry.global(it.coords());
-          auto rho = 1.0/f(x_2d);
-          file << "\t\t <"  << x_2d[0]*rho << ", " << x_2d[1]*rho << ", " <<  Local_Operator_MA_refl_Neilan::omega(x_2d)*rho<< ">," << endl;
+          auto rho = 1.0/f(it.coords());
+          file << "\t\t <"  << x_2d[0]*rho << ", " << x_2d[1]*rho << ", " <<  omega(x_2d)*rho<< ">," << endl;
           vertex_no++;
         }
       }

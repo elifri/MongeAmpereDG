@@ -25,22 +25,28 @@ using namespace Dune;
 class Local_Operator_MA_refl_Neilan {
 
 public:
+  Local_Operator_MA_refl_Neilan():
+    rhs() {}
 
-  /// projects the 2d reference plane omega to the ball surface in 3d
+  Local_Operator_MA_refl_Neilan(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld):
+    rhs(solUOld, gradUOld) {}
+
+/*  /// projects the 2d reference plane omega to the ball surface in 3d
   inline static Solver_config::value_type omega(Solver_config::SpaceType2d x) {
-    assert(x.two_norm2() <= 1);
-    return std::sqrt(1 - x.two_norm2());
+    return RightHandSideReflector::omega(x);
   }
 
   template<class valueType, class GradientType>
   inline static valueType a_tilde(const valueType u_value,
       const GradientType& gradu, const Solver_config::SpaceType2d& x) {
-//		adouble a_tilde_value = 0;
-    valueType a_tilde_value = gradu * gradu;
-    valueType temp = u_value + (gradu * x);
-    a_tilde_value -= sqr(temp);
-    return a_tilde_value;
+    return RightHandSideReflector::a_tilde(u_value, gradu, x);
   }
+
+  template<class valueType, class GradientType>
+  inline static FieldVector<valueType, Solver_config::dim> T(const valueType& a_tilde_value, const GradientType& gradu) {
+    return RightHandSideReflector::T(a_tilde_value, gradu);
+  }*/
+
   /**
    * implements the local volume integral
    * @param element		     the element the integral is evaluated on
@@ -500,14 +506,15 @@ public:
           gradients, x_adolc.segment(0, size_u), gradu);
 
       //-------calculate integral--------
-      auto phi_value = rhs.phi(x_value);
+      auto phi_value = rhs.phi(element, quadPos, x_value, normal);
+      auto phi_value_initial = rhs.phi_initial(x_value);
 
       adouble a_tilde_value = a_tilde(u_value, gradu, x_value);
 
       FieldVector<adouble, Solver_config::dim> T_value = gradu;
       T_value *= 2. / a_tilde_value;
 
-	    std::cerr << "phi " << phi_value << " T " << T_value[0].value() << " " << T_value[1].value() << std::endl;
+	    std::cerr << "phi " << phi_value << " thought it -> " << phi_value_initial << " T " << T_value[0].value() << " " << T_value[1].value() << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());

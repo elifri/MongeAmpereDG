@@ -16,15 +16,13 @@
 #include <Eigen/SparseCholesky>
 #include <Eigen/Dense>
 
-#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
-#include <dune/functions/gridfunctions/gridviewfunction.hh>
 #include <dune/functions/functionspacebases/interpolate.hh>
 
 
 //#include "operator_poisson_DG.hh"
 #include "Assembler.hh"
 #include "problem_data.hh"
-#include "Operator/linear_system_operator_poisson_DG.hh"
+//#include "Operator/linear_system_operator_poisson_DG.hh"
 //#include "Operator/operator_MA_Neilan_DG.hh"
 #include "Operator/operator_MA_refl_Neilan_DG.hh"
 #include "Plotter.hh"
@@ -65,6 +63,10 @@ public:
 	typedef typename Solver_config::FEuBasis FEuBasisType;
 	typedef typename Solver_config::FEuDHBasis FEuDHBasisType;
 
+	typedef typename Solver_config::DiscreteGridFunction DiscreteGridFunction;
+	typedef typename Solver_config::DiscreteLocalGridFunction DiscreteLocalGridFunction;
+  typedef typename Solver_config::DiscreteLocalGradientGridFunction DiscreteLocalGradientGridFunction;
+
 	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView) :
 			initialised(true),
 			grid_ptr(grid), gridView_ptr(&gridView),
@@ -72,6 +74,7 @@ public:
 		  uBasis(new FEuBasisType(gridView)), uDHBasis( new FEuDHBasisType(gridView)),
 			assembler(*FEBasis),
 			plotter(gridView),
+			solution_u_old(), gradient_u_old(),
 			count_refined(Solver_config::startlevel) {
 	  plotter.set_output_directory("../plots");
 	  plotter.set_refinement(Solver_config::degree);
@@ -95,7 +98,7 @@ public:
 public:
 	struct Operator {
 		Operator():solver_ptr(){}
-		Operator(const MA_solver &solver):solver_ptr(&solver){}
+		Operator(const MA_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old){}
 
 		void evaluate(const VectorType& x, VectorType& v) const
 		{
@@ -188,9 +191,21 @@ private:
 	void create_initial_guess();
 
 	/// solves own nonlinear system given initial point in solution
-	void solve_nonlinear_step();
+	void solve_nonlinear_system();
+
+	///performs one step in the nonlinear solver, returns if the step was successfull
+	bool solve_nonlinear_step(const MA_solver::Operator &op);
+
+	void phi(const Solver_config::SpaceType2d& T, const FieldVector<double, Solver_config::dim> &normal, Solver_config::value_type &phi);
+
 
 public:
+  ///calculate the projection of phi for the Picard Iteration for the b.c.
+  template<class Element>
+  Solver_config::value_type phi(const Element& element, const Solver_config::DomainType& xLocal
+                               , const FieldVector<double, Solver_config::dim> &normal);
+
+
 	/**
 	 * initialises the member solution with sol_u, the second derivatives are initialised with D^2_h sol_u
 	 */
@@ -232,6 +247,11 @@ private:
 
 	VectorType solution; /// stores the current solution vector
 	VectorType exactsol_projection; /// if exact solution is known, stores a L2 projection to the current grid
+
+	mutable shared_ptr<DiscreteGridFunction> solution_u_old_global;
+	mutable shared_ptr<DiscreteLocalGridFunction> solution_u_old;
+  mutable shared_ptr<DiscreteLocalGradientGridFunction> gradient_u_old;
+
 	int count_refined; ///counts how often the original grid was refined
 
 //

@@ -141,7 +141,7 @@ void make_FD_Jacobian(
  *  \see PDE_function, DogLeg_optionstype
 */
 template<typename FunctorType>
-void doglegMethod (
+int doglegMethod (
           const FunctorType &functor,
     const DogLeg_optionstype opts,
           Eigen::VectorXd &x
@@ -217,6 +217,7 @@ void doglegMethod (
     unsigned int stop = 0;
     double beta = 0.0;
     double nx = opts.stopcriteria[1] + x.norm();
+    int steps = 0;
 
     while (!stop) {
 
@@ -225,21 +226,21 @@ void doglegMethod (
         {
             // ||f||inf small enough
             if (!opts.silentmode)
-                std::cout << "||f||inf small enough. Ready." << std::endl;
+                std::cout << "||f||inf small enough. Finished." << std::endl;
             stop = 1;
         }
         else if (ng <= opts.stopcriteria[0])
         {
             // ||g||inf small enough
             if (!opts.silentmode)
-                std::cout << "||g||inf small enough. Ready." << std::endl;
+                std::cout << "||g||inf small enough. Finished." << std::endl;
             stop = 2;
         }
         else if (delta <= opts.stopcriteria[1] * nx)
         {
             // x-step small enough
             if (!opts.silentmode)
-                std::cout << "x-step small enough. Ready." << std::endl;
+                std::cout << "x-step small enough. Finished." << std::endl;
             stop = 3;
         }
         else
@@ -341,7 +342,7 @@ void doglegMethod (
                 if (nh <= opts.stopcriteria[1] * nx)
                 {
                     if (!opts.silentmode)
-                        std::cout << "\nx-step small enough (2). Ready." << std::endl;
+                        std::cout << "\nx-step small enough (2). Finished." << std::endl;
                     stop = 3;
                 }
             }
@@ -395,6 +396,7 @@ void doglegMethod (
                     //std::cout << "   " << std::scientific << std::setprecision(3) << dL;
                     //std::cout << "   " << std::scientific << std::setprecision(3) << dF;
                 }
+                steps++;
             }
             else
             {
@@ -426,6 +428,7 @@ void doglegMethod (
         std::cout << k-1 << " steps needed." << std::endl;
         std::cout << "Gesamt-Zeit = " << gesamtzeit << " Sekunden" << std::endl;
     }
+    return steps;
 }
 
 

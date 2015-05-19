@@ -7,6 +7,8 @@
 
 #include "problem_data.hh"
 
+#include "MA_solver.hh"
+
 void PDE_functions::f(const Solver_config::SpaceType2d& x, Solver_config::value_type &out){
 	out = 1;
 }
@@ -54,6 +56,26 @@ adouble interpolate_cubic_atXY(cimg_library::CImg<double> image , const adouble 
 }
 
 
+void RightHandSideReflector::phi(const Solver_config::SpaceType2d& T, const FieldVector<double, Solver_config::dim> &normal, Solver_config::value_type &phi) const
+ {
+   if (false)
+   {
+     phi_initial(T);
+   }
+   else
+   {
+     Solver_config::value_type x_min = std::min(T[0]-Solver_config::lowerLeft[0], Solver_config::upperRight[0] - T[0]);
+     Solver_config::value_type y_min = std::min(T[1]-Solver_config::lowerLeft[1], Solver_config::upperRight[1] - T[1]);
+
+     Solver_config::SpaceType2d T_proj = T;
+     if (x_min < y_min)
+       T_proj[0] = T[0]-Solver_config::lowerLeft[0] < Solver_config::upperRight[0] - T[0] ?  T[0]-Solver_config::lowerLeft[0] : Solver_config::upperRight[0] - T[0];
+     else
+       T_proj[1] = T[1]-Solver_config::lowerLeft[1] < Solver_config::upperRight[1] - T[1] ?  T[1]-Solver_config::lowerLeft[1] : Solver_config::upperRight[1] - T[1];
+
+     phi = T_proj * normal;
+   }
+ }
 
 /*
 

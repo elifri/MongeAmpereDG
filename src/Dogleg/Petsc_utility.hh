@@ -137,6 +137,11 @@ public:
 
 	int init(int n_dofs, int guess_nonzeros_J);
 	int solve(Solver_config::VectorType &v);
+	int get_iteration_number()
+	{
+	  return its;
+	}
+	void set_max_it(const int i){ maxit = i;}
 
 private:
 	static PetscErrorCode FormJacobian(SNES,Vec,Mat,Mat,void*);

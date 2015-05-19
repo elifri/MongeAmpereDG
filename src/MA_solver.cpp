@@ -75,10 +75,6 @@ void MA_solver::plot(std::string filename) const
   const int nDH = Solver_config::dim*Solver_config::dim;
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
-   //build gridviewfunction
-   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,solution_u);
-   auto localnumericalSolution = localFunction(numericalSolution);
-
    //extract hessian (3 entries (because symmetry))
    typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
    DerivativeVectorType derivativeSolution(uDHBasis->indexSet().size());
@@ -97,7 +93,7 @@ void MA_solver::plot(std::string filename) const
    auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
 
    SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
-   vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
+   vtkWriter.addVertexData(*solution_u_old, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
    vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
    vtkWriter.write(filename);
 }
@@ -141,7 +137,7 @@ void MA_solver::plot_with_mirror(std::string name) const
 
 
    std::string reflname(plotter.get_output_directory());
-   fname += "/"+ plotter.get_output_prefix()+ name + "reflector"+NumberToString(count_refined) + ".vtu";
+   reflname += "/"+ plotter.get_output_prefix()+ name + "reflector"+NumberToString(count_refined) + ".vtu";
 
    plotter.writeReflectorVTK(reflname, localnumericalSolution);
 
@@ -151,7 +147,7 @@ void MA_solver::plot_with_mirror(std::string name) const
     plotter.writeReflectorPOV(reflPovname, localnumericalSolution);
 
 
-    std::cout << "plot written into " << fname << std::endl;
+    std::cout << "plot written into " << fname  << " " << reflname << " and " << reflPovname << std::endl;
 }
 
 void MA_solver::create_initial_guess()
@@ -185,8 +181,8 @@ void MA_solver::create_initial_guess()
 
 
   //init exact solution
+  /*
   Dirichletdata exact_sol;
-/*
   if (Solver_config::problem == MA_SMOOTH || Solver_config::problem == SIMPLE_MA)
     project(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol), MEMBER_FUNCTION(&Dirichletdata::derivative, &exact_sol), exactsol_projection);
   else
@@ -210,22 +206,40 @@ void MA_solver::create_initial_guess()
   InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data("../inputData/ellipsoids.ini", "../inputData/geometry.ini");
   project([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
   ellipsoidMethod.write_output();
-
-  plot_with_mirror("initialguess");
 }
 
 const typename MA_solver::VectorType& MA_solver::solve()
 {
   assert (initialised);
 
+  //get operator
+  const MA_solver::Operator op(*this);
+
+
   create_initial_guess();
+  VectorType solution_u = solution.segment(0, get_n_dofs_u());
+  //build gridviewfunction
+  solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));
+  solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
+  gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
+
+  plot_with_mirror("initialguess");
 
   //calculate initial solution
   for (int i = 0; i < Solver_config::nonlinear_steps; i++)
   {
-    solve_nonlinear_step();
-
-    plot_with_mirror("numericalSolution");
+//    solve_nonlinear_system();
+    const int maxits = 200;
+    for (int it = 0; it < maxits; it++)
+    {
+      bool performedStep = solve_nonlinear_step(op);
+      if (!performedStep) break;
+      solution_u = solution.segment(0, get_n_dofs_u());
+      //build gridviewfunction
+      solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));
+      solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
+      gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
+    }
 
 //    VectorType right_sol;
 //    project(General_functions::get_easy_convex_polynomial_plus_one_callback(), right_sol);
@@ -236,6 +250,14 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //    std::cout << "error " << (right_sol.segment(0, get_n_dofs_u()) - solution_u).norm() << std::endl;
 
     adapt_solution(solution);
+
+    solution_u = solution.segment(0, get_n_dofs_u());
+    //build gridviewfunction
+    solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));
+    solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
+    gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
+
+    plot_with_mirror("numericalSolution");
   }
 
   return solution;
@@ -392,7 +414,7 @@ void MA_solver::adapt_solution(VectorType &v, const int level)
   grid_ptr->postAdapt();
 }
 
-void MA_solver::solve_nonlinear_step()
+void MA_solver::solve_nonlinear_system()
 {
   assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
 
@@ -459,13 +481,66 @@ void MA_solver::solve_nonlinear_step()
 
 #endif
 
-
-
-
   op.evaluate(solution, f);
 
   std::cout << "f(x) norm " << f.norm() << endl;
 //  std::cout << "l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
 
 //  std::cout << "x " << solution.transpose() << endl;
+  }
+
+bool MA_solver::solve_nonlinear_step(const MA_solver::Operator &op)
+{
+  assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
+
+  Solver_config::VectorType f;
+  op.evaluate(solution, f);
+  std::cout << "initial f(x) norm " << f.norm() << endl;
+
+  // /////////////////////////
+  // Compute solution
+  // /////////////////////////
+
+  int steps = 0;
+#ifdef USE_DOGLEG
+  DogLeg_optionstype opts;
+  opts.iradius = 1;
+  for (int i=0; i < 3; i++) opts.stopcriteria[i] = 1e-8;
+  opts.maxsteps = 1;
+  opts. silentmode = true;
+  opts.exportJacobianIfSingular= true;
+  opts.exportFDJacobianifFalse = true;
+  opts.check_Jacobian = false;
+//
+  steps = doglegMethod(op, opts, solution);
+#endif
+#ifdef USE_PETSC
+  igpm::processtimer timer;
+  timer.start();
+
+  PETSC_SNES_Wrapper<MA_solver::Operator>::op = op;
+
+  PETSC_SNES_Wrapper<MA_solver::Operator> snes;
+
+  //estimate number of nonzeros in jacobian
+//  int nnz_jacobian = gridView_ptr->size(0)* //for each element
+//            (localFiniteElement.size()*localFiniteElement.size()  //cell terms
+//             + 3*        //at most 3 neighbours and only mixed edge terms in
+//                (localFiniteElementu.size()*localFiniteElementu.size() //in u and v
+//                 + localFiniteElement.size(u_DH())*localFiniteElementu.size())/2)/2 ; //and mu and u
+  int nnz_jacobian = gridView_ptr->size(0)* //for each element
+              (18*18  //cell terms
+               + 3*        //at most 3 neighbours and only mixed edge terms in
+                  (6*6 //in u and v
+                   + 12*6)/2)/2 ; //and mu and u
+  std::cout << "estimate for nnz_jacobian " << nnz_jacobian << std::endl;
+
+  snes.init(get_n_dofs(), nnz_jacobian);
+  snes.set_max_it(1);
+  int error = snes.solve(solution);
+  steps = snes.get_iteration_number();
+  timer.stop();
+  std::cout << "needed "  << steps << "steps and "<< timer << " seconds for nonlinear step, ended with error code " << error << std::endl;
+#endif
+  return steps;
   }

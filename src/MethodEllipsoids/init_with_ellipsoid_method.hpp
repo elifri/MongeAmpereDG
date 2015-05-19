@@ -32,7 +32,10 @@ public:
 
     void write_output() const;
 
+    ///returns the inverse of rho(=u) computed by the ellipsoid method
     void evaluate(const Solver_config::DomainType& x, Solver_config::RangeType& u);
+
+    ///returns the inverse of rho(=u) computed by the ellipsoid method
     Solver_config::RangeType evaluate(const Solver_config::DomainType& x);
 
 private:

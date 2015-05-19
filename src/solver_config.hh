@@ -15,6 +15,9 @@
 #include <adolc/adouble.h>
 #define ADOLC
 
+#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
+#include <dune/functions/gridfunctions/gridviewfunction.hh>
+
 #include "UnitCube.hh"
 
 #include "localfunctions/MAmixedbasis.hh"
@@ -91,6 +94,11 @@ struct Solver_config{
 	typedef Functions::MAMixedBasis<GridView, degree, degreeHessian> FEBasis;
   typedef Functions::LagrangeDGBasis<GridView, degree> FEuBasis;
   typedef Functions::LagrangeDGBasis<GridView, degreeHessian> FEuDHBasis;
+
+
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasis,VectorType> DiscreteGridFunction;
+  typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
+  typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
 
 	typedef FieldVector<value_type,1> RangeType;
   typedef FieldMatrix<value_type,2,2> HessianRangeType;
