@@ -90,7 +90,7 @@ public:
 	//-----functions--------
 public:
 
-	int get_n_dofs() const{return FEBasis->indexSet().dimension();}
+	int get_n_dofs() const{return FEBasis->indexSet().dimension() + 1;}
   int get_n_dofs_u() const{
     size_t i = 0; return FEBasis->indexSet().size({0});}
 
@@ -126,7 +126,7 @@ public:
 
 	///assembles the (global) integrals (for every test function) specified by lop
 	template<typename LocalOperatorType>
-	void assemble_DG(LocalOperatorType lop, const VectorType& x,
+	void assemble_DG(const LocalOperatorType &lop, const VectorType& x,
 			VectorType& v) const {
 		assert (initialised);
 		assembler.assemble_DG(lop, x, v);
@@ -134,14 +134,14 @@ public:
 
 	///assembles the (global) Jacobian of the FE function as specified in LOP
 	template<typename LocalOperatorType>
-	void assemble_Jacobian_DG(LocalOperatorType LOP, const VectorType& x, MatrixType& m) const {
+	void assemble_Jacobian_DG(const LocalOperatorType &LOP, const VectorType& x, MatrixType& m) const {
 		assert (initialised);
 		assembler.assemble_Jacobian_DG(LOP, x, m);
 	}
 
   ///assembles the (global) Jacobian of the FE function as specified in LOP
   template<typename LocalOperatorType>
-  void assemble_DG_Jacobian(LocalOperatorType LOP, const VectorType& x, VectorType& v, MatrixType& m) const {
+  void assemble_DG_Jacobian(const LocalOperatorType &LOP, const VectorType& x, VectorType& v, MatrixType& m) const {
     assert (initialised);
     assembler.assemble_Jacobian_DG(LOP, x, v, m);
   }
@@ -253,6 +253,8 @@ private:
   mutable shared_ptr<DiscreteLocalGradientGridFunction> gradient_u_old;
 
 	int count_refined; ///counts how often the original grid was refined
+
+	double G;
 
 //
 //	friend Plotter;
@@ -378,11 +380,12 @@ void MA_solver::project(const F f, VectorType& v) const
   for (int row = 0; row < Solver_config::dim; row++)
     for (int col = 0; col < Solver_config::dim; col++)
     {
+      //calculate second derivative of gridviewfunction
       VectorType v_uDH_entry;
       auto localnumericalHessian_entry = localSecondDerivative(numericalSolution, {row,col});
       interpolateSecondDerivative(*uDHBasis, v_uDH_entry, localnumericalHessian_entry, Functions::Imp::AllTrueBitSetVector());
 
-
+      //copy corresponding dofs
       const int nDH = Solver_config::dim * Solver_config::dim;
       for (size_t i=0; i<v_uDH_entry.size(); i++)
       {
@@ -392,6 +395,9 @@ void MA_solver::project(const F f, VectorType& v) const
 
       std::cout << "hessian " << row << " " << col << v_uDH_entry.transpose() << std::endl;
     }
+
+  //set scaling factor (last dof) to ensure mass conservation
+  v(v.size()-1) = 1;
 }
 
 

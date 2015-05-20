@@ -103,6 +103,9 @@ void make_FD_Jacobian(
 {
 	int n = x.size();
 
+
+	std::cout << std::setprecision(9);
+
 	double h = 1e-8/2.;//to sqrt(eps)
 
 	Eigen::VectorXd f_minus = Eigen::VectorXd::Zero(n), f_plus= Eigen::VectorXd::Zero(n);
@@ -113,9 +116,7 @@ void make_FD_Jacobian(
 	{
 		Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(n, j);
 		f.evaluate(x-h*unit_j, f_minus);
-//		std::cout << j << "f- " << f_minus.transpose() << endl;
 		f.evaluate(x+h*unit_j, f_plus);
-//		std::cout << j << "f+ " << f_plus.transpose() << std::endl;
 
 		Eigen::VectorXd estimated_derivative = (f_plus - f_minus)/2./h;
 

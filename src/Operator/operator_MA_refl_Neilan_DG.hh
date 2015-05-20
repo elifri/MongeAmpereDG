@@ -56,7 +56,7 @@ public:
    */
   template<class LocalView, class LocalIndexSet, class VectorType>
   void assemble_cell_term(const LocalView& localView, const LocalIndexSet &localIndexSet, const VectorType &x,
-      VectorType& v, const int tag) const {
+      VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const {
 
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
@@ -99,14 +99,18 @@ public:
     //init variables for automatic differentiation
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(size);
+    adouble scaling_factor_adolc, last_equation_adolc;
+
     for (int i = 0; i < size; i++)
       v_adolc[i] <<= v[i];
+    last_equation_adolc <<= last_equation;
 
     trace_on(tag);
 
     //init independent variables
     for (int i = 0; i < size; i++)
       x_adolc[i] <<= x[i];
+    scaling_factor_adolc <<= scaling_factor;
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -124,6 +128,7 @@ public:
       adouble u_value = 0;
       assemble_functionValues_u(localFiniteElementu, quadPos,
           referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
+      auto temp = x_adolc.segment(0, size_u);
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
@@ -187,7 +192,8 @@ public:
 
 
 //		cout << "x_value " << x_value << " a_tilde " << a_tilde_value.value() << " omega(x) " << omega(x_value) << " btilde " << b_tilde.value() << " g " << g_value.value() << std::endl;
-		adouble PDE_rhs = a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde*omega(x_value)*g_value);
+      adouble PDE_rhs = scaling_factor_adolc*a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde*omega(x_value)*g_value);
+//      adouble PDE_rhs = scaling_factor_adolc*a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde*omega(x_value));
 //		cout<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value).value() << "/" << (4.0*b_tilde*omega(x_value)*g_value).value() << std::endl;
 
       //calculate system for first test functions
@@ -196,6 +202,7 @@ public:
       {
         v_adolc(j) += (PDE_rhs-uDH_det)*referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
+
 //	std::cout << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
       }
 
@@ -210,10 +217,24 @@ public:
                                     * quad[pt].weight() * integrationElement;
            }
       }
+      last_equation_adolc += u_value* quad[pt].weight() * integrationElement;
+//      std::cout << "last equation += " << u_value.value()<< " * " << quad[pt].weight() * integrationElement << " = " <<last_equation_adolc.value() << std::endl;
     }
+
+
     for (int i = 0; i < size; i++)
       v_adolc[i] >>= v[i]; // select dependent variables
+
+    last_equation_adolc >>= last_equation;
     trace_off();
+    /*std::size_t stats[11];
+    tapestats(tag, stats);
+    std::cout << "numer of independents " << stats[0] << std::endl
+      << "numer of deptendes " << stats[1] << std::endl
+      << "numer of live activ var " << stats[2] << std::endl
+//      << "numer of size of value stack " << stats[3] << std::endl
+      << "numer of buffer size " << stats[4] << std::endl;*/
+
   }
 
   /*
@@ -514,7 +535,7 @@ public:
       FieldVector<adouble, Solver_config::dim> T_value = gradu;
       T_value *= 2. / a_tilde_value;
 
-	    std::cerr << "phi " << phi_value << " thought it -> " << phi_value_initial << " T " << T_value[0].value() << " " << T_value[1].value() << std::endl;
+//	    std::cerr << "phi " << phi_value << " thought it -> " << phi_value_initial << " T " << T_value[0].value() << " " << T_value[1].value() << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());

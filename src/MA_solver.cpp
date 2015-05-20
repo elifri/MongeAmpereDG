@@ -18,11 +18,6 @@
 #include "MethodEllipsoids/init_with_ellipsoid_method.hpp"
 
 
-void MA_solver::project(const MA_function_type f, const MA_derivative_function_type f_DH, VectorType &v) const
-{
-  v.resize(get_n_dofs());
-}
-
 /*
 double MA_solver::calculate_L2_error(const MA_function_type &f) const
 {
@@ -206,6 +201,8 @@ void MA_solver::create_initial_guess()
   InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data("../inputData/ellipsoids.ini", "../inputData/geometry.ini");
   project([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
   ellipsoidMethod.write_output();
+
+
 }
 
 const typename MA_solver::VectorType& MA_solver::solve()
@@ -222,6 +219,10 @@ const typename MA_solver::VectorType& MA_solver::solve()
   solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));
   solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
   gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
+
+  Integrator<GridType> integrator(grid_ptr);
+  G = integrator.assemble_integral_of_local_gridFunction(*solution_u_old);
+  assembler.set_G(G);
 
   plot_with_mirror("initialguess");
 
@@ -292,6 +293,7 @@ void MA_solver::adapt_solution(VectorType &v, const int level)
     //store local dofs
     preserve_solution[idSet.id(element)]  = assembler.calculate_local_coefficients(localIndexSet, v);
   }
+  double scaling_factor = v(v.size()-1);
 
   std::cout << "old element count " << gridView_ptr->size(0) << std::endl;
 
@@ -410,6 +412,7 @@ void MA_solver::adapt_solution(VectorType &v, const int level)
     }
 
   }
+  v(v.size()-1)= scaling_factor;
   //reset adaption flags
   grid_ptr->postAdapt();
 }
