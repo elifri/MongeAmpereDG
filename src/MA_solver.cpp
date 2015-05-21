@@ -123,7 +123,7 @@ void MA_solver::plot_with_mirror(std::string name) const
 
 
    std::string fname(plotter.get_output_directory());
-   fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(count_refined) + ".vtu";
+   fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
 
    SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
    vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
@@ -132,12 +132,12 @@ void MA_solver::plot_with_mirror(std::string name) const
 
 
    std::string reflname(plotter.get_output_directory());
-   reflname += "/"+ plotter.get_output_prefix()+ name + "reflector"+NumberToString(count_refined) + ".vtu";
+   reflname += "/"+ plotter.get_output_prefix()+ name + "reflector"+NumberToString(iterations) + ".vtu";
 
    plotter.writeReflectorVTK(reflname, localnumericalSolution);
 
    std::string reflPovname(plotter.get_output_directory());
-   reflPovname += "/"+ plotter.get_output_prefix() + name + "reflector" + NumberToString(count_refined) + ".pov";
+   reflPovname += "/"+ plotter.get_output_prefix() + name + "reflector" + NumberToString(iterations) + ".pov";
 
     plotter.writeReflectorPOV(reflPovname, localnumericalSolution);
 
@@ -208,7 +208,7 @@ void MA_solver::create_initial_guess()
 const typename MA_solver::VectorType& MA_solver::solve()
 {
   assert (initialised);
-
+  iterations = 0;
   //get operator
   const MA_solver::Operator op(*this);
 
@@ -240,6 +240,8 @@ const typename MA_solver::VectorType& MA_solver::solve()
       solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));
       solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
       gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
+      plot_with_mirror("numericalSolution");
+      iterations++;
     }
 
 //    VectorType right_sol;
@@ -513,7 +515,7 @@ bool MA_solver::solve_nonlinear_step(const MA_solver::Operator &op)
   opts. silentmode = true;
   opts.exportJacobianIfSingular= true;
   opts.exportFDJacobianifFalse = true;
-  opts.check_Jacobian = false;
+  opts.check_Jacobian = true;
 //
   steps = doglegMethod(op, opts, solution);
 #endif

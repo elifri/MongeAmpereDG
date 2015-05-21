@@ -253,6 +253,7 @@ private:
   mutable shared_ptr<DiscreteLocalGradientGridFunction> gradient_u_old;
 
 	int count_refined; ///counts how often the original grid was refined
+	int iterations;
 
 	double G;
 

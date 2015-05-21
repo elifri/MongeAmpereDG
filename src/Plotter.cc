@@ -235,7 +235,8 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
 			                   <<  max(xMaxOut-xMinOut,yMaxOut-yMinOut)*0.5   <<">" <<std::endl <<
 			"\t angle 100" <<std::endl <<
 			"\t look_at <" << (Solver_config::lowerLeft[0]+Solver_config::upperRight[0])/2.0
-                    <<"," << (Solver_config::lowerLeft[1]+Solver_config::upperRight[1])/2.0 << ",0>" <<std::endl <<
+                    <<"," << (Solver_config::lowerLeft[1]+Solver_config::upperRight[1])/2.0
+                    << "," << Solver_config::z_3 <<std::endl <<
 			"\t right	x*image_width/image_height" <<std::endl <<
 			"}" <<std::endl <<std::endl;
 
@@ -255,7 +256,7 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
 void Plotter::write_target_plane(std::ofstream &file) const{
 	file << "// The floor" <<std::endl <<
 			"plane {" <<std::endl <<
-			"\t z, 0" <<std::endl <<
+			"\t z, " << Solver_config::z_3 << ">"<< std::endl <<
 			"\t texture {pigment {color rgb <1,1,1>} }" <<std::endl <<
 			"\t hollow" <<std::endl <<
 			"}" <<std::endl <<std::endl;

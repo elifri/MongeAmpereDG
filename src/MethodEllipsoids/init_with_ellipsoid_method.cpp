@@ -143,7 +143,7 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
     yMinOut = Solver_config::lowerLeftTarget[1];
     yMaxOut = Solver_config::upperRightTarget[1];
 
-    zOut = 0;
+    zOut = Solver_config::z_3;
 
     inputImageName = Solver_config::TargetImageName;
     lightInImageName = Solver_config::LightinputImageName;

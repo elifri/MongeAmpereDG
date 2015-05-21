@@ -86,6 +86,7 @@ struct Solver_config{
 	static std::string LightinputImageName;
   static std::string TargetImageName;
 
+  static value_type z_3;
 
 	typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementuType;
 	typedef Pk2DLocalFiniteElement<value_type, value_type, degreeHessian> LocalFiniteElementHessianSingleType;
@@ -133,8 +134,8 @@ struct Solver_config{
 #ifdef SIPG
      // SIPG
     static constexpr double epsilon = -1.0;
-    static constexpr double sigma = 20;   // should be < 5 for stability reasons
-    static constexpr double sigmaGrad = 10;   // should be < 5 for stability reasons
+    static constexpr double sigma = 5;   // should be < 5 for stability reasons
+    static constexpr double sigmaGrad = 5;   // should be < 5 for stability reasons
     static constexpr double beta = 2.0 - 0.5*dim;  // 2D => 1, 3D => 0.5
 #endif
 };

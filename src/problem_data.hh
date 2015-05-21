@@ -223,7 +223,7 @@ public:
 };
 
 
-/// projects the 2d reference plane omega to the ball surface in 3d
+/// calculates the third coordinate belonging to the 2d reference plane (by projecting the 2d plane onto the ball surface)
 inline Solver_config::value_type omega(Solver_config::SpaceType2d x) {
   assert(x.two_norm2() <= 1);
   return std::sqrt(1 - x.two_norm2());
@@ -234,15 +234,40 @@ inline valueType a_tilde(const valueType u_value,
     const GradientType& gradu, const Solver_config::SpaceType2d& x) {
 //    adouble a_tilde_value = 0;
   valueType a_tilde_value = gradu * gradu;
-  valueType temp = u_value + (gradu * x);
+  valueType temp = u_value - (gradu * x);
   a_tilde_value -= sqr(temp);
   return a_tilde_value;
 }
 
-template<class valueType, class GradientType>
-inline FieldVector<valueType, Solver_config::dim> T(const valueType& a_tilde_value, const GradientType& gradu) {
-  FieldVector<valueType, Solver_config::dim> T_value = gradu;
-  T_value *= 2. / a_tilde_value;
+template<class valueType>
+inline FieldVector<valueType, 2> T(const FieldVector<Solver_config::value_type, 2>& x, const valueType& u_value, FieldVector<valueType, 2>& Z_0, const double z_3) {
+  FieldVector<valueType, 2> T_value = x;
+  T_value /= u_value;
+
+  //temp = (Z_0 - X/u)
+  auto temp = T_value;
+  temp *= -1;
+  temp += Z_0;
+
+  valueType t = 1 - u_value*z_3/omega(x);
+
+  T_value.axpy(t, temp);
+  return T_value;
+}
+
+template<class valueType>
+inline FieldVector<valueType, 3> T(const FieldVector<Solver_config::value_type, 3>& x, const valueType& u_value, FieldVector<valueType, 3>& Z_0, const double z_3) {
+  FieldVector<valueType, 3> T_value = x;
+  T_value /= u_value;
+
+  //temp = (Z_0 - X/u)
+  auto temp = T_value;
+  temp *= -1;
+  temp += Z_0;
+
+  valueType t = 1 - u_value*z_3/x[2];
+
+  T_value.axpy(t, temp);
   return T_value;
 }
 
@@ -278,12 +303,51 @@ public:
       return Solver_config::lowerLeftTarget[1];
   }
 
+  ///define implicit the target plane
+  template <class valueType>
+  void psi(const FieldVector<valueType, 2 >& z, valueType& psi_value) const
+  {
+    valueType x_min = fmin(z[0]-Solver_config::lowerLeftTarget[0], Solver_config::upperRightTarget[0] - z[0]);
+    valueType y_min = fmin(z[1]-Solver_config::lowerLeftTarget[1], Solver_config::upperRightTarget[1] - z[1]);
+
+    //if psi_value is positive, z is inside, otherwise psi_value gives the negative of the distance to the target boundary
+    psi_value = fmin(0, x_min) + fmin(0, y_min);
+
+    psi_value *= -1;
+  }
+
+  template <class valueType>
+  void D_psi(const FieldVector<valueType, 2 >& z, FieldVector<valueType, 2 >& psi_value) const
+  {
+    valueType x_min;
+    x_min = fmin(z[0]-Solver_config::lowerLeftTarget[0], Solver_config::upperRightTarget[0] - z[0]);
+//    std::cout << "x min " << x_min.value() << " = " << (z[0]-Solver_config::lowerLeftTarget[0]).value() << "," << (Solver_config::upperRightTarget[0] - z[0]).value() << " ";
+    valueType x_der;
+    adouble zero = 0;
+    adouble one = 1;
+    condassign(x_der, x_min, zero, one);
+
+    valueType y_min = fmin(z[1]-Solver_config::lowerLeftTarget[1], Solver_config::upperRightTarget[1] - z[1]);
+//    std::cout << "y min " << y_min.value() << std::endl;
+
+    valueType y_der;
+    condassign(y_der, y_min, zero, one);
+//
+//    std::cout << "x_der" << x_der << " "<< "y_der" << y_der << std::endl;
+
+    psi_value[0] = x_der;
+    psi_value[1] = y_der;
+
+//    condassign(psi_value[0], y_min- x_min, x_der, zero);
+//    condassign(psi_value[1], y_min- x_min, zero, y_der);
+  }
+
   void phi(const Solver_config::SpaceType2d& T, const FieldVector<double, Solver_config::dim> &normal, Solver_config::value_type &phi) const;
 
 public:
   template<class Element>
   Solver_config::value_type phi(const Element& element, const Solver_config::DomainType& xLocal, const Solver_config::DomainType& xGlobal
-      , const FieldVector<double, Solver_config::dim> &normal) const
+      , const FieldVector<double, Solver_config::dim> &normal, const double z_3) const
   {
     assert(solution_u_old != NULL);
     assert(gradient_u_old != NULL);
@@ -297,7 +361,11 @@ public:
 
     Solver_config::value_type phi_value;
 
-    phi(T(  a_tilde(u, gradu, x), gradu),
+    FieldVector<double, Solver_config::dim> z_0 = gradu;
+    z_0 *= (2.0 / a_tilde(u, gradu, x));
+
+
+    phi(T(x, u, z_0, z_3),
         normal, phi_value);
   }
 

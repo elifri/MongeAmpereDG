@@ -8,7 +8,7 @@
 #ifndef SRC_DOGLEG_PETSC_TTILITY_HH_
 #define SRC_DOGLEG_PETSC_TTILITY_HH_
 
-#include "/home/data/friebel/workspace/MongeAmpereDG2/include/matlab_export.hpp"
+#include "../matlab_export.hpp"
 
 
 static char help[] = "Newton method to solve u'' + u^{2} = f, sequentially.\n\
@@ -259,6 +259,13 @@ int PETSC_SNES_Wrapper<OperatorType>::init(int n_dofs, int guess_nonzeros_J)
          -snes_view -snes_monitor -ksp_type <ksp> -pc_type <pc>
   */
   ierr = SNESSetFromOptions(snes);CHKERRQ(ierr);
+}
+
+template <typename OperatorType>
+int PETSC_SNES_Wrapper<OperatorType>::solve(Solver_config::VectorType &v)
+{
+	assert(v.size() == n);
+
   /*
      Print parameters used for convergence testing (optional) ... just
      to demonstrate this routine; this information is also printed with
@@ -267,12 +274,8 @@ int PETSC_SNES_Wrapper<OperatorType>::init(int n_dofs, int guess_nonzeros_J)
   ierr = SNESGetTolerances(snes,&abstol,&rtol,&stol,&maxit,&maxf);CHKERRQ(ierr);
   ierr = PetscPrintf(PETSC_COMM_WORLD,"atol=%g, rtol=%g, stol=%g, maxit=%D, maxf=%D\n",(double)abstol,(double)rtol,(double)stol,maxit,maxf);CHKERRQ(ierr);
 
-}
 
-template <typename OperatorType>
-int PETSC_SNES_Wrapper<OperatorType>::solve(Solver_config::VectorType &v)
-{
-	assert(v.size() == n);
+
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
      Evaluate initial guess; then solve nonlinear system
    - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
