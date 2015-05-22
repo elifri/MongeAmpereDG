@@ -219,6 +219,10 @@ public:
     typedef GV GridView;
     typedef std::size_t size_type;
 
+    /** \brief export the bases of the child elements*/
+    typedef LagrangeDGBasis<GV, deg> Basisu;
+    typedef LagrangeDGBasis<GV, degHess> BasisuDH;
+
     /** \brief Type of the local view on the restriction of the basis to a single element */
     typedef MAMixedBasisLocalView<GV, deg, degHess> LocalView;
 

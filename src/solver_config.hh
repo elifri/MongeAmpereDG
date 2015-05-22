@@ -20,8 +20,8 @@
 
 #include "UnitCube.hh"
 
-#include "localfunctions/MAmixedbasis.hh"
-
+//#include "localfunctions/MAmixedbasis.hh"
+#include "localfunctions/MAmixedbasisC0.hh"
 
 using namespace Dune;
 
@@ -93,8 +93,8 @@ struct Solver_config{
 
 
 	typedef Functions::MAMixedBasis<GridView, degree, degreeHessian> FEBasis;
-  typedef Functions::LagrangeDGBasis<GridView, degree> FEuBasis;
-  typedef Functions::LagrangeDGBasis<GridView, degreeHessian> FEuDHBasis;
+  typedef FEBasis::Basisu FEuBasis;
+  typedef FEBasis::BasisuDH FEuDHBasis;
 
 
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasis,VectorType> DiscreteGridFunction;
