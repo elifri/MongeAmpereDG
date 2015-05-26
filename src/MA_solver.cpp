@@ -198,10 +198,16 @@ void MA_solver::create_initial_guess()
 //        solution[get_n_dofs_u()+ nDH*i+j] = (j == 0 || j ==3)? 1 : 0;
 //      }
 
-  InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data("../inputData/ellipsoids.ini", "../inputData/geometry.ini");
-  project([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
-  ellipsoidMethod.write_output();
+//  InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data("../inputData/ellipsoids.ini", "../inputData/geometry.ini");
+//  project([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
+//  ellipsoidMethod.write_output();
 
+  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
+
+  assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
+  assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
+
+  project([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, solution);
 
 }
 

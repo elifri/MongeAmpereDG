@@ -13,6 +13,8 @@
 #include <dune/common/fmatrix.hh>
 #include <Eigen/Core>
 
+#include "solver_config.hh"
+
 template<typename T>
 inline T sqr (const T& x)
 {
@@ -79,4 +81,50 @@ std::string NumberToString(const T number)
 
   return s;
 }
+
+
+/*! reads an quadratic equidistant rectangle grid from file
+ *
+ *\param filename   file containing solution in the format "n ## h ## \n u(0,0) u(h,0) ... \n u(h,h) ..."
+ *\param n_x    number of nodes in x direction
+ *\param n_y    number of nodes in y direction
+ *\param h_x    distance between two nodes in x direction
+ *\param h_x    distance between two nodes in y direction
+ */
+void read_quadratic_grid(const std::string &filename,  int &n_x, int &n_y,
+                        double &h_x, double &h_y,
+                        double &x0, double &y0,
+                        Eigen::MatrixXd &solution);
+
+/*!helper function that bilinear interpolates on a rectangular, equidistant grid
+ *
+ * @param x   the coordinates of the point the function is interpolated on
+ * @param u   returns the interpolated function value
+ * @param n_x number of function values in x-direction
+ * @param n_y nubmer of function values in y-direction
+ * @param h_x distance in x-direction (between two grid points)
+ * @param h_y distance in y -direction (between two grid points)
+ * @param x0  min x-value of grid
+ * @param y0  min y-value of grid
+ * @param solution  a matrix of the function values
+ */
+
+void bilinear_interpolate(const Solver_config::SpaceType x, Solver_config::value_type &u, int &n_x, int &n_y,
+    Solver_config::value_type &h_x, Solver_config::value_type &h_y,
+    Solver_config::value_type &x0, Solver_config::value_type &y0,
+            Eigen::MatrixXd &solution);
+
+struct Rectangular_mesh_interpolator{
+
+  Rectangular_mesh_interpolator(const std::string &filename);
+  Solver_config::value_type evaluate (Solver_config::SpaceType2d& x);
+
+  int n_x, n_y;
+  double h_x, h_y;
+  double x_min, y_min;
+
+  Eigen::MatrixXd solution;
+
+};
+
 #endif

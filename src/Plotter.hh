@@ -101,18 +101,6 @@ public:
 
 	void read_VTK(const std::string filename);
 
-	/*! reads an quadratic equidistant rectangle grid from file
-	 *
-	 *\param filename 	file containing solution in the format "n ## h ## \n u(0,0) u(h,0) ... \n u(h,h) ..."
-	 *\param n_x		number of nodes in x direction
-	 *\param n_y		number of nodes in y direction
-	 *\param h_x		distance between two nodes in x direction
-	 *\param h_x		distance between two nodes in y direction
-	 */
-	void read_quadratic_grid(std::string filename, 	int &n_x, int &n_y,
-													double &h_x, double &h_y,
-													double &x0, double &y0,
-													Eigen::MatrixXd &solution);
 
 	void add_plot_stream(const std::string &name, const std::string &filepath);
 	const std::ofstream& get_plot_stream(const std::string &name) const

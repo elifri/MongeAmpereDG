@@ -61,43 +61,6 @@ int Plotter::Nnodes() const
 	return grid->size(0)*PlotRefinementType::nVertices(refinement);
 }
 
-void Plotter::read_quadratic_grid(std::string filename, 	int &n_x, int &n_y,
-												double &h_x, double &h_y,
-												double &x0, double &y0,
-												Eigen::MatrixXd &solution)
-{
-	std::ifstream file(filename.c_str()); 	//format "n ## h ## \n u(0,0) u(h,0) ... \n u(h,h) ..."
-	if(!file) { // file couldn't be opened
-	      cerr << "Error: file "<< filename << " for reading rectangle grid could not be opened" << endl;
-	      exit(1);
-	   }
-	cout << "Reading starting point from file " << filename << "... " << endl;
-
-	stringstream ss;
-	std::string s;
-
-	assert (!file.eof() && "The inserted vtk file is too short");
-	file >> s; file >> n_x; //read n_x
-
-	file >> s; file >> n_y; //read n_y
-
-	file >> s; file >> h_x; //read h_x
-
-	file >> s;  file >> h_y; //read h_y
-
-	file >> s;  file >> x0;
-	file >> s;  file >> y0;
-
-	solution.resize(n_x,n_y);
-
-	for (int y=0; y < n_y; y++)
-	{
-		for (int x=0; x < n_x; x++)
-		{
-			file >> solution(x,y);
-		}
-	}
-}
 
 //==================================================
 //-----------------vtk-helper-----------------------
