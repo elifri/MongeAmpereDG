@@ -31,6 +31,12 @@ public:
   Local_Operator_MA_refl_Neilan(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld):
     rhs(solUOld, gradUOld) {}
 
+  Local_Operator_MA_refl_Neilan(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld,
+                                Dirichletdata::Function_ptr &exactSolU):
+    rhs(solUOld, gradUOld),
+    bc(exactSolU){}
+
+
 /*  /// projects the 2d reference plane omega to the ball surface in 3d
   inline static Solver_config::value_type omega(Solver_config::SpaceType2d x) {
     return RightHandSideReflector::omega(x);
@@ -401,9 +407,6 @@ public:
       assemble_functionValues_u(localFiniteElementu, quadPos,
           referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
       std::vector<RangeType> referenceFunctionValuesn(size_u);
-//		std::cout << "referencefunctionvalues ";
-//		for (const auto &e: referenceFunctionValues) std::cout << e << " ";
-//		std::cout << std::endl;
       adouble un_value = 0;
       assemble_functionValues_u(localFiniteElementun, quadPosn,
           referenceFunctionValuesn, xn_adolc.segment(0, size_u), un_value);
@@ -429,6 +432,8 @@ public:
       //assemble jump and averages
       adouble u_jump = u_value - un_value;
       adouble grad_u_normaljump = (gradu - gradun) * normal;
+//      std::cout << "gradu " << gradu[0].value() << " " << gradu[1].value() << std::endl;
+//      std::cout << "gradun " << gradun[0].value() << " " << gradun[1].value() << std::endl;
 
       //-------calculate integral--------
       auto integrationElement = intersection.geometry().integrationElement(
@@ -440,18 +445,18 @@ public:
         // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
         v_adolc(j) += penalty_weight * u_jump * referenceFunctionValues[j] * factor;
         // gradient penalty
-        auto grad_times_normal = gradients[j] * normal;
-        v_adolc(j) += penalty_weight_gradient * (grad_u_normaljump)
-            * (grad_times_normal) * factor;
+//        auto grad_times_normal = gradients[j] * normal;
+//        v_adolc(j) += penalty_weight_gradient * (grad_u_normaljump)
+//            * (grad_times_normal) * factor;
 
         //neighbour parts
         // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
         vn_adolc(j) += penalty_weight * u_jump * (-referenceFunctionValuesn[j])
             * factor;
         // gradient penalty
-        grad_times_normal = gradientsn[j] * normal;
-        vn_adolc(j) += penalty_weight_gradient * (grad_u_normaljump)
-            * (-grad_times_normal) * factor;
+//        grad_times_normal = gradientsn[j] * normal;
+//        vn_adolc(j) += penalty_weight_gradient * (grad_u_normaljump)
+//            * (-grad_times_normal) * factor;
       }
 
       int col, row;
@@ -582,13 +587,21 @@ public:
       //-------calculate integral--------
       auto phi_value = rhs.phi(element, quadPos, x_value, normal, Solver_config::z_3);
       auto phi_value_initial = rhs.phi_initial(x_value);
+      double g_value;
+      bc.evaluate_exact_sol(element, quadPos, g_value);
+
 
       adouble a_tilde_value = a_tilde(u_value, gradu, x_value);
+      Solver_config::SpaceType3d X = { x_value[0], x_value[1], omega(x_value) };
+      FieldVector<adouble, 3> grad_hat = { gradu[0], gradu[1], 0 };
 
-      FieldVector<adouble, Solver_config::dim> T_value = gradu;
-      T_value *= 2. / a_tilde_value;
+      FieldVector<adouble, 2> z_0 = gradu;
+      z_0 *= (2.0 / a_tilde_value);
 
-//	    std::cerr << "phi " << phi_value << " thought it -> " << phi_value_initial << " T " << T_value[0].value() << " " << T_value[1].value() << std::endl;
+      FieldVector<adouble, Solver_config::dim> T_value = T(x_value, u_value, z_0, Solver_config::z_3);
+
+//	    std::cerr << "T " << (T_value*normal) << " thought it -> " << phi_value_initial << " T " << T_value[0].value() << " " << T_value[1].value() << " normal " << normal[0] << " " << normal[1]<< std::endl;
+//      std::cerr << "u_value " << u_value.value() << " g " << g_value << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
@@ -597,9 +610,12 @@ public:
           {
 
         // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
-        v_adolc(j) += penalty_weight * ((T_value * normal) - phi_value)
-            * referenceFunctionValues[j] * factor;
-      }
+//        v_adolc(j) += penalty_weight * ((T_value * normal) - phi_value_initial)
+//            * referenceFunctionValues[j] * factor;
+        v_adolc(j) += penalty_weight * (u_value - g_value)
+                        * referenceFunctionValues[j] * factor;
+
+          }
 
     }
 

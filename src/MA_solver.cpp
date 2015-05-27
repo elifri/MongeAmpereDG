@@ -219,6 +219,17 @@ const typename MA_solver::VectorType& MA_solver::solve()
   const MA_solver::Operator op(*this);
 
 
+  //init andreas solution as exact solution
+  VectorType exact_solution_u;
+  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
+  assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
+  assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
+  project([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, exact_solution_u);
+  exact_solution_u.conservativeResize(get_n_dofs_u());
+  exact_solution_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,exact_solution_u));
+  exact_solution = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*exact_solution_global));
+  plotter.writeReflectorVTK("exactReflector", *exact_solution);
+
   create_initial_guess();
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
   //build gridviewfunction
@@ -505,8 +516,11 @@ bool MA_solver::solve_nonlinear_step(const MA_solver::Operator &op)
   assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
 
   Solver_config::VectorType f;
+
+
   op.evaluate(solution, f);
   std::cout << "initial f(x) norm " << f.norm() << endl;
+  std::cout << "initial f: " << f.transpose() << endl;
 
   // /////////////////////////
   // Compute solution
@@ -521,7 +535,7 @@ bool MA_solver::solve_nonlinear_step(const MA_solver::Operator &op)
   opts. silentmode = true;
   opts.exportJacobianIfSingular= true;
   opts.exportFDJacobianifFalse = true;
-  opts.check_Jacobian = true;
+  opts.check_Jacobian = false;
 //
   steps = doglegMethod(op, opts, solution);
 #endif

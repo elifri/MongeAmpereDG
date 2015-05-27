@@ -21,6 +21,8 @@
 
 using namespace Dune;
 
+//forward declaration
+class Local_Operator_MA_refl_Neilan;
 
 // A class implementing the analytical right hand side
 class RightHandSide: public VirtualFunction<Solver_config::SpaceType, Solver_config::value_type> {
@@ -67,6 +69,11 @@ public:
 class Dirichletdata//: public VirtualFunction<FieldVector<double, Solver_config::dim>, double>
 {
 public:
+  typedef std::shared_ptr<Solver_config::DiscreteLocalGridFunction> Function_ptr;
+
+  Dirichletdata(){}
+  Dirichletdata(Function_ptr &exactSolU) : exact_solution(&exactSolU) {}
+
 	void evaluate(const Solver_config::SpaceType& in, Solver_config::value_type& out){
 		switch (Solver_config::problem)
 		{
@@ -120,6 +127,19 @@ public:
 			exit(-1);
 		}
 	}
+
+	template<class Element>
+	void evaluate_exact_sol(const Element element, const Solver_config::SpaceType& in, Solver_config::value_type& out) const
+	{
+	  assert(exact_solution != NULL);
+	  (*exact_solution)->bind(element);
+	  out = (**exact_solution)(in);
+	}
+
+private:
+  mutable Function_ptr* exact_solution;
+
+  friend Local_Operator_MA_refl_Neilan;
 };
 
 class RightHandSideInitial: public VirtualFunction<Solver_config::SpaceType, Solver_config::value_type> {
@@ -239,6 +259,13 @@ inline valueType a_tilde(const valueType u_value,
   return a_tilde_value;
 }
 
+template<class valueType, class GradientType>
+inline valueType b_tilde(const valueType u_value,
+    const GradientType& gradu, const Solver_config::SpaceType2d& x) {
+//    adouble a_tilde_value = 0;
+  return (gradu * gradu) + sqr(u_value) - sqr(gradu * x);
+}
+
 template<class valueType>
 inline FieldVector<valueType, 2> T(const FieldVector<Solver_config::value_type, 2>& x, const valueType& u_value, FieldVector<valueType, 2>& Z_0, const double z_3) {
   FieldVector<valueType, 2> T_value = x;
@@ -271,12 +298,11 @@ inline FieldVector<valueType, 3> T(const FieldVector<Solver_config::value_type, 
   return T_value;
 }
 
-class Local_Operator_MA_refl_Neilan;
-
 class RightHandSideReflector{
 public:
   typedef std::shared_ptr<Solver_config::DiscreteLocalGridFunction> Function_ptr;
   typedef std::shared_ptr<Solver_config::DiscreteLocalGradientGridFunction> GradFunction_ptr;
+
 
   RightHandSideReflector():
     f(Solver_config::LightinputImageName, Solver_config::lowerLeft, Solver_config::upperRight),

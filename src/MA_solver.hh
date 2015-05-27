@@ -98,7 +98,7 @@ public:
 public:
 	struct Operator {
 		Operator():solver_ptr(){}
-		Operator(const MA_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old){}
+		Operator(const MA_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old, solver.exact_solution){}
 
 		void evaluate(const VectorType& x, VectorType& v) const
 		{
@@ -252,6 +252,9 @@ private:
 	mutable shared_ptr<DiscreteLocalGridFunction> solution_u_old;
   mutable shared_ptr<DiscreteLocalGradientGridFunction> gradient_u_old;
 
+  mutable shared_ptr<DiscreteGridFunction> exact_solution_global;
+  mutable shared_ptr<DiscreteLocalGridFunction> exact_solution;
+
 	int count_refined; ///counts how often the original grid was refined
 	int iterations;
 
@@ -394,7 +397,7 @@ void MA_solver::project(const F f, VectorType& v) const
         v[get_n_dofs_u()+ nDH*i+  j] = v_uDH_entry[i];
       }
 
-      std::cout << "hessian " << row << " " << col << v_uDH_entry.transpose() << std::endl;
+//      std::cout << "hessian " << row << " " << col << v_uDH_entry.transpose() << std::endl;
     }
 
   //set scaling factor (last dof) to ensure mass conservation
