@@ -207,6 +207,18 @@ public:
       const Solver_config::VectorType &v) const;
 
   /**
+   * extracts local degree of freedoom
+   * @param     localIndexSet
+   * @param x   global dof vector
+   * @return  local dof vector
+   */
+  template<typename LocalIndexSet>
+  Solver_config::VectorType calculate_local_coefficients_u(
+      const LocalIndexSet &localIndexSet,
+      const Solver_config::VectorType &v) const;
+
+
+  /**
    *  adds the coeffs v_local to the global dof vector
    * @param localIndexSet indexset bind to the local contex where v_local is added
    * @param v_local local dof vector (to be added)
@@ -240,6 +252,25 @@ public:
       const LocalIndexSet &localIndexSetAnsatz,
       const Solver_config::DenseMatrixType &m_local,
       Solver_config::MatrixType& m) const;
+
+  /**
+   * adds the coeffs v_local to the global dof vector to assemble the linear sytem for the discrete hessiang
+   * @param localIndexSet
+   * @param v_local
+   * @param v
+   */
+  template<typename LocalIndexSet>
+  void add_local_coefficients_uDH(const LocalIndexSet &localIndexSet, const Solver_config::DenseMatrixType &v_local, Solver_config::VectorType& v) const;
+
+  /**
+   * adds the local jacobian to the global jacobian for the system of the discrete hessian
+   * @param localIndexSetTest
+   * @param localIndexSetAnsatz
+   * @param m_local
+   * @param m
+   */
+  template<typename LocalIndexSet>
+  void add_local_coefficients_Jacobian_uDH(const LocalIndexSet &localIndexSetTest, const LocalIndexSet &localIndexSetAnsatz, const Solver_config::DenseMatrixType &m_local, Solver_config::MatrixType& m) const;
 
 
   ///calculates the mass matrix of the ansatz functions (these are given by the member localFiniteElement)
@@ -328,8 +359,7 @@ public:
       Solver_config::VectorType& v, Solver_config::MatrixType& m) const;
 
   template<typename LocalOperatorType>
-  void assemble_linear_system_DG(const LocalOperatorType &lop, Solver_config::MatrixType &m,
-      Solver_config::VectorType& rhs) const;
+  void assemble_discrete_hessian_system(const LocalOperatorType &lop, Solver_config::VectorType x, Solver_config::MatrixType& m, Solver_config::VectorType& rhs) const;
 
   void set_G(const double g){ G = g;}
 
@@ -472,12 +502,26 @@ Solver_config::VectorType Assembler::calculate_local_coefficients(const LocalInd
 
 template<typename LocalIndexSet>
 inline
+Solver_config::VectorType Assembler::calculate_local_coefficients_u(const LocalIndexSet &localIndexSet, const Solver_config::VectorType &v) const
+{
+  Solver_config::VectorType v_local(localIndexSet.size());
+  for (int i = 0; i < localIndexSet.size(); i++)
+  {
+     v_local[i] = v(localIndexSet.index(i)[0]);
+  }
+  return v_local;
+}
+
+template<typename LocalIndexSet>
+inline
 void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const Solver_config::VectorType &v_local, Solver_config::VectorType& v) const
 {
   assert (v_local.size() == localIndexSet.size());
   assert (v.size() == basis_->indexSet().dimension()+1);
   for (int i = 0; i < localIndexSet.size(); i++)
   {
+//    std::cout << "i -> " << localIndexSet.flat_index(i) << std::endl;
+
      v(localIndexSet.flat_index(i)) += v_local[i];
   }
 }
@@ -511,6 +555,53 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
         m.coeffRef(localIndexSetTest.flat_index(i),localIndexSetAnsatz.flat_index(j)) += m_local(i,j);
   }
 }
+
+template<typename LocalIndexSet>
+inline
+void Assembler::add_local_coefficients_uDH(const LocalIndexSet &localIndexSet, const Solver_config::DenseMatrixType &v_local, Solver_config::VectorType& v) const
+{
+  assert (v_local.size() == localIndexSet.size({1}));
+  assert (v.size() == basis_->indexSet().size({1}));
+
+  const int size_u = localIndexSet.size({0});
+
+  for (int i = 0; i < v_local.size(); i++)
+  {
+    if (std::abs(v_local(i)) > 1e-13 )
+    {
+      auto multi_index = localIndexSet.index(size_u+i);
+      v(multi_index[1]) += v_local(i);
+    }
+  }
+}
+
+
+template<typename LocalIndexSet>
+inline
+void Assembler::add_local_coefficients_Jacobian_uDH(const LocalIndexSet &localIndexSetTest, const LocalIndexSet &localIndexSetAnsatz, const Solver_config::DenseMatrixType &m_local, Solver_config::MatrixType& m) const
+{
+  assert (m_local.rows() == localIndexSetTest.size({1}));
+  assert (m_local.cols() == localIndexSetAnsatz.size({1}));
+  assert (m.rows() == basis_->indexSet().size({1}));
+  assert (m.cols() == basis_->indexSet().size({1}));
+
+  const int size_u = localIndexSetTest.size({0});
+  const int size_global_u = localIndexSetAnsatz.size({0});
+
+  const int size_u_ansatz = localIndexSetAnsatz.size({0});
+
+  for (int i = 0; i < m_local.rows(); i++)
+  {
+    for (int j = 0; j < m_local.cols(); j++)
+      if (std::abs(m_local(i,j)) > 1e-13 )
+      {
+        auto multiIndexTest = localIndexSetTest.index(size_u+i);
+        auto multiIndexAnsatz = localIndexSetAnsatz.index(size_u_ansatz+j);
+        m.coeffRef(multiIndexTest[1],multiIndexAnsatz[1]) += m_local(i,j);
+      }
+  }
+}
+
 
 
 template<class LocalView, class VectorType, class MatrixType>
@@ -620,7 +711,7 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
 
     //assuming Galerkin
     v = Solver_config::VectorType::Zero(x.size());
-    v(v.size()-1) -= G;
+//    v(v.size()-1) -= G;
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
     const GridViewType::IndexSet& indexSet = gridView.indexSet();
@@ -647,8 +738,8 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
         //calculate local coefficients
         Solver_config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
 
-        lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, tag_count, x(x.size()-1), v(v.size()-1));
-        tag_count++;
+//        lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, tag_count, x(x.size()-1), v(v.size()-1));
+//        tag_count++;
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
@@ -674,21 +765,26 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
                   lop.assemble_inner_face_term(is, localView, localIndexSet, xLocal,
                       localViewn, localIndexSetn, xLocaln, local_vector,
                       local_vectorn, tag_count);
+//
+//                  std::cout << " v " << local_vector.transpose() << std::endl;
+//                  std::cout << " vn " << local_vectorn.transpose() << std::endl;
 
+//                  std::cout << "add neighbour " << std::endl;
                   add_local_coefficients(localIndexSetn, local_vectorn, v);
                   tag_count++;
                 }
             } else if (is.boundary()) {
-                // Boundary integration
-                lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
-                        local_vector, tag_count);
-                tag_count++;
+//                // Boundary integration
+//                lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
+//                        local_vector, tag_count);
+//                tag_count++;
             } else {
                 std::cerr << " I do not know how to handle this intersection"
                         << std::endl;
                 exit(-1);
             }
         }
+//        std::cout << " add self" << std::endl;
         add_local_coefficients(localIndexSet, local_vector, v);
     }
 }
@@ -731,8 +827,8 @@ void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_
         //calculate local coefficients
         Solver_config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
 
-        assemble_jacobian_integral_cell_term(localView, xLocal, m_m, tag_count, x(x.size()-1), last_equation, scaling_factor);
-        tag_count++;
+//        assemble_jacobian_integral_cell_term(localView, xLocal, m_m, tag_count, x(x.size()-1), last_equation, scaling_factor);
+//        tag_count++;
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
@@ -768,8 +864,8 @@ void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_
                 }
             } else if (is.boundary()) {
                 // Boundary integration
-                assemble_jacobian_integral(localView, xLocal, m_m, tag_count);
-                tag_count++;
+//                assemble_jacobian_integral(localView, xLocal, m_m, tag_count);
+//                tag_count++;
             } else {
                 std::cerr << " I do not know how to handle this intersection"
                         << std::endl;
@@ -888,5 +984,100 @@ void Assembler::assemble_DG_Jacobian(LocalOperatorType lop, const Solver_config:
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, m);
     }
 }*/
+
+//template<class Config>
+template<typename LocalOperatorType>
+void Assembler::assemble_discrete_hessian_system(const LocalOperatorType &lop, Solver_config::VectorType x, Solver_config::MatrixType& m, Solver_config::VectorType& rhs) const
+{
+    Solver_config::GridView gridView = basis_->gridView();
+
+
+    assert(x.size() == basis_->indexSet().size({0}));
+
+    //assuming Galerkin
+    rhs = Solver_config::VectorType::Zero(basis_->indexSet().size({1}));
+    m.resize(basis_->indexSet().size({1}), basis_->indexSet().size({1}));
+
+    // The index set gives you indices for each element , edge , face , vertex , etc .
+    const GridViewType::IndexSet& indexSet = gridView.indexSet();
+    auto localView = basis_->localView();
+    auto localViewn = basis_->localView();
+    auto localIndexSet = basis_->indexSet().localIndexSet();
+    auto localIndexSetn = basis_->indexSet().localIndexSet();
+
+    // A loop over all elements of the grid
+    for (auto&& e : elements(gridView)) {
+
+        // Bind the local FE basis view to the current element
+        localView.bind(e);
+        localIndexSet.bind(localView);
+
+
+        //calculate local coefficients
+        Solver_config::VectorType xLocal = calculate_local_coefficients_u(localIndexSet.uLocalIndexSet(), x);
+
+        Solver_config::VectorType local_vector;
+        local_vector.setZero(localIndexSet.size({1}));    // Set all entries to zero
+        Solver_config::DenseMatrixType m_m;
+        m_m.setZero(localIndexSet.size({1}), localIndexSet.size({1}));
+
+        //get id
+        IndexType id = indexSet.index(e);
+
+        lop.assemble_cell_term(localView, localIndexSet, xLocal, m_m, local_vector);
+
+       // Traverse intersections
+        for (auto&& is : intersections(gridView, e)) {
+            if (is.neighbor()) {
+
+                // compute unique id for neighbor
+                const GridViewType::IndexSet::IndexType idn =
+                        gridView.indexSet().index(*(is.outside()));
+
+                // Visit face if id is bigger
+                bool visit_face = id > idn
+                        || Solver_config::require_skeleton_two_sided;
+                // unique vist of intersection
+                if (visit_face) {
+                  auto neighbourElement = *(is.outside());
+
+                  // Bind the local neighbour FE basis view to the neighbour element
+                  localViewn.bind(neighbourElement);
+                  localIndexSetn.bind(localViewn);
+                  Solver_config::VectorType xLocaln = calculate_local_coefficients_u(localIndexSetn.uLocalIndexSet(), x);
+                  Solver_config::VectorType local_vectorn = Solver_config::VectorType::Zero(localIndexSetn.size({1}));
+
+
+                  //calculate jacobians
+                  Solver_config::DenseMatrixType mn_m, m_mn, mn_mn;
+                  mn_m.setZero(localIndexSetn.size({1}), localIndexSet.size({1}));
+                  m_mn.setZero(localIndexSet.size({1}), localIndexSetn.size({1}));
+                  mn_mn.setZero(localIndexSetn.size({1}), localIndexSetn.size({1}));
+
+                  lop.assemble_inner_face_term(is, localView, localIndexSet, localViewn, localIndexSetn,
+                                                    xLocal, xLocaln,
+                                                m_m, mn_m, m_mn, mn_mn, local_vector, local_vectorn);
+                  add_local_coefficients_Jacobian_uDH(localIndexSetn, localIndexSet, mn_m, m);
+                  add_local_coefficients_Jacobian_uDH(localIndexSet,localIndexSetn, m_mn,m);
+                  add_local_coefficients_Jacobian_uDH(localIndexSetn, localIndexSetn, mn_mn, m);
+
+                  add_local_coefficients_uDH(localIndexSetn, local_vectorn, rhs);
+                }
+            } else if (is.boundary()) {
+                // Boundary integration
+                lop.assemble_boundary_face_term(is, localView, localIndexSet, xLocal,
+                        m_m, local_vector);
+            } else {
+                std::cerr << " I do not know how to handle this intersection"
+                        << std::endl;
+                exit(-1);
+            }
+        }
+        add_local_coefficients_uDH(localIndexSet, local_vector, rhs);
+        add_local_coefficients_Jacobian_uDH(localIndexSet, localIndexSet, m_m, m);
+    }
+}
+
+
 
 #endif /* SRC_ASSEMBLER_HH_ */

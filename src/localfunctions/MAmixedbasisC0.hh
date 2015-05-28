@@ -82,6 +82,15 @@ public:
         return nDH * uDHLocalIndexSet_.size() + uLocalIndexSet_.size();
     }
 
+    //! Return number possible values for next position in multi index
+    size_type size(std::size_t prefix) const {
+      if (prefix == 1)
+        return nDH * uDHLocalIndexSet_.size();
+      if (prefix == 0)
+        return uLocalIndexSet_.size();
+        assert(false);
+    }
+
     MultiIndex index(size_type localIndex) const {
         MultiIndex mi;
         size_type u_size = uLocalIndexSet_.size();
@@ -125,6 +134,10 @@ public:
      */
     const LocalView& localView() const {
         return *localView_;
+    }
+
+    const typename PQ2NodalBasis<GV>::IndexSet::LocalIndexSet& uLocalIndexSet() const{
+      return uLocalIndexSet_;
     }
 
 private:
@@ -355,6 +368,15 @@ public:
     size_type size() const {
         return nDH * uDHlocalView_.size() + ulocalView_.size();
     }
+
+    size_type size(std::size_t prefix) const {
+      if (prefix == 1)
+        return nDH * uDHlocalView_.size();
+      if (prefix == 0)
+        return ulocalView_.size();
+        assert(false);
+    }
+
 
     /**
      * \brief Maximum local size for any element on the GridView

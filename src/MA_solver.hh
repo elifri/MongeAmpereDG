@@ -25,6 +25,7 @@
 //#include "Operator/linear_system_operator_poisson_DG.hh"
 //#include "Operator/operator_MA_Neilan_DG.hh"
 #include "Operator/operator_MA_refl_Neilan_DG.hh"
+#include "Operator/operator_discrete_Hessian.hh"
 #include "Plotter.hh"
 
 #ifdef USE_DOGLEG
@@ -146,20 +147,22 @@ public:
     assembler.assemble_Jacobian_DG(LOP, x, v, m);
   }
 
-	///assembles the (global) FE-System given by the operator lop
-	template<typename LocalOperatorType>
-	void assemble_linear_system_DG(LocalOperatorType lop, MatrixType &m, VectorType& rhs) const {
-		assert (initialised);
-		assembler.assemble_linear_system_DG(lop, m, rhs);
-	}
-
 	/**
-	 * projects a function into the grid space
+	 * projects a function into the grid space, for the initialisation of the hessian dofs the piecewise hessian is interpolated
 	 * @param f	function representing the function
 	 * @param V	returns the coefficient vector of the projection of f
 	 */
 	template<class F>
 	void project(F f, VectorType &V) const;
+
+  /**
+   * projects a function into the grid space, for the initialisation of the hessian dofs the discrete hessian is calculated
+   * @param f function representing the function
+   * @param V returns the coefficient vector of the projection of f
+   */
+  template<class F>
+  void project_with_discrete_Hessian(F f, VectorType &V) const;
+
 
 	/**
 	 * projects a function into the grid space
@@ -402,6 +405,49 @@ void MA_solver::project(const F f, VectorType& v) const
 
   //set scaling factor (last dof) to ensure mass conservation
   v(v.size()-1) = 1;
+}
+
+template<class F>
+void MA_solver::project_with_discrete_Hessian(const F f, VectorType& v) const
+{
+  v.resize(get_n_dofs());
+  VectorType v_u;
+  interpolate(*uBasis, v_u, f);
+  std::cout << v_u.transpose() << std::endl;
+  v.segment(0, v_u.size()) = v_u;
+
+  //init second derivatives
+
+  //build gridviewfunction
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,v_u);
+
+
+  Solver_config::MatrixType m;
+  Solver_config::VectorType rhs;
+
+  assembler.assemble_discrete_hessian_system(Local_Operator_discrete_Hessian(), v_u, m, rhs);
+
+  MATLAB_export(m, "m");
+  MATLAB_export(rhs, "rhs");
+
+  Eigen::SparseLU<Solver_config::MatrixType> solver;
+  solver.compute(m);
+  if(solver.info()!=Eigen::EigenSuccess) {
+    // decomposition failed
+    cerr << "Decomposition failed"; exit(-1);
+  }
+  Solver_config::VectorType v_uDH = solver.solve(rhs);
+  if(solver.info()!=Eigen::EigenSuccess) {
+    // decomposition failed
+    cerr << "Solving linear system failed"; exit(-1);
+  }
+
+  v.segment(v_u.size(), v_uDH.size()) = v_uDH;
+
+  //set scaling factor (last dof) to ensure mass conservation
+  v(v.size()-1) = 1;
+
+  std::cout << "v " << v.transpose() << std::endl;
 }
 
 
