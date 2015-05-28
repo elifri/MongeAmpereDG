@@ -264,13 +264,13 @@ public:
               Solver_config::value_type temp = referenceFunctionValuesHessian[j]*gradu[col];
               v(index_hess_entry) -= 0.5*( temp*normal[row]);
 
-              temp = referenceFunctionValuesHessiann[j]*gradu[col];
+              temp = referenceFunctionValuesHessian[j]*gradun[col];
+              v(index_hess_entry) -= -0.5*( temp*normal[row]);//a - sign for the normal
+
+              temp = referenceFunctionValuesHessiann[j] *gradu[col];
               vn(index_hess_entryn) -= 0.5*( temp*normal[row]);
 
-              temp = referenceFunctionValuesHessian[j] *gradu[col];
-              v(index_hess_entry) -= -0.5*( temp*normal[row]); //a - sign for the normal
-
-              temp = referenceFunctionValuesHessiann[j]*gradu[col];
+              temp = referenceFunctionValuesHessiann[j]*gradun[col];
               vn(index_hess_entryn) -= -0.5*( temp*normal[row]); //a - sign for the normal
             }
         }
