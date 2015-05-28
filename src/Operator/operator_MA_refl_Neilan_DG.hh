@@ -134,7 +134,6 @@ public:
       adouble u_value = 0;
       assemble_functionValues_u(localFiniteElementu, quadPos,
           referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
-      auto temp = x_adolc.segment(0, size_u);
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
@@ -243,8 +242,9 @@ public:
       adouble g_value;
       rhs.g.evaluate(z, g_value);
 
-      uDH.axpy(a_tilde_value*Solver_config::z_3/2.0/t/omega_value, N);
-      adouble uDH_pertubed_det = uDH[0][0]* uDH[1][1] -uDH[1][0]*uDH[0][1];
+      FieldMatrix<adouble, dim, dim> uDH_pertubed = uDH;
+      uDH_pertubed.axpy(a_tilde_value*Solver_config::z_3/2.0/t/omega_value, N);
+      adouble uDH_pertubed_det = uDH_pertubed[0][0]* uDH_pertubed[1][1] -uDH_pertubed[1][0]*uDH_pertubed[0][1];
 
       adouble D_psi_norm = sqrt(sqr(D_psi_value[0])+sqr(D_psi_value[1])+sqr(D_psi_value[2]));
 
