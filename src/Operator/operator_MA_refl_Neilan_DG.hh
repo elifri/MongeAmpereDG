@@ -250,7 +250,9 @@ public:
 
 //		cout << "x_value " << x_value << " a_tilde " << a_tilde_value.value() << " omega(x) " << omega(x_value) << " btilde " << b_tilde.value() << " g " << g_value.value() << std::endl;
       adouble PDE_rhs = -a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde*omega_value*g_value);
-      PDE_rhs *= (u_value*((Z_0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value;
+      auto uTimesZ0 = Z_0;
+      uTimesZ0 *= u_value;
+      PDE_rhs *= (((uTimesZ0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value;
       PDE_rhs *= scaling_factor_adolc;
       //      adouble PDE_rhs = scaling_factor_adolc*a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde*omega(x_value));
 //		cout<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value).value() << "/" << (4.0*b_tilde*omega(x_value)*g_value).value() << std::endl;
