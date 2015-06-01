@@ -246,7 +246,7 @@ public:
       uDH_pertubed.axpy(a_tilde_value*Solver_config::z_3/2.0/t/omega_value, N);
       adouble uDH_pertubed_det = uDH_pertubed[0][0]* uDH_pertubed[1][1] -uDH_pertubed[1][0]*uDH_pertubed[0][1];
 
-      adouble D_psi_norm = sqrt(sqr(D_psi_value[0])+sqr(D_psi_value[1])+sqr(D_psi_value[2]));
+      adouble D_psi_norm = sqrt(sqr(D_Psi_value[0])+sqr(D_Psi_value[1])+sqr(D_Psi_value[2]));
 
 //		cout << "x_value " << x_value << " a_tilde " << a_tilde_value.value() << " omega(x) " << omega(x_value) << " btilde " << b_tilde.value() << " g " << g_value.value() << std::endl;
       adouble PDE_rhs = a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde*omega_value*g_value);
