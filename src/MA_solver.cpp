@@ -482,20 +482,8 @@ void MA_solver::solve_nonlinear_system()
 
   PETSC_SNES_Wrapper<MA_solver::Operator> snes;
 
-  //estimate number of nonzeros in jacobian
-//  int nnz_jacobian = gridView_ptr->size(0)* //for each element
-//            (localFiniteElement.size()*localFiniteElement.size()  //cell terms
-//             + 3*        //at most 3 neighbours and only mixed edge terms in
-//                (localFiniteElementu.size()*localFiniteElementu.size() //in u and v
-//                 + localFiniteElement.size(u_DH())*localFiniteElementu.size())/2)/2 ; //and mu and u
-  int nnz_jacobian = gridView_ptr->size(0)* //for each element
-              (18*18  //cell terms
-               + 3*        //at most 3 neighbours and only mixed edge terms in
-                  (6*6 //in u and v
-                   + 12*6)/2)/2 ; //and mu and u
-  std::cout << "estimate for nnz_jacobian " << nnz_jacobian << std::endl;
-
-  snes.init(get_n_dofs(), nnz_jacobian);
+  Eigen::VectorXi est_nnz = assembler.estimate_nnz_Jacobian();
+  snes.init(get_n_dofs(), est_nnz);
   std::cout << " n_dofs " << get_n_dofs() << std::endl;
   int error = snes.solve(solution);
   timer.stop();
@@ -547,20 +535,8 @@ bool MA_solver::solve_nonlinear_step(const MA_solver::Operator &op)
 
   PETSC_SNES_Wrapper<MA_solver::Operator> snes;
 
-  //estimate number of nonzeros in jacobian
-//  int nnz_jacobian = gridView_ptr->size(0)* //for each element
-//            (localFiniteElement.size()*localFiniteElement.size()  //cell terms
-//             + 3*        //at most 3 neighbours and only mixed edge terms in
-//                (localFiniteElementu.size()*localFiniteElementu.size() //in u and v
-//                 + localFiniteElement.size(u_DH())*localFiniteElementu.size())/2)/2 ; //and mu and u
-  int nnz_jacobian = gridView_ptr->size(0)* //for each element
-              (18*18  //cell terms
-               + 3*        //at most 3 neighbours and only mixed edge terms in
-                  (6*6 //in u and v
-                   + 12*6)/2)/2 ; //and mu and u
-  std::cout << "estimate for nnz_jacobian " << nnz_jacobian << std::endl;
-
-  snes.init(get_n_dofs(), nnz_jacobian);
+  Eigen::VectorXi est_nnz = assembler.estimate_nnz_Jacobian();
+  snes.init(get_n_dofs(), est_nnz);
   snes.set_max_it(1);
   int error = snes.solve(solution);
   steps = snes.get_iteration_number();

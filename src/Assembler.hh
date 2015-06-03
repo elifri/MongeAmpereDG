@@ -345,6 +345,9 @@ private:
       MatrixType& mn_mn, int tag);
 
 public:
+  Eigen::VectorXi estimate_nnz_Jacobian() const;
+
+
   template<typename LocalOperatorType>
   void assemble_Jacobian_DG(const LocalOperatorType &LOP, const Solver_config::VectorType& x,
       Solver_config::MatrixType& m) const;
@@ -811,6 +814,24 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
     image.save_bmp(ss.str().c_str());
     picture_no++;
 }
+
+inline Eigen::VectorXi Assembler::estimate_nnz_Jacobian() const
+{
+  Eigen::VectorXi est_nnz (basis_->indexSet().dimension()+1);
+  const int n_dofsu = basis_->indexSet().size({0});
+  assert (Solver_config::degree == 2);
+  const int n_dofsuLocal = 6;
+
+  const int nDH = Solver_config::dim*Solver_config::dim;
+  const int n_dofsuDH = basis_->indexSet().size({1});
+  assert(Solver_config::degree == 1 || Solver_config::degree == 2);
+  const int n_dofsuDHLocal = Solver_config::degree == 1 ? 3*nDH : 6*nDH;
+
+  for (int i = 0; i < n_dofsu; i++) est_nnz(i) = 4*n_dofsuLocal + 4*n_dofsuDHLocal+1;
+  for (int i = 0; i < n_dofsuDH; i++) est_nnz(n_dofsu+i) = 4*n_dofsuLocal + n_dofsuDHLocal;
+  est_nnz(est_nnz.size()-1) = n_dofsu;
+
+  return est_nnz;
 }
 
 template<typename LocalOperatorType>
@@ -822,6 +843,10 @@ void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_
 
     //assuming Galerkin
     m.resize(x.size(), x.size());
+
+    //reserve space
+    Eigen::VectorXi est_nnz = estimate_nnz_Jacobian();
+    m.reserve(est_nnz);
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
     const GridViewType::IndexSet& indexSet = gridView.indexSet();
@@ -1021,6 +1046,11 @@ void Assembler::assemble_discrete_hessian_system(const LocalOperatorType &lop, S
     //assuming Galerkin
     rhs = Solver_config::VectorType::Zero(basis_->indexSet().size({1}));
     m.resize(basis_->indexSet().size({1}), basis_->indexSet().size({1}));
+
+    Solver_config::VectorType est_nnz = Solver_config::VectorType::Ones(basis_->indexSet().size({1}));
+    assert( Solver_config::degreeHessian == 2 && Solver_config::degree == 2);
+    est_nnz *= 6*Solver_config::dim*Solver_config::dim;
+    m.reserve(est_nnz);
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
     const GridViewType::IndexSet& indexSet = gridView.indexSet();

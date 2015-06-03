@@ -92,8 +92,7 @@ public:
 public:
 
 	int get_n_dofs() const{return FEBasis->indexSet().dimension() + 1;}
-  int get_n_dofs_u() const{
-    size_t i = 0; return FEBasis->indexSet().size({0});}
+  int get_n_dofs_u() const{return FEBasis->indexSet().size({0});}
 
 
 public:
