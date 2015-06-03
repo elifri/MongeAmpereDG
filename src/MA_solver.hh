@@ -171,10 +171,10 @@ public:
 	void project(const MA_function_type f, const MA_derivative_function_type f_DH, VectorType &v) const;
 
 	/**
-	 * adapts a grid function with coeffs v into the global refined space
-	 * @param v	coeffs of grid function
+	 * adapts the solver into the global refined space (refines grid, and transforms solution & exact solution data)
+	 * @param level
 	 */
-	void adapt_solution(VectorType &v, const int level=1);
+	void adapt_solution(const int level=1);
 
 	/**
 	 * refines the grid globally and sets up all necessary information for the next step
