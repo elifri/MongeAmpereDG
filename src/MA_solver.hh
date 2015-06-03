@@ -248,7 +248,7 @@ private:
 	Plotter plotter;
 
 	VectorType solution; /// stores the current solution vector
-	VectorType exactsol_projection; /// if exact solution is known, stores a L2 projection to the current grid
+	VectorType exactsol; /// if exact solution is known, stores a L2 projection to the current grid
 
 	mutable shared_ptr<DiscreteGridFunction> solution_u_old_global;
 	mutable shared_ptr<DiscreteLocalGridFunction> solution_u_old;

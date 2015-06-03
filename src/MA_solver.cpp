@@ -221,14 +221,14 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
   //init andreas solution as exact solution
   VectorType exact_solution_u;
-  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
-  assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
-  assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
-  project([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, exact_solution_u);
-  exact_solution_u.conservativeResize(get_n_dofs_u());
-  exact_solution_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,exact_solution_u));
-  exact_solution = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*exact_solution_global));
-  plotter.writeReflectorVTK("exactReflector", *exact_solution);
+    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
+    assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
+    assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
+    project([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, exactsol);
+    exact_solution_u = exactsol.segment(0,get_n_dofs_u());
+    exact_solution_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,exact_solution_u));
+    exact_solution = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*exact_solution_global));
+    plotter.writeReflectorVTK("exactReflector", *exact_solution);
 
   create_initial_guess();
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
@@ -272,10 +272,13 @@ const typename MA_solver::VectorType& MA_solver::solve()
     adapt_solution(solution);
 
     solution_u = solution.segment(0, get_n_dofs_u());
+    exact_solution_u = exactsol.segment(0, get_n_dofs_u());
     //build gridviewfunction
     solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));
+    exact_solution_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,exact_solution_u));
     solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
     gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
+    exact_solution = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*exact_solution_global));
 
     plot_with_mirror("numericalSolution");
   }
