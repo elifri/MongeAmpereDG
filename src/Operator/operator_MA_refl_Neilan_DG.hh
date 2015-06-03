@@ -277,6 +277,8 @@ public:
       //      adouble PDE_rhs = scaling_factor_adolc*a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde*omega(x_value));
 //		cout<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value).value() << "/" << (4.0*b_tilde*omega(x_value)*g_value).value() << std::endl;
 
+      cout << "scaling factor " << scaling_factor_adolc.value() << endl;
+
       //calculate system for first test functions
 
       for (size_t j = 0; j < size_u; j++) // loop over test fcts
@@ -284,7 +286,7 @@ public:
         v_adolc(j) += (PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
 
-//	std::cout << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
+        std::cout << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
       }
 
       //calculate system for second tensor functions
@@ -646,6 +648,8 @@ public:
       v_adolc[i] >>= v[i];
     trace_off();
   }
+
+  const RightHandSideReflector& get_right_handside() const {return rhs;}
 
   RightHandSideReflector rhs;
   Dirichletdata bc;

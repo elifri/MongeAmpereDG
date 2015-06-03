@@ -231,6 +231,10 @@ const typename MA_solver::VectorType& MA_solver::solve()
     plotter.writeReflectorVTK("exactReflector", *exact_solution);
 
   create_initial_guess();
+  solution(solution.size()-1)= op.lop.get_right_handside().get_target_distribution().integrate() / op.lop.get_right_handside().get_input_distribution().integrate();
+  std::cout << "f int = " << op.lop.get_right_handside().get_input_distribution().integrate()
+               << " g int " << op.lop.get_right_handside().get_target_distribution().integrate() << " and scal factor = " << solution(solution.size()-1) << endl;
+
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
   //build gridviewfunction
   solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));

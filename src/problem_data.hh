@@ -239,6 +239,13 @@ public:
         assert(fabs(integrator.assemble_integral(*this) - 1.0) < 1e-10);
     }
 
+    double integrate(const unsigned int n = Solver_config::startlevel+Solver_config::nonlinear_steps) const
+    {
+      Solver_config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, n);
+      Integrator<Solver_config::GridType> integrator(unitcube_quadrature.grid_ptr());
+      return integrator.assemble_integral(*this);
+    }
+
 
 };
 
@@ -314,7 +321,8 @@ public:
                             g(inputTargetfile, Solver_config::lowerLeftTarget, Solver_config::upperRightTarget),
                             solution_u_old(&solUOld), gradient_u_old(&gradUOld)
   {
-    g.normalize();
+//    f.normalize();
+//    g.normalize();
   }
 
   static double phi_initial(const Solver_config::SpaceType& x){
@@ -394,6 +402,9 @@ public:
     phi(T(x, u, z_0, z_3),
         normal, phi_value);
   }
+
+  const ImageFunction& get_input_distribution() const {return f;}
+  const ImageFunction& get_target_distribution() const {return g;}
 
 private:
   ImageFunction g, f;
