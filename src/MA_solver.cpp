@@ -477,7 +477,9 @@ void MA_solver::solve_nonlinear_system()
 //  std::cout << "initial f " << f.transpose() << std::endl;
   std::cout << "initial f(x) norm " << f.norm() << endl;
 //  std::cout << "initial l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
-//  std::cout << "approximate error " << (solution-exactsol_projection).norm() << std::endl;
+  //copy guess vor scaling factor into exact solution
+  exactsol(exactsol.size()-1) = solution(solution.size()-1);
+  std::cout << "approximate error " << (solution-exactsol).norm() << std::endl;
 
   // /////////////////////////
   // Compute solution
