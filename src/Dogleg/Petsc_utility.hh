@@ -135,7 +135,7 @@ public:
 
 //	PETSC_SNES_Wrapper(const OperatorType &op): op(op){}
 
-	int init(int n_dofs, int guess_nonzeros_J);
+	int init(int n_dofs, const Eigen::VectorXi &guess_nonzeros_J);
 	int solve(Solver_config::VectorType &v);
 	int get_iteration_number()
 	{
@@ -176,7 +176,7 @@ template<class T> int PETSC_SNES_Wrapper<T>::ierr = 0;
 
 
 template <typename OperatorType>
-int PETSC_SNES_Wrapper<OperatorType>::init(int n_dofs, int guess_nonzeros_J)
+int PETSC_SNES_Wrapper<OperatorType>::init(int n_dofs, const Eigen::VectorXi &guess_nonzeros_J)
 {
 	n = n_dofs;
 
@@ -216,7 +216,7 @@ int PETSC_SNES_Wrapper<OperatorType>::init(int n_dofs, int guess_nonzeros_J)
   ierr = MatCreate(PETSC_COMM_WORLD,&J);CHKERRQ(ierr);
   ierr = MatSetSizes(J,PETSC_DECIDE,PETSC_DECIDE,n,n);CHKERRQ(ierr);
   ierr = MatSetFromOptions(J);CHKERRQ(ierr);
-  ierr = MatSeqAIJSetPreallocation(J,guess_nonzeros_J,NULL);CHKERRQ(ierr);
+  ierr = MatSeqAIJSetPreallocation(J,0,guess_nonzeros_J.data());CHKERRQ(ierr);
 
   /*
      Set Jacobian matrix data structure and default Jacobian evaluation
