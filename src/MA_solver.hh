@@ -73,7 +73,7 @@ public:
 			grid_ptr(grid), gridView_ptr(&gridView),
 			FEBasis(new FEBasisType(gridView)),
 		  uBasis(new FEuBasisType(gridView)), uDHBasis( new FEuDHBasisType(gridView)),
-			assembler(*FEBasis),
+			assembler(*FEBasis, true),
 			plotter(gridView),
 			solution_u_old(), gradient_u_old(),
 			count_refined(Solver_config::startlevel) {

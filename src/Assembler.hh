@@ -188,8 +188,8 @@ public:
   typedef Solver_config::SpaceType SpaceType;
   typedef Solver_config::RangeType RangeType;
 
-  Assembler(const Solver_config::FEBasis& basis) :
-      basis_(&basis) {
+  Assembler(const Solver_config::FEBasis& basis, bool no_hanging_nodes) :
+      basis_(&basis), no_hanging_nodes(no_hanging_nodes), picture_no(0) {
   }
 
   void bind(const Solver_config::FEBasis& basis)
