@@ -99,13 +99,15 @@ public:
           size_type u_localIndex = localIndex;
           mi[1] = uLocalIndexSet_.index(u_localIndex)[0];
         }
-        if (mi[0] == 1) {
-          size_type uDH_comp = (localIndex - u_size)
+        else
+          if (mi[0] == 1) {
+            size_type uDH_comp = (localIndex - u_size)
                                 / nDH;
-          size_type uDH_localIndex = (localIndex - u_size)
+            size_type uDH_localIndex = (localIndex - u_size)
                             % nDH;
-          mi[1] = nDH*uDHLocalIndexSet_.index(uDH_comp)[0]
-                            + uDH_localIndex;       }
+            mi[1] = nDH*uDHLocalIndexSet_.index(uDH_comp)[0]
+                            + uDH_localIndex;
+          }
         return mi;
     }
 
