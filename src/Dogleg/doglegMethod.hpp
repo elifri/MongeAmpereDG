@@ -164,7 +164,6 @@ int doglegMethod (
     functor.evaluate(x,f);
     functor.derivative(x,J);
     if (opts.check_Jacobian)	checkJacobian(functor, x, opts.exportFDJacobianifFalse);
-//    MATLAB_export(J, "J");
 
     // Check result of function calls for correct length of vectors
     if (x.size() != f.size()) {
@@ -198,7 +197,7 @@ int doglegMethod (
         // decomposition failed
         std::cout << "\nError: "<< lu_of_J.info() << " Could not compute LU decomposition!\n";
         if (opts.exportJacobianIfSingular) {
-//            MATLAB_export(J,"J");
+            MATLAB_export(J,"J");
 //        	std::cout << J << std::endl;
         }
         exit(1);
