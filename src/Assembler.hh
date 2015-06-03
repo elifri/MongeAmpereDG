@@ -18,6 +18,8 @@
 #include <adolc/adouble.h>
 #include <adolc/adolc.h>
 
+#include <CImg.h>
+
 /**
  * evaluate the gradients of test functions at global scope
  * @param lfu			local finite element
@@ -375,6 +377,8 @@ private:
     const Solver_config::FEBasis* basis_;
 
     bool no_hanging_nodes;
+
+    mutable int picture_no;
 };
 
 template<typename LocalFiniteElement>
@@ -624,6 +628,10 @@ void Assembler::assemble_jacobian_integral(const LocalView& localView,
     for (int j = 0; j < x.size(); j++)
       m(i, j) += out[i][j];
   }
+
+  for (int i = 0; i < x.size(); i++)
+    delete[] out[i];
+
   delete[] out;
 }
 
@@ -654,6 +662,11 @@ void Assembler::assemble_jacobian_integral_cell_term(const LocalView& localView,
     scaling_derivatives(i) = out[i][x.size()];
   }
   scaling_derivatives(x.size()) = out[x.size()][x.size()];
+
+  //free memory
+  for (int i = 0; i < x_c.size(); i++)
+    delete[] out[i];
+
   delete[] out;
 }
 
@@ -698,6 +711,8 @@ void Assembler::assemble_inner_face_Jacobian(const Intersection& intersection,
       mn_mn(i, j) += out[x.size() + i][x.size() + j];
     }
 
+  for (int i = 0; i < n_var; i++)
+    delete[] out[i];
   delete[] out;
 }
 
@@ -711,7 +726,7 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
 
     //assuming Galerkin
     v = Solver_config::VectorType::Zero(x.size());
-//    v(v.size()-1) -= G;
+    v(v.size()-1) -= G;
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
     const GridViewType::IndexSet& indexSet = gridView.indexSet();
@@ -729,6 +744,7 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
         localView.bind(e);
         localIndexSet.bind(localView);
 
+
         Solver_config::VectorType local_vector;
         local_vector.setZero(localView.size());    // Set all entries to zero
 
@@ -738,8 +754,8 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
         //calculate local coefficients
         Solver_config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
 
-//        lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, tag_count, x(x.size()-1), v(v.size()-1));
-//        tag_count++;
+        lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, tag_count, x(x.size()-1), v(v.size()-1));
+        tag_count++;
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
@@ -775,9 +791,9 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
                 }
             } else if (is.boundary()) {
 //                // Boundary integration
-//                lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
-//                        local_vector, tag_count);
-//                tag_count++;
+                lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
+                        local_vector, tag_count);
+                tag_count++;
             } else {
                 std::cerr << " I do not know how to handle this intersection"
                         << std::endl;
@@ -787,6 +803,14 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
 //        std::cout << " add self" << std::endl;
         add_local_coefficients(localIndexSet, local_vector, v);
     }
+    cimg_library::CImg<double> image (lop.target_distribution, LocalOperatorType::pixel_width, LocalOperatorType::pixel_height);
+    for (int i = 0; i < LocalOperatorType::pixel_width* LocalOperatorType::pixel_width; i++)  lop.target_distribution[i]*=255;
+
+    std::stringstream ss;
+    ss << "../plots/targetDistributions/target" << picture_no << ".bmp";
+    image.save_bmp(ss.str().c_str());
+    picture_no++;
+}
 }
 
 template<typename LocalOperatorType>
@@ -827,8 +851,8 @@ void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_
         //calculate local coefficients
         Solver_config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
 
-//        assemble_jacobian_integral_cell_term(localView, xLocal, m_m, tag_count, x(x.size()-1), last_equation, scaling_factor);
-//        tag_count++;
+        assemble_jacobian_integral_cell_term(localView, xLocal, m_m, tag_count, x(x.size()-1), last_equation, scaling_factor);
+        tag_count++;
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
@@ -864,8 +888,8 @@ void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_
                 }
             } else if (is.boundary()) {
                 // Boundary integration
-//                assemble_jacobian_integral(localView, xLocal, m_m, tag_count);
-//                tag_count++;
+                assemble_jacobian_integral(localView, xLocal, m_m, tag_count);
+                tag_count++;
             } else {
                 std::cerr << " I do not know how to handle this intersection"
                         << std::endl;
@@ -1076,6 +1100,7 @@ void Assembler::assemble_discrete_hessian_system(const LocalOperatorType &lop, S
         add_local_coefficients_uDH(localIndexSet, local_vector, rhs);
         add_local_coefficients_Jacobian_uDH(localIndexSet, localIndexSet, m_m, m);
     }
+
 }
 
 

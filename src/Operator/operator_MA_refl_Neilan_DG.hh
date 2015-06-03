@@ -26,15 +26,24 @@ class Local_Operator_MA_refl_Neilan {
 
 public:
   Local_Operator_MA_refl_Neilan():
-    rhs() {}
+    rhs() {
+    for (int i = 0; i < pixel_height*pixel_width; i++)  target_distribution[i] = 0;
+
+  }
 
   Local_Operator_MA_refl_Neilan(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld):
-    rhs(solUOld, gradUOld) {}
+    rhs(solUOld, gradUOld) {
+    for (int i = 0; i < pixel_height*pixel_width; i++)  target_distribution[i] = 0;
+
+  }
 
   Local_Operator_MA_refl_Neilan(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld,
                                 Dirichletdata::Function_ptr &exactSolU):
     rhs(solUOld, gradUOld),
-    bc(exactSolU){}
+    bc(exactSolU){
+
+    for (int i = 0; i < pixel_height*pixel_width; i++)  target_distribution[i] = 0;
+  }
 
 
 /*  /// projects the 2d reference plane omega to the ball surface in 3d
@@ -241,6 +250,17 @@ public:
       rhs.f.evaluate(x_value, f_value);
       adouble g_value;
       rhs.g.evaluate(z, g_value);
+
+      //write calculated distribution
+      int width, height;
+      bool is_on_target = return_pixel_coordinates(Z[0].value(), Z[1].value(), width, height);
+      if (is_on_target)
+        {
+        assert (width < pixel_width && height < pixel_height);
+        target_distribution[height*pixel_width + width] = f_value*255;
+        }
+//      cout << "wrote pixel " << width << " " << height << " to value " << f_value*255 << endl;
+
 
       FieldMatrix<adouble, dim, dim> uDH_pertubed = uDH;
       uDH_pertubed.axpy(a_tilde_value*Solver_config::z_3/2.0/t/omega_value, N);
@@ -629,6 +649,31 @@ public:
 
   RightHandSideReflector rhs;
   Dirichletdata bc;
+
+  static const int pixel_width = 256;
+  static const int pixel_height = 256;
+
+  mutable double target_distribution[pixel_width*pixel_height];
+
+  static bool return_pixel_coordinates(const double& x, const double& y, int& width, int& height)
+  {
+    const double targetWidth = Solver_config::upperRightTarget[0] - Solver_config::lowerLeftTarget[0];
+    const double targetHeight = Solver_config::upperRightTarget[1] - Solver_config::lowerLeftTarget[1];
+
+    if (x > Solver_config::upperRightTarget[0] || x < Solver_config::lowerLeftTarget[0])
+      return false;
+    else
+      width = pixel_width / targetWidth*(x-Solver_config::lowerLeftTarget[0]);
+
+    if (y > Solver_config::upperRightTarget[1] || y < Solver_config::lowerLeftTarget[1])
+      return false;
+    else
+      height = pixel_height / targetHeight*(y-Solver_config::lowerLeftTarget[1]);
+
+    return true;
+  }
+
+
 };
 
 #endif /* SRC_OPERATOR_HH_ */
