@@ -180,7 +180,7 @@ public:
       adouble b_tilde = gradu * gradu + sqr(u_value) - sqr(gradu * x_value);
       FieldVector<adouble, 3> grad_hat = { gradu[0], gradu[1], 0 };
       //N = Id + xx^t/omega^2
-      FieldMatrix<adouble, dim, dim> N(0);
+      FieldMatrix<double, dim, dim> N(0);
       N[0][0] += 1.0+x_value[0]*x_value[0]; N[0][1] +=x_value[0]*x_value[1];
       N[1][0] += x_value[0]*x_value[1]; N[1][1] += 1.0+x_value[1]*x_value[1];
       N /= sqr(omega_value);
