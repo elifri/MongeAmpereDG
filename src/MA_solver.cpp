@@ -75,7 +75,7 @@ void MA_solver::plot(std::string filename) const
    DerivativeVectorType derivativeSolution(uDHBasis->indexSet().size());
 
    //extract dofs
-   for (size_t i=0; i<derivativeSolution.size(); i++)
+   for (int i=0; i<derivativeSolution.size(); i++)
      for (int j=0; j< nDH; j++)
      {
        if (j == 2) continue;

@@ -421,9 +421,9 @@ public:
           intersection.geometryInOutside().global(quad[pt].position());
 
       const auto& jacobian =
-          intersection.inside()->geometry().jacobianInverseTransposed(quadPos);
+          intersection.inside().geometry().jacobianInverseTransposed(quadPos);
       const auto& jacobiann =
-          intersection.outside()->geometry().jacobianInverseTransposed(quadPos);
+          intersection.outside().geometry().jacobianInverseTransposed(quadPos);
       // The shape functions on the reference elements
       // The shape functions
       std::vector<RangeType> referenceFunctionValues(size_u);
@@ -590,11 +590,11 @@ public:
       // Position of the current quadrature point in the reference element
       const FieldVector<double, dim> &quadPos =
           intersection.geometryInInside().global(quad[pt].position());
-      auto x_value = intersection.inside()->geometry().global(quadPos);
+      auto x_value = intersection.inside().geometry().global(quadPos);
 
       // The transposed inverse Jacobian of the map from the reference element to the element
       const auto& jacobian =
-          intersection.inside()->geometry().jacobianInverseTransposed(quadPos);
+          intersection.inside().geometry().jacobianInverseTransposed(quadPos);
 
       //the shape function values
       std::vector<RangeType> referenceFunctionValues(size_u);

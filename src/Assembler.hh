@@ -766,14 +766,14 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
 
                 // compute unique id for neighbor
                 const GridViewType::IndexSet::IndexType idn =
-                        gridView.indexSet().index(*(is.outside()));
+                        gridView.indexSet().index(is.outside());
 
                 // Visit face if id is bigger
                 bool visit_face = id > idn
                         || Solver_config::require_skeleton_two_sided;
                 // unique vist of intersection
                 if (visit_face) {
-                  auto neighbourElement = *(is.outside());
+                  auto neighbourElement = is.outside();
 
                   // Bind the local neighbour FE basis view to the neighbour element
                   localViewn.bind(neighbourElement);

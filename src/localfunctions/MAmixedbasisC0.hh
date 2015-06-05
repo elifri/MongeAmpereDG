@@ -124,7 +124,7 @@ public:
     size_type flat_index(size_type localIndex) const
     {
 //      std::cout << "local " << localIndex << " ";
-      auto mwi = index(localIndex);
+//      auto mwi = index(localIndex);
 //      std::cout << "mwi " << mwi[0] << " " << mwi[1] << " ";
 //      std::cout << "global " << flat_index(mwi) << std::endl;
 

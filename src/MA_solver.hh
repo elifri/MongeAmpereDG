@@ -119,9 +119,10 @@ public:
 			solver_ptr->assemble_Jacobian_DG(lop, x,m);
 		}
 
+    const MA_solver* solver_ptr;
+
 //		Local_Operator_MA_mixed_Neilan lop;
 		Local_Operator_MA_refl_Neilan lop;
-		const MA_solver* solver_ptr;
 	};
 
 	///assembles the (global) integrals (for every test function) specified by lop
