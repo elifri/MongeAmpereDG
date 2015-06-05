@@ -28,12 +28,13 @@ public:
   Local_Operator_MA_refl_Neilan():
     rhs() {
     for (int i = 0; i < pixel_height*pixel_width; i++)  target_distribution[i] = 0;
-
+    int_f = 0;
   }
 
   Local_Operator_MA_refl_Neilan(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld):
     rhs(solUOld, gradUOld) {
     for (int i = 0; i < pixel_height*pixel_width; i++)  target_distribution[i] = 0;
+    int_f = 0;
 
   }
 
@@ -43,6 +44,7 @@ public:
     bc(exactSolU){
 
     for (int i = 0; i < pixel_height*pixel_width; i++)  target_distribution[i] = 0;
+    int_f = 0;
   }
 
 
@@ -61,6 +63,72 @@ public:
   inline static FieldVector<valueType, Solver_config::dim> T(const valueType& a_tilde_value, const GradientType& gradu) {
     return RightHandSideReflector::T(a_tilde_value, gradu);
   }*/
+
+template<class LocalFiniteElement, class GeometryType, class JacobianType, class VectorType>
+static FieldMatrix<adouble, 3, 3> finiteElementDT(const LocalFiniteElement& lfu, const FieldVector<double, 2> &quadPos, const VectorType& local_dofs, const GeometryType& geometry, const JacobianType& jacobian)
+{
+  double h = 1e-8/2.;//to sqrt(eps)
+
+  const int n = 3;
+
+  FieldVector<adouble, n> T_minus (0); FieldVector<adouble, n> T_plus (0);
+  FieldMatrix<adouble, n, n> DT(0);
+  for (int j = 0; j < 2; j++)
+  {
+    FieldVector<double, 2> unit_j(0);
+    unit_j[j] = 1;
+
+
+    auto x_value_minus =  quadPos; x_value_minus.axpy(-h, unit_j);
+    auto x_value_plus =  quadPos; x_value_minus.axpy(-h, unit_j);
+
+    auto x_minus =geometry.local(x_value_minus);
+    auto x_plus = geometry.local(x_value_plus);
+
+    //evaluate
+    std::vector<FieldVector<double, 1 >> values(lfu.size());
+    adouble u_minus, u_plus;
+    assemble_functionValues_u(lfu, x_minus, values, local_dofs, u_minus);
+    assemble_functionValues_u(lfu, x_plus, values, local_dofs, u_plus);
+
+    std::vector<Dune::FieldVector<Solver_config::value_type, Solver_config::dim>> gradients(lfu.size());
+    FieldVector<adouble, Solver_config::dim> gradu_minus, gradu_plus;
+    assemble_gradients_gradu(lfu, jacobian, x_minus,
+        gradients, local_dofs, gradu_minus);
+    assemble_gradients_gradu(lfu, jacobian, x_plus,
+        gradients, local_dofs, gradu_plus);
+
+    adouble a_tilde_minus = a_tilde(u_minus, gradu_minus, x_value_minus);
+    adouble a_tilde_plus = a_tilde(u_plus, gradu_plus, x_value_plus);
+
+    FieldVector<double, 3> X_minus = {x_value_minus[0], x_value_minus[1], omega(x_value_minus)};
+    FieldVector<double, 3> X_plus = {x_value_plus[0], x_value_plus[1], omega(x_value_plus)};
+
+    FieldVector<adouble, 3> Z_0_minus = {gradu_minus[0], gradu_minus[1], 0};
+    FieldVector<adouble, 3> Z_0_plus = {gradu_plus[0], gradu_plus[1], 0};
+    Z_0_minus *= (2.0 / a_tilde_minus);
+    Z_0_plus *= (2.0 / a_tilde_plus);
+
+
+    T_minus = T(X_minus,u_minus,Z_0_minus,Solver_config::z_3);
+    T_plus = T(X_plus,u_plus,Z_0_plus,Solver_config::z_3);
+
+    cout << "T_plus " << T_plus[0] << " " << T_plus[1] << " " << T_plus[2] << endl;
+    cout << "T_minus " << T_minus[0] << " " << T_minus[1] << " " << T_minus[2] << endl;
+
+    auto estimated_derivative = (T_plus - T_minus);
+    estimated_derivative/= 2.*h;
+
+    for (int i = 0; i < n; i++)
+      DT[i][j] = estimated_derivative[i];
+  }
+
+  //last col = Dspi
+  DT[0][2] = 0;
+  DT[0][2] = 0;
+  DT[0][2] = -1;
+  return DT;
+}
 
   /**
    * implements the local volume integral
@@ -166,6 +234,9 @@ public:
         for (int row = 0; row < dim; row++)
           for (int j = 0; j < size_u_DH; j++)
             uDH[row][col] += x_adolc(localIndexSet.flat_local_index(j, row, col))*referenceFunctionValuesHessian[j];
+//      FieldMatrix<adouble, dim, dim> uDH = Hessu;
+
+//      std::cout << "uDH: " << uDH << endl;
 
       //--------assemble cell integrals in variational form--------
 
@@ -177,21 +248,24 @@ public:
       double omega_value = omega(x_value);
 
       adouble a_tilde_value = a_tilde(u_value, gradu, x_value);
-      adouble b_tilde = gradu * gradu + sqr(u_value) - sqr(gradu * x_value);
+      adouble b_tilde_value = (gradu * gradu) + sqr(u_value) - sqr((gradu * x_value));
+
       FieldVector<adouble, 3> grad_hat = { gradu[0], gradu[1], 0 };
       //N = Id + xx^t/omega^2
       FieldMatrix<double, dim, dim> N(0);
-      N[0][0] += 1.0+x_value[0]*x_value[0]; N[0][1] +=x_value[0]*x_value[1];
-      N[1][0] += x_value[0]*x_value[1]; N[1][1] += 1.0+x_value[1]*x_value[1];
+      N[0][0] += x_value[0]*x_value[0]; N[0][1] +=x_value[0]*x_value[1];
+      N[1][0] += x_value[0]*x_value[1]; N[1][1] += x_value[1]*x_value[1];
       N /= sqr(omega_value);
 
+      N[0][0] += 1.0; N[1][1] +=1.0;
 
-//		auto Y = X;
-//		Y *= a_tilde_value/b_tilde; Y.axpy(- 2*u_value/b_tilde,grad_hat);
+      //calculate Z = X/u +t(Z_0-X/u) = point on reflector + reflected vector
+      //calculate t: distance between reflector and target plane (reflected vector)
       adouble t = 1;
       t -= u_value *Solver_config::z_3/omega_value;
       assert ( t > 0);
 
+      //calculate Z_0, the intersection between reflected light and {x_3=0}-plane
       FieldVector<adouble, Solver_config::dim> z_0 = gradu;
       z_0 *= (2.0 / a_tilde_value);
       FieldVector<adouble, Solver_config::dim> z = T(x_value, u_value, z_0, Solver_config::z_3);
@@ -199,8 +273,8 @@ public:
       FieldVector<adouble, 3> Z_0 = grad_hat;
       Z_0 *= (2.0 / a_tilde_value);
       FieldVector<adouble, 3> Z = T(X, u_value, Z_0, Solver_config::z_3);
-//      std::cout << "u " << u_value.value() << "a tilde " << a_tilde_value.value() << " T_3 " << Z[2].value() << std::endl;
-//      std::cout << "x " << X << std::endl;
+      std::cout << "u " << u_value.value() << "a tilde " << a_tilde_value.value() << " T_3 " << Z[2].value() << std::endl;
+      std::cout << "x " << X << std::endl;
 //      std::cout << " grad " << grad_hat[0].value() << " " << " " << grad_hat[1].value() << " " << grad_hat[2].value() << std::endl;
 
       //calculate normal of the reflector
@@ -208,48 +282,64 @@ public:
       normal_refl *= -1.0/sqr(u_value);
       normal_refl.axpy(-1./u_value+1.0/sqr(u_value)*(gradu*x_value) ,X);
 
-//      std::cout << " normal " << normal_refl[0].value() << " " << " " << normal_refl[1].value() << " " << normal_refl[2].value() << std::endl;
-//
+      std::cout << " normal " << normal_refl[0].value() << " " << " " << normal_refl[1].value() << " " << normal_refl[2].value() << std::endl;
+
+      FieldVector<adouble, 3> X_adouble = X;
+      FieldVector<adouble, 3> y_check = X; y_check.axpy(-2*(X_adouble*normal_refl),normal_refl);
+      std::cout << " Y " << y_check[0].value() << " " << " " << y_check[1].value() << " " << y_check[2].value() << std::endl;
+
+      //
 //      std::cout << " X " << X[0] << " " << " " << X[1] << " " << X[2] << std::endl;
-//      std::cout << " Z " << Z[0].value() << " " << " " << Z[1].value() << " " << Z[2].value() << std::endl;
+      std::cout << " Z " << Z[0].value() << " " << " " << Z[1].value() << " " << Z[2].value() << std::endl;
 //      std::cout << " Z_0 " << Z_0[0].value() << " " << " " << Z_0[1].value() << " " << Z_0[2].value() << std::endl;
 
-
+      //calculate D_psi value, the gradient of the target plane
       FieldVector<adouble, Solver_config::dim> D_psi_value;
       rhs.D_psi(z, D_psi_value);
 
-        FieldVector<adouble, 3> lightvector = X;
-        lightvector /= u_value;
+      cout << " vector of boundary " << D_psi_value[0].value() << " " << D_psi_value[1].value() << endl;
+      assert(fabs(D_psi_value[0]) <1e-14 );
+      assert(fabs(D_psi_value[1]) <1e-14 );
 
-//        std::cout << " refl " << lightvector[0].value() << " " << lightvector[1].value() << " " << lightvector[2].value() << std::endl;
-//        std::cout << "t " << t  << std::endl;
-
-
-        adouble b_tilde_value = (gradu * gradu) + sqr(u_value) - sqr((gradu * x_value));
-        adouble a_tile_value_check = (gradu * gradu);
-        a_tile_value_check -= (u_value-(gradu * x_value))*(u_value-(gradu * x_value));
-//        std::cout << "check a tilde = " << a_tilde_value.value() << " b tilde =" << b_tilde_value.value() << std::endl;
-        FieldVector<adouble, 3> Y = X;
-        Y *= a_tilde_value/b_tilde_value;
-        Y.axpy(-2*u_value/b_tilde_value, grad_hat);
-//        std::cout << "direction after refl " << Y[0].value() << " " << Y[1].value() << " " << Y[2].value() << std::endl;
+      FieldVector<adouble, 3> lightvector = X;
+      lightvector /= u_value;
+      lightvector *= -1;
+      lightvector += Z_0;
+      std::cout << " refl " << lightvector[0].value() << " " << lightvector[1].value() << " " << lightvector[2].value() << std::endl;
+      //        std::cout << "t " << t  << std::endl;
 
 
-        lightvector *= -1;
-        lightvector += Z;
-        FieldVector<adouble, 3> D_Psi_value;
-        D_Psi_value[0] = D_psi_value[0]; D_Psi_value[1] = D_psi_value[1];
-        D_Psi_value[2] = -1;
+        //calculated direction after reflection (Y)
+      FieldVector<adouble, 3> Y = X;
+      Y *= a_tilde_value/b_tilde_value;
+      Y.axpy(-2*u_value/b_tilde_value, grad_hat);
+      std::cout << "direction after refl " << Y[0].value() << " " << Y[1].value() << " " << Y[2].value() << std::endl;
 
-//        std::cout << "check if tangential " <<  (D_Psi_value * lightvector).value()
-//                  << "vector of light " << lightvector[0].value() << " " << lightvector[1].value() << " " << lightvector[2].value()
-//                  << " vector of boundary " << D_Psi_value[0].value() << " " << D_Psi_value[1].value() << " " << D_Psi_value[2].value()<< std::endl;
-        assert( (D_Psi_value * lightvector).value() > 0);
+      //direction of lightvector and Y have to be the same
+      assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[1].value()/Y[1].value()) < 1e-12);
+      assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[2].value()/Y[2].value()) < 1e-12);
 
+      FieldVector<adouble, 3> D_Psi_value;
+      D_Psi_value[0] = D_psi_value[0]; D_Psi_value[1] = D_psi_value[1];
+      D_Psi_value[2] = -1;
+
+//    std::cout << "check if tangential " <<  (D_Psi_value * lightvector).value()
+//              << "vector of light " << lightvector[0].value() << " " << lightvector[1].value() << " " << lightvector[2].value()
+//              << " vector of boundary " << D_Psi_value[0].value() << " " << D_Psi_value[1].value() << " " << D_Psi_value[2].value()<< std::endl;
+      //the normal of the target plane has to point away from the reflector
+      assert( (D_Psi_value * lightvector).value() > 0);
+
+      //calculate illumination at \Omega
       double f_value;
       rhs.f.evaluate(x_value, f_value);
+
+      int_f += f_value* quad[pt].weight() * integrationElement;
+
+      //calculate illumination at target plane
       adouble g_value;
       rhs.g.evaluate(z, g_value);
+
+//      cout << "f(X) " << f_value<< " maps to g(Z) " << g_value << std::endl;
 
       //write calculated distribution
       int width, height;
@@ -257,36 +347,64 @@ public:
       if (is_on_target)
         {
         assert (width < pixel_width && height < pixel_height);
-        target_distribution[height*pixel_width + width] = f_value*255;
+        target_distribution[height*pixel_width + width] = f_value/rhs.f.f_max()*255;
+//        cout << "wrote pixel " << width << " " << height << " to value " << f_value/rhs.f.f_max()*255 << endl;
         }
-//      cout << "wrote pixel " << width << " " << height << " to value " << f_value*255 << endl;
 
 
       FieldMatrix<adouble, dim, dim> uDH_pertubed = uDH;
-      uDH_pertubed.axpy(a_tilde_value*Solver_config::z_3/2.0/t/omega_value, N);
+      assert(fabs(Solver_config::z_3+3.0) < 1e-12);
+      uDH_pertubed.axpy(a_tilde_value*Solver_config::z_3/(2.0*t*omega_value), N);
       adouble uDH_pertubed_det = uDH_pertubed[0][0]* uDH_pertubed[1][1] -uDH_pertubed[1][0]*uDH_pertubed[0][1];
 
+//      std::cout << "uDHpertubed: " << uDH_pertubed << endl;
+
+
       adouble D_psi_norm = sqrt(sqr(D_Psi_value[0])+sqr(D_Psi_value[1])+sqr(D_Psi_value[2]));
+//      cout << "D psi = " << D_Psi_value[0] << "," << D_Psi_value[1]<< "," << D_Psi_value[2] << endl;
 
 //		cout << "x_value " << x_value << " a_tilde " << a_tilde_value.value() << " omega(x) " << omega(x_value) << " btilde " << b_tilde.value() << " g " << g_value.value() << std::endl;
-      adouble PDE_rhs = -a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde*omega_value*g_value);
+      adouble PDE_rhs = -a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde_value*omega_value*g_value);
       auto uTimesZ0 = Z_0;
       uTimesZ0 *= u_value;
       PDE_rhs *= (((uTimesZ0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value;
       PDE_rhs *= scaling_factor_adolc;
-      //      adouble PDE_rhs = scaling_factor_adolc*a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde*omega(x_value));
-//		cout<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value).value() << "/" << (4.0*b_tilde*omega(x_value)*g_value).value() << std::endl;
+      //      double PDE_rhs = scaling_factor_adolc*a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde*omega(x_value));
+//      cout<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value).value() << "/" << (4.0*b_tilde*omega_value*g_value).value() << std::endl;
+//      cout << "rhs *= " <<  ((u_value*((Z_0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value).value() <<
+//                    " = (" <<  u_value.value() << "*scalarProd"
+//                        << "/(" << (t*t).value() << "*" << D_psi_norm.value() << "*" << omega_value << ")" << endl;
+//      cout<<  "*scalarProd = " << ((Z_0-X)*D_Psi_value).value() << " = "<< (Z_0-X)[0].value()<<"," << ((Z_0-X)[1]).value() << "*"<< (D_Psi_value)[0].value()<<"," << ((D_Psi_value)[1]).value();
+//      cout << "scaling factor " << scaling_factor_adolc.value() << endl;
+//      cout << " atilde " << a_tilde_value << " f " << f_value << endl;
+//      cout<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value) << "/" << (4.0*b_tilde*omega_value*g_value) << std::endl;
+//      cout << "rhs *= " <<  ((u_value*((Z_0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value) <<
+//                    " = (" <<  u_value << "*scalarProd"
+//                        << "/(" << (t*t) << "*" << D_psi_norm << "*" << omega_value << ")" << endl;
+//      cout<<  "*scalarProd = " << ((Z_0-X)*D_Psi_value) << " = "<< (Z_0-X)[0]<<"," << ((Z_0-X)[1]) <<"," << ((Z_0-X)[2])<< "*"<< (D_Psi_value)[0]<<"," << ((D_Psi_value)[1])<<"," << ((D_Psi_value)[2]) <<endl;
+//      cout << "scaling factor " << scaling_factor_adolc << endl;
 
-      cout << "scaling factor " << scaling_factor_adolc.value() << endl;
+//      cout << "scaling factor " << scaling_factor_adolc.value() << endl;
 
       //calculate system for first test functions
+      std::cout << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
+
+      FieldMatrix<adouble, 3, 3> DT = finiteElementDT(localFiniteElementu, x_value, x.segment(0, size_u), geometry, jacobian);
+      adouble det_DT = DT[0][0]* DT[1][1] -DT[1][0]*DT[0][1]*DT[2][2];
+
+      adouble detDz = uDH_pertubed_det/(-a_tilde_value*a_tilde_value*a_tilde_value/(4.0*b_tilde_value*omega_value));
+      detDz /= ((((uTimesZ0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value);
+
+
+      std::cout << "estimated det " << det_DT.value() << " detDz " << detDz.value()<< " f/g " << f_value/g_value << endl;
+
 
       for (size_t j = 0; j < size_u; j++) // loop over test fcts
       {
         v_adolc(j) += (PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
 
-        std::cout << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
+//      std::cout << "det(u)-f=" << uDH_pertubed_det<<"-"<< PDE_rhs <<"="<< (uDH_pertubed_det-PDE_rhs)<< std::endl;
       }
 
       //calculate system for second tensor functions
@@ -296,6 +414,9 @@ public:
           for (int col = 0 ; col < dim; col++){
             v_adolc(localIndexSet.flat_local_index(j, row, col) ) += uDH[row][col]*referenceFunctionValuesHessian[j]
                                     * quad[pt].weight() * integrationElement;
+//            std::cout <<"mN(" << localIndexSet.flat_local_index(j, row, col)-size_u <<"," << localIndexSet.flat_local_index(4, row, col)-size_u << ")+= " << (referenceFunctionValuesHessian[4]*referenceFunctionValuesHessian[j])
+//                                              * quad[pt].weight() * integrationElement << std::endl;
+
             v_adolc(localIndexSet.flat_local_index(j, row, col)) -= Hessu[row][col] * referenceFunctionValuesHessian[j]
                                     * quad[pt].weight() * integrationElement;
            }
@@ -469,21 +590,20 @@ public:
         // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
         v_adolc(j) += penalty_weight * u_jump * referenceFunctionValues[j] * factor;
         // gradient penalty
-//        auto grad_times_normal = gradients[j] * normal;
-//        v_adolc(j) += penalty_weight_gradient * (grad_u_normaljump)
-//            * (grad_times_normal) * factor;
+        auto grad_times_normal = gradients[j] * normal;
+        v_adolc(j) += penalty_weight_gradient * (grad_u_normaljump)
+            * (grad_times_normal) * factor;
 
         //neighbour parts
         // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
         vn_adolc(j) += penalty_weight * u_jump * (-referenceFunctionValuesn[j])
             * factor;
         // gradient penalty
-//        grad_times_normal = gradientsn[j] * normal;
-//        vn_adolc(j) += penalty_weight_gradient * (grad_u_normaljump)
-//            * (-grad_times_normal) * factor;
+        grad_times_normal = gradientsn[j] * normal;
+        vn_adolc(j) += penalty_weight_gradient * (grad_u_normaljump)
+            * (-grad_times_normal) * factor;
       }
 
-      int col, row;
       for (size_t j = 0; j < size_u_DH; j++) // loop over test fcts
       {
         for (int row = 0; row < dim; row++)
@@ -656,6 +776,8 @@ public:
 
   static const int pixel_width = 256;
   static const int pixel_height = 256;
+public:
+  mutable double int_f;
 
   mutable double target_distribution[pixel_width*pixel_height];
 
