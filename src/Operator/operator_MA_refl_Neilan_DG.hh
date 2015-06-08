@@ -389,6 +389,8 @@ static FieldMatrix<adouble, 3, 3> finiteElementDT(const LocalFiniteElement& lfu,
       //calculate system for first test functions
       std::cout << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
 
+      FieldMatrix<adouble, 3, 3> DT = finiteDifferenceDT(localFiniteElementu, x_value, x.segment(0, size_u), geometry, jacobian);
+      adouble det_DT = (DT[0][0]* DT[1][1] -DT[1][0]*DT[0][1])*DT[2][2];
       FieldMatrix<adouble, 3, 3> DT = finiteElementDT(localFiniteElementu, x_value, x.segment(0, size_u), geometry, jacobian);
       adouble det_DT = DT[0][0]* DT[1][1] -DT[1][0]*DT[0][1]*DT[2][2];
 
