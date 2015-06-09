@@ -625,6 +625,9 @@ void Assembler::assemble_jacobian_integral(const LocalView& localView,
   for (int i = 0; i < x.size(); i++)
     out[i] = new double[x.size()];
   int ierr = jacobian(tag, x.size(), x.size(), x.data(), out);
+
+  assert(ierr >=0);
+
 //TODO any better way to initialise matrix?
   for (int i = 0; i < x.size(); i++)
   {
@@ -655,7 +658,10 @@ void Assembler::assemble_jacobian_integral_cell_term(const LocalView& localView,
   for (int i = 0; i < x_c.size(); i++)
     out[i] = new double[x_c.size()];
   int ierr = jacobian(tag, x_c.size(), x_c.size(), x_c.data(), out);
-//TODO any better way to initialise matrix?
+
+  assert(ierr >=0);
+
+  //TODO any better way to initialise matrix?
   for (int i = 0; i < x.size(); i++)
   {
     for (int j = 0; j < x.size(); j++)
@@ -703,6 +709,7 @@ void Assembler::assemble_inner_face_Jacobian(const Intersection& intersection,
   for (int i = 0; i < n_var; i++)
     out[i] = new double[n_var];
   int ierr = jacobian(tag, n_var, n_var, x_xn.data(), out);
+  assert(ierr >=0);
 //  std::cout <<"ierr " << ierr << std::endl;
 
 //TODO any better way to initialise matrix?
@@ -884,14 +891,14 @@ void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_
             if (is.neighbor()) {
                 // compute unique id for neighbor
               const GridViewType::IndexSet::IndexType idn =
-                        gridView.indexSet().index(*(is.outside()));
+                        gridView.indexSet().index(is.outside());
 
                 // Visit face if id is bigger
               bool visit_face = id > idn
                         || Solver_config::require_skeleton_two_sided;
                 // unique vist of intersection
               if (visit_face) {
-                auto neighbourElement = *(is.outside());
+                auto neighbourElement = is.outside();
 
                   // Bind the local neighbour FE basis view to the neighbour element
                   localViewn.bind(neighbourElement);
