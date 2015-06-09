@@ -42,8 +42,8 @@ private:
 
 
 
-	inline int Nelements() const;
-	inline int Nnodes() const;
+	int Nelements() const;
+	int Nnodes() const;
 
 public:
 	typedef Eigen::Matrix<Solver_config::RangeType, Eigen::Dynamic, 1> PointdataVectorType;
@@ -69,6 +69,9 @@ public:
 	template <class Function>
 	void write_points_reflector(std::ofstream &file, Function &f) const;
 
+	template <class Function>
+	void write_error(std::ofstream &file, Function &f, Function &exact_solution) const;
+
 	void write_pov_setting(std::ofstream &file) const;///write the setting for photons, camera and light source
 	void write_target_plane(std::ofstream &file) const;
 
@@ -87,6 +90,9 @@ public:
 
 	template <class Function>
 	void writeReflectorVTK(std::string filename, Function &f) const;
+
+  template <class Function>
+  void writeReflectorVTK(std::string filename, Function &f, Function& exact_solution) const;
 
 	void set_grid(Solver_config::GridView* grid){	this->grid = grid;}
 	void set_refinement(const int refinement){	this->refinement = refinement;}
@@ -144,6 +150,35 @@ void Plotter::writeReflectorVTK(std::string filename, Function &f) const {
 }
 
 
+template <class Function>
+void Plotter::writeReflectorVTK(std::string filename, Function &f, Function & exact_solution) const {
+  //--------------------------------------
+  if (refinement > 0)
+  {
+    // open file
+    check_file_extension(filename, ".vtu");
+    std::ofstream file(filename.c_str(), std::ios::out);
+    if (file.rdstate()) {
+      std::cerr << "Error: Couldn't open '" << filename << "'!\n";
+      return;
+    }
+
+    //write file
+
+    write_vtk_header(file);
+
+    write_error(file, f, exact_solution);
+    write_points_reflector(file, f);
+    write_cells(file);
+
+    write_vtk_end(file);
+  }
+  else
+  {
+    assert(false);
+  }
+}
+
 
 template <class Function>
 void Plotter::write_points_reflector(std::ofstream &file, Function &f) const{
@@ -182,6 +217,46 @@ void Plotter::write_points_reflector(std::ofstream &file, Function &f) const{
       }
     }
   file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
+}
+
+template <class Function>
+void Plotter::write_error(std::ofstream &file, Function &f, Function &exact_solution) const{
+  // write points
+    file << "\t\t\t<PointData Scalars=\"error\">\n"
+      << "\t\t\t\t<DataArray type=\"Float32\" Name=\"error\" NumberOfComponents=\"1\" format=\""
+      << "ascii" << "\">\n";
+
+    int vertex_no = 0;
+
+    //the reflector is given by X*rho, where rho is the PDE solution. X is calculated from the 2d mesh by adding the third coordiante omega(x)
+
+    if (refinement == 0)
+    {
+      // collect points
+/*
+      for (auto&& vertex: vertices(*grid)) {
+        auto x_2d = vertex.geometry().center();
+        auto rho = 1.0/solution_vertex[vertex_no];
+        file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  Local_Operator_MA_refl_Neilan::omega(x_2d)*rho << endl;
+        vertex_no++;
+      }
+*/
+      assert(false);
+    }else {   // save points in file after refinement
+      for (auto&& element: elements(*grid))
+      {
+        f.bind(element);
+        exact_solution.bind(element);
+        const auto geometry = element.geometry();
+        file << "\t\t\t\t\t";
+        for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
+          auto diff = f(it.coords())-exact_solution(it.coords());
+          file << diff << " ";
+        }
+        file << endl;
+      }
+    }
+  file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
 }
 
 template <class Function>

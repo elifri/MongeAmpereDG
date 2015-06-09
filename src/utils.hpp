@@ -117,7 +117,7 @@ void bilinear_interpolate(const Solver_config::SpaceType x, Solver_config::value
 struct Rectangular_mesh_interpolator{
 
   Rectangular_mesh_interpolator(const std::string &filename);
-  Solver_config::value_type evaluate (Solver_config::SpaceType2d& x);
+  Solver_config::value_type evaluate (const Solver_config::SpaceType2d& x);
 
   int n_x, n_y;
   double h_x, h_y;

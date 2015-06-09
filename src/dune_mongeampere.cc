@@ -55,7 +55,8 @@ try {
   Solver_config::LightinputImageName = "../inputData/lightin_lambertian.bmp";
   Solver_config::TargetImageName = "../inputData/one_small.bmp";
 #else
-  Solver_config::LightinputImageName = "../inputData/lightin_lambertian.png";
+//  Solver_config::LightinputImageName = "../inputData/lightin_lambertian.png";
+  Solver_config::LightinputImageName = "../inputData/one_small.png";
   Solver_config::TargetImageName = "../inputData/one_small.png";
 #endif
 

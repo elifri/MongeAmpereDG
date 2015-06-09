@@ -54,13 +54,13 @@ public:
     const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
     const auto& localFiniteElementuDH_entry = localView.tree().template child<1>().child(0).finiteElement();
 
-    typedef decltype(localFiniteElementu) ConstElementuRefType;
-    typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
+//    typedef decltype(localFiniteElementu) ConstElementuRefType;
+//    typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
 
     typedef decltype(localFiniteElementuDH_entry) ConstElementuDHRefType;
     typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
 
-    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
+//    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
     typedef typename Dune::FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
     typedef typename Dune::FieldMatrix<Solver_config::value_type, Element::dimension, Element::dimension> FEHessianType;
     typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType HessianType;
@@ -116,6 +116,9 @@ public:
 
               m(index_row, index_col)+= (referenceFunctionValuesHessian[i]*referenceFunctionValuesHessian[j])
                                             * quad[pt].weight() * integrationElement;
+//              if (i == 4)
+//                std::cout <<"m(" << index_row <<"," << index_col << ")+= " << (referenceFunctionValuesHessian[i]*referenceFunctionValuesHessian[j])
+//                                                * quad[pt].weight() * integrationElement << std::endl;
             }
 
         //derivative of D_h^2 u: mu

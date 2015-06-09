@@ -45,7 +45,7 @@ void check_file_extension(std::string &name, std::string extension) {
 
 
 //==========================================================================================
-
+inline
 int Plotter::Nelements() const
 {
 	int Nelements = grid->size(0);
@@ -54,6 +54,7 @@ int Plotter::Nelements() const
 	return Nelements;
 }
 
+inline
 int Plotter::Nnodes() const
 {
 	if (refinement == 0)
@@ -88,7 +89,7 @@ void Plotter::write_point_data(std::ofstream &file, const string name, Eigen::Ma
 
 void Plotter::write_points(std::ofstream &file) const{
 	// write points
-		file << "\t\t\t<Points>\n"
+		file << "\t\t\t<Point>\n"
 			<< "\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\""
 			<< "ascii" << "\">\n";
 
@@ -126,7 +127,7 @@ void Plotter::write_cells(std::ofstream &file) const
 			for (unsigned int i = 0; i < e.subEntities(Solver_config::dim); i++) //loop over corners
 				{file << "\t\t\t\t\t";
 //				for (const auto& vertex : geometry.corners()) {
-					file << indexSet.index(*(e.subEntity<Solver_config::dim>(i))) << " ";
+					file << indexSet.index(e.subEntity<Solver_config::dim>(i)) << " ";
 //				}
 			}
 		}
