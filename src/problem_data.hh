@@ -258,6 +258,12 @@ public:
         assert(fabs(integrator.assemble_integral(*this) - 1.0) < 1e-10);
     }
 
+    double f_max() const
+    {
+      assert(fabs(image_.max() - 1.0) < 1e-12);
+        return factor_;
+    }
+
     double integrate(const unsigned int n = Solver_config::startlevel+Solver_config::nonlinear_steps) const
     {
       Solver_config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, n);
