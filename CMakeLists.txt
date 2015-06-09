@@ -8,7 +8,7 @@ SET(CMAKE_BUILD_TYPE DEBUG)
 
 
 # Select flags.
-SET(CMAKE_CXX_FLAGS "-std=c++11 -Wall -fmax-errors=3  -ftemplate-backtrace-limit=0")
+SET(CMAKE_CXX_FLAGS "-std=c++11 -Wall -fmax-errors=3  -ftemplate-backtrace-limit=0 -fopenmp")
 SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
 SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 SET(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g")
