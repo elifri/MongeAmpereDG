@@ -206,6 +206,11 @@ public:
         const double fx = std::max( 0.0, std::min( (double) image_.width()-1,  (x[0] - lowerLeft_[0])/h_ - 0.5 ) );
         const double fy = std::max( 0.0, std::min( (double) image_.height()-1, (upperRight_[1] - x[1])/h_ - 0.5 ) );
 
+        if ( x[0] < lowerLeft_[0] || x[0] > upperRight_[0])
+          return 0.0001*factor_ * image_._cubic_atXY(fx,fy);
+        if ( x[1] < lowerLeft_[1] || x[1] > upperRight_[1])
+          return 0.0001*factor_ * image_._cubic_atXY(fx,fy);
+
         return factor_ * image_._cubic_atXY(fx,fy);
     }
 
@@ -215,7 +220,14 @@ public:
         const double fx = std::max( 0.0, std::min( (double) image_.width()-1,  (x[0] - lowerLeft_[0])/h_ - 0.5 ) );
         const double fy = std::max( 0.0, std::min( (double) image_.height()-1, (upperRight_[1] - x[1])/h_ - 0.5 ) );
 
-        u = factor_ * image_._cubic_atXY(fx,fy);
+        if ( x[0] < lowerLeft_[0] || x[0] > upperRight_[0])
+          u = 0.0001*factor_ * image_._cubic_atXY(fx,fy);
+        else{
+          if ( x[1] < lowerLeft_[1] || x[1] > upperRight_[1])
+            u = 0.0001*factor_ * image_._cubic_atXY(fx,fy);
+          else
+            u = factor_ * image_._cubic_atXY(fx,fy);
+        }
     }
 
     void evaluate (const FieldVector<adouble, Solver_config::dim> &x, adouble &u) const
@@ -223,7 +235,14 @@ public:
         const adouble fx = fmax( 0.0, fmin( (double) image_.width()-1,  (x[0] - lowerLeft_[0])/h_ - 0.5 ) );
         const adouble fy = fmax( 0.0, fmin( (double) image_.height()-1, (upperRight_[1] - x[1])/h_ - 0.5 ) );
 
-        u = factor_ * interpolate_cubic_atXY(image_, fx, fy);
+        if ( x[0] < lowerLeft_[0] || x[0] > upperRight_[0])
+          u = 0.0001*factor_ * image_._cubic_atXY(fx.value(),fy.value());
+        else{
+          if ( x[1] < lowerLeft_[1] || x[1] > upperRight_[1])
+            u = 0.0001*factor_ * image_._cubic_atXY(fx.value(),fy.value());
+          else
+            u = factor_ * image_._cubic_atXY(fx.value(),fy.value());
+        }
     }
 
     void normalize (
