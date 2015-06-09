@@ -207,9 +207,9 @@ public:
         const double fy = std::max( 0.0, std::min( (double) image_.height()-1, (upperRight_[1] - x[1])/h_ - 0.5 ) );
 
         if ( x[0] < lowerLeft_[0] || x[0] > upperRight_[0])
-          return 0.0001*factor_ * image_._cubic_atXY(fx,fy);
+          return 0.01*factor_ * image_._cubic_atXY(fx,fy);
         if ( x[1] < lowerLeft_[1] || x[1] > upperRight_[1])
-          return 0.0001*factor_ * image_._cubic_atXY(fx,fy);
+          return 0.01*factor_ * image_._cubic_atXY(fx,fy);
 
         return factor_ * image_._cubic_atXY(fx,fy);
     }
@@ -221,10 +221,10 @@ public:
         const double fy = std::max( 0.0, std::min( (double) image_.height()-1, (upperRight_[1] - x[1])/h_ - 0.5 ) );
 
         if ( x[0] < lowerLeft_[0] || x[0] > upperRight_[0])
-          u = 0.0001*factor_ * image_._cubic_atXY(fx,fy);
+          u = 0.01*factor_ * image_._cubic_atXY(fx,fy);
         else{
           if ( x[1] < lowerLeft_[1] || x[1] > upperRight_[1])
-            u = 0.0001*factor_ * image_._cubic_atXY(fx,fy);
+            u = 0.01*factor_ * image_._cubic_atXY(fx,fy);
           else
             u = factor_ * image_._cubic_atXY(fx,fy);
         }
@@ -236,10 +236,10 @@ public:
         const adouble fy = fmax( 0.0, fmin( (double) image_.height()-1, (upperRight_[1] - x[1])/h_ - 0.5 ) );
 
         if ( x[0] < lowerLeft_[0] || x[0] > upperRight_[0])
-          u = 0.0001*factor_ * image_._cubic_atXY(fx.value(),fy.value());
+          u = 0.01*factor_ * image_._cubic_atXY(fx.value(),fy.value());
         else{
           if ( x[1] < lowerLeft_[1] || x[1] > upperRight_[1])
-            u = 0.0001*factor_ * image_._cubic_atXY(fx.value(),fy.value());
+            u = 0.01*factor_ * image_._cubic_atXY(fx.value(),fy.value());
           else
             u = factor_ * image_._cubic_atXY(fx.value(),fy.value());
         }
