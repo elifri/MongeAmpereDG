@@ -94,7 +94,7 @@ void MA_solver::plot(std::string filename) const
 }
 
 
-void MA_solver::plot_with_mirror(std::string name) const
+void MA_solver::plot_with_mirror(std::string name)
 {
 
   const int nDH = Solver_config::dim*Solver_config::dim;
@@ -109,7 +109,7 @@ void MA_solver::plot_with_mirror(std::string name) const
    DerivativeVectorType derivativeSolution(uDHBasis->indexSet().size());
 
    //extract dofs
-   for (size_t i=0; i<derivativeSolution.size(); i++)
+   for (int i=0; i<derivativeSolution.size(); i++)
      for (int j=0; j< nDH; j++)
      {
        if (j == 2) continue;
@@ -134,13 +134,15 @@ void MA_solver::plot_with_mirror(std::string name) const
    std::string reflname(plotter.get_output_directory());
    reflname += "/"+ plotter.get_output_prefix()+ name + "reflector"+NumberToString(iterations) + ".vtu";
 
-   plotter.writeReflectorVTK(reflname, localnumericalSolution);
+   plotter.writeReflectorVTK(reflname, localnumericalSolution, *exact_solution_projection);
 
    std::string reflPovname(plotter.get_output_directory());
    reflPovname += "/"+ plotter.get_output_prefix() + name + "reflector" + NumberToString(iterations) + ".pov";
 
+   plotter.set_refinement(4);
     plotter.writeReflectorPOV(reflPovname, localnumericalSolution);
 
+    plotter.set_refinement(2);
 
     std::cout << "plot written into " << fname  << " " << reflname << " and " << reflPovname << std::endl;
 }
@@ -186,7 +188,7 @@ void MA_solver::create_initial_guess()
 
 //  vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
 
-//  project([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
+//    project_with_discrete_Hessian([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
 //  solution = VectorType::Zero(get_n_dofs());
 //  solution = exactsol_projection;
 
@@ -208,6 +210,8 @@ void MA_solver::create_initial_guess()
   assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
 
   project([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, solution);
+//  TODO with discrete hessian not working
+//    project_with_discrete_Hessian([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, solution);
 
 }
 
@@ -250,20 +254,20 @@ const typename MA_solver::VectorType& MA_solver::solve()
   //calculate initial solution
   for (int i = 0; i < Solver_config::nonlinear_steps; i++)
   {
-//    solve_nonlinear_system();
-    const int maxits = 200;
-    for (int it = 0; it < maxits; it++)
-    {
-      bool performedStep = solve_nonlinear_step(op);
-      if (!performedStep) break;
-      solution_u = solution.segment(0, get_n_dofs_u());
-      //build gridviewfunction
-      solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));
-      solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
-      gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
-      plot_with_mirror("numericalSolution");
+    solve_nonlinear_system();
+//    const int maxits = 5;
+//    for (int it = 0; it < maxits; it++)
+//    {
+//      bool performedStep = solve_nonlinear_step(op);
+//      if (!performedStep) break;
+//      solution_u = solution.segment(0, get_n_dofs_u());
+//      //build gridviewfunction
+//      solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));
+//      solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
+//      gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
+//      plot_with_mirror("numericalSolution");
       iterations++;
-    }
+//    }
 
 //    VectorType right_sol;
 //    project(General_functions::get_easy_convex_polynomial_plus_one_callback(), right_sol);
@@ -476,10 +480,8 @@ void MA_solver::solve_nonlinear_system()
   Solver_config::VectorType f;
   op.evaluate(solution, f);
 
-  Dirichletdata exact_sol;
-
 //  std::cout << "initial f " << f.transpose() << std::endl;
-  std::cout << "initial f(x) norm " << f.norm() << endl;
+  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
 //  std::cout << "initial l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
   //copy guess vor scaling factor into exact solution
   exactsol(exactsol.size()-1) = solution(solution.size()-1);
@@ -493,7 +495,7 @@ void MA_solver::solve_nonlinear_system()
   DogLeg_optionstype opts;
   opts.iradius = 1;
   for (int i=0; i < 3; i++) opts.stopcriteria[i] = 1e-8;
-  opts.maxsteps = 100;
+  opts.maxsteps = 50;
   opts. silentmode = false;
   opts.exportJacobianIfSingular= true;
   opts.exportFDJacobianifFalse = true;
@@ -520,7 +522,7 @@ void MA_solver::solve_nonlinear_system()
 
   op.evaluate(solution, f);
 
-  std::cout << "f(x) norm " << f.norm() << endl;
+  std::cout << "f_u norm " << f.segment(0,get_n_dofs_u()).norm() << " f(x) norm " << f.norm() << endl;
 //  std::cout << "l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
 
 //  std::cout << "x " << solution.transpose() << endl;

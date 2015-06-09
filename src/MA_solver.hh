@@ -186,7 +186,7 @@ public:
 	///write the current numerical solution to vtk file
 	void plot(std::string filename) const;
 
-	void plot_with_mirror(std::string name) const;
+	void plot_with_mirror(std::string name);
 
 
 private:
@@ -288,10 +288,8 @@ void interpolateSecondDerivative(const B& basis, C& coeff, F&& f, BV&& bitVector
   using Element = typename GridView::template Codim<0>::Entity;
 
   using FiniteElement = typename B::LocalView::Tree::FiniteElement;
-  using FunctionBaseClass = typename Dune::LocalFiniteElementFunctionBase<FiniteElement>::type;
 
   using LocalBasisRange = typename FiniteElement::Traits::LocalBasisType::Traits::RangeType;
-  using LocalDomain = typename Element::Geometry::LocalCoordinate;
 
   using GlobalDomain = typename Element::Geometry::GlobalCoordinate;
 
@@ -302,7 +300,6 @@ void interpolateSecondDerivative(const B& basis, C& coeff, F&& f, BV&& bitVector
 
   auto&& gridView = basis.gridView();
 
-  using FunctionFromCallable = typename Dune::Functions::FunctionFromCallable<LocalBasisRange(LocalDomain), decltype(f), FunctionBaseClass>;
 
   auto basisIndexSet = basis.indexSet();
   coeff.resize(basisIndexSet.size());
