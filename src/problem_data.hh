@@ -181,8 +181,8 @@ public:
 
     ImageFunction (
         const std::string filename,
-        const Solver_config::SpaceType2d lowerLeft = {-0.5,-0.5},
-        const Solver_config::SpaceType2d upperRight = {0.5,0.5}
+        const Solver_config::SpaceType2d lowerLeft,
+        const Solver_config::SpaceType2d upperRight
     ) : image_(filename.c_str()),
         factor_(1.0)
     {
@@ -246,7 +246,7 @@ public:
     }
 
     void normalize (
-        const unsigned int n = Solver_config::startlevel+Solver_config::nonlinear_steps
+        const unsigned int n = Solver_config::startlevel+Solver_config::nonlinear_steps+1
     ) {
         factor_ = 1.0;
 
@@ -261,10 +261,11 @@ public:
     double f_max() const
     {
       assert(fabs(image_.max() - 1.0) < 1e-12);
-        return factor_;
+      return factor_;
     }
 
-    double integrate(const unsigned int n = Solver_config::startlevel+Solver_config::nonlinear_steps) const
+
+    double integrate(const unsigned int n = Solver_config::startlevel+Solver_config::nonlinear_steps+1) const
     {
       Solver_config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, n);
       Integrator<Solver_config::GridType> integrator(unitcube_quadrature.grid_ptr());
@@ -346,8 +347,9 @@ public:
                             g(inputTargetfile, Solver_config::lowerLeftTarget, Solver_config::upperRightTarget),
                             solution_u_old(&solUOld), gradient_u_old(&gradUOld)
   {
-//    f.normalize();
-//    g.normalize();
+//a normalisation seems to destroy the solution proces ...
+    f.normalize();
+    g.normalize();
   }
 
   static double phi_initial(const Solver_config::SpaceType& x){
@@ -360,6 +362,7 @@ public:
       return Solver_config::upperRightTarget[1];
     if(is_close(x[0], Solver_config::upperRight[1]))
       return Solver_config::lowerLeftTarget[1];
+    return 1/0.;
   }
 
   ///define implicit the target plane
@@ -378,24 +381,32 @@ public:
   template <class valueType>
   void D_psi(const FieldVector<valueType, 2 >& z, FieldVector<valueType, 2 >& psi_value) const
   {
-    valueType x_min;
-    x_min = fmin(z[0]-Solver_config::lowerLeftTarget[0], Solver_config::upperRightTarget[0] - z[0]);
-//    std::cout << "x min " << x_min.value() << " = " << (z[0]-Solver_config::lowerLeftTarget[0]).value() << "," << (Solver_config::upperRightTarget[0] - z[0]).value() << " ";
-    valueType x_der;
-    adouble zero = 0;
-    adouble one = 1;
-    condassign(x_der, x_min, zero, one);
-
-    valueType y_min = fmin(z[1]-Solver_config::lowerLeftTarget[1], Solver_config::upperRightTarget[1] - z[1]);
-//    std::cout << "y min " << y_min.value() << std::endl;
-
-    valueType y_der;
-    condassign(y_der, y_min, zero, one);
+//    valueType x_min;
+//    x_min = fmin(z[0]-Solver_config::lowerLeftTarget[0], Solver_config::upperRightTarget[0] - z[0]);
+//    //if x-min is positive, the x-value of z is inside , otherwise x_min gives the negative of the distance to the nearest boundary point in x-direction
 //
-//    std::cout << "x_der" << x_der << " "<< "y_der" << y_der << std::endl;
+//    //    std::cout << "x min " << x_min.value() << " = " << (z[0]-Solver_config::lowerLeftTarget[0]).value() << "," << (Solver_config::upperRightTarget[0] - z[0]).value() << " ";
+//    valueType x_der;
+//    adouble zero = 0;
+//    adouble one = 1;
+////    x_der = x_min > 0 ? zero.value() : one.value();
+//    condassign(x_der, x_min, zero, one);
+//
+//    valueType y_min = fmin(z[1]-Solver_config::lowerLeftTarget[1], Solver_config::upperRightTarget[1] - z[1]);
+//    //if y-min is positive, the y-value of z is inside , otherwise y_min gives the negative of the distance to the nearest boundary point in y-direction
+////    std::cout << "y min " << y_min.value() << std::endl;
+//
+//    valueType y_der;
+////    x_der = y_min > 0 ? zero.value() : one.value();
+//    condassign(y_der, y_min, zero, one);
+////
+////    std::cout << "x_der" << x_der << " "<< "y_der" << y_der << std::endl;
+//
+//    psi_value[0] = x_der;
+//    psi_value[1] = y_der;
 
-    psi_value[0] = x_der;
-    psi_value[1] = y_der;
+    psi_value[0] = 0;
+    psi_value[1] = 0;
 
 //    condassign(psi_value[0], y_min- x_min, x_der, zero);
 //    condassign(psi_value[1], y_min- x_min, zero, y_der);
@@ -426,13 +437,14 @@ public:
 
     phi(T(x, u, z_0, z_3),
         normal, phi_value);
+    return phi_value;
   }
 
   const ImageFunction& get_input_distribution() const {return f;}
   const ImageFunction& get_target_distribution() const {return g;}
 
 private:
-  ImageFunction g, f;
+  ImageFunction f, g;
 
   mutable Function_ptr* solution_u_old;
   mutable GradFunction_ptr* gradient_u_old;
