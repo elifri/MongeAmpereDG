@@ -75,6 +75,15 @@ public:
         uDHLocalIndexSet_.unbind();
     }
 
+    //! Return number possible values for next position in multi index
+    size_type size(std::size_t prefix) const {
+      if (prefix == 1)
+        return nDH * uDHLocalIndexSet_.size();
+      if (prefix == 0)
+        return uLocalIndexSet_.size();
+        assert(false);
+    }
+
     size_type size() const {
         return nDH * uDHLocalIndexSet_.size() + uLocalIndexSet_.size();
     }
@@ -110,13 +119,17 @@ public:
     size_type flat_index(size_type localIndex) const
     {
 //      std::cout << "local " << localIndex << " ";
-      auto mwi = index(localIndex);
+//      auto mwi = index(localIndex);
 //      std::cout << "mwi " << mwi[0] << " " << mwi[1] << " ";
 //      std::cout << "global " << flat_index(mwi) << std::endl;
 
         return flat_index(index(localIndex));
     }
 
+
+    const typename LagrangeDGBasis<GV, deg>::IndexSet::LocalIndexSet& uLocalIndexSet() const{
+      return uLocalIndexSet_;
+    }
 
     /** \brief Return the local view that we are attached to
      */
