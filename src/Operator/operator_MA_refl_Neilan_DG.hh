@@ -40,7 +40,7 @@ public:
 
 
   Local_Operator_MA_refl_Neilan(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld,
-                                Dirichletdata::Function_ptr &exactSolU):
+      std::shared_ptr<Rectangular_mesh_interpolator> &exactSolU):
     rhs(solUOld, gradUOld),
     bc(exactSolU){
 
@@ -801,7 +801,7 @@ static FieldMatrix<adouble, 3, 3> finiteDifferenceDZ_0(const LocalFiniteElement&
       auto phi_value = rhs.phi(element, quadPos, x_value, normal, Solver_config::z_3);
       auto phi_value_initial = rhs.phi_initial(x_value);
       double g_value;
-      bc.evaluate_exact_sol(element, quadPos, g_value);
+      bc.evaluate_exact_sol(x_value, g_value);
 
 
       adouble a_tilde_value = a_tilde(u_value, gradu, x_value);
@@ -841,7 +841,7 @@ static FieldMatrix<adouble, 3, 3> finiteDifferenceDZ_0(const LocalFiniteElement&
   const RightHandSideReflector& get_right_handside() const {return rhs;}
 
   RightHandSideReflector rhs;
-  Dirichletdata bc;
+  Dirichletdata<std::shared_ptr<Rectangular_mesh_interpolator> > bc;
 
   static const int pixel_width = 256;
   static const int pixel_height = 256;

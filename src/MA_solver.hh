@@ -110,7 +110,7 @@ public:
 public:
 	struct Operator {
 		Operator():solver_ptr(){}
-		Operator(const MA_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old, solver.exact_solution){}
+		Operator(MA_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old, solver.exact_solution){}
 
 		void evaluate(const VectorType& x, VectorType& v) const
 		{
@@ -131,7 +131,7 @@ public:
 			solver_ptr->assemble_Jacobian_DG(lop, x,m);
 		}
 
-    const MA_solver* solver_ptr;
+    mutable MA_solver* solver_ptr;
 
 //		Local_Operator_MA_mixed_Neilan lop;
 		Local_Operator_MA_refl_Neilan lop;

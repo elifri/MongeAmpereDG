@@ -66,13 +66,16 @@ public:
 };
 
 // A class implementing the analytical dirichlet boundary
+template
+<class ExactFunctionType>
 class Dirichletdata//: public VirtualFunction<FieldVector<double, Solver_config::dim>, double>
 {
 public:
   typedef std::shared_ptr<Solver_config::DiscreteLocalGridFunction> Function_ptr;
 
   Dirichletdata(){}
-  Dirichletdata(Function_ptr &exactSolU) : exact_solution(&exactSolU) {}
+//  Dirichletdata(Function_ptr &exactSolU) : exact_solution(&exactSolU) {}
+  Dirichletdata(ExactFunctionType &exactSolU) : exact_solution(&exactSolU) {}
 
 	void evaluate(const Solver_config::SpaceType& in, Solver_config::value_type& out){
 		switch (Solver_config::problem)
@@ -128,16 +131,14 @@ public:
 		}
 	}
 
-	template<class Element>
-	void evaluate_exact_sol(const Element element, const Solver_config::SpaceType& in, Solver_config::value_type& out) const
+	void evaluate_exact_sol(const Solver_config::SpaceType& x, Solver_config::value_type& out) const
 	{
 	  assert(exact_solution != NULL);
-	  (*exact_solution)->bind(element);
-	  out = (**exact_solution)(in);
+	  out = (*exact_solution)->evaluate_inverse(x);
 	}
 
 private:
-  mutable Function_ptr* exact_solution;
+  mutable ExactFunctionType* exact_solution;
 
   friend Local_Operator_MA_refl_Neilan;
 };
