@@ -101,10 +101,13 @@ double MA_solver::calculate_L2_error(const MA_function_type &f) const
 }
 */
 
-void MA_solver::plot(std::string filename) const
+void MA_solver::plot(std::string name) const
 {
   const int nDH = Solver_config::dim*Solver_config::dim;
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
+
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,solution_u);
+  auto localnumericalSolution = localFunction(numericalSolution);
 
    //extract hessian (3 entries (because symmetry))
    typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
@@ -123,10 +126,14 @@ void MA_solver::plot(std::string filename) const
    Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
    auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
 
+
+   std::string fname(plotter.get_output_directory());
+   fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
+
    SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
-   vtkWriter.addVertexData(*solution_u_old, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
+   vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
    vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
-   vtkWriter.write(filename);
+   vtkWriter.write(fname);
 }
 
 
