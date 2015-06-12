@@ -112,13 +112,21 @@ public:
 		Operator():solver_ptr(){}
 		Operator(MA_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old, solver.exact_solution){}
 
-		void evaluate(const VectorType& x, VectorType& v) const
+		void evaluate(const VectorType& x, VectorType& v, const VectorType& x_old, const bool new_solution=true) const
 		{
-			assert(solver_ptr != NULL);
+
+		  if (new_solution)
+      {
+		    solver_ptr->update_solution(x_old);
+//		    solver_ptr->iterations++;
+//		    solver_ptr->plot_with_mirror("intermediateStep");
+      }
+
+		  assert(solver_ptr != NULL);
 			igpm::processtimer timer;
 			timer.start();
 			solver_ptr->assemble_DG(lop, x,v); timer.stop();
-//			std::cout << "needed " << timer << " seconds for function evaluation" << std::endl;
+
 		}
 		void Jacobian(const VectorType& x, MatrixType& m) const
 		{
@@ -265,8 +273,11 @@ private:
 	Assembler assembler; ///handles all (integral) assembly processes
 	Plotter plotter;
 
-	VectorType solution; /// stores the current solution vector
-	VectorType exactsol; /// if exact solution is known, stores a L2 projection to the current grid
+	mutable VectorType solution; /// stores the current solution vector
+	mutable VectorType solution_u;
+
+	mutable VectorType exactsol; /// if exact solution is known, stores a L2 projection to the current grid
+	mutable VectorType exactsol_u;
 
 	mutable shared_ptr<DiscreteGridFunction> solution_u_old_global;
 	mutable shared_ptr<DiscreteLocalGridFunction> solution_u_old;
@@ -280,9 +291,11 @@ private:
   int maxSteps_;
 
 	int count_refined; ///counts how often the original grid was refined
-	int iterations;
+	mutable int iterations;
 
 	double G;
+
+	friend Operator;
 
 //
 //	friend Plotter;

@@ -501,7 +501,7 @@ void MA_solver::solve_nonlinear_system()
 //  std::cout << "initial guess "<< solution.transpose() << std::endl;
 
   Solver_config::VectorType f;
-  op.evaluate(solution, f);
+  op.evaluate(solution, f, false);
 
 //  std::cout << "initial f " << f.transpose() << std::endl;
   std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
@@ -543,7 +543,7 @@ void MA_solver::solve_nonlinear_system()
 
 #endif
 
-  op.evaluate(solution, f);
+  op.evaluate(solution, f, false);
 
   std::cout << "f_u norm " << f.segment(0,get_n_dofs_u()).norm() << " f(x) norm " << f.norm() << endl;
 //  std::cout << "l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
@@ -558,9 +558,9 @@ bool MA_solver::solve_nonlinear_step(const MA_solver::Operator &op)
   Solver_config::VectorType f;
 
 
-  op.evaluate(solution, f);
+  op.evaluate(solution, f, false);
   std::cout << "initial f(x) norm " << f.norm() << endl;
-  std::cout << "initial f: " << f.transpose() << endl;
+//  std::cout << "initial f: " << f.transpose() << endl;
 
   // /////////////////////////
   // Compute solution

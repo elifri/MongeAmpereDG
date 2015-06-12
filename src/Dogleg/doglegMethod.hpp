@@ -115,8 +115,8 @@ void make_FD_Jacobian(
 	for (int j = 0; j < n; j++)
 	{
 		Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(n, j);
-		f.evaluate(x-h*unit_j, f_minus);
-		f.evaluate(x+h*unit_j, f_plus);
+		f.evaluate(x-h*unit_j, f_minus, x-h*unit_j, false);
+		f.evaluate(x+h*unit_j, f_plus, x+h*unit_j, false);
 
 		Eigen::VectorXd estimated_derivative = (f_plus - f_minus)/2./h;
 
@@ -161,7 +161,7 @@ int doglegMethod (
     double dL = 0;
     double nh = 0;
 
-    functor.evaluate(x,f);
+    functor.evaluate(x,f,x, false);
     functor.derivative(x,J);
     if (opts.check_Jacobian)	checkJacobian(functor, x, opts.exportFDJacobianifFalse);
 
@@ -354,7 +354,7 @@ int doglegMethod (
 
             // new function evaluation
             const Eigen::VectorXd xnew(x + h);
-            functor.evaluate(xnew,fn);
+            functor.evaluate(xnew,fn,x);
 
             const double Fn = fn.squaredNorm() / 2.0;
             const double dF = F - Fn;
