@@ -10,12 +10,48 @@
 
 #include "MA_solver.hh"
 
+#include <boost/program_options.hpp>
+namespace po = boost::program_options;
+
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk/common.hh>
 
 
 #include "MethodEllipsoids/init_with_ellipsoid_method.hpp"
+
+#include "utils.hpp"
+
+void MA_solver::read_configfile(std::string &configFile)
+{
+  po::options_description config("Configuration of the MA FE solver");
+  config.add_options()
+//        ("FE.degree",  po::value<int>(&Solver_config::lowerLeft[0]), "")
+//        ("FE.degreeHessian",  po::value<int>(&Solver_config::upperRight[0]), "")
+        ("input.targetImageName",     po::value<string>(&Solver_config::TargetImageName), "")
+//        ("solver.startlevel",  po::value<int>(&Solver_config::startlevel), "")
+        ("solver.nonlinearSteps",  po::value<int>(&Solver_config::nonlinear_steps), "")
+        ("solver.maxSteps",     po::value<int>(&maxSteps_), "")
+        ("solver.sigma",     po::value<double>(&Solver_config::sigma), "")
+  ;
+
+  // open config file for the image
+  ifstream ifs(configFile.c_str());
+  if (!ifs)
+  {
+    if (configFile=="")
+      cerr << "\nError: Path to a config file is missing!\n";
+    else
+      cerr << "\nError: Can not open config file: " << configFile << "\n";
+    exit(1);
+  }
+  else
+  {
+    po::variables_map vm;
+    po::store(po::parse_config_file(ifs, config), vm);
+    notify(vm);
+  }
+}
 
 
 /*

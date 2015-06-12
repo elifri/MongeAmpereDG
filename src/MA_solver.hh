@@ -68,17 +68,22 @@ public:
 	typedef typename Solver_config::DiscreteLocalGridFunction DiscreteLocalGridFunction;
   typedef typename Solver_config::DiscreteLocalGradientGridFunction DiscreteLocalGradientGridFunction;
 
-	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView) :
+	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, std::string& configFile) :
 			initialised(true),
 			grid_ptr(grid), gridView_ptr(&gridView),
 			FEBasis(new FEBasisType(gridView)),
 		  uBasis(new FEuBasisType(gridView)), uDHBasis( new FEuDHBasisType(gridView)),
 			assembler(*FEBasis, true),
 			plotter(gridView),
-			solution_u_old(), gradient_u_old(),
-			count_refined(Solver_config::startlevel) {
+			solution_u_old(), gradient_u_old()
+	{
+	  read_configfile(configFile);
+
 	  plotter.set_output_directory("../plots");
 	  plotter.set_refinement(Solver_config::degree);
+
+	  count_refined = Solver_config::startlevel;
+
 	}
 
 /*
@@ -90,6 +95,13 @@ public:
 
 	//-----functions--------
 public:
+
+  /**
+   * init solver configuration from configfile
+   * @param configFile
+   */
+  void read_configfile(std::string &configFile);
+
 
 	int get_n_dofs() const{return FEBasis->indexSet().dimension() + 1;}
   int get_n_dofs_u() const{return FEBasis->indexSet().size({0});}
@@ -257,6 +269,7 @@ private:
 
   mutable shared_ptr<DiscreteGridFunction> exact_solution_global;
   mutable shared_ptr<DiscreteLocalGridFunction> exact_solution;
+  int maxSteps_;
 
 	int count_refined; ///counts how often the original grid was refined
 	int iterations;

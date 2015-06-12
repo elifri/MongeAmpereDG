@@ -53,8 +53,13 @@ std::ostream& operator <<(std::ostream &output, const ProblemType &p);
 
 struct Solver_config{
 
-	enum{ dim = 2, childdim = 4, degree = 2, degreeHessian = 1,
-		  nonlinear_steps = 2, startlevel = 2};
+  static std::string configFileMA_solver;
+  static std::string configFileEllipsoid;
+
+	enum{ dim = 2, childdim = 4, degree = 2, degreeHessian = 2};
+
+	static int startlevel;
+	static int nonlinear_steps;
 
 	typedef Eigen::VectorXd VectorType;
 	typedef Eigen::MatrixXd DenseMatrixType;
@@ -134,7 +139,7 @@ struct Solver_config{
 #ifdef SIPG
      // SIPG
     static constexpr double epsilon = -1.0;
-    static constexpr double sigma = 5;   // should be < 5 for stability reasons
+    static double sigma ;   // should be < 5 for stability reasons
     static constexpr double sigmaGrad = 5;   // should be < 5 for stability reasons
     static constexpr double beta = 2.0 - 0.5*dim;  // 2D => 1, 3D => 0.5
 #endif

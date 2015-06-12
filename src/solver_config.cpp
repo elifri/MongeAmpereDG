@@ -13,6 +13,9 @@
 using namespace Dune;
 using namespace std;
 
+std::string Solver_config::configFileMA_solver = "../inputData/MA_solver.ini";
+std::string Solver_config::configFileEllipsoid = "../inputData/ellipsoids.ini";
+
 ProblemType Solver_config::problem = MA_SMOOTH;
 Solver_config::UnitCubeType::SpaceType Solver_config::lowerLeft = {0,0};
 Solver_config::UnitCubeType::SpaceType Solver_config::upperRight = {1,1};
@@ -23,6 +26,11 @@ double Solver_config::z_3 = 0;
 
 std::string Solver_config::LightinputImageName = "../inputData/lightin_lambertian.bmp";
 std::string Solver_config::TargetImageName = "../inputData/one_small.bmp";
+
+int Solver_config::startlevel = 0;
+int Solver_config::nonlinear_steps = 1;
+
+double Solver_config::sigma = 5;
 
 std::ostream& operator <<(std::ostream &output, const ProblemType &p)
 {

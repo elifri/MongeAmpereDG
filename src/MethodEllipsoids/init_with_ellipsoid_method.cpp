@@ -34,14 +34,11 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
     Grid2d::PovRayOpts povRayOpts;
     double lightSourceIntensity;
 
-    po::options_description cmdline("Generic options");
-
     // Declare a group of options that will be
     // allowed both on command line and in
     // config file
     po::options_description config("Configuration for the method of ellipsoids of revolution");
     config.add_options()
-        ("input.imageName",    po::value<string>(&inputImageName),          "path to image")
         ("output.folder" ,        po::value<string>(&outputFolder),         "folder for the output data")
         ("ellipsoids.nDirectionsX", po::value<unsigned int>(&nDirectionsX), "number of directions in x direction")
         ("ellipsoids.nDirectionsY", po::value<unsigned int>(&nDirectionsY), "number of directions in y direction")
@@ -51,16 +48,6 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
 
     po::options_description configGeometry("Configuration of the geometry");
     configGeometry.add_options()
-//        ("geometry.reflector.xMin",  po::value<double>(&xMin), "")
-//        ("geometry.reflector.xMax",  po::value<double>(&xMax), "")
-//        ("geometry.reflector.yMin",  po::value<double>(&yMin), "")
-//        ("geometry.reflector.yMax",  po::value<double>(&yMax), "")
-//        ("geometry.target.xMin",     po::value<double>(&xMinOut), "")
-//        ("geometry.target.xMax",     po::value<double>(&xMaxOut), "")
-//        ("geometry.target.yMin",     po::value<double>(&yMinOut), "")
-//        ("geometry.target.yMax",     po::value<double>(&yMaxOut), "")
-//        ("geometry.target.z",        po::value<double>(&zOut),    "")
-        ("light.in.imageName",       po::value<string>(&lightInImageName), "path to image")
         ("povray.cameraAngle",       po::value<double>(&(povRayOpts.cameraAngle)),       "")
         ("povray.jitter",            po::value<bool>  (&(povRayOpts.jitter)),            "")
         ("povray.nPhotons",          po::value<unsigned int>(&(povRayOpts.nPhotons)),    "")
@@ -70,27 +57,7 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
         ("povray.lightSourceIntensity", po::value<double>(&lightSourceIntensity), "")
         ;
 
-    po::options_description cmdline_options;
-    cmdline_options.add(cmdline).add(config).add(configGeometry);
-
     po::variables_map vm;
-//    po::store(po::parse_command_line(argc, argv, cmdline_options), vm);
-//    notify(vm);
-
-    if (vm.count("help")) {
-        cout << cmdline << "\n";
-        exit(-1);
-    }
-
-    if (vm.count("help-all")) {
-        cout << cmdline_options << "\n";
-        exit(-1);
-    }
-
-    if (vm.count("version")) {
-        cout << cmdline << "\n";
-        exit(-1);
-    }
 
     {
         // open config file for the image
@@ -130,8 +97,9 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
         }
     }
 
+    inputImageName = Solver_config::TargetImageName;
+    lightInImageName = Solver_config::LightinputImageName;
     outputFolder_ = outputFolder;
-
 
     xMin = Solver_config::lowerLeft[0];
     xMax = Solver_config::upperRight[0];
