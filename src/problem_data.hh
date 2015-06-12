@@ -201,49 +201,54 @@ public:
         //normalise values to [0,1]
         image_ /= image_.max();
     }
+/*
 
     Solver_config::value_type evaluate (const Solver_config::DomainType &x) const
     {
         const double fx = std::max( 0.0, std::min( (double) image_.width()-1,  (x[0] - lowerLeft_[0])/h_ - 0.5 ) );
         const double fy = std::max( 0.0, std::min( (double) image_.height()-1, (upperRight_[1] - x[1])/h_ - 0.5 ) );
 
-        if ( x[0] < lowerLeft_[0] || x[0] > upperRight_[0])
-          return 0.01*factor_ * image_._cubic_atXY(fx,fy);
+        if ( x[0] < lowerLeft_[0]x[0] > upperRight_[0])
+        {
+          return outerFactor_*factor_ * image_._cubic_atXY(fx,fy);
+        }
         if ( x[1] < lowerLeft_[1] || x[1] > upperRight_[1])
-          return 0.01*factor_ * image_._cubic_atXY(fx,fy);
+          return outerFactor_*factor_ * image_._cubic_atXY(fx,fy);
 
         return factor_ * image_._cubic_atXY(fx,fy);
     }
+*/
 
 
     void evaluate (const Solver_config::DomainType &x, Solver_config::value_type &u) const
     {
-        const double fx = std::max( 0.0, std::min( (double) image_.width()-1,  (x[0] - lowerLeft_[0])/h_ - 0.5 ) );
-        const double fy = std::max( 0.0, std::min( (double) image_.height()-1, (upperRight_[1] - x[1])/h_ - 0.5 ) );
+        const double distance_x = std::min(x[0] -lowerLeft_[0], upperRight_[0]-x[0]);
+        const double distance_y = std::min(x[1] -lowerLeft_[1], upperRight_[1]-x[1]);
 
-        if ( x[0] < lowerLeft_[0] || x[0] > upperRight_[0])
-          u = 0.01*factor_ * image_._cubic_atXY(fx,fy);
-        else{
-          if ( x[1] < lowerLeft_[1] || x[1] > upperRight_[1])
-            u = 0.01*factor_ * image_._cubic_atXY(fx,fy);
-          else
-            u = factor_ * image_._cubic_atXY(fx,fy);
-        }
+        //if distance is positive, z is inside, otherwise distance gives the negative of the distance to the target boundary
+        double distance  = std::min(0.0, distance_x) + std::min(0.0, distance_y);
+        distance *= -1;
+        if (distance > 0)
+//          u = 1.0/(10.0+10*distance) * factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
+          u = 0.001*factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
+        else
+          u = factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
     }
 
     void evaluate (const FieldVector<adouble, Solver_config::dim> &x, adouble &u) const
     {
-        const adouble fx = fmax( 0.0, fmin( (double) image_.width()-1,  (x[0] - lowerLeft_[0])/h_ - 0.5 ) );
-        const adouble fy = fmax( 0.0, fmin( (double) image_.height()-1, (upperRight_[1] - x[1])/h_ - 0.5 ) );
+      const adouble distance_x = fmin(x[0] -lowerLeft_[0], upperRight_[0]-x[0]);
+      const adouble distance_y = fmin(x[1] -lowerLeft_[1], upperRight_[1]-x[1]);
 
-        if ( x[0] < lowerLeft_[0] || x[0] > upperRight_[0])
-          u = 0.01*factor_ * image_._cubic_atXY(fx.value(),fy.value());
-        else{
-          if ( x[1] < lowerLeft_[1] || x[1] > upperRight_[1])
-            u = 0.01*factor_ * image_._cubic_atXY(fx.value(),fy.value());
-          else
-            u = factor_ * image_._cubic_atXY(fx.value(),fy.value());
-        }
+      //if distance is positive, z is inside, otherwise distance gives the negative of the distance to the target boundary
+      adouble distance  = fmin(0.0, distance_x) + fmin(0.0, distance_y);
+      distance *= -1;
+
+      if (distance > 0)
+//        u = 1.0/(10.0+10*distance) * factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0]).value()/h_ - 0.5,(upperRight_[1] - x[1]).value()/h_ - 0.5);
+          u = 0.001*factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0]).value()/h_ - 0.5,(upperRight_[1] - x[1]).value()/h_ - 0.5);
+      else
+        u = factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0]).value()/h_ - 0.5,(upperRight_[1] - x[1]).value()/h_ - 0.5);
     }
 
     void normalize (
