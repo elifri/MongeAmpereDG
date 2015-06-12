@@ -518,7 +518,7 @@ void MA_solver::solve_nonlinear_system()
   DogLeg_optionstype opts;
   opts.iradius = 1;
   for (int i=0; i < 3; i++) opts.stopcriteria[i] = 1e-8;
-  opts.maxsteps = 50;
+  opts.maxsteps = maxSteps_;
   opts. silentmode = false;
   opts.exportJacobianIfSingular= true;
   opts.exportFDJacobianifFalse = true;
