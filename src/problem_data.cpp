@@ -64,14 +64,14 @@ void RightHandSideReflector::phi(const Solver_config::SpaceType2d& T, const Fiel
    }
    else
    {
-     Solver_config::value_type x_min = std::min(T[0]-Solver_config::lowerLeft[0], Solver_config::upperRight[0] - T[0]);
-     Solver_config::value_type y_min = std::min(T[1]-Solver_config::lowerLeft[1], Solver_config::upperRight[1] - T[1]);
+     Solver_config::value_type x_min = std::min(T[0]-Solver_config::lowerLeftTarget[0], Solver_config::upperRightTarget[0] - T[0]);
+     Solver_config::value_type y_min = std::min(T[1]-Solver_config::lowerLeftTarget[1], Solver_config::upperRightTarget[1] - T[1]);
 
      Solver_config::SpaceType2d T_proj = T;
      if (x_min < y_min)
-       T_proj[0] = T[0]-Solver_config::lowerLeft[0] < Solver_config::upperRight[0] - T[0] ?  T[0]-Solver_config::lowerLeft[0] : Solver_config::upperRight[0] - T[0];
+       T_proj[0] = T[0]-Solver_config::lowerLeftTarget[0] < Solver_config::upperRightTarget[0] - T[0] ?  Solver_config::lowerLeftTarget[0] : Solver_config::upperRightTarget[0];
      else
-       T_proj[1] = T[1]-Solver_config::lowerLeft[1] < Solver_config::upperRight[1] - T[1] ?  T[1]-Solver_config::lowerLeft[1] : Solver_config::upperRight[1] - T[1];
+       T_proj[1] = T[1]-Solver_config::lowerLeftTarget[1] < Solver_config::upperRightTarget[1] - T[1] ?  Solver_config::lowerLeftTarget[1] : Solver_config::upperRightTarget[1];
 
      phi = T_proj * normal;
    }
