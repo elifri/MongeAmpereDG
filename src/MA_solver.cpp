@@ -274,21 +274,21 @@ const typename MA_solver::VectorType& MA_solver::solve()
   std::cout << "f int = " << op.lop.get_right_handside().get_input_distribution().integrate()
                << " g int " << op.lop.get_right_handside().get_target_distribution().integrate() << " and scal factor = " << solution(solution.size()-1) << endl;
 
-  VectorType solution_u = solution.segment(0, get_n_dofs_u());
-  //build gridviewfunction
-  solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));
-  solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
-  gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
-
-  Integrator<GridType> integrator(grid_ptr);
-  G = integrator.assemble_integral_of_local_gridFunction(*solution_u_old);
-  assembler.set_G(G);
 
   plot_with_mirror("initialguess");
 
   //calculate initial solution
   for (int i = 0; i < Solver_config::nonlinear_steps; i++)
   {
+    update_solution(solution);
+
+    if (i == 0)
+    {
+      Integrator<GridType> integrator(grid_ptr);
+      G = integrator.assemble_integral_of_local_gridFunction(*solution_u_old);
+      assembler.set_G(G);
+    }
+
     solve_nonlinear_system();
 //    const int maxits = 5;
 //    for (int it = 0; it < maxits; it++)
@@ -313,14 +313,6 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //    std::cout << "error " << (right_sol.segment(0, get_n_dofs_u()) - solution_u).norm() << std::endl;
 
     adapt_solution();
-    solution_u = solution.segment(0, get_n_dofs_u());
-    exact_solution_u = exactsol.segment(0, get_n_dofs_u());
-    //build gridviewfunction
-    solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));
-    exact_solution_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,exact_solution_u));
-    solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
-    gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
-    exact_solution = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*exact_solution_global));
     project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
     exactsol_u = exactsol.segment(0, get_n_dofs_u());
 
@@ -328,6 +320,18 @@ const typename MA_solver::VectorType& MA_solver::solve()
   }
 
   return solution;
+}
+
+
+void MA_solver::update_solution(const Solver_config::VectorType& newSolution) const
+{
+  solution_u = solution.segment(0, get_n_dofs_u());
+  //build gridviewfunction
+  solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));
+  solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
+  gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
+
+  solution = newSolution;
 }
 
 void MA_solver::adapt_solution(const int level)

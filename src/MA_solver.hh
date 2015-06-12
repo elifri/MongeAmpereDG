@@ -184,6 +184,11 @@ public:
 	void project(const MA_function_type f, const MA_derivative_function_type f_DH, VectorType &v) const;
 
 	/**
+	 * updates all members to newSolution
+	 */
+	void update_solution(const Solver_config::VectorType& newSolution) const;
+
+	/**
 	 * adapts the solver into the global refined space (refines grid, and transforms solution & exact solution data)
 	 * @param level
 	 */
