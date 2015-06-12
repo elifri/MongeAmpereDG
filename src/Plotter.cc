@@ -241,7 +241,7 @@ void Plotter::write_face_indices_pov(std::ofstream &file) const
 			for (unsigned int i = 0; i < e.subEntities(Solver_config::dim); i++) //loop over corners
 				{file << "\t\t\t";
 //				for (const auto& vertex : geometry.corners()) {
-					file << indexSet.index(*(e.subEntity<Solver_config::dim>(i))) << " ";
+					file << indexSet.index(e.subEntity<Solver_config::dim>(i)) << " ";
 					assert(false);
 //				}
 			}
