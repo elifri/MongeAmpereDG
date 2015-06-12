@@ -267,8 +267,11 @@ private:
 	mutable shared_ptr<DiscreteLocalGridFunction> solution_u_old;
   mutable shared_ptr<DiscreteLocalGradientGridFunction> gradient_u_old;
 
-  mutable shared_ptr<DiscreteGridFunction> exact_solution_global;
-  mutable shared_ptr<DiscreteLocalGridFunction> exact_solution;
+  mutable shared_ptr<DiscreteGridFunction> exact_solution_projection_global;
+  mutable shared_ptr<DiscreteLocalGridFunction> exact_solution_projection;
+
+  mutable shared_ptr<Rectangular_mesh_interpolator> exact_solution;
+
   int maxSteps_;
 
 	int count_refined; ///counts how often the original grid was refined

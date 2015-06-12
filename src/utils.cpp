@@ -131,3 +131,9 @@ Solver_config::value_type Rectangular_mesh_interpolator::evaluate(const Solver_c
   bilinear_interpolate(x, val , n_x, n_y, h_x, h_y, x_min, y_min, solution); //interpolate bilinear
   return val;
 }
+
+Solver_config::value_type Rectangular_mesh_interpolator::evaluate_inverse(const Solver_config::SpaceType2d& x)
+{
+  return 1.0/evaluate(x);
+}
+

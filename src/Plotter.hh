@@ -69,8 +69,8 @@ public:
 	template <class Function>
 	void write_points_reflector(std::ofstream &file, Function &f) const;
 
-	template <class Function>
-	void write_error(std::ofstream &file, Function &f, Function &exact_solution) const;
+	template <class LocalFunction, class Function>
+	void write_error(std::ofstream &file, LocalFunction &f, Function &exact_solution) const;
 
 	void write_pov_setting(std::ofstream &file) const;///write the setting for photons, camera and light source
 	void write_target_plane(std::ofstream &file) const;
@@ -91,8 +91,8 @@ public:
 	template <class Function>
 	void writeReflectorVTK(std::string filename, Function &f) const;
 
-  template <class Function>
-  void writeReflectorVTK(std::string filename, Function &f, Function& exact_solution) const;
+	template <class LocalFunction, class Function>
+	void writeReflectorVTK(std::string filename, LocalFunction &f, Function& exact_solution) const;
 
 	void set_grid(Solver_config::GridView* grid){	this->grid = grid;}
 	void set_refinement(const int refinement){	this->refinement = refinement;}
@@ -150,8 +150,8 @@ void Plotter::writeReflectorVTK(std::string filename, Function &f) const {
 }
 
 
-template <class Function>
-void Plotter::writeReflectorVTK(std::string filename, Function &f, Function & exact_solution) const {
+template <class LocalFunction, class Function>
+void Plotter::writeReflectorVTK(std::string filename, LocalFunction &f, Function & exact_solution) const {
   //--------------------------------------
   if (refinement > 0)
   {
@@ -219,8 +219,8 @@ void Plotter::write_points_reflector(std::ofstream &file, Function &f) const{
   file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
 }
 
-template <class Function>
-void Plotter::write_error(std::ofstream &file, Function &f, Function &exact_solution) const{
+template <class LocalFunction, class Function>
+void Plotter::write_error(std::ofstream &file, LocalFunction &f, Function &exact_solution) const{
   // write points
     file << "\t\t\t<PointData Scalars=\"error\">\n"
       << "\t\t\t\t<DataArray type=\"Float32\" Name=\"error\" NumberOfComponents=\"1\" format=\""
@@ -246,11 +246,10 @@ void Plotter::write_error(std::ofstream &file, Function &f, Function &exact_solu
       for (auto&& element: elements(*grid))
       {
         f.bind(element);
-        exact_solution.bind(element);
         const auto geometry = element.geometry();
         file << "\t\t\t\t\t";
         for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
-          auto diff = f(it.coords())-exact_solution(it.coords());
+          auto diff = f(it.coords())-exact_solution.evaluate_inverse(geometry.global(it.coords()));
           file << diff << " ";
         }
         file << endl;

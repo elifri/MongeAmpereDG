@@ -170,7 +170,7 @@ void MA_solver::plot_with_mirror(std::string name)
    std::string reflname(plotter.get_output_directory());
    reflname += "/"+ plotter.get_output_prefix()+ name + "reflector"+NumberToString(iterations) + ".vtu";
 
-   plotter.writeReflectorVTK(reflname, localnumericalSolution, *exact_solution_projection);
+   plotter.writeReflectorVTK(reflname, localnumericalSolution, *exact_solution);
 
    std::string reflPovname(plotter.get_output_directory());
    reflPovname += "/"+ plotter.get_output_prefix() + name + "reflector" + NumberToString(iterations) + ".pov";
@@ -260,15 +260,14 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
 
   //init andreas solution as exact solution
-  VectorType exact_solution_u;
-    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
-    assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
-    assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
-    project([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, exactsol);
-    exact_solution_u = exactsol.segment(0,get_n_dofs_u());
-    exact_solution_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,exact_solution_u));
-    exact_solution = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*exact_solution_global));
-    plotter.writeReflectorVTK("exactReflector", *exact_solution);
+  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exact_reflector_projection_small.grid"));
+  assert(is_close(exact_solution->x_min, Solver_config::lowerLeft[0], 1e-12));
+  assert(is_close(exact_solution->y_min, Solver_config::lowerLeft[1], 1e-12));
+  project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
+  exactsol_u = exactsol.segment(0,get_n_dofs_u());
+  exact_solution_projection_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,exactsol_u));
+  exact_solution_projection = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*exact_solution_projection_global));
+  plotter.writeReflectorVTK("exactReflector", *exact_solution_projection);
 
   create_initial_guess();
   solution(solution.size()-1)= op.lop.get_right_handside().get_target_distribution().integrate() / op.lop.get_right_handside().get_input_distribution().integrate();
@@ -314,7 +313,6 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //    std::cout << "error " << (right_sol.segment(0, get_n_dofs_u()) - solution_u).norm() << std::endl;
 
     adapt_solution();
-
     solution_u = solution.segment(0, get_n_dofs_u());
     exact_solution_u = exactsol.segment(0, get_n_dofs_u());
     //build gridviewfunction
@@ -323,6 +321,8 @@ const typename MA_solver::VectorType& MA_solver::solve()
     solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
     gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
     exact_solution = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*exact_solution_global));
+    project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
+    exactsol_u = exactsol.segment(0, get_n_dofs_u());
 
     plot_with_mirror("numericalSolution");
   }
@@ -335,8 +335,6 @@ void MA_solver::adapt_solution(const int level)
   assert(initialised);
   assert(level == 1);
 
-  bool exactSolExists = (exact_solution.get() != nullptr);
-
   //gives any element a unique id (preserved by refinement),
   const GridType::Traits::GlobalIdSet&  idSet = grid_ptr->globalIdSet();
 
@@ -347,7 +345,6 @@ void MA_solver::adapt_solution(const int level)
 
   //map to store grid attached data during the refinement process
   std::map<IdType, VectorType>  preserveSolution;
-  std::map<IdType, VectorType>  preserveExactSolution;
 
   //mark elements for refinement
   for (auto&& element : elements(*gridView_ptr))
@@ -361,8 +358,6 @@ void MA_solver::adapt_solution(const int level)
 
     //store local dofs
     preserveSolution[idSet.id(element)]  = assembler.calculate_local_coefficients(localIndexSet, solution);
-    if (exactSolExists)
-      preserveExactSolution[idSet.id(element)]  = assembler.calculate_local_coefficients(localIndexSet, exactsol);
   }
   double scaling_factor = solution(solution.size()-1);
 
@@ -387,8 +382,6 @@ void MA_solver::adapt_solution(const int level)
 
   //init vector v
   solution.resize(get_n_dofs());
-  if (exactSolExists)
-    exactsol.resize(get_n_dofs());
 
   Solver_config::LocalFiniteElementuType localFiniteElementu;
   Solver_config::LocalFiniteElementHessianSingleType localFiniteElementuDH;
@@ -432,55 +425,47 @@ void MA_solver::adapt_solution(const int level)
       //get old dof vector
       const auto& father = element.father();
 
-      for (int vector_no = 0; vector_no < 2; vector_no++)
+      VectorType x_local = preserveSolution[idSet.id(father)];
+
+      //calculate new dof vector for every child
+      int i = 0;
+      for (auto&& child : descendantElements(father, count_refined))
       {
-        if (vector_no == 1 && !exactSolExists)  break;
-
-        VectorType x_local = vector_no == 0 ? preserveSolution[idSet.id(father)]: preserveExactSolution[idSet.id(father)];
-
-        //calculate new dof vector for every child
-        int i = 0;
-        for (auto&& child : descendantElements(father, count_refined))
-        {
           //bind to child
-          localViewRef.bind(child);
-          localIndexSetRef.bind(localViewRef);
+        localViewRef.bind(child);
+        localIndexSetRef.bind(localViewRef);
 
-          VectorType x_adapt(size);
+        VectorType x_adapt(size);
 
-          //local rhs = \int v_adapt*test = refinementmatrix*v
-          VectorType localVector = localrefinementMatrices[i]*x_local.segment(0,size_u);
-          x_adapt.segment(0,size_u) =  localMassMatrix.ldlt().solve(localVector);
+        //local rhs = \int v_adapt*test = refinementmatrix*v
+        VectorType localVector = localrefinementMatrices[i]*x_local.segment(0,size_u);
+        x_adapt.segment(0,size_u) =  localMassMatrix.ldlt().solve(localVector);
 
-          //same for hessian (now done seperately for every entry)
-          std::vector<VectorType> localVectorDH(nDH);
-          for (int j = 0; j < nDH; j++)
-          {
-            //extract dofs for one hessian entry
-            VectorType xlocalDH(size_u_DH);
-            for (int k = 0; k < size_u_DH; k++)
-              xlocalDH(k) = x_local(size_u+j +nDH*k);
+        //same for hessian (now done seperately for every entry)
+        std::vector<VectorType> localVectorDH(nDH);
+        for (int j = 0; j < nDH; j++)
+        {
+          //extract dofs for one hessian entry
+          VectorType xlocalDH(size_u_DH);
+          for (int k = 0; k < size_u_DH; k++)
+            xlocalDH(k) = x_local(size_u+j +nDH*k);
 
-            localVectorDH[j] = localrefinementMatrices_DH[i]*xlocalDH;
+          localVectorDH[j] = localrefinementMatrices_DH[i]*xlocalDH;
 
-            xlocalDH =  localMassMatrix_DH.ldlt().solve(localVectorDH[j]);
+          xlocalDH =  localMassMatrix_DH.ldlt().solve(localVectorDH[j]);
 
-            //write dofs to combined hessian
-            for (int k = 0; k < size_u_DH; k++)
-              x_adapt(size_u+j +nDH*k) = xlocalDH(k);
-          }
-
-          //set new dof vectors
-          if (vector_no == 0)
-            assembler.set_local_coefficients(localIndexSetRef, x_adapt, solution);
-          else
-            assembler.set_local_coefficients(localIndexSetRef, x_adapt, exactsol);
-
-          //mark element as refined
-          already_refined[mapper.index(child)] = true;
-
-          i++;
+          //write dofs to combined hessian
+          for (int k = 0; k < size_u_DH; k++)
+            x_adapt(size_u+j +nDH*k) = xlocalDH(k);
         }
+
+        //set new dof vectors
+        assembler.set_local_coefficients(localIndexSetRef, x_adapt, solution);
+
+        //mark element as refined
+        already_refined[mapper.index(child)] = true;
+
+        i++;
       }
     }
     else //element was not refined
@@ -491,8 +476,6 @@ void MA_solver::adapt_solution(const int level)
 
       IdType id = idSet.id(element);
       assembler.set_local_coefficients(localIndexSetRef, preserveSolution[id], solution);
-      if (exactSolExists)
-        assembler.set_local_coefficients(localIndexSetRef, preserveExactSolution[id], exactsol);
     }
 
   }
