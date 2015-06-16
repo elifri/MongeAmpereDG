@@ -51,7 +51,6 @@ void read_parameters(int argc, char *argv[], std::string& configFileMASolver)
         ("geometry.reflector.xMax",  po::value<double>(&Solver_config::upperRight[0]), "")
         ("geometry.reflector.yMin",  po::value<double>(&Solver_config::lowerLeft[1]), "")
         ("geometry.reflector.yMax",  po::value<double>(&Solver_config::upperRight[1]), "")
-        ("geometry.reflector.startlevel",  po::value<int>(&Solver_config::startlevel), "")
         ("geometry.target.xMin",     po::value<double>(&Solver_config::lowerLeftTarget[0]), "")
         ("geometry.target.xMax",     po::value<double>(&Solver_config::upperRightTarget[0]), "")
         ("geometry.target.yMin",     po::value<double>(&Solver_config::lowerLeftTarget[1]), "")
@@ -136,7 +135,7 @@ try {
 
 //	Solver_config::lowerLeft = {0,0};
 //	Solver_config::upperRight = {1,1};
-	Solver_config::UnitCubeType unitcube(Solver_config::lowerLeft, Solver_config::upperRight, Solver_config::startlevel);
+	Solver_config::UnitCubeType unitcube(Solver_config::lowerLeft, Solver_config::upperRight, 0);
 
 //	Solver_config::lowerLeftTarget = {0.3,0};
 //	Solver_config::upperRightTarget = {0.6,0.6};

@@ -71,15 +71,19 @@ public:
 	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, std::string& configFile) :
 			initialised(true),
 			grid_ptr(grid), gridView_ptr(&gridView),
-			FEBasis(new FEBasisType(gridView)),
-		  uBasis(new FEuBasisType(gridView)), uDHBasis( new FEuDHBasisType(gridView)),
 			assembler(*FEBasis, true),
 			plotter(gridView),
 			solution_u_old(), gradient_u_old()
 	{
 	  read_configfile(configFile);
 
-	  plotter.set_output_directory("../plots");
+	  grid_ptr->globalRefine(Solver_config::startlevel);
+
+	  //update member
+	  FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
+	  uBasis = std::shared_ptr<FEuBasisType> (new FEuBasisType(*gridView_ptr));
+	  uDHBasis = std::shared_ptr<FEuDHBasisType> (new FEuDHBasisType(*gridView_ptr));
+	  assembler.bind(*FEBasis);
 	  plotter.set_refinement(Solver_config::degree);
 
 	  count_refined = Solver_config::startlevel;
