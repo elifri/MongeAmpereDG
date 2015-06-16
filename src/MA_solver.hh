@@ -84,8 +84,14 @@ public:
 	  uBasis = std::shared_ptr<FEuBasisType> (new FEuBasisType(*gridView_ptr));
 	  uDHBasis = std::shared_ptr<FEuDHBasisType> (new FEuDHBasisType(*gridView_ptr));
 	  assembler.bind(*FEBasis);
+
+	  plotter.set_output_directory(outputDirectory_);
+	  plotter.set_output_prefix(outputPrefix_);
 	  plotter.set_refinement(Solver_config::degree);
 
+	  plotter.add_plot_stream("resU", outputDirectory_+"/Data/"+outputPrefix_+"resU"); //write residual in u test functions in this file
+	  plotter.add_plot_stream("res", outputDirectory_+"/Data/"+outputPrefix_+"res"); //write residual in this file
+    plotter.add_plot_stream("l2projError", outputDirectory_+"/Data/"+outputPrefix_+"l2projError"); //write L2 error to projection in this file
 	  count_refined = Solver_config::startlevel;
 
 	}
@@ -266,6 +272,8 @@ public:
 private:
 
 	bool initialised; ///asserts the important member, such as the dof_handler, assembler ... are initialised
+
+	std::string outputDirectory_, outputPrefix_;
 
 	const shared_ptr<GridType> grid_ptr;
 	const GridViewType* gridView_ptr;

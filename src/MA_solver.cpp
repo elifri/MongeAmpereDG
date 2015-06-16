@@ -36,6 +36,8 @@ void MA_solver::read_configfile(std::string &configFile)
         ("solver.sigma",     po::value<double>(&Solver_config::sigma), "")
         ("solver.sigmaGrad",     po::value<double>(&Solver_config::sigmaGrad), "")
         ("solver.sigmaBoundary",     po::value<double>(&Solver_config::sigmaBoundary), "")
+        ("output.directory", po::value<string>(&outputDirectory_), "")
+        ("output.prefix", po::value<string>(&outputPrefix_), "")
   ;
 
   // open config file for the image
@@ -514,11 +516,16 @@ void MA_solver::solve_nonlinear_system()
   op.evaluate(solution, f, solution, false);
 
 //  std::cout << "initial f " << f.transpose() << std::endl;
+  plotter.get_plot_stream("resU") << iterations << " " << f.segment(0,get_n_dofs_u()).norm() << endl;
+  plotter.get_plot_stream("res") << iterations << " " << f.norm() << endl;
+
   std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
 //  std::cout << "initial l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
   //copy guess vor scaling factor into exact solution
   exactsol(exactsol.size()-1) = solution(solution.size()-1);
   std::cout << "approximate error " << (solution-exactsol).norm() << std::endl;
+
+  plotter.get_plot_stream("l2projError") << iterations << " " << (solution-exactsol).segment(0,get_n_dofs_u()).norm()/((double)get_n_dofs_u()) << endl;
 
   // /////////////////////////
   // Compute solution
