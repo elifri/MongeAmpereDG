@@ -109,7 +109,7 @@ public:
 
 
 	void add_plot_stream(const std::string &name, const std::string &filepath);
-	const std::ofstream& get_plot_stream(const std::string &name) const
+	std::ofstream& get_plot_stream(const std::string &name)
 	{
 		return *plot_streams.at(name);
 	}
