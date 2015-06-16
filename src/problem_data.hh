@@ -314,6 +314,10 @@ public:
         u = factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0]).value()/h_ - 0.5,(upperRight_[1] - x[1]).value()/h_ - 0.5);
     }
 
+    /**@brief normalises the function on its 2dimensional domain such that its integral equals one
+     *
+     */
+
     void normalize (
         const unsigned int n = Solver_config::startlevel+Solver_config::nonlinear_steps+1
     ) {
@@ -326,6 +330,23 @@ public:
         factor_ = 1.0/integral;
         assert(fabs(integrator.assemble_integral(*this) - 1.0) < 1e-10);
     }
+
+    /**@brief normalises the function on the sphere surface, i.e. such that the integral \int_Omega f*omega dS_Omega equals one
+     *
+     */
+    void omega_normalize(const unsigned int n = Solver_config::startlevel+Solver_config::nonlinear_steps+1)
+    {
+      factor_ = 1.0;
+
+      Solver_config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, n);
+      Integrator<Solver_config::GridType> integrator(unitcube_quadrature.grid_ptr());
+      const double integral = integrator.assemble_integral([this](const Solver_config::DomainType &x) {return operator()(x)/omega(x);});
+
+      factor_ = 1.0/integral;
+      assert(fabs(integrator.assemble_integral([this](const Solver_config::DomainType &x) {return operator()(x)/omega(x);}) - 1.0) < 1e-10);
+//      std::cout << "f factor " << factor_ << endl;
+    }
+
 
     double f_max() const
     {
@@ -362,7 +383,7 @@ public:
                             solution_u_old(&solUOld), gradient_u_old(&gradUOld)
   {
 //a normalisation seems to destroy the solution proces ...
-    f.normalize();
+    f.omega_normalize();
     g.normalize();
   }
 
