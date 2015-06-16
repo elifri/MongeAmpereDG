@@ -21,6 +21,70 @@
 
 using namespace Dune;
 
+
+
+/// calculates the third coordinate belonging to the 2d reference plane (by projecting the 2d plane onto the ball surface)
+inline Solver_config::value_type omega(Solver_config::SpaceType2d x) {
+  assert(x.two_norm2() <= 1);
+  return std::sqrt(1 - x.two_norm2());
+}
+
+template<class valueType, class GradientType>
+inline valueType a_tilde(const valueType u_value,
+    const GradientType& gradu, const Solver_config::SpaceType2d& x) {
+//    adouble a_tilde_value = 0;
+  valueType a_tilde_value = gradu * gradu;
+  valueType temp = u_value - (gradu * x);
+  a_tilde_value -= sqr(temp);
+  return a_tilde_value;
+}
+
+template<class valueType, class GradientType>
+inline valueType b_tilde(const valueType u_value,
+    const GradientType& gradu, const Solver_config::SpaceType2d& x) {
+//    adouble a_tilde_value = 0;
+  return (gradu * gradu) + sqr(u_value) - sqr(gradu * x);
+}
+
+template<class valueType>
+inline FieldVector<valueType, 2> T(const FieldVector<Solver_config::value_type, 2>& x, const valueType& u_value, FieldVector<valueType, 2>& Z_0, const double z_3) {
+  FieldVector<valueType, 2> T_value = x;
+  T_value /= u_value;
+
+  //temp = (Z_0 - X/u)
+  auto temp = T_value;
+  temp *= -1;
+  temp += Z_0;
+
+  valueType t = 1 - u_value*z_3/omega(x);
+
+  T_value.axpy(t, temp);
+  return T_value;
+}
+
+template<class valueType>
+inline FieldVector<valueType, 3> T(const FieldVector<Solver_config::value_type, 3>& x, const valueType& u_value, FieldVector<valueType, 3>& Z_0, const double z_3) {
+  FieldVector<valueType, 3> T_value = x;
+  T_value /= u_value;
+
+  //temp = (Z_0 - X/u)
+  auto temp = T_value;
+  temp *= -1;
+  temp += Z_0;
+
+  valueType t = 1 - u_value*z_3/x[2];
+
+  T_value.axpy(t, temp);
+  return T_value;
+}
+
+
+
+
+
+
+
+
 //forward declaration
 class Local_Operator_MA_refl_Neilan;
 
@@ -281,61 +345,6 @@ public:
 
 };
 
-
-/// calculates the third coordinate belonging to the 2d reference plane (by projecting the 2d plane onto the ball surface)
-inline Solver_config::value_type omega(Solver_config::SpaceType2d x) {
-  assert(x.two_norm2() <= 1);
-  return std::sqrt(1 - x.two_norm2());
-}
-
-template<class valueType, class GradientType>
-inline valueType a_tilde(const valueType u_value,
-    const GradientType& gradu, const Solver_config::SpaceType2d& x) {
-//    adouble a_tilde_value = 0;
-  valueType a_tilde_value = gradu * gradu;
-  valueType temp = u_value - (gradu * x);
-  a_tilde_value -= sqr(temp);
-  return a_tilde_value;
-}
-
-template<class valueType, class GradientType>
-inline valueType b_tilde(const valueType u_value,
-    const GradientType& gradu, const Solver_config::SpaceType2d& x) {
-//    adouble a_tilde_value = 0;
-  return (gradu * gradu) + sqr(u_value) - sqr(gradu * x);
-}
-
-template<class valueType>
-inline FieldVector<valueType, 2> T(const FieldVector<Solver_config::value_type, 2>& x, const valueType& u_value, FieldVector<valueType, 2>& Z_0, const double z_3) {
-  FieldVector<valueType, 2> T_value = x;
-  T_value /= u_value;
-
-  //temp = (Z_0 - X/u)
-  auto temp = T_value;
-  temp *= -1;
-  temp += Z_0;
-
-  valueType t = 1 - u_value*z_3/omega(x);
-
-  T_value.axpy(t, temp);
-  return T_value;
-}
-
-template<class valueType>
-inline FieldVector<valueType, 3> T(const FieldVector<Solver_config::value_type, 3>& x, const valueType& u_value, FieldVector<valueType, 3>& Z_0, const double z_3) {
-  FieldVector<valueType, 3> T_value = x;
-  T_value /= u_value;
-
-  //temp = (Z_0 - X/u)
-  auto temp = T_value;
-  temp *= -1;
-  temp += Z_0;
-
-  valueType t = 1 - u_value*z_3/x[2];
-
-  T_value.axpy(t, temp);
-  return T_value;
-}
 
 class RightHandSideReflector{
 public:
