@@ -826,13 +826,11 @@ inline Eigen::VectorXi Assembler::estimate_nnz_Jacobian() const
 {
   Eigen::VectorXi est_nnz (basis_->indexSet().dimension()+1);
   const int n_dofsu = basis_->indexSet().size({0});
-  assert (Solver_config::degree == 2);
-  const int n_dofsuLocal = 6;
+  const int n_dofsuLocal = (Solver_config::degree+1)*(Solver_config::degree+2)/2;
 
   const int nDH = Solver_config::dim*Solver_config::dim;
   const int n_dofsuDH = basis_->indexSet().size({1});
-  assert(Solver_config::degree == 1 || Solver_config::degree == 2);
-  const int n_dofsuDHLocal = Solver_config::degree == 1 ? 3*nDH : 6*nDH;
+  const int n_dofsuDHLocal =  nDH*(Solver_config::degreeHessian+1)*(Solver_config::degreeHessian+2)/2;
 
   for (int i = 0; i < n_dofsu; i++) est_nnz(i) = 4*n_dofsuLocal + 4*n_dofsuDHLocal+1;
   for (int i = 0; i < n_dofsuDH; i++) est_nnz(n_dofsu+i) = 4*n_dofsuLocal + n_dofsuDHLocal;
