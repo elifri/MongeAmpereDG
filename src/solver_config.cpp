@@ -31,6 +31,7 @@ int Solver_config::startlevel = 0;
 int Solver_config::nonlinear_steps = 1;
 
 double Solver_config::sigma = 5;
+double Solver_config::sigmaGrad = 5;
 double Solver_config::sigmaBoundary = 5;
 
 bool Solver_config::Dirichlet = false;

@@ -34,6 +34,7 @@ void MA_solver::read_configfile(std::string &configFile)
         ("solver.maxSteps",     po::value<int>(&maxSteps_), "")
         ("solver.Dirichlet",     po::value<bool>(&Solver_config::Dirichlet), "")
         ("solver.sigma",     po::value<double>(&Solver_config::sigma), "")
+        ("solver.sigmaGrad",     po::value<double>(&Solver_config::sigmaGrad), "")
         ("solver.sigmaBoundary",     po::value<double>(&Solver_config::sigmaBoundary), "")
   ;
 

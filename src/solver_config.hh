@@ -142,7 +142,7 @@ struct Solver_config{
      // SIPG
     static constexpr double epsilon = -1.0;
     static double sigma ;   // should be < 5 for stability reasons
-    static constexpr double sigmaGrad = 5;   // should be < 5 for stability reasons
+    static double sigmaGrad;   // should be < 5 for stability reasons
     static double sigmaBoundary;
     static constexpr double beta = 2.0 - 0.5*dim;  // 2D => 1, 3D => 0.5
 #endif
