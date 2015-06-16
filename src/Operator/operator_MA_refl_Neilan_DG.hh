@@ -767,9 +767,16 @@ static FieldMatrix<adouble, 3, 3> finiteDifferenceDZ_0(const LocalFiniteElement&
 
     // penalty weight for NIPG / SIPG
     //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
-    double penalty_weight = Solver_config::sigma
-        * (Solver_config::degree * Solver_config::degree)
-        / std::pow(intersection.geometry().volume(), Solver_config::beta);
+    double penalty_weight;
+    if (Solver_config::Dirichlet)
+      penalty_weight = Solver_config::sigmaBoundary
+                      * (Solver_config::degree * Solver_config::degree)
+                      / std::pow(intersection.geometry().volume(), Solver_config::beta);
+    else
+      penalty_weight = Solver_config::sigmaBoundary
+                      * (Solver_config::degree * Solver_config::degree)
+                      * std::pow(intersection.geometry().volume(), 2*Solver_config::beta);
+
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -820,15 +827,20 @@ static FieldMatrix<adouble, 3, 3> finiteDifferenceDZ_0(const LocalFiniteElement&
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
       for (unsigned int j = 0; j < size_u; j++) //parts from self
-          {
+      {
 
         // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
-//        v_adolc(j) += penalty_weight * ((T_value * normal) - phi_value_initial)
-//            * referenceFunctionValues[j] * factor;
-        v_adolc(j) += penalty_weight * (u_value - g_value)
+        if (Solver_config::Dirichlet)
+        {
+          v_adolc(j) += penalty_weight * (u_value - g_value)
                         * referenceFunctionValues[j] * factor;
-
-          }
+        }
+        else
+        {
+          v_adolc(j) += penalty_weight * ((T_value * normal) - phi_value)
+                            * referenceFunctionValues[j] * factor;
+        }
+      }
 
     }
 

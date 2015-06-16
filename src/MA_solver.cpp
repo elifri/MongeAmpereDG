@@ -32,7 +32,9 @@ void MA_solver::read_configfile(std::string &configFile)
 //        ("solver.startlevel",  po::value<int>(&Solver_config::startlevel), "")
         ("solver.nonlinearSteps",  po::value<int>(&Solver_config::nonlinear_steps), "")
         ("solver.maxSteps",     po::value<int>(&maxSteps_), "")
+        ("solver.Dirichlet",     po::value<bool>(&Solver_config::Dirichlet), "")
         ("solver.sigma",     po::value<double>(&Solver_config::sigma), "")
+        ("solver.sigmaBoundary",     po::value<double>(&Solver_config::sigmaBoundary), "")
   ;
 
   // open config file for the image

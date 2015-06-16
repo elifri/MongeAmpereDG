@@ -56,6 +56,8 @@ struct Solver_config{
   static std::string configFileMA_solver;
   static std::string configFileEllipsoid;
 
+  static bool Dirichlet;
+
 	enum{ dim = 2, childdim = 4, degree = 2, degreeHessian = 2};
 
 	static int startlevel;
@@ -141,6 +143,7 @@ struct Solver_config{
     static constexpr double epsilon = -1.0;
     static double sigma ;   // should be < 5 for stability reasons
     static constexpr double sigmaGrad = 5;   // should be < 5 for stability reasons
+    static double sigmaBoundary;
     static constexpr double beta = 2.0 - 0.5*dim;  // 2D => 1, 3D => 0.5
 #endif
 };
