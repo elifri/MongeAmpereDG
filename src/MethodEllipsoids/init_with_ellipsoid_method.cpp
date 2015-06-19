@@ -44,10 +44,6 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
         ("ellipsoids.nDirectionsY", po::value<unsigned int>(&nDirectionsY), "number of directions in y direction")
         ("ellipsoids.maxIter",      po::value<unsigned int>(&maxIter),      "maximal number of iterations")
         ("ellipsoids.alpha",        po::value<double>(&alpha),              "design parameter (controls the size of the ellipsoid)")
-        ;
-
-    po::options_description configGeometry("Configuration of the geometry");
-    configGeometry.add_options()
         ("povray.cameraAngle",       po::value<double>(&(povRayOpts.cameraAngle)),       "")
         ("povray.jitter",            po::value<bool>  (&(povRayOpts.jitter)),            "")
         ("povray.nPhotons",          po::value<unsigned int>(&(povRayOpts.nPhotons)),    "")
@@ -73,26 +69,6 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
         else
         {
             po::store(po::parse_config_file(ifs, config), vm);
-            notify(vm);
-        }
-    }
-
-    {
-        // open config file for initial guess
-        string filename = configFileGeometry;
-        ifstream ifs(filename.c_str());
-        if (!ifs)
-        {
-            if (configFileGeometry=="")
-                cerr << "\nError: Path to a config file for the initial guess is missing!\n";
-            else
-                cerr << "\nError: Can not open config file: "
-                     << configFileGeometry << "\n";
-            exit(1);
-        }
-        else
-        {
-            po::store(po::parse_config_file(ifs, configGeometry), vm);
             notify(vm);
         }
     }
