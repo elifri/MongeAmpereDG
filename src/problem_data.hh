@@ -355,6 +355,13 @@ public:
     }
 
 
+    double omega_integrate(const unsigned int n = Solver_config::startlevel+Solver_config::nonlinear_steps+1) const
+    {
+      Solver_config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, n);
+      Integrator<Solver_config::GridType> integrator(unitcube_quadrature.grid_ptr());
+      return integrator.assemble_integral([this](const Solver_config::DomainType &x) {return operator()(x)/omega(x);});
+    }
+
     double integrate(const unsigned int n = Solver_config::startlevel+Solver_config::nonlinear_steps+1) const
     {
       Solver_config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, n);
