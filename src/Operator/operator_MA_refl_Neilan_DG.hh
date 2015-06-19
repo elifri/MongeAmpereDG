@@ -22,6 +22,21 @@
 
 using namespace Dune;
 
+template <class value_type>
+inline
+value_type determinant(const FieldMatrix<value_type, 2, 2>& A)
+{
+  return fmax(0,A[0][0])*fmax(0,A[1][1]) - A[0][1]*A[1][0]- Solver_config::lambda*((fmin(0,A[0][0])*fmin(0,A[0][0])) + (fmin(0,A[1][1])*fmin(0,A[1][1])));
+}
+
+template <class value_type>
+inline
+value_type naive_determinant(const FieldMatrix<value_type, 2, 2>& A)
+{
+  return A[0][0]*A[1][1]-A[0][1];
+}
+
+
 class Local_Operator_MA_refl_Neilan {
 
 public:
@@ -418,9 +433,11 @@ static FieldMatrix<adouble, 3, 3> finiteDifferenceDZ_0(const LocalFiniteElement&
       FieldMatrix<adouble, dim, dim> uDH_pertubed = uDH;
       assert(fabs(Solver_config::z_3+3.0) < 1e-12);
       uDH_pertubed.axpy(a_tilde_value*Solver_config::z_3/(2.0*t*omega_value), N);
-      adouble uDH_pertubed_det = uDH_pertubed[0][0]* uDH_pertubed[1][1] -uDH_pertubed[1][0]*uDH_pertubed[0][1];
 
-//      std::cout << "uDHpertubed: " << uDH_pertubed << endl;
+//      adouble uDH_pertubed_det = uDH_pertubed[0][0]* uDH_pertubed[1][1] -uDH_pertubed[1][0]*uDH_pertubed[0][1];
+      adouble uDH_pertubed_det = determinant(uDH);
+
+//      std::cerr << "uDHpertubed: " << uDH_pertubed_det << " naive " << naive_determinant(uDH) << endl;
 
 
       adouble D_psi_norm = sqrt(sqr(D_Psi_value[0])+sqr(D_Psi_value[1])+sqr(D_Psi_value[2]));
