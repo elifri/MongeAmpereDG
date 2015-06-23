@@ -419,7 +419,6 @@ void MA_solver::project(const F f, VectorType& v) const
   v.resize(get_n_dofs());
   VectorType v_u;
   interpolate(*uBasis, v_u, f);
-  std::cout << v_u.transpose() << std::endl;
   v.segment(0, v_u.size()) = v_u;
 
   //init second derivatives
@@ -456,7 +455,6 @@ void MA_solver::project_with_discrete_Hessian(const F f, VectorType& v) const
   v.resize(get_n_dofs());
   VectorType v_u;
   interpolate(*uBasis, v_u, f);
-  std::cout << v_u.transpose() << std::endl;
   v.segment(0, v_u.size()) = v_u;
 
   //init second derivatives
@@ -489,8 +487,6 @@ void MA_solver::project_with_discrete_Hessian(const F f, VectorType& v) const
 
   //set scaling factor (last dof) to ensure mass conservation
   v(v.size()-1) = 1;
-
-  std::cout << "v " << v.transpose() << std::endl;
 }
 
 
