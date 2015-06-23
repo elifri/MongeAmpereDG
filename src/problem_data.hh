@@ -274,10 +274,10 @@ public:
       //if distance is positive, z is inside, otherwise distance gives the negative of the distance to the target boundary
       double distance  = std::min(0.0, distance_x) + std::min(0.0, distance_y);
       distance *= -1;
-      if (distance > 0)
-        return 1.0/(10.0+10*distance) * factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
-//          return 0.01*factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
-      else
+//      if (distance > 0)
+//        return 1.0/(10.0+10*distance) * factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
+////          return 0.01*factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
+//      else
         return factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
     }
 
@@ -291,10 +291,10 @@ public:
         //if distance is positive, z is inside, otherwise distance gives the negative of the distance to the target boundary
         double distance  = std::min(0.0, distance_x) + std::min(0.0, distance_y);
         distance *= -1;
-        if (distance > 0)
-          u = 1.0/(10.0+10*distance) * factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
-//          u = 0.01*factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
-        else
+//        if (distance > 0)
+//          u = 1.0/(10.0+10*distance) * factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
+////          u = 0.01*factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
+//        else
           u = factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
     }
 
@@ -305,12 +305,12 @@ public:
 
       //if distance is positive, z is inside, otherwise distance gives the negative of the distance to the target boundary
       adouble distance  = fmin(0.0, distance_x) + fmin(0.0, distance_y);
-      distance *= -1;
-
-      if (distance > 0)
-        u = 1.0/(10.0+10*distance) * factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0]).value()/h_ - 0.5,(upperRight_[1] - x[1]).value()/h_ - 0.5);
-//          u = 0.01*factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0]).value()/h_ - 0.5,(upperRight_[1] - x[1]).value()/h_ - 0.5);
-      else
+//      distance *= -1;
+//
+//      if (distance > 0)
+//        u = 1.0/(10.0+10*distance) * factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0]).value()/h_ - 0.5,(upperRight_[1] - x[1]).value()/h_ - 0.5);
+////          u = 0.01*factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0]).value()/h_ - 0.5,(upperRight_[1] - x[1]).value()/h_ - 0.5);
+//      else
         u = factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0]).value()/h_ - 0.5,(upperRight_[1] - x[1]).value()/h_ - 0.5);
     }
 

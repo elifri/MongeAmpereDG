@@ -26,7 +26,7 @@ template <class value_type>
 inline
 value_type determinant(const FieldMatrix<value_type, 2, 2>& A)
 {
-  return fmax(0,A[0][0])*fmax(0,A[1][1]) - A[0][1]*A[1][0]- Solver_config::lambda*((fmin(0,A[0][0])*fmin(0,A[0][0])) + (fmin(0,A[1][1])*fmin(0,A[1][1])));
+  return fmax(0,A[0][0])*fmax(0,A[1][1]) - A[0][1]*A[1][0]- 1000.0*((fmin(0,A[0][0])*fmin(0,A[0][0])) + (fmin(0,A[1][1])*fmin(0,A[1][1])));
 }
 
 template <class value_type>
@@ -431,19 +431,16 @@ static FieldMatrix<adouble, 3, 3> finiteDifferenceDZ_0(const LocalFiniteElement&
 
 
       FieldMatrix<adouble, dim, dim> uDH_pertubed = uDH;
-      assert(fabs(Solver_config::z_3+3.0) < 1e-12);
+//      assert(fabs(Solver_config::z_3+3.0) < 1e-12);
       uDH_pertubed.axpy(a_tilde_value*Solver_config::z_3/(2.0*t*omega_value), N);
 
-//      adouble uDH_pertubed_det = uDH_pertubed[0][0]* uDH_pertubed[1][1] -uDH_pertubed[1][0]*uDH_pertubed[0][1];
-      adouble uDH_pertubed_det = determinant(uDH);
-
-//      std::cerr << "uDHpertubed: " << uDH_pertubed_det << " naive " << naive_determinant(uDH) << endl;
+      adouble uDH_pertubed_det = determinant(uDH_pertubed);
 
 
       adouble D_psi_norm = sqrt(sqr(D_Psi_value[0])+sqr(D_Psi_value[1])+sqr(D_Psi_value[2]));
 //      cout << "D psi = " << D_Psi_value[0] << "," << D_Psi_value[1]<< "," << D_Psi_value[2] << endl;
 
-//		cout << "x_value " << x_value << " a_tilde " << a_tilde_value.value() << " omega(x) " << omega(x_value) << " btilde " << b_tilde.value() << " g " << g_value.value() << std::endl;
+//      cout << "x_value " << x_value << " a_tilde " << a_tilde_value.value() << " omega(x) " << omega(x_value) << " btilde " << b_tilde.value() << " g " << g_value.value() << std::endl;
       adouble PDE_rhs = -a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde_value*omega_value*g_value);
       auto uTimesZ0 = Z_0;
       uTimesZ0 *= u_value;
@@ -467,7 +464,7 @@ static FieldMatrix<adouble, 3, 3> finiteDifferenceDZ_0(const LocalFiniteElement&
 //      cout << "scaling factor " << scaling_factor_adolc.value() << endl;
 
       //calculate system for first test functions
-      std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
+//      std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
 
       FieldMatrix<adouble, 3, 3> DT = finiteDifferenceDT(localFiniteElementu, quadPos, x.segment(0, size_u), geometry, jacobian);
       adouble det_DT = (DT[0][0]* DT[1][1] -DT[1][0]*DT[0][1])*DT[2][2];
@@ -475,16 +472,9 @@ static FieldMatrix<adouble, 3, 3> finiteDifferenceDZ_0(const LocalFiniteElement&
       adouble detDz = uDH_pertubed_det/(-a_tilde_value*a_tilde_value*a_tilde_value/(4.0*b_tilde_value*omega_value));
       detDz /= ((((uTimesZ0-X)*D_Psi_value))/t/t/D_psi_norm);
 
-      std::cerr << "estimated det " << det_DT.value() << " detDz " << detDz.value()<< " -> rel error: " << ((det_DT-detDz)/det_DT).value()<< endl;
+//      std::cerr << "estimated det " << det_DT.value() << " detDz " << detDz.value()<< " -> rel error: " << ((det_DT-detDz)/det_DT).value()<< endl;
 //                << " f/g " << f_value/(g_value*omega_value) << " f " << f_value << " g " << g_value << "f/g " << f_value/g_value << " 1/omega " << 1/omega_value << endl;
-
-      FieldMatrix<adouble, 3, 3> DZ_0 = finiteDifferenceDZ_0(localFiniteElementu, x_value, x.segment(0, size_u), geometry, jacobian);
-      adouble det_DZ_0 = (DZ_0[0][0]* DZ_0[1][1] -DZ_0[1][0]*DZ_0[0][1])*DZ_0[2][2];
-
-      adouble detRhs = -2.0/sqr(u_value)*b_tilde_value/sqr(a_tilde_value)*(uDH[0][0]* uDH[1][1] -uDH[1][0]*uDH[0][1]);
-
-//      std::cout << "estimated det Z_0 " << det_DZ_0.value() << " detDz " << detRhs.value()<< " -> rel error: " << ((det_DZ_0-detRhs)/det_DZ_0).value() << endl;
-
+//      cerr << x_value << " " << u_value.value() << " " << uDH_pertubed_det.value() << " " << PDE_rhs.value() << endl;
 
       for (size_t j = 0; j < size_u; j++) // loop over test fcts
       {
@@ -792,7 +782,7 @@ static FieldMatrix<adouble, 3, 3> finiteDifferenceDZ_0(const LocalFiniteElement&
     else
       penalty_weight = Solver_config::sigmaBoundary
                       * (Solver_config::degree * Solver_config::degree)
-                      * std::pow(intersection.geometry().volume(), 2*Solver_config::beta);
+                      * std::pow(intersection.geometry().volume(), Solver_config::beta);
 
 
     // Loop over all quadrature points
@@ -856,6 +846,7 @@ static FieldMatrix<adouble, 3, 3> finiteDifferenceDZ_0(const LocalFiniteElement&
         {
           v_adolc(j) += penalty_weight * ((T_value * normal) - phi_value)
                             * referenceFunctionValues[j] * factor;
+          std::cerr << "T " << T_value[0].value() << " " << T_value[1].value() << " T*n" << (T_value * normal).value() << " phi " << phi_value << endl;
         }
       }
 
