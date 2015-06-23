@@ -252,7 +252,8 @@ void MA_solver::create_initial_guess()
 //  project([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
 //  ellipsoidMethod.write_output();
 
-  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
+//    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
+  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimple.grid");
 
   assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
   assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
@@ -272,7 +273,8 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
 
   //init andreas solution as exact solution
-  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exact_reflector_projection_small.grid"));
+//  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exact_reflector_projection_small.grid"));
+  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exactReflectorProjectionSimple.grid"));
   assert(is_close(exact_solution->x_min, Solver_config::lowerLeft[0], 1e-12));
   assert(is_close(exact_solution->y_min, Solver_config::lowerLeft[1], 1e-12));
   project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
@@ -564,6 +566,8 @@ void MA_solver::solve_nonlinear_system()
 
   std::cout << "f_u norm " << f.segment(0,get_n_dofs_u()).norm() << " f(x) norm " << f.norm() << endl;
 //  std::cout << "l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
+
+  std::cout << "scaling factor " << solution(solution.size()-1) << endl;
 
 //  std::cout << "x " << solution.transpose() << endl;
   }
