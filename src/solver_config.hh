@@ -129,6 +129,8 @@ struct Solver_config{
 
 	static ProblemType problem;
 
+	static double lambda;
+
 #define SIPG
 #ifdef OBB    // OBB
     static const double epsilon = 1.0;

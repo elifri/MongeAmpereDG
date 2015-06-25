@@ -36,6 +36,8 @@ double Solver_config::sigmaBoundary = 5;
 
 bool Solver_config::Dirichlet = false;
 
+double Solver_config::lambda = 100;
+
 std::ostream& operator <<(std::ostream &output, const ProblemType &p)
 {
 	switch(p)
