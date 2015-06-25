@@ -17,6 +17,7 @@ namespace po = boost::program_options;
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk/common.hh>
 
+#include <Grids/Grid2d.hpp>
 
 #include "MethodEllipsoids/init_with_ellipsoid_method.hpp"
 
@@ -24,6 +25,8 @@ namespace po = boost::program_options;
 
 void MA_solver::read_configfile(std::string &configFile)
 {
+  mirror_problem::Grid2d::PovRayOpts povRayOpts;
+
   po::options_description config("Configuration of the MA FE solver");
   config.add_options()
 //        ("FE.degree",  po::value<int>(&Solver_config::lowerLeft[0]), "")
@@ -38,6 +41,12 @@ void MA_solver::read_configfile(std::string &configFile)
         ("solver.sigmaBoundary",     po::value<double>(&Solver_config::sigmaBoundary), "")
         ("output.directory", po::value<string>(&outputDirectory_), "")
         ("output.prefix", po::value<string>(&outputPrefix_), "")
+        ("povray.cameraAngle",       po::value<double>(&(povRayOpts.cameraAngle)),       "")
+        ("povray.jitter",            po::value<bool>  (&(povRayOpts.jitter)),            "")
+        ("povray.nPhotons",          po::value<unsigned int>(&(povRayOpts.nPhotons)),    "")
+        ("povray.lightSourceRadius",    po::value<double>(&(povRayOpts.lightSourceRadius)), "")
+        ("povray.lightSourceFalloff",   po::value<double>(&(povRayOpts.lightSourceFalloff)), "")
+        ("povray.lightSourceTightness", po::value<double>(&(povRayOpts.lightSourceTightness)), "")
   ;
 
   // open config file for the image
@@ -56,6 +65,8 @@ void MA_solver::read_configfile(std::string &configFile)
     po::store(po::parse_config_file(ifs, config), vm);
     notify(vm);
   }
+
+  plotter.set_PovRayOptions(povRayOpts);
 }
 
 

@@ -182,9 +182,9 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
 			"\t max_trace_level 2" <<std::endl <<
 			"\t photons {" <<std::endl <<
 			"\t\t // spacing 0.001" <<std::endl <<
-			"\t\t count 100000" <<std::endl <<
+			"\t\t count " << povRayOpts.nPhotons <<std::endl <<
 			"\t\t autostop 0" <<std::endl <<
-			"\t\tjitter 1" <<std::endl <<
+			"\t\tjitter " << povRayOpts.jitter <<std::endl <<
 			"\t}" <<std::endl <<
 			"}" <<std::endl <<std::endl;
 
@@ -197,7 +197,7 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
 			"\t location <" << (xMinOut+xMaxOut)/2.0
 			                   <<"," << (yMinOut+yMaxOut)/2.0 << ","
 			                   <<  max(xMaxOut-xMinOut,yMaxOut-yMinOut)*0.5   <<">" <<std::endl <<
-			"\t angle 100" <<std::endl <<
+			"\t angle " << povRayOpts.cameraAngle <<std::endl <<
 			"\t look_at <" << (xMinOut+xMaxOut)/2.0
                     <<"," << (yMinOut+yMaxOut)/2.0
                     << "," << Solver_config::z_3 << ">" << std::endl <<
@@ -207,12 +207,13 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
 	file << "// Light Source" <<std::endl <<
 			"light_source {" <<std::endl <<
 			"\t <-0,0,0>" <<std::endl <<
-			"\t color rgb <1,1,1>" <<std::endl <<
+//      "\t color rgb <1,1,1>" <<std::endl <<
+      "\t color rgb <0.141496033, 0.141496033, 0.141496033>" <<std::endl <<
 			"\t spotlight" <<std::endl <<
 			"\t point_at <-0.0, 0, 1>" <<std::endl <<
-			"\t radius 80" <<std::endl <<
-			"\t falloff 80" <<std::endl <<
-			"\t tightness 0" <<std::endl <<
+			"\t radius " << povRayOpts.lightSourceRadius <<std::endl <<
+			"\t falloff " << povRayOpts.lightSourceFalloff <<std::endl <<
+			"\t tightness " << povRayOpts.lightSourceTightness <<std::endl <<
 			"\t photons { reflection on}" <<std::endl <<
 			"}" <<std::endl <<std::endl;
 

@@ -23,6 +23,7 @@
 #include "problem_data.hh"
 
 #include <dune/geometry/refinement.hh>
+#include <Grids/Grid2d.hpp>
 
 #include <fstream>
 
@@ -40,6 +41,7 @@ private:
 
 	int refinement; ///choose the refinement level before plotting
 
+	mirror_problem::Grid2d::PovRayOpts povRayOpts;
 
 
 	int Nelements() const;
@@ -98,6 +100,7 @@ public:
 	void set_refinement(const int refinement){	this->refinement = refinement;}
 	void set_output_directory(std::string outputdir) {this->output_directory = outputdir;}
 	void set_output_prefix(std::string prefix) {this->output_prefix = prefix;}
+	void set_PovRayOptions(const  mirror_problem::Grid2d::PovRayOpts& opts) {this->povRayOpts = opts;}
 
 //	void set_rhs(vector_function_type get_rhs){ this->get_rhs = get_rhs;}
 //	void set_exact_sol(vector_function_type get_exact_sol){ this->get_exact_sol = get_exact_sol;}
