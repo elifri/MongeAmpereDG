@@ -214,6 +214,7 @@ void Plotter::write_points_reflector(std::ofstream &file, Function &f) const{
         for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
           auto x_2d = geometry.global(it.coords());
           auto rho = 1.0/f(it.coords());
+          file << std::setprecision(12) << std::scientific;
           file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  omega(x_2d)*rho << endl;
           vertex_no++;
         }
@@ -253,6 +254,7 @@ void Plotter::write_error(std::ofstream &file, LocalFunction &f, Function &exact
         file << "\t\t\t\t\t";
         for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
           auto diff = f(it.coords())-exact_solution.evaluate_inverse(geometry.global(it.coords()));
+          file << std::setprecision(12) << std::scientific;
           file << diff << " ";
         }
         file << endl;
@@ -290,6 +292,7 @@ void Plotter::write_points_reflector_pov(std::ofstream &file, Function & f) cons
         for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
           auto x_2d = geometry.global(it.coords());
           auto rho = 1.0/f(it.coords());
+          file << std::setprecision(12) << std::scientific;
           file << "\t\t <"  << x_2d[0]*rho << ", " << x_2d[1]*rho << ", " <<  omega(x_2d)*rho<< ">," << endl;
           vertex_no++;
         }
