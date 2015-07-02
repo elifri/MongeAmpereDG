@@ -23,8 +23,7 @@
 //#include "lagrangedgbasis.hh"
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 
-#include <dune/functions/functionspacebases/pq1nodalbasis.hh>
-#include <dune/functions/functionspacebases/pq2nodalbasis.hh>
+#include <dune/functions/functionspacebases/pqknodalbasis.hh>
 
 namespace Dune {
 namespace Functions {
@@ -44,11 +43,10 @@ class MAMixedHessianTree;
 template<typename GV, int deg, int degHess>
 class MAMixedBasisTree;
 
-template<typename GV, int deg, int degHess>
-class MAMixedLocalIndexSet {};
 
-template<typename GV, int degHess>
-class MAMixedLocalIndexSet<GV, 2, degHess> {
+template<typename GV, int deg, int degHess>
+class MAMixedLocalIndexSet
+{
     static const int dim = GV::dimension;
     static const int nDH = dim*dim;
 
@@ -56,18 +54,18 @@ public:
     typedef std::size_t size_type;
 
     /** \brief Type of the local view on the restriction of the basis to a single element */
-    typedef MAMixedBasisLocalView<GV, 2, degHess> LocalView;
+    typedef MAMixedBasisLocalView<GV, deg, degHess> LocalView;
 
     /** \brief Type used for global numbering of the basis vectors */
     typedef std::array<size_type, 2> MultiIndex;
 
-    MAMixedLocalIndexSet(const MAMixedIndexSet<GV, 2, degHess> & indexSet) :
+    MAMixedLocalIndexSet(const MAMixedIndexSet<GV, deg, degHess> & indexSet) :
             indexSet_(indexSet), uLocalIndexSet_(
                     indexSet_.uIndexSet_.localIndexSet()), uDHLocalIndexSet_(
                     indexSet_.uDHIndexSet_.localIndexSet()) {
     }
 
-    void bind(const MAMixedBasisLocalView<GV, 2, degHess>& localView) {
+    void bind(const MAMixedBasisLocalView<GV, deg, degHess>& localView) {
         localView_ = &localView;
         uLocalIndexSet_.bind(localView.ulocalView_);
         uDHLocalIndexSet_.bind(localView.uDHlocalView_);
@@ -119,7 +117,7 @@ public:
     size_type flat_index(MultiIndex mi) const
     {
         if (mi[0] == 0) return mi[1];
-        return uLocalIndexSet_.indexSet_.size()+mi[1];
+        return uLocalIndexSet_.indexSet().size()+mi[1];
     }
     size_type flat_index(size_type localIndex) const
     {
@@ -138,27 +136,25 @@ public:
         return *localView_;
     }
 
-    const typename PQ2NodalBasis<GV>::IndexSet::LocalIndexSet& uLocalIndexSet() const{
+    const typename PQKNodalBasis<GV, deg>::IndexSet::LocalIndexSet& uLocalIndexSet() const{
       return uLocalIndexSet_;
     }
 
 private:
     const LocalView * localView_;
-    MAMixedIndexSet<GV, 2, degHess> indexSet_;
-    typename PQ2NodalBasis<GV>::IndexSet::LocalIndexSet uLocalIndexSet_;
+    MAMixedIndexSet<GV, deg, degHess> indexSet_;
+    typename PQKNodalBasis<GV, deg>::IndexSet::LocalIndexSet uLocalIndexSet_;
     typename LagrangeDGBasis<GV, degHess>::IndexSet::LocalIndexSet uDHLocalIndexSet_;
 };
 
 template<typename GV, int deg, int degHess>
-class MAMixedIndexSet {};
-
-template<typename GV, int degHess>
-  class MAMixedIndexSet<GV, 2, degHess> {
+class MAMixedIndexSet
+{
     static const int dim = GV::dimension;
     static const int nDH = dim*dim;
 
     /** \brief The global FE basis that this is a view on */
-    typedef MAMixedBasis<GV, 2, degHess> GlobalBasis;
+    typedef MAMixedBasis<GV, deg, degHess> GlobalBasis;
 
     MAMixedIndexSet(const GlobalBasis & basis) :
             uIndexSet_(basis.unodalbasis_.indexSet()), uDHIndexSet_(
@@ -167,7 +163,7 @@ template<typename GV, int degHess>
 
 public:
 
-    typedef MAMixedLocalIndexSet<GV, 2, degHess> LocalIndexSet;
+    typedef MAMixedLocalIndexSet<GV, deg, degHess> LocalIndexSet;
 
     typedef std::size_t size_type;
 
@@ -219,7 +215,7 @@ private:
     friend GlobalBasis;
     friend LocalIndexSet;
 
-    typename PQ2NodalBasis<GV>::IndexSet uIndexSet_;
+    typename PQKNodalBasis<GV, deg>::IndexSet uIndexSet_;
     typename LagrangeDGBasis<GV, degHess>::IndexSet uDHIndexSet_;
 };
 
@@ -229,13 +225,8 @@ private:
  */
 template<typename GV, int deg, int degHess>
 class MAMixedBasis: public GridViewFunctionSpaceBasis<GV,
-        MAMixedBasisLocalView<GV, deg, degHess>,
-        MAMixedIndexSet<GV, deg, degHess>, std::array<std::size_t, 2> > {};
-
-template<typename GV, int degHess>
-  class MAMixedBasis<GV, 2, degHess>: public GridViewFunctionSpaceBasis<GV,
-          MAMixedBasisLocalView<GV, 2, degHess>,
-          MAMixedIndexSet<GV, 2, degHess>, std::array<std::size_t, 2> > {
+          MAMixedBasisLocalView<GV, deg, degHess>,
+          MAMixedIndexSet<GV, deg, degHess>, std::array<std::size_t, 2> > {
     static const int dim = GV::dimension;
     static const int nDH = dim*dim;
 
@@ -246,11 +237,11 @@ public:
     typedef std::size_t size_type;
 
     /** \brief export the bases of the child elements*/
-    typedef PQ2NodalBasis<GV> Basisu;
+    typedef PQKNodalBasis<GV, deg> Basisu;
     typedef LagrangeDGBasis<GV, degHess> BasisuDH;
 
     /** \brief Type of the local view on the restriction of the basis to a single element */
-    typedef MAMixedBasisLocalView<GV, 2, degHess> LocalView;
+    typedef MAMixedBasisLocalView<GV, deg, degHess> LocalView;
 
     /** \brief Constructor for a given grid view object */
     MAMixedBasis(const GridView& gv) :
@@ -264,8 +255,8 @@ public:
         return unodalbasis_.gridView();
     }
 
-    MAMixedIndexSet<GV, 2, degHess> indexSet() const {
-        return MAMixedIndexSet<GV, 2, degHess>(gridView());
+    MAMixedIndexSet<GV, deg, degHess> indexSet() const {
+        return MAMixedIndexSet<GV, deg, degHess>(gridView());
     }
 
     /**
@@ -277,25 +268,23 @@ public:
     }
 
 private:
-    friend MAMixedIndexSet<GV, 2, degHess> ;
-    friend MAMixedBasisLocalView<GV, 2, degHess> ;
+    friend MAMixedIndexSet<GV, deg, degHess> ;
+    friend MAMixedBasisLocalView<GV, deg, degHess> ;
 
-    PQ2NodalBasis<GV> unodalbasis_;
+    PQKNodalBasis<GV, deg> unodalbasis_;
     LagrangeDGBasis<GV, degHess> uDHnodalbasis_;
 };
 
 /** \brief The restriction of a finite element basis to a single element */
 template<typename GV, int deg, int degHess>
-class MAMixedBasisLocalView {};
-
-template<typename GV, int degHess>
-  class MAMixedBasisLocalView<GV, 2, degHess> {
+class MAMixedBasisLocalView
+{
     static const int dim = GV::dimension;
     static const int nDH = dim*dim;
 
 public:
     /** \brief The global FE basis that this is a view on */
-    typedef MAMixedBasis<GV, 2, degHess> GlobalBasis;
+    typedef MAMixedBasis<GV, deg, degHess> GlobalBasis;
     typedef typename GlobalBasis::GridView GridView;
 
     /** \brief The type used for sizes */
@@ -316,7 +305,7 @@ public:
      * In the case of a P2 space this tree consists of a single leaf only,
      * i.e., Tree is basically the type of the LocalFiniteElement
      */
-    typedef MAMixedBasisTree<GV, 2, degHess> Tree;
+    typedef MAMixedBasisTree<GV, deg, degHess> Tree;
 
     /** \brief Construct local view for a given global finite element basis */
     MAMixedBasisLocalView(const GlobalBasis* globalBasis) :
@@ -398,24 +387,21 @@ public:
     }
 
 protected:
-    friend MAMixedLocalIndexSet<GV, 2, degHess> ;
+    friend MAMixedLocalIndexSet<GV, deg, degHess> ;
 
     const GlobalBasis* globalBasis_;
-    PQ2NodalBasisLocalView<GV> ulocalView_;
+    PQKNodalBasisLocalView<GV, deg> ulocalView_;
     LagrangeDGBasisLocalView<GV, degHess> uDHlocalView_;
-    MAMixedHessianTree<GV, 2, degHess> uDHTree_;
+    MAMixedHessianTree<GV, deg, degHess> uDHTree_;
     Tree tree_;
 };
 
-template<typename GV, int deg, int degHess>
-class MAMixedHessianTree: public TypeTree::PowerNode<LagrangeDGBasisLeafNode<GV, degHess>,
-        GV::dimension*GV::dimension> {};
 
-template<typename GV, int degHess>
-  class MAMixedHessianTree<GV, 2, degHess>: public TypeTree::PowerNode<LagrangeDGBasisLeafNode<GV, degHess>,
+template<typename GV, int deg, int degHess>
+  class MAMixedHessianTree: public TypeTree::PowerNode<LagrangeDGBasisLeafNode<GV, degHess>,
           GV::dimension*GV::dimension> {
 
-    friend class MAMixedBasisLocalView<GV, 2, degHess>;
+    friend class MAMixedBasisLocalView<GV, deg, degHess>;
 
     MAMixedHessianTree(LagrangeDGBasisLeafNode<GV, degHess> & leafNode) :
             TypeTree::PowerNode<LagrangeDGBasisLeafNode<GV, degHess>, GV::dimension*GV::dimension>(
@@ -425,14 +411,11 @@ template<typename GV, int degHess>
 
 //todo erben ist falsch
 template<typename GV, int deg, int degHess>
-class MAMixedBasisTree: public TypeTree::CompositeNode<LagrangeDGBasisLeafNode<GV, deg>,MAMixedHessianTree<GV, deg, degHess>> {};
+class MAMixedBasisTree: public TypeTree::CompositeNode<PQKNodalBasisLeafNode<GV, deg>,MAMixedHessianTree<GV, deg, degHess>> {
+    friend MAMixedBasisLocalView<GV, deg, degHess> ;
 
-template<typename GV, int degHess>
-class MAMixedBasisTree<GV, 2, degHess>: public TypeTree::CompositeNode<PQ2NodalBasisLeafNode<GV>,MAMixedHessianTree<GV, 2, degHess>> {
-    friend MAMixedBasisLocalView<GV, 2, degHess> ;
-
-    typedef TypeTree::CompositeNode<PQ2NodalBasisLeafNode<GV>,MAMixedHessianTree<GV, 2, degHess> > Base;
-    MAMixedBasisTree(PQ2NodalBasisLeafNode<GV> & uleafNode, const MAMixedHessianTree<GV, 2, degHess> & hessianTree) :
+    typedef TypeTree::CompositeNode<PQKNodalBasisLeafNode<GV, deg>,MAMixedHessianTree<GV, deg, degHess> > Base;
+    MAMixedBasisTree(PQKNodalBasisLeafNode<GV, deg> & uleafNode, const MAMixedHessianTree<GV, deg, degHess> & hessianTree) :
             Base(uleafNode, hessianTree) {
     }
 };
