@@ -282,11 +282,10 @@ const typename MA_solver::VectorType& MA_solver::solve()
   assert (initialised);
   iterations = 0;
   //get operator
-  const MA_solver::Operator op(*this);
 
 
   //init andreas solution as exact solution
-//  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exact_reflector_projection_small.grid"));
+  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exact_reflector_projection_small.grid"));
   exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exactReflectorProjectionSimple.grid"));
   assert(is_close(exact_solution->x_min, Solver_config::lowerLeft[0], 1e-12));
   assert(is_close(exact_solution->y_min, Solver_config::lowerLeft[1], 1e-12));
@@ -518,10 +517,6 @@ void MA_solver::adapt_solution(const int level)
 void MA_solver::solve_nonlinear_system()
 {
   assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
-
-  //get operator
-  const MA_solver::Operator op(*this);
-
 
   std::cout << "n dofs" << get_n_dofs() << std::endl;
 //  if (count_refined < 3)  solution = exactsol_projection;

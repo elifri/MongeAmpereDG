@@ -73,7 +73,8 @@ public:
 			grid_ptr(grid), gridView_ptr(&gridView),
 			assembler(*FEBasis, true),
 			plotter(gridView),
-			solution_u_old(), gradient_u_old()
+			solution_u_old(), gradient_u_old(),
+			op(*this)
 	{
 	  read_configfile(configFile);
 
