@@ -27,6 +27,8 @@ void MA_solver::read_configfile(std::string &configFile)
 {
   mirror_problem::Grid2d::PovRayOpts povRayOpts;
 
+  int refinement;
+
   po::options_description config("Configuration of the MA FE solver");
   config.add_options()
 //        ("FE.degree",  po::value<int>(&Solver_config::lowerLeft[0]), "")
@@ -42,6 +44,7 @@ void MA_solver::read_configfile(std::string &configFile)
         ("solver.sigmaBoundary",     po::value<double>(&Solver_config::sigmaBoundary), "")
         ("output.directory", po::value<string>(&outputDirectory_), "")
         ("output.prefix", po::value<string>(&outputPrefix_), "")
+        ("output.refinement", po::value<int>(&refinement), "")
         ("povray.cameraAngle",       po::value<double>(&(povRayOpts.cameraAngle)),       "")
         ("povray.jitter",            po::value<bool>  (&(povRayOpts.jitter)),            "")
         ("povray.nPhotons",          po::value<unsigned int>(&(povRayOpts.nPhotons)),    "")
@@ -67,6 +70,7 @@ void MA_solver::read_configfile(std::string &configFile)
     notify(vm);
   }
 
+  plotter.set_refinement(refinement);
   plotter.set_PovRayOptions(povRayOpts);
 }
 
@@ -199,10 +203,7 @@ void MA_solver::plot_with_mirror(std::string name)
    std::string reflPovname(plotter.get_output_directory());
    reflPovname += "/"+ plotter.get_output_prefix() + name + "reflector" + NumberToString(iterations) + ".pov";
 
-   plotter.set_refinement(4);
-    plotter.writeReflectorPOV(reflPovname, localnumericalSolution);
-
-    plotter.set_refinement(2);
+   plotter.writeReflectorPOV(reflPovname, localnumericalSolution);
 
     std::cout << "plot written into " << fname  << " " << reflname << " and " << reflPovname << std::endl;
 }

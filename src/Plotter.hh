@@ -45,7 +45,13 @@ private:
 
 
 	int Nelements() const;
-	int Nnodes() const;
+	int Nnodes() const
+	{
+	  if (refinement == 0)
+	    return grid->size(Solver_config::dim);
+	  return grid->size(0)*PlotRefinementType::nVertices(refinement);
+	}
+
 
 public:
 	typedef Eigen::Matrix<Solver_config::RangeType, Eigen::Dynamic, 1> PointdataVectorType;
@@ -55,6 +61,12 @@ public:
 	std::string output_directory, output_prefix;
 
 	std::map<std::string, std::ofstream*> plot_streams;
+
+	~Plotter()
+	{
+	  for (auto& stream : plot_streams)
+	    delete stream.second;
+	}
 
 	//helper for vtk parts
 
@@ -230,21 +242,11 @@ void Plotter::write_error(std::ofstream &file, LocalFunction &f, Function &exact
       << "\t\t\t\t<DataArray type=\"Float32\" Name=\"error\" NumberOfComponents=\"1\" format=\""
       << "ascii" << "\">\n";
 
-    int vertex_no = 0;
-
     //the reflector is given by X*rho, where rho is the PDE solution. X is calculated from the 2d mesh by adding the third coordiante omega(x)
 
     if (refinement == 0)
     {
       // collect points
-/*
-      for (auto&& vertex: vertices(*grid)) {
-        auto x_2d = vertex.geometry().center();
-        auto rho = 1.0/solution_vertex[vertex_no];
-        file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  Local_Operator_MA_refl_Neilan::omega(x_2d)*rho << endl;
-        vertex_no++;
-      }
-*/
       assert(false);
     }else {   // save points in file after refinement
       for (auto&& element: elements(*grid))

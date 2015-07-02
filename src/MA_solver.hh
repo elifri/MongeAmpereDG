@@ -87,7 +87,6 @@ public:
 
 	  plotter.set_output_directory(outputDirectory_);
 	  plotter.set_output_prefix(outputPrefix_);
-	  plotter.set_refinement(Solver_config::degree);
 
 	  plotter.add_plot_stream("resU", outputDirectory_+"/Data/"+outputPrefix_+"resU"); //write residual in u test functions in this file
 	  plotter.add_plot_stream("res", outputDirectory_+"/Data/"+outputPrefix_+"res"); //write residual in this file

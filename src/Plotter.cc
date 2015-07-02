@@ -54,13 +54,6 @@ int Plotter::Nelements() const
 	return Nelements;
 }
 
-inline
-int Plotter::Nnodes() const
-{
-	if (refinement == 0)
-		return grid->size(Solver_config::dim);
-	return grid->size(0)*PlotRefinementType::nVertices(refinement);
-}
 
 
 //==================================================
@@ -89,7 +82,8 @@ void Plotter::write_point_data(std::ofstream &file, const string name, Eigen::Ma
 
 void Plotter::write_points(std::ofstream &file) const{
 	// write points
-		file << "\t\t\t<Point>\n"
+  file << std::setprecision(12) << std::scientific;
+  file << "\t\t\t<Point>\n"
 			<< "\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\""
 			<< "ascii" << "\">\n";
 
