@@ -72,7 +72,7 @@ public:
     assert(x.size() == size_u);
 
     // Get a quadrature rule
-    int order = std::max( 0, 2 * ( (int)localFiniteElementuDH_entry.localBasis().order()));
+    int order = std::max( 0, 3 * ( (int)localFiniteElementuDH_entry.localBasis().order()));
     const QuadratureRule<double, dim>& quad =
         QuadratureRules<double, dim>::rule(element.type(), order);
 
@@ -116,9 +116,6 @@ public:
 
               m(index_row, index_col)+= (referenceFunctionValuesHessian[i]*referenceFunctionValuesHessian[j])
                                             * quad[pt].weight() * integrationElement;
-//              if (i == 4)
-//                std::cout <<"m(" << index_row <<"," << index_col << ")+= " << (referenceFunctionValuesHessian[i]*referenceFunctionValuesHessian[j])
-//                                                * quad[pt].weight() * integrationElement << std::endl;
             }
 
         //derivative of D_h^2 u: mu
@@ -202,7 +199,7 @@ public:
 
     // Get a quadrature rule
       const int order = std::max( 1,
-          2 * ( (int)localFiniteElementun.localBasis().order()));
+          3 * ( (int)localFiniteElementun.localBasis().order()));
     GeometryType gtface = intersection.geometryInInside().type();
     const QuadratureRule<double, dim-1>& quad =
         QuadratureRules<double, dim-1>::rule(gtface, order);
@@ -227,9 +224,9 @@ public:
 
       //get jacobian of transformation
       const auto& jacobian =
-          intersection.inside()->geometry().jacobianInverseTransposed(quadPos);
+          intersection.inside().geometry().jacobianInverseTransposed(quadPos);
       const auto& jacobiann =
-          intersection.outside()->geometry().jacobianInverseTransposed(quadPos);
+          intersection.outside().geometry().jacobianInverseTransposed(quadPos);
 
       // The shape functions on the reference elements
       std::vector<RangeType > referenceFunctionValues(size_u);
