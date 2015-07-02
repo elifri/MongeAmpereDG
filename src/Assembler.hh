@@ -117,7 +117,7 @@ void assemble_gradients_gradu(const FiniteElement &lfu,
 
 //    assert( gradu.one_norm() == 0);
 
-    for (int i = 0; i < lfu.size(); i++)
+    for (size_t i = 0; i < lfu.size(); i++)
         gradu.axpy(x_local(i), gradients[i]);
 }
 
@@ -171,7 +171,7 @@ void assemble_hessians_hessu(const FiniteElement &lfu,
 
 //    assert( hessu.infinity_norm() == 0);
 
-    for (int i = 0; i < lfu.size(); i++)
+    for (size_t i = 0; i < lfu.size(); i++)
         hessu.axpy(x_local(i), hessians[i]);
 }
 
@@ -525,7 +525,7 @@ void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const
 {
   assert (v_local.size() == localIndexSet.size());
   assert (v.size() == basis_->indexSet().dimension()+1);
-  for (int i = 0; i < localIndexSet.size(); i++)
+  for (size_t i = 0; i < localIndexSet.size(); i++)
   {
 //    std::cout << "i -> " << localIndexSet.flat_index(i) << std::endl;
 
@@ -539,7 +539,7 @@ void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const
 {
   assert (v_local.size() == localIndexSet.size());
   assert (v.size() == basis_->indexSet().dimension()+1);
-  for (int i = 0; i < localIndexSet.size(); i++)
+  for (size_t i = 0; i < localIndexSet.size(); i++)
   {
      v(localIndexSet.flat_index(i)) = v_local[i];
   }
@@ -1091,14 +1091,14 @@ void Assembler::assemble_discrete_hessian_system(const LocalOperatorType &lop, S
 
                 // compute unique id for neighbor
                 const GridViewType::IndexSet::IndexType idn =
-                        gridView.indexSet().index(*(is.outside()));
+                        gridView.indexSet().index(is.outside());
 
                 // Visit face if id is bigger
                 bool visit_face = id > idn
                         || Solver_config::require_skeleton_two_sided;
                 // unique vist of intersection
                 if (visit_face) {
-                  auto neighbourElement = *(is.outside());
+                  auto neighbourElement = is.outside();
 
                   // Bind the local neighbour FE basis view to the neighbour element
                   localViewn.bind(neighbourElement);
