@@ -147,65 +147,6 @@ public:
     return DT;
   }
 
-template<class LocalFiniteElement, class GeometryType, class JacobianType, class VectorType>
-static FieldMatrix<adouble, 3, 3> finiteDifferenceDZ_0(const LocalFiniteElement& lfu, const FieldVector<double, 2> &quadPos, const VectorType& local_dofs, const GeometryType& geometry, const JacobianType& jacobian)
-{
-  double h = 1e-8/2.;//to sqrt(eps)
-
-  const int n = 3;
-
-  FieldVector<adouble, n> T_minus (0); FieldVector<adouble, n> T_plus (0);
-  FieldMatrix<adouble, n, n> DZ_0(0);
-  for (int j = 0; j < 2; j++)
-  {
-    FieldVector<double, 2> unit_j(0);
-    unit_j[j] = 1;
-
-
-    auto x_value_minus =  quadPos; x_value_minus.axpy(-h, unit_j);
-    auto x_value_plus =  quadPos; x_value_plus.axpy(h, unit_j);
-
-    auto x_minus =geometry.local(x_value_minus);
-    auto x_plus = geometry.local(x_value_plus);
-
-    //evaluate
-    std::vector<FieldVector<double, 1 >> values(lfu.size());
-    adouble u_minus, u_plus;
-    assemble_functionValues_u(lfu, x_minus, values, local_dofs, u_minus);
-    assemble_functionValues_u(lfu, x_plus, values, local_dofs, u_plus);
-
-    std::vector<Dune::FieldVector<Solver_config::value_type, Solver_config::dim>> gradients(lfu.size());
-    FieldVector<adouble, Solver_config::dim> gradu_minus, gradu_plus;
-    assemble_gradients_gradu(lfu, jacobian, x_minus,
-        gradients, local_dofs, gradu_minus);
-    assemble_gradients_gradu(lfu, jacobian, x_plus,
-        gradients, local_dofs, gradu_plus);
-
-    adouble a_tilde_minus = a_tilde(u_minus, gradu_minus, x_value_minus);
-    adouble a_tilde_plus = a_tilde(u_plus, gradu_plus, x_value_plus);
-
-    FieldVector<adouble, 3> Z_0_minus = {gradu_minus[0], gradu_minus[1], 0};
-    FieldVector<adouble, 3> Z_0_plus = {gradu_plus[0], gradu_plus[1], 0};
-    Z_0_minus *= (2.0 / a_tilde_minus);
-    Z_0_plus *= (2.0 / a_tilde_plus);
-
-//    cout << "Z-0_plus " << Z_0_plus[0] << " " << Z_0_plus[1] << " " << Z_0_plus[2] << endl;
-//    cout << "T_minus " << Z_0_minus[0] << " " << Z_0_minus[1] << " " << Z_0_minus[2] << endl;
-
-    auto estimated_derivative = (Z_0_plus - Z_0_minus);
-    estimated_derivative/= 2.*h;
-
-    for (int i = 0; i < n; i++)
-      DZ_0[i][j] = estimated_derivative[i];
-  }
-
-  //last col = Dspi
-  DZ_0[0][2] = 0;
-  DZ_0[1][2] = 0;
-  DZ_0[2][2] = -1;
-  return DZ_0;
-}
-
   /**
    * implements the local volume integral
    * @param element		     the element the integral is evaluated on
