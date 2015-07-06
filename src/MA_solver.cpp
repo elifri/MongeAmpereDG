@@ -110,51 +110,62 @@ void MA_solver::plot(std::string name) const
 void MA_solver::plot_with_mirror(std::string name)
 {
 
-  const int nDH = Solver_config::dim*Solver_config::dim;
-  VectorType solution_u = solution.segment(0, get_n_dofs_u());
+  std::cout << "write? " << writeVTK_ << " ";
+  std::cout << "plot written into ";
 
-   //build gridviewfunction
-   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,solution_u);
-   auto localnumericalSolution = localFunction(numericalSolution);
+  //write vtk files
+  if (writeVTK_)
+  {
 
-   //extract hessian (3 entries (because symmetry))
-   typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
-   DerivativeVectorType derivativeSolution(uDHBasis->indexSet().size());
+    const int nDH = Solver_config::dim*Solver_config::dim;
+    VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
-   //extract dofs
-   for (int i=0; i<derivativeSolution.size(); i++)
-     for (int j=0; j< nDH; j++)
-     {
-       if (j == 2) continue;
-       int index_j = j > 2? 2 : j;
-       derivativeSolution[i][index_j] = solution[get_n_dofs_u()+ nDH*i+j];
-     }
+     //build gridviewfunction
+     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,solution_u);
+     auto localnumericalSolution = localFunction(numericalSolution);
 
-   //build gridview function
-   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
-   auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
+     //extract hessian (3 entries (because symmetry))
+     typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
+     DerivativeVectorType derivativeSolution(uDHBasis->indexSet().size());
 
+     //extract dofs
+     for (int i=0; i<derivativeSolution.size(); i++)
+       for (int j=0; j< nDH; j++)
+       {
+         if (j == 2) continue;
+         int index_j = j > 2? 2 : j;
+         derivativeSolution[i][index_j] = solution[get_n_dofs_u()+ nDH*i+j];
+       }
 
-   std::string fname(plotter.get_output_directory());
-   fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
-
-   SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
-   vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
-   vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
-   vtkWriter.write(fname);
+     //build gridview function
+     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
+     auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
 
 
-   std::string reflname(plotter.get_output_directory());
-   reflname += "/"+ plotter.get_output_prefix()+ name + "reflector"+NumberToString(iterations) + ".vtu";
+     std::string fname(plotter.get_output_directory());
+     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
 
-   plotter.writeReflectorVTK(reflname, localnumericalSolution, *exact_solution);
+     SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
+     vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
+     vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
+     vtkWriter.write(fname);
 
+
+     std::string reflname(plotter.get_output_directory());
+     reflname += "/"+ plotter.get_output_prefix()+ name + "reflector"+NumberToString(iterations) + ".vtu";
+
+//     plotter.writeReflectorVTK(reflname, localnumericalSolution, *exact_solution);
+     plotter.writeReflectorVTK(reflname, localnumericalSolution);
+
+     std::cout << fname  << " " << reflname << " and ";
+  }
+
+  //write povray output
    std::string reflPovname(plotter.get_output_directory());
    reflPovname += "/"+ plotter.get_output_prefix() + name + "reflector" + NumberToString(iterations) + ".pov";
 
-   plotter.writeReflectorPOV(reflPovname, localnumericalSolution);
-
-    std::cout << "plot written into " << fname  << " " << reflname << " and " << reflPovname << std::endl;
+   plotter.writeReflectorPOV(reflPovname, *solution_u_old);
+   std::cout << reflPovname << std::endl;
 }
 
 void MA_solver::create_initial_guess()
