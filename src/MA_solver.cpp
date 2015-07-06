@@ -243,17 +243,16 @@ const typename MA_solver::VectorType& MA_solver::solve()
   iterations = 0;
   //get operator
 
-
   //init andreas solution as exact solution
-  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exact_reflector_projection_small.grid"));
-  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exactReflectorProjectionSimple.grid"));
-  assert(is_close(exact_solution->x_min, Solver_config::lowerLeft[0], 1e-12));
-  assert(is_close(exact_solution->y_min, Solver_config::lowerLeft[1], 1e-12));
-  project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
-  exactsol_u = exactsol.segment(0,get_n_dofs_u());
-  exact_solution_projection_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,exactsol_u));
-  exact_solution_projection = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*exact_solution_projection_global));
-  plotter.writeReflectorVTK("exactReflector", *exact_solution_projection);
+//  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exact_reflector_projection_small.grid"));
+//  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exactReflectorProjectionSimple.grid"));
+//  assert(is_close(exact_solution->x_min, Solver_config::lowerLeft[0], 1e-12));
+//  assert(is_close(exact_solution->y_min, Solver_config::lowerLeft[1], 1e-12));
+//  project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
+//  exactsol_u = exactsol.segment(0,get_n_dofs_u());
+//  exact_solution_projection_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,exactsol_u));
+//  exact_solution_projection = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*exact_solution_projection_global));
+//  plotter.writeReflectorVTK("exactReflector", *exact_solution_projection);
 
   create_initial_guess();
   solution(solution.size()-1)= op.lop.get_right_handside().get_target_distribution().integrate() / op.lop.get_right_handside().get_input_distribution().omega_integrate();
@@ -293,15 +292,12 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //    VectorType right_sol;
 //    project(General_functions::get_easy_convex_polynomial_plus_one_callback(), right_sol);
 
-//    vtkplotter.write_numericalmirror_VTK(count_refined);
-//    vtkplotter.write_numericalmirror_pov(count_refined);
-//    solution_u = solution.segment(0, get_n_dofs_u());
-//    std::cout << "error " << (right_sol.segment(0, get_n_dofs_u()) - solution_u).norm() << std::endl;
 
     adapt_solution();
-    project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
-    exactsol_u = exactsol.segment(0, get_n_dofs_u());
+//    project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
+//    exactsol_u = exactsol.segment(0, get_n_dofs_u());
 
+    update_solution(solution);
     plot_with_mirror("numericalSolution");
   }
 
