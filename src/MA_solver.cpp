@@ -23,57 +23,6 @@ namespace po = boost::program_options;
 
 #include "utils.hpp"
 
-void MA_solver::read_configfile(std::string &configFile)
-{
-  mirror_problem::Grid2d::PovRayOpts povRayOpts;
-
-  int refinement;
-
-  po::options_description config("Configuration of the MA FE solver");
-  config.add_options()
-//        ("FE.degree",  po::value<int>(&Solver_config::lowerLeft[0]), "")
-//        ("FE.degreeHessian",  po::value<int>(&Solver_config::upperRight[0]), "")
-        ("input.targetImageName",     po::value<string>(&Solver_config::TargetImageName), "")
-        ("solver.startlevel",  po::value<int>(&Solver_config::startlevel), "")
-        ("solver.nonlinearSteps",  po::value<int>(&Solver_config::nonlinear_steps), "")
-        ("solver.maxSteps",     po::value<int>(&maxSteps_), "")
-        ("solver.Dirichlet",     po::value<bool>(&Solver_config::Dirichlet), "")
-        ("solver.lambda",     po::value<double>(&Solver_config::lambda), "")
-        ("solver.sigma",     po::value<double>(&Solver_config::sigma), "")
-        ("solver.sigmaGrad",     po::value<double>(&Solver_config::sigmaGrad), "")
-        ("solver.sigmaBoundary",     po::value<double>(&Solver_config::sigmaBoundary), "")
-        ("output.directory", po::value<string>(&outputDirectory_), "")
-        ("output.prefix", po::value<string>(&outputPrefix_), "")
-        ("output.refinement", po::value<int>(&refinement), "")
-        ("povray.cameraAngle",       po::value<double>(&(povRayOpts.cameraAngle)),       "")
-        ("povray.jitter",            po::value<bool>  (&(povRayOpts.jitter)),            "")
-        ("povray.nPhotons",          po::value<unsigned int>(&(povRayOpts.nPhotons)),    "")
-        ("povray.lightSourceRadius",    po::value<double>(&(povRayOpts.lightSourceRadius)), "")
-        ("povray.lightSourceFalloff",   po::value<double>(&(povRayOpts.lightSourceFalloff)), "")
-        ("povray.lightSourceTightness", po::value<double>(&(povRayOpts.lightSourceTightness)), "")
-  ;
-
-  // open config file for the image
-  ifstream ifs(configFile.c_str());
-  if (!ifs)
-  {
-    if (configFile=="")
-      cerr << "\nError: Path to a config file is missing!\n";
-    else
-      cerr << "\nError: Can not open config file: " << configFile << "\n";
-    exit(1);
-  }
-  else
-  {
-    po::variables_map vm;
-    po::store(po::parse_config_file(ifs, config), vm);
-    notify(vm);
-  }
-
-  plotter.set_refinement(refinement);
-  plotter.set_PovRayOptions(povRayOpts);
-}
-
 
 /*
 double MA_solver::calculate_L2_error(const MA_function_type &f) const

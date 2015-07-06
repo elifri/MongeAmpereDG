@@ -18,12 +18,14 @@
 #include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 
+#include <Grids/Grid2d.hpp> //for povray options
+
+
 #include "UnitCube.hh"
 
 //#include "localfunctions/MAmixedbasis.hh"
-//#include "localfunctions/MAmixedbasisC0.hh"
-//#include "localfunctions/MAmixedbasisC0pol1.hh"
-#include "localfunctions/MAmixedbasisC0C0.hh"
+#include "localfunctions/MAmixedbasisC0.hh"
+//#include "localfunctions/MAmixedbasisC0C0.hh"
 
 using namespace Dune;
 
@@ -55,12 +57,26 @@ std::ostream& operator <<(std::ostream &output, const ProblemType &p);
 
 struct Solver_config{
 
+  void read_configfile(std::string &configFile);
+
+  std::string outputDirectory, outputPrefix;
+  unsigned int epsDivide, epsEnd;
+
+  double minPixelValue;
+
+  int maxSteps;
+
+  bool writeVTK;
+  mirror_problem::Grid2d::PovRayOpts povRayOpts;
+  int refinement;
+
+
   static std::string configFileMA_solver;
   static std::string configFileEllipsoid;
 
   static bool Dirichlet;
 
-	enum{ dim = 2, childdim = 4, degree = 2, degreeHessian = 2};
+	enum{ dim = 2, childdim = 4, degree = 2, degreeHessian = 1};
 
 	static int startlevel;
 	static int nonlinear_steps;

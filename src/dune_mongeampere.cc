@@ -163,7 +163,10 @@ try {
 	VTKWriter<Solver_config::GridView> vtkWriter(gridView);
 	vtkWriter.write("grid");
 
-	MA_solver ma_solver(unitcube.grid_ptr(), gridView, configFileMASolver);
+	Solver_config config;
+	config.read_configfile(configFileMASolver);
+
+	MA_solver ma_solver(unitcube.grid_ptr(), gridView, config);
 
 
 #ifdef USE_DOGLEG

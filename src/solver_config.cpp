@@ -9,6 +9,9 @@
 
 #include "solver_config.hh"
 
+#include <boost/program_options.hpp>
+namespace po = boost::program_options;
+
 
 using namespace Dune;
 using namespace std;
@@ -25,7 +28,7 @@ Solver_config::UnitCubeType::SpaceType Solver_config::upperRightTarget= {1,1};
 double Solver_config::z_3 = 0;
 
 std::string Solver_config::LightinputImageName = "../inputData/lightin_lambertian.bmp";
-std::string Solver_config::TargetImageName = "../inputData/one_small.bmp";
+std::string Solver_config::TargetImageName = "../inputData/blub.bmp";
 
 int Solver_config::startlevel = 0;
 int Solver_config::nonlinear_steps = 1;
@@ -64,3 +67,54 @@ std::ostream& operator <<(std::ostream &output, const ProblemType &p)
 
 	return output;
 }
+
+
+void Solver_config::read_configfile(std::string &configFile)
+{
+
+  po::options_description config("Configuration of the MA FE solver");
+  config.add_options()
+        ("input.targetImageName",     po::value<string>(&Solver_config::TargetImageName), "")
+        ("solver.startlevel",  po::value<int>(&Solver_config::startlevel), "")
+        ("solver.nonlinearSteps",  po::value<int>(&Solver_config::nonlinear_steps), "")
+        ("solver.maxSteps",     po::value<int>(&maxSteps), "")
+        ("solver.Dirichlet",     po::value<bool>(&Solver_config::Dirichlet), "")
+        ("solver.lambda",     po::value<double>(&Solver_config::lambda), "")
+        ("solver.epsDivide",  po::value<unsigned int>(&epsDivide), "")
+        ("solver.epsEnd",  po::value<unsigned int>(&epsEnd), "")
+        ("solver.minPixelValue",     po::value<double>(&minPixelValue), "")
+        ("solver.sigma",     po::value<double>(&Solver_config::sigma), "")
+        ("solver.sigmaGrad",     po::value<double>(&Solver_config::sigmaGrad), "")
+        ("solver.sigmaBoundary",     po::value<double>(&Solver_config::sigmaBoundary), "")
+        ("output.directory", po::value<string>(&outputDirectory), "")
+        ("output.prefix", po::value<string>(&outputPrefix), "")
+        ("output.refinement", po::value<int>(&refinement), "")
+        ("output.write_vtk", po::value<bool>(&writeVTK), "")
+        ("povray.cameraAngle",       po::value<double>(&(povRayOpts.cameraAngle)),       "")
+        ("povray.jitter",            po::value<bool>  (&(povRayOpts.jitter)),            "")
+        ("povray.nPhotons",          po::value<unsigned int>(&(povRayOpts.nPhotons)),    "")
+        ("povray.lightSourceRadius",    po::value<double>(&(povRayOpts.lightSourceRadius)), "")
+        ("povray.lightSourceFalloff",   po::value<double>(&(povRayOpts.lightSourceFalloff)), "")
+        ("povray.lightSourceTightness", po::value<double>(&(povRayOpts.lightSourceTightness)), "")
+  ;
+
+
+  // open config file for the image
+  ifstream ifs(configFile.c_str());
+  if (!ifs)
+  {
+    if (configFile=="")
+      cerr << "\nError: Path to a config file is missing!\n";
+    else
+      cerr << "\nError: Can not open config file: " << configFile << "\n";
+    exit(1);
+  }
+  else
+  {
+    po::variables_map vm;
+    po::store(po::parse_config_file(ifs, config), vm);
+    notify(vm);
+  }
+
+}
+

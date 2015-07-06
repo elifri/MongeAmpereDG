@@ -68,15 +68,29 @@ public:
 	typedef typename Solver_config::DiscreteLocalGridFunction DiscreteLocalGridFunction;
   typedef typename Solver_config::DiscreteLocalGradientGridFunction DiscreteLocalGradientGridFunction;
 
-	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, std::string& configFile) :
-			initialised(true),
-			grid_ptr(grid), gridView_ptr(&gridView),
-			assembler(*FEBasis, true),
-			plotter(gridView),
-			solution_u_old(), gradient_u_old(),
-			op(*this)
+	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, Solver_config config) :
+	    initialised(true),
+			epsDivide_(config.epsDivide),
+			epsEnd_(config.epsEnd),
+			minPixelValue_(config.minPixelValue),
+      maxSteps_(config.maxSteps),
+      writeVTK_(config.writeVTK),
+      povRayOpts_(config.povRayOpts),
+      outputDirectory_(config.outputDirectory), outputPrefix_(config.outputPrefix),
+      plotterRefinement_(config.refinement),
+      grid_ptr(grid), gridView_ptr(&gridView),
+      assembler(*FEBasis, true),
+      plotter(gridView),
+      op(*this),
+      solution_u_old(), gradient_u_old()
 	{
-	  read_configfile(configFile);
+
+
+
+	  plotter.set_refinement(plotterRefinement_);
+	  plotter.set_PovRayOptions(povRayOpts_);
+
+	  epsMollifier_ = pow((double) epsDivide_, (int) Solver_config::nonlinear_steps) * epsEnd_;
 
 	  grid_ptr->globalRefine(Solver_config::startlevel);
 
@@ -110,7 +124,7 @@ public:
    * init solver configuration from configfile
    * @param configFile
    */
-  void read_configfile(std::string &configFile);
+  bool read_configfile(std::string &configFile);
 
 
 	int get_n_dofs() const{return FEBasis->indexSet().dimension() + 1;}
@@ -120,10 +134,11 @@ public:
 public:
 	struct Operator {
 		Operator():solver_ptr(){}
-		Operator(MA_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old, solver.exact_solution){}
+		Operator(MA_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old, solver.minPixelValue_){}
 
 		void evaluate(const VectorType& x, VectorType& v, const VectorType& x_old, const bool new_solution=true) const
 		{
+//		  std::cerr<< "start operator evaluation ... " << std::endl;
 
 		  if (new_solution)
       {
@@ -273,7 +288,20 @@ private:
 
 	bool initialised; ///asserts the important member, such as the dof_handler, assembler ... are initialised
 
+  unsigned int epsMollifier_, epsDivide_, epsEnd_;
+
+  double minPixelValue_;
+
+  int maxSteps_;
+
+  int count_refined; ///counts how often the original grid was refined
+  mutable int iterations;
+
+  bool writeVTK_;
+
+  mirror_problem::Grid2d::PovRayOpts povRayOpts_;
 	std::string outputDirectory_, outputPrefix_;
+  int plotterRefinement_;
 
 	const shared_ptr<GridType> grid_ptr;
 	const GridViewType* gridView_ptr;
@@ -285,6 +313,12 @@ private:
 	Assembler assembler; ///handles all (integral) assembly processes
 	Plotter plotter;
 
+  double G;
+
+  Operator op;
+
+
+  //store old solutions and coefficients
 	mutable VectorType solution; /// stores the current solution vector
 	mutable VectorType solution_u;
 
@@ -295,17 +329,11 @@ private:
 	mutable shared_ptr<DiscreteLocalGridFunction> solution_u_old;
   mutable shared_ptr<DiscreteLocalGradientGridFunction> gradient_u_old;
 
-  mutable shared_ptr<DiscreteGridFunction> exact_solution_projection_global;
-  mutable shared_ptr<DiscreteLocalGridFunction> exact_solution_projection;
+//  mutable shared_ptr<DiscreteGridFunction> exact_solution_projection_global;
+//  mutable shared_ptr<DiscreteLocalGridFunction> exact_solution_projection;
+//
+//  mutable shared_ptr<Rectangular_mesh_interpolator> exact_solution;
 
-  mutable shared_ptr<Rectangular_mesh_interpolator> exact_solution;
-
-  int maxSteps_;
-
-	int count_refined; ///counts how often the original grid was refined
-	mutable int iterations;
-
-	double G;
 
 	friend Operator;
 
