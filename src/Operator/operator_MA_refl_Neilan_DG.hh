@@ -46,8 +46,8 @@ public:
     int_f = 0;
   }
 
-  Local_Operator_MA_refl_Neilan(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld):
-    rhs(solUOld, gradUOld) {
+  Local_Operator_MA_refl_Neilan(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld, const double minPixelValue):
+    rhs(solUOld, gradUOld, Solver_config::LightinputImageName, Solver_config::TargetImageName, minPixelValue) {
     for (int i = 0; i < pixel_height*pixel_width; i++)  target_distribution[i] = 0;
     int_f = 0;
 
@@ -55,9 +55,11 @@ public:
 
 
   Local_Operator_MA_refl_Neilan(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld,
-      std::shared_ptr<Rectangular_mesh_interpolator> &exactSolU):
-    rhs(solUOld, gradUOld),
+      std::shared_ptr<Rectangular_mesh_interpolator> &exactSolU, const double minPixelValue):
+    rhs(solUOld, gradUOld, Solver_config::LightinputImageName, Solver_config::TargetImageName, minPixelValue),
     bc(exactSolU){
+
+    std::cout << " created Local Operator" << endl;
 
     for (int i = 0; i < pixel_height*pixel_width; i++)  target_distribution[i] = 0;
     int_f = 0;
