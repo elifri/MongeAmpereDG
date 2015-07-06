@@ -255,42 +255,65 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //  plotter.writeReflectorVTK("exactReflector", *exact_solution_projection);
 
   create_initial_guess();
-  solution(solution.size()-1)= op.lop.get_right_handside().get_target_distribution().integrate() / op.lop.get_right_handside().get_input_distribution().omega_integrate();
-  std::cout << "f int = " << op.lop.get_right_handside().get_input_distribution().integrate()
-               << " g int " << op.lop.get_right_handside().get_target_distribution().integrate() << " and scal factor = " << solution(solution.size()-1) << endl;
+  solution(solution.size()-1)= op.lop.get_right_handside().get_input_distribution().omega_integrate() / op.lop.get_right_handside().get_target_distribution().integrate2();
+  std::cout << "f int = " << op.lop.get_right_handside().get_input_distribution().omega_integrate()
+               << " g int " << op.lop.get_right_handside().get_target_distribution().integrate2() << " and scal factor = " << solution(solution.size()-1) << endl;
 
+  {
+  ofstream fileInitial (outputPrefix_+"initialVector");
+  fileInitial << solution << endl;
+  fileInitial.close();
+  }
+
+  std::cout << "classical g " << op.lop.get_right_handside().get_target_distribution().integrate2() << std::endl;
+
+  update_solution(solution);
+  Solver_config::VectorType f;
+  op.evaluate(solution, f, solution, false);
+  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
 
   plot_with_mirror("initialguess");
+
+  //calculate integral to fix reflector size
+  Integrator<GridType> integrator(grid_ptr);
+  G = integrator.assemble_integral_of_local_gridFunction(*solution_u_old);
+  std::cout << "reflector size  G " << G << endl;
+//      G = 2.777777777777778;
+  assembler.set_G(G);
+  //blurr target distributation
+  op.lop.rhs.convolveTargetDistributionAndNormalise(std::min(100,(int) epsMollifier_));
+
 
   //calculate initial solution
   for (int i = 0; i < Solver_config::nonlinear_steps; i++)
   {
-    update_solution(solution);
-
-    if (i == 0)
-    {
-      Integrator<GridType> integrator(grid_ptr);
-      G = integrator.assemble_integral_of_local_gridFunction(*solution_u_old);
-      assembler.set_G(G);
-    }
-
     solve_nonlinear_system();
-//    const int maxits = 5;
-//    for (int it = 0; it < maxits; it++)
-//    {
-//      bool performedStep = solve_nonlinear_step(op);
-//      if (!performedStep) break;
-//      solution_u = solution.segment(0, get_n_dofs_u());
-//      //build gridviewfunction
-//      solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));
-//      solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
-//      gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
-//      plot_with_mirror("numericalSolution");
-      iterations++;
-//    }
 
-//    VectorType right_sol;
-//    project(General_functions::get_easy_convex_polynomial_plus_one_callback(), right_sol);
+    cout << "scaling factorn " << solution(solution.size()-1) << endl;
+
+    iterations++;
+
+    if (i % 2 == 1)
+    {
+      update_solution(solution);
+      plot_with_mirror("numericalSolution");
+
+      epsMollifier_ /= epsDivide_;
+      std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
+
+      // blur target
+      op.lop.rhs.convolveTargetDistributionAndNormalise(std::min(100,(int) epsMollifier_));
+
+      //print blurred target distribution
+      if (true) {
+          ostringstream filename2; filename2 << outputDirectory_+"/lightOut" << iterations << ".png";
+          std::cout << "saved image to " << filename2.str() << std::endl;
+          op.lop.get_right_handside().get_target_distribution().saveImage (filename2.str());
+      }
+
+      solve_nonlinear_system();
+      iterations++;
+    }
 
 
     adapt_solution();
@@ -478,20 +501,16 @@ void MA_solver::solve_nonlinear_system()
 //  if (count_refined < 3)  solution = exactsol_projection;
 //  std::cout << "initial guess "<< solution.transpose() << std::endl;
 
-  Solver_config::VectorType f;
-  op.evaluate(solution, f, solution, false);
 
-//  std::cout << "initial f " << f.transpose() << std::endl;
-  plotter.get_plot_stream("resU") << iterations << " " << f.segment(0,get_n_dofs_u()).norm() << endl;
-  plotter.get_plot_stream("res") << iterations << " " << f.norm() << endl;
+//  plotter.get_plot_stream("resU") << iterations << " " << f.segment(0,get_n_dofs_u()).norm() << endl;
+//  plotter.get_plot_stream("res") << iterations << " " << f.norm() << endl;
+//  MATLAB_export(f, "f");
 
-  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
-//  std::cout << "initial l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
+
+  //  std::cout << "initial l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
   //copy guess vor scaling factor into exact solution
-  exactsol(exactsol.size()-1) = solution(solution.size()-1);
-  std::cout << "approximate error " << (solution-exactsol).norm() << std::endl;
-
-  plotter.get_plot_stream("l2projError") << iterations << " " << (solution-exactsol).segment(0,get_n_dofs_u()).norm()/((double)get_n_dofs_u()) << endl;
+//  exactsol(exactsol.size()-1) = solution(solution.size()-1);
+//  std::cout << "approximate error " << (solution-exactsol).norm() << std::endl;
 
   // /////////////////////////
   // Compute solution
@@ -526,9 +545,9 @@ void MA_solver::solve_nonlinear_system()
 
 #endif
 
-  op.evaluate(solution, f, solution, false);
-
-  std::cout << "f_u norm " << f.segment(0,get_n_dofs_u()).norm() << " f(x) norm " << f.norm() << endl;
+//  op.evaluate(solution, f, solution, false);
+//
+//  std::cout << "f_u norm " << f.segment(0,get_n_dofs_u()).norm() << " f(x) norm " << f.norm() << endl;
 //  std::cout << "l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
 
   std::cout << "scaling factor " << solution(solution.size()-1) << endl;

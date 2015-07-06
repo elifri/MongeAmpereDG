@@ -244,9 +244,9 @@ public:
     g(Solver_config::TargetImageName, Solver_config::lowerLeftTarget, Solver_config::upperRightTarget){}
   RightHandSideReflector(Function_ptr &solUOld, GradFunction_ptr &gradUOld,
                         const std::string& inputfile=Solver_config::LightinputImageName,
-                        const std::string& inputTargetfile = Solver_config::TargetImageName):
+                        const std::string& inputTargetfile = Solver_config::TargetImageName, const double minPixelValue=0.0):
                             f(inputfile, Solver_config::lowerLeft, Solver_config::upperRight),
-                            g(inputTargetfile, Solver_config::lowerLeftTarget, Solver_config::upperRightTarget),
+                            g(inputTargetfile, Solver_config::lowerLeftTarget, Solver_config::upperRightTarget, minPixelValue),
                             solution_u_old(&solUOld), gradient_u_old(&gradUOld)
   {
 //a normalisation seems to destroy the solution proces ...
@@ -254,18 +254,14 @@ public:
     g.normalize();
   }
 
-  static double phi_initial(const Solver_config::SpaceType& x){
-    Solver_config::SpaceType T;
-    if(is_close(x[0], Solver_config::lowerLeft[0])) //x_0 = r_1 in andreas' notion
-      return Solver_config::upperRightTarget[0];
-    if(is_close(x[0], Solver_config::upperRight[0])) //x_0 = s_1
-      return Solver_config::lowerLeftTarget[0];
-    if(is_close(x[1], Solver_config::lowerLeft[1]))
-      return Solver_config::upperRightTarget[1];
-    if(is_close(x[0], Solver_config::upperRight[1]))
-      return Solver_config::lowerLeftTarget[1];
-    return 1/0.;
+  void convolveTargetDistribution(unsigned int width){  g.convolveOriginal(width);}
+  void convolveTargetDistributionAndNormalise(unsigned int width)
+  {
+    g.convolveOriginal(width);
+    g.normalize();
   }
+
+  static double phi_initial(const Solver_config::SpaceType& x);
 
   ///define implicit the target plane
   template <class valueType>
