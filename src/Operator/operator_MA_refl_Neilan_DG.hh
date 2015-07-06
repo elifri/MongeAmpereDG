@@ -428,7 +428,7 @@ public:
       }
 
       //calculate system for second tensor functions
-      for (size_t j = 0; j < size_u_DH; j++) // loop over test fcts
+      for (int j = 0; j < size_u_DH; j++) // loop over test fcts
       {
         for (int row=0; row < dim; row++)
           for (int col = 0 ; col < dim; col++){
@@ -605,7 +605,7 @@ public:
           quad[pt].position());
       double factor = quad[pt].weight() * integrationElement;
 
-      for (unsigned int j = 0; j < size_u; j++) {
+      for (int j = 0; j < size_u; j++) {
 //        //parts from self
 //        // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
         v_adolc(j) += penalty_weight * u_jump * referenceFunctionValues[j] * factor;
@@ -623,7 +623,7 @@ public:
             * (-grad_times_normal) * factor;
       }
 
-      for (size_t j = 0; j < size_u_DH; j++) // loop over test fcts
+      for (int j = 0; j < size_u_DH; j++) // loop over test fcts
       {
         for (int row = 0; row < dim; row++)
           for (int col = 0; col < dim; col++)
@@ -693,12 +693,12 @@ public:
         localView.size());
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(
         localView.size());
-    for (int i = 0; i < localView.size(); i++)
+    for (size_t i = 0; i < localView.size(); i++)
       v_adolc[i] <<= v[i];
 
     trace_on(tag);
     //init independent variables
-    for (int i = 0; i < localView.size(); i++)
+    for (size_t i = 0; i < localView.size(); i++)
       x_adolc[i] <<= x[i];
 
     // ----start quadrature--------
@@ -756,13 +756,8 @@ public:
 
       //-------calculate integral--------
       auto phi_value = rhs.phi(element, quadPos, x_value, normal, Solver_config::z_3);
-      auto phi_value_initial = rhs.phi_initial(x_value);
-      double g_value;
-      bc.evaluate_exact_sol(x_value, g_value);
-
 
       adouble a_tilde_value = a_tilde(u_value, gradu, x_value);
-      Solver_config::SpaceType3d X = { x_value[0], x_value[1], omega(x_value) };
       FieldVector<adouble, 3> grad_hat = { gradu[0], gradu[1], 0 };
 
       FieldVector<adouble, 2> z_0 = gradu;
@@ -776,18 +771,20 @@ public:
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
-      for (unsigned int j = 0; j < size_u; j++) //parts from self
+      for (int j = 0; j < size_u; j++) //parts from self
       {
 
         // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
         if (Solver_config::Dirichlet)
         {
+          double g_value;
+          bc.evaluate_exact_sol(x_value, g_value);
           v_adolc(j) += penalty_weight * (u_value - g_value)
                         * referenceFunctionValues[j] * factor;
         }
         else
         {
-          v_adolc(j) += penalty_weight * ((T_value * normal) - phi_value)
+          v_adolc(j) += penalty_weight * ((T_value * normal) - phi_value) //*((T_value * normal) - phi_value)
                             * referenceFunctionValues[j] * factor;
           std::cerr << "T " << T_value[0].value() << " " << T_value[1].value() << " T*n" << (T_value * normal).value() << " phi " << phi_value << endl;
         }
@@ -796,7 +793,7 @@ public:
     }
 
     // select dependent variables
-    for (int i = 0; i < localView.size(); i++)
+    for (size_t i = 0; i < localView.size(); i++)
       v_adolc[i] >>= v[i];
     trace_off();
   }
