@@ -204,7 +204,8 @@ public:
         return nDH * uDHIndexSet_.size();
       if (prefix == 0)
         return uIndexSet_.size();
-        assert(false);
+      assert(false);
+      return -1;
     }
 
     LocalIndexSet localIndexSet() const {
