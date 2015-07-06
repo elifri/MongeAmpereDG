@@ -1,3 +1,6 @@
+project(dune-mongeampere CXX)
+
+
 cmake_minimum_required(VERSION 2.8.6)
 
 IF(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
@@ -32,7 +35,6 @@ ELSE()
 ENDIF()
 
 
-project(dune-mongeampere CXX)
 
 
 if(NOT (dune-common_DIR OR dune-common_ROOT OR
