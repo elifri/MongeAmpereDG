@@ -19,7 +19,7 @@ using namespace mirror_problem;
 
 std::string InitEllipsoidMethod::outputFolder_ = "";
 
-InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string configFile, std::string configFileGeometry){
+InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string configFile){
 
     string outputFolder, inputImageName, lightInImageName;
 
