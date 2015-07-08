@@ -28,10 +28,10 @@ class ImageFunction : public Dune::VirtualFunction<Solver_config::SpaceType, Sol
     Solver_config::SpaceType2d lowerLeft_; ///left bottom of image
     Solver_config::SpaceType2d upperRight_; ///right top of image
     double h_;
-    double factor_;  /// factor for normalization
     double minValue_;
 
   public:
+    double factor_;  /// factor for normalization
 
     ImageFunction (
         const std::string filename,
