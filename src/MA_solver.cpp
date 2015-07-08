@@ -255,10 +255,19 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //  exact_solution_projection = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*exact_solution_projection_global));
 //  plotter.writeReflectorVTK("exactReflector", *exact_solution_projection);
 
+  //blurr target distributation
+  std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
+  op.lop.rhs.convolveTargetDistributionAndNormalise(std::min(100,(int) epsMollifier_));
+  //print blurred target distribution
+  if (true) {
+      ostringstream filename2; filename2 << outputDirectory_+"/lightOut" << iterations << ".png";
+      std::cout << "saved image to " << filename2.str() << std::endl;
+      op.lop.get_right_handside().get_target_distribution().saveImage (filename2.str());
+      assert(std::abs(op.lop.get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
+  }
+
   create_initial_guess();
   solution(solution.size()-1)= op.lop.get_right_handside().get_input_distribution().omega_integrate() / op.lop.get_right_handside().get_target_distribution().integrate2();
-  std::cout << "f int = " << op.lop.get_right_handside().get_input_distribution().omega_integrate()
-               << " g int " << op.lop.get_right_handside().get_target_distribution().integrate2() << " and scal factor = " << solution(solution.size()-1) << endl;
 
   {
   ofstream fileInitial (outputPrefix_+"initialVector");
@@ -266,12 +275,11 @@ const typename MA_solver::VectorType& MA_solver::solve()
   fileInitial.close();
   }
 
-  std::cout << "classical g " << op.lop.get_right_handside().get_target_distribution().integrate2() << std::endl;
-
   update_solution(solution);
-  Solver_config::VectorType f;
-  op.evaluate(solution, f, solution, false);
-  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
+//  Solver_config::VectorType f;
+//  Solver_config::MatrixType J;
+//  op.evaluate(solution, f, J, solution, false);
+//  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
 
   plot_with_mirror("initialguess");
 
@@ -281,8 +289,6 @@ const typename MA_solver::VectorType& MA_solver::solve()
   std::cout << "reflector size  G " << G << endl;
 //      G = 2.777777777777778;
   assembler.set_G(G);
-  //blurr target distributation
-  op.lop.rhs.convolveTargetDistributionAndNormalise(std::min(100,(int) epsMollifier_));
 
 
   //calculate initial solution
@@ -290,32 +296,29 @@ const typename MA_solver::VectorType& MA_solver::solve()
   {
     solve_nonlinear_system();
 
-    cout << "scaling factorn " << solution(solution.size()-1) << endl;
+    cout << "scaling factor " << solution(solution.size()-1) << endl;
 
     iterations++;
 
-    if (i % 2 == 1)
-    {
-      update_solution(solution);
-      plot_with_mirror("numericalSolution");
+    update_solution(solution);
+    plot_with_mirror("numericalSolution");
 
-      epsMollifier_ /= epsDivide_;
-      std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
+    epsMollifier_ /= epsDivide_;
+    std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
 
-      // blur target
-      op.lop.rhs.convolveTargetDistributionAndNormalise(std::min(100,(int) epsMollifier_));
+    // blur target
+    op.lop.rhs.convolveTargetDistributionAndNormalise(std::min(100,(int) epsMollifier_));
 
-      //print blurred target distribution
-      if (true) {
-          ostringstream filename2; filename2 << outputDirectory_+"/lightOut" << iterations << ".png";
-          std::cout << "saved image to " << filename2.str() << std::endl;
-          op.lop.get_right_handside().get_target_distribution().saveImage (filename2.str());
-      }
-
-      solve_nonlinear_system();
-      iterations++;
+    //print blurred target distribution
+    if (true) {
+        ostringstream filename2; filename2 << outputDirectory_+"/lightOut" << iterations << ".png";
+        std::cout << "saved image to " << filename2.str() << std::endl;
+        op.lop.get_right_handside().get_target_distribution().saveImage (filename2.str());
+        assert(std::abs(op.lop.get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
     }
 
+    solve_nonlinear_system();
+    iterations++;
 
     adapt_solution();
 //    project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
