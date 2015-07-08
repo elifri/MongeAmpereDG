@@ -8,6 +8,8 @@
 #ifndef SRC_SOLVER_CONFIG_HH_
 #define SRC_SOLVER_CONFIG_HH_
 
+#define EIGEN_DEFAULT_DENSE_INDEX_TYPE long
+
 #include<Eigen/Core>
 #include<Eigen/Sparse>
 
