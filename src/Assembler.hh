@@ -813,13 +813,13 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
 //        std::cout << " add self" << std::endl;
         add_local_coefficients(localIndexSet, local_vector, v);
     }
-    cimg_library::CImg<double> image (lop.target_distribution, LocalOperatorType::pixel_width, LocalOperatorType::pixel_height);
+    /*cimg_library::CImg<double> image (lop.target_distribution, LocalOperatorType::pixel_width, LocalOperatorType::pixel_height);
     for (int i = 0; i < LocalOperatorType::pixel_width* LocalOperatorType::pixel_width; i++)  lop.target_distribution[i]*=255;
 
     std::stringstream ss;
     ss << "../plots/targetDistributions/target" << picture_no << ".bmp";
     image.save_bmp(ss.str().c_str());
-    picture_no++;
+    picture_no++;*/
 }
 
 inline Eigen::VectorXi Assembler::estimate_nnz_Jacobian() const
@@ -938,16 +938,23 @@ void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_
 }
 
 
-/*//template<class Config>
+//template<class Config>
 template<typename LocalOperatorType>
-void Assembler::assemble_DG_Jacobian(LocalOperatorType lop, const Solver_config::VectorType& x, Solver_config::VectorType& v, Solver_config::MatrixType& m) const
+void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_config::VectorType& x, Solver_config::VectorType& v, Solver_config::MatrixType& m) const
 {
-    assert(x.size() == basis_->indexSet().dimension());
+    assert(x.size() == basis_->indexSet().dimension()+1);
 
     Solver_config::GridView gridView = basis_->gridView();
 
     //assuming Galerkin
     v = Solver_config::VectorType::Zero(x.size());
+    m.resize(x.size(), x.size());
+    //reserve space
+    Eigen::VectorXi est_nnz = estimate_nnz_Jacobian();
+    m.reserve(est_nnz);
+
+    //get last equation
+    v(v.size()-1) -= G;
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
     const GridViewType::IndexSet& indexSet = gridView.indexSet();
@@ -955,8 +962,6 @@ void Assembler::assemble_DG_Jacobian(LocalOperatorType lop, const Solver_config:
     auto localViewn = basis_->localView();
     auto localIndexSet = basis_->indexSet().localIndexSet();
     auto localIndexSetn = basis_->indexSet().localIndexSet();
-
-    int tag_count = 0;
 
     // A loop over all elements of the grid
     for (auto&& e : elements(gridView)) {
@@ -968,18 +973,25 @@ void Assembler::assemble_DG_Jacobian(LocalOperatorType lop, const Solver_config:
         Solver_config::VectorType local_vector;
         local_vector.setZero(localView.size());    // Set all entries to zero
         Solver_config::DenseMatrixType m_m;
-        m_m = 0;
+        m_m.setZero(localView.size(), localView.size());
+
+        Solver_config::VectorType last_equation = Solver_config::VectorType::Zero(localView.size()),
+                                  scaling_factor = Solver_config::VectorType::Zero(localView.size()+1);
 
 
         //get id
         IndexType id = indexSet.index(e);
+        if (id % 100 == 0)
+          std::cerr << "processing element " << id << std::endl;
+
 
         //calculate local coefficients
         Solver_config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
 
-        lop.assemble_cell_term(localView, xLocal, local_vector, tag_count);
-        assemble_jacobian_integral(localView, xLocal, m_m, tag_count, x(x.size()), v(v.size()));
-        tag_count++;
+        lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
+        assemble_jacobian_integral_cell_term(localView, xLocal, m_m, 0, x(x.size()-1), last_equation, scaling_factor);
+
+//        tag_count++;
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
@@ -987,14 +999,14 @@ void Assembler::assemble_DG_Jacobian(LocalOperatorType lop, const Solver_config:
 
                 // compute unique id for neighbor
                 const GridViewType::IndexSet::IndexType idn =
-                        gridView.indexSet().index(*(is.outside()));
+                        gridView.indexSet().index(is.outside());
 
                 // Visit face if id is bigger
                 bool visit_face = id > idn
                         || Solver_config::require_skeleton_two_sided;
                 // unique vist of intersection
                 if (visit_face) {
-                  auto neighbourElement = *(is.outside());
+                  auto neighbourElement = is.outside();
 
                   // Bind the local neighbour FE basis view to the neighbour element
                   localViewn.bind(neighbourElement);
@@ -1002,9 +1014,9 @@ void Assembler::assemble_DG_Jacobian(LocalOperatorType lop, const Solver_config:
                   Solver_config::VectorType xLocaln = calculate_local_coefficients(localIndexSetn, x);
                   Solver_config::VectorType local_vectorn = Solver_config::VectorType::Zero(xLocaln.size());
 
-                  lop.assemble_inner_face_term(is, localView, xLocal,
-                      localViewn, xLocaln, local_vector,
-                      local_vectorn, tag_count);
+                  lop.assemble_inner_face_term(is, localView, localIndexSet, xLocal,
+                      localViewn, localIndexSetn, xLocaln, local_vector,
+                      local_vectorn, 0);
 
                   add_local_coefficients(localIndexSetn, local_vectorn, v);
 
@@ -1015,19 +1027,19 @@ void Assembler::assemble_DG_Jacobian(LocalOperatorType lop, const Solver_config:
                   mn_mn.setZero(localViewn.size(), localViewn.size());
 
                   assemble_inner_face_Jacobian(is, localView, xLocal, localViewn, xLocaln,
-                                                m_m, mn_m, m_mn, mn_mn, tag_count);
+                                                m_m, mn_m, m_mn, mn_mn, 0);
                   add_local_coefficients_Jacobian(localIndexSetn, localIndexSet, mn_m, m);
                   add_local_coefficients_Jacobian(localIndexSet,localIndexSetn, m_mn,m);
                   add_local_coefficients_Jacobian(localIndexSetn, localIndexSetn, mn_mn, m);
-
-                  tag_count++;
+//
+//                  tag_count++;
                 }
             } else if (is.boundary()) {
                 // Boundary integration
-                lop.assemble_boundary_face_term(is, localView, xLocal,
-                        local_vector, tag_count);
-                assemble_jacobian_integral(localView, xLocal, m_m, tag_count);
-                tag_count++;
+              lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
+                      local_vector, 0);
+                assemble_jacobian_integral(localView, xLocal, m_m, 0);
+//                tag_count++;
             } else {
                 std::cerr << " I do not know how to handle this intersection"
                         << std::endl;
@@ -1036,8 +1048,17 @@ void Assembler::assemble_DG_Jacobian(LocalOperatorType lop, const Solver_config:
         }
         add_local_coefficients(localIndexSet, local_vector, v);
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, m);
+
+        //add derivatives for scaling factor
+        for (int i = 0; i < localView.size(); i++)
+        {
+          m.coeffRef(localIndexSet.flat_index(i),m.cols()-1) += scaling_factor(i);
+          m.coeffRef(m.rows()-1, localIndexSet.flat_index(i)) += last_equation(i);
+        }
+        m.coeffRef(m.rows()-1, m.cols()-1) += scaling_factor(localView.size());
+
     }
-}*/
+}
 
 //template<class Config>
 template<typename LocalOperatorType>

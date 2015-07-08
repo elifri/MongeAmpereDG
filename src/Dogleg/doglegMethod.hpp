@@ -65,7 +65,8 @@ bool checkJacobian(
 {
 	int n = x.size();
 	Eigen::SparseMatrix<double> J(n,n);
-	f.derivative(x,J);
+	Eigen::VectorXd temp(n);
+	f.evaluate(x,temp, J, x, false);
 	J.prune(1,1e-10);
 
 	double tol = 1e-7;
@@ -145,7 +146,8 @@ template<typename FunctorType>
 int doglegMethod (
           const FunctorType &functor,
     const DogLeg_optionstype opts,
-          Eigen::VectorXd &x
+          Eigen::VectorXd &x,
+          bool useCombinedFunctor = false
 ){
     igpm::processtimer gesamtzeit;
     gesamtzeit.start();
@@ -161,8 +163,14 @@ int doglegMethod (
     double dL = 0;
     double nh = 0;
 
-    functor.evaluate(x,f,x, false);
-    functor.derivative(x,J);
+    if (useCombinedFunctor)
+      functor.evaluate(x,f,J, x, false);
+    else
+    {
+      functor.evaluate(x,f,x, false);
+      functor.derivative(x,J);
+    }
+
     if (opts.check_Jacobian)	checkJacobian(functor, x, opts.exportFDJacobianifFalse);
 
     // Check result of function calls for correct length of vectors
@@ -354,15 +362,18 @@ int doglegMethod (
 
             // new function evaluation
             const Eigen::VectorXd xnew(x + h);
-            functor.evaluate(xnew,fn,x);
+            if (useCombinedFunctor)
+              functor.evaluate(xnew,fn,J, x);
+            else
+              functor.evaluate(xnew,fn,x);
 
             const double Fn = fn.squaredNorm() / 2.0;
             const double dF = F - Fn;
 
             if ((dL > 0.0) && (dF > 0.0))
             {
-                // new evaluation of Jacobian and its LU decomposition
-                functor.derivative(xnew,J);
+              functor.derivative(xnew,J);
+
                 if (opts.check_Jacobian)
                 	checkJacobian(functor, xnew);
 //                make_FD_Jacobian(functor, x, J);
@@ -371,7 +382,7 @@ int doglegMethod (
                     // decomposition failed
                     std::cerr << "\nError: Could not compute LU decomposition!\n";
                     if (opts.exportJacobianIfSingular) {
-//                        MATLAB_export(J,"J");
+                        MATLAB_export(J,"J");
                     }
                     exit(1);
                 }

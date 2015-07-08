@@ -136,6 +136,21 @@ public:
 		Operator():solver_ptr(){}
 		Operator(MA_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old, solver.minPixelValue_){}
 
+    void evaluate(const VectorType& x, VectorType& v, MatrixType& m, const VectorType& x_old, const bool new_solution=true) const
+    {
+      if (new_solution)
+      {
+        solver_ptr->update_solution(x_old);
+      }
+
+      assert(solver_ptr != NULL);
+      igpm::processtimer timer;
+      timer.start();
+      solver_ptr->assemble_DG_Jacobian(lop, x,v, m); timer.stop();
+
+    }
+
+
 		void evaluate(const VectorType& x, VectorType& v, const VectorType& x_old, const bool new_solution=true) const
 		{
 //		  std::cerr<< "start operator evaluation ... " << std::endl;
@@ -189,7 +204,7 @@ public:
   template<typename LocalOperatorType>
   void assemble_DG_Jacobian(const LocalOperatorType &LOP, const VectorType& x, VectorType& v, MatrixType& m) const {
     assert (initialised);
-    assembler.assemble_Jacobian_DG(LOP, x, v, m);
+    assembler.assemble_DG_Jacobian(LOP, x, v, m);
   }
 
 	/**
