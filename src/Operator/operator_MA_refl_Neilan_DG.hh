@@ -65,153 +65,54 @@ public:
     int_f = 0;
   }
 
-
-  struct analyticPDE
+  ///helper function that checks wether the calculated reflection is consistent with the vector calculated by direct application of the reflection law
+  bool check_reflection(const Solver_config::SpaceType& x_value, const FieldVector<adouble, 3>& X,
+                        const double u_value,
+                        const FieldVector<adouble, Solver_config::dim>& gradu, const FieldVector<adouble, 3>& grad_hat,
+                        const double a_tilde_value, const double b_tilde_value,
+                        const FieldVector<adouble, 3>& Z_0
+                        )
   {
+    //calculate normal of the reflector
+    FieldVector<adouble, 3> normal_refl = grad_hat;
+    normal_refl *= -1.0/sqr(u_value);
+    normal_refl.axpy(-1./u_value+1.0/sqr(u_value)*(gradu*x_value) ,X);
 
-    ///helper function that checks wether the calculated reflection is consistent with the vector calculated by direct application of the reflection law
-    bool check_reflection(const Solver_config::SpaceType& x_value, const double u_value, const FieldVector<adouble, Solver_config::dim>& gradu, const FieldVector<adouble, 3>& grad_hat)
-    {
-      //calculate normal of the reflector
-      FieldVector<adouble, 3> normal_refl = grad_hat;
-      normal_refl *= -1.0/sqr(u_value);
-      normal_refl.axpy(-1./u_value+1.0/sqr(u_value)*(gradu*x_value) ,X);
+    FieldVector<adouble, 3> lightvector = X;
+    lightvector /= u_value;
+    lightvector *= -1;
+    lightvector += Z_0;
 
+    //calculated direction after reflection (Y)
+    FieldVector<adouble, 3> Y = X;
+    Y *= a_tilde_value/b_tilde_value;
+    Y.axpy(-2*u_value/b_tilde_value, grad_hat);
+    //      std::cerr << "direction after refl " << Y[0].value() << " " << Y[1].value() << " " << Y[2].value() << std::endl;
 
-      FieldVector<adouble, 3> lightvector = X;
-      lightvector /= u_value;
-      lightvector *= -1;
-      lightvector += Z_0;
-
-      //calculated direction after reflection (Y)
-      FieldVector<adouble, 3> Y = X;
-      Y *= a_tilde_value/b_tilde_value;
-      Y.axpy(-2*u_value/b_tilde_value, grad_hat);
-      //      std::cerr << "direction after refl " << Y[0].value() << " " << Y[1].value() << " " << Y[2].value() << std::endl;
-
-      //direction of lightvector and Y have to be the same
-      assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[1].value()/Y[1].value()) < 1e-10
-            || (fabs(lightvector[0].value()) < 1e-12 &&  fabs(Y[0].value())< 1e-12)
-            || (fabs(lightvector[1].value()) < 1e-12 &&  fabs(Y[1].value())< 1e-12)  );
-      assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[2].value()/Y[2].value()) < 1e-10
-            || (fabs(lightvector[0].value()) < 1e-12 &&  fabs(Y[0].value())< 1e-12)
-            || (fabs(lightvector[2].value()) < 1e-12 &&  fabs(Y[2].value())< 1e-12)  );
-
-      return true;
-    }
-
-    bool check_direction_of_normal(const double& u_value)
-    {
-      FieldVector<adouble, 3> lightvector = X;
-       lightvector /= u_value;
-       lightvector *= -1;
-       lightvector += Z_0;
-
-  //    std::cout << "check if tangential " <<  (D_Psi_value * lightvector).value()
-  //              << "vector of light " << lightvector[0].value() << " " << lightvector[1].value() << " " << lightvector[2].value()
-  //              << " vector of boundary " << D_Psi_value[0].value() << " " << D_Psi_value[1].value() << " " << D_Psi_value[2].value()<< std::endl;
-      //the normal of the target plane has to point away from the reflector
-      assert( (D_Psi_value * lightvector).value() > 0);
-
-      return true;
-    }
-
-  template <class value_type, class grad_type>
-  inline void calc_variables(const Solver_config::SpaceType& x_value, const value_type& u_value, grad_type gradu)
-  {
-    X = { x_value[0], x_value[1], omega(x_value) };
-
-    omega_value = omega(x_value);
-
-    a_tilde_value = a_tilde(u_value, gradu, x_value);
-    b_tilde_value = (gradu * gradu) + sqr(u_value) - sqr((gradu * x_value));
-
-    FieldVector<adouble, 3> grad_hat = { gradu[0], gradu[1], 0 };
-
-    //N = Id + xx^t/omega^2
-    N = 0;
-    N[0][0] += x_value[0]*x_value[0]; N[0][1] +=x_value[0]*x_value[1];
-    N[1][0] += x_value[0]*x_value[1]; N[1][1] += x_value[1]*x_value[1];
-    N /= sqr(omega_value);
-
-    N[0][0] += 1.0; N[1][1] +=1.0;
-
-    //-----calculate Z------  = X/u +t(Z_0-X/u) = point on reflector + reflected vector
-    //calculate t: distance between reflector and target plane (reflected vector)
-    t = 1;
-    t -= u_value *Solver_config::z_3/omega_value;
-    assert ( t > 0);
-
-    //calculate Z_0, the intersection between reflected light and {x_3=0}-plane
-    FieldVector<adouble, Solver_config::dim> z_0 = gradu;
-    z_0 *= (2.0 / a_tilde_value);
-    z = T(x_value, u_value, z_0, Solver_config::z_3);
-//
-    Z_0 = grad_hat;
-    Z_0 *= (2.0 / a_tilde_value);
-//    FieldVector<adouble, 3> Z = T(X, u_value, Z_0, Solver_config::z_3);
-
-    //calculate D_psi value, the gradient of the target plane
-    D_Psi_value[0] = 0; D_Psi_value[1] = 0;
-    D_Psi_value[2] = -1;
-
-    adouble D_psi_norm = sqrt(sqr(D_Psi_value[0])+sqr(D_Psi_value[1])+sqr(D_Psi_value[2]));
-    assert(std::abs((D_psi_norm-1.0).value()) <1e-10);
-
-    //perfom additional checks
-    assert(check_reflection(x_value, u_value.value(), gradu, grad_hat));
-    assert(check_direction_of_normal(u_value.value()));
+    //direction of lightvector and Y have to be the same
+    assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[1].value()/Y[1].value()) < 1e-10
+        || (fabs(lightvector[0].value()) < 1e-12 &&  fabs(Y[0].value())< 1e-12)
+        || (fabs(lightvector[1].value()) < 1e-12 &&  fabs(Y[1].value())< 1e-12)  );
+    assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[2].value()/Y[2].value()) < 1e-10
+        || (fabs(lightvector[0].value()) < 1e-12 &&  fabs(Y[0].value())< 1e-12)
+        || (fabs(lightvector[2].value()) < 1e-12 &&  fabs(Y[2].value())< 1e-12)  );
+    return true;
   }
 
-  template< typename HessianType>
-  inline adouble lhs(const HessianType &uDH)
+  ///helper function to check if the target plane normal points away from the reflector
+  inline
+  bool check_direction_of_normal(const double& u_value, const FieldVector<adouble, 3>& X, const FieldVector<adouble, 3>& Z_0, const FieldVector<adouble, 3> &D_Psi_value)
   {
-    FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> uDH_pertubed = uDH;
-    uDH_pertubed.axpy(a_tilde_value*Solver_config::z_3/(2.0*t*omega_value), N);
+        FieldVector<adouble, 3> lightvector = X;
+        lightvector /= u_value;
+        lightvector *= -1;
+        lightvector += Z_0;
 
-    return determinant(uDH_pertubed);
-  }
+        //the normal of the target plane has to point away from the reflector
+        assert( (D_Psi_value * lightvector).value() > 0);
 
-  inline adouble rhs(const adouble& u_value, const adouble& scaling_factor_adolc, const double& f_value, const adouble& g_value)
-  {
-    adouble PDE_rhs = -a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde_value*omega_value*g_value);
-    auto uTimesZ0 = Z_0;
-    uTimesZ0 *= u_value;
-    PDE_rhs *= (((uTimesZ0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value;
-
-    assert(std::abs( ((uTimesZ0-X)*D_Psi_value).value() -omega_value ) < 1e-8);
-
-    PDE_rhs *= scaling_factor_adolc;
-    //      double PDE_rhs = scaling_factor_adolc*a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde*omega(x_value));
-//      cerr<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value).value() << "/" << (4.0*b_tilde_value*omega_value*g_value).value() << std::endl;
-//      cerr << "rhs *= " <<  ((u_value*((Z_0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value).value() <<
-//                    " = (" <<  u_value.value() << "*scalarProd"
-//                        << "/(" << (t*t).value() << "*" << D_psi_norm.value() << "*" << omega_value << ")" << endl;
-//      cerr<<  "*scalarProd = " << ((Z_0-X)*D_Psi_value).value() << " = "<< (Z_0-X)[0].value()<<"," << ((Z_0-X)[1]).value() << "*"<< (D_Psi_value)[0].value()<<"," << ((D_Psi_value)[1]).value();
-//      cerr << "scaling factor " << scaling_factor_adolc.value() << endl;
-//      cout << " atilde " << a_tilde_value << " f " << f_value << endl;
-//      cout<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value) << "/" << (4.0*b_tilde*omega_value*g_value) << std::endl;
-//      cout << "rhs *= " <<  ((u_value*((Z_0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value) <<
-//                    " = (" <<  u_value << "*scalarProd"
-//                        << "/(" << (t*t) << "*" << D_psi_norm << "*" << omega_value << ")" << endl;
-//      cout<<  "*scalarProd = " << ((Z_0-X)*D_Psi_value) << " = "<< (Z_0-X)[0]<<"," << ((Z_0-X)[1]) <<"," << ((Z_0-X)[2])<< "*"<< (D_Psi_value)[0]<<"," << ((D_Psi_value)[1])<<"," << ((D_Psi_value)[2]) <<endl;
-//      cout << "scaling factor " << scaling_factor_adolc << endl;
-
-    return PDE_rhs;
-  }
-
-  Solver_config::SpaceType3d X;
-  double omega_value;
-  adouble a_tilde_value, b_tilde_value;
-  adouble t;
-  FieldMatrix<double, Solver_config::dim, Solver_config::dim> N;
-
-  FieldVector<adouble, 3> Z_0;
-  FieldVector<adouble, Solver_config::dim> z;
-
-  FieldVector<adouble, 3> D_Psi_value;
-  adouble D_psi_norm;
-  };
+        return true;
+      }
 
   /**
    * implements the local volume integral
@@ -317,57 +218,126 @@ public:
         for (int row = 0; row < dim; row++)
           for (int j = 0; j < size_u_DH; j++)
             uDH[row][col] += x_adolc(localIndexSet.flat_local_index(j, row, col))*referenceFunctionValuesHessian[j];
+//      FieldMatrix<adouble, dim, dim> uDH = Hessu;
 
-      //--------assemble PDE data-----------
+//      std::cout << "uDH: " << uDH << endl;
+
+      //--------assemble cell integrals in variational form--------
 
       assert(Solver_config::dim == 2);
 
       auto x_value = geometry.global(quad[pt].position());
+      Solver_config::SpaceType3d X = { x_value[0], x_value[1], omega(x_value) };
 
-      //calculate all terms of PDE
-      PDE_.calc_variables(x_value, u_value, gradu);
+      double omega_value = omega(x_value);
+
+      adouble a_tilde_value = a_tilde(u_value, gradu, x_value);
+      adouble b_tilde_value = (gradu * gradu) + sqr(u_value) - sqr((gradu * x_value));
+
+      FieldVector<adouble, 3> grad_hat = { gradu[0], gradu[1], 0 };
+      //N = Id + xx^t/omega^2
+      FieldMatrix<double, dim, dim> N(0);
+      N[0][0] += x_value[0]*x_value[0]; N[0][1] +=x_value[0]*x_value[1];
+      N[1][0] += x_value[0]*x_value[1]; N[1][1] += x_value[1]*x_value[1];
+      N /= sqr(omega_value);
+
+      N[0][0] += 1.0; N[1][1] +=1.0;
+
+      //calculate Z = X/u +t(Z_0-X/u) = point on reflector + reflected vector
+      //calculate t: distance between reflector and target plane (reflected vector)
+      adouble t = 1;
+      t -= u_value *Solver_config::z_3/omega_value;
+      assert ( t > 0);
+
+      //calculate Z_0, the intersection between reflected light and {x_3=0}-plane
+      FieldVector<adouble, Solver_config::dim> z_0 = gradu;
+      z_0 *= (2.0 / a_tilde_value);
+      FieldVector<adouble, Solver_config::dim> z = T(x_value, u_value, z_0, Solver_config::z_3);
+
+      FieldVector<adouble, 3> Z_0 = grad_hat;
+      Z_0 *= (2.0 / a_tilde_value);
+
+      //calculate normal of the reflector
+//      FieldVector<adouble, 3> normal_refl = grad_hat;
+//      normal_refl *= -1.0/sqr(u_value);
+//      normal_refl.axpy(-1./u_value+1.0/sqr(u_value)*(gradu*x_value) ,X);
+
+      assert(check_reflection(x_value, X, u_value.value(), gradu, grad_hat, a_tilde_value.value(), b_tilde_value.value(), Z_0));
+
+      FieldVector<adouble, 3> D_Psi_value;
+      D_Psi_value[0] = 0; D_Psi_value[1] = 0;
+      D_Psi_value[2] = -1;
+
+      assert(check_direction_of_normal(u_value.value(), X, Z_0, D_Psi_value));
 
       //calculate illumination at \Omega
       double f_value;
       rhs.f.evaluate(x_value, f_value);
 
+      int_f += f_value* quad[pt].weight() * integrationElement;
+
       //calculate illumination at target plane
       adouble g_value;
-      rhs.g.evaluate(PDE_.z, g_value);
+      rhs.g.evaluate(z, g_value);
 
- /*     //write calculated distribution
+//      cout << "f(X) " << f_value<< " maps to g(Z) " << g_value << std::endl;
+
+      //write calculated distribution
       int width, height;
-      bool is_on_target = return_pixel_coordinates(Z[0].value(), Z[1].value(), width, height);
+      bool is_on_target = return_pixel_coordinates(z[0].value(), z[1].value(), width, height);
       if (is_on_target)
         {
         assert (width < pixel_width && height < pixel_height);
         target_distribution[height*pixel_width + width] = f_value;
-        }*/
+        }
 
 
-      adouble uDH_pertubed_det = PDE_.lhs(uDH);
-      FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> uDH_pertubed = uDH;
-      uDH_pertubed.axpy(PDE_.a_tilde_value*Solver_config::z_3/(2.0*PDE_.t*PDE_.omega_value), PDE_.N);
-      uDH_pertubed_det = determinant(uDH_pertubed);
+      FieldMatrix<adouble, dim, dim> uDH_pertubed = uDH;
+//      assert(fabs(Solver_config::z_3+3.0) < 1e-12);
+      uDH_pertubed.axpy(a_tilde_value*Solver_config::z_3/(2.0*t*omega_value), N);
 
-      adouble PDE_rhs = PDE_.rhs(u_value, scaling_factor_adolc, f_value, g_value);
+      adouble uDH_pertubed_det = determinant(uDH_pertubed);
+
+
+      adouble D_psi_norm = sqrt(sqr(D_Psi_value[0])+sqr(D_Psi_value[1])+sqr(D_Psi_value[2]));
+//      cout << "D psi = " << D_Psi_value[0] << "," << D_Psi_value[1]<< "," << D_Psi_value[2] << endl;
+
+//      cout << "x_value " << x_value << " a_tilde " << a_tilde_value.value() << " omega(x) " << omega(x_value) << " btilde " << b_tilde.value() << " g " << g_value.value() << std::endl;
+      adouble PDE_rhs = -a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde_value*omega_value*g_value);
+      auto uTimesZ0 = Z_0;
+      uTimesZ0 *= u_value;
+      PDE_rhs *= (((uTimesZ0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value;
+      PDE_rhs *= scaling_factor_adolc;
+      //      double PDE_rhs = scaling_factor_adolc*a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde*omega(x_value));
+//      cout<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value).value() << "/" << (4.0*b_tilde*omega_value*g_value).value() << std::endl;
+//      cout << "rhs *= " <<  ((u_value*((Z_0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value).value() <<
+//                    " = (" <<  u_value.value() << "*scalarProd"
+//                        << "/(" << (t*t).value() << "*" << D_psi_norm.value() << "*" << omega_value << ")" << endl;
+//      cout<<  "*scalarProd = " << ((Z_0-X)*D_Psi_value).value() << " = "<< (Z_0-X)[0].value()<<"," << ((Z_0-X)[1]).value() << "*"<< (D_Psi_value)[0].value()<<"," << ((D_Psi_value)[1]).value();
+//      cout << "scaling factor " << scaling_factor_adolc.value() << endl;
+//      cout << " atilde " << a_tilde_value << " f " << f_value << endl;
+//      cout<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value) << "/" << (4.0*b_tilde*omega_value*g_value) << std::endl;
+//      cout << "rhs *= " <<  ((u_value*((Z_0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value) <<
+//                    " = (" <<  u_value << "*scalarProd"
+//                        << "/(" << (t*t) << "*" << D_psi_norm << "*" << omega_value << ")" << endl;
+//      cout<<  "*scalarProd = " << ((Z_0-X)*D_Psi_value) << " = "<< (Z_0-X)[0]<<"," << ((Z_0-X)[1]) <<"," << ((Z_0-X)[2])<< "*"<< (D_Psi_value)[0]<<"," << ((D_Psi_value)[1])<<"," << ((D_Psi_value)[2]) <<endl;
+//      cout << "scaling factor " << scaling_factor_adolc << endl;
+
+//      cout << "scaling factor " << scaling_factor_adolc.value() << endl;
 
       //calculate system for first test functions
 //      std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
 
-//      cerr << std::setprecision(12) << std::scientific;
-//      cerr << x_value << " " << u_value.value() << " " << uDH_pertubed_det.value() << " " << PDE_rhs.value() << " " << rhs_factor << endl;
-
-
-      //--------assemble cell integrals in variational form--------
-
-      int_f += f_value* quad[pt].weight() * integrationElement;
-
+//      std::cerr << "estimated det " << det_DT.value() << " detDz " << detDz.value()<< " -> rel error: " << ((det_DT-detDz)/det_DT).value()<< endl;
+//                << " f/g " << f_value/(g_value*omega_value) << " f " << f_value << " g " << g_value << "f/g " << f_value/g_value << " 1/omega " << 1/omega_value << endl;
+//      cerr << x_value << " " << u_value.value() << " " << uDH_pertubed_det.value() << " " << PDE_rhs.value() << endl;
 
       for (size_t j = 0; j < size_u; j++) // loop over test fcts
       {
         v_adolc(j) += (PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
+
+//      std::cout << "det(u)-f=" << uDH_pertubed_det<<"-"<< PDE_rhs <<"="<< (uDH_pertubed_det-PDE_rhs)<< std::endl;
       }
 
       //calculate system for second tensor functions
@@ -377,16 +347,18 @@ public:
           for (int col = 0 ; col < dim; col++){
             v_adolc(localIndexSet.flat_local_index(j, row, col) ) += uDH[row][col]*referenceFunctionValuesHessian[j]
                                     * quad[pt].weight() * integrationElement;
+//            std::cout <<"mN(" << localIndexSet.flat_local_index(j, row, col)-size_u <<"," << localIndexSet.flat_local_index(4, row, col)-size_u << ")+= " << (referenceFunctionValuesHessian[4]*referenceFunctionValuesHessian[j])
+//                                              * quad[pt].weight() * integrationElement << std::endl;
 
             v_adolc(localIndexSet.flat_local_index(j, row, col)) -= Hessu[row][col] * referenceFunctionValuesHessian[j]
                                     * quad[pt].weight() * integrationElement;
            }
       }
-      //assemble equation to fix reflector size
       last_equation_adolc += u_value* quad[pt].weight() * integrationElement;
+//      std::cout << "last equation += " << u_value.value()<< " * " << quad[pt].weight() * integrationElement << " = " <<last_equation_adolc.value() << std::endl;
     }
 
-    //copy variables
+
     for (int i = 0; i < size; i++)
       v_adolc[i] >>= v[i]; // select dependent variables
 
@@ -727,7 +699,6 @@ public:
         {
           v_adolc(j) += penalty_weight * ((T_value * normal) - phi_value) //*((T_value * normal) - phi_value)
                             * referenceFunctionValues[j] * factor;
-//          assert(std::abs(phi_value-0.3) < 1e-8 || std::abs(phi_value+0.3) < 1e-8);
 //          std::cerr << "T " << T_value[0].value() << " " << T_value[1].value() << " T*n" << (T_value * normal).value() << " phi " << phi_value << endl;
         }
       }
@@ -771,7 +742,6 @@ public:
   }
 
 
-  mutable analyticPDE PDE_;
 };
 
 #endif /* SRC_OPERATOR_HH_ */
