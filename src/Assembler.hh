@@ -519,34 +519,23 @@ Solver_config::VectorType Assembler::calculate_local_coefficients(const LocalInd
   Solver_config::VectorType v_local(localIndexSet.size());
   for (int i = 0; i < localIndexSet.size(); i++)
   {
-     v_local[i] = v(localIndexSet.flat_index(i));
-  }
-  return v_local;
-}
-
-template<typename LocalIndexSet>
-inline
-Solver_config::VectorType Assembler::calculate_local_coefficients_u(const LocalIndexSet &localIndexSet, const Solver_config::VectorType &v) const
-{
-  Solver_config::VectorType v_local(localIndexSet.size());
-  for (int i = 0; i < localIndexSet.size(); i++)
-  {
      v_local[i] = v(localIndexSet.index(i)[0]);
   }
   return v_local;
 }
+
 
 template<typename LocalIndexSet>
 inline
 void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const Solver_config::VectorType &v_local, Solver_config::VectorType& v) const
 {
   assert (v_local.size() == localIndexSet.size());
-  assert (v.size() == basis_->indexSet().dimension()+1);
+  assert (v.size() == basis_->indexSet().size()+1);
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
 //    std::cout << "i -> " << localIndexSet.flat_index(i) << std::endl;
 
-     v(localIndexSet.flat_index(i)) += v_local[i];
+     v(localIndexSet.index(i)[0]) += v_local[i];
   }
 }
 
@@ -558,7 +547,7 @@ void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const
   assert (v.size() == basis_->indexSet().dimension()+1);
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
-     v(localIndexSet.flat_index(i)) = v_local[i];
+     v(localIndexSet.index(i)[0]) = v_local[i];
   }
 }
 
@@ -591,57 +580,9 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
   {
     for (int j = 0; j < m_local.cols(); j++)
       if (std::abs(m_local(i,j)) > 1e-13 )
-        je.push_back(EntryType(localIndexSetTest.flat_index(i),localIndexSetAnsatz.flat_index(j),m_local(i,j)));
+        je.push_back(EntryType(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0],m_local(i,j)));
   }
 }
-
-
-template<typename LocalIndexSet>
-inline
-void Assembler::add_local_coefficients_uDH(const LocalIndexSet &localIndexSet, const Solver_config::DenseMatrixType &v_local, Solver_config::VectorType& v) const
-{
-  assert (v_local.size() == localIndexSet.size({1}));
-  assert (v.size() == basis_->indexSet().size({1}));
-
-  const int size_u = localIndexSet.size({0});
-
-  for (int i = 0; i < v_local.size(); i++)
-  {
-    if (std::abs(v_local(i)) > 1e-13 )
-    {
-      auto multi_index = localIndexSet.index(size_u+i);
-      v(multi_index[1]) += v_local(i);
-    }
-  }
-}
-
-
-template<typename LocalIndexSet>
-inline
-void Assembler::add_local_coefficients_Jacobian_uDH(const LocalIndexSet &localIndexSetTest, const LocalIndexSet &localIndexSetAnsatz, const Solver_config::DenseMatrixType &m_local, Solver_config::MatrixType& m) const
-{
-  assert (m_local.rows() == localIndexSetTest.size({1}));
-  assert (m_local.cols() == localIndexSetAnsatz.size({1}));
-  assert (m.rows() == basis_->indexSet().size({1}));
-  assert (m.cols() == basis_->indexSet().size({1}));
-
-  const int size_u = localIndexSetTest.size({0});
-  const int size_global_u = localIndexSetAnsatz.size({0});
-
-  const int size_u_ansatz = localIndexSetAnsatz.size({0});
-
-  for (int i = 0; i < m_local.rows(); i++)
-  {
-    for (int j = 0; j < m_local.cols(); j++)
-      if (std::abs(m_local(i,j)) > 1e-13 )
-      {
-        auto multiIndexTest = localIndexSetTest.index(size_u+i);
-        auto multiIndexAnsatz = localIndexSetAnsatz.index(size_u_ansatz+j);
-        m.coeffRef(multiIndexTest[1],multiIndexAnsatz[1]) += m_local(i,j);
-      }
-  }
-}
-
 
 
 template<class LocalView, class VectorType, class MatrixType>
@@ -793,6 +734,8 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
 
         //get id
         IndexType id = indexSet.index(e);
+//        if (id % 100 == 0)
+//          std::cerr << "processing element " << id << std::endl;
 
         //calculate local coefficients
         Solver_config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
@@ -857,19 +800,17 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
 
 inline Eigen::VectorXi Assembler::estimate_nnz_Jacobian() const
 {
-  Eigen::VectorXi est_nnz (basis_->indexSet().dimension()+1);
-  const int n_dofsu = basis_->indexSet().size({0});
+  Eigen::VectorXi est_nnz (basis_->indexSet().size()+1);
+/*
+  const int n_dofsu = basis_->indexSet().size();
   const int n_dofsuLocal = (Solver_config::degree+1)*(Solver_config::degree+2)/2;
-
-  const int nDH = Solver_config::dim*Solver_config::dim;
-  const int n_dofsuDH = basis_->indexSet().size({1});
-  const int n_dofsuDHLocal =  nDH*(Solver_config::degreeHessian+1)*(Solver_config::degreeHessian+2)/2;
 
   for (int i = 0; i < n_dofsu; i++) est_nnz(i) = 4*n_dofsuLocal + 4*n_dofsuDHLocal+1;
   for (int i = 0; i < n_dofsuDH; i++) est_nnz(n_dofsu+i) = 4*n_dofsuLocal + n_dofsuDHLocal;
   est_nnz(est_nnz.size()-1) = n_dofsu;
-
+*/
   return est_nnz;
+
 }
 
 template<typename LocalOperatorType>
@@ -962,8 +903,8 @@ void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_
 
         for (int i = 0; i < localView.size(); i++)
         {
-          JacobianEntries.push_back(EntryType(localIndexSet.flat_index(i),m.cols()-1,scaling_factor(i)));
-          JacobianEntries.push_back(EntryType(m.rows()-1, localIndexSet.flat_index(i),last_equation(i)));
+          JacobianEntries.push_back(EntryType(localIndexSet.index(i)[0],m.cols()-1,scaling_factor(i)));
+          JacobianEntries.push_back(EntryType(m.rows()-1, localIndexSet.index(i)[0],last_equation(i)));
         }
         JacobianEntries.push_back(EntryType(m.rows()-1, m.cols()-1,scaling_factor(localView.size())));
     }
@@ -983,8 +924,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
     v = Solver_config::VectorType::Zero(x.size());
     m.resize(x.size(), x.size());
     //reserve space
-    Eigen::VectorXi est_nnz = estimate_nnz_Jacobian();
-    m.reserve(est_nnz);
+    std::vector<EntryType> JacobianEntries;
 
     //get last equation
     v(v.size()-1) -= G;
@@ -1061,9 +1001,9 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
 
                   assemble_inner_face_Jacobian(is, localView, xLocal, localViewn, xLocaln,
                                                 m_m, mn_m, m_mn, mn_mn, 0);
-                  add_local_coefficients_Jacobian(localIndexSetn, localIndexSet, mn_m, m);
-                  add_local_coefficients_Jacobian(localIndexSet,localIndexSetn, m_mn,m);
-                  add_local_coefficients_Jacobian(localIndexSetn, localIndexSetn, mn_mn, m);
+                  add_local_coefficients_Jacobian(localIndexSetn, localIndexSet, mn_m, JacobianEntries);
+                  add_local_coefficients_Jacobian(localIndexSet,localIndexSetn, m_mn,JacobianEntries);
+                  add_local_coefficients_Jacobian(localIndexSetn, localIndexSetn, mn_mn, JacobianEntries);
 //
 //                  tag_count++;
                 }
@@ -1080,118 +1020,18 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
             }
         }
         add_local_coefficients(localIndexSet, local_vector, v);
-        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, m);
+        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
 
         //add derivatives for scaling factor
         for (int i = 0; i < localView.size(); i++)
-        {
-          m.coeffRef(localIndexSet.flat_index(i),m.cols()-1) += scaling_factor(i);
-          m.coeffRef(m.rows()-1, localIndexSet.flat_index(i)) += last_equation(i);
-        }
-        m.coeffRef(m.rows()-1, m.cols()-1) += scaling_factor(localView.size());
-
-    }
+         {
+           JacobianEntries.push_back(EntryType(localIndexSet.index(i)[0],m.cols()-1,scaling_factor(i)));
+           JacobianEntries.push_back(EntryType(m.rows()-1, localIndexSet.index(i)[0],last_equation(i)));
+         }
+         JacobianEntries.push_back(EntryType(m.rows()-1, m.cols()-1,scaling_factor(localView.size())));
+     }
+     m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
 }
-
-//template<class Config>
-template<typename LocalOperatorType>
-void Assembler::assemble_discrete_hessian_system(const LocalOperatorType &lop, Solver_config::VectorType x, Solver_config::MatrixType& m, Solver_config::VectorType& rhs) const
-{
-    Solver_config::GridView gridView = basis_->gridView();
-
-
-    assert(x.size() == basis_->indexSet().size({0}));
-
-    //assuming Galerkin
-    rhs = Solver_config::VectorType::Zero(basis_->indexSet().size({1}));
-    m.resize(basis_->indexSet().size({1}), basis_->indexSet().size({1}));
-
-    Solver_config::VectorType est_nnz = Solver_config::VectorType::Ones(basis_->indexSet().size({1}));
-    assert( Solver_config::degreeHessian == 2 && Solver_config::degree == 2);
-    est_nnz *= 6*Solver_config::dim*Solver_config::dim;
-    m.reserve(est_nnz);
-
-    // The index set gives you indices for each element , edge , face , vertex , etc .
-    const GridViewType::IndexSet& indexSet = gridView.indexSet();
-    auto localView = basis_->localView();
-    auto localViewn = basis_->localView();
-    auto localIndexSet = basis_->indexSet().localIndexSet();
-    auto localIndexSetn = basis_->indexSet().localIndexSet();
-
-    // A loop over all elements of the grid
-    for (auto&& e : elements(gridView)) {
-
-        // Bind the local FE basis view to the current element
-        localView.bind(e);
-        localIndexSet.bind(localView);
-
-
-        //calculate local coefficients
-        Solver_config::VectorType xLocal = calculate_local_coefficients_u(localIndexSet.uLocalIndexSet(), x);
-
-        Solver_config::VectorType local_vector;
-        local_vector.setZero(localIndexSet.size({1}));    // Set all entries to zero
-        Solver_config::DenseMatrixType m_m;
-        m_m.setZero(localIndexSet.size({1}), localIndexSet.size({1}));
-
-        //get id
-        IndexType id = indexSet.index(e);
-
-        lop.assemble_cell_term(localView, localIndexSet, xLocal, m_m, local_vector);
-
-       // Traverse intersections
-        for (auto&& is : intersections(gridView, e)) {
-            if (is.neighbor()) {
-
-                // compute unique id for neighbor
-                const GridViewType::IndexSet::IndexType idn =
-                        gridView.indexSet().index(is.outside());
-
-                // Visit face if id is bigger
-                bool visit_face = id > idn
-                        || Solver_config::require_skeleton_two_sided;
-                // unique vist of intersection
-                if (visit_face) {
-                  auto neighbourElement = is.outside();
-
-                  // Bind the local neighbour FE basis view to the neighbour element
-                  localViewn.bind(neighbourElement);
-                  localIndexSetn.bind(localViewn);
-                  Solver_config::VectorType xLocaln = calculate_local_coefficients_u(localIndexSetn.uLocalIndexSet(), x);
-                  Solver_config::VectorType local_vectorn = Solver_config::VectorType::Zero(localIndexSetn.size({1}));
-
-
-                  //calculate jacobians
-                  Solver_config::DenseMatrixType mn_m, m_mn, mn_mn;
-                  mn_m.setZero(localIndexSetn.size({1}), localIndexSet.size({1}));
-                  m_mn.setZero(localIndexSet.size({1}), localIndexSetn.size({1}));
-                  mn_mn.setZero(localIndexSetn.size({1}), localIndexSetn.size({1}));
-
-                  lop.assemble_inner_face_term(is, localView, localIndexSet, localViewn, localIndexSetn,
-                                                    xLocal, xLocaln,
-                                                m_m, mn_m, m_mn, mn_mn, local_vector, local_vectorn);
-                  add_local_coefficients_Jacobian_uDH(localIndexSetn, localIndexSet, mn_m, m);
-                  add_local_coefficients_Jacobian_uDH(localIndexSet,localIndexSetn, m_mn,m);
-                  add_local_coefficients_Jacobian_uDH(localIndexSetn, localIndexSetn, mn_mn, m);
-
-                  add_local_coefficients_uDH(localIndexSetn, local_vectorn, rhs);
-                }
-            } else if (is.boundary()) {
-                // Boundary integration
-                lop.assemble_boundary_face_term(is, localView, localIndexSet, xLocal,
-                        m_m, local_vector);
-            } else {
-                std::cerr << " I do not know how to handle this intersection"
-                        << std::endl;
-                exit(-1);
-            }
-        }
-        add_local_coefficients_uDH(localIndexSet, local_vector, rhs);
-        add_local_coefficients_Jacobian_uDH(localIndexSet, localIndexSet, m_m, m);
-    }
-
-}
-
 
 
 #endif /* SRC_ASSEMBLER_HH_ */

@@ -76,8 +76,18 @@ void MA_solver::plot(std::string name) const
   const int nDH = Solver_config::dim*Solver_config::dim;
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,solution_u);
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
   auto localnumericalSolution = localFunction(numericalSolution);
+
+  //extract hessian
+  /*for (int row = 0; row < Solver_config::dim; row++)
+    for (int col = 0; col < Solver_config::dim; col++)
+    {
+      //calculate second derivative of gridviewfunction
+      VectorType v_uDH_entry;
+      auto localnumericalHessian_entry = localSecondDerivative(numericalSolution, {row,col});
+   }
+
 
    //extract hessian (3 entries (because symmetry))
    typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
@@ -96,13 +106,13 @@ void MA_solver::plot(std::string name) const
    Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
    auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
 
-
+*/
    std::string fname(plotter.get_output_directory());
    fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
 
    SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
    vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
-   vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
+//   vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
    vtkWriter.write(fname);
 }
 
@@ -121,10 +131,11 @@ void MA_solver::plot_with_mirror(std::string name)
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
      //build gridviewfunction
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,solution_u);
+     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
      auto localnumericalSolution = localFunction(numericalSolution);
 
      //extract hessian (3 entries (because symmetry))
+/*
      typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
      DerivativeVectorType derivativeSolution(uDHBasis->indexSet().size());
 
@@ -141,13 +152,14 @@ void MA_solver::plot_with_mirror(std::string name)
      Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
      auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
 
+*/
 
      std::string fname(plotter.get_output_directory());
      fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
 
      SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
      vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
-     vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
+//     vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
      vtkWriter.write(fname);
 
 
@@ -227,7 +239,8 @@ void MA_solver::create_initial_guess()
 
 //  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
 //  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimple.grid");
-  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRoentgen.grid");
+//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRoentgen.grid");
+  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRose.grid");
 
   assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
   assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
@@ -246,7 +259,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
   //init andreas solution as exact solution
 //  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exact_reflector_projection_small.grid"));
-//  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exactReflectorProjectionSimple.grid"));
+  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exactReflectorProjectionSimple.grid"));
 //  assert(is_close(exact_solution->x_min, Solver_config::lowerLeft[0], 1e-12));
 //  assert(is_close(exact_solution->y_min, Solver_config::lowerLeft[1], 1e-12));
 //  project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
@@ -260,7 +273,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
   op.lop.rhs.convolveTargetDistributionAndNormalise(std::min(100,(int) epsMollifier_));
   //print blurred target distribution
   if (true) {
-      ostringstream filename2; filename2 << outputDirectory_+"/lightOut" << iterations << ".png";
+      ostringstream filename2; filename2 << outputDirectory_+"/lightOut" << iterations << ".bmp";
       std::cout << "saved image to " << filename2.str() << std::endl;
       op.lop.get_right_handside().get_target_distribution().saveImage (filename2.str());
       assert(std::abs(op.lop.get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
@@ -272,14 +285,21 @@ const typename MA_solver::VectorType& MA_solver::solve()
   {
   ofstream fileInitial (outputPrefix_+"initialVector");
   fileInitial << solution << endl;
-  fileInitial.close();
+
+//    solution.resize(get_n_dofs());
+//    ifstream fileInitial ("CGtestfirstVector");
+//    for (int i=0; i<get_n_dofs(); ++i) {
+//        fileInitial >> solution(i);
+//    }
+//
+//    fileInitial.close();
   }
 
   update_solution(solution);
-//  Solver_config::VectorType f;
-//  Solver_config::MatrixType J;
-//  op.evaluate(solution, f, J, solution, false);
-//  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
+  Solver_config::VectorType f;
+  Solver_config::MatrixType J;
+  op.evaluate(solution, f, J, solution, false);
+  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
 
   plot_with_mirror("initialguess");
 
@@ -296,6 +316,11 @@ const typename MA_solver::VectorType& MA_solver::solve()
   {
     solve_nonlinear_system();
 
+    ofstream file (outputPrefix_+"firstVector");
+    file << solution << endl;
+    file.close();
+
+
     cout << "scaling factor " << solution(solution.size()-1) << endl;
 
     iterations++;
@@ -311,7 +336,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
     //print blurred target distribution
     if (true) {
-        ostringstream filename2; filename2 << outputDirectory_+"/lightOut" << iterations << ".png";
+        ostringstream filename2; filename2 << outputDirectory_+"/lightOut" << iterations << ".bmp";
         std::cout << "saved image to " << filename2.str() << std::endl;
         op.lop.get_right_handside().get_target_distribution().saveImage (filename2.str());
         assert(std::abs(op.lop.get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
@@ -336,7 +361,7 @@ void MA_solver::update_solution(const Solver_config::VectorType& newSolution) co
 {
   solution_u = solution.segment(0, get_n_dofs_u());
   //build gridviewfunction
-  solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));
+  solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*FEBasis,solution_u));
   solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
   gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
 
@@ -386,8 +411,6 @@ void MA_solver::adapt_solution(const int level)
 
   //update member
   FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
-  uBasis = std::shared_ptr<FEuBasisType> (new FEuBasisType(*gridView_ptr));
-  uDHBasis = std::shared_ptr<FEuDHBasisType> (new FEuDHBasisType(*gridView_ptr));
   assembler.bind(*FEBasis);
 
   auto localViewRef = FEBasis->localView();
@@ -396,30 +419,18 @@ void MA_solver::adapt_solution(const int level)
   //init vector v
   solution.resize(get_n_dofs());
 
-  Solver_config::LocalFiniteElementuType localFiniteElementu;
-  Solver_config::LocalFiniteElementHessianSingleType localFiniteElementuDH;
+  Solver_config::LocalFiniteElementType localFiniteElement;
 
   //calculate refinement matrices
 
   //local refined mass matrix m_ij = \int mu_child_i * mu_j
   std::vector<DenseMatrixType> localrefinementMatrices(Solver_config::childdim);
-  assembler.calculate_refined_local_mass_matrix_ansatz(localFiniteElementu, localrefinementMatrices);
+  assembler.calculate_refined_local_mass_matrix_ansatz(localFiniteElement, localrefinementMatrices);
   //local mass matrix m_ij = \int mu_i * mu_j
   DenseMatrixType localMassMatrix;
-  assembler.calculate_local_mass_matrix_ansatz(localFiniteElementu, localMassMatrix);
+  assembler.calculate_local_mass_matrix_ansatz(localFiniteElement, localMassMatrix);
 
-  //everything for the hessian ansatz function as well
-  //local refined mass matrix m_ij = \int mu_child_i * mu_j
-  std::vector<DenseMatrixType> localrefinementMatrices_DH(Solver_config::childdim);
-  assembler.calculate_refined_local_mass_matrix_ansatz(localFiniteElementuDH, localrefinementMatrices_DH);
-  //local mass matrix m_ij = \int mu_i * mu_j
-  DenseMatrixType localMassMatrix_DH;
-  assembler.calculate_local_mass_matrix_ansatz(localFiniteElementuDH, localMassMatrix_DH);
-
-  const int nDH = Solver_config::dim*Solver_config::dim;
-  const int size_u = localFiniteElementu.size();
-  const int size_u_DH = localFiniteElementuDH.size();
-  const int size = size_u +  nDH*size_u_DH;
+  const int size = localFiniteElement.size();
 
   //since we are going to calculate the refinement for all children when encountering one of them
   // we need to store wich data already is refined
@@ -451,26 +462,8 @@ void MA_solver::adapt_solution(const int level)
         VectorType x_adapt(size);
 
         //local rhs = \int v_adapt*test = refinementmatrix*v
-        VectorType localVector = localrefinementMatrices[i]*x_local.segment(0,size_u);
-        x_adapt.segment(0,size_u) =  localMassMatrix.ldlt().solve(localVector);
-
-        //same for hessian (now done seperately for every entry)
-        std::vector<VectorType> localVectorDH(nDH);
-        for (int j = 0; j < nDH; j++)
-        {
-          //extract dofs for one hessian entry
-          VectorType xlocalDH(size_u_DH);
-          for (int k = 0; k < size_u_DH; k++)
-            xlocalDH(k) = x_local(size_u+j +nDH*k);
-
-          localVectorDH[j] = localrefinementMatrices_DH[i]*xlocalDH;
-
-          xlocalDH =  localMassMatrix_DH.ldlt().solve(localVectorDH[j]);
-
-          //write dofs to combined hessian
-          for (int k = 0; k < size_u_DH; k++)
-            x_adapt(size_u+j +nDH*k) = xlocalDH(k);
-        }
+        VectorType localVector = localrefinementMatrices[i]*x_local;
+        x_adapt =  localMassMatrix.ldlt().solve(localVector);
 
         //set new dof vectors
         assembler.set_local_coefficients(localIndexSetRef, x_adapt, solution);

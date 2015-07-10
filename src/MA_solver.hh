@@ -24,7 +24,7 @@
 #include "problem_data.hh"
 //#include "Operator/linear_system_operator_poisson_DG.hh"
 //#include "Operator/operator_MA_Neilan_DG.hh"
-#include "Operator/operator_MA_refl_Neilan_DG.hh"
+#include "Operator/operator_MA_refl_Brenner.hh"
 #include "Operator/operator_discrete_Hessian.hh"
 #include "Plotter.hh"
 
@@ -61,8 +61,6 @@ public:
 	typedef typename Solver_config::MatrixType MatrixType;
 
 	typedef typename Solver_config::FEBasis FEBasisType;
-	typedef typename Solver_config::FEuBasis FEuBasisType;
-	typedef typename Solver_config::FEuDHBasis FEuDHBasisType;
 
 	typedef typename Solver_config::DiscreteGridFunction DiscreteGridFunction;
 	typedef typename Solver_config::DiscreteLocalGridFunction DiscreteLocalGridFunction;
@@ -103,8 +101,6 @@ public:
 
 	  //update member
 	  FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
-	  uBasis = std::shared_ptr<FEuBasisType> (new FEuBasisType(*gridView_ptr));
-	  uDHBasis = std::shared_ptr<FEuDHBasisType> (new FEuDHBasisType(*gridView_ptr));
 	  assembler.bind(*FEBasis);
 
 	  plotter.set_output_directory(outputDirectory_);
@@ -134,14 +130,15 @@ public:
   bool read_configfile(std::string &configFile);
 
 
-	int get_n_dofs() const{return FEBasis->indexSet().dimension() + 1;}
-  int get_n_dofs_u() const{return FEBasis->indexSet().size({0});}
+	int get_n_dofs() const{return FEBasis->indexSet().size() + 1;}
+  int get_n_dofs_u() const{return FEBasis->indexSet().size();}
 
 
 public:
 	struct Operator {
 		Operator():solver_ptr(){}
-		Operator(MA_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old, solver.minPixelValue_){}
+//		Operator(MA_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old, solver.minPixelValue_){}
+    Operator(MA_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old, solver.exact_solution, solver.minPixelValue_){}
 
     void evaluate(const VectorType& x, VectorType& v, MatrixType& m, const VectorType& x_old, const bool new_solution=true) const
     {
@@ -189,7 +186,7 @@ public:
     mutable MA_solver* solver_ptr;
 
 //		Local_Operator_MA_mixed_Neilan lop;
-		Local_Operator_MA_refl_Neilan lop;
+		Local_Operator_MA_refl_Brenner lop;
 	};
 
 	///assembles the (global) integrals (for every test function) specified by lop
@@ -319,6 +316,7 @@ private:
   DogLeg_optionstype doglegOpts_;
 #endif
 
+
   int count_refined; ///counts how often the original grid was refined
   mutable int iterations;
 
@@ -334,8 +332,6 @@ private:
 	const GridViewType* gridView_ptr;
 
 	shared_ptr<FEBasisType> FEBasis;
-	shared_ptr<FEuBasisType> uBasis;
-	shared_ptr<FEuDHBasisType> uDHBasis;
 
 	Assembler assembler; ///handles all (integral) assembly processes
 	Plotter plotter;
@@ -359,7 +355,7 @@ private:
 //  mutable shared_ptr<DiscreteGridFunction> exact_solution_projection_global;
 //  mutable shared_ptr<DiscreteLocalGridFunction> exact_solution_projection;
 //
-//  mutable shared_ptr<Rectangular_mesh_interpolator> exact_solution;
+  mutable shared_ptr<Rectangular_mesh_interpolator> exact_solution;
 
 
 	friend Operator;
@@ -473,72 +469,10 @@ void MA_solver::project(const F f, VectorType& v) const
 {
   v.resize(get_n_dofs());
   VectorType v_u;
-  interpolate(*uBasis, v_u, f);
+  interpolate(*FEBasis, v_u, f);
   v.segment(0, v_u.size()) = v_u;
 
   //init second derivatives
-
-  //build gridviewfunction
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,v_u);
-
-  for (int row = 0; row < Solver_config::dim; row++)
-    for (int col = 0; col < Solver_config::dim; col++)
-    {
-      //calculate second derivative of gridviewfunction
-      VectorType v_uDH_entry;
-      auto localnumericalHessian_entry = localSecondDerivative(numericalSolution, {row,col});
-      interpolateSecondDerivative(*uDHBasis, v_uDH_entry, localnumericalHessian_entry, Functions::Imp::AllTrueBitSetVector());
-
-      //copy corresponding dofs
-      const int nDH = Solver_config::dim * Solver_config::dim;
-      for (size_t i=0; i<v_uDH_entry.size(); i++)
-      {
-        const int j = row*Solver_config::dim + col;
-        v[get_n_dofs_u()+ nDH*i+  j] = v_uDH_entry[i];
-      }
-
-//      std::cout << "hessian " << row << " " << col << v_uDH_entry.transpose() << std::endl;
-    }
-
-  //set scaling factor (last dof) to ensure mass conservation
-  v(v.size()-1) = 1;
-}
-
-template<class F>
-void MA_solver::project_with_discrete_Hessian(const F f, VectorType& v) const
-{
-  v.resize(get_n_dofs());
-  VectorType v_u;
-  interpolate(*uBasis, v_u, f);
-  v.segment(0, v_u.size()) = v_u;
-
-  //init second derivatives
-
-  //build gridviewfunction
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,v_u);
-
-
-  Solver_config::MatrixType m;
-  Solver_config::VectorType rhs;
-
-  assembler.assemble_discrete_hessian_system(Local_Operator_discrete_Hessian(), v_u, m, rhs);
-
-  MATLAB_export(m, "m");
-  MATLAB_export(rhs, "rhs");
-
-  Eigen::SparseLU<Solver_config::MatrixType> solver;
-  solver.compute(m);
-  if(solver.info()!=Eigen::EigenSuccess) {
-    // decomposition failed
-    cerr << "Decomposition failed"; exit(-1);
-  }
-  Solver_config::VectorType v_uDH = solver.solve(rhs);
-  if(solver.info()!=Eigen::EigenSuccess) {
-    // decomposition failed
-    cerr << "Solving linear system failed"; exit(-1);
-  }
-
-  v.segment(v_u.size(), v_uDH.size()) = v_uDH;
 
   //set scaling factor (last dof) to ensure mass conservation
   v(v.size()-1) = 1;
