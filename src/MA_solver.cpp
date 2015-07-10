@@ -521,16 +521,9 @@ void MA_solver::solve_nonlinear_system()
   // /////////////////////////
 
 #ifdef USE_DOGLEG
-  DogLeg_optionstype opts;
-  opts.iradius = 0.01;
-  for (int i=0; i < 3; i++) opts.stopcriteria[i] = 1e-8;
-  opts.maxsteps = maxSteps_;
-  opts. silentmode = false;
-  opts.exportJacobianIfSingular= true;
-  opts.exportFDJacobianifFalse = true;
-  opts.check_Jacobian = false;
-//
-  doglegMethod(op, opts, solution);
+
+
+  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
 #endif
 #ifdef USE_PETSC
   igpm::processtimer timer;

@@ -74,6 +74,9 @@ public:
 			epsEnd_(config.epsEnd),
 			minPixelValue_(config.minPixelValue),
       maxSteps_(config.maxSteps),
+#ifdef USE_DOGLEG
+      doglegOpts_(config.doglegOpts),
+#endif
       writeVTK_(config.writeVTK),
       povRayOpts_(config.povRayOpts),
       outputDirectory_(config.outputDirectory), outputPrefix_(config.outputPrefix),
@@ -85,6 +88,9 @@ public:
       solution_u_old(), gradient_u_old()
 	{
 
+#ifdef USE_DOGLEG
+    doglegOpts_.maxsteps = maxSteps_;
+#endif
 
 
 	  plotter.set_refinement(plotterRefinement_);
@@ -308,6 +314,9 @@ private:
   double minPixelValue_;
 
   int maxSteps_;
+#ifdef USE_DOGLEG
+  DogLeg_optionstype doglegOpts_;
+#endif
 
   int count_refined; ///counts how often the original grid was refined
   mutable int iterations;
