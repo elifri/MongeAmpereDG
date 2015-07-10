@@ -28,6 +28,7 @@
 //#include "localfunctions/MAmixedbasis.hh"
 #include "localfunctions/MAmixedbasisC0.hh"
 //#include "localfunctions/MAmixedbasisC0C0.hh"
+#include "Dogleg/doglegMethod.hpp"
 
 using namespace Dune;
 
@@ -67,6 +68,9 @@ struct Solver_config{
   double minPixelValue;
 
   int maxSteps;
+#ifdef USE_DOGLEG
+  DogLeg_optionstype doglegOpts;
+#endif
 
   bool writeVTK;
   mirror_problem::Grid2d::PovRayOpts povRayOpts;

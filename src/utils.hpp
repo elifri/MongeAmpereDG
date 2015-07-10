@@ -13,13 +13,10 @@
 #include <dune/common/fmatrix.hh>
 #include <Eigen/Core>
 
+#include "Dogleg/utils.hpp"
+
 #include "solver_config.hh"
 
-template<typename T>
-inline T sqr (const T& x)
-{
- return x*x;
-}
 
 template <class R, class R2>
 inline
@@ -55,11 +52,6 @@ void copy_to_sparse_matrix(const R** &m_local, int offset_row, int offset_col, i
 			m.coeffRef(offset_row+i,offset_col+j) += m_local[i][j];
 }
 
-
-bool is_close(const double a, const double b, const double tolerance=1e-10);
-
-template<typename Ta, typename Tb>
-bool is_equal(const Ta a, const Tb b) { return (a==b); };
 
 
 template < typename T >

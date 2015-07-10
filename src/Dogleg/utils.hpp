@@ -15,8 +15,17 @@
 #include <cmath>
 
 #include "igpm_t2_lib.hpp"
-#include "../utils.hpp"
 
+template<typename T>
+inline T sqr (const T& x)
+{
+ return x*x;
+}
+
+bool is_close(const double a, const double b, const double tolerance=1e-10);
+
+template<typename Ta, typename Tb>
+bool is_equal(const Ta a, const Tb b) { return (a==b); };
 
 template<typename T>
 inline int sign (const T& x)
