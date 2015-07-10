@@ -88,6 +88,7 @@ inline FieldVector<valueType, 3> T(const FieldVector<Solver_config::value_type, 
 
 //forward declaration
 class Local_Operator_MA_refl_Neilan;
+class Local_Operator_MA_refl_Brenner;
 
 // A class implementing the analytical right hand side
 class RightHandSide: public VirtualFunction<Solver_config::SpaceType, Solver_config::value_type> {
@@ -348,6 +349,7 @@ private:
   mutable GradFunction_ptr* gradient_u_old;
 
   friend Local_Operator_MA_refl_Neilan;
+  friend Local_Operator_MA_refl_Brenner;
 };
 
 
