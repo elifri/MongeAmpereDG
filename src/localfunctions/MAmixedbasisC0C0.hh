@@ -190,6 +190,7 @@ public:
     if (prefix == 0)
       return uIndexSet_.size();
     assert(false);
+    return false;
   }
 
   LocalIndexSet localIndexSet() const {
