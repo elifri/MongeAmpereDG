@@ -78,6 +78,7 @@ public:
       doglegOpts_(config.doglegOpts),
 #endif
       writeVTK_(config.writeVTK),
+      evaluateJacobianSimultaneously_(config.evalJacSimultaneously),
       povRayOpts_(config.povRayOpts),
       outputDirectory_(config.outputDirectory), outputPrefix_(config.outputPrefix),
       plotterRefinement_(config.refinement),
@@ -322,6 +323,8 @@ private:
   mutable int iterations;
 
   bool writeVTK_;
+
+  bool evaluateJacobianSimultaneously_;
 
   mirror_problem::Grid2d::PovRayOpts povRayOpts_;
 	std::string outputDirectory_, outputPrefix_;

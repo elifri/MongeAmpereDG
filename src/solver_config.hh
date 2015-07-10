@@ -72,7 +72,11 @@ struct Solver_config{
   DogLeg_optionstype doglegOpts;
 #endif
 
+
   bool writeVTK;
+
+  bool evalJacSimultaneously;
+
   mirror_problem::Grid2d::PovRayOpts povRayOpts;
   int refinement;
 
