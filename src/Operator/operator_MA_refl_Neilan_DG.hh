@@ -71,7 +71,7 @@ public:
                         const FieldVector<adouble, Solver_config::dim>& gradu, const FieldVector<adouble, 3>& grad_hat,
                         const double a_tilde_value, const double b_tilde_value,
                         const FieldVector<adouble, 3>& Z_0
-                        )
+                        ) const
   {
     //calculate normal of the reflector
     FieldVector<adouble, 3> normal_refl = grad_hat;
@@ -101,7 +101,7 @@ public:
 
   ///helper function to check if the target plane normal points away from the reflector
   inline
-  bool check_direction_of_normal(const double& u_value, const FieldVector<adouble, 3>& X, const FieldVector<adouble, 3>& Z_0, const FieldVector<adouble, 3> &D_Psi_value)
+  bool check_direction_of_normal(const double& u_value, const FieldVector<adouble, 3>& X, const FieldVector<adouble, 3>& Z_0, const FieldVector<adouble, 3> &D_Psi_value) const
   {
         FieldVector<adouble, 3> lightvector = X;
         lightvector /= u_value;
@@ -257,14 +257,9 @@ public:
       FieldVector<adouble, 3> Z_0 = grad_hat;
       Z_0 *= (2.0 / a_tilde_value);
 
-      //calculate normal of the reflector
-//      FieldVector<adouble, 3> normal_refl = grad_hat;
-//      normal_refl *= -1.0/sqr(u_value);
-//      normal_refl.axpy(-1./u_value+1.0/sqr(u_value)*(gradu*x_value) ,X);
-
       assert(check_reflection(x_value, X, u_value.value(), gradu, grad_hat, a_tilde_value.value(), b_tilde_value.value(), Z_0));
 
-      FieldVector<adouble, 3> D_Psi_value;
+      FieldVector<double, 3> D_Psi_value;
       D_Psi_value[0] = 0; D_Psi_value[1] = 0;
       D_Psi_value[2] = -1;
 
@@ -298,17 +293,13 @@ public:
 
       adouble uDH_pertubed_det = determinant(uDH_pertubed);
 
+      double D_psi_norm = sqrt(sqr(D_Psi_value[0])+sqr(D_Psi_value[1])+sqr(D_Psi_value[2]));
 
-      adouble D_psi_norm = sqrt(sqr(D_Psi_value[0])+sqr(D_Psi_value[1])+sqr(D_Psi_value[2]));
-//      cout << "D psi = " << D_Psi_value[0] << "," << D_Psi_value[1]<< "," << D_Psi_value[2] << endl;
-
-//      cout << "x_value " << x_value << " a_tilde " << a_tilde_value.value() << " omega(x) " << omega(x_value) << " btilde " << b_tilde.value() << " g " << g_value.value() << std::endl;
       adouble PDE_rhs = -a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde_value*omega_value*g_value);
       auto uTimesZ0 = Z_0;
       uTimesZ0 *= u_value;
       PDE_rhs *= (((uTimesZ0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value;
       PDE_rhs *= scaling_factor_adolc;
-      //      double PDE_rhs = scaling_factor_adolc*a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde*omega(x_value));
 //      cout<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value).value() << "/" << (4.0*b_tilde*omega_value*g_value).value() << std::endl;
 //      cout << "rhs *= " <<  ((u_value*((Z_0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value).value() <<
 //                    " = (" <<  u_value.value() << "*scalarProd"
@@ -316,28 +307,16 @@ public:
 //      cout<<  "*scalarProd = " << ((Z_0-X)*D_Psi_value).value() << " = "<< (Z_0-X)[0].value()<<"," << ((Z_0-X)[1]).value() << "*"<< (D_Psi_value)[0].value()<<"," << ((D_Psi_value)[1]).value();
 //      cout << "scaling factor " << scaling_factor_adolc.value() << endl;
 //      cout << " atilde " << a_tilde_value << " f " << f_value << endl;
-//      cout<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value) << "/" << (4.0*b_tilde*omega_value*g_value) << std::endl;
-//      cout << "rhs *= " <<  ((u_value*((Z_0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value) <<
-//                    " = (" <<  u_value << "*scalarProd"
-//                        << "/(" << (t*t) << "*" << D_psi_norm << "*" << omega_value << ")" << endl;
-//      cout<<  "*scalarProd = " << ((Z_0-X)*D_Psi_value) << " = "<< (Z_0-X)[0]<<"," << ((Z_0-X)[1]) <<"," << ((Z_0-X)[2])<< "*"<< (D_Psi_value)[0]<<"," << ((D_Psi_value)[1])<<"," << ((D_Psi_value)[2]) <<endl;
-//      cout << "scaling factor " << scaling_factor_adolc << endl;
-
-//      cout << "scaling factor " << scaling_factor_adolc.value() << endl;
 
       //calculate system for first test functions
 //      std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
 
-//      std::cerr << "estimated det " << det_DT.value() << " detDz " << detDz.value()<< " -> rel error: " << ((det_DT-detDz)/det_DT).value()<< endl;
-//                << " f/g " << f_value/(g_value*omega_value) << " f " << f_value << " g " << g_value << "f/g " << f_value/g_value << " 1/omega " << 1/omega_value << endl;
 //      cerr << x_value << " " << u_value.value() << " " << uDH_pertubed_det.value() << " " << PDE_rhs.value() << endl;
 
       for (size_t j = 0; j < size_u; j++) // loop over test fcts
       {
         v_adolc(j) += (PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
-
-//      std::cout << "det(u)-f=" << uDH_pertubed_det<<"-"<< PDE_rhs <<"="<< (uDH_pertubed_det-PDE_rhs)<< std::endl;
       }
 
       //calculate system for second tensor functions
@@ -347,15 +326,12 @@ public:
           for (int col = 0 ; col < dim; col++){
             v_adolc(localIndexSet.flat_local_index(j, row, col) ) += uDH[row][col]*referenceFunctionValuesHessian[j]
                                     * quad[pt].weight() * integrationElement;
-//            std::cout <<"mN(" << localIndexSet.flat_local_index(j, row, col)-size_u <<"," << localIndexSet.flat_local_index(4, row, col)-size_u << ")+= " << (referenceFunctionValuesHessian[4]*referenceFunctionValuesHessian[j])
-//                                              * quad[pt].weight() * integrationElement << std::endl;
 
             v_adolc(localIndexSet.flat_local_index(j, row, col)) -= Hessu[row][col] * referenceFunctionValuesHessian[j]
                                     * quad[pt].weight() * integrationElement;
            }
       }
       last_equation_adolc += u_value* quad[pt].weight() * integrationElement;
-//      std::cout << "last equation += " << u_value.value()<< " * " << quad[pt].weight() * integrationElement << " = " <<last_equation_adolc.value() << std::endl;
     }
 
 
@@ -566,8 +542,8 @@ public:
       vn_adolc[i] >>= vn[i];
     }
     trace_off();
-    std::size_t stats[11];
-    tapestats(tag, stats);
+//    std::size_t stats[11];
+//    tapestats(tag, stats);
 //	std::cout << "numer of independents " << stats[0] << std::endl
 //			<< "numer of deptendes " << stats[1] << std::endl
 //			<< "numer of live activ var " << stats[2] << std::endl
