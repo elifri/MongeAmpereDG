@@ -188,6 +188,8 @@ public:
   typedef Solver_config::SpaceType SpaceType;
   typedef Solver_config::RangeType RangeType;
 
+  typedef Eigen::Triplet<double> EntryType;
+
   Assembler(const Solver_config::FEBasis& basis, bool no_hanging_nodes) :
       basis_(&basis), no_hanging_nodes(no_hanging_nodes), picture_no(0) {
   }
@@ -254,6 +256,21 @@ public:
       const LocalIndexSet &localIndexSetAnsatz,
       const Solver_config::DenseMatrixType &m_local,
       Solver_config::MatrixType& m) const;
+
+  /**
+   *  adds the local jacobian to the global jacobian
+   * @param localIndexSetTest indexset bound to the local contex where the current test functions are from (to determine rows)
+   * @param localIndexSetTest indexset bound to the local contex where the current ansatz functions are from (to determine cols)
+   * @param m_local local jacobian (to be added)
+   * @param je  the list of entries where the new entries are added to
+   */
+  template<typename LocalIndexSet>
+  void add_local_coefficients_Jacobian(const LocalIndexSet &localIndexSetTest,
+      const LocalIndexSet &localIndexSetAnsatz,
+      const Solver_config::DenseMatrixType &m_local,
+      std::vector<EntryType> & je) const;
+
+
 
   /**
    * adds the coeffs v_local to the global dof vector to assemble the linear sytem for the discrete hessiang
@@ -565,6 +582,22 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
 
 template<typename LocalIndexSet>
 inline
+void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexSetTest, const LocalIndexSet &localIndexSetAnsatz, const Solver_config::DenseMatrixType &m_local, std::vector<EntryType> & je) const
+{
+  assert (m_local.rows() == localIndexSetTest.size());
+  assert (m_local.cols() == localIndexSetAnsatz.size());
+
+  for (int i = 0; i < m_local.rows(); i++)
+  {
+    for (int j = 0; j < m_local.cols(); j++)
+      if (std::abs(m_local(i,j)) > 1e-13 )
+        je.push_back(EntryType(localIndexSetTest.flat_index(i),localIndexSetAnsatz.flat_index(j),m_local(i,j)));
+  }
+}
+
+
+template<typename LocalIndexSet>
+inline
 void Assembler::add_local_coefficients_uDH(const LocalIndexSet &localIndexSet, const Solver_config::DenseMatrixType &v_local, Solver_config::VectorType& v) const
 {
   assert (v_local.size() == localIndexSet.size({1}));
@@ -850,8 +883,7 @@ void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_
     m.resize(x.size(), x.size());
 
     //reserve space
-    Eigen::VectorXi est_nnz = estimate_nnz_Jacobian();
-    m.reserve(est_nnz);
+    std::vector<EntryType> JacobianEntries;
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
     const GridViewType::IndexSet& indexSet = gridView.indexSet();
@@ -911,9 +943,9 @@ void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_
 
                   assemble_inner_face_Jacobian(is, localView, xLocal, localViewn, xLocaln,
                                                 m_m, mn_m, m_mn, mn_mn, tag_count);
-                  add_local_coefficients_Jacobian(localIndexSetn, localIndexSet, mn_m, m);
-                  add_local_coefficients_Jacobian(localIndexSet,localIndexSetn, m_mn,m);
-                  add_local_coefficients_Jacobian(localIndexSetn, localIndexSetn, mn_mn, m);
+                  add_local_coefficients_Jacobian(localIndexSetn, localIndexSet, mn_m, JacobianEntries);
+                  add_local_coefficients_Jacobian(localIndexSet,localIndexSetn, m_mn,JacobianEntries);
+                  add_local_coefficients_Jacobian(localIndexSetn, localIndexSetn, mn_mn, JacobianEntries);
                   tag_count++;
                 }
             } else if (is.boundary()) {
@@ -926,15 +958,16 @@ void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_
                 exit(-1);
             }
         }
-        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, m);
+        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
 
         for (int i = 0; i < localView.size(); i++)
         {
-          m.coeffRef(localIndexSet.flat_index(i),m.cols()-1) += scaling_factor(i);
-          m.coeffRef(m.rows()-1, localIndexSet.flat_index(i)) += last_equation(i);
+          JacobianEntries.push_back(EntryType(localIndexSet.flat_index(i),m.cols()-1,scaling_factor(i)));
+          JacobianEntries.push_back(EntryType(m.rows()-1, localIndexSet.flat_index(i),last_equation(i)));
         }
-        m.coeffRef(m.rows()-1, m.cols()-1) += scaling_factor(localView.size());
+        JacobianEntries.push_back(EntryType(m.rows()-1, m.cols()-1,scaling_factor(localView.size())));
     }
+    m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
 }
 
 
