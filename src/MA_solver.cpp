@@ -410,25 +410,27 @@ void MA_solver::adapt_solution(const int level)
   std::cout << "new element count " << gridView_ptr->size(0) << std::endl;
 
   //update member
-  FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
+  std::array<unsigned int,Solver_config::dim> elementsSplines;
+  std::fill(elementsSplines.begin(), elementsSplines.end(), std::sqrt(gridView_ptr->size(0)));
+
+  FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr, Solver_config::lowerLeft, Solver_config::upperRight, elementsSplines, Solver_config::degree));
   assembler.bind(*FEBasis);
 
-  auto localViewRef = FEBasis->localView();
+  auto localViewRefChild = FEBasis->localView();
+  auto localViewRefFather = FEBasis->localView();
   auto localIndexSetRef = FEBasis->indexSet().localIndexSet();
 
   //init vector v
   solution.resize(get_n_dofs());
 
-  Solver_config::LocalFiniteElementType localFiniteElement;
+  Solver_config::LocalFiniteElementType localFiniteElement(*FEBasis);
 
   //calculate refinement matrices
 
   //local refined mass matrix m_ij = \int mu_child_i * mu_j
-  std::vector<DenseMatrixType> localrefinementMatrices(Solver_config::childdim);
-  assembler.calculate_refined_local_mass_matrix_ansatz(localFiniteElement, localrefinementMatrices);
+  DenseMatrixType localrefinementMatrix(localFiniteElement.size(), localFiniteElement.size());
   //local mass matrix m_ij = \int mu_i * mu_j
-  DenseMatrixType localMassMatrix;
-  assembler.calculate_local_mass_matrix_ansatz(localFiniteElement, localMassMatrix);
+  DenseMatrixType localMassMatrix(localFiniteElement.size(), localFiniteElement.size());
 
   const int size = localFiniteElement.size();
 
@@ -448,6 +450,7 @@ void MA_solver::adapt_solution(const int level)
 
       //get old dof vector
       const auto& father = element.father();
+      localViewRefFather.bind(father);
 
       VectorType x_local = preserveSolution[idSet.id(father)];
 
@@ -456,13 +459,17 @@ void MA_solver::adapt_solution(const int level)
       for (auto&& child : descendantElements(father, count_refined))
       {
           //bind to child
-        localViewRef.bind(child);
-        localIndexSetRef.bind(localViewRef);
+        localViewRefChild.bind(child);
+        localIndexSetRef.bind(localViewRefChild);
+
+        assembler.calculate_refined_local_mass_matrix_detailed(localViewRefFather, localViewRefChild, localrefinementMatrix, level);
+        assembler.calculate_local_mass_matrix_detailed(localViewRefChild, localMassMatrix);
+
 
         VectorType x_adapt(size);
 
         //local rhs = \int v_adapt*test = refinementmatrix*v
-        VectorType localVector = localrefinementMatrices[i]*x_local;
+        VectorType localVector = localrefinementMatrix*x_local;
         x_adapt =  localMassMatrix.ldlt().solve(localVector);
 
         //set new dof vectors
