@@ -219,6 +219,10 @@ public:
 	template<class F>
 	void project(F f, VectorType &V) const;
 
+	//project by L2-projection
+	template<class F>
+	void project_labourious(const F f, VectorType& v) const;
+
   /**
    * projects a function into the grid space, for the initialisation of the hessian dofs the discrete hessian is calculated
    * @param f function representing the function
@@ -473,6 +477,65 @@ void MA_solver::project(const F f, VectorType& v) const
   v.segment(0, v_u.size()) = v_u;
 
   //init second derivatives
+
+  //set scaling factor (last dof) to ensure mass conservation
+  v(v.size()-1) = 1;
+}
+
+
+//project by L2-projection
+template<class F>
+void MA_solver::project_labourious(const F f, VectorType& v) const
+{
+  v.resize(get_n_dofs());
+  VectorType v_u;
+
+  DenseMatrixType localMassMatrix;
+
+  auto localView = FEBasis->localView();
+  auto localIndexSet = FEBasis->indexSet().localIndexSet();
+
+  for (auto&& element : elements(*gridView_ptr))
+  {
+    localView.bind(element);
+    localIndexSet.bind(localView);
+
+    const auto & lFE = localView.tree().finiteElement();
+    const auto& geometry = element.geometry();
+
+    // ----assemble mass matrix and integrate f*test to solve LES --------
+    localMassMatrix.setZero(localView.size(), localView.size());
+    VectorType localVector = VectorType::Zero(localView.size());
+
+    // Get a quadrature rule
+    const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
+    const QuadratureRule<double, Solver_config::dim>& quad =
+        QuadratureRules<double, Solver_config::dim>::rule(element.type(), order);
+
+    for (const auto& quadpoint : quad)
+    {
+      const FieldVector<double, Solver_config::dim> &quadPos = quadpoint.position();
+
+      //evaluate test function
+      std::vector<Dune::FieldVector<double, 1>> functionValues(localView.size());
+      lFE.localBasis().evaluateFunction(quadPos, functionValues);
+
+      const double integrationElement = geometry.integrationElement(quadPos);
+
+      for (int j = 0; j < localVector.size(); j++)
+      {
+        localVector(j) += f(geometry.global(quadPos))*functionValues[j]* quadpoint.weight() * integrationElement;
+
+        //int v_i*v_j, as mass matrix is symmetric only fill lower part
+        for (size_t i = 0; i <= j; i++)
+          localMassMatrix(j, i) += cwiseProduct(functionValues[i],
+                    functionValues[j]) * quadpoint.weight()*integrationElement;
+
+      }
+    }
+
+    assembler.set_local_coefficients(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
+  }
 
   //set scaling factor (last dof) to ensure mass conservation
   v(v.size()-1) = 1;
