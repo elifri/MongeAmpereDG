@@ -93,7 +93,7 @@ void assemble_gradients(const FiniteElement &lfu, const JacobianType &jacobian,
 
     //compute the gradients on the real element
     for (size_t i = 0; i < gradients.size(); i++)
-       gradients[i] = referenceGradients[i][0];
+      jacobian.mv(referenceGradients[i][0], gradients[i]);
 }
 
 /**
@@ -131,21 +131,30 @@ void assemble_gradients_gradu(const FiniteElement &lfu,
 template<class FiniteElement, class JacobianType, class HessianType>
 inline
 void assemble_hessians(const FiniteElement &lfu, const JacobianType &jacobian,
-        const Solver_config::SpaceType& x, std::vector<HessianType>& hessians) {
-    assert(hessians.size() == lfu.size());
+    const Solver_config::SpaceType& x, std::vector<HessianType>& hessians) {
+  assert(hessians.size() == lfu.size());
 
-    // The hessian of the shape functions on the reference element
-    std::vector<HessianType> referenceHessians(lfu.size());
-    for (int row = 0; row <Solver_config::dim; row++)
-      for (int col = 0; col <Solver_config::dim; col++)
-      {
-        std::array<int, Solver_config::dim> directions = { row, col };
-        std::vector<typename FiniteElement::Traits::LocalBasisType::Traits::RangeType> out;
-        lfu.localBasis().template evaluate<2>(directions, x, out);
+  // The hessian of the shape functions on the reference element
+  std::vector<HessianType> referenceHessians(lfu.size());
+  for (int row = 0; row < Solver_config::dim; row++)
+    for (int col = 0; col < Solver_config::dim; col++) {
+      std::array<int, Solver_config::dim> directions = { row, col };
+      std::vector<
+          typename FiniteElement::Traits::LocalBasisType::Traits::RangeType> out;
+      lfu.localBasis().template evaluate<2>(directions, x, out);
 
-        for (size_t i = 0; i < hessians.size(); i++)
-          hessians[i][row][col] = out[i][0];
-      }
+      for (size_t i = 0; i < hessians.size(); i++)
+        hessians[i][row][col] = out[i][0];
+    }
+
+  auto jacobianTransposed = jacobian;
+  jacobianTransposed[1][0] = jacobian[0][1];
+  jacobianTransposed[0][1] = jacobian[1][0];
+  for (size_t i = 0; i < hessians.size(); i++)
+  {
+    leftmultiply(hessians[i],jacobianTransposed);
+    rightmultiply(hessians[i],jacobian);
+  }
 
 }
 
