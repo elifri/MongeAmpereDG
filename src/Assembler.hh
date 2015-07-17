@@ -93,7 +93,7 @@ void assemble_gradients(const FiniteElement &lfu, const JacobianType &jacobian,
 
     //compute the gradients on the real element
     for (size_t i = 0; i < gradients.size(); i++)
-        jacobian.mv(referenceGradients[i][0], gradients[i]);
+       gradients[i] = referenceGradients[i][0];
 }
 
 /**
@@ -146,14 +146,6 @@ void assemble_hessians(const FiniteElement &lfu, const JacobianType &jacobian,
         for (size_t i = 0; i < hessians.size(); i++)
           hessians[i][row][col] = out[i][0];
       }
-
-    auto jacobianTransposed = jacobian;
-    jacobianTransposed[1][0] = jacobian[0][1];
-    jacobianTransposed[0][1] = jacobian[1][0];
-    for (size_t i = 0; i < hessians.size(); i++) {
-        hessians[i].leftmultiply(jacobianTransposed);
-        hessians[i].rightmultiply(jacobian);
-    }
 
 }
 
@@ -297,6 +289,11 @@ public:
   void calculate_local_mass_matrix_ansatz(const LocalFiniteElement &lfu,
       Solver_config::DenseMatrixType& m) const;
 
+  template<typename LocalView>
+  void calculate_local_mass_matrix_detailed(
+          const LocalView &localView, Solver_config::DenseMatrixType& m) const;
+
+
   /**calculates the mass matrix of the ansatz functions and refined ansatz functions (red-green refinement)
    * Note that since the matrices are symmetric, only the lower part is filled
    *
@@ -307,6 +304,11 @@ public:
   template<typename LocalFiniteElement>
   void calculate_refined_local_mass_matrix_ansatz(const LocalFiniteElement &lfu,
       std::vector<Solver_config::DenseMatrixType>& m, const int level = 1) const;
+
+
+  template<typename LocalView>
+  void calculate_refined_local_mass_matrix_detailed(const LocalView &localViewFather, const LocalView &localViewChild, Solver_config::DenseMatrixType& m,
+          const int level) const;
 
   template<typename LocalOperatorType>
   void assemble_DG(const LocalOperatorType &LOP, const Solver_config::VectorType& x,
@@ -439,6 +441,52 @@ void Assembler::calculate_local_mass_matrix_ansatz(
     }
 }
 
+template<typename LocalView>
+void Assembler::calculate_local_mass_matrix_detailed(
+        const LocalView &localView, Solver_config::DenseMatrixType& m) const {
+    const int size = localView.size();
+
+    const auto lfu = localView.tree().finiteElement();
+
+    typedef decltype(lfu) ConstElementRefType;
+    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
+
+    // Get a quadrature rule
+    int order = std::max(1, 2 * ((int) lfu.localBasis().order()));
+    const QuadratureRule<double, Solver_config::dim>& quad = QuadratureRules<
+            double, Solver_config::dim>::rule(lfu.type(), order);
+
+    //local mass matrix m_ij = \int mu_i : mu_j
+    m.setZero(size, size);
+
+    // Loop over all quadrature points
+    for (size_t pt = 0; pt < quad.size(); pt++) {
+
+        // Position of the current quadrature point in the reference element
+        const FieldVector<double, Solver_config::dim> &quadPos =
+                quad[pt].position();
+
+        //the shape function values
+        std::vector<RangeType> referenceFunctionValues(size);
+        lfu.localBasis().evaluateFunction(quadPos, referenceFunctionValues);
+
+        //-----assemble integrals---------
+        assert(no_hanging_nodes);
+
+        const double integrationElement = localView.element().geometry().integrationElement(quadPos);
+
+        for (size_t j = 0; j < lfu.size(); j++) // loop over test fcts
+                {
+            //int v_i*v_j, as mass matrix is symmetric only fill lower part
+            for (size_t i = 0; i <= j; i++)
+                m(j, i) += cwiseProduct(referenceFunctionValues[i],
+                        referenceFunctionValues[j]) * quad[pt].weight()*integrationElement;
+        }
+    }
+}
+
+
 template<typename LocalFiniteElement>
 void Assembler::calculate_refined_local_mass_matrix_ansatz(
         const LocalFiniteElement &lfu, std::vector<Solver_config::DenseMatrixType>& m,
@@ -511,6 +559,67 @@ void Assembler::calculate_refined_local_mass_matrix_ansatz(
 }
 
 
+template<typename LocalView>
+void Assembler::calculate_refined_local_mass_matrix_detailed(const LocalView &localViewFather, const LocalView &localViewChild, Solver_config::DenseMatrixType& m,
+        const int level) const {
+  assert(level == 1);
+
+  const auto lfuFather = localViewFather.tree().finiteElement();
+  const auto lfuChild = localViewChild.tree().finiteElement();
+
+  typedef decltype(lfuChild) ConstElementRefType;
+  typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+  typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
+
+  const int size = lfuChild.size();
+
+  assert(size == lfuFather.size());
+  assert(Solver_config::dim == 2);
+
+  // Get a quadrature rule
+  int order = std::max(1, 3 * ((int) lfuChild.localBasis().order()));
+  const QuadratureRule<double, Solver_config::dim>& quad = QuadratureRules<
+      double, Solver_config::dim>::rule(lfuChild.type(), order);
+
+  //local mass matrix m_ij = \int mu_i : mu_j
+  m.setZero(size, size);
+
+  auto geometryInFather = localViewChild.element().geometryInFather();
+
+    // Loop over all quadrature points
+  for (size_t pt = 0; pt < quad.size(); pt++) {
+
+    // Position of the current quadrature point in the child element
+    const FieldVector<double, Solver_config::dim> &quadPosChild =
+        quad[pt].position();
+
+    const FieldVector<double, Solver_config::dim> &quadPosFather =
+        geometryInFather.global(quadPosChild);
+
+    //the shape function values
+    std::vector<RangeType> referenceFunctionValues(size);
+    lfuChild.localBasis().evaluateFunction(quadPosChild,
+        referenceFunctionValues);
+
+    std::vector<RangeType> fatherFunctionValues(size);
+    lfuFather.localBasis().evaluateFunction(quadPosFather,
+        fatherFunctionValues);
+
+    const double integrationElement = localViewChild.element().geometry().integrationElement(quadPosChild);
+    //-----assemble integrals---------
+    for (size_t j = 0; j < size; j++) // loop over ansatz fcts of child
+    {
+      //loop over ansatz functions in base cell
+      //int v_i*v_j, as mass matrix is symmetric only fill lower part
+      for (size_t i = 0; i < size; i++) {
+        m(j, i) += cwiseProduct(referenceFunctionValues[j],
+            fatherFunctionValues[i]) * quad[pt].weight() * integrationElement;
+      }
+    }
+  }
+}
+
+
 
 template<typename LocalIndexSet>
 inline
@@ -544,7 +653,7 @@ inline
 void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const Solver_config::VectorType &v_local, Solver_config::VectorType& v) const
 {
   assert (v_local.size() == localIndexSet.size());
-  assert (v.size() == basis_->indexSet().dimension()+1);
+  assert (v.size() == basis_->indexSet().size()+1);
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
      v(localIndexSet.index(i)[0]) = v_local[i];
@@ -558,8 +667,8 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
 {
   assert (m_local.rows() == localIndexSetTest.size());
   assert (m_local.cols() == localIndexSetAnsatz.size());
-  assert (m.rows() == basis_->indexSet().dimension()+1);
-  assert (m.cols() == basis_->indexSet().dimension()+1);
+  assert (m.rows() == basis_->indexSet().size()+1);
+  assert (m.cols() == basis_->indexSet().size()+1);
 
   for (int i = 0; i < m_local.rows(); i++)
   {
@@ -704,7 +813,7 @@ void Assembler::assemble_inner_face_Jacobian(const Intersection& intersection,
 template<typename LocalOperatorType>
 void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::VectorType& x, Solver_config::VectorType& v) const
 {
-    assert(x.size() == basis_->indexSet().dimension()+1);
+    assert(x.size() == basis_->indexSet().size()+1);
 
     Solver_config::GridView gridView = basis_->gridView();
 
@@ -816,7 +925,7 @@ inline Eigen::VectorXi Assembler::estimate_nnz_Jacobian() const
 template<typename LocalOperatorType>
 void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_config::VectorType& x, Solver_config::MatrixType& m) const
 {
-    assert(x.size() == basis_->indexSet().dimension()+1);
+    assert(x.size() == basis_->indexSet().size()+1);
 
     Solver_config::GridView gridView = basis_->gridView();
 
@@ -916,7 +1025,7 @@ void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_
 template<typename LocalOperatorType>
 void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_config::VectorType& x, Solver_config::VectorType& v, Solver_config::MatrixType& m) const
 {
-    assert(x.size() == basis_->indexSet().dimension()+1);
+    assert(x.size() == basis_->indexSet().size()+1);
 
     Solver_config::GridView gridView = basis_->gridView();
 

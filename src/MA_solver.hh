@@ -100,7 +100,10 @@ public:
 	  grid_ptr->globalRefine(Solver_config::startlevel);
 
 	  //update member
-	  FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
+	  std::array<unsigned int,Solver_config::dim> elements;
+	  std::fill(elements.begin(), elements.end(), std::pow(2,Solver_config::startlevel));
+
+	  FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr, Solver_config::lowerLeft, Solver_config::upperRight, elements, Solver_config::degree));
 	  assembler.bind(*FEBasis);
 
 	  plotter.set_output_directory(outputDirectory_);

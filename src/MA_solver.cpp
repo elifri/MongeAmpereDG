@@ -73,14 +73,14 @@ double MA_solver::calculate_L2_error(const MA_function_type &f) const
 
 void MA_solver::plot(std::string name) const
 {
-  const int nDH = Solver_config::dim*Solver_config::dim;
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
   auto localnumericalSolution = localFunction(numericalSolution);
 
   //extract hessian
-  /*for (int row = 0; row < Solver_config::dim; row++)
+  /*  const int nDH = Solver_config::dim*Solver_config::dim;
+     for (int row = 0; row < Solver_config::dim; row++)
     for (int col = 0; col < Solver_config::dim; col++)
     {
       //calculate second derivative of gridviewfunction
@@ -134,32 +134,31 @@ void MA_solver::plot_with_mirror(std::string name)
      Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
      auto localnumericalSolution = localFunction(numericalSolution);
 
+     //build writer
+     SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
+
+     //add solution data
+     vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
+
      //extract hessian (3 entries (because symmetry))
-/*
-     typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
-     DerivativeVectorType derivativeSolution(uDHBasis->indexSet().size());
+     Dune::array<int,2> direction = {0,0};
 
-     //extract dofs
-     for (int i=0; i<derivativeSolution.size(); i++)
-       for (int j=0; j< nDH; j++)
-       {
-         if (j == 2) continue;
-         int index_j = j > 2? 2 : j;
-         derivativeSolution[i][index_j] = solution[get_n_dofs_u()+ nDH*i+j];
-       }
+     auto HessianEntry00= localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry00 , VTK::FieldInfo("Hessian00", VTK::FieldInfo::Type::scalar, 1));
+     direction[0] = 1;
+     auto HessianEntry10 = localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry10 , VTK::FieldInfo("Hessian10", VTK::FieldInfo::Type::scalar, 1));
+     direction[0] = 0; direction[1] = 1;
+     auto HessianEntry01 = localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry01 , VTK::FieldInfo("Hessian01", VTK::FieldInfo::Type::scalar, 1));
+     direction[0] = 1;
+     auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
 
-     //build gridview function
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
-     auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
 
-*/
-
+     //write to file
      std::string fname(plotter.get_output_directory());
      fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
-
-     SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
-     vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
-//     vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
      vtkWriter.write(fname);
 
 
@@ -221,7 +220,7 @@ void MA_solver::create_initial_guess()
 
 //  vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
 
-//    project_with_discrete_Hessian([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
+    project_labourious([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
 //  solution = VectorType::Zero(get_n_dofs());
 //  solution = exactsol_projection;
 
@@ -233,19 +232,19 @@ void MA_solver::create_initial_guess()
 //        solution[get_n_dofs_u()+ nDH*i+j] = (j == 0 || j ==3)? 1 : 0;
 //      }
 
-//  InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data("../inputData/ellipsoids.ini", "../inputData/geometry.ini");
+//  InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data("../inputData/ellipsoids.ini");
 //  project([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
 //  ellipsoidMethod.write_output();
 
 //  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
 //  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimple.grid");
 //  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRoentgen.grid");
-  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRose.grid");
-
-  assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
-  assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
-
-  project([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, solution);
+//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRose.grid");
+//
+//  assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
+//  assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
+//
+//  project_labourious([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, solution);
 //  TODO with discrete hessian not working
 //    project_with_discrete_Hessian([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, solution);
 
@@ -296,12 +295,14 @@ const typename MA_solver::VectorType& MA_solver::solve()
   }
 
   update_solution(solution);
-  Solver_config::VectorType f;
-  Solver_config::MatrixType J;
-  op.evaluate(solution, f, J, solution, false);
-  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
 
   plot_with_mirror("initialguess");
+
+
+  Solver_config::VectorType f;
+  Solver_config::MatrixType J;
+  op.evaluate(solution, f, solution, false);
+  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
 
   //calculate integral to fix reflector size
   Integrator<GridType> integrator(grid_ptr);
@@ -484,8 +485,8 @@ void MA_solver::adapt_solution(const int level)
     else //element was not refined
     {
       //bind to child
-      localViewRef.bind(element);
-      localIndexSetRef.bind(localViewRef);
+      localViewRefFather.bind(element);
+      localIndexSetRef.bind(localViewRefFather);
 
       IdType id = idSet.id(element);
       assembler.set_local_coefficients(localIndexSetRef, preserveSolution[id], solution);

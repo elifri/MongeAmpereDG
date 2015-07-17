@@ -202,11 +202,20 @@ public:
       assemble_functionValues_u(localFiniteElement, quadPos,
           referenceFunctionValues, x_adolc, u_value);
 
+      std::cerr << "referenceFunctionValues ";
+      for (const auto& e : referenceFunctionValues) std::cerr << e << " ";
+      std::cerr << std::endl;
+
       // The gradients
       std::vector<JacobianType> gradients(size);
       FieldVector<adouble, Solver_config::dim> gradu;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradu);
+
+      std::cerr << "gradients ";
+      for (const auto& e : gradients) std::cerr << "("<< e[0] << "," << e[1] << ") ";
+      std::cerr << std::endl;
+
 
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size);
@@ -301,7 +310,7 @@ public:
 //      cout << " atilde " << a_tilde_value << " f " << f_value << endl;
 
       //calculate system for first test functions
-//      std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
+//      std::cout << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
 
 //      cerr << x_value << " " << u_value.value() << " " << uDH_pertubed_det.value() << " " << PDE_rhs.value() << endl;
 //      cerr << x_value << " " << u_value.value() << " " << z[0].value() << " " << z[1].value() << endl;
@@ -463,8 +472,14 @@ public:
 
       //assemble jump and averages
       adouble u_jump = u_value - un_value;
+
+      assert(std::abs(u_jump.value()) < 1e-8);
+
       adouble grad_u_normaljump = (gradu - gradun) * normal;
-//      Hess_avg = 0.5*(Hessu+Hessun);
+
+      assert(std::abs(grad_u_normaljump.value()) < 1e-8);
+
+      //      Hess_avg = 0.5*(Hessu+Hessun);
       FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> Hess_avg = cofactor(Hessu);
       Hess_avg += cofactor(Hessu);
       Hess_avg *= 0.5;
@@ -623,7 +638,8 @@ public:
       FieldVector<adouble, Solver_config::dim> T_value = T(x_value, u_value, z_0, Solver_config::z_3);
 
 //	    std::cerr << "T " << (T_value*normal) << " thought it -> " << phi_value_initial << " T " << T_value[0].value() << " " << T_value[1].value() << " normal " << normal[0] << " " << normal[1]<< std::endl;
-//      std::cerr << "u_value " << u_value.value() << " g " << g_value << std::endl;
+//      std::cerr << "x " << x_value << " T " << T_value[0].value() << " " << T_value[1].value() << " T*n" << (T_value * normal).value() << " phi " << phi_value << endl;
+//      std::cerr  << T_value[0].value() << " " << T_value[1].value()  << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
@@ -643,7 +659,6 @@ public:
         {
           v_adolc(j) += penalty_weight * ((T_value * normal) - phi_value) //*((T_value * normal) - phi_value)
                             * referenceFunctionValues[j] * factor;
-//          std::cerr << "T " << T_value[0].value() << " " << T_value[1].value() << " T*n" << (T_value * normal).value() << " phi " << phi_value << endl;
         }
       }
 

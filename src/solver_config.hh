@@ -8,7 +8,7 @@
 #ifndef SRC_SOLVER_CONFIG_HH_
 #define SRC_SOLVER_CONFIG_HH_
 
-#define EIGEN_DEFAULT_DENSE_INDEX_TYPE long
+//#define EIGEN_DEFAULT_DENSE_INDEX_TYPE long
 
 #include<Eigen/Core>
 #include<Eigen/Sparse>
@@ -19,6 +19,7 @@
 
 #include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
+#include <dune/functions/functionspacebases/bsplinebasis.hh>
 
 #include <Grids/Grid2d.hpp> //for povray options
 
@@ -27,7 +28,7 @@
 
 //#include "localfunctions/MAmixedbasis.hh"
 //#include "localfunctions/MAmixedbasisC0.hh"
-#include "localfunctions/MAmixedbasisC0C0.hh"
+//#include "localfunctions/MAmixedbasisC0C0.hh"
 
 #include "Dogleg/doglegMethod.hpp"
 
@@ -87,7 +88,7 @@ struct Solver_config{
 
   static bool Dirichlet;
 
-	enum{ dim = 2, childdim = 4, degree = 2, degreeHessian = 2};
+	enum{ dim = 2, childdim = 4, degree = 3};
 
 	static int startlevel;
 	static int nonlinear_steps;
@@ -100,7 +101,8 @@ struct Solver_config{
 
 
 //	typedef YaspGrid<dim> GridType;
-	typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > UnitCubeType;
+//	typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > UnitCubeType;
+	typedef UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >> UnitCubeType;
 	typedef UnitCubeType::GridType GridType;
 	typedef GridType::LevelGridView LevelGridView;
 	typedef GridType::LeafGridView GridView;
@@ -124,9 +126,12 @@ struct Solver_config{
 
   static value_type z_3;
 
-	typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementType;
+//	typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementType;
+  typedef Functions::BSplineLocalFiniteElement<GridView, value_type> LocalFiniteElementType;
 
-	typedef Functions::PQKNodalBasis<GridView, degree> FEBasis;
+//	typedef Functions::PQKNodalBasis<GridView, degree> FEBasis;
+
+	typedef Functions::BSplineBasis<GridView> FEBasis;
 
 
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis,VectorType> DiscreteGridFunction;

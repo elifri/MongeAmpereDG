@@ -174,6 +174,91 @@ public:
 		grid_->globalRefine(n);
 	}
 
+	enum crossingType {LeftDiagonal, RightDiagonal};
+
+  UnitCube(SpaceType lowerLeft, SpaceType upperRight, int n, crossingType crossing) {
+    std::array<unsigned int, dim> elements;
+    std::fill(elements.begin(), elements.end(), 2);
+
+//    grid_ = Dune::StructuredGridFactory<GridType>::createSimplexGrid(
+//        lowerLeft, upperRight, elements);
+
+    GridFactory<GridType> factory;
+
+      if(MPIHelper::getCollectiveCommunication().rank() == 0)
+      {
+          // Insert uniformly spaced vertices
+          std::array<unsigned int,dim> vertices = elements;
+          for (std::size_t i=0; i<vertices.size(); i++)
+            vertices[i]++;
+
+              // Create vertices
+          FieldVector<double, GridType::dimensionworld> pos(0);
+          pos[0] = lowerLeft[0];
+          pos[1] = lowerLeft[1];
+          factory.insertVertex(pos);
+
+          pos[0] = upperRight[0];
+          pos[1] = lowerLeft[1];
+          factory.insertVertex(pos);
+
+          pos[0] = lowerLeft[0];
+          pos[1] = upperRight[1];
+          factory.insertVertex(pos);
+
+          pos[0] = upperRight[0];
+          pos[1] = upperRight[1];
+          factory.insertVertex(pos);
+
+          // Insert the elements
+          std::vector<unsigned int> corners(dim+1);
+          switch(crossing)
+          {
+          case LeftDiagonal:
+
+            corners[0] = 0;
+            corners[1] = 1;
+            corners[2] = 3;
+
+            factory.insertElement
+                (GeometryType(GeometryType::simplex, dim),
+                corners);
+
+            // 'base' is the index of the lower left element corner
+            corners[0] = 3;
+            corners[1] = 2;
+            corners[2] = 0;
+
+            factory.insertElement
+                (GeometryType(GeometryType::simplex, dim),
+                corners);
+            break;
+          case RightDiagonal:
+            corners[0] = 0;
+            corners[1] = 1;
+            corners[2] = 2;
+
+            factory.insertElement
+                (GeometryType(GeometryType::simplex, dim),
+                corners);
+
+            // 'base' is the index of the lower left element corner
+            corners[0] = 3;
+            corners[1] = 2;
+            corners[2] = 1;
+
+            factory.insertElement
+                (GeometryType(GeometryType::simplex, dim),
+                corners);
+            break;
+          }
+        }
+      grid_ = shared_ptr<GridType>(factory.createGrid());
+
+    grid_->globalRefine(n);
+  }
+
+
 	UnitCube(int n) : UnitCube(SpaceType(0), SpaceType(1), n) {}
 
 	GridType& grid() {
@@ -187,26 +272,41 @@ public:
 };
 
 template<int dim>
-class UnitCube<Dune::YaspGrid<dim> > {
+class UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >> {
 public:
-	typedef Dune::YaspGrid<dim> GridType;
+	typedef Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> > GridType;
+  typedef Dune::FieldVector<typename GridType::ctype, dim> SpaceType;
 
-	UnitCube(int size) {
+  UnitCube(int size) {
 		Dune::FieldVector<double, dim> length(1.0);
 		std::array<int, dim> elements;
 		std::fill(elements.begin(), elements.end(), size);
 
-		grid_ = std::unique_ptr < Dune::YaspGrid<dim>
-				> (new Dune::YaspGrid<dim>(length, elements));
+		grid_ = std::unique_ptr < GridType
+				> (new GridType(length, elements));
 	}
 
+  UnitCube(SpaceType lowerLeft, SpaceType upperRight, int n)
+  {
+    std::array<int, dim> elements;
+    std::fill(elements.begin(), elements.end(), n);
+
+    grid_ = std::unique_ptr < GridType
+        > (new GridType(lowerLeft, upperRight, elements));
+
+  }
+
+  const std::shared_ptr<GridType>& grid_ptr() const{
+    return grid_;
+  }
+
 	GridType& grid() {
-		return *grid;
+		return *grid_;
 	}
 
 private:
 	//the constructed grid object
-	std::unique_ptr<GridType> grid_;
+	std::shared_ptr<GridType> grid_;
 };
 
 //
