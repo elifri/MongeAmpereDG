@@ -253,6 +253,10 @@ public:
 //a normalisation seems to destroy the solution proces ...
     f.omega_normalize();
     g.normalize();
+
+    Solver_config::lowerLeftTarget = g.lowerLeft();
+    Solver_config::upperRightTarget = g.upperRight();
+    std::cout << "Corrected target area to domain (" <<Solver_config::lowerLeftTarget << ") , (" << Solver_config::upperRightTarget << ")" << std::endl;
   }
 
   void convolveTargetDistribution(unsigned int width){  g.convolveOriginal(width);}
