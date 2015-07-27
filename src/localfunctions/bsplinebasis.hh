@@ -402,7 +402,6 @@ public:
     FieldVector<D,dim> globalIn = offset_;
     scaling_.umv(in,globalIn);
 
-//    std::cerr << " evaluate global basis with "<< globalIn << std::endl;
     globalBasis_.evaluateFunction(globalIn, out, lFE_.currentKnotSpan_);
   }
 
@@ -433,6 +432,13 @@ public:
     else
       if (k == 1)
       {
+        FieldVector<D,dim> globalIn = offset_;
+        scaling_.umv(in,globalIn);
+
+        globalBasis_.evaluate(directions, globalIn, out, lFE_.currentKnotSpan_);
+
+        for (size_t i=0; i<out.size(); i++)
+            out[i][0] *= scaling_[directions[0]][directions[0]];
       }
       else
         if (k == 2)
@@ -442,8 +448,6 @@ public:
 
           globalBasis_.evaluate(directions, globalIn, out, lFE_.currentKnotSpan_);
 
-
-          std::cerr << "scaling " << scaling_ << std::endl;
           for (size_t i=0; i<out.size(); i++)
               out[i][0] *= scaling_[directions[0]][directions[0]]*scaling_[directions[1]][directions[1]];
         }
@@ -738,6 +742,8 @@ class BSplineBasis
 
   };
 
+
+
 public:
 
   /** \brief The grid view that the FE space is defined on */
@@ -751,6 +757,22 @@ public:
 
   /** \brief Type used for global numbering of the basis vectors */
   typedef std::array<size_type, 1> MultiIndex;
+
+private:
+  /** \brief Order of the B-spline for each space dimension */
+  array<unsigned int, dim> order_;
+
+  /** \brief The knot vectors, one for each space dimension */
+  array<std::vector<double>, dim> knotVectors_;
+
+  /** \brief Number of grid elements in the different coordinate directions */
+  std::array<uint,dim> elements_;
+
+  const GridView gridView_;
+
+  BSplineIndexSet<GV> indexSet_;
+
+public:
 
   /** \brief Construct a B-spline basis for a given grid view and set of knot vectors
    *
@@ -907,119 +929,15 @@ protected:
     MultiDigitCounter ijkCounter(limits);
 
     out.resize(ijkCounter.cycle());
-//    std::cerr << "build product " << std::endl;
     for (size_t i=0; i<out.size(); i++, ++ijkCounter)
     {
       out[i] = R(1.0);
       for (size_t j=0; j<dim; j++)
       {
         out[i] *= oneDValues[j][ijkCounter[j]];
-//        std::cerr << " *= " << oneDValues[j][ijkCounter[j]];
       }
-//      std::cerr << std::endl;
     }
   }
-
-  //! \brief Evaluate Jacobian of all B-spline basis functions
-  void evaluateJacobian (const FieldVector<typename GV::ctype,dim>& in,
-                         std::vector<FieldMatrix<R,1,dim> >& out,
-                         const std::array<uint,dim>& currentKnotSpan) const
-  {
-
-    std::cerr << std::setprecision(15) << std::scientific;
-        std::cerr << " x " << in << " and ";
-        std::cerr << "knotvector ";
-        for (const auto& e : knotVectors_[0])  std::cerr << e << " ";
-    //    std::cerr << std::endl;
-
-        std::cerr << ", the current Knot Span " << currentKnotSpan << std::endl;
-//     Evaluate 1d function values (needed for the product rule)
-    Dune::array<std::vector<R>, dim> oneDValues;
-
-    for (size_t i=0; i<dim; i++)
-    {
-      evaluateFunctionFull(in[i], oneDValues[i], knotVectors_[i], order_[i], currentKnotSpan[i]);
-      std::cerr << "evaluated function ";
-      for (const auto & e : oneDValues[i]) std::cerr << e << " ";
-      std::cerr << std::endl;
-    }
-
-    // Evaluate 1d function values of one order lower (needed for the derivative formula)
-    Dune::array<std::vector<R>, dim> lowOrderOneDValues;
-
-    /** \todo Calling evaluateFunction again here is a waste: the lower-order values have
-     * already been computed during the first call to evaluateFunction.  Still, for the time
-     * being I leave it as is to have more readable code. */
-    for (size_t i=0; i<dim; i++)
-      if (order_[i]!=0)
-      {
-        evaluateFunctionFull(in[i], lowOrderOneDValues[i], knotVectors_[i], order_[i]-1, currentKnotSpan[i]);
-        std::cerr << "evaluated function lower order  ";
-        for (const auto & e : lowOrderOneDValues[i]) std::cerr << e << " ";
-        std::cerr << std::endl;
-      }
-
-    // Evaluate 1d function derivatives
-    Dune::array<std::vector<R>, dim> oneDDerivatives;
-    for (size_t i=0; i<dim; i++)
-    {
-      oneDDerivatives[i].resize(oneDValues[i].size());
-      for (size_t j=0; j<oneDDerivatives[i].size(); j++)
-      {
-        if (order_[i]==0)  // order-zero functions are piecewise constant, hence all derivatives are zero
-          std::fill(oneDDerivatives[i].begin(), oneDDerivatives[i].end(), R(0.0));
-        else
-        {
-          R derivativeAddend1 = lowOrderOneDValues[i][j] / (knotVectors_[i][j+order_[i]]-knotVectors_[i][j]);
-          R derivativeAddend2 = lowOrderOneDValues[i][j+1] / (knotVectors_[i][j+order_[i]+1]-knotVectors_[i][j+1]);
-          // The two previous terms may evaluate as 0/0.  This is to be interpreted as 0.
-          if (std::isnan(derivativeAddend1))
-            derivativeAddend1 = 0;
-          if (std::isnan(derivativeAddend2))
-            derivativeAddend2 = 0;
-          oneDDerivatives[i][j] = order_[i] * ( derivativeAddend1 - derivativeAddend2 );
-        }
-      }
-      std::cerr << "derivatives 1d  ";
-      for (const auto & e : oneDDerivatives[i]) std::cerr << e << " ";
-      std::cerr << std::endl;
-    }
-
-    // Set up a multi-index to go from consecutive indices to integer coordinates
-    std::array<unsigned int, dim> limits;
-    for (int i=0; i<dim; i++)
-    {
-      // In a proper implementation, the following line would do
-      //limits[i] = oneDValues[i].size();
-      limits[i] = order_[i]+1;  // The 'standard' value away from the boundaries of the knot vector
-      if (currentKnotSpan[i]<order_[i])
-        limits[i] -= (order_[i] - currentKnotSpan[i]);
-      if ( order_[i] > (knotVectors_[i].size() - currentKnotSpan[i] - 2) )
-        limits[i] -= order_[i] - (knotVectors_[i].size() - currentKnotSpan[i] - 2);
-    }
-
-    MultiDigitCounter ijkCounter(limits);
-
-    out.resize(ijkCounter.cycle());
-
-    // Complete Jacobian is given by the product rule
-    for (size_t i=0; i<out.size(); i++, ++ijkCounter)
-      {for (int j=0; j<dim; j++)
-
-      {
-        std::cerr << "derivatives 2dd  ";
-        out[i][0][j] = 1.0;
-        for (int k=0; k<dim; k++)
-          out[i][0][j] *= (j==k) ? oneDDerivatives[k][std::max((int)(currentKnotSpan[k] - order_[k]),0) + ijkCounter[k]]
-                                 : oneDValues[k][std::max((int)(currentKnotSpan[k] - order_[k]),0) + ijkCounter[k]];
-        std::cerr << out[i][0][j] << " ";
-      }
-      std::cerr << std::endl;
-      }
-
-
-  }
-
 
   //! \brief Evaluate Derivatives of all B-spline basis functions
   template <size_type k>
@@ -1029,33 +947,26 @@ protected:
                          const std::array<uint,dim>& currentKnotSpan) const
   {
 
-    std::cerr << std::setprecision(15) << std::scientific;
-    std::cerr << " x " << in << " and ";
-    std::cerr << "knotvector ";
-    for (const auto& e : knotVectors_[0])  std::cerr << e << " ";
-
-    std::cerr << ", the current Knot Span " << currentKnotSpan << std::endl;
-
-    if (k == 2)
+    if (k == 1 || k == 2)
     {
       //     Evaluate 1d function values (needed for the product rule)
       Dune::array<std::vector<R>, dim> oneDValues;
+      Dune::array<std::vector<R>, dim> oneDDerivatives;
+      Dune::array<std::vector<R>, dim> oneDSecondDerivatives;
 
-      for (size_t i=0; i<dim; i++)
-        evaluateFunctionFull(in[i], oneDValues[i], knotVectors_[i], order_[i], currentKnotSpan[i]);
-
-      std::cerr << "1d values ";
-      for (const auto & e : oneDValues[0]) std::cerr << e << " ";
-      std::cerr << std::endl;
 
       // Evaluate 1d function derivatives
-      Dune::array<std::vector<R>, dim> oneDDerivatives;
-      for (size_t i=0; i<dim; i++)
-        evaluateFirstDerivativesFull(in[i], oneDDerivatives[i], knotVectors_[i], order_[i], currentKnotSpan[i]);
+      if (k==1)
+        for (size_t i=0; i<dim; i++)
+          evaluateAll(in[i], evaluateJac, oneDValues[i], oneDDerivatives[i], oneDSecondDerivatives[i], knotVectors_[i], order_[i], currentKnotSpan[i]);
+      else
+        for (size_t i=0; i<dim; i++)
+          evaluateAll(in[i], evaluateJacAndHess, oneDValues[i], oneDDerivatives[i], oneDSecondDerivatives[i], knotVectors_[i], order_[i], currentKnotSpan[i]);
 
-      Dune::array<std::vector<R>, dim> oneDSecondDerivatives;
-      for (size_t i=0; i<dim; i++)
-        evaluateSecondDerivativesFull(in[i], oneDSecondDerivatives[i], knotVectors_[i], order_[i], currentKnotSpan[i]);
+      // The lowest knot spans that we need values from
+      std::array<unsigned int, dim> offset;
+      for (int i=0; i<dim; i++)
+        offset[i] = std::max((int)(currentKnotSpan[i] - order_[i]),0);
 
       // Set up a multi-index to go from consecutive indices to integer coordinates
       std::array<unsigned int, dim> limits;
@@ -1070,32 +981,52 @@ protected:
           limits[i] -= order_[i] - (knotVectors_[i].size() - currentKnotSpan[i] - 2);
       }
 
+      // Working towards computing only the parts that we really need:
+       // Let's copy them out into a separate array
+       Dune::array<std::vector<R>, dim> oneDValuesShort;
+
+       for (int i=0; i<dim; i++)
+       {
+         oneDValuesShort[i].resize(limits[i]);
+
+         for (size_t j=0; j<limits[i]; j++)
+           oneDValuesShort[i][j]  = oneDValues[i][offset[i] + j];
+       }
+
+
       MultiDigitCounter ijkCounter(limits);
 
       out.resize(ijkCounter.cycle());
 
-      // Complete Jacobian is given by the product rule
-      for (size_t i=0; i<out.size(); i++, ++ijkCounter)
-      {
-        std::cerr << "second derivatives 2dd  ";
-        out[i][0] = 1.0;
-        for (size_t j=0; j<dim; j++)
+      if (k == 2)
+      {// Complete Jacobian is given by the product rule
+        for (size_t i=0; i<out.size(); i++, ++ijkCounter)
         {
-          if ((directions[0] == j && directions[1] != j) || (directions[1] == j && directions[0] != j)) out[i][0] *= oneDDerivatives[j][std::max((int)(currentKnotSpan[j] - order_[j]),0) + ijkCounter[j]];
-          else  if (directions[0] == j && directions[1] == j)
-            {
-              out[i][0] *= oneDSecondDerivatives[j][std::max((int)(currentKnotSpan[j] - order_[j]),0) + ijkCounter[j]];
-              std::cerr << " mutiplied by " << oneDSecondDerivatives[j][std::max((int)(currentKnotSpan[j] - order_[j]),0) + ijkCounter[j]];
-            }
-                else{
-                  out[i][0] *= oneDValues[j][std::max((int)(currentKnotSpan[j] - order_[j]),0) + ijkCounter[j]];
-                  std::cerr << " mutiplied by " << oneDValues[j][std::max((int)(currentKnotSpan[j] - order_[j]),0) + ijkCounter[j]];
-                }
-
+          out[i][0] = 1.0;
+          for (size_t j=0; j<dim; j++)
+          {
+            if ((directions[0] == j && directions[1] != j) || (directions[1] == j && directions[0] != j)) out[i][0] *= oneDDerivatives[j][ijkCounter[j]];
+            else  if (directions[0] == j && directions[1] == j)
+              {
+                out[i][0] *= oneDSecondDerivatives[j][ijkCounter[j]];
+              }
+                  else{
+                    out[i][0] *= oneDValuesShort[j][ijkCounter[j]];
+                  }
+          }
         }
-        std::cerr << " -> "<< out[i][0] << " ";
-        std::cerr << std::endl;
-       }
+      }
+      else if (k == 1)
+      {
+        // Complete Jacobian is given by the product rule
+        for (size_t i=0; i<out.size(); i++, ++ijkCounter)
+        {
+          out[i][0] = 1.0;
+          for (int k=0; k<dim; k++)
+            out[i][0] *= (directions[0]==k) ? oneDDerivatives[k][ijkCounter[k]]
+                                     : oneDValuesShort[k][ijkCounter[k]];
+        }
+      }
 
     }
   }
@@ -1137,12 +1068,6 @@ protected:
                                 unsigned int order,
                                 unsigned int currentKnotSpan)
   {
-//    std::cerr << " x " << in << " and ";
-//    std::cerr << "knotvector ";
-//    for (const auto& e : knotVector)  std::cerr << e << " ";
-////    std::cerr << std::endl;
-//
-//    std::cerr << ", the current Knot Span " << currentKnotSpan << std::endl;
 
     std::size_t outSize = order+1;  // The 'standard' value away from the boundaries of the knot vector
     if (currentKnotSpan<order)   // Less near the left end of the knot vector
@@ -1199,15 +1124,15 @@ protected:
    * \param [out] out Vector containing the values of all B-spline functions at 'in'
    */
   static void evaluateFunctionFull(const typename GV::ctype& in,
-                                   std::vector<R>& out,
+                                   DynamicMatrix<R>& out,
                                    const std::vector<R>& knotVector,
                                    unsigned int order,
                                    unsigned int currentKnotSpan)
   {
-    out.resize(knotVector.size()-order-1);
-
     // It's not really a matrix that is needed here, a plain 2d array would do
-    DynamicMatrix<R> N(order+1, knotVector.size()-1);
+    DynamicMatrix<R>& N = out;
+
+    N.resize(order+1, knotVector.size()-1);
 
     // The text books on splines use the following geometric condition here to fill the array N
     // (see for example Cottrell, Hughes, Bazilevs, Formula (2.1).  However, this condition
@@ -1229,128 +1154,233 @@ protected:
         : 0;
         N[r][i] = factor1 * N[r-1][i] + factor2 * N[r-1][i+1];
       }
-
-      for (size_t i=0; i<out.size(); i++) {
-        out[i] = N[order][i];
-      }
   }
 
-  /** \brief Evaluate the derivatives of all one-dimensional B-spline functions for a given coordinate direction
-   *
-   * \todo This method is a hack!  I computes the derivatives of ALL B-splines, even the ones that
-   * are zero on the current knot span.  I need it as an intermediate step to get the derivatives
-   * working.  It will/must be removed as soon as possible.
-   *
-   * \param in Scalar(!) coordinate where to evaluate the functions
-   * \param [out] out Vector containing the values of all B-spline derivatives at 'in'
-   */
-  static void evaluateFirstDerivativesFull(const typename GV::ctype& in,
-                                   std::vector<R>& out,
-                                   const std::vector<R>& knotVector,
-                                   unsigned int order,
-                                   unsigned int currentKnotSpan)
-  {
-    out.resize(knotVector.size()-order-1);
+  /** \brief Evaluate Jacobian of all B-spline basis functions
+    *
+    * In theory this is easy: just look up the formula in a B-spline text of your choice.
+    * The challenge is compute only the values needed for the current knot span.
+    */
+   void evaluateJacobian (const FieldVector<typename GV::ctype,dim>& in,
+                          std::vector<FieldMatrix<R,1,dim> >& out,
+                          const std::array<uint,dim>& currentKnotSpan) const
+   {
+     // How many shape functions to we have in each coordinate direction?
+     std::array<unsigned int, dim> limits;
+     for (int i=0; i<dim; i++)
+     {
+       limits[i] = order_[i]+1;  // The 'standard' value away from the boundaries of the knot vector
+       if (currentKnotSpan[i]<order_[i])
+         limits[i] -= (order_[i] - currentKnotSpan[i]);
+       if ( order_[i] > (knotVectors_[i].size() - currentKnotSpan[i] - 2) )
+         limits[i] -= order_[i] - (knotVectors_[i].size() - currentKnotSpan[i] - 2);
+     }
 
-    std::vector<R> lowOrderOneDValues;
-    /** \todo Calling evaluateFunction again here is a waste: the lower-order values have
-     * already been computed during the first call to evaluateFunction.  Still, for the time
-     * being I leave it as is to have more readable code. */
-    for (size_t i=0; i<dim; i++)
-      if (order!=0)
-        evaluateFunctionFull(in, lowOrderOneDValues, knotVector, order-1, currentKnotSpan);
+     // The lowest knot spans that we need values from
+     std::array<unsigned int, dim> offset;
+     for (int i=0; i<dim; i++)
+       offset[i] = std::max((int)(currentKnotSpan[i] - order_[i]),0);
 
-    // Evaluate 1d function derivatives
-    for (size_t j=0; j<out.size(); j++)
-    {
-      if (order==0)  // order-zero functions are piecewise constant, hence all derivatives are zero
-        std::fill(out.begin(), out.end(), R(0.0));
-      else
-      {
-        R derivativeAddend1 = lowOrderOneDValues[j] / (knotVector[j+order]-knotVector[j]);
-        R derivativeAddend2 = lowOrderOneDValues[j+1] / (knotVector[j+order+1]-knotVector[j+1]);
-        // The two previous terms may evaluate as 0/0.  This is to be interpreted as 0.
-        if (std::isnan(derivativeAddend1))
-          derivativeAddend1 = 0;
-        if (std::isnan(derivativeAddend2))
-          derivativeAddend2 = 0;
-        out[j] = order * ( derivativeAddend1 - derivativeAddend2 );
-      }
-    }
-    std::cerr << "derivatives 1d  ";
-    for (const auto & e : out) std::cerr << e << " ";
-    std::cerr << std::endl;
-  }
+     // Evaluate 1d function values (needed for the product rule)
+     Dune::array<std::vector<R>, dim> oneDValues;
+
+     // Evaluate 1d function values of one order lower (needed for the derivative formula)
+     Dune::array<std::vector<R>, dim> lowOrderOneDValues;
+
+     Dune::array<DynamicMatrix<R>, dim> values;
+
+     for (size_t i=0; i<dim; i++)
+     {
+       evaluateFunctionFull(in[i], values[i], knotVectors_[i], order_[i], currentKnotSpan[i]);
+       oneDValues[i].resize(knotVectors_[i].size()-order_[i]-1);
+       for (size_t j=0; j<oneDValues[i].size(); j++)
+         oneDValues[i][j] = values[i][order_[i]][j];
+
+       if (order_[i]!=0)
+       {
+         lowOrderOneDValues[i].resize(knotVectors_[i].size()-(order_[i]-1)-1);
+         for (size_t j=0; j<lowOrderOneDValues[i].size(); j++)
+           lowOrderOneDValues[i][j] = values[i][order_[i]-1][j];
+       }
+     }
+
+
+     // Evaluate 1d function derivatives
+     Dune::array<std::vector<R>, dim> oneDDerivatives;
+     for (size_t i=0; i<dim; i++)
+     {
+       oneDDerivatives[i].resize(limits[i]);
+
+       if (order_[i]==0)  // order-zero functions are piecewise constant, hence all derivatives are zero
+         std::fill(oneDDerivatives[i].begin(), oneDDerivatives[i].end(), R(0.0));
+       else
+       {
+         for (size_t j=offset[i]; j<offset[i]+limits[i]; j++)
+         {
+           R derivativeAddend1 = lowOrderOneDValues[i][j] / (knotVectors_[i][j+order_[i]]-knotVectors_[i][j]);
+           R derivativeAddend2 = lowOrderOneDValues[i][j+1] / (knotVectors_[i][j+order_[i]+1]-knotVectors_[i][j+1]);
+           // The two previous terms may evaluate as 0/0.  This is to be interpreted as 0.
+           if (std::isnan(derivativeAddend1))
+             derivativeAddend1 = 0;
+           if (std::isnan(derivativeAddend2))
+             derivativeAddend2 = 0;
+           oneDDerivatives[i][j-offset[i]] = order_[i] * ( derivativeAddend1 - derivativeAddend2 );
+         }
+       }
+     }
+
+     // Working towards computing only the parts that we really need:
+     // Let's copy them out into a separate array
+     Dune::array<std::vector<R>, dim> oneDValuesShort;
+
+     for (int i=0; i<dim; i++)
+     {
+       oneDValuesShort[i].resize(limits[i]);
+
+       for (size_t j=0; j<limits[i]; j++)
+         oneDValuesShort[i][j]      = oneDValues[i][offset[i] + j];
+     }
+
+
+
+     // Set up a multi-index to go from consecutive indices to integer coordinates
+     MultiDigitCounter ijkCounter(limits);
+
+     out.resize(ijkCounter.cycle());
+
+     // Complete Jacobian is given by the product rule
+     for (size_t i=0; i<out.size(); i++, ++ijkCounter)
+       for (int j=0; j<dim; j++)
+       {
+         out[i][0][j] = 1.0;
+         for (int k=0; k<dim; k++)
+           out[i][0][j] *= (j==k) ? oneDDerivatives[k][ijkCounter[k]]
+                                  : oneDValuesShort[k][ijkCounter[k]];
+       }
+
+   }
 
 
   /** \brief Evaluate the second derivatives of all one-dimensional B-spline functions for a given coordinate direction
    *
-   * \todo This method is a hack!  I computes the derivatives of ALL B-splines, even the ones that
-   * are zero on the current knot span.  I need it as an intermediate step to get the derivatives
-   * working.  It will/must be removed as soon as possible.
    *
    * \param in Scalar(!) coordinate where to evaluate the functions
+   * \param enableEvaluations switches calculation of desired derivatives on
    * \param [out] out Vector containing the values of all B-spline derivatives at 'in'
+   * \param [out] outJac Vector containing the first derivatives of all B-spline derivatives at 'in' (only if calculation was switched on by enableEvaluations)
+   * \param [out] outHess Vector containing the second derivatives of all B-spline derivatives at 'in' (only if calculation was switched on by enableEvaluations)
    */
-  static void evaluateSecondDerivativesFull(const typename GV::ctype& in,
-                                   std::vector<R>& out,
+
+  enum {evaluateJac=1, evaluateHess=2, evaluateJacAndHess=4};
+  static void evaluateAll(const typename GV::ctype& in,
+                                   char enableEvaluations, std::vector<R>& out,
+                                   std::vector<R>& outJac,
+                                   std::vector<R>& outHess,
                                    const std::vector<R>& knotVector,
                                    unsigned int order,
                                    unsigned int currentKnotSpan)
   {
+    // How many shape functions to we have in each coordinate direction?
+    unsigned int limit;
+    limit = order+1;  // The 'standard' value away from the boundaries of the knot vector
+    if (currentKnotSpan<order)
+      limit -= (order - currentKnotSpan);
+    if ( order > (knotVector.size() - currentKnotSpan - 2) )
+      limit -= order - (knotVector.size() - currentKnotSpan - 2);
+
+    // The lowest knot spans that we need values from
+    unsigned int offset;
+    offset = std::max((int)(currentKnotSpan - order),0);
+
+    // Evaluate 1d function values (needed for the product rule)
+    DynamicMatrix<R> values;
+
+    evaluateFunctionFull(in, values, knotVector, order, currentKnotSpan);
+
     out.resize(knotVector.size()-order-1);
-
-    std::vector<R> lowOrderTwoDValues;
-    /** \todo Calling evaluateFunction again here is a waste: the lower-order values have
-     * already been computed during the first call to evaluateFunction.  Still, for the time
-     * being I leave it as is to have more readable code. */
-    for (size_t i=0; i<dim; i++)
-      if (order>1)
-        evaluateFunctionFull(in, lowOrderTwoDValues, knotVector, order-2, currentKnotSpan);
-
     for (size_t j=0; j<out.size(); j++)
+        out[j] = values[order][j];
+
+    // Evaluate 1d function values of one order lower (needed for the derivative formula)
+    std::vector<R> lowOrderOneDValues;
+
+    if (order!=0 && (enableEvaluations & evaluateJac || enableEvaluations & evaluateJacAndHess))
     {
-      if (order<2)  // order-zero functions are piecewise constant, hence all derivatives are zero
-        std::fill(out.begin(), out.end(), R(0.0));
+      lowOrderOneDValues.resize(knotVector.size()-(order-1)-1);
+      for (size_t j=0; j<lowOrderOneDValues.size(); j++)
+        lowOrderOneDValues[j] = values[order-1][j];
+    }
+
+    // Evaluate 1d function values of two order lower (needed for the (second) derivative formula)
+    std::vector<R> lowOrderTwoDValues;
+
+    if (order>1 && (enableEvaluations & evaluateHess || enableEvaluations & evaluateJacAndHess))
+    {
+      lowOrderTwoDValues.resize(knotVector.size()-(order-2)-1);
+      for (size_t j=0; j<lowOrderTwoDValues.size(); j++)
+        lowOrderTwoDValues[j] = values[order-2][j];
+    }
+
+
+    // Evaluate 1d function derivatives
+    if (enableEvaluations & evaluateJac || enableEvaluations & evaluateJacAndHess)
+    {
+      outJac.resize(limit);
+
+      if (order==0)  // order-zero functions are piecewise constant, hence all derivatives are zero
+        std::fill(outJac.begin(), outJac.end(), R(0.0));
       else
       {
-        R derivativeAddend1 = lowOrderTwoDValues[j] / (knotVector[j+order]-knotVector[j]) / (knotVector[j+order-1]-knotVector[j]);
-        R derivativeAddend2 = lowOrderTwoDValues[j+1] / (knotVector[j+order]-knotVector[j]) / (knotVector[j+order]-knotVector[j+1]);
-        R derivativeAddend3 = lowOrderTwoDValues[j+1] / (knotVector[j+order+1]-knotVector[j+1]) / (knotVector[j+order]-knotVector[j+1]);
-        R derivativeAddend4 = lowOrderTwoDValues[j+2] / (knotVector[j+order+1]-knotVector[j+1]) / (knotVector[j+1+order]-knotVector[j+2]);
-        // The two previous terms may evaluate as 0/0.  This is to be interpreted as 0.
-
-        if (std::isnan(derivativeAddend1))
-          derivativeAddend1 = 0;
-        if (std::isnan(derivativeAddend2))
-          derivativeAddend2 = 0;
-        if (std::isnan(derivativeAddend3))
-          derivativeAddend3 = 0;
-        if (std::isnan(derivativeAddend4))
-          derivativeAddend4 = 0;
-        out[j] = order* (order-1) * ( derivativeAddend1 - derivativeAddend2 -derivativeAddend3 + derivativeAddend4 );
+        for (size_t j=offset; j<offset+limit; j++)
+        {
+          R derivativeAddend1 = lowOrderOneDValues[j] / (knotVector[j+order]-knotVector[j]);
+          R derivativeAddend2 = lowOrderOneDValues[j+1] / (knotVector[j+order+1]-knotVector[j+1]);
+          // The two previous terms may evaluate as 0/0.  This is to be interpreted as 0.
+          if (std::isnan(derivativeAddend1))
+            derivativeAddend1 = 0;
+          if (std::isnan(derivativeAddend2))
+            derivativeAddend2 = 0;
+          outJac[j-offset] = order * ( derivativeAddend1 - derivativeAddend2 );
+        }
       }
     }
-    std::cerr << "2nd derivatives 1d  ";
-    for (const auto & e : out) std::cerr << e << " ";
-    std::cerr << std::endl;
+
+    // Evaluate 1d function second derivatives
+    if (enableEvaluations & evaluateHess || enableEvaluations & evaluateJacAndHess)
+    {
+      outHess.resize(limit);
+
+      if (order<2)  // order-zero functions are piecewise constant, hence all derivatives are zero
+        std::fill(outHess.begin(), outHess.end(), R(0.0));
+      else
+      {
+        for (size_t j=offset; j<offset+limit; j++)
+        {
+          assert(j+2 < lowOrderTwoDValues.size());
+          R derivativeAddend1 = lowOrderTwoDValues[j] / (knotVector[j+order]-knotVector[j]) / (knotVector[j+order-1]-knotVector[j]);
+          R derivativeAddend2 = lowOrderTwoDValues[j+1] / (knotVector[j+order]-knotVector[j]) / (knotVector[j+order]-knotVector[j+1]);
+          R derivativeAddend3 = lowOrderTwoDValues[j+1] / (knotVector[j+order+1]-knotVector[j+1]) / (knotVector[j+order]-knotVector[j+1]);
+          R derivativeAddend4 = lowOrderTwoDValues[j+2] / (knotVector[j+order+1]-knotVector[j+1]) / (knotVector[j+1+order]-knotVector[j+2]);
+          // The two previous terms may evaluate as 0/0.  This is to be interpreted as 0.
+
+          if (std::isnan(derivativeAddend1))
+            derivativeAddend1 = 0;
+          if (std::isnan(derivativeAddend2))
+            derivativeAddend2 = 0;
+          if (std::isnan(derivativeAddend3))
+            derivativeAddend3 = 0;
+          if (std::isnan(derivativeAddend4))
+            derivativeAddend4 = 0;
+          outHess[j-offset] = order* (order-1) * ( derivativeAddend1 - derivativeAddend2 -derivativeAddend3 + derivativeAddend4 );
+        }
+      }
+    }
   }
 
 
 
 
-  /** \brief Order of the B-spline for each space dimension */
-  array<unsigned int, dim> order_;
 
-  /** \brief The knot vectors, one for each space dimension */
-  array<std::vector<double>, dim> knotVectors_;
-
-  /** \brief Number of grid elements in the different coordinate directions */
-  std::array<uint,dim> elements_;
-
-  const GridView gridView_;
-
-  BSplineIndexSet<GV> indexSet_;
 };
 
 }   // namespace Functions
