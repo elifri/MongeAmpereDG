@@ -414,17 +414,23 @@ void MA_solver::adapt_solution(const int level)
   std::array<unsigned int,Solver_config::dim> elementsSplines;
   std::fill(elementsSplines.begin(), elementsSplines.end(), std::sqrt(gridView_ptr->size(0)));
 
+  //we need do store the old basis as the (father) finite element depends on the basis
+  std::shared_ptr<FEBasisType> FEBasisOld (FEBasis);
+
   FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr, Solver_config::lowerLeft, Solver_config::upperRight, elementsSplines, Solver_config::degree));
+//  FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
   assembler.bind(*FEBasis);
 
   auto localViewRefChild = FEBasis->localView();
-  auto localViewRefFather = FEBasis->localView();
+  auto localViewRefFather = FEBasisOld->localView();
   auto localIndexSetRef = FEBasis->indexSet().localIndexSet();
 
   //init vector v
   solution.resize(get_n_dofs());
 
   Solver_config::LocalFiniteElementType localFiniteElement(*FEBasis);
+  Solver_config::LocalFiniteElementType localFiniteElementFather(*FEBasisOld);
+//  Solver_config::LocalFiniteElementType localFiniteElement;
 
   //calculate refinement matrices
 
