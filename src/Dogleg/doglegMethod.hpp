@@ -372,9 +372,10 @@ int doglegMethod (
 
             if ((dL > 0.0) && (dF > 0.0))
             {
-              functor.derivative(xnew,J);
+              if (!useCombinedFunctor)
+                functor.derivative(xnew,J);
 
-                if (opts.check_Jacobian)
+              if (opts.check_Jacobian)
                 	checkJacobian(functor, xnew);
 //                make_FD_Jacobian(functor, x, J);
                 lu_of_J.factorize(J);
