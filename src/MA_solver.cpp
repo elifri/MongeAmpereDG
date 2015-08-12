@@ -127,7 +127,6 @@ void MA_solver::plot_with_mirror(std::string name)
   if (writeVTK_)
   {
 
-    const int nDH = Solver_config::dim*Solver_config::dim;
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
      //build gridviewfunction
@@ -220,7 +219,7 @@ void MA_solver::create_initial_guess()
 
 //  vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
 
-    project_labourious([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
+//    project_labourious([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
 //  solution = VectorType::Zero(get_n_dofs());
 //  solution = exactsol_projection;
 
@@ -236,15 +235,15 @@ void MA_solver::create_initial_guess()
 //  project([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
 //  ellipsoidMethod.write_output();
 
-//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
+    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
 //  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimple.grid");
 //  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRoentgen.grid");
 //  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRose.grid");
 //
-//  assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
-//  assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
-//
-//  project_labourious([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, solution);
+  assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
+  assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
+
+  project_labourious([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, solution);
 //  TODO with discrete hessian not working
 //    project_with_discrete_Hessian([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, solution);
 
@@ -258,7 +257,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
   //init andreas solution as exact solution
 //  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exact_reflector_projection_small.grid"));
-  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exactReflectorProjectionSimple.grid"));
+//  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exactReflectorProjectionSimple.grid"));
 //  assert(is_close(exact_solution->x_min, Solver_config::lowerLeft[0], 1e-12));
 //  assert(is_close(exact_solution->y_min, Solver_config::lowerLeft[1], 1e-12));
 //  project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
@@ -301,8 +300,8 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
   Solver_config::VectorType f;
   Solver_config::MatrixType J;
-  op.evaluate(solution, f, solution, false);
-  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
+//  op.evaluate(solution, f, solution, false);
+//  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
 
   //calculate integral to fix reflector size
   Integrator<GridType> integrator(grid_ptr);
@@ -351,6 +350,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //    exactsol_u = exactsol.segment(0, get_n_dofs_u());
 
     update_solution(solution);
+
     plot_with_mirror("numericalSolution");
   }
 
@@ -397,6 +397,40 @@ void MA_solver::adapt_solution(const int level)
 
     //store local dofs
     preserveSolution[idSet.id(element)]  = assembler.calculate_local_coefficients(localIndexSet, solution);
+
+    //test
+/*
+    {
+      VectorType templocal = assembler.calculate_local_coefficients(localIndexSet, solution);
+
+      // Get a quadrature rule
+//      int order = std::max(1, 3 * ((int) localView.tree().finiteElement().localBasis().order()));
+//      const QuadratureRule<double, Solver_config::dim>& quad = QuadratureRules<
+//          double, Solver_config::dim>::rule(localView.tree().finiteElement().type(), order);
+
+//      for (size_t pt = 0; pt < quad.size(); pt++) {
+
+      FieldVector<double, 2> quadPos = {3.350e-01, 3.350e-01};
+        std::vector<FieldVector<double,1>> fatherFunctionValues(localView.size());
+        localView.tree().finiteElement().localBasis().evaluateFunction(quadPos,fatherFunctionValues);
+
+        std::cout << "local dofs "  << templocal << std::endl;
+        std::cout << "father function values ";
+        for (const auto& el : fatherFunctionValues)  std::cout << el << " ";
+        std::cout << std::endl;
+
+        double resFather =0;
+        for (int i = 0; i < fatherFunctionValues.size(); i++)
+        {
+          resFather += templocal[i]*fatherFunctionValues[i][0];
+        }
+
+        auto globalCoordFather = element.geometry().global(quadPos);
+
+        std::cout << "coordinates " << globalCoordFather << " old value " << resFather << std::endl;
+//      }
+    }
+*/
   }
   double scaling_factor = solution(solution.size()-1);
 
@@ -405,6 +439,7 @@ void MA_solver::adapt_solution(const int level)
   //adapt grid
   bool marked = grid_ptr->preAdapt();
   assert(marked == false);
+  _unused(marked);// mark the variable as unused in non-debug mode
   grid_ptr->adapt();
   count_refined += level;
 
@@ -426,7 +461,8 @@ void MA_solver::adapt_solution(const int level)
   auto localIndexSetRef = FEBasis->indexSet().localIndexSet();
 
   //init vector v
-  solution.resize(get_n_dofs());
+//  solution.resize(get_n_dofs());
+  solution.setZero(get_n_dofs());
 
   Solver_config::LocalFiniteElementType localFiniteElement(*FEBasis);
   Solver_config::LocalFiniteElementType localFiniteElementFather(*FEBasisOld);
@@ -469,6 +505,7 @@ void MA_solver::adapt_solution(const int level)
         localViewRefChild.bind(child);
         localIndexSetRef.bind(localViewRefChild);
 
+//        std::cout << "child " << i << std::endl;
         assembler.calculate_refined_local_mass_matrix_detailed(localViewRefFather, localViewRefChild, localrefinementMatrix, level);
         assembler.calculate_local_mass_matrix_detailed(localViewRefChild, localMassMatrix);
 
@@ -481,6 +518,80 @@ void MA_solver::adapt_solution(const int level)
 
         //set new dof vectors
         assembler.set_local_coefficients(localIndexSetRef, x_adapt, solution);
+
+        //test
+/*
+        {
+          const auto lfuChild = localViewRefChild.tree().finiteElement();
+
+          // Get a quadrature rule
+          int order = std::max(1, 3 * ((int) lfuChild.localBasis().order()));
+          const QuadratureRule<double, Solver_config::dim>& quad = QuadratureRules<
+              double, Solver_config::dim>::rule(lfuChild.type(), order);
+
+          auto geometryInFather = localViewRefChild.element().geometryInFather();
+
+          for (size_t pt = 0; pt < quad.size(); pt++) {
+
+            const FieldVector<double, Solver_config::dim> &quadPosChild =
+                    quad[pt].position();
+            const FieldVector<double, Solver_config::dim> &quadPosFather =
+                geometryInFather.global(quadPosChild);
+
+            std::vector<FieldVector<double,1>> childFunctionValues(localViewRefChild.size());
+            lfuChild.localBasis().evaluateFunction(quadPosChild,childFunctionValues);
+
+//            std::cout << "function values from local basis ";
+//            for (const auto& el : childFunctionValues)  std::cout << el << " ";
+//            std::cout << std::endl;
+
+            std::vector<FieldVector<double,1>> fatherFunctionValues(localViewRefFather.size());
+            localViewRefFather.tree().finiteElement().localBasis().evaluateFunction(quadPosFather,fatherFunctionValues);
+
+//            std::cout << "father function values from local basis ";
+//            for (const auto& el : fatherFunctionValues)  std::cout << el << " ";
+//            std::cout << std::endl;
+
+
+            double resChild = 0, resFather =0;
+            for (int i = 0; i < childFunctionValues.size(); i++)
+            {
+              resChild += x_adapt[i]*childFunctionValues[i][0];
+              resFather += x_local[i]*fatherFunctionValues[i][0];
+            }
+
+            assert(std::abs(resChild - resFather) < 1e-8);
+
+//            solution_u_old->bind(father);
+//            std::cout << setprecision(9);
+//            std::cout << "father " << resFather << std::endl;// << " old " << (*solution_u_old)(quadPosFather) << std::endl;
+
+
+            Solver_config::VectorType temp_solution = solution.segment(0,get_n_dofs_u());
+
+
+            Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution42(*FEBasis,temp_solution);
+            auto localnumericalSolution42 = localFunction(numericalSolution42);
+//            std::cout << "after local function creation" << numericalSolution42.dofs()[9] << std::endl;
+
+//            std::cout << "temp solution " << temp_solution.transpose()<< std::endl;
+            auto temp = numericalSolution42.dofs();
+//            std::cout << "dofs " << temp.transpose() << std::endl;
+
+            localnumericalSolution42.bind(child);
+//            std::cout << "child " << resChild << " global " << localnumericalSolution42(quadPosChild) << std::endl;
+
+            assert(std::abs(resChild - localnumericalSolution42(quadPosChild)) < 1e-8);
+
+            auto globalCoordChild = child.geometry().global(quadPosChild);
+            auto globalCoordFather = father.geometry().global(quadPosFather);
+
+            std::cout << "cooridnate child " << globalCoordChild << " coordinate father " << globalCoordFather << std::endl;
+            assert(std::abs(globalCoordChild[0] - globalCoordFather [0]) < 1e-8);
+
+          }
+        }
+*/
 
         //mark element as refined
         already_refined[mapper.index(child)] = true;
@@ -499,6 +610,7 @@ void MA_solver::adapt_solution(const int level)
     }
 
   }
+
   solution(solution.size()-1)= scaling_factor;
   //reset adaption flags
   grid_ptr->postAdapt();

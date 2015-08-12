@@ -197,7 +197,7 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
 			"camera {" <<std::endl <<
 			"\t location <" << (xMinOut+xMaxOut)/2.0
 			                   <<"," << (yMinOut+yMaxOut)/2.0 << ","
-			                   <<  max(xMaxOut-xMinOut,yMaxOut-yMinOut)*0.5   <<">" <<std::endl <<
+			                   <<  Solver_config::z_3 + max(xMaxOut-xMinOut,yMaxOut-yMinOut)*0.5   <<">" <<std::endl <<
 			"\t angle " << povRayOpts.cameraAngle <<std::endl <<
 			"\t look_at <" << (xMinOut+xMaxOut)/2.0
                     <<"," << (yMinOut+yMaxOut)/2.0

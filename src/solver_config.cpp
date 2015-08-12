@@ -9,6 +9,8 @@
 
 #include "solver_config.hh"
 
+#include "Dogleg/doglegMethod.hpp"
+
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
@@ -71,6 +73,8 @@ std::ostream& operator <<(std::ostream &output, const ProblemType &p)
 
 void Solver_config::read_configfile(std::string &configFile)
 {
+
+  std::cout << "read information from file " << configFile << std::endl;
 
   po::options_description config("Configuration of the MA FE solver");
   config.add_options()

@@ -20,14 +20,17 @@
 #include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
 #include <dune/functions/functionspacebases/bsplinebasis.hh>
+//#include "localfunctions/bsplinebasis.hh"
 
 #include <Grids/Grid2d.hpp> //for povray options
 
+//to mark variables as unused (used for checking of return values in Petsc etc. in Debug Mode)
+#define _unused(x) ((void)x)
 
 #include "UnitCube.hh"
 
 //#include "localfunctions/MAmixedbasis.hh"
-//#include "localfunctions/MAmixedbasisC0.hh"
+#include "localfunctions/MAmixedbasisC0.hh"
 //#include "localfunctions/MAmixedbasisC0C0.hh"
 
 #include "Dogleg/doglegMethod.hpp"
@@ -88,7 +91,7 @@ struct Solver_config{
 
   static bool Dirichlet;
 
-	enum{ dim = 2, childdim = 4, degree = 3};
+	enum{ dim = 2, childdim = 4, degree = 2};
 
 	static int startlevel;
 	static int nonlinear_steps;
@@ -127,10 +130,9 @@ struct Solver_config{
   static value_type z_3;
 
 //	typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementType;
+//  typedef Functions::PQKNodalBasis<GridView, degree> FEBasis;
+
   typedef Functions::BSplineLocalFiniteElement<GridView, value_type> LocalFiniteElementType;
-
-//	typedef Functions::PQKNodalBasis<GridView, degree> FEBasis;
-
 	typedef Functions::BSplineBasis<GridView> FEBasis;
 
 

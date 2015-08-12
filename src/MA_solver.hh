@@ -33,7 +33,8 @@
 #endif
 
 #ifdef USE_PETSC
-#include "Dogleg/Petsc_utility.hh"
+//#include "Dogleg/Petsc_utility.hh"
+#include "Dogleg/Petsc_utilitySimultaneous.hh"
 #endif
 
 
@@ -104,6 +105,7 @@ public:
 	  std::fill(elements.begin(), elements.end(), std::pow(2,Solver_config::startlevel));
 
 	  FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr, Solver_config::lowerLeft, Solver_config::upperRight, elements, Solver_config::degree));
+//    FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
 	  assembler.bind(*FEBasis);
 
 	  plotter.set_output_directory(outputDirectory_);
@@ -139,7 +141,7 @@ public:
 
 public:
 	struct Operator {
-		Operator():solver_ptr(){}
+		Operator():solver_ptr(NULL){}
 //		Operator(MA_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old, solver.minPixelValue_){}
     Operator(MA_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old, solver.exact_solution, solver.minPixelValue_){}
 

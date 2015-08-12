@@ -60,6 +60,7 @@ inline FieldVector<valueType, 2> T(const FieldVector<Solver_config::value_type, 
   valueType t = 1 - u_value*z_3/omega(x);
 
   T_value.axpy(t, temp);
+
   return T_value;
 }
 
@@ -241,11 +242,11 @@ public:
 
 
   RightHandSideReflector():
-    f(Solver_config::LightinputImageName, Solver_config::lowerLeft, Solver_config::upperRight),
-    g(Solver_config::TargetImageName, Solver_config::lowerLeftTarget, Solver_config::upperRightTarget){}
+    f(),
+    g(){}
   RightHandSideReflector(Function_ptr &solUOld, GradFunction_ptr &gradUOld,
-                        const std::string& inputfile=Solver_config::LightinputImageName,
-                        const std::string& inputTargetfile = Solver_config::TargetImageName, const double minPixelValue=0.0):
+                        const std::string& inputfile,
+                        const std::string& inputTargetfile, const double minPixelValue=0.0):
                             f(inputfile, Solver_config::lowerLeft, Solver_config::upperRight),
                             g(inputTargetfile, Solver_config::lowerLeftTarget, Solver_config::upperRightTarget, minPixelValue),
                             solution_u_old(&solUOld), gradient_u_old(&gradUOld)
@@ -336,7 +337,6 @@ public:
 
     FieldVector<double, Solver_config::dim> z_0 = gradu;
     z_0 *= (2.0 / a_tilde(u, gradu, x));
-
 
     phi(T(x, u, z_0, z_3),
         normal, phi_value);

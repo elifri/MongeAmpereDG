@@ -954,7 +954,6 @@ protected:
       Dune::array<std::vector<R>, dim> oneDDerivatives;
       Dune::array<std::vector<R>, dim> oneDSecondDerivatives;
 
-
       // Evaluate 1d function derivatives
       if (k==1)
         for (size_t i=0; i<dim; i++)

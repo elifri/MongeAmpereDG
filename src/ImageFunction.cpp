@@ -10,7 +10,7 @@
 #include "Integrator.hpp"
 #include "problem_data.hh"
 
-ImageFunction::ImageFunction(const std::string filename,
+ImageFunction::ImageFunction(const std::string& filename,
     const Solver_config::SpaceType2d lowerLeft,
     const Solver_config::SpaceType2d upperRight, const double minValue) :
     image_(filename.c_str()), factor_(1.0) {

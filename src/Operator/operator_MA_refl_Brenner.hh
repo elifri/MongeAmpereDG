@@ -147,8 +147,8 @@ public:
 
     //assuming galerkin ansatz = test space
 
-    assert(x.size() == localView.size());
-    assert(v.size() == localView.size());
+    assert((unsigned int) x.size() == localView.size());
+    assert((unsigned int) v.size() == localView.size());
 
     // Get set of shape functions for this element
     const auto& localFiniteElement = localView.tree().finiteElement();
@@ -202,20 +202,12 @@ public:
       assemble_functionValues_u(localFiniteElement, quadPos,
           referenceFunctionValues, x_adolc, u_value);
 
-      std::cerr << "referenceFunctionValues ";
-      for (const auto& e : referenceFunctionValues) std::cerr << e << " ";
-      std::cerr << std::endl;
 
       // The gradients
       std::vector<JacobianType> gradients(size);
       FieldVector<adouble, Solver_config::dim> gradu;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradu);
-
-      std::cerr << "gradients ";
-      for (const auto& e : gradients) std::cerr << "("<< e[0] << "," << e[1] << ") ";
-      std::cerr << std::endl;
-
 
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size);
@@ -310,12 +302,12 @@ public:
 //      cout << " atilde " << a_tilde_value << " f " << f_value << endl;
 
       //calculate system for first test functions
-//      std::cout << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
+//      std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
 
 //      cerr << x_value << " " << u_value.value() << " " << uDH_pertubed_det.value() << " " << PDE_rhs.value() << endl;
 //      cerr << x_value << " " << u_value.value() << " " << z[0].value() << " " << z[1].value() << endl;
 
-      for (size_t j = 0; j < size; j++) // loop over test fcts
+      for (int j = 0; j < size; j++) // loop over test fcts
       {
         v_adolc(j) += (PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
@@ -359,10 +351,10 @@ public:
     const int dimw = IntersectionType::dimensionworld;
 
     //assuming galerkin
-    assert(x.size() == localView.size());
-    assert(xn.size() == localViewn.size());
-    assert(v.size() == localView.size());
-    assert(vn.size() == localViewn.size());
+    assert((unsigned int) x.size() == localView.size());
+    assert((unsigned int) xn.size() == localViewn.size());
+    assert((unsigned int) v.size() == localView.size());
+    assert((unsigned int) vn.size() == localViewn.size());
 
     const int size = localView.size();
 
@@ -378,8 +370,8 @@ public:
     typedef FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
     typedef typename Dune::FieldMatrix<Solver_config::value_type, IntersectionType::dimensionworld, IntersectionType::dimensionworld> FEHessianType;
 
-    assert(size == localFiniteElement.size());
-    assert(size == localFiniteElementn.size());
+    assert((unsigned int) size == localFiniteElement.size());
+    assert((unsigned int) size == localFiniteElementn.size());
 
     // Get a quadrature rule
     const int order = std::max(1,
@@ -537,8 +529,8 @@ public:
     const int dimw = Intersection::dimensionworld;
 
     //assuming galerkin
-    assert(x.size() == localView.size());
-    assert(v.size() == localView.size());
+    assert((unsigned int) x.size() == localView.size());
+    assert((unsigned int) v.size() == localView.size());
 
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
