@@ -158,10 +158,10 @@ public:
 
     //init transposed inverse jacobian for transformation from ref triangle to local triangles
 
-    inverseJacobianT_[0][0][0] = -1.;
-    inverseJacobianT_[0][0][1] = 2.;
-    inverseJacobianT_[0][1][0] = 1.;
-    inverseJacobianT_[0][1][1] = 0.;
+    inverseJacobianT_[0][0][0] = 1.;
+    inverseJacobianT_[0][0][1] = 0.;
+    inverseJacobianT_[0][1][0] = -1.;
+    inverseJacobianT_[0][1][1] = 2.;
 
     inverseJacobianT_[1][0][0] = 1.;
     inverseJacobianT_[1][0][1] = -2.;
@@ -389,7 +389,7 @@ public:
     switch(subtriangle)
     {
     case 0:
-      bezierPos = {-x[0]+x[1], 2.*x[0]};
+      bezierPos = {x[0]-x[1], 2.*x[1]};
       break;
     case 1:
       bezierPos = {x[0]-1.+x[1], -2.*(x[0]-1)};
@@ -433,7 +433,7 @@ public:
     switch(subtriangle)
     {
     case 0:
-      bezierPos = {-x[0]+x[1], 2.*x[0]};
+      bezierPos = {x[0]-x[1], 2.*x[1]};
       break;
     case 1:
       bezierPos = {x[0]-1.+x[1], -2.*(x[0]-1)};
@@ -467,17 +467,104 @@ public:
                         std::vector<typename Traits::RangeType>& out) const //return value
    {
      out.resize(N);
+     //get bezier basis polynomials
+     typename Traits::DomainType bezierPos;
+
+     const int subtriangle = subtriangle_lookup(x);
+
+     //check transformation to get local triangle coordinates
+     switch(subtriangle)
+     {
+     case 0:
+       bezierPos = {x[0]-x[1], 2.*x[1]};
+       break;
+     case 1:
+       bezierPos = {x[0]-1.+x[1], -2.*(x[0]-1)};
+       break;
+     case 2:
+       bezierPos = {-x[0]-x[1]+1., 2.*x[0]};
+       break;
+     case 3:
+       bezierPos = {-x[0]+x[1], -2.*(x[1]-1)};
+       break;
+     }
+
 
      if (dOrder > Traits::diffOrder)
        DUNE_THROW(NotImplemented, "Desired derivative order is not implemented");
 
-     if (dOrder==0)
-       evaluateFunction(x, out);
-     else if (dOrder==1)
+     switch(dOrder)
      {
+     case 0:
+     {
+       std::vector<typename Traits::RangeType> bezierBasisValues(10);
+
+       bbBasis_.evaluateFunction(bezierPos, bezierBasisValues);
+
+       //calculate function value by precomputed weights
+       for (unsigned int i = 0; i < N; i++)
+       {
+         out[i] = 0;
+         for (const auto& coeff : conversionCoeff_[i][subtriangle])
+           {
+              out[i] += coeff.factor*bezierBasisValues[coeff.localBezierDofno];
+           }
+       }
      }
-     else if (dOrder==2)
+       break;
+     case 1:
      {
+       std::vector<typename Traits::JacobianType> bezierBasisValues(10);
+
+       bbBasis_.evaluateJacobian(bezierPos, bezierBasisValues);
+
+       //calculate function value by precomputed weights
+       for (unsigned int i = 0; i < N; i++)
+       {
+         for (const auto& coeff : conversionCoeff_[i][subtriangle])
+           {
+           //transform Jacobian and add to basis function
+             out[i] += coeff.factor*(inverseJacobianT_[subtriangle][directions[0]][0]*bezierBasisValues[coeff.localBezierDofno][0][0]
+                                    +inverseJacobianT_[subtriangle][directions[0]][1]*bezierBasisValues[coeff.localBezierDofno][0][1]);
+           }
+       }
+     }
+       break;
+     case 2:
+     {
+       // The hessian of the shape functions on the reference element
+       const int dim = 2;
+       std::vector<FieldMatrix<typename deVeubekeLocalBasis::Traits::RangeType, dim, dim>> referenceHessians(bbBasis_.size());
+       for (int row = 0; row < dim; row++)
+         for (int col = 0; col < dim; col++)
+         {
+           std::array<int, 2> directions = { row, col };
+           std::vector<typename deVeubekeLocalBasis::Traits::RangeType> out;
+           bbBasis_.template evaluate<2>(directions, bezierPos, out);
+
+           for (size_t i = 0; i < referenceHessians.size(); i++)
+             referenceHessians[i][row][col] = out[i][0];
+         }
+
+       //calculate function value by precomputed weights
+       for (unsigned int i = 0; i < N; i++)
+       {
+         for (const auto& coeff : conversionCoeff_[i][subtriangle])
+         {
+           //transform Jacobian from Refcell to subcell
+           R transformedDerived(0.0);
+
+           for (int i = 0; i < dim; i++)
+             for (int j = 0; j < dim; j++)
+               transformedDerived += inverseJacobianT_[subtriangle][directions[0]][i]*referenceHessians[i][j]*inverseJacobianT_[subtriangle][directions[1]][j];
+
+           //add to basis function
+           out[i] += coeff.factor*transformedDerived;
+         }
+       }
+     }
+
+       break;
      }
    }
 
