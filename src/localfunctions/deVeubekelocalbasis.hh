@@ -156,27 +156,27 @@ public:
   deVeubekeLocalBasis () : bbBasis_()
   {
 
-    //init inverse jacobian for transformation from ref triangle to local triangles
+    //init transposed inverse jacobian for transformation from ref triangle to local triangles
 
-    inverseJacobian_[0][0][0] = -1.;
-    inverseJacobian_[0][0][1] = 1.;
-    inverseJacobian_[0][1][0] = 2.;
-    inverseJacobian_[0][1][1] = 0.;
+    inverseJacobianT_[0][0][0] = -1.;
+    inverseJacobianT_[0][0][1] = 2.;
+    inverseJacobianT_[0][1][0] = 1.;
+    inverseJacobianT_[0][1][1] = 0.;
 
-    inverseJacobian_[1][0][0] = 1.;
-    inverseJacobian_[1][0][1] = 1.;
-    inverseJacobian_[1][1][0] = -2.;
-    inverseJacobian_[1][1][1] = 0.;
+    inverseJacobianT_[1][0][0] = 1.;
+    inverseJacobianT_[1][0][1] = -2.;
+    inverseJacobianT_[1][1][0] = 1.;
+    inverseJacobianT_[1][1][1] = 0.;
 
-    inverseJacobian_[2][0][0] = -1.;
-    inverseJacobian_[2][0][1] = -1.;
-    inverseJacobian_[2][1][0] = 2.;
-    inverseJacobian_[2][1][1] = 0.;
+    inverseJacobianT_[2][0][0] = -1.;
+    inverseJacobianT_[2][0][1] = 2.;
+    inverseJacobianT_[2][1][0] = -1.;
+    inverseJacobianT_[2][1][1] = 0.;
 
-    inverseJacobian_[3][0][0] = -1.;
-    inverseJacobian_[3][0][1] = 1.;
-    inverseJacobian_[3][1][0] = -2.;
-    inverseJacobian_[3][1][1] = 0.;
+    inverseJacobianT_[3][0][0] = -1.;
+    inverseJacobianT_[3][0][1] = 0;
+    inverseJacobianT_[3][1][0] = 1.;
+    inverseJacobianT_[3][1][1] = -2.;
 
     //init conversion coefficients
     /*The Bezier coefficients are numbered locally the following way
@@ -216,9 +216,10 @@ public:
     insert_conversion_coefficient(0, 0, 1.);
     insert_conversion_coefficient(0, 1, 1.);
     insert_conversion_coefficient(0, 23, 1.);
-    insert_conversion_coefficient(0,4,1.);
+    insert_conversion_coefficient(0, 4,1.);
     insert_conversion_coefficient(0, 5, 1./2.);
     insert_conversion_coefficient(0, 24, 1./2.);
+    insert_conversion_coefficient(0, 7, 1./2);
     insert_conversion_coefficient(0, 8, 1./4);
     insert_conversion_coefficient(0, 21, 1./4.);
     insert_conversion_coefficient(0, 9, 1./4.);
@@ -273,7 +274,7 @@ public:
     //6th basis function (y gradient at vertex 0 =1)
     insert_conversion_coefficient(5, 23, 1./3.);
     insert_conversion_coefficient(5, 4, 1./6.);
-    insert_conversion_coefficient(5, 4, -1./12.);
+    insert_conversion_coefficient(5, 5, -1./12.);
     insert_conversion_coefficient(5, 24, 1./6.);
     insert_conversion_coefficient(5, 7, 1./24.);
     insert_conversion_coefficient(5, 8, -1./24.);
@@ -298,7 +299,7 @@ public:
     insert_conversion_coefficient(7, 7, -1./24.);
     insert_conversion_coefficient(7, 8, 1./24.);
     insert_conversion_coefficient(7, 15, 1./12.);
-    insert_conversion_coefficient(7, 10, 1./48.);
+    insert_conversion_coefficient(7, 9, 1./48.);
 
     //9th basis function (x gradient at vertex 2 = 1)
     insert_conversion_coefficient(8, 17, 1./3.);
@@ -441,7 +442,7 @@ public:
       bezierPos = {-x[0]-x[1]+1., 2.*x[0]};
       break;
     case 3:
-      bezierPos = {-x[0]+x[1], -2.*(x[0]-1)};
+      bezierPos = {-x[0]+x[1], -2.*(x[1]-1)};
       break;
     }
 
@@ -450,10 +451,10 @@ public:
     //calculate function value by precomputed weights
     for (unsigned int i = 0; i < N; i++)
     {
-      for (const auto& coeff : conversionCoeff_[i][0])
+      for (const auto& coeff : conversionCoeff_[i][subtriangle])
         {
         //transform Jacobian and add to basis function
-          inverseJacobian_[subtriangle].usmv(coeff.factor, bezierBasisValues[coeff.localBezierDofno][0], out[i][0]);
+          inverseJacobianT_[subtriangle].usmv(coeff.factor, bezierBasisValues[coeff.localBezierDofno][0], out[i][0]);
         }
     }
 
@@ -509,7 +510,7 @@ private:
    }
 
 
-  std::array<FieldMatrix<typename Traits::DomainFieldType, 2, 2>, 4> inverseJacobian_;
+  std::array<FieldMatrix<typename Traits::DomainFieldType, 2, 2>, 4> inverseJacobianT_;
   std::array<std::array<std::vector<Coefficient>,4 >, 16> conversionCoeff_;
   BernsteinBezier32DLocalBasis<D,R> bbBasis_;
 
