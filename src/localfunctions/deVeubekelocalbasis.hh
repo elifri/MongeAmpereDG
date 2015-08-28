@@ -3,11 +3,15 @@
 #ifndef DUNE_DEVEUBEKEDLOCALBASIS_HH
 #define DUNE_DEVEUBEKELOCALBASIS_HH
 
+#include <iostream>
 #include <dune/common/fmatrix.hh>
 
 #include <dune/localfunctions/common/localbasis.hh>
 
+
 #include <dune/localfunctions/bernsteinbezier/bernsteinbezier32d.hh>
+
+
 
 namespace Dune {
 /**@ingroup LocalBasisImplementation
@@ -534,33 +538,36 @@ public:
      {
        // The hessian of the shape functions on the reference element
        const int dim = 2;
-       std::vector<FieldMatrix<typename deVeubekeLocalBasis::Traits::RangeType, dim, dim>> referenceHessians(bbBasis_.size());
+       std::vector<FieldMatrix<typename deVeubekeLocalBasis::Traits::RangeFieldType, dim, dim>> referenceHessians(bbBasis_.size());
        for (int row = 0; row < dim; row++)
          for (int col = 0; col < dim; col++)
          {
-           std::array<int, 2> directions = { row, col };
+           std::array<int, 2> Refdirections = { row, col };
            std::vector<typename deVeubekeLocalBasis::Traits::RangeType> out;
-           bbBasis_.template evaluate<2>(directions, bezierPos, out);
+           bbBasis_.template evaluate<2>(Refdirections, bezierPos, out);
 
            for (size_t i = 0; i < referenceHessians.size(); i++)
              referenceHessians[i][row][col] = out[i][0];
          }
 
        //calculate function value by precomputed weights
-       for (unsigned int i = 0; i < N; i++)
+       for (unsigned int k = 0; k < N; k++)
        {
-         for (const auto& coeff : conversionCoeff_[i][subtriangle])
+         out[k] = 0;
+         FieldMatrix<typename deVeubekeLocalBasis::Traits::RangeFieldType, dim, dim> HessianRefcell;
+         for (const auto& coeff : conversionCoeff_[k][subtriangle])
          {
-           //transform Jacobian from Refcell to subcell
-           R transformedDerived(0.0);
-
-           for (int i = 0; i < dim; i++)
-             for (int j = 0; j < dim; j++)
-               transformedDerived += inverseJacobianT_[subtriangle][directions[0]][i]*referenceHessians[i][j]*inverseJacobianT_[subtriangle][directions[1]][j];
-
-           //add to basis function
-           out[i] += coeff.factor*transformedDerived;
+           //calculate derivative on Refcell
+           HessianRefcell.axpy(coeff.factor, referenceHessians[coeff.localBezierDofno]);
          }
+         for (int i = 0; i < dim; i++)
+           for (int j = 0; j < dim; j++)
+//               transformedDerived = inverseJacobianT_[subtriangle][directions[0]][i]*(referenceHessians[k][i][j]);
+             //add to basis function
+             {out[k] += inverseJacobianT_[subtriangle][directions[0]][i]*HessianRefcell[i][j]*inverseJacobianT_[subtriangle][directions[1]][j];
+//               std::cout << "+ " << inverseJacobianT_[subtriangle][directions[0]][i] << "*" << HessianRefcell[i][j] << "*" << inverseJacobianT_[subtriangle][directions[1]][j]<< std::endl;
+             }
+
        }
      }
 

@@ -1,8 +1,8 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
 
-#ifndef DUNE_BernsteinBezierk2DLOCALCOEFFICIENTS_HH
-#define DUNE_BernsteinBezierk2DLOCALCOEFFICIENTS_HH
+#ifndef DUNE_DEVEUBEKELOCALCOEFFICIENTS_HH
+#define DUNE_DEVEUBEKELOCALCOEFFICIENTS_HH
 
 #include <cstddef>
 #include <vector>
@@ -18,20 +18,19 @@ namespace Dune
          \nosubgrouping
      \implements Dune::LocalCoefficientsVirtualImp
    */
-  template<unsigned int k>
-  class BernsteinBezierk2DLocalCoefficients
+  class deVeubekeLocalCoefficients
   {
-    enum {N = (k+1)*(k+2)/2};
+    enum {N = 12};
 
   public:
     //! \brief Standard constructor
-    BernsteinBezierk2DLocalCoefficients () : li(N)
+    deVeubekeLocalCoefficients () : li(N)
     {
       fill_default();
     }
 
     //! constructor for eight variants with order on edges flipped
-    BernsteinBezierk2DLocalCoefficients (int variant) : li(N)
+    deVeubekeLocalCoefficients (int variant) : li(N)
     {
       fill_default();
       bool flip[3];
@@ -39,7 +38,7 @@ namespace Dune
         flip[i] = variant & (1<<i);
       for (int i=0; i<N; i++)
         if (li[i].codim()==1 && flip[li[i].subEntity()])
-          li[i].index(k-2-li[i].index());
+          li[i].index(16-2-li[i].index());
     }
 
     /** Constructor for six variants with permuted vertices.
@@ -52,7 +51,7 @@ namespace Dune
         random-access iterator.
      */
     template<class VertexMap>
-    explicit BernsteinBezierk2DLocalCoefficients(const VertexMap &vertexmap) : li(N)
+    explicit deVeubekeLocalCoefficients(const VertexMap &vertexmap) : li(N)
     {
       fill_default();
       bool flip[3];
@@ -61,7 +60,7 @@ namespace Dune
       flip[2] = vertexmap[1] > vertexmap[2];
       for (std::size_t i=0; i<N; i++)
         if (li[i].codim()==1 && flip[li[i].subEntity()])
-          li[i].index(k-2-li[i].index());
+          li[i].index(16-2-li[i].index());
     }
 
     //! number of coefficients
@@ -81,12 +80,10 @@ namespace Dune
 
     void fill_default ()
     {
-      if (k==0)
-      {
-        li[0] = LocalKey(0,0,0);
-        return;
-      }
-      int n=0;
+      li.resize(16);
+/*
+      const int k = 16;
+      int n=0, c=0;
       for (unsigned int lambda3=0; lambda3<=k; lambda3++)
         for (unsigned int lambda2=0; lambda2<=k-lambda3; lambda2++)
         {
@@ -129,6 +126,7 @@ namespace Dune
           //inner dofs
           li[n++] = LocalKey(0,0,c++);
         }
+*/
     }
   };
 

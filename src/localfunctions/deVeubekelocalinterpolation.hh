@@ -1,14 +1,14 @@
 // -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 // vi: set et ts=4 sw=2 sts=2:
-#ifndef DUNE_BERNSTEINBEZIERK2DLOCALINTERPOLATION_HH
-#define DUNE_BERNSTEINBEZIERK2DLOCALINTERPOLATION_HH
+#ifndef DUNE_DEVEUBEKELOCALINTERPOLATION_HH
+#define DUNE_DEVEUBEKELOCALINTERPOLATION_HH
 
 #include <vector>
 
 namespace Dune
 {
   template<class LB>
-  class BernsteinBezierk2DLocalInterpolation
+  class deVeubekeLocalInterpolation
   {
     /** \brief The number of degrees of freedom */
     enum {N = LB::N};
