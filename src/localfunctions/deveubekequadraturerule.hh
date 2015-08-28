@@ -109,7 +109,7 @@ namespace Dune {
         }
         assert (local[0] > 0 && local[0] < 1 && local[1] > 0 && local[1] < 1);
 
-        double weight = SimplexQuadraturePointsSingleton<2>::sqp.weight(m,i)/4.0;
+        double weight = SimplexQuadraturePointsSingleton<2>::sqp.weight(m,i)/2.0;
         // put in container
         this->push_back(QuadraturePoint<ct,2>(local,weight));
       }
