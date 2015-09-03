@@ -74,6 +74,7 @@ dune_project()
 message("found boost ${Boost_LIBRARIES}")
 
 add_subdirectory("src")
+add_subdirectory("Testing")
 add_subdirectory("m4")
 add_subdirectory("dune")
 add_subdirectory("doc")
