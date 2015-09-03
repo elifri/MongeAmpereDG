@@ -11,6 +11,7 @@
 
 #include <config.h>
 #include <dune/common/fmatrix.hh>
+#include <dune/common/diagonalmatrix.hh>
 #include <Eigen/Core>
 
 #include "Dogleg/utils.hpp"
@@ -29,6 +30,28 @@ inline
 double cwiseProduct(const double& A, const double &B)
 {
 	return A*B;
+}
+
+template<typename R, int dim>
+void leftmultiply (Dune::FieldMatrix<R,dim,dim>& A, const Dune::DiagonalMatrix<R, dim>& M)
+{
+  assert(M.size() == A.M());
+
+  for (unsigned int i=0; i<A.M(); i++)
+    for (unsigned int j=0; j<A.N(); j++) {
+      A[i][j] *= M.diagonal(j);
+    }
+}
+
+template<typename R, int dim>
+void rightmultiply (Dune::FieldMatrix<R,dim,dim>& A, const Dune::DiagonalMatrix<R, dim>& M)
+{
+  assert(M.size() == A.M());
+
+  for (unsigned int i=0; i<A.M(); i++)
+    for (unsigned int j=0; j<A.N(); j++) {
+      A[i][j] *= M.diagonal(i);
+    }
 }
 
 template<class MatrixType, class R>

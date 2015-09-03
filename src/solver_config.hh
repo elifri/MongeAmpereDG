@@ -8,7 +8,7 @@
 #ifndef SRC_SOLVER_CONFIG_HH_
 #define SRC_SOLVER_CONFIG_HH_
 
-#define EIGEN_DEFAULT_DENSE_INDEX_TYPE long
+//#define EIGEN_DEFAULT_DENSE_INDEX_TYPE long
 
 #include<Eigen/Core>
 #include<Eigen/Sparse>
@@ -19,15 +19,20 @@
 
 #include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
+#include <dune/functions/functionspacebases/bsplinebasis.hh>
+//#include "localfunctions/bsplinebasis.hh"
 
 #include <Grids/Grid2d.hpp> //for povray options
 
+//to mark variables as unused (used for checking of return values in Petsc etc. in Debug Mode)
+#define _unused(x) ((void)x)
 
 #include "UnitCube.hh"
 
 //#include "localfunctions/MAmixedbasis.hh"
 #include "localfunctions/MAmixedbasisC0.hh"
 //#include "localfunctions/MAmixedbasisC0C0.hh"
+
 #include "Dogleg/doglegMethod.hpp"
 
 using namespace Dune;
@@ -86,7 +91,7 @@ struct Solver_config{
 
   static bool Dirichlet;
 
-	enum{ dim = 2, childdim = 4, degree = 2, degreeHessian = 1};
+	enum{ dim = 2, childdim = 4, degree = 2};
 
 	static int startlevel;
 	static int nonlinear_steps;
@@ -99,7 +104,8 @@ struct Solver_config{
 
 
 //	typedef YaspGrid<dim> GridType;
-	typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > UnitCubeType;
+//	typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > UnitCubeType;
+	typedef UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >> UnitCubeType;
 	typedef UnitCubeType::GridType GridType;
 	typedef GridType::LevelGridView LevelGridView;
 	typedef GridType::LeafGridView GridView;
@@ -123,30 +129,20 @@ struct Solver_config{
 
   static value_type z_3;
 
-	typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementuType;
-	typedef Pk2DLocalFiniteElement<value_type, value_type, degreeHessian> LocalFiniteElementHessianSingleType;
+//	typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementType;
+//  typedef Functions::PQKNodalBasis<GridView, degree> FEBasis;
+
+  typedef Functions::BSplineLocalFiniteElement<GridView, value_type> LocalFiniteElementType;
+	typedef Functions::BSplineBasis<GridView> FEBasis;
 
 
-	typedef Functions::MAMixedBasis<GridView, degree, degreeHessian> FEBasis;
-  typedef FEBasis::Basisu FEuBasis;
-  typedef FEBasis::BasisuDH FEuDHBasis;
-
-
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasis,VectorType> DiscreteGridFunction;
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis,VectorType> DiscreteGridFunction;
   typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
   typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
 
 	typedef FieldVector<value_type,1> RangeType;
   typedef FieldMatrix<value_type,2,2> HessianRangeType;
 
-
-/*
-	typedef LocalFiniteElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-	typedef LocalFiniteElementuType::Traits::LocalBasisType::Traits::DomainType DomainType;
-//	typedef LocalFiniteElementHessianType::Traits::LocalBasisType::Traits::RangeType HessianType;
-	typedef LocalFiniteElementHessianType::RangeType HessianRangeType;
-	typedef HessianRangeType HessianType;
-*/
 
 	static const bool require_skeleton_two_sided = false; ///if enabled every face is assembled twice
 

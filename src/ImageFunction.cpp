@@ -10,7 +10,7 @@
 #include "Integrator.hpp"
 #include "problem_data.hh"
 
-ImageFunction::ImageFunction(const std::string filename,
+ImageFunction::ImageFunction(const std::string& filename,
     const Solver_config::SpaceType2d lowerLeft,
     const Solver_config::SpaceType2d upperRight, const double minValue) :
     image_(filename.c_str()), factor_(1.0) {
@@ -44,12 +44,12 @@ Solver_config::value_type ImageFunction::operator()(const Solver_config::DomainT
   const double distance_y = std::min(x[1] -lowerLeft_[1], upperRight_[1]-x[1]);
 
   //if distance is positive, z is inside, otherwise distance gives the negative of the distance to the target boundary
-//  double distance  = std::min(0.0, distance_x) + std::min(0.0, distance_y);
-//  distance *= -1;
-//  if (distance > 0)
-////        return 1.0/(10.0+10*distance) * factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
-//      return 0.01*factor_ * imageSmooth_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
-//  else
+  double distance  = std::min(0.0, distance_x) + std::min(0.0, distance_y);
+  distance *= -1;
+  if (distance > 0)
+//        return 1.0/(10.0+10*distance) * factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
+      return 0.01*factor_ * imageSmooth_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
+  else
     return factor_ * imageSmooth_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
 }
 
@@ -71,10 +71,10 @@ void ImageFunction::evaluate (const Solver_config::DomainType &x, Solver_config:
     //if distance is positive, z is inside, otherwise distance gives the negative of the distance to the target boundary
     double distance  = std::min(0.0, distance_x) + std::min(0.0, distance_y);
     distance *= -1;
-//    if (distance > 0)
-////          u = 1.0/(10.0+10*distance) * factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
-//      u = 0.01*factor_ * imageSmooth_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
-//    else
+    if (distance > 0)
+//          u = 1.0/(10.0+10*distance) * factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
+      u = 0.01*factor_ * imageSmooth_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
+    else
       u = factor_ * imageSmooth_._cubic_atXY((x[0] - lowerLeft_[0])/h_ - 0.5,(upperRight_[1] - x[1])/h_ - 0.5);
 }
 
@@ -87,10 +87,10 @@ void ImageFunction::evaluate (const FieldVector<adouble, Solver_config::dim> &x,
   adouble distance  = fmin(0.0, distance_x) + fmin(0.0, distance_y);
   distance *= -1;
 
-//  if (distance > 0)
-////        u = 1.0/(10.0+10*distance) * factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0]).value()/h_ - 0.5,(upperRight_[1] - x[1]).value()/h_ - 0.5);
-//      u = 0.01*factor_ * imageSmooth_._cubic_atXY((x[0] - lowerLeft_[0]).value()/h_ - 0.5,(upperRight_[1] - x[1]).value()/h_ - 0.5);
-//  else
+  if (distance > 0)
+//        u = 1.0/(10.0+10*distance) * factor_ * image_._cubic_atXY((x[0] - lowerLeft_[0]).value()/h_ - 0.5,(upperRight_[1] - x[1]).value()/h_ - 0.5);
+      u = 0.01*factor_ * imageSmooth_._cubic_atXY((x[0] - lowerLeft_[0]).value()/h_ - 0.5,(upperRight_[1] - x[1]).value()/h_ - 0.5);
+  else
     u = factor_ * imageSmooth_._cubic_atXY((x[0] - lowerLeft_[0]).value()/h_ - 0.5,(upperRight_[1] - x[1]).value()/h_ - 0.5);
 //    std::cout << imageSmooth_._cubic_atXY((x[0] - lowerLeft_[0]).value()/h_ - 0.5,(upperRight_[1] - x[1]).value()/h_ - 0.5)
 //        << " Z " << x[0].value() << " " << x[1].value() << " -> "<< (x[0] - lowerLeft_[0]).value()/h_ - 0.5 << " "  << (upperRight_[1] - x[1].value())/h_ - 0.5 << std::endl;

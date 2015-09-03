@@ -29,10 +29,16 @@
 
 class MA_solver;
 
-typedef StaticRefinement<GenericGeometry::SimplexTopology<2>::type::id,
+//typedef StaticRefinement<GenericGeometry::SimplexTopology<2>::type::id,
+//        Solver_config::GridType::ctype,
+//        GenericGeometry::SimplexTopology<2>::type::id,
+//        2> PlotRefinementType;
+
+typedef StaticRefinement<GenericGeometry::CubeTopology<2>::type::id,
         Solver_config::GridType::ctype,
-        GenericGeometry::SimplexTopology<2>::type::id,
+        GenericGeometry::CubeTopology<2>::type::id,
         2> PlotRefinementType;
+
 
 class Plotter{
 private:

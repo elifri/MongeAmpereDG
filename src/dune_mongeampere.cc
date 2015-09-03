@@ -23,8 +23,7 @@ namespace po = boost::program_options;
 
 void read_parameters(int argc, char *argv[], std::string& configFileMASolver)
 {
-
-  string configFileGeometry;
+  string configFileGeometry, petscConfig;
 
   po::options_description cmdline("Generic options");
   cmdline.add_options()
@@ -34,6 +33,7 @@ void read_parameters(int argc, char *argv[], std::string& configFileMASolver)
       ("solver,c", po::value<string>(&configFileMASolver),  "config file for the MA finite element method")
       ("ellipsoids,e", po::value<string>(&Solver_config::configFileEllipsoid), "config file for method of ellipsoids of revolution")
       ("geometry,g",   po::value<string>(&configFileGeometry),  "config file for geometry")
+      ("Petsoptionsfile,o", po::value<string>(&petscConfig), "config file for petsc")
       ;
 
   // Declare a group of options that will be
@@ -88,6 +88,16 @@ void read_parameters(int argc, char *argv[], std::string& configFileMASolver)
       exit(-1);
   }
 
+#ifdef USE_DOGLEG
+  std::cout <<"using dogleg " << std::endl;
+#endif
+#ifdef USE_PETSC
+
+  PetscInitialize(&argc,&argv,petscConfig.c_str(),help);
+  std::cout <<"using petsc" << std::endl;
+#endif
+
+
   {
       // open config file for initial guess
       string filename = configFileGeometry;
@@ -135,7 +145,7 @@ try {
 
 //	Solver_config::lowerLeft = {0,0};
 //	Solver_config::upperRight = {1,1};
-	Solver_config::UnitCubeType unitcube(Solver_config::lowerLeft, Solver_config::upperRight, 0);
+	Solver_config::UnitCubeType unitcube(Solver_config::lowerLeft, Solver_config::upperRight, 1);
 
 //	Solver_config::lowerLeftTarget = {0.3,0};
 //	Solver_config::upperRightTarget = {0.6,0.6};
@@ -168,14 +178,6 @@ try {
 
 	MA_solver ma_solver(unitcube.grid_ptr(), gridView, config);
 
-
-#ifdef USE_DOGLEG
-  std::cout <<"using dogleg " << std::endl;
-#endif
-#ifdef USE_PETSC
-  PetscInitialize(&argc,&argv,NULL,help);
-  std::cout <<"using petsc" << std::endl;
-#endif
 
 
 	// ///////////////////////////////////////////////

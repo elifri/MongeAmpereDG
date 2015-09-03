@@ -133,9 +133,16 @@ void Plotter::write_cells(std::ofstream &file) const
 			for (auto it = PlotRefinementType::eBegin(refinement); it != PlotRefinementType::eEnd(refinement); it++)
 			{
 				file << "\t\t\t\t\t";
-				auto vertexIndices = it.vertexIndices();
-				for (const auto& e : vertexIndices)
-					file << offset+e << " ";
+				if (true) //hack for quads as the corner numbering of the refinement and vtk differs
+				{
+          auto vertexIndices = it.vertexIndices();
+          file << offset+vertexIndices[0] << " " << offset+vertexIndices[1] << " " << offset+vertexIndices[3] << " " << offset+vertexIndices[2] << "  ";
+				}
+				else{
+          auto vertexIndices = it.vertexIndices();
+          for (const auto& e : vertexIndices)
+            file << offset+e << " ";
+				}
 			}
 			offset += PlotRefinementType::nVertices(refinement);
 		}
@@ -147,12 +154,12 @@ void Plotter::write_cells(std::ofstream &file) const
 
 	const int Nelements = this->Nelements();
 	for (int i = 1; i <= Nelements; ++i)
-		file << i * 3 << " ";
+		file << i * 4 << " ";
 	file << "\n\t\t\t\t</DataArray>";
 	file
 			<< "\n\t\t\t\t<DataArray type=\"Int32\" Name=\"types\" format=\"ascii\">\n\t\t\t\t\t";
 	for (int i = 1; i <= Nelements; ++i)
-		file << "5 ";  // 5: triangle, 9: quad
+		file << "9 ";  // 5: triangle, 9: quad
 	file << "\n\t\t\t\t</DataArray>";
 	file << "\n\t\t\t</Cells>\n";
 }
@@ -190,7 +197,7 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
 			"camera {" <<std::endl <<
 			"\t location <" << (xMinOut+xMaxOut)/2.0
 			                   <<"," << (yMinOut+yMaxOut)/2.0 << ","
-			                   <<  max(xMaxOut-xMinOut,yMaxOut-yMinOut)*0.5   <<">" <<std::endl <<
+			                   <<  Solver_config::z_3 + max(xMaxOut-xMinOut,yMaxOut-yMinOut)*0.5   <<">" <<std::endl <<
 			"\t angle " << povRayOpts.cameraAngle <<std::endl <<
 			"\t look_at <" << (xMinOut+xMaxOut)/2.0
                     <<"," << (yMinOut+yMaxOut)/2.0
@@ -227,7 +234,7 @@ void Plotter::write_face_indices_pov(std::ofstream &file) const
 {
 	// write cells
 	file << "\t\t face_indices {\n"
-			<< "\t\t\t" << this->Nelements() << std::endl;
+			<< "\t\t\t" << this->Nelements()*2 << std::endl;
 	// make connectivity
 	if (refinement == 0){
 		const Solver_config::GridView::IndexSet& indexSet = grid->indexSet();
@@ -248,11 +255,10 @@ void Plotter::write_face_indices_pov(std::ofstream &file) const
 		for (int i = 0; i < grid->size(0); i++){
 			for (auto it = PlotRefinementType::eBegin(refinement); it != PlotRefinementType::eEnd(refinement); it++)
 			{
-				file << "\t\t\t<";
-				auto vertexIndices = it.vertexIndices();
-				for (const auto& e : vertexIndices)
-					file << offset+e << ", ";
-				file << ">\n";
+        auto vertexIndices = it.vertexIndices();
+
+        file << "\t\t\t<" << offset+vertexIndices[0] << ", "<< offset+vertexIndices[1] << ", "<< offset+vertexIndices[2] << ">\n";
+        file << "\t\t\t<" << offset+vertexIndices[1] << ", "<< offset+vertexIndices[2] << ", "<< offset+vertexIndices[3] << ">\n";
 			}
 			offset += PlotRefinementType::nVertices(refinement);
 		}

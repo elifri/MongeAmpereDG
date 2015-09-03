@@ -33,12 +33,17 @@ class ImageFunction : public Dune::VirtualFunction<Solver_config::SpaceType, Sol
   public:
     double factor_;  /// factor for normalization
 
+
+    ImageFunction(){}
     ImageFunction (
-        const std::string filename,
+        const std::string &filename,
         const Solver_config::SpaceType2d lowerLeft,
         const Solver_config::SpaceType2d upperRight,
         const double minValue=0.0
     );
+
+    const Solver_config::SpaceType2d& lowerLeft(){ return lowerLeft_;}
+    const Solver_config::SpaceType2d& upperRight(){ return upperRight_;}
 
     cimg_library::CImg<double>& getOriginalImage () { return image_; }
     cimg_library::CImg<double>& getSmoothImage   () { return imageSmooth_; }

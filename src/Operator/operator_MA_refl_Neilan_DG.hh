@@ -312,10 +312,11 @@ public:
 //      std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
 
 //      cerr << x_value << " " << u_value.value() << " " << uDH_pertubed_det.value() << " " << PDE_rhs.value() << endl;
+//      cerr << x_value << " " << u_value.value() << " " << z[0].value() << " " << z[1].value() << endl;
 
       for (size_t j = 0; j < size_u; j++) // loop over test fcts
       {
-        v_adolc(j) += (PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]
+        v_adolc(j) += (uDH_pertubed_det-PDE_rhs)*referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
       }
 

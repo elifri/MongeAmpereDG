@@ -60,6 +60,7 @@ inline FieldVector<valueType, 2> T(const FieldVector<Solver_config::value_type, 
   valueType t = 1 - u_value*z_3/omega(x);
 
   T_value.axpy(t, temp);
+
   return T_value;
 }
 
@@ -88,6 +89,7 @@ inline FieldVector<valueType, 3> T(const FieldVector<Solver_config::value_type, 
 
 //forward declaration
 class Local_Operator_MA_refl_Neilan;
+class Local_Operator_MA_refl_Brenner;
 
 // A class implementing the analytical right hand side
 class RightHandSide: public VirtualFunction<Solver_config::SpaceType, Solver_config::value_type> {
@@ -240,11 +242,11 @@ public:
 
 
   RightHandSideReflector():
-    f(Solver_config::LightinputImageName, Solver_config::lowerLeft, Solver_config::upperRight),
-    g(Solver_config::TargetImageName, Solver_config::lowerLeftTarget, Solver_config::upperRightTarget){}
+    f(),
+    g(){}
   RightHandSideReflector(Function_ptr &solUOld, GradFunction_ptr &gradUOld,
-                        const std::string& inputfile=Solver_config::LightinputImageName,
-                        const std::string& inputTargetfile = Solver_config::TargetImageName, const double minPixelValue=0.0):
+                        const std::string& inputfile,
+                        const std::string& inputTargetfile, const double minPixelValue=0.0):
                             f(inputfile, Solver_config::lowerLeft, Solver_config::upperRight),
                             g(inputTargetfile, Solver_config::lowerLeftTarget, Solver_config::upperRightTarget, minPixelValue),
                             solution_u_old(&solUOld), gradient_u_old(&gradUOld)
@@ -252,6 +254,10 @@ public:
 //a normalisation seems to destroy the solution proces ...
     f.omega_normalize();
     g.normalize();
+
+    Solver_config::lowerLeftTarget = g.lowerLeft();
+    Solver_config::upperRightTarget = g.upperRight();
+    std::cout << "Corrected target area to domain (" <<Solver_config::lowerLeftTarget << ") , (" << Solver_config::upperRightTarget << ")" << std::endl;
   }
 
   void convolveTargetDistribution(unsigned int width){  g.convolveOriginal(width);}
@@ -332,7 +338,6 @@ public:
     FieldVector<double, Solver_config::dim> z_0 = gradu;
     z_0 *= (2.0 / a_tilde(u, gradu, x));
 
-
     phi(T(x, u, z_0, z_3),
         normal, phi_value);
     return phi_value;
@@ -348,6 +353,7 @@ private:
   mutable GradFunction_ptr* gradient_u_old;
 
   friend Local_Operator_MA_refl_Neilan;
+  friend Local_Operator_MA_refl_Brenner;
 };
 
 

@@ -190,6 +190,7 @@ int doglegMethod (
     if ((opts.iradius <= 0) || (opts.stopcriteria[0] <= 0) ||
        (opts.stopcriteria[1] <= 0) || (opts.stopcriteria[2] <= 0) || (opts.maxsteps <= 0))
     {
+        std::cout << opts.iradius <<" " << opts.stopcriteria[0]<<" " << (opts.stopcriteria[1] ) <<" " << opts.stopcriteria[2] <<" " << opts.maxsteps <<std::endl;
         std::cerr << "\nError: The elements in opts must be strictly positive\n";
         assert(false);
         exit(1);
@@ -372,9 +373,10 @@ int doglegMethod (
 
             if ((dL > 0.0) && (dF > 0.0))
             {
-              functor.derivative(xnew,J);
+              if (!useCombinedFunctor)
+                functor.derivative(xnew,J);
 
-                if (opts.check_Jacobian)
+              if (opts.check_Jacobian)
                 	checkJacobian(functor, xnew);
 //                make_FD_Jacobian(functor, x, J);
                 lu_of_J.factorize(J);

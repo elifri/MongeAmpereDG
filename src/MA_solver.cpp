@@ -73,11 +73,21 @@ double MA_solver::calculate_L2_error(const MA_function_type &f) const
 
 void MA_solver::plot(std::string name) const
 {
-  const int nDH = Solver_config::dim*Solver_config::dim;
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,solution_u);
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
   auto localnumericalSolution = localFunction(numericalSolution);
+
+  //extract hessian
+  /*  const int nDH = Solver_config::dim*Solver_config::dim;
+     for (int row = 0; row < Solver_config::dim; row++)
+    for (int col = 0; col < Solver_config::dim; col++)
+    {
+      //calculate second derivative of gridviewfunction
+      VectorType v_uDH_entry;
+      auto localnumericalHessian_entry = localSecondDerivative(numericalSolution, {row,col});
+   }
+
 
    //extract hessian (3 entries (because symmetry))
    typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
@@ -96,13 +106,13 @@ void MA_solver::plot(std::string name) const
    Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
    auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
 
-
+*/
    std::string fname(plotter.get_output_directory());
    fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
 
    SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
    vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
-   vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
+//   vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
    vtkWriter.write(fname);
 }
 
@@ -117,37 +127,37 @@ void MA_solver::plot_with_mirror(std::string name)
   if (writeVTK_)
   {
 
-    const int nDH = Solver_config::dim*Solver_config::dim;
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
      //build gridviewfunction
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,solution_u);
+     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
      auto localnumericalSolution = localFunction(numericalSolution);
 
+     //build writer
+     SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
+
+     //add solution data
+     vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
+
      //extract hessian (3 entries (because symmetry))
-     typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
-     DerivativeVectorType derivativeSolution(uDHBasis->indexSet().size());
+     Dune::array<int,2> direction = {0,0};
 
-     //extract dofs
-     for (int i=0; i<derivativeSolution.size(); i++)
-       for (int j=0; j< nDH; j++)
-       {
-         if (j == 2) continue;
-         int index_j = j > 2? 2 : j;
-         derivativeSolution[i][index_j] = solution[get_n_dofs_u()+ nDH*i+j];
-       }
-
-     //build gridview function
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
-     auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
+     auto HessianEntry00= localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry00 , VTK::FieldInfo("Hessian00", VTK::FieldInfo::Type::scalar, 1));
+     direction[0] = 1;
+     auto HessianEntry10 = localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry10 , VTK::FieldInfo("Hessian10", VTK::FieldInfo::Type::scalar, 1));
+     direction[0] = 0; direction[1] = 1;
+     auto HessianEntry01 = localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry01 , VTK::FieldInfo("Hessian01", VTK::FieldInfo::Type::scalar, 1));
+     direction[0] = 1;
+     auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
 
 
+     //write to file
      std::string fname(plotter.get_output_directory());
      fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
-
-     SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
-     vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
-     vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
      vtkWriter.write(fname);
 
 
@@ -209,7 +219,7 @@ void MA_solver::create_initial_guess()
 
 //  vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
 
-//    project_with_discrete_Hessian([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
+//    project_labourious([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
 //  solution = VectorType::Zero(get_n_dofs());
 //  solution = exactsol_projection;
 
@@ -221,18 +231,19 @@ void MA_solver::create_initial_guess()
 //        solution[get_n_dofs_u()+ nDH*i+j] = (j == 0 || j ==3)? 1 : 0;
 //      }
 
-//  InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data("../inputData/ellipsoids.ini", "../inputData/geometry.ini");
+//  InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data("../inputData/ellipsoids.ini");
 //  project([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
 //  ellipsoidMethod.write_output();
 
-//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
+    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
 //  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimple.grid");
-  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRoentgen.grid");
-
+//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRoentgen.grid");
+//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRose.grid");
+//
   assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
   assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
 
-  project([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, solution);
+  project_labourious([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, solution);
 //  TODO with discrete hessian not working
 //    project_with_discrete_Hessian([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, solution);
 
@@ -260,7 +271,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
   op.lop.rhs.convolveTargetDistributionAndNormalise(std::min(100,(int) epsMollifier_));
   //print blurred target distribution
   if (true) {
-      ostringstream filename2; filename2 << outputDirectory_+"/lightOut" << iterations << ".png";
+      ostringstream filename2; filename2 << outputDirectory_+"/lightOut" << iterations << ".bmp";
       std::cout << "saved image to " << filename2.str() << std::endl;
       op.lop.get_right_handside().get_target_distribution().saveImage (filename2.str());
       assert(std::abs(op.lop.get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
@@ -272,16 +283,25 @@ const typename MA_solver::VectorType& MA_solver::solve()
   {
   ofstream fileInitial (outputPrefix_+"initialVector");
   fileInitial << solution << endl;
-  fileInitial.close();
+
+//    solution.resize(get_n_dofs());
+//    ifstream fileInitial ("CGtestfirstVector");
+//    for (int i=0; i<get_n_dofs(); ++i) {
+//        fileInitial >> solution(i);
+//    }
+//
+//    fileInitial.close();
   }
 
   update_solution(solution);
-//  Solver_config::VectorType f;
-//  Solver_config::MatrixType J;
-//  op.evaluate(solution, f, J, solution, false);
-//  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
 
   plot_with_mirror("initialguess");
+
+
+  Solver_config::VectorType f;
+  Solver_config::MatrixType J;
+//  op.evaluate(solution, f, solution, false);
+//  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
 
   //calculate integral to fix reflector size
   Integrator<GridType> integrator(grid_ptr);
@@ -295,6 +315,11 @@ const typename MA_solver::VectorType& MA_solver::solve()
   for (int i = 0; i < Solver_config::nonlinear_steps; i++)
   {
     solve_nonlinear_system();
+
+    ofstream file (outputPrefix_+"firstVector");
+    file << solution << endl;
+    file.close();
+
 
     cout << "scaling factor " << solution(solution.size()-1) << endl;
 
@@ -311,7 +336,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
     //print blurred target distribution
     if (true) {
-        ostringstream filename2; filename2 << outputDirectory_+"/lightOut" << iterations << ".png";
+        ostringstream filename2; filename2 << outputDirectory_+"/lightOut" << iterations << ".bmp";
         std::cout << "saved image to " << filename2.str() << std::endl;
         op.lop.get_right_handside().get_target_distribution().saveImage (filename2.str());
         assert(std::abs(op.lop.get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
@@ -325,6 +350,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //    exactsol_u = exactsol.segment(0, get_n_dofs_u());
 
     update_solution(solution);
+
     plot_with_mirror("numericalSolution");
   }
 
@@ -336,7 +362,7 @@ void MA_solver::update_solution(const Solver_config::VectorType& newSolution) co
 {
   solution_u = solution.segment(0, get_n_dofs_u());
   //build gridviewfunction
-  solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));
+  solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*FEBasis,solution_u));
   solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
   gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
 
@@ -371,6 +397,40 @@ void MA_solver::adapt_solution(const int level)
 
     //store local dofs
     preserveSolution[idSet.id(element)]  = assembler.calculate_local_coefficients(localIndexSet, solution);
+
+    //test
+/*
+    {
+      VectorType templocal = assembler.calculate_local_coefficients(localIndexSet, solution);
+
+      // Get a quadrature rule
+//      int order = std::max(1, 3 * ((int) localView.tree().finiteElement().localBasis().order()));
+//      const QuadratureRule<double, Solver_config::dim>& quad = QuadratureRules<
+//          double, Solver_config::dim>::rule(localView.tree().finiteElement().type(), order);
+
+//      for (size_t pt = 0; pt < quad.size(); pt++) {
+
+      FieldVector<double, 2> quadPos = {3.350e-01, 3.350e-01};
+        std::vector<FieldVector<double,1>> fatherFunctionValues(localView.size());
+        localView.tree().finiteElement().localBasis().evaluateFunction(quadPos,fatherFunctionValues);
+
+        std::cout << "local dofs "  << templocal << std::endl;
+        std::cout << "father function values ";
+        for (const auto& el : fatherFunctionValues)  std::cout << el << " ";
+        std::cout << std::endl;
+
+        double resFather =0;
+        for (int i = 0; i < fatherFunctionValues.size(); i++)
+        {
+          resFather += templocal[i]*fatherFunctionValues[i][0];
+        }
+
+        auto globalCoordFather = element.geometry().global(quadPos);
+
+        std::cout << "coordinates " << globalCoordFather << " old value " << resFather << std::endl;
+//      }
+    }
+*/
   }
   double scaling_factor = solution(solution.size()-1);
 
@@ -379,47 +439,43 @@ void MA_solver::adapt_solution(const int level)
   //adapt grid
   bool marked = grid_ptr->preAdapt();
   assert(marked == false);
+  _unused(marked);// mark the variable as unused in non-debug mode
   grid_ptr->adapt();
   count_refined += level;
 
   std::cout << "new element count " << gridView_ptr->size(0) << std::endl;
 
   //update member
-  FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
-  uBasis = std::shared_ptr<FEuBasisType> (new FEuBasisType(*gridView_ptr));
-  uDHBasis = std::shared_ptr<FEuDHBasisType> (new FEuDHBasisType(*gridView_ptr));
+  std::array<unsigned int,Solver_config::dim> elementsSplines;
+  std::fill(elementsSplines.begin(), elementsSplines.end(), std::sqrt(gridView_ptr->size(0)));
+
+  //we need do store the old basis as the (father) finite element depends on the basis
+  std::shared_ptr<FEBasisType> FEBasisOld (FEBasis);
+
+  FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr, Solver_config::lowerLeft, Solver_config::upperRight, elementsSplines, Solver_config::degree));
+//  FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
   assembler.bind(*FEBasis);
 
-  auto localViewRef = FEBasis->localView();
+  auto localViewRefChild = FEBasis->localView();
+  auto localViewRefFather = FEBasisOld->localView();
   auto localIndexSetRef = FEBasis->indexSet().localIndexSet();
 
   //init vector v
-  solution.resize(get_n_dofs());
+//  solution.resize(get_n_dofs());
+  solution.setZero(get_n_dofs());
 
-  Solver_config::LocalFiniteElementuType localFiniteElementu;
-  Solver_config::LocalFiniteElementHessianSingleType localFiniteElementuDH;
+  Solver_config::LocalFiniteElementType localFiniteElement(*FEBasis);
+  Solver_config::LocalFiniteElementType localFiniteElementFather(*FEBasisOld);
+//  Solver_config::LocalFiniteElementType localFiniteElement;
 
   //calculate refinement matrices
 
   //local refined mass matrix m_ij = \int mu_child_i * mu_j
-  std::vector<DenseMatrixType> localrefinementMatrices(Solver_config::childdim);
-  assembler.calculate_refined_local_mass_matrix_ansatz(localFiniteElementu, localrefinementMatrices);
+  DenseMatrixType localrefinementMatrix(localFiniteElement.size(), localFiniteElement.size());
   //local mass matrix m_ij = \int mu_i * mu_j
-  DenseMatrixType localMassMatrix;
-  assembler.calculate_local_mass_matrix_ansatz(localFiniteElementu, localMassMatrix);
+  DenseMatrixType localMassMatrix(localFiniteElement.size(), localFiniteElement.size());
 
-  //everything for the hessian ansatz function as well
-  //local refined mass matrix m_ij = \int mu_child_i * mu_j
-  std::vector<DenseMatrixType> localrefinementMatrices_DH(Solver_config::childdim);
-  assembler.calculate_refined_local_mass_matrix_ansatz(localFiniteElementuDH, localrefinementMatrices_DH);
-  //local mass matrix m_ij = \int mu_i * mu_j
-  DenseMatrixType localMassMatrix_DH;
-  assembler.calculate_local_mass_matrix_ansatz(localFiniteElementuDH, localMassMatrix_DH);
-
-  const int nDH = Solver_config::dim*Solver_config::dim;
-  const int size_u = localFiniteElementu.size();
-  const int size_u_DH = localFiniteElementuDH.size();
-  const int size = size_u +  nDH*size_u_DH;
+  const int size = localFiniteElement.size();
 
   //since we are going to calculate the refinement for all children when encountering one of them
   // we need to store wich data already is refined
@@ -437,6 +493,7 @@ void MA_solver::adapt_solution(const int level)
 
       //get old dof vector
       const auto& father = element.father();
+      localViewRefFather.bind(father);
 
       VectorType x_local = preserveSolution[idSet.id(father)];
 
@@ -445,35 +502,96 @@ void MA_solver::adapt_solution(const int level)
       for (auto&& child : descendantElements(father, count_refined))
       {
           //bind to child
-        localViewRef.bind(child);
-        localIndexSetRef.bind(localViewRef);
+        localViewRefChild.bind(child);
+        localIndexSetRef.bind(localViewRefChild);
+
+//        std::cout << "child " << i << std::endl;
+        assembler.calculate_refined_local_mass_matrix_detailed(localViewRefFather, localViewRefChild, localrefinementMatrix, level);
+        assembler.calculate_local_mass_matrix_detailed(localViewRefChild, localMassMatrix);
+
 
         VectorType x_adapt(size);
 
         //local rhs = \int v_adapt*test = refinementmatrix*v
-        VectorType localVector = localrefinementMatrices[i]*x_local.segment(0,size_u);
-        x_adapt.segment(0,size_u) =  localMassMatrix.ldlt().solve(localVector);
-
-        //same for hessian (now done seperately for every entry)
-        std::vector<VectorType> localVectorDH(nDH);
-        for (int j = 0; j < nDH; j++)
-        {
-          //extract dofs for one hessian entry
-          VectorType xlocalDH(size_u_DH);
-          for (int k = 0; k < size_u_DH; k++)
-            xlocalDH(k) = x_local(size_u+j +nDH*k);
-
-          localVectorDH[j] = localrefinementMatrices_DH[i]*xlocalDH;
-
-          xlocalDH =  localMassMatrix_DH.ldlt().solve(localVectorDH[j]);
-
-          //write dofs to combined hessian
-          for (int k = 0; k < size_u_DH; k++)
-            x_adapt(size_u+j +nDH*k) = xlocalDH(k);
-        }
+        VectorType localVector = localrefinementMatrix*x_local;
+        x_adapt =  localMassMatrix.ldlt().solve(localVector);
 
         //set new dof vectors
         assembler.set_local_coefficients(localIndexSetRef, x_adapt, solution);
+
+        //test
+/*
+        {
+          const auto lfuChild = localViewRefChild.tree().finiteElement();
+
+          // Get a quadrature rule
+          int order = std::max(1, 3 * ((int) lfuChild.localBasis().order()));
+          const QuadratureRule<double, Solver_config::dim>& quad = QuadratureRules<
+              double, Solver_config::dim>::rule(lfuChild.type(), order);
+
+          auto geometryInFather = localViewRefChild.element().geometryInFather();
+
+          for (size_t pt = 0; pt < quad.size(); pt++) {
+
+            const FieldVector<double, Solver_config::dim> &quadPosChild =
+                    quad[pt].position();
+            const FieldVector<double, Solver_config::dim> &quadPosFather =
+                geometryInFather.global(quadPosChild);
+
+            std::vector<FieldVector<double,1>> childFunctionValues(localViewRefChild.size());
+            lfuChild.localBasis().evaluateFunction(quadPosChild,childFunctionValues);
+
+//            std::cout << "function values from local basis ";
+//            for (const auto& el : childFunctionValues)  std::cout << el << " ";
+//            std::cout << std::endl;
+
+            std::vector<FieldVector<double,1>> fatherFunctionValues(localViewRefFather.size());
+            localViewRefFather.tree().finiteElement().localBasis().evaluateFunction(quadPosFather,fatherFunctionValues);
+
+//            std::cout << "father function values from local basis ";
+//            for (const auto& el : fatherFunctionValues)  std::cout << el << " ";
+//            std::cout << std::endl;
+
+
+            double resChild = 0, resFather =0;
+            for (int i = 0; i < childFunctionValues.size(); i++)
+            {
+              resChild += x_adapt[i]*childFunctionValues[i][0];
+              resFather += x_local[i]*fatherFunctionValues[i][0];
+            }
+
+            assert(std::abs(resChild - resFather) < 1e-8);
+
+//            solution_u_old->bind(father);
+//            std::cout << setprecision(9);
+//            std::cout << "father " << resFather << std::endl;// << " old " << (*solution_u_old)(quadPosFather) << std::endl;
+
+
+            Solver_config::VectorType temp_solution = solution.segment(0,get_n_dofs_u());
+
+
+            Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution42(*FEBasis,temp_solution);
+            auto localnumericalSolution42 = localFunction(numericalSolution42);
+//            std::cout << "after local function creation" << numericalSolution42.dofs()[9] << std::endl;
+
+//            std::cout << "temp solution " << temp_solution.transpose()<< std::endl;
+            auto temp = numericalSolution42.dofs();
+//            std::cout << "dofs " << temp.transpose() << std::endl;
+
+            localnumericalSolution42.bind(child);
+//            std::cout << "child " << resChild << " global " << localnumericalSolution42(quadPosChild) << std::endl;
+
+            assert(std::abs(resChild - localnumericalSolution42(quadPosChild)) < 1e-8);
+
+            auto globalCoordChild = child.geometry().global(quadPosChild);
+            auto globalCoordFather = father.geometry().global(quadPosFather);
+
+            std::cout << "cooridnate child " << globalCoordChild << " coordinate father " << globalCoordFather << std::endl;
+            assert(std::abs(globalCoordChild[0] - globalCoordFather [0]) < 1e-8);
+
+          }
+        }
+*/
 
         //mark element as refined
         already_refined[mapper.index(child)] = true;
@@ -484,14 +602,15 @@ void MA_solver::adapt_solution(const int level)
     else //element was not refined
     {
       //bind to child
-      localViewRef.bind(element);
-      localIndexSetRef.bind(localViewRef);
+      localViewRefFather.bind(element);
+      localIndexSetRef.bind(localViewRefFather);
 
       IdType id = idSet.id(element);
       assembler.set_local_coefficients(localIndexSetRef, preserveSolution[id], solution);
     }
 
   }
+
   solution(solution.size()-1)= scaling_factor;
   //reset adaption flags
   grid_ptr->postAdapt();
