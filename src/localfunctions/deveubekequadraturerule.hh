@@ -26,7 +26,7 @@ namespace Dune {
   {
   public:
     /** \brief The highest quadrature order available */
-    enum { highest_order = 12 };
+    enum { highest_order = 10 };
   private:
     friend class MacroQuadratureRuleFactory<ct,2>;
     DeVeubekeQuadratureRule (int p);
