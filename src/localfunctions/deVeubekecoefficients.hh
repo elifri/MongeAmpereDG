@@ -96,26 +96,26 @@ namespace Dune
         0----2----1
         */
 
-      int n=0, g=0;
+      int n=0;
+
+      //set dofs for function values at corner
+      for (int i = 0; i < 4; i++)
       {
-        //set dofs for function values at corner
-        for (int i = 0; i < 4; i++)
-        {
-          li[n++] = LocalKey(i,0,0);
-        }
+        li[n++] = LocalKey(i,2,0);
+      }
 
-        //set dofs for gradient values at corner
-        for (int i = 0; i < 4; i++)
-        {
-          li[n++] = LocalKey(i,0,1);
-          li[n++] = LocalKey(i,0,2);
-        }
+      //set dofs for gradient values at corner
+      for (int i = 0; i < 4; i++)
+      {
+        li[n++] = LocalKey(i,2,1);
+        li[n++] = LocalKey(i,2,2);
+      }
 
-        //set dofs for edge mid normals
-        for (int i = 0; i < 4; i++)
-        {
-          li[n++] = LocalKey(i,1,0);
-        }
+      //set dofs for edge mid normals
+      for (int i = 0; i < 4; i++)
+      {
+        li[n++] = LocalKey(i,1,0);
+      }
 
     }
   };
