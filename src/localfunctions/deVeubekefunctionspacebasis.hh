@@ -254,7 +254,7 @@ public:
 
   /** \brief Construct local view for a given global finite element basis */
   deVeubekeBasisLocalView(const GlobalBasis* globalBasis) :
-    globalBasis_(globalBasis)
+    globalBasis_(globalBasis), tree_(globalBasis->gridView())
   {}
 
   /** \brief Bind the view to a grid element
@@ -319,13 +319,11 @@ public:
    * \brief Maximum local size for any element on the GridView
    *
    * This is the maximal size needed for local matrices
-   * and local vectors, i.e., the result is
-   *
-   * The method returns 3^dim, which is the number of degrees of freedom you get for cubes.
+   * and local vectors, i.e., at the moment the size is constant
    */
   size_type maxSize() const
   {
-    return StaticPower<3,dim>::power;
+    return 16;
   }
 
   /** \brief Return the global basis that we are a view on
@@ -345,17 +343,21 @@ protected:
 template<typename GV>
 class deVeubekeBasisLeafNode :
   public GridFunctionSpaceBasisLeafNodeInterface<
-    typename GV::template Codim<0>::Entity,
-    typename deVeubekeFiniteElement<GV::template Codim<0>::Entity::Geometry, typename GV::ctype, double>,
-    typename deVeubekeBasis<GV>::size_type>
+  typename GV::template Codim<0>::Entity,
+  typename Dune::deVeubekeFiniteElement<typename GV::template Codim<0>::Entity::Geometry, typename GV::ctype, double>,
+  typename deVeubekeBasis<GV>::size_type>
+  //    typename GV::template Codim<0>::Entity,
+//    typename deVeubekeFiniteElementCache<typename GV::template Codim<0>::Entity::Geometry, typename GV::ctype, double>,
+//    typename deVeubekeBasis<GV>::size_type>
 {
   typedef deVeubekeBasis<GV> GlobalBasis;
   static const int dim = GV::dimension;
   int maxSize;
 
   typedef typename GV::template Codim<0>::Entity E;
-  typedef typename deVeubekeFiniteElementCache<typename GV::ctype, double, dim, 2, 2> FiniteElementCache;
+  typedef typename Dune::deVeubekeFiniteElementCache<typename GV::template Codim<0>::Entity::Geometry, typename GV::ctype, double> FiniteElementCache;
   typedef typename FiniteElementCache::FiniteElementType FE;
+
   typedef typename GlobalBasis::size_type ST;
   typedef typename GlobalBasis::MultiIndex MI;
 
@@ -418,7 +420,7 @@ protected:
   void bind(const Element& e)
   {
     element_ = &e;
-    finiteElement_ = &(cache_.get(element_->type()));
+    finiteElement_ = &(cache_.get(element_->geometry()));
     for(size_type i=0; i<localIndices_.size(); ++i)
       setLocalIndex(i, i);
   }
