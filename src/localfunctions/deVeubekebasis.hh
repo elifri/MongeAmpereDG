@@ -54,7 +54,10 @@ public:
     R factor;
   };
 
-  /// \implements BasisInterface::Traits
+  /*!
+   * \implements BasisInterface::Traits
+   * \implements LocalBasisInterface::Traits
+   */
   struct Traits{
     typedef D DomainField;
     static const std::size_t dimDomainLocal = 2;
@@ -65,8 +68,10 @@ public:
     typedef R RangeField;
     static const std::size_t dimRange = 1;
     typedef typename Dune::FieldVector<R,1> Range;
+    typedef Range RangeType;
 
     typedef FieldMatrix<RangeField, dimRange, dimDomainGlobal> Jacobian;
+    typedef Jacobian JacobianType;
 
     static const std::size_t diffOrder = 2;
   };
@@ -415,7 +420,7 @@ private:
     static bool JacobianfirstTime = true;
     if (JacobianfirstTime) {
       JacobianfirstTime = false;
-      std::cout << "initializing 'coefficients'\n";
+      std::cout << "initializing 'inverse Jacobian'\n";
       init_inverseJacobianT_();
     }
 
@@ -426,7 +431,8 @@ public:
 
   //! \brief Standard constructor
   deVeubekeGlobalBasis (const Geometry &geo) : bbBasis_(), geo_(geo)
-  {}
+  {
+  }
 
   //! \brief number of shape functions
   unsigned int size () const
@@ -528,7 +534,7 @@ public:
   }
 
   //! \brief Evaluate higher derivatives of all shape functions
-   template<unsigned int dOrder> //order of derivative
+   template<size_t dOrder> //order of derivative
    inline void evaluate(const std::array<int,dOrder> directions, //direction of derivative
                         const typename Traits::DomainLocal& x,  //position
                         std::vector<typename Traits::Range>& out) const //return value
@@ -677,6 +683,7 @@ private:
 //  std::array<FieldMatrix<typename Traits::DomainFieldType, 2, 2>, 4> inverseJacobianT_;
 //  static ConversionMapType conversionCoeff_();
    BernsteinBezier32DLocalBasis<D,R> bbBasis_;
+public:
    const Geometry& geo_;
 
 }
