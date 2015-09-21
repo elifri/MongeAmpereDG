@@ -9,8 +9,7 @@
 #define REFL_OPERATOR_HH_
 
 #include <dune/common/function.hh>
-#include <dune/geometry/quadraturerules.hh>
-
+#include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
 #include "../utils.hpp"
 #include "../solver_config.hh"
 
@@ -167,7 +166,7 @@ public:
     int order = std::max(0,
         3 * ((int) localFiniteElement.localBasis().order()));
     const QuadratureRule<double, dim>& quad =
-        QuadratureRules<double, dim>::rule(element.type(), order);
+        MacroQuadratureRules<double, dim>::rule(element.type(), order, Solver_config::quadratureType);
 
     //init variables for automatic differentiation
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);

@@ -17,10 +17,10 @@
 #include <adolc/adouble.h>
 #define ADOLC
 
+
 #include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
-#include <dune/functions/functionspacebases/bsplinebasis.hh>
-//#include "localfunctions/bsplinebasis.hh"
+//#include <dune/functions/functionspacebases/bsplinebasis.hh>
 
 #include <Grids/Grid2d.hpp> //for povray options
 
@@ -29,11 +29,16 @@
 
 #include "UnitCube.hh"
 
+
 //#include "localfunctions/MAmixedbasis.hh"
-#include "localfunctions/MAmixedbasisC0.hh"
+//#include "localfunctions/MAmixedbasisC0.hh"
 //#include "localfunctions/MAmixedbasisC0C0.hh"
+#include "localfunctions/deVeubekefunctionspacebasis.hh"
 
 #include "Dogleg/doglegMethod.hpp"
+
+#include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
+
 
 using namespace Dune;
 
@@ -49,6 +54,7 @@ inline void DenseMatrix<Dune::FieldMatrix<adouble, 2, 2>>::luDecomposition(Dense
 
 
 };
+
 
 enum PolynomialType {LAGRANGE};
 enum ProblemType
@@ -132,8 +138,10 @@ struct Solver_config{
 //	typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementType;
 //  typedef Functions::PQKNodalBasis<GridView, degree> FEBasis;
 
-  typedef Functions::BSplineLocalFiniteElement<GridView, value_type> LocalFiniteElementType;
-	typedef Functions::BSplineBasis<GridView> FEBasis;
+  typedef Dune::deVeubekeFiniteElement<GridView::Codim<2>::Entity::Geometry, value_type, value_type> LocalFiniteElementType;
+	typedef Functions::deVeubekeBasis<GridView> FEBasis;
+
+	static const MacroQuadratureType::Enum quadratureType = MacroQuadratureType::deVeubeke;
 
 
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis,VectorType> DiscreteGridFunction;
@@ -172,9 +180,10 @@ struct Solver_config{
     static double sigmaBoundary;
     static constexpr double beta = 2.0 - 0.5*dim;  // 2D => 1, 3D => 0.5
 #endif
+
+
+
 };
-
-
 
 
 #endif /* SRC_SOLVER_CONFIG_HH_ */

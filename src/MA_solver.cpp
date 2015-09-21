@@ -235,8 +235,8 @@ void MA_solver::create_initial_guess()
 //  project([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
 //  ellipsoidMethod.write_output();
 
-    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
-//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimple.grid");
+//    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
+  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimple.grid");
 //  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRoentgen.grid");
 //  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRose.grid");
 //
@@ -452,8 +452,7 @@ void MA_solver::adapt_solution(const int level)
   //we need do store the old basis as the (father) finite element depends on the basis
   std::shared_ptr<FEBasisType> FEBasisOld (FEBasis);
 
-  FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr, Solver_config::lowerLeft, Solver_config::upperRight, elementsSplines, Solver_config::degree));
-//  FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
+  FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
   assembler.bind(*FEBasis);
 
   auto localViewRefChild = FEBasis->localView();
@@ -464,18 +463,16 @@ void MA_solver::adapt_solution(const int level)
 //  solution.resize(get_n_dofs());
   solution.setZero(get_n_dofs());
 
-  Solver_config::LocalFiniteElementType localFiniteElement(*FEBasis);
-  Solver_config::LocalFiniteElementType localFiniteElementFather(*FEBasisOld);
 //  Solver_config::LocalFiniteElementType localFiniteElement;
 
   //calculate refinement matrices
 
   //local refined mass matrix m_ij = \int mu_child_i * mu_j
-  DenseMatrixType localrefinementMatrix(localFiniteElement.size(), localFiniteElement.size());
+  DenseMatrixType localrefinementMatrix(localViewRefChild.maxSize(), localViewRefFather.maxSize());
   //local mass matrix m_ij = \int mu_i * mu_j
-  DenseMatrixType localMassMatrix(localFiniteElement.size(), localFiniteElement.size());
+  DenseMatrixType localMassMatrix(localViewRefChild.maxSize(), localViewRefChild.maxSize());
 
-  const int size = localFiniteElement.size();
+  const int size = localViewRefChild.maxSize();
 
   //since we are going to calculate the refinement for all children when encountering one of them
   // we need to store wich data already is refined
