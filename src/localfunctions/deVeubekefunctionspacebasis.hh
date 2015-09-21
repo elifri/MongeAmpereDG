@@ -7,7 +7,7 @@
 #include <dune/common/exceptions.hh>
 #include <dune/common/std/final.hh>
 
-#include <dune/grid/common/mcmgmapper.hh>
+#include <dune/grid/common/scsgmapper.hh>
 
 #include "deVeubekeFiniteElementCache.hh"
 
@@ -31,7 +31,12 @@ class deVeubekeIndexSet;
 template<typename GV>
 class deVeubekeLocalIndexSet
 {
+  static_assert(GV::dimension == 2, "deVeubeke bases need dimension 2");
+  static const int edgeOffset_ = 12;
+
 public:
+  static const int dofPerVertex_ = 3;
+
   typedef std::size_t size_type;
 
   /** \brief Type of the local view on the restriction of the basis to a single element */
@@ -71,13 +76,28 @@ public:
   //! Maps from subtree index set [0..size-1] to a globally unique multi index in global basis (pair of multi-indices)
   const MultiIndex index(size_type i) const
   {
-    return {{
-        indexSet_.mapper_.subIndex
+    //the dofs are numbered the following way: first all dofs associated with a vertex and then all associated with an edge
+
+    MultiIndex mi;
+
+    if (i < 12) //nodal degree of freedom
+    {
+    auto vertex_id =
+        indexSet_.vertexMapper_.subIndex
         (
           *(localView_->element_),
           localView_->tree().finiteElement_->localCoefficients().localKey(i).subEntity(),
-          localView_->tree().finiteElement_->localCoefficients().localKey(i).codim())
-      }};
+          localView_->tree().finiteElement_->localCoefficients().localKey(i).codim());
+
+    mi[0] = vertex_id*dofPerVertex_ + localView_->tree().finiteElement_->localCoefficients().localKey(i).index();
+    return mi;
+    }
+
+    mi[0] = edgeOffset_ + indexSet_.edgeMapper_.subIndex
+        (
+          *(localView_->element_),
+          localView_->tree().finiteElement_->localCoefficients().localKey(i).subEntity(),
+          localView_->tree().finiteElement_->localCoefficients().localKey(i).codim());
   }
 
   /** \brief Return the local view that we are attached to
@@ -104,7 +124,7 @@ class deVeubekeIndexSet
     bool contains (Dune::GeometryType gt) const
     {
       // All hypercubes carry a degree of freedom (this includes vertices and edges)
-      return gt.isCube();
+      return gt.dim() < GV::dimension;
     }
   };
 
@@ -113,12 +133,12 @@ public:
   typedef deVeubekeLocalIndexSet<GV> LocalIndexSet;
 
   deVeubekeIndexSet(const GV& gridView)
-  : mapper_(gridView)
+  : vertexMapper_(gridView), edgeMapper_(gridView)
   {}
 
   std::size_t size() const
   {
-    return mapper_.size();
+    return deVeubekeLocalIndexSet<GV>::dofPerVertex_*vertexMapper_.size() + edgeMapper_.size();
   }
 
   LocalIndexSet localIndexSet() const
@@ -127,7 +147,8 @@ public:
   }
 
 private:
-  const MultipleCodimMultipleGeomTypeMapper<GV, MCMGElementLayout> mapper_;
+  const SingleCodimSingleGeomTypeMapper<GV, GV::dimension> vertexMapper_;
+  const SingleCodimSingleGeomTypeMapper<GV, GV::dimension-1> edgeMapper_;
 };
 
 
