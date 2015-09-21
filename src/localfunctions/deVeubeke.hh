@@ -26,25 +26,29 @@ namespace Dune
      */
     struct Traits{
       typedef deVeubekeGlobalBasis<Geometry, D,R> Basis;
+      typedef deVeubekeGlobalBasis<Geometry, D,R> LocalBasisType;
       typedef deVeubekeGlobalCoefficients Coefficients;
       typedef deVeubekeInterpolation<deVeubekeGlobalBasis<Geometry, D,R> > Interpolation;
     };
 
 
-    deVeubekeFiniteElement (const Geometry& geometry) : basis_(geometry), gt_(geometry)
+    deVeubekeFiniteElement (const Geometry& geometry) : geo_(geometry), basis_(geo_)
     {}
 
-    deVeubekeFiniteElement (const Geometry& geometry, const unsigned int vertexmap[3]) : gt_(geometry), coefficients_(vertexmap)
+    deVeubekeFiniteElement (const Geometry& geometry, const unsigned int vertexmap[3]) : geo_(geometry), coefficients_(vertexmap)
     {
       DUNE_THROW(NotImplemented, "Constructor with vertex reordering is not implemented yet");
     }
 
     const typename Traits::Basis& basis() const { return basis_; }
+    const typename Traits::LocalBasisType& localBasis() const { return basis_; }
     const typename Traits::Interpolation& interpolation() const
     { return interpolation_; }
     const typename Traits::Coefficients& coefficients() const
     { return coefficients_; }
-    const GeometryType type() const { return gt_.type(); }
+    const typename Traits::Coefficients& localCoefficients() const
+    { return coefficients_; }
+    const GeometryType type() const { return geo_.type(); }
 
 
     /** \brief Number of shape functions in this finite element */
@@ -53,16 +57,17 @@ namespace Dune
       return basis_.size();
     }
 
-//    deVeubekeFiniteElement* clone () const
-//    {
-//      return new deVeubekeGlobalFiniteElement(*this);
-//    }
+    deVeubekeFiniteElement* clone () const
+    {
+      return new deVeubekeFiniteElement(*this);
+    }
+  public:
+    const Geometry geo_;
 
   private:
     typename Traits::Basis basis_;
     typename Traits::Coefficients coefficients_;
     typename Traits::Interpolation interpolation_;
-    const Geometry& gt_;
   };
 }
 
