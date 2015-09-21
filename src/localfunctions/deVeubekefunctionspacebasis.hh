@@ -115,6 +115,9 @@ public:
 template<typename GV>
 class deVeubekeIndexSet
 {
+  static_assert(GV::dimension == 2, "deVeubeke bases need dimension 2");
+
+
   // Needs the mapper
   friend class deVeubekeLocalIndexSet<GV>;
 
@@ -165,6 +168,7 @@ class deVeubekeBasis
                                     std::array<std::size_t, 1> >
 {
   static const int dim = GV::dimension;
+  static_assert(dim == 2, "deVeubeke bases need dimension 2");
 
 public:
 
@@ -217,6 +221,8 @@ class deVeubekeBasisLocalView
 {
   // Grid dimension
   enum {dim = GV::dimension};
+
+  static_assert(dim == 2, "deVeubeke bases need dimension 2");
 
   // Needs the grid element
   friend class deVeubekeLocalIndexSet<GV>;
