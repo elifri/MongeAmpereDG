@@ -90,10 +90,6 @@ void assemble_gradients(const FiniteElement &lfu, const JacobianType &jacobian,
     std::vector<typename FiniteElement::Traits::LocalBasisType::Traits::JacobianType> referenceGradients(
             lfu.size());
     lfu.localBasis().evaluateJacobian(x, referenceGradients);
-
-    //compute the gradients on the real element
-    for (size_t i = 0; i < gradients.size(); i++)
-      jacobian.mv(referenceGradients[i][0], gradients[i]);
 }
 
 /**
@@ -146,16 +142,6 @@ void assemble_hessians(const FiniteElement &lfu, const JacobianType &jacobian,
       for (size_t i = 0; i < hessians.size(); i++)
         hessians[i][row][col] = out[i][0];
     }
-
-  auto jacobianTransposed = jacobian;
-  jacobianTransposed[1][0] = jacobian[0][1];
-  jacobianTransposed[0][1] = jacobian[1][0];
-  for (size_t i = 0; i < hessians.size(); i++)
-  {
-    leftmultiply(hessians[i],jacobianTransposed);
-    rightmultiply(hessians[i],jacobian);
-  }
-
 }
 
 template<class FiniteElement, class JacobianType, class HessianType, class VectorType,
