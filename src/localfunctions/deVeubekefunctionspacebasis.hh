@@ -32,10 +32,8 @@ template<typename GV>
 class deVeubekeLocalIndexSet
 {
   static_assert(GV::dimension == 2, "deVeubeke bases need dimension 2");
-  static const int edgeOffset_ = 12;
 
 public:
-  static const int dofPerVertex_ = 3;
 
   typedef std::size_t size_type;
 
@@ -80,7 +78,7 @@ public:
 
     MultiIndex mi;
 
-    if (i < 12) //nodal degree of freedom
+    if (i < 12) //degree of freedom associated to a vertex
     {
     auto vertex_id =
         indexSet_.vertexMapper_.subIndex
@@ -89,15 +87,16 @@ public:
           localView_->tree().finiteElement_->localCoefficients().localKey(i).subEntity(),
           localView_->tree().finiteElement_->localCoefficients().localKey(i).codim());
 
-    mi[0] = vertex_id*dofPerVertex_ + localView_->tree().finiteElement_->localCoefficients().localKey(i).index();
+    mi[0] = vertex_id*indexSet_.dofPerVertex_ + localView_->tree().finiteElement_->localCoefficients().localKey(i).index();
     return mi;
     }
 
-    mi[0] = edgeOffset_ + indexSet_.edgeMapper_.subIndex
+    mi[0] = indexSet_.edgeOffset_ + indexSet_.edgeMapper_.subIndex
         (
           *(localView_->element_),
           localView_->tree().finiteElement_->localCoefficients().localKey(i).subEntity(),
           localView_->tree().finiteElement_->localCoefficients().localKey(i).codim());
+    return mi;
   }
 
   /** \brief Return the local view that we are attached to
@@ -118,18 +117,11 @@ class deVeubekeIndexSet
   static_assert(GV::dimension == 2, "deVeubeke bases need dimension 2");
 
 
-  // Needs the mapper
+  // Needs the mapper, as well as offsets and #dof per vertices
   friend class deVeubekeLocalIndexSet<GV>;
 
-  template<int dim>
-  struct deVeubekeMapperLayout
-  {
-    bool contains (Dune::GeometryType gt) const
-    {
-      // All hypercubes carry a degree of freedom (this includes vertices and edges)
-      return gt.dim() < GV::dimension;
-    }
-  };
+  size_t edgeOffset_;
+  const int dofPerVertex_ = 3;
 
 public:
 
@@ -137,11 +129,13 @@ public:
 
   deVeubekeIndexSet(const GV& gridView)
   : vertexMapper_(gridView), edgeMapper_(gridView)
-  {}
+  {
+      edgeOffset_ = vertexMapper_.size()*dofPerVertex_;
+  }
 
   std::size_t size() const
   {
-    return deVeubekeLocalIndexSet<GV>::dofPerVertex_*vertexMapper_.size() + edgeMapper_.size();
+    return dofPerVertex_*vertexMapper_.size() + edgeMapper_.size();
   }
 
   LocalIndexSet localIndexSet() const
