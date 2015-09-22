@@ -134,7 +134,7 @@ void MA_solver::plot_with_mirror(std::string name)
      auto localnumericalSolution = localFunction(numericalSolution);
 
      //build writer
-     SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
+     SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
 
      //add solution data
      vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
