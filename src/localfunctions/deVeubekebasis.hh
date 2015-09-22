@@ -60,12 +60,16 @@ public:
    */
   struct Traits{
     typedef D DomainField;
+    typedef D DomainFieldType;
     static const std::size_t dimDomainLocal = 2;
     static const std::size_t dimDomainGlobal = 2;
-    typedef typename Dune::FieldVector<D,2> DomainLocal;
+    static const std::size_t dimDomain = dimDomainLocal;
+    typedef typename Dune::FieldVector<D,dimDomainLocal> DomainType;
+    typedef typename Dune::FieldVector<D,dimDomainLocal> DomainLocal;
     typedef FieldVector<DomainField, dimDomainGlobal> DomainGlobal;
 
     typedef R RangeField;
+    typedef R RangeFieldType;
     static const std::size_t dimRange = 1;
     typedef typename Dune::FieldVector<R,1> Range;
     typedef Range RangeType;
@@ -210,7 +214,7 @@ private:
      for the formulas to calculate the coefficients see:
 
      Dahmen, Oswald, Shi - C^1-hierarchical bases, Journal of Computational and applied Mathematics 51(1994) 37-56   Section 5
-     and Farin - Curvesx and Surfaces in CAGD: A practical guide (Academic Press, New York, 1988) chapter 18
+     and Farin - Curves and Surfaces in CAGD: A practical guide (Academic Press, New York, 1988) chapter 18
 
 */
 
@@ -432,6 +436,29 @@ public:
   //! \brief Standard constructor
   deVeubekeGlobalBasis (const Geometry &geo) : bbBasis_(), geo_(geo)
   {
+    //calculate the transform implied by the edge lengths
+    std::fill(scaling_.begin(), scaling_.end(), R(1.0));
+
+    D l0 = (geo.corner(0)-geo.corner(2)).two_norm();
+    D l1 = (geo.corner(1)-geo.corner(3)).two_norm();
+    D l2 = (geo.corner(0)-geo.corner(1)).two_norm();
+    D l3 = (geo.corner(2)-geo.corner(3)).two_norm();
+
+    assert (l0 == l1 && "the element is only implemented properly if the quadriteral is a (scaled) translation of the reference quadriteral");
+    assert(l2 == l3 && "the element is only implemented properly if the quadriteral is a (scaled) translation of the reference quadriteral");
+
+    //every gradient is a normalised directional derivative in either (1,0) or (0,1), the formula gives a directional derivative along the edge
+    scaling_[4] = l2; scaling_[5] = l0;
+    scaling_[6] = l2; scaling_[7] = l0;
+    scaling_[8] = l3; scaling_[9] = l1;
+    scaling_[10] = l3; scaling_[11] = l1;
+
+    //the calculated formula has to be scaled appropriately
+    //(formula was calculated by Farin - Curves and Surfaces in CAGD: A practical guide (Academic Press, New York, 1988) chapter 18 equation (18.15))
+    scaling_[12] = l0;
+    scaling_[13] = l1;
+    scaling_[14] = l2;
+    scaling_[15] = l3;
   }
 
   //! \brief number of shape functions
@@ -477,7 +504,7 @@ public:
       out[i] = 0;
       for (const auto& coeff : conversionCoeff_()[i][subtriangle])
         {
-           out[i] += coeff.factor*bezierBasisValues[coeff.localBezierDofno];
+           out[i] += scaling_[i]*coeff.factor*bezierBasisValues[coeff.localBezierDofno];
         }
     }
 
@@ -527,7 +554,7 @@ public:
       for (const auto& coeff : conversionCoeff_()[i][subtriangle])
         {
         //transform Jacobian and add to basis function
-        invJacT.usmv(coeff.factor, bezierBasisValues[coeff.localBezierDofno][0], out[i][0]);
+        invJacT.usmv(scaling_[i]*coeff.factor, bezierBasisValues[coeff.localBezierDofno][0], out[i][0]);
         }
     }
 
@@ -580,7 +607,7 @@ public:
          out[i] = 0;
          for (const auto& coeff : conversionCoeff_()[i][subtriangle])
            {
-              out[i] += coeff.factor*bezierBasisValues[coeff.localBezierDofno];
+              out[i] += scaling_[i]*coeff.factor*bezierBasisValues[coeff.localBezierDofno];
            }
        }
      }
@@ -602,7 +629,7 @@ public:
          for (const auto& coeff : conversionCoeff_()[i][subtriangle])
            {
            //transform Jacobian and add to basis function
-             out[i] += coeff.factor*(invJacT[directions[0]][0]*bezierBasisValues[coeff.localBezierDofno][0][0]
+             out[i] += scaling_[i]*coeff.factor*(invJacT[directions[0]][0]*bezierBasisValues[coeff.localBezierDofno][0][0]
                                     +invJacT[directions[0]][1]*bezierBasisValues[coeff.localBezierDofno][0][1]);
            }
        }
@@ -636,7 +663,7 @@ public:
          for (const auto& coeff : conversionCoeff_()[k][subtriangle])
          {
            //calculate derivative on Refcell
-           HessianRefcell.axpy(coeff.factor, referenceHessians[coeff.localBezierDofno]);
+           HessianRefcell.axpy(scaling_[k]*coeff.factor, referenceHessians[coeff.localBezierDofno]);
          }
          for (int i = 0; i < dim; i++)
            for (int j = 0; j < dim; j++)
@@ -682,6 +709,7 @@ private:
 
 //  std::array<FieldMatrix<typename Traits::DomainFieldType, 2, 2>, 4> inverseJacobianT_;
 //  static ConversionMapType conversionCoeff_();
+   std::array<D,N> scaling_;
    BernsteinBezier32DLocalBasis<D,R> bbBasis_;
 public:
    const Geometry& geo_;
