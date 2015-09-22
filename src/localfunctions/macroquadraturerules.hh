@@ -7,6 +7,7 @@
 #include <dune/common/fmatrix.hh>
 
 #include <dune/localfunctions/common/localbasis.hh>
+#include <dune/geometry/quadraturerules.hh>
 
 
 #include <dune/localfunctions/bernsteinbezier/bernsteinbezier32d.hh>
@@ -145,6 +146,11 @@ private:
 template<typename ct, int dim>
 class DeVeubekeQuadratureRule;
 
+}
+#include "deveubekequadraturerule.hh"
+
+namespace Dune{
+
 template<typename ct>
 class MacroQuadratureRuleFactory<ct, 2> {
 private:
@@ -152,8 +158,7 @@ private:
   friend class MacroQuadratureRules<ct, dim>;
   static unsigned maxOrder(const GeometryType &t, MacroQuadratureType::Enum qt)
   {
-    unsigned order = std::max
-        (order, unsigned(SimplexQuadratureRule<ct,dim>::highest_order));
+    unsigned order = unsigned(SimplexQuadratureRule<ct,dim>::highest_order);
     return order;
   }
   static QuadratureRule<ct, dim> rule(const GeometryType& t, int p, MacroQuadratureType::Enum qt)
