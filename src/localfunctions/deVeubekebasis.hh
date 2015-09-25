@@ -551,13 +551,13 @@ public:
     //calculate function value by precomputed weights
     for (unsigned int i = 0; i < N; i++)
     {
+      out[i][0] = 0;
       for (const auto& coeff : conversionCoeff_()[i][subtriangle])
         {
         //transform Jacobian and add to basis function
         invJacT.usmv(scaling_[i]*coeff.factor, bezierBasisValues[coeff.localBezierDofno][0], out[i][0]);
         }
     }
-
   }
 
   //! \brief Evaluate higher derivatives of all shape functions
