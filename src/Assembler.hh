@@ -90,6 +90,10 @@ void assemble_gradients(const FiniteElement &lfu, const JacobianType &jacobian,
     std::vector<typename FiniteElement::Traits::LocalBasisType::Traits::JacobianType> referenceGradients(
             lfu.size());
     lfu.localBasis().evaluateJacobian(x, referenceGradients);
+
+    //compute the gradients on the real element
+    for (size_t i = 0; i < gradients.size(); i++)
+      gradients[i] = referenceGradients[i][0];
 }
 
 /**
@@ -625,7 +629,7 @@ Solver_config::VectorType Assembler::calculate_local_coefficients(const LocalInd
   Solver_config::VectorType v_local(localIndexSet.size());
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
-     v_local[i] = v(localIndexSet.index(i)[0]);
+     v_local[i] = (i == 12 || i == 14) ? -v(localIndexSet.index(i)[0]) : v(localIndexSet.index(i)[0]);
   }
   return v_local;
 }
@@ -641,7 +645,7 @@ void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const
   {
 //    std::cout << "i -> " << localIndexSet.flat_index(i) << std::endl;
 
-     v(localIndexSet.index(i)[0]) += v_local[i];
+     v(localIndexSet.index(i)[0]) += (i == 12 || i == 14) ? -v_local[i] : v_local[i];
   }
 }
 
@@ -653,7 +657,8 @@ void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const
   assert ((unsigned int) v.size() == basis_->indexSet().size()+1);
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
-     v(localIndexSet.index(i)[0]) = v_local[i];
+    //dofs associated to normal derivatives have to be corrected to the same direction (we define them to either point upwards or to the right)
+     v(localIndexSet.index(i)[0]) = (i == 12 || i == 14) ? -v_local[i] : v_local[i];
   }
 }
 
@@ -671,7 +676,20 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
   {
     for (int j = 0; j < m_local.cols(); j++)
       if (std::abs(m_local(i,j)) > 1e-13 )
-        m.coeffRef(localIndexSetTest.flat_index(i),localIndexSetAnsatz.flat_index(j)) += m_local(i,j);
+      {
+        //dofs associated to normal derivatives have to be corrected to the same direction (we define them to either point upwards or to the right)
+        if ( (
+                (i == 12 || i == 14) && ((j != 12) && (j != 14))
+             )
+             ||
+             (
+                (j == 12 || j == 14) && ((i != 12) && (i != 14))
+             )
+          )
+          m.coeffRef(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0]) -=  m_local(i,j);
+        else
+          m.coeffRef(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0]) +=  m_local(i,j);
+      }
   }
 }
 
@@ -686,7 +704,21 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
   {
     for (int j = 0; j < m_local.cols(); j++)
       if (std::abs(m_local(i,j)) > 1e-13 )
-        je.push_back(EntryType(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0],m_local(i,j)));
+      {
+        //dofs associated to normal derivatives have to be corrected to the same direction (we define them to either point upwards or to the right)
+        if ( (
+                (i == 12 || i == 14) && ((j != 12) && (j != 14))
+             )
+             ||
+             (
+                (j == 12 || j == 14) && ((i != 12) && (i != 14))
+             )
+          )
+          je.push_back(EntryType(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0],-m_local(i,j)));
+        else
+          je.push_back(EntryType(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0],m_local(i,j)));
+      }
+
   }
 }
 
