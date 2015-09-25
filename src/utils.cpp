@@ -51,6 +51,7 @@ void read_quadratic_grid(const string &filename,   int &n_x, int &n_y,
   {
     for (int x=0; x < n_x; x++)
     {
+      assert(!file.eof() && "The inserted grid file is too short");
       file >> solution(x,y);
     }
   }
