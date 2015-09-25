@@ -1107,7 +1107,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
-            if (is.neighbor()) {
+/*            if (is.neighbor()) {
 
                 // compute unique id for neighbor
                 const GridViewType::IndexSet::IndexType idn =
@@ -1146,18 +1146,18 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
 //
 //                  tag_count++;
                 }
-            } else if (is.boundary()) {
+            } else*/ if (is.boundary()) {
                 // Boundary integration
               lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
                       local_vector, 0);
                 assemble_jacobian_integral(localView, xLocal, m_m, 0);
 //                tag_count++;
-            } else {
+            }/* else {
                 std::cerr << " I do not know how to handle this intersection"
                         << std::endl;
                 exit(-1);
             }
-        }
+*/        }
         add_local_coefficients(localIndexSet, local_vector, v);
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
 
