@@ -20,11 +20,10 @@ namespace Dune
 template<typename value_type>
 bool operator<(const Dune::FieldVector<value_type, 2> & v, const Dune::FieldVector<value_type, 2> & w)
 {
-  const int eps = 1e-10;
-
-  if(std::abs(v[0]-w[0] < eps))
+  const double eps = 1e-10;
+  if(std::abs(v[0]-w[0]) < eps)
   {
-    if(std::abs(v[1]-w[1] < eps))
+    if(std::abs(v[1]-w[1]) < eps)
       return false;
     return v[1] < w[1];
   }
