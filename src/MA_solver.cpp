@@ -374,63 +374,24 @@ void MA_solver::adapt_solution(const int level)
   assert(initialised);
   assert(level == 1);
 
-  //gives any element a unique id (preserved by refinement),
-  const GridType::Traits::GlobalIdSet&  idSet = grid_ptr->globalIdSet();
-
-  auto localView = FEBasis->localView();
-  auto localIndexSet = FEBasis->indexSet().localIndexSet();
-
-  typedef GridType::Traits::GlobalIdSet::IdType IdType;
-
-  //map to store grid attached data during the refinement process
-  std::map<IdType, VectorType>  preserveSolution;
+//  auto localViewOld = FEBasis->localView();
 
   //mark elements for refinement
   for (auto&& element : elements(*gridView_ptr))
   {
-    // Bind the local FE basis view to the current element
-    localView.bind(element);
-    localIndexSet.bind(localView);
+//    localViewOld.bind(element);
+//    solution_u_old->bind(element);
+//    gradient_u_old->bind(element);
+//
+//
+//    for (int i = 0; i < element.geometry().corners(); i++) { //loop over nodes
+//      const auto x = element.geometry().local(element.geometry().corner(i));
+//      std::cout << "value " << (*solution_u_old)(x) << " at " << element.geometry().corner(i) << std::endl;
+//      std::cout << " gradient at the same " << (*gradient_u_old)(x) << std::endl;
+//    }
 
     //mark element for refining
     grid_ptr->mark(1,element);
-
-    //store local dofs
-    preserveSolution[idSet.id(element)]  = assembler.calculate_local_coefficients(localIndexSet, solution);
-
-    //test
-/*
-    {
-      VectorType templocal = assembler.calculate_local_coefficients(localIndexSet, solution);
-
-      // Get a quadrature rule
-//      int order = std::max(1, 3 * ((int) localView.tree().finiteElement().localBasis().order()));
-//      const QuadratureRule<double, Solver_config::dim>& quad = QuadratureRules<
-//          double, Solver_config::dim>::rule(localView.tree().finiteElement().type(), order);
-
-//      for (size_t pt = 0; pt < quad.size(); pt++) {
-
-      FieldVector<double, 2> quadPos = {3.350e-01, 3.350e-01};
-        std::vector<FieldVector<double,1>> fatherFunctionValues(localView.size());
-        localView.tree().finiteElement().localBasis().evaluateFunction(quadPos,fatherFunctionValues);
-
-        std::cout << "local dofs "  << templocal << std::endl;
-        std::cout << "father function values ";
-        for (const auto& el : fatherFunctionValues)  std::cout << el << " ";
-        std::cout << std::endl;
-
-        double resFather =0;
-        for (int i = 0; i < fatherFunctionValues.size(); i++)
-        {
-          resFather += templocal[i]*fatherFunctionValues[i][0];
-        }
-
-        auto globalCoordFather = element.geometry().global(quadPos);
-
-        std::cout << "coordinates " << globalCoordFather << " old value " << resFather << std::endl;
-//      }
-    }
-*/
   }
   double scaling_factor = solution(solution.size()-1);
 
@@ -446,8 +407,6 @@ void MA_solver::adapt_solution(const int level)
   std::cout << "new element count " << gridView_ptr->size(0) << std::endl;
 
   //update member
-  std::array<unsigned int,Solver_config::dim> elementsSplines;
-  std::fill(elementsSplines.begin(), elementsSplines.end(), std::sqrt(gridView_ptr->size(0)));
 
   //we need do store the old basis as the (father) finite element depends on the basis
   std::shared_ptr<FEBasisType> FEBasisOld (FEBasis);
@@ -455,160 +414,116 @@ void MA_solver::adapt_solution(const int level)
   FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
   assembler.bind(*FEBasis);
 
-  auto localViewRefChild = FEBasis->localView();
-  auto localViewRefFather = FEBasisOld->localView();
-  auto localIndexSetRef = FEBasis->indexSet().localIndexSet();
-
-  //init vector v
-//  solution.resize(get_n_dofs());
   solution.setZero(get_n_dofs());
 
-//  Solver_config::LocalFiniteElementType localFiniteElement;
+  auto localView = FEBasis->localView();
+  auto localIndexSet = FEBasis->indexSet().localIndexSet();
 
-  //calculate refinement matrices
+  //loop over elements (in refined grid)
+  for (auto&& element : elements(*gridView_ptr)) {
 
-  //local refined mass matrix m_ij = \int mu_child_i * mu_j
-  DenseMatrixType localrefinementMatrix(localViewRefChild.maxSize(), localViewRefFather.maxSize());
-  //local mass matrix m_ij = \int mu_i * mu_j
-  DenseMatrixType localMassMatrix(localViewRefChild.maxSize(), localViewRefChild.maxSize());
+    const auto father = element.father();
 
-  const int size = localViewRefChild.maxSize();
+    localView.bind(element);
+    localIndexSet.bind(localView);
 
-  //since we are going to calculate the refinement for all children when encountering one of them
-  // we need to store wich data already is refined
-  Dune::LeafMultipleCodimMultipleGeomTypeMapper <GridType,Dune::MCMGElementLayout > mapper(*grid_ptr);
-  std::vector<bool> already_refined (mapper.size());
-  std::fill(already_refined.begin(), already_refined.end(), false);
+    solution_u_old->bind(father);
+    gradient_u_old->bind(father);
 
-  //calculate new dof vector
-  for (auto&& element : elements(*gridView_ptr))
-  {
-    if (element.isNew())
+    const auto & lFE = localView.tree().finiteElement();
+    const auto& geometry = element.geometry();
+
+    VectorType localDofs = VectorType::Zero(lFE.size());
+
+    for (int i = 0; i < geometry.corners(); i++) { //loop over nodes
+      const auto x = father.geometry().local(geometry.corner(i));
+//      std::cout << "local coordinate " << x << std::endl;
+
+      auto value = (*solution_u_old)(x);
+//      std::cout << "value " << value << " at " << geometry.corner(i) << std::endl;
+      //set dofs associated with values at vertices
+      assert(lFE.localCoefficients().localKey(i).subEntity() == i);
+      localDofs(i) = value;
+
+
+      const auto gradient = (*gradient_u_old)(x);
+//      std::cout << " gradient at the same " << gradient << std::endl;
+      localDofs(geometry.corners() + 2 * i) = gradient[0];
+
+      localDofs(geometry.corners() + 2 * i + 1) = gradient[1];
+    }
+
+    for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
     {
-      //check if data was already calculated
-      if (already_refined[mapper.index(element)]) continue;
+      const int i = is.indexInInside();
 
-      //get old dof vector
-      const auto& father = element.father();
-      localViewRefFather.bind(father);
+      // normal of center in face's reference element
+      const FieldVector<double, Solver_config::dim> normal =
+            is.centerUnitOuterNormal();
 
-      VectorType x_local = preserveSolution[idSet.id(father)];
-
-      //calculate new dof vector for every child
-      int i = 0;
-      for (auto&& child : descendantElements(father, count_refined))
-      {
-          //bind to child
-        localViewRefChild.bind(child);
-        localIndexSetRef.bind(localViewRefChild);
-
-//        std::cout << "child " << i << std::endl;
-        assembler.calculate_refined_local_mass_matrix_detailed(localViewRefFather, localViewRefChild, localrefinementMatrix, level);
-        assembler.calculate_local_mass_matrix_detailed(localViewRefChild, localMassMatrix);
-
-
-        VectorType x_adapt(size);
-
-        //local rhs = \int v_adapt*test = refinementmatrix*v
-        VectorType localVector = localrefinementMatrix*x_local;
-        x_adapt =  localMassMatrix.ldlt().solve(localVector);
-
-        //set new dof vectors
-        assembler.set_local_coefficients(localIndexSetRef, x_adapt, solution);
-
-        //test
-/*
-        {
-          const auto lfuChild = localViewRefChild.tree().finiteElement();
-
-          // Get a quadrature rule
-          int order = std::max(1, 3 * ((int) lfuChild.localBasis().order()));
-          const QuadratureRule<double, Solver_config::dim>& quad = QuadratureRules<
-              double, Solver_config::dim>::rule(lfuChild.type(), order);
-
-          auto geometryInFather = localViewRefChild.element().geometryInFather();
-
-          for (size_t pt = 0; pt < quad.size(); pt++) {
-
-            const FieldVector<double, Solver_config::dim> &quadPosChild =
-                    quad[pt].position();
-            const FieldVector<double, Solver_config::dim> &quadPosFather =
-                geometryInFather.global(quadPosChild);
-
-            std::vector<FieldVector<double,1>> childFunctionValues(localViewRefChild.size());
-            lfuChild.localBasis().evaluateFunction(quadPosChild,childFunctionValues);
-
-//            std::cout << "function values from local basis ";
-//            for (const auto& el : childFunctionValues)  std::cout << el << " ";
-//            std::cout << std::endl;
-
-            std::vector<FieldVector<double,1>> fatherFunctionValues(localViewRefFather.size());
-            localViewRefFather.tree().finiteElement().localBasis().evaluateFunction(quadPosFather,fatherFunctionValues);
-
-//            std::cout << "father function values from local basis ";
-//            for (const auto& el : fatherFunctionValues)  std::cout << el << " ";
-//            std::cout << std::endl;
-
-
-            double resChild = 0, resFather =0;
-            for (int i = 0; i < childFunctionValues.size(); i++)
-            {
-              resChild += x_adapt[i]*childFunctionValues[i][0];
-              resFather += x_local[i]*fatherFunctionValues[i][0];
-            }
-
-            assert(std::abs(resChild - resFather) < 1e-8);
-
-//            solution_u_old->bind(father);
-//            std::cout << setprecision(9);
-//            std::cout << "father " << resFather << std::endl;// << " old " << (*solution_u_old)(quadPosFather) << std::endl;
-
-
-            Solver_config::VectorType temp_solution = solution.segment(0,get_n_dofs_u());
-
-
-            Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution42(*FEBasis,temp_solution);
-            auto localnumericalSolution42 = localFunction(numericalSolution42);
-//            std::cout << "after local function creation" << numericalSolution42.dofs()[9] << std::endl;
-
-//            std::cout << "temp solution " << temp_solution.transpose()<< std::endl;
-            auto temp = numericalSolution42.dofs();
-//            std::cout << "dofs " << temp.transpose() << std::endl;
-
-            localnumericalSolution42.bind(child);
-//            std::cout << "child " << resChild << " global " << localnumericalSolution42(quadPosChild) << std::endl;
-
-            assert(std::abs(resChild - localnumericalSolution42(quadPosChild)) < 1e-8);
-
-            auto globalCoordChild = child.geometry().global(quadPosChild);
-            auto globalCoordFather = father.geometry().global(quadPosFather);
-
-            std::cout << "cooridnate child " << globalCoordChild << " coordinate father " << globalCoordFather << std::endl;
-            assert(std::abs(globalCoordChild[0] - globalCoordFather [0]) < 1e-8);
-
-          }
-        }
-*/
-
-        //mark element as refined
-        already_refined[mapper.index(child)] = true;
-
-        i++;
+      const auto face_center = is.geometry().center();
+      localDofs(3 * geometry.corners() + i) = (*gradient_u_old)(face_center) * normal;
+//      std::cout << " aprox normal derivative " << (*gradient_u_old)(face_center)*normal << " = " << (*gradient_u_old)(face_center) << " * " << normal << std::endl ;
       }
-    }
-    else //element was not refined
-    {
-      //bind to child
-      localViewRefFather.bind(element);
-      localIndexSetRef.bind(localViewRefFather);
 
-      IdType id = idSet.id(element);
-      assembler.set_local_coefficients(localIndexSetRef, preserveSolution[id], solution);
+      assembler.set_local_coefficients(localIndexSet, localDofs, solution);
     }
 
-  }
-
+  //set scaling factor (last dof) to ensure mass conservation
   solution(solution.size()-1)= scaling_factor;
+
+#define NDEBUG
+#ifdef DEBUG
+  for (auto&& element : elements(*gridView_ptr)) {
+
+    localView.bind(element);
+    localIndexSet.bind(localView);
+
+    const auto & lFE = localView.tree().finiteElement();
+    const auto& geometry = element.geometry();
+
+    VectorType localDofs = assembler.calculate_local_coefficients(localIndexSet, solution);
+
+    // Get a quadrature rule
+    const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
+    const QuadratureRule<double, Solver_config::dim>& quad =
+        MacroQuadratureRules<double, Solver_config::dim>::rule(element.type(),
+            order, Solver_config::quadratureType);
+
+    double resTest1f = 0, resTest1 = 0;
+
+    for (int i = 0; i < geometry.corners(); i++) {
+      //evaluate test function
+      std::vector<Dune::FieldVector<double, 1>> functionValues(
+          localView.size());
+      lFE.localBasis().evaluateFunction(geometry.local(geometry.corner(i)),
+          functionValues);
+
+      double res = 0;
+      for (int j = 0; j < localDofs.size(); j++) {
+        res += localDofs(j) * functionValues[j];
+      }
+
+      std::cout << "approx(corner " << i << ")="<< res << std::endl;
+
+      std::vector<Dune::FieldMatrix<double, 1, 2>> JacobianValues(
+          localView.size());
+      lFE.localBasis().evaluateJacobian(geometry.local(geometry.corner(i)),
+          JacobianValues);
+
+      Dune::FieldVector<double, 2> jacApprox;
+      for (int j = 0; j < localDofs.size(); j++) {
+        jacApprox.axpy(localDofs(j), JacobianValues[j][0]);
+      }
+
+      std::cout << "approx'(corner " << i << ")=" << geometry.corner(i)[0] << " "
+          << geometry.corner(i)[1] << "  approx = " << jacApprox << std::endl;
+
+    }
+  }
+#endif
+
+
   //reset adaption flags
   grid_ptr->postAdapt();
 }
