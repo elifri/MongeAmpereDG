@@ -1,3 +1,4 @@
+
 #include <config.h>
 #include <vector>
 
@@ -146,24 +147,6 @@ try {
 //	Solver_config::lowerLeft = {0,0};
 //	Solver_config::upperRight = {1,1};
 	Solver_config::UnitCubeType unitcube(Solver_config::lowerLeft, Solver_config::upperRight, 1);
-
-//	Solver_config::lowerLeftTarget = {0.3,0};
-//	Solver_config::upperRightTarget = {0.6,0.6};
-//	Solver_config::lowerLeftTarget = {-0.15,0.1};
-//	Solver_config::upperRightTarget = {0.15,0.4};
-//	Solver_config::lowerLeftTarget = {-1.5,1};
-//	Solver_config::upperRightTarget = {1.5, 4.0};
-//
-//	Solver_config::z_3 = -3;
-
-//#if USE_PETSC
-//  Solver_config::LightinputImageName = "../inputData/lightin_lambertian.bmp";
-//  Solver_config::TargetImageName = "../inputData/one_small.bmp";
-//#else
-////  Solver_config::LightinputImageName = "../inputData/lightin_lambertian.png";
-//  Solver_config::LightinputImageName = "../inputData/one_small.png";
-//  Solver_config::TargetImageName = "../inputData/one_small.png";
-//#endif
 
 
 	Solver_config::GridType &grid = unitcube.grid();
