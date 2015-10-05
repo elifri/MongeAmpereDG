@@ -629,7 +629,9 @@ Solver_config::VectorType Assembler::calculate_local_coefficients(const LocalInd
   Solver_config::VectorType v_local(localIndexSet.size());
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
-     v_local[i] = (i == 12 || i == 14) ? -v(localIndexSet.index(i)[0]) : v(localIndexSet.index(i)[0]);
+    v_local[i] = v(localIndexSet.index(i)[0]);
+//     v_local[i] = (i == 12 || i == 14) ? -v(localIndexSet.index(i)[0]) : v(localIndexSet.index(i)[0]);
+//     std::cerr << "calculated from " << i << "  index " << localIndexSet.index(i)[0] << " with value " << v_local[i] << std::endl;
   }
   return v_local;
 }
@@ -643,9 +645,10 @@ void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const
   assert ((unsigned int) v.size() == basis_->indexSet().size()+1);
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
-//    std::cout << "i -> " << localIndexSet.flat_index(i) << std::endl;
-
-     v(localIndexSet.index(i)[0]) += (i == 12 || i == 14) ? -v_local[i] : v_local[i];
+//    std::cout << i << " -> " << localIndexSet.index(i)[0] <<  " with value " << v_local[i] << std::endl;
+//    std::cerr << "set " << i << " to " << localIndexSet.index(i)[0] << " with value " << v_local[i] << std::endl;
+//     v(localIndexSet.index(i)[0]) += (i == 12 || i == 14) ? -v_local[i] : v_local[i];
+    v(localIndexSet.index(i)[0]) += v_local[i] ;
   }
 }
 
@@ -658,7 +661,9 @@ void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
     //dofs associated to normal derivatives have to be corrected to the same direction (we define them to either point upwards or to the right)
-     v(localIndexSet.index(i)[0]) = (i == 12 || i == 14) ? -v_local[i] : v_local[i];
+     v(localIndexSet.index(i)[0]) = v_local[i];
+//     v(localIndexSet.index(i)[0]) = (i == 12 || i == 14) ? -v_local[i] : v_local[i];
+//     std::cout << "set " << i << " to " << localIndexSet.index(i)[0] << " with value " << v(localIndexSet.index(i)[0]) << std::endl;
   }
 }
 
@@ -678,6 +683,7 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
       if (std::abs(m_local(i,j)) > 1e-13 )
       {
         //dofs associated to normal derivatives have to be corrected to the same direction (we define them to either point upwards or to the right)
+/*
         if ( (
                 (i == 12 || i == 14) && ((j != 12) && (j != 14))
              )
@@ -689,6 +695,8 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
           m.coeffRef(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0]) -=  m_local(i,j);
         else
           m.coeffRef(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0]) +=  m_local(i,j);
+*/
+        m.coeffRef(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0])+=  m_local(i,j);
       }
   }
 }
@@ -703,7 +711,7 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
   for (int i = 0; i < m_local.rows(); i++)
   {
     for (int j = 0; j < m_local.cols(); j++)
-      if (std::abs(m_local(i,j)) > 1e-13 )
+/*      if (std::abs(m_local(i,j)) > 1e-13 )
       {
         //dofs associated to normal derivatives have to be corrected to the same direction (we define them to either point upwards or to the right)
         if ( (
@@ -717,8 +725,8 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
           je.push_back(EntryType(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0],-m_local(i,j)));
         else
           je.push_back(EntryType(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0],m_local(i,j)));
-      }
-
+      }*/
+      je.push_back(EntryType(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0],m_local(i,j)));
   }
 }
 
@@ -1072,11 +1080,11 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
     v(v.size()-1) -= G;
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
-    const GridViewType::IndexSet& indexSet = gridView.indexSet();
+//    const GridViewType::IndexSet& indexSet = gridView.indexSet();
     auto localView = basis_->localView();
-    auto localViewn = basis_->localView();
+//    auto localViewn = basis_->localView();
     auto localIndexSet = basis_->indexSet().localIndexSet();
-    auto localIndexSetn = basis_->indexSet().localIndexSet();
+//    auto localIndexSetn = basis_->indexSet().localIndexSet();
 
     // A loop over all elements of the grid
     for (auto&& e : elements(gridView)) {
@@ -1095,7 +1103,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
 
 
         //get id
-        IndexType id = indexSet.index(e);
+//        IndexType id = indexSet.index(e);
 
         //calculate local coefficients
         Solver_config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);

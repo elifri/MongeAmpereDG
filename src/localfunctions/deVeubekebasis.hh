@@ -455,9 +455,9 @@ public:
 
     //the calculated formula has to be scaled appropriately
     //(formula was calculated by Farin - Curves and Surfaces in CAGD: A practical guide (Academic Press, New York, 1988) chapter 18 equation (18.15))
-    scaling_[12] = l0;
+    scaling_[12] = -l0;
     scaling_[13] = l1;
-    scaling_[14] = l2;
+    scaling_[14] = -l2;
     scaling_[15] = l3;
   }
 

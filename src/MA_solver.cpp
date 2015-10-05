@@ -374,7 +374,7 @@ void MA_solver::adapt_solution(const int level)
   assert(initialised);
   assert(level == 1);
 
-//  auto localViewOld = FEBasis->localView();
+  auto localViewOld = FEBasis->localView();
 
   //mark elements for refinement
   for (auto&& element : elements(*gridView_ptr))
@@ -462,8 +462,10 @@ void MA_solver::adapt_solution(const int level)
             is.centerUnitOuterNormal();
 
       const auto face_center = is.geometry().center();
-      localDofs(3 * geometry.corners() + i) = (*gradient_u_old)(face_center) * normal;
-//      std::cout << " aprox normal derivative " << (*gradient_u_old)(face_center)*normal << " = " << (*gradient_u_old)(face_center) << " * " << normal << std::endl ;
+      //set dofs according to global normal direction
+
+      localDofs(3 * geometry.corners() + i) = (normal[0]+normal[1] < 0) ? - ((*gradient_u_old)(father.geometry().local(face_center)) * normal) : (*gradient_u_old)(father.geometry().local(face_center)) * normal;
+      assert(lFE.localCoefficients().localKey(3*geometry.corners()+i).subEntity() == i);
       }
 
       assembler.set_local_coefficients(localIndexSet, localDofs, solution);
@@ -474,6 +476,8 @@ void MA_solver::adapt_solution(const int level)
 
 #define NDEBUG
 #ifdef DEBUG
+  std::cout << "refinement :" << std::endl;
+
   for (auto&& element : elements(*gridView_ptr)) {
 
     localView.bind(element);
@@ -503,9 +507,11 @@ void MA_solver::adapt_solution(const int level)
       for (int j = 0; j < localDofs.size(); j++) {
         res += localDofs(j) * functionValues[j];
       }
+      solution_u_old->bind(element.father());
+      std::cout << "approx(corner " << i << ")="<< res
+          << " f(corner " << i << ")= " << (*solution_u_old)(element.father().geometry().local(geometry.corner(i)))<< std::endl;
 
-      std::cout << "approx(corner " << i << ")="<< res << std::endl;
-
+      //evaluate jacobian at node
       std::vector<Dune::FieldMatrix<double, 1, 2>> JacobianValues(
           localView.size());
       lFE.localBasis().evaluateJacobian(geometry.local(geometry.corner(i)),
@@ -516,8 +522,38 @@ void MA_solver::adapt_solution(const int level)
         jacApprox.axpy(localDofs(j), JacobianValues[j][0]);
       }
 
-      std::cout << "approx'(corner " << i << ")=" << geometry.corner(i)[0] << " "
-          << geometry.corner(i)[1] << "  approx = " << jacApprox << std::endl;
+      gradient_u_old->bind(element.father());
+      std::cout << "approx'(corner " << i << ")=" << (*gradient_u_old)(element.father().geometry().local(geometry.corner(i)))
+          << "  approx = " << jacApprox << std::endl;
+
+      for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
+      {
+        //evaluate jacobian at edge mid
+        std::vector<Dune::FieldMatrix<double, 1, 2>> JacobianValues(
+            localView.size());
+        lFE.localBasis().evaluateJacobian(geometry.local(is.geometry().center()),
+            JacobianValues);
+
+        Dune::FieldVector<double, 2> jacApprox;
+        for (int j = 0; j < localDofs.size(); j++) {
+          jacApprox.axpy(localDofs(j), JacobianValues[j][0]);
+        }
+
+        const int i = is.indexInInside();
+
+        // normal of center in face's reference element
+        const FieldVector<double, Solver_config::dim> normal =
+              is.centerUnitOuterNormal();
+
+        const auto face_center = is.geometry().center();
+        std::cout << " f (face center " << i  << " )= ";
+        if (normal[0]+normal[1] < 0 )
+          std::cout << -((*gradient_u_old)(element.father().geometry().local(face_center)) * normal);
+        else
+          std::cout << (*gradient_u_old)(element.father().geometry().local(face_center)) * normal;
+        std::cout << " approx (face center " << i  << " )= " << jacApprox*normal;
+        std::cout << " global dof no " << localIndexSet.index(12+i) << " has value " << solution[localIndexSet.index(12+i)] << std::endl;
+        }
 
     }
   }
