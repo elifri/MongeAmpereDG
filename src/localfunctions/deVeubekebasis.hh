@@ -81,315 +81,312 @@ public:
   };
 
 private:
-  typedef std::array<std::array<std::vector<Coefficient>,4 >, 16> ConversionMapType;
 
-
-  static void insert_conversion_coefficient(int basis, int bezierordinate, R coefficient)
-{
-    switch(bezierordinate)
-    {
-    case 0:
-      conversionCoeff_()[basis][0].push_back(Coefficient(0,coefficient));
-      conversionCoeff_()[basis][2].push_back(Coefficient(3,coefficient));
-      break;
-    case 1:
-      conversionCoeff_()[basis][0].push_back(Coefficient(1,coefficient));
-      break;
-    case 2:
-      conversionCoeff_()[basis][0].push_back(Coefficient(2,coefficient));
-      break;
-    case 3:
-      conversionCoeff_()[basis][0].push_back(Coefficient(3,coefficient));
-      conversionCoeff_()[basis][1].push_back(Coefficient(0,coefficient));
-      break;
-    case 4:
-      conversionCoeff_()[basis][0].push_back(Coefficient(4,coefficient));
-      conversionCoeff_()[basis][2].push_back(Coefficient(6,coefficient));
-      break;
-    case 5:
-      conversionCoeff_()[basis][0].push_back(Coefficient(5,coefficient));
-      break;
-    case 6:
-      conversionCoeff_()[basis][0].push_back(Coefficient(6,coefficient));
-      conversionCoeff_()[basis][1].push_back(Coefficient(4,coefficient));
-      break;
-    case 7:
-      conversionCoeff_()[basis][0].push_back(Coefficient(7,coefficient));
-      conversionCoeff_()[basis][2].push_back(Coefficient(8,coefficient));
-      break;
-    case 8:
-      conversionCoeff_()[basis][0].push_back(Coefficient(8,coefficient));
-      conversionCoeff_()[basis][1].push_back(Coefficient(7,coefficient));
-      break;
-    case 9:
-      conversionCoeff_()[basis][0].push_back(Coefficient(9,coefficient));
-      conversionCoeff_()[basis][1].push_back(Coefficient(9,coefficient));
-      conversionCoeff_()[basis][2].push_back(Coefficient(9,coefficient));
-      conversionCoeff_()[basis][3].push_back(Coefficient(9,coefficient));
-      break;
-    case 10:
-      conversionCoeff_()[basis][1].push_back(Coefficient(1,coefficient));
-      break;
-    case 11:
-      conversionCoeff_()[basis][1].push_back(Coefficient(2,coefficient));
-      break;
-    case 12:
-      conversionCoeff_()[basis][1].push_back(Coefficient(3,coefficient));
-      conversionCoeff_()[basis][3].push_back(Coefficient(0,coefficient));
-      break;
-    case 13:
-      conversionCoeff_()[basis][1].push_back(Coefficient(5,coefficient));
-      break;
-    case 14:
-      conversionCoeff_()[basis][1].push_back(Coefficient(6,coefficient));
-      conversionCoeff_()[basis][3].push_back(Coefficient(4,coefficient));
-      break;
-    case 15:
-      conversionCoeff_()[basis][1].push_back(Coefficient(8,coefficient));
-      conversionCoeff_()[basis][3].push_back(Coefficient(7,coefficient));
-      break;
-    case 16:
-      conversionCoeff_()[basis][3].push_back(Coefficient(1,coefficient));
-      break;
-    case 17:
-      conversionCoeff_()[basis][3].push_back(Coefficient(2,coefficient));
-      break;
-    case 18:
-      conversionCoeff_()[basis][2].push_back(Coefficient(0,coefficient));
-      conversionCoeff_()[basis][3].push_back(Coefficient(3,coefficient));
-      break;
-    case 19:
-      conversionCoeff_()[basis][3].push_back(Coefficient(5,coefficient));
-      break;
-    case 20:
-      conversionCoeff_()[basis][2].push_back(Coefficient(4,coefficient));
-      conversionCoeff_()[basis][3].push_back(Coefficient(6,coefficient));
-      break;
-    case 21:
-      conversionCoeff_()[basis][2].push_back(Coefficient(7,coefficient));
-      conversionCoeff_()[basis][3].push_back(Coefficient(8,coefficient));
-      break;
-    case 22:
-    conversionCoeff_()[basis][2].push_back(Coefficient(1,coefficient));
-      break;
-    case 23:
-      conversionCoeff_()[basis][2].push_back(Coefficient(2,coefficient));
-      break;
-    case 24:
-      conversionCoeff_()[basis][2].push_back(Coefficient(5,coefficient));
-      break;
-    default:  DUNE_THROW(RangeError, "Bezier ordinate is out of range");
-    }
-}
-
-  static void init_conversion_map()
+  inline
+  static void init_permutation_map()
   {
-    //init conversion coefficients
-    /*The Bezier coefficients are numbered locally the following way
+    //permuation of splines for the triangle 0 (no permutation needed)
+    for (int i = 0; i < N ; i++)
+      subtrianglePerm()[i][0] = i;
 
-    18----17----16---12
-     |\              /|
-     | 20    19    13 |
-     |   \        /   |
-    22    21    15   11
-     |      \  /      |
-     |  24    9   14  |
-     |      /  \      |
-    23    7      8   10
-     |   /        \   |
-     |  4    5     6  |
-     |/             \ |
-     0-----1-----2----3
+    //permuation of splines for the first triangle
+    subtrianglePerm()[0][1] = 2;
+    subtrianglePerm()[1][1] = 0;
+    subtrianglePerm()[2][1] = 3;
+    subtrianglePerm()[3][1] = 1;
+    subtrianglePerm()[4][1] = 9;
+    subtrianglePerm()[5][1] = 8;
+    subtrianglePerm()[6][1] = 5;
+    subtrianglePerm()[7][1] = 4;
+    subtrianglePerm()[8][1] = 11;
+    subtrianglePerm()[9][1] = 10;
+    subtrianglePerm()[10][1] = 7;
+    subtrianglePerm()[11][1] = 6;
+    subtrianglePerm()[12][1] = 15;
+    subtrianglePerm()[13][1] = 14;
+    subtrianglePerm()[14][1] = 12;
+    subtrianglePerm()[15][1] = 13;
 
-     The local nodal dofs are numbered the following way
-     - function values at the vertices (numbered as the vertices)   -> 4 dofs
-     - gradient values at the vertices                              -> 8 dofs
-     - edge mitpoint normal derivatives (numbered as the edges)     -> 4 dofs
+    //permutation of splines for the second triangle
+    subtrianglePerm()[0][2] = 1;
+    subtrianglePerm()[1][2] = 3;
+    subtrianglePerm()[2][2] = 0;
+    subtrianglePerm()[3][2] = 2;
+    subtrianglePerm()[4][2] = 7;
+    subtrianglePerm()[5][2] = 6;
+    subtrianglePerm()[6][2] = 11;
+    subtrianglePerm()[7][2] = 10;
+    subtrianglePerm()[8][2] = 5;
+    subtrianglePerm()[9][2] = 4;
+    subtrianglePerm()[10][2] = 9;
+    subtrianglePerm()[11][2] = 8;
+    subtrianglePerm()[12][2] = 14;
+    subtrianglePerm()[13][2] = 15;
+    subtrianglePerm()[14][2] = 13;
+    subtrianglePerm()[15][2] = 12;
 
-     left: standard vertex numbering   right: standard edge numbering
-     2_3          3
-     | |        0   1
-     0_1          2
-
-     for the formulas to calculate the coefficients see:
-
-     Dahmen, Oswald, Shi - C^1-hierarchical bases, Journal of Computational and applied Mathematics 51(1994) 37-56   Section 5
-     and Farin - Curves and Surfaces in CAGD: A practical guide (Academic Press, New York, 1988) chapter 18
-
-*/
-
-
-    DUNE_ASSERT_CALL_ONCE();
-
-    //first basis function (just one at vertex 0)   -> add all contributions to bezier coefficients \neq 0
-    insert_conversion_coefficient(0, 0, 1.);
-    insert_conversion_coefficient(0, 1, 1.);
-    insert_conversion_coefficient(0, 23, 1.);
-    insert_conversion_coefficient(0, 4,1.);
-    insert_conversion_coefficient(0, 5, 1./2.);
-    insert_conversion_coefficient(0, 24, 1./2.);
-    insert_conversion_coefficient(0, 7, 1./2);
-    insert_conversion_coefficient(0, 8, 1./4);
-    insert_conversion_coefficient(0, 21, 1./4.);
-    insert_conversion_coefficient(0, 9, 1./4.);
-
-    //second basis function (just one at vertex 1)   -> add all contributions to bezier coefficients \neq 0
-    insert_conversion_coefficient(1, 3, 1.);
-    insert_conversion_coefficient(1, 2, 1.);
-    insert_conversion_coefficient(1, 10, 1.);
-    insert_conversion_coefficient(1, 6, 1.);
-    insert_conversion_coefficient(1, 5, 1./2.);
-    insert_conversion_coefficient(1, 13, 1./2.);
-    insert_conversion_coefficient(1, 7, 1./4.);
-    insert_conversion_coefficient(1, 8, 1./2.);
-    insert_conversion_coefficient(1,15, 1./4.);
-    insert_conversion_coefficient(1, 9, 1./4.);
-
-    //3rd basis function (just one at vertex 2)
-    insert_conversion_coefficient(2, 18, 1.);
-    insert_conversion_coefficient(2, 17, 1.);
-    insert_conversion_coefficient(2, 22, 1.);
-    insert_conversion_coefficient(2, 20, 1.);
-    insert_conversion_coefficient(2, 19, 1./2.);
-    insert_conversion_coefficient(2, 24, 1./2.);
-    insert_conversion_coefficient(2, 7, 1./4.);
-    insert_conversion_coefficient(2, 15, 1./4.);
-    insert_conversion_coefficient(2, 21, 1./2.);
-    insert_conversion_coefficient(2, 9, 1./4.);
-
-    //4th basis function (just one at vertex 3)
-    insert_conversion_coefficient(3, 12, 1.);
-    insert_conversion_coefficient(3, 16, 1.);
-    insert_conversion_coefficient(3, 11, 1.);
-    insert_conversion_coefficient(3, 14, 1.);
-    insert_conversion_coefficient(3, 13, 1./2.);
-    insert_conversion_coefficient(3, 19, 1./2.);
-    insert_conversion_coefficient(3, 8, 1./4.);
-    insert_conversion_coefficient(3, 15, 1./2.);
-    insert_conversion_coefficient(3, 21, 1./4.);
-    insert_conversion_coefficient(3, 9, 1./4.);
-
-
-    //5th basis function (x gradient at vertex 0 equals one)
-    insert_conversion_coefficient(4, 1, 1./3.);
-    insert_conversion_coefficient(4, 4, 1./6.);
-    insert_conversion_coefficient(4, 5, 1./6.);
-    insert_conversion_coefficient(4, 24, -1./12.);
-    insert_conversion_coefficient(4, 7, 1./24.);
-    insert_conversion_coefficient(4, 8, 1./12.);
-    insert_conversion_coefficient(4, 21, -1./24.);
-    insert_conversion_coefficient(4, 9, 1./48.);
-
-    //6th basis function (y gradient at vertex 0 =1)
-    insert_conversion_coefficient(5, 23, 1./3.);
-    insert_conversion_coefficient(5, 4, 1./6.);
-    insert_conversion_coefficient(5, 5, -1./12.);
-    insert_conversion_coefficient(5, 24, 1./6.);
-    insert_conversion_coefficient(5, 7, 1./24.);
-    insert_conversion_coefficient(5, 8, -1./24.);
-    insert_conversion_coefficient(5, 21, 1./12.);
-    insert_conversion_coefficient(5, 9, 1./48.);
-
-    //7th basis function (x gradient at vertex 1 = 1)
-    insert_conversion_coefficient(6, 2, -1./3.);
-    insert_conversion_coefficient(6, 6, -1./6.);
-    insert_conversion_coefficient(6, 5, -1./6.);
-    insert_conversion_coefficient(6, 13, 1./12.);
-    insert_conversion_coefficient(6, 7, -1./12.);
-    insert_conversion_coefficient(6, 8, -1./24.);
-    insert_conversion_coefficient(6, 15, 1./24.);
-    insert_conversion_coefficient(6, 9, -1./48.);
-
-    //8th basis function (y gradient at vertex 1 = 1)
-    insert_conversion_coefficient(7, 10, 1./3.);
-    insert_conversion_coefficient(7, 6, 1./6.);
-    insert_conversion_coefficient(7, 5, -1./12.);
-    insert_conversion_coefficient(7, 13, 1./6.);
-    insert_conversion_coefficient(7, 7, -1./24.);
-    insert_conversion_coefficient(7, 8, 1./24.);
-    insert_conversion_coefficient(7, 15, 1./12.);
-    insert_conversion_coefficient(7, 9, 1./48.);
-
-    //9th basis function (x gradient at vertex 2 = 1)
-    insert_conversion_coefficient(8, 17, 1./3.);
-    insert_conversion_coefficient(8, 20, 1./6.);
-    insert_conversion_coefficient(8, 19, 1./6.);
-    insert_conversion_coefficient(8, 24, -1./12.);
-    insert_conversion_coefficient(8, 7, -1./24);
-    insert_conversion_coefficient(8, 15, 1./12.);
-    insert_conversion_coefficient(8, 21, 1./24.);
-    insert_conversion_coefficient(8, 9, 1./48.);
-
-    //10th basis function ( y gradient at vertex 2 = 1)
-    insert_conversion_coefficient(9, 22, -1./3.);
-    insert_conversion_coefficient(9, 20, -1./6.);
-    insert_conversion_coefficient(9, 19, 1./12.);
-    insert_conversion_coefficient(9, 24, -1./6.);
-    insert_conversion_coefficient(9, 7, -1./12.);
-    insert_conversion_coefficient(9, 15, 1./24.);
-    insert_conversion_coefficient(9, 21, -1./24.);
-    insert_conversion_coefficient(9, 9, -1./48.);
-
-    //11th basis function (x gradient at vertex 3 = 1)
-    insert_conversion_coefficient(10, 16, -1./3.);
-    insert_conversion_coefficient(10, 14, -1./6.);
-    insert_conversion_coefficient(10, 13, 1./12);
-    insert_conversion_coefficient(10, 19, -1./6.);
-    insert_conversion_coefficient(10, 8, 1./24.);
-    insert_conversion_coefficient(10, 15, -1./24.);
-    insert_conversion_coefficient(10, 21, -1./12.);
-    insert_conversion_coefficient(10, 9, -1./48.);
-
-    //12th basis function (y gradient at vertex 3 =1)
-    insert_conversion_coefficient(11, 11, -1./3.);
-    insert_conversion_coefficient(11, 14, -1./6.);
-    insert_conversion_coefficient(11, 13, -1./6.);
-    insert_conversion_coefficient(11, 19, 1./12);
-    insert_conversion_coefficient(11, 8, -1./12);
-    insert_conversion_coefficient(11, 15, -1./24.);
-    insert_conversion_coefficient(11, 21, 1./24.);
-    insert_conversion_coefficient(11, 9, -1./48.);
-
-
-    //13th basis function (normal der. at edge 0 equals one)
-    insert_conversion_coefficient(12, 24, -1./3.);
-    insert_conversion_coefficient(12, 7, -1./6.);
-    insert_conversion_coefficient(12, 21, -1./6.);
-    insert_conversion_coefficient(12, 9, -1./12.);
-
-    //14th basis function (normal der. at edge 1 equals one)
-    insert_conversion_coefficient(13, 13, -1./3.);
-    insert_conversion_coefficient(13, 8, -1./6.);
-    insert_conversion_coefficient(13, 15, -1./6.);
-    insert_conversion_coefficient(13, 9, -1./12.);
-
-    //15th basis function (normal der. at edge 2 = 1)
-    insert_conversion_coefficient(14, 5, -1./3.);
-    insert_conversion_coefficient(14, 7, -1./6.);
-    insert_conversion_coefficient(14, 8, -1./6.);
-    insert_conversion_coefficient(14, 9, -1./12.);
-
-    //16th basis function (normal der. at edge 2 = 1)
-    insert_conversion_coefficient(15, 19, -1./3.);
-    insert_conversion_coefficient(15, 15, -1./6.);
-    insert_conversion_coefficient(15, 21, -1./6.);
-    insert_conversion_coefficient(15, 9, -1./12.);
+    //permuation of splines for the third triangle
+    subtrianglePerm()[0][3] = 3;
+    subtrianglePerm()[1][3] = 2;
+    subtrianglePerm()[2][3] = 1;
+    subtrianglePerm()[3][3] = 0;
+    subtrianglePerm()[4][3] = 10;
+    subtrianglePerm()[5][3] = 11;
+    subtrianglePerm()[6][3] = 8;
+    subtrianglePerm()[7][3] = 9;
+    subtrianglePerm()[8][3] = 6;
+    subtrianglePerm()[9][3] = 7;
+    subtrianglePerm()[10][3] = 4;
+    subtrianglePerm()[11][3] = 5;
+    subtrianglePerm()[12][3] = 13;
+    subtrianglePerm()[13][3] = 12;
+    subtrianglePerm()[14][3] = 15;
+    subtrianglePerm()[15][3] = 14;
   }
 
-  static ConversionMapType& conversionCoeff_()
+  inline
+  static void init_sign_map(){
+  for (int subtriangle = 0; subtriangle < 4; subtriangle++)
+      for (int i = 0; i < N; i++)
+        signPerm()[i][subtriangle] = 1;
+
+    signPerm()[4][1] = -1;
+    signPerm()[6][1] = -1;
+    signPerm()[8][1] = -1;
+    signPerm()[10][1] = -1;
+
+    signPerm()[5][2] = -1;
+    signPerm()[7][2] = -1;
+    signPerm()[9][2] = -1;
+    signPerm()[11][2] = -1;
+
+    signPerm()[4][3] = -1;
+    signPerm()[5][3] = -1;
+    signPerm()[6][3] = -1;
+    signPerm()[7][3] = -1;
+    signPerm()[8][3] = -1;
+    signPerm()[9][3] = -1;
+    signPerm()[10][3] = -1;
+    signPerm()[11][3] = -1;
+  }
+
+  typedef std::array<std::array<int, 4>, N> PermutationMap;
+
+  ///provide Permutation map (only once for every instance) storing the permutation needed for the raw evaluation
+  static PermutationMap& subtrianglePerm()
   {
-    static ConversionMapType* conversionCoefficients = new ConversionMapType();
+    static PermutationMap* subtrianglePerm = new PermutationMap();
     static bool firstTime = true;
     if (firstTime) {
       firstTime = false;
-      std::cout << "initializing 'coefficients'\n";
-      init_conversion_map();
+      std::cout << "initializing 'permutation coeffs'\n";
+      init_permutation_map();
     }
 
-    return *conversionCoefficients;
+    return *subtrianglePerm;
   }
 
-  typedef std::array<FieldMatrix<typename Traits::DomainField, 2, 2>, 4> Matrixarray4;
+  typedef std::array<std::array<int, 4>, N> SignMap;
+  static SignMap& signPerm()
+  {
+    static SignMap* signMap = new SignMap();
+    static bool firstSignTime = true;
+    if (firstSignTime) {
+      firstSignTime = false;
+      std::cout << "initializing 'sign coeffs'\n";
+      init_sign_map();
+    }
+
+    return *signMap;
+  }
+
+
+
+
+  ///evaluate the basis function on the reference quadriteral
+  inline
+  void evaluateRaw(const int subtriangle, const typename Traits::DomainLocal& x,
+      std::vector<typename Traits::Range>& out) const
+  {
+    const R values [N] =
+      {
+          1.+ 2.*x[0]*x[0]*x[0] + 3.*x[0]*x[0]*x[1] + 2.25*x[0]*x[1]*x[1] - 3.*x[0]*x[1] - 3.*x[0]*x[0] - 1.5*x[1]*x[1]  + 0.75*x[1]*x[1]*x[1], //0
+          -2.*x[0]*x[0]*x[0]-3.0*x[0]*x[0]*x[1]+3.*x[0]*x[0]-2.25*x[0]*x[1]*x[1]+3.0*x[0]*x[1]-.50*x[1]*x[1]*x[1]+.75*x[1]*x[1],                //1
+          .75*x[1]*x[1]*(1-x[0]-x[1])+.25*x[1]*x[1]*x[1],                                                                                       //2
+          .75*x[0]*x[1]*x[1]+.25*x[1]*x[1]*x[1],                                                                                                //3
+          x[0]*x[0]*x[0]+1.5*x[0]*x[0]*x[1]+1.125*x[0]*x[1]*x[1]-2.*x[0]*x[0]-2.*x[0]*x[1]+x[0]+R(19./48.)*x[1]*x[1]*x[1]-0.875*x[1]*x[1]+0.5*x[1], //4
+          x[0]*x[0]*x[1]+1.25*x[0]*x[1]*x[1]+R(19./48.)*x[1]*x[1]*x[1]-1.5*x[0]*x[1]-.875*x[1]*x[1]+.5*x[1],                                    //5
+          x[0]*x[0]*x[0]+1.5*x[0]*x[0]*x[1]-x[0]*x[0]+1.125*x[0]*x[1]*x[1]-x[0]*x[1]+R(11./48.)*x[1]*x[1]*x[1]-0.25*x[1]*x[1],                  //6
+          x[0]*x[0]*x[1]+0.75*x[0]*x[1]*x[1]-(1/2)*x[0]*x[1]+R(7./48.)*x[1]*x[1]*x[1]-0.125*x[1]*x[1],                                          //7
+          -0.125*x[1]*x[1]*(1-x[0]-x[1])+R(1./48.)*x[1]*x[1]*x[1],                                                                              //8
+          -0.25*x[1]*x[1]*(1-x[0]-x[1])-R(1./48.)*x[1]*x[1]*x[1],                                                                               //9
+          0.125*x[0]*x[1]*x[1]-R(1./48.)*x[1]*x[1]*x[1],                                                                                        //10
+          -0.25*x[0]*x[1]*x[1]-R(1./48.)*x[1]*x[1]*x[1],                                                                                        //11
+          -0.5*x[1]*x[1]*(1-x[0]-x[1])-R(1./12.)*x[1]*x[1]*x[1],                                                                                //12
+          -0.5*x[0]*x[1]*x[1]-R(1./12.)*x[1]*x[1]*x[1],                                                                                         //13
+          2.*x[0]*x[0]*x[1]+2.*x[0]*x[1]*x[1]-2.*x[0]*x[1]+R(5./12.)*x[1]*x[1]*x[1]-0.5*x[1]*x[1],                                              //14
+          -R(1./12.)*x[1]*x[1]*x[1]};                                                                                                           //15
+
+    for (int i = 0; i <N; i++)
+    {
+      const int sign = signPerm()[i][subtriangle];
+      const int no = subtrianglePerm()[i][subtriangle];
+      out[i][0] = sign*values[no];
+    }
+  }
+
+  ///evaluate the basis function derivatives on the reference quadriteral
+  inline
+  void evaluateJacobianRaw(const int subtriangle, const typename Traits::DomainLocal& x,// position
+      std::vector<typename Traits::Jacobian>& out) const// return value
+  {
+    assert(subtriangle >= 0 && subtriangle <=4 && " This subtriangle does not exist");
+
+    const R valuesX [N] =
+      {
+          6.*x[0]*x[0]-6.*x[0]-3.*x[1]+6.*x[0]*x[1]+2.25*x[1]*x[1],    //0
+          -6.*x[0]*x[0]-6.0*x[0]*x[1]+6.*x[0]-2.25*x[1]*x[1]+3.0*x[1], //1
+          -.75*x[1]*x[1],                                              //2
+          .75*x[1]*x[1],                                               //3
+          3.*x[0]*x[0]+3.*x[0]*x[1]+(9./8.)*x[1]*x[1]-4.*x[0]-2.*x[1]+1,//4
+          2.*x[0]*x[1]+1.25*x[1]*x[1]-1.5*x[1],                        //5
+          3.*x[0]*x[0]+3*x[0]*x[1]-2.*x[0]+1.125*x[1]*x[1]-x[1],       //6
+          2.*x[0]*x[1]+0.75*x[1]*x[1]-0.5*x[1],                        //7
+          0.125*x[1]*x[1],                                             //8
+          0.25*x[1]*x[1],                                              //9
+          0.125*x[1]*x[1],                                             //10
+          -0.25*x[1]*x[1],                                             //11
+          0.5*x[1]*x[1],                                               //12
+          -0.5*x[1]*x[1],                                              //13
+          4.*x[0]*x[1]+2.*x[1]*x[1]-2.*x[1],                           //14
+          0                                                            //15
+        };
+
+    const R valuesY [N]=
+    {
+        3.*x[0]*x[0]+4.5*x[0]*x[1]-3.*x[0]+2.25*x[1]*x[1]-3.*x[1],          //0
+        -3.0*x[0]*x[0]-4.50*x[0]*x[1]+3.0*x[0]-1.50*x[1]*x[1]+1.50*x[1],    //1
+        1.50*x[1]-1.50*x[0]*x[1]-1.50*x[1]*x[1],                            //2
+        1.50*x[0]*x[1]+.75*x[1]*x[1],                                       //3
+        1.5*x[0]*x[0]+2.25*x[0]*x[1]-2.*x[0]+19./16.*x[1]*x[1]-1.75*x[1]+0.5,//4
+        x[0]*x[0]+2.5*x[0]*x[1]+1.1875*x[1]*x[1]-1.5*x[0]-1.75*x[1]+0.5,    //5
+        1.5*x[0]*x[0]+2.25*x[0]*x[1]-x[0]+11./16.*x[1]*x[1]-0.5*x[1],       //6
+        x[0]*x[0]+1.5*x[0]*x[1]-0.5*x[0]+7./16.*x[1]*x[1]-0.25*x[1],        //7
+        0.25*x[0]*x[1]+7./16.*x[1]*x[1]-0.25*x[1],                          //8
+        0.5*x[0]*x[1]+11./16.*x[1]*x[1]-0.5*x[1],                           //9
+        0.25*x[0]*x[1]-1./16.*x[1]*x[1],                                    //10
+        -0.5*x[0]*x[1]-1./16.*x[1]*x[1],                                    //11
+        x[0]*x[1]+1.25*x[1]*x[1]-x[1],                                      //12
+        -x[0]*x[1]-0.25*x[1]*x[1],                                          //13
+        2.*x[0]*x[0]+4.*x[0]*x[1]-2.*x[0]+1.25*x[1]*x[1]-x[1],              //14
+        -0.25*x[1]*x[1]                                                     //15
+    };
+
+    for (int i = 0; i < N; i++)
+    {
+      const int no = subtrianglePerm()[i][subtriangle];
+      const int sign = signPerm()[i][subtriangle];
+
+      out[i][0] = {sign*valuesX[no], sign*valuesY[no]};
+    }
+
+  }
+
+  //! \brief Evaluate higher derivatives of all shape functions
+  template<size_t dOrder> //order of derivative
+  inline void evaluateRaw(const int subtriangle, //local subtriangle
+                          const std::array<int,dOrder> directions, //direction of derivative
+                          const typename Traits::DomainLocal& x,  //position in local (triangle) coordinates
+                          std::vector<typename Traits::Range>& out) const //return value
+  {
+    out.resize(N);
+
+    const R valuesXX [N] =
+    {
+        12.*x[0]+6.*x[1]-6.,  //0
+        -12.*x[0]-6.*x[1]+6., //1
+        0,                    //2
+        0,                    //3
+        6.*x[0]+3*x[1]-4.,    //4
+        2.*x[1],              //5
+        6.*x[0]+3*x[1]-2.,    //6
+        2.*x[1],              //7
+        0,                    //8
+        0,                    //9
+        0,                    //10
+        0,                    //11
+        0,                    //12
+        0,                    //13
+        4.*x[1],              //14
+        0                     //15
+    };
+
+    const R valuesYY [N]=
+    {
+        4.50*x[0]-3.+4.50*x[1],    //0
+        -4.50*x[0]-3.*x[1]+1.50,   //1
+        1.50-1.50*x[0]-3.00*x[1],  //2
+        1.50*x[0]+1.50*x[1],       //3
+        2.25*x[0]+19./8.*x[1]-1.75,//4
+        2.5*x[0]+2.375*x[1]-1.75,  //5
+        2.25*x[0]+1.375*x[1]-0.5,  //6
+        1.5*x[0]+0.875*x[1]-0.25,  //7
+        0.25*x[0]+0.875*x[1]-0.25, //8
+        0.5*x[0]+1.375*x[1]-0.5,   //9
+        0.25*x[0]-0.125*x[1],      //10
+        -0.5*x[0]-0.125*x[1],      //11
+        x[0]+2.5*x[1]-1,           //12
+        -x[0]-0.5*x[1],            //13
+        4*x[0]+2.5*x[1]-1,         //14
+        -0.5*x[1]                  //15
+    };
+
+    const R valuesXY [N] =
+    {
+        6.0*x[0]+4.5*x[1]-3.0,    //0
+        -6.0*x[0]-4.5*x[1]+3.0,   //1
+        -1.50*x[1],               //2
+        1.50*x[1],                //3
+        3.*x[0]+2.25*x[1]-2.,     //4
+        2.*x[0]+2.5*x[1]-1.5,     //5
+        3.*x[0]+2.25*x[1]-1.,     //6
+        2.*x[0]+1.5*x[1]-0.5,     //7
+        0.25*x[1],                //8
+        0.5*x[1],                 //9
+        0.25*x[1],                //10
+        -0.5*x[1],                //11
+        x[1],                     //12
+        -x[1],                    //13
+        4.*x[0]+4.*x[1]-2.,       //14
+        0                         //15
+    };
+
+    switch(dOrder)
+    {
+      case 2:
+        if (directions[0] == directions[1])
+          switch(directions[0])
+          {
+          case 0:
+            for (int i = 0; i < N; i++)
+              out[i] = signPerm()[i][subtriangle] * valuesXX[(subtrianglePerm()[i][subtriangle])];
+              break;
+            case 1:
+              for (int i = 0; i < N; i++)
+              out[i] = signPerm()[i][subtriangle] * valuesYY[subtrianglePerm()[i][subtriangle]];
+              break;
+            default:
+              DUNE_THROW(RangeError, "Direction is invalid!");
+            }
+          else
+          {
+            for (int i = 0; i < N; i++)
+            out[i] = signPerm()[i][subtriangle] * valuesXY[subtrianglePerm()[i][subtriangle]];
+          }
+          break;
+           break;
+    }
+  }
 
   inline
   static void init_inverseJacobianT_()
@@ -418,6 +415,8 @@ private:
 
   }
 
+  typedef std::array<FieldMatrix<typename Traits::DomainFieldType, 2, 2>, 4> Matrixarray4;
+
   static Matrixarray4& inverseJacobianT_()
   {
     static Matrixarray4 *inverseJacobianT = new Matrixarray4();
@@ -434,7 +433,7 @@ private:
 public:
 
   //! \brief Standard constructor
-  deVeubekeGlobalBasis (const Geometry &geo) : bbBasis_(), geo_(geo)
+  deVeubekeGlobalBasis (const Geometry &geo) : geo_(geo)
   {
     //calculate the transform implied by the edge lengths
     std::fill(scaling_.begin(), scaling_.end(), R(1.0));
@@ -473,8 +472,7 @@ public:
   {
     out.resize(N);
 
-    //get bezier basis polynomials
-    std::vector<typename Traits::Range> bezierBasisValues(10);
+    //get local triangle coordinates
     typename Traits::DomainLocal bezierPos;
 
     const int subtriangle = subtriangle_lookup(x);
@@ -496,18 +494,13 @@ public:
       break;
     }
 
-    bbBasis_.evaluateFunction(bezierPos, bezierBasisValues);
+    evaluateRaw(subtriangle, bezierPos,out);
 
     //calculate function value by precomputed weights
     for (unsigned int i = 0; i < N; i++)
     {
-      out[i] = 0;
-      for (const auto& coeff : conversionCoeff_()[i][subtriangle])
-        {
-           out[i] += scaling_[i]*coeff.factor*bezierBasisValues[coeff.localBezierDofno];
-        }
+      out[i] *= scaling_[i];
     }
-
   }
 
   //! \brief Evaluate Jacobian of all shape functions
@@ -517,8 +510,7 @@ public:
   {
     out.resize(N);
 
-    //get bezier basis polynomials
-    std::vector<typename Traits::Jacobian> bezierBasisValues(10);
+    //get local triangle coordinates
     typename Traits::DomainLocal bezierPos;
 
     const int subtriangle = subtriangle_lookup(x);
@@ -540,7 +532,9 @@ public:
       break;
     }
 
-    bbBasis_.evaluateJacobian(bezierPos, bezierBasisValues);
+    std::vector<typename Traits::Jacobian> rawJacobian(N);
+
+    evaluateJacobianRaw(subtriangle, bezierPos, rawJacobian);
 
     //get inverse transposed jacobian of affine map to quadriteral
     FieldMatrix<D, 2, 2> invJacT = geo_.jacobianInverseTransposed(x);
@@ -552,11 +546,8 @@ public:
     for (unsigned int i = 0; i < N; i++)
     {
       out[i][0] = 0;
-      for (const auto& coeff : conversionCoeff_()[i][subtriangle])
-        {
         //transform Jacobian and add to basis function
-        invJacT.usmv(scaling_[i]*coeff.factor, bezierBasisValues[coeff.localBezierDofno][0], out[i][0]);
-        }
+      invJacT.usmv(scaling_[i], rawJacobian[i][0], out[i][0]);
     }
   }
 
@@ -596,44 +587,8 @@ public:
      switch(dOrder)
      {
      case 0:
-     {
-       std::vector<typename Traits::Range> bezierBasisValues(10);
-
-       bbBasis_.evaluateFunction(bezierPos, bezierBasisValues);
-
-       //calculate function value by precomputed weights
-       for (unsigned int i = 0; i < N; i++)
-       {
-         out[i] = 0;
-         for (const auto& coeff : conversionCoeff_()[i][subtriangle])
-           {
-              out[i] += scaling_[i]*coeff.factor*bezierBasisValues[coeff.localBezierDofno];
-           }
-       }
-     }
        break;
      case 1:
-     {
-       std::vector<typename Traits::Jacobian> bezierBasisValues(10);
-
-       bbBasis_.evaluateJacobian(bezierPos, bezierBasisValues);
-
-       //get inverse transposed jacobian of affine map to quadriteral
-       FieldMatrix<D, 2, 2> invJacT = geo_.jacobianInverseTransposed(x);
-       //calculate Jacobian of affine map to triangle
-       invJacT.rightmultiply(inverseJacobianT_()[subtriangle]);
-
-
-       for (unsigned int i = 0; i < N; i++)
-       {
-         for (const auto& coeff : conversionCoeff_()[i][subtriangle])
-           {
-           //transform Jacobian and add to basis function
-             out[i] += scaling_[i]*coeff.factor*(invJacT[directions[0]][0]*bezierBasisValues[coeff.localBezierDofno][0][0]
-                                    +invJacT[directions[0]][1]*bezierBasisValues[coeff.localBezierDofno][0][1]);
-           }
-       }
-     }
        break;
      case 2:
      {
@@ -644,31 +599,29 @@ public:
 
        // The hessian of the shape functions on the reference element
        const int dim = 2;
-       std::vector<FieldMatrix<typename deVeubekeGlobalBasis::Traits::RangeField, dim, dim>> referenceHessians(bbBasis_.size());
+       std::vector<FieldMatrix<typename deVeubekeGlobalBasis::Traits::RangeField, dim, dim>> referenceHessians(N);
        for (int row = 0; row < dim; row++)
          for (int col = 0; col < dim; col++)
          {
            std::array<int, 2> Refdirections = { row, col };
            std::vector<typename deVeubekeGlobalBasis::Traits::Range> out;
-           bbBasis_.template evaluate<2>(Refdirections, bezierPos, out);
-
+           evaluateRaw(subtriangle, Refdirections, bezierPos, out);
            for (size_t i = 0; i < referenceHessians.size(); i++)
              referenceHessians[i][row][col] = out[i][0];
          }
 
+
+       std::cout << " x " << x << " bezierPos " << bezierPos << std::endl;
+       for (const auto& e : referenceHessians) std::cout << e << std::endl;
+       std::cout << std::endl;
+
        for (unsigned int k = 0; k < N; k++)
        {
          out[k] = 0;
-         FieldMatrix<typename deVeubekeGlobalBasis::Traits::RangeField, dim, dim> HessianRefcell;
-         for (const auto& coeff : conversionCoeff_()[k][subtriangle])
-         {
-           //calculate derivative on Refcell
-           HessianRefcell.axpy(scaling_[k]*coeff.factor, referenceHessians[coeff.localBezierDofno]);
-         }
          for (int i = 0; i < dim; i++)
            for (int j = 0; j < dim; j++)
              //add to basis function
-             {out[k] += invJacT[directions[0]][i]*HessianRefcell[i][j]*invJacT[directions[1]][j];
+             {out[k] += scaling_[k]*(invJacT[directions[0]][i]*referenceHessians[k][i][j]*invJacT[directions[1]][j]);
 //               std::cout << "+ " << inverseJacobianT_[subtriangle][directions[0]][i] << "*" << HessianRefcell[i][j] << "*" << inverseJacobianT_[subtriangle][directions[1]][j]<< std::endl;
              }
 
@@ -710,7 +663,6 @@ private:
 //  std::array<FieldMatrix<typename Traits::DomainFieldType, 2, 2>, 4> inverseJacobianT_;
 //  static ConversionMapType conversionCoeff_();
    std::array<D,N> scaling_;
-   BernsteinBezier32DLocalBasis<D,R> bbBasis_;
 public:
    const Geometry& geo_;
 
