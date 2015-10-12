@@ -140,6 +140,7 @@ void ImageFunction::convolveOriginal (unsigned int width)
     }
     else
     {
+/*
         width = 2*width + 1;
 
         // assemble mollifier
@@ -163,5 +164,7 @@ void ImageFunction::convolveOriginal (unsigned int width)
         // convolve image with mollifier
         imageSmooth_=image_;
         imageSmooth_.convolve(mollifier, 1, false);
+*/
+      imageSmooth_ = image_.get_blur(width+1);
     }
 }
