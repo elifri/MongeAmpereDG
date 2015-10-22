@@ -11,6 +11,7 @@
 # include <memory>
 
 #include <dune/geometry/quadraturerules.hh>
+#include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
 
 #include "Callback/Callback_utility.hpp"
 
@@ -77,14 +78,14 @@ double Integrator<GT>::assemble_integral_of_local_gridFunction(function_type &f,
 
     // Get a quadrature rule
     const QuadratureRule<double, Solver_config::dim>& quad =
-        QuadratureRules<double, Solver_config::dim>::rule(geometry.type(), quad_degree);
+        MacroQuadratureRules<double, Solver_config::dim>::rule(e.type(), quad_degree, Solver_config::quadratureType);
 
     // Loop over all quadrature points
     for (const auto& pt : quad) {
 
       f.bind(e);
       Solver_config::value_type f_value;
-      f_value = f(geometry.global(pt.position()));
+      f_value = f(pt.position());
 
         auto factor = pt.weight()*geometry.integrationElement(pt.position());
       res += f_value*factor;
