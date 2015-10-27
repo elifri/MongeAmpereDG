@@ -261,7 +261,7 @@ void InitEllipsoidMethod::evaluate(const Solver_config::DomainType& x, Solver_co
     u = method_.getEllipsoids().evaluate2d(x[0], x[1]);
 }
 
-Solver_config::RangeType InitEllipsoidMethod::evaluate(const Solver_config::DomainType& x)
+double InitEllipsoidMethod::evaluate(const Solver_config::DomainType& x)
 {
     return method_.getEllipsoids().evaluate2d(x[0], x[1]);
 }
