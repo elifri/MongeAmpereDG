@@ -1066,6 +1066,8 @@ void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_
 template<typename LocalOperatorType>
 void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_config::VectorType& x, Solver_config::VectorType& v, Solver_config::MatrixType& m) const
 {
+  Solver_config::VectorType boundary = Solver_config::VectorType::Zero(v.size());
+
     assert((unsigned int) x.size() == basis_->indexSet().size()+1);
 
     Solver_config::GridView gridView = basis_->gridView();
@@ -1078,6 +1080,8 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
 
     //get last equation
     v(v.size()-1) -= G;
+    std::cerr << "last coeff " << x(x.size()-1) << std::endl;
+
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
 //    const GridViewType::IndexSet& indexSet = gridView.indexSet();
@@ -1095,6 +1099,9 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
 
         Solver_config::VectorType local_vector;
         local_vector.setZero(localView.size());    // Set all entries to zero
+        Solver_config::VectorType local_boundary;
+        local_boundary.setZero(localView.size());    // Set all entries to zero
+
         Solver_config::DenseMatrixType m_m;
         m_m.setZero(localView.size(), localView.size());
 
@@ -1156,6 +1163,9 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
                 }
             } else*/ if (is.boundary()) {
                 // Boundary integration
+//              lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
+//                      local_boundary, 0);
+//              local_vector += local_boundary;
               lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
                       local_vector, 0);
                 assemble_jacobian_integral(localView, xLocal, m_m, 0);
@@ -1167,6 +1177,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
             }
 */        }
         add_local_coefficients(localIndexSet, local_vector, v);
+//        add_local_coefficients(localIndexSet, local_boundary, boundary);
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
 
         //add derivatives for scaling factor
@@ -1178,6 +1189,10 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
          JacobianEntries.push_back(EntryType(m.rows()-1, m.cols()-1,scaling_factor(localView.size())));
      }
      m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
+
+     std::cerr << " local boundary term " << boundary.norm()<< " whole norm " << v.norm() << std::endl;
+     std::cerr << " f " << v.transpose() << std::endl;
+
 }
 
 
