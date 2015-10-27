@@ -7,7 +7,7 @@ IF(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
    SET(CMAKE_BUILD_TYPE DEBUG)
 ENDIF(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
 
-SET(CMAKE_BUILD_TYPE RELEASE)
+SET(CMAKE_BUILD_TYPE DEBUG)
 
 
 # Select flags.
@@ -16,26 +16,28 @@ SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
 SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 SET(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g")
 
-
 SITE_NAME(MY_SITE)
 IF(MY_SITE STREQUAL "indigo7")
    message( "We are on ${MY_SITE}, use dogleg method." )
    SET(SNES_LIBRARY Dogleg)
    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_DOGLEG")
    SET(ADOLC_PATH $ENV{HOME}/lib/adolc)
+   unset(Boost_FOUND CACHE)
    find_package(Boost REQUIRED COMPONENTS program_options)
+   message("found boost ${Boost_LIBRARIES} in ${BOOST_INCLUDEDIR}")
    SET(BoostPO_LIBRARIES ${Boost_LIBRARIES})
 ELSE()
    SET(CMAKE_BUILD_TYPE DEBUG)
-   message( "We are on ${MY_SITE}, use petsc snes." )
-   SET(SNES_LIBRARY petsc)
-   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_PETSC")
+#   message( "We are on ${MY_SITE}, use petsc snes." )
+#   SET(SNES_LIBRARY petsc)
+#   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_PETSC")
+   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_DOGLEG")
+   message( "We are on ${MY_SITE}, use dogleg method." )
+   SET(SNES_LIBRARY Dogleg)
    SET(ADOLC_PATH $ENV{HOME}/lib/adolcRapunzel)
    SET(Boost_LIBRARIES boost_program_options)
    SET(BoostPO_LIBRARIES ${Boost_LIBRARIES})
 ENDIF()
-
-
 
 
 if(NOT (dune-common_DIR OR dune-common_ROOT OR
