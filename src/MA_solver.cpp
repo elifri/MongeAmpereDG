@@ -231,8 +231,8 @@ void MA_solver::create_initial_guess()
 //        solution[get_n_dofs_u()+ nDH*i+j] = (j == 0 || j ==3)? 1 : 0;
 //      }
 
-//  InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data("../inputData/ellipsoids.ini");
-//  project([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
+//  InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data(Solver_config::configFileEllipsoid);
+//  project_labouriousC1([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
 //  ellipsoidMethod.write_output();
 
 //    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
@@ -243,9 +243,24 @@ void MA_solver::create_initial_guess()
   assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
   assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
 
-  project_labourious([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, solution);
-//  TODO with discrete hessian not working
-//    project_with_discrete_Hessian([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);}, solution);
+//  Rectangular_mesh_interpolator rectangular_interpolatorDerX("../inputData/exactReflectorProjectionSimpleDerX.grid");
+//  Rectangular_mesh_interpolator rectangular_interpolatorDerY("../inputData/exactReflectorProjectionSimpleDerY.grid");
+
+//  assert(is_close(rectangular_interpolatorDerX.x_min, Solver_config::lowerLeft[0], 1e-12));
+//  assert(is_close(rectangular_interpolatorDerX.y_min, Solver_config::lowerLeft[1], 1e-12));
+//  assert(is_close(rectangular_interpolatorDerY.x_min, Solver_config::lowerLeft[0], 1e-12));
+//  assert(is_close(rectangular_interpolatorDerY.y_min, Solver_config::lowerLeft[1], 1e-12));
+//
+    project_labouriousC1([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);},solution);
+
+//  project_labouriousC1([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);},
+//                       [&rectangular_interpolatorDerX](Solver_config::SpaceType x){return rectangular_interpolatorDerX.evaluate(x);},
+//                       [&rectangular_interpolatorDerY](Solver_config::SpaceType x){return rectangular_interpolatorDerY.evaluate(x);}
+//                       ,solution);
+//  project_labouriousC1([](Solver_config::SpaceType x){return x.two_norm2()/2.0;},
+//                       [](Solver_config::SpaceType x){return x[0];},
+//                       [](Solver_config::SpaceType x){return x[1];},
+//                       solution);
 
 }
 
