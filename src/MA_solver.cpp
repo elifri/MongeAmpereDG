@@ -602,10 +602,17 @@ void MA_solver::solve_nonlinear_system()
   // Compute solution
   // /////////////////////////
 
+  Solver_config::VectorType newSolution = solution;
+
+//  int k = 0;
+//  do{
+//  std::cout << "before: new Solution " << newSolution.transpose() << std::endl;
+//  std::cout << "before: old solution " << solution_u.transpose() << std::endl;
+
 #ifdef USE_DOGLEG
 
-
   doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
+
 #endif
 #ifdef USE_PETSC
   igpm::processtimer timer;
@@ -621,8 +628,17 @@ void MA_solver::solve_nonlinear_system()
   int error = snes.solve(solution);
   timer.stop();
   std::cout << "needed " << timer << " seconds for nonlinear step, ended with error code " << error << std::endl;
-
 #endif
+//  update_solution(newSolution);
+////  std::cout << "new Solution" << newSolution.transpose() << std::endl;
+////  std::cout << " old solution " << solution_u.transpose() << std::endl;
+//
+//  k++;
+//  std::cout << " current difference " << (newSolution.segment(0,get_n_dofs_u()) - solution_u).norm() << std::endl;
+//
+//    }  while ((newSolution.segment(0,get_n_dofs_u()) - solution_u).norm() && k < 20);
+//
+//    std::cout << " needed " << k << " steps to adapt boundary conditions " << std::endl;
 
 //  op.evaluate(solution, f, solution, false);
 //
@@ -631,7 +647,6 @@ void MA_solver::solve_nonlinear_system()
 
   std::cout << "scaling factor " << solution(solution.size()-1) << endl;
 
-//  std::cout << "x " << solution.transpose() << endl;
   }
 
 bool MA_solver::solve_nonlinear_step(const MA_solver::Operator &op)
