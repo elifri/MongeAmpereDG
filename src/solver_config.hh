@@ -128,8 +128,10 @@ struct Solver_config{
 
 
 	typedef Functions::MAMixedBasis<GridView, degree, degreeHessian> FEBasis;
-  typedef FEBasis::Basisu FEuBasis;
-  typedef FEBasis::BasisuDH FEuDHBasis;
+//  typedef FEBasis::Basisu FEuBasis;
+	typedef Functions::PQkNodalBasis<GridView, degree> FEuBasis;
+	//  typedef FEBasis::BasisuDH FEuDHBasis;
+  typedef Functions::LagrangeDGBasis<GridView, degreeHessian> FEuDHBasis;
 
 
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasis,VectorType> DiscreteGridFunction;

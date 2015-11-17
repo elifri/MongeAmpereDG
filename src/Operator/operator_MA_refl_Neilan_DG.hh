@@ -134,8 +134,8 @@ public:
 
     //assuming galerkin ansatz = test space
 
-    assert(x.size() == localView.size());
-    assert(v.size() == localView.size());
+    assert(x.size() == (int) localView.size());
+    assert(v.size() == (int) localView.size());
 
     // Get set of shape functions for this element
     const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
@@ -369,10 +369,10 @@ public:
     const int dimw = IntersectionType::dimensionworld;
 
     //assuming galerkin
-    assert(x.size() == localView.size());
-    assert(xn.size() == localViewn.size());
-    assert(v.size() == localView.size());
-    assert(vn.size() == localViewn.size());
+    assert(x.size() == (int) localView.size());
+    assert(xn.size() == (int) localViewn.size());
+    assert(v.size() == (int) localView.size());
+    assert(vn.size() == (int) localViewn.size());
 
     const int size = localView.size();
 
@@ -393,11 +393,11 @@ public:
     typedef FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
     typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType RangeTypeDH;
 
-    const int size_u = localFiniteElementu.size();
-    const int size_u_DH = localFiniteElementuDH.size();
+    const unsigned int size_u = localFiniteElementu.size();
+    const unsigned int size_u_DH = localFiniteElementuDH.size();
 
-    assert(size_u == localFiniteElementun.size());
-    assert(size_u_DH == localFiniteElementuDHn.size());
+    assert(size_u ==  localFiniteElementun.size());
+    assert(size_u_DH ==  localFiniteElementuDHn.size());
 
     // Get a quadrature rule
     const int order = std::max(1,
@@ -494,7 +494,7 @@ public:
           quad[pt].position());
       double factor = quad[pt].weight() * integrationElement;
 
-      for (int j = 0; j < size_u; j++) {
+      for (unsigned int j = 0; j < size_u; j++) {
 //        //parts from self
 //        // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
         v_adolc(j) += penalty_weight * u_jump * referenceFunctionValues[j] * factor;
@@ -512,7 +512,7 @@ public:
             * (-grad_times_normal) * factor;
       }
 
-      for (int j = 0; j < size_u_DH; j++) // loop over test fcts
+      for (unsigned int j = 0; j < size_u_DH; j++) // loop over test fcts
       {
         for (int row = 0; row < dim; row++)
           for (int col = 0; col < dim; col++)
@@ -560,8 +560,8 @@ public:
     const int dimw = Intersection::dimensionworld;
 
     //assuming galerkin
-    assert(x.size() == localView.size());
-    assert(v.size() == localView.size());
+    assert(x.size() == (int) localView.size());
+    assert(v.size() == (int) localView.size());
 
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;

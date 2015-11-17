@@ -17,7 +17,7 @@
 #include <Eigen/Dense>
 
 #include <dune/functions/functionspacebases/interpolate.hh>
-
+#include <dune/functions/functionspacebases/hierarchicvectorwrapper.hh>
 
 //#include "operator_poisson_DG.hh"
 #include "Assembler.hh"
@@ -383,35 +383,32 @@ private:
  * \param bitVector A vector with flags marking ald DOFs that should be interpolated
  */
 template <class B, class C, class F, class BV>
-void interpolateSecondDerivative(const B& basis, C& coeff, F&& f, BV&& bitVector)
+void interpolateSecondDerivative(const B& basis, C& coeff, F&& f, BV&& bv)
 {
+  auto treePath = Dune::TypeTree::hybridTreePath();
+  auto nodeToRangeEntry = makeDefaultNodeToRangeMap(basis, treePath);
+
   using GridView = typename B::GridView;
   using Element = typename GridView::template Codim<0>::Entity;
 
-  using FiniteElement = typename B::LocalView::Tree::FiniteElement;
-
-  using LocalBasisRange = typename FiniteElement::Traits::LocalBasisType::Traits::RangeType;
+  using Tree = typename std::decay<decltype(TypeTree::child(basis.localView().tree(),treePath))>::type;
 
   using GlobalDomain = typename Element::Geometry::GlobalCoordinate;
-
-  using CoefficientBlock = typename std::decay<decltype(coeff[0])>::type;
-  using BitVectorBlock = typename std::decay<decltype(bitVector[0])>::type;
 
   static_assert(Dune::Functions::Concept::isCallable<F, GlobalDomain>(), "Function passed to interpolate does not model the Callable<GlobalCoordinate> concept");
 
   auto&& gridView = basis.gridView();
 
-
   auto basisIndexSet = basis.indexSet();
   coeff.resize(basisIndexSet.size());
 
-  auto processed = Dune::BitSetVector<1>(basisIndexSet.size(), false);
-  auto interpolationValues = std::vector<LocalBasisRange>();
+
+  auto&& bitVector = Dune::Functions::makeHierarchicVectorForMultiIndex<typename B::MultiIndex>(bv);
+  auto&& vector = Dune::Functions::makeHierarchicVectorForMultiIndex<typename B::MultiIndex>(coeff);
+  vector.resize(sizeInfo(basis));
 
   auto localView = basis.localView();
   auto localIndexSet = basisIndexSet.localIndexSet();
-
-  auto blockSize = Functions::Imp::FlatIndexContainerAccess<CoefficientBlock>::size(coeff[0]);
 
   for (const auto& e : elements(gridView))
   {
@@ -419,50 +416,11 @@ void interpolateSecondDerivative(const B& basis, C& coeff, F&& f, BV&& bitVector
     localIndexSet.bind(localView);
     f.bind(e);
 
-    const auto& fe = localView.tree().finiteElement();
+    auto&& subTree = TypeTree::child(localView.tree(),treePath);
 
-    // check if all components have already been processed
-    bool allProcessed = true;
-    for (size_t i=0; i<fe.localBasis().size(); ++i)
-    {
-      // if index was already processed we don't need to do further checks
-      auto index = localIndexSet.index(i)[0];
-      if (processed[index][0])
-        continue;
+    Functions::Imp::LocalInterpolateVisitor<B, Tree, decltype(nodeToRangeEntry), decltype(vector), decltype(f), decltype(bitVector)> localInterpolateVisitor(basis, vector, bitVector, f, localIndexSet, nodeToRangeEntry);
+    TypeTree::applyToTree(subTree,localInterpolateVisitor);
 
-      // if index was not processed, check if any entry is marked for interpolation
-      auto&& bitVectorBlock = bitVector[index];
-      for(int k=0; k<blockSize; ++k)
-      {
-        if (Functions::Imp::FlatIndexContainerAccess<BitVectorBlock>::getEntry(bitVectorBlock,k))
-        {
-          allProcessed = false;
-          break;
-        }
-      }
-    }
-    int j=0;
-    if (not(allProcessed))
-    {
-      // We loop over j defined above and thus over the components of the
-      // range type of localF.
-      for(j=0; j<blockSize; ++j)
-      {
-
-        // We cannot use localFj directly because interpolate requires a Dune::VirtualFunction like interface
-        fe.localInterpolation().interpolate(f, interpolationValues);
-        for (size_t i=0; i<fe.localBasis().size(); ++i)
-        {
-          size_t index = localIndexSet.index(i)[0];
-          auto interpolateHere = Functions::Imp::FlatIndexContainerAccess<BitVectorBlock>::getEntry(bitVector[index],j);
-
-          if (not(processed[index][0]) and interpolateHere)
-            Functions::Imp::FlatIndexContainerAccess<CoefficientBlock>::setEntry(coeff[index], j, interpolationValues[i]);
-        }
-      }
-      for (size_t i=0; i<fe.localBasis().size(); ++i)
-        processed[localIndexSet.index(i)[0]][0] = true;
-    }
   }
 }
 
