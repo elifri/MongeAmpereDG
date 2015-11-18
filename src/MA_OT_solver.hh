@@ -281,6 +281,8 @@ private:
 
 	void phi(const Solver_config::SpaceType2d& T, const FieldVector<double, Solver_config::dim> &normal, Solver_config::value_type &phi);
 
+	template<typename FGrad>
+	double calculate_L2_errorOT(const FGrad &f) const;
 
 public:
   ///calculate the projection of phi for the Picard Iteration for the b.c.
@@ -346,7 +348,6 @@ private:
   double G;
 
   Operator op;
-
 
   //store old solutions and coefficients
 	mutable VectorType solution; /// stores the current solution vector
@@ -535,5 +536,46 @@ void MA_OT_solver::project_labourious(const F f, VectorType& v) const
   std::cout << "projected on vector " << std::endl << v.transpose() << std::endl;
 }*/
 
+template<typename FGrad>
+double MA_OT_solver::calculate_L2_errorOT(const FGrad &f) const
+{
+  double res = 0, max_error = 0;
 
+  for(auto&& e: elements(*gridView_ptr))
+  {
+    auto geometry = e.geometry();
+
+    gradient_u_old->bind(e);
+
+    // Get a quadrature rule
+    int order = std::max(1, 3 * gradient_u_old->localOrder());
+    const QuadratureRule<double, Solver_config::dim>& quad =
+        MacroQuadratureRules<double, Solver_config::dim>::rule(e.type(), order, Solver_config::quadratureType);
+
+    // Loop over all quadrature points
+    for (const auto& pt : quad) {
+
+      // Position of the current quadrature point in the reference element
+      const FieldVector<double, Solver_config::dim> &quadPos = pt.position();
+
+      auto u_value = (*gradient_u_old)(quadPos);
+
+      decltype(u_value) f_value;
+      f_value = f(geometry.global(pt.position()));
+
+      auto factor = pt.weight()*geometry.integrationElement(pt.position());
+
+      res += (u_value - f_value).two_norm2()*factor;
+      if ((u_value-f_value).two_norm() > max_error)
+      {
+        max_error = (u_value-f_value).two_norm();
+        std::cerr << "found greater error at " << geometry.global(pt.position()) << ", namely " << max_error << std::endl;
+      }
+//      cout << "res = " << res << "u_ value " << u_value << " f_value " << f_value << std::endl;
+    }
+  }
+  std::cout << " Maximal L2error found in gradient is " << max_error << std::endl;
+
+  return std::sqrt(res);
+}
 #endif /* SRC_MA_OT_solver_HH_ */
