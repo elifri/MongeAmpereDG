@@ -13,7 +13,7 @@
 #include "../utils.hpp"
 #include "../solver_config.hh"
 
-#include "../problem_data.hh"
+#include "../problem_data_OT.hh"
 
 //automatic differtiation
 #include <adolc/adouble.h>
@@ -21,112 +21,6 @@
 #include <cmath>
 
 using namespace Dune;
-
-class OTBoundary
-{
-private:
-  ///find the projection on the desired boundary
-  void phi(const Solver_config::SpaceType2d& T, const FieldVector<double, Solver_config::dim> &normal, Solver_config::value_type &phi) const
-  {
-    Solver_config::value_type x_min = std::min(T[0]-Solver_config::lowerLeftTarget[0], Solver_config::upperRightTarget[0] - T[0]);
-    Solver_config::value_type y_min = std::min(T[1]-Solver_config::lowerLeftTarget[1], Solver_config::upperRightTarget[1] - T[1]);
-
-    Solver_config::SpaceType2d T_proj = T;
-    if (x_min < y_min)
-      T_proj[0] = T[0]-Solver_config::lowerLeftTarget[0] < Solver_config::upperRightTarget[0] - T[0] ?  Solver_config::lowerLeftTarget[0] : Solver_config::upperRightTarget[0];
-    else
-      T_proj[1] = T[1]-Solver_config::lowerLeftTarget[1] < Solver_config::upperRightTarget[1] - T[1] ?  Solver_config::lowerLeftTarget[1] : Solver_config::upperRightTarget[1];
-    phi = T_proj * normal;
-  }
-
-public:
-  typedef std::shared_ptr<Solver_config::DiscreteLocalGradientGridFunction> GradFunction_ptr;
-
-  OTBoundary(GradFunction_ptr &gradUOld) : gradient_u_old(&gradUOld) {}
-
-  ///return the projection of the last iteration's solution (onto the desired boundary)
-  template<class Element>
-  Solver_config::value_type phi(const Element& element, const Solver_config::DomainType& xLocal, const FieldVector<double, Solver_config::dim> &normal) const
-  {
-    //get last step's gradient
-    assert(gradient_u_old != NULL);
-    (*gradient_u_old)->bind(element);
-
-    Solver_config::SpaceType2d gradu = (**gradient_u_old)(xLocal);
-
-    //find projection
-    Solver_config::value_type phi_value;
-    phi(gradu, normal, phi_value);
-    return phi_value;
-  }
-
-private:
-  mutable GradFunction_ptr* gradient_u_old;
-};
-
-class DensityFunction
-{
-public:
-    virtual void evaluate (const FieldVector<adouble, Solver_config::dim> &x, adouble &u) const = 0;
-    virtual void evaluate (const Solver_config::SpaceType &x, Solver_config::value_type&u) const = 0;
-};
-
-class rhoXSquareToSquare : public DensityFunction
-{
-public:
-  void evaluate (const Solver_config::DomainType &x, Solver_config::value_type &u) const
-  {
-    u = 1.+4.*(q_div2(x[0])*q(x[1])+q(x[0])*q_div2(x[1])) +16.*(q(x[0])*q(x[1])*q_div2(x[0])*q_div2(x[1]) - sqr(q_div(x[0]))*sqr(q_div(x[1])) );
-//    std::cout << " 1 + 4*" << (q_div2(x[0])*q(x[1])+q(x[0])*q_div2(x[1])) << " +16*" << (q(x[0])*q(x[1])*q_div2(x[0])*q_div2(x[1]) - sqr(q_div(x[0]))*sqr(q_div(x[1])) ) << std::endl;
-//    std::cout << "q_div2(x[0])*q(x[1]) " <<q_div2(x[0])*q(x[1]) << std::endl;
-  }
-  void evaluate (const FieldVector<adouble, Solver_config::dim> &x, adouble &u) const
-  {
-    u = 1.+4.*(q_div2(x[0])*q(x[1])+q(x[0])*q_div2(x[1])) +16.*(q(x[0])*q(x[1])*q_div2(x[0])*q_div2(x[1]) - sqr(q_div(x[0]))*sqr(q_div(x[1])) );
-  }
-
-public :
-  static Solver_config::value_type q(const Solver_config::value_type& z)
-  {
-    return (-1./8./M_PI*z*z+1./256./M_PI/M_PI/M_PI +1./32./M_PI)* std::cos(8.*M_PI*z)
-            + 1./32./M_PI/M_PI*z*std::sin(8.*M_PI*z);
-  }
-  static Solver_config::value_type q_div(const Solver_config::value_type& z)
-  {
-    return (z*z-0.25)*std::sin(8.*M_PI*z);
-  }
-  static Solver_config::value_type q_div2(const Solver_config::value_type& z)
-  {
-    return 8.*M_PI*std::cos(8.*M_PI*z)*z*z-2.*M_PI*std::cos(8.*M_PI*z)+2*z*std::sin(8.*M_PI*z);
-  }
-
-  static adouble q(const adouble& z)
-  {
-    return (-1./8./M_PI*z*z+1./256./M_PI/M_PI/M_PI +1./32./M_PI)* cos(8.*M_PI*z)
-            + 1./32./M_PI/M_PI*z*sin(8.*M_PI*z);
-  }
-  static adouble q_div(const adouble& z)
-  {
-    return (z*z-0.25)*sin(8.*M_PI*z);
-  }
-  static adouble q_div2(const adouble& z)
-  {
-    return 8.*M_PI*cos(8.*M_PI*z)*z*z-2.*M_PI*cos(8.*M_PI*z)+2*z*sin(8.*M_PI*z);
-  }
-};
-
-class rhoYSquareToSquare : public DensityFunction
-{
-public:
-  void evaluate (const Solver_config::DomainType &x, Solver_config::value_type &u) const
-  {
-    u = 1;
-  }
-  void evaluate (const FieldVector<adouble, Solver_config::dim> &x, adouble &u) const
-  {
-    u = 1;
-  }
-};
 
 template <class value_type>
 inline
@@ -161,8 +55,8 @@ class Local_Operator_MA_OT {
 public:
   typedef DensityFunction Function;
 
-  Local_Operator_MA_OT(OTBoundary::GradFunction_ptr &gradUOld, const Function* rhoX, const Function* rhoY):
-    rhoX(*rhoX), rhoY(*rhoY),bc(gradUOld)
+  Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
+    rhoX(*rhoX), rhoY(*rhoY),bc(*bc)
   {
     std::cout << " created Local Operator" << endl;
     int_f = 0;
@@ -172,6 +66,7 @@ public:
   {
     delete &rhoX;
     delete &rhoY;
+    delete &bc;
   }
 
 
@@ -296,8 +191,8 @@ public:
       adouble uDH_det = determinant(uDH);
 
       //calculate value at transported point
-//      adouble g_value;
-//      rhoY.evaluate(gradu, g_value);
+      adouble g_value;
+      rhoY.evaluate(gradu, g_value);
 
       std::cerr << std::setprecision(15);
 
@@ -309,7 +204,7 @@ public:
 
 //      std::cerr << "hessian [[" << Hessu[0][0].value() << ", " << Hessu[1][0].value() << "], [" << Hessu[0][1].value() << ", " << Hessu[1][1].value() << "]]" <<  std::endl;
 
-      adouble PDE_rhs = f_value;// / g_value ;
+      adouble PDE_rhs = f_value / g_value ;
 
       ///multiply by term for boundary integration
       PDE_rhs *= scaling_factor_adolc;
@@ -653,7 +548,7 @@ public:
   const Function& rhoX;
   const Function& rhoY;
 
-  OTBoundary bc;
+  const OTBoundary& bc;
 
 public:
   mutable double int_f;
