@@ -625,7 +625,7 @@ public:
   size_type flat_index(MultiIndex mi) const
   {
       if (mi[0] == 0) return mi[1];
-      return uNodeIndexSet_.size()+mi[1];
+      return nodeFactory_->uFactory_.size()+mi[1];
   }
   size_type flat_index(size_type localIndex) const
   {
