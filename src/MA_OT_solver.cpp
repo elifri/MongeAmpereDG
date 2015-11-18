@@ -75,11 +75,12 @@ void MA_OT_solver::plot(std::string name) const
   if (writeVTK_)
   {
     std::cout << "plot written into ";
+    const int nDH = Solver_config::dim*Solver_config::dim;
 
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
      //build gridviewfunction
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
+     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,solution_u);
      auto localnumericalSolution = localFunction(numericalSolution);
 
      //build writer
@@ -103,8 +104,25 @@ void MA_OT_solver::plot(std::string name) const
      auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
      vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
 
+     //extract hessian (3 entries (because symmetry))
+     typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
+     DerivativeVectorType derivativeSolution(uDHBasis->indexSet().size());
 
-//     std::cout << "solution " << solution_u.transpose() << std::endl;
+     //extract dofs
+     for (int i=0; i<derivativeSolution.size(); i++)
+       for (int j=0; j< nDH; j++)
+       {
+         if (j == 2) continue;
+         int index_j = j > 2? 2 : j;
+         derivativeSolution[i][index_j] = solution[get_n_dofs_u()+ nDH*i+j];
+       }
+
+     //build gridview function
+     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
+     auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
+
+     vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("DiscreteHessian", VTK::FieldInfo::Type::vector, 3));
+
 
      //write to file
      std::string fname(plotter.get_output_directory());
@@ -128,16 +146,12 @@ void MA_OT_solver::create_initial_guess()
 
 //  vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
 
-    project_labouriousC1([](Solver_config::SpaceType x){return x.two_norm2()/2.0;},
+    project([](Solver_config::SpaceType x){return x.two_norm2()/2.0;},
 //  project_labouriousC1([](Solver_config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
 //                        [](Solver_config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},
 //                        [](Solver_config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
                         solution);
 
-
-//  project_labouriousC1([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
-//  solution = VectorType::Zero(get_n_dofs());
-//  solution = exactsol_projection;
 }
 
 const typename MA_OT_solver::VectorType& MA_OT_solver::solve()
@@ -211,7 +225,7 @@ void MA_OT_solver::update_solution(const Solver_config::VectorType& newSolution)
 //  std::cout << "solution " << solution_u.transpose() << std::endl;
 
   //build gridviewfunction
-  solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*FEBasis,solution_u));
+  solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));
   solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
   gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
 
@@ -223,24 +237,29 @@ void MA_OT_solver::adapt_solution(const int level)
   assert(initialised);
   assert(level == 1);
 
-  auto localViewOld = FEBasis->localView();
+  //gives any element a unique id (preserved by refinement),
+  const GridType::Traits::GlobalIdSet&  idSet = grid_ptr->globalIdSet();
+
+  auto localView = FEBasis->localView();
+  auto localIndexSet = FEBasis->indexSet().localIndexSet();
+
+  typedef GridType::Traits::GlobalIdSet::IdType IdType;
+
+  //map to store grid attached data during the refinement process
+  std::map<IdType, VectorType>  preserveSolution;
 
   //mark elements for refinement
   for (auto&& element : elements(*gridView_ptr))
   {
-//    localViewOld.bind(element);
-//    solution_u_old->bind(element);
-//    gradient_u_old->bind(element);
-//
-//
-//    for (int i = 0; i < element.geometry().corners(); i++) { //loop over nodes
-//      const auto x = element.geometry().local(element.geometry().corner(i));
-//      std::cout << "value " << (*solution_u_old)(x) << " at " << element.geometry().corner(i) << std::endl;
-//      std::cout << " gradient at the same " << (*gradient_u_old)(x) << std::endl;
-//    }
+    // Bind the local FE basis view to the current element
+    localView.bind(element);
+    localIndexSet.bind(localView);
 
     //mark element for refining
     grid_ptr->mark(1,element);
+
+    //store local dofs
+    preserveSolution[idSet.id(element)]  = assembler.calculate_local_coefficients(localIndexSet, solution);
   }
   double scaling_factor = solution(solution.size()-1);
 
@@ -249,166 +268,120 @@ void MA_OT_solver::adapt_solution(const int level)
   //adapt grid
   bool marked = grid_ptr->preAdapt();
   assert(marked == false);
-  _unused(marked);// mark the variable as unused in non-debug mode
   grid_ptr->adapt();
   count_refined += level;
 
   std::cout << "new element count " << gridView_ptr->size(0) << std::endl;
 
   //update member
-
-  //we need do store the old basis as the (father) finite element depends on the basis
-  std::shared_ptr<FEBasisType> FEBasisOld (FEBasis);
-
   FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
+  uBasis = std::shared_ptr<FEuBasisType> (new FEuBasisType(*gridView_ptr));
+  uDHBasis = std::shared_ptr<FEuDHBasisType> (new FEuDHBasisType(*gridView_ptr));
   assembler.bind(*FEBasis);
 
-  solution.setZero(get_n_dofs());
+  auto localViewRef = FEBasis->localView();
+  auto localIndexSetRef = FEBasis->indexSet().localIndexSet();
 
-  auto localView = FEBasis->localView();
-  auto localIndexSet = FEBasis->indexSet().localIndexSet();
+  //init vector v
+  solution.resize(get_n_dofs());
 
-  //loop over elements (in refined grid)
-  for (auto&& element : elements(*gridView_ptr)) {
+  Solver_config::LocalFiniteElementuType localFiniteElementu;
+  Solver_config::LocalFiniteElementHessianSingleType localFiniteElementuDH;
 
-    const auto father = element.father();
+  //calculate refinement matrices
 
-    localView.bind(element);
-    localIndexSet.bind(localView);
+  //local refined mass matrix m_ij = \int mu_child_i * mu_j
+  std::vector<DenseMatrixType> localrefinementMatrices(Solver_config::childdim);
+  assembler.calculate_refined_local_mass_matrix_ansatz(localFiniteElementu, localrefinementMatrices);
+  //local mass matrix m_ij = \int mu_i * mu_j
+  DenseMatrixType localMassMatrix;
+  assembler.calculate_local_mass_matrix_ansatz(localFiniteElementu, localMassMatrix);
 
-    solution_u_old->bind(father);
-    gradient_u_old->bind(father);
+  //everything for the hessian ansatz function as well
+  //local refined mass matrix m_ij = \int mu_child_i * mu_j
+  std::vector<DenseMatrixType> localrefinementMatrices_DH(Solver_config::childdim);
+  assembler.calculate_refined_local_mass_matrix_ansatz(localFiniteElementuDH, localrefinementMatrices_DH);
+  //local mass matrix m_ij = \int mu_i * mu_j
+  DenseMatrixType localMassMatrix_DH;
+  assembler.calculate_local_mass_matrix_ansatz(localFiniteElementuDH, localMassMatrix_DH);
 
-    const auto & lFE = localView.tree().finiteElement();
-    const auto& geometry = element.geometry();
+  const int nDH = Solver_config::dim*Solver_config::dim;
+  const int size_u = localFiniteElementu.size();
+  const int size_u_DH = localFiniteElementuDH.size();
+  const int size = size_u +  nDH*size_u_DH;
 
-    VectorType localDofs = VectorType::Zero(lFE.size());
+  //since we are going to calculate the refinement for all children when encountering one of them
+  // we need to store wich data already is refined
+  Dune::LeafMultipleCodimMultipleGeomTypeMapper <GridType,Dune::MCMGElementLayout > mapper(*grid_ptr);
+  std::vector<bool> already_refined (mapper.size());
+  std::fill(already_refined.begin(), already_refined.end(), false);
 
-    for (int i = 0; i < geometry.corners(); i++) { //loop over nodes
-      const auto x = father.geometry().local(geometry.corner(i));
-//      std::cout << "local coordinate " << x << std::endl;
-
-      auto value = (*solution_u_old)(x);
-//      std::cout << "value " << value << " at " << geometry.corner(i) << std::endl;
-      //set dofs associated with values at vertices
-      assert(lFE.localCoefficients().localKey(i).subEntity() == i);
-      localDofs(i) = value;
-
-
-      const auto gradient = (*gradient_u_old)(x);
-//      std::cout << " gradient at the same " << gradient << std::endl;
-      localDofs(geometry.corners() + 2 * i) = gradient[0];
-
-      localDofs(geometry.corners() + 2 * i + 1) = gradient[1];
-    }
-
-    for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
+  //calculate new dof vector
+  for (auto&& element : elements(*gridView_ptr))
+  {
+    if (element.isNew())
     {
-      const int i = is.indexInInside();
+      //check if data was already calculated
+      if (already_refined[mapper.index(element)]) continue;
 
-      // normal of center in face's reference element
-      const FieldVector<double, Solver_config::dim> normal =
-            is.centerUnitOuterNormal();
+      //get old dof vector
+      const auto& father = element.father();
 
-      const auto face_center = is.geometry().center();
-      //set dofs according to global normal direction
+      VectorType x_local = preserveSolution[idSet.id(father)];
 
-      localDofs(3 * geometry.corners() + i) = (normal[0]+normal[1] < 0) ? - ((*gradient_u_old)(father.geometry().local(face_center)) * normal) : (*gradient_u_old)(father.geometry().local(face_center)) * normal;
-      assert(lFE.localCoefficients().localKey(3*geometry.corners()+i).subEntity() == i);
-      }
-
-      assembler.set_local_coefficients(localIndexSet, localDofs, solution);
-    }
-
-  //set scaling factor (last dof) to ensure mass conservation
-  solution(solution.size()-1)= scaling_factor;
-
-#define NDEBUG
-#ifdef DEBUG
-  std::cout << "refinement :" << std::endl;
-
-  for (auto&& element : elements(*gridView_ptr)) {
-
-    localView.bind(element);
-    localIndexSet.bind(localView);
-
-    const auto & lFE = localView.tree().finiteElement();
-    const auto& geometry = element.geometry();
-
-    VectorType localDofs = assembler.calculate_local_coefficients(localIndexSet, solution);
-
-    // Get a quadrature rule
-    const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
-    const QuadratureRule<double, Solver_config::dim>& quad =
-        MacroQuadratureRules<double, Solver_config::dim>::rule(element.type(),
-            order, Solver_config::quadratureType);
-
-    double resTest1f = 0, resTest1 = 0;
-
-    for (int i = 0; i < geometry.corners(); i++) {
-      //evaluate test function
-      std::vector<Dune::FieldVector<double, 1>> functionValues(
-          localView.size());
-      lFE.localBasis().evaluateFunction(geometry.local(geometry.corner(i)),
-          functionValues);
-
-      double res = 0;
-      for (int j = 0; j < localDofs.size(); j++) {
-        res += localDofs(j) * functionValues[j];
-      }
-      solution_u_old->bind(element.father());
-      std::cout << "approx(corner " << i << ")="<< res
-          << " f(corner " << i << ")= " << (*solution_u_old)(element.father().geometry().local(geometry.corner(i)))<< std::endl;
-
-      //evaluate jacobian at node
-      std::vector<Dune::FieldMatrix<double, 1, 2>> JacobianValues(
-          localView.size());
-      lFE.localBasis().evaluateJacobian(geometry.local(geometry.corner(i)),
-          JacobianValues);
-
-      Dune::FieldVector<double, 2> jacApprox;
-      for (int j = 0; j < localDofs.size(); j++) {
-        jacApprox.axpy(localDofs(j), JacobianValues[j][0]);
-      }
-
-      gradient_u_old->bind(element.father());
-      std::cout << "approx'(corner " << i << ")=" << (*gradient_u_old)(element.father().geometry().local(geometry.corner(i)))
-          << "  approx = " << jacApprox << std::endl;
-
-      for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
+      //calculate new dof vector for every child
+      int i = 0;
+      for (auto&& child : descendantElements(father, count_refined))
       {
-        //evaluate jacobian at edge mid
-        std::vector<Dune::FieldMatrix<double, 1, 2>> JacobianValues(
-            localView.size());
-        lFE.localBasis().evaluateJacobian(geometry.local(is.geometry().center()),
-            JacobianValues);
+          //bind to child
+        localViewRef.bind(child);
+        localIndexSetRef.bind(localViewRef);
 
-        Dune::FieldVector<double, 2> jacApprox;
-        for (int j = 0; j < localDofs.size(); j++) {
-          jacApprox.axpy(localDofs(j), JacobianValues[j][0]);
+        VectorType x_adapt(size);
+
+        //local rhs = \int v_adapt*test = refinementmatrix*v
+        VectorType localVector = localrefinementMatrices[i]*x_local.segment(0,size_u);
+        x_adapt.segment(0,size_u) =  localMassMatrix.ldlt().solve(localVector);
+
+        //same for hessian (now done seperately for every entry)
+        std::vector<VectorType> localVectorDH(nDH);
+        for (int j = 0; j < nDH; j++)
+        {
+          //extract dofs for one hessian entry
+          VectorType xlocalDH(size_u_DH);
+          for (int k = 0; k < size_u_DH; k++)
+            xlocalDH(k) = x_local(size_u+j +nDH*k);
+
+          localVectorDH[j] = localrefinementMatrices_DH[i]*xlocalDH;
+
+          xlocalDH =  localMassMatrix_DH.ldlt().solve(localVectorDH[j]);
+
+          //write dofs to combined hessian
+          for (int k = 0; k < size_u_DH; k++)
+            x_adapt(size_u+j +nDH*k) = xlocalDH(k);
         }
 
-        const int i = is.indexInInside();
+        //set new dof vectors
+        assembler.set_local_coefficients(localIndexSetRef, x_adapt, solution);
 
-        // normal of center in face's reference element
-        const FieldVector<double, Solver_config::dim> normal =
-              is.centerUnitOuterNormal();
+        //mark element as refined
+        already_refined[mapper.index(child)] = true;
 
-        const auto face_center = is.geometry().center();
-        std::cout << " f (face center " << i  << " )= ";
-        if (normal[0]+normal[1] < 0 )
-          std::cout << -((*gradient_u_old)(element.father().geometry().local(face_center)) * normal);
-        else
-          std::cout << (*gradient_u_old)(element.father().geometry().local(face_center)) * normal;
-        std::cout << " approx (face center " << i  << " )= " << jacApprox*normal;
-        std::cout << " global dof no " << localIndexSet.index(12+i) << " has value " << solution[localIndexSet.index(12+i)] << std::endl;
-        }
-
+        i++;
+      }
     }
+    else //element was not refined
+    {
+      //bind to child
+      localViewRef.bind(element);
+      localIndexSetRef.bind(localViewRef);
+
+      IdType id = idSet.id(element);
+      assembler.set_local_coefficients(localIndexSetRef, preserveSolution[id], solution);
+    }
+
   }
-#endif
-
-
+  solution(solution.size()-1)= scaling_factor;
   //reset adaption flags
   grid_ptr->postAdapt();
 }

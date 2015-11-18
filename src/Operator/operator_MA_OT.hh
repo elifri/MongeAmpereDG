@@ -199,23 +199,30 @@ public:
     assert((unsigned int) v.size() == localView.size());
 
     // Get set of shape functions for this element
-    const auto& localFiniteElement = localView.tree().finiteElement();
+    const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
+    const auto& localFiniteElementuDH_entry = localView.tree().template child<1>().child(0).finiteElement();
 
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    typedef decltype(localFiniteElementu) ConstElementuRefType;
+    typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
+    typedef decltype(localFiniteElementuDH_entry) ConstElementuDHRefType;
+    typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
+
+    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
     typedef typename Dune::FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
     typedef typename Dune::FieldMatrix<Solver_config::value_type, Element::dimension, Element::dimension> FEHessianType;
+    typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType HessianType;
 
+    const int size_u = localFiniteElementu.size();
+    const int size_u_DH = localFiniteElementuDH_entry.size();
     const int size = localView.size();
 
 
     // Get a quadrature rule
     int order = std::max(0,
-        3 * ((int) localFiniteElement.localBasis().order()));
+        3 * ((int) localFiniteElementu.localBasis().order()));
     const QuadratureRule<double, dim>& quad =
-        MacroQuadratureRules<double, dim>::rule(element.type(), order, Solver_config::quadratureType);
+        QuadratureRules<double, dim>::rule(geometry.type(), order);
 
     //init variables for automatic differentiation
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
@@ -245,22 +252,34 @@ public:
       const double integrationElement = geometry.integrationElement(quadPos);
 
       //the shape function values
-      std::vector<RangeType> referenceFunctionValues(size);
+      std::vector<RangeType> referenceFunctionValues(size_u);
       adouble u_value = 0;
-      assemble_functionValues_u(localFiniteElement, quadPos,
-          referenceFunctionValues, x_adolc, u_value);
+      assemble_functionValues_u(localFiniteElementu, quadPos,
+          referenceFunctionValues, x_adolc.segment(0,size_u), u_value);
 
       // The gradients
-      std::vector<JacobianType> gradients(size);
+      std::vector<JacobianType> gradients(size_u);
       FieldVector<adouble, Solver_config::dim> gradu;
-      assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
-          gradients, x_adolc, gradu);
+      assemble_gradients_gradu(localFiniteElementu, jacobian, quadPos,
+          gradients, x_adolc.segment(0,size_u), gradu);
 
       // The hessian of the shape functions
-      std::vector<FEHessianType> Hessians(size);
+      std::vector<FEHessianType> Hessians(size_u);
       FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> Hessu;
-      assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
-          x_adolc, Hessu);
+      assemble_hessians_hessu(localFiniteElementu, jacobian, quadPos, Hessians,
+          x_adolc.segment(0,size_u), Hessu);
+
+      //the shape function values of hessian ansatz functions and assemble u_DH
+      std::vector<HessianType> referenceFunctionValuesHessian(size_u_DH);
+      localFiniteElementuDH_entry.localBasis().evaluateFunction(quadPos,
+          referenceFunctionValuesHessian);
+      FieldMatrix<adouble, dim, dim> uDH = 0;
+
+      for (int col = 0; col < dim; col++)
+        for (int row = 0; row < dim; row++)
+          for (int j = 0; j < size_u_DH; j++)
+            uDH[row][col] += x_adolc(localIndexSet.flat_local_index(j, row, col))*referenceFunctionValuesHessian[j];
+
 
       //--------assemble cell integrals in variational form--------
 
@@ -274,7 +293,7 @@ public:
 
       int_f += f_value* quad[pt].weight() * integrationElement;
 
-      adouble uDH_det = determinant(Hessu);
+      adouble uDH_det = determinant(uDH);
 
       //calculate value at transported point
 //      adouble g_value;
@@ -298,22 +317,27 @@ public:
       //calculate system for first test functions
       if (uDH_det.value() < 0)
       {
-        std::cerr << "found negative determinant !!!!! " << uDH_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
+//        std::cerr << "found negative determinant !!!!! " << uDH_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
       }
-      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
+//      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
 
-      for (int j = 0; j < size; j++) // loop over test fcts
+      for (int j = 0; j < size_u; j++) // loop over test fcts
       {
         v_adolc(j) += (PDE_rhs-uDH_det)*referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
-//        v_adolc(j) += referenceFunctionValues[j]
-//              * quad[pt].weight() * integrationElement;
-//        if (((PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]* quad[pt].weight() * integrationElement).value() > 1e-6)
-//        {
-//          std:: cerr << "v_adolc(" << j << ")+=" << ((PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]
-//                              * quad[pt].weight() * integrationElement).value() << " -> " << v_adolc(j).value() << std::endl;
-//          std::cerr << "at " << x_value << " T " << z[0].value() << " " << z[1].value() << " u " << u_value.value() << " det() " << uDH_pertubed_det.value() << " rhs " << PDE_rhs.value() << endl;
-//        }
+      }
+
+      //calculate system for second tensor functions
+      for (int j = 0; j < size_u_DH; j++) // loop over test fcts
+      {
+        for (int row=0; row < dim; row++)
+          for (int col = 0 ; col < dim; col++){
+            v_adolc(localIndexSet.flat_local_index(j, row, col) ) += uDH[row][col]*referenceFunctionValuesHessian[j]
+                                    * quad[pt].weight() * integrationElement;
+
+            v_adolc(localIndexSet.flat_local_index(j, row, col)) -= Hessu[row][col] * referenceFunctionValuesHessian[j]
+                                    * quad[pt].weight() * integrationElement;
+           }
       }
 
       last_equation_adolc += u_value* quad[pt].weight() * integrationElement;
@@ -332,7 +356,186 @@ public:
   void assemble_inner_face_term(const IntersectionType& intersection,
       const LocalView &localView,  const LocalIndexSet &localIndexSet, const VectorType &x,
       const LocalView &localViewn,  const LocalIndexSet &localIndexSetn, const VectorType &xn, VectorType& v,
-      VectorType& vn, int tag) const{}
+      VectorType& vn, int tag) const{
+    const int dim = IntersectionType::dimension;
+    const int dimw = IntersectionType::dimensionworld;
+
+    //assuming galerkin
+    assert(x.size() == (int) localView.size());
+    assert(xn.size() == (int) localViewn.size());
+    assert(v.size() == (int) localView.size());
+    assert(vn.size() == (int) localViewn.size());
+
+    const int size = localView.size();
+
+    // Get set of shape functions for this element
+    const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
+    const auto& localFiniteElementuDH = localView.tree().template child<1>().child(0).finiteElement();
+    // Get set of shape functions for neighbour element
+    const auto& localFiniteElementun = localViewn.tree().template child<0>().finiteElement();
+    const auto& localFiniteElementuDHn = localViewn.tree().template child<1>().child(0).finiteElement();
+
+    typedef decltype(localFiniteElementu) ConstElementuRefType;
+    typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
+
+    typedef decltype(localFiniteElementuDH) ConstElementuDHRefType;
+    typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
+
+    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
+    typedef FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
+    typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType RangeTypeDH;
+
+    const unsigned int size_u = localFiniteElementu.size();
+    const unsigned int size_u_DH = localFiniteElementuDH.size();
+
+    assert(size_u ==  localFiniteElementun.size());
+    assert(size_u_DH ==  localFiniteElementuDHn.size());
+
+    // Get a quadrature rule
+    const int order = std::max(1,
+        std::max(3 * ((int) localFiniteElementu.localBasis().order()),
+            3 * ((int) localFiniteElementun.localBasis().order())));
+    GeometryType gtface = intersection.geometryInInside().type();
+    const QuadratureRule<double, dim - 1>& quad = QuadratureRules<double,
+        dim - 1>::rule(gtface, order);
+
+    // normal of center in face's reference element
+    const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
+        dim - 1>::general(intersection.geometry().type()).position(0, 0);
+    const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
+        face_center);
+
+    // penalty weight for NIPG / SIPG
+    double penalty_weight = Solver_config::sigma
+        * (Solver_config::degree * Solver_config::degree)
+        / std::pow(intersection.geometry().volume(), Solver_config::beta);
+    double penalty_weight_gradient = Solver_config::sigmaGrad
+        * (Solver_config::degree * Solver_config::degree)
+        * std::pow(intersection.geometry().volume(), Solver_config::beta);
+
+    Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
+    Eigen::Matrix<adouble, Eigen::Dynamic, 1> xn_adolc(size);
+    Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(size);
+    Eigen::Matrix<adouble, Eigen::Dynamic, 1> vn_adolc(size);
+    for (int i = 0; i < size; i++) {
+      v_adolc[i] <<= v[i];
+      vn_adolc[i] <<= vn[i];
+    }
+
+    trace_on(tag);
+    //init independent variables
+    for (int i = 0; i < size; i++) {
+      x_adolc[i] <<= x[i];
+    }
+    for (int i = 0; i < size; i++) {
+      xn_adolc[i] <<= xn[i];
+    }
+
+    // Loop over all quadrature points
+    for (size_t pt = 0; pt < quad.size(); pt++) {
+
+      //------get reference data----------
+
+      // Position of the current quadrature point in the reference element and neighbour element
+      const FieldVector<double, dim> &quadPos =
+          intersection.geometryInInside().global(quad[pt].position());
+      const FieldVector<double, dim> &quadPosn =
+          intersection.geometryInOutside().global(quad[pt].position());
+
+      const auto& jacobian =
+          intersection.inside().geometry().jacobianInverseTransposed(quadPos);
+      const auto& jacobiann =
+          intersection.outside().geometry().jacobianInverseTransposed(quadPos);
+      // The shape functions on the reference elements
+      // The shape functions
+      std::vector<RangeType> referenceFunctionValues(size_u);
+      adouble u_value = 0;
+      assemble_functionValues_u(localFiniteElementu, quadPos,
+          referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
+      std::vector<RangeType> referenceFunctionValuesn(size_u);
+      adouble un_value = 0;
+      assemble_functionValues_u(localFiniteElementun, quadPosn,
+          referenceFunctionValuesn, xn_adolc.segment(0, size_u), un_value);
+
+      // The gradients of the shape functions on the reference element
+      std::vector<JacobianType> gradients(size_u);
+      FieldVector<adouble, Solver_config::dim> gradu(0);
+      assemble_gradients_gradu(localFiniteElementu, jacobian, quadPos,
+          gradients, x_adolc.segment(0, size_u), gradu);
+      std::vector<JacobianType> gradientsn(size_u);
+      FieldVector<adouble, Solver_config::dim> gradun(0);
+      assemble_gradients_gradu(localFiniteElementun, jacobiann, quadPosn,
+          gradientsn, xn_adolc.segment(0, size_u), gradun);
+
+      //the shape function values of hessian ansatz functions
+      std::vector<RangeTypeDH> referenceFunctionValuesHessian(size_u_DH);
+      localFiniteElementuDH.localBasis().evaluateFunction(quadPos,
+          referenceFunctionValuesHessian);
+      std::vector<RangeTypeDH> referenceFunctionValuesHessiann(size_u_DH);
+      localFiniteElementuDHn.localBasis().evaluateFunction(quadPosn,
+          referenceFunctionValuesHessiann);
+
+      //assemble jump and averages
+      adouble u_jump = u_value - un_value;
+      adouble grad_u_normaljump = (gradu - gradun) * normal;
+//      std::cout << "gradu " << gradu[0].value() << " " << gradu[1].value() << std::endl;
+//      std::cout << "gradun " << gradun[0].value() << " " << gradun[1].value() << std::endl;
+
+      //-------calculate integral--------
+      auto integrationElement = intersection.geometry().integrationElement(
+          quad[pt].position());
+      double factor = quad[pt].weight() * integrationElement;
+
+      for (unsigned int j = 0; j < size_u; j++) {
+//        //parts from self
+//        // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
+        v_adolc(j) += penalty_weight * u_jump * referenceFunctionValues[j] * factor;
+//        // gradient penalty
+        auto grad_times_normal = gradients[j] * normal;
+        v_adolc(j) += penalty_weight_gradient * (grad_u_normaljump)
+            * (grad_times_normal) * factor;
+
+//        //neighbour parts
+//        // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
+        vn_adolc(j) += penalty_weight * u_jump * (-referenceFunctionValuesn[j]) * factor;
+//        // gradient penalty
+        grad_times_normal = gradientsn[j] * normal;
+        vn_adolc(j) += penalty_weight_gradient * (grad_u_normaljump)
+            * (-grad_times_normal) * factor;
+      }
+
+      for (unsigned int j = 0; j < size_u_DH; j++) // loop over test fcts
+      {
+        for (int row = 0; row < dim; row++)
+          for (int col = 0; col < dim; col++)
+          {
+          //parts from self
+          // dicr. hessian correction term: jump{avg{mu} grad_u}
+          adouble temp = referenceFunctionValuesHessian[j]*gradu[col];
+          v_adolc(localIndexSet.flat_local_index(j, row, col)) += 0.5 * (temp * normal[row]);
+          temp = referenceFunctionValuesHessian[j]*gradun[col];
+          v_adolc(localIndexSet.flat_local_index(j, row, col)) += -0.5 * (temp * normal[row]); //a - sign for the normal
+
+          //neighbour parts
+          // dicr. hessian correction term: jump{avg{mu} grad_u}
+          temp = referenceFunctionValuesHessiann[j]*gradu[col];
+          vn_adolc(localIndexSetn.flat_local_index(j, row, col)) += 0.5 * (temp * normal[row]);
+          temp = referenceFunctionValuesHessiann[j]*gradun[col];
+          vn_adolc(localIndexSetn.flat_local_index(j, row, col)) += -0.5 * (temp * normal[row]); //a - sign for the normal
+          }
+      }
+    }
+
+    // select dependent variables
+    for (int i = 0; i < size; i++) {
+      v_adolc[i] >>= v[i];
+    }
+    for (int i = 0; i < size; i++) {
+      vn_adolc[i] >>= vn[i];
+    }
+    trace_off();
+
+  }
 
   template<class Intersection, class LocalView, class LocalIndexSet, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
@@ -349,13 +552,13 @@ public:
     typedef typename LocalView::Element Element;
     const Element& element = localView.element();
 
-    const auto& localFiniteElement = localView.tree().finiteElement();
-    const int size_u = localFiniteElement.size();
+    const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
+    const int size_u = localFiniteElementu.size();
 
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    typedef decltype(localFiniteElementu) ConstElementuRefType;
+    typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
+    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
     typedef typename Dune::FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
 
     //-----init variables for automatic differentiation
@@ -375,7 +578,7 @@ public:
     // ----start quadrature--------
 
     // Get a quadrature rule
-    const int order = std::max(0, 3 * ((int) localFiniteElement.localBasis().order()));
+    const int order = std::max(0, 3 * ((int) localFiniteElementu.localBasis().order()));
     GeometryType gtface = intersection.geometryInInside().type();
     const QuadratureRule<double, dim - 1>& quad = QuadratureRules<double,
         dim - 1>::rule(gtface, order);
@@ -415,14 +618,14 @@ public:
       //the shape function values
       std::vector<RangeType> referenceFunctionValues(size_u);
       adouble u_value = 0;
-      assemble_functionValues_u(localFiniteElement, quadPos,
+      assemble_functionValues_u(localFiniteElementu, quadPos,
           referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
       FieldVector<adouble, Solver_config::dim> gradu;
-      assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
-          gradients, x_adolc, gradu);
+      assemble_gradients_gradu(localFiniteElementu, jacobian, quadPos,
+          gradients, x_adolc.segment(0,size_u), gradu);
 
       //-------calculate integral--------
       auto phi_value = bc.phi(element, quadPos, normal);

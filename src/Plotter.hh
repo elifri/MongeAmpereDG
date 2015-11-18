@@ -119,6 +119,7 @@ public:
 
 	std::string get_output_directory() const {return output_directory;}
 	std::string get_output_prefix() const {return output_prefix;}
+	int get_refinement() const {return refinement;}
 
 	void read_VTK(const std::string filename);
 
