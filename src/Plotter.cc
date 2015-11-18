@@ -17,6 +17,35 @@ enum {
 };
 
 
+void evaluateRhoX (const Solver_config::DomainType &x, Solver_config::value_type &u)
+{
+  if (x[1] < 0)
+    if (x[0] < 0)
+    {
+      //first quadrant
+      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-Solver_config::DomainType({-1,-1})).two_norm2());
+    }
+    else
+    {
+      //second quadrant
+      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-Solver_config::DomainType({1,-1})).two_norm2());
+    }
+  else
+    if (x[0] < 0)
+    {
+      //third
+      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-Solver_config::DomainType({-1,1})).two_norm2());
+    }
+    else
+    {
+      //fourth quadrant
+      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-Solver_config::DomainType({1,1})).two_norm2());
+    }
+
+}
+
+
+
 /*!
  *
  */
