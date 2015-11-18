@@ -92,6 +92,7 @@ void read_quadratic_grid_vtk(std::string filename,   int &n_x, int &n_y,
     {
       double temp;
       file >> temp; file >> temp;
+      assert(!file.eof());
       file >> solution(x,y);
     }
   }
