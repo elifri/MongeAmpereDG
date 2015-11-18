@@ -19,54 +19,6 @@ namespace po = boost::program_options;
 
 #include "utils.hpp"
 
-
-/*
-double MA_OT_solver::calculate_L2_error(const MA_function_type &f) const
-{
-  const int size_u = localFiniteElement.size(u());
-
-  double res = 0;
-
-  for(auto&& e: elements(*gridView_ptr))
-  {
-    assert(localFiniteElement.type() == e.type());
-
-    auto geometry = e.geometry();
-    IndexType id = gridView_ptr->indexSet().index(e);
-
-    // Get a quadrature rule
-    int order = std::max(1, 3 * ((int)localFiniteElement.order()));
-    const QuadratureRule<double, Config::dim>& quad =
-        QuadratureRules<double, Config::dim>::rule(localFiniteElement.type(), order);
-
-    VectorType x_local = dof_handler.calculate_local_coefficients(id, solution);
-
-    // Loop over all quadrature points
-    for (const auto& pt : quad) {
-
-      // Position of the current quadrature point in the reference element
-      const FieldVector<double, Config::dim> &quadPos = pt.position();
-
-      //the shape function values
-      std::vector<typename Config::RangeType> referenceFunctionValues(size_u);
-      localFiniteElement(u()).localBasis().evaluateFunction(quadPos, referenceFunctionValues);
-
-      double u_value = 0;
-      for (int i=0; i<size_u; i++)
-        u_value += x_local(i)*referenceFunctionValues[i];
-
-      double f_value;
-      f(geometry.global(pt.position()), f_value);
-
-        auto factor = pt.weight()*geometry.integrationElement(pt.position());
-      res += sqr(u_value - f_value)*factor;
-//      cout << "res = " << res << "u_ value " << u_value << " f_value " << f_value << std::endl;
-    }
-  }
-  return std::sqrt(res);
-}
-*/
-
 void MA_OT_solver::plot(std::string name) const
 {
   std::cout << "write VTK output? " << writeVTK_ << " ";
@@ -113,6 +65,16 @@ void MA_OT_solver::plot(std::string name) const
 
      std::cout << fname  << std::endl;
   }
+
+  //write to file
+  std::string fname(plotter.get_output_directory());
+  fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "outputGrid.vtu";
+//  plotter.writeOTVTK(fname, *gradient_u_old, [](Solver_config::SpaceType x)
+//      {return Dune::FieldVector<double, Solver_config::dim> ({
+//                                                      x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
+//                                                      x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});});
+  plotter.writeOTVTK(fname, *gradient_u_old);
+
 }
 
 void MA_OT_solver::create_initial_guess()
@@ -216,6 +178,7 @@ void MA_OT_solver::update_solution(const Solver_config::VectorType& newSolution)
   gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
 
   solution = newSolution;
+
 }
 
 void MA_OT_solver::adapt_solution(const int level)
@@ -432,7 +395,7 @@ void MA_OT_solver::solve_nonlinear_system()
 
 #ifdef USE_DOGLEG
 
-  doglegMethod(op, doglegOpts_, newSolution, evaluateJacobianSimultaneously_);
+  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
 
 #endif
 #ifdef USE_PETSC
@@ -465,6 +428,11 @@ void MA_OT_solver::solve_nonlinear_system()
 //
 //  std::cout << "f_u norm " << f.segment(0,get_n_dofs_u()).norm() << " f(x) norm " << f.norm() << endl;
 //  std::cout << "l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
+
+  std::cout << " L2 error is " << calculate_L2_errorOT([](Solver_config::SpaceType x)
+      {return Dune::FieldVector<double, Solver_config::dim> ({
+                                                      x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
+                                                      x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
 
   std::cout << "scaling factor " << solution(solution.size()-1) << endl;
 
