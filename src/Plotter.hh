@@ -89,10 +89,20 @@ public:
 	template <class Function>
 	void write_points_reflector(std::ofstream &file, Function &f) const;
 
+	///writes the transported point array to file (transport is given by gradient)
+	template <class LocalFunction>
+	void write_points_OT(std::ofstream &file, LocalFunction &fg) const;
+
 	template <class LocalFunction, class Function>
 	void write_error(std::ofstream &file, LocalFunction &f, Function &exact_solution) const;
 
-	void write_pov_setting(std::ofstream &file) const;///write the setting for photons, camera and light source
+  template <class LocalFunction, class Function>
+  void write_error_OT(std::ofstream &file, LocalFunction &f, const Function &exact_solution) const;
+
+  template <class LocalFunction>
+  void write_transport_OT(std::ofstream &file, LocalFunction &f) const;
+
+  void write_pov_setting(std::ofstream &file) const;///write the setting for photons, camera and light source
 	void write_target_plane(std::ofstream &file) const;
 
 	template <class Function>
@@ -113,6 +123,15 @@ public:
 
 	template <class LocalFunction, class Function>
 	void writeReflectorVTK(std::string filename, LocalFunction &f, Function& exact_solution) const;
+
+  template <class LocalFunction>
+  void writeOTVTK(std::string filename, LocalFunction &f) const;
+
+  template <class LocalFunction, class Function>
+  void writeOTVTK(std::string filename, LocalFunction &fg, const Function& f) const;
+
+  template<typename Functiontype>
+  void save_rectangular_mesh(Functiontype &f, std::ofstream &of) const;
 
 	void set_grid(Solver_config::GridView* grid){	this->grid = grid;}
 	void set_refinement(const int refinement){	this->refinement = refinement;}
@@ -201,6 +220,58 @@ void Plotter::writeReflectorVTK(std::string filename, LocalFunction &f, Function
   }
 }
 
+template <class LocalFunction>
+void Plotter::writeOTVTK(std::string filename, LocalFunction &f) const {
+  //--------------------------------------
+  // open file
+    check_file_extension(filename, ".vtu");
+    std::ofstream file(filename.c_str(), std::ios::out);
+    if (file.rdstate()) {
+      std::cerr << "Error: Couldn't open '" << filename << "'!\n";
+      return;
+    }
+
+    //write file
+
+    write_vtk_header(file);
+
+    write_transport_OT(file, f);
+    write_points_OT(file, f);
+    write_cells(file);
+
+    write_vtk_end(file);
+
+}
+
+template <class LocalFunction, class Function>
+void Plotter::writeOTVTK(std::string filename, LocalFunction &fg, const Function& f) const {
+  //--------------------------------------
+  if (refinement > 0)
+  {
+    // open file
+    check_file_extension(filename, ".vtu");
+    std::ofstream file(filename.c_str(), std::ios::out);
+    if (file.rdstate()) {
+      std::cerr << "Error: Couldn't open '" << filename << "'!\n";
+      return;
+    }
+
+    //write file
+
+    write_vtk_header(file);
+
+    write_error_OT(file, fg, f);
+    write_points_OT(file, fg);
+    write_cells(file);
+
+    write_vtk_end(file);
+  }
+  else
+  {
+    assert(false);
+  }
+}
+
 
 template <class Function>
 void Plotter::write_points_reflector(std::ofstream &file, Function &f) const{
@@ -242,6 +313,38 @@ void Plotter::write_points_reflector(std::ofstream &file, Function &f) const{
   file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
 }
 
+void evaluateRhoX (const Solver_config::DomainType &x, Solver_config::value_type &u);
+
+template <class Function>
+void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
+  // write points
+    file << "\t\t\t<Points>\n"
+      << "\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\""
+      << "ascii" << "\">\n";
+
+    int vertex_no = 0;
+
+    //the reflector is given by X*rho, where rho is the PDE solution. X is calculated from the 2d mesh by adding the third coordiante omega(x)
+
+    {   // save points in file after refinement
+      for (auto&& element: elements(*grid))
+      {
+        fg.bind(element);
+        const auto geometry = element.geometry();
+        for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
+          auto transportedX = fg(it.coords());
+          file << std::setprecision(12) << std::scientific;
+          Solver_config::value_type u;
+          evaluateRhoX(geometry.global(it.coords()),u);
+          file << "\t\t\t\t\t" << transportedX[0] << " " << transportedX[1] << " 0" << endl;
+          vertex_no++;
+        }
+      }
+    }
+  file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
+}
+
+
 template <class LocalFunction, class Function>
 void Plotter::write_error(std::ofstream &file, LocalFunction &f, Function &exact_solution) const{
   // write points
@@ -263,6 +366,60 @@ void Plotter::write_error(std::ofstream &file, LocalFunction &f, Function &exact
         file << "\t\t\t\t\t";
         for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
           auto diff = f(it.coords())-exact_solution.evaluate_inverse(geometry.global(it.coords()));
+          file << std::setprecision(12) << std::scientific;
+          file << diff << " ";
+        }
+        file << endl;
+      }
+    }
+  file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
+}
+
+template <class LocalFunction, class Function>
+void Plotter::write_error_OT(std::ofstream &file, LocalFunction &f, const Function &exact_solution) const{
+  // write points
+    file << "\t\t\t<PointData Scalars=\"error\">\n"
+      << "\t\t\t\t<DataArray type=\"Float32\" Name=\"error\" NumberOfComponents=\"1\" format=\""
+      << "ascii" << "\">\n";
+
+    //the reflector is given by X*rho, where rho is the PDE solution. X is calculated from the 2d mesh by adding the third coordiante omega(x)
+
+    if (refinement == 0)
+    {
+      // collect points
+      assert(false);
+    }else {   // save points in file after refinement
+      for (auto&& element: elements(*grid))
+      {
+        f.bind(element);
+        const auto geometry = element.geometry();
+        file << "\t\t\t\t\t";
+        for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
+          auto diff = (f(it.coords())-exact_solution(geometry.global(it.coords()))).two_norm();
+          file << std::setprecision(12) << std::scientific;
+          file << diff << " ";
+        }
+        file << endl;
+      }
+    }
+  file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
+}
+
+template <class LocalFunction>
+void Plotter::write_transport_OT(std::ofstream &file, LocalFunction &f) const{
+  // write points
+    file << "\t\t\t<PointData Scalars=\"error\">\n"
+      << "\t\t\t\t<DataArray type=\"Float32\" Name=\"transport\" NumberOfComponents=\"1\" format=\""
+      << "ascii" << "\">\n";
+
+    {   // save points in file after refinement
+      for (auto&& element: elements(*grid))
+      {
+        f.bind(element);
+        const auto geometry = element.geometry();
+        file << "\t\t\t\t\t";
+        for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
+          auto diff = (f(it.coords())-(geometry.global(it.coords()))).two_norm();
           file << std::setprecision(12) << std::scientific;
           file << diff << " ";
         }
@@ -368,5 +525,64 @@ void Plotter::writeReflectorPOV(std::string filename, Function &f) const {
   write_target_plane(file);
   write_mirror(file, f);
 }
+
+
+template<typename Functiontype>
+void Plotter::save_rectangular_mesh(Functiontype &f, std::ofstream &of) const
+{
+  static_assert(std::is_same<Solver_config::GridType,Dune::YaspGrid<2, EquidistantOffsetCoordinates<double,2> > >::value, "saving in rectangular mesh format works only for yaspgrids so far!");
+
+  //get information
+  const double l_x = Solver_config::upperRight[0] - Solver_config::lowerLeft[0];
+  const double l_y = Solver_config::upperRight[1] - Solver_config::lowerLeft[1];
+
+  int n_x = std::sqrt(grid->size(0)*l_x/l_y);
+  int n_y = grid->size(0)/n_x;
+
+  n_x <<= refinement;
+  n_y <<= refinement;
+
+  of << std::setprecision(12) << std::scientific;
+
+  const double h_x = ((double)l_x)/(n_x-1);
+  const double h_y = ((double)l_y)/(n_y-1);
+
+  //evaluate at mesh points and save to matrix
+  Eigen::MatrixXd solution_values(n_x,n_y);
+
+  for (auto&& element: elements(*grid))
+  {
+    f.bind(element);
+    for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
+      const auto& x_local = it.coords();
+      const auto& x_global = element.geometry().global(x_local);
+      int index_x = (x_global[0]-Solver_config::lowerLeft[0])/h_x;
+      int index_y = (x_global[1]-Solver_config::lowerLeft[1])/h_y; //index of the bottom left corner of the rectangle where x lies in
+
+      //special case at right boundary
+      if (index_x == n_x) index_x--;
+      if (index_y == n_y) index_y--;
+
+      solution_values(index_x,index_y) = f(x_local);
+    }
+  }
+
+  //write to file
+
+  of << n_x << " " << n_y << " "
+     << h_x << " " << h_y << " "
+     << Solver_config::lowerLeft[0] << " " << Solver_config::lowerLeft[1] << std::endl;
+
+  for (int y=0; y < n_y; y++)
+  {
+    for (int x=0; x < n_x; x++)
+    {
+      of << solution_values(x,y) << std::endl;
+    }
+  }
+
+
+}
+
 
 #endif /* SRC_PLOTTER_HH_ */
