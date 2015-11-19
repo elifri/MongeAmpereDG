@@ -15,6 +15,7 @@
 
 #include "problem_data.hh"
 
+#include "problem_data_OT.hh"
 
 #if USE_DOGLEG
 #include "Dogleg/doglegMethod.hpp"
@@ -328,8 +329,10 @@ void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
         for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
           auto transportedX = fg(it.coords());
           file << std::setprecision(12) << std::scientific;
-          Solver_config::value_type u;
-          evaluateRhoX(geometry.global(it.coords()),u);
+//          Solver_config::value_type u;
+//          evaluateRhoX(geometry.global(it.coords()),u);
+          auto x = geometry.global(it.coords());
+          cerr << x << " goes to " << transportedX << " , it should be " << x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]) << " " << x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]) << std::endl;
           file << "\t\t\t\t\t" << transportedX[0] << " " << transportedX[1] << " 0" << endl;
           vertex_no++;
         }
@@ -521,62 +524,6 @@ void Plotter::writeReflectorPOV(std::string filename, Function &f) const {
 }
 
 
-template<typename Functiontype>
-void Plotter::save_rectangular_mesh(Functiontype &f, std::ofstream &of) const
-{
-  static_assert(std::is_same<Solver_config::GridType,Dune::YaspGrid<2, EquidistantOffsetCoordinates<double,2> > >::value, "saving in rectangular mesh format works only for yaspgrids so far!");
-
-  //get information
-  const double l_x = Solver_config::upperRight[0] - Solver_config::lowerLeft[0];
-  const double l_y = Solver_config::upperRight[1] - Solver_config::lowerLeft[1];
-
-  int n_x = std::sqrt(grid->size(0)*l_x/l_y);
-  int n_y = grid->size(0)/n_x;
-
-  n_x <<= refinement;
-  n_y <<= refinement;
-
-  of << std::setprecision(12) << std::scientific;
-
-  const double h_x = ((double)l_x)/(n_x-1);
-  const double h_y = ((double)l_y)/(n_y-1);
-
-  //evaluate at mesh points and save to matrix
-  Eigen::MatrixXd solution_values(n_x,n_y);
-
-  for (auto&& element: elements(*grid))
-  {
-    f.bind(element);
-    for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
-      const auto& x_local = it.coords();
-      const auto& x_global = element.geometry().global(x_local);
-      int index_x = (x_global[0]-Solver_config::lowerLeft[0])/h_x;
-      int index_y = (x_global[1]-Solver_config::lowerLeft[1])/h_y; //index of the bottom left corner of the rectangle where x lies in
-
-      //special case at right boundary
-      if (index_x == n_x) index_x--;
-      if (index_y == n_y) index_y--;
-
-      solution_values(index_x,index_y) = f(x_local);
-    }
-  }
-
-  //write to file
-
-  of << n_x << " " << n_y << " "
-     << h_x << " " << h_y << " "
-     << Solver_config::lowerLeft[0] << " " << Solver_config::lowerLeft[1] << std::endl;
-
-  for (int y=0; y < n_y; y++)
-  {
-    for (int x=0; x < n_x; x++)
-    {
-      of << solution_values(x,y) << std::endl;
-    }
-  }
-
-
-}
 
 
 #endif /* SRC_PLOTTER_HH_ */
