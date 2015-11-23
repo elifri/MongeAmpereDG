@@ -466,7 +466,7 @@ void Assembler::calculate_refined_local_mass_matrix_ansatz(
             double, Solver_config::dim>::rule(lfu.type(), order);
 
     //local mass matrix m_ij = \int mu_i : mu_j
-    for (int i = 0; i < m.size(); i++)
+    for (unsigned int i = 0; i < m.size(); i++)
         m[i].setZero(size, size);
 
     // Loop over all quadrature points
@@ -554,8 +554,8 @@ template<typename LocalIndexSet>
 inline
 void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const Solver_config::VectorType &v_local, Solver_config::VectorType& v) const
 {
-  assert (v_local.size() == localIndexSet.size());
-  assert (v.size() == basis_->indexSet().dimension()+1);
+  assert (v_local.size() == (int) localIndexSet.size());
+  assert (v.size() == (int) basis_->indexSet().dimension()+1);
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
      v(localIndexSet.flat_index(i)) = v_local[i];
@@ -975,7 +975,7 @@ void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_
 template<typename LocalOperatorType>
 void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_config::VectorType& x, Solver_config::VectorType& v, Solver_config::MatrixType& m) const
 {
-    assert(x.size() == basis_->indexSet().dimension()+1);
+    assert(x.size() == (int) basis_->indexSet().dimension()+1);
 
     Solver_config::GridView gridView = basis_->gridView();
 
