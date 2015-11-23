@@ -25,7 +25,7 @@ inline T sqr (const T& x)
 bool is_close(const double a, const double b, const double tolerance=1e-10);
 
 template<typename Ta, typename Tb>
-bool is_equal(const Ta a, const Tb b) { return (a==b); };
+bool is_equal(const Ta a, const Tb b) { return (a==b); }
 
 template<typename T>
 inline int sign (const T& x)

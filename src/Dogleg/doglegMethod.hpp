@@ -158,7 +158,7 @@ int doglegMethod (
     const unsigned int n = x.size();
 
     Eigen::VectorXd f(n), fn(n), h(n);
-    Eigen::SparseMatrix<double> J(n,n);
+    Eigen::SparseMatrix<double> J(n,n), Jn(n,n);
 
     double dL = 0;
     double nh = 0;
@@ -364,7 +364,7 @@ int doglegMethod (
             // new function evaluation
             const Eigen::VectorXd xnew(x + h);
             if (useCombinedFunctor)
-              functor.evaluate(xnew,fn,J, x);
+              functor.evaluate(xnew,fn,Jn, x);
             else
               functor.evaluate(xnew,fn,x);
 
@@ -375,6 +375,8 @@ int doglegMethod (
             {
               if (!useCombinedFunctor)
                 functor.derivative(xnew,J);
+              else
+                J = Jn;
 
               if (opts.check_Jacobian)
                 	checkJacobian(functor, xnew);
