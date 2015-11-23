@@ -22,11 +22,11 @@ namespace po = boost::program_options;
 void MA_OT_solver::plot(std::string name) const
 {
   std::cout << "write VTK output? " << writeVTK_ << " ";
+  std::cout << "plot written into ";
 
   //write vtk files
   if (writeVTK_)
   {
-    std::cout << "plot written into ";
     const int nDH = Solver_config::dim*Solver_config::dim;
 
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
@@ -81,7 +81,7 @@ void MA_OT_solver::plot(std::string name) const
      fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
      vtkWriter.write(fname);
 
-     std::cout << fname  << std::endl;
+     std::cout << fname  << " and ";
   }
 
   //write to file
@@ -92,6 +92,8 @@ void MA_OT_solver::plot(std::string name) const
 //                                                      x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
 //                                                      x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});});
   plotter.writeOTVTK(fname, *gradient_u_old);
+
+  std::cout << fname << std::endl;
 
 }
 
