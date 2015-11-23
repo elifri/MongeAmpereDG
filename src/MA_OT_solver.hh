@@ -454,7 +454,7 @@ void MA_OT_solver::project(const F f, VectorType& v) const
 
   //set scaling factor (last dof) to ensure mass conservation
   v(v.size()-1) = 1;
-  test_projection(f, v);
+//  test_projection(f, v);
 }
 
 template<class F>
@@ -473,6 +473,7 @@ void MA_OT_solver::test_projection(const F f, VectorType& v) const
     localView.bind(element);
     localIndexSet.bind(localView);
 
+
     const auto & lFE = localView.tree().template child<0>().finiteElement();
     const auto& geometry = element.geometry();
 
@@ -490,6 +491,9 @@ void MA_OT_solver::test_projection(const F f, VectorType& v) const
       const FieldVector<double, Solver_config::dim> &quadPos =
           quadpoint.position();
 
+      const auto& Jacobian = geometry.jacobianInverseTransposed(quadPos);
+
+
       //evaluate test function
       std::vector<Dune::FieldVector<double, 1>> functionValues(
           lFE.size());
@@ -505,15 +509,12 @@ void MA_OT_solver::test_projection(const F f, VectorType& v) const
       std::cerr << "f( " << x << ")=" << f(x)
           << "  approx = " << res << std::endl;
 
-      std::vector<Dune::FieldMatrix<double, 1, 2>> JacobianValues(
+      std::vector<Dune::FieldVector<double, 2>> JacobianValues(
           lFE.size());
-      lFE.localBasis().evaluateJacobian(quadPos,
-          JacobianValues);
-
       Dune::FieldVector<double, 2> jacApprox;
-      for (int j = 0; j < lFE.size(); j++) {
-        jacApprox.axpy(localDofs(j), JacobianValues[j][0]);
-      }
+
+      assemble_gradients_gradu(lFE, Jacobian, quadPos, JacobianValues, localDofs.segment(0,lFE.size()), jacApprox);
+
 
       std::cerr << "f'( "
           << x << ") = "
@@ -585,11 +586,15 @@ void MA_OT_solver::test_projection(const F f, VectorType& v) const
           assemble_gradients_gradu(lFE, jacobian, quadPos,
               gradients, localDofs.segment(0, lFE.size()), gradu);
 
+          const auto& jacobiann =
+                 is.outside().geometry().jacobianInverseTransposed(quadPosn);
+
           std::vector<FieldVector<double, 2>> gradientsn(lFE.size());
           FieldVector<double, Solver_config::dim> gradun(0);
-          assemble_gradients_gradu(lFEn, jacobian, quadPosn,
+          assemble_gradients_gradu(lFEn, jacobiann, quadPosn,
               gradientsn, localDofsn.segment(0, lFEn.size()), gradun);
 
+          std::cerr << "grad at " << x_value << " is " << gradu << " neighbour value " << gradun << std::endl;
           std::cerr << "grad difference " << std::abs((gradu-gradun).two_norm() ) << std::endl;
         }
 
