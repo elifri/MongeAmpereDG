@@ -86,7 +86,7 @@ struct Solver_config{
 
   static bool Dirichlet;
 
-	enum{ dim = 2, childdim = 4, degree = 2, degreeHessian = 1};
+	enum{ dim = 2, childdim = 4, degree = 3, degreeHessian = 2};
 
 	static int startlevel;
 	static int nonlinear_steps;

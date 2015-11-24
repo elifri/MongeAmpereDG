@@ -332,7 +332,7 @@ void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
 //          Solver_config::value_type u;
 //          evaluateRhoX(geometry.global(it.coords()),u);
           auto x = geometry.global(it.coords());
-          cerr << x << " goes to " << transportedX << " , it should be " << x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]) << " " << x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]) << std::endl;
+//          cerr << x << " goes to " << transportedX << " , it should be " << x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]) << " " << x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]) << std::endl;
           file << "\t\t\t\t\t" << transportedX[0] << " " << transportedX[1] << " 0" << endl;
           vertex_no++;
         }

@@ -202,15 +202,15 @@ bool doglegMethod (
 
     J.makeCompressed();
 
-    Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::IncompleteLUT<double> > lu_of_J;
-    lu_of_J.compute(J);
+//    Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::IncompleteLUT<double> > lu_of_J;
+//    lu_of_J.compute(J);
 
 //    Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int> > lu_of_J;
 //    lu_of_J.compute(J);
 
-//    Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_J;
-//    lu_of_J.analyzePattern(J);
-//    lu_of_J.compute(J);
+    Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_J;
+    lu_of_J.analyzePattern(J);
+    lu_of_J.compute(J);
 
     if (lu_of_J.info()!= Eigen::EigenSuccess) {
         // decomposition failed
@@ -283,7 +283,7 @@ bool doglegMethod (
                 // solving failed
                 std::cerr << "\nError "<< lu_of_J.info() << ": Could not solve the linear system of equations!\n";
                 if (opts.exportJacobianIfSingular) {
-//                    MATLAB_export(J,"J");
+                    MATLAB_export(J,"J");
                 }
                 exit(1);
             }
