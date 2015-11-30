@@ -245,7 +245,7 @@ private:
     */
    void subtriangle_lookup(const BarycCoordType& baryc, int& k, std::array<int, 3>& gk1, std::array<int, 6>& gk2) const
    {
-     int sw = 32*(baryc[0] > 0.5) + 16*(baryc[1] >= 0.5) + 8*(baryc[2] >= 0.5) + 4*(baryc[0] > baryc[1]) + 2*(baryc[0]>baryc[2]) + (baryc[1] > baryc[2]);
+     int sw = 32*(baryc[0] > 0.5) + 16*(baryc[1] >= 0.5) + 8*(baryc[2] >= 0.5) + 4*(baryc[0] > baryc[1]) + 2*(baryc[0]>baryc[2]) + (baryc[1] >= baryc[2]);
 
      switch(sw)
      {
@@ -263,7 +263,7 @@ private:
      case 1: k = 9; break;
      case 0: k = 10; break;
      case 4: k = 11; break;
-     default: DUNE_THROW(RangeError, "given coordinates do no lie within the triangle");
+     default: assert(false); DUNE_THROW(RangeError, "given coordinates do no lie within the triangle");
      }
 
      //table 1 of [CLR2013]
