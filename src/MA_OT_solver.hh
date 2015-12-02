@@ -134,7 +134,8 @@ public:
 //		Operator():solver_ptr(NULL){}
 //		Operator(MA_OT_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old, solver.minPixelValue_){}
 //    Operator(MA_OT_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old, solver.exact_solution, solver.minPixelValue_){}
-		Operator(MA_OT_solver &solver):solver_ptr(&solver), lop(solver.gradient_u_old, new rhoXSquareToSquare(), new rhoYSquareToSquare()){}
+		Operator(MA_OT_solver &solver):solver_ptr(&solver), lop(new BoundarySquare(solver.gradient_u_old), new rhoXSquareToSquare(), new rhoYSquareToSquare()){}
+//    Operator(MA_OT_solver &solver):solver_ptr(&solver), lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
 
     void evaluate(const VectorType& x, VectorType& v, MatrixType& m, const VectorType& x_old, const bool new_solution=true) const
     {
