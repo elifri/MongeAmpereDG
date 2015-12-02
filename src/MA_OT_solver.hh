@@ -221,6 +221,12 @@ public:
 	template<class F>
 	void project(F f, VectorType &V) const;
 
+private:
+	////helper function to check if projection went fine
+	template<class F>
+	void test_projection(const F f, VectorType& v) const;
+
+
 	//project by L2-projection
 	template<class F>
 	void project_labourious(const F f, VectorType& v) const;
@@ -384,10 +390,151 @@ void MA_OT_solver::project(const F f, VectorType& v) const
   interpolate(*FEBasis, v_u, f);
   v.segment(0, v_u.size()) = v_u;
 
-  //init second derivatives
-
   //set scaling factor (last dof) to ensure mass conservation
   v(v.size()-1) = 1;
+  test_projection(f, v);
+}
+
+template<class F>
+void MA_OT_solver::test_projection(const F f, VectorType& v) const
+{
+  std::cout << "v.size()" << v.size()-1 << std::endl;
+  std::cout << "projected on vector " << std::endl << v.transpose() << std::endl;
+
+  auto localView = FEBasis->localView();
+  auto localIndexSet = FEBasis->indexSet().localIndexSet();
+
+  const double h = 1e-5;
+
+  for (auto&& element : elements(*gridView_ptr)) {
+
+    localView.bind(element);
+    localIndexSet.bind(localView);
+
+    const auto & lFE = localView.tree().template child<0>().finiteElement();
+    const auto& geometry = element.geometry();
+
+    VectorType localDofs = assembler.calculate_local_coefficients(localIndexSet, v);
+
+    // Get a quadrature rule
+    const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
+    const QuadratureRule<double, Solver_config::dim>& quad =
+        QuadratureRules<double, Solver_config::dim>::rule(geometry.type(),
+            order);
+
+    double resTest1f = 0, resTest1 = 0;
+
+    for (const auto& quadpoint : quad) {
+      const FieldVector<double, Solver_config::dim> &quadPos =
+          quadpoint.position();
+
+      //evaluate test function
+      std::vector<Dune::FieldVector<double, 1>> functionValues(
+          lFE.size());
+      lFE.localBasis().evaluateFunction(quadPos,
+          functionValues);
+
+      double res = 0;
+      for (int j = 0; j < lFE.size(); j++) {
+        res += localDofs(j) * functionValues[j];
+      }
+      auto x = geometry.global(quadPos);
+
+      std::cerr << "f( " << x << ")=" << f(x)
+          << "  approx = " << res << std::endl;
+
+      std::vector<Dune::FieldMatrix<double, 1, 2>> JacobianValues(
+          lFE.size());
+      lFE.localBasis().evaluateJacobian(quadPos,
+          JacobianValues);
+
+      Dune::FieldVector<double, 2> jacApprox;
+      for (int j = 0; j < lFE.size(); j++) {
+        jacApprox.axpy(localDofs(j), JacobianValues[j][0]);
+      }
+
+      std::cerr << "f'( "
+          << x << ") = "
+          << (x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]))
+          << " " << (x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0]))
+          <<  "  approx = " << jacApprox << std::endl;
+
+    }
+
+/*    for (const auto& quadpoint : quad) {
+      const FieldVector<double, Solver_config::dim> &quadPos =
+          quadpoint.position();
+      //evaluate test function
+      std::vector<Dune::FieldVector<double, 1>> functionValues(
+          localView.size());
+      lFE.localBasis().evaluateFunction(quadPos, functionValues);
+
+      resTest1f += f(geometry.global(quadPos)) * functionValues[0]
+          * quadpoint.weight() * geometry.integrationElement(quadPos);
+
+      double res = 0;
+      for (int i = 0; i < localDofs.size(); i++) {
+        res += localDofs(i) * functionValues[i];
+        resTest1 += localDofs(i) * functionValues[i] * functionValues[0]
+            * quadpoint.weight() * geometry.integrationElement(quadPos);
+      }
+
+      std::cout << " f " << f(geometry.global(quadPos)) << " approx " << res
+          << std::endl;
+
+    }*/
+
+    auto localViewn = FEBasis->localView();
+    auto localIndexSetn = FEBasis->indexSet().localIndexSet();
+
+    for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
+    {
+      if (is.neighbor()) {
+        const int i = is.indexInInside();
+
+        localViewn.bind(is.outside());
+        localIndexSetn.bind(localViewn);
+        const auto & lFEn = localViewn.tree().template child<0>().finiteElement();
+
+        // Get a quadrature rule
+        const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
+        GeometryType gtface = is.geometryInInside().type();
+        const QuadratureRule<double, 1>& quad = QuadratureRules<double,1>::rule(gtface, order);
+
+        // Loop over all quadrature points
+        for (size_t pt = 0; pt < quad.size(); pt++) {
+
+          // Position of the current quadrature point in the reference element
+          const FieldVector<double, 2> &quadPos =
+              is.geometryInInside().global(quad[pt].position());
+          const FieldVector<double, 2> &quadPosn =
+              is.geometryInOutside().global(quad[pt].position());
+          auto x_value = is.inside().geometry().global(quadPos);
+
+          const auto& jacobian =
+                 is.inside().geometry().jacobianInverseTransposed(quadPos);
+
+          VectorType localDofs = assembler.calculate_local_coefficients(localIndexSet, v);
+          VectorType localDofsn = assembler.calculate_local_coefficients(localIndexSetn, v);
+
+          // The gradients
+          std::vector<Dune::FieldVector<double, 2>> gradients(lFE.size());
+          FieldVector<double, Solver_config::dim> gradu;
+          assemble_gradients_gradu(lFE, jacobian, quadPos,
+              gradients, localDofs.segment(0, lFE.size()), gradu);
+
+          std::vector<FieldVector<double, 2>> gradientsn(lFE.size());
+          FieldVector<double, Solver_config::dim> gradun(0);
+          assemble_gradients_gradu(lFEn, jacobian, quadPosn,
+              gradientsn, localDofsn.segment(0, lFEn.size()), gradun);
+
+          std::cerr << "grad difference " << std::abs((gradu-gradun).two_norm() ) << std::endl;
+        }
+
+      }
+    }
+  }
+
 }
 
 
@@ -1163,7 +1310,7 @@ double MA_OT_solver::calculate_L2_errorOT(const FGrad &f) const
     // Get a quadrature rule
     int order = std::max(1, 3 * gradient_u_old->localOrder());
     const QuadratureRule<double, Solver_config::dim>& quad =
-        MacroQuadratureRules<double, Solver_config::dim>::rule(e.type(), order, Solver_config::quadratureType);
+        QuadratureRules<double, Solver_config::dim>::rule(geometry.type(), order);
 
     // Loop over all quadrature points
     for (const auto& pt : quad) {
