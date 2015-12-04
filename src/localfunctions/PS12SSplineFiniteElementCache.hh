@@ -96,7 +96,9 @@ bool operator<(const Dune::FieldVector<value_type, 2> & v, const Dune::FieldVect
       auto b4 = (b1+b2); b4 *= 0.5;
       auto b5 = (b0+b2); b5 *= 0.5;
 
-      const auto determinantBarycTrafo = 2.*geo.volume();
+      const auto determinantBarycTrafo = b0[0]*b1[1]-b0[0]*b2[1]-b0[1]*b1[0]+b0[1]*b2[0]+b1[0]*b2[1]-b1[1]*b2[0];
+/*
+      const auto determinantBarycTrafo = 2.*geo.volume();*/
 
       const auto pNorm01 = (b0-b1).two_norm();
       const auto pNorm12 = (b2-b1).two_norm();
