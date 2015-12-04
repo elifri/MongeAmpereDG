@@ -9,6 +9,9 @@
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
 #include <dune/localfunctions/c1/PowellSabin/PowellSabin12quadraturerule.hh>
 
+#include "PowellSabin12SSplinenodalbasis.hh"
+#include "PS12SSplineFiniteElementCache.hh"
+
 #include <Eigen/Sparse>
 
 
@@ -49,7 +52,7 @@ void makeGeometries(std::vector<Geometry>& geos)
   coords.resize(3);
 
 
-  coords[0][0] = 0; coords[0][1] = 0;
+/*  coords[0][0] = 0; coords[0][1] = 0;
   coords[1][0] = 1; coords[1][1] = 0;
   coords[2][0] = 0; coords[2][1] = 1;
 
@@ -59,19 +62,19 @@ void makeGeometries(std::vector<Geometry>& geos)
   coords[1][0] = .2  ; coords[1][1] = -.2;
   coords[2][0] =  -.2; coords[2][1] = .2;
 
-  geos.push_back(Geometry(gt, coords));
+  geos.push_back(Geometry(gt, coords));*/
 
   coords[0][0] = -.2; coords[0][1] = -.2;
-  coords[1][0] = -.1; coords[1][1] = -.2;
-  coords[2][0] = -.2; coords[2][1] = -.1;
+  coords[1][0] = 0.; coords[1][1] = 0.;
+  coords[2][0] = 0.2; coords[2][1] = -.2;
 
   geos.push_back(Geometry(gt, coords));
-
-  coords[0][0] = -.5; coords[0][1] = 0.;
-  coords[1][0] = 0.; coords[1][1] = .5;
-  coords[2][0] = .5; coords[2][1] = 0;
-
-  geos.push_back(Geometry(gt, coords));
+//
+//  coords[0][0] = -.5; coords[0][1] = 0.;
+//  coords[1][0] = 0.; coords[1][1] = .5;
+//  coords[2][0] = .5; coords[2][1] = 0;
+//
+//  geos.push_back(Geometry(gt, coords));
 }
 
 void testPS12SSpline(const Geometry& geo) {
@@ -90,7 +93,10 @@ void testPS12SSpline(const Geometry& geo) {
 //          0, 0, elements);
 
 
+
+
   typedef PS12SSplineFiniteElement<Geometry ,double,double, Eigen::SparseMatrix<double>> PS12SSplineeFEType;
+
 
   Eigen::SparseMatrix<double> A(12,12);
 
@@ -102,12 +108,32 @@ void testPS12SSpline(const Geometry& geo) {
   auto b4 = (b1+b2); b4 *= 0.5;
   auto b5 = (b0+b2); b5 *= 0.5;
 
-  const auto determinantBarycTrafo = b0[0]*b1[1]-b0[1]*b2[1]-b0[1]*b1[0]+b0[1]*b2[0]+b1[0]*b2[1]-b1[1]*b2[0];
+  const auto determinantBarycTrafo = b0[0]*b1[1]-b0[0]*b2[1]-b0[1]*b1[0]+b0[1]*b2[0]+b1[0]*b2[1]-b1[1]*b2[0];
   std::cout << " determinant " << determinantBarycTrafo << " area " << geo.volume() << std::endl;
 
   const auto pNorm01 = (b0-b1).two_norm();
   const auto pNorm12 = (b2-b1).two_norm();
   const auto pNorm02 = (b2-b0).two_norm();
+
+  std::vector<FieldVector<double, 2>> normals(geo.corners());
+  normals[0] = {b0[1]-b1[1] , - b0[0]+b1[0]}; if (normals[0]*(b2-b0) > 0) normals[0]*=-1;
+  normals[1] = {b2[1]-b1[1] , - b2[0]+b1[0]}; if (normals[1]*(b0-b2) > 0) normals[1]*=-1;
+  normals[2] = {b0[1]-b2[1] , - b0[0]+b2[0]}; if (normals[2]*(b1-b0) > 0) normals[2]*=-1;
+
+  for (int i = 0; i < 3; i++)
+  {
+    normals[i] /= normals[i].two_norm();
+  }
+
+  int signNormal [3];
+  for (int k = 0; k < 3; k++)
+  {
+    if (std::abs(normals[k][0]+normals[k][1]) < 1e-12)
+      signNormal[k] = normals[k][1] > 0 ? 1 : -1;
+    else
+      signNormal[k] = normals[k][0]+normals[k][1] > 0 ? 1 : -1;
+  }
+
 
 /*
   A.insert(0,0) = 1.0;
@@ -154,7 +180,7 @@ void testPS12SSpline(const Geometry& geo) {
   A.insert(2,2) = 1./6.*(b0[1]-b1[1])*((b0-b1)*(b1-b5))/((b0-b1)*(b0-b1));
   A.insert(10,2) = 1./6.*(b0[1]-b2[1])*((b0-b2)*(b2-b3))/((b0-b2)*(b0-b2));
   A.insert(11,2) = 0.25*(b2[1]-b0[1]);
-  A.insert(2,3) = determinantBarycTrafo/6./pNorm01;
+  A.insert(2,3) = signNormal[0]*determinantBarycTrafo/6./pNorm01;
   A.insert(2,4) = -2./3.*((b1-b0)*(b0-b4))/((b1-b0)*(b1-b0));
   A.insert(3,4) = 1.;
   A.insert(4,4) = 1.;
@@ -168,7 +194,7 @@ void testPS12SSpline(const Geometry& geo) {
   A.insert(3,6) = 0.25*(b0[1]-b1[1]);
   A.insert(5,6) = 0.25*(b2[1]-b1[1]);
   A.insert(6,6) = 1./6.*(b1[1]-b2[1])*((b1-b2)*(b2-b3))/((b1-b2)*(b1-b2));
-  A.insert(6,7) = determinantBarycTrafo/6./pNorm12;
+  A.insert(6,7) = signNormal[2]*determinantBarycTrafo/6./pNorm12;
   A.insert(6,8) = -2./3.*((b2-b1)*(b1-b5))/((b2-b1)*(b2-b1));
   A.insert(7,8) = 1.;
   A.insert(8,8) = 1.;
@@ -182,7 +208,7 @@ void testPS12SSpline(const Geometry& geo) {
   A.insert(7,10) = 0.25*(b1[1]-b2[1]);
   A.insert(9,10) = 0.25*(b0[1]-b2[1]);
   A.insert(10,10) = 1./6.*(b2[1]-b0[1])*((b2-b0)*(b0-b4))/((b2-b0)*(b2-b0));
-  A.insert(10,11) = determinantBarycTrafo/6./pNorm02;
+  A.insert(10,11) = signNormal[1]*determinantBarycTrafo/6./pNorm02;
 
 
   PS12SSplineeFEType fem(geo, A);
@@ -191,7 +217,7 @@ void testPS12SSpline(const Geometry& geo) {
   {
     std::vector<FieldVector<double,1>> out(fem.size());
     //test values at corners
-    fem.localBasis().evaluateFunction(geo.corner(i), out);
+    fem.localBasis().evaluateFunction(geo.local(geo.corner(i)), out);
     for (unsigned int j = 0; j < out.size(); j++)
     {
       if (j % 4 == 0 && j / 4 == i)
@@ -215,7 +241,7 @@ void testPS12SSpline(const Geometry& geo) {
 
     //test gradient at corners
     std::vector<PS12SSplineeFEType::Traits::LocalBasisType::Traits::JacobianType > outJac(fem.size());
-    fem.localBasis().evaluateJacobian(geo.corner(i), outJac);
+    fem.localBasis().evaluateJacobian(geo.local(geo.corner(i)), outJac);
     for (unsigned int j = 0; j < outJac.size(); j++)
     {
       if (j % 4 == 1 && j / 4 == i)
@@ -260,30 +286,33 @@ void testPS12SSpline(const Geometry& geo) {
   edgemids[1] = geo.corner(1)+geo.corner(2); edgemids[1]/=2.;
   edgemids[2] = geo.corner(0)+geo.corner(2); edgemids[2]/=2.;
 
-  std::vector<FieldVector<double, 2>> normals(geo.corners());
-  normals[0] = {0.,-1.};
-  normals[1] = {1./std::sqrt(2.),1./std::sqrt(2.)};
-  normals[2] = {-1., 0.};
 
-  for (int i = 0 ; i < geo.corners(); i++)
+
+  for (unsigned int i = 0 ; i < geo.corners(); i++)
   {
     std::vector<PS12SSplineeFEType::Traits::LocalBasisType::Traits::JacobianType > outJac(fem.size());
-    fem.localBasis().evaluateJacobian(edgemids[i], outJac);
+    fem.localBasis().evaluateJacobian(geo.local(edgemids[i]), outJac);
     for (unsigned int j = 0; j < outJac.size(); j++)
     {
       if (j % 4 == 3 && j / 4 == i)
       {
         //decides wether the global normal pointer upwards or downwards
-        double normalDirection = (normals[i][0]+normals[i][1] > 0)? 1 : -1;
+        double normalDirection;
+        if (i == 0) normalDirection = signNormal[0];
+        else
+          if (i == 1) normalDirection = signNormal[2];
+          else normalDirection = signNormal[1];
 
         if (std::abs( (outJac[j][0]*normals[i]) - normalDirection ) > eps)
-          std::cerr << " Error in normal gradient of basis function " << j << " at edgemid " << edgemids[i]
+          std::cerr << " Error in normal gradient of basis function " << j << " at edgemid " << edgemids[i] << " with normal " << normals[i]
                     << " expected " << normalDirection << ", but got " << outJac[j][0]*normals[i] <<  std::endl;
+        else
+          std::cerr << " Correct normal gradient at " << edgemids[i] << std::endl;
       }
       else
       {
         if (std::abs((outJac[j][0]*normals[i])) > eps)
-        std::cerr << " Error in normal gradient of basis function " << j << " at vertex " << edgemids[i]
+        std::cerr << " Error in normal gradient of basis function " << j << " at vertex " << edgemids[i]<< " with normal " << normals[i]
                   << " expected 0, but got " << outJac[j][0]*normals[i] << std::endl;
       }
     }
