@@ -221,6 +221,53 @@ public:
                         const typename Traits::DomainLocal& x,  //position
                         std::vector<typename Traits::Range>& out) const //return value
    {
+     out.resize(N);
+      std::fill(out.begin(), out.end(), 0);
+
+      //get barycentric triangle coordinates
+      BarycCoordType barycPos;
+      calcBarycCoords(x, barycPos);
+
+      //determine subtriangle no and indeces of splines with support in \triang_k
+      int k;
+      std::array<int, 3> gk1; //indeces of linear splines with support in \triang_k
+      std::array<int, 6> gk2; //indeces of quadratic splines with support in \triang_k
+
+      const int gk2size = 6;
+
+      subtriangle_lookup(barycPos, k, gk1, gk2);
+
+      //calculate derivative (sub)matrix for linear splines
+      FieldMatrix<R, 1 , 3> Uk1;
+
+      for (int j = 0; j < 3; j++)
+      {
+        Uk1[0][j] = U1(directionAxis_[directions[0]], k, gk1[j]);
+      }
+
+  //    std::cout << " U1 " << Uk1[0] << std::endl << " and " << Uk1[1] << std::endl;
+
+      //caluclate derivative (sub)matrix for quadratic splines
+      FieldMatrix<R, 3 , gk2size> Uk2;
+      for (int i = 0; i < 3; i++)
+        for (int j = 0; j < gk2size; j++)
+          Uk2[i][j] = U2(directionAxis_[directions[1]], gk1[i], gk2[j]);
+
+  //    std::cout << " U2 " << Uk2[0] << std::endl << " and " << Uk2[1] << std::endl;
+
+      FieldMatrix <R, gk2size, N> Asub;
+      for (int i = 0; i < gk2size; i++)
+        for (int j = 0; j < N; j++)
+          Asub[i][j] = A_.coeff(gk2[i],j);
+
+  //    std::cout << " Asub " << Asub << std::endl;
+
+      auto basisValuesDerivatives = Uk1.rightmultiplyany(Uk2.rightmultiplyany(Asub));
+      basisValuesDerivatives*=2;
+
+      for (int i = 0; i < N; i++)
+        out[i][0] = basisValuesDerivatives[0][i];
+
    }
 
 //! \brief Polynomial order of the shape functions
