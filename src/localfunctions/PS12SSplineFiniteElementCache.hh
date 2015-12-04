@@ -76,9 +76,15 @@ bool operator<(const Dune::FieldVector<value_type, 2> & v, const Dune::FieldVect
       for (auto&& it : intersections(gridView_, e))
       {
         const auto normal = it.centerUnitOuterNormal();
-        signNormal[k++] = normal[0]+normal[1] > 0 ? 1 : -1;
-      }
+        if (std::abs(normal[0]+normal[1]) < 1e-12)
+          signNormal[k++] = normal[1] > 0 ? 1 : -1;
+        else
+          signNormal[k++] = normal[0]+normal[1] > 0 ? 1 : -1;
 
+        std::cout << "normal " << normal  << " " << signNormal[k-1] << std::endl;
+
+
+      }
 
       const auto& geo =  e.geometry();
 
