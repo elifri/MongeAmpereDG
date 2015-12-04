@@ -129,17 +129,17 @@ public:
 
     std::cout << " R2 " << Rk2 << std::endl;
 
-    FieldMatrix <R, gk2size, gk2size> Asub;
+    FieldMatrix <R, gk2size, N> Asub;
     for (int i = 0; i < gk2size; i++)
-      for (int j = 0; j < gk2size; j++)
-        Asub[i][j] = A_.coeff(gk2[i],gk2[j]);
+      for (int j = 0; j < N; j++)
+        Asub[i][j] = A_.coeff(gk2[i],j);
 
     std::cout << " Asub " << Asub << std::endl;
 
     const auto basisValuesWithSupport = Rk1.rightmultiplyany(Rk2.rightmultiplyany(Asub));
 
-    for (int i = 0; i < gk2size; i++)
-      out[gk2[i]] = basisValuesWithSupport[0][i];
+    for (int i = 0; i < N; i++)
+      out[i] = basisValuesWithSupport[0][i];
   }
 
   //! \brief Evaluate Jacobian of all shape functions
@@ -196,10 +196,10 @@ public:
       for (int j = 0; j < gk2size; j++)
         Rk2[i][j] = R2(barycPos, gk1[i], gk2[j]);
 
-    FieldMatrix <R, gk2size, gk2size> Asub;
+    FieldMatrix <R, gk2size, N> Asub;
     for (int i = 0; i < gk2size; i++)
-      for (int j = 0; j < gk2size; j++)
-        Asub[i][j] = A_.coeff(gk2[i],gk2[j]);
+      for (int j = 0; j < N; j++)
+        Asub[i][j] = A_.coeff(gk2[i],j);
 
     std::cout << " Asub " << Asub << std::endl;
 
@@ -208,8 +208,8 @@ public:
       auto basisValuesWithSupport = Rk1.rightmultiplyany(Uk2[dim].rightmultiplyany(Asub));
       basisValuesWithSupport*=2;
 
-      for (int i = 0; i < gk2size; i++)
-        out[gk2[i]][0][dim] = basisValuesWithSupport[0][i];
+      for (int i = 0; i < N; i++)
+        out[i][0][dim] = basisValuesWithSupport[0][i];
     }
   }
 
