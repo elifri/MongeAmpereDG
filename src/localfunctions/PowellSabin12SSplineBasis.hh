@@ -323,6 +323,8 @@ private:
 
    void calcBarycCoords(const typename Traits::DomainLocal& x, BarycCoordType& baryc) const
    {
+     assert(x[0] < 1+1e-12 && x[1] <= 1+1e-12 && x[0] > -1e-12 && x[1] > -1e-12 && " These are not local coordinates");
+/*
      const auto& b0 = geo_.corner(0);
      const auto& b1 = geo_.corner(1);
      const auto& b2 = geo_.corner(2);
@@ -330,6 +332,23 @@ private:
      baryc[0] = (b1[0]*b2[1]-b1[0]*x[1]-b1[1]*b2[0]+b1[1]*x[0]+b2[0]*x[1]-b2[1]*x[0])/determinantBarycTrafo_;
      baryc[1] = -(b0[0]*b2[1]-b0[0]*x[1]-b0[1]*b2[0]+b0[1]*x[0]+b2[0]*x[1]-b2[1]*x[0])/determinantBarycTrafo_;
      baryc[2] = (b0[0]*b1[1]-b0[0]*x[1]-b0[1]*b1[0]+b0[1]*x[0]+b1[0]*x[1]-b1[1]*x[0])/determinantBarycTrafo_;
+*/
+     baryc[1] = x[0];
+     baryc[2] = x[1];
+     baryc[0] = 1 - x[0] -x[1];
+
+     for (int i = 0; i < 3; i++)
+       if (baryc[i] < 0)
+       {
+         baryc[i] = 0;
+         baryc[(i+1)%3] = 1 - baryc[i%3] -baryc[(i+2)%3];
+       }
+
+     assert(baryc[0] >= 0);
+     assert(baryc[1] >= 0);
+     assert(baryc[2] >= 0);
+//     assert(!(baryc[0]+baryc[1]+baryc[2] > 1));
+
    }
 
    R R1(const BarycCoordType& baryc, const int i, const int j) const
