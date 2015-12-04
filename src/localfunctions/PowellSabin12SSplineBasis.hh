@@ -14,7 +14,7 @@
 
 namespace Dune {
 /**@ingroup LocalBasisImplementation
- \brief DeVeubeke (Macro element) shape functions of piecewise cubic order on the reference quadriteral.
+ \brief PowellSabin 12 Split (Macro element) shape functions of piecewise cubic order on the reference quadriteral.
 
   The macro element is described by the nodal degrees function values and gradients at vertices, as well as normal derivatives at edge midpoints.
   Attention: The normal derivatives are not affine transformable. Hence, global dofs have to be transformed before using them as local dofs on the reference element!
@@ -247,6 +247,7 @@ private:
     */
    void subtriangle_lookup(const BarycCoordType& baryc, int& k, std::array<int, 3>& gk1, std::array<int, 6>& gk2) const
    {
+     //algorithm 1.1 from [CLR2013]
      int sw = 32*(baryc[0] > 0.5) + 16*(baryc[1] >= 0.5) + 8*(baryc[2] >= 0.5) + 4*(baryc[0] > baryc[1]) + 2*(baryc[0]>baryc[2]) + (baryc[1] >= baryc[2]);
 
      switch(sw)
@@ -670,12 +671,7 @@ private:
    const SparseMatrixType& A_; //hermite interpolation matrix
 
    std::array<BarycCoordType, Traits::dimDomainLocal> directionAxis_;
-   BarycCoordType directionYAxis_;
 
-/*
-   const SparseMatrixType& U1TimesU2_gradx; //differentiation matrix for linear splines in  direction
-   const SparseMatrixType& U1TimesU2_grady; //differentiation matrix for linear splines in  direction
-*/
 
 private:
    D determinantBarycTrafo_;///the determinant of the matrix for the calculation of baryc coordinates
