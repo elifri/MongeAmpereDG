@@ -73,7 +73,9 @@ public:
     const auto& b0 = geo.corner(0);
     const auto& b1 = geo.corner(1);
     const auto& b2 = geo.corner(2);
-    determinantBarycTrafo_ = b0[0]*b1[1]-b0[1]*b2[1]-b0[1]*b1[0]+b0[1]*b2[0]+b1[0]*b2[1]-b1[1]*b2[0];
+    determinantBarycTrafo_ = b0[0]*b1[1]-b0[0]*b2[1]-b0[1]*b1[0]+b0[1]*b2[0]+b1[0]*b2[1]-b1[1]*b2[0];
+
+    assert(std::abs(std::abs(determinantBarycTrafo_) - 2.*geo_.volume()) < 1e-12);
 
     static_assert(Traits::dimDomainLocal == 2, " constructor works only for dimension 2");
     directionAxis_[0][0] = (b1[1]-b2[1]) / determinantBarycTrafo_;
