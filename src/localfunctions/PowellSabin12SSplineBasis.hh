@@ -165,17 +165,6 @@ public:
 
     subtriangle_lookup(barycPos, k, gk1, gk2);
 
-    //calculate derivative (sub)matrix for linear splines
-    std::array<FieldMatrix<R, 1 , 3>, Traits::dimDomainLocal> Uk1;
-
-    for (unsigned int dim = 0 ; dim < Traits::dimDomainLocal; dim++)
-      for (int j = 0; j < 3; j++)
-      {
-        Uk1[dim][0][j] = U1(directionAxis_[dim], k, gk1[j]);
-      }
-
-    std::cout << " U1 " << Uk1[0] << std::endl << " and " << Uk1[1] << std::endl;
-
     //caluclate derivative (sub)matrix for quadratic splines
     std::array<FieldMatrix<R, 3 , gk2size>,2> Uk2;
     for (unsigned int dim = 0 ; dim < Traits::dimDomainLocal; dim++)
@@ -313,7 +302,7 @@ private:
      case 1: k = 9; break;
      case 0: k = 10; break;
      case 4: k = 11; break;
-     default: assert(false); DUNE_THROW(RangeError, "given coordinates do no lie within the triangle");
+     default: assert(false); DUNE_THROW(RangeError, "given coordinates do not lie within the triangle");
      }
 
      //table 1 of [CLR2013]
