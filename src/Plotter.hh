@@ -29,15 +29,17 @@
 
 class MA_solver;
 
-//typedef StaticRefinement<GenericGeometry::SimplexTopology<2>::type::id,
-//        Solver_config::GridType::ctype,
-//        GenericGeometry::SimplexTopology<2>::type::id,
-//        2> PlotRefinementType;
+typedef StaticRefinement<GenericGeometry::SimplexTopology<2>::type::id,
+        Solver_config::GridType::ctype,
+        GenericGeometry::SimplexTopology<2>::type::id,
+        2> PlotRefinementType;
 
+/*
 typedef StaticRefinement<GenericGeometry::CubeTopology<2>::type::id,
         Solver_config::GridType::ctype,
         GenericGeometry::CubeTopology<2>::type::id,
         2> PlotRefinementType;
+*/
 
 
 class Plotter{
@@ -527,6 +529,7 @@ void Plotter::writeReflectorPOV(std::string filename, Function &f) const {
 }
 
 
+/*
 template<typename Functiontype>
 void Plotter::save_rectangular_mesh(Functiontype &f, std::ofstream &of) const
 {
@@ -584,5 +587,6 @@ void Plotter::save_rectangular_mesh(Functiontype &f, std::ofstream &of) const
 
 }
 
+*/
 
 #endif /* SRC_PLOTTER_HH_ */

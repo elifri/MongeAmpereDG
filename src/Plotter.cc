@@ -162,7 +162,7 @@ void Plotter::write_cells(std::ofstream &file) const
 			for (auto it = PlotRefinementType::eBegin(refinement); it != PlotRefinementType::eEnd(refinement); it++)
 			{
 				file << "\t\t\t\t\t";
-				if (true) //hack for quads as the corner numbering of the refinement and vtk differs
+				if (false) //hack for quads as the corner numbering of the refinement and vtk differs
 				{
           auto vertexIndices = it.vertexIndices();
           file << offset+vertexIndices[0] << " " << offset+vertexIndices[1] << " " << offset+vertexIndices[3] << " " << offset+vertexIndices[2] << "  ";
@@ -183,12 +183,12 @@ void Plotter::write_cells(std::ofstream &file) const
 
 	const int Nelements = this->Nelements();
 	for (int i = 1; i <= Nelements; ++i)
-		file << i * 4 << " ";
+		file << i * 3 << " ";
 	file << "\n\t\t\t\t</DataArray>";
 	file
 			<< "\n\t\t\t\t<DataArray type=\"Int32\" Name=\"types\" format=\"ascii\">\n\t\t\t\t\t";
 	for (int i = 1; i <= Nelements; ++i)
-		file << "9 ";  // 5: triangle, 9: quad
+		file << "5 ";  // 5: triangle, 9: quad
 	file << "\n\t\t\t\t</DataArray>";
 	file << "\n\t\t\t</Cells>\n";
 }
@@ -259,7 +259,7 @@ void Plotter::write_target_plane(std::ofstream &file) const{
 
 
 
-void Plotter::write_face_indices_pov(std::ofstream &file) const
+/*void Plotter::write_face_indices_pov(std::ofstream &file) const
 {
 	// write cells
 	file << "\t\t face_indices {\n"
@@ -293,8 +293,43 @@ void Plotter::write_face_indices_pov(std::ofstream &file) const
 		}
 	}
 	file << "\t}\n";
-}
+}*/
 
+///for triangular grids
+void Plotter::write_face_indices_pov(std::ofstream &file) const
+{
+  // write cells
+  file << "\t\t face_indices {\n"
+      << "\t\t\t" << this->Nelements() << std::endl;
+  // make connectivity
+  if (refinement == 0){
+    const Solver_config::GridView::IndexSet& indexSet = grid->indexSet();
+
+    for (auto&& e : elements(*grid)) {
+      for (unsigned int i = 0; i < e.subEntities(Solver_config::dim); i++) //loop over corners
+        {file << "\t\t\t";
+//        for (const auto& vertex : geometry.corners()) {
+          file << indexSet.index(e.subEntity<Solver_config::dim>(i)) << " ";
+          assert(false);
+//        }
+      }
+    }
+  }
+  else{ //refined
+    int offset = 0;
+//    for (auto&& element : elements(*grid)) {
+    for (int i = 0; i < grid->size(0); i++){
+      for (auto it = PlotRefinementType::eBegin(refinement); it != PlotRefinementType::eEnd(refinement); it++)
+      {
+        auto vertexIndices = it.vertexIndices();
+
+        file << "\t\t\t<" << offset+vertexIndices[0] << ", "<< offset+vertexIndices[1] << ", "<< offset+vertexIndices[2] << ">\n";
+      }
+      offset += PlotRefinementType::nVertices(refinement);
+    }
+  }
+  file << "\t}\n";
+}
 
 
 
