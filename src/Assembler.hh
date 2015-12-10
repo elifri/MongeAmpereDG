@@ -452,16 +452,16 @@ void Assembler::calculate_refined_local_mass_matrix_ansatz(
 
     assert(Solver_config::dim == 2);
     //calculate affine transformation form ref cell to child cell (g:R->C, g(x) = Ax+b)
-    FieldMatrix<double, 2, 2> A3 = { { -0.5, 0 }, { 0, -0.5 } };
+    FieldMatrix<double, 2, 2> A3 = { { 0.5, 0.5 }, { -0.5, 0. } };
     FieldMatrix<double, 2, 2> A = { { 0.5, 0 }, { 0, 0.5 } };
     std::vector<FieldVector<double, 2> > b(Solver_config::childdim);
-    b[3] = {0.5,0.5};
+    b[3] = {0,0.5};
     b[0] = {0,0};
-    b[1] = {0.5,0};
-    b[2] = {0,0.5};
+    b[1] = {0,0.5};
+    b[2] = {0.5,0};
 
     // Get a quadrature rule
-    int order = std::max(1, 4 * ((int) lfu.localBasis().order()));
+    int order = std::max(1, 2 * ((int) lfu.localBasis().order()));
     const QuadratureRule<double, Solver_config::dim>& quad = QuadratureRules<
             double, Solver_config::dim>::rule(lfu.type(), order);
 
