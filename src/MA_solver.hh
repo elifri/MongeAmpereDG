@@ -24,9 +24,11 @@
 #include "problem_data.hh"
 //#include "Operator/linear_system_operator_poisson_DG.hh"
 //#include "Operator/operator_MA_Neilan_DG.hh"
-#include "Operator/operator_MA_refl_Brenner.hh"
+//#include "Operator/operator_MA_refl_Brenner.hh"
+#include "Operator/operator_MA_refr_Brenner.hh"
 #include "Operator/operator_discrete_Hessian.hh"
 #include "Plotter.hh"
+#include "matlab_export.hpp"
 
 #ifdef USE_DOGLEG
 #include "Dogleg/doglegMethod.hpp"
@@ -149,6 +151,8 @@ public:
       if (new_solution)
       {
         solver_ptr->update_solution(x_old);
+//        solver_ptr->iterations++;
+//        solver_ptr->plot_with_mirror("intermediateStep");
       }
 
       assert(solver_ptr != NULL);
@@ -190,7 +194,8 @@ public:
     mutable MA_solver* solver_ptr;
 
 //		Local_Operator_MA_mixed_Neilan lop;
-		Local_Operator_MA_refl_Brenner lop;
+//		Local_Operator_MA_refl_Brenner lop;
+		Local_Operator_MA_refr_Brenner lop;
 	};
 
 	///assembles the (global) integrals (for every test function) specified by lop
@@ -239,7 +244,11 @@ public:
   template<class LocalF, class LocalF_grad>
   void project_labouriousC1Local(LocalF f, LocalF_grad f_grad, VectorType& v) const;
 
+private:
+  template<class F>
+  void test_projection(const F f, VectorType& v) const;
 
+public:
   /**
    * projects a function into the grid space, for the initialisation of the hessian dofs the discrete hessian is calculated
    * @param f function representing the function
@@ -278,6 +287,7 @@ public:
 
 	void plot_with_mirror(std::string name);
 
+	void plot_with_lens(std::string name);
 
 private:
 	///creates the initial guess
@@ -339,8 +349,9 @@ private:
 
 
   int count_refined; ///counts how often the original grid was refined
+public:
   mutable int iterations;
-
+private:
   bool writeVTK_;
 
   bool evaluateJacobianSimultaneously_;

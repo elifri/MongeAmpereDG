@@ -248,6 +248,52 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
 			"}" <<std::endl <<std::endl;
 
 }
+
+void Plotter::write_pov_setting_refractor(std::ofstream &file) const{
+  file << "// Setting for photons" <<std::endl <<
+      "global_settings {" <<std::endl <<
+      "\t //assumed_gamma 1" <<std::endl <<
+      "\t ambient_light <0.0, 0.0, 0.0>" <<std::endl <<
+      "\t max_trace_level 2" <<std::endl <<
+      "\t photons {" <<std::endl <<
+      "\t\t // spacing 0.001" <<std::endl <<
+      "\t\t count " << povRayOpts.nPhotons <<std::endl <<
+      "\t\t autostop 0" <<std::endl <<
+      "\t\tjitter " << povRayOpts.jitter <<std::endl <<
+      "\t}" <<std::endl <<
+      "}" <<std::endl <<std::endl;
+
+
+  double xMinOut = Solver_config::lowerLeftTarget[0], xMaxOut = Solver_config::upperRightTarget[0],
+         yMinOut = Solver_config::lowerLeftTarget[1], yMaxOut = Solver_config::upperRightTarget[1];
+
+  file << "// Camera" <<std::endl <<
+      "camera {" <<std::endl <<
+      "\t location <" << (xMinOut+xMaxOut)/2.0
+                         <<"," << (yMinOut+yMaxOut)/2.0 << ","
+                         <<  Solver_config::z_3 - max(xMaxOut-xMinOut,yMaxOut-yMinOut)*0.5   <<">" <<std::endl <<
+      "\t angle " << povRayOpts.cameraAngle <<std::endl <<
+      "\t look_at <" << (xMinOut+xMaxOut)/2.0
+                    <<"," << (yMinOut+yMaxOut)/2.0
+                    << "," << Solver_config::z_3 << ">" << std::endl <<
+      "\t right x*image_width/image_height" <<std::endl <<
+      "}" <<std::endl <<std::endl;
+
+  file << "// Light Source" <<std::endl <<
+      "light_source {" <<std::endl <<
+      "\t <-0,0,0>" <<std::endl <<
+//      "\t color rgb <1,1,1>" <<std::endl <<
+      "\t color rgb <0.141496033, 0.141496033, 0.141496033>" <<std::endl <<
+      "\t spotlight" <<std::endl <<
+      "\t point_at <-0.0, 0, 1>" <<std::endl <<
+      "\t radius " << povRayOpts.lightSourceRadius <<std::endl <<
+      "\t falloff " << povRayOpts.lightSourceFalloff <<std::endl <<
+      "\t tightness " << povRayOpts.lightSourceTightness <<std::endl <<
+      "\t photons { refraction on}" <<std::endl <<
+      "}" <<std::endl <<std::endl;
+
+}
+
 void Plotter::write_target_plane(std::ofstream &file) const{
 	file << "// The floor" <<std::endl <<
 			"plane {" <<std::endl <<
@@ -257,7 +303,16 @@ void Plotter::write_target_plane(std::ofstream &file) const{
 			"}" <<std::endl <<std::endl;
 }
 
-
+void Plotter::write_aperture(std::ofstream &file) const
+{
+  file << "// Aperture" <<std::endl <<
+      "difference {" <<std::endl <<
+      "\t   sphere{ <0,0,0> , 0.01 }" << std::endl <<
+      "\t box { <0.003,-0.003,-1>," <<std::endl <<
+      "\t <-0.003,0.003,1> }" <<std::endl <<
+      "\t texture{ pigment{ color White } }" <<std::endl <<
+      "}" <<std::endl <<std::endl;
+}
 
 /*void Plotter::write_face_indices_pov(std::ofstream &file) const
 {

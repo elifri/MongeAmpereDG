@@ -178,6 +178,70 @@ void MA_solver::plot_with_mirror(std::string name)
    std::cout << reflPovname << std::endl;
 }
 
+
+void MA_solver::plot_with_lens(std::string name)
+{
+
+  std::cout << "write? " << writeVTK_ << " ";
+  std::cout << "plot written into ";
+
+  //write vtk files
+  if (writeVTK_)
+  {
+
+    VectorType solution_u = solution.segment(0, get_n_dofs_u());
+
+     //build gridviewfunction
+     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
+     auto localnumericalSolution = localFunction(numericalSolution);
+
+     //build writer
+     SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
+
+     //add solution data
+     vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
+
+     //extract hessian (3 entries (because symmetry))
+     Dune::array<int,2> direction = {0,0};
+
+     auto HessianEntry00= localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry00 , VTK::FieldInfo("Hessian00", VTK::FieldInfo::Type::scalar, 1));
+     direction[0] = 1;
+     auto HessianEntry10 = localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry10 , VTK::FieldInfo("Hessian10", VTK::FieldInfo::Type::scalar, 1));
+     direction[0] = 0; direction[1] = 1;
+     auto HessianEntry01 = localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry01 , VTK::FieldInfo("Hessian01", VTK::FieldInfo::Type::scalar, 1));
+     direction[0] = 1;
+     auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
+
+
+//     std::cout << "solution " << solution_u.transpose() << std::endl;
+
+     //write to file
+     std::string fname(plotter.get_output_directory());
+     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
+     vtkWriter.write(fname);
+
+
+     std::string reflname(plotter.get_output_directory());
+     reflname += "/"+ plotter.get_output_prefix()+ name + "refractor"+NumberToString(iterations) + ".vtu";
+
+//     plotter.writeReflectorVTK(reflname, localnumericalSolution, *exact_solution);
+     plotter.writeRefractorVTK(reflname, localnumericalSolution);
+
+     std::cout << fname  << " " << reflname << " and ";
+  }
+
+  //write povray output
+   std::string refrPovname(plotter.get_output_directory());
+   refrPovname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".pov";
+
+   plotter.writeRefractorPOV(refrPovname, *solution_u_old);
+   std::cout << refrPovname << std::endl;
+}
+
 void MA_solver::create_initial_guess()
 {
   //init solution by laplace u = -sqrt(2f)
@@ -231,37 +295,25 @@ void MA_solver::create_initial_guess()
 //        solution[get_n_dofs_u()+ nDH*i+j] = (j == 0 || j ==3)? 1 : 0;
 //      }
 
-//  InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data(Solver_config::configFileEllipsoid);
-//  project_labouriousC1([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
-//  ellipsoidMethod.write_output();
+/*    InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data(Solver_config::configFileEllipsoid);
+    project_labouriousC1([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
+    ellipsoidMethod.write_output();*/
 
 //    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
-  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimple.grid");
+//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimple.grid");
 //  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRoentgen.grid");
-//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRose.grid");
-//
-  assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
-  assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
+//    Rectangular_mesh_interpolator rectangular_interpolator("../Testing/oneParis.grid");
 
-//  Rectangular_mesh_interpolator rectangular_interpolatorDerX("../inputData/exactReflectorProjectionSimpleDerX.grid");
-//  Rectangular_mesh_interpolator rectangular_interpolatorDerY("../inputData/exactReflectorProjectionSimpleDerY.grid");
+//    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/grids/homogeneousinitial.grid");
+////
+//    assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
+//    assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
+//    project_labouriousC1([&rectangular_interpolator](Solver_config::SpaceType x){return rectangular_interpolator.evaluate(x);},solution);
+//    project_labouriousC1([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
+//    solution.setZero(get_n_dofs());
+//    solution[1] = 1;
 
-//  assert(is_close(rectangular_interpolatorDerX.x_min, Solver_config::lowerLeft[0], 1e-12));
-//  assert(is_close(rectangular_interpolatorDerX.y_min, Solver_config::lowerLeft[1], 1e-12));
-//  assert(is_close(rectangular_interpolatorDerY.x_min, Solver_config::lowerLeft[0], 1e-12));
-//  assert(is_close(rectangular_interpolatorDerY.y_min, Solver_config::lowerLeft[1], 1e-12));
-//
-    project_labouriousC1([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);},solution);
-
-//  project_labouriousC1([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);},
-//                       [&rectangular_interpolatorDerX](Solver_config::SpaceType x){return rectangular_interpolatorDerX.evaluate(x);},
-//                       [&rectangular_interpolatorDerY](Solver_config::SpaceType x){return rectangular_interpolatorDerY.evaluate(x);}
-//                       ,solution);
-//  project_labouriousC1([](Solver_config::SpaceType x){return x.two_norm2()/2.0;},
-//                       [](Solver_config::SpaceType x){return x[0];},
-//                       [](Solver_config::SpaceType x){return x[1];},
-//                       solution);
-
+  project_labouriousC1([](Solver_config::SpaceType x){return 1;}, solution);
 }
 
 const typename MA_solver::VectorType& MA_solver::solve()
@@ -283,7 +335,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
   //blurr target distributation
   std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
-  op.lop.rhs.convolveTargetDistributionAndNormalise(std::min(100,(int) epsMollifier_));
+  op.lop.rhs.convolveTargetDistributionAndNormalise(epsMollifier_);
   //print blurred target distribution
   if (true) {
       ostringstream filename2; filename2 << outputDirectory_+"/lightOut" << iterations << ".bmp";
@@ -293,24 +345,30 @@ const typename MA_solver::VectorType& MA_solver::solve()
   }
 
   create_initial_guess();
+  {
+    //write initial guess into file
+    stringstream filename2; filename2 << outputDirectory_ <<  outputPrefix_ << "initial.feg";
+    ofstream file(filename2.str(),std::ios::out);
+//    update_solution(solution);
+//    plotter.save_rectangular_mesh(*solution_u_old, file);
+    file << solution;
+    file.close();
+
+  /*solution.resize(get_n_dofs());
+  ifstream fileInitial ("homogeneousFineVector2.data");
+  for (int i=0; i<get_n_dofs(); ++i) {
+    fileInitial >> solution(i);
+  }
+
+   fileInitial.close();*/
+  }
+
   solution(solution.size()-1)= op.lop.get_right_handside().get_input_distribution().omega_integrate() / op.lop.get_right_handside().get_target_distribution().integrate2();
 
-  {
-  ofstream fileInitial (outputPrefix_+"initialVector");
-  fileInitial << solution << endl;
-
-//    solution.resize(get_n_dofs());
-//    ifstream fileInitial ("CGtestfirstVector");
-//    for (int i=0; i<get_n_dofs(); ++i) {
-//        fileInitial >> solution(i);
-//    }
-//
-//    fileInitial.close();
-  }
 
   update_solution(solution);
 
-  plot_with_mirror("initialguess");
+  plot_with_lens("initialguess");
 
 
   Solver_config::VectorType f;
@@ -322,7 +380,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
   Integrator<GridType> integrator(grid_ptr);
   G = integrator.assemble_integral_of_local_gridFunction(*solution_u_old);
   std::cout << "reflector size  G " << G << endl;
-//      G = 2.777777777777778;
+//  G = 0.16;   std::cout << "set reflector size  G " << G << endl;
   assembler.set_G(G);
 
 
@@ -330,24 +388,20 @@ const typename MA_solver::VectorType& MA_solver::solve()
   for (int i = 0; i < Solver_config::nonlinear_steps; i++)
   {
     solve_nonlinear_system();
-
-    ofstream file (outputPrefix_+"firstVector");
-    file << solution << endl;
-    file.close();
-
+    std::cerr << " solves nonlinear system" << std::endl;
 
     cout << "scaling factor " << solution(solution.size()-1) << endl;
 
     iterations++;
 
     update_solution(solution);
-    plot_with_mirror("numericalSolution");
+    plot_with_lens("numericalSolution");
 
     epsMollifier_ /= epsDivide_;
     std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
 
     // blur target
-    op.lop.rhs.convolveTargetDistributionAndNormalise(std::min(100,(int) epsMollifier_));
+    op.lop.rhs.convolveTargetDistributionAndNormalise(epsMollifier_);
 
     //print blurred target distribution
     if (true) {
@@ -358,15 +412,31 @@ const typename MA_solver::VectorType& MA_solver::solve()
     }
 
     solve_nonlinear_system();
+    std::cerr << " solves nonlinear system" << std::endl;
     iterations++;
+
+    {
+      //write current solution to file
+//      ostringstream filename2; filename2 << outputPrefix_ << "Vector" << iterations << ".data";
+//      ofstream fileInitial (filename2.str());
+//      fileInitial << solution << endl;
+//      fileInitial.close();
+
+      stringstream filename2; filename2 << "../inputData/grids/" << outputPrefix_ << iterations << ".grid";
+      ofstream file(filename2.str(),std::ios::out);
+      update_solution(solution);
+//      plotter.save_rectangular_mesh(*solution_u_old, file);
+      file.close();
+    }
+
+    plot_with_mirror("numericalSolutionBeforeRef");
 
     adapt_solution();
 //    project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
 //    exactsol_u = exactsol.segment(0, get_n_dofs_u());
 
     update_solution(solution);
-
-    plot_with_mirror("numericalSolution");
+    plot_with_lens("numericalSolution");
   }
 
   return solution;
@@ -405,6 +475,7 @@ void MA_solver::adapt_solution(const int level)
 //      std::cout << " gradient at the same " << (*gradient_u_old)(x) << std::endl;
 //    }
 
+    solution_u_old->bind(element);
     //mark element for refining
     grid_ptr->mark(1,element);
   }
@@ -608,19 +679,6 @@ void MA_solver::solve_nonlinear_system()
   assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
 
   std::cout << "n dofs" << get_n_dofs() << std::endl;
-//  if (count_refined < 3)  solution = exactsol_projection;
-//  std::cout << "initial guess "<< solution.transpose() << std::endl;
-
-
-//  plotter.get_plot_stream("resU") << iterations << " " << f.segment(0,get_n_dofs_u()).norm() << endl;
-//  plotter.get_plot_stream("res") << iterations << " " << f.norm() << endl;
-//  MATLAB_export(f, "f");
-
-
-  //  std::cout << "initial l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
-  //copy guess vor scaling factor into exact solution
-//  exactsol(exactsol.size()-1) = solution(solution.size()-1);
-//  std::cout << "approximate error " << (solution-exactsol).norm() << std::endl;
 
   // /////////////////////////
   // Compute solution
@@ -628,14 +686,37 @@ void MA_solver::solve_nonlinear_system()
 
   Solver_config::VectorType newSolution = solution;
 
-//  int k = 0;
-//  do{
-//  std::cout << "before: new Solution " << newSolution.transpose() << std::endl;
-//  std::cout << "before: old solution " << solution_u.transpose() << std::endl;
-
 #ifdef USE_DOGLEG
 
+ /* doglegOpts_.maxsteps = 5;
+  int steps = 0;
+  bool converged = false;
+
+  do{
+    std::array<Solver_config::VectorType, 2> v;
+    Solver_config::sigmaBoundary =50;
+
+    for (int i=0; i < 2; i++)
+    {
+      v[i] =  solution;
+      v[i] += (i == 0)? Solver_config::VectorType::Constant(solution.size(),1e-5)
+                    : Solver_config::VectorType::Constant(solution.size(),-1e-5);
+
+      converged = doglegMethod(op, doglegOpts_, v[i], evaluateJacobianSimultaneously_);
+      std::cerr << "solved three steps " << std::endl;
+      Solver_config::sigmaBoundary +=25;
+    }
+    std::cerr << " merged solution " << std::endl;
+    solution = 0.5*(v[0]+v[1]);
+    steps++;
+    std::cerr << " v0 " << v[0].transpose() << std::endl;
+    std::cerr << " v1 " << v[1].transpose() << std::endl;
+    std::cerr << " solution " << solution.transpose() << std::endl;
+
+  }  while (!converged && steps < maxSteps_);
+*/
   doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
+
 
 #endif
 #ifdef USE_PETSC

@@ -91,6 +91,10 @@ public:
 	template <class Function>
 	void write_points_reflector(std::ofstream &file, Function &f) const;
 
+	///writes the point array of the reflector (implicitly given by f) into file
+  template <class Function>
+  void write_points_refractor(std::ofstream &file, Function &f) const;
+
 	///writes the transported point array to file (transport is given by gradient)
 	template <class LocalFunction>
 	void write_points_OT(std::ofstream &file, LocalFunction &fg) const;
@@ -105,23 +109,39 @@ public:
   void write_transport_OT(std::ofstream &file, LocalFunction &f) const;
 
   void write_pov_setting(std::ofstream &file) const;///write the setting for photons, camera and light source
+  void write_pov_setting_refractor(std::ofstream &file) const;///write the setting for photons, camera and light source
 	void write_target_plane(std::ofstream &file) const;
+  void write_aperture(std::ofstream &file) const;
 
+	///writes pointarray in pov format for reflector
 	template <class Function>
 	void write_points_reflector_pov(std::ofstream &file, Function& f) const;
+
+  ///writes pointarray in pov format for reflector
+	template <class Function>
+  void write_points_refractor_pov(std::ofstream &file, Function& f) const;
 
 	void write_face_indices_pov(std::ofstream &file) const;
 
   template <class Function>
 	void write_mirror(std::ofstream &file, Function &f) const;
 
+  template <class Function>
+  void write_lens(std::ofstream &file, Function &f) const;
+
 public:
 
   template <class Function>
 	void writeReflectorPOV(std::string filename, Function &f) const;
 
+  template <class Function>
+  void writeRefractorPOV(std::string filename, Function &f) const;
+
 	template <class Function>
 	void writeReflectorVTK(std::string filename, Function &f) const;
+
+	template <class Function>
+  void writeRefractorVTK(std::string filename, Function &f) const;
 
 	template <class LocalFunction, class Function>
 	void writeReflectorVTK(std::string filename, LocalFunction &f, Function& exact_solution) const;
@@ -192,6 +212,34 @@ void Plotter::writeReflectorVTK(std::string filename, Function &f) const {
   }
 }
 
+template <class Function>
+void Plotter::writeRefractorVTK(std::string filename, Function &f) const {
+
+  //--------------------------------------
+  if (refinement > 0)
+  {
+    // open file
+    check_file_extension(filename, ".vtu");
+    std::ofstream file(filename.c_str(), std::ios::out);
+    if (file.rdstate()) {
+      std::cerr << "Error: Couldn't open '" << filename << "'!\n";
+      return;
+    }
+
+    //write file
+
+    write_vtk_header(file);
+
+    write_points_refractor(file, f);
+    write_cells(file);
+
+    write_vtk_end(file);
+  }
+  else
+  {
+    assert(false);
+  }
+}
 
 template <class LocalFunction, class Function>
 void Plotter::writeReflectorVTK(std::string filename, LocalFunction &f, Function & exact_solution) const {
@@ -314,6 +362,38 @@ void Plotter::write_points_reflector(std::ofstream &file, Function &f) const{
     }
   file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
 }
+
+template <class Function>
+void Plotter::write_points_refractor(std::ofstream &file, Function &f) const{
+  // write points
+    file << "\t\t\t<Points>\n"
+      << "\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\""
+      << "ascii" << "\">\n";
+
+    int vertex_no = 0;
+
+    //the refractor is given by X*rho, where rho is the PDE solution. X is calculated from the 2d mesh by adding the third coordiante omega(x)
+
+    if (refinement == 0)
+    {
+      assert(false);
+    }else {   // save points in file after refinement
+      for (auto&& element: elements(*grid))
+      {
+        f.bind(element);
+        const auto geometry = element.geometry();
+        for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
+          auto x_2d = geometry.global(it.coords());
+          auto rho = f(it.coords());
+          file << std::setprecision(12) << std::scientific;
+          file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  omega(x_2d)*rho << endl;
+          vertex_no++;
+        }
+      }
+    }
+  file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
+}
+
 
 void evaluateRhoX (const Solver_config::DomainType &x, Solver_config::value_type &u);
 
@@ -470,6 +550,44 @@ void Plotter::write_points_reflector_pov(std::ofstream &file, Function & f) cons
 }
 
 template <class Function>
+void Plotter::write_points_refractor_pov(std::ofstream &file, Function & f) const{
+  // write points
+  file << "\t vertex_vectors {" << std::endl
+      << "\t\t " << Nnodes() << "," << std::endl;
+
+    int vertex_no = 0;
+
+    //the reflector is given by X*rho, where rho is the PDE solution. X is calculated from the 2d mesh by adding the third coordiante omega(x)
+
+    if (refinement == 0)
+    {
+      // collect points
+      /*for (auto&& vertex: vertices(*grid)) {
+        auto x_2d = vertex.geometry().center();
+        f.bind(vertex. );
+        auto rho = 1.0/f(x_2d);
+        file << "\t\t <" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  Local_Operator_MA_refl_Neilan::omega(x_2d)*rho  << ">,"<< endl;
+        vertex_no++;
+      }*/
+      assert(false);
+    }else {   // save points in file after refinement
+      for (auto&& element: elements(*grid))
+      {
+        f.bind(element);
+        const auto geometry = element.geometry();
+        for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
+          auto x_2d = geometry.global(it.coords());
+          auto rho = f(it.coords());
+          file << std::setprecision(12) << std::scientific;
+          file << "\t\t <"  << x_2d[0]*rho << ", " << x_2d[1]*rho << ", " <<  omega(x_2d)*rho<< ">," << endl;
+          vertex_no++;
+        }
+      }
+    }
+  file << "\t}\n";
+}
+
+template <class Function>
 void Plotter::write_mirror(std::ofstream &file, Function &f) const{
   file << "// Mirror" <<std::endl <<
       "mesh2 {" <<std::endl;
@@ -508,6 +626,63 @@ void Plotter::write_mirror(std::ofstream &file, Function &f) const{
 }
 
 
+template <class Function>
+void Plotter::write_lens(std::ofstream &file, Function &f) const{
+  file << "// Glass interior" <<std::endl <<
+      "#declare myI_Glass =" <<std::endl <<
+      "interior { "<< std::endl <<
+      "\t ior " << Solver_config::kappa <<
+      "}" <<std::endl <<std::endl;
+
+  file << "// Glass Finishes" <<std::endl <<
+      "#declare myF_Glass =" <<std::endl <<
+      "finish { "<< std::endl <<
+      "\t specular 0 " << std::endl <<
+      "\t roughness 0.0001 " << std::endl <<
+      "\t ambient 0 " << std::endl <<
+      "\t diffuse 0 " << std::endl <<
+      "\t reflection 0 " << std::endl <<
+      "}" <<std::endl <<std::endl;
+
+  file << "// Glass Textures" <<std::endl <<
+      "#declare myT_Glass =" <<std::endl <<
+      "texture { "<< std::endl <<
+      "\t pigment { color rgbf<1.0, 1.0, 1.0, 0.97> } " << std::endl <<
+      "\t finish  { myF_Glass } " << std::endl <<
+      "}" <<std::endl <<std::endl;
+
+
+  file << "// Lens" <<std::endl <<
+      "intersection {" <<std::endl <<
+      "\t mesh2 {" <<std::endl;
+
+  if (refinement > 0)
+  {
+    write_points_refractor_pov(file, f); //define if with 3rd coordinate or without
+    write_face_indices_pov(file);
+  }
+  else
+  {
+    // Output result
+    assert(false);
+  }
+  file << "\t inside_vector <0, 0, 1> " << std::endl
+       << "\t }" << std::endl;
+
+
+  file << "\t sphere{<0,0,0>,10} " <<std::endl
+       << "\t\t texture { myT_Glass }" << std::endl
+       << "\t\t interior{ myI_Glass }" << std::endl<<std::endl;
+
+  file << "\t photons {" << std::endl
+        << "\t\t target" <<std::endl
+        << "\t\t reflection off" <<std::endl
+        << "\t\t refraction on" <<std::endl
+      <<"\t}" <<std::endl<<std::endl;
+  file << "}" <<std::endl;
+}
+
+
 
 template <class Function>
 void Plotter::writeReflectorPOV(std::string filename, Function &f) const {
@@ -528,6 +703,27 @@ void Plotter::writeReflectorPOV(std::string filename, Function &f) const {
   write_mirror(file, f);
 }
 
+template <class Function>
+void Plotter::writeRefractorPOV(std::string filename, Function &f) const {
+  // open file
+  check_file_extension(filename, ".pov");
+  std::ofstream file(filename.c_str(), std::ios::out);
+  if (file.rdstate()) {
+    std::cerr << "Error: Couldn't open '" << filename << "'!\n";
+    return;
+  }
+
+  //include header
+  file << "//Simulation of a lens" << std::endl
+     << "#include \"colors.inc\" " << std::endl
+     << "#include \"textures.inc\" " << std::endl
+     << "#include \"glass.inc\" " << std::endl << std::endl;
+
+  write_pov_setting_refractor(file);
+  write_target_plane(file);
+  write_aperture(file);
+  write_lens(file, f);
+}
 
 /*
 template<typename Functiontype>
