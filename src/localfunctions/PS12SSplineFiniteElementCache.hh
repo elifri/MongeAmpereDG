@@ -77,13 +77,9 @@ bool operator<(const Dune::FieldVector<value_type, 2> & v, const Dune::FieldVect
       {
         const auto normal = it.centerUnitOuterNormal();
         if (std::abs(normal[0]+normal[1]) < 1e-12)
-          signNormal[k++] = normal[1] > 0 ? 1 : -1;
+          signNormal[k++] = normal[1] > 0 ? -1 : 1;
         else
-          signNormal[k++] = normal[0]+normal[1] > 0 ? 1 : -1;
-
-        std::cout << "normal " << normal  << " " << signNormal[k-1] << std::endl;
-
-
+          signNormal[k++] = normal[0]+normal[1] > 0 ? -1 : 1;
       }
 
       const auto& geo =  e.geometry();
@@ -96,9 +92,9 @@ bool operator<(const Dune::FieldVector<value_type, 2> & v, const Dune::FieldVect
       auto b4 = (b1+b2); b4 *= 0.5;
       auto b5 = (b0+b2); b5 *= 0.5;
 
-      const auto determinantBarycTrafo = b0[0]*b1[1]-b0[0]*b2[1]-b0[1]*b1[0]+b0[1]*b2[0]+b1[0]*b2[1]-b1[1]*b2[0];
-/*
-      const auto determinantBarycTrafo = 2.*geo.volume();*/
+//      const auto determinantBarycTrafo = b0[0]*b1[1]-b0[0]*b2[1]-b0[1]*b1[0]+b0[1]*b2[0]+b1[0]*b2[1]-b1[1]*b2[0];
+
+      const auto determinantBarycTrafo = 2.*geo.volume();
 
       const auto pNorm01 = (b0-b1).two_norm();
       const auto pNorm12 = (b2-b1).two_norm();
@@ -146,6 +142,49 @@ bool operator<(const Dune::FieldVector<value_type, 2> & v, const Dune::FieldVect
       A.insert(9,10) = 0.25*(b0[1]-b2[1]);
       A.insert(10,10) = 1./6.*(b2[1]-b0[1])*((b2-b0)*(b0-b4))/((b2-b0)*(b2-b0));
       A.insert(10,11) = signNormal[1]*determinantBarycTrafo/6./pNorm02;
+
+ /*     A.insert(0,0) = 1.;
+      A.insert(1,0) = 1.;
+      A.insert(2,0) = -2./3.*((b0-b1)*(b1-b5))/((b0-b1)*(b0-b1));
+      A.insert(10,0) = -2./3.*((b0-b2)*(b2-b3))/((b0-b2)*(b0-b2));
+      A.insert(11,0) = signNormal[1]*1.;
+      A.insert(1,1) = 0.25*(b1[0]-b0[0]);
+      A.insert(2,1) = 1./6.*(b0[0]-b1[0])*((b0-b1)*(b1-b5))/((b0-b1)*(b0-b1));
+      A.insert(10,1) = 1./6.*(b0[0]-b2[0])*((b0-b2)*(b2-b3))/((b0-b2)*(b0-b2));
+      A.insert(11,1) = signNormal[1]*0.25*(b2[0]-b0[0]);
+      A.insert(1,2) = 0.25*(b1[1]-b0[1]);
+      A.insert(2,2) = 1./6.*(b0[1]-b1[1])*((b0-b1)*(b1-b5))/((b0-b1)*(b0-b1));
+      A.insert(10,2) = 1./6.*(b0[1]-b2[1])*((b0-b2)*(b2-b3))/((b0-b2)*(b0-b2));
+      A.insert(11,2) = signNormal[1]*0.25*(b2[1]-b0[1]);
+      A.insert(2,3) = determinantBarycTrafo/6./pNorm01;
+      A.insert(2,4) = -2./3.*((b1-b0)*(b0-b4))/((b1-b0)*(b1-b0));
+      A.insert(3,4) = signNormal[0]*1.;
+      A.insert(4,4) = 1.;
+      A.insert(5,4) = 1.;
+      A.insert(6,4) = -2./3.*((b1-b2)*(b2-b3))/((b1-b2)*(b1-b2));
+      A.insert(2,5) = 1./6.*(b1[0]-b0[0])*((b1-b0)*(b0-b4))/((b1-b0)*(b1-b0));
+      A.insert(3,5) = signNormal[0]*0.25*(b0[0]-b1[0]);
+      A.insert(5,5) = 0.25*(b2[0]-b1[0]);
+      A.insert(6,5) = 1./6.*(b1[0]-b2[0])*((b1-b2)*(b2-b3))/((b1-b2)*(b1-b2));
+      A.insert(2,6) = 1./6.*(b1[1]-b0[1])*((b1-b0)*(b0-b4))/((b1-b0)*(b1-b0));
+      A.insert(3,6) = signNormal[0]*0.25*(b0[1]-b1[1]);
+      A.insert(5,6) = 0.25*(b2[1]-b1[1]);
+      A.insert(6,6) = 1./6.*(b1[1]-b2[1])*((b1-b2)*(b2-b3))/((b1-b2)*(b1-b2));
+      A.insert(6,7) = determinantBarycTrafo/6./pNorm12;
+      A.insert(6,8) = -2./3.*((b2-b1)*(b1-b5))/((b2-b1)*(b2-b1));
+      A.insert(7,8) = signNormal[2]*1.;
+      A.insert(8,8) = 1.;
+      A.insert(9,8) = 1.;
+      A.insert(10,8) = -2./3.*((b2-b0)*(b0-b4))/((b2-b0)*(b2-b0));
+      A.insert(6,9) = 1./6.*(b2[0]-b1[0])*((b2-b1)*(b1-b5))/((b2-b1)*(b2-b1));
+      A.insert(7,9) = signNormal[2]*0.25*(b1[0]-b2[0]);
+      A.insert(9,9) = 0.25*(b0[0]-b2[0]);
+      A.insert(10,9) = 1./6.*(b2[0]-b0[0])*((b2-b0)*(b0-b4))/((b2-b0)*(b2-b0));
+      A.insert(6,10) = 1./6.*(b2[1]-b1[1])*((b2-b1)*(b1-b5))/((b2-b1)*(b2-b1));
+      A.insert(7,10) = signNormal[2]*0.25*(b1[1]-b2[1]);
+      A.insert(9,10) = 0.25*(b0[1]-b2[1]);
+      A.insert(10,10) = 1./6.*(b2[1]-b0[1])*((b2-b0)*(b0-b4))/((b2-b0)*(b2-b0));
+      A.insert(10,11) = determinantBarycTrafo/6./pNorm02;*/
     }
 
   public:

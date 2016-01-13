@@ -190,7 +190,7 @@ public:
 
     //calculate derivative of Phi(u/G) in u
     value_type DuPhi_u_G = DPhi(u/G)*(1./G-u*DuG/sqr(G));
-    std::cerr << " DPhi(u/G) " << DPhi(u/G) << std::endl;
+//    std::cerr << " DPhi(u/G) " << DPhi(u/G) << std::endl;
 
 
     //calculate derivative of Phi(u/G) in p
@@ -199,11 +199,11 @@ public:
 
     //scalar Coefficient appearing in all partial derivatives of F
     adouble denominator = -G+(u+(p*x))*Phi_u_G;
-    std::cerr << " denominator  " << denominator.value() << std::endl;
+//    std::cerr << " denominator  " << denominator.value() << std::endl;
     value_type scalarCoefficient = Phi_u_G/ sqr(denominator);
 
     F = 0.5*Phi(u/G)/(-G+(u+(p*x))*Phi(u/G));
-    std::cerr << " DxG " << DxG << std::endl;
+//    std::cerr << " DxG " << DxG << std::endl;
 
     //calculate derivative of F in x
     DxF = DxPhi_u_G;
@@ -217,8 +217,8 @@ public:
     DuF = DuPhi_u_G / denominator;
     DuF += scalarCoefficient*(DuG - Phi_u_G - (u+p*x)*DuPhi_u_G);
     DuF /= 2.;
-    std::cerr << " DuPhi_u_G " << DuPhi_u_G << " scalarCoefficient " << scalarCoefficient <<" DuG " << DuG << " Phi_u_G " << Phi_u_G << std::endl;
-    std::cerr << "DuPhi_u_G / denominator " << DuPhi_u_G / denominator << " scalarCoefficient*(DuG - Phi_u_G - (u+p*x)*DuPhi_u_G) " << scalarCoefficient*(DuG - Phi_u_G - (u+p*x)*DuPhi_u_G) << std::endl;
+//    std::cerr << " DuPhi_u_G " << DuPhi_u_G << " scalarCoefficient " << scalarCoefficient <<" DuG " << DuG << " Phi_u_G " << Phi_u_G << std::endl;
+//    std::cerr << "DuPhi_u_G / denominator " << DuPhi_u_G / denominator << " scalarCoefficient*(DuG - Phi_u_G - (u+p*x)*DuPhi_u_G) " << scalarCoefficient*(DuG - Phi_u_G - (u+p*x)*DuPhi_u_G) << std::endl;
     //calculate derivative of F in p
     DpF = DpPhi_u_G;
     DpF /= denominator;
@@ -326,7 +326,14 @@ public:
       double omega_value = omega(x_value);
       FieldVector<double,2> DOmega_value = DOmega(x_value);
 
-      adouble F_value = F(x_value, rho_value, gradrho);
+      adouble F_value, DuF;
+      FieldVector<adouble, Solver_config::dim> DxF, DpF;
+      calc_F_and_derivatives(x_value,rho_value, gradrho, F_value, DxF, DuF, DpF);
+
+
+/*
+ *    //calculate finite difference derivatives
+      adouble F_valueEx = F(x_value, rho_value, gradrho);
 
       //calculate derivatives of F
       const double delta = std::sqrt(1e-15);
@@ -339,16 +346,16 @@ public:
       temp[1]+=delta;
       adouble Dx2PlusF_value = F(temp, rho_value, gradrho);
 
-      FieldVector<adouble, Solver_config::dim> DxF =
+      FieldVector<adouble, Solver_config::dim> DxFEx =
         {
-          (Dx1PlusF_value-F_value)/delta,
-          (Dx2PlusF_value-F_value)/delta
+          (Dx1PlusF_value-F_valueEx)/delta,
+          (Dx2PlusF_value-F_valueEx)/delta
         };
 
       //calculate derivative of F in u by finite difference
       adouble tempScalar = rho_value+delta;
       adouble DuPlusF_value = F(x_value, tempScalar, gradrho);
-      adouble DuF = (DuPlusF_value-F_value)/delta;
+      adouble DuFEx = (DuPlusF_value-F_valueEx)/delta;
 
       //calculate derivative of F in p by finite difference
       auto tempAdouble = gradrho;
@@ -358,16 +365,13 @@ public:
       tempAdouble[1]+=delta;
       adouble DP2PlusF_value = F(x_value, rho_value, tempAdouble);
 
-      FieldVector<adouble, Solver_config::dim> DpF =
+      FieldVector<adouble, Solver_config::dim> DpFEx =
         {
-          (DP1PlusF_value-F_value)/delta,
-          (DP2PlusF_value-F_value)/delta
+          (DP1PlusF_value-F_valueEx)/delta,
+          (DP2PlusF_value-F_valueEx)/delta
         };
 
-      adouble F_valueEx, DuFEx;
-      FieldVector<adouble, Solver_config::dim> DxFEx, DpFEx;
-      calc_F_and_derivatives(x_value,rho_value, gradrho, F_valueEx, DxFEx, DuFEx, DpFEx);
-
+      //compare analytic and finite differences derivatives
       if (!(std::abs(F_value.value() - F_valueEx.value()) < 1e-5))
       if (!(std::abs( DxF[0].value() -  DxFEx[0].value()) < 1e-3 && abs( DxF[1].value() -  DxFEx[1].value()) < 1e-3))
         std::cerr << " F " << F_value << " vs. " << F_valueEx << std::endl
@@ -381,6 +385,7 @@ public:
                 << " DuFEx " << DuF.value() << " vs. " <<  DuFEx.value()  << std::endl
                 << " DpFEx " << DpF[0].value() << ' ' << DpF[1].value() << " vs. " <<  DpFEx[0].value() << ' ' << DpFEx[1].value() << std::endl;
 
+*/
 
       //calculate Z = X/u +t(Z_0-X/u) = point on reflector + reflected vector
       //calculate t: distance between refractor and target plane (refracted vector)
@@ -397,21 +402,21 @@ public:
       z.axpy(t,w);
       z.axpy(-t*rho_value,x_value);
 
-      std::cerr << "rho_value " << rho_value.value()
+/*      std::cerr << "rho_value " << rho_value.value()
                 << " F " << F_value << std::endl
                 << " X " << X << std::endl
                 << " rhogradu " << gradrho[0].value() << " " << gradrho[1].value() << std::endl
                 << " t " << t.value()
                 << " w " << w[0].value() << " " << w[1].value() << std::endl
                 << " z " << z[0].value() << " " << z[1].value() << std::endl
-                << std::endl;
+                << std::endl;*/
 
 
       assert(std::abs(((omega_value*rho_value) - t*rho_value*omega_value - Solver_config::z_3).value()) < 1e-8 && "something with t is not as expected!");
 
       assert(check_refraction(x_value, X, rho_value.value(), gradrho, z));
 
-      std::cerr << "F "  << F_value << " DpF " << DpF << " DuF " << DuF << " DxF " << DxF << std::endl;
+//      std::cerr << "F "  << F_value << " DpF " << DpF << " DuF " << DuF << " DxF " << DxF << std::endl;
 
       //M_invers = Id - gradu x DpF / ...
       FieldMatrix<adouble, dim, dim> M_invers;
@@ -419,7 +424,7 @@ public:
       M_invers[1][0] = -gradrho[1]*DpF[0]; M_invers[1][1] = -gradrho[1]*DpF[1];
       M_invers /= (F_value+(gradrho*DpF));
       M_invers[0][0] += 1.; M_invers[1][1] += 1.;
-      std::cerr << " M^-1 " << M_invers << std::endl;
+//      std::cerr << " M^-1 " << M_invers << std::endl;
 
       FieldMatrix<adouble, dim, dim> B;
       B[0][0] = 2.*F_value*gradrho[0]*gradrho[0] + 2.*rho_value*gradrho[0]*DxF[0] + DuF*2.*rho_value*gradrho[0]*gradrho[0];
@@ -427,9 +432,9 @@ public:
       B[1][0] = 2.*F_value*gradrho[1]*gradrho[0] + 2.*rho_value*gradrho[1]*DxF[0] + DuF*2.*rho_value*gradrho[1]*gradrho[0];
       B[1][1] = 2.*F_value*gradrho[1]*gradrho[1] + 2.*rho_value*gradrho[1]*DxF[1] + DuF*2.*rho_value*gradrho[1]*gradrho[1];
 
-      std::cerr << " B " << B << std::endl;
+//      std::cerr << " B " << B << std::endl;
 
-      std::cerr << " omega " << omega_value << " DOmega " << DOmega_value[0] << " " << DOmega_value[1] << std::endl;
+//      std::cerr << " omega " << omega_value << " DOmega " << DOmega_value[0] << " " << DOmega_value[1] << std::endl;
 
       FieldMatrix<adouble, dim, dim> C;
       C[0][0] = gradrho[0]*x_value[0] + rho_value + 1./rho_value/omega_value*(w[0]-rho_value*x_value[0])*(gradrho[0]*omega_value + rho_value*DOmega_value[0]);
@@ -437,20 +442,20 @@ public:
       C[1][0] = gradrho[0]*x_value[1]             + 1./rho_value/omega_value*(w[1]-rho_value*x_value[1])*(gradrho[0]*omega_value + rho_value*DOmega_value[0]);
       C[1][1] = gradrho[1]*x_value[1] + rho_value + 1./rho_value/omega_value*(w[1]-rho_value*x_value[1])*(gradrho[1]*omega_value + rho_value*DOmega_value[1]);
 
-      std::cerr << " C " << C << std::endl;
+//      std::cerr << " C " << C << std::endl;
 
 
       FieldMatrix<adouble, dim, dim> A;
       A = B;
       A *= t;
       A.axpy(1.-t,C);
-      std::cerr << " A itnermediate" << A << std::endl;
+//      std::cerr << " A itnermediate" << A << std::endl;
       A.leftmultiply(M_invers);
       A /= 2.*t*rho_value*F_value;
 
-      std::cerr << "factor " << 2.*t*rho_value*F_value << std::endl;
+//      std::cerr << "factor " << 2.*t*rho_value*F_value << std::endl;
 
-      std::cerr << " A " << A << std::endl;
+//      std::cerr << " A " << A << std::endl;
 
       FieldVector<double, 3> D_Psi_value;
       D_Psi_value[0] = 0; D_Psi_value[1] = 0;
@@ -458,7 +463,8 @@ public:
 
       assert(check_direction_of_normal(rho_value.value(), X, z, D_Psi_value));
 
-      FieldVector<adouble, 3> refractedVector = X; refractedVector*=rho_value;
+      assert(std::abs(D_Psi_value[0]) < 1e-10 &&  std::abs(D_Psi_value[1]) < 1e-10 && std::abs(D_Psi_value[2]-1) < 1e-10 && " the current formula should be refracted_vector = w-rho*x");
+      FieldVector<adouble, 3> refractedVector = X; refractedVector*=-rho_value;
       adouble beta = 1./ (refractedVector*D_Psi_value);
 
       //calculate illumination at \Omega
@@ -474,18 +480,14 @@ public:
       double D_psi_norm = sqrt(sqr(D_Psi_value[0])+sqr(D_Psi_value[1])+sqr(D_Psi_value[2]));
       adouble H_value = (1.-(x_value*x_value))*D_psi_norm *4. *t*t*rho_value*rho_value*rho_value*(-beta)*F_value*(F_value+(gradrho*DpF));
 
-      std::cerr << " H " << H_value.value() << " = " <<  (1.-(x_value*x_value)) << " * " << D_psi_norm << " *"
-            << t.value()*t.value() << "* " << rho_value.value()*rho_value.value()*rho_value.value() << "*"
-            << (-beta).value() << "* "  << (F_value.value()+(gradrho*DpF).value()) << std::endl;
-
       //write calculated distribution
 
       FieldMatrix<adouble, dim, dim> uDH_pertubed = Hessrho;
 //      assert(fabs(Solver_config::z_3+3.0) < 1e-12);
       uDH_pertubed+=A;
 
-      std::cerr << " Hess rho " << Hessrho << std::endl;
-      std::cerr << " D2rho+A " << uDH_pertubed << std::endl;
+//      std::cerr << " Hess rho " << Hessrho << std::endl;
+//      std::cerr << " D2rho+A " << uDH_pertubed << std::endl;
 
       adouble uDH_pertubed_det = determinant(uDH_pertubed);
 
@@ -497,8 +499,8 @@ public:
       {
         std::cerr << "found negative determinant !!!!! " << uDH_pertubed_det.value() << " at " << x_value  << "matrix is " << Hessrho << std::endl;
 //        std::cerr << " local dofs " << x.transpose() << std::endl;
+        std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
       }
-      std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
 
 //      cerr << x_value << " " << u_value.value() << " " << uDH_pertubed_det.value() << " " << PDE_rhs.value() << endl;
 //      cerr << x_value << " " << u_value.value() << " " << z[0].value() << " " << z[1].value() << endl;
@@ -800,8 +802,8 @@ public:
                       / std::pow(intersection.geometry().volume(), Solver_config::beta);
     else
       penalty_weight = Solver_config::sigmaBoundary
-                      * (Solver_config::degree * Solver_config::degree)
-                     * std::pow(intersection.geometry().volume(), Solver_config::beta);
+                      * (Solver_config::degree * Solver_config::degree);
+//                     * std::pow(intersection.geometry().volume(), Solver_config::beta);
 
 
     // Loop over all quadrature points

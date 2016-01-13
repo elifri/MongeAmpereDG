@@ -155,6 +155,8 @@ public:
 //        solver_ptr->plot_with_mirror("intermediateStep");
       }
 
+//      std::cout << " evaluate " << x.transpose() << std::endl;
+
       assert(solver_ptr != NULL);
       igpm::processtimer timer;
       timer.start();
@@ -1381,6 +1383,8 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 //          assert(std::abs((gradu-gradun).two_norm() < 1e-10));
           if (std::abs((gradu-gradun).two_norm() > 1e-10))
             std::cout << "found two gradient not matching at " << x_value << ", namely " << gradu  << " and " << gradun << std::endl;
+          else
+            std::cout << "checked matching gradients at quad point " << std::endl;
         }
 
       }

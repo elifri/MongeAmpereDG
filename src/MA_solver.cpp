@@ -155,6 +155,8 @@ void MA_solver::plot_with_mirror(std::string name)
      vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
 
 
+//     std::cout << "solution " << solution_u.transpose() << std::endl;
+
      //write to file
      std::string fname(plotter.get_output_directory());
      fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
@@ -283,7 +285,7 @@ void MA_solver::create_initial_guess()
 
 //  vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
 
-//    project_labourious([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
+//    project_labouriousC1([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
 //  solution = VectorType::Zero(get_n_dofs());
 //  solution = exactsol_projection;
 
@@ -429,7 +431,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
       file.close();
     }
 
-    plot_with_mirror("numericalSolutionBeforeRef");
+//    plot_with_lens("numericalSolutionBeforeRef");
 
     adapt_solution();
 //    project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
@@ -446,6 +448,8 @@ const typename MA_solver::VectorType& MA_solver::solve()
 void MA_solver::update_solution(const Solver_config::VectorType& newSolution) const
 {
   solution_u = solution.segment(0, get_n_dofs_u());
+//  std::cout << "solution " << solution_u.transpose() << std::endl;
+
   //build gridviewfunction
   solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*FEBasis,solution_u));
   solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
@@ -482,6 +486,7 @@ void MA_solver::adapt_solution(const int level)
   double scaling_factor = solution(solution.size()-1);
 
   std::cout << "old element count " << gridView_ptr->size(0) << std::endl;
+  std::cout << " grid febasis " << solution_u_old_global->basis().nodeFactory().gridView().size(2) << std::endl;
 
   //adapt grid
   bool marked = grid_ptr->preAdapt();
@@ -503,6 +508,7 @@ void MA_solver::adapt_solution(const int level)
   std::shared_ptr<DiscreteLocalGradientGridFunctionCoarse> gradient_u_Coarse = std::shared_ptr<DiscreteLocalGradientGridFunctionCoarse> (new DiscreteLocalGradientGridFunctionCoarse(*solution_u_Coarse_global));
 
   //update member
+  std::cout << " grid febasis " <<solution_u_Coarse_global->basis().nodeFactory().gridView().size(2) << std::endl;
 
   FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
   assembler.bind(*FEBasis);
@@ -527,6 +533,11 @@ void MA_solver::adapt_solution(const int level)
     const auto& geometry = element.geometry();
 
     VectorType localDofs = VectorType::Zero(lFE.size());
+
+
+//    std::cout << " father dofs ";
+//    for (const auto& tempEl : gradient_u_Coarse->localDoFs_ ) std::cout << tempEl << " ";
+//    std::cout << std::endl;
 
     int k = 0;
     for (int i = 0; i < geometry.corners(); i++) { //loop over nodes
@@ -575,8 +586,11 @@ void MA_solver::adapt_solution(const int level)
         signNormal = normal[0]+normal[1] > 0 ? 1 : -1;
 
       localDofs(k) = signNormal * ((*gradient_u_Coarse)(father.geometry().local(face_center)) * normal);
-      assert(lFE.localCoefficients().localKey(3*geometry.corners()+i).subEntity() == i);
+//      std::cout << "grad at " << face_center << " is " << (*gradient_u_Coarse)(father.geometry().local(face_center)) << " normal " << normal << " -> " << ((*gradient_u_Coarse)(father.geometry().local(face_center)) * normal) << " signNormal " << signNormal << std::endl;
+      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
       }
+
+//      std::cout << " set local dofs " << localDofs.transpose() << std::endl;
 
       assembler.set_local_coefficients(localIndexSet, localDofs, solution);
     }
@@ -584,7 +598,7 @@ void MA_solver::adapt_solution(const int level)
   //set scaling factor (last dof) to ensure mass conservation
   solution(solution.size()-1)= scaling_factor;
 
-#define NDEBUG
+#define BDEBUG
 #ifdef DEBUG
   std::cout << "refinement :" << std::endl;
 
@@ -607,6 +621,9 @@ void MA_solver::adapt_solution(const int level)
     double resTest1f = 0, resTest1 = 0;
 
     for (int i = 0; i < geometry.corners(); i++) {
+
+      std::cout << "corner " << i << " = " << geometry.corner(i) << std::endl;
+
       //evaluate test function
       std::vector<Dune::FieldVector<double, 1>> functionValues(
           localView.size());
@@ -636,36 +653,40 @@ void MA_solver::adapt_solution(const int level)
       std::cout << "approx'(corner " << i << ")=" << (*gradient_u_Coarse)(element.father().geometry().local(geometry.corner(i)))
           << "  approx = " << jacApprox << std::endl;
 
-      for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
-      {
-        //evaluate jacobian at edge mid
-        std::vector<Dune::FieldMatrix<double, 1, 2>> JacobianValues(
-            localView.size());
-        lFE.localBasis().evaluateJacobian(geometry.local(is.geometry().center()),
+    }
+
+    for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
+    {
+      //evaluate jacobian at edge mid
+      std::vector<Dune::FieldMatrix<double, 1, 2>> JacobianValues(
+          localView.size());
+      lFE.localBasis().evaluateJacobian(geometry.local(is.geometry().center()),
             JacobianValues);
 
-        Dune::FieldVector<double, 2> jacApprox;
-        for (int j = 0; j < localDofs.size(); j++) {
-          jacApprox.axpy(localDofs(j), JacobianValues[j][0]);
-        }
+      Dune::FieldVector<double, 2> jacApprox;
+      for (int j = 0; j < localDofs.size(); j++) {
+        jacApprox.axpy(localDofs(j), JacobianValues[j][0]);
+      }
 
-        const int i = is.indexInInside();
+      const int i = is.indexInInside();
 
-        // normal of center in face's reference element
-        const FieldVector<double, Solver_config::dim> normal =
+      // normal of center in face's reference element
+      const FieldVector<double, Solver_config::dim> normal =
               is.centerUnitOuterNormal();
 
-        const auto face_center = is.geometry().center();
-        std::cout << " f (face center " << i  << " )= ";
-        if (normal[0]+normal[1] < 0 )
-          std::cout << -((*gradient_u_Coarse)(element.father().geometry().local(face_center)) * normal);
-        else
-          std::cout << (*gradient_u_Coarse)(element.father().geometry().local(face_center)) * normal;
-        std::cout << " approx (face center " << i  << " )= " << jacApprox*normal;
+      const auto face_center = is.geometry().center();
+      std::cout << " f (face center " << i  << "=" << face_center << " )= ";
+      if (normal[0]+normal[1] < 0 )
+        std::cout << -((*gradient_u_Coarse)(element.father().geometry().local(face_center)) * normal)
+          << " = " <<(*gradient_u_Coarse)(element.father().geometry().local(face_center)) << "*" << normal;
+      else
+        std::cout << (*gradient_u_Coarse)(element.father().geometry().local(face_center)) * normal
+          << " = " << (*gradient_u_Coarse)(element.father().geometry().local(face_center)) << "*" <<normal;
+      std::cout << " approx (face center " << i  << " )= " << jacApprox*normal
+          << " = " << jacApprox << "*" << normal << std::endl;
 //        std::cout << " global dof no " << localIndexSet.index(k) << " has value " << solution[localIndexSet.index(k)] << std::endl;
-        }
-
     }
+
   }
 #endif
 

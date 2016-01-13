@@ -128,8 +128,7 @@ try {
 	/////////////////////////////
 	// setup problem parameter //
 	/////////////////////////////
-	Solver_config::problem = SIMPLE_MA;
-	std::cout << "we are solving the problem " << Solver_config::problem << std::endl;
+
 
 	// ////////////////////////////////
 // Generate the grid
@@ -146,7 +145,7 @@ try {
 
 //	Solver_config::lowerLeft = {0,0};
 //	Solver_config::upperRight = {1,1};
-	Solver_config::UnitCubeType unitcube(Solver_config::lowerLeft, Solver_config::upperRight, 1);
+	Solver_config::UnitCubeType unitcube(Solver_config::lowerLeft, Solver_config::upperRight, 0);
 
 
 	Solver_config::GridType &grid = unitcube.grid();

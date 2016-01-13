@@ -15,10 +15,12 @@ Set(MirrorProblemLibs problemData ImageFunction)
 Set(OTProblemLibs )
 
 add_executable("dune_mongeampere" dune_mongeampere.cc)
-message("ZLIB libraries ${ZLIB_LIBRARIES}")
-message("Boost libraries ${Boost_LIBRARIES}")
-target_link_libraries(dune_mongeampere MA_solver Plotter ${SNES_LIBRARY} EllipsoidMethod ${MirrorProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11)
+target_link_libraries(dune_mongeampere MA_solver Plotter ${SNES_LIBRARY} EllipsoidMethod ${MirrorProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES} ${ARPACK_LIBRARY} ${AMD_LIBRARY})
 target_link_dune_default_libraries("dune_mongeampere")
+
+add_executable("dune_mongeampereItSimple" dune_mongeampere.cc)
+target_link_libraries(dune_mongeampereItSimple MA_solver Plotter ${SNES_LIBRARY} EllipsoidMethod ${MirrorProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES} ${ARPACK_LIBRARY} ${AMD_LIBRARY})
+target_link_dune_default_libraries("dune_mongeampereItSimple")
 
 add_executable("dune_mongeampereOT" dune_mongeampere_OT.cc)
 target_link_libraries(dune_mongeampereOT MA_OT_solver Plotter ${SNES_LIBRARY} ${OTProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11)
@@ -31,5 +33,5 @@ target_link_dune_default_libraries("poisson")
 #add_executable("petscnes" Petsc_utility.cc)
 #target_link_libraries(petscnes petsc)
 
-add_executable("testEvaluate" test_functions_evaluate2.cpp)
-target_link_dune_default_libraries("testEvaluate")
+add_executable("testPS12Split" localfunctions/test-PS12SSpline.cc)
+target_link_dune_default_libraries("testPS12Split")

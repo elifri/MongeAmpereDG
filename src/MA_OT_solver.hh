@@ -626,7 +626,7 @@ void MA_OT_solver::project_labourious(const F f, VectorType& v) const
   std::cout << "projected on vector " << std::endl << v.transpose() << std::endl;
 }
 
-//project by L2-projection
+//project by setting nodal values
 template<class F>
 void MA_OT_solver::project_labouriousC1(const F f, VectorType& v) const
 {
@@ -650,6 +650,7 @@ void MA_OT_solver::project_labouriousC1(const F f, VectorType& v) const
 
     VectorType localDofs = VectorType::Zero (lFE.size());
 
+ /*
     for (int i = 0; i < geometry.corners(); i++)
     {
       auto value = f(geometry.corner(i));
@@ -658,7 +659,7 @@ void MA_OT_solver::project_labouriousC1(const F f, VectorType& v) const
       assert(lFE.localCoefficients().localKey(i).subEntity() == (unsigned int) i);
       localDofs(i) = value;
 
-//      std::cout << "value " << value << " at " << geometry.corner(i) << std::endl;
+      std::cout << "value " << value << " at " << geometry.corner(i) << std::endl;
 
       //test if this was the right basis function
       {
@@ -676,7 +677,6 @@ void MA_OT_solver::project_labouriousC1(const F f, VectorType& v) const
 //      std::cout << " approx gradient at " << geometry.corner(i);
 
       assert(lFE.localCoefficients().localKey(geometry.corners()+2*i).subEntity() == (unsigned int) i);
-
 
       localDofs(geometry.corners()+2*i) = i % 2 == 0 ? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
 
@@ -696,9 +696,51 @@ void MA_OT_solver::project_labouriousC1(const F f, VectorType& v) const
         assert(std::abs(jacobianValues[geometry.corners()+2*i][0][0]-1) < 1e-10);
         assert(std::abs(jacobianValues[geometry.corners()+2*i+1][0][1]-1) < 1e-10);
       }
+*/
+
+    int k = 0;
+    for (int i = 0; i < geometry.corners(); i++)
+    {
+      auto value = f(geometry.corner(i));
+
+      //set dofs associated with values at vertices
+      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
+      localDofs(k++) = value;
+
+      //test if this was the right basis function
+      {
+        std::vector<FieldVector<double, 1> > functionValues(lFE.size());
+        lFE.localBasis().evaluateFunction(geometry.local(geometry.corner(i)), functionValues);
+        assert(std::abs(functionValues[k-1][0]-1) < 1e-10);
+      }
+
+      //set dofs associated with gradient values at vertices
+      auto xValuePlus = geometry.corner(i);
+      xValuePlus[0] += i % 2 == 0 ? h : - h;
+
+      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
 
 
+      localDofs(k++) = i % 2 == 0 ? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
+
+      xValuePlus = geometry.corner(i);
+      xValuePlus[1] += i < 2 ? h : - h;
+
+      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
+      localDofs(k++) = i < 2 ? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
+
+      //test if this were the right basis function
+      {
+        std::vector<FieldMatrix<double, 1, 2> > jacobianValues(lFE.size());
+        lFE.localBasis().evaluateJacobian(geometry.local(geometry.corner(i)), jacobianValues);
+        assert(std::abs(jacobianValues[k-2][0][0]-1) < 1e-10);
+        assert(std::abs(jacobianValues[k-1][0][1]-1) < 1e-10);
+      }
+
+      k++;
     }
+
+    assert(k == 12);
 
     for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
     {
@@ -706,6 +748,12 @@ void MA_OT_solver::project_labouriousC1(const F f, VectorType& v) const
 
       // normal of center in face's reference element
       const FieldVector<double, Solver_config::dim> normal = is.centerUnitOuterNormal();
+
+      bool unit_pointUpwards;
+      if (std::abs(normal[0]+normal[1])< 1e-12)
+        unit_pointUpwards = (normal[1] > 0);
+      else
+        unit_pointUpwards = (normal[0]+normal[1] > 0);
 
       const auto face_center = is.geometry().center();
 
@@ -715,29 +763,36 @@ void MA_OT_solver::project_labouriousC1(const F f, VectorType& v) const
 
       //calculate finite difference in x0-direction
       auto xValuePlus = face_center;
-      xValuePlus[0] += i != 1 ? h : - h;
-      approxGradientF[0] = i != 1 ? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
+      xValuePlus[0] += !(normal[0] > 0) ? h : - h;
+      approxGradientF[0] = !(normal[0] > 0)? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
 
       //calculate finite difference in x1-direction
       xValuePlus = face_center;
-      xValuePlus[1] += i != 3 ? h : - h;
-      approxGradientF[1] = i != 3 ? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
+      xValuePlus[1] += !(normal[1] > 0) ? h : - h;
+      approxGradientF[1] = !(normal[1] > 0) ? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
 
-      assert(lFE.localCoefficients().localKey(3*geometry.corners()+i).subEntity() == (unsigned int) i);
-      localDofs(3*geometry.corners()+i) = i % 2 == 0? -(approxGradientF*normal) : approxGradientF*normal;
-//      std::cout << " aprox normal derivative " << approxGradientF*normal << " = " << approxGradientF << " * " << normal << std::endl ;
+      if (i == 0)
+        k = 3;
+      else
+        if (i == 1)
+          k = 11;
+        else
+          k = 7;
+
+      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
+      localDofs(k++) = unit_pointUpwards ? (approxGradientF*normal) : -(approxGradientF*normal);
 
       //test if this were the right basis function
       {
         std::vector<FieldMatrix<double, 1, 2> > jacobianValues(lFE.size());
         lFE.localBasis().evaluateJacobian(geometry.local(face_center), jacobianValues);
-        assert(std::abs( std::abs(jacobianValues[3*geometry.corners()+i][0]*normal)-1) < 1e-10);
+        assert(std::abs( std::abs(jacobianValues[k-1][0]*normal)-1) < 1e-10);
       }
 
     }
 
+
     assembler.add_local_coefficients(localIndexSet,localDofs, v);
-//    assembler.add_local_coefficients(localIndexSet,VectorType::Ones(localDofs.size()), countMultipleDof);
     VectorType localmultiples = VectorType::Ones(localDofs.size());
     assembler.add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
   }
@@ -747,145 +802,14 @@ void MA_OT_solver::project_labouriousC1(const F f, VectorType& v) const
   //set scaling factor (last dof) to ensure mass conservation
   v(v.size()-1) = 1;
 
-//#define DEBUG
-#ifdef DEBUG
-  std::cout << "v.size()" << v.size()-1 << std::endl;
-  std::cout << "projected on vector " << std::endl << v.transpose() << std::endl;
-  std::cout << "multiples " << std::endl << countMultipleDof.transpose() << std::endl;
-
-  for (auto&& element : elements(*gridView_ptr)) {
-
-    localView.bind(element);
-    localIndexSet.bind(localView);
-
-    const auto & lFE = localView.tree().finiteElement();
-    const auto& geometry = element.geometry();
-
-    VectorType localDofs = assembler.calculate_local_coefficients(localIndexSet, v);
-
-    // Get a quadrature rule
-    const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
-    const QuadratureRule<double, Solver_config::dim>& quad =
-        MacroQuadratureRules<double, Solver_config::dim>::rule(element.type(),
-            order, Solver_config::quadratureType);
-
-    double resTest1f = 0, resTest1 = 0;
-
-    for (int i = 0; i < geometry.corners(); i++) {
-      //evaluate test function
-      std::vector<Dune::FieldVector<double, 1>> functionValues(
-          localView.size());
-      lFE.localBasis().evaluateFunction(geometry.local(geometry.corner(i)),
-          functionValues);
-
-      double res = 0;
-      for (int j = 0; j < localDofs.size(); j++) {
-        res += localDofs(j) * functionValues[j];
-      }
-
-      std::cout << "f(corner " << i << ")=" << f(geometry.corner(i))
-          << "  approx = " << res << std::endl;
-
-      std::vector<Dune::FieldMatrix<double, 1, 2>> JacobianValues(
-          localView.size());
-      lFE.localBasis().evaluateJacobian(geometry.local(geometry.corner(i)),
-          JacobianValues);
-
-      Dune::FieldVector<double, 2> jacApprox;
-      for (int j = 0; j < localDofs.size(); j++) {
-        jacApprox.axpy(localDofs(j), JacobianValues[j][0]);
-      }
-
-      std::cout << "f'(corner " << i << ")=" << geometry.corner(i)[0] << " "
-          << geometry.corner(i)[1] << "  approx = " << jacApprox << std::endl;
-
-    }
-
-    for (const auto& quadpoint : quad) {
-      const FieldVector<double, Solver_config::dim> &quadPos =
-          quadpoint.position();
-      //evaluate test function
-      std::vector<Dune::FieldVector<double, 1>> functionValues(
-          localView.size());
-      lFE.localBasis().evaluateFunction(quadPos, functionValues);
-
-      resTest1f += f(geometry.global(quadPos)) * functionValues[0]
-          * quadpoint.weight() * geometry.integrationElement(quadPos);
-
-      double res = 0;
-      for (int i = 0; i < localDofs.size(); i++) {
-        res += localDofs(i) * functionValues[i];
-        resTest1 += localDofs(i) * functionValues[i] * functionValues[0]
-            * quadpoint.weight() * geometry.integrationElement(quadPos);
-      }
-
-      std::cout << " f " << f(geometry.global(quadPos)) << " approx " << res
-          << std::endl;
-
-    }
-
-    auto localViewn = FEBasis->localView();
-    auto localIndexSetn = FEBasis->indexSet().localIndexSet();
-
-    for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
-    {
-      if (is.neighbor()) {
-        const int i = is.indexInInside();
-
-        localViewn.bind(is.outside());
-        localIndexSetn.bind(localViewn);
-        const auto & lFEn = localViewn.tree().finiteElement();
-
-        // Get a quadrature rule
-        const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
-        GeometryType gtface = is.geometryInInside().type();
-        const QuadratureRule<double, 1>& quad = QuadratureRules<double,1>::rule(gtface, order);
-
-        // Loop over all quadrature points
-        for (size_t pt = 0; pt < quad.size(); pt++) {
-
-          // Position of the current quadrature point in the reference element
-          const FieldVector<double, 2> &quadPos =
-              is.geometryInInside().global(quad[pt].position());
-          const FieldVector<double, 2> &quadPosn =
-              is.geometryInOutside().global(quad[pt].position());
-          auto x_value = is.inside().geometry().global(quadPos);
-
-          const auto& jacobian =
-                 is.inside().geometry().jacobianInverseTransposed(quadPos);
-
-          VectorType localDofs = assembler.calculate_local_coefficients(localIndexSet, v);
-          VectorType localDofsn = assembler.calculate_local_coefficients(localIndexSetn, v);
-
-          // The gradients
-          std::vector<Dune::FieldVector<double, 2>> gradients(lFE.size());
-          FieldVector<double, Solver_config::dim> gradu;
-          assemble_gradients_gradu(lFE, jacobian, quadPos,
-              gradients, localDofs, gradu);
-
-          std::vector<FieldVector<double, 2>> gradientsn(lFE.size());
-          FieldVector<double, Solver_config::dim> gradun(0);
-          assemble_gradients_gradu(lFEn, jacobian, quadPosn,
-              gradientsn, localDofsn, gradun);
-
-          assert(std::abs((gradu-gradun).two_norm() < 1e-10));
-        }
-
-      }
-    }
-
-
-  }
-#endif
-
-
+//  test_projection(f, v);
 }
-
 
 //project by L2-projection
 template<class F, class F_derX, class F_derY>
 void MA_OT_solver::project_labouriousC1(const F f, const F_derX f_derX, const F_derY f_derY, VectorType& v) const
 {
+  assert(false && " not working yet");
   v.setZero(get_n_dofs());
 
   DenseMatrixType localMassMatrix;
@@ -1086,6 +1010,7 @@ void MA_OT_solver::project_labouriousC1(const F f, const F_derX f_derX, const F_
 
 template<class LocalF, class LocalF_grad>
 void MA_OT_solver::project_labouriousC1Local(LocalF f, LocalF_grad f_grad, VectorType& v) const {
+  assert(false && " not working yet");
   v.setZero(get_n_dofs());
 
   DenseMatrixType localMassMatrix;
@@ -1310,7 +1235,7 @@ double MA_OT_solver::calculate_L2_errorOT(const FGrad &f) const
     // Get a quadrature rule
     int order = std::max(1, 3 * gradient_u_old->localOrder());
     const QuadratureRule<double, Solver_config::dim>& quad =
-        QuadratureRules<double, Solver_config::dim>::rule(geometry.type(), order);
+        MacroQuadratureRules<double, Solver_config::dim>::rule(e.type(), order, Solver_config::quadratureType);
 
     // Loop over all quadrature points
     for (const auto& pt : quad) {

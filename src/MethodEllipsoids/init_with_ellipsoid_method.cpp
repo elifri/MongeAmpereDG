@@ -73,7 +73,9 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
         }
     }
 
-    inputImageName = Solver_config::TargetImageName;
+//    inputImageName = Solver_config::TargetImageName;
+//    inputImageName = outputFolder+"/lightOut0.bmp";
+    inputImageName = " ../inputData/testimages/one_small.bmp";
     lightInImageName = Solver_config::LightinputImageName;
     outputFolder_ = outputFolder;
 
@@ -130,6 +132,7 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
             direction(1) = yMaxOut - double(i)/(image.rows()-1)*(yMaxOut-yMinOut);
             direction(2) = zOut;
             directionsOut.push_back(direction);
+//            std::cerr<< "pushed0 " << direction << std::endl;
             valuesLightOut.push_back(image(i,j));
         }
     }
@@ -143,6 +146,7 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
                 direction(1) = yMaxOut - double(i)/(image.rows()-1)*(yMaxOut-yMinOut);
                 direction(2) = zOut;
                 directionsOut.push_back(direction);
+//                std::cerr<< "pushed1 " << direction << std::endl;
                 valuesLightOut.push_back(image(i,j));
             }
         }
@@ -156,6 +160,7 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
                 direction(1) = yMaxOut - double(i)/(image.rows()-1)*(yMaxOut-yMinOut);
                 direction(2) = zOut;
                 directionsOut.push_back(direction);
+//                std::cerr<< "pushed2 " << direction << std::endl;
                 valuesLightOut.push_back(image(i,j));
             }
         }
@@ -169,6 +174,7 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
                 direction(1) = yMaxOut - double(i)/(image.rows()-1)*(yMaxOut-yMinOut);
                 direction(2) = zOut;
                 directionsOut.push_back(direction);
+//                std::cerr<< "pushed3 " << direction << std::endl;
                 valuesLightOut.push_back(image(i,j));
             }
         }
@@ -182,6 +188,7 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
                 direction(1) = yMaxOut - double(i)/(image.rows()-1)*(yMaxOut-yMinOut);
                 direction(2) = zOut;
                 directionsOut.push_back(direction);
+//                std::cerr<< "pushed4 " << direction << std::endl;
                 valuesLightOut.push_back(image(i,j));
             }
         }
@@ -211,6 +218,9 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
               <<"  xMin " << lightIn.yMin_ << endl
             <<"  h " << lightIn.h_ << endl
             <<"  factor " << lightIn.factor_ << endl;*/
+
+    std::cout << " solve geometry with lower left " << Solver_config::lowerLeftTarget << " and upper Right " << Solver_config::upperRightTarget << " and z " << Solver_config::z_3 << std::endl;
+    std::cout << " , i.e. " << xMinOut << " " << yMinOut << " , " << xMaxOut << " " << yMaxOut << std::endl;
 
 
     InitEllipsoidMethod method (nDirectionsX, xMin, xMax, nDirectionsY, yMin, yMax, directionsOut, valuesLightOut, lightIn, alpha, maxIter);

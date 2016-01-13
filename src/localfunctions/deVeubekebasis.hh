@@ -25,27 +25,27 @@ namespace Dune {
  \tparam D Type to represent the field in the domain.
  \tparam R Type to represent the field in the range.
 
- \nosubgrouping
- */
+ \nosubgrouping*/
+
 template<class Geometry, class D, class R>
 class deVeubekeGlobalBasis
 {
 public:
 
-  /** \brief Export the number of degrees of freedom */
+/*  * \brief Export the number of degrees of freedom*/
   enum {N = 16};
 
-  /** \brief Export the element order
-   the makroelement is piecewise quadratic ...
-   */
+/*  * \brief Export the element order
+   the makroelement is piecewise quadratic ...*/
+
   enum {O = 2};
 
-  /**
+/*  *
    * \brief struct to store the calculation coefficients to switch between nodal dofs and bezier coefficients for intern representation
 
-    The polynomial patches are internally represented by their Bezier representation. This struct handles the coefficents needed for a conversion from nodal dofs to bezier coefficients.
+    The polynomial patches are internally represented by their Bezier representation. This struct handles the coefficents needed for a conversion from nodal dofs to bezier coefficients.*/
 
-   */
+
   struct Coefficient{
 
     Coefficient(int localBezierDofno, R factor): localBezierDofno(localBezierDofno), factor(factor){}
@@ -54,10 +54,10 @@ public:
     R factor;
   };
 
-  /*!
+/*  !
    * \implements BasisInterface::Traits
-   * \implements LocalBasisInterface::Traits
-   */
+   * \implements LocalBasisInterface::Traits*/
+
   struct Traits{
     typedef D DomainField;
     typedef D DomainFieldType;
@@ -611,9 +611,9 @@ public:
          }
 
 
-       std::cout << " x " << x << " bezierPos " << bezierPos << std::endl;
-       for (const auto& e : referenceHessians) std::cout << e << std::endl;
-       std::cout << std::endl;
+//       std::cout << " x " << x << " bezierPos " << bezierPos << std::endl;
+//       for (const auto& e : referenceHessians) std::cout << e << std::endl;
+//       std::cout << std::endl;
 
        for (unsigned int k = 0; k < N; k++)
        {
@@ -639,7 +639,7 @@ public:
 
 private:
 
-   /**
+/*   *
     *! \brief helper function that determines in which subtriangle x lies
     * The subtriangles are numbered
     * ______
@@ -647,8 +647,8 @@ private:
     * | \ / |
     * |2/ \1|
     * |/_0_\|
-    *
-    */
+    **/
+
 
 
    int subtriangle_lookup(const typename Traits::DomainLocal& x) const// position)

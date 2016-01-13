@@ -1074,8 +1074,10 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
 
     //assuming Galerkin
     v = Solver_config::VectorType::Zero(x.size());
+    Solver_config::VectorType v_boundary= Solver_config::VectorType::Zero(x.size());
     m.resize(x.size(), x.size());
-    //reserve space
+
+    //reserve space for jacobian entries
     std::vector<EntryType> JacobianEntries;
 
     //get last equation
@@ -1097,13 +1099,17 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
         localView.bind(e);
         localIndexSet.bind(localView);
 
+        //get zero vector to store local function values
         Solver_config::VectorType local_vector;
         local_vector.setZero(localView.size());    // Set all entries to zero
         Solver_config::VectorType local_boundary;
         local_boundary.setZero(localView.size());    // Set all entries to zero
 
+        //get zero matrix to store local jacobian
         Solver_config::DenseMatrixType m_m;
         m_m.setZero(localView.size(), localView.size());
+        Solver_config::DenseMatrixType m_mB;
+        m_mB.setZero(localView.size(), localView.size());
 
         Solver_config::VectorType last_equation = Solver_config::VectorType::Zero(localView.size()),
                                   scaling_factor = Solver_config::VectorType::Zero(localView.size()+1);
@@ -1163,22 +1169,23 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
                 }
             } else*/ if (is.boundary()) {
                 // Boundary integration
-//              lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
-//                      local_boundary, 0);
-//              local_vector += local_boundary;
+
               lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
-                      local_vector, 0);
-                assemble_jacobian_integral(localView, xLocal, m_m, 0);
-//                tag_count++;
+                  local_boundary, 0);
+
+              assemble_jacobian_integral(localView, xLocal, m_mB, 0);
+//              std::cerr << "m_mB " << m_mB << std::endl;
             }/* else {
                 std::cerr << " I do not know how to handle this intersection"
                         << std::endl;
                 exit(-1);
             }
 */        }
+        local_vector += local_boundary;
         add_local_coefficients(localIndexSet, local_vector, v);
-//        add_local_coefficients(localIndexSet, local_boundary, boundary);
+        add_local_coefficients(localIndexSet, local_boundary, v_boundary);
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
+        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
 
         //add derivatives for scaling factor
         for (unsigned int i = 0; i < localView.size(); i++)
@@ -1190,9 +1197,10 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
      }
      m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
 
-     std::cerr << " local boundary term " << boundary.norm()<< " whole norm " << v.norm() << std::endl;
-     std::cerr << " f " << v.transpose() << std::endl;
-
+     std::cerr << " local boundary term " << v_boundary.norm()<< " whole norm " << v.norm() << std::endl;
+//     std::cerr << " f " << v.transpose() << std::endl;
+//     MATLAB_export(v, "v");
+//     MATLAB_export(v_boundary, "b");
 }
 
 

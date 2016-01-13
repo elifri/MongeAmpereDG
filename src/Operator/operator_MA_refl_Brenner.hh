@@ -53,13 +53,14 @@ class Local_Operator_MA_refl_Brenner {
 
 public:
   Local_Operator_MA_refl_Brenner():
-    rhs() {
+    rhs(), bc(1 << (Solver_config::startlevel+Solver_config::nonlinear_steps)), sign(1.0) {
     for (int i = 0; i < pixel_height*pixel_width; i++)  target_distribution[i] = 0;
     int_f = 0;
   }
 
   Local_Operator_MA_refl_Brenner(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld, const double minPixelValue):
-    rhs(solUOld, gradUOld, Solver_config::LightinputImageName, Solver_config::TargetImageName, minPixelValue) {
+    rhs(solUOld, gradUOld, Solver_config::LightinputImageName, Solver_config::TargetImageName, minPixelValue),
+    bc(1 << (Solver_config::startlevel+Solver_config::nonlinear_steps)), sign(1.0) {
     for (int i = 0; i < pixel_height*pixel_width; i++)  target_distribution[i] = 0;
     int_f = 0;
 
@@ -69,7 +70,8 @@ public:
   Local_Operator_MA_refl_Brenner(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld,
       std::shared_ptr<Rectangular_mesh_interpolator> &exactSolU, const double minPixelValue):
     rhs(solUOld, gradUOld, Solver_config::LightinputImageName, Solver_config::TargetImageName, minPixelValue),
-    bc(exactSolU){
+    bc(1 << (Solver_config::startlevel+Solver_config::nonlinear_steps)),
+    bcDirichlet(exactSolU), sign(1.0){
 
     std::cout << " created Local Operator" << endl;
 
@@ -273,7 +275,6 @@ public:
 //      cout << "f(X) " << f_value<< " maps to g(Z) " << g_value << std::endl;
 
       //write calculated distribution
-      int width, height;
 
       FieldMatrix<adouble, dim, dim> uDH_pertubed = Hessu;
 //      assert(fabs(Solver_config::z_3+3.0) < 1e-12);
@@ -297,11 +298,11 @@ public:
 //      cout << " atilde " << a_tilde_value << " f " << f_value << endl;
 
       //calculate system for first test functions
-      if (uDH_pertubed_det.value() < 0)
-      {
-        std::cerr << "found negative determinant !!!!! " << uDH_pertubed_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
+//      if (uDH_pertubed_det.value() < 0)
+//      {
+//        std::cerr << "found negative determinant !!!!! " << uDH_pertubed_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
 //        std::cerr << " local dofs " << x.transpose() << std::endl;
-      }
+//      }
 //      std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
 
 //      cerr << x_value << " " << u_value.value() << " " << uDH_pertubed_det.value() << " " << PDE_rhs.value() << endl;
@@ -309,7 +310,9 @@ public:
 
       for (int j = 0; j < size; j++) // loop over test fcts
       {
-        v_adolc(j) += (PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]
+        v_adolc(j) += (PDE_rhs-uDH_pertubed_det)*
+        //(PDE_rhs-uDH_pertubed_det)*
+        referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
 
 /*
@@ -602,8 +605,8 @@ public:
                       / std::pow(intersection.geometry().volume(), Solver_config::beta);
     else
       penalty_weight = Solver_config::sigmaBoundary
-                      * (Solver_config::degree * Solver_config::degree);
-//                     * std::pow(intersection.geometry().volume(), Solver_config::beta);
+                      * (Solver_config::degree * Solver_config::degree)
+                     * std::pow(intersection.geometry().volume(), Solver_config::beta);
 
 
     // Loop over all quadrature points
@@ -660,6 +663,8 @@ public:
 //                << " phi " << phi_value << endl;
 //      std::cerr  << T_value[0].value() << " " << T_value[1].value()  << std::endl;
 
+      auto signedDistance = bc.H(T_value, normal);
+
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
@@ -670,13 +675,13 @@ public:
         if (Solver_config::Dirichlet)
         {
           double g_value;
-          bc.evaluate_exact_sol(x_value, g_value);
+          bcDirichlet.evaluate_exact_sol(x_value, g_value);
           v_adolc(j) += penalty_weight * (u_value - g_value)
                         * referenceFunctionValues[j] * factor;
         }
         else
         {
-          v_adolc(j) += penalty_weight * ((T_value * normal) - phi_value) //*((T_value * normal) - phi_value)
+          v_adolc(j) += penalty_weight * signedDistance //((T_value * normal) - phi_value) //
                             * referenceFunctionValues[j] * factor;
 //          std::cerr << " add to v_adolc(" << j << ") " << (penalty_weight * ((T_value * normal) - phi_value)* referenceFunctionValues[j] * factor).value() << " -> " << v_adolc(j).value() << std::endl;
         }
@@ -693,12 +698,14 @@ public:
   const RightHandSideReflector& get_right_handside() const {return rhs;}
 
   RightHandSideReflector rhs;
-  Dirichletdata<std::shared_ptr<Rectangular_mesh_interpolator> > bc;
+  HamiltonJacobiBC bc;
+  Dirichletdata<std::shared_ptr<Rectangular_mesh_interpolator> > bcDirichlet;
 
   static const int pixel_width = 256;
   static const int pixel_height = 256;
 public:
   mutable double int_f;
+  mutable double sign;
 
   mutable double target_distribution[pixel_width*pixel_height];
 

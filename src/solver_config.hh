@@ -33,7 +33,8 @@
 //#include "localfunctions/MAmixedbasis.hh"
 //#include "localfunctions/MAmixedbasisC0.hh"
 //#include "localfunctions/MAmixedbasisC0C0.hh"
-#include "localfunctions/deVeubekefunctionspacebasis.hh"
+//#include "localfunctions/deVeubekefunctionspacebasis.hh"
+#include "localfunctions/PowellSabin12SSplinenodalbasis.hh"
 
 #include "Dogleg/doglegMethod.hpp"
 
@@ -52,8 +53,7 @@ inline void DenseMatrix<Dune::FieldMatrix<adouble, 2, 2>>::luDecomposition(Dense
 {
 }
 
-
-};
+}
 
 
 enum PolynomialType {LAGRANGE};
@@ -74,7 +74,8 @@ struct Solver_config{
   void read_configfile(std::string &configFile);
 
   std::string outputDirectory, outputPrefix;
-  unsigned int epsDivide, epsEnd;
+  static unsigned int epsDivide;
+  static unsigned int epsEnd;
 
   double minPixelValue;
 
@@ -110,8 +111,8 @@ struct Solver_config{
 
 
 //	typedef YaspGrid<dim> GridType;
-//	typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > UnitCubeType;
-	typedef UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >> UnitCubeType;
+	typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > UnitCubeType;
+//	typedef UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >> UnitCubeType;
 	typedef UnitCubeType::GridType GridType;
 	typedef GridType::LevelGridView LevelGridView;
 	typedef GridType::LeafGridView GridView;
@@ -133,15 +134,23 @@ struct Solver_config{
 	static std::string LightinputImageName;
   static std::string TargetImageName;
 
+  static value_type kappa;
   static value_type z_3;
 
 //	typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementType;
 //  typedef Functions::PQKNodalBasis<GridView, degree> FEBasis;
 
-  typedef Dune::deVeubekeFiniteElement<GridView::Codim<2>::Entity::Geometry, value_type, value_type> LocalFiniteElementType;
-	typedef Functions::deVeubekeBasis<GridView> FEBasis;
+//  typedef Dune::deVeubekeFiniteElement<GridView::Codim<2>::Entity::Geometry, value_type, value_type> LocalFiniteElementType;
+//	typedef Functions::deVeubekeBasis<GridView> FEBasis;
 
-	static const MacroQuadratureType::Enum quadratureType = MacroQuadratureType::deVeubeke;
+  typedef Eigen::SparseMatrix<value_type> SparseMatrixType;
+
+  typedef Dune::PS12SSplineFiniteElement<GridView::Codim<2>::Entity::Geometry, value_type, value_type, SparseMatrixType> LocalFiniteElementType;
+  typedef Functions::PS12SSplineBasis<GridView, SparseMatrixType> FEBasis;
+
+
+//	static const MacroQuadratureType::Enum quadratureType = MacroQuadratureType::deVeubeke;
+  static const MacroQuadratureType::Enum quadratureType = MacroQuadratureType::Powell_Sabin_12_split;
 
 
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis,VectorType> DiscreteGridFunction;
