@@ -1049,6 +1049,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
 
     //assuming Galerkin
     v = Solver_config::VectorType::Zero(x.size());
+    Solver_config::VectorType v_boundary= Solver_config::VectorType::Zero(x.size());
     m.resize(x.size(), x.size());
     //reserve space
     std::vector<EntryType> JacobianEntries;
@@ -1070,8 +1071,13 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
         localView.bind(e);
         localIndexSet.bind(localView);
 
+        //get zero vector to store local function values
         Solver_config::VectorType local_vector;
-        local_vector.setZero(localView.size());    // Set all entries to zero
+        local_vector.setZero(localView.size());
+        Solver_config::VectorType local_boundary;
+        local_boundary.setZero(localView.size());
+
+        //get zero matrix to store local jacobian
         Solver_config::DenseMatrixType m_m;
         m_m.setZero(localView.size(), localView.size());
 
@@ -1134,7 +1140,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
             } else if (is.boundary()) {
                 // Boundary integration
               lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
-                      local_vector, 0);
+                      local_boundary, 0);
                 assemble_jacobian_integral(localView, xLocal, m_m, 0);
 //                tag_count++;
             } else {
@@ -1143,7 +1149,9 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
                 exit(-1);
             }
         }
+        local_vector+=local_boundary;
         add_local_coefficients(localIndexSet, local_vector, v);
+        add_local_coefficients(localIndexSet, local_boundary, v_boundary);
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
 
         //add derivatives for scaling factor
@@ -1155,6 +1163,8 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
          JacobianEntries.push_back(EntryType(m.rows()-1, m.cols()-1,scaling_factor(localView.size())));
      }
      m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
+
+     std::cerr << " local boundary term " << v_boundary.norm()<< " whole norm " << v.norm() << std::endl;
 }
 
 
