@@ -315,8 +315,8 @@ public:
       std::vector<Solver_config::DenseMatrixType>& m, const int level = 1) const;
 
 
-  template<typename LocalView>
-  void calculate_refined_local_mass_matrix_detailed(const LocalView &localViewFather, const LocalView &localViewChild, Solver_config::DenseMatrixType& m,
+  template<typename LocalView, typename LocalViewFather>
+  void calculate_refined_local_mass_matrix_detailed(const LocalViewFather &localViewFather, const LocalView &localViewChild, Solver_config::DenseMatrixType& m,
           const int level) const;
 
   template<typename LocalOperatorType>
@@ -455,7 +455,7 @@ void Assembler::calculate_local_mass_matrix_detailed(
         const LocalView &localView, Solver_config::DenseMatrixType& m) const {
     const int size = localView.size();
 
-    const auto lfu = localView.tree().finiteElement();
+    const auto& lfu = localView.tree().finiteElement();
 
     typedef decltype(lfu) ConstElementRefType;
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
@@ -826,6 +826,7 @@ void Assembler::assemble_inner_face_Jacobian(const Intersection& intersection,
 template<typename LocalOperatorType>
 void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::VectorType& x, Solver_config::VectorType& v) const
 {
+
     assert((unsigned int) x.size() == basis_->indexSet().size()+1);
 
     Solver_config::GridView gridView = basis_->gridView();
@@ -911,6 +912,7 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
 //        std::cout << " add self" << std::endl;
         add_local_coefficients(localIndexSet, local_vector, v);
     }
+
     /*cimg_library::CImg<double> image (lop.target_distribution, LocalOperatorType::pixel_width, LocalOperatorType::pixel_height);
     for (int i = 0; i < LocalOperatorType::pixel_width* LocalOperatorType::pixel_width; i++)  lop.target_distribution[i]*=255;
 
@@ -952,8 +954,9 @@ void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
     const GridViewType::IndexSet& indexSet = gridView.indexSet();
-    auto localView = basis_->localView();
-    auto localViewn = basis_->localView();
+    Solver_config::FEBasis::LocalView  localView (*basis_);
+//    auto localViewn = basis_->localView();
+    Solver_config::FEBasis::LocalView  localViewn (*basis_);
     auto localIndexSet = basis_->indexSet().localIndexSet();
     auto localIndexSetn = basis_->indexSet().localIndexSet();
 

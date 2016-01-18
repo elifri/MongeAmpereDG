@@ -134,6 +134,8 @@ struct Solver_config{
 
   typedef Functions::BSplineLocalFiniteElement<GridView, value_type> LocalFiniteElementType;
 	typedef Functions::BSplineBasis<GridView> FEBasis;
+  typedef Functions::BSplineLocalFiniteElement<LevelGridView, value_type> LocalFiniteElementCoarseType;
+  typedef Functions::BSplineBasis<LevelGridView> FEBasisCoarse;
 
 
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis,VectorType> DiscreteGridFunction;

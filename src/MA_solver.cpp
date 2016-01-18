@@ -76,7 +76,8 @@ void MA_solver::plot(std::string name) const
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
-  auto localnumericalSolution = localFunction(numericalSolution);
+//  auto localnumericalSolution = localFunction(numericalSolution);
+  decltype(numericalSolution)::LocalFunction localnumericalSolution(numericalSolution);
 
   //extract hessian
   /*  const int nDH = Solver_config::dim*Solver_config::dim;
@@ -131,7 +132,8 @@ void MA_solver::plot_with_mirror(std::string name)
 
      //build gridviewfunction
      Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
-     auto localnumericalSolution = localFunction(numericalSolution);
+     decltype(numericalSolution)::LocalFunction localnumericalSolution(numericalSolution);
+//     auto localnumericalSolution = localFunction(numericalSolution);
 
      //build writer
      SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
@@ -139,7 +141,7 @@ void MA_solver::plot_with_mirror(std::string name)
      //add solution data
      vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
 
-     //extract hessian (3 entries (because symmetry))
+/*     //extract hessian (3 entries (because symmetry))
      Dune::array<int,2> direction = {0,0};
 
      auto HessianEntry00= localSecondDerivative(numericalSolution, direction);
@@ -153,12 +155,13 @@ void MA_solver::plot_with_mirror(std::string name)
      direction[0] = 1;
      auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
      vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
-
+     */
 
      //write to file
      std::string fname(plotter.get_output_directory());
      fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
      vtkWriter.write(fname);
+
 
 
      std::string reflname(plotter.get_output_directory());
@@ -344,6 +347,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
     solve_nonlinear_system();
     iterations++;
+//    plot_with_mirror("numericalSolutionBeforeRef");
 
     adapt_solution();
 //    project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
@@ -436,6 +440,11 @@ void MA_solver::adapt_solution(const int level)
 
   std::cout << "old element count " << gridView_ptr->size(0) << std::endl;
 
+
+  std::array<unsigned int,Solver_config::dim> elementsCoarse;
+  std::fill(elementsCoarse.begin(), elementsCoarse.end(), std::sqrt(gridView_ptr->size(0)));
+
+
   //adapt grid
   bool marked = grid_ptr->preAdapt();
   assert(marked == false);
@@ -445,27 +454,39 @@ void MA_solver::adapt_solution(const int level)
 
   std::cout << "new element count " << gridView_ptr->size(0) << std::endl;
 
+
+  //we need do store the old basis as the (father) finite element depends on the basis
+  std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(grid_ptr->levelGridView(grid_ptr->maxLevel()-1),
+                                                                          Solver_config::lowerLeft, Solver_config::upperRight,
+                                                                          elementsCoarse,
+                                                                          Solver_config::degree));
+/*
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,VectorType> DiscreteGridFunctionCoarse;
+  typedef typename DiscreteGridFunctionCoarse::LocalFunction DiscreteLocalGridFunctionCoarse;
+  typedef typename DiscreteGridFunctionCoarse::LocalFirstDerivative DiscreteLocalGradientGridFunctionCoarse;
+  std::shared_ptr<DiscreteGridFunctionCoarse> solution_u_Coarse_global = std::shared_ptr<DiscreteGridFunctionCoarse> (new DiscreteGridFunctionCoarse(*FEBasisCoarse,solution_u_old_global->dofs()));
+  std::shared_ptr<DiscreteLocalGridFunctionCoarse> solution_u_Coarse = std::shared_ptr<DiscreteLocalGridFunctionCoarse> (new DiscreteLocalGridFunctionCoarse(*solution_u_Coarse_global));
+  std::shared_ptr<DiscreteLocalGradientGridFunctionCoarse> gradient_u_Coarse = std::shared_ptr<DiscreteLocalGradientGridFunctionCoarse> (new DiscreteLocalGradientGridFunctionCoarse(*solution_u_Coarse_global));
+*/
+
   //update member
   std::array<unsigned int,Solver_config::dim> elementsSplines;
   std::fill(elementsSplines.begin(), elementsSplines.end(), std::sqrt(gridView_ptr->size(0)));
-
-  //we need do store the old basis as the (father) finite element depends on the basis
-  std::shared_ptr<FEBasisType> FEBasisOld (FEBasis);
 
   FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr, Solver_config::lowerLeft, Solver_config::upperRight, elementsSplines, Solver_config::degree));
 //  FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
   assembler.bind(*FEBasis);
 
   auto localViewRefChild = FEBasis->localView();
-  auto localViewRefFather = FEBasisOld->localView();
+  auto localViewRefFather = FEBasisCoarse->localView();
   auto localIndexSetRef = FEBasis->indexSet().localIndexSet();
 
   //init vector v
 //  solution.resize(get_n_dofs());
   solution.setZero(get_n_dofs());
 
-  Solver_config::LocalFiniteElementType localFiniteElement(*FEBasis);
-  Solver_config::LocalFiniteElementType localFiniteElementFather(*FEBasisOld);
+  Solver_config::LocalFiniteElementType localFiniteElement(FEBasis->nodeFactory());
+  Solver_config::LocalFiniteElementCoarseType localFiniteElementFather(FEBasisCoarse->nodeFactory());
 //  Solver_config::LocalFiniteElementType localFiniteElement;
 
   //calculate refinement matrices
@@ -602,8 +623,8 @@ void MA_solver::adapt_solution(const int level)
     else //element was not refined
     {
       //bind to child
-      localViewRefFather.bind(element);
-      localIndexSetRef.bind(localViewRefFather);
+      localViewRefChild.bind(element);
+      localIndexSetRef.bind(localViewRefChild);
 
       IdType id = idSet.id(element);
       assembler.set_local_coefficients(localIndexSetRef, preserveSolution[id], solution);
