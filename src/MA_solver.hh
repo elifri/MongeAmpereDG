@@ -92,6 +92,10 @@ public:
     doglegOpts_.maxsteps = maxSteps_;
 #endif
 
+    //adjust light intensity
+    const auto integralLightOut = op.lop.get_right_handside().get_target_distribution().integrateOriginal();
+    const auto integralLightIn = op.lop.get_right_handside().get_input_distribution().integrateOriginal();
+    povRayOpts_.lightSourceColor = Eigen::Vector3d::Constant(integralLightOut/integralLightIn*Solver_config::lightSourceIntensity);
 
 	  plotter.set_refinement(plotterRefinement_);
 	  plotter.set_PovRayOptions(povRayOpts_);

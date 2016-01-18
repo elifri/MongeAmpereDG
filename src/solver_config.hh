@@ -129,6 +129,8 @@ struct Solver_config{
 
   static value_type z_3;
 
+  static value_type lightSourceIntensity;
+
 //	typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementType;
 //  typedef Functions::PQKNodalBasis<GridView, degree> FEBasis;
 
