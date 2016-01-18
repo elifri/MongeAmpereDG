@@ -62,6 +62,8 @@ public:
 	typedef typename Solver_config::MatrixType MatrixType;
 
 	typedef typename Solver_config::FEBasis FEBasisType;
+  typedef typename Solver_config::FEBasisCoarse FEBasisCoarseType;
+
 
 	typedef typename Solver_config::DiscreteGridFunction DiscreteGridFunction;
 	typedef typename Solver_config::DiscreteLocalGridFunction DiscreteLocalGridFunction;
