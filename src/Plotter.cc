@@ -238,7 +238,8 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
 			"light_source {" <<std::endl <<
 			"\t <-0,0,0>" <<std::endl <<
 //      "\t color rgb <1,1,1>" <<std::endl <<
-      "\t color rgb <0.141496033, 0.141496033, 0.141496033>" <<std::endl <<
+//      "\t color rgb <0.141496033, 0.141496033, 0.141496033>" <<std::endl <<
+			"\t color rgb < " << povRayOpts.lightSourceColor[0] << ", " << povRayOpts.lightSourceColor[1] << ", " << povRayOpts.lightSourceColor[2] << "> " << std::endl <<
 			"\t spotlight" <<std::endl <<
 			"\t point_at <-0.0, 0, 1>" <<std::endl <<
 			"\t radius " << povRayOpts.lightSourceRadius <<std::endl <<

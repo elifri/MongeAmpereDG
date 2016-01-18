@@ -30,6 +30,8 @@ Solver_config::UnitCubeType::SpaceType Solver_config::upperRightTarget= {1,1};
 double Solver_config::z_3 = 0;
 double Solver_config::kappa = 2./3.;
 
+double Solver_config::lightSourceIntensity = 0.00007;
+
 std::string Solver_config::LightinputImageName = "../inputData/lightin_lambertian.bmp";
 std::string Solver_config::TargetImageName = "../inputData/blub.bmp";
 
@@ -116,6 +118,7 @@ void Solver_config::read_configfile(std::string &configFile)
         ("povray.lightSourceRadius",    po::value<double>(&(povRayOpts.lightSourceRadius)), "")
         ("povray.lightSourceFalloff",   po::value<double>(&(povRayOpts.lightSourceFalloff)), "")
         ("povray.lightSourceTightness", po::value<double>(&(povRayOpts.lightSourceTightness)), "")
+        ("povray.lightSourceIntensity", po::value<double>(&Solver_config::lightSourceIntensity), "")
   ;
 
 
