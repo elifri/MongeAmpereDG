@@ -9,12 +9,18 @@ ENDIF(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
 
 SET(CMAKE_BUILD_TYPE DEBUG)
 
-
 # Select flags.
-SET(CMAKE_CXX_FLAGS "-std=c++11 -Wall -fmax-errors=3  -ftemplate-backtrace-limit=0 -fopenmp")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fmax-errors=3  -ftemplate-backtrace-limit=0 -fopenmp")
 SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
 SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 SET(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g")
+
+
+
+message("compiling mode: ${CMAKE_BUILD_TYPE}")
+message("cmake flags mode: ${CMAKE_CXX_FLAGS}")
+message("cmake release flags mode: ${CMAKE_CXX_FLAGS_RELEASE}")
+
 
 SITE_NAME(MY_SITE)
 IF(MY_SITE STREQUAL "indigo7")
@@ -23,11 +29,9 @@ IF(MY_SITE STREQUAL "indigo7")
    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_DOGLEG")
    SET(ADOLC_PATH $ENV{HOME}/lib/adolc)
    unset(Boost_FOUND CACHE)
-   find_package(Boost REQUIRED COMPONENTS program_options)
-   message("found boost ${Boost_LIBRARIES} in ${BOOST_INCLUDEDIR}")
+   SET(Boost_LIBRARIES /usr/local/gcc-5.2.0/lib/libboost_program_options.so)
    SET(BoostPO_LIBRARIES ${Boost_LIBRARIES})
 ELSE()
-   SET(CMAKE_BUILD_TYPE DEBUG)
 #   message( "We are on ${MY_SITE}, use petsc snes." )
 #   SET(SNES_LIBRARY petsc)
 #   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_PETSC")
@@ -37,6 +41,7 @@ ELSE()
    SET(ADOLC_PATH $ENV{HOME}/lib/adolcRapunzel)
    SET(Boost_LIBRARIES boost_program_options)
    SET(BoostPO_LIBRARIES ${Boost_LIBRARIES})
+   SET(ARPACK_LIBRARY "-lcholmod -lsuitesparseconfig -lcolamd -lmetis -lccolamd -lcamd")
 ENDIF()
 
 
@@ -90,4 +95,8 @@ message("found boost ${Boost_LIBRARIES}")
 finalize_dune_project(GENERATE_CONFIG_H_CMAKE)
 
 
-   message("found boost ${Boost_LIBRARIES}")
+message("found boost ${Boost_LIBRARIES}")
+
+message("compiling mode: ${CMAKE_BUILD_TYPE}")
+message("cmake flags mode: ${CMAKE_CXX_FLAGS}")
+message("cmake release flags mode: ${CMAKE_CXX_FLAGS_RELEASE}")

@@ -28,12 +28,17 @@ Solver_config::UnitCubeType::SpaceType Solver_config::upperRight = {1,1};
 Solver_config::UnitCubeType::SpaceType Solver_config::lowerLeftTarget = {0,0};
 Solver_config::UnitCubeType::SpaceType Solver_config::upperRightTarget= {1,1};
 double Solver_config::z_3 = 0;
+double Solver_config::kappa = 2./3.;
 
 std::string Solver_config::LightinputImageName = "../inputData/lightin_lambertian.bmp";
 std::string Solver_config::TargetImageName = "../inputData/blub.bmp";
 
 int Solver_config::startlevel = 0;
 int Solver_config::nonlinear_steps = 1;
+
+unsigned int Solver_config::epsDivide = 1;
+unsigned int Solver_config::epsEnd = 1;
+
 
 double Solver_config::sigma = 5;
 double Solver_config::sigmaGrad = 5;
@@ -85,8 +90,8 @@ void Solver_config::read_configfile(std::string &configFile)
         ("solver.Dirichlet",     po::value<bool>(&Solver_config::Dirichlet), "")
         ("solver.JacSimultaneously",     po::value<bool>(&evalJacSimultaneously), "")
         ("solver.lambda",     po::value<double>(&Solver_config::lambda), "")
-        ("solver.epsDivide",  po::value<unsigned int>(&epsDivide), "")
-        ("solver.epsEnd",  po::value<unsigned int>(&epsEnd), "")
+        ("solver.epsDivide",  po::value<unsigned int>(&Solver_config::epsDivide), "")
+        ("solver.epsEnd",  po::value<unsigned int>(&Solver_config::epsEnd), "")
         ("solver.minPixelValue",     po::value<double>(&minPixelValue), "")
         ("solver.sigma",     po::value<double>(&Solver_config::sigma), "")
         ("solver.sigmaGrad",     po::value<double>(&Solver_config::sigmaGrad), "")
