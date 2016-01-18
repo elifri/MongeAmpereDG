@@ -568,13 +568,13 @@ void Assembler::calculate_refined_local_mass_matrix_ansatz(
 }
 
 
-template<typename LocalView>
-void Assembler::calculate_refined_local_mass_matrix_detailed(const LocalView &localViewFather, const LocalView &localViewChild, Solver_config::DenseMatrixType& m,
+template<typename LocalView, typename LocalViewFather>
+void Assembler::calculate_refined_local_mass_matrix_detailed(const LocalViewFather &localViewFather, const LocalView &localViewChild, Solver_config::DenseMatrixType& m,
         const int level) const {
   assert(level == 1);
 
-  const auto lfuFather = localViewFather.tree().finiteElement();
-  const auto lfuChild = localViewChild.tree().finiteElement();
+  const auto& lfuFather = localViewFather.tree().finiteElement();
+  const auto& lfuChild = localViewChild.tree().finiteElement();
 
   typedef decltype(lfuChild) ConstElementRefType;
   typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
