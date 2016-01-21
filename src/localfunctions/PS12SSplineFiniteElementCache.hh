@@ -81,9 +81,6 @@ bool operator<(const Dune::FieldVector<value_type, 2> & v, const Dune::FieldVect
         else
           signNormal[k++] = normal[0]+normal[1] > 0 ? 1 : -1;
 
-        std::cout << "normal " << normal  << " " << signNormal[k-1] << std::endl;
-
-
       }
 
       const auto& geo =  e.geometry();

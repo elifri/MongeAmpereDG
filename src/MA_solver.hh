@@ -243,6 +243,9 @@ public:
   template<class LocalF, class LocalF_grad>
   void project_labouriousC1Local(LocalF f, LocalF_grad f_grad, VectorType& v) const;
 
+private:
+  template<class F>
+  void test_projection(const F f, VectorType& v) const;
 
   /**
    * projects a function into the grid space, for the initialisation of the hessian dofs the discrete hessian is calculated
