@@ -13,7 +13,7 @@
 #include <map>
 
 #include <dune/localfunctions/c1/deVeubeke/deVeubeke.hh>
-
+#include <iomanip>
 namespace Dune
 {
 
@@ -35,6 +35,9 @@ bool operator<(const Dune::FieldVector<value_type, 2> & v, const Dune::FieldVect
     bool operator()(const Geometry& geo0, const Geometry& geo1)
     {
       return (geo0.center() < geo1.center());
+//      bool temp = geo0.center() < geo1.center();
+//      std::cout << geo0.center() << " is smaller than " << geo1.center() << "? " << temp << std::endl;
+//      return temp;
     }
   };
 
@@ -83,6 +86,8 @@ bool operator<(const Dune::FieldVector<value_type, 2> & v, const Dune::FieldVect
     //! Get local finite element for given GeometryType
     const FiniteElementType& get(const Geometry& geo) const
     {
+//      std::cout << "geo center " << geo.center() << std::endl;
+
       typename FEMap::const_iterator it = cache_.find(geo);
 
       if (it==cache_.end())
@@ -92,9 +97,17 @@ bool operator<(const Dune::FieldVector<value_type, 2> & v, const Dune::FieldVect
           DUNE_THROW(Dune::NotImplemented,"No deVeubeke finite element available for given geometry ");
 
         cache_[geo] = fe;
+//        std::cout << "inserted geo " << geo.center()  << " with center " << fe->geo_.center() << std::endl;
 
         return *fe;
       }
+      else
+      {
+        assert(std::abs(geo.center()[0] - it->second->geo_.center()[0]) < 1e-10 );
+        assert(std::abs(geo.center()[1] - it->second->geo_.center()[1]) < 1e-10 );
+//        std::cout << "found geo with center " << it->first.center() << std::endl;
+      }
+
       return *(it->second);
     }
 

@@ -66,8 +66,8 @@ public:
   };
 
 public:
+//  PS12SSplineGlobalBasis () : geo_(&(new Geometry)), A_(&(new SparseMatrixType))  {}
 
-  //! \brief Standard constructor
   PS12SSplineGlobalBasis (const Geometry &geo, const SparseMatrixType& A) : geo_(geo), A_(A)
   {
     const auto& b0 = geo.corner(0);
@@ -86,9 +86,25 @@ public:
     directionAxis_[1][1] = (b0[0]-b2[0]) / determinantBarycTrafo_;
     directionAxis_[1][2] = (-b0[0]+b1[0]) / determinantBarycTrafo_;
 
+/*
     std::cout << "direction x " << directionAxis_[0] << std::endl;
     std::cout << "direction y " << directionAxis_[1] << std::endl;
-}
+*/
+  }
+
+/*
+  PS12SSplineGlobalBasis( const PS12SSplineGlobalBasis& basis) : geo_(basis.geo_), A_(basis.A_),
+      directionAxis_(basis.directionAxis_), determinantBarycTrafo_(basis.determinantBarycTrafo_)
+  {}
+*/
+
+  PS12SSplineGlobalBasis& operator=( const PS12SSplineGlobalBasis& basis)
+  {
+    geo_ = basis.geo_;
+    A_ = basis.A_;
+    directionAxis_ = basis.directionAxis_;
+    determinantBarycTrafo_ = basis.determinantBarycTrafo_;
+  }
 
   //! \brief number of shape functions
   unsigned int size () const
@@ -107,6 +123,8 @@ public:
     BarycCoordType barycPos;
     calcBarycCoords(x, barycPos);
 
+//    std::cout << " barycPos " << barycPos << std::endl;
+
     //determine subtriangle no and indeces of splines with support in \triang_k
     int k;
     std::array<int, 3> gk1; //indeces of linear splines with support in \triang_k
@@ -121,7 +139,7 @@ public:
 
     for (int j = 0; j < 3; j++) Rk1[0][j] = R1(barycPos, k, gk1[j]);
 
-    std::cout << " R1 " << Rk1 << std::endl;
+//    std::cout << " R1 " << Rk1 << std::endl;
 
     //caluclate recurrence (sub)matrix for quadratic splines
     FieldMatrix<R, 3 , gk2size> Rk2;
@@ -129,14 +147,14 @@ public:
       for (int j = 0; j < gk2size; j++)
         Rk2[i][j] = R2(barycPos, gk1[i], gk2[j]);
 
-    std::cout << " R2 " << Rk2 << std::endl;
+//    std::cout << " R2 " << Rk2 << std::endl;
 
     FieldMatrix <R, gk2size, N> Asub;
     for (int i = 0; i < gk2size; i++)
       for (int j = 0; j < N; j++)
         Asub[i][j] = A_.coeff(gk2[i],j);
 
-    std::cout << " Asub " << Asub << std::endl;
+//    std::cout << " Asub " << Asub << std::endl;
 
     const auto basisValuesWithSupport = Rk1.rightmultiplyany(Rk2.rightmultiplyany(Asub));
 
@@ -172,14 +190,14 @@ public:
         for (int j = 0; j < gk2size; j++)
           Uk2[dim][i][j] = U2(directionAxis_[dim], gk1[i], gk2[j]);
 
-    std::cout << " U2 " << Uk2[0] << std::endl << " and " << Uk2[1] << std::endl;
+//    std::cout << " U2 " << Uk2[0] << std::endl << " and " << Uk2[1] << std::endl;
 
     //calculate recurrence (sub)matrix for linear splines
     FieldMatrix<R, 1 , 3> Rk1;
 
     for (int j = 0; j < 3; j++) Rk1[0][j] = R1(barycPos, k, gk1[j]);
 
-    std::cout << " R1 " << Rk1 << std::endl;
+//    std::cout << " R1 " << Rk1 << std::endl;
 
     //caluclate recurrence (sub)matrix for quadratic splines
     FieldMatrix<R, 3 , gk2size> Rk2;
@@ -192,7 +210,7 @@ public:
       for (int j = 0; j < N; j++)
         Asub[i][j] = A_.coeff(gk2[i],j);
 
-    std::cout << " Asub " << Asub << std::endl;
+//    std::cout << " Asub " << Asub << std::endl;
 
     for (unsigned int dim = 0 ; dim < Traits::dimDomainLocal; dim++)
     {
@@ -382,6 +400,9 @@ private:
          baryc[i] = 0;
          baryc[(i+1)%3] = 1 - baryc[i%3] -baryc[(i+2)%3];
        }
+
+//     std::cerr << std::setprecision(16);
+//     std::cerr << " baryc sum " << baryc[0]+baryc[1]+baryc[2] << " > 0? " << !(baryc[0]+baryc[1]+baryc[2] > 1) << std::endl;
 
      assert(baryc[0] >= 0);
      assert(baryc[1] >= 0);
@@ -704,6 +725,7 @@ private:
    }
 
    const Geometry& geo_;
+public:
    const SparseMatrixType& A_; //hermite interpolation matrix
 
    std::array<BarycCoordType, Traits::dimDomainLocal> directionAxis_;

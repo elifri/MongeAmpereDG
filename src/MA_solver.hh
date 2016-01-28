@@ -24,9 +24,11 @@
 #include "problem_data.hh"
 //#include "Operator/linear_system_operator_poisson_DG.hh"
 //#include "Operator/operator_MA_Neilan_DG.hh"
-#include "Operator/operator_MA_refl_Brenner.hh"
+//#include "Operator/operator_MA_refl_Brenner.hh"
+#include "Operator/operator_MA_refr_Brenner.hh"
 #include "Operator/operator_discrete_Hessian.hh"
 #include "Plotter.hh"
+#include "matlab_export.hpp"
 
 #ifdef USE_DOGLEG
 #include "Dogleg/doglegMethod.hpp"
@@ -153,7 +155,11 @@ public:
       if (new_solution)
       {
         solver_ptr->update_solution(x_old);
+//        solver_ptr->iterations++;
+//        solver_ptr->plot_with_mirror("intermediateStep");
       }
+
+//      std::cout << " evaluate " << x.transpose() << std::endl;
 
       assert(solver_ptr != NULL);
       igpm::processtimer timer;
@@ -194,7 +200,8 @@ public:
     mutable MA_solver* solver_ptr;
 
 //		Local_Operator_MA_mixed_Neilan lop;
-		Local_Operator_MA_refl_Brenner lop;
+//		Local_Operator_MA_refl_Brenner lop;
+		Local_Operator_MA_refr_Brenner lop;
 	};
 
 	///assembles the (global) integrals (for every test function) specified by lop
@@ -247,6 +254,7 @@ private:
   template<class F>
   void test_projection(const F f, VectorType& v) const;
 
+public:
   /**
    * projects a function into the grid space, for the initialisation of the hessian dofs the discrete hessian is calculated
    * @param f function representing the function
@@ -285,6 +293,7 @@ private:
 
 	void plot_with_mirror(std::string name);
 
+	void plot_with_lens(std::string name);
 
 private:
 	///creates the initial guess
@@ -346,8 +355,9 @@ private:
 
 
   int count_refined; ///counts how often the original grid was refined
+public:
   mutable int iterations;
-
+private:
   bool writeVTK_;
 
   bool evaluateJacobianSimultaneously_;
@@ -1377,6 +1387,8 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 //          assert(std::abs((gradu-gradun).two_norm() < 1e-10));
           if (std::abs((gradu-gradun).two_norm() > 1e-10))
             std::cout << "found two gradient not matching at " << x_value << ", namely " << gradu  << " and " << gradun << std::endl;
+          else
+            std::cout << "checked matching gradients at quad point " << std::endl;
         }
 
       }

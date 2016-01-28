@@ -21,7 +21,7 @@
 #include <dune/localfunctions/c1/deVeubeke/deveubekequadraturerule.hh>
 
 
-#include "test-localfe.hh"
+#include <dune/localfunctions/test/test-localfe.hh>
 
 using namespace Dune;
 
@@ -153,6 +153,12 @@ struct TestMacroEvaluate<2>
                   - neighbourValues[1][j][k] - neighbourValues[2][j][k]
                   + neighbourValues[3][j][k]) / (4 * delta * delta);
 
+              std::cout << " neighbourvalues k " << k <<" "
+                  << neighbourValues[0][j][k] << " "
+                  << - neighbourValues[1][j][k] << " "
+                  << - neighbourValues[2][j][k] << " "
+                  <<  neighbourValues[3][j][k]) << std::endl;
+
               // Check
               if (std::abs(derivative - finiteDiff)
                   > eps / delta * (std::max(std::abs(finiteDiff), 1.0)))
@@ -168,6 +174,7 @@ struct TestMacroEvaluate<2>
                           << derivative << ", but " << finiteDiff
                           << " is expected." << std::endl;
                 std::cout << std::endl;
+
                 success = false;
               }
             } //Loop over all components

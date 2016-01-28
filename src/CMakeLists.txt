@@ -21,6 +21,10 @@ message("Boost libraries ${Boost_LIBRARIES}")
 target_link_libraries(dune_mongeampere MA_solver Plotter BoundaryHandler ${SNES_LIBRARY} EllipsoidMethod ${MirrorProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11)
 target_link_dune_default_libraries("dune_mongeampere")
 
+add_executable("dune_mongeampereItSimple" dune_mongeampere.cc)
+target_link_libraries(dune_mongeampereItSimple MA_solver Plotter ${SNES_LIBRARY} EllipsoidMethod ${MirrorProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES} ${ARPACK_LIBRARY} ${AMD_LIBRARY})
+target_link_dune_default_libraries("dune_mongeampereItSimple")
+
 add_executable("dune_mongeampereOT" dune_mongeampere_OT.cc)
 target_link_libraries(dune_mongeampereOT MA_OT_solver Plotter BoundaryHandler ${SNES_LIBRARY} ${OTProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11)
 target_link_dune_default_libraries("dune_mongeampereOT")

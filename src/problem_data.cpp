@@ -72,7 +72,6 @@ void RightHandSideReflector::phi(const Solver_config::SpaceType2d& T, const Fiel
        T_proj[0] = T[0]-Solver_config::lowerLeftTarget[0] < Solver_config::upperRightTarget[0] - T[0] ?  Solver_config::lowerLeftTarget[0] : Solver_config::upperRightTarget[0];
      else
        T_proj[1] = T[1]-Solver_config::lowerLeftTarget[1] < Solver_config::upperRightTarget[1] - T[1] ?  Solver_config::lowerLeftTarget[1] : Solver_config::upperRightTarget[1];
-
      phi = T_proj * normal;
    }
  }

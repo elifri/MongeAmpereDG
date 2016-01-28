@@ -118,7 +118,7 @@ public:
   }
 
 private:
-  GridView gridView_;
+  const GridView gridView_;
 };
 
 template<typename GV, typename ST, typename TP, class SparseMatrixType>

@@ -164,6 +164,8 @@ void MA_solver::plot_with_mirror(std::string name)
      vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
 
 
+//     std::cout << "solution " << solution_u.transpose() << std::endl;
+
      //write to file
      std::string fname(plotter.get_output_directory());
      fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
@@ -185,6 +187,70 @@ void MA_solver::plot_with_mirror(std::string name)
 
    plotter.writeReflectorPOV(reflPovname, *solution_u_old);
    std::cout << reflPovname << std::endl;
+}
+
+
+void MA_solver::plot_with_lens(std::string name)
+{
+
+  std::cout << "write? " << writeVTK_ << " ";
+  std::cout << "plot written into ";
+
+  //write vtk files
+  if (writeVTK_)
+  {
+
+    VectorType solution_u = solution.segment(0, get_n_dofs_u());
+
+     //build gridviewfunction
+     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
+     auto localnumericalSolution = localFunction(numericalSolution);
+
+     //build writer
+     SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
+
+     //add solution data
+     vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
+
+     //extract hessian (3 entries (because symmetry))
+     Dune::array<int,2> direction = {0,0};
+
+     auto HessianEntry00= localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry00 , VTK::FieldInfo("Hessian00", VTK::FieldInfo::Type::scalar, 1));
+     direction[0] = 1;
+     auto HessianEntry10 = localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry10 , VTK::FieldInfo("Hessian10", VTK::FieldInfo::Type::scalar, 1));
+     direction[0] = 0; direction[1] = 1;
+     auto HessianEntry01 = localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry01 , VTK::FieldInfo("Hessian01", VTK::FieldInfo::Type::scalar, 1));
+     direction[0] = 1;
+     auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
+
+
+//     std::cout << "solution " << solution_u.transpose() << std::endl;
+
+     //write to file
+     std::string fname(plotter.get_output_directory());
+     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
+     vtkWriter.write(fname);
+
+
+     std::string reflname(plotter.get_output_directory());
+     reflname += "/"+ plotter.get_output_prefix()+ name + "refractor"+NumberToString(iterations) + ".vtu";
+
+//     plotter.writeReflectorVTK(reflname, localnumericalSolution, *exact_solution);
+     plotter.writeRefractorVTK(reflname, localnumericalSolution);
+
+     std::cout << fname  << " " << reflname << " and ";
+  }
+
+  //write povray output
+   std::string refrPovname(plotter.get_output_directory());
+   refrPovname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".pov";
+
+   plotter.writeRefractorPOV(refrPovname, *solution_u_old);
+   std::cout << refrPovname << std::endl;
 }
 
 void MA_solver::create_initial_guess()
@@ -228,7 +294,7 @@ void MA_solver::create_initial_guess()
 
 //  vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
 
-//    project_labourious([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
+//    project_labouriousC1([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
 //  solution = VectorType::Zero(get_n_dofs());
 //  solution = exactsol_projection;
 
@@ -240,37 +306,25 @@ void MA_solver::create_initial_guess()
 //        solution[get_n_dofs_u()+ nDH*i+j] = (j == 0 || j ==3)? 1 : 0;
 //      }
 
-//  InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data(Solver_config::configFileEllipsoid);
-//  project_labouriousC1([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
-//  ellipsoidMethod.write_output();
+/*    InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data(Solver_config::configFileEllipsoid);
+    project_labouriousC1([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
+    ellipsoidMethod.write_output();*/
 
-    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
+//    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
 //  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimple.grid");
 //  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRoentgen.grid");
-//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRose.grid");
-//
-  assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
-  assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
+//    Rectangular_mesh_interpolator rectangular_interpolator("../Testing/oneParis.grid");
 
-//  Rectangular_mesh_interpolator rectangular_interpolatorDerX("../inputData/exactReflectorProjectionSimpleDerX.grid");
-//  Rectangular_mesh_interpolator rectangular_interpolatorDerY("../inputData/exactReflectorProjectionSimpleDerY.grid");
+//    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/grids/homogeneousinitial.grid");
+////
+//    assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
+//    assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
+//    project_labouriousC1([&rectangular_interpolator](Solver_config::SpaceType x){return rectangular_interpolator.evaluate(x);},solution);
+//    project_labouriousC1([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
+//    solution.setZero(get_n_dofs());
+//    solution[1] = 1;
 
-//  assert(is_close(rectangular_interpolatorDerX.x_min, Solver_config::lowerLeft[0], 1e-12));
-//  assert(is_close(rectangular_interpolatorDerX.y_min, Solver_config::lowerLeft[1], 1e-12));
-//  assert(is_close(rectangular_interpolatorDerY.x_min, Solver_config::lowerLeft[0], 1e-12));
-//  assert(is_close(rectangular_interpolatorDerY.y_min, Solver_config::lowerLeft[1], 1e-12));
-//
-    project_labouriousC1([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);},solution);
-
-//  project_labouriousC1([&rectangular_interpolator](Solver_config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);},
-//                       [&rectangular_interpolatorDerX](Solver_config::SpaceType x){return rectangular_interpolatorDerX.evaluate(x);},
-//                       [&rectangular_interpolatorDerY](Solver_config::SpaceType x){return rectangular_interpolatorDerY.evaluate(x);}
-//                       ,solution);
-//  project_labouriousC1([](Solver_config::SpaceType x){return x.two_norm2()/2.0;},
-//                       [](Solver_config::SpaceType x){return x[0];},
-//                       [](Solver_config::SpaceType x){return x[1];},
-//                       solution);
-
+  project_labouriousC1([](Solver_config::SpaceType x){return 1;}, solution);
 }
 
 const typename MA_solver::VectorType& MA_solver::solve()
@@ -292,7 +346,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
   //blurr target distributation
   std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
-  op.lop.rhs.convolveTargetDistributionAndNormalise(std::min(100,(int) epsMollifier_));
+  op.lop.rhs.convolveTargetDistributionAndNormalise(epsMollifier_);
   //print blurred target distribution
   if (true) {
       ostringstream filename2; filename2 << outputDirectory_+"/lightOut" << iterations << ".bmp";
@@ -302,24 +356,30 @@ const typename MA_solver::VectorType& MA_solver::solve()
   }
 
   create_initial_guess();
+  {
+    //write initial guess into file
+    stringstream filename2; filename2 << outputDirectory_ <<  outputPrefix_ << "initial.feg";
+    ofstream file(filename2.str(),std::ios::out);
+//    update_solution(solution);
+//    plotter.save_rectangular_mesh(*solution_u_old, file);
+    file << solution;
+    file.close();
+
+  /*solution.resize(get_n_dofs());
+  ifstream fileInitial ("homogeneousFineVector2.data");
+  for (int i=0; i<get_n_dofs(); ++i) {
+    fileInitial >> solution(i);
+  }
+
+   fileInitial.close();*/
+  }
+
   solution(solution.size()-1)= op.lop.get_right_handside().get_input_distribution().omega_integrate() / op.lop.get_right_handside().get_target_distribution().integrate2();
 
-  {
-  ofstream fileInitial (outputPrefix_+"initialVector");
-  fileInitial << solution << endl;
-
-//    solution.resize(get_n_dofs());
-//    ifstream fileInitial ("CGtestfirstVector");
-//    for (int i=0; i<get_n_dofs(); ++i) {
-//        fileInitial >> solution(i);
-//    }
-//
-//    fileInitial.close();
-  }
 
   update_solution(solution);
 
-  plot_with_mirror("initialguess");
+  plot_with_lens("initialguess");
 
 
   Solver_config::VectorType f;
@@ -331,7 +391,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
   Integrator<GridType> integrator(grid_ptr);
   G = integrator.assemble_integral_of_local_gridFunction(*solution_u_old);
   std::cout << "reflector size  G " << G << endl;
-//      G = 2.777777777777778;
+//  G = 0.16;   std::cout << "set reflector size  G " << G << endl;
   assembler.set_G(G);
 
 
@@ -339,24 +399,20 @@ const typename MA_solver::VectorType& MA_solver::solve()
   for (int i = 0; i < Solver_config::nonlinear_steps; i++)
   {
     solve_nonlinear_system();
-
-    ofstream file (outputPrefix_+"firstVector");
-    file << solution << endl;
-    file.close();
-
+    std::cerr << " solves nonlinear system" << std::endl;
 
     cout << "scaling factor " << solution(solution.size()-1) << endl;
 
     iterations++;
 
     update_solution(solution);
-    plot_with_mirror("numericalSolution");
+    plot_with_lens("numericalSolution");
 
     epsMollifier_ /= epsDivide_;
     std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
 
     // blur target
-    op.lop.rhs.convolveTargetDistributionAndNormalise(std::min(100,(int) epsMollifier_));
+    op.lop.rhs.convolveTargetDistributionAndNormalise(epsMollifier_);
 
     //print blurred target distribution
     if (true) {
@@ -367,15 +423,31 @@ const typename MA_solver::VectorType& MA_solver::solve()
     }
 
     solve_nonlinear_system();
+    std::cerr << " solves nonlinear system" << std::endl;
     iterations++;
+
+    {
+      //write current solution to file
+//      ostringstream filename2; filename2 << outputPrefix_ << "Vector" << iterations << ".data";
+//      ofstream fileInitial (filename2.str());
+//      fileInitial << solution << endl;
+//      fileInitial.close();
+
+      stringstream filename2; filename2 << "../inputData/grids/" << outputPrefix_ << iterations << ".grid";
+      ofstream file(filename2.str(),std::ios::out);
+      update_solution(solution);
+//      plotter.save_rectangular_mesh(*solution_u_old, file);
+      file.close();
+    }
+
+//    plot_with_lens("numericalSolutionBeforeRef");
 
     adapt_solution();
 //    project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
 //    exactsol_u = exactsol.segment(0, get_n_dofs_u());
 
     update_solution(solution);
-
-    plot_with_mirror("numericalSolution");
+    plot_with_lens("numericalSolution");
   }
 
   return solution;
@@ -385,6 +457,8 @@ const typename MA_solver::VectorType& MA_solver::solve()
 void MA_solver::update_solution(const Solver_config::VectorType& newSolution) const
 {
   solution_u = solution.segment(0, get_n_dofs_u());
+//  std::cout << "solution " << solution_u.transpose() << std::endl;
+
   //build gridviewfunction
   solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*FEBasis,solution_u));
   solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
@@ -414,12 +488,14 @@ void MA_solver::adapt_solution(const int level)
 //      std::cout << " gradient at the same " << (*gradient_u_old)(x) << std::endl;
 //    }
 
+    solution_u_old->bind(element);
     //mark element for refining
     grid_ptr->mark(1,element);
   }
   double scaling_factor = solution(solution.size()-1);
 
   std::cout << "old element count " << gridView_ptr->size(0) << std::endl;
+  std::cout << " grid febasis " << solution_u_old_global->basis().nodeFactory().gridView().size(2) << std::endl;
 
   //adapt grid
   bool marked = grid_ptr->preAdapt();
@@ -441,6 +517,7 @@ void MA_solver::adapt_solution(const int level)
   std::shared_ptr<DiscreteLocalGradientGridFunctionCoarse> gradient_u_Coarse = std::shared_ptr<DiscreteLocalGradientGridFunctionCoarse> (new DiscreteLocalGradientGridFunctionCoarse(*solution_u_Coarse_global));
 
   //update member
+  std::cout << " grid febasis " <<solution_u_Coarse_global->basis().nodeFactory().gridView().size(2) << std::endl;
 
   FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
   assembler.bind(*FEBasis);
@@ -465,6 +542,11 @@ void MA_solver::adapt_solution(const int level)
     const auto& geometry = element.geometry();
 
     VectorType localDofs = VectorType::Zero(lFE.size());
+
+
+//    std::cout << " father dofs ";
+//    for (const auto& tempEl : gradient_u_Coarse->localDoFs_ ) std::cout << tempEl << " ";
+//    std::cout << std::endl;
 
     int k = 0;
     for (int i = 0; i < geometry.corners(); i++) { //loop over nodes
@@ -513,8 +595,11 @@ void MA_solver::adapt_solution(const int level)
         signNormal = normal[0]+normal[1] > 0 ? 1 : -1;
 
       localDofs(k) = signNormal * ((*gradient_u_Coarse)(father.geometry().local(face_center)) * normal);
-      assert(lFE.localCoefficients().localKey(3*geometry.corners()+i).subEntity() == i);
+//      std::cout << "grad at " << face_center << " is " << (*gradient_u_Coarse)(father.geometry().local(face_center)) << " normal " << normal << " -> " << ((*gradient_u_Coarse)(father.geometry().local(face_center)) * normal) << " signNormal " << signNormal << std::endl;
+      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
       }
+
+//      std::cout << " set local dofs " << localDofs.transpose() << std::endl;
 
       assembler.set_local_coefficients(localIndexSet, localDofs, solution);
     }
@@ -522,7 +607,7 @@ void MA_solver::adapt_solution(const int level)
   //set scaling factor (last dof) to ensure mass conservation
   solution(solution.size()-1)= scaling_factor;
 
-#define NDEBUG
+#define BDEBUG
 #ifdef DEBUG
   std::cout << "refinement :" << std::endl;
 
@@ -545,6 +630,9 @@ void MA_solver::adapt_solution(const int level)
     double resTest1f = 0, resTest1 = 0;
 
     for (int i = 0; i < geometry.corners(); i++) {
+
+      std::cout << "corner " << i << " = " << geometry.corner(i) << std::endl;
+
       //evaluate test function
       std::vector<Dune::FieldVector<double, 1>> functionValues(
           localView.size());
@@ -574,36 +662,40 @@ void MA_solver::adapt_solution(const int level)
       std::cout << "approx'(corner " << i << ")=" << (*gradient_u_Coarse)(element.father().geometry().local(geometry.corner(i)))
           << "  approx = " << jacApprox << std::endl;
 
-      for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
-      {
-        //evaluate jacobian at edge mid
-        std::vector<Dune::FieldMatrix<double, 1, 2>> JacobianValues(
-            localView.size());
-        lFE.localBasis().evaluateJacobian(geometry.local(is.geometry().center()),
+    }
+
+    for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
+    {
+      //evaluate jacobian at edge mid
+      std::vector<Dune::FieldMatrix<double, 1, 2>> JacobianValues(
+          localView.size());
+      lFE.localBasis().evaluateJacobian(geometry.local(is.geometry().center()),
             JacobianValues);
 
-        Dune::FieldVector<double, 2> jacApprox;
-        for (int j = 0; j < localDofs.size(); j++) {
-          jacApprox.axpy(localDofs(j), JacobianValues[j][0]);
-        }
+      Dune::FieldVector<double, 2> jacApprox;
+      for (int j = 0; j < localDofs.size(); j++) {
+        jacApprox.axpy(localDofs(j), JacobianValues[j][0]);
+      }
 
-        const int i = is.indexInInside();
+      const int i = is.indexInInside();
 
-        // normal of center in face's reference element
-        const FieldVector<double, Solver_config::dim> normal =
+      // normal of center in face's reference element
+      const FieldVector<double, Solver_config::dim> normal =
               is.centerUnitOuterNormal();
 
-        const auto face_center = is.geometry().center();
-        std::cout << " f (face center " << i  << " )= ";
-        if (normal[0]+normal[1] < 0 )
-          std::cout << -((*gradient_u_Coarse)(element.father().geometry().local(face_center)) * normal);
-        else
-          std::cout << (*gradient_u_Coarse)(element.father().geometry().local(face_center)) * normal;
-        std::cout << " approx (face center " << i  << " )= " << jacApprox*normal;
+      const auto face_center = is.geometry().center();
+      std::cout << " f (face center " << i  << "=" << face_center << " )= ";
+      if (normal[0]+normal[1] < 0 )
+        std::cout << -((*gradient_u_Coarse)(element.father().geometry().local(face_center)) * normal)
+          << " = " <<(*gradient_u_Coarse)(element.father().geometry().local(face_center)) << "*" << normal;
+      else
+        std::cout << (*gradient_u_Coarse)(element.father().geometry().local(face_center)) * normal
+          << " = " << (*gradient_u_Coarse)(element.father().geometry().local(face_center)) << "*" <<normal;
+      std::cout << " approx (face center " << i  << " )= " << jacApprox*normal
+          << " = " << jacApprox << "*" << normal << std::endl;
 //        std::cout << " global dof no " << localIndexSet.index(k) << " has value " << solution[localIndexSet.index(k)] << std::endl;
-        }
-
     }
+
   }
 #endif
 
@@ -617,19 +709,6 @@ void MA_solver::solve_nonlinear_system()
   assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
 
   std::cout << "n dofs" << get_n_dofs() << std::endl;
-//  if (count_refined < 3)  solution = exactsol_projection;
-//  std::cout << "initial guess "<< solution.transpose() << std::endl;
-
-
-//  plotter.get_plot_stream("resU") << iterations << " " << f.segment(0,get_n_dofs_u()).norm() << endl;
-//  plotter.get_plot_stream("res") << iterations << " " << f.norm() << endl;
-//  MATLAB_export(f, "f");
-
-
-  //  std::cout << "initial l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
-  //copy guess vor scaling factor into exact solution
-//  exactsol(exactsol.size()-1) = solution(solution.size()-1);
-//  std::cout << "approximate error " << (solution-exactsol).norm() << std::endl;
 
   // /////////////////////////
   // Compute solution
@@ -637,14 +716,37 @@ void MA_solver::solve_nonlinear_system()
 
   Solver_config::VectorType newSolution = solution;
 
-//  int k = 0;
-//  do{
-//  std::cout << "before: new Solution " << newSolution.transpose() << std::endl;
-//  std::cout << "before: old solution " << solution_u.transpose() << std::endl;
-
 #ifdef USE_DOGLEG
 
+ /* doglegOpts_.maxsteps = 5;
+  int steps = 0;
+  bool converged = false;
+
+  do{
+    std::array<Solver_config::VectorType, 2> v;
+    Solver_config::sigmaBoundary =50;
+
+    for (int i=0; i < 2; i++)
+    {
+      v[i] =  solution;
+      v[i] += (i == 0)? Solver_config::VectorType::Constant(solution.size(),1e-5)
+                    : Solver_config::VectorType::Constant(solution.size(),-1e-5);
+
+      converged = doglegMethod(op, doglegOpts_, v[i], evaluateJacobianSimultaneously_);
+      std::cerr << "solved three steps " << std::endl;
+      Solver_config::sigmaBoundary +=25;
+    }
+    std::cerr << " merged solution " << std::endl;
+    solution = 0.5*(v[0]+v[1]);
+    steps++;
+    std::cerr << " v0 " << v[0].transpose() << std::endl;
+    std::cerr << " v1 " << v[1].transpose() << std::endl;
+    std::cerr << " solution " << solution.transpose() << std::endl;
+
+  }  while (!converged && steps < maxSteps_);
+*/
   doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
+
 
 #endif
 #ifdef USE_PETSC
