@@ -677,7 +677,7 @@ public:
         else
         {
           v_adolc(j) += penalty_weight * ((T_value * normal) - phi_value) //*((T_value * normal) - phi_value)
-                            * referenceFunctionValues[j] * factor;
+                            * (referenceFunctionValues[j]+(gradients[j]*normal)) * factor;
 //          std::cerr << " add to v_adolc(" << j << ") " << (penalty_weight * ((T_value * normal) - phi_value)* referenceFunctionValues[j] * factor).value() << " -> " << v_adolc(j).value() << std::endl;
         }
       }

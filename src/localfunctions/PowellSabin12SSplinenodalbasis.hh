@@ -143,8 +143,8 @@ public:
   typedef typename Interface::TreePath TreePath;
 
   PS12SSplineNode(const GV& gridView, const TreePath& treePath) :
-    cache_(gridView),
     Interface(treePath),
+    cache_(gridView),
     finiteElement_(nullptr),
     element_(nullptr)
   {}

@@ -139,6 +139,15 @@ void MA_solver::plot_with_mirror(std::string name)
      //add solution data
      vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
 
+     const auto& EigenBoundaryDofs = assembler.isBoundaryDoF();
+     Solver_config::VectorType boundaryDofs(EigenBoundaryDofs.size());
+     for (int i = 0; i < EigenBoundaryDofs.size(); i++) boundaryDofs[i] = EigenBoundaryDofs(i);
+
+     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> boundarySolution(*FEBasis,boundaryDofs);
+     auto localBoundarySolution = localFunction(boundarySolution);
+
+     vtkWriter.addVertexData(localBoundarySolution, VTK::FieldInfo("boundary", VTK::FieldInfo::Type::scalar, 1));
+
      //extract hessian (3 entries (because symmetry))
      Dune::array<int,2> direction = {0,0};
 
@@ -235,8 +244,8 @@ void MA_solver::create_initial_guess()
 //  project_labouriousC1([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
 //  ellipsoidMethod.write_output();
 
-//    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
-  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimple.grid");
+    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
+//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimple.grid");
 //  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRoentgen.grid");
 //  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRose.grid");
 //

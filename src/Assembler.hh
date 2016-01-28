@@ -20,6 +20,8 @@
 
 #include <CImg.h>
 
+#include "boundaryHandler.hh"
+
 /**
  * evaluate the gradients of test functions at global scope
  * @param lfu			local finite element
@@ -182,12 +184,13 @@ public:
   typedef Eigen::Triplet<double> EntryType;
 
   Assembler(const Solver_config::FEBasis& basis, bool no_hanging_nodes) :
-      basis_(&basis), no_hanging_nodes(no_hanging_nodes), picture_no(0) {
+      basis_(&basis),no_hanging_nodes(no_hanging_nodes), picture_no(0) {
   }
 
   void bind(const Solver_config::FEBasis& basis)
   {
       basis_ = &basis;
+      boundaryHandler_.init_boundary_dofs(*this);
   }
 
   /**
@@ -200,6 +203,23 @@ public:
   Solver_config::VectorType calculate_local_coefficients(
       const LocalIndexSet &localIndexSet,
       const Solver_config::VectorType &v) const;
+
+  template<typename LocalIndexSet>
+  BoundaryHandler::BoolVectorType calculate_local_bool_coefficients(
+      const LocalIndexSet &localIndexSet,
+      const BoundaryHandler::BoolVectorType &v) const;
+
+
+  /**
+   * extracts local degree of freedoom
+   * @param localIndexSet
+   * @param x   global dof vector
+   * @return  local dof vector
+   */
+  template<typename LocalIndexSet, typename AnyVectorType>
+  AnyVectorType calculate_local_coefficients(
+      const LocalIndexSet &localIndexSet,
+      const AnyVectorType &v) const;
 
   /**
    * extracts local degree of freedoom
@@ -234,6 +254,17 @@ public:
   void set_local_coefficients(const LocalIndexSet &localIndexSet,
       const Solver_config::VectorType &v_local,
       Solver_config::VectorType& v) const;
+
+  /**
+   *  sets the coeffs v_local to the global dof vector
+   * @param localIndexSet indexset bind to the local contex where v_local is added
+   * @param v_local local dof vector (to be added)
+   * @param returns the new global dof vector
+   */
+  template<typename LocalIndexSet, typename VectorType>
+  void set_local_coefficients(const LocalIndexSet &localIndexSet,
+      const VectorType &v_local,
+      VectorType& v) const;
 
   /**
    *  adds the local jacobian to the global jacobian
@@ -386,6 +417,9 @@ public:
 
   void set_G(const double g){ G = g;}
 
+  const Solver_config::FEBasis& basis() const {return *basis_;}
+  const BoundaryHandler::BoolVectorType& isBoundaryDoF(){return boundaryHandler_.isBoundaryDoF();}
+
 private:
 /*
   const GridViewType* gridView_ptr;
@@ -396,6 +430,7 @@ private:
 
 //    const MA_solver* ma_solver;
     const Solver_config::FEBasis* basis_;
+    BoundaryHandler boundaryHandler_;
 
     bool no_hanging_nodes;
 
@@ -636,6 +671,28 @@ Solver_config::VectorType Assembler::calculate_local_coefficients(const LocalInd
   return v_local;
 }
 
+template<typename LocalIndexSet>
+BoundaryHandler::BoolVectorType Assembler::calculate_local_bool_coefficients(const LocalIndexSet &localIndexSet, const BoundaryHandler::BoolVectorType &v) const
+{
+  BoundaryHandler::BoolVectorType v_local(localIndexSet.size());
+  for (size_t i = 0; i < localIndexSet.size(); i++)
+  {
+    v_local[i] = v(localIndexSet.index(i)[0]);
+  }
+  return v_local;
+}
+
+template<typename LocalIndexSet, typename AnyVectorType>
+AnyVectorType Assembler::calculate_local_coefficients(const LocalIndexSet &localIndexSet, const AnyVectorType &v) const
+{
+  AnyVectorType v_local(localIndexSet.size());
+  for (size_t i = 0; i < localIndexSet.size(); i++)
+  {
+    v_local[i] = v(localIndexSet.index(i)[0]);
+  }
+  return v_local;
+}
+
 
 template<typename LocalIndexSet>
 inline
@@ -665,6 +722,19 @@ void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const
 //     v(localIndexSet.index(i)[0]) = (i == 12 || i == 14) ? -v_local[i] : v_local[i];
 //     std::cout << "set " << i << " to " << localIndexSet.index(i)[0] << " with value " << v(localIndexSet.index(i)[0]) << std::endl;
   }
+}
+
+template<typename LocalIndexSet, typename VectorType>
+inline
+void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const VectorType &v_local, VectorType& v) const
+{
+  assert ((unsigned int) v_local.size() == localIndexSet.size());
+//  assert ((unsigned int) v.size() == basis_->indexSet().size()+1);
+  for (size_t i = 0; i < localIndexSet.size(); i++)
+  {
+    //dofs associated to normal derivatives have to be corrected to the same direction (we define them to either point upwards or to the right)
+     v(localIndexSet.index(i)[0]) = v_local[i];
+ }
 }
 
 
@@ -1114,9 +1184,17 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
 
         //calculate local coefficients
         Solver_config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
+        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryDoF());
 
         lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
         assemble_jacobian_integral_cell_term(localView, xLocal, m_m, 0, x(x.size()-1), last_equation, scaling_factor);
+
+//        local_vector = local_vector.cwiseProduct(isBoundaryLocal);
+        for (int i = 0; i < isBoundaryLocal.size(); i++)
+        {
+          if (isBoundaryLocal(i)) m_m.row(i) = Solver_config::VectorType::Zero(localView.size());
+          if (isBoundaryLocal(i)) local_vector(i) = 0;
+        }
 
 //        tag_count++;
 
@@ -1163,11 +1241,11 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
                 }
             } else*/ if (is.boundary()) {
                 // Boundary integration
-//              lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
-//                      local_boundary, 0);
-//              local_vector += local_boundary;
               lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
-                      local_vector, 0);
+                      local_boundary, 0);
+
+//              lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
+//                      local_vector, 0);
                 assemble_jacobian_integral(localView, xLocal, m_m, 0);
 //                tag_count++;
             }/* else {
@@ -1176,8 +1254,9 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
                 exit(-1);
             }
 */        }
+        local_vector += local_boundary;
         add_local_coefficients(localIndexSet, local_vector, v);
-//        add_local_coefficients(localIndexSet, local_boundary, boundary);
+        add_local_coefficients(localIndexSet, local_boundary, boundary);
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
 
         //add derivatives for scaling factor
