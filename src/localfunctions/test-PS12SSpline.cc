@@ -52,29 +52,32 @@ void makeGeometries(std::vector<Geometry>& geos)
   coords.resize(3);
 
 
-/*  coords[0][0] = 0; coords[0][1] = 0;
+  coords[0][0] = 0; coords[0][1] = 0;
   coords[1][0] = 1; coords[1][1] = 0;
   coords[2][0] = 0; coords[2][1] = 1;
-
   geos.push_back(Geometry(gt, coords));
 
   coords[0][0] = -.2; coords[0][1] = -.2;
   coords[1][0] = .2  ; coords[1][1] = -.2;
   coords[2][0] =  -.2; coords[2][1] = .2;
-
-  geos.push_back(Geometry(gt, coords));*/
+  geos.push_back(Geometry(gt, coords));
 
   coords[0][0] = -.2; coords[0][1] = -.2;
   coords[1][0] = 0.; coords[1][1] = 0.;
   coords[2][0] = 0.2; coords[2][1] = -.2;
+  geos.push_back(Geometry(gt, coords));
+
+  coords[0][0] = -.5; coords[0][1] = 0.;
+  coords[1][0] = 0.; coords[1][1] = .5;
+  coords[2][0] = .5; coords[2][1] = 0;
+  geos.push_back(Geometry(gt, coords));
+
+  coords[0][0] = -.2; coords[0][1] = 0;
+  coords[1][0] = -.1; coords[1][1] = 0.1;
+  coords[2][0] = 0.0; coords[2][1] = 0;
 
   geos.push_back(Geometry(gt, coords));
-//
-//  coords[0][0] = -.5; coords[0][1] = 0.;
-//  coords[1][0] = 0.; coords[1][1] = .5;
-//  coords[2][0] = .5; coords[2][1] = 0;
-//
-//  geos.push_back(Geometry(gt, coords));
+
 }
 
 void testPS12SSpline(const Geometry& geo) {
@@ -83,7 +86,7 @@ void testPS12SSpline(const Geometry& geo) {
   // stepsize for numerical differentiation
   static const double delta = 1e-5;
 
-  std::cout << "== Checking local-valued deVeubeke elements" << std::endl;
+  std::cout << "== Checking local-valued PS12 elements" << std::endl;
 
 //  Dune::FieldVector<double, 2> lowerLeft(0);
 //  Dune::FieldVector<double, 2> upperRight(1);
@@ -229,6 +232,14 @@ void testPS12SSpline(const Geometry& geo) {
         {
           std::cerr << " right evaluation at corner "<< geo.corner(i) <<  std::endl;
         }
+
+        //check coefficient
+        if (fem.localCoefficients().localKey(j).subEntity() != i
+                || fem.localCoefficients().localKey(j).codim() != 2)
+           std::cerr << " Error in coefficient " << j
+                     << " expected to be of codimension 2, but is " << fem.localCoefficients().localKey(j).codim() <<  " and"
+                     << " expected to belong to vertex " << i << ", but got " << fem.localCoefficients().localKey(j).subEntity() <<  std::endl;
+
       }
       else
       {
@@ -255,6 +266,12 @@ void testPS12SSpline(const Geometry& geo) {
         else{
           std::cerr << " right evaluation of x gradient at " << geo.corner(i) << std::endl;
         }
+        //check coefficient
+        if (fem.localCoefficients().localKey(j).subEntity() != i
+                || fem.localCoefficients().localKey(j).codim() != 2)
+           std::cerr << " Error in coefficient " << j
+                     << " expected to be of codimension 2, but is " << fem.localCoefficients().localKey(j).codim() <<  " and"
+                     << " expected to belong to vertex " << i << ", but got " << fem.localCoefficients().localKey(j).subEntity() <<  std::endl;
       }
       else
         if (std::abs(outJac[j][0][0]) > eps)
@@ -264,6 +281,13 @@ void testPS12SSpline(const Geometry& geo) {
       //check value at y gradient
       if (j % 4 == 2 && j / 4 == i)
       {
+        //check coefficient
+        if (fem.localCoefficients().localKey(j).subEntity() != i
+                || fem.localCoefficients().localKey(j).codim() != 2)
+           std::cerr << " Error in coefficient " << j
+                     << " expected to be of codimension 2, but is " << fem.localCoefficients().localKey(j).codim() <<  " and"
+                     << " expected to belong to vertex " << i << ", but got " << fem.localCoefficients().localKey(j).subEntity() <<  std::endl;
+
         if (std::abs(outJac[j][0][1]-1) > eps)
             std::cerr << " Error in y gradient of basis function " << j << " at vertex " << i  << ", i.e. " << geo.corner(i)
                       << " expected 1, but got " << outJac[j] <<  std::endl;
@@ -308,6 +332,24 @@ void testPS12SSpline(const Geometry& geo) {
                     << " expected " << normalDirection << ", but got " << outJac[j][0]*normals[i] <<  std::endl;
         else
           std::cerr << " Correct normal gradient at " << edgemids[i] << std::endl;
+
+
+        int localedge;
+        switch(i){
+          case 0: localedge = 0; break;
+          case 1: localedge = 2; break;
+          case 2: localedge = 1; break;
+        }
+
+        //check coefficient
+        if (fem.localCoefficients().localKey(j).subEntity() != localedge
+                || fem.localCoefficients().localKey(j).codim() != 1)
+           std::cerr << " Error in coefficient " << j
+                     << " expected to be of codimension 1, but is " << fem.localCoefficients().localKey(j).codim() <<  " and"
+                     << " expected to belong to edge " << localedge << ", but got " << fem.localCoefficients().localKey(j).subEntity() <<  std::endl;
+        else
+          std::cerr << " correct coefficient for basis function " << j << std::endl;
+
       }
       else
       {
