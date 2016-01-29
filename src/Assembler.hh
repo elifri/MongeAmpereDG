@@ -1267,7 +1267,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
         //add derivatives for scaling factor
         for (unsigned int i = 0; i < localView.size(); i++)
          {
-           JacobianEntries.push_back(EntryType(localIndexSet.index(i)[0],m.cols()-1,scaling_factor(i)));
+          if (!isBoundaryLocal(i)) JacobianEntries.push_back(EntryType(localIndexSet.index(i)[0],m.cols()-1,scaling_factor(i)));
            JacobianEntries.push_back(EntryType(m.rows()-1, localIndexSet.index(i)[0],last_equation(i)));
          }
          JacobianEntries.push_back(EntryType(m.rows()-1, m.cols()-1,scaling_factor(localView.size())));
