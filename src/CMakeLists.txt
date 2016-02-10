@@ -3,6 +3,7 @@ add_library(utils utils.cpp)
 add_library(Solver_Config solver_config.cpp)
 add_library(ImageFunction ImageFunction.cpp)
 add_library(problemData problem_data.cpp) 
+add_library(operator_MA_refl_Brenner Operator/operator_MA_refl_Brenner.cpp)
 add_library(Plotter Plotter.cc)
 add_library(Dogleg Dogleg/utils.cpp)
 add_library(BoundaryHandler boundaryHandler.cpp)
@@ -11,7 +12,7 @@ set_source_files_properties(MethodEllipsoids/init_with_ellipsoid_method.cpp PROP
 add_library(EllipsoidMethod MethodEllipsoids/init_with_ellipsoid_method.cpp)
 add_library(MA_solver MA_solver.cpp)
 
-Set(MirrorProblemLibs problemData ImageFunction)
+Set(MirrorProblemLibs operator_MA_refl_Brenner problemData ImageFunction)
 Set(OTProblemLibs )
 
 add_executable("dune_mongeampere" dune_mongeampere.cc)
