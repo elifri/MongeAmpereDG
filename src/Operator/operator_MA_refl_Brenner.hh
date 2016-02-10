@@ -9,8 +9,6 @@
 #define REFL_OPERATOR_HH_
 
 #include <dune/common/function.hh>
-#include <dune/geometry/quadraturerules.hh>
-
 #include "../utils.hpp"
 #include "../solver_config.hh"
 
@@ -121,8 +119,11 @@ public:
         lightvector *= -1;
         lightvector += Z_0;
 
+        if ((D_Psi_value * lightvector).value() < 0)
+          std::cout << " value is not positiv? "<< (D_Psi_value * lightvector).value() << std::endl;
+
         //the normal of the target plane has to point away from the reflector
-        assert( (D_Psi_value * lightvector).value() > 0);
+        assert( (D_Psi_value * lightvector).value() > 0 );
 
         return true;
       }
@@ -272,13 +273,6 @@ public:
 
       //write calculated distribution
       int width, height;
-      bool is_on_target = return_pixel_coordinates(z[0].value(), z[1].value(), width, height);
-      if (is_on_target)
-        {
-        assert (width < pixel_width && height < pixel_height);
-        target_distribution[height*pixel_width + width] = f_value;
-        }
-
 
       FieldMatrix<adouble, dim, dim> uDH_pertubed = Hessu;
 //      assert(fabs(Solver_config::z_3+3.0) < 1e-12);
@@ -302,6 +296,11 @@ public:
 //      cout << " atilde " << a_tilde_value << " f " << f_value << endl;
 
       //calculate system for first test functions
+      if (uDH_pertubed_det.value() < 0)
+      {
+        std::cerr << "found negative determinant !!!!! " << uDH_pertubed_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
+//        std::cerr << " local dofs " << x.transpose() << std::endl;
+      }
 //      std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
 
 //      cerr << x_value << " " << u_value.value() << " " << uDH_pertubed_det.value() << " " << PDE_rhs.value() << endl;
@@ -311,6 +310,15 @@ public:
       {
         v_adolc(j) += (PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
+
+/*
+        if (((PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]* quad[pt].weight() * integrationElement).value() > 1e-6)
+        {
+          std:: cerr << "v_adolc(" << j << ")+=" << ((PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]
+                              * quad[pt].weight() * integrationElement).value() << " -> " << v_adolc(j).value() << std::endl;
+          std::cerr << "at " << x_value << " T " << z[0].value() << " " << z[1].value() << " u " << u_value.value() << " det() " << uDH_pertubed_det.value() << " rhs " << PDE_rhs.value() << endl;
+        }
+*/
       }
 
       last_equation_adolc += u_value* quad[pt].weight() * integrationElement;
@@ -388,9 +396,9 @@ public:
         face_center);
 
     // penalty weight for NIPG / SIPG
-    double penalty_weight = Solver_config::sigma
-        * (Solver_config::degree * Solver_config::degree)
-        / std::pow(intersection.geometry().volume(), Solver_config::beta);
+//    double penalty_weight = Solver_config::sigma
+//        * (Solver_config::degree * Solver_config::degree)
+//        / std::pow(intersection.geometry().volume(), Solver_config::beta);
     double penalty_weight_gradient = Solver_config::sigmaGrad
         * (Solver_config::degree * Solver_config::degree)
         * std::pow(intersection.geometry().volume(), Solver_config::beta);
@@ -465,9 +473,13 @@ public:
       //assemble jump and averages
       adouble u_jump = u_value - un_value;
 
+//      std::cerr << " u_jump " << u_jump.value() << std::endl;
+
       assert(std::abs(u_jump.value()) < 1e-8);
 
       adouble grad_u_normaljump = (gradu - gradun) * normal;
+
+//      std::cerr << " gradu u_jump " << grad_u_normaljump.value() << std::endl;
 
       assert(std::abs(grad_u_normaljump.value()) < 1e-8);
 
@@ -489,17 +501,24 @@ public:
         jump -= (temp*normal);
 //        //parts from self
         v_adolc(j) += jump * referenceFunctionValues[j] * factor;
+//        std:: cerr << "v_adolc(" << j << ")+= " << (jump * referenceFunctionValues[j] * factor).value() << std::endl;
 //        // gradient penalty
         auto grad_times_normal = gradients[j] * normal;
         v_adolc(j) += penalty_weight_gradient * (grad_u_normaljump)
             * (grad_times_normal) * factor;
+//        std:: cerr << "v_adolc(" << j << ")+= " << (penalty_weight_gradient * (grad_u_normaljump)
+//            * (grad_times_normal) * factor).value() << std::endl;
 
 //        //neighbour parts
         vn_adolc(j) += jump * referenceFunctionValuesn[j] * factor;
+//        std:: cerr << "v_adolcn(" << j << ")+= " << (jump * referenceFunctionValuesn[j] * factor).value() << std::endl;
+
 //        // gradient penalty
         grad_times_normal = gradientsn[j] * normal;
         vn_adolc(j) += penalty_weight_gradient * (grad_u_normaljump)
             * (-grad_times_normal) * factor;
+//        std:: cerr << "v_adolcn(" << j << ")+= " << (penalty_weight_gradient * (grad_u_normaljump)
+//            * (-grad_times_normal) * factor).value() << std::endl;
       }
     }
 
@@ -582,8 +601,8 @@ public:
                       / std::pow(intersection.geometry().volume(), Solver_config::beta);
     else
       penalty_weight = Solver_config::sigmaBoundary
-                      * (Solver_config::degree * Solver_config::degree);
-//                      * std::pow(intersection.geometry().volume(), Solver_config::beta);
+//                      * (Solver_config::degree * Solver_config::degree);
+                     / std::pow(intersection.geometry().volume(), Solver_config::beta);
 
 
     // Loop over all quadrature points
@@ -628,9 +647,16 @@ public:
       z_0 *= (2.0 / a_tilde_value);
 
       FieldVector<adouble, Solver_config::dim> T_value = T(x_value, u_value, z_0, Solver_config::z_3);
+//      std::cerr << "x local "<< x.transpose() << std::endl;
+//      std::cerr << "gradients "; for (const auto& grad : gradients) std::cerr << grad << "   "; std::cerr << std::endl;
+
 
 //	    std::cerr << "T " << (T_value*normal) << " thought it -> " << phi_value_initial << " T " << T_value[0].value() << " " << T_value[1].value() << " normal " << normal[0] << " " << normal[1]<< std::endl;
-//      std::cerr << "x " << x_value << " T " << T_value[0].value() << " " << T_value[1].value() << " T*n" << (T_value * normal).value() << " phi " << phi_value << endl;
+//      std::cerr << "x " << x_value
+//                << " gradu " << gradu[0].value() << " " << gradu[1].value()
+//                << " T " << T_value[0].value() << " " << T_value[1].value()
+//                << " T*n " << (T_value * normal).value()
+//                << " phi " << phi_value << endl;
 //      std::cerr  << T_value[0].value() << " " << T_value[1].value()  << std::endl;
 
       const auto integrationElement =
@@ -650,7 +676,8 @@ public:
         else
         {
           v_adolc(j) += penalty_weight * ((T_value * normal) - phi_value) //*((T_value * normal) - phi_value)
-                            * referenceFunctionValues[j] * factor;
+                            * (referenceFunctionValues[j]+(gradients[j]*normal)) * factor;
+//          std::cerr << " add to v_adolc(" << j << ") " << (penalty_weight * ((T_value * normal) - phi_value)* referenceFunctionValues[j] * factor).value() << " -> " << v_adolc(j).value() << std::endl;
         }
       }
 
