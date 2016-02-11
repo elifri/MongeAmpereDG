@@ -741,8 +741,6 @@ public:
 
     // ----start collocation--------
 
-    // Get a quadrature rule
-    const int n = 5;
     GeometryType gtface = intersection.geometryInInside().type();
 
     const int boundaryFaceId = intersection.indexInInside();
@@ -761,19 +759,59 @@ public:
                       * (Solver_config::degree * Solver_config::degree)
                       / std::pow(intersection.geometry().volume(), Solver_config::beta);
     else
-      penalty_weight = Solver_config::sigmaBoundary
+      penalty_weight = Solver_config::sigmaBoundary;
 //                      * (Solver_config::degree * Solver_config::degree)
-                     * std::pow(intersection.geometry().volume(), Solver_config::beta);
+//                     / std::pow(intersection.geometry().volume(), Solver_config::beta);
 
-
+    int n = localFiniteElement.size(0);
+    int collPointNo = 0;
     // Loop over all quadrature points
-    for (size_t i = 0; i < n; i++) {
+    for (size_t i = 0; i < localFiniteElement.size(); i++) {
+
+      //check if dof is boundary dof
+      int j;
+      const auto & localkey = localFiniteElement.localCoefficients().localKey(i);
+      int localEntity = localkey.subEntity();
+
+      if (localkey.codim() == 0)  continue;
+      if (localkey.codim() == 2)
+      {
+        switch (boundaryFaceId)
+        {
+          case 0:
+            if (localEntity == 0 || localEntity == 2) j = i;
+            else  continue;
+            break;
+          case 1:
+            if (localEntity == 1 || localEntity == 3) j = i;
+            else  continue;
+            break;
+          case 2:
+            if (localEntity == 0 || localEntity == 1) j = i;
+            else  continue;
+            break;
+          case 3:
+            if (localEntity == 2 || localEntity == 3) j = i;
+            else  continue;
+            break;
+          default: std::cerr << " Error cannot find boundary id " << boundaryFaceId << std::endl; exit(-1);
+        }
+      }
+      else //codim == 1
+      {
+        assert(localkey.codim()==1);
+        if (localEntity == boundaryFaceId)
+          j = i;
+        else
+          continue;
+      }
 
       //------get data----------
 
       // Position of the current quadrature point in the reference element
       const FieldVector<double, dim> &collocationPos =
-          intersection.geometryInInside().global((double) i / double (n-1));
+          intersection.geometryInInside().global((double) collPointNo / double (n-1));
+      collPointNo++;
       auto x_value = intersection.inside().geometry().global(collocationPos);
 
       // The transposed inverse Jacobian of the map from the reference element to the element
@@ -820,10 +858,11 @@ public:
 //                << " phi " << phi_value << endl;
 //      std::cerr  << T_value[0].value() << " " << T_value[1].value()  << std::endl;
 
-//      auto signedDistance = bc.H(T_value, normal);
+      auto signedDistance = bc.H(T_value, normal);
 
 
-      int j = collocationNo[boundaryFaceId][i]; //selection local dof no for collocation point
+
+//      int j = collocationNo[boundaryFaceId][i]; //selection local dof no for collocation point
     // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
       if (Solver_config::Dirichlet)
       {
@@ -831,11 +870,11 @@ public:
       }
       else
       {
-        if (j % 4 == 0)
-          v_adolc(j) += 0.5*penalty_weight * ((T_value * normal) - phi_value);//signedDistance;
+        if (localkey.codim() == 2)
+          v_adolc(j) += 0.5*penalty_weight * signedDistance;
         else
-          v_adolc(j) += penalty_weight //* signedDistance;
-          *((T_value * normal) - phi_value); //
+          v_adolc(j) += penalty_weight *signedDistance;
+//          *((T_value * normal) - phi_value); //
 //          std::cerr << " add to v_adolc(" << j << ") " << (penalty_weight * ((T_value * normal) - phi_value)* referenceFunctionValues[j] * factor).value() << " -> " << v_adolc(j).value() << std::endl;
       }
 
