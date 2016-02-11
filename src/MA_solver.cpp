@@ -121,9 +121,11 @@ void MA_solver::plot(std::string name) const
 void MA_solver::plot_with_mirror(std::string name)
 {
 
-  std::cout << "write? " << writeVTK_ << " ";
-  std::cout << "plot written into ";
-
+  if (name != "intermediateStep")
+  {
+    std::cout << "write? " << writeVTK_ << " ";
+    std::cout << "plot written into ";
+  }
   //write vtk files
   if (writeVTK_)
   {
@@ -170,7 +172,10 @@ void MA_solver::plot_with_mirror(std::string name)
 //     plotter.writeReflectorVTK(reflname, localnumericalSolution, *exact_solution);
      plotter.writeReflectorVTK(reflname, localnumericalSolution);
 
-     std::cout << fname  << " " << reflname << " and ";
+     if (name != "intermediateStep")
+     {
+       std::cout << fname  << " " << reflname << " and ";
+     }
   }
 
   //write povray output
@@ -178,7 +183,10 @@ void MA_solver::plot_with_mirror(std::string name)
    reflPovname += "/"+ plotter.get_output_prefix() + name + "reflector" + NumberToString(iterations) + ".pov";
 
    plotter.writeReflectorPOV(reflPovname, *solution_u_old);
-   std::cout << reflPovname << std::endl;
+   if (name != "intermediateStep")
+   {
+     std::cout << reflPovname << std::endl;
+   }
 }
 
 void MA_solver::create_initial_guess()
