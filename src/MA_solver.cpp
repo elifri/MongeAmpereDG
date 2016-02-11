@@ -317,7 +317,6 @@ const typename MA_solver::VectorType& MA_solver::solve()
   Integrator<GridType> integrator(grid_ptr);
   G = integrator.assemble_integral_of_local_gridFunction(*solution_u_old);
   std::cout << "reflector size  G " << G << endl;
-//      G = 2.777777777777778;
   assembler.set_G(G);
 
 
@@ -329,9 +328,6 @@ const typename MA_solver::VectorType& MA_solver::solve()
     ofstream file (outputPrefix_+"firstVector");
     file << solution << endl;
     file.close();
-
-
-    cout << "scaling factor " << solution(solution.size()-1) << endl;
 
     iterations++;
 
