@@ -1249,6 +1249,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
      m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
 
      std::cerr << " local boundary term " << boundary.norm()<< " whole norm " << v.norm() << std::endl;
+     std::cerr << " f inner    " << (v-boundary).transpose() << std::endl;
      std::cerr << " f boundary " << boundary.transpose() << std::endl;
      std::cerr << " f " << v.transpose() << std::endl;
 
