@@ -289,7 +289,6 @@ const typename MA_solver::VectorType& MA_solver::solve()
   }
 
   create_initial_guess();
-  solution(solution.size()-1)= op.lop.get_right_handside().get_input_distribution().omega_integrate() / op.lop.get_right_handside().get_target_distribution().integrate2();
 
   {
   ofstream fileInitial (outputPrefix_+"initialVector");
