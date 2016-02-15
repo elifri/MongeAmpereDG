@@ -146,7 +146,7 @@ try {
 
 //	Solver_config::lowerLeft = {0,0};
 //	Solver_config::upperRight = {1,1};
-	Solver_config::UnitCubeType unitcube(Solver_config::lowerLeft, Solver_config::upperRight, 1);
+	Solver_config::UnitCubeType unitcube(Solver_config::lowerLeft, Solver_config::upperRight, 1, Solver_config::UnitCubeType::LeftDiagonal);
 
 
 	Solver_config::GridType &grid = unitcube.grid();

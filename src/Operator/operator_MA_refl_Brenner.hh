@@ -294,7 +294,7 @@ public:
       auto uTimesZ0 = Z_0;
       uTimesZ0 *= u_value;
       PDE_rhs *= (((uTimesZ0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value;
-      PDE_rhs *= scaling_factor_adolc;
+//      PDE_rhs *= scaling_factor_adolc;
 //      cout<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value).value() << "/" << (4.0*b_tilde*omega_value*g_value).value() << std::endl;
 //      cout << "rhs *= " <<  ((u_value*((Z_0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value).value() <<
 //                    " = (" <<  u_value.value() << "*scalarProd"
@@ -316,10 +316,14 @@ public:
 
       for (int j = 0; j < size; j++) // loop over test fcts
       {
-        v_adolc(j) += (PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]
+//        v_adolc(j) += (scaling_factor_adolc*PDE_rhs-uDH_pertubed_det)*
+        //(PDE_rhs-uDH_pertubed_det)*
+        v_adolc(j) += (scaling_factor_adolc*PDE_rhs-uDH_pertubed_det)*
+        referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
 
 /*
+
         if (((PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]* quad[pt].weight() * integrationElement).value() > 1e-6)
         {
           std:: cerr << "v_adolc(" << j << ")+=" << ((PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]
@@ -747,6 +751,7 @@ public:
     GeometryType gtface = intersection.geometryInInside().type();
 
     const int boundaryFaceId = intersection.indexInInside();
+//    std::cerr << " boundaryFaceId " << boundaryFaceId << std::endl;
 
     // normal of center in face's reference element
     const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
@@ -762,9 +767,9 @@ public:
                       * (Solver_config::degree * Solver_config::degree)
                       / std::pow(intersection.geometry().volume(), Solver_config::beta);
     else
-      penalty_weight = Solver_config::sigmaBoundary
+      penalty_weight = Solver_config::sigmaBoundary;
 //                      * (Solver_config::degree * Solver_config::degree)
-                     * std::pow(intersection.geometry().volume(), Solver_config::beta);
+//                     * std::pow(intersection.geometry().volume(), Solver_config::beta);
 
 
     // Loop over all quadrature points
@@ -821,10 +826,11 @@ public:
 //                << " phi " << phi_value << endl;
 //      std::cerr  << T_value[0].value() << " " << T_value[1].value()  << std::endl;
 
-//      auto signedDistance = bc.H(T_value, normal);
+      auto signedDistance = bc.H(T_value, normal);
 
 
       int j = collocationNo[boundaryFaceId][i]; //selection local dof no for collocation point
+//      std::cerr << " j is " << j << std::endl;
     // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
       if (Solver_config::Dirichlet)
       {
@@ -832,11 +838,14 @@ public:
       }
       else
       {
+/*
         if (j % 4 == 0)
-          v_adolc(j) += 0.5*penalty_weight * ((T_value * normal) - phi_value);//signedDistance;
+          v_adolc(j) = penalty_weight * signedDistance;
         else
-          v_adolc(j) += penalty_weight //* signedDistance;
-          *((T_value * normal) - phi_value); //
+*/
+          v_adolc(j) = penalty_weight * signedDistance;
+          std::cerr << signedDistance << " ";
+//          *((T_value * normal) - phi_value); //
 //          std::cerr << " add to v_adolc(" << j << ") " << (penalty_weight * ((T_value * normal) - phi_value)* referenceFunctionValues[j] * factor).value() << " -> " << v_adolc(j).value() << std::endl;
       }
 

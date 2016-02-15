@@ -419,6 +419,7 @@ public:
 
   const Solver_config::FEBasis& basis() const {return *basis_;}
   const BoundaryHandler::BoolVectorType& isBoundaryDoF(){return boundaryHandler_.isBoundaryDoF();}
+  const BoundaryHandler::BoolVectorType& isBoundaryValueDoF(){return boundaryHandler_.isBoundaryValueDoF();}
 
 private:
 /*
@@ -480,7 +481,7 @@ void Assembler::calculate_local_mass_matrix_detailed(
         const LocalView &localView, Solver_config::DenseMatrixType& m) const {
     const int size = localView.size();
 
-    const auto lfu = localView.tree().finiteElement();
+    const auto& lfu = localView.tree().finiteElement();
 
     typedef decltype(lfu) ConstElementRefType;
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
@@ -598,8 +599,8 @@ void Assembler::calculate_refined_local_mass_matrix_detailed(const LocalView &lo
         const int level) const {
   assert(level == 1);
 
-  const auto lfuFather = localViewFather.tree().finiteElement();
-  const auto lfuChild = localViewChild.tree().finiteElement();
+  const auto& lfuFather = localViewFather.tree().finiteElement();
+  const auto& lfuChild = localViewChild.tree().finiteElement();
 
   typedef decltype(lfuChild) ConstElementRefType;
   typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
@@ -703,7 +704,7 @@ void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
 //    std::cout << i << " -> " << localIndexSet.index(i)[0] <<  " with value " << v_local[i] << std::endl;
-//    std::cerr << "set " << i << " to " << localIndexSet.index(i)[0] << " with value " << v_local[i] << std::endl;
+//    std::cerr << "add " << i << " to " << localIndexSet.index(i)[0] << " with value " << v_local[i] << std::endl;
 //     v(localIndexSet.index(i)[0]) += (i == 12 || i == 14) ? -v_local[i] : v_local[i];
     v(localIndexSet.index(i)[0]) += v_local[i] ;
   }
@@ -722,6 +723,23 @@ void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const
 //     v(localIndexSet.index(i)[0]) = (i == 12 || i == 14) ? -v_local[i] : v_local[i];
 //     std::cout << "set " << i << " to " << localIndexSet.index(i)[0] << " with value " << v(localIndexSet.index(i)[0]) << std::endl;
   }
+}
+
+inline Eigen::VectorXi Assembler::estimate_nnz_Jacobian() const
+{
+    Eigen::VectorXi est_nnz = Eigen::VectorXi::Constant(basis_->indexSet().size()+1,basis_->indexSet().size()+1);
+//  Eigen::VectorXi est_nnz (basis_->indexSet().size()+1);
+//
+//  const int n_dofsu = basis_->indexSet().size();
+//  const int n_dofsuLocal = (Solver_config::degree+1)*(Solver_config::degree+2)/2;
+//
+//  for (int i = 0; i < n_dofsu; i++) est_nnz(i) = 4*n_dofsuLocal + 4*n_dofsuDHLocal+1;
+//  for (int i = 0; i < n_dofsuDH; i++) est_nnz(n_dofsu+i) = 4*n_dofsuLocal + n_dofsuDHLocal;
+//  est_nnz(est_nnz.size()-1) = n_dofsu;
+
+
+  return est_nnz;
+
 }
 
 template<typename LocalIndexSet, typename VectorType>
@@ -924,6 +942,8 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
 {
     assert((unsigned int) x.size() == basis_->indexSet().size()+1);
 
+    lop.found_negative = false;
+
     Solver_config::GridView gridView = basis_->gridView();
 
     //assuming Galerkin
@@ -951,17 +971,24 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
         local_vector.setZero(localView.size());    // Set all entries to zero
 
         //get id
-        IndexType id = indexSet.index(e);
+//        IndexType id = indexSet.index(e);
 //        if (id % 100 == 0)
 //          std::cerr << "processing element " << id << std::endl;
 
         //calculate local coefficients
         Solver_config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
+        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryDoF());
+//        BoundaryHandler::BoolVectorType isBoundaryLocal = BoundaryHandler::BoolVectorType::Constant(localIndexSet.size(), false);
 
         lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, tag_count, x(x.size()-1), v(v.size()-1));
         tag_count++;
 
-       // Traverse intersections
+        for (int i = 0; i < isBoundaryLocal.size(); i++)
+        {
+          if (isBoundaryLocal(i)) local_vector(i) = 0;
+        }
+
+        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
             if (is.neighbor()) {
 
@@ -969,6 +996,7 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
                 const GridViewType::IndexSet::IndexType idn =
                         gridView.indexSet().index(is.outside());
 
+/*
                 // Visit face if id is bigger
                 bool visit_face = id > idn
                         || Solver_config::require_skeleton_two_sided;
@@ -986,6 +1014,8 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
                       localViewn, localIndexSetn, xLocaln, local_vector,
                       local_vectorn, tag_count);
 //
+
+
 //                  std::cout << " v " << local_vector.transpose() << std::endl;
 //                  std::cout << " vn " << local_vectorn.transpose() << std::endl;
 
@@ -993,6 +1023,7 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
                   add_local_coefficients(localIndexSetn, local_vectorn, v);
                   tag_count++;
                 }
+*/
             } else if (is.boundary()) {
 //                // Boundary integration
                 lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
@@ -1016,23 +1047,6 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const Solver_config::V
     picture_no++;*/
 }
 
-inline Eigen::VectorXi Assembler::estimate_nnz_Jacobian() const
-{
-    Eigen::VectorXi est_nnz = Eigen::VectorXi::Constant(basis_->indexSet().size()+1,basis_->indexSet().size()+1);
-//  Eigen::VectorXi est_nnz (basis_->indexSet().size()+1);
-//
-//  const int n_dofsu = basis_->indexSet().size();
-//  const int n_dofsuLocal = (Solver_config::degree+1)*(Solver_config::degree+2)/2;
-//
-//  for (int i = 0; i < n_dofsu; i++) est_nnz(i) = 4*n_dofsuLocal + 4*n_dofsuDHLocal+1;
-//  for (int i = 0; i < n_dofsuDH; i++) est_nnz(n_dofsu+i) = 4*n_dofsuLocal + n_dofsuDHLocal;
-//  est_nnz(est_nnz.size()-1) = n_dofsu;
-
-
-  return est_nnz;
-
-}
-
 template<typename LocalOperatorType>
 void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_config::VectorType& x, Solver_config::MatrixType& m) const
 {
@@ -1048,8 +1062,9 @@ void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Solver_
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
     const GridViewType::IndexSet& indexSet = gridView.indexSet();
-    auto localView = basis_->localView();
-    auto localViewn = basis_->localView();
+     Solver_config::FEBasis::LocalView  localView (*basis_);
+    //    auto localViewn = basis_->localView();
+    Solver_config::FEBasis::LocalView  localViewn (*basis_);
     auto localIndexSet = basis_->indexSet().localIndexSet();
     auto localIndexSetn = basis_->indexSet().localIndexSet();
 
@@ -1140,6 +1155,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
 
     assert((unsigned int) x.size() == basis_->indexSet().size()+1);
 
+    lop.found_negative = false;
     Solver_config::GridView gridView = basis_->gridView();
 
     //assuming Galerkin
@@ -1151,6 +1167,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
     //get last equation
     v(v.size()-1) -= G;
     std::cerr << "last coeff " << x(x.size()-1) << std::endl;
+    std::cerr << "signed distances " << " ";
 
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
@@ -1174,6 +1191,8 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
 
         Solver_config::DenseMatrixType m_m;
         m_m.setZero(localView.size(), localView.size());
+        Solver_config::DenseMatrixType m_mB;
+        m_mB.setZero(localView.size(), localView.size());
 
         Solver_config::VectorType last_equation = Solver_config::VectorType::Zero(localView.size()),
                                   scaling_factor = Solver_config::VectorType::Zero(localView.size()+1);
@@ -1185,9 +1204,12 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
         //calculate local coefficients
         Solver_config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
         BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryDoF());
+//        BoundaryHandler::BoolVectorType isBoundaryLocal = BoundaryHandler::BoolVectorType::Constant(localIndexSet.size(), false);
 
         lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
         assemble_jacobian_integral_cell_term(localView, xLocal, m_m, 0, x(x.size()-1), last_equation, scaling_factor);
+
+//        std::cerr << "local vector " << local_vector.transpose() << std::endl;
 
 //        local_vector = local_vector.cwiseProduct(isBoundaryLocal);
         for (int i = 0; i < isBoundaryLocal.size(); i++)
@@ -1195,6 +1217,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
           if (isBoundaryLocal(i)) m_m.row(i) = Solver_config::VectorType::Zero(localView.size());
           if (isBoundaryLocal(i)) local_vector(i) = 0;
         }
+//        std::cerr << "local vector after boundary " << local_vector << std::endl;
 
 //        tag_count++;
 
@@ -1243,10 +1266,11 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
                 // Boundary integration
               lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
                       local_boundary, 0);
+//              std::cerr << "local boundary " << local_boundary.transpose() << std::endl;
 
 //              lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
 //                      local_vector, 0);
-                assemble_jacobian_integral(localView, xLocal, m_m, 0);
+                assemble_jacobian_integral(localView, xLocal, m_mB, 0);
 //                tag_count++;
             }/* else {
                 std::cerr << " I do not know how to handle this intersection"
@@ -1254,10 +1278,72 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
                 exit(-1);
             }
 */        }
-        local_vector += local_boundary;
+//        local_vector += local_boundary;
+//        std::cerr << " add to objective vector " << std::endl;
         add_local_coefficients(localIndexSet, local_vector, v);
-        add_local_coefficients(localIndexSet, local_boundary, boundary);
+
+        Solver_config::DenseMatrixType Coll_m_mB;
+        Coll_m_mB.setZero(localView.size(), localView.size());
+        //set collocation boundary,
+        for (size_t i = 0; i < localIndexSet.size(); i++)
+        {
+          if (std::abs(local_boundary(i)) < 1e-12)  continue;
+//          std::cerr << "add " << i << " to " << localIndexSet.index(i)[0] << " with value " << v_local[i] << std::endl;
+          if (std::abs(boundary(localIndexSet.index(i)[0])) < 1e-12)
+          {
+            boundary(localIndexSet.index(i)[0]) = local_boundary[i];
+//            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(i)[0] << " with value " << local_boundary[i] << std::endl;
+            Coll_m_mB.row(i) = m_mB.row(i);
+          }
+          else
+          {
+            switch(i)
+            {
+            case 0: boundary(localIndexSet.index(i)[0]) = local_boundary[i];
+            Coll_m_mB.row(i) = m_mB.row(i);
+//            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(i)[0] << " with value " << local_boundary[i] << std::endl;
+            break;
+            case 1: boundary(localIndexSet.index(2)[0]) = local_boundary[i];
+            Coll_m_mB.row(2) = m_mB.row(i);
+//            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(2)[0] << " with value " << local_boundary[i] << std::endl;
+            break;
+            case 2: boundary(localIndexSet.index(1)[0]) = local_boundary[i];
+            Coll_m_mB.row(1) = m_mB.row(i);
+//            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(1)[0] << " with value " << local_boundary[i] << std::endl;
+            break;
+            case 4: boundary(localIndexSet.index(i)[0]) = local_boundary[i];
+            Coll_m_mB.row(i) = m_mB.row(i);
+//            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(i)[0] << " with value " << local_boundary[i] << std::endl;
+            break;
+            case 5: boundary(localIndexSet.index(6)[0]) = local_boundary[i];
+            Coll_m_mB.row(6) = m_mB.row(i);
+//            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(6)[0] << " with value " << local_boundary[i] << std::endl;
+            break;
+            case 6: boundary(localIndexSet.index(5)[0]) = local_boundary[i];
+            Coll_m_mB.row(5) = m_mB.row(i);
+//            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(5)[0] << " with value " << local_boundary[i] << std::endl;
+            break;
+            case 8: boundary(localIndexSet.index(i)[0]) = local_boundary[i];
+            Coll_m_mB.row(i) = m_mB.row(i);
+//            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(i)[0] << " with value " << local_boundary[i] << std::endl;
+            break;
+            case 9: boundary(localIndexSet.index(10)[0]) = local_boundary[i];
+            Coll_m_mB.row(10) = m_mB.row(i);
+//            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(10)[0] << " with value " << local_boundary[i] << std::endl;
+            break;
+            case 10: boundary(localIndexSet.index(9)[0]) = local_boundary[i];
+            Coll_m_mB.row(9) = m_mB.row(i);
+//            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(9)[0] << " with value " << local_boundary[i] << std::endl;
+            break;
+            default: assert(false);
+            }
+          }
+        }
+//        add_local_coefficients(localIndexSet, local_boundary, boundary);
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
+        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, Coll_m_mB, JacobianEntries);
+
+//        std::cerr << " M_m " << m_m << std::endl;
 
         //add derivatives for scaling factor
         for (unsigned int i = 0; i < localView.size(); i++)
@@ -1269,8 +1355,11 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
      }
      m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
 
-     std::cerr << " local boundary term " << boundary.norm()<< " whole norm " << v.norm() << std::endl;
-     std::cerr << " f " << v.transpose() << std::endl;
+     v+= boundary;
+     std::cerr << std::endl << " local boundary term " << boundary.norm()<< " whole norm " << v.norm() << std::endl;
+     std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
+     std::cerr << " f_boundary " << boundary.transpose() << std::endl;
+     std::cerr << " f          " << v.transpose() << std::endl;
 
 }
 
