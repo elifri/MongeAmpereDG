@@ -778,8 +778,8 @@ public:
       //------get data----------
 
       // Position of the current quadrature point in the reference element
-      const FieldVector<double, dim> &collocationPos =
-          intersection.geometryInInside().global((double) i / double (n-1));
+      FieldVector<double, dim> collocationPos =
+          intersection.geometryInInside().global((double) (i) / double (n-1));
       auto x_value = intersection.inside().geometry().global(collocationPos);
 
       // The transposed inverse Jacobian of the map from the reference element to the element
@@ -791,6 +791,16 @@ public:
       adouble u_value = 0;
       assemble_functionValues_u(localFiniteElement, collocationPos,
           referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
+
+      //selection local dof no for collocation point
+      int j = collocationNo[boundaryFaceId][i];
+      if ((i == 0 || i == n-1) && std::abs(referenceFunctionValues[j] - 1) > 1e-12)
+      {
+        collocationPos = intersection.geometryInInside().global((double) (n-1-i) / double (n-1));
+        u_value = 0;
+        assemble_functionValues_u(localFiniteElement, collocationPos,
+                  referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
+      }
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
