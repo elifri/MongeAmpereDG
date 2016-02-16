@@ -57,6 +57,7 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
             if (localKey.subEntity() == boundaryFaceId) //edge normal dof
             {
               localIsBoundary[k] = true;
+              localIsBoundaryValue[k] = true;
 //              std::cout << " found (local) boundary dof " << k << std::endl;
             }
             break;
@@ -67,7 +68,8 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
                 if (localKey.subEntity() == 0 || localKey.subEntity() == 1) //nodes next to edge 0
                 {
                   localIsBoundary[k] = true;
-                  localIsBoundaryValue[k] = true;
+                  if (localKey.index()== 0)
+                    localIsBoundaryValue[k] = true;
 //                  std::cout << " found (local) boundary dof " << k << std::endl;
                 }
                 break;
@@ -75,7 +77,8 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
                 if (localKey.subEntity() == 0 || localKey.subEntity() == 2)//nodes next to edge 1
                 {
                   localIsBoundary[k] = true;
-                  localIsBoundaryValue[k] = true;
+                  if (localKey.index()== 0)
+                    localIsBoundaryValue[k] = true;
 //                  std::cout << " found (local) boundary dof " << k << std::endl;
                 }
                 break;
@@ -83,7 +86,8 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
                 if (localKey.subEntity() == 1 || localKey.subEntity() == 2) //nodes next to edge 2
                 {
                   localIsBoundary[k] = true;
-                  localIsBoundaryValue[k] = true;
+                  if (localKey.index()== 0)
+                    localIsBoundaryValue[k] = true;
 //                  std::cout << " found (local) boundary dof " << k << std::endl;
                 }
                 break;

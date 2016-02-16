@@ -7,6 +7,6 @@
 
 #include "operator_MA_refl_Brenner.hh"
 
-constexpr int Local_Operator_MA_refl_Brenner::collocationNo[3][5];
+constexpr int Local_Operator_MA_refl_Brenner::collocationNo[3][3];
 
 

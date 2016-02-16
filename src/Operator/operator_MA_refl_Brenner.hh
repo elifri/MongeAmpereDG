@@ -747,7 +747,7 @@ public:
     // ----start collocation--------
 
     // Get a quadrature rule
-    const int n = 5;
+    const int n = 3;
     GeometryType gtface = intersection.geometryInInside().type();
 
     const int boundaryFaceId = intersection.indexInInside();
@@ -827,6 +827,7 @@ public:
 //      std::cerr << "x local "<< x.transpose() << std::endl;
 //      std::cerr << "gradients "; for (const auto& grad : gradients) std::cerr << grad << "   "; std::cerr << std::endl;
 
+      auto signedDistance = bc.H(T_value, normal);
 
 //      std::cerr << "T " << (T_value*normal) << " thought it -> " << phi_value_initial << " T " << T_value[0].value() << " " << T_value[1].value() << " normal " << normal[0] << " " << normal[1]<< std::endl;
 //      std::cerr << "x " << x_value
@@ -839,7 +840,6 @@ public:
       auto signedDistance = bc.H(T_value, normal);
 
 
-      int j = collocationNo[boundaryFaceId][i]; //selection local dof no for collocation point
 //      std::cerr << " j is " << j << std::endl;
     // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
       if (Solver_config::Dirichlet)
@@ -877,7 +877,8 @@ public:
   static const int pixel_width = 256;
   static const int pixel_height = 256;
 
-  static constexpr int collocationNo[3][5] = {{0,1,3,5,4},{0,2,11,9,8},{4,6,7,10,8}};
+//  static constexpr int collocationNo[3][5] = {{0,1,3,5,4},{0,2,11,9,8},{4,6,7,10,8}};
+  static constexpr int collocationNo[3][3] = {{0,3,4},{0,11,8},{4,7,8}};
 
 public:
   mutable double int_f;
