@@ -770,20 +770,6 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
     for (int j = 0; j < m_local.cols(); j++)
       if (std::abs(m_local(i,j)) > 1e-13 )
       {
-        //dofs associated to normal derivatives have to be corrected to the same direction (we define them to either point upwards or to the right)
-/*
-        if ( (
-                (i == 12 || i == 14) && ((j != 12) && (j != 14))
-             )
-             ||
-             (
-                (j == 12 || j == 14) && ((i != 12) && (i != 14))
-             )
-          )
-          m.coeffRef(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0]) -=  m_local(i,j);
-        else
-          m.coeffRef(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0]) +=  m_local(i,j);
-*/
         m.coeffRef(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0])+=  m_local(i,j);
       }
   }
@@ -799,22 +785,10 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
   for (int i = 0; i < m_local.rows(); i++)
   {
     for (int j = 0; j < m_local.cols(); j++)
-/*      if (std::abs(m_local(i,j)) > 1e-13 )
-      {
-        //dofs associated to normal derivatives have to be corrected to the same direction (we define them to either point upwards or to the right)
-        if ( (
-                (i == 12 || i == 14) && ((j != 12) && (j != 14))
-             )
-             ||
-             (
-                (j == 12 || j == 14) && ((i != 12) && (i != 14))
-             )
-          )
-          je.push_back(EntryType(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0],-m_local(i,j)));
-        else
-          je.push_back(EntryType(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0],m_local(i,j)));
-      }*/
+    {
+//      if (std::abs(m_local(i,j)) > 1e-13 )
       je.push_back(EntryType(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0],m_local(i,j)));
+    }
   }
 }
 
@@ -1267,7 +1241,6 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
               lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
                       local_boundary, 0);
 //              std::cerr << "local boundary " << local_boundary.transpose() << std::endl;
-
 //              lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
 //                      local_vector, 0);
                 assemble_jacobian_integral(localView, xLocal, m_mB, 0);
@@ -1336,8 +1309,6 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
 //        add_local_coefficients(localIndexSet, local_boundary, boundary);
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, Coll_m_mB, JacobianEntries);
-
-//        std::cerr << " M_m " << m_m << std::endl;
 
         //add derivatives for scaling factor
         for (unsigned int i = 0; i < localView.size(); i++)
