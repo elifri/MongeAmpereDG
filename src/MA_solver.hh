@@ -8,9 +8,6 @@
 #ifndef SRC_MA_SOLVER_HH_
 #define SRC_MA_SOLVER_HH_
 
-#include "solver_config.hh"
-
-
 #include <memory>
 
 #include <Eigen/SparseCholesky>
@@ -18,6 +15,7 @@
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 
+#include "solver_config.hh"
 
 //#include "operator_poisson_DG.hh"
 #include "Assembler.hh"
