@@ -33,12 +33,12 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
     BoolVectorType localIsBoundaryValue = BoolVectorType::Constant(lFE.size(),false);
 //    std::fill(localIsBoundary.begin(), localIsBoundary.end(), false);
 
-/*
-    std::cout << " corners " << std::endl;
+
+/*    std::cout << " corners " << std::endl;
     for (int i = 0 ; i < element.geometry().corners(); i++)
       std::cout << element.geometry().corner(i) << " ";
-    std::cout << std::endl;
-*/
+    std::cout << std::endl;*/
+
 
     // Traverse intersections
     for (auto&& is : intersections(FEBasis.gridView(), element)) {
@@ -143,6 +143,8 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
       for (size_t i = 0; i < localIndexSet.size(); i++)
       {
         isBoundaryDof_(localIndexSet.index(i)[0]) = isBoundaryDof_(localIndexSet.index(i)[0]) || localIsBoundary[i] ;
+//        if (isBoundaryDof_(localIndexSet.index(i)[0]))
+//          std::cout << " found boundary dof " << localIndexSet.index(i)[0] << std::endl;
         isBoundaryValueDof_(localIndexSet.index(i)[0]) = isBoundaryValueDof_(localIndexSet.index(i)[0]) || localIsBoundaryValue[i] ;
       }
 
