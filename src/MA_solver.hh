@@ -469,6 +469,10 @@ void MA_solver::project_labourious(const F f, VectorType& v) const
   //set scaling factor (last dof) to ensure mass conservation
   v(v.size()-1) = 1;
 
+#ifdef DEBUG
+  test_projection(f,v);
+#endif
+
   std::cout << "v.size()" << v.size()-1 << std::endl;
   std::cout << "projected on vector " << std::endl << v.transpose() << std::endl;
 }
