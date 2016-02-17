@@ -829,18 +829,18 @@ public:
 
       auto signedDistance = bc.H(T_value, normal);
 
+
+
+      std::cerr << " j is " << j << std::endl;
+
 //      std::cerr << "T " << (T_value*normal) << " thought it -> " << phi_value_initial << " T " << T_value[0].value() << " " << T_value[1].value() << " normal " << normal[0] << " " << normal[1]<< std::endl;
-//      std::cerr << "x " << x_value
+      std::cerr << "x " << x_value
 //                << " gradu " << gradu[0].value() << " " << gradu[1].value()
-//                << " T " << T_value[0].value() << " " << T_value[1].value()
-//                << " T*n " << (T_value * normal).value()
-//                << " phi " << phi_value << endl;
-//      std::cerr  << T_value[0].value() << " " << T_value[1].value()  << std::endl;
+                << " T " << T_value[0].value() << " " << T_value[1].value()
+                << " distance " << signedDistance.value()
+                << " T*n " << (T_value * normal).value()
+                << " phi " << phi_value << endl;
 
-      auto signedDistance = bc.H(T_value, normal);
-
-
-//      std::cerr << " j is " << j << std::endl;
     // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
       if (Solver_config::Dirichlet)
       {
@@ -848,13 +848,8 @@ public:
       }
       else
       {
-/*
-        if (j % 4 == 0)
           v_adolc(j) = penalty_weight * signedDistance;
-        else
-*/
-          v_adolc(j) = penalty_weight * signedDistance;
-          std::cerr << signedDistance << " ";
+          cerr << signedDistance << " ";
 //          *((T_value * normal) - phi_value); //
 //          std::cerr << " add to v_adolc(" << j << ") " << (penalty_weight * ((T_value * normal) - phi_value)* referenceFunctionValues[j] * factor).value() << " -> " << v_adolc(j).value() << std::endl;
       }
