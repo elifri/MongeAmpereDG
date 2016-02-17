@@ -1252,7 +1252,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
                 exit(-1);
             }
 */        }
-//        local_vector += local_boundary;
+        local_vector += local_boundary;
 //        std::cerr << " add to objective vector " << std::endl;
         add_local_coefficients(localIndexSet, local_vector, v);
 
