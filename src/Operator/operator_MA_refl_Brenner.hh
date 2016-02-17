@@ -553,7 +553,7 @@ public:
   }
 
 
-/*
+
   template<class Intersection, class LocalView, class LocalIndexSet, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalView &localView, const LocalIndexSet &localIndexSet,
@@ -605,6 +605,9 @@ public:
         dim - 1>::general(intersection.geometry().type()).position(0, 0);
     const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
         face_center);
+
+    const int n = 3;
+    const int boundaryFaceId = intersection.indexInInside();
 
     // penalty weight for NIPG / SIPG
     //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
@@ -678,16 +681,13 @@ public:
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
-      for (int j = 0; j < size_u; j++) //parts from self
+      for (size_t i = 0; i < n; i++)
       {
-
+        int j = collocationNo[boundaryFaceId][i];
         // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
         if (Solver_config::Dirichlet)
         {
-          double g_value;
-          bcDirichlet.evaluate_exact_sol(x_value, g_value);
-          v_adolc(j) += penalty_weight * (u_value - g_value)
-                        * referenceFunctionValues[j] * factor;
+          assert(false);
         }
         else
         {
@@ -704,8 +704,8 @@ public:
       v_adolc[i] >>= v[i];
     trace_off();
   }
-*/
 
+/*
   template<class Intersection, class LocalView, class LocalIndexSet, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalView &localView, const LocalIndexSet &localIndexSet,
@@ -780,7 +780,6 @@ public:
       // Position of the current quadrature point in the reference element
       FieldVector<double, dim> collocationPos =
           intersection.geometryInInside().global((double) (i) / double (n-1));
-      auto x_value = intersection.inside().geometry().global(collocationPos);
 
       // The transposed inverse Jacobian of the map from the reference element to the element
       const auto& jacobian =
@@ -801,6 +800,7 @@ public:
         assemble_functionValues_u(localFiniteElement, collocationPos,
                   referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
       }
+      auto x_value = intersection.inside().geometry().global(collocationPos);
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
@@ -866,8 +866,7 @@ public:
       v_adolc[i] >>= v[i];
     trace_off();
   }
-
-
+*/
   const RightHandSideReflector& get_right_handside() const {return rhs;}
 
   RightHandSideReflector rhs;
