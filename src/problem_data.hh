@@ -30,6 +30,14 @@ inline Solver_config::value_type omega(Solver_config::SpaceType2d x) {
   return std::sqrt(1 - x.two_norm2());
 }
 
+/// calculates derivative of omega (from above)
+inline FieldVector<Solver_config::value_type, Solver_config::dim> DOmega(Solver_config::SpaceType2d x) {
+  assert(x.two_norm2() <= 1);
+  FieldVector<Solver_config::value_type, Solver_config::dim> res = x;
+  res/= -std::sqrt(1 - x.two_norm2());
+  return res;
+}
+
 template<class valueType, class GradientType>
 inline valueType a_tilde(const valueType u_value,
     const GradientType& gradu, const Solver_config::SpaceType2d& x) {
@@ -90,6 +98,7 @@ inline FieldVector<valueType, 3> T(const FieldVector<Solver_config::value_type, 
 //forward declaration
 class Local_Operator_MA_refl_Neilan;
 class Local_Operator_MA_refl_Brenner;
+class Local_Operator_MA_refr_Brenner;
 
 // A class implementing the analytical right hand side
 class RightHandSide: public VirtualFunction<Solver_config::SpaceType, Solver_config::value_type> {
@@ -354,7 +363,71 @@ private:
 
   friend Local_Operator_MA_refl_Neilan;
   friend Local_Operator_MA_refl_Brenner;
+  friend Local_Operator_MA_refr_Brenner;
 };
 
+
+class HamiltonJacobiBC{
+  //calculate Legendre-Fenchel transofrmation of n
+  Solver_config::value_type LegrendeFenchelTrafo(const FieldVector<double, Solver_config::dim> &normal) const
+  {
+    if (normal[0] < 0)
+    {
+      if (normal[1] < 0)
+        return Solver_config::lowerLeftTarget[0]*normal[0] + Solver_config::lowerLeftTarget[1]*normal[1];
+      else
+        return Solver_config::lowerLeftTarget[0]*normal[0] + Solver_config::upperRightTarget[1]*normal[1];
+    }
+    else
+    {
+      if (normal[1] < 0)
+        return Solver_config::upperRightTarget[0]*normal[0] + Solver_config::lowerLeftTarget[1]*normal[1];
+      else
+        return Solver_config::upperRightTarget[0]*normal[0] + Solver_config::upperRightTarget[1]*normal[1];
+    }
+  }
+public:
+  HamiltonJacobiBC(const int N): N_(N){}
+
+  Solver_config::value_type H(const Solver_config::SpaceType2d& transportedX, const FieldVector<double, Solver_config::dim> &normalX) const
+  {
+
+    //create discrete version of Lemma 2.1. in "Numerical soltuion of the OT problem using the MA equation" by Benamou, Froese and Oberman
+    Solver_config::value_type max = 0;
+
+    for (int i = 0; i < N_; i++)
+    {
+      const FieldVector<double, Solver_config::dim> normal = {std::cos(2*M_PI*i/N_), std::sin(2*M_PI*i/N_)};
+      if (normal*normalX >= 0) continue;
+
+      auto tempdistanceFunction = transportedX*normal - LegrendeFenchelTrafo(normal);
+      if(tempdistanceFunction > max)
+        max = tempdistanceFunction;
+    }
+    return max;
+  }
+
+  adouble H(const FieldVector<adouble, Solver_config::dim>& transportedX, const FieldVector<double, Solver_config::dim> &normalX) const
+  {
+//    std::cerr << " T_value " << transportedX[0].value() << " " << transportedX[1].value() << std::endl;
+
+    //create discrete version of Lemma 2.1. in "Numerical soltuion of the OT problem using the MA equation" by Benamou, Froese and Oberman
+    adouble max = -100000000;
+
+    for (int i = 0; i < N_; i++)
+    {
+      const FieldVector<double, Solver_config::dim> normal = {std::cos(2*M_PI*i/N_), std::sin(2*M_PI*i/N_)};
+//      if (normal*normalX >= 0) continue;
+
+      adouble tempdistanceFunction = transportedX*normal - LegrendeFenchelTrafo(normal);
+      max = fmax(tempdistanceFunction, max);
+//      std::cerr << "normal " << normal << " transportedX*normal " << (transportedX*normal).value() << "- H*(n)" <<LegrendeFenchelTrafo(normal) << " tempdistanceFunction " << tempdistanceFunction.value() << " -> max = " << max.value() << std::endl;
+    }
+    return max;
+  }
+
+private:
+  int N_;
+};
 
 #endif /* SRC_PROBLEM_DATA_HH_ */
