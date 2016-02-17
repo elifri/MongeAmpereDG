@@ -252,6 +252,18 @@ void MA_solver::create_initial_guess()
   assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
   assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
 
+    if(!is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12))
+    {
+      std::cerr << " start value does not match geometric data " << std::endl;
+      std::exit(-1);
+    }
+    if(!is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12))
+    {
+      std::cerr << " start value does not match geometric data " << std::endl;
+      std::exit(-1);
+    }
+
+
 //  Rectangular_mesh_interpolator rectangular_interpolatorDerX("../inputData/exactReflectorProjectionSimpleDerX.grid");
 //  Rectangular_mesh_interpolator rectangular_interpolatorDerY("../inputData/exactReflectorProjectionSimpleDerY.grid");
 
