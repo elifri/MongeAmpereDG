@@ -168,8 +168,6 @@ public:
 		  if (new_solution)
       {
 		    solver_ptr->update_solution(x_old);
-//		    solver_ptr->iterations++;
-//		    solver_ptr->plot_with_mirror("intermediateStep");
       }
 
 		  assert(solver_ptr != NULL);
