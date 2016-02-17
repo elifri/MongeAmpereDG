@@ -120,7 +120,6 @@ void MA_solver::plot(std::string name) const
 void MA_solver::plot_with_mirror(std::string name)
 {
 
-  std::cout << "write? " << writeVTK_ << " ";
   std::cout << "plot written into ";
 
   //write vtk files
@@ -248,7 +247,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
   }
 
   create_initial_guess();
-  solution(solution.size()-1)= op.lop.get_right_handside().get_input_distribution().omega_integrate() / op.lop.get_right_handside().get_target_distribution().integrate2();
+//  solution(solution.size()-1)= op.lop.get_right_handside().get_input_distribution().omega_integrate() / op.lop.get_right_handside().get_target_distribution().integrate2();
 
   {
   ofstream fileInitial (outputPrefix_+"initialVector");
@@ -285,6 +284,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
   for (int i = 0; i < Solver_config::nonlinear_steps; i++)
   {
     solve_nonlinear_system();
+    std::cerr << " solved nonlinear system" << std::endl;
 
     ofstream file (outputPrefix_+"firstVector");
     file << solution << endl;
@@ -313,6 +313,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
     }
 
     solve_nonlinear_system();
+    std::cerr << " solved nonlinear system" << std::endl;
     iterations++;
 
     adapt_solution();
