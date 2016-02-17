@@ -1245,6 +1245,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
 //              lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
 //                      local_vector, 0);
                 assemble_jacobian_integral(localView, xLocal, m_mB, 0);
+//                std::cerr << " local m_m " << m_mB << std::endl;
 //                tag_count++;
             }/* else {
                 std::cerr << " I do not know how to handle this intersection"
@@ -1256,16 +1257,18 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
 //        std::cerr << " add to objective vector " << std::endl;
         add_local_coefficients(localIndexSet, local_vector, v);
 
+/*
         Solver_config::DenseMatrixType Coll_m_mB;
         Coll_m_mB.setZero(localView.size(), localView.size());
         //set collocation boundary,
         for (size_t i = 0; i < localIndexSet.size(); i++)
         {
           if (!isBoundaryLocal(i))  continue;
+//          std::cerr << "want " << i << " to " << localIndexSet.index(i)[0] << " with value " << local_boundary[i] << " global vector has value " << boundary(localIndexSet.index(i)[0]) << std::endl;
           if (!collocationSet(localIndexSet.index(i)[0]))
           {
             boundary(localIndexSet.index(i)[0]) = local_boundary[i];
-            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(i)[0] << " with value " << local_boundary[i] << std::endl;
+//            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(i)[0] << " with value " << local_boundary[i] << std::endl;
             Coll_m_mB.row(i) = m_mB.row(i);
             collocationSet(localIndexSet.index(i)[0])=true;
           }
@@ -1276,53 +1279,53 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
             case 0:
               assert(std::abs(local_boundary[i]-boundary(localIndexSet.index(i)[0])) < 1e-10 || std::abs(local_boundary[i]) < 1e-14);
             break;
-            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(2)[0] << " with value " << local_boundary[i] << std::endl;
             case 1:
               assert(!collocationSet(localIndexSet.index(2)[0]));
               boundary(localIndexSet.index(2)[0]) = local_boundary[i];
               Coll_m_mB.row(2) = m_mB.row(i);
               collocationSet(localIndexSet.index(2)[0]) = true;
+//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(2)[0] << " with value " << local_boundary[i] << std::endl;
             break;
-            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(1)[0] << " with value " << local_boundary[i] << std::endl;
             case 2:
               assert(!collocationSet(localIndexSet.index(2)[0]));
               boundary(localIndexSet.index(1)[0]) = local_boundary[i];
               Coll_m_mB.row(1) = m_mB.row(i);
               collocationSet(localIndexSet.index(1)[0]) = true;
+//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(1)[0] << " with value " << local_boundary[i] << std::endl;
             break;
             case 4:
               assert(std::abs(local_boundary[i]-boundary(localIndexSet.index(i)[0])) < 1e-10);
             break;
-            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(6)[0] << " with value " << local_boundary[i] << std::endl;
             case 5:
               assert(!collocationSet(localIndexSet.index(6)[0]));
               boundary(localIndexSet.index(6)[0]) = local_boundary[i];
               Coll_m_mB.row(6) = m_mB.row(i);
               collocationSet(localIndexSet.index(6)[0]) = true;
+//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(6)[0] << " with value " << local_boundary[i] << std::endl;
             break;
-            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(5)[0] << " with value " << local_boundary[i] << std::endl;
             case 6:
               assert(!collocationSet(localIndexSet.index(5)[0]));
               boundary(localIndexSet.index(5)[0]) = local_boundary[i];
               Coll_m_mB.row(5) = m_mB.row(i);
               collocationSet(localIndexSet.index(5)[0]) = true;
+//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(5)[0] << " with value " << local_boundary[i] << std::endl;
             break;
             case 8:
               assert(std::abs(local_boundary[i]-boundary(localIndexSet.index(i)[0])) < 1e-10);
             break;
-            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(10)[0] << " with value " << local_boundary[i] << std::endl;
             case 9:
               assert(!collocationSet(localIndexSet.index(10)[0]));
               boundary(localIndexSet.index(10)[0]) = local_boundary[i];
               Coll_m_mB.row(10) = m_mB.row(i);
               collocationSet(localIndexSet.index(10)[0]) = true;
+//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(10)[0] << " with value " << local_boundary[i] << std::endl;
             break;
-            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(9)[0] << " with value " << local_boundary[i] << std::endl;
             case 10:
               assert(!collocationSet(localIndexSet.index(9)[0]));
               boundary(localIndexSet.index(9)[0]) = local_boundary[i];
               Coll_m_mB.row(9) = m_mB.row(i);
               collocationSet(localIndexSet.index(9)[0]) = true;
+//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(9)[0] << " with value " << local_boundary[i] << std::endl;
             break;
             default: assert(false);
             }
