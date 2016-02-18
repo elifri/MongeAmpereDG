@@ -825,45 +825,33 @@ public:
 
       //the shape function values
       std::vector<RangeType> referenceFunctionValues(size_u);
-      adouble u_value = 0;
+      adouble rho_value = 0;
       assemble_functionValues_u(localFiniteElement, quadPos,
-          referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
+          referenceFunctionValues, x_adolc.segment(0, size_u), rho_value);
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, Solver_config::dim> gradu;
+      FieldVector<adouble, Solver_config::dim> gradrho;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
-          gradients, x_adolc, gradu);
-
-      // The hessian of the shape functions
-//      std::vector<FEHessianType> Hessians(size);
-//      FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> Hessu;
-//      assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
-//          x_adolc, Hessu);
+          gradients, x_adolc, gradrho);
 
       //-------calculate integral--------
-      auto phi_value = rhs.phi(element, quadPos, x_value, normal, Solver_config::z_3);
+      double omega_value = omega(x_value);
 
-      adouble a_tilde_value = a_tilde(u_value, gradu, x_value);
-      FieldVector<adouble, 3> grad_hat = { gradu[0], gradu[1], 0 };
+      adouble t = rho_value*omega_value-Solver_config::z_3;
+      t /= rho_value*omega_value;
 
-      FieldVector<adouble, 2> z_0 = gradu;
-      z_0 *= (2.0 / a_tilde_value);
+      adouble F_value = F(x_value, rho_value, gradrho);
 
-      FieldVector<adouble, Solver_config::dim> T_value = T(x_value, u_value, z_0, Solver_config::z_3);
-//      std::cerr << "x local "<< x.transpose() << std::endl;
-//      std::cerr << "gradients "; for (const auto& grad : gradients) std::cerr << grad << "   "; std::cerr << std::endl;
+      FieldVector<adouble, Solver_config::dim> w = gradrho;
+      w *= 2*F_value*rho_value;
 
+      FieldVector<adouble, Solver_config::dim> z = x_value;
+      z *= rho_value;
+      z.axpy(t,w);
+      z.axpy(-t*rho_value,x_value);
 
-//	    std::cerr << "T " << (T_value*normal) << " thought it -> " << phi_value_initial << " T " << T_value[0].value() << " " << T_value[1].value() << " normal " << normal[0] << " " << normal[1]<< std::endl;
-//      std::cerr << "x " << x_value
-//                << " gradu " << gradu[0].value() << " " << gradu[1].value()
-//                << " T " << T_value[0].value() << " " << T_value[1].value()
-//                << " T*n " << (T_value * normal).value()
-//                << " phi " << phi_value << endl;
-//      std::cerr  << T_value[0].value() << " " << T_value[1].value()  << std::endl;
-
-      auto signedDistance = bc.H(T_value, normal);
+      auto signedDistance = bc.H(z, normal);
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
