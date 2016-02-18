@@ -8,9 +8,6 @@
 #ifndef SRC_MA_SOLVER_HH_
 #define SRC_MA_SOLVER_HH_
 
-#include "solver_config.hh"
-
-
 #include <memory>
 
 #include <Eigen/SparseCholesky>
@@ -18,6 +15,7 @@
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 
+#include "solver_config.hh"
 
 //#include "operator_poisson_DG.hh"
 #include "Assembler.hh"
@@ -176,8 +174,6 @@ public:
 		  if (new_solution)
       {
 		    solver_ptr->update_solution(x_old);
-//		    solver_ptr->iterations++;
-//		    solver_ptr->plot_with_mirror("intermediateStep");
       }
 
 		  assert(solver_ptr != NULL);
@@ -470,38 +466,18 @@ void MA_solver::project_labourious(const F f, VectorType& v) const
       }
     }
 
-    Solver_config::VectorType x_local = localMassMatrix.ldlt().solve(localVector);
 
     assembler.set_local_coefficients(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
-
-    double resTest1f = 0, resTest1 = 0;
-
-    for (const auto& quadpoint : quad)
-    {
-      const FieldVector<double, Solver_config::dim> &quadPos = quadpoint.position();
-      //evaluate test function
-      std::vector<Dune::FieldVector<double, 1>> functionValues(localView.size());
-      lFE.localBasis().evaluateFunction(quadPos, functionValues);
-
-      resTest1f += f(geometry.global(quadPos))*functionValues[0]* quadpoint.weight() *  geometry.integrationElement(quadPos);
-
-
-      double res = 0;
-      for (int i = 0 ; i < x_local.size(); i++)
-      {
-        res += x_local(i)*functionValues[i];
-        resTest1 += x_local(i)*functionValues[i]*functionValues[0]* quadpoint.weight() *  geometry.integrationElement(quadPos);
-      }
-
-      std::cout << " f " << f(geometry.global(quadPos)) << " approx " << res << std::endl;
-
     }
 
-  }
 
 
   //set scaling factor (last dof) to ensure mass conservation
   v(v.size()-1) = 1;
+
+#ifdef DEBUG
+  test_projection(f,v);
+#endif
 
   std::cout << "v.size()" << v.size()-1 << std::endl;
   std::cout << "projected on vector " << std::endl << v.transpose() << std::endl;

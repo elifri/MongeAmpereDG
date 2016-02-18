@@ -793,6 +793,9 @@ public:
     const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
         face_center);
 
+    const int n = 3;
+    const int boundaryFaceId = intersection.indexInInside();
+
     // penalty weight for NIPG / SIPG
     //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
     double penalty_weight;
@@ -865,16 +868,13 @@ public:
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
-      for (int j = 0; j < size_u; j++) //parts from self
+      for (size_t i = 0; i < n; i++)
       {
 
-        // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
+        int j = collocationNo[boundaryFaceId][i];
         if (Solver_config::Dirichlet)
         {
-          double g_value;
-          bcDirichlet.evaluate_exact_sol(x_value, g_value);
-          v_adolc(j) += penalty_weight * (u_value - g_value)
-                        * referenceFunctionValues[j] * factor;
+          assert(false);
         }
         else
         {
@@ -898,30 +898,14 @@ public:
   HamiltonJacobiBC bc;
   Dirichletdata<std::shared_ptr<Rectangular_mesh_interpolator> > bcDirichlet;
 
+  static constexpr int collocationNo[3][3] = {{0,3,4},{0,11,8},{4,7,8}};
+
   static constexpr double& kappa_ = Solver_config::kappa;
 public:
   mutable double int_f;
   mutable double sign;
 
-/*  static bool return_pixel_coordinates(const double& x, const double& y, int& width, int& height)
-  {
-    const double targetWidth = Solver_config::upperRightTarget[0] - Solver_config::lowerLeftTarget[0];
-    const double targetHeight = Solver_config::upperRightTarget[1] - Solver_config::lowerLeftTarget[1];
-
-    if (x > Solver_config::upperRightTarget[0] || x < Solver_config::lowerLeftTarget[0])
-      return false;
-    else
-      width = pixel_width / targetWidth*(x-Solver_config::lowerLeftTarget[0]);
-
-    if (y > Solver_config::upperRightTarget[1] || y < Solver_config::lowerLeftTarget[1])
-      return false;
-    else
-      height = pixel_height / targetHeight*(y-Solver_config::lowerLeftTarget[1]);
-
-    return true;
-  }*/
-
-
+  mutable bool found_negative;
 };
 
 #endif /* SRC_OPERATOR_HH_ */

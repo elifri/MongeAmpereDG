@@ -120,7 +120,6 @@ void MA_solver::plot(std::string name) const
 void MA_solver::plot_with_mirror(std::string name)
 {
 
-  std::cout << "write? " << writeVTK_ << " ";
   std::cout << "plot written into ";
 
   //write vtk files
@@ -257,73 +256,7 @@ void MA_solver::create_initial_guess()
 {
   //init solution by laplace u = -sqrt(2f)
 
-//  Linear_System_Local_Operator_Poisson_DG<RightHandSideInitial, Dirichletdata> lop;
-//  MatrixType m(dof_handler.get_n_dofs_u(), dof_handler.get_n_dofs_u());
-//  VectorType rhs(dof_handler.get_n_dofs_u());
-//  assemble_linear_system_DG(lop, m, rhs);
-//  assert(m.nonZeros() > 0);
-
-/*
-  Eigen::SimplicialLDLT<MatrixType> CholeskySolver(m);
-  if (CholeskySolver.info() != Eigen::Success)
-  {
-    std::cout << "Error, could not compute cholesky decomposition of the system matrix" << std::endl;
-    exit(-1);
-  }
-  VectorType solution_u = CholeskySolver.solve(rhs);
-  if (CholeskySolver.info() != Eigen::Success)
-  {
-    std::cout << "Error, could not solve the linear system" << std::endl;
-    exit(-1);
-  }
-
-  init_mixed_element_without_second_derivatives(solution_u, solution);
-*/
-
 //  solution = VectorType::Zero(dof_handler.get_n_dofs());
-
-
-  //init exact solution
-  /*
-  Dirichletdata exact_sol;
-  if (Solver_config::problem == MA_SMOOTH || Solver_config::problem == SIMPLE_MA)
-    project(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol), MEMBER_FUNCTION(&Dirichletdata::derivative, &exact_sol), exactsol_projection);
-  else
-    project(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol), exactsol_projection);
-*/
-
-//  vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
-
-//    project_labouriousC1([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
-//  solution = VectorType::Zero(get_n_dofs());
-//  solution = exactsol_projection;
-
-//    //write hessian dofs
-//     const int nDH = Solver_config::dim*Solver_config::dim;
-//     for (size_t i=0; i<uDHBasis->indexSet().size(); i++)
-//      for (int j=0; j< nDH; j++)
-//      {
-//        solution[get_n_dofs_u()+ nDH*i+j] = (j == 0 || j ==3)? 1 : 0;
-//      }
-
-/*    InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data(Solver_config::configFileEllipsoid);
-    project_labouriousC1([&ellipsoidMethod](Solver_config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
-    ellipsoidMethod.write_output();*/
-
-//    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
-//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimple.grid");
-//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRoentgen.grid");
-//    Rectangular_mesh_interpolator rectangular_interpolator("../Testing/oneParis.grid");
-
-//    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/grids/homogeneousinitial.grid");
-////
-//    assert(is_close(rectangular_interpolator.x_min, Solver_config::lowerLeft[0], 1e-12));
-//    assert(is_close(rectangular_interpolator.y_min, Solver_config::lowerLeft[1], 1e-12));
-//    project_labouriousC1([&rectangular_interpolator](Solver_config::SpaceType x){return rectangular_interpolator.evaluate(x);},solution);
-//    project_labouriousC1([](Solver_config::SpaceType x){return x.two_norm2()/2.0;}, solution);
-//    solution.setZero(get_n_dofs());
-//    solution[1] = 1;
-
   project_labouriousC1([](Solver_config::SpaceType x){return 1;}, solution);
 }
 
@@ -399,7 +332,11 @@ const typename MA_solver::VectorType& MA_solver::solve()
   for (int i = 0; i < Solver_config::nonlinear_steps; i++)
   {
     solve_nonlinear_system();
-    std::cerr << " solves nonlinear system" << std::endl;
+    std::cerr << " solved nonlinear system" << std::endl;
+
+    ofstream file (outputPrefix_+"firstVector");
+    file << solution << endl;
+    file.close();
 
     cout << "scaling factor " << solution(solution.size()-1) << endl;
 
@@ -423,7 +360,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
     }
 
     solve_nonlinear_system();
-    std::cerr << " solves nonlinear system" << std::endl;
+    std::cerr << " solved nonlinear system" << std::endl;
     iterations++;
 
     {

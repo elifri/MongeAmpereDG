@@ -27,8 +27,15 @@ public:
     return isBoundaryDof_;
   }
 
+  const BoolVectorType& isBoundaryValueDoF() const
+  {
+    assert(initialised_);
+    return isBoundaryValueDof_;
+  }
+
 private:
   BoolVectorType  isBoundaryDof_;
+  BoolVectorType  isBoundaryValueDof_;
   bool initialised_;
 };
 

@@ -69,7 +69,7 @@ bool checkJacobian(
 	f.evaluate(x,temp, J, x, false);
 	J.prune(1,1e-10);
 
-	double tol = 1e-7;
+	double tol = 1e-5;
 
 	Eigen::VectorXd f_minus = Eigen::VectorXd::Zero(n), f_plus= Eigen::VectorXd::Zero(n);
 
@@ -80,6 +80,8 @@ bool checkJacobian(
 
 	if (b && exportFDJacobianifFalse)
 	{
+	  MATLAB_export(x, "x");
+	  MATLAB_export(temp, "f");
 		MATLAB_export(J, "Jacobian");
 		MATLAB_export(estimated_J, "FDJacobian");
 	}
@@ -169,6 +171,7 @@ int doglegMethod (
     {
       functor.evaluate(x,f,x, false);
       functor.derivative(x,J);
+//      make_FD_Jacobian(functor, x, J);
     }
 
     if (opts.check_Jacobian)	checkJacobian(functor, x, opts.exportFDJacobianifFalse);
@@ -374,7 +377,10 @@ int doglegMethod (
             if ((dL > 0.0) && (dF > 0.0))
             {
               if (!useCombinedFunctor)
+              {
                 functor.derivative(xnew,J);
+//                make_FD_Jacobian(functor,xnew,J);
+              }
               else
                 J = Jn;
 

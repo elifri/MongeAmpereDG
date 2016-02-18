@@ -18,8 +18,9 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
 
   //init all values with false
   isBoundaryDof_ = BoolVectorType::Constant(FEBasis.indexSet().size(),false);
+  isBoundaryValueDof_ = BoolVectorType::Constant(FEBasis.indexSet().size(),false);
 
-  std::cout << "size " << FEBasis.gridView().size(0) << std::endl;
+//  std::cout << "size " << FEBasis.gridView().size(0) << std::endl;
 
   for (auto&& element : elements(FEBasis.gridView())) {
     localView.bind(element);
@@ -28,20 +29,23 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
     const auto& lFE = localView.tree().finiteElement();
 
     //store local boundary information
-    Eigen::Matrix<bool, Eigen::Dynamic, 1> localIsBoundary = Eigen::Matrix<bool, Eigen::Dynamic, 1>::Constant(lFE.size(),false);
+    BoolVectorType localIsBoundary = BoolVectorType::Constant(lFE.size(),false);
+    BoolVectorType localIsBoundaryValue = BoolVectorType::Constant(lFE.size(),false);
 //    std::fill(localIsBoundary.begin(), localIsBoundary.end(), false);
 
-    std::cout << " corners " << std::endl;
+
+/*    std::cout << " corners " << std::endl;
     for (int i = 0 ; i < element.geometry().corners(); i++)
       std::cout << element.geometry().corner(i) << " ";
-    std::cout << std::endl;
+    std::cout << std::endl;*/
+
 
     // Traverse intersections
     for (auto&& is : intersections(FEBasis.gridView(), element)) {
       if (is.boundary()) {
 
         const auto boundaryFaceId = is.indexInInside();
-        std::cout << " at boundary " << boundaryFaceId << std::endl;
+//        std::cout << " at boundary " << boundaryFaceId << std::endl;
 
         for (int k = 0; k < lFE.size(); k++) {
           const auto& localKey = lFE.localCoefficients().localKey(k);
@@ -49,35 +53,42 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
           switch (localKey.codim()) {
           case 0:
             break;
-          case 1:
-            if (localKey.subEntity() == boundaryFaceId)
+          case 1: //case of facet
+            if (localKey.subEntity() == boundaryFaceId) //edge normal dof
             {
               localIsBoundary[k] = true;
-              std::cout << " found (local) boundary dof " << k << std::endl;
+              localIsBoundaryValue[k] = true;
+//              std::cout << " found (local) boundary dof " << k << std::endl;
             }
             break;
           case 2:
             if (element.type().isTriangle()) {
               switch (boundaryFaceId) {
               case 0:
-                if (localKey.subEntity() == 0 || localKey.subEntity() == 1)
+                if (localKey.subEntity() == 0 || localKey.subEntity() == 1) //nodes next to edge 0
                 {
                   localIsBoundary[k] = true;
-                  std::cout << " found (local) boundary dof " << k << std::endl;
+                  if (localKey.index()== 0)
+                    localIsBoundaryValue[k] = true;
+//                  std::cout << " found (local) boundary dof " << k << std::endl;
                 }
                 break;
               case 1:
-                if (localKey.subEntity() == 0 || localKey.subEntity() == 2)
+                if (localKey.subEntity() == 0 || localKey.subEntity() == 2)//nodes next to edge 1
                 {
                   localIsBoundary[k] = true;
-                  std::cout << " found (local) boundary dof " << k << std::endl;
+                  if (localKey.index()== 0)
+                    localIsBoundaryValue[k] = true;
+//                  std::cout << " found (local) boundary dof " << k << std::endl;
                 }
                 break;
               case 2:
-                if (localKey.subEntity() == 1 || localKey.subEntity() == 2)
+                if (localKey.subEntity() == 1 || localKey.subEntity() == 2) //nodes next to edge 2
                 {
                   localIsBoundary[k] = true;
-                  std::cout << " found (local) boundary dof " << k << std::endl;
+                  if (localKey.index()== 0)
+                    localIsBoundaryValue[k] = true;
+//                  std::cout << " found (local) boundary dof " << k << std::endl;
                 }
                 break;
               }
@@ -87,34 +98,38 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
                 if (localKey.subEntity() == 0 || localKey.subEntity() == 2)
                 {
                   localIsBoundary[k] = true;
-                  std::cout << " found (local) boundary dof " << k << std::endl;
+                  localIsBoundaryValue[k] = true;
+//                  std::cout << " found (local) boundary dof " << k << std::endl;
                 }
                 break;
               case 1:
                 if (localKey.subEntity() == 1 || localKey.subEntity() == 3)
                 {
                   localIsBoundary[k] = true;
-                  std::cout << " found (local) boundary dof " << k << std::endl;
+                  localIsBoundaryValue[k] = true;
+//                  std::cout << " found (local) boundary dof " << k << std::endl;
                 }
                 break;
               case 2:
                 if (localKey.subEntity() == 0 || localKey.subEntity() == 1)
                 {
                   localIsBoundary[k] = true;
-                  std::cout << " found (local) boundary dof " << k << std::endl;
+                  localIsBoundaryValue[k] = true;
+//                  std::cout << " found (local) boundary dof " << k << std::endl;
                 }
                 break;
               case 3:
                 if (localKey.subEntity() == 2 || localKey.subEntity() == 3)
                 {
                   localIsBoundary[k] = true;
-                  std::cout << " found (local) boundary dof " << k << std::endl;
+                  localIsBoundaryValue[k] = true;
+//                  std::cout << " found (local) boundary dof " << k << std::endl;
                 }
                 break;
               }
             } else {
               std::cerr
-                  << " Boundary Handler cannot handle elements other than triangles or quadr. in 2d"
+//                  << " Boundary Handler cannot handle elements other than triangles or quadr. in 2d"
                   << std::endl;
               exit(-1);
             }
@@ -128,6 +143,9 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
       for (size_t i = 0; i < localIndexSet.size(); i++)
       {
         isBoundaryDof_(localIndexSet.index(i)[0]) = isBoundaryDof_(localIndexSet.index(i)[0]) || localIsBoundary[i] ;
+//        if (isBoundaryDof_(localIndexSet.index(i)[0]))
+//          std::cout << " found boundary dof " << localIndexSet.index(i)[0] << std::endl;
+        isBoundaryValueDof_(localIndexSet.index(i)[0]) = isBoundaryValueDof_(localIndexSet.index(i)[0]) || localIsBoundaryValue[i] ;
       }
 
 

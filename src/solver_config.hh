@@ -41,7 +41,6 @@
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
 
 
-using namespace Dune;
 
 namespace Dune{
 template<> struct PromotionTraits<adouble, double> {typedef adouble PromotedType; };
@@ -55,6 +54,7 @@ inline void DenseMatrix<Dune::FieldMatrix<adouble, 2, 2>>::luDecomposition(Dense
 
 }
 
+using namespace Dune;
 
 enum PolynomialType {LAGRANGE};
 enum ProblemType

@@ -105,6 +105,8 @@ void bilinear_interpolate(const Solver_config::SpaceType x, Solver_config::value
             Eigen::MatrixXd &solution)
 {
   int index_x = (x[0]-x0)/h_x, index_y = (x[1]-y0)/h_y; //index of the bottom left corner of the rectangle where x lies in
+  assert(index_x >= 0); assert(index_x < solution.rows());
+  assert(index_y >= 0); assert(index_y < solution.cols());
 
   //special case at right boundary
   if (index_x == solution.rows()-1) index_x--;

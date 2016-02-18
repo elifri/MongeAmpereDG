@@ -251,6 +251,12 @@ public:
       z_0 *= (2.0 / a_tilde_value);
       FieldVector<adouble, Solver_config::dim> z = T(x_value, u_value, z_0, Solver_config::z_3);
 
+      if (z[0] < Solver_config::lowerLeftTarget[0] || z[0] > Solver_config::upperRightTarget[0]
+           || z[1] < Solver_config::lowerLeftTarget[1] || z[1] > Solver_config::upperRightTarget[1])
+      {
+        std::cerr << " Point " << x_value << " is mapped into the outside, namely to " << z[0].value() << " " << z[1].value() << std::endl;
+      }
+
       FieldVector<adouble, 3> Z_0 = grad_hat;
       Z_0 *= (2.0 / a_tilde_value);
 
@@ -298,11 +304,11 @@ public:
 //      cout << " atilde " << a_tilde_value << " f " << f_value << endl;
 
       //calculate system for first test functions
-//      if (uDH_pertubed_det.value() < 0)
-//      {
-//        std::cerr << "found negative determinant !!!!! " << uDH_pertubed_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
-//        std::cerr << " local dofs " << x.transpose() << std::endl;
-//      }
+      if (uDH_pertubed_det.value() < 0 && !found_negative)
+      {
+        found_negative = true;
+        std::cerr << "found negative determinant !!!!! " << uDH_pertubed_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
+      }
 //      std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
 
 //      cerr << x_value << " " << u_value.value() << " " << uDH_pertubed_det.value() << " " << PDE_rhs.value() << endl;
@@ -316,6 +322,7 @@ public:
 	          	* quad[pt].weight() * integrationElement;
 
 /*
+
         if (((PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]* quad[pt].weight() * integrationElement).value() > 1e-6)
         {
           std:: cerr << "v_adolc(" << j << ")+=" << ((PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]
@@ -323,6 +330,7 @@ public:
           std::cerr << "at " << x_value << " T " << z[0].value() << " " << z[1].value() << " u " << u_value.value() << " det() " << uDH_pertubed_det.value() << " rhs " << PDE_rhs.value() << endl;
         }
 */
+
       }
 
       last_equation_adolc += u_value* quad[pt].weight() * integrationElement;
@@ -544,6 +552,7 @@ public:
   }
 
 
+
   template<class Intersection, class LocalView, class LocalIndexSet, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalView &localView, const LocalIndexSet &localIndexSet,
@@ -595,6 +604,9 @@ public:
         dim - 1>::general(intersection.geometry().type()).position(0, 0);
     const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
         face_center);
+
+    const int n = 3;
+    const int boundaryFaceId = intersection.indexInInside();
 
     // penalty weight for NIPG / SIPG
     //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
@@ -668,9 +680,9 @@ public:
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
-      for (int j = 0; j < size_u; j++) //parts from self
+      for (size_t i = 0; i < n; i++)
       {
-
+        int j = collocationNo[boundaryFaceId][i];
         // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
         if (Solver_config::Dirichlet)
         {
@@ -681,7 +693,7 @@ public:
         }
         else
         {
-          v_adolc(j) += penalty_weight * ((T_value * normal) - phi_value) //*((T_value * normal) - phi_value)
+          v_adolc(j) += penalty_weight * signedDistance //((T_value * normal) - phi_value) //
                             * (referenceFunctionValues[j]+(gradients[j]*normal)) * factor;
 //          std::cerr << " add to v_adolc(" << j << ") " << (penalty_weight * ((T_value * normal) - phi_value)* referenceFunctionValues[j] * factor).value() << " -> " << v_adolc(j).value() << std::endl;
         }
@@ -695,38 +707,177 @@ public:
     trace_off();
   }
 
+/*
+  template<class Intersection, class LocalView, class LocalIndexSet, class VectorType>
+  void assemble_boundary_face_term(const Intersection& intersection,
+      const LocalView &localView, const LocalIndexSet &localIndexSet,
+      const VectorType &x, VectorType& v, int tag) const {
+    const int dim = Intersection::dimension;
+    const int dimw = Intersection::dimensionworld;
+
+    //assuming galerkin
+    assert((unsigned int) x.size() == localView.size());
+    assert((unsigned int) v.size() == localView.size());
+
+    // Get the grid element from the local FE basis view
+    typedef typename LocalView::Element Element;
+    const Element& element = localView.element();
+
+    const auto& localFiniteElement = localView.tree().finiteElement();
+    const int size_u = localFiniteElement.size();
+
+    typedef decltype(localFiniteElement) ConstElementRefType;
+    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+
+    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
+    typedef typename Dune::FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
+
+    //-----init variables for automatic differentiation
+
+    Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(
+        localView.size());
+    Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(
+        localView.size());
+    for (size_t i = 0; i < localView.size(); i++)
+      v_adolc[i] <<= v[i];
+
+    trace_on(tag);
+    //init independent variables
+    for (size_t i = 0; i < localView.size(); i++)
+      x_adolc[i] <<= x[i];
+
+    // ----start collocation--------
+
+    // Get a quadrature rule
+    const int n = 3;
+    GeometryType gtface = intersection.geometryInInside().type();
+
+    const int boundaryFaceId = intersection.indexInInside();
+//    std::cerr << " boundaryFaceId " << boundaryFaceId << std::endl;
+
+    // normal of center in face's reference element
+    const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
+        dim - 1>::general(intersection.geometry().type()).position(0, 0);
+    const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
+        face_center);
+
+    // penalty weight for NIPG / SIPG
+    //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
+    double penalty_weight;
+    if (Solver_config::Dirichlet)
+      penalty_weight = Solver_config::sigmaBoundary
+                      * (Solver_config::degree * Solver_config::degree)
+                      / std::pow(intersection.geometry().volume(), Solver_config::beta);
+    else
+      penalty_weight = Solver_config::sigmaBoundary;
+//                      * (Solver_config::degree * Solver_config::degree)
+//                     * std::pow(intersection.geometry().volume(), Solver_config::beta);
+
+
+    // Loop over all quadrature points
+    for (size_t i = 0; i < n; i++) {
+
+      //------get data----------
+
+      // Position of the current quadrature point in the reference element
+      FieldVector<double, dim> collocationPos =
+          intersection.geometryInInside().global((double) (i) / double (n-1));
+
+      // The transposed inverse Jacobian of the map from the reference element to the element
+      const auto& jacobian =
+          intersection.inside().geometry().jacobianInverseTransposed(collocationPos);
+
+      //the shape function values
+      std::vector<RangeType> referenceFunctionValues(size_u);
+      adouble u_value = 0;
+      assemble_functionValues_u(localFiniteElement, collocationPos,
+          referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
+
+      //selection local dof no for collocation point
+      int j = collocationNo[boundaryFaceId][i];
+      if ((i == 0 || i == n-1) && std::abs(referenceFunctionValues[j] - 1) > 1e-12)
+      {
+        collocationPos = intersection.geometryInInside().global((double) (n-1-i) / double (n-1));
+        u_value = 0;
+        assemble_functionValues_u(localFiniteElement, collocationPos,
+                  referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
+      }
+      auto x_value = intersection.inside().geometry().global(collocationPos);
+
+      // The gradients
+      std::vector<JacobianType> gradients(size_u);
+      FieldVector<adouble, Solver_config::dim> gradu;
+      assemble_gradients_gradu(localFiniteElement, jacobian, collocationPos,
+          gradients, x_adolc, gradu);
+
+      // The hessian of the shape functions
+//      std::vector<FEHessianType> Hessians(size);
+//      FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> Hessu;
+//      assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
+//          x_adolc, Hessu);
+
+      //-------calculate integral--------
+      auto phi_value = rhs.phi(element, collocationPos, x_value, normal, Solver_config::z_3);
+
+      adouble a_tilde_value = a_tilde(u_value, gradu, x_value);
+      FieldVector<adouble, 3> grad_hat = { gradu[0], gradu[1], 0 };
+
+      FieldVector<adouble, 2> z_0 = gradu;
+      z_0 *= (2.0 / a_tilde_value);
+
+      FieldVector<adouble, Solver_config::dim> T_value = T(x_value, u_value, z_0, Solver_config::z_3);
+//      std::cerr << "x local "<< x.transpose() << std::endl;
+//      std::cerr << "gradients "; for (const auto& grad : gradients) std::cerr << grad << "   "; std::cerr << std::endl;
+
+      auto signedDistance = bc.H(T_value, normal);
+
+
+
+      std::cerr << " j is " << j << std::endl;
+
+//      std::cerr << "T " << (T_value*normal) << " thought it -> " << phi_value_initial << " T " << T_value[0].value() << " " << T_value[1].value() << " normal " << normal[0] << " " << normal[1]<< std::endl;
+      std::cerr << "x " << x_value
+//                << " gradu " << gradu[0].value() << " " << gradu[1].value()
+                << " T " << T_value[0].value() << " " << T_value[1].value()
+                << " distance " << signedDistance.value()
+                << " T*n " << (T_value * normal).value()
+                << " phi " << phi_value << endl;
+
+    // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
+      if (Solver_config::Dirichlet)
+      {
+        assert(false);
+      }
+      else
+      {
+          v_adolc(j) = penalty_weight * signedDistance;
+          cerr << signedDistance << " ";
+//          *((T_value * normal) - phi_value); //
+//          std::cerr << " add to v_adolc(" << j << ") " << (penalty_weight * ((T_value * normal) - phi_value)* referenceFunctionValues[j] * factor).value() << " -> " << v_adolc(j).value() << std::endl;
+      }
+
+    }
+
+    // select dependent variables
+    for (size_t i = 0; i < localView.size(); i++)
+      v_adolc[i] >>= v[i];
+    trace_off();
+  }
+*/
   const RightHandSideReflector& get_right_handside() const {return rhs;}
 
   RightHandSideReflector rhs;
   HamiltonJacobiBC bc;
   Dirichletdata<std::shared_ptr<Rectangular_mesh_interpolator> > bcDirichlet;
 
-  static const int pixel_width = 256;
-  static const int pixel_height = 256;
+//  static constexpr int collocationNo[3][5] = {{0,1,3,5,4},{0,2,11,9,8},{4,6,7,10,8}};
+  static constexpr int collocationNo[3][3] = {{0,3,4},{0,11,8},{4,7,8}};
+
 public:
   mutable double int_f;
   mutable double sign;
 
-  mutable double target_distribution[pixel_width*pixel_height];
-
-  static bool return_pixel_coordinates(const double& x, const double& y, int& width, int& height)
-  {
-    const double targetWidth = Solver_config::upperRightTarget[0] - Solver_config::lowerLeftTarget[0];
-    const double targetHeight = Solver_config::upperRightTarget[1] - Solver_config::lowerLeftTarget[1];
-
-    if (x > Solver_config::upperRightTarget[0] || x < Solver_config::lowerLeftTarget[0])
-      return false;
-    else
-      width = pixel_width / targetWidth*(x-Solver_config::lowerLeftTarget[0]);
-
-    if (y > Solver_config::upperRightTarget[1] || y < Solver_config::lowerLeftTarget[1])
-      return false;
-    else
-      height = pixel_height / targetHeight*(y-Solver_config::lowerLeftTarget[1]);
-
-    return true;
-  }
-
+  mutable bool found_negative;
 
 };
 
