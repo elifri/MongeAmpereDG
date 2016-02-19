@@ -255,9 +255,35 @@ void MA_solver::plot_with_lens(std::string name)
 void MA_solver::create_initial_guess()
 {
   //init solution by laplace u = -sqrt(2f)
+  if(initValueFromFile_)
+  {
+    solution.resize(get_n_dofs());
+    ifstream fileInitial (initValue_);
 
-//  solution = VectorType::Zero(dof_handler.get_n_dofs());
-  project_labouriousC1([](Solver_config::SpaceType x){return 1;}, solution);
+    if(fileInitial.fail())
+    {
+      std::cerr << "Error opening " << initValue_ << ", exited with error " << strerror(errno) << std::endl;
+      exit(-1);
+    }
+
+
+    for (int i=0; i<get_n_dofs(); ++i) {
+      assert(!fileInitial.eof() && "The inserted coefficient file is too short");
+      fileInitial >> solution(i);
+    }
+    fileInitial >> ws;
+    if (!fileInitial.eof())
+    {
+      std::cerr << "Coefficient initialisation is too long for the specified setting!";
+      exit(-1);
+    }
+    fileInitial.close();
+  }
+  else
+  {
+    //  solution = VectorType::Zero(dof_handler.get_n_dofs());
+    project_labouriousC1([](Solver_config::SpaceType x){return 1;}, solution);
+  }
 }
 
 const typename MA_solver::VectorType& MA_solver::solve()
@@ -282,7 +308,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
   op.lop.rhs.convolveTargetDistributionAndNormalise(epsMollifier_);
   //print blurred target distribution
   if (true) {
-      ostringstream filename2; filename2 << outputDirectory_+"/lightOut" << iterations << ".bmp";
+      ostringstream filename2; filename2 << plotOutputDirectory_+"/lightOut" << iterations << ".bmp";
       std::cout << "saved image to " << filename2.str() << std::endl;
       op.lop.get_right_handside().get_target_distribution().saveImage (filename2.str());
       assert(std::abs(op.lop.get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
@@ -291,29 +317,17 @@ const typename MA_solver::VectorType& MA_solver::solve()
   create_initial_guess();
   {
     //write initial guess into file
-    stringstream filename2; filename2 << outputDirectory_ <<  outputPrefix_ << "initial.feg";
+    stringstream filename2; filename2 << outputDirectory_ <<  "/" << outputPrefix_ << "initial.fec";
     ofstream file(filename2.str(),std::ios::out);
 //    update_solution(solution);
 //    plotter.save_rectangular_mesh(*solution_u_old, file);
     file << solution;
     file.close();
-
-  /*solution.resize(get_n_dofs());
-  ifstream fileInitial ("homogeneousFineVector2.data");
-  for (int i=0; i<get_n_dofs(); ++i) {
-    fileInitial >> solution(i);
   }
-
-   fileInitial.close();*/
-  }
-
-  solution(solution.size()-1)= op.lop.get_right_handside().get_input_distribution().omega_integrate() / op.lop.get_right_handside().get_target_distribution().integrate2();
-
 
   update_solution(solution);
 
   plot_with_lens("initialguess");
-
 
   Solver_config::VectorType f;
   Solver_config::MatrixType J;
@@ -324,20 +338,12 @@ const typename MA_solver::VectorType& MA_solver::solve()
   Integrator<GridType> integrator(grid_ptr);
   G = integrator.assemble_integral_of_local_gridFunction(*solution_u_old);
   std::cout << "reflector size  G " << G << endl;
-//  G = 0.16;   std::cout << "set reflector size  G " << G << endl;
   assembler.set_G(G);
 
-
-  //calculate initial solution
   for (int i = 0; i < Solver_config::nonlinear_steps; i++)
   {
     solve_nonlinear_system();
     std::cerr << " solved nonlinear system" << std::endl;
-
-    ofstream file (outputPrefix_+"firstVector");
-    file << solution << endl;
-    file.close();
-
     cout << "scaling factor " << solution(solution.size()-1) << endl;
 
     iterations++;
@@ -353,7 +359,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
     //print blurred target distribution
     if (true) {
-        ostringstream filename2; filename2 << outputDirectory_+"/lightOut" << iterations << ".bmp";
+        ostringstream filename2; filename2 << plotOutputDirectory_+"/lightOut" << iterations << ".bmp";
         std::cout << "saved image to " << filename2.str() << std::endl;
         op.lop.get_right_handside().get_target_distribution().saveImage (filename2.str());
         assert(std::abs(op.lop.get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
@@ -365,14 +371,11 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
     {
       //write current solution to file
-//      ostringstream filename2; filename2 << outputPrefix_ << "Vector" << iterations << ".data";
-//      ofstream fileInitial (filename2.str());
-//      fileInitial << solution << endl;
-//      fileInitial.close();
-
-      stringstream filename2; filename2 << "../inputData/grids/" << outputPrefix_ << iterations << ".grid";
-      ofstream file(filename2.str(),std::ios::out);
       update_solution(solution);
+
+      stringstream filename2; filename2 << outputDirectory_ << "/"<< outputPrefix_ << iterations << ".fec";
+      ofstream file(filename2.str(),std::ios::out);
+      file << solution;
 //      plotter.save_rectangular_mesh(*solution_u_old, file);
       file.close();
     }
@@ -380,8 +383,6 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //    plot_with_lens("numericalSolutionBeforeRef");
 
     adapt_solution();
-//    project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
-//    exactsol_u = exactsol.segment(0, get_n_dofs_u());
 
     update_solution(solution);
     plot_with_lens("numericalSolution");

@@ -74,10 +74,12 @@ public:
 #ifdef USE_DOGLEG
       doglegOpts_(config.doglegOpts),
 #endif
-      writeVTK_(config.writeVTK),
+      initValueFromFile_(config.initValueFromFile),
+      initValue_(config.initValue),
       evaluateJacobianSimultaneously_(config.evalJacSimultaneously),
+      writeVTK_(config.writeVTK),
       povRayOpts_(config.povRayOpts),
-      outputDirectory_(config.outputDirectory), outputPrefix_(config.outputPrefix),
+      outputDirectory_(config.outputDirectory), plotOutputDirectory_(config.plotOutputDirectory), outputPrefix_(config.outputPrefix),
       plotterRefinement_(config.refinement),
       grid_ptr(grid), gridView_ptr(&gridView),
       assembler(*FEBasis, true),
@@ -109,12 +111,12 @@ public:
     FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
 	  assembler.bind(*FEBasis);
 
-	  plotter.set_output_directory(outputDirectory_);
+	  plotter.set_output_directory(plotOutputDirectory_);
 	  plotter.set_output_prefix(outputPrefix_);
 
-	  plotter.add_plot_stream("resU", outputDirectory_+"/Data/"+outputPrefix_+"resU"); //write residual in u test functions in this file
-	  plotter.add_plot_stream("res", outputDirectory_+"/Data/"+outputPrefix_+"res"); //write residual in this file
-    plotter.add_plot_stream("l2projError", outputDirectory_+"/Data/"+outputPrefix_+"l2projError"); //write L2 error to projection in this file
+	  plotter.add_plot_stream("resU", plotOutputDirectory_+"/Data/"+outputPrefix_+"resU"); //write residual in u test functions in this file
+	  plotter.add_plot_stream("res", plotOutputDirectory_+"/Data/"+outputPrefix_+"res"); //write residual in this file
+    plotter.add_plot_stream("l2projError", plotOutputDirectory_+"/Data/"+outputPrefix_+"l2projError"); //write L2 error to projection in this file
 	  count_refined = Solver_config::startlevel;
 
 	}
@@ -350,27 +352,29 @@ private:
 
   int count_refined; ///counts how often the original grid was refined
 public:
-  mutable int iterations;
+  mutable int iterations; ///counts overall iterations (how often the nonlinear system was solved)
 private:
-  bool writeVTK_;
+  bool initValueFromFile_; ///decide if initial guess is initiated from file
+  std::string initValue_; ///file the initial guess is initiiated from
 
-  bool evaluateJacobianSimultaneously_;
+  bool evaluateJacobianSimultaneously_; ///evaluate the jacobian simultaneously to the objective function (in Newton solver)
 
-  mirror_problem::Grid2d::PovRayOpts povRayOpts_;
-	std::string outputDirectory_, outputPrefix_;
-  int plotterRefinement_;
+  bool writeVTK_; ///write vtk files output
+  mirror_problem::Grid2d::PovRayOpts povRayOpts_; ///stores povRay options
+	std::string outputDirectory_, plotOutputDirectory_, outputPrefix_; ///outputdirectories
+  int plotterRefinement_; ///number of (virtual) grid refinements for output generation
 
-	const shared_ptr<GridType> grid_ptr;
-	const GridViewType* gridView_ptr;
+	const shared_ptr<GridType> grid_ptr; ///Pointer to grid
+	const GridViewType* gridView_ptr; /// Pointer to gridView
 
-	shared_ptr<FEBasisType> FEBasis;
+	shared_ptr<FEBasisType> FEBasis; ///Pointer to finite element basis
 
 	Assembler assembler; ///handles all (integral) assembly processes
-	Plotter plotter;
+	Plotter plotter; ///handles all output generation
 
-  double G;
+  double G; /// fixes the reflector size
 
-  Operator op;
+  Operator op; ///functional operator
 
 
   //store old solutions and coefficients
