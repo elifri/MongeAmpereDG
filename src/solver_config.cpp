@@ -7,7 +7,7 @@
 
 
 
-#include "solver_config.hh"
+#include "solver_config.h"
 
 #include "Dogleg/doglegMethod.hpp"
 

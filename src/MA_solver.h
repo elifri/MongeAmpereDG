@@ -15,18 +15,16 @@
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 
-#include "solver_config.hh"
-
-//#include "operator_poisson_DG.hh"
-#include "Assembler.hh"
-#include "problem_data.hh"
+#include "Assembler.h"
+#include "problem_data.h"
 //#include "Operator/linear_system_operator_poisson_DG.hh"
 //#include "Operator/operator_MA_Neilan_DG.hh"
 //#include "Operator/operator_MA_refl_Brenner.hh"
-#include "Operator/operator_MA_refr_Brenner.hh"
-#include "Operator/operator_discrete_Hessian.hh"
-#include "Plotter.hh"
+#include "Operator/operator_MA_refr_Brenner.h"
+#include "Operator/operator_discrete_Hessian.h"
+#include "Plotter.h"
 #include "matlab_export.hpp"
+#include "solver_config.h"
 
 #ifdef USE_DOGLEG
 #include "Dogleg/doglegMethod.hpp"

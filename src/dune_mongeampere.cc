@@ -8,9 +8,9 @@
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 
-#include "solver_config.hh"
-#include "MA_solver.hh"
-#include "Plotter.hh"
+#include "solver_config.h"
+#include "MA_solver.h"
+#include "Plotter.h"
 
 #include <boost/program_options.hpp>
 

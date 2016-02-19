@@ -5,9 +5,9 @@
  *      Author: friebel
  */
 
-#include "problem_data.hh"
+#include "problem_data.h"
 
-#include "MA_solver.hh"
+#include "MA_solver.h"
 
 void PDE_functions::f(const Solver_config::SpaceType2d& x, Solver_config::value_type &out){
 	out = 1;

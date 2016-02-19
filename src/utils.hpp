@@ -16,7 +16,7 @@
 
 #include "Dogleg/utils.hpp"
 
-#include "solver_config.hh"
+#include "solver_config.h"
 
 
 template <class R, class R2>

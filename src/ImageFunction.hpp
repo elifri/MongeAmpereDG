@@ -15,7 +15,7 @@
 #include <Eigen/Core>
 #include "CImg.h"
 
-#include "solver_config.hh"
+#include "solver_config.h"
 #include "utils.hpp"
 
 class ImageFunction : public Dune::VirtualFunction<Solver_config::SpaceType, Solver_config::value_type>

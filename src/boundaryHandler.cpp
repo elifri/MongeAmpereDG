@@ -5,9 +5,9 @@
  *      Author: friebel
  */
 
-#include "boundaryHandler.hh"
+#include "boundaryHandler.h"
 
-#include "Assembler.hh"
+#include "Assembler.h"
 
 void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Solver_config::FEBasisType &FEBasis)
 {

@@ -9,7 +9,7 @@
 #define CALLBACK_UTILITY_HPP_
 
 #include "callback.hpp"
-#include "../solver_config.hh"
+#include "../solver_config.h"
 #include "../utils.hpp"
 
 template <class D, class R>

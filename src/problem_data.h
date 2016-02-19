@@ -10,7 +10,7 @@
 
 #include <dune/common/function.hh>
 
-#include "solver_config.hh"
+#include "solver_config.h"
 #include "Callback/callback.hpp"
 #include "Callback/Callback_utility.hpp"
 #include "Dogleg/utils.hpp"

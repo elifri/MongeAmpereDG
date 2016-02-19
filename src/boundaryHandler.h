@@ -8,7 +8,7 @@
 #ifndef SRC_BOUNDARYHANDLER_HH_
 #define SRC_BOUNDARYHANDLER_HH_
 
-#include "solver_config.hh"
+#include "solver_config.h"
 
 class Assembler;
 

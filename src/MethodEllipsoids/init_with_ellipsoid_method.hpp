@@ -16,7 +16,7 @@
 
 #include <string>
 
-#include "../solver_config.hh"
+#include "../solver_config.h"
 #include "../Callback/Callback_utility.hpp"
 
 

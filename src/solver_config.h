@@ -27,7 +27,7 @@
 //to mark variables as unused (used for checking of return values in Petsc etc. in Debug Mode)
 #define _unused(x) ((void)x)
 
-#include "UnitCube.hh"
+#include "UnitCube.h"
 
 
 //#include "localfunctions/MAmixedbasis.hh"
@@ -73,7 +73,10 @@ struct Solver_config{
 
   void read_configfile(std::string &configFile);
 
-  std::string outputDirectory, outputPrefix;
+  bool initValueFromFile;
+  std::string initValue;
+
+  std::string outputDirectory, plotOutputDirectory, outputPrefix;
   static unsigned int epsDivide;
   static unsigned int epsEnd;
 
@@ -165,9 +168,6 @@ struct Solver_config{
 
 	static const bool require_skeleton_two_sided = false; ///if enabled every face is assembled twice
 
-
-	static const PolynomialType ansatzpolynomials = LAGRANGE;
-
 	static ProblemType problem;
 
 	static double lambda;
@@ -196,5 +196,5 @@ struct Solver_config{
 
 };
 
-
+typedef struct Solver_config Solver_config;
 #endif /* SRC_SOLVER_CONFIG_HH_ */

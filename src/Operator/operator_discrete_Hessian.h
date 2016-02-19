@@ -12,9 +12,9 @@
 #include <dune/geometry/quadraturerules.hh>
 
 #include "../utils.hpp"
-#include "../solver_config.hh"
+#include "../solver_config.h"
 
-#include "../problem_data.hh"
+#include "../problem_data.h"
 
 //automatic differtiation
 #include <adolc/adouble.h>

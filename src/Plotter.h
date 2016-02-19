@@ -10,17 +10,17 @@
 
 
 #include <string>
-#include "solver_config.hh"
+#include "solver_config.h"
 //#include "Callback_utility.hpp"
 
-#include "problem_data.hh"
+#include "problem_data.h"
 
 
 #if USE_DOGLEG
 #include "Dogleg/doglegMethod.hpp"
 #endif
 
-#include "problem_data.hh"
+#include "problem_data.h"
 
 #include <dune/geometry/refinement.hh>
 #include <Grids/Grid2d.hpp>

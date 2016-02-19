@@ -5,19 +5,18 @@
  *      Author: friebel
  */
 
-#ifndef REFL_OPERATOR_HH_
-#define REFL_OPERATOR_HH_
+#ifndef REFR_OPERATOR_HH_
+#define REFR_OPERATOR_HH_
 
 #include <dune/common/function.hh>
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
 #include "../utils.hpp"
-#include "../solver_config.hh"
-
-#include "../problem_data.hh"
+#include "../problem_data.h"
 
 //automatic differtiation
 #include <adolc/adouble.h>
 #include <adolc/adolc.h>
+#include "../solver_config.h"
 
 using namespace Dune;
 
@@ -49,25 +48,23 @@ FieldMatrix<value_type, 2, 2> cofactor(const FieldMatrix<value_type, 2, 2>& A)
   return cofA;
 }
 
-class Local_Operator_MA_refl_Brenner {
+class Local_Operator_MA_refr_Brenner {
 
 public:
-  Local_Operator_MA_refl_Brenner():
+  Local_Operator_MA_refr_Brenner():
     rhs(), bc(1 << (Solver_config::startlevel+Solver_config::nonlinear_steps)), sign(1.0) {
-    for (int i = 0; i < pixel_height*pixel_width; i++)  target_distribution[i] = 0;
     int_f = 0;
   }
 
-  Local_Operator_MA_refl_Brenner(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld, const double minPixelValue):
+  Local_Operator_MA_refr_Brenner(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld, const double minPixelValue):
     rhs(solUOld, gradUOld, Solver_config::LightinputImageName, Solver_config::TargetImageName, minPixelValue),
     bc(1 << (Solver_config::startlevel+Solver_config::nonlinear_steps)), sign(1.0) {
-    for (int i = 0; i < pixel_height*pixel_width; i++)  target_distribution[i] = 0;
     int_f = 0;
 
   }
 
 
-  Local_Operator_MA_refl_Brenner(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld,
+  Local_Operator_MA_refr_Brenner(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld,
       std::shared_ptr<Rectangular_mesh_interpolator> &exactSolU, const double minPixelValue):
     rhs(solUOld, gradUOld, Solver_config::LightinputImageName, Solver_config::TargetImageName, minPixelValue),
     bc(1 << (Solver_config::startlevel+Solver_config::nonlinear_steps)),
@@ -75,39 +72,46 @@ public:
 
     std::cout << " created Local Operator" << endl;
 
-    for (int i = 0; i < pixel_height*pixel_width; i++)  target_distribution[i] = 0;
     int_f = 0;
   }
 
   ///helper function that checks wether the calculated reflection is consistent with the vector calculated by direct application of the reflection law
-  bool check_reflection(const Solver_config::SpaceType& x_value, const FieldVector<adouble, 3>& X,
-                        const double u_value,
-                        const FieldVector<adouble, Solver_config::dim>& gradu, const FieldVector<adouble, 3>& grad_hat,
-                        const double a_tilde_value, const double b_tilde_value,
-                        const FieldVector<adouble, 3>& Z_0
+  bool check_refraction(const Solver_config::SpaceType& x_value, const FieldVector<adouble, 3>& X,
+                        const double rho_value,
+                        const FieldVector<adouble, Solver_config::dim>& gradrho,
+                        const FieldVector<adouble, 2>& z
                         ) const
   {
     //calculate normal of the reflector
-    FieldVector<adouble, 3> normal_refl = grad_hat;
-    normal_refl *= -1.0/sqr(u_value);
-    normal_refl.axpy(-1./u_value+1.0/sqr(u_value)*(gradu*x_value) ,X);
+    FieldVector<adouble, 3> normal_refr = {-gradrho[0],-gradrho[1],0};
+    normal_refr.axpy(rho_value+(gradrho*x_value) ,X);
+    normal_refr /= std::sqrt(sqr(normal_refr[0].value())+sqr(normal_refr[1].value())+sqr(normal_refr[2].value()));
 
+//    std::cout << " normal refr " << normal_refr[0].value() << " " << normal_refr[1].value() << ' ' << normal_refr[2].value() << std::endl;
+
+
+    //calculate direction of (presumed) outgoing lightvector at refractor
     FieldVector<adouble, 3> lightvector = X;
-    lightvector /= u_value;
+    lightvector *= rho_value;
     lightvector *= -1;
-    lightvector += Z_0;
+    lightvector [0] += z[0];
+    lightvector [1] += z[1];
+    lightvector [2] += Solver_config::z_3;
 
-    //calculated direction after reflection (Y)
+    //calculated direction after refraction by Snell's law (Y)
     FieldVector<adouble, 3> Y = X;
-    Y *= a_tilde_value/b_tilde_value;
-    Y.axpy(-2*u_value/b_tilde_value, grad_hat);
-    //      std::cerr << "direction after refl " << Y[0].value() << " " << Y[1].value() << " " << Y[2].value() << std::endl;
+    Y.axpy(-Phi((X*normal_refr)), normal_refr);
+//    std::cout << " -Phi((X*normal_refr) " << -(Phi((X*normal_refr)).value()) << std::endl;
+    Y /= kappa_;
+//    std::cout << std::setprecision(15);
+    std::cerr << "direction after refr " << Y[0].value() << " " << Y[1].value() << " " << Y[2].value() << std::endl;
+//    std::cout << "presumed lightvector " << lightvector[0].value() << " " << lightvector[1].value() << " " << lightvector[2].value() << std::endl;
 
     //direction of lightvector and Y have to be the same
-    assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[1].value()/Y[1].value()) < 1e-10
+    assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[1].value()/Y[1].value()) < 1e-8
         || (fabs(lightvector[0].value()) < 1e-12 &&  fabs(Y[0].value())< 1e-12)
         || (fabs(lightvector[1].value()) < 1e-12 &&  fabs(Y[1].value())< 1e-12)  );
-    assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[2].value()/Y[2].value()) < 1e-10
+    assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[2].value()/Y[2].value()) < 1e-8
         || (fabs(lightvector[0].value()) < 1e-12 &&  fabs(Y[0].value())< 1e-12)
         || (fabs(lightvector[2].value()) < 1e-12 &&  fabs(Y[2].value())< 1e-12)  );
     return true;
@@ -115,12 +119,14 @@ public:
 
   ///helper function to check if the target plane normal points away from the reflector
   inline
-  bool check_direction_of_normal(const double& u_value, const FieldVector<adouble, 3>& X, const FieldVector<adouble, 3>& Z_0, const FieldVector<adouble, 3> &D_Psi_value) const
+  bool check_direction_of_normal(const double& rho_value, const FieldVector<adouble, 3>& X, const FieldVector<adouble, 2>& z, const FieldVector<adouble, 3> &D_Psi_value) const
   {
         FieldVector<adouble, 3> lightvector = X;
-        lightvector /= u_value;
+        lightvector *= rho_value;
         lightvector *= -1;
-        lightvector += Z_0;
+        lightvector[0] += z[0];
+        lightvector[1] += z[1];
+        lightvector[2] += Solver_config::z_3;
 
         if ((D_Psi_value * lightvector).value() < 0)
           std::cout << " value is not positiv? "<< (D_Psi_value * lightvector).value() << std::endl;
@@ -130,6 +136,96 @@ public:
 
         return true;
       }
+
+  template<class value_type>
+  inline
+  adouble Phi(const value_type& s) const
+  {
+    return s - sqrt(kappa_*kappa_ + s*s -1);
+  }
+
+  template<class value_type>
+  inline
+  adouble DPhi(const value_type& s) const
+  {
+//    std::cerr  << " 1/kappa ? "<< s/sqrt(kappa_*kappa_ + s*s -1) << " 1/kappa " << 1./kappa_ << endl;
+    return 1. - s/sqrt(kappa_*kappa_ + s*s -1);
+  }
+  template<class value_type>
+  inline
+  value_type F(const FieldVector<Solver_config::value_type,2> &x, const value_type &u, const FieldVector<value_type,2> &p) const
+  {
+    value_type G = sqrt(sqr(u) + (p*p) - sqr((p * x)));
+//    std::cout << " G " << G.value();
+//    std::cout << " phi(u/G) " << (Phi(u/G)).value() <<  " result " << ( 0.5*Phi(u/G)/(-G+(u+(p*x))*Phi(u/G))).value()<<  std::endl;
+    return  0.5*Phi(u/G)/(-G+(u+(p*x))*Phi(u/G));
+  }
+
+  template<class value_type>
+  inline
+  void calc_F_and_derivatives(const FieldVector<Solver_config::value_type,2> &x, const value_type &u, const FieldVector<value_type,2> &p,
+                              value_type& F, FieldVector<value_type,2>& DxF, value_type& DuF, FieldVector<value_type,2>& DpF) const
+  {
+    value_type G = sqrt(sqr(u) + (p*p) - sqr((p * x)));
+
+    //calculate derivative of G in x
+    FieldVector<value_type,2> DxG = p;
+    DxG *= -(p*x)/sqrt(sqr(u) + (p*p) - sqr((p * x)));
+
+    //calculate derivative of G in u
+    value_type DuG = u/sqrt(sqr(u) + (p*p) - sqr((p * x)));
+
+    //calculate derivative of G in p
+    FieldVector<value_type,2> DpG = p;
+    DpG.axpy(-(p*x),x);
+    DpG /= sqrt(sqr(u) + (p*p) - sqr((p * x)));
+
+    //calculate derivative of Phi(u/G) in u
+    value_type Phi_u_G = Phi(u/G);
+
+    //calculate derivative of Phi(u/G) in x
+    FieldVector<value_type,2> DxPhi_u_G = DxG;
+    DxPhi_u_G *= -DPhi(u/G)/sqr(G);
+
+    //calculate derivative of Phi(u/G) in u
+    value_type DuPhi_u_G = DPhi(u/G)*(1./G-u*DuG/sqr(G));
+//    std::cerr << " DPhi(u/G) " << DPhi(u/G) << std::endl;
+
+
+    //calculate derivative of Phi(u/G) in p
+    FieldVector<value_type,2> DpPhi_u_G = DpG;
+    DpPhi_u_G *= -DPhi(u/G)/sqr(G);
+
+    //scalar Coefficient appearing in all partial derivatives of F
+    adouble denominator = -G+(u+(p*x))*Phi_u_G;
+//    std::cerr << " denominator  " << denominator.value() << std::endl;
+    value_type scalarCoefficient = Phi_u_G/ sqr(denominator);
+
+    F = 0.5*Phi(u/G)/(-G+(u+(p*x))*Phi(u/G));
+//    std::cerr << " DxG " << DxG << std::endl;
+
+    //calculate derivative of F in x
+    DxF = DxPhi_u_G;
+    DxF /= denominator;
+    DxF.axpy(scalarCoefficient,DxG);
+    DxF.axpy(-scalarCoefficient*Phi_u_G,p);
+    DxF.axpy(-scalarCoefficient*(u+(p*x)),DxPhi_u_G);
+    DxF /= 2.;
+
+    //calculate derivative of F in u
+    DuF = DuPhi_u_G / denominator;
+    DuF += scalarCoefficient*(DuG - Phi_u_G - (u+p*x)*DuPhi_u_G);
+    DuF /= 2.;
+//    std::cerr << " DuPhi_u_G " << DuPhi_u_G << " scalarCoefficient " << scalarCoefficient <<" DuG " << DuG << " Phi_u_G " << Phi_u_G << std::endl;
+//    std::cerr << "DuPhi_u_G / denominator " << DuPhi_u_G / denominator << " scalarCoefficient*(DuG - Phi_u_G - (u+p*x)*DuPhi_u_G) " << scalarCoefficient*(DuG - Phi_u_G - (u+p*x)*DuPhi_u_G) << std::endl;
+    //calculate derivative of F in p
+    DpF = DpPhi_u_G;
+    DpF /= denominator;
+    DpF.axpy(scalarCoefficient,DpG);
+    DpF.axpy(-scalarCoefficient*Phi_u_G,x);
+    DpF.axpy(-scalarCoefficient*(u+(p*x)),DpPhi_u_G);
+    DpF /= 2.;
+  }
 
   /**
    * implements the local volume integral
@@ -202,22 +298,22 @@ public:
 
       //the shape function values
       std::vector<RangeType> referenceFunctionValues(size);
-      adouble u_value = 0;
+      adouble rho_value = 0;
       assemble_functionValues_u(localFiniteElement, quadPos,
-          referenceFunctionValues, x_adolc, u_value);
+          referenceFunctionValues, x_adolc, rho_value);
 
 
       // The gradients
       std::vector<JacobianType> gradients(size);
-      FieldVector<adouble, Solver_config::dim> gradu;
+      FieldVector<adouble, Solver_config::dim> gradrho;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
-          gradients, x_adolc, gradu);
+          gradients, x_adolc, gradrho);
 
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size);
-      FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> Hessu;
+      FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> Hessrho;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
-          x_adolc, Hessu);
+          x_adolc, Hessrho);
 
       //--------assemble cell integrals in variational form--------
 
@@ -227,46 +323,148 @@ public:
       Solver_config::SpaceType3d X = { x_value[0], x_value[1], omega(x_value) };
 
       double omega_value = omega(x_value);
+      FieldVector<double,2> DOmega_value = DOmega(x_value);
 
-      adouble a_tilde_value = a_tilde(u_value, gradu, x_value);
-      adouble b_tilde_value = (gradu * gradu) + sqr(u_value) - sqr((gradu * x_value));
+      adouble F_value, DuF;
+      FieldVector<adouble, Solver_config::dim> DxF, DpF;
+      calc_F_and_derivatives(x_value,rho_value, gradrho, F_value, DxF, DuF, DpF);
 
-      FieldVector<adouble, 3> grad_hat = { gradu[0], gradu[1], 0 };
-      //N = Id + xx^t/omega^2
-      FieldMatrix<double, dim, dim> N(0);
-      N[0][0] += x_value[0]*x_value[0]; N[0][1] +=x_value[0]*x_value[1];
-      N[1][0] += x_value[0]*x_value[1]; N[1][1] += x_value[1]*x_value[1];
-      N /= sqr(omega_value);
 
-      N[0][0] += 1.0; N[1][1] +=1.0;
+/*
+ *    //calculate finite difference derivatives
+      adouble F_valueEx = F(x_value, rho_value, gradrho);
+
+      //calculate derivatives of F
+      const double delta = std::sqrt(1e-15);
+
+      //calculate derivative of F in x by finite difference
+      auto temp = x_value;
+      temp[0]+=delta;
+      adouble Dx1PlusF_value = F(temp, rho_value, gradrho);
+      temp = x_value;
+      temp[1]+=delta;
+      adouble Dx2PlusF_value = F(temp, rho_value, gradrho);
+
+      FieldVector<adouble, Solver_config::dim> DxFEx =
+        {
+          (Dx1PlusF_value-F_valueEx)/delta,
+          (Dx2PlusF_value-F_valueEx)/delta
+        };
+
+      //calculate derivative of F in u by finite difference
+      adouble tempScalar = rho_value+delta;
+      adouble DuPlusF_value = F(x_value, tempScalar, gradrho);
+      adouble DuFEx = (DuPlusF_value-F_valueEx)/delta;
+
+      //calculate derivative of F in p by finite difference
+      auto tempAdouble = gradrho;
+      tempAdouble[0]+=delta;
+      adouble DP1PlusF_value = F(x_value, rho_value, tempAdouble);
+      tempAdouble = gradrho;
+      tempAdouble[1]+=delta;
+      adouble DP2PlusF_value = F(x_value, rho_value, tempAdouble);
+
+      FieldVector<adouble, Solver_config::dim> DpFEx =
+        {
+          (DP1PlusF_value-F_valueEx)/delta,
+          (DP2PlusF_value-F_valueEx)/delta
+        };
+
+      //compare analytic and finite differences derivatives
+      if (!(std::abs(F_value.value() - F_valueEx.value()) < 1e-5))
+      if (!(std::abs( DxF[0].value() -  DxFEx[0].value()) < 1e-3 && abs( DxF[1].value() -  DxFEx[1].value()) < 1e-3))
+        std::cerr << " F " << F_value << " vs. " << F_valueEx << std::endl
+              << " DxFEx " << DxF[0].value() << ' ' << DxF[1].value() << " vs. " <<  DxFEx[0].value() << ' ' << DxFEx[1].value() << std::endl
+              << " DuFEx " << DuF.value() << " vs. " <<  DuFEx.value()  << std::endl
+              << " DpFEx " << DpF[0].value() << ' ' << DpF[1].value() << " vs. " <<  DpFEx[0].value() << ' ' << DpFEx[1].value() << std::endl;
+      if (!(std::abs(DuF.value() - DuFEx.value()) < 1e-5))
+      if (!(std::abs( DpF[0].value() -  DpFEx[0].value()) < 1e-3 && abs( DpF[1].value() -  DpFEx[1].value()) < 1e-3))
+        std::cerr << " F " << F_value << " vs. " << F_valueEx << std::endl
+                << " DxFEx " << DxF[0].value() << ' ' << DxF[1].value() << " vs. " <<  DxFEx[0].value() << ' ' << DxFEx[1].value() << std::endl
+                << " DuFEx " << DuF.value() << " vs. " <<  DuFEx.value()  << std::endl
+                << " DpFEx " << DpF[0].value() << ' ' << DpF[1].value() << " vs. " <<  DpFEx[0].value() << ' ' << DpFEx[1].value() << std::endl;
+
+*/
 
       //calculate Z = X/u +t(Z_0-X/u) = point on reflector + reflected vector
-      //calculate t: distance between reflector and target plane (reflected vector)
-      adouble t = 1;
-      t -= u_value *Solver_config::z_3/omega_value;
-      assert ( t > 0);
+      //calculate t: distance between refractor and target plane (refracted vector)
+      adouble t = rho_value*omega_value-Solver_config::z_3;
+      t /= rho_value*omega_value;
 
-      //calculate Z_0, the intersection between reflected light and {x_3=0}-plane
-      FieldVector<adouble, Solver_config::dim> z_0 = gradu;
-      z_0 *= (2.0 / a_tilde_value);
-      FieldVector<adouble, Solver_config::dim> z = T(x_value, u_value, z_0, Solver_config::z_3);
+      FieldVector<adouble, 3> grad_hat = { gradrho[0], gradrho[1], 0 };
+      //calculate w, the intersection between refracted light and {x_3=0}-plane
+      FieldVector<adouble, Solver_config::dim> w = gradrho;
+      w *= 2*F_value*rho_value;
 
-      if (z[0] < Solver_config::lowerLeftTarget[0] || z[0] > Solver_config::upperRightTarget[0]
-           || z[1] < Solver_config::lowerLeftTarget[1] || z[1] > Solver_config::upperRightTarget[1])
-      {
-        std::cerr << " Point " << x_value << " is mapped into the outside, namely to " << z[0].value() << " " << z[1].value() << std::endl;
-      }
+      FieldVector<adouble, Solver_config::dim> z = x_value;
+      z *= rho_value;
+      z.axpy(t,w);
+      z.axpy(-t*rho_value,x_value);
 
-      FieldVector<adouble, 3> Z_0 = grad_hat;
-      Z_0 *= (2.0 / a_tilde_value);
+/*      std::cerr << "rho_value " << rho_value.value()
+                << " F " << F_value << std::endl
+                << " X " << X << std::endl
+                << " rhogradu " << gradrho[0].value() << " " << gradrho[1].value() << std::endl
+                << " t " << t.value()
+                << " w " << w[0].value() << " " << w[1].value() << std::endl
+                << " z " << z[0].value() << " " << z[1].value() << std::endl
+                << std::endl;*/
 
-      assert(check_reflection(x_value, X, u_value.value(), gradu, grad_hat, a_tilde_value.value(), b_tilde_value.value(), Z_0));
+
+      assert(std::abs(((omega_value*rho_value) - t*rho_value*omega_value - Solver_config::z_3).value()) < 1e-8 && "something with t is not as expected!");
+
+      assert(check_refraction(x_value, X, rho_value.value(), gradrho, z));
+
+//      std::cerr << "F "  << F_value << " DpF " << DpF << " DuF " << DuF << " DxF " << DxF << std::endl;
+
+      //M_invers = Id - gradu x DpF / ...
+      FieldMatrix<adouble, dim, dim> M_invers;
+      M_invers[0][0] = -gradrho[0]*DpF[0]; M_invers[0][1] = -gradrho[0]*DpF[1];
+      M_invers[1][0] = -gradrho[1]*DpF[0]; M_invers[1][1] = -gradrho[1]*DpF[1];
+      M_invers /= (F_value+(gradrho*DpF));
+      M_invers[0][0] += 1.; M_invers[1][1] += 1.;
+//      std::cerr << " M^-1 " << M_invers << std::endl;
+
+      FieldMatrix<adouble, dim, dim> B;
+      B[0][0] = 2.*F_value*gradrho[0]*gradrho[0] + 2.*rho_value*gradrho[0]*DxF[0] + DuF*2.*rho_value*gradrho[0]*gradrho[0];
+      B[0][1] = 2.*F_value*gradrho[0]*gradrho[1] + 2.*rho_value*gradrho[0]*DxF[1] + DuF*2.*rho_value*gradrho[0]*gradrho[1];
+      B[1][0] = 2.*F_value*gradrho[1]*gradrho[0] + 2.*rho_value*gradrho[1]*DxF[0] + DuF*2.*rho_value*gradrho[1]*gradrho[0];
+      B[1][1] = 2.*F_value*gradrho[1]*gradrho[1] + 2.*rho_value*gradrho[1]*DxF[1] + DuF*2.*rho_value*gradrho[1]*gradrho[1];
+
+//      std::cerr << " B " << B << std::endl;
+
+//      std::cerr << " omega " << omega_value << " DOmega " << DOmega_value[0] << " " << DOmega_value[1] << std::endl;
+
+      FieldMatrix<adouble, dim, dim> C;
+      C[0][0] = gradrho[0]*x_value[0] + rho_value + 1./rho_value/omega_value*(w[0]-rho_value*x_value[0])*(gradrho[0]*omega_value + rho_value*DOmega_value[0]);
+      C[0][1] = gradrho[1]*x_value[0]             + 1./rho_value/omega_value*(w[0]-rho_value*x_value[0])*(gradrho[1]*omega_value + rho_value*DOmega_value[1]);
+      C[1][0] = gradrho[0]*x_value[1]             + 1./rho_value/omega_value*(w[1]-rho_value*x_value[1])*(gradrho[0]*omega_value + rho_value*DOmega_value[0]);
+      C[1][1] = gradrho[1]*x_value[1] + rho_value + 1./rho_value/omega_value*(w[1]-rho_value*x_value[1])*(gradrho[1]*omega_value + rho_value*DOmega_value[1]);
+
+//      std::cerr << " C " << C << std::endl;
+
+
+      FieldMatrix<adouble, dim, dim> A;
+      A = B;
+      A *= t;
+      A.axpy(1.-t,C);
+//      std::cerr << " A itnermediate" << A << std::endl;
+      A.leftmultiply(M_invers);
+      A /= 2.*t*rho_value*F_value;
+
+//      std::cerr << "factor " << 2.*t*rho_value*F_value << std::endl;
+
+//      std::cerr << " A " << A << std::endl;
 
       FieldVector<double, 3> D_Psi_value;
       D_Psi_value[0] = 0; D_Psi_value[1] = 0;
-      D_Psi_value[2] = -1;
+      D_Psi_value[2] = 1;
 
-      assert(check_direction_of_normal(u_value.value(), X, Z_0, D_Psi_value));
+      assert(check_direction_of_normal(rho_value.value(), X, z, D_Psi_value));
+
+      assert(std::abs(D_Psi_value[0]) < 1e-10 &&  std::abs(D_Psi_value[1]) < 1e-10 && std::abs(D_Psi_value[2]-1) < 1e-10 && " the current formula should be refracted_vector = w-rho*x");
+      FieldVector<adouble, 3> refractedVector = X; refractedVector*=-rho_value;
+      adouble beta = 1./ (refractedVector*D_Psi_value);
 
       //calculate illumination at \Omega
       double f_value;
@@ -278,51 +476,42 @@ public:
       adouble g_value;
       rhs.g.evaluate(z, g_value);
 
-//      cout << "f(X) " << f_value<< " maps to g(Z) " << g_value << std::endl;
+      double D_psi_norm = sqrt(sqr(D_Psi_value[0])+sqr(D_Psi_value[1])+sqr(D_Psi_value[2]));
+      adouble H_value = (1.-(x_value*x_value))*D_psi_norm *4. *t*t*rho_value*rho_value*rho_value*(-beta)*F_value*(F_value+(gradrho*DpF));
 
       //write calculated distribution
 
-      FieldMatrix<adouble, dim, dim> uDH_pertubed = Hessu;
+      FieldMatrix<adouble, dim, dim> uDH_pertubed = Hessrho;
 //      assert(fabs(Solver_config::z_3+3.0) < 1e-12);
-      uDH_pertubed.axpy(a_tilde_value*Solver_config::z_3/(2.0*t*omega_value), N);
+      uDH_pertubed+=A;
+
+//      std::cerr << " Hess rho " << Hessrho << std::endl;
+//      std::cerr << " D2rho+A " << uDH_pertubed << std::endl;
 
       adouble uDH_pertubed_det = determinant(uDH_pertubed);
 
-      double D_psi_norm = sqrt(sqr(D_Psi_value[0])+sqr(D_Psi_value[1])+sqr(D_Psi_value[2]));
 
-      adouble PDE_rhs = -a_tilde_value*a_tilde_value*a_tilde_value*f_value/(4.0*b_tilde_value*omega_value*g_value);
-      auto uTimesZ0 = Z_0;
-      uTimesZ0 *= u_value;
-      PDE_rhs *= (((uTimesZ0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value;
-      PDE_rhs *= scaling_factor_adolc;
-//      cout<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value).value() << "/" << (4.0*b_tilde*omega_value*g_value).value() << std::endl;
-//      cout << "rhs *= " <<  ((u_value*((Z_0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value).value() <<
-//                    " = (" <<  u_value.value() << "*scalarProd"
-//                        << "/(" << (t*t).value() << "*" << D_psi_norm.value() << "*" << omega_value << ")" << endl;
-//      cout<<  "*scalarProd = " << ((Z_0-X)*D_Psi_value).value() << " = "<< (Z_0-X)[0].value()<<"," << ((Z_0-X)[1]).value() << "*"<< (D_Psi_value)[0].value()<<"," << ((D_Psi_value)[1]).value();
-//      cout << "scaling factor " << scaling_factor_adolc.value() << endl;
-//      cout << " atilde " << a_tilde_value << " f " << f_value << endl;
+      adouble PDE_rhs = f_value/(g_value*H_value);
 
       //calculate system for first test functions
-      if (uDH_pertubed_det.value() < 0 && !found_negative)
+      if (uDH_pertubed_det.value() < 0)
       {
-        found_negative = true;
-        std::cerr << "found negative determinant !!!!! " << uDH_pertubed_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
+        std::cerr << "found negative determinant !!!!! " << uDH_pertubed_det.value() << " at " << x_value  << "matrix is " << Hessrho << std::endl;
+//        std::cerr << " local dofs " << x.transpose() << std::endl;
+        std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
       }
-//      std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
 
 //      cerr << x_value << " " << u_value.value() << " " << uDH_pertubed_det.value() << " " << PDE_rhs.value() << endl;
 //      cerr << x_value << " " << u_value.value() << " " << z[0].value() << " " << z[1].value() << endl;
 
       for (int j = 0; j < size; j++) // loop over test fcts
       {
-        v_adolc(j) += (PDE_rhs-uDH_pertubed_det)*
+        v_adolc(j) += (scaling_factor_adolc*PDE_rhs-uDH_pertubed_det)*
         //(PDE_rhs-uDH_pertubed_det)*
         referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
 
 /*
-
         if (((PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]* quad[pt].weight() * integrationElement).value() > 1e-6)
         {
           std:: cerr << "v_adolc(" << j << ")+=" << ((PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]
@@ -330,10 +519,9 @@ public:
           std::cerr << "at " << x_value << " T " << z[0].value() << " " << z[1].value() << " u " << u_value.value() << " det() " << uDH_pertubed_det.value() << " rhs " << PDE_rhs.value() << endl;
         }
 */
-
       }
 
-      last_equation_adolc += u_value* quad[pt].weight() * integrationElement;
+      last_equation_adolc += rho_value* quad[pt].weight() * integrationElement;
     }
 
 
@@ -552,7 +740,6 @@ public:
   }
 
 
-
   template<class Intersection, class LocalView, class LocalIndexSet, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalView &localView, const LocalIndexSet &localIndexSet,
@@ -617,8 +804,8 @@ public:
                       / std::pow(intersection.geometry().volume(), Solver_config::beta);
     else
       penalty_weight = Solver_config::sigmaBoundary
-                      * (Solver_config::degree * Solver_config::degree)
-                     * std::pow(intersection.geometry().volume(), Solver_config::beta);
+                      * (Solver_config::degree * Solver_config::degree);
+//                     * std::pow(intersection.geometry().volume(), Solver_config::beta);
 
 
     // Loop over all quadrature points
@@ -637,59 +824,44 @@ public:
 
       //the shape function values
       std::vector<RangeType> referenceFunctionValues(size_u);
-      adouble u_value = 0;
+      adouble rho_value = 0;
       assemble_functionValues_u(localFiniteElement, quadPos,
-          referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
+          referenceFunctionValues, x_adolc.segment(0, size_u), rho_value);
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, Solver_config::dim> gradu;
+      FieldVector<adouble, Solver_config::dim> gradrho;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
-          gradients, x_adolc, gradu);
-
-      // The hessian of the shape functions
-//      std::vector<FEHessianType> Hessians(size);
-//      FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> Hessu;
-//      assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
-//          x_adolc, Hessu);
+          gradients, x_adolc, gradrho);
 
       //-------calculate integral--------
-      auto phi_value = rhs.phi(element, quadPos, x_value, normal, Solver_config::z_3);
+      double omega_value = omega(x_value);
 
-      adouble a_tilde_value = a_tilde(u_value, gradu, x_value);
-      FieldVector<adouble, 3> grad_hat = { gradu[0], gradu[1], 0 };
+      adouble t = rho_value*omega_value-Solver_config::z_3;
+      t /= rho_value*omega_value;
 
-      FieldVector<adouble, 2> z_0 = gradu;
-      z_0 *= (2.0 / a_tilde_value);
+      adouble F_value = F(x_value, rho_value, gradrho);
 
-      FieldVector<adouble, Solver_config::dim> T_value = T(x_value, u_value, z_0, Solver_config::z_3);
-//      std::cerr << "x local "<< x.transpose() << std::endl;
-//      std::cerr << "gradients "; for (const auto& grad : gradients) std::cerr << grad << "   "; std::cerr << std::endl;
+      FieldVector<adouble, Solver_config::dim> w = gradrho;
+      w *= 2*F_value*rho_value;
 
+      FieldVector<adouble, Solver_config::dim> z = x_value;
+      z *= rho_value;
+      z.axpy(t,w);
+      z.axpy(-t*rho_value,x_value);
 
-//	    std::cerr << "T " << (T_value*normal) << " thought it -> " << phi_value_initial << " T " << T_value[0].value() << " " << T_value[1].value() << " normal " << normal[0] << " " << normal[1]<< std::endl;
-//      std::cerr << "x " << x_value
-//                << " gradu " << gradu[0].value() << " " << gradu[1].value()
-//                << " T " << T_value[0].value() << " " << T_value[1].value()
-//                << " T*n " << (T_value * normal).value()
-//                << " phi " << phi_value << endl;
-//      std::cerr  << T_value[0].value() << " " << T_value[1].value()  << std::endl;
-
-      auto signedDistance = bc.H(T_value, normal);
+      auto signedDistance = bc.H(z, normal);
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
       for (size_t i = 0; i < n; i++)
       {
+
         int j = collocationNo[boundaryFaceId][i];
-        // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
         if (Solver_config::Dirichlet)
         {
-          double g_value;
-          bcDirichlet.evaluate_exact_sol(x_value, g_value);
-          v_adolc(j) += penalty_weight * (u_value - g_value)
-                        * referenceFunctionValues[j] * factor;
+          assert(false);
         }
         else
         {
@@ -707,178 +879,20 @@ public:
     trace_off();
   }
 
-/*
-  template<class Intersection, class LocalView, class LocalIndexSet, class VectorType>
-  void assemble_boundary_face_term(const Intersection& intersection,
-      const LocalView &localView, const LocalIndexSet &localIndexSet,
-      const VectorType &x, VectorType& v, int tag) const {
-    const int dim = Intersection::dimension;
-    const int dimw = Intersection::dimensionworld;
-
-    //assuming galerkin
-    assert((unsigned int) x.size() == localView.size());
-    assert((unsigned int) v.size() == localView.size());
-
-    // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
-    const Element& element = localView.element();
-
-    const auto& localFiniteElement = localView.tree().finiteElement();
-    const int size_u = localFiniteElement.size();
-
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
-
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
-
-    //-----init variables for automatic differentiation
-
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(
-        localView.size());
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(
-        localView.size());
-    for (size_t i = 0; i < localView.size(); i++)
-      v_adolc[i] <<= v[i];
-
-    trace_on(tag);
-    //init independent variables
-    for (size_t i = 0; i < localView.size(); i++)
-      x_adolc[i] <<= x[i];
-
-    // ----start collocation--------
-
-    // Get a quadrature rule
-    const int n = 3;
-    GeometryType gtface = intersection.geometryInInside().type();
-
-    const int boundaryFaceId = intersection.indexInInside();
-//    std::cerr << " boundaryFaceId " << boundaryFaceId << std::endl;
-
-    // normal of center in face's reference element
-    const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
-        dim - 1>::general(intersection.geometry().type()).position(0, 0);
-    const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
-        face_center);
-
-    // penalty weight for NIPG / SIPG
-    //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
-    double penalty_weight;
-    if (Solver_config::Dirichlet)
-      penalty_weight = Solver_config::sigmaBoundary
-                      * (Solver_config::degree * Solver_config::degree)
-                      / std::pow(intersection.geometry().volume(), Solver_config::beta);
-    else
-      penalty_weight = Solver_config::sigmaBoundary;
-//                      * (Solver_config::degree * Solver_config::degree)
-//                     * std::pow(intersection.geometry().volume(), Solver_config::beta);
-
-
-    // Loop over all quadrature points
-    for (size_t i = 0; i < n; i++) {
-
-      //------get data----------
-
-      // Position of the current quadrature point in the reference element
-      FieldVector<double, dim> collocationPos =
-          intersection.geometryInInside().global((double) (i) / double (n-1));
-
-      // The transposed inverse Jacobian of the map from the reference element to the element
-      const auto& jacobian =
-          intersection.inside().geometry().jacobianInverseTransposed(collocationPos);
-
-      //the shape function values
-      std::vector<RangeType> referenceFunctionValues(size_u);
-      adouble u_value = 0;
-      assemble_functionValues_u(localFiniteElement, collocationPos,
-          referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
-
-      //selection local dof no for collocation point
-      int j = collocationNo[boundaryFaceId][i];
-      if ((i == 0 || i == n-1) && std::abs(referenceFunctionValues[j] - 1) > 1e-12)
-      {
-        collocationPos = intersection.geometryInInside().global((double) (n-1-i) / double (n-1));
-        u_value = 0;
-        assemble_functionValues_u(localFiniteElement, collocationPos,
-                  referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
-      }
-      auto x_value = intersection.inside().geometry().global(collocationPos);
-
-      // The gradients
-      std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, Solver_config::dim> gradu;
-      assemble_gradients_gradu(localFiniteElement, jacobian, collocationPos,
-          gradients, x_adolc, gradu);
-
-      // The hessian of the shape functions
-//      std::vector<FEHessianType> Hessians(size);
-//      FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> Hessu;
-//      assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
-//          x_adolc, Hessu);
-
-      //-------calculate integral--------
-      auto phi_value = rhs.phi(element, collocationPos, x_value, normal, Solver_config::z_3);
-
-      adouble a_tilde_value = a_tilde(u_value, gradu, x_value);
-      FieldVector<adouble, 3> grad_hat = { gradu[0], gradu[1], 0 };
-
-      FieldVector<adouble, 2> z_0 = gradu;
-      z_0 *= (2.0 / a_tilde_value);
-
-      FieldVector<adouble, Solver_config::dim> T_value = T(x_value, u_value, z_0, Solver_config::z_3);
-//      std::cerr << "x local "<< x.transpose() << std::endl;
-//      std::cerr << "gradients "; for (const auto& grad : gradients) std::cerr << grad << "   "; std::cerr << std::endl;
-
-      auto signedDistance = bc.H(T_value, normal);
-
-
-
-      std::cerr << " j is " << j << std::endl;
-
-//      std::cerr << "T " << (T_value*normal) << " thought it -> " << phi_value_initial << " T " << T_value[0].value() << " " << T_value[1].value() << " normal " << normal[0] << " " << normal[1]<< std::endl;
-      std::cerr << "x " << x_value
-//                << " gradu " << gradu[0].value() << " " << gradu[1].value()
-                << " T " << T_value[0].value() << " " << T_value[1].value()
-                << " distance " << signedDistance.value()
-                << " T*n " << (T_value * normal).value()
-                << " phi " << phi_value << endl;
-
-    // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
-      if (Solver_config::Dirichlet)
-      {
-        assert(false);
-      }
-      else
-      {
-          v_adolc(j) = penalty_weight * signedDistance;
-          cerr << signedDistance << " ";
-//          *((T_value * normal) - phi_value); //
-//          std::cerr << " add to v_adolc(" << j << ") " << (penalty_weight * ((T_value * normal) - phi_value)* referenceFunctionValues[j] * factor).value() << " -> " << v_adolc(j).value() << std::endl;
-      }
-
-    }
-
-    // select dependent variables
-    for (size_t i = 0; i < localView.size(); i++)
-      v_adolc[i] >>= v[i];
-    trace_off();
-  }
-*/
   const RightHandSideReflector& get_right_handside() const {return rhs;}
 
   RightHandSideReflector rhs;
   HamiltonJacobiBC bc;
   Dirichletdata<std::shared_ptr<Rectangular_mesh_interpolator> > bcDirichlet;
 
-//  static constexpr int collocationNo[3][5] = {{0,1,3,5,4},{0,2,11,9,8},{4,6,7,10,8}};
   static constexpr int collocationNo[3][3] = {{0,3,4},{0,11,8},{4,7,8}};
 
+  static constexpr double& kappa_ = Solver_config::kappa;
 public:
   mutable double int_f;
   mutable double sign;
 
   mutable bool found_negative;
-
 };
 
 #endif /* SRC_OPERATOR_HH_ */

@@ -9,7 +9,7 @@
 #define SRC_ASSEMBLER_HH_
 
 #include "utils.hpp"
-#include "solver_config.hh"
+#include "solver_config.h"
 
 #include <dune/geometry/quadraturerules.hh>
 #include "matlab_export.hpp"
@@ -20,7 +20,7 @@
 
 #include <CImg.h>
 
-#include "boundaryHandler.hh"
+#include "boundaryHandler.h"
 
 /**
  * evaluate the gradients of test functions at global scope

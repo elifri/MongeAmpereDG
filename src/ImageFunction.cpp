@@ -8,7 +8,7 @@
 #include "ImageFunction.hpp"
 
 #include "Integrator.hpp"
-#include "problem_data.hh"
+#include "problem_data.h"
 
 ImageFunction::ImageFunction(const std::string& filename,
     const Solver_config::SpaceType2d lowerLeft,
