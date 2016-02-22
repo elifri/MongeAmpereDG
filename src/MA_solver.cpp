@@ -304,7 +304,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //  plotter.writeReflectorVTK("exactReflector", *exact_solution_projection);
 
   //blurr target distributation
-  std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
+/*  std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
   op.lop.rhs.convolveTargetDistributionAndNormalise(epsMollifier_);
   //print blurred target distribution
   if (true) {
@@ -312,7 +312,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
       std::cout << "saved image to " << filename2.str() << std::endl;
       op.lop.get_right_handside().get_target_distribution().saveImage (filename2.str());
       assert(std::abs(op.lop.get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
-  }
+  }*/
 
   create_initial_guess();
   {
@@ -342,6 +342,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
   for (int i = 0; i < Solver_config::nonlinear_steps; i++)
   {
+/*
     solve_nonlinear_system();
     std::cerr << " solved nonlinear system" << std::endl;
     cout << "scaling factor " << solution(solution.size()-1) << endl;
@@ -351,7 +352,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
     update_solution(solution);
     plot_with_lens("numericalSolution");
 
-    epsMollifier_ /= epsDivide_;
+*/
     std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
 
     // blur target
@@ -364,6 +365,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
         op.lop.get_right_handside().get_target_distribution().saveImage (filename2.str());
         assert(std::abs(op.lop.get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
     }
+    epsMollifier_ /= epsDivide_;
 
     solve_nonlinear_system();
     std::cerr << " solved nonlinear system" << std::endl;

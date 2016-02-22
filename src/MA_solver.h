@@ -15,6 +15,8 @@
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 
+//#define COLLOCATION
+
 #include "Assembler.h"
 #include "problem_data.h"
 //#include "Operator/linear_system_operator_poisson_DG.hh"

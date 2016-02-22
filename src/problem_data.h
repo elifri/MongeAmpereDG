@@ -19,6 +19,7 @@
 #include "ImageFunction.hpp"
 
 #include <CImg.h>
+#include <algorithm>
 
 using namespace Dune;
 

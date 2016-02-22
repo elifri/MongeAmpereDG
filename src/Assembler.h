@@ -1183,6 +1183,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
         //calculate local coefficients
         Solver_config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
         BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryValueDoF());
+//        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryDoF());
 //        BoundaryHandler::BoolVectorType isBoundaryLocal = BoundaryHandler::BoolVectorType::Constant(localIndexSet.size(), false);
 
         lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
@@ -1257,11 +1258,8 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
                 exit(-1);
             }
 */        }
-        local_vector += local_boundary;
-//        std::cerr << " add to objective vector " << std::endl;
-        add_local_coefficients(localIndexSet, local_vector, v);
 
-/*
+#ifdef COLLOCATION
         Solver_config::DenseMatrixType Coll_m_mB;
         Coll_m_mB.setZero(localView.size(), localView.size());
         //set collocation boundary,
@@ -1335,11 +1333,19 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
             }
           }
         }
-*/
+#else
+        local_vector+=local_boundary;
+#endif
+//        std::cerr << " add to objective vector " << std::endl;
+        add_local_coefficients(localIndexSet, local_vector, v);
+
         add_local_coefficients(localIndexSet, local_boundary, boundary);
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
+#ifndef COLLOCATION
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
-//        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, Coll_m_mB, JacobianEntries);
+#else
+        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, Coll_m_mB, JacobianEntries);
+#endif
 
         //add derivatives for scaling factor
         for (unsigned int i = 0; i < localView.size(); i++)
@@ -1351,7 +1357,9 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
      }
      m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
 
-//     v+= boundary;
+#ifdef COLLOCATION
+     v+= boundary;
+#endif
      std::cerr << std::endl << " local boundary term " << boundary.norm()<< " whole norm " << v.norm() << std::endl;
      std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
      std::cerr << " f_boundary " << boundary.transpose() << std::endl;
