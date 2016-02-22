@@ -278,6 +278,13 @@ public:
 	 */
 	void adapt_solution(const int level=1);
 
+  /**
+   * adapts the solution into a coarser grid space
+   * @param level
+   */
+  Solver_config::VectorType coarse_solution(const int level=1);
+
+
 	/**
 	 * refines the grid globally and sets up all necessary information for the next step
 	 * @param level	how often the grid is refined
