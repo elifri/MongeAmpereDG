@@ -184,7 +184,7 @@ public:
   typedef Eigen::Triplet<double> EntryType;
 
   Assembler(const Solver_config::FEBasis& basis, bool no_hanging_nodes) :
-      basis_(&basis),no_hanging_nodes(no_hanging_nodes), picture_no(0) {
+      basis_(&basis),no_hanging_nodes(no_hanging_nodes), reuseAdolCTape(true), picture_no(0) {
   }
 
   void bind(const Solver_config::FEBasis& basis)
@@ -194,7 +194,7 @@ public:
   }
 
   /**
-   * extracts local degree of freedoom
+   * extracts local degree of freedom
    * @param localIndexSet
    * @param x		global dof vector
    * @return	local dof vector
@@ -348,14 +348,41 @@ private:
   //helper to assemble jacobians via automatic differentiation
 
   /*
+ * implements a local integral via the evaluation from an adolc tape
+ * @param localView     localView bound to the current context
+ * @param x             local solution coefficients
+ * @param v             local residual (to be returned)
+ * @param tag           the tag of the adolc tape
+ */
+  template<class LocalView, class VectorType>
+  inline
+  static bool assemble_boundary_integral_term(const LocalView& localView,
+      const VectorType &x, VectorType& v, int tag);
+
+  /*
+ * implements a local integral via the evaluation from an adolc tape
+ * @param localView     localView bound to the current context
+ * @param x             local solution coefficients
+ * @param v             local residual (to be returned)
+ * @param tag           the tag of the adolc tape
+ * @param scaling_factor the scaling factor for the PDE right-hand side
+ * @param last_equation local part of last equation is added to last equation
+ */
+  template<class LocalView, class VectorType>
+  inline
+  static bool assemble_integral_cell_term(const LocalView& localView,
+      const VectorType &x, VectorType& v, int tag, const double& scaling_factor, double& last_equation);
+
+  /*
  * implements a local integral
- * @param element        the element the integral is evaluated on
  * @param localView     localView bound to the current context
  * @param x              local solution coefficients
  * @param v          local residual (to be returned)
+ * @param tag           the tag of the adolc tape
+ * @param scaling_factor the scaling factor for the PDE right-hand side
  */
   template<class LocalView, class VectorType, class MatrixType>
-  static void assemble_jacobian_integral(const LocalView& localView,
+  static bool assemble_jacobian_integral(const LocalView& localView,
       const VectorType &x, MatrixType& m, int tag);
 
   /*
@@ -368,7 +395,7 @@ private:
  * @param last_equation_der
  */
   template<class LocalView, class VectorType, class MatrixType>
-  static void assemble_jacobian_integral_cell_term(const LocalView& localView,
+  static bool assemble_jacobian_integral_cell_term(const LocalView& localView,
       const VectorType &x, MatrixType& m, int tag, const double& scaling_factor, VectorType& last_equation_derivatives, VectorType& scaling_derivatives);
 
 
@@ -434,6 +461,8 @@ private:
     BoundaryHandler boundaryHandler_;
 
     bool no_hanging_nodes;
+
+    bool reuseAdolCTape;
 
     mutable int picture_no;
 };
@@ -792,10 +821,37 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
   }
 }
 
+template<class LocalView, class VectorType>
+inline
+bool Assembler::assemble_boundary_integral_term(const LocalView& localView,
+    const VectorType &x, VectorType& v, int tag) {
+  //assuming galerkin ansatz = test space
+
+  assert((unsigned int) x.size() == localView.size());
+  assert((unsigned int) v.size() == localView.size());
+
+  VectorType x_c (x);
+
+  double* out = new double[x.size()];
+  int ierr = ::function(tag, x.size(), x.size(), x_c.data(), out);
+
+  std::cerr << "function boundary ierr was " << ierr << std::endl;
+  if(ierr <3)
+    return false;
+
+//TODO any better way to initialise matrix?
+  for (int i = 0; i < x.size(); i++)
+  {
+      v(i) += out[i];
+  }
+
+  delete[] out;
+  return true;
+}
 
 template<class LocalView, class VectorType, class MatrixType>
 inline
-void Assembler::assemble_jacobian_integral(const LocalView& localView,
+bool Assembler::assemble_jacobian_integral(const LocalView& localView,
     const VectorType &x, MatrixType& m, int tag) {
   //assuming galerkin ansatz = test space
 
@@ -807,8 +863,10 @@ void Assembler::assemble_jacobian_integral(const LocalView& localView,
   for (int i = 0; i < x.size(); i++)
     out[i] = new double[x.size()];
   int ierr = jacobian(tag, x.size(), x.size(), x.data(), out);
-  assert(ierr >=0);
-  _unused(ierr);
+
+  std::cerr << "jacobian ierr was " << ierr << std::endl;
+  if(ierr <3)
+    return false;
 
 //TODO any better way to initialise matrix?
   for (int i = 0; i < x.size(); i++)
@@ -821,11 +879,37 @@ void Assembler::assemble_jacobian_integral(const LocalView& localView,
     delete[] out[i];
 
   delete[] out;
+  return true;
 }
+template<class LocalView, class VectorType>
+inline
+bool Assembler::assemble_integral_cell_term(const LocalView& localView,
+    const VectorType &x, VectorType& v, int tag, const double& scaling_factor, double& last_equation) {
+  assert((unsigned int) x.size() == localView.size());
+  assert((unsigned int) v.size() == localView.size());
 
+  VectorType x_c(x.size()+1);
+  x_c << x, scaling_factor;
+
+  double* out = new double[x_c.size()];
+  int ierr = ::function(tag, x_c.size(), x_c.size(), x_c.data(), out);
+
+  std::cerr << "function cell ierr was " << ierr << std::endl;
+  if(ierr <3)
+    return false;
+
+  for (int i = 0; i < x.size(); i++)
+  {
+    v(i) += out[i];
+  }
+  last_equation += out[v.size()];
+
+  delete[] out;
+  return true;
+}
 template<class LocalView, class VectorType, class MatrixType>
 inline
-void Assembler::assemble_jacobian_integral_cell_term(const LocalView& localView,
+bool Assembler::assemble_jacobian_integral_cell_term(const LocalView& localView,
     const VectorType &x, MatrixType& m, int tag, const double& scaling_factor, VectorType& last_equation_derivatives, VectorType& scaling_derivatives) {
   //assuming galerkin ansatz = test space
 
@@ -841,8 +925,9 @@ void Assembler::assemble_jacobian_integral_cell_term(const LocalView& localView,
     out[i] = new double[x_c.size()];
   int ierr = jacobian(tag, x_c.size(), x_c.size(), x_c.data(), out);
 
-  assert(ierr >=0);
-  _unused(ierr);
+  std::cerr << "jacobian ierr was " << ierr << std::endl;
+  if(ierr <3)
+    return false;
 
   //TODO any better way to initialise matrix?
   for (int i = 0; i < x.size(); i++)
@@ -860,6 +945,7 @@ void Assembler::assemble_jacobian_integral_cell_term(const LocalView& localView,
     delete[] out[i];
 
   delete[] out;
+  return true;
 }
 
 template<class LocalView, class VectorType, class MatrixType>
@@ -1154,6 +1240,8 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
     auto localIndexSet = basis_->indexSet().localIndexSet();
 //    auto localIndexSetn = basis_->indexSet().localIndexSet();
 
+    bool tape0initialised = false, tape1initialised = false;
+
     // A loop over all elements of the grid
     for (auto&& e : elements(gridView)) {
 
@@ -1186,8 +1274,29 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
 //        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryDoF());
 //        BoundaryHandler::BoolVectorType isBoundaryLocal = BoundaryHandler::BoolVectorType::Constant(localIndexSet.size(), false);
 
-        lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
-        assemble_jacobian_integral_cell_term(localView, xLocal, m_m, 0, x(x.size()-1), last_equation, scaling_factor);
+        if (!tape0initialised || !reuseAdolCTape || true) //check if tape has record
+        {
+          lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
+          tape0initialised = true;
+        }
+        else
+        {
+          //try to construct function with last tape
+          bool tapeReconstrutionSuccessfull = assemble_integral_cell_term(localView, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
+          std::cerr << "Cell Reconstruction was successfull ? " << tapeReconstrutionSuccessfull << std::endl;
+          if (!tapeReconstrutionSuccessfull)
+            lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
+        }
+
+        //tryp to recover derivation from last tape
+        bool derivationSuccessful = assemble_jacobian_integral_cell_term(localView, xLocal, m_m, 0, x(x.size()-1), last_equation, scaling_factor);
+        std::cerr << "Cell Derivation was successfull ? " << derivationSuccessful << std::endl;
+        if (!derivationSuccessful)
+          lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
+        {
+          derivationSuccessful = assemble_jacobian_integral_cell_term(localView, xLocal, m_m, 0, x(x.size()-1), last_equation, scaling_factor);
+          assert(derivationSuccessful);
+        }
 
 //        std::cerr << "local vector " << local_vector.transpose() << std::endl;
 
@@ -1203,53 +1312,33 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
-/*            if (is.neighbor()) {
+          if (is.boundary()) {
+            // Boundary integration
 
-                // compute unique id for neighbor
-                const GridViewType::IndexSet::IndexType idn =
-                        gridView.indexSet().index(is.outside());
+            if (!tape1initialised || !reuseAdolCTape) //check if tape has record
+            {
+              lop.assemble_boundary_face_term(is,localView, localIndexSet, xLocal, local_boundary, 1);
+              tape1initialised = true;
+            }
+            else
+            {
+              //try to construct function with last tape
+              bool tapeReconstrutionSuccessfull = assemble_boundary_integral_term(localView, xLocal, local_vector, 1);
+              std::cerr << "Tape Reconstruction was successfull ? " << tapeReconstrutionSuccessfull << std::endl;
+              if (!tapeReconstrutionSuccessfull)
+                lop.assemble_boundary_face_term(is,localView, localIndexSet, xLocal, local_boundary, 1);
+            }
 
-                // Visit face if id is bigger
-                bool visit_face = id > idn
-                        || Solver_config::require_skeleton_two_sided;
-                // unique vist of intersection
-                if (visit_face) {
-                  auto neighbourElement = is.outside();
+            //tryp to recover derivation from last tape
+            bool derivationSuccessful = assemble_jacobian_integral(localView, xLocal, m_mB, 1);
+            std::cerr << "Boundary Derivation was successfull ? " << derivationSuccessful << std::endl;
+            if (!derivationSuccessful)
+            {
+              lop.assemble_boundary_face_term(is,localView, localIndexSet, xLocal, local_boundary, 1);
+              derivationSuccessful = assemble_jacobian_integral(localView, xLocal, m_mB, 1);
+              assert(derivationSuccessful);
+            }
 
-                  // Bind the local neighbour FE basis view to the neighbour element
-                  localViewn.bind(neighbourElement);
-                  localIndexSetn.bind(localViewn);
-                  Solver_config::VectorType xLocaln = calculate_local_coefficients(localIndexSetn, x);
-                  Solver_config::VectorType local_vectorn = Solver_config::VectorType::Zero(xLocaln.size());
-
-                  lop.assemble_inner_face_term(is, localView, localIndexSet, xLocal,
-                      localViewn, localIndexSetn, xLocaln, local_vector,
-                      local_vectorn, 0);
-
-                  add_local_coefficients(localIndexSetn, local_vectorn, v);
-
-                  //calculate jacobians
-                  Solver_config::DenseMatrixType mn_m, m_mn, mn_mn;
-                  mn_m.setZero(localViewn.size(), localView.size());
-                  m_mn.setZero(localView.size(), localViewn.size());
-                  mn_mn.setZero(localViewn.size(), localViewn.size());
-
-                  assemble_inner_face_Jacobian(is, localView, xLocal, localViewn, xLocaln,
-                                                m_m, mn_m, m_mn, mn_mn, 0);
-                  add_local_coefficients_Jacobian(localIndexSetn, localIndexSet, mn_m, JacobianEntries);
-                  add_local_coefficients_Jacobian(localIndexSet,localIndexSetn, m_mn,JacobianEntries);
-                  add_local_coefficients_Jacobian(localIndexSetn, localIndexSetn, mn_mn, JacobianEntries);
-//
-//                  tag_count++;
-                }
-            } else*/ if (is.boundary()) {
-                // Boundary integration
-              lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
-                      local_boundary, 0);
-//              std::cerr << "local boundary " << local_boundary.transpose() << std::endl;
-//              lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
-//                      local_vector, 0);
-                assemble_jacobian_integral(localView, xLocal, m_mB, 0);
 //                std::cerr << " local m_m " << m_mB << std::endl;
 //                tag_count++;
             }/* else {
@@ -1365,6 +1454,5 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
      std::cerr << " f_boundary " << boundary.transpose() << std::endl;
      std::cerr << " f          " << v.transpose() << std::endl;
 }
-
 
 #endif /* SRC_ASSEMBLER_HH_ */
