@@ -10,6 +10,7 @@
 
 #include "solver_config.h"
 
+
 class Assembler;
 
 class BoundaryHandler{
@@ -38,8 +39,6 @@ private:
   BoolVectorType  isBoundaryValueDof_;
   bool initialised_;
 };
-
-
 
 
 #endif /* SRC_BOUNDARYHANDLER_HH_ */

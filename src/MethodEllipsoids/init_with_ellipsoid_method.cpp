@@ -12,7 +12,7 @@
 #include <Functions/Reflectorproblem/LightInImage.hpp>
 #include <boost/program_options.hpp>
 
-using namespace std;
+using std::cout;
 using namespace Eigen;
 namespace po = boost::program_options;
 using namespace mirror_problem;

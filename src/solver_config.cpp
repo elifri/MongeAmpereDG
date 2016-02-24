@@ -16,7 +16,7 @@ namespace po = boost::program_options;
 
 
 using namespace Dune;
-using namespace std;
+using std::cout;
 
 std::string Solver_config::configFileMA_solver = "../inputData/MA_solver.ini";
 std::string Solver_config::configFileEllipsoid = "../inputData/ellipsoids.ini";

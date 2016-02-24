@@ -39,7 +39,6 @@
 
 
 using namespace Dune;
-using namespace std;
 
 //class Plotter;
 

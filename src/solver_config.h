@@ -14,9 +14,11 @@
 #include<Eigen/Sparse>
 
 #include <config.h>
-#include <adolc/adouble.h>
-#define ADOLC
 
+//automatic differtiation
+#include <adolc/adouble.h>
+#include <adolc/adolc.h>
+#define ADOLC
 
 #include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 #include <dune/functions/gridfunctions/gridviewfunction.hh>
@@ -39,8 +41,6 @@
 #include "Dogleg/doglegMethod.hpp"
 
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
-
-
 
 namespace Dune{
 template<> struct PromotionTraits<adouble, double> {typedef adouble PromotedType; };

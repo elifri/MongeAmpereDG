@@ -13,9 +13,6 @@
 #include "../utils.hpp"
 #include "../problem_data.h"
 
-//automatic differtiation
-#include <adolc/adouble.h>
-#include <adolc/adolc.h>
 #include "../solver_config.h"
 
 using namespace Dune;
