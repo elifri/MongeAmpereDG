@@ -138,6 +138,7 @@ public:
   inline
   adouble Phi(const value_type& s) const
   {
+    if (kappa_*kappa_ + s*s -1 < 0) return s;
     return s - sqrt(kappa_*kappa_ + s*s -1);
   }
 
@@ -146,6 +147,7 @@ public:
   adouble DPhi(const value_type& s) const
   {
 //    std::cerr  << " 1/kappa ? "<< s/sqrt(kappa_*kappa_ + s*s -1) << " 1/kappa " << 1./kappa_ << endl;
+    if (kappa_*kappa_ + s*s -1 < 0) return 1;
     return 1. - s/sqrt(kappa_*kappa_ + s*s -1);
   }
   template<class value_type>
@@ -222,6 +224,7 @@ public:
     DpF.axpy(-scalarCoefficient*Phi_u_G,x);
     DpF.axpy(-scalarCoefficient*(u+(p*x)),DpPhi_u_G);
     DpF /= 2.;
+    assert ( ! (DpF[0] != DpF[0]));
   }
 
   /**
