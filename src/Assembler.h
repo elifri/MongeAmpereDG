@@ -19,6 +19,7 @@
 #include <adolc/adolc.h>
 
 #include <CImg.h>
+#include "Dogleg/utils.hpp"
 
 #include "boundaryHandler.h"
 
@@ -397,6 +398,10 @@ private:
   template<class LocalView, class VectorType, class MatrixType>
   static bool assemble_jacobian_integral_cell_term(const LocalView& localView,
       const VectorType &x, MatrixType& m, int tag, const double& scaling_factor, VectorType& last_equation_derivatives, VectorType& scaling_derivatives);
+
+  template<typename LocalOperatorType, class LocalView, class VectorType, class MatrixType>
+  void assemble_jacobianFD_integral_cell_term(const LocalOperatorType lop, const LocalView& localView,
+      const VectorType &x, MatrixType& m, int tag, const double& scaling_factor, VectorType& last_equation_derivatives, VectorType& scaling_derivatives) const;
 
 
 /*
@@ -948,6 +953,66 @@ bool Assembler::assemble_jacobian_integral_cell_term(const LocalView& localView,
   return true;
 }
 
+template<typename LocalOperatorType, class LocalView, class VectorType, class MatrixType>
+inline
+void Assembler::assemble_jacobianFD_integral_cell_term(const LocalOperatorType lop, const LocalView& localView,
+    const VectorType &x, MatrixType& m, int tag, const double& scaling_factor, VectorType& last_equation_derivatives, VectorType& scaling_derivatives) const{
+  //assuming galerkin ansatz = test space
+
+  auto localIndexSet = basis_->indexSet().localIndexSet();
+  localIndexSet.bind(localView);
+
+  assert((unsigned int) x.size() == localView.size());
+  assert((unsigned int) m.rows() == localView.size());
+  assert((unsigned int) m.cols() == localView.size());
+
+  std::cout << std::setprecision(9);
+
+  const int n = m.cols();
+  double h = 1e-8/2.;//to sqrt(eps)
+
+  for (int j = 0; j < n; j++)
+  {
+    Solver_config::VectorType f_minus = Solver_config::VectorType::Zero(n), f_plus= Solver_config::VectorType::Zero(n);
+    double v_minus = 0, v_plus = 0;
+    Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(n, j);
+
+    Solver_config::VectorType temp = x-h*unit_j;
+    lop.assemble_cell_term(localView, localIndexSet, temp , f_minus, 2, x(x.size()-1), v_minus);
+    temp = x+h*unit_j;
+    lop.assemble_cell_term(localView, localIndexSet, temp , f_plus, 2, x(x.size()-1), v_plus);
+
+    Eigen::VectorXd estimated_derivative = (f_plus - f_minus)/2./h;
+
+    for (int i = 0; i < n; i++)
+    {
+      if (std::abs(estimated_derivative(i)) > 1e-10)
+      {
+        m(i,j) = estimated_derivative(i);
+      }
+    }
+    last_equation_derivatives(j) = (v_plus - v_minus)/2./h;
+  }
+  {
+    Solver_config::VectorType f_minus = Solver_config::VectorType::Zero(n), f_plus= Solver_config::VectorType::Zero(n);
+    double v_minus = 0, v_plus = 0;
+
+    lop.assemble_cell_term(localView, localIndexSet, x, f_minus, 2, x(x.size()-1)-h, v_minus);
+    lop.assemble_cell_term(localView, localIndexSet, x, f_plus, 2, x(x.size()-1)+h, v_plus);
+    Eigen::VectorXd estimated_derivative = (f_plus - f_minus)/2./h;
+
+    for (int i = 0; i < n; i++)
+    {
+      if (std::abs(estimated_derivative(i)) > 1e-10)
+      {
+        scaling_derivatives(i) = estimated_derivative(i);
+      }
+    }
+    scaling_derivatives(n) = (v_plus - v_minus)/2./h;
+  }
+}
+
+
 template<class LocalView, class VectorType, class MatrixType>
 inline
 void Assembler::assemble_inner_face_Jacobian(const Intersection& intersection,
@@ -1264,7 +1329,6 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
         Solver_config::VectorType last_equation = Solver_config::VectorType::Zero(localView.size()),
                                   scaling_factor = Solver_config::VectorType::Zero(localView.size()+1);
 
-
         //get id
 //        IndexType id = indexSet.index(e);
 
@@ -1298,17 +1362,30 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
           assert(derivationSuccessful);
         }
 
-//        std::cerr << "local vector " << local_vector.transpose() << std::endl;
+#ifdef DEBUG
+        {
+          Solver_config::DenseMatrixType m_mFD;
+          m_mFD.setZero(localView.size(), localView.size());
+          Solver_config::VectorType last_equationFD = Solver_config::VectorType::Zero(localView.size()),
+                                    scaling_factorFD = Solver_config::VectorType::Zero(localView.size()+1);
 
-//        local_vector = local_vector.cwiseProduct(isBoundaryLocal);
+          assemble_jacobianFD_integral_cell_term(lop, localView, xLocal, m_mFD, 0, x(x.size()-1), last_equationFD, scaling_factorFD);
+
+          double tol = 1e-7;
+          igpm::testblock b(std::cout);
+          compare_matrices(b, m_m, m_mFD, "CellJacobian", "FD CellJacobian", true, tol);
+          compare_matrices(b, last_equation, last_equationFD, "last_equation", "last_equationFD", true, tol);
+          compare_matrices(b, scaling_factor, scaling_factorFD, "scaling_factor", "scaling_factorFD", true, tol);
+        }
+#endif
+
+        //delete all equations with boundary dof test function
         for (int i = 0; i < isBoundaryLocal.size(); i++)
         {
           if (isBoundaryLocal(i)) m_m.row(i) = Solver_config::VectorType::Zero(localView.size());
           if (isBoundaryLocal(i)) local_vector(i) = 0;
         }
 //        std::cerr << "local vector after boundary " << local_vector << std::endl;
-
-//        tag_count++;
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
@@ -1339,14 +1416,12 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
               assert(derivationSuccessful);
             }
 
-//                std::cerr << " local m_m " << m_mB << std::endl;
-//                tag_count++;
             }/* else {
                 std::cerr << " I do not know how to handle this intersection"
                         << std::endl;
                 exit(-1);
             }
-*/        }
+        */}
 
 #ifdef COLLOCATION
         Solver_config::DenseMatrixType Coll_m_mB;
