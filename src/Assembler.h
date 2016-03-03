@@ -1362,6 +1362,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
           assert(derivationSuccessful);
         }
 
+
 #ifdef DEBUG
         {
           Solver_config::DenseMatrixType m_mFD;
@@ -1386,6 +1387,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
           if (isBoundaryLocal(i)) local_vector(i) = 0;
         }
 //        std::cerr << "local vector after boundary " << local_vector << std::endl;
+
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
