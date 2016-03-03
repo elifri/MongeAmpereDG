@@ -203,7 +203,7 @@ public:
   typedef Eigen::Triplet<double> EntryType;
 
   Assembler(const Solver_config::FEBasis& basis, bool no_hanging_nodes) :
-      basis_(&basis),no_hanging_nodes(no_hanging_nodes), reuseAdolCTape(true), picture_no(0) {
+      basis_(&basis),no_hanging_nodes(no_hanging_nodes), picture_no(0) {
   }
 
   void bind(const Solver_config::FEBasis& basis)
@@ -485,7 +485,7 @@ private:
 
     bool no_hanging_nodes;
 
-    bool reuseAdolCTape;
+    static constexpr bool reuseAdolCTape = false;
 
     mutable int picture_no;
 };
@@ -853,12 +853,14 @@ bool Assembler::assemble_boundary_integral_term(const LocalView& localView,
   assert((unsigned int) x.size() == localView.size());
   assert((unsigned int) v.size() == localView.size());
 
+  assert(reuseAdolCTape);
+
   VectorType x_c (x);
 
   double* out = new double[x.size()];
   int ierr = ::function(tag, x.size(), x.size(), x_c.data(), out);
 
-  std::cerr << "function boundary ierr was " << ierr << std::endl;
+//  std::cerr << "function boundary ierr was " << ierr << std::endl;
   if(ierr <3)
     return false;
 
@@ -887,7 +889,7 @@ bool Assembler::assemble_jacobian_integral(const LocalView& localView,
     out[i] = new double[x.size()];
   int ierr = jacobian(tag, x.size(), x.size(), x.data(), out);
 
-  std::cerr << "jacobian ierr was " << ierr << std::endl;
+//  std::cerr << "jacobian ierr was " << ierr << std::endl;
   if(ierr <3)
     return false;
 
@@ -911,13 +913,15 @@ bool Assembler::assemble_integral_cell_term(const LocalView& localView,
   assert((unsigned int) x.size() == localView.size());
   assert((unsigned int) v.size() == localView.size());
 
+  assert(reuseAdolCTape);
+
   VectorType x_c(x.size()+1);
   x_c << x, scaling_factor;
 
   double* out = new double[x_c.size()];
   int ierr = ::function(tag, x_c.size(), x_c.size(), x_c.data(), out);
 
-  std::cerr << "function cell ierr was " << ierr << std::endl;
+//  std::cerr << "function cell ierr was " << ierr << std::endl;
   if(ierr <3)
     return false;
 
@@ -948,7 +952,7 @@ bool Assembler::assemble_jacobian_integral_cell_term(const LocalView& localView,
     out[i] = new double[x_c.size()];
   int ierr = jacobian(tag, x_c.size(), x_c.size(), x_c.data(), out);
 
-  std::cerr << "jacobian cell ierr was " << ierr << std::endl;
+//  std::cerr << "jacobian cell ierr was " << ierr << std::endl;
   if(ierr <3)
   {
     std::cerr << " failed proper derivation from tape " << std::endl;
@@ -1368,27 +1372,22 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
         {
           //try to construct function with last tape
           bool tapeReconstrutionSuccessfull = assemble_integral_cell_term(localView, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
-          std::cerr << "Cell Reconstruction was successfull ? " << tapeReconstrutionSuccessfull << std::endl;
+//          std::cerr << "Cell Reconstruction was successfull ? " << tapeReconstrutionSuccessfull << std::endl;
           if (!tapeReconstrutionSuccessfull)
+          {
             lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
+          }
         }
 
         //tryp to recover derivation from last tape
         bool derivationSuccessful = assemble_jacobian_integral_cell_term(localView, xLocal, m_m, 0, x(x.size()-1), last_equation, scaling_factor);
-        std::cerr << "Cell Derivation was successfull ? " << derivationSuccessful << std::endl;
+//        std::cerr << "Cell Derivation was successfull ? " << derivationSuccessful << std::endl;
         if (!derivationSuccessful)
         {
+          local_vector.setZero(); //prevent double addition of local terms
           lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 2, x(x.size()-1), v(v.size()-1));
           derivationSuccessful = assemble_jacobian_integral_cell_term(localView, xLocal, m_m, 2, x(x.size()-1), last_equation, scaling_factor);
-//          assert(derivationSuccessful);
-          std::size_t stats[11];
-          tapestats(2, stats);
-          std::cout << "numer of independents " << stats[0] << std::endl
-                << "numer of deptendes " << stats[1] << std::endl
-                << "numer of live activ var " << stats[2] << std::endl
-                //      << "numer of size of value stack " << stats[3] << std::endl
-                << "numer of buffer size " << stats[4] << std::endl;
-          std::cerr << "second try Cell Derivation was successfull ? " << derivationSuccessful << std::endl;
+          assert(derivationSuccessful);
         }
 
 
@@ -1453,18 +1452,26 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
             else
             {
               //try to construct function with last tape
-              bool tapeReconstrutionSuccessfull = assemble_boundary_integral_term(localView, xLocal, local_vector, 1);
-              std::cerr << "Tape Reconstruction was successfull ? " << tapeReconstrutionSuccessfull << std::endl;
+              Solver_config::VectorType currentBoundaryVector =  Solver_config::VectorType::Zero(local_boundary.size());
+              bool tapeReconstrutionSuccessfull = assemble_boundary_integral_term(localView, xLocal, currentBoundaryVector, 1);
+//              std::cerr << "Tape Reconstruction was successfull ? " << tapeReconstrutionSuccessfull << std::endl;
               if (!tapeReconstrutionSuccessfull)
+              {
                 lop.assemble_boundary_face_term(is,localView, localIndexSet, xLocal, local_boundary, 1);
+              }
+              else
+              {
+                local_boundary+= currentBoundaryVector;
+              }
             }
 
             //tryp to recover derivation from last tape
             bool derivationSuccessful = assemble_jacobian_integral(localView, xLocal, m_mB, 1);
-            std::cerr << "Boundary Derivation was successfull ? " << derivationSuccessful << std::endl;
+//            std::cerr << "Boundary Derivation was successfull ? " << derivationSuccessful << std::endl;
             if (!derivationSuccessful)
             {
-              lop.assemble_boundary_face_term(is,localView, localIndexSet, xLocal, local_boundary, 1);
+              Solver_config::VectorType currentBoundaryVector =  Solver_config::VectorType::Zero(local_boundary.size());
+              lop.assemble_boundary_face_term(is,localView, localIndexSet, xLocal, currentBoundaryVector, 1);
               derivationSuccessful = assemble_jacobian_integral(localView, xLocal, m_mB, 1);
 //              assert(derivationSuccessful);
               if (!derivationSuccessful)
