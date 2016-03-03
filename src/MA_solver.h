@@ -293,15 +293,13 @@ public:
 	void adapt(const int level=1);
 
 	///write the current numerical solution to vtk file
-	void plot(std::string filename) const;
-
-	void plot_with_mirror(std::string name);
+	virtual void plot(std::string filename) const;
 
 	void plot_with_lens(std::string name);
 
 private:
 	///creates the initial guess
-	void create_initial_guess();
+	virtual void create_initial_guess();
 
 	/// solves own nonlinear system given initial point in solution
 	void solve_nonlinear_system();
@@ -344,7 +342,11 @@ public:
 
 	//--------Attributes--
 
+	enum ProblemType {REFLECTOR, REFRACTOR, OPTIMALTRANSPORT};
+
 private:
+
+	ProblemType problem_;
 
 	bool initialised; ///asserts the important member, such as the dof_handler, assembler ... are initialised
 
@@ -361,7 +363,7 @@ private:
   int count_refined; ///counts how often the original grid was refined
 public:
   mutable int iterations; ///counts overall iterations (how often the nonlinear system was solved)
-private:
+protected:
   bool initValueFromFile_; ///decide if initial guess is initiated from file
   std::string initValue_; ///file the initial guess is initiiated from
 

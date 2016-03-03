@@ -116,142 +116,6 @@ void MA_solver::plot(std::string name) const
    vtkWriter.write(fname);
 }
 
-
-void MA_solver::plot_with_mirror(std::string name)
-{
-
-  std::cout << "plot written into ";
-
-  //write vtk files
-  if (writeVTK_)
-  {
-
-    VectorType solution_u = solution.segment(0, get_n_dofs_u());
-
-     //build gridviewfunction
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
-     auto localnumericalSolution = localFunction(numericalSolution);
-
-     //build writer
-     SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
-
-     //add solution data
-     vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
-
-     const auto& EigenBoundaryDofs = assembler.isBoundaryDoF();
-     Solver_config::VectorType boundaryDofs(EigenBoundaryDofs.size());
-     for (int i = 0; i < EigenBoundaryDofs.size(); i++) boundaryDofs[i] = EigenBoundaryDofs(i);
-
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> boundarySolution(*FEBasis,boundaryDofs);
-     auto localBoundarySolution = localFunction(boundarySolution);
-
-     vtkWriter.addVertexData(localBoundarySolution, VTK::FieldInfo("boundary", VTK::FieldInfo::Type::scalar, 1));
-
-     //extract hessian (3 entries (because symmetry))
-     Dune::array<int,2> direction = {0,0};
-
-     auto HessianEntry00= localSecondDerivative(numericalSolution, direction);
-     vtkWriter.addVertexData(HessianEntry00 , VTK::FieldInfo("Hessian00", VTK::FieldInfo::Type::scalar, 1));
-     direction[0] = 1;
-     auto HessianEntry10 = localSecondDerivative(numericalSolution, direction);
-     vtkWriter.addVertexData(HessianEntry10 , VTK::FieldInfo("Hessian10", VTK::FieldInfo::Type::scalar, 1));
-     direction[0] = 0; direction[1] = 1;
-     auto HessianEntry01 = localSecondDerivative(numericalSolution, direction);
-     vtkWriter.addVertexData(HessianEntry01 , VTK::FieldInfo("Hessian01", VTK::FieldInfo::Type::scalar, 1));
-     direction[0] = 1;
-     auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
-     vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
-
-
-//     std::cout << "solution " << solution_u.transpose() << std::endl;
-
-     //write to file
-     std::string fname(plotter.get_output_directory());
-     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
-     vtkWriter.write(fname);
-
-
-     std::string reflname(plotter.get_output_directory());
-     reflname += "/"+ plotter.get_output_prefix()+ name + "reflector"+NumberToString(iterations) + ".vtu";
-
-//     plotter.writeReflectorVTK(reflname, localnumericalSolution, *exact_solution);
-     plotter.writeReflectorVTK(reflname, localnumericalSolution);
-
-     std::cout << fname  << " " << reflname << " and ";
-  }
-
-  //write povray output
-   std::string reflPovname(plotter.get_output_directory());
-   reflPovname += "/"+ plotter.get_output_prefix() + name + "reflector" + NumberToString(iterations) + ".pov";
-
-   plotter.writeReflectorPOV(reflPovname, *solution_u_old);
-   std::cout << reflPovname << std::endl;
-}
-
-
-void MA_solver::plot_with_lens(std::string name)
-{
-
-  std::cout << "write? " << writeVTK_ << " ";
-  std::cout << "plot written into ";
-
-  //write vtk files
-  if (writeVTK_)
-  {
-
-    VectorType solution_u = solution.segment(0, get_n_dofs_u());
-
-     //build gridviewfunction
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
-     auto localnumericalSolution = localFunction(numericalSolution);
-
-     //build writer
-     SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
-
-     //add solution data
-     vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
-
-     //extract hessian (3 entries (because symmetry))
-     Dune::array<int,2> direction = {0,0};
-
-     auto HessianEntry00= localSecondDerivative(numericalSolution, direction);
-     vtkWriter.addVertexData(HessianEntry00 , VTK::FieldInfo("Hessian00", VTK::FieldInfo::Type::scalar, 1));
-     direction[0] = 1;
-     auto HessianEntry10 = localSecondDerivative(numericalSolution, direction);
-     vtkWriter.addVertexData(HessianEntry10 , VTK::FieldInfo("Hessian10", VTK::FieldInfo::Type::scalar, 1));
-     direction[0] = 0; direction[1] = 1;
-     auto HessianEntry01 = localSecondDerivative(numericalSolution, direction);
-     vtkWriter.addVertexData(HessianEntry01 , VTK::FieldInfo("Hessian01", VTK::FieldInfo::Type::scalar, 1));
-     direction[0] = 1;
-     auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
-     vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
-
-
-//     std::cout << "solution " << solution_u.transpose() << std::endl;
-
-     //write to file
-     std::string fname(plotter.get_output_directory());
-     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
-     vtkWriter.write(fname);
-
-
-     std::string reflname(plotter.get_output_directory());
-     reflname += "/"+ plotter.get_output_prefix()+ name + "refractor"+NumberToString(iterations) + ".vtu";
-
-//     plotter.writeReflectorVTK(reflname, localnumericalSolution, *exact_solution);
-     plotter.writeRefractorVTK(reflname, localnumericalSolution);
-
-     std::cout << fname  << " " << reflname << " and ";
-  }
-
-  //write povray output
-   std::string refrPovname(plotter.get_output_directory());
-   refrPovname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".pov";
-
-   plotter.writeRefractorPOV(refrPovname, *solution_u_old);
-   std::cout << refrPovname << std::endl;
-}
-
 void MA_solver::create_initial_guess()
 {
   //init solution by laplace u = -sqrt(2f)
@@ -314,7 +178,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
       assert(std::abs(op.lop.get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
   }
 
-  create_initial_guess();
+  this->create_initial_guess();
   {
     //write initial guess into file
     stringstream filename2; filename2 << outputDirectory_ <<  "/" << outputPrefix_ << "initial.fec";
@@ -327,7 +191,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
   update_solution(solution);
 
-  plot_with_lens("initialguess");
+  plot("initialguess");
 
   Solver_config::VectorType f;
   Solver_config::MatrixType J;
@@ -350,7 +214,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
     iterations++;
 
     update_solution(solution);
-    plot_with_lens("numericalSolution");
+    plot("numericalSolution");
 
 
     std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
@@ -388,7 +252,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
     adapt_solution();
 
     update_solution(solution);
-    plot_with_lens("numericalSolution");
+    plot("numericalSolution");
 
     Solver_config::VectorType v = coarse_solution(1);
     {
