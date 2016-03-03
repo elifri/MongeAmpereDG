@@ -98,7 +98,7 @@ public:
     //calculated direction after refraction by Snell's law (Y)
     FieldVector<adouble, 3> Y = X;
     Y.axpy(-Phi((X*normal_refr)), normal_refr);
-    std::cout << " -Phi((X*normal_refr) " << -(Phi((X*normal_refr)).value()) << " X*normal_refr " << (X*normal_refr).value() << std::endl;
+//    std::cout << " -Phi((X*normal_refr) " << -(Phi((X*normal_refr)).value()) << " X*normal_refr " << (X*normal_refr).value() << std::endl;
     Y /= kappa_;
 //    std::cout << std::setprecision(15);
 //    std::cerr << "direction after refr " << Y[0].value() << " " << Y[1].value() << " " << Y[2].value() << std::endl;
@@ -224,7 +224,8 @@ public:
     DpF.axpy(-scalarCoefficient*Phi_u_G,x);
     DpF.axpy(-scalarCoefficient*(u+(p*x)),DpPhi_u_G);
     DpF /= 2.;
-    assert ( ! (DpF[0] != DpF[0]));
+
+    assert ( ! (DpF[0].value() != DpF[0].value()));
   }
 
   /**
@@ -329,9 +330,8 @@ public:
       FieldVector<adouble, Solver_config::dim> DxF, DpF;
       calc_F_and_derivatives(x_value,rho_value, gradrho, F_value, DxF, DuF, DpF);
 
-
-/*
- *    //calculate finite difference derivatives
+#ifdef DEBUG
+     //calculate finite difference derivatives
       adouble F_valueEx = F(x_value, rho_value, gradrho);
 
       //calculate derivatives of F
@@ -383,8 +383,7 @@ public:
                 << " DxFEx " << DxF[0].value() << ' ' << DxF[1].value() << " vs. " <<  DxFEx[0].value() << ' ' << DxFEx[1].value() << std::endl
                 << " DuFEx " << DuF.value() << " vs. " <<  DuFEx.value()  << std::endl
                 << " DpFEx " << DpF[0].value() << ' ' << DpF[1].value() << " vs. " <<  DpFEx[0].value() << ' ' << DpFEx[1].value() << std::endl;
-
-*/
+#endif
 
       //calculate Z = X/u +t(Z_0-X/u) = point on reflector + reflected vector
       //calculate t: distance between refractor and target plane (refracted vector)
@@ -401,14 +400,14 @@ public:
       z.axpy(t,w);
       z.axpy(-t*rho_value,x_value);
 
-/*      std::cerr << "rho_value " << rho_value.value()
-                << " F " << F_value << std::endl
-                << " X " << X << std::endl
-                << " rhogradu " << gradrho[0].value() << " " << gradrho[1].value() << std::endl
-                << " t " << t.value()
-                << " w " << w[0].value() << " " << w[1].value() << std::endl
-                << " z " << z[0].value() << " " << z[1].value() << std::endl
-                << std::endl;*/
+//      std::cerr << "rho_value " << rho_value.value()
+//                << " F " << F_value << std::endl
+//                << " X " << X << std::endl
+//                << " rhogradu " << gradrho[0].value() << " " << gradrho[1].value() << std::endl
+//                << " t " << t.value()
+//                << " w " << w[0].value() << " " << w[1].value() << std::endl
+//                << " z " << z[0].value() << " " << z[1].value() << std::endl
+//                << std::endl;
 
 
       assert(std::abs(((omega_value*rho_value) - t*rho_value*omega_value - Solver_config::z_3).value()) < 1e-8 && "something with t is not as expected!");

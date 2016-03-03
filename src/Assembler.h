@@ -48,6 +48,24 @@ void assemble_functionValues_u(const FiniteElement &lfu,
         u_value += x_local(i) * values[i];
 }
 
+template<class FiniteElement, class VectorType>
+inline
+void assemble_functionValues_u(const FiniteElement &lfu,
+        const Solver_config::SpaceType& x, std::vector<typename FiniteElement::Traits::LocalBasisType::Traits::RangeType>& values,
+        const VectorType& x_local, adouble& u_value) {
+    assert(values.size() == lfu.size());
+    assert(x_local.size() == lfu.size());
+
+    // The gradients of the shape functions on the reference element
+    lfu.localBasis().evaluateFunction(x, values);
+
+    assert(u_value.value() == 0);
+
+    //compute the gradients on the real element
+    for (size_t i = 0; i < values.size(); i++)
+        u_value += x_local(i) * values[i];
+}
+
 template<class FiniteElement, int m, int n, class VectorType, class RangeType>
 inline
 void assemble_functionValues_u(const FiniteElement &lfu,
