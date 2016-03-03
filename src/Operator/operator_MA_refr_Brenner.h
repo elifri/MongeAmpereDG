@@ -303,7 +303,6 @@ public:
       assemble_functionValues_u(localFiniteElement, quadPos,
           referenceFunctionValues, x_adolc, rho_value);
 
-
       // The gradients
       std::vector<JacobianType> gradients(size);
       FieldVector<adouble, Solver_config::dim> gradrho;
@@ -319,6 +318,7 @@ public:
       //--------assemble cell integrals in variational form--------
 
       assert(Solver_config::dim == 2);
+
 
       auto x_value = geometry.global(quad[pt].position());
       Solver_config::SpaceType3d X = { x_value[0], x_value[1], omega(x_value) };
@@ -414,8 +414,6 @@ public:
 
       assert(check_refraction(x_value, X, rho_value.value(), gradrho, z));
 
-//      std::cerr << "F "  << F_value << " DpF " << DpF << " DuF " << DuF << " DxF " << DxF << std::endl;
-
       //M_invers = Id - gradu x DpF / ...
       FieldMatrix<adouble, dim, dim> M_invers;
       M_invers[0][0] = -gradrho[0]*DpF[0]; M_invers[0][1] = -gradrho[0]*DpF[1];
@@ -430,30 +428,18 @@ public:
       B[1][0] = 2.*F_value*gradrho[1]*gradrho[0] + 2.*rho_value*gradrho[1]*DxF[0] + DuF*2.*rho_value*gradrho[1]*gradrho[0];
       B[1][1] = 2.*F_value*gradrho[1]*gradrho[1] + 2.*rho_value*gradrho[1]*DxF[1] + DuF*2.*rho_value*gradrho[1]*gradrho[1];
 
-//      std::cerr << " B " << B << std::endl;
-
-//      std::cerr << " omega " << omega_value << " DOmega " << DOmega_value[0] << " " << DOmega_value[1] << std::endl;
-
       FieldMatrix<adouble, dim, dim> C;
       C[0][0] = gradrho[0]*x_value[0] + rho_value + 1./rho_value/omega_value*(w[0]-rho_value*x_value[0])*(gradrho[0]*omega_value + rho_value*DOmega_value[0]);
       C[0][1] = gradrho[1]*x_value[0]             + 1./rho_value/omega_value*(w[0]-rho_value*x_value[0])*(gradrho[1]*omega_value + rho_value*DOmega_value[1]);
       C[1][0] = gradrho[0]*x_value[1]             + 1./rho_value/omega_value*(w[1]-rho_value*x_value[1])*(gradrho[0]*omega_value + rho_value*DOmega_value[0]);
       C[1][1] = gradrho[1]*x_value[1] + rho_value + 1./rho_value/omega_value*(w[1]-rho_value*x_value[1])*(gradrho[1]*omega_value + rho_value*DOmega_value[1]);
 
-//      std::cerr << " C " << C << std::endl;
-
-
       FieldMatrix<adouble, dim, dim> A;
       A = B;
       A *= t;
       A.axpy(1.-t,C);
-//      std::cerr << " A itnermediate" << A << std::endl;
       A.leftmultiply(M_invers);
       A /= 2.*t*rho_value*F_value;
-
-//      std::cerr << "factor " << 2.*t*rho_value*F_value << std::endl;
-
-//      std::cerr << " A " << A << std::endl;
 
       FieldVector<double, 3> D_Psi_value;
       D_Psi_value[0] = 0; D_Psi_value[1] = 0;
@@ -479,16 +465,10 @@ public:
       adouble H_value = (1.-(x_value*x_value))*D_psi_norm *4. *t*t*rho_value*rho_value*rho_value*(-beta)*F_value*(F_value+(gradrho*DpF));
 
       //write calculated distribution
-
       FieldMatrix<adouble, dim, dim> uDH_pertubed = Hessrho;
-//      assert(fabs(Solver_config::z_3+3.0) < 1e-12);
       uDH_pertubed+=A;
 
-//      std::cerr << " Hess rho " << Hessrho << std::endl;
-//      std::cerr << " D2rho+A " << uDH_pertubed << std::endl;
-
       adouble uDH_pertubed_det = determinant(uDH_pertubed);
-
 
       adouble PDE_rhs = f_value/(g_value*H_value);
 
@@ -496,7 +476,6 @@ public:
       if (uDH_pertubed_det.value() < 0 && !found_negative)
       {
         std::cerr << "found negative determinant !!!!! " << uDH_pertubed_det.value() << " at " << x_value  << "matrix is " << Hessrho << std::endl;
-//        std::cerr << " local dofs " << x.transpose() << std::endl;
         std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
         found_negative = true;
       }
@@ -507,10 +486,9 @@ public:
       for (int j = 0; j < size; j++) // loop over test fcts
       {
         v_adolc(j) += (scaling_factor_adolc*PDE_rhs-uDH_pertubed_det)*
-        //(PDE_rhs-uDH_pertubed_det)*
             (referenceFunctionValues[j])
 //            (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1])
-	          	* quad[pt].weight() * integrationElement;
+            *quad[pt].weight() * integrationElement;
 
 /*
         if (((PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]* quad[pt].weight() * integrationElement).value() > 1e-6)
