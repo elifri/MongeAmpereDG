@@ -948,9 +948,12 @@ bool Assembler::assemble_jacobian_integral_cell_term(const LocalView& localView,
     out[i] = new double[x_c.size()];
   int ierr = jacobian(tag, x_c.size(), x_c.size(), x_c.data(), out);
 
-  std::cerr << "jacobian ierr was " << ierr << std::endl;
+  std::cerr << "jacobian cell ierr was " << ierr << std::endl;
   if(ierr <3)
+  {
+    std::cerr << " failed proper derivation from tape " << std::endl;
     return false;
+  }
 
   //TODO any better way to initialise matrix?
   for (int i = 0; i < x.size(); i++)
@@ -1374,15 +1377,45 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
         bool derivationSuccessful = assemble_jacobian_integral_cell_term(localView, xLocal, m_m, 0, x(x.size()-1), last_equation, scaling_factor);
         std::cerr << "Cell Derivation was successfull ? " << derivationSuccessful << std::endl;
         if (!derivationSuccessful)
-          lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
         {
-          derivationSuccessful = assemble_jacobian_integral_cell_term(localView, xLocal, m_m, 0, x(x.size()-1), last_equation, scaling_factor);
-          assert(derivationSuccessful);
+          lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 2, x(x.size()-1), v(v.size()-1));
+          derivationSuccessful = assemble_jacobian_integral_cell_term(localView, xLocal, m_m, 2, x(x.size()-1), last_equation, scaling_factor);
+//          assert(derivationSuccessful);
+          std::size_t stats[11];
+          tapestats(2, stats);
+          std::cout << "numer of independents " << stats[0] << std::endl
+                << "numer of deptendes " << stats[1] << std::endl
+                << "numer of live activ var " << stats[2] << std::endl
+                //      << "numer of size of value stack " << stats[3] << std::endl
+                << "numer of buffer size " << stats[4] << std::endl;
+          std::cerr << "second try Cell Derivation was successfull ? " << derivationSuccessful << std::endl;
         }
 
 
-#ifdef DEBUG
+#ifndef DEBUG
+        if(!derivationSuccessful)
         {
+          {
+            trace_on(4);
+            double start = 5;
+            adouble test;
+            test <<= start;
+            test *= 50;
+            double end;
+            test >>= end;
+            trace_off(4);
+
+            const int n_var = 1;
+            Solver_config::VectorType x_xn(n_var);
+
+            double** out = new double*[n_var];
+            for (int i = 0; i < n_var; i++)
+              out[i] = new double[n_var];
+            int ierr = jacobian(4, n_var, n_var, x_xn.data(), out);
+          }
+
+
+          std::cerr << " derivation was not successful " << std::endl;
           Solver_config::DenseMatrixType m_mFD;
           m_mFD.setZero(localView.size(), localView.size());
           Solver_config::VectorType last_equationFD = Solver_config::VectorType::Zero(localView.size()),
@@ -1433,7 +1466,9 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Solver_
             {
               lop.assemble_boundary_face_term(is,localView, localIndexSet, xLocal, local_boundary, 1);
               derivationSuccessful = assemble_jacobian_integral(localView, xLocal, m_mB, 1);
-              assert(derivationSuccessful);
+//              assert(derivationSuccessful);
+              if (!derivationSuccessful)
+                cerr << " Error at derivation " << std::endl; exit(-1);
             }
 
             }/* else {
