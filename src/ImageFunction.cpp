@@ -131,7 +131,9 @@ void ImageFunction::omega_normalize(const unsigned int n)
 
 double ImageFunction::integrate2(const unsigned int n) const
 {
-  Solver_config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, n);
+  const unsigned int order = std::min(5u,n);
+
+  Solver_config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, order);
   Integrator<Solver_config::GridType> integrator(unitcube_quadrature.grid_ptr());
   double integral = integrator.assemble_integral(*this);
   std::cout << "calculated integral " << integral << std::endl;
@@ -142,7 +144,8 @@ double ImageFunction::integrate2(const unsigned int n) const
 
 double ImageFunction::omega_integrate(const unsigned int n) const
 {
-  Solver_config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, n);
+  const unsigned int order = std::min(5u,n);
+  Solver_config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, order);
   Integrator<Solver_config::GridType> integrator(unitcube_quadrature.grid_ptr());
   double integral = integrator.assemble_integral([this](const Solver_config::DomainType &x) {return operator()(x)/omega(x);});
   std::cout << "calculated omega integral " << integral << std::endl;
