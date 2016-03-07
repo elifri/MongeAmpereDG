@@ -485,7 +485,7 @@ private:
 
     bool no_hanging_nodes;
 
-    static constexpr bool reuseAdolCTape = false;
+    static constexpr bool reuseAdolCTape = true;
 
     mutable int picture_no;
 };
