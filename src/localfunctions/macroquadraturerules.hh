@@ -148,6 +148,7 @@ class DeVeubekeQuadratureRule;
 
 }
 #include "deveubekequadraturerule.hh"
+#include "../PowellSabin/PowellSabin12quadraturerule.hh"
 
 namespace Dune{
 
@@ -165,13 +166,42 @@ private:
   {
     if (t.isSimplex())
     {
-      DUNE_THROW(NotImplemented, "No macro rule for triangles implemented");
+      if (qt != MacroQuadratureType::Powell_Sabin_12_split)
+        DUNE_THROW(NotImplemented, "No macro rule for this macro element implemented");
+      return PowellSabin12SplitQuadratureRule<ct, dim>(p);
     }
 
     if (qt != MacroQuadratureType::deVeubeke)
       DUNE_THROW(NotImplemented, "No macro rule for this macro element implemented");
 
     return DeVeubekeQuadratureRule<ct,dim>(p);
+  }
+};
+
+template<typename ct>
+class MacroQuadratureRuleFactory<ct, 1> {
+private:
+  enum { dim = 1 };
+  friend class MacroQuadratureRules<ct, dim>;
+  static unsigned maxOrder(const GeometryType &t, MacroQuadratureType::Enum qt)
+  {
+    unsigned order = unsigned(GaussQuadratureRule1D<ct>::highest_order);
+    return order;
+  }
+  static QuadratureRule<ct, dim> rule(const GeometryType& t, int p, MacroQuadratureType::Enum qt)
+  {
+    if (t.isLine())
+    {
+      if (qt == MacroQuadratureType::Powell_Sabin_12_split)
+      return PowellSabin12SplitQuadratureRule<ct, dim>(p);
+      if (qt != MacroQuadratureType::deVeubeke)
+      {
+        DUNE_THROW(NotImplemented, "No macro rule for this dimension and macro element implemented yet");
+      }
+      DUNE_THROW(NotImplemented, "No macro rule for this macro element implemented");
+    }
+    DUNE_THROW(Exception, "Unknown GeometryType");
+
   }
 };
 

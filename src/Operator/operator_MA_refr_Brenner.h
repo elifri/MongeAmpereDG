@@ -762,8 +762,8 @@ public:
     // Get a quadrature rule
     const int order = std::max(0, 3 * ((int) localFiniteElement.localBasis().order()));
     GeometryType gtface = intersection.geometryInInside().type();
-    const QuadratureRule<double, dim - 1>& quad = QuadratureRules<double,
-        dim - 1>::rule(gtface, order);
+    const QuadratureRule<double, dim - 1>& quad = MacroQuadratureRules<double,
+        dim - 1>::rule(gtface, order, Solver_config::quadratureType);
 
     // normal of center in face's reference element
     const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
