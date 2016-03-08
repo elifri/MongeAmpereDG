@@ -68,10 +68,11 @@ enum ProblemType
 
 std::ostream& operator <<(std::ostream &output, const ProblemType &p);
 
-
-struct Solver_config{
+struct SolverConfig{
 
   void read_configfile(std::string &configFile);
+
+  static ProblemType problem;
 
   bool initValueFromFile;
   std::string initValue;
@@ -80,24 +81,16 @@ struct Solver_config{
   static unsigned int epsDivide;
   static unsigned int epsEnd;
 
-  double minPixelValue;
-
   int maxSteps;
 #ifdef USE_DOGLEG
   DogLeg_optionstype doglegOpts;
 #endif
 
-
   bool writeVTK;
 
   bool evalJacSimultaneously;
 
-  mirror_problem::Grid2d::PovRayOpts povRayOpts;
   int refinement;
-
-
-  static std::string configFileMA_solver;
-  static std::string configFileEllipsoid;
 
   static bool Dirichlet;
 
@@ -111,7 +104,6 @@ struct Solver_config{
 	typedef Eigen::SparseMatrix<double> MatrixType;
 
 	typedef double value_type;
-
 
 //	typedef YaspGrid<dim> GridType;
 	typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > UnitCubeType;
@@ -127,20 +119,6 @@ struct Solver_config{
   typedef FieldVector<value_type, 3> SpaceType3d;
 
   static_assert(std::is_same<SpaceType, DomainType>::value, "Grid domain type must be equal to function type");
-
-	static UnitCubeType::SpaceType lowerLeft;
-	static UnitCubeType::SpaceType upperRight;
-
-	static UnitCubeType::SpaceType lowerLeftTarget;
-	static UnitCubeType::SpaceType upperRightTarget;
-
-	static std::string LightinputImageName;
-  static std::string TargetImageName;
-
-  static value_type kappa;
-  static value_type z_3;
-
-  static value_type lightSourceIntensity;
 
 //	typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementType;
 //  typedef Functions::PQKNodalBasis<GridView, degree> FEBasis;
@@ -165,10 +143,7 @@ struct Solver_config{
 	typedef FieldVector<value_type,1> RangeType;
   typedef FieldMatrix<value_type,2,2> HessianRangeType;
 
-
 	static const bool require_skeleton_two_sided = false; ///if enabled every face is assembled twice
-
-	static ProblemType problem;
 
 	static double lambda;
 
@@ -192,9 +167,35 @@ struct Solver_config{
     static constexpr double beta = 2.0 - 0.5*dim;  // 2D => 1, 3D => 0.5
 #endif
 
-
-
 };
 
-typedef struct Solver_config Solver_config;
+struct GeometrySetting{
+  virtual void read_configfile(std::string &configFile);
+
+  static SolverConfig::UnitCubeType::SpaceType lowerLeft;  ///lower left of input grid
+  static SolverConfig::UnitCubeType::SpaceType upperRight;   ///upper right of input grid
+
+  static SolverConfig::UnitCubeType::SpaceType lowerLeftTarget; ///lower left of target grid (target must be in x-y-plane)
+  static SolverConfig::UnitCubeType::SpaceType upperRightTarget; ///upper left of target grid (target must be in x-y-plane)
+  static SolverConfig::value_type z_3; /// third coordinate of target grid (target must be in x-y-plane)
+};
+
+struct OpticalSetting : GeometrySetting{
+  void read_configfile(std::string &configFile);
+  ///file for light source input
+  static std::string LightinputImageName;
+  ///file for target distribution
+  static std::string TargetImageName;
+
+  ///minimal Pixelvalue in outputimage
+  double minPixelValue;
+
+  ///pov ray options for output
+  mirror_problem::Grid2d::PovRayOpts povRayOpts;
+  static SolverConfig::value_type lightSourceIntensity;
+
+  static double kappa;
+};
+
+
 #endif /* SRC_SOLVER_CONFIG_HH_ */

@@ -30,13 +30,13 @@
 class MA_solver;
 
 typedef StaticRefinement<GenericGeometry::SimplexTopology<2>::type::id,
-        Solver_config::GridType::ctype,
+        SolverConfig::GridType::ctype,
         GenericGeometry::SimplexTopology<2>::type::id,
         2> PlotRefinementType;
 
 /*
 typedef StaticRefinement<GenericGeometry::CubeTopology<2>::type::id,
-        Solver_config::GridType::ctype,
+        SolverConfig::GridType::ctype,
         GenericGeometry::CubeTopology<2>::type::id,
         2> PlotRefinementType;
 */
@@ -44,11 +44,12 @@ typedef StaticRefinement<GenericGeometry::CubeTopology<2>::type::id,
 
 class Plotter{
 private:
-	const Solver_config::GridView* grid;
+	const SolverConfig::GridView* grid;
 	PlotRefinementType refined_grid;
 
 	int refinement; ///choose the refinement level before plotting
 
+	GeometrySetting geometrySetting;
 	mirror_problem::Grid2d::PovRayOpts povRayOpts;
 
 
@@ -56,15 +57,15 @@ private:
 	int Nnodes() const
 	{
 	  if (refinement == 0)
-	    return grid->size(Solver_config::dim);
+	    return grid->size(SolverConfig::dim);
 	  return grid->size(0)*PlotRefinementType::nVertices(refinement);
 	}
 
 
 public:
-	typedef Eigen::Matrix<Solver_config::RangeType, Eigen::Dynamic, 1> PointdataVectorType;
+	typedef Eigen::Matrix<SolverConfig::RangeType, Eigen::Dynamic, 1> PointdataVectorType;
 
-	Plotter(const Solver_config::GridView& gridView):grid(&gridView) {};
+	Plotter(const SolverConfig::GridView& gridView):grid(&gridView) {};
 
 	std::string output_directory, output_prefix;
 
@@ -155,11 +156,12 @@ public:
   template<typename Functiontype>
   void save_rectangular_mesh(Functiontype &f, std::ofstream &of) const;
 
-	void set_grid(Solver_config::GridView* grid){	this->grid = grid;}
+	void set_grid(SolverConfig::GridView* grid){	this->grid = grid;}
 	void set_refinement(const int refinement){	this->refinement = refinement;}
 	void set_output_directory(std::string outputdir) {this->output_directory = outputdir;}
 	void set_output_prefix(std::string prefix) {this->output_prefix = prefix;}
 	void set_PovRayOptions(const  mirror_problem::Grid2d::PovRayOpts& opts) {this->povRayOpts = opts;}
+  void set_geometrySetting(const  GeometrySetting& opts) {this->geometrySetting = opts;}
 
 //	void set_rhs(vector_function_type get_rhs){ this->get_rhs = get_rhs;}
 //	void set_exact_sol(vector_function_type get_exact_sol){ this->get_exact_sol = get_exact_sol;}
@@ -395,7 +397,7 @@ void Plotter::write_points_refractor(std::ofstream &file, Function &f) const{
 }
 
 
-void evaluateRhoX (const Solver_config::DomainType &x, Solver_config::value_type &u);
+void evaluateRhoX (const SolverConfig::DomainType &x, SolverConfig::value_type &u);
 
 template <class Function>
 void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
@@ -416,7 +418,7 @@ void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
         for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
           auto transportedX = fg(it.coords());
           file << std::setprecision(12) << std::scientific;
-          Solver_config::value_type u;
+          SolverConfig::value_type u;
           evaluateRhoX(geometry.global(it.coords()),u);
           file << "\t\t\t\t\t" << transportedX[0] << " " << transportedX[1] << " 0" << endl;
           vertex_no++;
@@ -602,8 +604,8 @@ void Plotter::write_mirror(std::ofstream &file, Function &f) const{
     // Output result
     assert(false);
 /*
-    VTKWriter<Solver_config::GridView> vtkWriter(*solver->gridView_ptr);
-    Solver_config::VectorType solution_v = solver->return_vertex_vector(solution);
+    VTKWriter<SolverConfig::GridView> vtkWriter(*solver->gridView_ptr);
+    SolverConfig::VectorType solution_v = solver->return_vertex_vector(solution);
     std::cout << "solution vertex " << solution_v.transpose() << std::endl;
     vtkWriter.addVertexData(solution_v, "solution");
 */
@@ -631,7 +633,7 @@ void Plotter::write_lens(std::ofstream &file, Function &f) const{
   file << "// Glass interior" <<std::endl <<
       "#declare myI_Glass =" <<std::endl <<
       "interior { "<< std::endl <<
-      "\t ior " << Solver_config::kappa <<
+      "\t ior " << OpticalSetting::kappa <<
       "}" <<std::endl <<std::endl;
 
   file << "// Glass Finishes" <<std::endl <<
@@ -729,11 +731,11 @@ void Plotter::writeRefractorPOV(std::string filename, Function &f) const {
 template<typename Functiontype>
 void Plotter::save_rectangular_mesh(Functiontype &f, std::ofstream &of) const
 {
-  static_assert(std::is_same<Solver_config::GridType,Dune::YaspGrid<2, EquidistantOffsetCoordinates<double,2> > >::value, "saving in rectangular mesh format works only for yaspgrids so far!");
+  static_assert(std::is_same<SolverConfig::GridType,Dune::YaspGrid<2, EquidistantOffsetCoordinates<double,2> > >::value, "saving in rectangular mesh format works only for yaspgrids so far!");
 
   //get information
-  const double l_x = Solver_config::upperRight[0] - Solver_config::lowerLeft[0];
-  const double l_y = Solver_config::upperRight[1] - Solver_config::lowerLeft[1];
+  const double l_x = SolverConfig::upperRight[0] - SolverConfig::lowerLeft[0];
+  const double l_y = SolverConfig::upperRight[1] - SolverConfig::lowerLeft[1];
 
   int n_x = std::sqrt(grid->size(0)*l_x/l_y);
   int n_y = grid->size(0)/n_x;
@@ -755,8 +757,8 @@ void Plotter::save_rectangular_mesh(Functiontype &f, std::ofstream &of) const
     for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
       const auto& x_local = it.coords();
       const auto& x_global = element.geometry().global(x_local);
-      int index_x = (x_global[0]-Solver_config::lowerLeft[0])/h_x;
-      int index_y = (x_global[1]-Solver_config::lowerLeft[1])/h_y; //index of the bottom left corner of the rectangle where x lies in
+      int index_x = (x_global[0]-SolverConfig::lowerLeft[0])/h_x;
+      int index_y = (x_global[1]-SolverConfig::lowerLeft[1])/h_y; //index of the bottom left corner of the rectangle where x lies in
 
       //special case at right boundary
       if (index_x == n_x) index_x--;
@@ -770,7 +772,7 @@ void Plotter::save_rectangular_mesh(Functiontype &f, std::ofstream &of) const
 
   of << n_x << " " << n_y << " "
      << h_x << " " << h_y << " "
-     << Solver_config::lowerLeft[0] << " " << Solver_config::lowerLeft[1] << std::endl;
+     << SolverConfig::lowerLeft[0] << " " << SolverConfig::lowerLeft[1] << std::endl;
 
   for (int y=0; y < n_y; y++)
   {

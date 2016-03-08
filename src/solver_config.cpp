@@ -18,37 +18,22 @@ namespace po = boost::program_options;
 using namespace Dune;
 using std::cout;
 
-std::string Solver_config::configFileMA_solver = "../inputData/MA_solver.ini";
-std::string Solver_config::configFileEllipsoid = "../inputData/ellipsoids.ini";
+ProblemType SolverConfig::problem;
 
-ProblemType Solver_config::problem = MA_SMOOTH;
-Solver_config::UnitCubeType::SpaceType Solver_config::lowerLeft = {0,0};
-Solver_config::UnitCubeType::SpaceType Solver_config::upperRight = {1,1};
+int SolverConfig::startlevel = 0;
+int SolverConfig::nonlinear_steps = 1;
 
-Solver_config::UnitCubeType::SpaceType Solver_config::lowerLeftTarget = {0,0};
-Solver_config::UnitCubeType::SpaceType Solver_config::upperRightTarget= {1,1};
-double Solver_config::z_3 = 0;
-double Solver_config::kappa = 2./3.;
-
-double Solver_config::lightSourceIntensity = 0.00007;
-
-std::string Solver_config::LightinputImageName = "../inputData/lightin_lambertian.bmp";
-std::string Solver_config::TargetImageName = "../inputData/blub.bmp";
-
-int Solver_config::startlevel = 0;
-int Solver_config::nonlinear_steps = 1;
-
-unsigned int Solver_config::epsDivide = 1;
-unsigned int Solver_config::epsEnd = 1;
+unsigned int SolverConfig::epsDivide = 1;
+unsigned int SolverConfig::epsEnd = 1;
 
 
-double Solver_config::sigma = 5;
-double Solver_config::sigmaGrad = 5;
-double Solver_config::sigmaBoundary = 5;
+double SolverConfig::sigma = 5;
+double SolverConfig::sigmaGrad = 5;
+double SolverConfig::sigmaBoundary = 5;
 
-bool Solver_config::Dirichlet = false;
+bool SolverConfig::Dirichlet = false;
 
-double Solver_config::lambda = 100;
+double SolverConfig::lambda = 100;
 
 std::ostream& operator <<(std::ostream &output, const ProblemType &p)
 {
@@ -78,28 +63,24 @@ std::ostream& operator <<(std::ostream &output, const ProblemType &p)
 }
 
 
-void Solver_config::read_configfile(std::string &configFile)
+void SolverConfig::read_configfile(std::string &configFile)
 {
 
   std::cout << "read information from file " << configFile << std::endl;
 
   po::options_description config("Configuration of the MA FE solver");
   config.add_options()
-        ("input.targetImageName",     po::value<string>(&Solver_config::TargetImageName), "")
         ("solver.initValueFromFile",     po::value<bool>(&initValueFromFile), "")
         ("solver.initValue",     po::value<string>(&initValue), "")
-        ("solver.startlevel",  po::value<int>(&Solver_config::startlevel), "")
-        ("solver.nonlinearSteps",  po::value<int>(&Solver_config::nonlinear_steps), "")
+        ("solver.startlevel",  po::value<int>(&SolverConfig::startlevel), "")
+        ("solver.nonlinearSteps",  po::value<int>(&SolverConfig::nonlinear_steps), "")
         ("solver.maxSteps",     po::value<int>(&maxSteps), "")
-        ("solver.Dirichlet",     po::value<bool>(&Solver_config::Dirichlet), "")
+        ("solver.Dirichlet",     po::value<bool>(&SolverConfig::Dirichlet), "")
         ("solver.JacSimultaneously",     po::value<bool>(&evalJacSimultaneously), "")
-        ("solver.lambda",     po::value<double>(&Solver_config::lambda), "")
-        ("solver.epsDivide",  po::value<unsigned int>(&Solver_config::epsDivide), "")
-        ("solver.epsEnd",  po::value<unsigned int>(&Solver_config::epsEnd), "")
-        ("solver.minPixelValue",     po::value<double>(&minPixelValue), "")
-        ("solver.sigma",     po::value<double>(&Solver_config::sigma), "")
-        ("solver.sigmaGrad",     po::value<double>(&Solver_config::sigmaGrad), "")
-        ("solver.sigmaBoundary",     po::value<double>(&Solver_config::sigmaBoundary), "")
+        ("solver.lambda",     po::value<double>(&SolverConfig::lambda), "")
+        ("solver.sigma",     po::value<double>(&SolverConfig::sigma), "")
+        ("solver.sigmaGrad",     po::value<double>(&SolverConfig::sigmaGrad), "")
+        ("solver.sigmaBoundary",     po::value<double>(&SolverConfig::sigmaBoundary), "")
 #ifdef USE_DOGLEG
         ("dogleg.iradius",     po::value<double>(&doglegOpts.iradius), "")
         ("dogleg.stopcriteria0" , po::value<double>(&(doglegOpts.stopcriteria[0])), "")
@@ -115,13 +96,6 @@ void Solver_config::read_configfile(std::string &configFile)
         ("output.prefix", po::value<string>(&outputPrefix), "")
         ("output.refinement", po::value<int>(&refinement), "")
         ("output.write_vtk", po::value<bool>(&writeVTK), "")
-        ("povray.cameraAngle",       po::value<double>(&(povRayOpts.cameraAngle)),       "")
-        ("povray.jitter",            po::value<bool>  (&(povRayOpts.jitter)),            "")
-        ("povray.nPhotons",          po::value<unsigned int>(&(povRayOpts.nPhotons)),    "")
-        ("povray.lightSourceRadius",    po::value<double>(&(povRayOpts.lightSourceRadius)), "")
-        ("povray.lightSourceFalloff",   po::value<double>(&(povRayOpts.lightSourceFalloff)), "")
-        ("povray.lightSourceTightness", po::value<double>(&(povRayOpts.lightSourceTightness)), "")
-        ("povray.lightSourceIntensity", po::value<double>(&Solver_config::lightSourceIntensity), "")
   ;
 
 
@@ -131,6 +105,109 @@ void Solver_config::read_configfile(std::string &configFile)
   {
     if (configFile=="")
       cerr << "\nError: Path to a config file is missing!\n";
+    else
+      cerr << "\nError: Can not open config file: " << configFile << "\n";
+    exit(1);
+  }
+  else
+  {
+    po::variables_map vm;
+    po::store(po::parse_config_file(ifs, config), vm);
+    notify(vm);
+  }
+
+}
+
+
+////------fallback values for geometry setting---------
+SolverConfig::UnitCubeType::SpaceType GeometrySetting::lowerLeft = {0,0};
+SolverConfig::UnitCubeType::SpaceType GeometrySetting::upperRight = {1,1};
+
+SolverConfig::UnitCubeType::SpaceType GeometrySetting::lowerLeftTarget = {0,0};
+SolverConfig::UnitCubeType::SpaceType GeometrySetting::upperRightTarget= {1,1};
+double GeometrySetting::z_3 = 0;
+
+void GeometrySetting::read_configfile(std::string &configFile)
+{
+
+  std::cout << "read information from file " << configFile << std::endl;
+
+  po::options_description config("Configuration of the geometry setting");
+  config.add_options()
+        ("geometry.optic.xMin",  po::value<double>(&OpticalSetting::lowerLeft[0]), "")
+        ("geometry.optic.xMax",  po::value<double>(&OpticalSetting::upperRight[0]), "")
+        ("geometry.optic.yMin",  po::value<double>(&OpticalSetting::lowerLeft[1]), "")
+        ("geometry.optic.yMax",  po::value<double>(&OpticalSetting::upperRight[1]), "")
+        ("geometry.target.xMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[0]), "")
+        ("geometry.target.xMax",     po::value<double>(&OpticalSetting::upperRightTarget[0]), "")
+        ("geometry.target.yMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[1]), "")
+        ("geometry.target.yMax",     po::value<double>(&OpticalSetting::upperRightTarget[1]), "")
+        ("geometry.target.z",        po::value<double>(&OpticalSetting::z_3),    "")
+  ;
+
+
+  // open config file for the image
+  ifstream ifs(configFile.c_str());
+  if (!ifs)
+  {
+    if (configFile=="")
+      cerr << "\nError: Path to a geometry config file is missing!\n";
+    else
+      cerr << "\nError: Can not open config file: " << configFile << "\n";
+    exit(1);
+  }
+  else
+  {
+    po::variables_map vm;
+    po::store(po::parse_config_file(ifs, config), vm);
+    notify(vm);
+  }
+
+}
+
+string OpticalSetting::TargetImageName;
+string OpticalSetting::LightinputImageName;
+
+double OpticalSetting::kappa = 2./3.;
+SolverConfig::value_type OpticalSetting::lightSourceIntensity;
+
+void OpticalSetting::read_configfile(std::string &configFile)
+{
+
+  std::cout << "read information from file " << configFile << std::endl;
+
+  po::options_description config("Configuration of the optical setting");
+  config.add_options()
+        ("geometry.optic.xMin",  po::value<double>(&OpticalSetting::lowerLeft[0]), "")
+        ("geometry.optic.xMax",  po::value<double>(&OpticalSetting::upperRight[0]), "")
+        ("geometry.optic.yMin",  po::value<double>(&OpticalSetting::lowerLeft[1]), "")
+        ("geometry.optic.yMax",  po::value<double>(&OpticalSetting::upperRight[1]), "")
+        ("geometry.target.xMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[0]), "")
+        ("geometry.target.xMax",     po::value<double>(&OpticalSetting::upperRightTarget[0]), "")
+        ("geometry.target.yMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[1]), "")
+        ("geometry.target.yMax",     po::value<double>(&OpticalSetting::upperRightTarget[1]), "")
+        ("geometry.target.z",        po::value<double>(&OpticalSetting::z_3),    "")
+        ("light.in.imageName",       po::value<string>(&OpticalSetting::LightinputImageName), "path to image")
+        ("light.out.targetImageName",     po::value<string>(&OpticalSetting::TargetImageName), "")
+        ("solver.epsDivide",  po::value<unsigned int>(&SolverConfig::epsDivide), "")
+        ("solver.epsEnd",  po::value<unsigned int>(&SolverConfig::epsEnd), "")
+        ("solver.minPixelValue",     po::value<double>(&minPixelValue), "")
+        ("povray.cameraAngle",       po::value<double>(&(povRayOpts.cameraAngle)),       "")
+        ("povray.jitter",            po::value<bool>  (&(povRayOpts.jitter)),            "")
+        ("povray.nPhotons",          po::value<unsigned int>(&(povRayOpts.nPhotons)),    "")
+        ("povray.lightSourceRadius",    po::value<double>(&(povRayOpts.lightSourceRadius)), "")
+        ("povray.lightSourceFalloff",   po::value<double>(&(povRayOpts.lightSourceFalloff)), "")
+        ("povray.lightSourceTightness", po::value<double>(&(povRayOpts.lightSourceTightness)), "")
+        ("povray.lightSourceIntensity", po::value<double>(&OpticalSetting::lightSourceIntensity), "")
+  ;
+
+
+  // open config file for the image
+  ifstream ifs(configFile.c_str());
+  if (!ifs)
+  {
+    if (configFile=="")
+      cerr << "\nError: Path to a optical setting file is missing!\n";
     else
       cerr << "\nError: Can not open config file: " << configFile << "\n";
     exit(1);

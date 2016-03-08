@@ -124,16 +124,16 @@ void read_quadratic_grid(const std::string &filename,  int &n_x, int &n_y,
  * @param solution  a matrix of the function values
  */
 
-void bilinear_interpolate(const Solver_config::SpaceType x, Solver_config::value_type &u, int &n_x, int &n_y,
-    Solver_config::value_type &h_x, Solver_config::value_type &h_y,
-    Solver_config::value_type &x0, Solver_config::value_type &y0,
+void bilinear_interpolate(const SolverConfig::SpaceType x, SolverConfig::value_type &u, int &n_x, int &n_y,
+    SolverConfig::value_type &h_x, SolverConfig::value_type &h_y,
+    SolverConfig::value_type &x0, SolverConfig::value_type &y0,
             Eigen::MatrixXd &solution);
 
 struct Rectangular_mesh_interpolator{
 
   Rectangular_mesh_interpolator(const std::string &filename);
-  Solver_config::value_type evaluate (const Solver_config::SpaceType2d& x);
-  Solver_config::value_type evaluate_inverse(const Solver_config::SpaceType2d& x);
+  SolverConfig::value_type evaluate (const SolverConfig::SpaceType2d& x);
+  SolverConfig::value_type evaluate_inverse(const SolverConfig::SpaceType2d& x);
 
   int n_x, n_y;
   double h_x, h_y;

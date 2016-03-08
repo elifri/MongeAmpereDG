@@ -20,7 +20,7 @@
 #include "Assembler.h"
 #include "problem_data.h"
 //#include "Operator/linear_system_operator_poisson_DG.hh"
-//#include "Operator/operator_MA_Neilan_DG.hh"
+#include "Operator/operator_MA_Neilan_DG.h"
 //#include "Operator/operator_MA_refl_Brenner.hh"
 #include "Operator/operator_MA_refr_Brenner.h"
 #include "Operator/operator_discrete_Hessian.h"
@@ -38,6 +38,7 @@
 #endif
 
 
+
 using namespace Dune;
 
 //class Plotter;
@@ -46,31 +47,30 @@ class MA_solver {
 public:
 
 	//-----typedefs---------
-	typedef Solver_config::GridType GridType;
-	typedef Solver_config::GridView GridViewType;
-	typedef Solver_config::LevelGridView LevelGridViewType;
+	typedef SolverConfig::GridType GridType;
+	typedef SolverConfig::GridView GridViewType;
+	typedef SolverConfig::LevelGridView LevelGridViewType;
 	typedef GridViewType::IntersectionIterator IntersectionIterator;
 	typedef IntersectionIterator::Intersection Intersection;
 	typedef GridViewType::IndexSet::IndexType IndexType;
 
-	typedef Solver_config::SpaceType SpaceType;
-	typedef Solver_config::RangeType RangeType;
+	typedef SolverConfig::SpaceType SpaceType;
+	typedef SolverConfig::RangeType RangeType;
 
-	typedef typename Solver_config::VectorType VectorType;
-	typedef typename Solver_config::DenseMatrixType DenseMatrixType;
-	typedef typename Solver_config::MatrixType MatrixType;
+	typedef typename SolverConfig::VectorType VectorType;
+	typedef typename SolverConfig::DenseMatrixType DenseMatrixType;
+	typedef typename SolverConfig::MatrixType MatrixType;
 
-	typedef typename Solver_config::FEBasis FEBasisType;
+	typedef typename SolverConfig::FEBasis FEBasisType;
 
-	typedef typename Solver_config::DiscreteGridFunction DiscreteGridFunction;
-	typedef typename Solver_config::DiscreteLocalGridFunction DiscreteLocalGridFunction;
-  typedef typename Solver_config::DiscreteLocalGradientGridFunction DiscreteLocalGradientGridFunction;
+	typedef typename SolverConfig::DiscreteGridFunction DiscreteGridFunction;
+	typedef typename SolverConfig::DiscreteLocalGridFunction DiscreteLocalGridFunction;
+  typedef typename SolverConfig::DiscreteLocalGradientGridFunction DiscreteLocalGradientGridFunction;
 
-	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, Solver_config config) :
+	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, SolverConfig config):
 	    initialised(true),
 			epsDivide_(config.epsDivide),
 			epsEnd_(config.epsEnd),
-			minPixelValue_(config.minPixelValue),
       maxSteps_(config.maxSteps),
 #ifdef USE_DOGLEG
       doglegOpts_(config.doglegOpts),
@@ -79,7 +79,6 @@ public:
       initValue_(config.initValue),
       evaluateJacobianSimultaneously_(config.evalJacSimultaneously),
       writeVTK_(config.writeVTK),
-      povRayOpts_(config.povRayOpts),
       outputDirectory_(config.outputDirectory), plotOutputDirectory_(config.plotOutputDirectory), outputPrefix_(config.outputPrefix),
       plotterRefinement_(config.refinement),
       grid_ptr(grid), gridView_ptr(&gridView),
@@ -93,21 +92,14 @@ public:
     doglegOpts_.maxsteps = maxSteps_;
 #endif
 
-    //adjust light intensity
-    const auto integralLightOut = op.lop.get_right_handside().get_target_distribution().integrateOriginal();
-    const auto integralLightIn = op.lop.get_right_handside().get_input_distribution().integrateOriginal();
-    povRayOpts_.lightSourceColor = Eigen::Vector3d::Constant(integralLightOut/integralLightIn*Solver_config::lightSourceIntensity);
-
 	  plotter.set_refinement(plotterRefinement_);
-	  plotter.set_PovRayOptions(povRayOpts_);
+	  plotter.set_geometrySetting(get_setting());
 
-	  epsMollifier_ = pow((double) epsDivide_, (int) Solver_config::nonlinear_steps) * epsEnd_;
-
-	  grid_ptr->globalRefine(Solver_config::startlevel);
+	  grid_ptr->globalRefine(SolverConfig::startlevel);
 
 	  //update member
-	  std::array<unsigned int,Solver_config::dim> elements;
-	  std::fill(elements.begin(), elements.end(), std::pow(2,Solver_config::startlevel));
+	  std::array<unsigned int,SolverConfig::dim> elements;
+	  std::fill(elements.begin(), elements.end(), std::pow(2,SolverConfig::startlevel));
 
     FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
 	  assembler.bind(*FEBasis);
@@ -118,9 +110,14 @@ public:
 	  plotter.add_plot_stream("resU", plotOutputDirectory_+"/Data/"+outputPrefix_+"resU"); //write residual in u test functions in this file
 	  plotter.add_plot_stream("res", plotOutputDirectory_+"/Data/"+outputPrefix_+"res"); //write residual in this file
     plotter.add_plot_stream("l2projError", plotOutputDirectory_+"/Data/"+outputPrefix_+"l2projError"); //write L2 error to projection in this file
-	  count_refined = Solver_config::startlevel;
-
+	  count_refined = SolverConfig::startlevel;
 	}
+
+  MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, SolverConfig config, const GeometrySetting& geometrySetting)
+      :MA_solver(grid, gridView, config)
+  {
+    setting_ = geometrySetting;
+  }
 
 /*
 	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const string& name0, const string &name1) :
@@ -128,6 +125,53 @@ public:
 		initialise_dofs();
 	}
 */
+
+  struct MA_Operator {
+    MA_Operator():solver_ptr(NULL){}
+    MA_Operator(MA_solver &solver):solver_ptr(&solver){}
+
+    void evaluate(const SolverConfig::VectorType& x, SolverConfig::VectorType& v, SolverConfig::MatrixType& m, const SolverConfig::VectorType& x_old, const bool new_solution=true) const
+    {
+      if (new_solution)
+      {
+        solver_ptr->update_solution(x_old);
+//        solver_ptr->iterations++;
+//        solver_ptr->plot_with_mirror("intermediateStep");
+      }
+
+      assert(solver_ptr != NULL);
+      igpm::processtimer timer;
+      timer.start();
+      solver_ptr->assemble_DG_Jacobian(lop, x,v, m); timer.stop();
+    }
+
+    void evaluate(const SolverConfig::VectorType& x, SolverConfig::VectorType& v, const SolverConfig::VectorType& x_old, const bool new_solution=true) const
+    {
+      if (new_solution)
+      {
+        solver_ptr->update_solution(x_old);
+      }
+
+      assert(solver_ptr != NULL);
+      igpm::processtimer timer;
+      timer.start();
+      solver_ptr->assemble_DG(lop, x,v); timer.stop();
+    }
+    void Jacobian(const SolverConfig::VectorType& x, SolverConfig::MatrixType& m) const
+    {
+      assert(solver_ptr != NULL);
+      solver_ptr->assemble_Jacobian_DG(lop, x,m);
+    }
+    void derivative(const SolverConfig::VectorType& x, SolverConfig::MatrixType& m) const
+    {
+      assert(solver_ptr != NULL);
+      solver_ptr->assemble_Jacobian_DG(lop, x,m);
+    }
+
+    mutable MA_solver* solver_ptr;
+
+    Local_Operator_MA_mixed_Neilan lop;
+  };
 
 	//-----functions--------
 public:
@@ -144,62 +188,6 @@ public:
 
 
 public:
-	struct Operator {
-		Operator():solver_ptr(NULL){}
-//		Operator(MA_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old, solver.minPixelValue_){}
-    Operator(MA_solver &solver):solver_ptr(&solver), lop(solver.solution_u_old, solver.gradient_u_old, solver.exact_solution, solver.minPixelValue_){}
-
-    void evaluate(const VectorType& x, VectorType& v, MatrixType& m, const VectorType& x_old, const bool new_solution=true) const
-    {
-      if (new_solution)
-      {
-        solver_ptr->update_solution(x_old);
-//        solver_ptr->iterations++;
-//        solver_ptr->plot_with_mirror("intermediateStep");
-      }
-
-//      std::cout << " evaluate " << x.transpose() << std::endl;
-
-      assert(solver_ptr != NULL);
-      igpm::processtimer timer;
-      timer.start();
-      solver_ptr->assemble_DG_Jacobian(lop, x,v, m); timer.stop();
-
-    }
-
-
-		void evaluate(const VectorType& x, VectorType& v, const VectorType& x_old, const bool new_solution=true) const
-		{
-//		  std::cerr<< "start operator evaluation ... " << std::endl;
-
-		  if (new_solution)
-      {
-		    solver_ptr->update_solution(x_old);
-      }
-
-		  assert(solver_ptr != NULL);
-			igpm::processtimer timer;
-			timer.start();
-			solver_ptr->assemble_DG(lop, x,v); timer.stop();
-
-		}
-		void Jacobian(const VectorType& x, MatrixType& m) const
-		{
-			assert(solver_ptr != NULL);
-			solver_ptr->assemble_Jacobian_DG(lop, x,m);
-		}
-		void derivative(const VectorType& x, MatrixType& m) const
-		{
-			assert(solver_ptr != NULL);
-			solver_ptr->assemble_Jacobian_DG(lop, x,m);
-		}
-
-    mutable MA_solver* solver_ptr;
-
-//		Local_Operator_MA_mixed_Neilan lop;
-//		Local_Operator_MA_refl_Brenner lop;
-		Local_Operator_MA_refr_Brenner lop;
-	};
 
 	///assembles the (global) integrals (for every test function) specified by lop
 	template<typename LocalOperatorType>
@@ -260,7 +248,6 @@ public:
   template<class F>
   void project_with_discrete_Hessian(F f, VectorType &V) const;
 
-
 	/**
 	 * projects a function into the grid space
 	 * @param f	callback function representing the function
@@ -271,7 +258,7 @@ public:
 	/**
 	 * updates all members to newSolution
 	 */
-	void update_solution(const Solver_config::VectorType& newSolution) const;
+	void update_solution(const SolverConfig::VectorType& newSolution) const;
 
 	/**
 	 * adapts the solver into the global refined space (refines grid, and transforms solution & exact solution data)
@@ -283,8 +270,7 @@ public:
    * adapts the solution into a coarser grid space
    * @param level
    */
-  Solver_config::VectorType coarse_solution(const int level=1);
-
+  SolverConfig::VectorType coarse_solution(const int level=1);
 
 	/**
 	 * refines the grid globally and sets up all necessary information for the next step
@@ -297,25 +283,21 @@ public:
 
 	void plot_with_lens(std::string name);
 
-private:
+protected:
 	///creates the initial guess
 	virtual void create_initial_guess();
 
 	/// solves own nonlinear system given initial point in solution
 	void solve_nonlinear_system();
 
-	///performs one step in the nonlinear solver, returns if the step was successfull
-	bool solve_nonlinear_step(const MA_solver::Operator &op);
-
-	void phi(const Solver_config::SpaceType2d& T, const FieldVector<double, Solver_config::dim> &normal, Solver_config::value_type &phi);
+	void phi(const SolverConfig::SpaceType2d& T, const FieldVector<double, SolverConfig::dim> &normal, SolverConfig::value_type &phi);
 
 
 public:
   ///calculate the projection of phi for the Picard Iteration for the b.c.
   template<class Element>
-  Solver_config::value_type phi(const Element& element, const Solver_config::DomainType& xLocal
-                               , const FieldVector<double, Solver_config::dim> &normal);
-
+  SolverConfig::value_type phi(const Element& element, const SolverConfig::DomainType& xLocal
+                               , const FieldVector<double, SolverConfig::dim> &normal);
 
 	/**
 	 * initialises the member solution with sol_u, the second derivatives are initialised with D^2_h sol_u
@@ -330,7 +312,7 @@ public:
 	 * @brief calculates the solution of the MA equation
 	 * @return
 	 */
-	const VectorType& solve();
+	virtual const VectorType& solve();
 
 	double calculate_L2_error(const MA_function_type &f) const;
 
@@ -340,25 +322,22 @@ public:
 	 */
 	VectorType return_vertex_vector(const VectorType &x) const;
 
+	virtual GeometrySetting& get_setting() {return setting_;}
+  virtual const GeometrySetting& get_setting() const {return setting_;}
+
+
 	//--------Attributes--
-
-	enum ProblemType {REFLECTOR, REFRACTOR, OPTIMALTRANSPORT};
-
-private:
-
-	ProblemType problem_;
-
+protected:
 	bool initialised; ///asserts the important member, such as the dof_handler, assembler ... are initialised
 
-  unsigned int epsMollifier_, epsDivide_, epsEnd_;
+	GeometrySetting setting_;
 
-  double minPixelValue_;
+  unsigned int epsMollifier_, epsDivide_, epsEnd_;
 
   int maxSteps_;
 #ifdef USE_DOGLEG
   DogLeg_optionstype doglegOpts_;
 #endif
-
 
   int count_refined; ///counts how often the original grid was refined
 public:
@@ -370,7 +349,6 @@ protected:
   bool evaluateJacobianSimultaneously_; ///evaluate the jacobian simultaneously to the objective function (in Newton solver)
 
   bool writeVTK_; ///write vtk files output
-  mirror_problem::Grid2d::PovRayOpts povRayOpts_; ///stores povRay options
 	std::string outputDirectory_, plotOutputDirectory_, outputPrefix_; ///outputdirectories
   int plotterRefinement_; ///number of (virtual) grid refinements for output generation
 
@@ -384,8 +362,7 @@ protected:
 
   double G; /// fixes the reflector size
 
-  Operator op; ///functional operator
-
+  MA_Operator op; ///functional operator
 
   //store old solutions and coefficients
 	mutable VectorType solution; /// stores the current solution vector
@@ -403,8 +380,7 @@ protected:
 //
   mutable shared_ptr<Rectangular_mesh_interpolator> exact_solution;
 
-
-	friend Operator;
+	friend MA_Operator;
 
 //
 //	friend Plotter;
@@ -453,12 +429,12 @@ void MA_solver::project_labourious(const F f, VectorType& v) const
 
     // Get a quadrature rule
     const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
-    const QuadratureRule<double, Solver_config::dim>& quad =
-        MacroQuadratureRules<double, Solver_config::dim>::rule(element.type(), order, Solver_config::quadratureType);
+    const QuadratureRule<double, SolverConfig::dim>& quad =
+        MacroQuadratureRules<double, SolverConfig::dim>::rule(element.type(), order, SolverConfig::quadratureType);
 
     for (const auto& quadpoint : quad)
     {
-      const FieldVector<double, Solver_config::dim> &quadPos = quadpoint.position();
+      const FieldVector<double, SolverConfig::dim> &quadPos = quadpoint.position();
 
       //evaluate test function
       std::vector<Dune::FieldVector<double, 1>> functionValues(localView.size());
@@ -729,7 +705,7 @@ void MA_solver::project_labouriousC1(const F f, VectorType& v) const
       const int i = is.indexInInside();
 
       // normal of center in face's reference element
-      const FieldVector<double, Solver_config::dim> normal = is.centerUnitOuterNormal();
+      const FieldVector<double, SolverConfig::dim> normal = is.centerUnitOuterNormal();
 
       bool unit_pointUpwards;
       if (std::abs(normal[0]+normal[1])< 1e-12)
@@ -838,7 +814,7 @@ void MA_solver::project_labouriousC1(const F f, const F_derX f_derX, const F_der
       const int i = is.indexInInside();
 
       // normal of center in face's reference element
-      const FieldVector<double, Solver_config::dim> normal = is.centerUnitOuterNormal();
+      const FieldVector<double, SolverConfig::dim> normal = is.centerUnitOuterNormal();
 
       const auto face_center = is.geometry().center();
 //      std::cout << "face center " << face_center << std::endl;
@@ -859,7 +835,6 @@ void MA_solver::project_labouriousC1(const F f, const F_derX f_derX, const F_der
   //set scaling factor (last dof) to ensure mass conservation
   v(v.size()-1) = 1;
 
-//#define NDEBUG
 #ifdef DEBUG
   std::cout << "v.size()" << v.size()-1 << std::endl;
   std::cout << "projected on vector " << std::endl << v.transpose() << std::endl;
@@ -876,9 +851,9 @@ void MA_solver::project_labouriousC1(const F f, const F_derX f_derX, const F_der
 
     // Get a quadrature rule
     const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
-    const QuadratureRule<double, Solver_config::dim>& quad =
-        MacroQuadratureRules<double, Solver_config::dim>::rule(element.type(),
-            order, Solver_config::quadratureType);
+    const QuadratureRule<double, SolverConfig::dim>& quad =
+        MacroQuadratureRules<double, SolverConfig::dim>::rule(element.type(),
+            order, SolverConfig::quadratureType);
 
     double resTest1f = 0, resTest1 = 0;
 
@@ -913,7 +888,7 @@ void MA_solver::project_labouriousC1(const F f, const F_derX f_derX, const F_der
     }
 
     for (const auto& quadpoint : quad) {
-      const FieldVector<double, Solver_config::dim> &quadPos =
+      const FieldVector<double, SolverConfig::dim> &quadPos =
           quadpoint.position();
       //evaluate test function
       std::vector<Dune::FieldVector<double, 1>> functionValues(
@@ -969,12 +944,12 @@ void MA_solver::project_labouriousC1(const F f, const F_derX f_derX, const F_der
 
           // The gradients
           std::vector<Dune::FieldVector<double, 2>> gradients(lFE.size());
-          FieldVector<double, Solver_config::dim> gradu;
+          FieldVector<double, SolverConfig::dim> gradu;
           assemble_gradients_gradu(lFE, jacobian, quadPos,
               gradients, localDofs, gradu);
 
           std::vector<FieldVector<double, 2>> gradientsn(lFE.size());
-          FieldVector<double, Solver_config::dim> gradun(0);
+          FieldVector<double, SolverConfig::dim> gradun(0);
           assemble_gradients_gradu(lFEn, jacobian, quadPosn,
               gradientsn, localDofsn, gradun);
 
@@ -1045,7 +1020,7 @@ void MA_solver::project_labouriousC1Local(LocalF f, LocalF_grad f_grad, VectorTy
       const int i = is.indexInInside();
 
       // normal of center in face's reference element
-      const FieldVector<double, Solver_config::dim> normal =
+      const FieldVector<double, SolverConfig::dim> normal =
           is.centerUnitOuterNormal();
 
       const auto face_center = is.geometry().center();
@@ -1066,7 +1041,6 @@ void MA_solver::project_labouriousC1Local(LocalF f, LocalF_grad f_grad, VectorTy
   //set scaling factor (last dof) to ensure mass conservation
   v(v.size() - 1) = 1;
 
-#define NDEBUG
 #ifdef DEBUG
   std::cout << "v.size()" << v.size() - 1 << std::endl;
   std::cout << "projected on vector " << std::endl << v.transpose()
@@ -1085,9 +1059,9 @@ void MA_solver::project_labouriousC1Local(LocalF f, LocalF_grad f_grad, VectorTy
 
     // Get a quadrature rule
     const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
-    const QuadratureRule<double, Solver_config::dim>& quad =
-        MacroQuadratureRules<double, Solver_config::dim>::rule(element.type(),
-            order, Solver_config::quadratureType);
+    const QuadratureRule<double, SolverConfig::dim>& quad =
+        MacroQuadratureRules<double, SolverConfig::dim>::rule(element.type(),
+            order, SolverConfig::quadratureType);
 
     double resTest1f = 0, resTest1 = 0;
 
@@ -1122,7 +1096,7 @@ void MA_solver::project_labouriousC1Local(LocalF f, LocalF_grad f_grad, VectorTy
     }
 
     for (const auto& quadpoint : quad) {
-      const FieldVector<double, Solver_config::dim> &quadPos =
+      const FieldVector<double, SolverConfig::dim> &quadPos =
           quadpoint.position();
       //evaluate test function
       std::vector<Dune::FieldVector<double, 1>> functionValues(
@@ -1181,12 +1155,12 @@ void MA_solver::project_labouriousC1Local(LocalF f, LocalF_grad f_grad, VectorTy
 
           // The gradients
           std::vector<Dune::FieldVector<double, 2>> gradients(lFE.size());
-          FieldVector<double, Solver_config::dim> gradu;
+          FieldVector<double, SolverConfig::dim> gradu;
           assemble_gradients_gradu(lFE, jacobian, quadPos, gradients, localDofs,
               gradu);
 
           std::vector<FieldVector<double, 2>> gradientsn(lFE.size());
-          FieldVector<double, Solver_config::dim> gradun(0);
+          FieldVector<double, SolverConfig::dim> gradun(0);
           assemble_gradients_gradu(lFEn, jacobian, quadPosn, gradientsn,
               localDofsn, gradun);
 
@@ -1262,14 +1236,14 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
     // Get a quadrature rule
     const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
-    const QuadratureRule<double, Solver_config::dim>& quad =
-        MacroQuadratureRules<double, Solver_config::dim>::rule(element.type(),
-            order, Solver_config::quadratureType);
+    const QuadratureRule<double, SolverConfig::dim>& quad =
+        MacroQuadratureRules<double, SolverConfig::dim>::rule(element.type(),
+            order, SolverConfig::quadratureType);
 
     double resTest1f = 0, resTest1 = 0;
 
     for (const auto& quadpoint : quad) {
-      const FieldVector<double, Solver_config::dim> &quadPos =
+      const FieldVector<double, SolverConfig::dim> &quadPos =
           quadpoint.position();
 
       //evaluate test function
@@ -1322,7 +1296,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
         std::cout << "local dofs   " << localDofs.transpose() << std::endl << "local dofs n " << localDofsn.transpose() << std::endl;
 
         //calculate normal derivative
-        const FieldVector<double, Solver_config::dim> normal =
+        const FieldVector<double, SolverConfig::dim> normal =
             is.centerUnitOuterNormal();
 
         const auto face_center = is.geometry().center();
@@ -1334,12 +1308,12 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
         // assemble the gradients
         std::vector<Dune::FieldVector<double, 2>> gradients(lFE.size());
-        FieldVector<double, Solver_config::dim> gradu;
+        FieldVector<double, SolverConfig::dim> gradu;
         assemble_gradients_gradu(lFE, jacobian, geometry.local(face_center),
             gradients, localDofs, gradu);
 
         std::vector<FieldVector<double, 2>> gradientsn(lFE.size());
-        FieldVector<double, Solver_config::dim> gradun(0);
+        FieldVector<double, SolverConfig::dim> gradun(0);
         assemble_gradients_gradu(lFEn, jacobian, faceCentern,
             gradientsn, localDofsn, gradun);
 
@@ -1363,12 +1337,12 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
           // The gradients
           std::vector<Dune::FieldVector<double, 2>> gradients(lFE.size());
-          FieldVector<double, Solver_config::dim> gradu;
+          FieldVector<double, SolverConfig::dim> gradu;
           assemble_gradients_gradu(lFE, jacobian, quadPos,
               gradients, localDofs, gradu);
 
           std::vector<FieldVector<double, 2>> gradientsn(lFE.size());
-          FieldVector<double, Solver_config::dim> gradun(0);
+          FieldVector<double, SolverConfig::dim> gradun(0);
           assemble_gradients_gradu(lFEn, jacobian, quadPosn,
               gradientsn, localDofsn, gradun);
 
@@ -1383,7 +1357,6 @@ void MA_solver::test_projection(const F f, VectorType& v) const
     }
 
   }
-
 
 
 }

@@ -61,8 +61,8 @@ public:
     typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
 
 //    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<Solver_config::value_type, Element::dimension, Element::dimension> FEHessianType;
+    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
+    typedef typename Dune::FieldMatrix<SolverConfig::value_type, Element::dimension, Element::dimension> FEHessianType;
     typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType HessianType;
 
     const int size_u = localFiniteElementu.size();
@@ -89,12 +89,12 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<double, Solver_config::dim> gradu;
+      FieldVector<double, SolverConfig::dim> gradu;
       assemble_gradients(localFiniteElementu, jacobian, quadPos, gradients);
 
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size_u);
-      FieldMatrix<double, Solver_config::dim, Solver_config::dim> Hessu;
+      FieldMatrix<double, SolverConfig::dim, SolverConfig::dim> Hessu;
       assemble_hessians_hessu(localFiniteElementu, jacobian, quadPos, Hessians, x, Hessu);
 
       //the shape function values of hessian ansatz functions and assemble u_DH
@@ -172,7 +172,7 @@ public:
     typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
 
     typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
+    typedef FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
     typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType RangeTypeDH;
 
     const int size_u = localFiniteElementu.size();
@@ -210,8 +210,8 @@ public:
     const FieldVector<double,dimw> normal = intersection.unitOuterNormal(face_center);
 
     // penalty weight for NIPG / SIPG
-    double penalty_weight = Solver_config::sigma*(Solver_config::degree*Solver_config::degree) / std::pow(intersection.geometry().volume(), Solver_config::beta);
-    double penalty_weight_gradient = Solver_config::sigmaGrad*(Solver_config::degree*Solver_config::degree) * std::pow(intersection.geometry().volume(), Solver_config::beta);
+    double penalty_weight = SolverConfig::sigma*(SolverConfig::degree*SolverConfig::degree) / std::pow(intersection.geometry().volume(), SolverConfig::beta);
+    double penalty_weight_gradient = SolverConfig::sigmaGrad*(SolverConfig::degree*SolverConfig::degree) * std::pow(intersection.geometry().volume(), SolverConfig::beta);
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -236,10 +236,10 @@ public:
 
       // The gradients of the shape functions on the reference element
        std::vector<JacobianType> gradients(size_u);
-       FieldVector<double, Solver_config::dim> gradu(0);
+       FieldVector<double, SolverConfig::dim> gradu(0);
        assemble_gradients_gradu(localFiniteElementu, jacobian, quadPos, gradients, x, gradu);
        std::vector<JacobianType> gradientsn(size_u);
-       FieldVector<double, Solver_config::dim> gradun(0);
+       FieldVector<double, SolverConfig::dim> gradun(0);
        assemble_gradients_gradu(localFiniteElementun, jacobiann, quadPosn, gradientsn, xn, gradun);
 
        //the shape function values of hessian ansatz functions
@@ -261,7 +261,7 @@ public:
               auto index_hess_entryn = localIndexSetn.flat_local_index(j, row, col)- size_u;
 
               // discr. hessian correction term: jump{avg{mu} grad_u}
-              Solver_config::value_type temp = referenceFunctionValuesHessian[j]*gradu[col];
+              SolverConfig::value_type temp = referenceFunctionValuesHessian[j]*gradu[col];
               v(index_hess_entry) -= 0.5*( temp*normal[row]);
 
               temp = referenceFunctionValuesHessian[j]*gradun[col];

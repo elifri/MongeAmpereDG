@@ -20,9 +20,9 @@
 using namespace Dune;
 namespace po = boost::program_options;
 
-void read_parameters(int argc, char *argv[], std::string& configFileMASolver)
+void read_parameters(int argc, char *argv[], std::string& configFileMASolver, std::string& configFileOpticalSetting)
 {
-  string configFileGeometry, petscConfig;
+  string petscConfig;
 
   po::options_description cmdline("Generic options");
   cmdline.add_options()
@@ -30,7 +30,7 @@ void read_parameters(int argc, char *argv[], std::string& configFileMASolver)
       ("help,h",      "produce help message")
       ("help-all,a",  "produce help message (including config file options)")
       ("solver,c", po::value<string>(&configFileMASolver),  "config file for the MA finite element method")
-      ("geometry,g",   po::value<string>(&configFileGeometry),  "config file for geometry")
+      ("geometry,g",   po::value<string>(&configFileOpticalSetting),  "config file for geometry")
       ("Petsoptionsfile,o", po::value<string>(&petscConfig), "config file for petsc")
       ;
 
@@ -39,33 +39,14 @@ void read_parameters(int argc, char *argv[], std::string& configFileMASolver)
   // config file
   po::options_description config("Configuration for the method of ellipsoids of revolution");
   config.add_options()
-      ("input.imageName",    po::value<string>(&Solver_config::LightinputImageName),          "path to image")
+      ("input.imageName", po::value<string>(&OpticalSetting::LightinputImageName), "path to image")
 //      ("output.folder" ,        po::value<string>(&outputFolder),         "folder for the output data")
       ;
 
-  po::options_description configGeometry("Configuration of the geometry");
-  configGeometry.add_options()
-        ("geometry.reflector.xMin",  po::value<double>(&Solver_config::lowerLeft[0]), "")
-        ("geometry.reflector.xMax",  po::value<double>(&Solver_config::upperRight[0]), "")
-        ("geometry.reflector.yMin",  po::value<double>(&Solver_config::lowerLeft[1]), "")
-        ("geometry.reflector.yMax",  po::value<double>(&Solver_config::upperRight[1]), "")
-        ("geometry.target.xMin",     po::value<double>(&Solver_config::lowerLeftTarget[0]), "")
-        ("geometry.target.xMax",     po::value<double>(&Solver_config::upperRightTarget[0]), "")
-        ("geometry.target.yMin",     po::value<double>(&Solver_config::lowerLeftTarget[1]), "")
-        ("geometry.target.yMax",     po::value<double>(&Solver_config::upperRightTarget[1]), "")
-        ("geometry.target.z",        po::value<double>(&Solver_config::z_3),    "")
-        ("light.in.imageName",       po::value<string>(&Solver_config::LightinputImageName), "path to image")
-//      ("povray.cameraAngle",       po::value<double>(&(povRayOpts.cameraAngle)),       "")
-//      ("povray.jitter",            po::value<bool>  (&(povRayOpts.jitter)),            "")
-//      ("povray.nPhotons",          po::value<unsigned int>(&(povRayOpts.nPhotons)),    "")
-//      ("povray.lightSourceRadius",    po::value<double>(&(povRayOpts.lightSourceRadius)), "")
-//      ("povray.lightSourceFalloff",   po::value<double>(&(povRayOpts.lightSourceFalloff)), "")
-//      ("povray.lightSourceTightness", po::value<double>(&(povRayOpts.lightSourceTightness)), "")
-//      ("povray.lightSourceIntensity", po::value<double>(&lightSourceIntensity), "")
-      ;
 
   po::options_description cmdline_options;
-  cmdline_options.add(cmdline).add(configGeometry);
+  cmdline_options.add(cmdline);
+
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, cmdline_options), vm);
@@ -94,28 +75,6 @@ void read_parameters(int argc, char *argv[], std::string& configFileMASolver)
   PetscInitialize(&argc,&argv,petscConfig.c_str(),help);
   std::cout <<"using petsc" << std::endl;
 #endif
-
-
-  {
-      // open config file for initial guess
-      string filename = configFileGeometry;
-      ifstream ifs(filename.c_str());
-      if (!ifs)
-      {
-          if (configFileGeometry=="")
-              cerr << "\nError: Path to a config file for the initial guess is missing!\n";
-          else
-              cerr << "\nError: Can not open config file: "
-                   << configFileGeometry << "\n";
-          exit(1);
-      }
-      else
-      {
-          po::store(po::parse_config_file(ifs, configGeometry), vm);
-          notify(vm);
-      }
-  }
-
 }
 
 
@@ -128,54 +87,36 @@ try {
 
   std::cout << " Start solving Lens problem " << std::endl;
 
+	std::string configFileMASolver, configFileOpticalSetting;
 
-	// ////////////////////////////////
-// Generate the grid
-// ////////////////////////////////
-//	FieldVector<double, dim> l(1);
-//	std::array<int, dim> elements = { 10, 10 };
+	read_parameters(argc, argv, configFileMASolver, configFileOpticalSetting);
 
-	std::string configFileMASolver;
-
-	read_parameters(argc, argv, configFileMASolver);
-
-//	Solver_config::lowerLeft = {-0.2,0};
-//	Solver_config::upperRight = {0.2,0.4};
-
-//	Solver_config::lowerLeft = {0,0};
-//	Solver_config::upperRight = {1,1};
-	Solver_config::UnitCubeType unitcube(Solver_config::lowerLeft, Solver_config::upperRight, 0);
-
-
-	Solver_config::GridType &grid = unitcube.grid();
-	Solver_config::GridView gridView = grid.leafGridView();
-
-	// Output result
-	VTKWriter<Solver_config::GridView> vtkWriter(gridView);
-	vtkWriter.write("grid");
-
-	Solver_config config;
+	SolverConfig config;
 	config.read_configfile(configFileMASolver);
 
-	MA_refractor_solver ma_solver(unitcube.grid_ptr(), gridView, config);
+	OpticalSetting opticalSetting;
+	opticalSetting.read_configfile(configFileOpticalSetting);
+
+  // ////////////////////////////////
+  // Generate the grid
+  // ////////////////////////////////
+
+	SolverConfig::UnitCubeType unitcube(opticalSetting.lowerLeft, opticalSetting.upperRight, 0);
+
+	SolverConfig::GridType &grid = unitcube.grid();
+	SolverConfig::GridView gridView = grid.leafGridView();
+
+	// Output resulting grid
+	VTKWriter<SolverConfig::GridView> vtkWriter(gridView);
+	vtkWriter.write("grid");
 
 	// ///////////////////////////////////////////////
-	// Choose an initial iterate
+	// Solve PDE
 	// ///////////////////////////////////////////////
-//	Solver_config::VectorType initial_guess;
-//	ma_solver.project(General_functions::get_easy_convex_polynomial_callback(), initial_guess);
-//	ma_solver.project(General_functions::get_constant_one_callback(), initial_guess);
+
+	MA_refractor_solver ma_solver(unitcube.grid_ptr(), gridView, config, opticalSetting);
 
 	ma_solver.solve();
-
-//	x = ma_solver.return_vertex_vector(x);
-//	initial_guess = ma_solver.return_vertex_vector(initial_guess);
-
-	// Output result
-//	VTKWriter<Solver_config::GridView> vtkWriter(gridView);
-//	vtkWriter.addVertexData(initial_guess, "initial");
-//	vtkWriter.addVertexData(x, "solution");
-//	vtkWriter.write("poissonequation result");
 
 	std::cout << "done" << std::endl;
 

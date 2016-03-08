@@ -12,8 +12,8 @@
 #include <dune/geometry/quadraturerules.hh>
 
 #include "../utils.hpp"
-#include "../solver_config.hh"
-#include "../problem_data.hh"
+#include "../solver_config.h"
+#include "../problem_data.h"
 
 //automatic differtiation
 #include <adolc/adouble.h>
@@ -22,8 +22,6 @@
 using namespace Dune;
 
 class Local_Operator_MA_mixed_Neilan {
-
-
 
 public:
 
@@ -36,8 +34,8 @@ public:
    */
   template<class LocalView, class LocalIndexSet, class VectorType>
   void assemble_cell_term(const LocalView& localView, const LocalIndexSet &localIndexSet, const VectorType &x,
-      VectorType& v, const int tag) const {
-
+      VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const {
+/*
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
     const Element& element = localView.element();
@@ -62,8 +60,8 @@ public:
     typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
 
     typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<Solver_config::value_type, Element::dimension, Element::dimension> FEHessianType;
+    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
+    typedef typename Dune::FieldMatrix<SolverConfig::value_type, Element::dimension, Element::dimension> FEHessianType;
     typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType HessianType;
 
     const int size_u = localFiniteElementu.size();
@@ -107,13 +105,13 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, Solver_config::dim> gradu;
+      FieldVector<adouble, SolverConfig::dim> gradu;
       assemble_gradients_gradu(localFiniteElementu, jacobian, quadPos,
           gradients, x_adolc.segment(0, size_u), gradu);
 
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size_u);
-      FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> Hessu;
+      FieldMatrix<adouble, SolverConfig::dim, SolverConfig::dim> Hessu;
       assemble_hessians_hessu(localFiniteElementu, jacobian, quadPos, Hessians,
           x_adolc.segment(0, size_u), Hessu);
 
@@ -158,6 +156,7 @@ public:
     for (int i = 0; i < size; i++)
       v_adolc[i] >>= v[i]; // select dependent variables
     trace_off();
+    */
   }
 
   /*
@@ -173,13 +172,14 @@ public:
 
 //typedef Dune::Q1LocalFiniteElement<double, double, 2> LocalElement;
 //typedef Dune::Intersection<const Dune::YaspGrid<2>, Dune::YaspIntersection<const Dune::YaspGrid<2> > > IntersectionType;
-//typedef Solver_config::VectorType VectorType;
-//typedef Solver_config::MatrixType MatrixType;
+//typedef SolverConfig::VectorType VectorType;
+//typedef SolverConfig::MatrixType MatrixType;
   template<class IntersectionType, class LocalView, class LocalIndexSet, class VectorType>
   void assemble_inner_face_term(const IntersectionType& intersection,
-      const LocalView &localView, const LocalIndexSet &localIndexSet, const VectorType &x,
-      const LocalView &localViewn, const LocalIndexSet &localIndexSetn, const VectorType &xn, VectorType& v,
-      VectorType& vn, const int tag) const {
+      const LocalView &localView,  const LocalIndexSet &localIndexSet, const VectorType &x,
+      const LocalView &localViewn,  const LocalIndexSet &localIndexSetn, const VectorType &xn, VectorType& v,
+      VectorType& vn, int tag) const {
+    /*
     const int dim = IntersectionType::dimension;
     const int dimw = IntersectionType::dimensionworld;
 
@@ -205,7 +205,7 @@ public:
     typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
 
     typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
+    typedef FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
     typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType RangeTypeDH;
 
     const int size_u = localFiniteElementu.size();
@@ -252,12 +252,12 @@ public:
         face_center);
 
     // penalty weight for NIPG / SIPG
-    double penalty_weight = Solver_config::sigma
-        * (Solver_config::degree * Solver_config::degree)
-        / std::pow(intersection.geometry().volume(), Solver_config::beta);
-    double penalty_weight_gradient = Solver_config::sigmaGrad
-        * (Solver_config::degree * Solver_config::degree)
-        * std::pow(intersection.geometry().volume(), Solver_config::beta);
+    double penalty_weight = SolverConfig::sigma
+        * (SolverConfig::degree * SolverConfig::degree)
+        / std::pow(intersection.geometry().volume(), SolverConfig::beta);
+    double penalty_weight_gradient = SolverConfig::sigmaGrad
+        * (SolverConfig::degree * SolverConfig::degree)
+        * std::pow(intersection.geometry().volume(), SolverConfig::beta);
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -290,11 +290,11 @@ public:
 
       // The gradients of the shape functions on the reference element
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, Solver_config::dim> gradu(0);
+      FieldVector<adouble, SolverConfig::dim> gradu(0);
       assemble_gradients_gradu(localFiniteElementu, jacobian, quadPos,
           gradients, x_adolc.segment(0, size_u), gradu);
       std::vector<JacobianType> gradientsn(size_u);
-      FieldVector<adouble, Solver_config::dim> gradun(0);
+      FieldVector<adouble, SolverConfig::dim> gradun(0);
       assemble_gradients_gradu(localFiniteElementun, jacobiann, quadPosn,
           gradientsn, xn_adolc.segment(0, size_u), gradun);
 
@@ -370,13 +370,14 @@ public:
       vn_adolc[i] >>= vn[i];
     }
     trace_off();
+    */
   }
 
-  template<class Intersection, class LocalIndexSet, class LocalView,
-      class VectorType>
+  template<class Intersection, class LocalView, class LocalIndexSet, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
-      const LocalView &localView,  const LocalIndexSet &localIndexSet,
-      const VectorType &x, VectorType& v, const int tag) const {
+      const LocalView &localView, const LocalIndexSet &localIndexSet,
+      const VectorType &x, VectorType& v, int tag) const {
+    /*
     const int dim = Intersection::dimension;
     const int dimw = Intersection::dimensionworld;
 
@@ -425,9 +426,9 @@ public:
 
     // penalty weight for NIPG / SIPG
     //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
-    double penalty_weight = Solver_config::sigma
-        * (Solver_config::degree * Solver_config::degree)
-        / std::pow(intersection.geometry().volume(), Solver_config::beta);
+    double penalty_weight = SolverConfig::sigma
+        * (SolverConfig::degree * SolverConfig::degree)
+        / std::pow(intersection.geometry().volume(), SolverConfig::beta);
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -445,8 +446,8 @@ public:
                 referenceFunctionValues, x_adolc.segment(0, localFiniteElementu.size()), u_value);
 
       double g;
-      Dirichletdata bcTEmp; //todo dirichletdata const machen
-      bcTEmp.evaluate(intersection.inside()->geometry().global(quadPos), g);
+//      Dirichletdata bcTEmp; //todo dirichletdata const machen
+//      bcTEmp.evaluate(intersection.inside()->geometry().global(quadPos), g);
 
       //-------calculate integral--------
       const auto integrationElement =
@@ -467,10 +468,12 @@ public:
     for (int i = 0; i < localView.size(); i++)
       v_adolc[i] >>= v[i];
     trace_off();
+    */
   }
 
   RightHandSide rhs;
-  Dirichletdata bc;
+//  Dirichletdata bc;
+
 };
 
 #endif /* SRC_OPERATOR_HH_ */

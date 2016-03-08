@@ -9,11 +9,11 @@
 
 #include "MA_solver.h"
 
-void PDE_functions::f(const Solver_config::SpaceType2d& x, Solver_config::value_type &out){
+void PDE_functions::f(const SolverConfig::SpaceType2d& x, SolverConfig::value_type &out){
 	out = 1;
 }
 
-void PDE_functions::g_initial(const Solver_config::SpaceType2d& z, Solver_config::value_type &out){
+void PDE_functions::g_initial(const SolverConfig::SpaceType2d& z, SolverConfig::value_type &out){
 	out = 1;
 }
 
@@ -22,7 +22,7 @@ void PDE_functions::g_initial_a(const FieldVector<adouble,2>& z, adouble &out){
 }
 
 
-void PDE_functions::Dg_initial(const Solver_config::SpaceType2d& z, Solver_config::SpaceType2d &out){
+void PDE_functions::Dg_initial(const SolverConfig::SpaceType2d& z, SolverConfig::SpaceType2d &out){
 	out[0] = 0;
 	out[1] = 0;
 }
@@ -56,7 +56,7 @@ adouble interpolate_cubic_atXY(cimg_library::CImg<double> image , const adouble 
 }
 
 
-void RightHandSideReflector::phi(const Solver_config::SpaceType2d& T, const FieldVector<double, Solver_config::dim> &normal, Solver_config::value_type &phi) const
+void RightHandSideReflector::phi(const SolverConfig::SpaceType2d& T, const FieldVector<double, SolverConfig::dim> &normal, SolverConfig::value_type &phi) const
  {
    if (false)
    {
@@ -64,14 +64,14 @@ void RightHandSideReflector::phi(const Solver_config::SpaceType2d& T, const Fiel
    }
    else
    {
-     Solver_config::value_type x_min = std::min(T[0]-Solver_config::lowerLeftTarget[0], Solver_config::upperRightTarget[0] - T[0]);
-     Solver_config::value_type y_min = std::min(T[1]-Solver_config::lowerLeftTarget[1], Solver_config::upperRightTarget[1] - T[1]);
+     SolverConfig::value_type x_min = std::min(T[0]-opticalsetting.lowerLeftTarget[0], opticalsetting.upperRightTarget[0] - T[0]);
+     SolverConfig::value_type y_min = std::min(T[1]-opticalsetting.lowerLeftTarget[1], opticalsetting.upperRightTarget[1] - T[1]);
 
-     Solver_config::SpaceType2d T_proj = T;
+     SolverConfig::SpaceType2d T_proj = T;
      if (x_min < y_min)
-       T_proj[0] = T[0]-Solver_config::lowerLeftTarget[0] < Solver_config::upperRightTarget[0] - T[0] ?  Solver_config::lowerLeftTarget[0] : Solver_config::upperRightTarget[0];
+       T_proj[0] = T[0]-opticalsetting.lowerLeftTarget[0] < opticalsetting.upperRightTarget[0] - T[0] ?  opticalsetting.lowerLeftTarget[0] : opticalsetting.upperRightTarget[0];
      else
-       T_proj[1] = T[1]-Solver_config::lowerLeftTarget[1] < Solver_config::upperRightTarget[1] - T[1] ?  Solver_config::lowerLeftTarget[1] : Solver_config::upperRightTarget[1];
+       T_proj[1] = T[1]-opticalsetting.lowerLeftTarget[1] < opticalsetting.upperRightTarget[1] - T[1] ?  opticalsetting.lowerLeftTarget[1] : opticalsetting.upperRightTarget[1];
      phi = T_proj * normal;
    }
  }
@@ -79,12 +79,12 @@ void RightHandSideReflector::phi(const Solver_config::SpaceType2d& T, const Fiel
 /*
 
 void RightHandSideReflector::init(){
-	Solver_config::UnitCubeType unitcube_quadrature(Solver_config::lowerLeft, Solver_config::upperRight, Solver_config::startlevel+Solver_config::nonlinear_steps);
-  Solver_config::UnitCubeType unitcube_quadrature_target(Solver_config::lowerLeftTarget, Solver_config::upperRightTarget, Solver_config::startlevel+Solver_config::nonlinear_steps);
-	init(Integrator<Solver_config::GridType>(unitcube_quadrature.grid_ptr()), Integrator<Solver_config::GridType>(unitcube_quadrature_target.grid_ptr()));
+	SolverConfig::UnitCubeType unitcube_quadrature(SolverConfig::lowerLeft, SolverConfig::upperRight, SolverConfig::startlevel+SolverConfig::nonlinear_steps);
+  SolverConfig::UnitCubeType unitcube_quadrature_target(SolverConfig::lowerLeftTarget, SolverConfig::upperRightTarget, SolverConfig::startlevel+SolverConfig::nonlinear_steps);
+	init(Integrator<SolverConfig::GridType>(unitcube_quadrature.grid_ptr()), Integrator<SolverConfig::GridType>(unitcube_quadrature_target.grid_ptr()));
 }
 
-void RightHandSideReflector::init(const Integrator<Solver_config::GridType>& integratorDomain, const Integrator<Solver_config::GridType>& integratorTarget){
+void RightHandSideReflector::init(const Integrator<SolverConfig::GridType>& integratorDomain, const Integrator<SolverConfig::GridType>& integratorTarget){
 	integral_f = integratorDomain.assemble_integral(f_callback);
 	integral_g = integratorTarget.assemble_integral(g_initial_callback);
 }

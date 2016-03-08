@@ -33,10 +33,10 @@ public:
     void write_output() const;
 
     ///returns the inverse of rho(=u) computed by the ellipsoid method
-    void evaluate(const Solver_config::DomainType& x, Solver_config::RangeType& u);
+    void evaluate(const SolverConfig::DomainType& x, SolverConfig::RangeType& u);
 
     ///returns the inverse of rho(=u) computed by the ellipsoid method
-    double evaluate(const Solver_config::DomainType& x);
+    double evaluate(const SolverConfig::DomainType& x);
 
 private:
     InitEllipsoidMethod(const unsigned int nDirectionsX,

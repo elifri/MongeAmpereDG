@@ -19,8 +19,6 @@ namespace po = boost::program_options;
 
 #include <Grids/Grid2d.hpp>
 
-#include "MethodEllipsoids/init_with_ellipsoid_method.hpp"
-
 #include "utils.hpp"
 
 
@@ -79,9 +77,9 @@ void MA_solver::plot(std::string name) const
   auto localnumericalSolution = localFunction(numericalSolution);
 
   //extract hessian
-  /*  const int nDH = Solver_config::dim*Solver_config::dim;
-     for (int row = 0; row < Solver_config::dim; row++)
-    for (int col = 0; col < Solver_config::dim; col++)
+  /*  const int nDH = SolverConfig::dim*SolverConfig::dim;
+     for (int row = 0; row < SolverConfig::dim; row++)
+    for (int col = 0; col < SolverConfig::dim; col++)
     {
       //calculate second derivative of gridviewfunction
       VectorType v_uDH_entry;
@@ -146,7 +144,7 @@ void MA_solver::create_initial_guess()
   else
   {
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
-    project_labouriousC1([](Solver_config::SpaceType x){return 1.12;}, solution);
+    project_labouriousC1([](SolverConfig::SpaceType x){return 1.12;}, solution);
   }
 }
 
@@ -159,14 +157,18 @@ const typename MA_solver::VectorType& MA_solver::solve()
   //init andreas solution as exact solution
 //  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exact_reflector_projection_small.grid"));
 //  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exactReflectorProjectionSimple.grid"));
-//  assert(is_close(exact_solution->x_min, Solver_config::lowerLeft[0], 1e-12));
-//  assert(is_close(exact_solution->y_min, Solver_config::lowerLeft[1], 1e-12));
-//  project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
+//  assert(is_close(exact_solution->x_min, SolverConfig::lowerLeft[0], 1e-12));
+//  assert(is_close(exact_solution->y_min, SolverConfig::lowerLeft[1], 1e-12));
+//  project([this](SolverConfig::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
 //  exactsol_u = exactsol.segment(0,get_n_dofs_u());
 //  exact_solution_projection_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,exactsol_u));
 //  exact_solution_projection = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*exact_solution_projection_global));
 //  plotter.writeReflectorVTK("exactReflector", *exact_solution_projection);
 
+  assert(false);
+  std::exit(-1);
+/*
+  update_rhs();
   //blurr target distributation
   std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
   op.lop.rhs.convolveTargetDistributionAndNormalise(epsMollifier_);
@@ -177,7 +179,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
       op.lop.get_right_handside().get_target_distribution().saveImage (filename2.str());
       assert(std::abs(op.lop.get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
   }
-
+*/
   this->create_initial_guess();
   {
     //write initial guess into file
@@ -193,8 +195,8 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
   plot("initialguess");
 
-  Solver_config::VectorType f;
-  Solver_config::MatrixType J;
+  SolverConfig::VectorType f;
+  SolverConfig::MatrixType J;
 //  op.evaluate(solution, f, solution, false);
 //  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
 
@@ -204,7 +206,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
   std::cout << "reflector size  G " << G << endl;
   assembler.set_G(G);
 
-  for (int i = 0; i < Solver_config::nonlinear_steps; i++)
+  for (int i = 0; i < SolverConfig::nonlinear_steps; i++)
   {
 
     solve_nonlinear_system();
@@ -216,7 +218,8 @@ const typename MA_solver::VectorType& MA_solver::solve()
     update_solution(solution);
     plot("numericalSolution");
 
-
+/*
+ * update_rhs();
     std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
 
     // blur target
@@ -230,6 +233,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
         assert(std::abs(op.lop.get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
     }
     epsMollifier_ /= epsDivide_;
+*/
 
     solve_nonlinear_system();
     std::cerr << " solved nonlinear system" << std::endl;
@@ -254,7 +258,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
     update_solution(solution);
     plot("numericalSolution");
 
-    Solver_config::VectorType v = coarse_solution(1);
+    SolverConfig::VectorType v = coarse_solution(1);
     {
       //write current solution to file
       update_solution(solution);
@@ -271,7 +275,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 }
 
 
-void MA_solver::update_solution(const Solver_config::VectorType& newSolution) const
+void MA_solver::update_solution(const SolverConfig::VectorType& newSolution) const
 {
   solution_u = solution.segment(0, get_n_dofs_u());
 //  std::cout << "solution " << solution_u.transpose() << std::endl;
@@ -324,7 +328,7 @@ void MA_solver::adapt_solution(const int level)
   std::cout << "new element count " << gridView_ptr->size(0) << std::endl;
 
   //we need do store the old basis as the (father) finite element depends on the basis
-  typedef Functions::PS12SSplineBasis<Solver_config::LevelGridView, Solver_config::SparseMatrixType> FEBasisCoarseType;
+  typedef Functions::PS12SSplineBasis<SolverConfig::LevelGridView, SolverConfig::SparseMatrixType> FEBasisCoarseType;
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(grid_ptr->levelGridView(grid_ptr->maxLevel()-1)));
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,VectorType> DiscreteGridFunctionCoarse;
   typedef typename DiscreteGridFunctionCoarse::LocalFunction DiscreteLocalGridFunctionCoarse;
@@ -398,7 +402,7 @@ void MA_solver::adapt_solution(const int level)
           k = 7;
 
       // normal of center in face's reference element
-      const FieldVector<double, Solver_config::dim> normal =
+      const FieldVector<double, SolverConfig::dim> normal =
             is.centerUnitOuterNormal();
 
       const auto face_center = is.geometry().center();
@@ -440,9 +444,9 @@ void MA_solver::adapt_solution(const int level)
 
     // Get a quadrature rule
     const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
-    const QuadratureRule<double, Solver_config::dim>& quad =
-        MacroQuadratureRules<double, Solver_config::dim>::rule(element.type(),
-            order, Solver_config::quadratureType);
+    const QuadratureRule<double, SolverConfig::dim>& quad =
+        MacroQuadratureRules<double, SolverConfig::dim>::rule(element.type(),
+            order, SolverConfig::quadratureType);
 
     double resTest1f = 0, resTest1 = 0;
 
@@ -497,7 +501,7 @@ void MA_solver::adapt_solution(const int level)
       const int i = is.indexInInside();
 
       // normal of center in face's reference element
-      const FieldVector<double, Solver_config::dim> normal =
+      const FieldVector<double, SolverConfig::dim> normal =
               is.centerUnitOuterNormal();
 
       const auto face_center = is.geometry().center();
@@ -521,7 +525,7 @@ void MA_solver::adapt_solution(const int level)
   grid_ptr->postAdapt();
 }
 
-Solver_config::VectorType MA_solver::coarse_solution(const int level)
+SolverConfig::VectorType MA_solver::coarse_solution(const int level)
 {
   assert(initialised);
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
@@ -535,13 +539,13 @@ Solver_config::VectorType MA_solver::coarse_solution(const int level)
   //we need do generate the coarse basis
   const auto& levelGridView = grid_ptr->levelGridView(level);
 
-  typedef Functions::PS12SSplineBasis<Solver_config::LevelGridView, Solver_config::SparseMatrixType> FEBasisCoarseType;
+  typedef Functions::PS12SSplineBasis<SolverConfig::LevelGridView, SolverConfig::SparseMatrixType> FEBasisCoarseType;
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(levelGridView));
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,VectorType> DiscreteGridFunctionCoarse;
   typedef typename DiscreteGridFunctionCoarse::LocalFunction DiscreteLocalGridFunctionCoarse;
 
   //init vector
-  Solver_config::VectorType v = Solver_config::VectorType::Zero(FEBasisCoarse->indexSet().size() + 1);
+  SolverConfig::VectorType v = SolverConfig::VectorType::Zero(FEBasisCoarse->indexSet().size() + 1);
 
   auto localViewCoarse = FEBasisCoarse->localView();
   auto localIndexSetCoarse = FEBasisCoarse->indexSet().localIndexSet();
@@ -552,7 +556,7 @@ Solver_config::VectorType MA_solver::coarse_solution(const int level)
   //loop over elements (in coarse grid)
   for (auto&& elementCoarse : elements(levelGridView)) {
 
-    HierarchicSearch<Solver_config::GridType, Solver_config::GridView::IndexSet> hs(*grid_ptr, gridView_ptr->indexSet());
+    HierarchicSearch<SolverConfig::GridType, SolverConfig::GridView::IndexSet> hs(*grid_ptr, gridView_ptr->indexSet());
 
     localViewCoarse.bind(elementCoarse);
     localIndexSetCoarse.bind(localViewCoarse);
@@ -564,7 +568,7 @@ Solver_config::VectorType MA_solver::coarse_solution(const int level)
 //    for (const auto& tempEl : gradient_u_Coarse->localDoFs_ ) std::cout << tempEl << " ";
 //    std::cout << std::endl;
 
-    Solver_config::VectorType localDofs;
+    SolverConfig::VectorType localDofs;
     localDofs.setZero(localViewCoarse.size());
 
     int k = 0;
@@ -606,7 +610,7 @@ Solver_config::VectorType MA_solver::coarse_solution(const int level)
           k = 7;
 
       // normal of center in face's reference element
-      const FieldVector<double, Solver_config::dim> normal =
+      const FieldVector<double, SolverConfig::dim> normal =
             is.centerUnitOuterNormal();
 
       const auto face_center = is.geometry().center();
@@ -649,7 +653,7 @@ void MA_solver::solve_nonlinear_system()
   // Compute solution
   // /////////////////////////
 
-  Solver_config::VectorType newSolution = solution;
+  SolverConfig::VectorType newSolution = solution;
 
 #ifdef USE_DOGLEG
 
@@ -658,18 +662,18 @@ void MA_solver::solve_nonlinear_system()
   bool converged = false;
 
   do{
-    std::array<Solver_config::VectorType, 2> v;
-    Solver_config::sigmaBoundary =50;
+    std::array<SolverConfig::VectorType, 2> v;
+    SolverConfig::sigmaBoundary =50;
 
     for (int i=0; i < 2; i++)
     {
       v[i] =  solution;
-      v[i] += (i == 0)? Solver_config::VectorType::Constant(solution.size(),1e-5)
-                    : Solver_config::VectorType::Constant(solution.size(),-1e-5);
+      v[i] += (i == 0)? SolverConfig::VectorType::Constant(solution.size(),1e-5)
+                    : SolverConfig::VectorType::Constant(solution.size(),-1e-5);
 
       converged = doglegMethod(op, doglegOpts_, v[i], evaluateJacobianSimultaneously_);
       std::cerr << "solved three steps " << std::endl;
-      Solver_config::sigmaBoundary +=25;
+      SolverConfig::sigmaBoundary +=25;
     }
     std::cerr << " merged solution " << std::endl;
     solution = 0.5*(v[0]+v[1]);
@@ -717,51 +721,4 @@ void MA_solver::solve_nonlinear_system()
 
   std::cout << "scaling factor " << solution(solution.size()-1) << endl;
 
-  }
-
-bool MA_solver::solve_nonlinear_step(const MA_solver::Operator &op)
-{
-  assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
-
-  Solver_config::VectorType f;
-
-
-  op.evaluate(solution, f, solution, false);
-  std::cout << "initial f(x) norm " << f.norm() << endl;
-//  std::cout << "initial f: " << f.transpose() << endl;
-
-  // /////////////////////////
-  // Compute solution
-  // /////////////////////////
-
-  int steps = 0;
-#ifdef USE_DOGLEG
-  DogLeg_optionstype opts;
-  opts.iradius = 1;
-  for (int i=0; i < 3; i++) opts.stopcriteria[i] = 1e-8;
-  opts.maxsteps = 1;
-  opts. silentmode = true;
-  opts.exportJacobianIfSingular= true;
-  opts.exportFDJacobianifFalse = true;
-  opts.check_Jacobian = false;
-//
-  steps = doglegMethod(op, opts, solution);
-#endif
-#ifdef USE_PETSC
-  igpm::processtimer timer;
-  timer.start();
-
-  PETSC_SNES_Wrapper<MA_solver::Operator>::op = op;
-
-  PETSC_SNES_Wrapper<MA_solver::Operator> snes;
-
-  Eigen::VectorXi est_nnz = assembler.estimate_nnz_Jacobian();
-  snes.init(get_n_dofs(), est_nnz);
-  snes.set_max_it(1);
-  int error = snes.solve(solution);
-  steps = snes.get_iteration_number();
-  timer.stop();
-  std::cout << "needed "  << steps << "steps and "<< timer << " seconds for nonlinear step, ended with error code " << error << std::endl;
-#endif
-  return steps;
   }

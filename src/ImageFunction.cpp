@@ -11,8 +11,8 @@
 #include "problem_data.h"
 
 ImageFunction::ImageFunction(const std::string& filename,
-    const Solver_config::SpaceType2d lowerLeft,
-    const Solver_config::SpaceType2d upperRight, const double minValue) :
+    const SolverConfig::SpaceType2d lowerLeft,
+    const SolverConfig::SpaceType2d upperRight, const double minValue) :
     image_(filename.c_str()), factor_(1.0) {
   assert(lowerLeft[0] < upperRight[0]);
   assert(lowerLeft[1] < upperRight[1]);
@@ -38,9 +38,9 @@ ImageFunction::ImageFunction(const std::string& filename,
 
 
 //evaluation
-Solver_config::value_type ImageFunction::operator()(const Solver_config::DomainType &x) const
+SolverConfig::value_type ImageFunction::operator()(const SolverConfig::DomainType &x) const
 {
-  Solver_config::value_type u;
+  SolverConfig::value_type u;
   evaluate(x, u);
   return u;
 }
@@ -57,7 +57,7 @@ double ImageFunction::evaluate2d(const double x, const double y)
 }
 
 inline
-void ImageFunction::evaluate (const Solver_config::DomainType &x, Solver_config::value_type &u) const
+void ImageFunction::evaluate (const SolverConfig::DomainType &x, SolverConfig::value_type &u) const
 {
 /*
     const double distance_x = std::min(x[0] -lowerLeft_[0], upperRight_[0]-x[0]);
@@ -85,7 +85,7 @@ void ImageFunction::evaluate (const Solver_config::DomainType &x, Solver_config:
   u = factor_ * imageSmooth_._cubic_atXY(fx,fy);
 }
 
-void ImageFunction::evaluate (const FieldVector<adouble, Solver_config::dim> &x, adouble &u) const
+void ImageFunction::evaluate (const FieldVector<adouble, SolverConfig::dim> &x, adouble &u) const
 {
 
 /*
@@ -120,12 +120,12 @@ void ImageFunction::omega_normalize(const unsigned int n)
 {
   factor_ = 1.0;
 
-  Solver_config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, n);
-  Integrator<Solver_config::GridType> integrator(unitcube_quadrature.grid_ptr());
-  const double integral = integrator.assemble_integral([this](const Solver_config::DomainType &x) {return operator()(x)/omega(x);});
+  SolverConfig::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, n);
+  Integrator<SolverConfig::GridType> integrator(unitcube_quadrature.grid_ptr());
+  const double integral = integrator.assemble_integral([this](const SolverConfig::DomainType &x) {return operator()(x)/omega(x);});
 
   factor_ = 1.0/integral;
-  assert(fabs(integrator.assemble_integral([this](const Solver_config::DomainType &x) {return operator()(x)/omega(x);}) - 1.0) < 1e-10);
+  assert(fabs(integrator.assemble_integral([this](const SolverConfig::DomainType &x) {return operator()(x)/omega(x);}) - 1.0) < 1e-10);
 //      std::cout << "f factor " << factor_ << endl;
 }
 
@@ -133,8 +133,8 @@ double ImageFunction::integrate2(const unsigned int n) const
 {
   const unsigned int order = std::min(5u,n);
 
-  Solver_config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, order);
-  Integrator<Solver_config::GridType> integrator(unitcube_quadrature.grid_ptr());
+  SolverConfig::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, order);
+  Integrator<SolverConfig::GridType> integrator(unitcube_quadrature.grid_ptr());
   double integral = integrator.assemble_integral(*this);
   std::cout << "calculated integral " << integral << std::endl;
   return integral;
@@ -145,13 +145,13 @@ double ImageFunction::integrate2(const unsigned int n) const
 double ImageFunction::omega_integrate(const unsigned int n) const
 {
   const unsigned int order = std::min(5u,n);
-  Solver_config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, order);
-  Integrator<Solver_config::GridType> integrator(unitcube_quadrature.grid_ptr());
-  double integral = integrator.assemble_integral([this](const Solver_config::DomainType &x) {return operator()(x)/omega(x);});
+  SolverConfig::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, order);
+  Integrator<SolverConfig::GridType> integrator(unitcube_quadrature.grid_ptr());
+  double integral = integrator.assemble_integral([this](const SolverConfig::DomainType &x) {return operator()(x)/omega(x);});
   std::cout << "calculated omega integral " << integral << std::endl;
 
   return integral;
-//  return integrator.assemble_integral([this](const Solver_config::DomainType &x) {return operator()(x)/omega(x);});
+//  return integrator.assemble_integral([this](const SolverConfig::DomainType &x) {return operator()(x)/omega(x);});
 }
 
 void ImageFunction::convolveOriginal (unsigned int width)
@@ -188,7 +188,7 @@ void ImageFunction::convolveOriginal (unsigned int width)
         imageSmooth_.convolve(mollifier, 1, false);
 */
       //TODO adapt width when calling function not here
-      int maxBlur = pow((double) Solver_config::epsDivide, (int) Solver_config::nonlinear_steps) * Solver_config::epsEnd;
+      int maxBlur = pow((double) SolverConfig::epsDivide, (int) SolverConfig::nonlinear_steps) * SolverConfig::epsEnd;
       std::cout << " maxBlur " << maxBlur << " ((double)(width-1)/(maxBlur-1)) " << ((double)(width-1)/(maxBlur-1))<< " maybe " <<((double)(width-1))/(maxBlur-1) << std::endl;
       double blurCoeff = 1+ ((double)(width-1))/(maxBlur-1)*29;
 

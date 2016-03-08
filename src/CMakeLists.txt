@@ -31,7 +31,7 @@ target_link_libraries(dune_mongeampere_reflector MA_reflector_solver MA_solver P
 target_link_dune_default_libraries("dune_mongeampere_reflector")
 
 add_executable("dune_mongeampere_refractor" dune_mongeampere_refractor.cpp)
-target_link_libraries(dune_mongeampere_refractor MA_refractor_solver MA_solver Plotter BoundaryHandler ${SNES_LIBRARY} EllipsoidMethod ${LensProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11)
+target_link_libraries(dune_mongeampere_refractor MA_refractor_solver MA_solver Plotter BoundaryHandler ${SNES_LIBRARY} ${LensProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11)
 target_link_dune_default_libraries("dune_mongeampere_refractor")
 
 add_executable("dune_mongeampereItSimple" dune_mongeampere.cc)

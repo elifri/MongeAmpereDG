@@ -26,22 +26,22 @@ using namespace Dune;
 
 
 /// calculates the third coordinate belonging to the 2d reference plane (by projecting the 2d plane onto the ball surface)
-inline Solver_config::value_type omega(Solver_config::SpaceType2d x) {
+inline SolverConfig::value_type omega(SolverConfig::SpaceType2d x) {
   assert(x.two_norm2() <= 1);
   return std::sqrt(1 - x.two_norm2());
 }
 
 /// calculates derivative of omega (from above)
-inline FieldVector<Solver_config::value_type, Solver_config::dim> DOmega(Solver_config::SpaceType2d x) {
+inline FieldVector<SolverConfig::value_type, SolverConfig::dim> DOmega(SolverConfig::SpaceType2d x) {
   assert(x.two_norm2() <= 1);
-  FieldVector<Solver_config::value_type, Solver_config::dim> res = x;
+  FieldVector<SolverConfig::value_type, SolverConfig::dim> res = x;
   res/= -std::sqrt(1 - x.two_norm2());
   return res;
 }
 
 template<class valueType, class GradientType>
 inline valueType a_tilde(const valueType u_value,
-    const GradientType& gradu, const Solver_config::SpaceType2d& x) {
+    const GradientType& gradu, const SolverConfig::SpaceType2d& x) {
 //    adouble a_tilde_value = 0;
   valueType a_tilde_value = gradu * gradu;
   valueType temp = u_value - (gradu * x);
@@ -51,13 +51,13 @@ inline valueType a_tilde(const valueType u_value,
 
 template<class valueType, class GradientType>
 inline valueType b_tilde(const valueType u_value,
-    const GradientType& gradu, const Solver_config::SpaceType2d& x) {
+    const GradientType& gradu, const SolverConfig::SpaceType2d& x) {
 //    adouble a_tilde_value = 0;
   return (gradu * gradu) + sqr(u_value) - sqr(gradu * x);
 }
 
 template<class valueType>
-inline FieldVector<valueType, 2> T(const FieldVector<Solver_config::value_type, 2>& x, const valueType& u_value, FieldVector<valueType, 2>& Z_0, const double z_3) {
+inline FieldVector<valueType, 2> T(const FieldVector<SolverConfig::value_type, 2>& x, const valueType& u_value, FieldVector<valueType, 2>& Z_0, const double z_3) {
   FieldVector<valueType, 2> T_value = x;
   T_value /= u_value;
 
@@ -74,7 +74,7 @@ inline FieldVector<valueType, 2> T(const FieldVector<Solver_config::value_type, 
 }
 
 template<class valueType>
-inline FieldVector<valueType, 3> T(const FieldVector<Solver_config::value_type, 3>& x, const valueType& u_value, FieldVector<valueType, 3>& Z_0, const double z_3) {
+inline FieldVector<valueType, 3> T(const FieldVector<SolverConfig::value_type, 3>& x, const valueType& u_value, FieldVector<valueType, 3>& Z_0, const double z_3) {
   FieldVector<valueType, 3> T_value = x;
   T_value /= u_value;
 
@@ -102,10 +102,10 @@ class Local_Operator_MA_refl_Brenner;
 class Local_Operator_MA_refr_Brenner;
 
 // A class implementing the analytical right hand side
-class RightHandSide: public VirtualFunction<Solver_config::SpaceType, Solver_config::value_type> {
+class RightHandSide: public VirtualFunction<SolverConfig::SpaceType, SolverConfig::value_type> {
 public:
-	void evaluate(const Solver_config::SpaceType& in, Solver_config::value_type& out) const {
-		switch (Solver_config::problem)
+	void evaluate(const SolverConfig::SpaceType& in, SolverConfig::value_type& out) const {
+		switch (SolverConfig::problem)
 		{
 		case SIMPLE_MA:
 			out = 1;
@@ -119,9 +119,9 @@ public:
 			break;
 		case MA_C1:
 			{
-//			Solver_config::DomainType x0;
+//			SolverConfig::DomainType x0;
 //			x0 = {0.5,0.5};
-//			Solver_config::value_type f = 0.2 / (in-x0).two_norm();
+//			SolverConfig::value_type f = 0.2 / (in-x0).two_norm();
 //			f = 1 - f;
 //			if (f > 0)
 //				out = f;
@@ -145,70 +145,25 @@ public:
 // A class implementing the analytical dirichlet boundary
 template
 <class ExactFunctionType>
-class Dirichletdata//: public VirtualFunction<FieldVector<double, Solver_config::dim>, double>
+class Dirichletdata//: public VirtualFunction<FieldVector<double, SolverConfig::dim>, double>
 {
 public:
-  typedef std::shared_ptr<Solver_config::DiscreteLocalGridFunction> Function_ptr;
+  typedef std::shared_ptr<SolverConfig::DiscreteLocalGridFunction> Function_ptr;
 
   Dirichletdata(){}
 //  Dirichletdata(Function_ptr &exactSolU) : exact_solution(&exactSolU) {}
   Dirichletdata(ExactFunctionType &exactSolU) : exact_solution(&exactSolU) {}
 
-	void evaluate(const Solver_config::SpaceType& in, Solver_config::value_type& out){
-		switch (Solver_config::problem)
-		{
-		case SIMPLE_MA:
-			out = in.two_norm2()/2.0;;
-			break;
-		case CONST_RHS:
-			out = 0.0;
-			break;
-		case MA_SMOOTH:
-			out = std::exp( in.two_norm2()/2. );
-			break;
-		case MA_C1:
-//			{
-//				Solver_config::DomainType x0;
-//				x0 = {0.5,0.5};
-//				double val = ((in-x0).two_norm() - 0.2).value();
-//				if (val > 0)	out = val*val/2.;
-//				else out = 0;
-//			}
-			break;
-		case MA_SQRT:
-		{
-			double val = 2.0-in.two_norm2();
-			if (val < 0) out = 0;
-			else	out = -std::sqrt(val);
-		}
-			break;
-		default:
-			std::cerr << "Unknown problem ... " << std::endl;
-			exit(-1);
-		}
+	void evaluate(const SolverConfig::SpaceType& in, SolverConfig::value_type& out){
+	  out = (*exact_solution)->evaluate_inverse(in);
 	}
 
-	void derivative(const Solver_config::SpaceType& in, Solver_config::HessianRangeType& out)
+	void derivative(const SolverConfig::SpaceType& in, SolverConfig::HessianRangeType& out)
 	{
-		switch(Solver_config::problem)
-		{
-		case SIMPLE_MA:
-			out[0][0] = 1; out[1][0] =0;
-			out[0][1] = 0; out[1][1] =1;
-			break;
-		case	MA_SMOOTH:
-//			out[0][0] = std::exp( in.two_norm2()/2. )*(sqr(in[0])+1);
-//			out[1][0] = std::exp( in.two_norm2()/2. )*(in[0]*in[1]);
-//			out[0][1] = std::exp( in.two_norm2()/2. )*(in[0]*in[1]);
-//			out[1][1] = std::exp( in.two_norm2()/2. )*(sqr(in[1])+1);
-			break;
-		default:
-			std::cerr << "No known derivatives for this problem ... " << std::endl;
-			exit(-1);
-		}
+	  std::cerr << "No known derivatives for this problem ... " << std::endl;
 	}
 
-	void evaluate_exact_sol(const Solver_config::SpaceType& x, Solver_config::value_type& out) const
+	void evaluate_exact_sol(const SolverConfig::SpaceType& x, SolverConfig::value_type& out) const
 	{
 	  assert(exact_solution != NULL);
 	  out = (*exact_solution)->evaluate_inverse(x);
@@ -220,10 +175,10 @@ private:
   friend Local_Operator_MA_refl_Neilan;
 };
 
-class RightHandSideInitial: public VirtualFunction<Solver_config::SpaceType, Solver_config::value_type> {
+class RightHandSideInitial: public VirtualFunction<SolverConfig::SpaceType, SolverConfig::value_type> {
 public:
 //	RightHandSideInitial(RightHandSide rhs)
-	void evaluate(const FieldVector<double, Solver_config::dim>& in, Solver_config::value_type& out) const{
+	void evaluate(const FieldVector<double, SolverConfig::dim>& in, SolverConfig::value_type& out) const{
 		rhs.evaluate(in, out);
 		out = std::sqrt(2.0*out);
 	}
@@ -234,12 +189,12 @@ private:
 
 namespace PDE_functions{
 
-	void f(const Solver_config::SpaceType2d& x, Solver_config::value_type &out);
+	void f(const SolverConfig::SpaceType2d& x, SolverConfig::value_type &out);
 
-	void g_initial(const Solver_config::SpaceType2d& z, Solver_config::value_type &out);
+	void g_initial(const SolverConfig::SpaceType2d& z, SolverConfig::value_type &out);
 	void g_initial_a(const FieldVector<adouble,2>& z, adouble &out);
 
-	void Dg_initial(const Solver_config::SpaceType2d& z, Solver_config::SpaceType2d &out); /// derivative of g_initial
+	void Dg_initial(const SolverConfig::SpaceType2d& z, SolverConfig::SpaceType2d &out); /// derivative of g_initial
 }
 
 
@@ -247,27 +202,27 @@ namespace PDE_functions{
 
 class RightHandSideReflector{
 public:
-  typedef std::shared_ptr<Solver_config::DiscreteLocalGridFunction> Function_ptr;
-  typedef std::shared_ptr<Solver_config::DiscreteLocalGradientGridFunction> GradFunction_ptr;
+  typedef std::shared_ptr<SolverConfig::DiscreteLocalGridFunction> Function_ptr;
+  typedef std::shared_ptr<SolverConfig::DiscreteLocalGradientGridFunction> GradFunction_ptr;
 
 
-  RightHandSideReflector():
+  RightHandSideReflector(OpticalSetting& opticalsetting):
+    opticalsetting(opticalsetting),
     f(),
     g(){}
-  RightHandSideReflector(Function_ptr &solUOld, GradFunction_ptr &gradUOld,
-                        const std::string& inputfile,
-                        const std::string& inputTargetfile, const double minPixelValue=0.0):
-                            f(inputfile, Solver_config::lowerLeft, Solver_config::upperRight),
-                            g(inputTargetfile, Solver_config::lowerLeftTarget, Solver_config::upperRightTarget, minPixelValue),
+  RightHandSideReflector(Function_ptr &solUOld, GradFunction_ptr &gradUOld, OpticalSetting& opticalsetting):
+                            opticalsetting(opticalsetting),
+                            f(opticalsetting.LightinputImageName, opticalsetting.lowerLeft, opticalsetting.upperRight),
+                            g(opticalsetting.TargetImageName, opticalsetting.lowerLeftTarget, opticalsetting.upperRightTarget, opticalsetting.minPixelValue),
                             solution_u_old(&solUOld), gradient_u_old(&gradUOld)
   {
 //a normalisation seems to destroy the solution proces ...
     f.omega_normalize();
     g.normalize();
 
-    Solver_config::lowerLeftTarget = g.lowerLeft();
-    Solver_config::upperRightTarget = g.upperRight();
-    std::cout << "Corrected target area to domain (" <<Solver_config::lowerLeftTarget << ") , (" << Solver_config::upperRightTarget << ")" << std::endl;
+    opticalsetting.lowerLeftTarget = g.lowerLeft();
+    opticalsetting.upperRightTarget = g.upperRight();
+    std::cout << "Corrected target area to domain (" <<opticalsetting.lowerLeftTarget << ") , (" << opticalsetting.upperRightTarget << ")" << std::endl;
   }
 
   void convolveTargetDistribution(unsigned int width){  g.convolveOriginal(width);}
@@ -277,14 +232,14 @@ public:
     g.normalize();
   }
 
-  static double phi_initial(const Solver_config::SpaceType& x);
+  static double phi_initial(const SolverConfig::SpaceType& x);
 
   ///define implicit the target plane
   template <class valueType>
   void psi(const FieldVector<valueType, 2 >& z, valueType& psi_value) const
   {
-    valueType x_min = fmin(z[0]-Solver_config::lowerLeftTarget[0], Solver_config::upperRightTarget[0] - z[0]);
-    valueType y_min = fmin(z[1]-Solver_config::lowerLeftTarget[1], Solver_config::upperRightTarget[1] - z[1]);
+    valueType x_min = fmin(z[0]-opticalsetting.lowerLeftTarget[0], opticalsetting.upperRightTarget[0] - z[0]);
+    valueType y_min = fmin(z[1]-opticalsetting.lowerLeftTarget[1], opticalsetting.upperRightTarget[1] - z[1]);
 
     //if psi_value is positive, z is inside, otherwise psi_value gives the negative of the distance to the target boundary
     psi_value = fmin(0, x_min) + fmin(0, y_min);
@@ -296,17 +251,17 @@ public:
   void D_psi(const FieldVector<valueType, 2 >& z, FieldVector<valueType, 2 >& psi_value) const
   {
 //    valueType x_min;
-//    x_min = fmin(z[0]-Solver_config::lowerLeftTarget[0], Solver_config::upperRightTarget[0] - z[0]);
+//    x_min = fmin(z[0]-SolverConfig::lowerLeftTarget[0], SolverConfig::upperRightTarget[0] - z[0]);
 //    //if x-min is positive, the x-value of z is inside , otherwise x_min gives the negative of the distance to the nearest boundary point in x-direction
 //
-//    //    std::cout << "x min " << x_min.value() << " = " << (z[0]-Solver_config::lowerLeftTarget[0]).value() << "," << (Solver_config::upperRightTarget[0] - z[0]).value() << " ";
+//    //    std::cout << "x min " << x_min.value() << " = " << (z[0]-SolverConfig::lowerLeftTarget[0]).value() << "," << (SolverConfig::upperRightTarget[0] - z[0]).value() << " ";
 //    valueType x_der;
 //    adouble zero = 0;
 //    adouble one = 1;
 ////    x_der = x_min > 0 ? zero.value() : one.value();
 //    condassign(x_der, x_min, zero, one);
 //
-//    valueType y_min = fmin(z[1]-Solver_config::lowerLeftTarget[1], Solver_config::upperRightTarget[1] - z[1]);
+//    valueType y_min = fmin(z[1]-SolverConfig::lowerLeftTarget[1], SolverConfig::upperRightTarget[1] - z[1]);
 //    //if y-min is positive, the y-value of z is inside , otherwise y_min gives the negative of the distance to the nearest boundary point in y-direction
 ////    std::cout << "y min " << y_min.value() << std::endl;
 //
@@ -326,26 +281,26 @@ public:
 //    condassign(psi_value[1], y_min- x_min, zero, y_der);
   }
 
-  void phi(const Solver_config::SpaceType2d& T, const FieldVector<double, Solver_config::dim> &normal, Solver_config::value_type &phi) const;
+  void phi(const SolverConfig::SpaceType2d& T, const FieldVector<double, SolverConfig::dim> &normal, SolverConfig::value_type &phi) const;
 
 public:
   template<class Element>
-  Solver_config::value_type phi(const Element& element, const Solver_config::DomainType& xLocal, const Solver_config::DomainType& xGlobal
-      , const FieldVector<double, Solver_config::dim> &normal, const double z_3) const
+  SolverConfig::value_type phi(const Element& element, const SolverConfig::DomainType& xLocal, const SolverConfig::DomainType& xGlobal
+      , const FieldVector<double, SolverConfig::dim> &normal, const double z_3) const
   {
     assert(solution_u_old != NULL);
     assert(gradient_u_old != NULL);
 
     (*solution_u_old)->bind(element);
     (*gradient_u_old)->bind(element);
-    Solver_config::value_type u = (**solution_u_old)(xLocal);
-    Solver_config::SpaceType2d gradu = (**gradient_u_old)(xLocal);
+    SolverConfig::value_type u = (**solution_u_old)(xLocal);
+    SolverConfig::SpaceType2d gradu = (**gradient_u_old)(xLocal);
 
-    Solver_config::SpaceType2d x = element.geometry().global(xLocal);
+    SolverConfig::SpaceType2d x = element.geometry().global(xLocal);
 
-    Solver_config::value_type phi_value;
+    SolverConfig::value_type phi_value;
 
-    FieldVector<double, Solver_config::dim> z_0 = gradu;
+    FieldVector<double, SolverConfig::dim> z_0 = gradu;
     z_0 *= (2.0 / a_tilde(u, gradu, x));
 
     phi(T(x, u, z_0, z_3),
@@ -357,6 +312,8 @@ public:
   const ImageFunction& get_target_distribution() const {return g;}
 
 private:
+  OpticalSetting& opticalsetting;
+
   ImageFunction f, g;
 
   mutable Function_ptr* solution_u_old;
@@ -370,35 +327,35 @@ private:
 
 class HamiltonJacobiBC{
   //calculate Legendre-Fenchel transofrmation of n
-  Solver_config::value_type LegrendeFenchelTrafo(const FieldVector<double, Solver_config::dim> &normal) const
+  SolverConfig::value_type LegrendeFenchelTrafo(const FieldVector<double, SolverConfig::dim> &normal) const
   {
     if (normal[0] < 0)
     {
       if (normal[1] < 0)
-        return Solver_config::lowerLeftTarget[0]*normal[0] + Solver_config::lowerLeftTarget[1]*normal[1];
+        return opticalsetting.lowerLeftTarget[0]*normal[0] + opticalsetting.lowerLeftTarget[1]*normal[1];
       else
-        return Solver_config::lowerLeftTarget[0]*normal[0] + Solver_config::upperRightTarget[1]*normal[1];
+        return opticalsetting.lowerLeftTarget[0]*normal[0] + opticalsetting.upperRightTarget[1]*normal[1];
     }
     else
     {
       if (normal[1] < 0)
-        return Solver_config::upperRightTarget[0]*normal[0] + Solver_config::lowerLeftTarget[1]*normal[1];
+        return opticalsetting.upperRightTarget[0]*normal[0] + opticalsetting.lowerLeftTarget[1]*normal[1];
       else
-        return Solver_config::upperRightTarget[0]*normal[0] + Solver_config::upperRightTarget[1]*normal[1];
+        return opticalsetting.upperRightTarget[0]*normal[0] + opticalsetting.upperRightTarget[1]*normal[1];
     }
   }
 public:
-  HamiltonJacobiBC(const int N): N_(N){}
+  HamiltonJacobiBC(const OpticalSetting& opticalsetting, const int N): opticalsetting(opticalsetting), N_(N){}
 
-  Solver_config::value_type H(const Solver_config::SpaceType2d& transportedX, const FieldVector<double, Solver_config::dim> &normalX) const
+  SolverConfig::value_type H(const SolverConfig::SpaceType2d& transportedX, const FieldVector<double, SolverConfig::dim> &normalX) const
   {
 
     //create discrete version of Lemma 2.1. in "Numerical soltuion of the OT problem using the MA equation" by Benamou, Froese and Oberman
-    Solver_config::value_type max = 0;
+    SolverConfig::value_type max = 0;
 
     for (int i = 0; i < N_; i++)
     {
-      const FieldVector<double, Solver_config::dim> normal = {std::cos(2*M_PI*i/N_), std::sin(2*M_PI*i/N_)};
+      const FieldVector<double, SolverConfig::dim> normal = {std::cos(2*M_PI*i/N_), std::sin(2*M_PI*i/N_)};
       if (normal*normalX >= 0) continue;
 
       auto tempdistanceFunction = transportedX*normal - LegrendeFenchelTrafo(normal);
@@ -408,7 +365,7 @@ public:
     return max;
   }
 
-  adouble H(const FieldVector<adouble, Solver_config::dim>& transportedX, const FieldVector<double, Solver_config::dim> &normalX) const
+  adouble H(const FieldVector<adouble, SolverConfig::dim>& transportedX, const FieldVector<double, SolverConfig::dim> &normalX) const
   {
 //    std::cerr << " T_value " << transportedX[0].value() << " " << transportedX[1].value() << std::endl;
 
@@ -417,7 +374,7 @@ public:
 
     for (int i = 0; i < N_; i++)
     {
-      const FieldVector<double, Solver_config::dim> normal = {std::cos(2*M_PI*i/N_), std::sin(2*M_PI*i/N_)};
+      const FieldVector<double, SolverConfig::dim> normal = {std::cos(2*M_PI*i/N_), std::sin(2*M_PI*i/N_)};
 //      if (normal*normalX >= 0) continue;
 
       adouble tempdistanceFunction = transportedX*normal - LegrendeFenchelTrafo(normal);
@@ -428,6 +385,7 @@ public:
   }
 
 private:
+  const OpticalSetting& opticalsetting;
   int N_;
 };
 

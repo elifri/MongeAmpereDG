@@ -17,29 +17,29 @@ enum {
 };
 
 
-void evaluateRhoX (const Solver_config::DomainType &x, Solver_config::value_type &u)
+void evaluateRhoX (const SolverConfig::DomainType &x, SolverConfig::value_type &u)
 {
   if (x[1] < 0)
     if (x[0] < 0)
     {
       //first quadrant
-      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-Solver_config::DomainType({-1,-1})).two_norm2());
+      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-SolverConfig::DomainType({-1,-1})).two_norm2());
     }
     else
     {
       //second quadrant
-      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-Solver_config::DomainType({1,-1})).two_norm2());
+      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-SolverConfig::DomainType({1,-1})).two_norm2());
     }
   else
     if (x[0] < 0)
     {
       //third
-      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-Solver_config::DomainType({-1,1})).two_norm2());
+      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-SolverConfig::DomainType({-1,1})).two_norm2());
     }
     else
     {
       //fourth quadrant
-      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-Solver_config::DomainType({1,1})).two_norm2());
+      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-SolverConfig::DomainType({1,1})).two_norm2());
     }
 
 }
@@ -144,13 +144,13 @@ void Plotter::write_cells(std::ofstream &file) const
 
 
 	if (refinement == 0){
-		const Solver_config::GridView::IndexSet& indexSet = grid->indexSet();
+		const SolverConfig::GridView::IndexSet& indexSet = grid->indexSet();
 
 		for (auto&& e : elements(*grid)) {
-			for (unsigned int i = 0; i < e.subEntities(Solver_config::dim); i++) //loop over corners
+			for (unsigned int i = 0; i < e.subEntities(SolverConfig::dim); i++) //loop over corners
 				{file << "\t\t\t\t\t";
 //				for (const auto& vertex : geometry.corners()) {
-					file << indexSet.index(e.subEntity<Solver_config::dim>(i)) << " ";
+					file << indexSet.index(e.subEntity<SolverConfig::dim>(i)) << " ";
 //				}
 			}
 		}
@@ -219,18 +219,18 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
 			"}" <<std::endl <<std::endl;
 
 
-	double xMinOut = Solver_config::lowerLeftTarget[0], xMaxOut = Solver_config::upperRightTarget[0],
-	       yMinOut = Solver_config::lowerLeftTarget[1], yMaxOut = Solver_config::upperRightTarget[1];
+	double xMinOut = geometrySetting.lowerLeftTarget[0], xMaxOut = geometrySetting.upperRightTarget[0],
+	       yMinOut = geometrySetting.lowerLeftTarget[1], yMaxOut = geometrySetting.upperRightTarget[1];
 
 	file << "// Camera" <<std::endl <<
 			"camera {" <<std::endl <<
 			"\t location <" << (xMinOut+xMaxOut)/2.0
 			                   <<"," << (yMinOut+yMaxOut)/2.0 << ","
-			                   <<  Solver_config::z_3 + max(xMaxOut-xMinOut,yMaxOut-yMinOut)*0.5   <<">" <<std::endl <<
+			                   <<  geometrySetting.z_3 + max(xMaxOut-xMinOut,yMaxOut-yMinOut)*0.5   <<">" <<std::endl <<
 			"\t angle " << povRayOpts.cameraAngle <<std::endl <<
 			"\t look_at <" << (xMinOut+xMaxOut)/2.0
                     <<"," << (yMinOut+yMaxOut)/2.0
-                    << "," << Solver_config::z_3 << ">" << std::endl <<
+                    << "," << geometrySetting.z_3 << ">" << std::endl <<
 			"\t right	x*image_width/image_height" <<std::endl <<
 			"}" <<std::endl <<std::endl;
 
@@ -265,18 +265,18 @@ void Plotter::write_pov_setting_refractor(std::ofstream &file) const{
       "}" <<std::endl <<std::endl;
 
 
-  double xMinOut = Solver_config::lowerLeftTarget[0], xMaxOut = Solver_config::upperRightTarget[0],
-         yMinOut = Solver_config::lowerLeftTarget[1], yMaxOut = Solver_config::upperRightTarget[1];
+  double xMinOut = geometrySetting.lowerLeftTarget[0], xMaxOut = geometrySetting.upperRightTarget[0],
+         yMinOut = geometrySetting.lowerLeftTarget[1], yMaxOut = geometrySetting.upperRightTarget[1];
 
   file << "// Camera" <<std::endl <<
       "camera {" <<std::endl <<
       "\t location <" << (xMinOut+xMaxOut)/2.0
                          <<"," << (yMinOut+yMaxOut)/2.0 << ","
-                         <<  Solver_config::z_3 - max(xMaxOut-xMinOut,yMaxOut-yMinOut)*0.5   <<">" <<std::endl <<
+                         <<  geometrySetting.z_3 - max(xMaxOut-xMinOut,yMaxOut-yMinOut)*0.5   <<">" <<std::endl <<
       "\t angle " << povRayOpts.cameraAngle <<std::endl <<
       "\t look_at <" << (xMinOut+xMaxOut)/2.0
                     <<"," << (yMinOut+yMaxOut)/2.0
-                    << "," << Solver_config::z_3 << ">" << std::endl <<
+                    << "," << geometrySetting.z_3 << ">" << std::endl <<
       "\t right x*image_width/image_height" <<std::endl <<
       "}" <<std::endl <<std::endl;
 
@@ -298,7 +298,7 @@ void Plotter::write_pov_setting_refractor(std::ofstream &file) const{
 void Plotter::write_target_plane(std::ofstream &file) const{
 	file << "// The floor" <<std::endl <<
 			"plane {" <<std::endl <<
-			"\t z, " << Solver_config::z_3 << std::endl <<
+			"\t z, " << geometrySetting.z_3 << std::endl <<
 			"\t texture {pigment {color rgb <1,1,1>} }" <<std::endl <<
 			"\t hollow" <<std::endl <<
 			"}" <<std::endl <<std::endl;
@@ -322,13 +322,13 @@ void Plotter::write_aperture(std::ofstream &file) const
 			<< "\t\t\t" << this->Nelements()*2 << std::endl;
 	// make connectivity
 	if (refinement == 0){
-		const Solver_config::GridView::IndexSet& indexSet = grid->indexSet();
+		const SolverConfig::GridView::IndexSet& indexSet = grid->indexSet();
 
 		for (auto&& e : elements(*grid)) {
-			for (unsigned int i = 0; i < e.subEntities(Solver_config::dim); i++) //loop over corners
+			for (unsigned int i = 0; i < e.subEntities(SolverConfig::dim); i++) //loop over corners
 				{file << "\t\t\t";
 //				for (const auto& vertex : geometry.corners()) {
-					file << indexSet.index(e.subEntity<Solver_config::dim>(i)) << " ";
+					file << indexSet.index(e.subEntity<SolverConfig::dim>(i)) << " ";
 					assert(false);
 //				}
 			}
@@ -359,13 +359,13 @@ void Plotter::write_face_indices_pov(std::ofstream &file) const
       << "\t\t\t" << this->Nelements() << std::endl;
   // make connectivity
   if (refinement == 0){
-    const Solver_config::GridView::IndexSet& indexSet = grid->indexSet();
+    const SolverConfig::GridView::IndexSet& indexSet = grid->indexSet();
 
     for (auto&& e : elements(*grid)) {
-      for (unsigned int i = 0; i < e.subEntities(Solver_config::dim); i++) //loop over corners
+      for (unsigned int i = 0; i < e.subEntities(SolverConfig::dim); i++) //loop over corners
         {file << "\t\t\t";
 //        for (const auto& vertex : geometry.corners()) {
-          file << indexSet.index(e.subEntity<Solver_config::dim>(i)) << " ";
+          file << indexSet.index(e.subEntity<SolverConfig::dim>(i)) << " ";
           assert(false);
 //        }
       }

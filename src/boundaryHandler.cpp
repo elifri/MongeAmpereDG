@@ -47,7 +47,7 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
         const auto boundaryFaceId = is.indexInInside();
 //        std::cout << " at boundary " << boundaryFaceId << std::endl;
 
-        for (int k = 0; k < lFE.size(); k++) {
+        for (unsigned int k = 0; k < lFE.size(); k++) {
           const auto& localKey = lFE.localCoefficients().localKey(k);
 
           switch (localKey.codim()) {
