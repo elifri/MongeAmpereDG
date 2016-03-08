@@ -287,8 +287,10 @@ protected:
 	///creates the initial guess
 	virtual void create_initial_guess();
 
+	virtual void update_Operator() {}
+
 	/// solves own nonlinear system given initial point in solution
-	void solve_nonlinear_system();
+	virtual void solve_nonlinear_system();
 
 	void phi(const SolverConfig::SpaceType2d& T, const FieldVector<double, SolverConfig::dim> &normal, SolverConfig::value_type &phi);
 
@@ -306,13 +308,13 @@ public:
 
 	/**
 	 * This function is the main function of the MA solver:
-	 * It solves the help problem -laplace u = sqrt(2f) to calculate an initial value.
-	 * It calls the nonlinear solver to solve Neilan's nonlinear system
+	 * It starts with the initial value given by create_initial_guess
+	 * It calls the nonlinear solver to solve the nonlinear system given by op
 	 *
 	 * @brief calculates the solution of the MA equation
 	 * @return
 	 */
-	virtual const VectorType& solve();
+	const VectorType& solve();
 
 	double calculate_L2_error(const MA_function_type &f) const;
 

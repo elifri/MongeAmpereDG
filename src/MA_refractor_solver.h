@@ -65,10 +65,10 @@ public:
 private:
   ///creates the initial guess
   void create_initial_guess();
+  void update_Operator();
   void solve_nonlinear_system();
 
 public:
-  const VectorType& solve();
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
   void plot(std::string filename) const;
 

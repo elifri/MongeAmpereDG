@@ -165,21 +165,8 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //  exact_solution_projection = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*exact_solution_projection_global));
 //  plotter.writeReflectorVTK("exactReflector", *exact_solution_projection);
 
-  assert(false);
-  std::exit(-1);
-/*
-  update_rhs();
-  //blurr target distributation
-  std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
-  op.lop.rhs.convolveTargetDistributionAndNormalise(epsMollifier_);
-  //print blurred target distribution
-  if (true) {
-      ostringstream filename2; filename2 << plotOutputDirectory_+"/lightOut" << iterations << ".bmp";
-      std::cout << "saved image to " << filename2.str() << std::endl;
-      op.lop.get_right_handside().get_target_distribution().saveImage (filename2.str());
-      assert(std::abs(op.lop.get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
-  }
-*/
+  update_Operator();
+
   this->create_initial_guess();
   {
     //write initial guess into file
@@ -218,22 +205,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
     update_solution(solution);
     plot("numericalSolution");
 
-/*
- * update_rhs();
-    std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
-
-    // blur target
-    op.lop.rhs.convolveTargetDistributionAndNormalise(epsMollifier_);
-
-    //print blurred target distribution
-    if (true) {
-        ostringstream filename2; filename2 << plotOutputDirectory_+"/lightOut" << iterations << ".bmp";
-        std::cout << "saved image to " << filename2.str() << std::endl;
-        op.lop.get_right_handside().get_target_distribution().saveImage (filename2.str());
-        assert(std::abs(op.lop.get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
-    }
-    epsMollifier_ /= epsDivide_;
-*/
+    update_Operator();
 
     solve_nonlinear_system();
     std::cerr << " solved nonlinear system" << std::endl;
@@ -251,7 +223,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
       file.close();
     }
 
-//    plot_with_lens("numericalSolutionBeforeRef");
+//    plot("numericalSolutionBeforeRef");
 
     adapt_solution();
 
@@ -268,9 +240,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
       file << v;
       file.close();
     }
-
   }
-
   return solution;
 }
 
