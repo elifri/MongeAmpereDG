@@ -21,8 +21,6 @@
 #include "problem_data.h"
 //#include "Operator/linear_system_operator_poisson_DG.hh"
 #include "Operator/operator_MA_Neilan_DG.h"
-//#include "Operator/operator_MA_refl_Brenner.hh"
-#include "Operator/operator_MA_refr_Brenner.h"
 #include "Operator/operator_discrete_Hessian.h"
 #include "Plotter.h"
 #include "matlab_export.hpp"
@@ -279,9 +277,7 @@ public:
 	void adapt(const int level=1);
 
 	///write the current numerical solution to vtk file
-	virtual void plot(std::string filename) const;
-
-	void plot_with_lens(std::string name);
+	virtual void plot(const std::string& filename) const;
 
 protected:
 	///creates the initial guess
@@ -1362,7 +1358,5 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
 
 }
-
-
 
 #endif /* SRC_MA_SOLVER_HH_ */

@@ -9,15 +9,16 @@
 #define SRC_MA_REFRACTOR_SOLVER_H_
 
 #include "MA_solver.h"
+#include "Operator/operator_MA_refr_Brenner.h"
 
 class MA_refractor_solver: public MA_solver
 {
 //  using MA_solver::MA_solver;
 public:
   MA_refractor_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting);
-  struct MA_refl_Operator {
-    MA_refl_Operator():solver_ptr(NULL), lop(){}
-    MA_refl_Operator(MA_refractor_solver &solver):solver_ptr(&solver), lop(solver.setting_, solver.solution_u_old, solver.gradient_u_old, solver.exact_solution){}
+  struct MA_refr_Operator {
+    MA_refr_Operator():solver_ptr(NULL), lop(){}
+    MA_refr_Operator(MA_refractor_solver &solver):solver_ptr(&solver), lop(solver.setting_, solver.solution_u_old, solver.gradient_u_old, solver.exact_solution){}
 
     void evaluate(const SolverConfig::VectorType& x, SolverConfig::VectorType& v, SolverConfig::MatrixType& m, const SolverConfig::VectorType& x_old, const bool new_solution=true) const
     {
@@ -70,14 +71,14 @@ private:
 
 public:
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
-  void plot(std::string filename) const;
+  void plot(const std::string& filename) const;
 
   GeometrySetting& get_setting() {return setting_;}
   const GeometrySetting& get_setting() const {return setting_;}
 
 private:
   OpticalSetting& setting_;
-  MA_refl_Operator op;
+  MA_refr_Operator op;
 
 };
 

@@ -60,7 +60,7 @@ void MA_refractor_solver::create_initial_guess()
   }
 }
 
-void MA_refractor_solver::plot(std::string name) const
+void MA_refractor_solver::plot(const std::string& name) const
 {
   std::cout << "write? " << writeVTK_ << " ";
   std::cout << "plot written into ";

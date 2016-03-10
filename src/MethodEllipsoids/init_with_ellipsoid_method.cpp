@@ -19,7 +19,7 @@ using namespace mirror_problem;
 
 std::string InitEllipsoidMethod::outputFolder_ = "";
 
-InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string configFile){
+InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(const OpticalSetting& opticalSetting, const std::string& configFile){
 
     string outputFolder, inputImageName, lightInImageName;
 
@@ -44,14 +44,7 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
         ("ellipsoids.nDirectionsY", po::value<unsigned int>(&nDirectionsY), "number of directions in y direction")
         ("ellipsoids.maxIter",      po::value<unsigned int>(&maxIter),      "maximal number of iterations")
         ("ellipsoids.alpha",        po::value<double>(&alpha),              "design parameter (controls the size of the ellipsoid)")
-        ("povray.cameraAngle",       po::value<double>(&(povRayOpts.cameraAngle)),       "")
-        ("povray.jitter",            po::value<bool>  (&(povRayOpts.jitter)),            "")
-        ("povray.nPhotons",          po::value<unsigned int>(&(povRayOpts.nPhotons)),    "")
-        ("povray.lightSourceRadius",    po::value<double>(&(povRayOpts.lightSourceRadius)), "")
-        ("povray.lightSourceFalloff",   po::value<double>(&(povRayOpts.lightSourceFalloff)), "")
-        ("povray.lightSourceTightness", po::value<double>(&(povRayOpts.lightSourceTightness)), "")
-        ("povray.lightSourceIntensity", po::value<double>(&lightSourceIntensity), "")
-        ;
+    ;
 
     po::variables_map vm;
 
@@ -73,26 +66,22 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
         }
     }
 
-//    inputImageName = Solver_config::TargetImageName;
-//    inputImageName = outputFolder+"/lightOut0.bmp";
-    inputImageName = " ../inputData/testimages/one_small.bmp";
-    lightInImageName = Solver_config::LightinputImageName;
     outputFolder_ = outputFolder;
 
-    xMin = Solver_config::lowerLeft[0];
-    xMax = Solver_config::upperRight[0];
-    yMin = Solver_config::lowerLeft[1];
-    yMax = Solver_config::upperRight[1];
+    xMin = opticalSetting.lowerLeft[0];
+    xMax = opticalSetting.upperRight[0];
+    yMin = opticalSetting.lowerLeft[1];
+    yMax = opticalSetting.upperRight[1];
 
-    xMinOut = Solver_config::lowerLeftTarget[0];
-    xMaxOut = Solver_config::upperRightTarget[0];
-    yMinOut = Solver_config::lowerLeftTarget[1];
-    yMaxOut = Solver_config::upperRightTarget[1];
+    xMinOut = opticalSetting.lowerLeftTarget[0];
+    xMaxOut = opticalSetting.upperRightTarget[0];
+    yMinOut = opticalSetting.lowerLeftTarget[1];
+    yMaxOut = opticalSetting.upperRightTarget[1];
 
-    zOut = Solver_config::z_3;
+    zOut = opticalSetting.z_3;
 
-    inputImageName = Solver_config::TargetImageName;
-    lightInImageName = Solver_config::LightinputImageName;
+    inputImageName = opticalSetting.TargetImageName;
+    lightInImageName = opticalSetting.LightinputImageName;
 
 
     povRayOpts.cameraLocation(0) = (xMaxOut+xMinOut)/2.0;
@@ -219,7 +208,7 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(std::string confi
             <<"  h " << lightIn.h_ << endl
             <<"  factor " << lightIn.factor_ << endl;*/
 
-    std::cout << " solve geometry with lower left " << Solver_config::lowerLeftTarget << " and upper Right " << Solver_config::upperRightTarget << " and z " << Solver_config::z_3 << std::endl;
+    std::cout << " solve geometry with lower left " << opticalSetting.lowerLeftTarget << " and upper Right " << opticalSetting.upperRightTarget << " and z " << opticalSetting.z_3 << std::endl;
     std::cout << " , i.e. " << xMinOut << " " << yMinOut << " , " << xMaxOut << " " << yMaxOut << std::endl;
 
 
@@ -266,12 +255,12 @@ void InitEllipsoidMethod::write_output() const
     method_.writeReportToFile(outputFolder_+"/ellipsoids_report.txt");
 }
 
-void InitEllipsoidMethod::evaluate(const Solver_config::DomainType& x, Solver_config::RangeType& u)
+void InitEllipsoidMethod::evaluate(const SolverConfig::DomainType& x, SolverConfig::RangeType& u)
 {
     u = method_.getEllipsoids().evaluate2d(x[0], x[1]);
 }
 
-double InitEllipsoidMethod::evaluate(const Solver_config::DomainType& x)
+double InitEllipsoidMethod::evaluate(const SolverConfig::DomainType& x)
 {
     return method_.getEllipsoids().evaluate2d(x[0], x[1]);
 }

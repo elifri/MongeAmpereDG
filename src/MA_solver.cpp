@@ -69,7 +69,7 @@ double MA_solver::calculate_L2_error(const MA_function_type &f) const
 }
 */
 
-void MA_solver::plot(std::string name) const
+void MA_solver::plot(const std::string& name) const
 {
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
@@ -531,7 +531,7 @@ SolverConfig::VectorType MA_solver::coarse_solution(const int level)
     localViewCoarse.bind(elementCoarse);
     localIndexSetCoarse.bind(localViewCoarse);
 
-    const auto & lFE = localView.tree().finiteElement();
+    const auto & lFE = localViewCoarse.tree().finiteElement();
     const auto& geometry = elementCoarse.geometry();
 
 //    std::cout << " father dofs ";
@@ -604,7 +604,7 @@ SolverConfig::VectorType MA_solver::coarse_solution(const int level)
 
 //      std::cout << " set local dofs " << localDofs.transpose() << std::endl;
 
-      for (int i = 0; i < localViewCoarse.size(); i++)
+      for (unsigned int i = 0; i < localViewCoarse.size(); i++)
         v(localIndexSetCoarse.index(i)[0]) = localDofs[i];
     }
 

@@ -30,23 +30,12 @@ void read_parameters(int argc, char *argv[], std::string& configFileMASolver, st
       ("help,h",      "produce help message")
       ("help-all,a",  "produce help message (including config file options)")
       ("solver,c", po::value<string>(&configFileMASolver),  "config file for the MA finite element method")
-      ("geometry,g",   po::value<string>(&configFileOpticalSetting),  "config file for geometry")
+      ("geometry,g",   po::value<string>(&configFileOpticalSetting),  "config file for optical setting")
       ("Petsoptionsfile,o", po::value<string>(&petscConfig), "config file for petsc")
       ;
 
-  // Declare a group of options that will be
-  // allowed both on command line and in
-  // config file
-  po::options_description config("Configuration for the method of ellipsoids of revolution");
-  config.add_options()
-      ("input.imageName", po::value<string>(&OpticalSetting::LightinputImageName), "path to image")
-//      ("output.folder" ,        po::value<string>(&outputFolder),         "folder for the output data")
-      ;
-
-
   po::options_description cmdline_options;
   cmdline_options.add(cmdline);
-
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, cmdline_options), vm);

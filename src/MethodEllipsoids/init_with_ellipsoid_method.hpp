@@ -26,7 +26,7 @@
 class InitEllipsoidMethod
 {
 public:
-    static InitEllipsoidMethod init_from_config_data(std::string configFile);
+    static InitEllipsoidMethod init_from_config_data(const OpticalSetting& opticalSetting, const std::string& configFile);
 
     void solve();
 

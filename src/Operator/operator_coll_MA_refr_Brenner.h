@@ -21,7 +21,7 @@ template <class value_type>
 inline
 value_type determinant(const FieldMatrix<value_type, 2, 2>& A)
 {
-  return fmax(0,A[0][0])*fmax(0,A[1][1]) - A[0][1]*A[1][0]- SolverConfig::lambda*((fmin(0,A[0][0])*fmin(0,A[0][0])) + (fmin(0,A[1][1])*fmin(0,A[1][1])));
+  return fmax(0,A[0][0])*fmax(0,A[1][1]) - A[0][1]*A[1][0]- Solver_config::lambda*((fmin(0,A[0][0])*fmin(0,A[0][0])) + (fmin(0,A[1][1])*fmin(0,A[1][1])));
 }
 
 template <class value_type>
@@ -45,27 +45,26 @@ FieldMatrix<value_type, 2, 2> cofactor(const FieldMatrix<value_type, 2, 2>& A)
   return cofA;
 }
 
-class Local_Operator_MA_refr_Brenner {
+class Local_Collocation_Operator_MA_refr_Brenner {
 
 public:
-  Local_Operator_MA_refr_Brenner():
-    opticalSetting(NULL), rhs(*opticalSetting), bc(*opticalSetting, 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps)), sign(1.0) {
+  Local_Collocation_Operator_MA_refr_Brenner():
+    rhs(), bc(1 << (Solver_config::startlevel+Solver_config::nonlinear_steps)), sign(1.0) {
     int_f = 0;
   }
 
-  Local_Operator_MA_refr_Brenner(OpticalSetting &opticalSetting,RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld):
-    opticalSetting(&opticalSetting),
-    rhs(solUOld, gradUOld, opticalSetting),
-    bc(opticalSetting, 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps)), sign(1.0) {
+  Local_Collocation_Operator_MA_refr_Brenner(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld, const double minPixelValue):
+    rhs(solUOld, gradUOld, Solver_config::LightinputImageName, Solver_config::TargetImageName, minPixelValue),
+    bc(1 << (Solver_config::startlevel+Solver_config::nonlinear_steps)), sign(1.0) {
     int_f = 0;
+
   }
 
 
-  Local_Operator_MA_refr_Brenner(OpticalSetting &opticalSetting,RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld,
-      std::shared_ptr<Rectangular_mesh_interpolator> &exactSolU):
-    opticalSetting(&opticalSetting),
-    rhs(solUOld, gradUOld, opticalSetting),
-    bc(opticalSetting, 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps)),
+  Local_Collocation_Operator_MA_refr_Brenner(RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld,
+      std::shared_ptr<Rectangular_mesh_interpolator> &exactSolU, const double minPixelValue):
+    rhs(solUOld, gradUOld, Solver_config::LightinputImageName, Solver_config::TargetImageName, minPixelValue),
+    bc(1 << (Solver_config::startlevel+Solver_config::nonlinear_steps)),
     bcDirichlet(exactSolU), sign(1.0){
 
     std::cout << " created Local Operator" << endl;
@@ -74,9 +73,9 @@ public:
   }
 
   ///helper function that checks wether the calculated reflection is consistent with the vector calculated by direct application of the reflection law
-  bool check_refraction(const SolverConfig::SpaceType& x_value, const FieldVector<adouble, 3>& X,
+  bool check_refraction(const Solver_config::SpaceType& x_value, const FieldVector<adouble, 3>& X,
                         const double rho_value,
-                        const FieldVector<adouble, SolverConfig::dim>& gradrho,
+                        const FieldVector<adouble, Solver_config::dim>& gradrho,
                         const FieldVector<adouble, 2>& z
                         ) const
   {
@@ -94,22 +93,22 @@ public:
     lightvector *= -1;
     lightvector [0] += z[0];
     lightvector [1] += z[1];
-    lightvector [2] += opticalSetting->z_3;
+    lightvector [2] += Solver_config::z_3;
 
     //calculated direction after refraction by Snell's law (Y)
     FieldVector<adouble, 3> Y = X;
     Y.axpy(-Phi((X*normal_refr)), normal_refr);
-//    std::cout << " -Phi((X*normal_refr) " << -(Phi((X*normal_refr)).value()) << " X*normal_refr " << (X*normal_refr).value() << std::endl;
+    std::cout << " -Phi((X*normal_refr) " << -(Phi((X*normal_refr)).value()) << " X*normal_refr " << (X*normal_refr).value() << std::endl;
     Y /= kappa_;
-//    std::cout << std::setprecision(15);
-//    std::cerr << "direction after refr " << Y[0].value() << " " << Y[1].value() << " " << Y[2].value() << std::endl;
-//    std::cout << "presumed lightvector " << lightvector[0].value() << " " << lightvector[1].value() << " " << lightvector[2].value() << std::endl;
+    std::cout << std::setprecision(15);
+    std::cerr << "direction after refr " << Y[0].value() << " " << Y[1].value() << " " << Y[2].value() << std::endl;
+    std::cout << "presumed lightvector " << lightvector[0].value() << " " << lightvector[1].value() << " " << lightvector[2].value() << std::endl;
 
     //direction of lightvector and Y have to be the same
-    assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[1].value()/Y[1].value()) < 1e-7
+    assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[1].value()/Y[1].value()) < 1e-8
         || (fabs(lightvector[0].value()) < 1e-12 &&  fabs(Y[0].value())< 1e-12)
         || (fabs(lightvector[1].value()) < 1e-12 &&  fabs(Y[1].value())< 1e-12)  );
-    assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[2].value()/Y[2].value()) < 1e-7
+    assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[2].value()/Y[2].value()) < 1e-8
         || (fabs(lightvector[0].value()) < 1e-12 &&  fabs(Y[0].value())< 1e-12)
         || (fabs(lightvector[2].value()) < 1e-12 &&  fabs(Y[2].value())< 1e-12)  );
     return true;
@@ -124,7 +123,7 @@ public:
         lightvector *= -1;
         lightvector[0] += z[0];
         lightvector[1] += z[1];
-        lightvector[2] += opticalSetting->z_3;
+        lightvector[2] += Solver_config::z_3;
 
         if ((D_Psi_value * lightvector).value() < 0)
           std::cout << " value is not positiv? "<< (D_Psi_value * lightvector).value() << std::endl;
@@ -153,7 +152,7 @@ public:
   }
   template<class value_type>
   inline
-  value_type F(const FieldVector<SolverConfig::value_type,2> &x, const value_type &u, const FieldVector<value_type,2> &p) const
+  value_type F(const FieldVector<Solver_config::value_type,2> &x, const value_type &u, const FieldVector<value_type,2> &p) const
   {
     value_type G = sqrt(sqr(u) + (p*p) - sqr((p * x)));
 //    std::cout << " G " << G.value();
@@ -163,7 +162,7 @@ public:
 
   template<class value_type>
   inline
-  void calc_F_and_derivatives(const FieldVector<SolverConfig::value_type,2> &x, const value_type &u, const FieldVector<value_type,2> &p,
+  void calc_F_and_derivatives(const FieldVector<Solver_config::value_type,2> &x, const value_type &u, const FieldVector<value_type,2> &p,
                               value_type& F, FieldVector<value_type,2>& DxF, value_type& DuF, FieldVector<value_type,2>& DpF) const
   {
     value_type G = sqrt(sqr(u) + (p*p) - sqr((p * x)));
@@ -225,8 +224,7 @@ public:
     DpF.axpy(-scalarCoefficient*Phi_u_G,x);
     DpF.axpy(-scalarCoefficient*(u+(p*x)),DpPhi_u_G);
     DpF /= 2.;
-
-    assert ( ! (DpF[0].value() != DpF[0].value()));
+    assert ( ! (DpF[0] != DpF[0]));
   }
 
   /**
@@ -239,8 +237,6 @@ public:
   template<class LocalView, class LocalIndexSet, class VectorType>
   void assemble_cell_term(const LocalView& localView, const LocalIndexSet &localIndexSet, const VectorType &x,
       VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const {
-
-    assert(opticalSetting);
 
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
@@ -261,8 +257,8 @@ public:
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
     typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<SolverConfig::value_type, Element::dimension, Element::dimension> FEHessianType;
+    typedef typename Dune::FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
+    typedef typename Dune::FieldMatrix<Solver_config::value_type, Element::dimension, Element::dimension> FEHessianType;
 
     const int size = localView.size();
 
@@ -271,7 +267,7 @@ public:
     int order = std::max(0,
         3 * ((int) localFiniteElement.localBasis().order()));
     const QuadratureRule<double, dim>& quad =
-        MacroQuadratureRules<double, dim>::rule(element.type(), order, SolverConfig::quadratureType);
+        MacroQuadratureRules<double, dim>::rule(element.type(), order, Solver_config::quadratureType);
 
     //init variables for automatic differentiation
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
@@ -306,35 +302,36 @@ public:
       assemble_functionValues_u(localFiniteElement, quadPos,
           referenceFunctionValues, x_adolc, rho_value);
 
+
       // The gradients
       std::vector<JacobianType> gradients(size);
-      FieldVector<adouble, SolverConfig::dim> gradrho;
+      FieldVector<adouble, Solver_config::dim> gradrho;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradrho);
 
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size);
-      FieldMatrix<adouble, SolverConfig::dim, SolverConfig::dim> Hessrho;
+      FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> Hessrho;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
           x_adolc, Hessrho);
 
       //--------assemble cell integrals in variational form--------
 
-      assert(SolverConfig::dim == 2);
-
+      assert(Solver_config::dim == 2);
 
       auto x_value = geometry.global(quad[pt].position());
-      SolverConfig::SpaceType3d X = { x_value[0], x_value[1], omega(x_value) };
+      Solver_config::SpaceType3d X = { x_value[0], x_value[1], omega(x_value) };
 
       double omega_value = omega(x_value);
       FieldVector<double,2> DOmega_value = DOmega(x_value);
 
       adouble F_value, DuF;
-      FieldVector<adouble, SolverConfig::dim> DxF, DpF;
+      FieldVector<adouble, Solver_config::dim> DxF, DpF;
       calc_F_and_derivatives(x_value,rho_value, gradrho, F_value, DxF, DuF, DpF);
 
-#ifdef DEBUG
-     //calculate finite difference derivatives
+
+/*
+ *    //calculate finite difference derivatives
       adouble F_valueEx = F(x_value, rho_value, gradrho);
 
       //calculate derivatives of F
@@ -348,7 +345,7 @@ public:
       temp[1]+=delta;
       adouble Dx2PlusF_value = F(temp, rho_value, gradrho);
 
-      FieldVector<adouble, SolverConfig::dim> DxFEx =
+      FieldVector<adouble, Solver_config::dim> DxFEx =
         {
           (Dx1PlusF_value-F_valueEx)/delta,
           (Dx2PlusF_value-F_valueEx)/delta
@@ -367,7 +364,7 @@ public:
       tempAdouble[1]+=delta;
       adouble DP2PlusF_value = F(x_value, rho_value, tempAdouble);
 
-      FieldVector<adouble, SolverConfig::dim> DpFEx =
+      FieldVector<adouble, Solver_config::dim> DpFEx =
         {
           (DP1PlusF_value-F_valueEx)/delta,
           (DP2PlusF_value-F_valueEx)/delta
@@ -386,36 +383,39 @@ public:
                 << " DxFEx " << DxF[0].value() << ' ' << DxF[1].value() << " vs. " <<  DxFEx[0].value() << ' ' << DxFEx[1].value() << std::endl
                 << " DuFEx " << DuF.value() << " vs. " <<  DuFEx.value()  << std::endl
                 << " DpFEx " << DpF[0].value() << ' ' << DpF[1].value() << " vs. " <<  DpFEx[0].value() << ' ' << DpFEx[1].value() << std::endl;
-#endif
+
+*/
 
       //calculate Z = X/u +t(Z_0-X/u) = point on reflector + reflected vector
       //calculate t: distance between refractor and target plane (refracted vector)
-      adouble t = rho_value*omega_value-opticalSetting->z_3;
+      adouble t = rho_value*omega_value-Solver_config::z_3;
       t /= rho_value*omega_value;
 
       FieldVector<adouble, 3> grad_hat = { gradrho[0], gradrho[1], 0 };
       //calculate w, the intersection between refracted light and {x_3=0}-plane
-      FieldVector<adouble, SolverConfig::dim> w = gradrho;
+      FieldVector<adouble, Solver_config::dim> w = gradrho;
       w *= 2*F_value*rho_value;
 
-      FieldVector<adouble, SolverConfig::dim> z = x_value;
+      FieldVector<adouble, Solver_config::dim> z = x_value;
       z *= rho_value;
       z.axpy(t,w);
       z.axpy(-t*rho_value,x_value);
 
-//      std::cerr << "rho_value " << rho_value.value()
-//                << " F " << F_value << std::endl
-//                << " X " << X << std::endl
-//                << " rhogradu " << gradrho[0].value() << " " << gradrho[1].value() << std::endl
-//                << " t " << t.value()
-//                << " w " << w[0].value() << " " << w[1].value() << std::endl
-//                << " z " << z[0].value() << " " << z[1].value() << std::endl
-//                << std::endl;
+/*      std::cerr << "rho_value " << rho_value.value()
+                << " F " << F_value << std::endl
+                << " X " << X << std::endl
+                << " rhogradu " << gradrho[0].value() << " " << gradrho[1].value() << std::endl
+                << " t " << t.value()
+                << " w " << w[0].value() << " " << w[1].value() << std::endl
+                << " z " << z[0].value() << " " << z[1].value() << std::endl
+                << std::endl;*/
 
 
-      assert(std::abs(((omega_value*rho_value) - t*rho_value*omega_value - opticalSetting->z_3).value()) < 1e-8 && "something with t is not as expected!");
+      assert(std::abs(((omega_value*rho_value) - t*rho_value*omega_value - Solver_config::z_3).value()) < 1e-8 && "something with t is not as expected!");
 
       assert(check_refraction(x_value, X, rho_value.value(), gradrho, z));
+
+//      std::cerr << "F "  << F_value << " DpF " << DpF << " DuF " << DuF << " DxF " << DxF << std::endl;
 
       //M_invers = Id - gradu x DpF / ...
       FieldMatrix<adouble, dim, dim> M_invers;
@@ -431,18 +431,30 @@ public:
       B[1][0] = 2.*F_value*gradrho[1]*gradrho[0] + 2.*rho_value*gradrho[1]*DxF[0] + DuF*2.*rho_value*gradrho[1]*gradrho[0];
       B[1][1] = 2.*F_value*gradrho[1]*gradrho[1] + 2.*rho_value*gradrho[1]*DxF[1] + DuF*2.*rho_value*gradrho[1]*gradrho[1];
 
+//      std::cerr << " B " << B << std::endl;
+
+//      std::cerr << " omega " << omega_value << " DOmega " << DOmega_value[0] << " " << DOmega_value[1] << std::endl;
+
       FieldMatrix<adouble, dim, dim> C;
       C[0][0] = gradrho[0]*x_value[0] + rho_value + 1./rho_value/omega_value*(w[0]-rho_value*x_value[0])*(gradrho[0]*omega_value + rho_value*DOmega_value[0]);
       C[0][1] = gradrho[1]*x_value[0]             + 1./rho_value/omega_value*(w[0]-rho_value*x_value[0])*(gradrho[1]*omega_value + rho_value*DOmega_value[1]);
       C[1][0] = gradrho[0]*x_value[1]             + 1./rho_value/omega_value*(w[1]-rho_value*x_value[1])*(gradrho[0]*omega_value + rho_value*DOmega_value[0]);
       C[1][1] = gradrho[1]*x_value[1] + rho_value + 1./rho_value/omega_value*(w[1]-rho_value*x_value[1])*(gradrho[1]*omega_value + rho_value*DOmega_value[1]);
 
+//      std::cerr << " C " << C << std::endl;
+
+
       FieldMatrix<adouble, dim, dim> A;
       A = B;
       A *= t;
       A.axpy(1.-t,C);
+//      std::cerr << " A itnermediate" << A << std::endl;
       A.leftmultiply(M_invers);
       A /= 2.*t*rho_value*F_value;
+
+//      std::cerr << "factor " << 2.*t*rho_value*F_value << std::endl;
+
+//      std::cerr << " A " << A << std::endl;
 
       FieldVector<double, 3> D_Psi_value;
       D_Psi_value[0] = 0; D_Psi_value[1] = 0;
@@ -468,10 +480,16 @@ public:
       adouble H_value = (1.-(x_value*x_value))*D_psi_norm *4. *t*t*rho_value*rho_value*rho_value*(-beta)*F_value*(F_value+(gradrho*DpF));
 
       //write calculated distribution
+
       FieldMatrix<adouble, dim, dim> uDH_pertubed = Hessrho;
+//      assert(fabs(Solver_config::z_3+3.0) < 1e-12);
       uDH_pertubed+=A;
 
+//      std::cerr << " Hess rho " << Hessrho << std::endl;
+//      std::cerr << " D2rho+A " << uDH_pertubed << std::endl;
+
       adouble uDH_pertubed_det = determinant(uDH_pertubed);
+
 
       adouble PDE_rhs = f_value/(g_value*H_value);
 
@@ -479,6 +497,7 @@ public:
       if (uDH_pertubed_det.value() < 0 && !found_negative)
       {
         std::cerr << "found negative determinant !!!!! " << uDH_pertubed_det.value() << " at " << x_value  << "matrix is " << Hessrho << std::endl;
+//        std::cerr << " local dofs " << x.transpose() << std::endl;
         std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
         found_negative = true;
       }
@@ -489,9 +508,9 @@ public:
       for (int j = 0; j < size; j++) // loop over test fcts
       {
         v_adolc(j) += (scaling_factor_adolc*PDE_rhs-uDH_pertubed_det)*
-            (referenceFunctionValues[j])
-//            (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1])
-            *quad[pt].weight() * integrationElement;
+        //(PDE_rhs-uDH_pertubed_det)*
+        referenceFunctionValues[j]
+	          	* quad[pt].weight() * integrationElement;
 
 /*
         if (((PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]* quad[pt].weight() * integrationElement).value() > 1e-6)
@@ -537,8 +556,6 @@ public:
       const LocalView &localView,  const LocalIndexSet &localIndexSet, const VectorType &x,
       const LocalView &localViewn,  const LocalIndexSet &localIndexSetn, const VectorType &xn, VectorType& v,
       VectorType& vn, int tag) const {
-    assert(opticalSetting);
-
     const int dim = IntersectionType::dimension;
     const int dimw = IntersectionType::dimensionworld;
 
@@ -559,8 +576,8 @@ public:
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
     typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<SolverConfig::value_type, IntersectionType::dimensionworld, IntersectionType::dimensionworld> FEHessianType;
+    typedef FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
+    typedef typename Dune::FieldMatrix<Solver_config::value_type, IntersectionType::dimensionworld, IntersectionType::dimensionworld> FEHessianType;
 
     assert((unsigned int) size == localFiniteElement.size());
     assert((unsigned int) size == localFiniteElementn.size());
@@ -580,12 +597,12 @@ public:
         face_center);
 
     // penalty weight for NIPG / SIPG
-//    double penalty_weight = SolverConfig::sigma
-//        * (SolverConfig::degree * SolverConfig::degree)
-//        / std::pow(intersection.geometry().volume(), SolverConfig::beta);
-    double penalty_weight_gradient = SolverConfig::sigmaGrad
-        * (SolverConfig::degree * SolverConfig::degree)
-        * std::pow(intersection.geometry().volume(), SolverConfig::beta);
+//    double penalty_weight = Solver_config::sigma
+//        * (Solver_config::degree * Solver_config::degree)
+//        / std::pow(intersection.geometry().volume(), Solver_config::beta);
+    double penalty_weight_gradient = Solver_config::sigmaGrad
+        * (Solver_config::degree * Solver_config::degree)
+        * std::pow(intersection.geometry().volume(), Solver_config::beta);
 
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> xn_adolc(size);
@@ -633,22 +650,22 @@ public:
 
       // The gradients of the shape functions on the reference element
       std::vector<JacobianType> gradients(size);
-      FieldVector<adouble, SolverConfig::dim> gradu(0);
+      FieldVector<adouble, Solver_config::dim> gradu(0);
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradu);
       std::vector<JacobianType> gradientsn(size);
-      FieldVector<adouble, SolverConfig::dim> gradun(0);
+      FieldVector<adouble, Solver_config::dim> gradun(0);
       assemble_gradients_gradu(localFiniteElementn, jacobiann, quadPosn,
           gradientsn, xn_adolc, gradun);
 
       //the shape function values of hessian ansatz functions
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size);
-      FieldMatrix<adouble, SolverConfig::dim, SolverConfig::dim> Hessu;
+      FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> Hessu;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
           x_adolc, Hessu);
       std::vector<FEHessianType> Hessiansn(size);
-      FieldMatrix<adouble, SolverConfig::dim, SolverConfig::dim> Hessun;
+      FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> Hessun;
       assemble_hessians_hessu(localFiniteElementn, jacobian, quadPos, Hessiansn,
           x_adolc, Hessun);
 
@@ -668,7 +685,7 @@ public:
       assert(std::abs(grad_u_normaljump.value()) < 1e-8);
 
       //      Hess_avg = 0.5*(Hessu+Hessun);
-      FieldMatrix<adouble, SolverConfig::dim, SolverConfig::dim> Hess_avg = cofactor(Hessu);
+      FieldMatrix<adouble, Solver_config::dim, Solver_config::dim> Hess_avg = cofactor(Hessu);
       Hess_avg += cofactor(Hessu);
       Hess_avg *= 0.5;
 
@@ -678,7 +695,7 @@ public:
       double factor = quad[pt].weight() * integrationElement;
 
       for (int j = 0; j < size; j++) {
-        FieldVector<adouble, SolverConfig::dim> temp;
+        FieldVector<adouble, Solver_config::dim> temp;
         Hess_avg.mv(gradu, temp);
         adouble jump = (temp*normal);
         Hess_avg.mv(gradun, temp);
@@ -728,9 +745,6 @@ public:
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalView &localView, const LocalIndexSet &localIndexSet,
       const VectorType &x, VectorType& v, int tag) const {
-
-    assert(opticalSetting);
-
     const int dim = Intersection::dimension;
     const int dimw = Intersection::dimensionworld;
 
@@ -749,7 +763,7 @@ public:
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
     typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
+    typedef typename Dune::FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
 
     //-----init variables for automatic differentiation
 
@@ -770,8 +784,8 @@ public:
     // Get a quadrature rule
     const int order = std::max(0, 3 * ((int) localFiniteElement.localBasis().order()));
     GeometryType gtface = intersection.geometryInInside().type();
-    const QuadratureRule<double, dim - 1>& quad = MacroQuadratureRules<double,
-        dim - 1>::rule(gtface, order, SolverConfig::quadratureType);
+    const QuadratureRule<double, dim - 1>& quad = QuadratureRules<double,
+        dim - 1>::rule(gtface, order);
 
     // normal of center in face's reference element
     const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
@@ -785,30 +799,16 @@ public:
     // penalty weight for NIPG / SIPG
     //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
     double penalty_weight;
-    if (SolverConfig::Dirichlet)
-      penalty_weight = SolverConfig::sigmaBoundary
-                      * (SolverConfig::degree * SolverConfig::degree)
-                      / std::pow(intersection.geometry().volume(), SolverConfig::beta);
+    if (Solver_config::Dirichlet)
+      penalty_weight = Solver_config::sigmaBoundary
+                      * (Solver_config::degree * Solver_config::degree)
+                      / std::pow(intersection.geometry().volume(), Solver_config::beta);
     else
-      penalty_weight = SolverConfig::sigmaBoundary
-                      * (SolverConfig::degree * SolverConfig::degree);
-//                     * std::pow(intersection.geometry().volume(), SolverConfig::beta);
+      penalty_weight = Solver_config::sigmaBoundary
+                      * (Solver_config::degree * Solver_config::degree)
+                     * std::pow(intersection.geometry().volume(), Solver_config::beta);
 
 
-
-/*
-    std::cerr << " old quad " << std::endl;
-    const QuadratureRule<double, dim - 1>& quadOld = QuadratureRules<double,
-        dim - 1>::rule(gtface, order);
-    for (size_t pt = 0; pt < quadOld.size(); pt++) {
-      const FieldVector<double, dim> &quadPos =
-          intersection.geometryInInside().global(quadOld[pt].position());
-      auto x_value = intersection.inside().geometry().global(quadPos);
-//      std::cerr << " quadpos " << quadPos << " x " << x_value << " weight " <<quad[pt].weight()<< std::endl;
-
-    }
-*/
-//    std::cerr << " start quadrature " << std::endl;
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
 
@@ -818,8 +818,6 @@ public:
       const FieldVector<double, dim> &quadPos =
           intersection.geometryInInside().global(quad[pt].position());
       auto x_value = intersection.inside().geometry().global(quadPos);
-
-//      std::cerr << " quadpos " << quadPos << " x " << x_value << " weight " <<quad[pt].weight()<< std::endl;
 
       // The transposed inverse Jacobian of the map from the reference element to the element
       const auto& jacobian =
@@ -833,28 +831,30 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, SolverConfig::dim> gradrho;
+      FieldVector<adouble, Solver_config::dim> gradrho;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradrho);
 
       //-------calculate integral--------
       double omega_value = omega(x_value);
 
-      adouble t = rho_value*omega_value-opticalSetting->z_3;
+      adouble t = rho_value*omega_value-Solver_config::z_3;
       t /= rho_value*omega_value;
 
       adouble F_value = F(x_value, rho_value, gradrho);
 
-      FieldVector<adouble, SolverConfig::dim> w = gradrho;
+      FieldVector<adouble, Solver_config::dim> w = gradrho;
       w *= 2*F_value*rho_value;
 
-      FieldVector<adouble, SolverConfig::dim> z = x_value;
+      FieldVector<adouble, Solver_config::dim> z = x_value;
       z *= rho_value;
       z.axpy(t,w);
       z.axpy(-t*rho_value,x_value);
 
       auto signedDistance = bc.H(z, normal);
-      std::cerr << " signedDistance " << signedDistance << " at " << z[0].value() << " "<< z[1].value()<< " from X "  << x_value << std::endl;
+
+      std::cerr << " signed distance " << signedDistance << std::endl;
+
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
@@ -863,7 +863,7 @@ public:
       {
 
         int j = collocationNo[boundaryFaceId][i];
-        if (SolverConfig::Dirichlet)
+        if (Solver_config::Dirichlet)
         {
           assert(false);
         }
@@ -871,9 +871,8 @@ public:
         {
           v_adolc(j) += penalty_weight * signedDistance //((T_value * normal) - phi_value) //
                             * (referenceFunctionValues[j]+(gradients[j]*normal)) * factor;
-//          * (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1]) * factor;
-          std::cerr << " add to v_adolc(" << j << ") " << penalty_weight * signedDistance.value()
-              * (referenceFunctionValues[j]+(gradients[j]*normal))* factor << " -> " << v_adolc(j).value() << std::endl;
+          std::cerr << " add to v_adolc(" << j << ") " << penalty_weight * signedDistance
+              * (referenceFunctionValues[j]+(gradients[j]*normal)).value() * factor << " -> " << v_adolc(j).value() << std::endl;
         }
       }
 
@@ -889,8 +888,6 @@ public:
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalView &localView, const LocalIndexSet &localIndexSet,
       const VectorType &x, VectorType& v, int tag) const {
-    assert(opticalSetting);
-
     const int dim = Intersection::dimension;
     const int dimw = Intersection::dimensionworld;
 
@@ -909,7 +906,7 @@ public:
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
     typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
+    typedef typename Dune::FieldVector<Solver_config::value_type, Solver_config::dim> JacobianType;
 
     //-----init variables for automatic differentiation
 
@@ -930,6 +927,8 @@ public:
     // Get a quadrature rule
     const int order = std::max(0, 3 * ((int) localFiniteElement.localBasis().order()));
     GeometryType gtface = intersection.geometryInInside().type();
+    const QuadratureRule<double, dim - 1>& quad = QuadratureRules<double,
+        dim - 1>::rule(gtface, order);
 
     // normal of center in face's reference element
     const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
@@ -942,9 +941,9 @@ public:
 
     // penalty weight for NIPG / SIPG
     //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
-    double penalty_weight = SolverConfig::sigmaBoundary
-                      * (SolverConfig::degree * SolverConfig::degree)
-                      * std::pow(intersection.geometry().volume(), SolverConfig::beta);
+    double penalty_weight = Solver_config::sigmaBoundary
+                      * (Solver_config::degree * Solver_config::degree)
+                      * std::pow(intersection.geometry().volume(), Solver_config::beta);
 
 
     // Loop over all quadrature points
@@ -979,22 +978,22 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, SolverConfig::dim> gradrho;
+      FieldVector<adouble, Solver_config::dim> gradrho;
       assemble_gradients_gradu(localFiniteElement, jacobian, collocationPos,
           gradients, x_adolc, gradrho);
 
       //-------calculate integral--------
       double omega_value = omega(x_value);
 
-      adouble t = rho_value*omega_value-SolverConfig::z_3;
+      adouble t = rho_value*omega_value-Solver_config::z_3;
       t /= rho_value*omega_value;
 
       adouble F_value = F(x_value, rho_value, gradrho);
 
-      FieldVector<adouble, SolverConfig::dim> w = gradrho;
+      FieldVector<adouble, Solver_config::dim> w = gradrho;
       w *= 2*F_value*rho_value;
 
-      FieldVector<adouble, SolverConfig::dim> z = x_value;
+      FieldVector<adouble, Solver_config::dim> z = x_value;
       z *= rho_value;
       z.axpy(t,w);
       z.axpy(-t*rho_value,x_value);
@@ -1013,8 +1012,6 @@ public:
   }
 #endif
 
-  OpticalSetting* opticalSetting;
-
   const RightHandSideReflector& get_right_handside() const {return rhs;}
 
   RightHandSideReflector rhs;
@@ -1024,7 +1021,7 @@ public:
   static constexpr int collocationNo[3][3] = {{0,3,4},{0,11,8},{4,7,8}};
 //  static constexpr int collocationNo[3][5] = {{0,1,3,5,4},{0,2,11,9,8},{4,6,7,10,8}};
 
-  static constexpr double& kappa_ = OpticalSetting::kappa;
+  static constexpr double& kappa_ = Solver_config::kappa;
 public:
   mutable double int_f;
   mutable double sign;

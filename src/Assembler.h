@@ -468,8 +468,8 @@ public:
   void set_G(const double g){ G = g;}
 
   const SolverConfig::FEBasis& basis() const {return *basis_;}
-  const BoundaryHandler::BoolVectorType& isBoundaryDoF(){return boundaryHandler_.isBoundaryDoF();}
-  const BoundaryHandler::BoolVectorType& isBoundaryValueDoF(){return boundaryHandler_.isBoundaryValueDoF();}
+  const BoundaryHandler::BoolVectorType& isBoundaryDoF() const {return boundaryHandler_.isBoundaryDoF();}
+  const BoundaryHandler::BoolVectorType& isBoundaryValueDoF() const{return boundaryHandler_.isBoundaryValueDoF();}
 
 private:
 /*
@@ -1392,25 +1392,6 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const SolverC
 #ifndef NDEBUG
         if(!derivationSuccessful)
         {
-          {
-            trace_on(4);
-            double start = 5;
-            adouble test;
-            test <<= start;
-            test *= 50;
-            double end;
-            test >>= end;
-            trace_off(4);
-
-            const int n_var = 1;
-            SolverConfig::VectorType x_xn(n_var);
-
-            double** out = new double*[n_var];
-            for (int i = 0; i < n_var; i++)
-              out[i] = new double[n_var];
-            int ierr = jacobian(4, n_var, n_var, x_xn.data(), out);
-          }
-
 
           std::cerr << " derivation was not successful " << std::endl;
           SolverConfig::DenseMatrixType m_mFD;
@@ -1582,7 +1563,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const SolverC
         {
           if (!isBoundaryLocal(i))  continue;
           boundary(localIndexSet.index(i)[0]) += local_boundary[i] ;
-//          std::cerr << "add " << i << " to " << localIndexSet.index(i)[0] << " with value " << local_boundary[i] << " and get " << boundary(localIndexSet.index(i)[0]) << std::endl;
+//          std::cerr << "boundary add " << i << " to " << localIndexSet.index(i)[0] << " with value " << local_boundary[i] << " and get " << boundary(localIndexSet.index(i)[0]) << std::endl;
         }
 #ifndef COLLOCATION
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
