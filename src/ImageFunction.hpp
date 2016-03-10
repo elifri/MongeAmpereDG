@@ -18,7 +18,9 @@
 #include "solver_config.h"
 #include "utils.hpp"
 
-class ImageFunction : public Dune::VirtualFunction<SolverConfig::SpaceType, SolverConfig::value_type>
+#include "problem_data_OT.h"
+
+class ImageFunction : public DensityFunction
 {
 
   private:
