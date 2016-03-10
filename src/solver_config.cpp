@@ -134,15 +134,15 @@ void GeometrySetting::read_configfile(std::string &configFile)
 
   po::options_description config("Configuration of the geometry setting");
   config.add_options()
-        ("geometry.optic.xMin",  po::value<double>(&OpticalSetting::lowerLeft[0]), "")
-        ("geometry.optic.xMax",  po::value<double>(&OpticalSetting::upperRight[0]), "")
-        ("geometry.optic.yMin",  po::value<double>(&OpticalSetting::lowerLeft[1]), "")
-        ("geometry.optic.yMax",  po::value<double>(&OpticalSetting::upperRight[1]), "")
-        ("geometry.target.xMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[0]), "")
-        ("geometry.target.xMax",     po::value<double>(&OpticalSetting::upperRightTarget[0]), "")
-        ("geometry.target.yMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[1]), "")
-        ("geometry.target.yMax",     po::value<double>(&OpticalSetting::upperRightTarget[1]), "")
-        ("geometry.target.z",        po::value<double>(&OpticalSetting::z_3),    "")
+        ("geometry.input.xMin",  po::value<double>(&GeometrySetting::lowerLeft[0]), "")
+        ("geometry.input.xMax",  po::value<double>(&GeometrySetting::upperRight[0]), "")
+        ("geometry.input.yMin",  po::value<double>(&GeometrySetting::lowerLeft[1]), "")
+        ("geometry.input.yMax",  po::value<double>(&GeometrySetting::upperRight[1]), "")
+        ("geometry.target.xMin",     po::value<double>(&GeometrySetting::lowerLeftTarget[0]), "")
+        ("geometry.target.xMax",     po::value<double>(&GeometrySetting::upperRightTarget[0]), "")
+        ("geometry.target.yMin",     po::value<double>(&GeometrySetting::lowerLeftTarget[1]), "")
+        ("geometry.target.yMax",     po::value<double>(&GeometrySetting::upperRightTarget[1]), "")
+        ("geometry.target.z",        po::value<double>(&GeometrySetting::z_3),    "")
   ;
 
 
