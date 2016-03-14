@@ -18,7 +18,7 @@ private:
 public:
   typedef std::shared_ptr<SolverConfig::DiscreteLocalGradientGridFunction> GradFunction_ptr;
 
-  virtual ~OTBoundary();
+//  virtual ~OTBoundary() {delete (*GradFunction_ptr);}
 
   OTBoundary(GradFunction_ptr &gradUOld, GeometrySetting& geometrySetting) : gradient_u_old(&gradUOld), geometrySetting(geometrySetting) {}
 
@@ -43,7 +43,6 @@ protected:
   GeometrySetting& geometrySetting;
 };
 
-inline OTBoundary::~OTBoundary() {}
 
 class DensityFunction : public virtual Dune::VirtualFunction<SolverConfig::DomainType, SolverConfig::value_type>
 {

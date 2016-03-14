@@ -62,12 +62,12 @@ public:
     int_f = 0;
   }
 
-  ~Local_Operator_MA_OT()
-  {
-    delete &rhoX;
-    delete &rhoY;
-    delete &bc;
-  }
+//  ~Local_Operator_MA_OT()
+//  {
+//    delete &rhoX;
+//    delete &rhoY;
+//    delete &bc;
+//  }
 
 
   /**
@@ -120,6 +120,11 @@ public:
     for (int i = 0; i < size; i++)
       v_adolc[i] <<= v[i];
     last_equation_adolc <<= last_equation;
+
+    double test;
+    auto testx = geometry.global(FieldVector<double,2>());
+    rhoY.evaluate(testx, test);
+    std::cerr << " at " << testx << " the target image is " << test << std::endl;
 
     trace_on(tag);
 
@@ -175,10 +180,11 @@ public:
       adouble g_value;
       rhoY.evaluate(gradu, g_value);
 
+
       std::cerr << std::setprecision(15);
 
 //      std::cerr << "x " << x_value << " ";
-      std::cerr << "f(x) " << f_value<< " maps from " << x_value << " to " << gradu[0].value() << " " << gradu[1].value() << " with value g(T(x)) " << g_value.value() << std::endl;
+//      std::cerr << "f(x) " << f_value<< " maps from " << x_value << " to " << gradu[0].value() << " " << gradu[1].value() << " with value g(T(x)) " << g_value.value() << std::endl;
 //      std::cerr << " should map to " << (x_value[0]+4.*rhoXSquareToSquare::q_div(x_value[0])*rhoXSquareToSquare::q(x_value[1]))
 //       << " " << (x_value[1]+4.*rhoXSquareToSquare::q(x_value[0])*rhoXSquareToSquare::q_div(x_value[1])) << std::endl;
 //      std::cout << " q_div(x) " << rhoXSquareToSquare::q_div(x_value[0]) << " q_div(y) = " << rhoXSquareToSquare::q_div(x_value[1]) << std::endl;
@@ -470,6 +476,7 @@ public:
 
 public:
   mutable double int_f;
+
 
 };
 
