@@ -31,9 +31,10 @@
 
 #include "UnitCube.h"
 
+#include <dune/localfunctions/lagrange/pk2d.hh>
 
 //#include "localfunctions/MAmixedbasis.hh"
-//#include "localfunctions/MAmixedbasisC0.hh"
+#include "localfunctions/MAmixedbasisC0.hh"
 //#include "localfunctions/MAmixedbasisC0C0.hh"
 //#include "localfunctions/deVeubekefunctionspacebasis.hh"
 #include "localfunctions/PowellSabin12SSplinenodalbasis.hh"
@@ -56,7 +57,20 @@ inline void DenseMatrix<Dune::FieldMatrix<adouble, 2, 2>>::luDecomposition(Dense
 
 using namespace Dune;
 
-enum PolynomialType {LAGRANGE};
+enum FEType{
+  PS12Split,
+  Lagrange,
+  Mixed,
+  Undefined
+};
+
+template <typename T>
+struct FETraits
+{
+  static const FEType Type = Undefined;
+  typedef T FEBasis;
+};
+
 enum ProblemType
 {
 	SIMPLE_MA, /// solution is x^2/2+y^2/2
@@ -94,7 +108,7 @@ struct SolverConfig{
 
   static bool Dirichlet;
 
-	enum{ dim = 2, childdim = 4, degree = 2};
+	enum{ dim = 2, childdim = 4, degree = 2, degreeHessian = 2};
 
 	static int startlevel;
 	static int nonlinear_steps;
@@ -120,21 +134,40 @@ struct SolverConfig{
 
   static_assert(std::is_same<SpaceType, DomainType>::value, "Grid domain type must be equal to function type");
 
-//	typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementType;
-//  typedef Functions::PQKNodalBasis<GridView, degree> FEBasis;
+  //////////////////////////////////////////////////////////
+  ///---------------select Finite Element----------------///
+  //////////////////////////////////////////////////////////
+
+  //-------select lagranian element----------
+//  typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementType;
+  //  typedef Functions::PQKNodalBasis<GridView, degree> FEBasis;
+
+  //-------select DeVeubeke-------------
 
 //  typedef Dune::deVeubekeFiniteElement<GridView::Codim<2>::Entity::Geometry, value_type, value_type> LocalFiniteElementType;
 //	typedef Functions::deVeubekeBasis<GridView> FEBasis;
 
+//  static const MacroQuadratureType::Enum quadratureType = MacroQuadratureType::deVeubeke;
+
+  //-------select PS12 S-Splines
   typedef Eigen::SparseMatrix<value_type> SparseMatrixType;
 
-  typedef Dune::PS12SSplineFiniteElement<GridView::Codim<2>::Entity::Geometry, value_type, value_type, SparseMatrixType> LocalFiniteElementType;
+//  typedef Dune::PS12SSplineFiniteElement<GridView::Codim<2>::Entity::Geometry, value_type, value_type, SparseMatrixType> LocalFiniteElementType;
   typedef Functions::PS12SSplineBasis<GridView, SparseMatrixType> FEBasis;
 
-
-//	static const MacroQuadratureType::Enum quadratureType = MacroQuadratureType::deVeubeke;
   static const MacroQuadratureType::Enum quadratureType = MacroQuadratureType::Powell_Sabin_12_split;
 
+
+  //------select Mixed element-----------------
+  typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementuType;
+  typedef Pk2DLocalFiniteElement<value_type, value_type, degreeHessian> LocalFiniteElementHessianSingleType;
+
+/*	typedef Functions::MAMixedBasis<GridView, degree, degreeHessian> FEBasis;
+  typedef FEBasis::Basisu FEuBasis;
+	typedef Functions::PQkNodalBasis<GridView, degree> FEuBasis;
+	//  typedef FEBasis::BasisuDH FEuDHBasis;
+  typedef Functions::LagrangeDGBasis<GridView, degreeHessian> FEuDHBasis;
+*/
 
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis,VectorType> DiscreteGridFunction;
   typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
@@ -168,6 +201,23 @@ struct SolverConfig{
 #endif
 
 };
+
+template<>
+struct FETraits<Functions::PS12SSplineBasis<SolverConfig::GridView, SolverConfig::SparseMatrixType>>
+{
+  static const FEType Type = PS12Split;
+  typedef Functions::PS12SSplineBasis<SolverConfig::GridView, SolverConfig::SparseMatrixType> FEBasis;
+};
+
+template<>
+struct FETraits<Functions::MAMixedBasis<SolverConfig::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>
+{
+  static const FEType Type = Mixed;
+  typedef Functions::MAMixedBasis<SolverConfig::GridView, SolverConfig::degree, SolverConfig::degreeHessian> FEBasis;
+};
+
+typedef FETraits<Functions::PS12SSplineBasis<SolverConfig::GridView, SolverConfig::SparseMatrixType>> FEPS12SplitTraits;
+typedef FETraits<Functions::MAMixedBasis<SolverConfig::GridView, SolverConfig::degree, SolverConfig::degreeHessian>> MixedTraits;
 
 struct GeometrySetting{
   virtual void read_configfile(std::string &configFile);

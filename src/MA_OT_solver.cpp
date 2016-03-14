@@ -31,11 +31,13 @@ void MA_OT_solver::plot(const std::string& name) const
   if (writeVTK_)
   {
     std::cout << "plot written into ";
+    const int nDH = SolverConfig::dim*SolverConfig::dim;
 
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
      //build gridviewfunction
      Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
+//     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,solution_u);
      auto localnumericalSolution = localFunction(numericalSolution);
 
      //build writer
@@ -59,9 +61,25 @@ void MA_OT_solver::plot(const std::string& name) const
      auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
      vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
 
+     //extract hessian (3 entries (because symmetry))
+/*     typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
+     DerivativeVectorType derivativeSolution(uDHBasis->indexSet().size());
 
-//     std::cout << "solution " << solution_u.transpose() << std::endl;
+     //extract dofs
+     for (int i=0; i<derivativeSolution.size(); i++)
+       for (int j=0; j< nDH; j++)
+       {
+         if (j == 2) continue;
+         int index_j = j > 2? 2 : j;
+         derivativeSolution[i][index_j] = solution[get_n_dofs_u()+ nDH*i+j];
+       }
 
+     //build gridview function
+     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
+     auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
+
+     vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("DiscreteHessian", VTK::FieldInfo::Type::vector, 3));
+*/
      //write to file
      std::string fname(plotter.get_output_directory());
      fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
@@ -73,6 +91,7 @@ void MA_OT_solver::plot(const std::string& name) const
   //write to file
   std::string fname(plotter.get_output_directory());
   fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "outputGrid.vtu";
+
 //  plotter.writeOTVTK(fname, *gradient_u_old, [](SolverConfig::SpaceType x)
 //      {return Dune::FieldVector<double, SolverConfig::dim> ({
 //                                                      x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
@@ -105,6 +124,7 @@ void MA_OT_solver::create_initial_guess()
 //  solution = VectorType::Zero(get_n_dofs());
 //  solution = exactsol_projection;
 }
+
 
 void MA_OT_solver::solve_nonlinear_system()
 {

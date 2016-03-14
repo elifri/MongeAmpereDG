@@ -13,6 +13,8 @@ add_library(BoundaryHandler boundaryHandler.cpp)
 set_source_files_properties(MethodEllipsoids/init_with_ellipsoid_method.cpp PROPERTIES COMPILE_FLAGS -O3)
 add_library(EllipsoidMethod MethodEllipsoids/init_with_ellipsoid_method.cpp)
 add_library(MA_solver MA_solver.cpp)
+add_library(FEC0C1distinguisher FEC0C1distinguisher.cpp)
+
 add_library(MA_reflector_solver MA_reflector_solver.cpp)
 add_library(MA_refractor_solver MA_refractor_solver.cpp)
 add_library(MA_OT_solver MA_OT_solver.cpp)
@@ -21,7 +23,7 @@ add_library(MA_OT_image_solver MA_OT_image_solver.cpp)
 Set(MirrorProblemLibs operator_MA_refl_Brenner problemData ImageFunction)
 Set(LensProblemLibs operator_MA_refr_Brenner problemData ImageFunction)
 Set(OTProblemLibs operator_MA_OT)
-Set(PureSolverLibs MA_solver Plotter BoundaryHandler)
+Set(PureSolverLibs MA_solver FEC0C1distinguisher Plotter BoundaryHandler)
 
 #add_executable("dune_mongeampere" dune_mongeampere.cc)
 #message("ZLIB libraries ${ZLIB_LIBRARIES}")
@@ -38,11 +40,11 @@ target_link_libraries(dune_mongeampere_refractor MA_refractor_solver ${PureSolve
 target_link_dune_default_libraries("dune_mongeampere_refractor")
 
 add_executable("dune_mongeampere_OT" dune_mongeampere_OT.cpp)
-target_link_libraries(dune_mongeampere_OT MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11)
+target_link_libraries(dune_mongeampere_OT MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
 target_link_dune_default_libraries("dune_mongeampere_OT")
 
 add_executable("dune_mongeampere_image_OT" dune_mongeampere_image_OT.cpp)
-target_link_libraries(dune_mongeampere_image_OT MA_OT_image_solver MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} ImageFunction Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11)
+target_link_libraries(dune_mongeampere_image_OT MA_OT_image_solver MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} ImageFunction Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
 target_link_dune_default_libraries("dune_mongeampere_image_OT")
 
 add_executable("poisson" poisson.cc)

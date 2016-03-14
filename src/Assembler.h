@@ -649,7 +649,7 @@ void Assembler::calculate_refined_local_mass_matrix_ansatz(
             double, SolverConfig::dim>::rule(lfu.type(), order);
 
     //local mass matrix m_ij = \int mu_i : mu_j
-    for (int i = 0; i < m.size(); i++)
+    for (unsigned int i = 0; i < m.size(); i++)
         m[i].setZero(size, size);
 
     // Loop over all quadrature points
@@ -799,7 +799,7 @@ inline
 void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const SolverConfig::VectorType &v_local, SolverConfig::VectorType& v)
 {
   assert ((unsigned int) v_local.size() == localIndexSet.size());
-  assert ((unsigned int) v.size() == basis_->indexSet().size()+1);
+//  assert ((unsigned int) v.size() == basis_->indexSet().size()+1);
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
 //    std::cout << i << " -> " << localIndexSet.index(i)[0] <<  " with value " << v_local[i] << std::endl;
@@ -813,7 +813,7 @@ inline
 void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const SolverConfig::VectorType &v_local, SolverConfig::VectorType& v)
 {
   assert ((unsigned int) v_local.size() == localIndexSet.size());
-  assert ((unsigned int) v.size() == basis_->indexSet().size()+1);
+//  assert ((unsigned int) v.size() == basis_->indexSet().size()+1);
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
     //dofs associated to normal derivatives have to be corrected to the same direction (we define them to either point upwards or to the right)
@@ -860,8 +860,8 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
 {
   assert ((unsigned int) m_local.rows() == localIndexSetTest.size());
   assert ((unsigned int) m_local.cols() == localIndexSetAnsatz.size());
-  assert ((unsigned int) m.rows() == basis_->indexSet().size()+1);
-  assert ((unsigned int) m.cols() == basis_->indexSet().size()+1);
+//  assert ((unsigned int) m.rows() == basis_->indexSet().size()+1);
+//  assert ((unsigned int) m.cols() == basis_->indexSet().size()+1);
 
   for (int i = 0; i < m_local.rows(); i++)
   {

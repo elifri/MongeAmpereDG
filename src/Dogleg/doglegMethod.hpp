@@ -145,7 +145,7 @@ void make_FD_Jacobian(
  *  \see PDE_function, DogLeg_optionstype
 */
 template<typename FunctorType>
-int doglegMethod (
+bool doglegMethod (
           const FunctorType &functor,
     const DogLeg_optionstype opts,
           Eigen::VectorXd &x,
@@ -174,6 +174,9 @@ int doglegMethod (
 //      make_FD_Jacobian(functor, x, J);
     }
 
+//    std::cerr << "f " << f.transpose() << std::endl;
+
+
     if (opts.check_Jacobian)	checkJacobian(functor, x, opts.exportFDJacobianifFalse);
 
     // Check result of function calls for correct length of vectors
@@ -200,11 +203,18 @@ int doglegMethod (
     }
 
 
-
     J.makeCompressed();
-    Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int> > lu_of_J;
+
+//    Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::IncompleteLUT<double> > lu_of_J;
+//    lu_of_J.compute(J);
+
+//    Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int> > lu_of_J;
+//    lu_of_J.compute(J);
+
+    Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_J;
+    lu_of_J.analyzePattern(J);
     lu_of_J.compute(J);
-//    lu_of_J.factorize(J);
+
     if (lu_of_J.info()!= Eigen::EigenSuccess) {
         // decomposition failed
         std::cout << "\nError: "<< lu_of_J.info() << " Could not compute LU decomposition!\n";
@@ -269,11 +279,14 @@ int doglegMethod (
 
             // solve J*b = f using UmfPack:
             Eigen::VectorXd b = lu_of_J.solve(f);
+
+//            std::cout << "#iterations:     " << lu_of_J.iterations() << std::endl;
+//            std::cout << "#estimated error: " << lu_of_J.error()      << std::endl;
             if(lu_of_J.info()!= Eigen::EigenSuccess) {
                 // solving failed
                 std::cerr << "\nError "<< lu_of_J.info() << ": Could not solve the linear system of equations!\n";
                 if (opts.exportJacobianIfSingular) {
-//                    MATLAB_export(J,"J");
+                    MATLAB_export(J,"J");
                 }
                 exit(1);
             }
@@ -372,6 +385,9 @@ int doglegMethod (
               functor.evaluate(xnew,fn,x);
 
             const double Fn = fn.squaredNorm() / 2.0;
+//            std::cerr << "f " << fn.transpose() << std::endl;
+//            std::cerr << " function norm 2 /2" << Fn << std::endl;
+
             const double dF = F - Fn;
 
             if ((dL > 0.0) && (dF > 0.0))
@@ -387,21 +403,23 @@ int doglegMethod (
               if (opts.check_Jacobian)
                 	checkJacobian(functor, xnew);
 //                make_FD_Jacobian(functor, x, J);
-                lu_of_J.factorize(J);
-                if (lu_of_J.info()!=0) {
-                    // decomposition failed
-                    std::cerr << "\nError: Could not compute LU decomposition!\n";
-                    if (opts.exportJacobianIfSingular) {
-                        MATLAB_export(J,"J");
-                    }
-                    exit(1);
-                }
 
-                // adapt trust region radius
-                x = xnew;
-                nx = opts.stopcriteria[1] + x.norm();
-                F = Fn;
-                f = fn;
+              lu_of_J.compute(J);
+//              lu_of_J.factorize(J);
+              if (lu_of_J.info()!=0) {
+                // decomposition failed
+                std::cerr << "\nError: Could not compute LU decomposition!\n";
+                if (opts.exportJacobianIfSingular) {
+                  MATLAB_export(J,"J");
+                }
+                    exit(1);
+              }
+
+              // adapt trust region radius
+              x = xnew;
+              nx = opts.stopcriteria[1] + x.norm();
+              F = Fn;
+              f = fn;
                 nf = f.lpNorm<Eigen::Infinity>();
                 g.noalias() = J.transpose() * f;
                 ng = g.lpNorm<Eigen::Infinity>();
@@ -429,6 +447,7 @@ int doglegMethod (
             if (!opts.silentmode)
                 std::cout << std::endl;
             k++;
+            std::cerr << "new dogleg step " << std::endl;
             if (k > opts.maxsteps)
             {
                 stop = 4;
@@ -439,8 +458,8 @@ int doglegMethod (
     }
 
     gesamtzeit.stop();
-    if (!opts.silentmode)
-    {
+//    if (!opts.silentmode)
+//    {
         std::cout << "||f(x)||2   = " << sqrt(2*F) << "\n";
         std::cout << "||f(x)||inf = " << nf << "\n";
         std::cout << "||F'||inf   = " << ng << "\n";
@@ -448,8 +467,8 @@ int doglegMethod (
         std::cout << "delta       = " << delta << std::endl;
         std::cout << k-1 << " steps needed." << std::endl;
         std::cout << "Gesamt-Zeit = " << gesamtzeit << " Sekunden" << std::endl;
-    }
-    return steps;
+//    }
+    return (stop<3);
 }
 
 
