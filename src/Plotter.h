@@ -418,10 +418,9 @@ void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
         for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
           auto transportedX = fg(it.coords());
           file << std::setprecision(12) << std::scientific;
-          SolverConfig::value_type u;
-          evaluateRhoX(geometry.global(it.coords()),u);
           file << "\t\t\t\t\t" << transportedX[0] << " " << transportedX[1] << " 0" << endl;
           vertex_no++;
+//          std::cerr << " transported " << geometry.global(it.coords()) << " to " << transportedX << std::endl;
         }
       }
     }
