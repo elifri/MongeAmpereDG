@@ -90,6 +90,7 @@ public:
 
 private:
   void update_Operator();
+  void solve_nonlinear_system();
 
   OpticalSetting& setting_;
   MA_OT_image_Operator op;

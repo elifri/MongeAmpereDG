@@ -114,37 +114,42 @@ void MA_solver::plot(const std::string& name) const
    vtkWriter.write(fname);
 }
 
+void MA_solver::init_from_file(const std::string& filename)
+{
+  solution.resize(get_n_dofs());
+  ifstream fileInitial (filename);
+
+  if(fileInitial.fail())
+  {
+    std::cerr << "Error opening " << filename << ", exited with error " << strerror(errno) << std::endl;
+    exit(-1);
+  }
+
+
+  for (int i=0; i<get_n_dofs(); ++i) {
+    assert(!fileInitial.eof() && "The inserted coefficient file is too short");
+    fileInitial >> solution(i);
+  }
+  fileInitial >> ws;
+  if (!fileInitial.eof())
+  {
+    std::cerr << "Coefficient initialisation is too long for the specified setting!";
+    exit(-1);
+  }
+  fileInitial.close();
+}
+
 void MA_solver::create_initial_guess()
 {
   //init solution by laplace u = -sqrt(2f)
   if(initValueFromFile_)
   {
-    solution.resize(get_n_dofs());
-    ifstream fileInitial (initValue_);
-
-    if(fileInitial.fail())
-    {
-      std::cerr << "Error opening " << initValue_ << ", exited with error " << strerror(errno) << std::endl;
-      exit(-1);
-    }
-
-
-    for (int i=0; i<get_n_dofs(); ++i) {
-      assert(!fileInitial.eof() && "The inserted coefficient file is too short");
-      fileInitial >> solution(i);
-    }
-    fileInitial >> ws;
-    if (!fileInitial.eof())
-    {
-      std::cerr << "Coefficient initialisation is too long for the specified setting!";
-      exit(-1);
-    }
-    fileInitial.close();
+    init_from_file(initValue_);
   }
   else
   {
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
-    project_labouriousC1([](SolverConfig::SpaceType x){return 1.12;}, solution);
+    project([](SolverConfig::SpaceType x){return 1.12;}, solution);
   }
 }
 
@@ -512,7 +517,6 @@ SolverConfig::VectorType MA_solver::coarse_solution(const int level)
   typedef Functions::PS12SSplineBasis<SolverConfig::LevelGridView, SolverConfig::SparseMatrixType> FEBasisCoarseType;
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(levelGridView));
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,VectorType> DiscreteGridFunctionCoarse;
-  typedef typename DiscreteGridFunctionCoarse::LocalFunction DiscreteLocalGridFunctionCoarse;
 
   //init vector
   SolverConfig::VectorType v = SolverConfig::VectorType::Zero(FEBasisCoarse->indexSet().size() + 1);

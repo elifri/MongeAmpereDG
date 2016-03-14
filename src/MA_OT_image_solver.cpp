@@ -47,3 +47,38 @@ void MA_OT_image_solver::update_Operator()
   }
   epsMollifier_ /= epsDivide_;
 }
+
+void MA_OT_image_solver::solve_nonlinear_system()
+{
+  assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
+
+  std::cout << "n dofs" << get_n_dofs() << std::endl;
+
+  // /////////////////////////
+  // Compute solution
+  // /////////////////////////
+
+  SolverConfig::VectorType newSolution = solution;
+#ifdef USE_DOGLEG
+
+  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
+
+#endif
+#ifdef USE_PETSC
+  igpm::processtimer timer;
+  timer.start();
+
+  PETSC_SNES_Wrapper<MA_OT_solver::Operator>::op = op;
+
+  PETSC_SNES_Wrapper<MA_OT_solver::Operator> snes;
+
+  Eigen::VectorXi est_nnz = assembler.estimate_nnz_Jacobian();
+  snes.init(get_n_dofs(), est_nnz);
+  std::cout << " n_dofs " << get_n_dofs() << std::endl;
+  int error = snes.solve(solution);
+  timer.stop();
+  std::cout << "needed " << timer << " seconds for nonlinear step, ended with error code " << error << std::endl;
+#endif
+  std::cout << "scaling factor " << solution(solution.size()-1) << endl;
+
+  }

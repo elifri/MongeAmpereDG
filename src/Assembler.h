@@ -22,7 +22,7 @@
 #include "Dogleg/utils.hpp"
 
 #include "boundaryHandler.h"
-
+#include "ImageFunction.hpp"
 /**
  * evaluate the gradients of test functions at global scope
  * @param lfu			local finite element
@@ -114,6 +114,24 @@ void assemble_gradients(const FiniteElement &lfu, const JacobianType &jacobian,
 
     //compute the gradients on the real element
     for (size_t i = 0; i < gradients.size(); i++)
+        jacobian.mv(referenceGradients[i][0], gradients[i]);
+}
+template<class GeometryType, typename valueType, class SparseMatrixType, class JacobianType>
+inline
+void assemble_gradients(const PS12SSplineFiniteElement<GeometryType, valueType, valueType, SparseMatrixType> &lfu, const JacobianType &jacobian,
+        const SolverConfig::SpaceType& x,
+        std::vector<Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim>>& gradients) {
+    assert(gradients.size() == lfu.size());
+
+    typedef PS12SSplineFiniteElement<GeometryType, valueType, valueType, SparseMatrixType> FiniteElement;
+
+    // The gradients of the shape functions on the reference element
+    std::vector<typename FiniteElement::Traits::LocalBasisType::Traits::JacobianType> referenceGradients(
+            lfu.size());
+    lfu.localBasis().evaluateJacobian(x, referenceGradients);
+
+    //compute the gradients on the real element
+    for (size_t i = 0; i < gradients.size(); i++)
       gradients[i] = referenceGradients[i][0];
 }
 
@@ -153,7 +171,36 @@ template<class FiniteElement, class JacobianType, class HessianType>
 inline
 void assemble_hessians(const FiniteElement &lfu, const JacobianType &jacobian,
     const SolverConfig::SpaceType& x, std::vector<HessianType>& hessians) {
+
+  // The hessian of the shape functions on the reference element
+  std::vector<HessianType> referenceHessians(lfu.size());
+  for (int row = 0; row <SolverConfig::dim; row++)
+    for (int col = 0; col <SolverConfig::dim; col++)
+    {
+      std::array<int, SolverConfig::dim> directions = { row, col };
+      std::vector<typename FiniteElement::Traits::LocalBasisType::Traits::RangeType> out;
+      lfu.localBasis().template evaluate<2>(directions, x, out);
+
+      for (size_t i = 0; i < hessians.size(); i++)
+        hessians[i][row][col] = out[i][0];
+    }
+
+  auto jacobianTransposed = jacobian;
+  jacobianTransposed[1][0] = jacobian[0][1];
+  jacobianTransposed[0][1] = jacobian[1][0];
+  for (size_t i = 0; i < hessians.size(); i++) {
+      hessians[i].leftmultiply(jacobianTransposed);
+      hessians[i].rightmultiply(jacobian);
+  }
+}
+
+template<class GeometryType, typename valueType, class SparseMatrixType, class JacobianType, class HessianType>
+inline
+void assemble_hessians(const PS12SSplineFiniteElement<GeometryType, valueType, valueType, SparseMatrixType> &lfu,
+    const JacobianType &jacobian, const SolverConfig::SpaceType& x, std::vector<HessianType>& hessians) {
   assert(hessians.size() == lfu.size());
+
+  typedef PS12SSplineFiniteElement<GeometryType, valueType, valueType, SparseMatrixType> FiniteElement;
 
   // The hessian of the shape functions on the reference element
   std::vector<HessianType> referenceHessians(lfu.size());
@@ -168,6 +215,7 @@ void assemble_hessians(const FiniteElement &lfu, const JacobianType &jacobian,
         hessians[i][row][col] = out[i][0];
     }
 }
+
 
 template<class FiniteElement, class JacobianType, class HessianType, class VectorType,
         class FEHessianType>
@@ -219,14 +267,14 @@ public:
    * @return	local dof vector
    */
   template<typename LocalIndexSet>
-  SolverConfig::VectorType calculate_local_coefficients(
+  static SolverConfig::VectorType calculate_local_coefficients(
       const LocalIndexSet &localIndexSet,
-      const SolverConfig::VectorType &v) const;
+      const SolverConfig::VectorType &v);
 
   template<typename LocalIndexSet>
-  BoundaryHandler::BoolVectorType calculate_local_bool_coefficients(
+  static BoundaryHandler::BoolVectorType calculate_local_bool_coefficients(
       const LocalIndexSet &localIndexSet,
-      const BoundaryHandler::BoolVectorType &v) const;
+      const BoundaryHandler::BoolVectorType &v);
 
 
   /**
@@ -236,9 +284,9 @@ public:
    * @return  local dof vector
    */
   template<typename LocalIndexSet, typename AnyVectorType>
-  AnyVectorType calculate_local_coefficients(
+  static AnyVectorType calculate_local_coefficients(
       const LocalIndexSet &localIndexSet,
-      const AnyVectorType &v) const;
+      const AnyVectorType &v);
 
   /**
    * extracts local degree of freedoom
@@ -259,9 +307,9 @@ public:
    * @param returns the new global dof vector
    */
   template<typename LocalIndexSet>
-  void add_local_coefficients(const LocalIndexSet &localIndexSet,
+  static void add_local_coefficients(const LocalIndexSet &localIndexSet,
       const SolverConfig::VectorType &v_local,
-      SolverConfig::VectorType& v) const;
+      SolverConfig::VectorType& v);
 
   /**
    *  sets the coeffs v_local to the global dof vector
@@ -270,9 +318,9 @@ public:
    * @param returns the new global dof vector
    */
   template<typename LocalIndexSet>
-  void set_local_coefficients(const LocalIndexSet &localIndexSet,
+  static void set_local_coefficients(const LocalIndexSet &localIndexSet,
       const SolverConfig::VectorType &v_local,
-      SolverConfig::VectorType& v) const;
+      SolverConfig::VectorType& v);
 
   /**
    *  sets the coeffs v_local to the global dof vector
@@ -281,9 +329,9 @@ public:
    * @param returns the new global dof vector
    */
   template<typename LocalIndexSet, typename VectorType>
-  void set_local_coefficients(const LocalIndexSet &localIndexSet,
+  static void set_local_coefficients(const LocalIndexSet &localIndexSet,
       const VectorType &v_local,
-      VectorType& v) const;
+      VectorType& v);
 
   /**
    *  adds the local jacobian to the global jacobian
@@ -293,10 +341,10 @@ public:
    * @param returns the new global jacobian
    */
   template<typename LocalIndexSet>
-  void add_local_coefficients_Jacobian(const LocalIndexSet &localIndexSetTest,
+  static void add_local_coefficients_Jacobian(const LocalIndexSet &localIndexSetTest,
       const LocalIndexSet &localIndexSetAnsatz,
       const SolverConfig::DenseMatrixType &m_local,
-      SolverConfig::MatrixType& m) const;
+      SolverConfig::MatrixType& m);
 
   /**
    *  adds the local jacobian to the global jacobian
@@ -306,10 +354,10 @@ public:
    * @param je  the list of entries where the new entries are added to
    */
   template<typename LocalIndexSet>
-  void add_local_coefficients_Jacobian(const LocalIndexSet &localIndexSetTest,
+  static void add_local_coefficients_Jacobian(const LocalIndexSet &localIndexSetTest,
       const LocalIndexSet &localIndexSetAnsatz,
       const SolverConfig::DenseMatrixType &m_local,
-      std::vector<EntryType> & je) const;
+      std::vector<EntryType> & je);
 
 
 
@@ -485,7 +533,7 @@ private:
 
     bool no_hanging_nodes;
 
-    static constexpr bool reuseAdolCTape = true;
+    static constexpr bool reuseAdolCTape = false;
 
     mutable int picture_no;
 };
@@ -709,10 +757,9 @@ void Assembler::calculate_refined_local_mass_matrix_detailed(const LocalView &lo
 }
 
 
-
 template<typename LocalIndexSet>
 inline
-SolverConfig::VectorType Assembler::calculate_local_coefficients(const LocalIndexSet &localIndexSet, const SolverConfig::VectorType &v) const
+SolverConfig::VectorType Assembler::calculate_local_coefficients(const LocalIndexSet &localIndexSet, const SolverConfig::VectorType &v)
 {
   SolverConfig::VectorType v_local(localIndexSet.size());
   for (size_t i = 0; i < localIndexSet.size(); i++)
@@ -725,7 +772,7 @@ SolverConfig::VectorType Assembler::calculate_local_coefficients(const LocalInde
 }
 
 template<typename LocalIndexSet>
-BoundaryHandler::BoolVectorType Assembler::calculate_local_bool_coefficients(const LocalIndexSet &localIndexSet, const BoundaryHandler::BoolVectorType &v) const
+BoundaryHandler::BoolVectorType Assembler::calculate_local_bool_coefficients(const LocalIndexSet &localIndexSet, const BoundaryHandler::BoolVectorType &v)
 {
   BoundaryHandler::BoolVectorType v_local(localIndexSet.size());
   for (size_t i = 0; i < localIndexSet.size(); i++)
@@ -736,7 +783,7 @@ BoundaryHandler::BoolVectorType Assembler::calculate_local_bool_coefficients(con
 }
 
 template<typename LocalIndexSet, typename AnyVectorType>
-AnyVectorType Assembler::calculate_local_coefficients(const LocalIndexSet &localIndexSet, const AnyVectorType &v) const
+AnyVectorType Assembler::calculate_local_coefficients(const LocalIndexSet &localIndexSet, const AnyVectorType &v)
 {
   AnyVectorType v_local(localIndexSet.size());
   for (size_t i = 0; i < localIndexSet.size(); i++)
@@ -749,7 +796,7 @@ AnyVectorType Assembler::calculate_local_coefficients(const LocalIndexSet &local
 
 template<typename LocalIndexSet>
 inline
-void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const SolverConfig::VectorType &v_local, SolverConfig::VectorType& v) const
+void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const SolverConfig::VectorType &v_local, SolverConfig::VectorType& v)
 {
   assert ((unsigned int) v_local.size() == localIndexSet.size());
   assert ((unsigned int) v.size() == basis_->indexSet().size()+1);
@@ -763,7 +810,7 @@ void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const
 
 template<typename LocalIndexSet>
 inline
-void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const SolverConfig::VectorType &v_local, SolverConfig::VectorType& v) const
+void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const SolverConfig::VectorType &v_local, SolverConfig::VectorType& v)
 {
   assert ((unsigned int) v_local.size() == localIndexSet.size());
   assert ((unsigned int) v.size() == basis_->indexSet().size()+1);
@@ -795,7 +842,7 @@ inline Eigen::VectorXi Assembler::estimate_nnz_Jacobian() const
 
 template<typename LocalIndexSet, typename VectorType>
 inline
-void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const VectorType &v_local, VectorType& v) const
+void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const VectorType &v_local, VectorType& v)
 {
   assert ((unsigned int) v_local.size() == localIndexSet.size());
 //  assert ((unsigned int) v.size() == basis_->indexSet().size()+1);
@@ -809,7 +856,7 @@ void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const
 
 template<typename LocalIndexSet>
 inline
-void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexSetTest, const LocalIndexSet &localIndexSetAnsatz, const SolverConfig::DenseMatrixType &m_local, SolverConfig::MatrixType& m) const
+void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexSetTest, const LocalIndexSet &localIndexSetAnsatz, const SolverConfig::DenseMatrixType &m_local, SolverConfig::MatrixType& m)
 {
   assert ((unsigned int) m_local.rows() == localIndexSetTest.size());
   assert ((unsigned int) m_local.cols() == localIndexSetAnsatz.size());
@@ -828,7 +875,7 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
 
 template<typename LocalIndexSet>
 inline
-void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexSetTest, const LocalIndexSet &localIndexSetAnsatz, const SolverConfig::DenseMatrixType &m_local, std::vector<EntryType> & je) const
+void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexSetTest, const LocalIndexSet &localIndexSetAnsatz, const SolverConfig::DenseMatrixType &m_local, std::vector<EntryType> & je)
 {
   assert ((unsigned int) m_local.rows() == localIndexSetTest.size());
   assert ((unsigned int) m_local.cols() == localIndexSetAnsatz.size());
@@ -1098,11 +1145,11 @@ void Assembler::assemble_DG(const LocalOperatorType &lop, const SolverConfig::Ve
     v(v.size()-1) -= G;
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
-    const GridViewType::IndexSet& indexSet = gridView.indexSet();
+//    const GridViewType::IndexSet& indexSet = gridView.indexSet();
     auto localView = basis_->localView();
     auto localViewn = basis_->localView();
     auto localIndexSet = basis_->indexSet().localIndexSet();
-    auto localIndexSetn = basis_->indexSet().localIndexSet();
+//    auto localIndexSetn = basis_->indexSet().localIndexSet();
 
     int tag_count = 0;
 
@@ -1361,7 +1408,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const SolverC
 //        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryDoF());
 //        BoundaryHandler::BoolVectorType isBoundaryLocal = BoundaryHandler::BoolVectorType::Constant(localIndexSet.size(), false);
 
-        if (!tape0initialised || !reuseAdolCTape || true) //check if tape has record
+        if (!tape0initialised || !reuseAdolCTape) //check if tape has record
         {
           lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
           tape0initialised = true;
@@ -1380,12 +1427,16 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const SolverC
         //tryp to recover derivation from last tape
         bool derivationSuccessful = assemble_jacobian_integral_cell_term(localView, xLocal, m_m, 0, x(x.size()-1), last_equation, scaling_factor);
 //        std::cerr << "Cell Derivation was successfull ? " << derivationSuccessful << std::endl;
-        if (!derivationSuccessful)
+        if (!derivationSuccessful )
         {
+          std::cerr << " derivation was not successful " << std::endl;
+          ImageFunction::use_adouble_image_evaluation = false;
           local_vector.setZero(); //prevent double addition of local terms
           lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 2, x(x.size()-1), v(v.size()-1));
           derivationSuccessful = assemble_jacobian_integral_cell_term(localView, xLocal, m_m, 2, x(x.size()-1), last_equation, scaling_factor);
-          assert(derivationSuccessful);
+          ImageFunction::use_adouble_image_evaluation = true;
+          std::cerr << "Cell Derivation was successfull ? " << derivationSuccessful << std::endl;
+//          assert(derivationSuccessful);
         }
 
 
@@ -1393,7 +1444,6 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const SolverC
         if(!derivationSuccessful)
         {
 
-          std::cerr << " derivation was not successful " << std::endl;
           SolverConfig::DenseMatrixType m_mFD;
           m_mFD.setZero(localView.size(), localView.size());
           SolverConfig::VectorType last_equationFD = SolverConfig::VectorType::Zero(localView.size()),

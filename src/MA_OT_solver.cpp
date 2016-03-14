@@ -93,7 +93,7 @@ void MA_OT_solver::create_initial_guess()
 
 //  vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
 
-    project_labouriousC1([](SolverConfig::SpaceType x){return x.two_norm2()/2.0;},
+    project([](SolverConfig::SpaceType x){return x.two_norm2()/2.0;},
 //    project([](SolverConfig::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
 //  project_labouriousC1([](SolverConfig::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
 //                        [](SolverConfig::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},

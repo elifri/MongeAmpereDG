@@ -31,10 +31,13 @@ class ImageFunction : public DensityFunction
     SolverConfig::SpaceType2d upperRight_; ///right top of image
     double h_;
     double minValue_;
+    double blurCoeff_;
+
 
   public:
     double factor_;  /// factor for normalization
 
+    static bool use_adouble_image_evaluation;
 
     ImageFunction(){}
     ImageFunction (

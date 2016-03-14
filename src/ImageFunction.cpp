@@ -10,10 +10,14 @@
 #include "Integrator.hpp"
 #include "problem_data.h"
 
+#include <adolc/adolc.h>
+
+bool ImageFunction::use_adouble_image_evaluation = true;
+
 ImageFunction::ImageFunction(const std::string& filename,
     const SolverConfig::SpaceType2d lowerLeft,
     const SolverConfig::SpaceType2d upperRight, const double minValue) :
-    image_(filename.c_str()), factor_(1.0) {
+    image_(filename.c_str()), factor_(1.0), blurCoeff_(1.0) {
   assert(lowerLeft[0] < upperRight[0]);
   assert(lowerLeft[1] < upperRight[1]);
 
@@ -109,10 +113,19 @@ void ImageFunction::evaluate (const FieldVector<adouble, SolverConfig::dim> &x, 
   else
     u = factor_ * imageSmooth_._cubic_atXY((x[0] - lowerLeft_[0]).value()/h_ - 0.5,(upperRight_[1] - x[1]).value()/h_ - 0.5);
 */
-
-  const double fx = std::max( 0.0, std::min( (double) imageSmooth_.width()-1,  (x[0].value() - lowerLeft_[0])/h_ - 0.5 ) );
-  const double fy = std::max( 0.0, std::min( (double) imageSmooth_.height()-1, (upperRight_[1] - x[1].value())/h_ - 0.5 ) );
-  u = factor_ * imageSmooth_._cubic_atXY(fx,fy);
+  if (use_adouble_image_evaluation)
+  { const adouble fx = fmax( 0.0, fmin( (double) imageSmooth_.width()-1,  (x[0] - lowerLeft_[0])/h_ - 0.5 ) );
+    const adouble fy = fmax( 0.0, fmin( (double) imageSmooth_.height()-1, (upperRight_[1] - x[1])/h_ - 0.5 ) );
+    imageSmooth_._cubic_atXY(fx,fy,u);
+    u*=factor_;
+//    std::cerr << "using adolc implementation and blur Coeff " << blurCoeff_ << std::endl;
+  }
+  else
+  {
+    const double fx = std::max( 0.0, std::min( (double) imageSmooth_.width()-1,  (x[0].value() - lowerLeft_[0])/h_ - 0.5 ) );
+    const double fy = std::max( 0.0, std::min( (double) imageSmooth_.height()-1, (upperRight_[1] - x[1].value())/h_ - 0.5 ) );
+    u = factor_ * imageSmooth_._cubic_atXY(fx,fy);
+  }
 }
 
 
@@ -190,10 +203,10 @@ void ImageFunction::convolveOriginal (unsigned int width)
       //TODO adapt width when calling function not here
       int maxBlur = pow((double) SolverConfig::epsDivide, (int) SolverConfig::nonlinear_steps) * SolverConfig::epsEnd;
       std::cout << " maxBlur " << maxBlur << " ((double)(width-1)/(maxBlur-1)) " << ((double)(width-1)/(maxBlur-1))<< " maybe " <<((double)(width-1))/(maxBlur-1) << std::endl;
-      double blurCoeff = 1+ ((double)(width-1))/(maxBlur-1)*29;
+      blurCoeff_ = 1+ ((double)(width-1))/(maxBlur-1)*29;
 
 
-      std::cout << " blurring with " << blurCoeff << std::endl;
-      imageSmooth_ = image_.get_blur(blurCoeff);
+      std::cout << " blurring with " << blurCoeff_ << std::endl;
+      imageSmooth_ = image_.get_blur(blurCoeff_);
     }
 }
