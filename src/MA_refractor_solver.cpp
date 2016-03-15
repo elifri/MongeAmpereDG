@@ -56,7 +56,7 @@ void MA_refractor_solver::create_initial_guess()
   else
   {
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
-    project_labouriousC1([](SolverConfig::SpaceType x){return 1.12;}, solution);
+    project([](SolverConfig::SpaceType x){return 1.12;}, solution);
   }
 }
 
