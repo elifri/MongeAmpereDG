@@ -121,10 +121,12 @@ public:
       v_adolc[i] <<= v[i];
     last_equation_adolc <<= last_equation;
 
+/*
     double test;
     auto testx = geometry.global(FieldVector<double,2>());
     rhoY.evaluate(testx, test);
     std::cerr << " at " << testx << " the target image is " << test << std::endl;
+*/
 
     trace_on(tag);
 
@@ -197,7 +199,7 @@ public:
       PDE_rhs *= scaling_factor_adolc;
 
       //calculate system for first test functions
-      if (uDH_det.value() < 0)
+      if (uDH_det.value() < 0 && false)
       {
         std::cerr << "found negative determinant !!!!! " << uDH_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
       }

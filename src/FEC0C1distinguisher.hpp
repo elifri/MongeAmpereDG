@@ -8,16 +8,45 @@
 #ifndef SRC_FEC0C1DISTINGUISHER_HPP_
 #define SRC_FEC0C1DISTINGUISHER_HPP_
 
+#include "Assembler.hpp"
 #include "solver_config.h"
-#include "Assembler.h"
 
 class MA_solver;
 
-template<typename FEType>
+template<int FETraitstype, typename FETraits>
 struct FEC0C1distinguisher{
-  typedef typename FEType::FEBasis FEBasis;
+  typedef typename FETraits::FEBasis FEBasisType;
 
-  FEC0C1distinguisher(const FEBasis& feBasis): febasis_(&feBasis){}
+  FEC0C1distinguisher(const SolverConfig::GridView& grid): FEBasis_(new FEBasisType(grid)){}
+
+  template<class F>
+  void project(F f, SolverConfig::VectorType &v) const;
+
+  void adapt(MA_solver& ma_solver, const int level, SolverConfig::VectorType& v)
+  {assert(false && " Error, dont know FE basis"); exit(-1);}
+
+  SolverConfig::VectorType coarse_solution(MA_solver& solver, const int level)
+  {assert(false && " Error, dont know FE basis"); exit(-1);}
+
+
+  void bind(const shared_ptr<FEBasisType>& feBasis)
+  {
+    FEBasis_ = feBasis;
+  }
+
+  shared_ptr<FEBasisType> FEBasis_; ///Pointer to finite element basis
+  const FEBasisType& FEBasis() const{ return *FEBasis_;}
+
+};
+
+///specialisation for mixed elements
+template<typename FETraits>
+struct FEC0C1distinguisher<Mixed, FETraits>{
+  typedef typename FETraits::FEBasis FEBasisType;
+  typedef typename FETraits::FEuBasis FEuBasisType;
+  typedef typename FETraits::FEuDHBasis FEuDHBasisType;
+
+  FEC0C1distinguisher(const SolverConfig::GridView& grid): FEBasis_(new FEBasisType(grid)){}
 
   template<class F>
   void project(F f, SolverConfig::VectorType &V) const;
@@ -25,28 +54,57 @@ struct FEC0C1distinguisher{
   void adapt(MA_solver& ma_solver, const int level, SolverConfig::VectorType& v)
   {assert(false && " Error, dont know FE basis"); exit(-1);}
 
-  void bind(const FEBasis& feBasis)
+  SolverConfig::VectorType coarse_solution(MA_solver& solver, const int level)
+  {assert(false && " Error, dont know FE basis"); exit(-1);}
+
+
+  void bind(const FEBasisType& feBasis)
   {
-    febasis_ = &feBasis;
+    FEBasis_ = &feBasis;
   }
 
-  const FEBasis* febasis_;
+  shared_ptr<FEBasisType> FEBasis_; ///Pointer to finite element basis
+  shared_ptr<FEuBasisType> uBasis_; ///Pointer to finite element basis
+  shared_ptr<FEuDHBasisType> uDHBasis_; ///Pointer to finite element basis
+
+  const FEBasisType& FEBasis() const{ return *FEBasis_;}
+  const FEuBasisType& uBasis() const{ return *uBasis_;}
 };
 
+
+
 template <>
-void FEC0C1distinguisher<FEPS12SplitTraits>::adapt(MA_solver& solver, const int level, SolverConfig::VectorType& v);
+void FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::adapt(MA_solver& solver, const int level, SolverConfig::VectorType& v);
 
 template <>
-void FEC0C1distinguisher<MixedTraits>::adapt(MA_solver& solver, const int level, SolverConfig::VectorType& v);
+void FEC0C1distinguisher<Mixed, MixedTraits>::adapt(MA_solver& solver, const int level, SolverConfig::VectorType& v);
 
+template <>
+SolverConfig::VectorType FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::coarse_solution(MA_solver& solver, const int level);
 
-template <typename FEType>
+template <>
+SolverConfig::VectorType FEC0C1distinguisher<Mixed, MixedTraits>::coarse_solution(MA_solver& solver, const int level);
+
+template<int FETraitstype, typename FETraits>
 template <class F>
-void FEC0C1distinguisher<FEType>::project(F f, SolverConfig::VectorType &v) const
+void FEC0C1distinguisher<FETraitstype, FETraits>::project(F f, SolverConfig::VectorType &v) const
 {
-  v.resize(febasis_->indexSet().size() + 1);
+  v.resize(FEBasis_->indexSet().size() + 1);
   SolverConfig::VectorType v_u;
-  interpolate(febasis_, v_u, f);
+  interpolate(FEBasis_, v_u, f);
+  v.segment(0, v_u.size()) = v_u;
+
+  //set scaling factor (last dof) to ensure mass conservation
+  v(v.size()-1) = 1;
+}
+
+template<typename FETraits>
+template <class F>
+void FEC0C1distinguisher<Mixed, FETraits>::project(F f, SolverConfig::VectorType &v) const
+{
+  v.resize(FEBasis_->indexSet().size() + 1);
+  SolverConfig::VectorType v_u;
+  interpolate(FEBasis_, v_u, f);
   v.segment(0, v_u.size()) = v_u;
 
   //set scaling factor (last dof) to ensure mass conservation
@@ -55,19 +113,19 @@ void FEC0C1distinguisher<FEType>::project(F f, SolverConfig::VectorType &v) cons
 
 template <>
 template<class F>
-void FEC0C1distinguisher<FEPS12SplitTraits>::project(F f, SolverConfig::VectorType &v) const
+void FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::project(F f, SolverConfig::VectorType &v) const
 {
-  v.setZero(febasis_->indexSet().size() + 1);
+  v.setZero(FEBasis_->indexSet().size() + 1);
   SolverConfig::VectorType countMultipleDof = SolverConfig::VectorType::Zero(v.size());;
 
   SolverConfig::DenseMatrixType localMassMatrix;
 
-  auto localView = febasis_->localView();
-  auto localIndexSet = febasis_->indexSet().localIndexSet();
+  auto localView = FEBasis_->localView();
+  auto localIndexSet = FEBasis_->indexSet().localIndexSet();
 
   const double h = 1e-5;
 
-  for (auto&& element : elements(febasis_->gridView()))
+  for (auto&& element : elements(FEBasis_->gridView()))
   {
     localView.bind(element);
     localIndexSet.bind(localView);
@@ -122,7 +180,7 @@ void FEC0C1distinguisher<FEPS12SplitTraits>::project(F f, SolverConfig::VectorTy
 
     assert(k == 12);
 
-    for (auto&& is : intersections(febasis_->gridView(), element)) //loop over edges
+    for (auto&& is : intersections(FEBasis_->gridView(), element)) //loop over edges
     {
       const int i = is.indexInInside();
 
@@ -173,10 +231,10 @@ void FEC0C1distinguisher<FEPS12SplitTraits>::project(F f, SolverConfig::VectorTy
 #endif
     }
 
-    Assembler::add_local_coefficients(localIndexSet,localDofs, v);
+    Assembler<FEPS12SplitTraits>::add_local_coefficients(localIndexSet,localDofs, v);
 //    assembler.add_local_coefficients(localIndexSet,VectorType::Ones(localDofs.size()), countMultipleDof);
     SolverConfig::VectorType localmultiples = SolverConfig::VectorType::Ones(localDofs.size());
-    Assembler::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
+    Assembler<FEPS12SplitTraits>::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
   }
 
   v = v.cwiseQuotient(countMultipleDof);

@@ -9,7 +9,12 @@
 #define SRC_MA_OT_SOLVER_H_
 
 #include "MA_solver.h"
+
+#ifdef C0Element
+#include "Operator/operator_MA_OT_Neilan.h"
+#else
 #include "Operator/operator_MA_OT.h"
+#endif
 
 #include "ImageFunction.hpp"
 

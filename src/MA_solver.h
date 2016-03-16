@@ -17,7 +17,7 @@
 
 //#define COLLOCATION
 
-#include "Assembler.h"
+#include "Assembler.hpp"
 #include "problem_data.h"
 //#include "Operator/linear_system_operator_poisson_DG.hh"
 #include "Operator/operator_MA_Neilan_DG.h"
@@ -80,13 +80,12 @@ public:
 	typedef typename SolverConfig::DenseMatrixType DenseMatrixType;
 	typedef typename SolverConfig::MatrixType MatrixType;
 
-	typedef typename SolverConfig::FEBasis FEBasisType;
-  typedef typename SolverConfig::FEBasis FEuBasisType;
-  typedef typename SolverConfig::FEBasis FEuDHBasisType;
+	typedef typename FETraitsSolver::FEBasis FEBasisType;
+  typedef FETraitsSolver FETraits;
 
-	typedef typename SolverConfig::DiscreteGridFunction DiscreteGridFunction;
-	typedef typename SolverConfig::DiscreteLocalGridFunction DiscreteLocalGridFunction;
-  typedef typename SolverConfig::DiscreteLocalGradientGridFunction DiscreteLocalGradientGridFunction;
+	typedef typename FETraitsSolver::DiscreteGridFunction DiscreteGridFunction;
+	typedef typename FETraitsSolver::DiscreteLocalGridFunction DiscreteLocalGridFunction;
+  typedef typename FETraitsSolver::DiscreteLocalGradientGridFunction DiscreteLocalGradientGridFunction;
 
 	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, SolverConfig config):
 	    initialised(true),
@@ -103,13 +102,13 @@ public:
       outputDirectory_(config.outputDirectory), plotOutputDirectory_(config.plotOutputDirectory), outputPrefix_(config.outputPrefix),
       plotterRefinement_(config.refinement),
       grid_ptr(grid), gridView_ptr(&gridView),
-      FEC0C1distinguisher_(*FEBasis),
-      assembler(*FEBasis, true),
+      FEC0C1distinguisher_(*gridView_ptr),
+      assembler(FEC0C1distinguisher_.FEBasis(), true),
       plotter(gridView),
       op(*this),
       solution_u_old(), gradient_u_old()
 	{
-
+    std::cout << "constructor n dofs" << get_n_dofs() << std::endl;
 #ifdef USE_DOGLEG
     doglegOpts_.maxsteps = maxSteps_;
 #endif
@@ -118,14 +117,9 @@ public:
 	  plotter.set_geometrySetting(get_setting());
 
 	  grid_ptr->globalRefine(SolverConfig::startlevel);
+    std::cout << "constructor n dofs" << get_n_dofs() << std::endl;
 
-	  //update member
-	  std::array<unsigned int,SolverConfig::dim> elements;
-	  std::fill(elements.begin(), elements.end(), std::pow(2,SolverConfig::startlevel));
-
-    FEBasis = std::shared_ptr<FEBasisType> (new FEBasisType(*gridView_ptr));
-	  assembler.bind(*FEBasis);
-    FEC0C1distinguisher_.bind(*FEBasis);
+	  assembler.bind(FEC0C1distinguisher_.FEBasis());
 
 	  plotter.set_output_directory(plotOutputDirectory_);
 	  plotter.set_output_prefix(outputPrefix_);
@@ -134,6 +128,9 @@ public:
 	  plotter.add_plot_stream("res", plotOutputDirectory_+"/Data/"+outputPrefix_+"res"); //write residual in this file
     plotter.add_plot_stream("l2projError", plotOutputDirectory_+"/Data/"+outputPrefix_+"l2projError"); //write L2 error to projection in this file
 	  count_refined = SolverConfig::startlevel;
+
+    std::cout << "constructor n dofs" << get_n_dofs() << std::endl;
+
 	}
 
   MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, SolverConfig config, const GeometrySetting& geometrySetting)
@@ -206,8 +203,8 @@ public:
   bool read_configfile(std::string &configFile);
 
 
-	int get_n_dofs() const{return FEBasis->indexSet().size() + 1;}
-  int get_n_dofs_u() const{return FEBasis->indexSet().size();}
+	int get_n_dofs() const{return FEC0C1distinguisher_.FEBasis().indexSet().size() + 1;}
+  int get_n_dofs_u() const{return FEC0C1distinguisher_.FEBasis().indexSet().size();}
 
 
 public:
@@ -291,15 +288,7 @@ protected:
 	/// solves own nonlinear system given initial point in solution
 	virtual void solve_nonlinear_system();
 
-	void phi(const SolverConfig::SpaceType2d& T, const FieldVector<double, SolverConfig::dim> &normal, SolverConfig::value_type &phi);
-
-
 public:
-  ///calculate the projection of phi for the Picard Iteration for the b.c.
-  template<class Element>
-  SolverConfig::value_type phi(const Element& element, const SolverConfig::DomainType& xLocal
-                               , const FieldVector<double, SolverConfig::dim> &normal);
-
 	/**
 	 * initialises the member solution with sol_u, the second derivatives are initialised with D^2_h sol_u
 	 */
@@ -356,12 +345,9 @@ protected:
 	const shared_ptr<GridType> grid_ptr; ///Pointer to grid
 	const GridViewType* gridView_ptr; /// Pointer to gridView
 
-	shared_ptr<FEBasisType> FEBasis; ///Pointer to finite element basis
-  shared_ptr<FEuBasisType> uBasis; ///Pointer to finite element basis
-  shared_ptr<FEuBasisType> uDHBasis; ///Pointer to finite element basis
-	FEC0C1distinguisher<FETraits<FEBasisType>> FEC0C1distinguisher_;
+	FEC0C1distinguisher<FETraits::Type, FETraits> FEC0C1distinguisher_;
 
-	Assembler assembler; ///handles all (integral) assembly processes
+	Assembler<FETraits> assembler; ///handles all (integral) assembly processes
 	Plotter plotter; ///handles all output generation
 
   double G; /// fixes the reflector size
@@ -385,12 +371,8 @@ protected:
   mutable shared_ptr<Rectangular_mesh_interpolator> exact_solution;
 
 	friend MA_Operator;
-	template <typename T>
+	template <int T, typename T2>
 	friend struct FEC0C1distinguisher;
-
-//
-//	friend Plotter;
-//	Plotter vtkplotter; /// handles I/O
 };
 
 template<class F>
@@ -453,7 +435,7 @@ void project_labourious(const FEBasis& febasis, const F f, SolverConfig::VectorT
       }
     }
 
-    Assembler::set_local_coefficients(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
+    Assembler<FETraits<MA_solver::FEBasisType>>::set_local_coefficients(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
     }
 
   //set scaling factor (last dof) to ensure mass conservation
@@ -616,8 +598,8 @@ void MA_solver::test_projection(const F f, VectorType& v) const
   std::cout << "v.size()" << v.size()-1 << std::endl;
   std::cout << "projected on vector " << std::endl << v.transpose() << std::endl;
 
-  auto localView = FEBasis->localView();
-  auto localIndexSet = FEBasis->indexSet().localIndexSet();
+  auto localView = FEC0C1distinguisher_.FEBasis().localView();
+  auto localIndexSet = FEC0C1distinguisher_.FEBasis().indexSet().localIndexSet();
 
   const double h = 1e-5;
 
@@ -626,7 +608,11 @@ void MA_solver::test_projection(const F f, VectorType& v) const
     localView.bind(element);
     localIndexSet.bind(localView);
 
+#ifdef C0Element
+    const auto & lFE = localView.tree().template child<0>().finiteElement();
+#else
     const auto & lFE = localView.tree().finiteElement();
+#endif
     const auto& geometry = element.geometry();
 
     VectorType localDofs = assembler.calculate_local_coefficients(localIndexSet, v);
@@ -706,8 +692,8 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
     }
 
-    auto localViewn = FEBasis->localView();
-    auto localIndexSetn = FEBasis->indexSet().localIndexSet();
+    auto localViewn = FEC0C1distinguisher_.FEBasis().localView();
+    auto localIndexSetn = FEC0C1distinguisher_.FEBasis().indexSet().localIndexSet();
 
     gradient_u_old->bind(element);
 
@@ -718,7 +704,11 @@ void MA_solver::test_projection(const F f, VectorType& v) const
         //bind to local neighbour context
         localViewn.bind(is.outside());
         localIndexSetn.bind(localViewn);
+#ifdef C0Element
+        const auto & lFEn = localViewn.tree().template child<0>().finiteElement();
+#else
         const auto & lFEn = localViewn.tree().finiteElement();
+#endif
 
         VectorType localDofsn = assembler.calculate_local_coefficients(localIndexSetn, v);
 

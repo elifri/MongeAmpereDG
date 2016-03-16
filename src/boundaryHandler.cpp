@@ -7,9 +7,9 @@
 
 #include "boundaryHandler.h"
 
-#include "Assembler.h"
+#include "Assembler.hpp"
 
-void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Solver_config::FEBasisType &FEBasis)
+void BoundaryHandler::init_boundary_dofs(const Assembler<FETraitsSolver>& assembler) //const Solver_config::FEBasisType &FEBasis)
 {
   initialised_ = true;
   const auto& FEBasis = assembler.basis();
@@ -26,8 +26,11 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
     localView.bind(element);
     localIndexSet.bind(localView);
 
+#ifdef C0Element
+    const auto& lFE = localView.tree().template child<0>().finiteElement();
+#else
     const auto& lFE = localView.tree().finiteElement();
-
+#endif
     //store local boundary information
     BoolVectorType localIsBoundary = BoolVectorType::Constant(lFE.size(),false);
     BoolVectorType localIsBoundaryValue = BoolVectorType::Constant(lFE.size(),false);
@@ -137,19 +140,16 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
 
         }
       }
+    }
 
 //      assembler.set_local_coefficients(localIndexSet, localIsBoundary, isBoundaryDof_);
 
-      for (size_t i = 0; i < localIndexSet.size(); i++)
-      {
-        isBoundaryDof_(localIndexSet.index(i)[0]) = isBoundaryDof_(localIndexSet.index(i)[0]) || localIsBoundary[i] ;
-//        if (isBoundaryDof_(localIndexSet.index(i)[0]))
-//          std::cout << " found boundary dof " << localIndexSet.index(i)[0] << std::endl;
-        isBoundaryValueDof_(localIndexSet.index(i)[0]) = isBoundaryValueDof_(localIndexSet.index(i)[0]) || localIsBoundaryValue[i] ;
-      }
-
-
+    for (size_t i = 0; i < localIndexSet.size(); i++)
+    {
+      isBoundaryDof_(localIndexSet.index(i)[0]) = isBoundaryDof_(localIndexSet.index(i)[0]) || localIsBoundary[i] ;
+//      if (isBoundaryDof_(localIndexSet.index(i)[0]))
+//        std::cout << " found boundary dof " << localIndexSet.index(i)[0] << std::endl;
+      isBoundaryValueDof_(localIndexSet.index(i)[0]) = isBoundaryValueDof_(localIndexSet.index(i)[0]) || localIsBoundaryValue[i] ;
+    }
   }
-
-}
 }

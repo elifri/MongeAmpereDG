@@ -36,8 +36,11 @@ void MA_OT_solver::plot(const std::string& name) const
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
      //build gridviewfunction
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
-//     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,VectorType> numericalSolution(*uBasis,solution_u);
+#ifdef C0Element
+    Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEC0C1distinguisher_.uBasis(),solution_u);
+#else
+    Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEBasis,VectorType> numericalSolution(FEC0C1distinguisher_.FEBasis(),solution_u);
+#endif
      auto localnumericalSolution = localFunction(numericalSolution);
 
      //build writer
@@ -111,7 +114,7 @@ void MA_OT_solver::create_initial_guess()
 */
 
 //  vtkplotter.write_gridfunction_VTK(count_refined, exactsol_projection, "exact_sol");
-
+  std::cout << "n dofs" << get_n_dofs() << std::endl;
     project([](SolverConfig::SpaceType x){return x.two_norm2()/2.0;},
 //    project([](SolverConfig::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
 //  project_labouriousC1([](SolverConfig::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
@@ -119,7 +122,7 @@ void MA_OT_solver::create_initial_guess()
 //                        [](SolverConfig::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
                         solution);
 
-
+    std::cout << "n dofs" << get_n_dofs() << std::endl;
 //  project_labouriousC1([](SolverConfig::SpaceType x){return x.two_norm2()/2.0;}, solution);
 //  solution = VectorType::Zero(get_n_dofs());
 //  solution = exactsol_projection;

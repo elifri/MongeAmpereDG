@@ -10,7 +10,7 @@
 
 #include "solver_config.h"
 
-
+template<typename FETraits>
 class Assembler;
 
 class BoundaryHandler{
@@ -20,7 +20,7 @@ public:
   BoundaryHandler(): initialised_(false){
   }
 
-  void init_boundary_dofs(const Assembler& assembler); //const Solver_config::FEBasisType &FEBasis)
+  void init_boundary_dofs(const Assembler<FETraitsSolver>& assembler); //const Solver_config::FEBasisType &FEBasis)
 
   const BoolVectorType& isBoundaryDoF() const
   {

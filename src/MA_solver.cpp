@@ -73,7 +73,11 @@ void MA_solver::plot(const std::string& name) const
 {
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
+#ifdef C0Element
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEC0C1distinguisher_.uBasis(),solution_u);
+#else
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(FEC0C1distinguisher_.FEBasis(),solution_u);
+#endif
   auto localnumericalSolution = localFunction(numericalSolution);
 
   //extract hessian
@@ -170,6 +174,8 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //  exact_solution_projection = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*exact_solution_projection_global));
 //  plotter.writeReflectorVTK("exactReflector", *exact_solution_projection);
 
+  std::cout << "n dofs" << get_n_dofs() << std::endl;
+
   update_Operator();
 
   this->create_initial_guess();
@@ -256,11 +262,14 @@ void MA_solver::update_solution(const SolverConfig::VectorType& newSolution) con
 //  std::cout << "solution " << solution_u.transpose() << std::endl;
 
   //build gridviewfunction
-  solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*FEBasis,solution_u));
-//  solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,solution_u));
-
+#ifdef C0Element
+  solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(FEC0C1distinguisher_.uBasis(),solution_u));
+#else
+  solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(FEC0C1distinguisher_.FEBasis(),solution_u));
+#endif
   solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
   gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
+
 
   solution = newSolution;
 }
@@ -274,119 +283,7 @@ void MA_solver::adapt_solution(const int level)
 SolverConfig::VectorType MA_solver::coarse_solution(const int level)
 {
   assert(initialised);
-  VectorType solution_u = solution.segment(0, get_n_dofs_u());
-
-   //build gridviewfunction
-   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
-   auto localnumericalSolution = localFunction(numericalSolution);
-   DiscreteLocalGradientGridFunction localGradient (numericalSolution);
-
-
-  //we need do generate the coarse basis
-  const auto& levelGridView = grid_ptr->levelGridView(level);
-
-  typedef Functions::PS12SSplineBasis<SolverConfig::LevelGridView, SolverConfig::SparseMatrixType> FEBasisCoarseType;
-  std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(levelGridView));
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,VectorType> DiscreteGridFunctionCoarse;
-
-  //init vector
-  SolverConfig::VectorType v = SolverConfig::VectorType::Zero(FEBasisCoarse->indexSet().size() + 1);
-
-  auto localViewCoarse = FEBasisCoarse->localView();
-  auto localIndexSetCoarse = FEBasisCoarse->indexSet().localIndexSet();
-
-  auto localView = FEBasis->localView();
-  auto localIndexSet = FEBasis->indexSet().localIndexSet();
-
-  //loop over elements (in coarse grid)
-  for (auto&& elementCoarse : elements(levelGridView)) {
-
-    HierarchicSearch<SolverConfig::GridType, SolverConfig::GridView::IndexSet> hs(*grid_ptr, gridView_ptr->indexSet());
-
-    localViewCoarse.bind(elementCoarse);
-    localIndexSetCoarse.bind(localViewCoarse);
-
-    const auto & lFE = localViewCoarse.tree().finiteElement();
-    const auto& geometry = elementCoarse.geometry();
-
-//    std::cout << " father dofs ";
-//    for (const auto& tempEl : gradient_u_Coarse->localDoFs_ ) std::cout << tempEl << " ";
-//    std::cout << std::endl;
-
-    SolverConfig::VectorType localDofs;
-    localDofs.setZero(localViewCoarse.size());
-
-    int k = 0;
-    for (int i = 0; i < geometry.corners(); i++) { //loop over nodes
-      const auto x = geometry.corner(i);
-//      std::cout << "local coordinate " << x << std::endl;
-
-      //find element containing corner
-      const auto& element = hs.findEntity(x);
-      localnumericalSolution.bind(element);
-      localGradient.bind(element);
-
-      const auto localx = element.geometry().local(x);;
-
-      auto value = localnumericalSolution(localx);
-//      std::cout << "value " << value << " at " << geometry.corner(i) << std::endl;
-      //set dofs associated with values at vertices
-      localDofs(k++) = value;
-
-      const auto gradient = localGradient(localx);
-//      std::cout << " gradient at the same " << gradient << std::endl;
-      localDofs(k++) = gradient[0];
-
-      localDofs(k++) = gradient[1];
-      k++;
-    }
-
-    for (auto&& is : intersections(levelGridView, elementCoarse)) //loop over edges
-    {
-      const int i = is.indexInInside();
-
-      //calculate local key
-      if (i == 0)
-        k = 3;
-      else
-        if (i == 1)
-          k = 11;
-        else
-          k = 7;
-
-      // normal of center in face's reference element
-      const FieldVector<double, SolverConfig::dim> normal =
-            is.centerUnitOuterNormal();
-
-      const auto face_center = is.geometry().center();
-
-      //find element containing face center
-      const auto& element = hs.findEntity(face_center);
-      localGradient.bind(element);
-
-      //set dofs according to global normal direction
-      int signNormal;
-
-      if (std::abs(normal[0]+ normal[1]) < 1e-12)
-        signNormal = normal[1] > 0 ? 1 : -1;
-      else
-        signNormal = normal[0]+normal[1] > 0 ? 1 : -1;
-
-      localDofs(k) = signNormal * (localGradient(element.geometry().local(face_center)) * normal);
-//      std::cout << "grad at " << face_center << " is " << localGradient(element.geometry().local(face_center)) << " normal " << normal << " -> " << (localGradient(element.geometry().local(face_center)) * normal) << " signNormal " << signNormal << std::endl;
-      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
-      }
-
-//      std::cout << " set local dofs " << localDofs.transpose() << std::endl;
-
-      for (unsigned int i = 0; i < localViewCoarse.size(); i++)
-        v(localIndexSetCoarse.index(i)[0]) = localDofs[i];
-    }
-
-  //set scaling factor (last dof) to ensure mass conservation
-  v(v.size()-1) = solution(solution.size()-1);
-
-  return v;
+  return FEC0C1distinguisher_.coarse_solution(*this, level);
 }
 void MA_solver::solve_nonlinear_system()
 {

@@ -22,8 +22,13 @@
 //#include "operator_poisson_DG.hh"
 #include "Assembler.hh"
 #include "problem_data_OT.hh"
-#include "Operator/operator_MA_OT.hh"
 #include "Plotter.hh"
+
+#ifdef C0Element
+  #include "Operator/operator_MA_OT_Neilan.hh"
+#else
+  #include "Operator/operator_MA_OT.h"
+#endif
 
 #ifdef USE_DOGLEG
 #include "Dogleg/doglegMethod.hpp"
