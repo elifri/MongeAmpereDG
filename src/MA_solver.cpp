@@ -73,11 +73,7 @@ void MA_solver::plot(const std::string& name) const
 {
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
-#ifdef C0Element
   Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEC0C1distinguisher_.uBasis(),solution_u);
-#else
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(FEC0C1distinguisher_.FEBasis(),solution_u);
-#endif
   auto localnumericalSolution = localFunction(numericalSolution);
 
   //extract hessian
@@ -262,11 +258,7 @@ void MA_solver::update_solution(const SolverConfig::VectorType& newSolution) con
 //  std::cout << "solution " << solution_u.transpose() << std::endl;
 
   //build gridviewfunction
-#ifdef C0Element
   solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(FEC0C1distinguisher_.uBasis(),solution_u));
-#else
-  solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(FEC0C1distinguisher_.FEBasis(),solution_u));
-#endif
   solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
   gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
 

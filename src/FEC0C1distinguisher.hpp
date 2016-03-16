@@ -8,7 +8,7 @@
 #ifndef SRC_FEC0C1DISTINGUISHER_HPP_
 #define SRC_FEC0C1DISTINGUISHER_HPP_
 
-#include "Assembler.hpp"
+#include "Assembler.h"
 #include "solver_config.h"
 
 class MA_solver;
@@ -35,8 +35,9 @@ struct FEC0C1distinguisher{
   }
 
   shared_ptr<FEBasisType> FEBasis_; ///Pointer to finite element basis
-  const FEBasisType& FEBasis() const{ return *FEBasis_;}
 
+  const FEBasisType& FEBasis() const{ return *FEBasis_;}
+  const FEBasisType& uBasis() const{ return *FEBasis_;}
 };
 
 ///specialisation for mixed elements
@@ -231,10 +232,10 @@ void FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::project(F f, SolverConfi
 #endif
     }
 
-    Assembler<FEPS12SplitTraits>::add_local_coefficients(localIndexSet,localDofs, v);
+    Assembler::add_local_coefficients(localIndexSet,localDofs, v);
 //    assembler.add_local_coefficients(localIndexSet,VectorType::Ones(localDofs.size()), countMultipleDof);
     SolverConfig::VectorType localmultiples = SolverConfig::VectorType::Ones(localDofs.size());
-    Assembler<FEPS12SplitTraits>::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
+    Assembler::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
   }
 
   v = v.cwiseQuotient(countMultipleDof);

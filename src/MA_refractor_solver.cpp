@@ -72,11 +72,7 @@ void MA_refractor_solver::plot(const std::string& name) const
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
     //build gridviewfunction
-#ifdef C0Element
      Dune::Functions::DiscreteScalarGlobalBasisFunction<MA_solver::FETraits::FEuBasis,VectorType> numericalSolution(FEC0C1distinguisher_.uBasis(),solution_u);
-#else
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<MA_solver::FEBasisType,VectorType> numericalSolution(FEC0C1distinguisher_.FEBasis(),solution_u);
-#endif
      auto localnumericalSolution = localFunction(numericalSolution);
 
      //build writer

@@ -10,6 +10,8 @@
 
 //#define EIGEN_DEFAULT_DENSE_INDEX_TYPE long
 
+//#define C0Element
+
 #include<Eigen/Core>
 #include<Eigen/Sparse>
 
@@ -162,16 +164,13 @@ struct SolverConfig{
   typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementuType;
   typedef Pk2DLocalFiniteElement<value_type, value_type, degreeHessian> LocalFiniteElementHessianSingleType;
 
-/*	typedef Functions::MAMixedBasis<GridView, degree, degreeHessian> FEBasis;
-  typedef FEBasis::Basisu FEuBasis;
+/*
+	typedef Functions::MAMixedBasis<GridView, degree, degreeHessian> FEBasis;
+//  typedef FEBasis::Basisu FEuBasis;
 	typedef Functions::PQkNodalBasis<GridView, degree> FEuBasis;
 	//  typedef FEBasis::BasisuDH FEuDHBasis;
   typedef Functions::LagrangeDGBasis<GridView, degreeHessian> FEuDHBasis;
 */
-
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis,VectorType> DiscreteGridFunction;
-  typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
-  typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
 
 	typedef FieldVector<value_type,1> RangeType;
   typedef FieldMatrix<value_type,2,2> HessianRangeType;
@@ -207,6 +206,17 @@ struct FETraits<Functions::PS12SSplineBasis<SolverConfig::GridView, SolverConfig
 {
   static const FEType Type = PS12Split;
   typedef Functions::PS12SSplineBasis<SolverConfig::GridView, SolverConfig::SparseMatrixType> FEBasis;
+  typedef FEBasis FEuBasis;
+
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis,SolverConfig::VectorType> DiscreteGridFunction;
+  typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
+  typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
+
+  template<typename LocalView>
+  static const auto& get_finiteElement(const LocalView& localView)
+  {
+    return localView.tree().finiteElement();
+  }
 };
 
 template<>
@@ -214,10 +224,26 @@ struct FETraits<Functions::MAMixedBasis<SolverConfig::GridView, SolverConfig::de
 {
   static const FEType Type = Mixed;
   typedef Functions::MAMixedBasis<SolverConfig::GridView, SolverConfig::degree, SolverConfig::degreeHessian> FEBasis;
+  //  typedef FEBasis::Basisu FEuBasis;
+  typedef Functions::PQkNodalBasis<SolverConfig::GridView, SolverConfig::degree> FEuBasis;
+  //  typedef FEBasis::BasisuDH FEuDHBasis;
+  typedef Functions::LagrangeDGBasis<SolverConfig::GridView, SolverConfig::degreeHessian> FEuDHBasis;
+
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasis,SolverConfig::VectorType> DiscreteGridFunction;
+  typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
+  typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
+
+  template<typename LocalView>
+  static const auto& get_finiteElement(const LocalView& localView)
+  {
+    return localView.tree().template child<0>().finiteElement();
+  }
 };
 
 typedef FETraits<Functions::PS12SSplineBasis<SolverConfig::GridView, SolverConfig::SparseMatrixType>> FEPS12SplitTraits;
 typedef FETraits<Functions::MAMixedBasis<SolverConfig::GridView, SolverConfig::degree, SolverConfig::degreeHessian>> MixedTraits;
+
+typedef FEPS12SplitTraits FETraitsSolver;
 
 struct GeometrySetting{
   virtual void read_configfile(std::string &configFile);

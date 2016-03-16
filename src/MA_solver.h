@@ -17,7 +17,7 @@
 
 //#define COLLOCATION
 
-#include "Assembler.hpp"
+#include "Assembler.h"
 #include "problem_data.h"
 //#include "Operator/linear_system_operator_poisson_DG.hh"
 #include "Operator/operator_MA_Neilan_DG.h"
@@ -347,7 +347,7 @@ protected:
 
 	FEC0C1distinguisher<FETraits::Type, FETraits> FEC0C1distinguisher_;
 
-	Assembler<FETraits> assembler; ///handles all (integral) assembly processes
+	Assembler assembler; ///handles all (integral) assembly processes
 	Plotter plotter; ///handles all output generation
 
   double G; /// fixes the reflector size
@@ -435,7 +435,7 @@ void project_labourious(const FEBasis& febasis, const F f, SolverConfig::VectorT
       }
     }
 
-    Assembler<FETraits<MA_solver::FEBasisType>>::set_local_coefficients(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
+    Assembler::set_local_coefficients(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
     }
 
   //set scaling factor (last dof) to ensure mass conservation
@@ -608,11 +608,8 @@ void MA_solver::test_projection(const F f, VectorType& v) const
     localView.bind(element);
     localIndexSet.bind(localView);
 
-#ifdef C0Element
-    const auto & lFE = localView.tree().template child<0>().finiteElement();
-#else
-    const auto & lFE = localView.tree().finiteElement();
-#endif
+    const auto & lFE = FETraitsSolver::get_finiteElement(localView);
+
     const auto& geometry = element.geometry();
 
     VectorType localDofs = assembler.calculate_local_coefficients(localIndexSet, v);
@@ -704,11 +701,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
         //bind to local neighbour context
         localViewn.bind(is.outside());
         localIndexSetn.bind(localViewn);
-#ifdef C0Element
-        const auto & lFEn = localViewn.tree().template child<0>().finiteElement();
-#else
-        const auto & lFEn = localViewn.tree().finiteElement();
-#endif
+        const auto & lFEn = FETraitsSolver::get_finiteElement(localViewn);
 
         VectorType localDofsn = assembler.calculate_local_coefficients(localIndexSetn, v);
 

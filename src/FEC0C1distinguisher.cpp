@@ -138,7 +138,7 @@ void FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::adapt(MA_solver& solver,
 
 //      std::cout << " set local dofs " << localDofs.transpose() << std::endl;
 
-      Assembler<FEPS12SplitTraits>::set_local_coefficients(localIndexSet, localDofs, v);
+      Assembler::set_local_coefficients(localIndexSet, localDofs, v);
     }
 
   //set scaling factor (last dof) to ensure mass conservation
@@ -269,7 +269,7 @@ void FEC0C1distinguisher<Mixed, MixedTraits>::adapt(MA_solver& solver, const int
     solver.grid_ptr->mark(1,element);
 
     //store local dofs
-    preserveSolution[idSet.id(element)]  = Assembler<MixedTraits>::calculate_local_coefficients(localIndexSet, v);
+    preserveSolution[idSet.id(element)]  = Assembler::calculate_local_coefficients(localIndexSet, v);
   }
   double scaling_factor = v(v.size()-1);
 
@@ -372,7 +372,7 @@ void FEC0C1distinguisher<Mixed, MixedTraits>::adapt(MA_solver& solver, const int
         }
 
         //set new dof vectors
-        Assembler<MixedTraits>::set_local_coefficients(localIndexSetRef, x_adapt, v);
+        Assembler::set_local_coefficients(localIndexSetRef, x_adapt, v);
 
         //mark element as refined
         already_refined[mapper.index(child)] = true;
@@ -387,7 +387,7 @@ void FEC0C1distinguisher<Mixed, MixedTraits>::adapt(MA_solver& solver, const int
       localIndexSetRef.bind(localViewRef);
 
       IdType id = idSet.id(element);
-      Assembler<MixedTraits>::set_local_coefficients(localIndexSetRef, preserveSolution[id], v);
+      Assembler::set_local_coefficients(localIndexSetRef, preserveSolution[id], v);
     }
 
   }

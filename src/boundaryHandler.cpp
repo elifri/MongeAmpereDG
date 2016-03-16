@@ -7,9 +7,9 @@
 
 #include "boundaryHandler.h"
 
-#include "Assembler.hpp"
+#include "Assembler.h"
 
-void BoundaryHandler::init_boundary_dofs(const Assembler<FETraitsSolver>& assembler) //const Solver_config::FEBasisType &FEBasis)
+void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Solver_config::FEBasisType &FEBasis)
 {
   initialised_ = true;
   const auto& FEBasis = assembler.basis();
@@ -26,11 +26,8 @@ void BoundaryHandler::init_boundary_dofs(const Assembler<FETraitsSolver>& assemb
     localView.bind(element);
     localIndexSet.bind(localView);
 
-#ifdef C0Element
-    const auto& lFE = localView.tree().template child<0>().finiteElement();
-#else
-    const auto& lFE = localView.tree().finiteElement();
-#endif
+    const auto& lFE = FETraitsSolver::get_finiteElement(localView);
+
     //store local boundary information
     BoolVectorType localIsBoundary = BoolVectorType::Constant(lFE.size(),false);
     BoolVectorType localIsBoundaryValue = BoolVectorType::Constant(lFE.size(),false);
