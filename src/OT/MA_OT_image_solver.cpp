@@ -58,7 +58,7 @@ void MA_OT_image_solver::solve_nonlinear_system()
   // Compute solution
   // /////////////////////////
 
-  SolverConfig::VectorType newSolution = solution;
+  Config::VectorType newSolution = solution;
 #ifdef USE_DOGLEG
 
   doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);

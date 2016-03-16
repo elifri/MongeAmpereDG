@@ -8,8 +8,7 @@
 #ifndef SRC_MA_OT_IMAGE_SOLVER_H_
 #define SRC_MA_OT_IMAGE_SOLVER_H_
 
-#include "solver_config.h"
-#include "ImageFunction.hpp"
+#include "../ImageFunction.hpp"
 
 #include "MA_OT_solver.h"
 
@@ -33,7 +32,7 @@ public:
                   &f_,&g_)
                ){}
 
-    void evaluate(const SolverConfig::VectorType& x, SolverConfig::VectorType& v, SolverConfig::MatrixType& m, const SolverConfig::VectorType& x_old, const bool new_solution=true) const
+    void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
     {
       assert(lop_ptr);
 
@@ -49,7 +48,7 @@ public:
       solver_ptr->assemble_DG_Jacobian(*lop_ptr, x,v, m); timer.stop();
     }
 
-    void evaluate(const SolverConfig::VectorType& x, SolverConfig::VectorType& v, const SolverConfig::VectorType& x_old, const bool new_solution=true) const
+    void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const
     {
       assert(lop_ptr);
       if (new_solution)
@@ -64,13 +63,13 @@ public:
       solver_ptr->assemble_DG(*lop_ptr, x,v); timer.stop();
 
     }
-    void Jacobian(const SolverConfig::VectorType& x, SolverConfig::MatrixType& m) const
+    void Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
     {
       assert(lop_ptr);
       assert(solver_ptr != NULL);
       solver_ptr->assemble_Jacobian_DG(*lop_ptr, x,m);
     }
-    void derivative(const SolverConfig::VectorType& x, SolverConfig::MatrixType& m) const
+    void derivative(const Config::VectorType& x, Config::MatrixType& m) const
     {
       assert(lop_ptr);
       assert(solver_ptr != NULL);

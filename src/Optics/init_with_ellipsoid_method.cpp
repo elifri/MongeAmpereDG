@@ -255,12 +255,12 @@ void InitEllipsoidMethod::write_output() const
     method_.writeReportToFile(outputFolder_+"/ellipsoids_report.txt");
 }
 
-void InitEllipsoidMethod::evaluate(const SolverConfig::DomainType& x, SolverConfig::RangeType& u)
+void InitEllipsoidMethod::evaluate(const Config::DomainType& x, SolverConfig::RangeType& u)
 {
     u = method_.getEllipsoids().evaluate2d(x[0], x[1]);
 }
 
-double InitEllipsoidMethod::evaluate(const SolverConfig::DomainType& x)
+double InitEllipsoidMethod::evaluate(const Config::DomainType& x)
 {
     return method_.getEllipsoids().evaluate2d(x[0], x[1]);
 }

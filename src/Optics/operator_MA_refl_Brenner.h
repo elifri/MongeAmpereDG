@@ -10,9 +10,9 @@
 
 #include <dune/common/function.hh>
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
-#include "../utils.hpp"
-#include "../solver_config.h"
 
+#include "../config.h"
+#include "../utils.hpp"
 #include "../problem_data.h"
 
 //automatic differtiation
@@ -75,9 +75,9 @@ public:
   }
 
   ///helper function that checks wether the calculated reflection is consistent with the vector calculated by direct application of the reflection law
-  bool check_reflection(const SolverConfig::SpaceType& x_value, const FieldVector<adouble, 3>& X,
+  bool check_reflection(const Config::SpaceType& x_value, const FieldVector<adouble, 3>& X,
                         const double u_value,
-                        const FieldVector<adouble, SolverConfig::dim>& gradu, const FieldVector<adouble, 3>& grad_hat,
+                        const FieldVector<adouble, Config::dim>& gradu, const FieldVector<adouble, 3>& grad_hat,
                         const double a_tilde_value, const double b_tilde_value,
                         const FieldVector<adouble, 3>& Z_0
                         ) const
@@ -156,8 +156,8 @@ public:
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
     typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<SolverConfig::value_type, Element::dimension, Element::dimension> FEHessianType;
+    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
+    typedef typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension> FEHessianType;
 
     const int size = localView.size();
 
@@ -204,22 +204,22 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size);
-      FieldVector<adouble, SolverConfig::dim> gradu;
+      FieldVector<adouble, Config::dim> gradu;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradu);
 
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size);
-      FieldMatrix<adouble, SolverConfig::dim, SolverConfig::dim> Hessu;
+      FieldMatrix<adouble, Config::dim, Config::dim> Hessu;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
           x_adolc, Hessu);
 
       //--------assemble cell integrals in variational form--------
 
-      assert(SolverConfig::dim == 2);
+      assert(Config::dim == 2);
 
       auto x_value = geometry.global(quad[pt].position());
-      SolverConfig::SpaceType3d X = { x_value[0], x_value[1], omega(x_value) };
+      Config::SpaceType3d X = { x_value[0], x_value[1], omega(x_value) };
 
       double omega_value = omega(x_value);
 
@@ -242,9 +242,9 @@ public:
       assert ( t > 0);
 
       //calculate Z_0, the intersection between reflected light and {x_3=0}-plane
-      FieldVector<adouble, SolverConfig::dim> z_0 = gradu;
+      FieldVector<adouble, Config::dim> z_0 = gradu;
       z_0 *= (2.0 / a_tilde_value);
-      FieldVector<adouble, SolverConfig::dim> z = T(x_value, u_value, z_0, opticalSetting->z_3);
+      FieldVector<adouble, Config::dim> z = T(x_value, u_value, z_0, opticalSetting->z_3);
 
       if (z[0] < opticalSetting->lowerLeftTarget[0] || z[0] > opticalSetting->upperRightTarget[0]
            || z[1] < opticalSetting->lowerLeftTarget[1] || z[1] > opticalSetting->upperRightTarget[1])
@@ -383,8 +383,8 @@ public:
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
     typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<SolverConfig::value_type, IntersectionType::dimensionworld, IntersectionType::dimensionworld> FEHessianType;
+    typedef FieldVector<Config::ValueType, Config::dim> JacobianType;
+    typedef typename Dune::FieldMatrix<Config::ValueType, IntersectionType::dimensionworld, IntersectionType::dimensionworld> FEHessianType;
 
     assert((unsigned int) size == localFiniteElement.size());
     assert((unsigned int) size == localFiniteElementn.size());
@@ -457,22 +457,22 @@ public:
 
       // The gradients of the shape functions on the reference element
       std::vector<JacobianType> gradients(size);
-      FieldVector<adouble, SolverConfig::dim> gradu(0);
+      FieldVector<adouble, Config::dim> gradu(0);
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradu);
       std::vector<JacobianType> gradientsn(size);
-      FieldVector<adouble, SolverConfig::dim> gradun(0);
+      FieldVector<adouble, Config::dim> gradun(0);
       assemble_gradients_gradu(localFiniteElementn, jacobiann, quadPosn,
           gradientsn, xn_adolc, gradun);
 
       //the shape function values of hessian ansatz functions
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size);
-      FieldMatrix<adouble, SolverConfig::dim, SolverConfig::dim> Hessu;
+      FieldMatrix<adouble, Config::dim, Config::dim> Hessu;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
           x_adolc, Hessu);
       std::vector<FEHessianType> Hessiansn(size);
-      FieldMatrix<adouble, SolverConfig::dim, SolverConfig::dim> Hessun;
+      FieldMatrix<adouble, Config::dim, Config::dim> Hessun;
       assemble_hessians_hessu(localFiniteElementn, jacobian, quadPos, Hessiansn,
           x_adolc, Hessun);
 
@@ -492,7 +492,7 @@ public:
       assert(std::abs(grad_u_normaljump.value()) < 1e-8);
 
       //      Hess_avg = 0.5*(Hessu+Hessun);
-      FieldMatrix<adouble, SolverConfig::dim, SolverConfig::dim> Hess_avg = cofactor(Hessu);
+      FieldMatrix<adouble, Config::dim, Config::dim> Hess_avg = cofactor(Hessu);
       Hess_avg += cofactor(Hessu);
       Hess_avg *= 0.5;
 
@@ -502,7 +502,7 @@ public:
       double factor = quad[pt].weight() * integrationElement;
 
       for (int j = 0; j < size; j++) {
-        FieldVector<adouble, SolverConfig::dim> temp;
+        FieldVector<adouble, Config::dim> temp;
         Hess_avg.mv(gradu, temp);
         adouble jump = (temp*normal);
         Hess_avg.mv(gradun, temp);
@@ -571,7 +571,7 @@ public:
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
     typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
+    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
 
     //-----init variables for automatic differentiation
 
@@ -639,7 +639,7 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, SolverConfig::dim> gradu;
+      FieldVector<adouble, Config::dim> gradu;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradu);
 
@@ -652,7 +652,7 @@ public:
       FieldVector<adouble, 2> z_0 = gradu;
       z_0 *= (2.0 / a_tilde_value);
 
-      FieldVector<adouble, SolverConfig::dim> T_value = T(x_value, u_value, z_0, opticalSetting->z_3);
+      FieldVector<adouble, Config::dim> T_value = T(x_value, u_value, z_0, opticalSetting->z_3);
 //      std::cerr << "x local "<< x.transpose() << std::endl;
 //      std::cerr << "gradients "; for (const auto& grad : gradients) std::cerr << grad << "   "; std::cerr << std::endl;
 
@@ -716,7 +716,7 @@ public:
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
     typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
+    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
 
     //-----init variables for automatic differentiation
 
@@ -792,13 +792,13 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, SolverConfig::dim> gradu;
+      FieldVector<adouble, Config::dim> gradu;
       assemble_gradients_gradu(localFiniteElement, jacobian, collocationPos,
           gradients, x_adolc, gradu);
 
       // The hessian of the shape functions
 //      std::vector<FEHessianType> Hessians(size);
-//      FieldMatrix<adouble, SolverConfig::dim, SolverConfig::dim> Hessu;
+//      FieldMatrix<adouble, Config::dim, Config::dim> Hessu;
 //      assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
 //          x_adolc, Hessu);
 
@@ -811,7 +811,7 @@ public:
       FieldVector<adouble, 2> z_0 = gradu;
       z_0 *= (2.0 / a_tilde_value);
 
-      FieldVector<adouble, SolverConfig::dim> T_value = T(x_value, u_value, z_0, SolverConfig::z_3);
+      FieldVector<adouble, Config::dim> T_value = T(x_value, u_value, z_0, SolverConfig::z_3);
 //      std::cerr << "x local "<< x.transpose() << std::endl;
 //      std::cerr << "gradients "; for (const auto& grad : gradients) std::cerr << grad << "   "; std::cerr << std::endl;
 

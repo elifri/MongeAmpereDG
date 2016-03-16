@@ -8,13 +8,12 @@
 #ifndef SRC_INTEGRATOR_HPP_
 #define SRC_INTEGRATOR_HPP_
 
+#include "Solver/solver_config.h"
+
 # include <memory>
 
 #include <dune/geometry/quadraturerules.hh>
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
-
-#include "Callback/Callback_utility.hpp"
-
 
 template<class GridType>
 class Integrator{
@@ -52,13 +51,13 @@ double Integrator<GT>::assemble_integral(const function_type &f, const int quad_
 		auto geometry = e.geometry();
 
 		// Get a quadrature rule
-		const QuadratureRule<double, SolverConfig::dim>& quad =
-				QuadratureRules<double, SolverConfig::dim>::rule(geometry.type(), quad_degree);
+		const QuadratureRule<double, Config::dim>& quad =
+				QuadratureRules<double, Config::dim>::rule(geometry.type(), quad_degree);
 
 		// Loop over all quadrature points
 		for (const auto& pt : quad) {
 
-			SolverConfig::value_type f_value = f(geometry.global(pt.position()));
+			Config::ValueType f_value = f(geometry.global(pt.position()));
 
 		    auto factor = pt.weight()*geometry.integrationElement(pt.position());
 			res += f_value*factor;
@@ -77,14 +76,14 @@ double Integrator<GT>::assemble_integral_of_local_gridFunction(function_type &f,
     auto geometry = e.geometry();
 
     // Get a quadrature rule
-    const QuadratureRule<double, SolverConfig::dim>& quad =
-        MacroQuadratureRules<double, SolverConfig::dim>::rule(e.type(), quad_degree, SolverConfig::quadratureType);
+    const QuadratureRule<Config::ValueType, Config::dim>& quad =
+        MacroQuadratureRules<Config::ValueType, Config::dim>::rule(e.type(), quad_degree, SolverConfig::quadratureType);
 
     // Loop over all quadrature points
     for (const auto& pt : quad) {
 
       f.bind(e);
-      SolverConfig::value_type f_value;
+      Config::ValueType f_value;
       f_value = f(pt.position());
 
         auto factor = pt.weight()*geometry.integrationElement(pt.position());

@@ -11,9 +11,9 @@
 #include <dune/common/function.hh>
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
 #include "../utils.hpp"
-#include "../solver_config.h"
+#include "../config.h"
 
-#include "../problem_data_OT.h"
+#include "../OT/problem_data_OT.h"
 
 //automatic differtiation
 #include <adolc/adouble.h>
@@ -100,8 +100,8 @@ public:
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
     typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<SolverConfig::value_type, Element::dimension, Element::dimension> FEHessianType;
+    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
+    typedef typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension> FEHessianType;
 
     const int size = localView.size();
 
@@ -154,24 +154,24 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size);
-      FieldVector<adouble, SolverConfig::dim> gradu;
+      FieldVector<adouble, Config::dim> gradu;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradu);
 
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size);
-      FieldMatrix<adouble, SolverConfig::dim, SolverConfig::dim> Hessu;
+      FieldMatrix<adouble, Config::dim, Config::dim> Hessu;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
           x_adolc, Hessu);
 
       //--------assemble cell integrals in variational form--------
 
-      assert(SolverConfig::dim == 2);
+      assert(Config::dim == 2);
 
-      SolverConfig::DomainType x_value = geometry.global(quad[pt].position());
+      Config::DomainType x_value = geometry.global(quad[pt].position());
 
       //calculate illumination at \Omega
-      SolverConfig::value_type f_value;
+      Config::ValueType f_value;
       rhoX.evaluate(x_value, f_value);
 
       int_f += f_value* quad[pt].weight() * integrationElement;
@@ -260,7 +260,7 @@ public:
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
     typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
+    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
 
     //-----init variables for automatic differentiation
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(
@@ -325,7 +325,7 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, SolverConfig::dim> gradu;
+      FieldVector<adouble, Config::dim> gradu;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradu);
 
@@ -375,7 +375,7 @@ public:
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
     typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
+    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
 
     //-----init variables for automatic differentiation
 
@@ -439,7 +439,7 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, SolverConfig::dim> gradu;
+      FieldVector<adouble, Config::dim> gradu;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradu);
 

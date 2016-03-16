@@ -9,7 +9,7 @@
 
 #include "solver_config.h"
 
-#include "Dogleg/doglegMethod.hpp"
+#include "../Dogleg/doglegMethod.hpp"
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
@@ -120,11 +120,11 @@ void SolverConfig::read_configfile(std::string &configFile)
 
 
 ////------fallback values for geometry setting---------
-SolverConfig::UnitCubeType::SpaceType GeometrySetting::lowerLeft = {0,0};
-SolverConfig::UnitCubeType::SpaceType GeometrySetting::upperRight = {1,1};
+Config::SpaceType GeometrySetting::lowerLeft = {0,0};
+Config::SpaceType GeometrySetting::upperRight = {1,1};
 
-SolverConfig::UnitCubeType::SpaceType GeometrySetting::lowerLeftTarget = {0,0};
-SolverConfig::UnitCubeType::SpaceType GeometrySetting::upperRightTarget= {1,1};
+Config::SpaceType GeometrySetting::lowerLeftTarget = {0,0};
+Config::SpaceType GeometrySetting::upperRightTarget= {1,1};
 double GeometrySetting::z_3 = 0;
 
 void GeometrySetting::read_configfile(std::string &configFile)
@@ -169,11 +169,10 @@ string OpticalSetting::TargetImageName;
 string OpticalSetting::LightinputImageName;
 
 double OpticalSetting::kappa = 2./3.;
-SolverConfig::value_type OpticalSetting::lightSourceIntensity;
+Config::ValueType OpticalSetting::lightSourceIntensity;
 
 void OpticalSetting::read_configfile(std::string &configFile)
 {
-
   std::cout << "read information from file " << configFile << std::endl;
 
   po::options_description config("Configuration of the optical setting");

@@ -10,7 +10,7 @@
 
 
 #include <string>
-#include "solver_config.h"
+#include "config.h"
 //#include "Callback_utility.hpp"
 
 #include "problem_data.h"
@@ -30,7 +30,7 @@
 class MA_solver;
 
 typedef StaticRefinement<GenericGeometry::SimplexTopology<2>::type::id,
-        SolverConfig::GridType::ctype,
+        Config::GridType::ctype,
         GenericGeometry::SimplexTopology<2>::type::id,
         2> PlotRefinementType;
 
@@ -44,7 +44,7 @@ typedef StaticRefinement<GenericGeometry::CubeTopology<2>::type::id,
 
 class Plotter{
 private:
-	const SolverConfig::GridView* grid;
+	const Config::GridView* grid;
 	PlotRefinementType refined_grid;
 
 	int refinement; ///choose the refinement level before plotting
@@ -57,7 +57,7 @@ private:
 	int Nnodes() const
 	{
 	  if (refinement == 0)
-	    return grid->size(SolverConfig::dim);
+	    return grid->size(Config::dim);
 	  return grid->size(0)*PlotRefinementType::nVertices(refinement);
 	}
 
@@ -65,7 +65,7 @@ private:
 public:
 	typedef Eigen::Matrix<SolverConfig::RangeType, Eigen::Dynamic, 1> PointdataVectorType;
 
-	Plotter(const SolverConfig::GridView& gridView):grid(&gridView) {};
+	Plotter(const Config::GridView& gridView):grid(&gridView) {};
 
 	std::string output_directory, output_prefix;
 
@@ -156,7 +156,7 @@ public:
   template<typename Functiontype>
   void save_rectangular_mesh(Functiontype &f, std::ofstream &of) const;
 
-	void set_grid(SolverConfig::GridView* grid){	this->grid = grid;}
+	void set_grid(Config::GridView* grid){	this->grid = grid;}
 	void set_refinement(const int refinement){	this->refinement = refinement;}
 	void set_output_directory(std::string outputdir) {this->output_directory = outputdir;}
 	void set_output_prefix(std::string prefix) {this->output_prefix = prefix;}
@@ -397,7 +397,7 @@ void Plotter::write_points_refractor(std::ofstream &file, Function &f) const{
 }
 
 
-void evaluateRhoX (const SolverConfig::DomainType &x, SolverConfig::value_type &u);
+void evaluateRhoX (const Config::DomainType &x, Config::ValueType &u);
 
 template <class Function>
 void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
@@ -603,7 +603,7 @@ void Plotter::write_mirror(std::ofstream &file, Function &f) const{
     // Output result
     assert(false);
 /*
-    VTKWriter<SolverConfig::GridView> vtkWriter(*solver->gridView_ptr);
+    VTKWriter<Config::GridView> vtkWriter(*solver->gridView_ptr);
     SolverConfig::VectorType solution_v = solver->return_vertex_vector(solution);
     std::cout << "solution vertex " << solution_v.transpose() << std::endl;
     vtkWriter.addVertexData(solution_v, "solution");

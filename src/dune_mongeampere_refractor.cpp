@@ -8,7 +8,7 @@
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 
-#include "MA_refractor_solver.h"
+#include "Optics/MA_refractor_solver.h"
 
 #include <boost/program_options.hpp>
 
@@ -90,13 +90,13 @@ try {
   // Generate the grid
   // ////////////////////////////////
 
-	SolverConfig::UnitCubeType unitcube(opticalSetting.lowerLeft, opticalSetting.upperRight, 0);
+	Config::UnitCubeType unitcube(opticalSetting.lowerLeft, opticalSetting.upperRight, 0);
 
-	SolverConfig::GridType &grid = unitcube.grid();
-	SolverConfig::GridView gridView = grid.leafGridView();
+	Config::GridType &grid = unitcube.grid();
+	Config::GridView gridView = grid.leafGridView();
 
 	// Output resulting grid
-	VTKWriter<SolverConfig::GridView> vtkWriter(gridView);
+	VTKWriter<Config::GridView> vtkWriter(gridView);
 	vtkWriter.write("grid");
 
 	// ///////////////////////////////////////////////

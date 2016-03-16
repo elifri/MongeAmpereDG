@@ -12,7 +12,7 @@
 #include <dune/geometry/quadraturerules.hh>
 
 #include "../utils.hpp"
-#include "../solver_config.h"
+#include "../config.h"
 #include "../problem_data.h"
 
 //automatic differtiation

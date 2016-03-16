@@ -1,17 +1,17 @@
 /*
- * FEC0C1distinguisher.cpp
+ * FEBasisHandler.cpp
  *
  *  Created on: Mar 14, 2016
  *      Author: friebel
  */
 
-#include "FEC0C1distinguisher.hpp"
+#include "FEBasisHandler.hpp"
 #include "MA_solver.h"
 
 #include <dune/grid/common/mcmgmapper.hh>
 
 template <>
-void FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::adapt(MA_solver& solver, const int level, SolverConfig::VectorType& v)
+void FEBasisHandler<PS12Split, FEPS12SplitTraits>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
  {
   assert(level == 1);
 
@@ -50,9 +50,9 @@ void FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::adapt(MA_solver& solver,
   std::cout << "new element count " << solver.gridView_ptr->size(0) << std::endl;
 
   //we need do store the old basis as the (father) finite element depends on the basis
-  typedef Functions::PS12SSplineBasis<SolverConfig::LevelGridView, SolverConfig::SparseMatrixType> FEBasisCoarseType;
+  typedef Functions::PS12SSplineBasis<Config::LevelGridView, Config::SparseMatrixType> FEBasisCoarseType;
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1)));
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,SolverConfig::VectorType> DiscreteGridFunctionCoarse;
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
   typedef typename DiscreteGridFunctionCoarse::LocalFunction DiscreteLocalGridFunctionCoarse;
   typedef typename DiscreteGridFunctionCoarse::LocalFirstDerivative DiscreteLocalGradientGridFunctionCoarse;
   std::shared_ptr<DiscreteGridFunctionCoarse> solution_u_Coarse_global = std::shared_ptr<DiscreteGridFunctionCoarse> (new DiscreteGridFunctionCoarse(*FEBasisCoarse,solver.solution_u_old_global->dofs()));
@@ -84,7 +84,7 @@ void FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::adapt(MA_solver& solver,
     const auto & lFE = localView.tree().finiteElement();
     const auto& geometry = element.geometry();
 
-    SolverConfig::VectorType localDofs = SolverConfig::VectorType::Zero(lFE.size());
+    Config::VectorType localDofs = Config::VectorType::Zero(lFE.size());
 
     int k = 0;
     for (int i = 0; i < geometry.corners(); i++) { //loop over nodes
@@ -118,7 +118,7 @@ void FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::adapt(MA_solver& solver,
           k = 7;
 
       // normal of center in face's reference element
-      const FieldVector<double, SolverConfig::dim> normal =
+      const FieldVector<double, Config::dim> normal =
             is.centerUnitOuterNormal();
 
       const auto face_center = is.geometry().center();
@@ -160,8 +160,8 @@ void FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::adapt(MA_solver& solver,
 
     // Get a quadrature rule
     const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
-    const QuadratureRule<double, SolverConfig::dim>& quad =
-        MacroQuadratureRules<double, SolverConfig::dim>::rule(element.type(),
+    const QuadratureRule<double, Config::dim>& quad =
+        MacroQuadratureRules<double, Config::dim>::rule(element.type(),
             order, SolverConfig::quadratureType);
 
     double resTest1f = 0, resTest1 = 0;
@@ -217,7 +217,7 @@ void FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::adapt(MA_solver& solver,
       const int i = is.indexInInside();
 
       // normal of center in face's reference element
-      const FieldVector<double, SolverConfig::dim> normal =
+      const FieldVector<double, Config::dim> normal =
               is.centerUnitOuterNormal();
 
       const auto face_center = is.geometry().center();
@@ -242,7 +242,7 @@ void FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::adapt(MA_solver& solver,
 }
 
 template <>
-void FEC0C1distinguisher<Mixed, MixedTraits>::adapt(MA_solver& solver, const int level, SolverConfig::VectorType& v)
+void FEBasisHandler<Mixed, MixedTraits>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
 {
   assert(solver.initialised);
   assert(level == 1);
@@ -256,7 +256,7 @@ void FEC0C1distinguisher<Mixed, MixedTraits>::adapt(MA_solver& solver, const int
   typedef MA_solver::GridType::Traits::GlobalIdSet::IdType IdType;
 
   //map to store grid attached data during the refinement process
-  std::map<IdType, SolverConfig::VectorType>  preserveSolution;
+  std::map<IdType, Config::VectorType>  preserveSolution;
 
   //mark elements for refinement
   for (auto&& element : elements(*solver.gridView_ptr))
@@ -315,7 +315,7 @@ void FEC0C1distinguisher<Mixed, MixedTraits>::adapt(MA_solver& solver, const int
   MA_solver::DenseMatrixType localMassMatrix_DH;
   solver.assembler.calculate_local_mass_matrix_ansatz(localFiniteElementuDH, localMassMatrix_DH);
 
-  const int nDH = SolverConfig::dim*SolverConfig::dim;
+  const int nDH = Config::dim*Config::dim;
   const int size_u = localFiniteElementu.size();
   const int size_u_DH = localFiniteElementuDH.size();
   const int size = size_u +  nDH*size_u_DH;
@@ -337,7 +337,7 @@ void FEC0C1distinguisher<Mixed, MixedTraits>::adapt(MA_solver& solver, const int
       //get old dof vector
       const auto& father = element.father();
 
-      SolverConfig::VectorType x_local = preserveSolution[idSet.id(father)];
+      Config::VectorType x_local = preserveSolution[idSet.id(father)];
 
       //calculate new dof vector for every child
       int i = 0;
@@ -347,18 +347,18 @@ void FEC0C1distinguisher<Mixed, MixedTraits>::adapt(MA_solver& solver, const int
         localViewRef.bind(child);
         localIndexSetRef.bind(localViewRef);
 
-        SolverConfig::VectorType x_adapt(size);
+        Config::VectorType x_adapt(size);
 
         //local rhs = \int v_adapt*test = refinementmatrix*v
-        SolverConfig::VectorType localVector = localrefinementMatrices[i]*x_local.segment(0,size_u);
+        Config::VectorType localVector = localrefinementMatrices[i]*x_local.segment(0,size_u);
         x_adapt.segment(0,size_u) =  localMassMatrix.ldlt().solve(localVector);
 
         //same for hessian (now done seperately for every entry)
-        std::vector<SolverConfig::VectorType> localVectorDH(nDH);
+        std::vector<Config::VectorType> localVectorDH(nDH);
         for (int j = 0; j < nDH; j++)
         {
           //extract dofs for one hessian entry
-          SolverConfig::VectorType xlocalDH(size_u_DH);
+          Config::VectorType xlocalDH(size_u_DH);
           for (int k = 0; k < size_u_DH; k++)
             xlocalDH(k) = x_local(size_u+j +nDH*k);
 
@@ -398,13 +398,13 @@ void FEC0C1distinguisher<Mixed, MixedTraits>::adapt(MA_solver& solver, const int
 
 
 template <>
-SolverConfig::VectorType FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::coarse_solution(MA_solver& solver, const int level)
+Config::VectorType FEBasisHandler<PS12Split, FEPS12SplitTraits>::coarse_solution(MA_solver& solver, const int level)
 {
   assert(solver.initialised);
-  SolverConfig::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
+  Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
 
    //build gridviewfunction
-   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,SolverConfig::VectorType> numericalSolution(*FEBasis_,solution_u);
+   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,Config::VectorType> numericalSolution(*FEBasis_,solution_u);
    auto localnumericalSolution = localFunction(numericalSolution);
    FEPS12SplitTraits::DiscreteLocalGradientGridFunction localGradient (numericalSolution);
 
@@ -412,12 +412,12 @@ SolverConfig::VectorType FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::coar
   //we need do generate the coarse basis
   const auto& levelGridView = solver.grid_ptr->levelGridView(level);
 
-  typedef Functions::PS12SSplineBasis<SolverConfig::LevelGridView, SolverConfig::SparseMatrixType> FEBasisCoarseType;
+  typedef Functions::PS12SSplineBasis<Config::LevelGridView, Config::SparseMatrixType> FEBasisCoarseType;
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(levelGridView));
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,SolverConfig::VectorType> DiscreteGridFunctionCoarse;
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
 
   //init vector
-  SolverConfig::VectorType v = SolverConfig::VectorType::Zero(FEBasisCoarse->indexSet().size() + 1);
+  Config::VectorType v = Config::VectorType::Zero(FEBasisCoarse->indexSet().size() + 1);
 
   auto localViewCoarse = FEBasisCoarse->localView();
   auto localIndexSetCoarse = FEBasisCoarse->indexSet().localIndexSet();
@@ -428,7 +428,7 @@ SolverConfig::VectorType FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::coar
   //loop over elements (in coarse grid)
   for (auto&& elementCoarse : elements(levelGridView)) {
 
-    HierarchicSearch<SolverConfig::GridType, SolverConfig::GridView::IndexSet> hs(*solver.grid_ptr, solver.gridView_ptr->indexSet());
+    HierarchicSearch<Config::GridType, Config::GridView::IndexSet> hs(*solver.grid_ptr, solver.gridView_ptr->indexSet());
 
     localViewCoarse.bind(elementCoarse);
     localIndexSetCoarse.bind(localViewCoarse);
@@ -440,7 +440,7 @@ SolverConfig::VectorType FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::coar
 //    for (const auto& tempEl : gradient_u_Coarse->localDoFs_ ) std::cout << tempEl << " ";
 //    std::cout << std::endl;
 
-    SolverConfig::VectorType localDofs;
+    Config::VectorType localDofs;
     localDofs.setZero(localViewCoarse.size());
 
     int k = 0;
@@ -482,7 +482,7 @@ SolverConfig::VectorType FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::coar
           k = 7;
 
       // normal of center in face's reference element
-      const FieldVector<double, SolverConfig::dim> normal =
+      const Config::SpaceType normal =
             is.centerUnitOuterNormal();
 
       const auto face_center = is.geometry().center();
@@ -517,16 +517,16 @@ SolverConfig::VectorType FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::coar
 }
 
 template<>
-SolverConfig::VectorType FEC0C1distinguisher<Mixed, MixedTraits>::coarse_solution(MA_solver& solver, const int level)
+Config::VectorType FEBasisHandler<Mixed, MixedTraits>::coarse_solution(MA_solver& solver, const int level)
 {
   assert(false);
   exit(-1);
   /*
   assert(solver.initialised);
-  SolverConfig::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
+  Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
 
    //build gridviewfunction
-   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,SolverConfig::VectorType> numericalSolution(*uBasis_,solution_u);
+   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,Config::VectorType> numericalSolution(*uBasis_,solution_u);
    auto localnumericalSolution = localFunction(numericalSolution);
    DiscreteLocalGradientGridFunction localGradient (numericalSolution);
 
@@ -536,10 +536,10 @@ SolverConfig::VectorType FEC0C1distinguisher<Mixed, MixedTraits>::coarse_solutio
 
   typedef Functions::MAMixedBasis<SolverConfig::LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian, SolverConfig::SparseMatrixType> FEBasisCoarseType;
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(levelGridView));
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,SolverConfig::VectorType> DiscreteGridFunctionCoarse;
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
 
   //init vector
-  SolverConfig::VectorType v = SolverConfig::VectorType::Zero(FEBasisCoarse->indexSet().size() + 1);
+  Config::VectorType v = Config::VectorType::Zero(FEBasisCoarse->indexSet().size() + 1);
 
   auto localViewCoarse = FEBasisCoarse->localView();
   auto localIndexSetCoarse = FEBasisCoarse->indexSet().localIndexSet();
@@ -566,7 +566,7 @@ SolverConfig::VectorType FEC0C1distinguisher<Mixed, MixedTraits>::coarse_solutio
 //    for (const auto& tempEl : gradient_u_Coarse->localDoFs_ ) std::cout << tempEl << " ";
 //    std::cout << std::endl;
 
-    SolverConfig::VectorType localDofs;
+    Config::VectorType localDofs;
     localDofs.setZero(localViewCoarse.size());
 */
 

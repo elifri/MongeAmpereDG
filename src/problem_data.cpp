@@ -7,13 +7,13 @@
 
 #include "problem_data.h"
 
-#include "MA_solver.h"
+#include "Solver/MA_solver.h"
 
-void PDE_functions::f(const SolverConfig::SpaceType2d& x, SolverConfig::value_type &out){
+void PDE_functions::f(const Config::SpaceType2d& x, Config::ValueType &out){
 	out = 1;
 }
 
-void PDE_functions::g_initial(const SolverConfig::SpaceType2d& z, SolverConfig::value_type &out){
+void PDE_functions::g_initial(const Config::SpaceType2d& z, Config::ValueType &out){
 	out = 1;
 }
 
@@ -22,7 +22,7 @@ void PDE_functions::g_initial_a(const FieldVector<adouble,2>& z, adouble &out){
 }
 
 
-void PDE_functions::Dg_initial(const SolverConfig::SpaceType2d& z, SolverConfig::SpaceType2d &out){
+void PDE_functions::Dg_initial(const Config::SpaceType2d& z, Config::SpaceType2d &out){
 	out[0] = 0;
 	out[1] = 0;
 }
@@ -56,7 +56,7 @@ adouble interpolate_cubic_atXY(cimg_library::CImg<double> image , const adouble 
 }
 
 
-void RightHandSideReflector::phi(const SolverConfig::SpaceType2d& T, const FieldVector<double, SolverConfig::dim> &normal, SolverConfig::value_type &phi) const
+void RightHandSideReflector::phi(const Config::SpaceType2d& T, const FieldVector<double, Config::dim> &normal, Config::ValueType &phi) const
  {
    if (false)
    {
@@ -64,10 +64,10 @@ void RightHandSideReflector::phi(const SolverConfig::SpaceType2d& T, const Field
    }
    else
    {
-     SolverConfig::value_type x_min = std::min(T[0]-opticalsetting.lowerLeftTarget[0], opticalsetting.upperRightTarget[0] - T[0]);
-     SolverConfig::value_type y_min = std::min(T[1]-opticalsetting.lowerLeftTarget[1], opticalsetting.upperRightTarget[1] - T[1]);
+     Config::ValueType x_min = std::min(T[0]-opticalsetting.lowerLeftTarget[0], opticalsetting.upperRightTarget[0] - T[0]);
+     Config::ValueType y_min = std::min(T[1]-opticalsetting.lowerLeftTarget[1], opticalsetting.upperRightTarget[1] - T[1]);
 
-     SolverConfig::SpaceType2d T_proj = T;
+     Config::SpaceType2d T_proj = T;
      if (x_min < y_min)
        T_proj[0] = T[0]-opticalsetting.lowerLeftTarget[0] < opticalsetting.upperRightTarget[0] - T[0] ?  opticalsetting.lowerLeftTarget[0] : opticalsetting.upperRightTarget[0];
      else

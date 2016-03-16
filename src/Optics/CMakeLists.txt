@@ -1,0 +1,10 @@
+add_library(operator_MA_refl_Brenner operator_MA_refl_Brenner.cpp)
+add_library(operator_MA_refr_Brenner operator_MA_refr_Brenner.cpp)
+set_source_files_properties(init_with_ellipsoid_method.cpp PROPERTIES COMPILE_FLAGS -O3)
+add_library(EllipsoidMethod init_with_ellipsoid_method.cpp)
+
+add_library(MA_reflector_solver MA_reflector_solver.cpp)
+add_library(MA_refractor_solver MA_refractor_solver.cpp)
+
+Set(MirrorProblemLibs operator_MA_refl_Brenner problemData ImageFunction PARENT_SCOPE)
+Set(LensProblemLibs operator_MA_refr_Brenner problemData ImageFunction PARENT_SCOPE)

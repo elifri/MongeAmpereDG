@@ -12,7 +12,7 @@
 #include <dune/geometry/quadraturerules.hh>
 
 #include "../utils.hpp"
-#include "../solver_config.h"
+#include "../config.h"
 
 #include "../problem_data.h"
 
@@ -61,8 +61,8 @@ public:
     typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
 
 //    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<SolverConfig::value_type, Element::dimension, Element::dimension> FEHessianType;
+    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
+    typedef typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension> FEHessianType;
     typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType HessianType;
 
     const int size_u = localFiniteElementu.size();
@@ -89,12 +89,12 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<double, SolverConfig::dim> gradu;
+      Config::SpaceType gradu;
       assemble_gradients(localFiniteElementu, jacobian, quadPos, gradients);
 
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size_u);
-      FieldMatrix<double, SolverConfig::dim, SolverConfig::dim> Hessu;
+      FieldMatrix<double, Config::dim, Config::dim> Hessu;
       assemble_hessians_hessu(localFiniteElementu, jacobian, quadPos, Hessians, x, Hessu);
 
       //the shape function values of hessian ansatz functions and assemble u_DH
@@ -172,7 +172,7 @@ public:
     typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
 
     typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
+    typedef FieldVector<Config::ValueType, Config::dim> JacobianType;
     typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType RangeTypeDH;
 
     const int size_u = localFiniteElementu.size();
@@ -236,10 +236,10 @@ public:
 
       // The gradients of the shape functions on the reference element
        std::vector<JacobianType> gradients(size_u);
-       FieldVector<double, SolverConfig::dim> gradu(0);
+       Config::SpaceType gradu(0);
        assemble_gradients_gradu(localFiniteElementu, jacobian, quadPos, gradients, x, gradu);
        std::vector<JacobianType> gradientsn(size_u);
-       FieldVector<double, SolverConfig::dim> gradun(0);
+       Config::SpaceType gradun(0);
        assemble_gradients_gradu(localFiniteElementun, jacobiann, quadPosn, gradientsn, xn, gradun);
 
        //the shape function values of hessian ansatz functions
@@ -261,7 +261,7 @@ public:
               auto index_hess_entryn = localIndexSetn.flat_local_index(j, row, col)- size_u;
 
               // discr. hessian correction term: jump{avg{mu} grad_u}
-              SolverConfig::value_type temp = referenceFunctionValuesHessian[j]*gradu[col];
+              Config::ValueType temp = referenceFunctionValuesHessian[j]*gradu[col];
               v(index_hess_entry) -= 0.5*( temp*normal[row]);
 
               temp = referenceFunctionValuesHessian[j]*gradun[col];

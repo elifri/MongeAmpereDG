@@ -16,8 +16,8 @@
 
 #include <string>
 
-#include "../solver_config.h"
-#include "../Callback/Callback_utility.hpp"
+#include "../config.h"
+#include "../Solver/solver_config.h"
 
 
 //using namespace mirror_problem;
@@ -33,10 +33,10 @@ public:
     void write_output() const;
 
     ///returns the inverse of rho(=u) computed by the ellipsoid method
-    void evaluate(const SolverConfig::DomainType& x, SolverConfig::RangeType& u);
+    void evaluate(const Config::DomainType& x, SolverConfig::RangeType& u);
 
     ///returns the inverse of rho(=u) computed by the ellipsoid method
-    double evaluate(const SolverConfig::DomainType& x);
+    double evaluate(const Config::DomainType& x);
 
 private:
     InitEllipsoidMethod(const unsigned int nDirectionsX,

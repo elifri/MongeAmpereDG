@@ -19,8 +19,7 @@ namespace po = boost::program_options;
 
 #include <Grids/Grid2d.hpp>
 
-#include "utils.hpp"
-
+#include "../utils.hpp"
 
 /*
 double MA_solver::calculate_L2_error(const MA_function_type &f) const
@@ -73,13 +72,13 @@ void MA_solver::plot(const std::string& name) const
 {
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEC0C1distinguisher_.uBasis(),solution_u);
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(),solution_u);
   auto localnumericalSolution = localFunction(numericalSolution);
 
   //extract hessian
-  /*  const int nDH = SolverConfig::dim*SolverConfig::dim;
-     for (int row = 0; row < SolverConfig::dim; row++)
-    for (int col = 0; col < SolverConfig::dim; col++)
+  /*  const int nDH = Config::dim*Config::dim;
+     for (int row = 0; row < Config::dim; row++)
+    for (int col = 0; col < Config::dim; col++)
     {
       //calculate second derivative of gridviewfunction
       VectorType v_uDH_entry;
@@ -149,7 +148,7 @@ void MA_solver::create_initial_guess()
   else
   {
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
-    project([](SolverConfig::SpaceType x){return 1.12;}, solution);
+    project([](Config::SpaceType x){return 1.12;}, solution);
   }
 }
 
@@ -157,24 +156,18 @@ const typename MA_solver::VectorType& MA_solver::solve()
 {
   assert (initialised);
   iterations = 0;
-  //get operator
-
-  //init andreas solution as exact solution
-//  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exact_reflector_projection_small.grid"));
-//  exact_solution = std::shared_ptr<Rectangular_mesh_interpolator> (new Rectangular_mesh_interpolator("../inputData/exactReflectorProjectionSimple.grid"));
-//  assert(is_close(exact_solution->x_min, SolverConfig::lowerLeft[0], 1e-12));
-//  assert(is_close(exact_solution->y_min, SolverConfig::lowerLeft[1], 1e-12));
-//  project([this](SolverConfig::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);
-//  exactsol_u = exactsol.segment(0,get_n_dofs_u());
-//  exact_solution_projection_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(*uBasis,exactsol_u));
-//  exact_solution_projection = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*exact_solution_projection_global));
-//  plotter.writeReflectorVTK("exactReflector", *exact_solution_projection);
-
-  std::cout << "n dofs" << get_n_dofs() << std::endl;
 
   update_Operator();
 
-  this->create_initial_guess();
+  //get or create initial guess
+  if(initValueFromFile_)
+  {
+    init_from_file(initValue_);
+  }
+  else
+  {
+    this->create_initial_guess();
+  }
   {
     //write initial guess into file
     stringstream filename2; filename2 << outputDirectory_ <<  "/" << outputPrefix_ << "initial.fec";
@@ -186,11 +179,10 @@ const typename MA_solver::VectorType& MA_solver::solve()
   }
 
   update_solution(solution);
-
   plot("initialguess");
 
-  SolverConfig::VectorType f;
-  SolverConfig::MatrixType J;
+//  Config::VectorType f;
+//  SolverConfig::MatrixType J;
 //  op.evaluate(solution, f, solution, false);
 //  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
 
@@ -204,10 +196,9 @@ const typename MA_solver::VectorType& MA_solver::solve()
   {
 
     solve_nonlinear_system();
+    iterations++;
     std::cerr << " solved nonlinear system" << std::endl;
     cout << "scaling factor " << solution(solution.size()-1) << endl;
-
-    iterations++;
 
     update_solution(solution);
     plot("numericalSolution");
@@ -215,9 +206,9 @@ const typename MA_solver::VectorType& MA_solver::solve()
     update_Operator();
 
     solve_nonlinear_system();
+    iterations++;
     std::cerr << " solved nonlinear system" << std::endl;
     cout << "scaling factor " << solution(solution.size()-1) << endl;
-    iterations++;
 
     {
       //write current solution to file
@@ -229,7 +220,6 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //      plotter.save_rectangular_mesh(*solution_u_old, file);
       file.close();
     }
-
 //    plot("numericalSolutionBeforeRef");
 
     adapt_solution();
@@ -237,7 +227,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
     update_solution(solution);
     plot("numericalSolution");
 
-    SolverConfig::VectorType v = coarse_solution(1);
+    Config::VectorType v = coarse_solution(1);
     {
       //write current solution to file
       update_solution(solution);
@@ -252,30 +242,29 @@ const typename MA_solver::VectorType& MA_solver::solve()
 }
 
 
-void MA_solver::update_solution(const SolverConfig::VectorType& newSolution) const
+void MA_solver::update_solution(const Config::VectorType& newSolution) const
 {
   solution_u = solution.segment(0, get_n_dofs_u());
 //  std::cout << "solution " << solution_u.transpose() << std::endl;
 
   //build gridviewfunction
-  solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(FEC0C1distinguisher_.uBasis(),solution_u));
+  solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(FEBasisHandler_.uBasis(),solution_u));
   solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
   gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
-
 
   solution = newSolution;
 }
 
 void MA_solver::adapt_solution(const int level)
 {
-  FEC0C1distinguisher_.adapt(*this, level, solution);
+  FEBasisHandler_.adapt(*this, level, solution);
 }
 
 
-SolverConfig::VectorType MA_solver::coarse_solution(const int level)
+Config::VectorType MA_solver::coarse_solution(const int level)
 {
   assert(initialised);
-  return FEC0C1distinguisher_.coarse_solution(*this, level);
+  return FEBasisHandler_.coarse_solution(*this, level);
 }
 void MA_solver::solve_nonlinear_system()
 {
@@ -287,23 +276,22 @@ void MA_solver::solve_nonlinear_system()
   // Compute solution
   // /////////////////////////
 
-  SolverConfig::VectorType newSolution = solution;
+  Config::VectorType newSolution = solution;
 
 #ifdef USE_DOGLEG
-
  /* doglegOpts_.maxsteps = 5;
   int steps = 0;
   bool converged = false;
 
   do{
-    std::array<SolverConfig::VectorType, 2> v;
+    std::array<Config::VectorType, 2> v;
     SolverConfig::sigmaBoundary =50;
 
     for (int i=0; i < 2; i++)
     {
       v[i] =  solution;
-      v[i] += (i == 0)? SolverConfig::VectorType::Constant(solution.size(),1e-5)
-                    : SolverConfig::VectorType::Constant(solution.size(),-1e-5);
+      v[i] += (i == 0)? Config::VectorType::Constant(solution.size(),1e-5)
+                    : Config::VectorType::Constant(solution.size(),-1e-5);
 
       converged = doglegMethod(op, doglegOpts_, v[i], evaluateJacobianSimultaneously_);
       std::cerr << "solved three steps " << std::endl;
@@ -319,8 +307,6 @@ void MA_solver::solve_nonlinear_system()
   }  while (!converged && steps < maxSteps_);
 */
   doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
-
-
 #endif
 #ifdef USE_PETSC
   igpm::processtimer timer;
@@ -354,5 +340,4 @@ void MA_solver::solve_nonlinear_system()
 //  std::cout << "l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;
 
   std::cout << "scaling factor " << solution(solution.size()-1) << endl;
-
-  }
+}

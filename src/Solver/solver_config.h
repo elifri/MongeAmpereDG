@@ -12,10 +12,8 @@
 
 //#define C0Element
 
-#include<Eigen/Core>
-#include<Eigen/Sparse>
-
 #include <config.h>
+#include "../config.h"
 
 //automatic differtiation
 #include <adolc/adouble.h>
@@ -28,20 +26,15 @@
 
 #include <Grids/Grid2d.hpp> //for povray options
 
-//to mark variables as unused (used for checking of return values in Petsc etc. in Debug Mode)
-#define _unused(x) ((void)x)
-
-#include "UnitCube.h"
-
 #include <dune/localfunctions/lagrange/pk2d.hh>
 
 //#include "localfunctions/MAmixedbasis.hh"
-#include "localfunctions/MAmixedbasisC0.hh"
+#include "../localfunctions/MAmixedbasisC0.hh"
 //#include "localfunctions/MAmixedbasisC0C0.hh"
 //#include "localfunctions/deVeubekefunctionspacebasis.hh"
-#include "localfunctions/PowellSabin12SSplinenodalbasis.hh"
+#include "../localfunctions/PowellSabin12SSplinenodalbasis.hh"
 
-#include "Dogleg/doglegMethod.hpp"
+#include "../Dogleg/doglegMethod.hpp"
 
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
 
@@ -86,6 +79,8 @@ std::ostream& operator <<(std::ostream &output, const ProblemType &p);
 
 struct SolverConfig{
 
+  typedef Config::ValueType ValueType;
+
   void read_configfile(std::string &configFile);
 
   static ProblemType problem;
@@ -110,59 +105,36 @@ struct SolverConfig{
 
   static bool Dirichlet;
 
-	enum{ dim = 2, childdim = 4, degree = 2, degreeHessian = 2};
+	enum{childdim = 4, degree = 2, degreeHessian = 2};
 
 	static int startlevel;
 	static int nonlinear_steps;
-
-	typedef Eigen::VectorXd VectorType;
-	typedef Eigen::MatrixXd DenseMatrixType;
-	typedef Eigen::SparseMatrix<double> MatrixType;
-
-	typedef double value_type;
-
-//	typedef YaspGrid<dim> GridType;
-	typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > UnitCubeType;
-//	typedef UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >> UnitCubeType;
-	typedef UnitCubeType::GridType GridType;
-	typedef GridType::LevelGridView LevelGridView;
-	typedef GridType::LeafGridView GridView;
-	typedef GridType::Codim<0>::Entity ElementType;
-	typedef Dune::FieldVector<GridView::ctype, GridView::dimension> DomainType;
-
-  typedef FieldVector<value_type, dim> SpaceType;
-  typedef FieldVector<value_type, 2> SpaceType2d;
-  typedef FieldVector<value_type, 3> SpaceType3d;
-
-  static_assert(std::is_same<SpaceType, DomainType>::value, "Grid domain type must be equal to function type");
 
   //////////////////////////////////////////////////////////
   ///---------------select Finite Element----------------///
   //////////////////////////////////////////////////////////
 
   //-------select lagranian element----------
-//  typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementType;
+//  typedef Pk2DLocalFiniteElement<ValueType, ValueType, degree> LocalFiniteElementType;
   //  typedef Functions::PQKNodalBasis<GridView, degree> FEBasis;
 
   //-------select DeVeubeke-------------
 
-//  typedef Dune::deVeubekeFiniteElement<GridView::Codim<2>::Entity::Geometry, value_type, value_type> LocalFiniteElementType;
+//  typedef Dune::deVeubekeFiniteElement<GridView::Codim<2>::Entity::Geometry, ValueType, ValueType> LocalFiniteElementType;
 //	typedef Functions::deVeubekeBasis<GridView> FEBasis;
 
 //  static const MacroQuadratureType::Enum quadratureType = MacroQuadratureType::deVeubeke;
 
   //-------select PS12 S-Splines
-  typedef Eigen::SparseMatrix<value_type> SparseMatrixType;
-
-//  typedef Dune::PS12SSplineFiniteElement<GridView::Codim<2>::Entity::Geometry, value_type, value_type, SparseMatrixType> LocalFiniteElementType;
-  typedef Functions::PS12SSplineBasis<GridView, SparseMatrixType> FEBasis;
+//  typedef Dune::PS12SSplineFiniteElement<GridView::Codim<2>::Entity::Geometry, ValueType, ValueType, SparseMatrixType> LocalFiniteElementType;
+  typedef Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatrixType> FEBasis;
 
   static const MacroQuadratureType::Enum quadratureType = MacroQuadratureType::Powell_Sabin_12_split;
 
 
   //------select Mixed element-----------------
-  typedef Pk2DLocalFiniteElement<value_type, value_type, degree> LocalFiniteElementuType;
-  typedef Pk2DLocalFiniteElement<value_type, value_type, degreeHessian> LocalFiniteElementHessianSingleType;
+  typedef Pk2DLocalFiniteElement<ValueType, ValueType, degree> LocalFiniteElementuType;
+  typedef Pk2DLocalFiniteElement<ValueType, ValueType, degreeHessian> LocalFiniteElementHessianSingleType;
 
 /*
 	typedef Functions::MAMixedBasis<GridView, degree, degreeHessian> FEBasis;
@@ -172,8 +144,8 @@ struct SolverConfig{
   typedef Functions::LagrangeDGBasis<GridView, degreeHessian> FEuDHBasis;
 */
 
-	typedef FieldVector<value_type,1> RangeType;
-  typedef FieldMatrix<value_type,2,2> HessianRangeType;
+	typedef FieldVector<ValueType,1> RangeType;
+  typedef FieldMatrix<ValueType,2,2> HessianRangeType;
 
 	static const bool require_skeleton_two_sided = false; ///if enabled every face is assembled twice
 
@@ -196,19 +168,19 @@ struct SolverConfig{
     static double sigma ;   // should be < 5 for stability reasons
     static double sigmaGrad;   // should be < 5 for stability reasons
     static double sigmaBoundary;
-    static constexpr double beta = 2.0 - 0.5*dim;  // 2D => 1, 3D => 0.5
+    static constexpr double beta = 2.0 - 0.5*Config::dim;  // 2D => 1, 3D => 0.5
 #endif
 
 };
 
 template<>
-struct FETraits<Functions::PS12SSplineBasis<SolverConfig::GridView, SolverConfig::SparseMatrixType>>
+struct FETraits<Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatrixType>>
 {
   static const FEType Type = PS12Split;
-  typedef Functions::PS12SSplineBasis<SolverConfig::GridView, SolverConfig::SparseMatrixType> FEBasis;
+  typedef Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatrixType> FEBasis;
   typedef FEBasis FEuBasis;
 
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis,SolverConfig::VectorType> DiscreteGridFunction;
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis,Config::VectorType> DiscreteGridFunction;
   typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
   typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
 
@@ -220,16 +192,16 @@ struct FETraits<Functions::PS12SSplineBasis<SolverConfig::GridView, SolverConfig
 };
 
 template<>
-struct FETraits<Functions::MAMixedBasis<SolverConfig::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>
+struct FETraits<Functions::MAMixedBasis<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>
 {
   static const FEType Type = Mixed;
-  typedef Functions::MAMixedBasis<SolverConfig::GridView, SolverConfig::degree, SolverConfig::degreeHessian> FEBasis;
+  typedef Functions::MAMixedBasis<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian> FEBasis;
   //  typedef FEBasis::Basisu FEuBasis;
-  typedef Functions::PQkNodalBasis<SolverConfig::GridView, SolverConfig::degree> FEuBasis;
+  typedef Functions::PQkNodalBasis<Config::GridView, SolverConfig::degree> FEuBasis;
   //  typedef FEBasis::BasisuDH FEuDHBasis;
-  typedef Functions::LagrangeDGBasis<SolverConfig::GridView, SolverConfig::degreeHessian> FEuDHBasis;
+  typedef Functions::LagrangeDGBasis<Config::GridView, SolverConfig::degreeHessian> FEuDHBasis;
 
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasis,SolverConfig::VectorType> DiscreteGridFunction;
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasis,Config::VectorType> DiscreteGridFunction;
   typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
   typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
 
@@ -240,20 +212,20 @@ struct FETraits<Functions::MAMixedBasis<SolverConfig::GridView, SolverConfig::de
   }
 };
 
-typedef FETraits<Functions::PS12SSplineBasis<SolverConfig::GridView, SolverConfig::SparseMatrixType>> FEPS12SplitTraits;
-typedef FETraits<Functions::MAMixedBasis<SolverConfig::GridView, SolverConfig::degree, SolverConfig::degreeHessian>> MixedTraits;
+typedef FETraits<Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatrixType>> FEPS12SplitTraits;
+typedef FETraits<Functions::MAMixedBasis<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>> MixedTraits;
 
 typedef FEPS12SplitTraits FETraitsSolver;
 
 struct GeometrySetting{
   virtual void read_configfile(std::string &configFile);
 
-  static SolverConfig::UnitCubeType::SpaceType lowerLeft;  ///lower left of input grid
-  static SolverConfig::UnitCubeType::SpaceType upperRight;   ///upper right of input grid
+  static Config::SpaceType lowerLeft;  ///lower left of input grid
+  static Config::SpaceType upperRight;   ///upper right of input grid
 
-  static SolverConfig::UnitCubeType::SpaceType lowerLeftTarget; ///lower left of target grid (target must be in x-y-plane)
-  static SolverConfig::UnitCubeType::SpaceType upperRightTarget; ///upper left of target grid (target must be in x-y-plane)
-  static SolverConfig::value_type z_3; /// third coordinate of target grid (target must be in x-y-plane)
+  static Config::SpaceType lowerLeftTarget; ///lower left of target grid (target must be in x-y-plane)
+  static Config::SpaceType upperRightTarget; ///upper left of target grid (target must be in x-y-plane)
+  static SolverConfig::ValueType z_3; /// third coordinate of target grid (target must be in x-y-plane)
 };
 
 struct OpticalSetting : GeometrySetting{
@@ -268,7 +240,7 @@ struct OpticalSetting : GeometrySetting{
 
   ///pov ray options for output
   mirror_problem::Grid2d::PovRayOpts povRayOpts;
-  static SolverConfig::value_type lightSourceIntensity;
+  static SolverConfig::ValueType lightSourceIntensity;
 
   static double kappa;
 };

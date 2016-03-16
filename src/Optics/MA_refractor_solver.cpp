@@ -28,36 +28,8 @@ MA_refractor_solver::MA_refractor_solver(const shared_ptr<GridType>& grid, GridV
 
 void MA_refractor_solver::create_initial_guess()
 {
-  //init solution by laplace u = -sqrt(2f)
-  if(initValueFromFile_)
-  {
-    solution.resize(get_n_dofs());
-    ifstream fileInitial (initValue_);
-
-    if(fileInitial.fail())
-    {
-      std::cerr << "Error opening " << initValue_ << ", exited with error " << strerror(errno) << std::endl;
-      exit(-1);
-    }
-
-
-    for (int i=0; i<get_n_dofs(); ++i) {
-      assert(!fileInitial.eof() && "The inserted coefficient file is too short");
-      fileInitial >> solution(i);
-    }
-    fileInitial >> ws;
-    if (!fileInitial.eof())
-    {
-      std::cerr << "Coefficient initialisation is too long for the specified setting!";
-      exit(-1);
-    }
-    fileInitial.close();
-  }
-  else
-  {
-    //  solution = VectorType::Zero(dof_handler.get_n_dofs());
-    project([](SolverConfig::SpaceType x){return 1.12;}, solution);
-  }
+  //  solution = VectorType::Zero(dof_handler.get_n_dofs());
+  project([](Config::SpaceType x){return 1.12;}, solution);
 }
 
 void MA_refractor_solver::plot(const std::string& name) const
@@ -72,7 +44,7 @@ void MA_refractor_solver::plot(const std::string& name) const
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
     //build gridviewfunction
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<MA_solver::FETraits::FEuBasis,VectorType> numericalSolution(FEC0C1distinguisher_.uBasis(),solution_u);
+     Dune::Functions::DiscreteScalarGlobalBasisFunction<MA_solver::FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(),solution_u);
      auto localnumericalSolution = localFunction(numericalSolution);
 
      //build writer
@@ -146,7 +118,7 @@ void MA_refractor_solver::solve_nonlinear_system()
   // Compute solution
   // /////////////////////////
 
-  SolverConfig::VectorType newSolution = solution;
+  Config::VectorType newSolution = solution;
 
 #ifdef USE_DOGLEG
   doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);

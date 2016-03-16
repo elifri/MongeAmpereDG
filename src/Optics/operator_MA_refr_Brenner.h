@@ -13,7 +13,7 @@
 #include "../utils.hpp"
 #include "../problem_data.h"
 
-#include "../solver_config.h"
+#include "../Solver/solver_config.h"
 
 using namespace Dune;
 
@@ -74,9 +74,9 @@ public:
   }
 
   ///helper function that checks wether the calculated reflection is consistent with the vector calculated by direct application of the reflection law
-  bool check_refraction(const SolverConfig::SpaceType& x_value, const FieldVector<adouble, 3>& X,
+  bool check_refraction(const Config::SpaceType& x_value, const FieldVector<adouble, 3>& X,
                         const double rho_value,
-                        const FieldVector<adouble, SolverConfig::dim>& gradrho,
+                        const FieldVector<adouble, Config::dim>& gradrho,
                         const FieldVector<adouble, 2>& z
                         ) const
   {
@@ -153,7 +153,7 @@ public:
   }
   template<class value_type>
   inline
-  value_type F(const FieldVector<SolverConfig::value_type,2> &x, const value_type &u, const FieldVector<value_type,2> &p) const
+  value_type F(const Config::SpaceType &x, const value_type &u, const FieldVector<value_type,2> &p) const
   {
     value_type G = sqrt(sqr(u) + (p*p) - sqr((p * x)));
 //    std::cout << " G " << G.value();
@@ -163,7 +163,7 @@ public:
 
   template<class value_type>
   inline
-  void calc_F_and_derivatives(const FieldVector<SolverConfig::value_type,2> &x, const value_type &u, const FieldVector<value_type,2> &p,
+  void calc_F_and_derivatives(const Config::SpaceType &x, const value_type &u, const FieldVector<value_type,2> &p,
                               value_type& F, FieldVector<value_type,2>& DxF, value_type& DuF, FieldVector<value_type,2>& DpF) const
   {
     value_type G = sqrt(sqr(u) + (p*p) - sqr((p * x)));
@@ -261,8 +261,8 @@ public:
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
     typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<SolverConfig::value_type, Element::dimension, Element::dimension> FEHessianType;
+    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
+    typedef typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension> FEHessianType;
 
     const int size = localView.size();
 
@@ -308,29 +308,29 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size);
-      FieldVector<adouble, SolverConfig::dim> gradrho;
+      FieldVector<adouble, Config::dim> gradrho;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradrho);
 
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size);
-      FieldMatrix<adouble, SolverConfig::dim, SolverConfig::dim> Hessrho;
+      FieldMatrix<adouble, Config::dim, Config::dim> Hessrho;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
           x_adolc, Hessrho);
 
       //--------assemble cell integrals in variational form--------
 
-      assert(SolverConfig::dim == 2);
+      assert(Config::dim == 2);
 
 
       auto x_value = geometry.global(quad[pt].position());
-      SolverConfig::SpaceType3d X = { x_value[0], x_value[1], omega(x_value) };
+      Config::SpaceType3d X = { x_value[0], x_value[1], omega(x_value) };
 
       double omega_value = omega(x_value);
       FieldVector<double,2> DOmega_value = DOmega(x_value);
 
       adouble F_value, DuF;
-      FieldVector<adouble, SolverConfig::dim> DxF, DpF;
+      FieldVector<adouble, Config::dim> DxF, DpF;
       calc_F_and_derivatives(x_value,rho_value, gradrho, F_value, DxF, DuF, DpF);
 
 #ifdef DEBUG
@@ -348,7 +348,7 @@ public:
       temp[1]+=delta;
       adouble Dx2PlusF_value = F(temp, rho_value, gradrho);
 
-      FieldVector<adouble, SolverConfig::dim> DxFEx =
+      FieldVector<adouble, Config::dim> DxFEx =
         {
           (Dx1PlusF_value-F_valueEx)/delta,
           (Dx2PlusF_value-F_valueEx)/delta
@@ -367,7 +367,7 @@ public:
       tempAdouble[1]+=delta;
       adouble DP2PlusF_value = F(x_value, rho_value, tempAdouble);
 
-      FieldVector<adouble, SolverConfig::dim> DpFEx =
+      FieldVector<adouble, Config::dim> DpFEx =
         {
           (DP1PlusF_value-F_valueEx)/delta,
           (DP2PlusF_value-F_valueEx)/delta
@@ -395,10 +395,10 @@ public:
 
       FieldVector<adouble, 3> grad_hat = { gradrho[0], gradrho[1], 0 };
       //calculate w, the intersection between refracted light and {x_3=0}-plane
-      FieldVector<adouble, SolverConfig::dim> w = gradrho;
+      FieldVector<adouble, Config::dim> w = gradrho;
       w *= 2*F_value*rho_value;
 
-      FieldVector<adouble, SolverConfig::dim> z = x_value;
+      FieldVector<adouble, Config::dim> z = x_value;
       z *= rho_value;
       z.axpy(t,w);
       z.axpy(-t*rho_value,x_value);
@@ -559,8 +559,8 @@ public:
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
     typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<SolverConfig::value_type, IntersectionType::dimensionworld, IntersectionType::dimensionworld> FEHessianType;
+    typedef FieldVector<Config::ValueType, Config::dim> JacobianType;
+    typedef typename Dune::FieldMatrix<Config::ValueType, IntersectionType::dimensionworld, IntersectionType::dimensionworld> FEHessianType;
 
     assert((unsigned int) size == localFiniteElement.size());
     assert((unsigned int) size == localFiniteElementn.size());
@@ -633,22 +633,22 @@ public:
 
       // The gradients of the shape functions on the reference element
       std::vector<JacobianType> gradients(size);
-      FieldVector<adouble, SolverConfig::dim> gradu(0);
+      FieldVector<adouble, Config::dim> gradu(0);
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradu);
       std::vector<JacobianType> gradientsn(size);
-      FieldVector<adouble, SolverConfig::dim> gradun(0);
+      FieldVector<adouble, Config::dim> gradun(0);
       assemble_gradients_gradu(localFiniteElementn, jacobiann, quadPosn,
           gradientsn, xn_adolc, gradun);
 
       //the shape function values of hessian ansatz functions
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size);
-      FieldMatrix<adouble, SolverConfig::dim, SolverConfig::dim> Hessu;
+      FieldMatrix<adouble, Config::dim, Config::dim> Hessu;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
           x_adolc, Hessu);
       std::vector<FEHessianType> Hessiansn(size);
-      FieldMatrix<adouble, SolverConfig::dim, SolverConfig::dim> Hessun;
+      FieldMatrix<adouble, Config::dim, Config::dim> Hessun;
       assemble_hessians_hessu(localFiniteElementn, jacobian, quadPos, Hessiansn,
           x_adolc, Hessun);
 
@@ -668,7 +668,7 @@ public:
       assert(std::abs(grad_u_normaljump.value()) < 1e-8);
 
       //      Hess_avg = 0.5*(Hessu+Hessun);
-      FieldMatrix<adouble, SolverConfig::dim, SolverConfig::dim> Hess_avg = cofactor(Hessu);
+      FieldMatrix<adouble, Config::dim, Config::dim> Hess_avg = cofactor(Hessu);
       Hess_avg += cofactor(Hessu);
       Hess_avg *= 0.5;
 
@@ -678,7 +678,7 @@ public:
       double factor = quad[pt].weight() * integrationElement;
 
       for (int j = 0; j < size; j++) {
-        FieldVector<adouble, SolverConfig::dim> temp;
+        FieldVector<adouble, Config::dim> temp;
         Hess_avg.mv(gradu, temp);
         adouble jump = (temp*normal);
         Hess_avg.mv(gradun, temp);
@@ -749,7 +749,7 @@ public:
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
     typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
+    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
 
     //-----init variables for automatic differentiation
 
@@ -833,7 +833,7 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, SolverConfig::dim> gradrho;
+      FieldVector<adouble, Config::dim> gradrho;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradrho);
 
@@ -845,10 +845,10 @@ public:
 
       adouble F_value = F(x_value, rho_value, gradrho);
 
-      FieldVector<adouble, SolverConfig::dim> w = gradrho;
+      FieldVector<adouble, Config::dim> w = gradrho;
       w *= 2*F_value*rho_value;
 
-      FieldVector<adouble, SolverConfig::dim> z = x_value;
+      FieldVector<adouble, Config::dim> z = x_value;
       z *= rho_value;
       z.axpy(t,w);
       z.axpy(-t*rho_value,x_value);
@@ -909,7 +909,7 @@ public:
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
     typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
+    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
 
     //-----init variables for automatic differentiation
 
@@ -979,7 +979,7 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, SolverConfig::dim> gradrho;
+      FieldVector<adouble, Config::dim> gradrho;
       assemble_gradients_gradu(localFiniteElement, jacobian, collocationPos,
           gradients, x_adolc, gradrho);
 
@@ -991,10 +991,10 @@ public:
 
       adouble F_value = F(x_value, rho_value, gradrho);
 
-      FieldVector<adouble, SolverConfig::dim> w = gradrho;
+      FieldVector<adouble, Config::dim> w = gradrho;
       w *= 2*F_value*rho_value;
 
-      FieldVector<adouble, SolverConfig::dim> z = x_value;
+      FieldVector<adouble, Config::dim> z = x_value;
       z *= rho_value;
       z.axpy(t,w);
       z.axpy(-t*rho_value,x_value);

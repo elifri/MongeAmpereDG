@@ -16,25 +16,26 @@
 #include <dune/functions/functionspacebases/interpolate.hh>
 
 //#define COLLOCATION
+#include "../config.h"
 
 #include "Assembler.h"
-#include "problem_data.h"
+#include "../problem_data.h"
 //#include "Operator/linear_system_operator_poisson_DG.hh"
-#include "Operator/operator_MA_Neilan_DG.h"
-#include "Operator/operator_discrete_Hessian.h"
-#include "Plotter.h"
-#include "matlab_export.hpp"
+#include "../Operator/operator_MA_Neilan_DG.h"
+#include "../Operator/operator_discrete_Hessian.h"
+#include "../Plotter.h"
+#include "../matlab_export.hpp"
 #include "solver_config.h"
 
-#include "FEC0C1distinguisher.hpp"
+#include "FEBasisHandler.hpp"
 
 #ifdef USE_DOGLEG
-#include "Dogleg/doglegMethod.hpp"
+#include "../Dogleg/doglegMethod.hpp"
 #endif
 
 #ifdef USE_PETSC
 //#include "Dogleg/Petsc_utility.hh"
-#include "Dogleg/Petsc_utilitySimultaneous.hh"
+#include "../Dogleg/Petsc_utilitySimultaneous.hh"
 #endif
 
 
@@ -43,21 +44,21 @@ using namespace Dune;
 
 
 template<class F, typename FEBasis>
-void projectC0_(const FEBasis& febasis, F f, SolverConfig::VectorType &V);
+void projectC0_(const FEBasis& febasis, F f, Config::VectorType &V);
 
 template<class F, typename FEBasis>
-void projectC1_(const FEBasis& febasis, F f, SolverConfig::VectorType &V);
+void projectC1_(const FEBasis& febasis, F f, Config::VectorType &V);
 
 //project by L2-projection
 template<class F, typename FEBasis>
-void project_labourious(const FEBasis& febasis, const F f, SolverConfig::VectorType& v);
+void project_labourious(const FEBasis& febasis, const F f, Config::VectorType& v);
 
 //project by setting nodal dofs
 template<class LocalF, class LocalF_grad, typename FEBasis>
-void project_labouriousLocal(const FEBasis& febasis, LocalF f, LocalF_grad f_grad, SolverConfig::VectorType& v);
+void project_labouriousLocal(const FEBasis& febasis, LocalF f, LocalF_grad f_grad, Config::VectorType& v);
 
 //template<class F, typename FEBasis>
-//void test_projection(const FEBasis& febasis, const F f, SolverConfig::VectorType& v);
+//void test_projection(const FEBasis& febasis, const F f, Config::VectorType& v);
 
 
 //class Plotter;
@@ -66,19 +67,19 @@ class MA_solver {
 public:
 
 	//-----typedefs---------
-	typedef SolverConfig::GridType GridType;
-	typedef SolverConfig::GridView GridViewType;
-	typedef SolverConfig::LevelGridView LevelGridViewType;
+	typedef Config::GridType GridType;
+	typedef Config::GridView GridViewType;
+	typedef Config::LevelGridView LevelGridViewType;
 	typedef GridViewType::IntersectionIterator IntersectionIterator;
 	typedef IntersectionIterator::Intersection Intersection;
 	typedef GridViewType::IndexSet::IndexType IndexType;
 
-	typedef SolverConfig::SpaceType SpaceType;
+	typedef Config::SpaceType SpaceType;
 	typedef SolverConfig::RangeType RangeType;
 
-	typedef typename SolverConfig::VectorType VectorType;
-	typedef typename SolverConfig::DenseMatrixType DenseMatrixType;
-	typedef typename SolverConfig::MatrixType MatrixType;
+	typedef typename Config::VectorType VectorType;
+	typedef typename Config::DenseMatrixType DenseMatrixType;
+	typedef typename Config::MatrixType MatrixType;
 
 	typedef typename FETraitsSolver::FEBasis FEBasisType;
   typedef FETraitsSolver FETraits;
@@ -102,8 +103,8 @@ public:
       outputDirectory_(config.outputDirectory), plotOutputDirectory_(config.plotOutputDirectory), outputPrefix_(config.outputPrefix),
       plotterRefinement_(config.refinement),
       grid_ptr(grid), gridView_ptr(&gridView),
-      FEC0C1distinguisher_(*gridView_ptr),
-      assembler(FEC0C1distinguisher_.FEBasis(), true),
+      FEBasisHandler_(*gridView_ptr),
+      assembler(FEBasisHandler_.FEBasis(), true),
       plotter(gridView),
       op(*this),
       solution_u_old(), gradient_u_old()
@@ -119,7 +120,7 @@ public:
 	  grid_ptr->globalRefine(SolverConfig::startlevel);
     std::cout << "constructor n dofs" << get_n_dofs() << std::endl;
 
-	  assembler.bind(FEC0C1distinguisher_.FEBasis());
+	  assembler.bind(FEBasisHandler_.FEBasis());
 
 	  plotter.set_output_directory(plotOutputDirectory_);
 	  plotter.set_output_prefix(outputPrefix_);
@@ -150,7 +151,7 @@ public:
     MA_Operator():solver_ptr(NULL){}
     MA_Operator(MA_solver &solver):solver_ptr(&solver){}
 
-    void evaluate(const SolverConfig::VectorType& x, SolverConfig::VectorType& v, SolverConfig::MatrixType& m, const SolverConfig::VectorType& x_old, const bool new_solution=true) const
+    void evaluate(const Config::VectorType& x, Config::VectorType& v,  Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
     {
       if (new_solution)
       {
@@ -165,7 +166,7 @@ public:
       solver_ptr->assemble_DG_Jacobian(lop, x,v, m); timer.stop();
     }
 
-    void evaluate(const SolverConfig::VectorType& x, SolverConfig::VectorType& v, const SolverConfig::VectorType& x_old, const bool new_solution=true) const
+    void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const
     {
       if (new_solution)
       {
@@ -177,12 +178,12 @@ public:
       timer.start();
       solver_ptr->assemble_DG(lop, x,v); timer.stop();
     }
-    void Jacobian(const SolverConfig::VectorType& x, SolverConfig::MatrixType& m) const
+    void Jacobian(const Config::VectorType& x,  Config::MatrixType& m) const
     {
       assert(solver_ptr != NULL);
       solver_ptr->assemble_Jacobian_DG(lop, x,m);
     }
-    void derivative(const SolverConfig::VectorType& x, SolverConfig::MatrixType& m) const
+    void derivative(const Config::VectorType& x,  Config::MatrixType& m) const
     {
       assert(solver_ptr != NULL);
       solver_ptr->assemble_Jacobian_DG(lop, x,m);
@@ -203,8 +204,8 @@ public:
   bool read_configfile(std::string &configFile);
 
 
-	int get_n_dofs() const{return FEC0C1distinguisher_.FEBasis().indexSet().size() + 1;}
-  int get_n_dofs_u() const{return FEC0C1distinguisher_.FEBasis().indexSet().size();}
+	int get_n_dofs() const{return FEBasisHandler_.FEBasis().indexSet().size() + 1;}
+  int get_n_dofs_u() const{return FEBasisHandler_.FEBasis().indexSet().size();}
 
 
 public:
@@ -254,7 +255,7 @@ public:
 	/**
 	 * updates all members to newSolution
 	 */
-	void update_solution(const SolverConfig::VectorType& newSolution) const;
+	void update_solution(const Config::VectorType& newSolution) const;
 
 	/**
 	 * adapts the solver into the global refined space (refines grid, and transforms solution & exact solution data)
@@ -266,7 +267,7 @@ public:
    * adapts the solution into a coarser grid space
    * @param level
    */
-  SolverConfig::VectorType coarse_solution(const int level=1);
+  Config::VectorType coarse_solution(const int level=1);
 
 	/**
 	 * refines the grid globally and sets up all necessary information for the next step
@@ -304,7 +305,8 @@ public:
 	 */
 	const VectorType& solve();
 
-	double calculate_L2_error(const MA_function_type &f) const;
+	template <typename FunctionType>
+	double calculate_L2_error(const FunctionType &f) const;
 
 	/**
 	 * returns a vector containing the function with coefficients x evaluated at the vertices
@@ -333,7 +335,7 @@ protected:
 public:
   mutable int iterations; ///counts overall iterations (how often the nonlinear system was solved)
 protected:
-  bool initValueFromFile_; ///decide if initial guess is initiated from file
+  bool initValueFromFile_; ///decide if initial guess iFEBasisHandlers initiated from file
   std::string initValue_; ///file the initial guess is initiiated from
 
   bool evaluateJacobianSimultaneously_; ///evaluate the jacobian simultaneously to the objective function (in Newton solver)
@@ -345,7 +347,7 @@ protected:
 	const shared_ptr<GridType> grid_ptr; ///Pointer to grid
 	const GridViewType* gridView_ptr; /// Pointer to gridView
 
-	FEC0C1distinguisher<FETraits::Type, FETraits> FEC0C1distinguisher_;
+	FEBasisHandler<FETraits::Type, FETraits> FEBasisHandler_;
 
 	Assembler assembler; ///handles all (integral) assembly processes
 	Plotter plotter; ///handles all output generation
@@ -372,13 +374,13 @@ protected:
 
 	friend MA_Operator;
 	template <int T, typename T2>
-	friend struct FEC0C1distinguisher;
+	friend struct FEBasisHandler;
 };
 
 template<class F>
 void MA_solver::project(const F f, VectorType& v) const
 {
-  FEC0C1distinguisher_.project(f, v);
+  FEBasisHandler_.project(f, v);
 #ifdef DEBUG
   test_projection(f,v);
 #endif
@@ -386,12 +388,12 @@ void MA_solver::project(const F f, VectorType& v) const
 
 //project by L2-projection
 template<class F, typename FEBasis>
-void project_labourious(const FEBasis& febasis, const F f, SolverConfig::VectorType& v)
+void project_labourious(const FEBasis& febasis, const F f, Config::VectorType& v)
 {
   v.resize(febasis.indexSet().size() + 1);
-  SolverConfig::VectorType v_u;
+  Config::VectorType v_u;
 
-  SolverConfig::DenseMatrixType localMassMatrix;
+  Config::DenseMatrixType localMassMatrix;
 
   auto localView = febasis.localView();
   auto localIndexSet = febasis.indexSet().localIndexSet();
@@ -406,16 +408,16 @@ void project_labourious(const FEBasis& febasis, const F f, SolverConfig::VectorT
 
     // ----assemble mass matrix and integrate f*test to solve LES --------
     localMassMatrix.setZero(localView.size(), localView.size());
-    SolverConfig::VectorType localVector = SolverConfig::VectorType::Zero(localView.size());
+    Config::VectorType localVector = Config::VectorType::Zero(localView.size());
 
     // Get a quadrature rule
     const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
-    const QuadratureRule<double, SolverConfig::dim>& quad =
-        MacroQuadratureRules<double, SolverConfig::dim>::rule(element.type(), order, SolverConfig::quadratureType);
+    const QuadratureRule<double, Config::dim>& quad =
+        MacroQuadratureRules<double, Config::dim>::rule(element.type(), order, SolverConfig::quadratureType);
 
     for (const auto& quadpoint : quad)
     {
-      const FieldVector<double, SolverConfig::dim> &quadPos = quadpoint.position();
+      const FieldVector<double, Config::dim> &quadPos = quadpoint.position();
 
       //evaluate test function
       std::vector<Dune::FieldVector<double, 1>> functionValues(localView.size());
@@ -492,7 +494,7 @@ void MA_solver::project_labouriousC1(const F f, const F_derX f_derX, const F_der
       const int i = is.indexInInside();
 
       // normal of center in face's reference element
-      const FieldVector<double, SolverConfig::dim> normal = is.centerUnitOuterNormal();
+      const FieldVector<double, Config::dim> normal = is.centerUnitOuterNormal();
 
       const auto face_center = is.geometry().center();
 //      std::cout << "face center " << face_center << std::endl;
@@ -564,7 +566,7 @@ void MA_solver::project_labouriousC1Local(LocalF f, LocalF_grad f_grad, VectorTy
       const int i = is.indexInInside();
 
       // normal of center in face's reference element
-      const FieldVector<double, SolverConfig::dim> normal =
+      const FieldVector<double, Config::dim> normal =
           is.centerUnitOuterNormal();
 
       const auto face_center = is.geometry().center();
@@ -598,8 +600,8 @@ void MA_solver::test_projection(const F f, VectorType& v) const
   std::cout << "v.size()" << v.size()-1 << std::endl;
   std::cout << "projected on vector " << std::endl << v.transpose() << std::endl;
 
-  auto localView = FEC0C1distinguisher_.FEBasis().localView();
-  auto localIndexSet = FEC0C1distinguisher_.FEBasis().indexSet().localIndexSet();
+  auto localView = FEBasisHandler_.FEBasis().localView();
+  auto localIndexSet = FEBasisHandler_.FEBasis().indexSet().localIndexSet();
 
   const double h = 1e-5;
 
@@ -648,14 +650,14 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
     // Get a quadrature rule
     const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
-    const QuadratureRule<double, SolverConfig::dim>& quad =
-        MacroQuadratureRules<double, SolverConfig::dim>::rule(element.type(),
+    const QuadratureRule<double, Config::dim>& quad =
+        MacroQuadratureRules<double, Config::dim>::rule(element.type(),
             order, SolverConfig::quadratureType);
 
     double resTest1f = 0, resTest1 = 0;
 
     for (const auto& quadpoint : quad) {
-      const FieldVector<double, SolverConfig::dim> &quadPos =
+      const FieldVector<double, Config::dim> &quadPos =
           quadpoint.position();
 
       //evaluate test function
@@ -689,8 +691,8 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
     }
 
-    auto localViewn = FEC0C1distinguisher_.FEBasis().localView();
-    auto localIndexSetn = FEC0C1distinguisher_.FEBasis().indexSet().localIndexSet();
+    auto localViewn = FEBasisHandler_.FEBasis().localView();
+    auto localIndexSetn = FEBasisHandler_.FEBasis().indexSet().localIndexSet();
 
     gradient_u_old->bind(element);
 
@@ -708,7 +710,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
         std::cout << "local dofs   " << localDofs.transpose() << std::endl << "local dofs n " << localDofsn.transpose() << std::endl;
 
         //calculate normal derivative
-        const FieldVector<double, SolverConfig::dim> normal =
+        const FieldVector<double, Config::dim> normal =
             is.centerUnitOuterNormal();
 
         const auto face_center = is.geometry().center();
@@ -720,12 +722,12 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
         // assemble the gradients
         std::vector<Dune::FieldVector<double, 2>> gradients(lFE.size());
-        FieldVector<double, SolverConfig::dim> gradu;
+        FieldVector<double, Config::dim> gradu;
         assemble_gradients_gradu(lFE, jacobian, geometry.local(face_center),
             gradients, localDofs, gradu);
 
         std::vector<FieldVector<double, 2>> gradientsn(lFE.size());
-        FieldVector<double, SolverConfig::dim> gradun(0);
+        FieldVector<double, Config::dim> gradun(0);
         assemble_gradients_gradu(lFEn, jacobian, faceCentern,
             gradientsn, localDofsn, gradun);
 
@@ -749,12 +751,12 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
           // The gradients
           std::vector<Dune::FieldVector<double, 2>> gradients(lFE.size());
-          FieldVector<double, SolverConfig::dim> gradu;
+          FieldVector<double, Config::dim> gradu;
           assemble_gradients_gradu(lFE, jacobian, quadPos,
               gradients, localDofs, gradu);
 
           std::vector<FieldVector<double, 2>> gradientsn(lFE.size());
-          FieldVector<double, SolverConfig::dim> gradun(0);
+          FieldVector<double, Config::dim> gradun(0);
           assemble_gradients_gradu(lFEn, jacobian, quadPosn,
               gradientsn, localDofsn, gradun);
 

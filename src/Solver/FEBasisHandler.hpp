@@ -14,18 +14,18 @@
 class MA_solver;
 
 template<int FETraitstype, typename FETraits>
-struct FEC0C1distinguisher{
+struct FEBasisHandler{
   typedef typename FETraits::FEBasis FEBasisType;
 
-  FEC0C1distinguisher(const SolverConfig::GridView& grid): FEBasis_(new FEBasisType(grid)){}
+  FEBasisHandler(const Config::GridView& grid): FEBasis_(new FEBasisType(grid)){}
 
   template<class F>
-  void project(F f, SolverConfig::VectorType &v) const;
+  void project(F f, Config::VectorType &v) const;
 
-  void adapt(MA_solver& ma_solver, const int level, SolverConfig::VectorType& v)
+  void adapt(MA_solver& ma_solver, const int level, Config::VectorType& v)
   {assert(false && " Error, dont know FE basis"); exit(-1);}
 
-  SolverConfig::VectorType coarse_solution(MA_solver& solver, const int level)
+  Config::VectorType coarse_solution(MA_solver& solver, const int level)
   {assert(false && " Error, dont know FE basis"); exit(-1);}
 
 
@@ -42,20 +42,20 @@ struct FEC0C1distinguisher{
 
 ///specialisation for mixed elements
 template<typename FETraits>
-struct FEC0C1distinguisher<Mixed, FETraits>{
+struct FEBasisHandler<Mixed, FETraits>{
   typedef typename FETraits::FEBasis FEBasisType;
   typedef typename FETraits::FEuBasis FEuBasisType;
   typedef typename FETraits::FEuDHBasis FEuDHBasisType;
 
-  FEC0C1distinguisher(const SolverConfig::GridView& grid): FEBasis_(new FEBasisType(grid)){}
+  FEBasisHandler(const Config::GridView& grid): FEBasis_(new FEBasisType(grid)){}
 
   template<class F>
-  void project(F f, SolverConfig::VectorType &V) const;
+  void project(F f, Config::VectorType &V) const;
 
-  void adapt(MA_solver& ma_solver, const int level, SolverConfig::VectorType& v)
+  void adapt(MA_solver& ma_solver, const int level, Config::VectorType& v)
   {assert(false && " Error, dont know FE basis"); exit(-1);}
 
-  SolverConfig::VectorType coarse_solution(MA_solver& solver, const int level)
+  Config::VectorType coarse_solution(MA_solver& solver, const int level)
   {assert(false && " Error, dont know FE basis"); exit(-1);}
 
 
@@ -75,23 +75,23 @@ struct FEC0C1distinguisher<Mixed, FETraits>{
 
 
 template <>
-void FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::adapt(MA_solver& solver, const int level, SolverConfig::VectorType& v);
+void FEBasisHandler<PS12Split, FEPS12SplitTraits>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
 
 template <>
-void FEC0C1distinguisher<Mixed, MixedTraits>::adapt(MA_solver& solver, const int level, SolverConfig::VectorType& v);
+void FEBasisHandler<Mixed, MixedTraits>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
 
 template <>
-SolverConfig::VectorType FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::coarse_solution(MA_solver& solver, const int level);
+Config::VectorType FEBasisHandler<PS12Split, FEPS12SplitTraits>::coarse_solution(MA_solver& solver, const int level);
 
 template <>
-SolverConfig::VectorType FEC0C1distinguisher<Mixed, MixedTraits>::coarse_solution(MA_solver& solver, const int level);
+Config::VectorType FEBasisHandler<Mixed, MixedTraits>::coarse_solution(MA_solver& solver, const int level);
 
 template<int FETraitstype, typename FETraits>
 template <class F>
-void FEC0C1distinguisher<FETraitstype, FETraits>::project(F f, SolverConfig::VectorType &v) const
+void FEBasisHandler<FETraitstype, FETraits>::project(F f, Config::VectorType &v) const
 {
   v.resize(FEBasis_->indexSet().size() + 1);
-  SolverConfig::VectorType v_u;
+  Config::VectorType v_u;
   interpolate(FEBasis_, v_u, f);
   v.segment(0, v_u.size()) = v_u;
 
@@ -101,10 +101,10 @@ void FEC0C1distinguisher<FETraitstype, FETraits>::project(F f, SolverConfig::Vec
 
 template<typename FETraits>
 template <class F>
-void FEC0C1distinguisher<Mixed, FETraits>::project(F f, SolverConfig::VectorType &v) const
+void FEBasisHandler<Mixed, FETraits>::project(F f, Config::VectorType &v) const
 {
   v.resize(FEBasis_->indexSet().size() + 1);
-  SolverConfig::VectorType v_u;
+  Config::VectorType v_u;
   interpolate(FEBasis_, v_u, f);
   v.segment(0, v_u.size()) = v_u;
 
@@ -114,12 +114,12 @@ void FEC0C1distinguisher<Mixed, FETraits>::project(F f, SolverConfig::VectorType
 
 template <>
 template<class F>
-void FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::project(F f, SolverConfig::VectorType &v) const
+void FEBasisHandler<PS12Split, FEPS12SplitTraits>::project(F f, Config::VectorType &v) const
 {
   v.setZero(FEBasis_->indexSet().size() + 1);
-  SolverConfig::VectorType countMultipleDof = SolverConfig::VectorType::Zero(v.size());;
+  Config::VectorType countMultipleDof = Config::VectorType::Zero(v.size());;
 
-  SolverConfig::DenseMatrixType localMassMatrix;
+  Config::DenseMatrixType localMassMatrix;
 
   auto localView = FEBasis_->localView();
   auto localIndexSet = FEBasis_->indexSet().localIndexSet();
@@ -134,7 +134,7 @@ void FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::project(F f, SolverConfi
     const auto & lFE = localView.tree().finiteElement();
     const auto& geometry = element.geometry();
 
-    SolverConfig::VectorType localDofs = SolverConfig::VectorType::Zero (lFE.size());
+    Config::VectorType localDofs = Config::VectorType::Zero (lFE.size());
 
     int k = 0;
     for (int i = 0; i < geometry.corners(); i++)
@@ -186,7 +186,7 @@ void FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::project(F f, SolverConfi
       const int i = is.indexInInside();
 
       // normal of center in face's reference element
-      const FieldVector<double, SolverConfig::dim> normal = is.centerUnitOuterNormal();
+      const Config::SpaceType normal = is.centerUnitOuterNormal();
 
       bool unit_pointUpwards;
       if (std::abs(normal[0]+normal[1])< 1e-12)
@@ -234,7 +234,7 @@ void FEC0C1distinguisher<PS12Split, FEPS12SplitTraits>::project(F f, SolverConfi
 
     Assembler::add_local_coefficients(localIndexSet,localDofs, v);
 //    assembler.add_local_coefficients(localIndexSet,VectorType::Ones(localDofs.size()), countMultipleDof);
-    SolverConfig::VectorType localmultiples = SolverConfig::VectorType::Ones(localDofs.size());
+    Config::VectorType localmultiples = Config::VectorType::Ones(localDofs.size());
     Assembler::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
   }
 

@@ -8,8 +8,8 @@
 #ifndef SRC_MA_REFRACTOR_SOLVER_H_
 #define SRC_MA_REFRACTOR_SOLVER_H_
 
-#include "MA_solver.h"
-#include "Operator/operator_MA_refr_Brenner.h"
+#include "../Solver/MA_solver.h"
+#include "operator_MA_refr_Brenner.h"
 
 class MA_refractor_solver: public MA_solver
 {
@@ -20,7 +20,7 @@ public:
     MA_refr_Operator():solver_ptr(NULL), lop(){}
     MA_refr_Operator(MA_refractor_solver &solver):solver_ptr(&solver), lop(solver.setting_, solver.solution_u_old, solver.gradient_u_old, solver.exact_solution){}
 
-    void evaluate(const SolverConfig::VectorType& x, SolverConfig::VectorType& v, SolverConfig::MatrixType& m, const SolverConfig::VectorType& x_old, const bool new_solution=true) const
+    void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
     {
       if (new_solution)
       {
@@ -34,7 +34,7 @@ public:
       solver_ptr->assemble_DG_Jacobian(lop, x,v, m); timer.stop();
     }
 
-    void evaluate(const SolverConfig::VectorType& x, SolverConfig::VectorType& v, const SolverConfig::VectorType& x_old, const bool new_solution=true) const
+    void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const
     {
       if (new_solution)
       {
@@ -48,12 +48,12 @@ public:
       solver_ptr->assemble_DG(lop, x,v); timer.stop();
 
     }
-    void Jacobian(const SolverConfig::VectorType& x, SolverConfig::MatrixType& m) const
+    void Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
     {
       assert(solver_ptr != NULL);
       solver_ptr->assemble_Jacobian_DG(lop, x,m);
     }
-    void derivative(const SolverConfig::VectorType& x, SolverConfig::MatrixType& m) const
+    void derivative(const Config::VectorType& x, Config::MatrixType& m) const
     {
       assert(solver_ptr != NULL);
       solver_ptr->assemble_Jacobian_DG(lop, x,m);

@@ -9,12 +9,13 @@
 #define SRC_PROBLEM_DATA_OT_H_
 
 #include <dune/common/function.hh>
+#include "../Solver/solver_config.h"
 
 class OTBoundary
 {
 private:
   ///find the projection on the desired boundary
-  virtual void phi(const SolverConfig::SpaceType2d& T, const FieldVector<double, SolverConfig::dim> &normal, SolverConfig::value_type &phi) const =0;
+  virtual void phi(const Config::SpaceType2d& T, const FieldVector<double, Config::dim> &normal, Config::ValueType &phi) const =0;
 public:
   typedef std::shared_ptr<FETraitsSolver::DiscreteLocalGradientGridFunction> GradFunction_ptr;
 
@@ -24,16 +25,16 @@ public:
 
   ///return the projection of the last iteration's solution (onto the desired boundary)
   template<class Element>
-  SolverConfig::value_type phi(const Element& element, const SolverConfig::DomainType& xLocal, const FieldVector<double, SolverConfig::dim> &normal) const
+  Config::ValueType phi(const Element& element, const Config::DomainType& xLocal, const FieldVector<double, Config::dim> &normal) const
   {
     //get last step's gradient
     assert(gradient_u_old != NULL);
     (*gradient_u_old)->bind(element);
 
-    SolverConfig::SpaceType2d gradu = (**gradient_u_old)(xLocal);
+    Config::SpaceType2d gradu = (**gradient_u_old)(xLocal);
 
     //find projection
-    SolverConfig::value_type phi_value;
+    Config::ValueType phi_value;
     phi(gradu, normal, phi_value);
     return phi_value;
   }
@@ -44,20 +45,20 @@ protected:
 };
 
 
-class DensityFunction : public virtual Dune::VirtualFunction<SolverConfig::DomainType, SolverConfig::value_type>
+class DensityFunction : public virtual Dune::VirtualFunction<Config::DomainType, Config::ValueType>
 {
 public:
-    using Dune::VirtualFunction<SolverConfig::DomainType, SolverConfig::value_type>::evaluate;
-    virtual void evaluate (const FieldVector<adouble, SolverConfig::dim> &x, adouble &u) const = 0;
+    using Dune::VirtualFunction<Config::DomainType, Config::ValueType>::evaluate;
+    virtual void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const = 0;
 };
 
 class BoundarySquare : public OTBoundary
 {
-  void phi(const SolverConfig::SpaceType2d& T, const FieldVector<double, SolverConfig::dim> &normal, SolverConfig::value_type &phi) const{
-    SolverConfig::value_type x_min = std::min(T[0]-geometrySetting.lowerLeftTarget[0], geometrySetting.upperRightTarget[0] - T[0]);
-    SolverConfig::value_type y_min = std::min(T[1]-geometrySetting.lowerLeftTarget[1], geometrySetting.upperRightTarget[1] - T[1]);
+  void phi(const Config::SpaceType2d& T, const FieldVector<double, Config::dim> &normal, Config::ValueType &phi) const{
+    Config::ValueType x_min = std::min(T[0]-geometrySetting.lowerLeftTarget[0], geometrySetting.upperRightTarget[0] - T[0]);
+    Config::ValueType y_min = std::min(T[1]-geometrySetting.lowerLeftTarget[1], geometrySetting.upperRightTarget[1] - T[1]);
 
-    SolverConfig::SpaceType2d T_proj = T;
+    Config::SpaceType2d T_proj = T;
     if (x_min < y_min)
       T_proj[0] = T[0]-geometrySetting.lowerLeftTarget[0] < geometrySetting.upperRightTarget[0] - T[0] ?  geometrySetting.lowerLeftTarget[0] : geometrySetting.upperRightTarget[0];
     else
@@ -76,28 +77,28 @@ class rhoXSquareToSquare : public DensityFunction
 public:
   ~rhoXSquareToSquare(){}
 
-  void evaluate (const SolverConfig::DomainType &x, SolverConfig::value_type &u) const
+  void evaluate (const Config::DomainType &x, Config::ValueType &u) const
   {
     u = 1.+4.*(q_div2(x[0])*q(x[1])+q(x[0])*q_div2(x[1])) +16.*(q(x[0])*q(x[1])*q_div2(x[0])*q_div2(x[1]) - sqr(q_div(x[0]))*sqr(q_div(x[1])) );
 //    std::cout << " 1 + 4*" << (q_div2(x[0])*q(x[1])+q(x[0])*q_div2(x[1])) << " +16*" << (q(x[0])*q(x[1])*q_div2(x[0])*q_div2(x[1]) - sqr(q_div(x[0]))*sqr(q_div(x[1])) ) << std::endl;
 //    std::cout << "q_div2(x[0])*q(x[1]) " <<q_div2(x[0])*q(x[1]) << std::endl;
   }
-  void evaluate (const FieldVector<adouble, SolverConfig::dim> &x, adouble &u) const
+  void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
   {
     u = 1.+4.*(q_div2(x[0])*q(x[1])+q(x[0])*q_div2(x[1])) +16.*(q(x[0])*q(x[1])*q_div2(x[0])*q_div2(x[1]) - sqr(q_div(x[0]))*sqr(q_div(x[1])) );
   }
 
 public :
-  static SolverConfig::value_type q(const SolverConfig::value_type& z)
+  static Config::ValueType q(const Config::ValueType& z)
   {
     return (-1./8./M_PI*z*z+1./256./M_PI/M_PI/M_PI +1./32./M_PI)* std::cos(8.*M_PI*z)
             + 1./32./M_PI/M_PI*z*std::sin(8.*M_PI*z);
   }
-  static SolverConfig::value_type q_div(const SolverConfig::value_type& z)
+  static Config::ValueType q_div(const Config::ValueType& z)
   {
     return (z*z-0.25)*std::sin(8.*M_PI*z);
   }
-  static SolverConfig::value_type q_div2(const SolverConfig::value_type& z)
+  static Config::ValueType q_div2(const Config::ValueType& z)
   {
     return 8.*M_PI*std::cos(8.*M_PI*z)*z*z-2.*M_PI*std::cos(8.*M_PI*z)+2*z*std::sin(8.*M_PI*z);
   }
@@ -122,11 +123,11 @@ class rhoYSquareToSquare : public DensityFunction
 public:
   ~rhoYSquareToSquare() {}
 
-  void evaluate (const SolverConfig::DomainType &x, SolverConfig::value_type &u) const
+  void evaluate (const Config::DomainType &x, Config::ValueType &u) const
   {
     u = 1;
   }
-  void evaluate (const FieldVector<adouble, SolverConfig::dim> &x, adouble &u) const
+  void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
   {
     u = 1;
   }
@@ -137,35 +138,35 @@ class rhoXGaussians : public DensityFunction
 public:
   ~rhoXGaussians() {}
 
-  void evaluate (const SolverConfig::DomainType &x, SolverConfig::value_type &u) const
+  void evaluate (const Config::DomainType &x, Config::ValueType &u) const
   {
     if (x[1] < 0)
       if (x[0] < 0)
       {
         //first quadrant
-        u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-SolverConfig::DomainType({-1,-1})).two_norm2());
+        u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-Config::DomainType({-1,-1})).two_norm2());
       }
       else
       {
         //second quadrant
-        u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-SolverConfig::DomainType({1,-1})).two_norm2());
+        u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-Config::DomainType({1,-1})).two_norm2());
       }
     else
       if (x[0] < 0)
       {
         //third
-        u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-SolverConfig::DomainType({-1,1})).two_norm2());
+        u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-Config::DomainType({-1,1})).two_norm2());
       }
       else
       {
         //fourth quadrant
-        u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-SolverConfig::DomainType({1,1})).two_norm2());
+        u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-Config::DomainType({1,1})).two_norm2());
       }
 
   }
-  void evaluate (const FieldVector<adouble, SolverConfig::dim> &x, adouble &u) const
+  void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
   {
-    FieldVector<adouble, SolverConfig::dim> corner;
+    FieldVector<adouble, Config::dim> corner;
     if (x[1] < 0)
       if (x[0] < 0)
       {
@@ -197,11 +198,11 @@ class rhoYGaussians : public DensityFunction
 public:
 
 
-  void evaluate (const SolverConfig::DomainType &x, SolverConfig::value_type &u) const
+  void evaluate (const Config::DomainType &x, Config::ValueType &u) const
   {
     u = 2.+1./0.2/0.2 * std::exp(-12.5*x.two_norm2());
   }
-  void evaluate (const FieldVector<adouble, SolverConfig::dim> &x, adouble &u) const
+  void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
   {
     u = 2.+1./0.2/0.2 * exp(-12.5*x.two_norm2());
   }

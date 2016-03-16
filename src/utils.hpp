@@ -16,7 +16,7 @@
 
 #include "Dogleg/utils.hpp"
 
-#include "solver_config.h"
+#include "config.h"
 
 
 template <class R, class R2>
@@ -124,16 +124,16 @@ void read_quadratic_grid(const std::string &filename,  int &n_x, int &n_y,
  * @param solution  a matrix of the function values
  */
 
-void bilinear_interpolate(const SolverConfig::SpaceType x, SolverConfig::value_type &u, int &n_x, int &n_y,
-    SolverConfig::value_type &h_x, SolverConfig::value_type &h_y,
-    SolverConfig::value_type &x0, SolverConfig::value_type &y0,
+void bilinear_interpolate(const Config::SpaceType x, Config::ValueType &u, int &n_x, int &n_y,
+    Config::ValueType &h_x, Config::ValueType &h_y,
+    Config::ValueType &x0, Config::ValueType &y0,
             Eigen::MatrixXd &solution);
 
 struct Rectangular_mesh_interpolator{
 
   Rectangular_mesh_interpolator(const std::string &filename);
-  SolverConfig::value_type evaluate (const SolverConfig::SpaceType2d& x);
-  SolverConfig::value_type evaluate_inverse(const SolverConfig::SpaceType2d& x);
+  Config::ValueType evaluate (const Config::SpaceType2d& x);
+  Config::ValueType evaluate_inverse(const Config::SpaceType2d& x);
 
   int n_x, n_y;
   double h_x, h_y;

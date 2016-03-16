@@ -17,29 +17,29 @@ enum {
 };
 
 
-void evaluateRhoX (const SolverConfig::DomainType &x, SolverConfig::value_type &u)
+void evaluateRhoX (const Config::DomainType &x, Config::ValueType &u)
 {
   if (x[1] < 0)
     if (x[0] < 0)
     {
       //first quadrant
-      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-SolverConfig::DomainType({-1,-1})).two_norm2());
+      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-Config::DomainType({-1,-1})).two_norm2());
     }
     else
     {
       //second quadrant
-      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-SolverConfig::DomainType({1,-1})).two_norm2());
+      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-Config::DomainType({1,-1})).two_norm2());
     }
   else
     if (x[0] < 0)
     {
       //third
-      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-SolverConfig::DomainType({-1,1})).two_norm2());
+      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-Config::DomainType({-1,1})).two_norm2());
     }
     else
     {
       //fourth quadrant
-      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-SolverConfig::DomainType({1,1})).two_norm2());
+      u = 2.+1./0.2/0.2 * std::exp(-12.5*(x-Config::DomainType({1,1})).two_norm2());
     }
 
 }
@@ -144,13 +144,13 @@ void Plotter::write_cells(std::ofstream &file) const
 
 
 	if (refinement == 0){
-		const SolverConfig::GridView::IndexSet& indexSet = grid->indexSet();
+		const Config::GridView::IndexSet& indexSet = grid->indexSet();
 
 		for (auto&& e : elements(*grid)) {
-			for (unsigned int i = 0; i < e.subEntities(SolverConfig::dim); i++) //loop over corners
+			for (unsigned int i = 0; i < e.subEntities(Config::dim); i++) //loop over corners
 				{file << "\t\t\t\t\t";
 //				for (const auto& vertex : geometry.corners()) {
-					file << indexSet.index(e.subEntity<SolverConfig::dim>(i)) << " ";
+					file << indexSet.index(e.subEntity<Config::dim>(i)) << " ";
 //				}
 			}
 		}
@@ -322,13 +322,13 @@ void Plotter::write_aperture(std::ofstream &file) const
 			<< "\t\t\t" << this->Nelements()*2 << std::endl;
 	// make connectivity
 	if (refinement == 0){
-		const SolverConfig::GridView::IndexSet& indexSet = grid->indexSet();
+		const Config::GridView::IndexSet& indexSet = grid->indexSet();
 
 		for (auto&& e : elements(*grid)) {
-			for (unsigned int i = 0; i < e.subEntities(SolverConfig::dim); i++) //loop over corners
+			for (unsigned int i = 0; i < e.subEntities(Config::dim); i++) //loop over corners
 				{file << "\t\t\t";
 //				for (const auto& vertex : geometry.corners()) {
-					file << indexSet.index(e.subEntity<SolverConfig::dim>(i)) << " ";
+					file << indexSet.index(e.subEntity<Config::dim>(i)) << " ";
 					assert(false);
 //				}
 			}
@@ -359,13 +359,13 @@ void Plotter::write_face_indices_pov(std::ofstream &file) const
       << "\t\t\t" << this->Nelements() << std::endl;
   // make connectivity
   if (refinement == 0){
-    const SolverConfig::GridView::IndexSet& indexSet = grid->indexSet();
+    const Config::GridView::IndexSet& indexSet = grid->indexSet();
 
     for (auto&& e : elements(*grid)) {
-      for (unsigned int i = 0; i < e.subEntities(SolverConfig::dim); i++) //loop over corners
+      for (unsigned int i = 0; i < e.subEntities(Config::dim); i++) //loop over corners
         {file << "\t\t\t";
 //        for (const auto& vertex : geometry.corners()) {
-          file << indexSet.index(e.subEntity<SolverConfig::dim>(i)) << " ";
+          file << indexSet.index(e.subEntity<Config::dim>(i)) << " ";
           assert(false);
 //        }
       }

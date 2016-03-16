@@ -5,13 +5,14 @@
  *      Author: friebel
  */
 
-
-#include "MA_reflector_solver.h"
-#include "MethodEllipsoids/init_with_ellipsoid_method.hpp"
-
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk/common.hh>
+
+#include "MA_reflector_solver.h"
+#include "init_with_ellipsoid_method.hpp"
+
+#include "../utils.hpp"
 
 
 MA_reflector_solver::MA_reflector_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting, const std::string& configFileEllipsoid)
@@ -33,7 +34,7 @@ void MA_reflector_solver::create_initial_guess()
 //  solution = VectorType::Zero(dof_handler.get_n_dofs());
 
 //  InitEllipsoidMethod ellipsoidMethod = InitEllipsoidMethod::init_from_config_data(SolverConfig::configFileEllipsoid);
-//  project_labouriousC1([&ellipsoidMethod](SolverConfig::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
+//  project_labouriousC1([&ellipsoidMethod](Config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
 //  ellipsoidMethod.write_output();
 
     Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
@@ -52,15 +53,15 @@ void MA_reflector_solver::create_initial_guess()
 //  assert(is_close(rectangular_interpolatorDerY.x_min, SolverConfig::lowerLeft[0], 1e-12));
 //  assert(is_close(rectangular_interpolatorDerY.y_min, SolverConfig::lowerLeft[1], 1e-12));
 //
-    project_labouriousC1([&rectangular_interpolator](SolverConfig::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);},solution);
+    project([&rectangular_interpolator](Config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);},solution);
 
-//  project_labouriousC1([&rectangular_interpolator](SolverConfig::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);},
-//                       [&rectangular_interpolatorDerX](SolverConfig::SpaceType x){return rectangular_interpolatorDerX.evaluate(x);},
-//                       [&rectangular_interpolatorDerY](SolverConfig::SpaceType x){return rectangular_interpolatorDerY.evaluate(x);}
+//  project_labouriousC1([&rectangular_interpolator](Config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);},
+//                       [&rectangular_interpolatorDerX](Config::SpaceType x){return rectangular_interpolatorDerX.evaluate(x);},
+//                       [&rectangular_interpolatorDerY](Config::SpaceType x){return rectangular_interpolatorDerY.evaluate(x);}
 //                       ,solution);
-//  project_labouriousC1([](SolverConfig::SpaceType x){return x.two_norm2()/2.0;},
-//                       [](SolverConfig::SpaceType x){return x[0];},
-//                       [](SolverConfig::SpaceType x){return x[1];},
+//  project_labouriousC1([](Config::SpaceType x){return x.two_norm2()/2.0;},
+//                       [](Config::SpaceType x){return x[0];},
+//                       [](Config::SpaceType x){return x[1];},
 //                       solution);
 
 }
@@ -77,7 +78,7 @@ void MA_reflector_solver::plot(const std::string& name) const
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
      //build gridviewfunction
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(*FEBasis,solution_u);
+     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(FEBasisHandler_.uBasis(),solution_u);
      auto localnumericalSolution = localFunction(numericalSolution);
 
      //build writer
@@ -87,10 +88,10 @@ void MA_reflector_solver::plot(const std::string& name) const
      vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
 
      const auto& EigenBoundaryDofs = assembler.isBoundaryDoF();
-     SolverConfig::VectorType boundaryDofs(EigenBoundaryDofs.size());
+     Config::VectorType boundaryDofs(EigenBoundaryDofs.size());
      for (int i = 0; i < EigenBoundaryDofs.size(); i++) boundaryDofs[i] = EigenBoundaryDofs(i);
 
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> boundarySolution(*FEBasis,boundaryDofs);
+     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> boundarySolution(FEBasisHandler_.FEBasis(),boundaryDofs);
      auto localBoundarySolution = localFunction(boundarySolution);
 
      vtkWriter.addVertexData(localBoundarySolution, VTK::FieldInfo("boundary", VTK::FieldInfo::Type::scalar, 1));
@@ -160,7 +161,7 @@ void MA_reflector_solver::solve_nonlinear_system()
   // Compute solution
   // /////////////////////////
 
-  SolverConfig::VectorType newSolution = solution;
+  Config::VectorType newSolution = solution;
 
 #ifdef USE_DOGLEG
   doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
