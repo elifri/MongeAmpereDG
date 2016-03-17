@@ -76,8 +76,7 @@ double Integrator<GT>::assemble_integral_of_local_gridFunction(function_type &f,
     auto geometry = e.geometry();
 
     // Get a quadrature rule
-    const QuadratureRule<Config::ValueType, Config::dim>& quad =
-        MacroQuadratureRules<Config::ValueType, Config::dim>::rule(e.type(), quad_degree, SolverConfig::quadratureType);
+    const QuadratureRule<Config::ValueType, Config::dim>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(e, quad_degree);
 
     // Loop over all quadrature points
     for (const auto& pt : quad) {

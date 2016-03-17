@@ -81,12 +81,12 @@ public:
 	typedef typename Config::DenseMatrixType DenseMatrixType;
 	typedef typename Config::MatrixType MatrixType;
 
-	typedef typename FETraitsSolver::FEBasis FEBasisType;
-  typedef FETraitsSolver FETraits;
+  typedef SolverConfig::FETraitsSolver FETraits;
+  typedef FETraits::FEBasis FEBasisType;
 
-	typedef typename FETraitsSolver::DiscreteGridFunction DiscreteGridFunction;
-	typedef typename FETraitsSolver::DiscreteLocalGridFunction DiscreteLocalGridFunction;
-  typedef typename FETraitsSolver::DiscreteLocalGradientGridFunction DiscreteLocalGradientGridFunction;
+	typedef FETraits::DiscreteGridFunction DiscreteGridFunction;
+	typedef FETraits::DiscreteLocalGridFunction DiscreteLocalGridFunction;
+  typedef FETraits::DiscreteLocalGradientGridFunction DiscreteLocalGradientGridFunction;
 
 	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, SolverConfig config):
 	    initialised(true),
@@ -412,8 +412,7 @@ void project_labourious(const FEBasis& febasis, const F f, Config::VectorType& v
 
     // Get a quadrature rule
     const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
-    const QuadratureRule<double, Config::dim>& quad =
-        MacroQuadratureRules<double, Config::dim>::rule(element.type(), order, SolverConfig::quadratureType);
+    const QuadratureRule<double, Config::dim>& quad = SolverConfig::FETraitsSolver::get_Quadrature(element, order);
 
     for (const auto& quadpoint : quad)
     {
@@ -610,7 +609,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
     localView.bind(element);
     localIndexSet.bind(localView);
 
-    const auto & lFE = FETraitsSolver::get_finiteElement(localView);
+    const auto & lFE = FETraits::get_finiteElement(localView);
 
     const auto& geometry = element.geometry();
 
@@ -646,18 +645,14 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
      }
 
-
-
     // Get a quadrature rule
     const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
-    const QuadratureRule<double, Config::dim>& quad =
-        MacroQuadratureRules<double, Config::dim>::rule(element.type(),
-            order, SolverConfig::quadratureType);
+    const QuadratureRule<Config::ValueType, Config::dim>& quad = FETraits::get_Quadrature<Config::dim>(element, order);
 
     double resTest1f = 0, resTest1 = 0;
 
     for (const auto& quadpoint : quad) {
-      const FieldVector<double, Config::dim> &quadPos =
+      const FieldVector<Config::ValueType, Config::dim> &quadPos =
           quadpoint.position();
 
       //evaluate test function
@@ -703,7 +698,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
         //bind to local neighbour context
         localViewn.bind(is.outside());
         localIndexSetn.bind(localViewn);
-        const auto & lFEn = FETraitsSolver::get_finiteElement(localViewn);
+        const auto & lFEn = FETraits::get_finiteElement(localViewn);
 
         VectorType localDofsn = assembler.calculate_local_coefficients(localIndexSetn, v);
 

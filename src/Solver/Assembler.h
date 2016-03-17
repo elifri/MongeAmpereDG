@@ -250,7 +250,7 @@ public:
 
   typedef Eigen::Triplet<double> EntryType;
 
-  typedef typename FETraitsSolver::FEBasis FEBasisType;
+  typedef typename SolverConfig::FETraitsSolver::FEBasis FEBasisType;
 
   Assembler(const FEBasisType& basis, bool no_hanging_nodes) :
       basis_(&basis),no_hanging_nodes(no_hanging_nodes), picture_no(0) {
@@ -520,7 +520,7 @@ public:
 
   void set_G(const double g){ G = g;}
 
-  const SolverConfig::FEBasis& basis() const {return *basis_;}
+  const FEBasisType& basis() const {return *basis_;}
   const BoundaryHandler::BoolVectorType& isBoundaryDoF() const {return boundaryHandler_.isBoundaryDoF();}
   const BoundaryHandler::BoolVectorType& isBoundaryValueDoF() const{return boundaryHandler_.isBoundaryValueDoF();}
 

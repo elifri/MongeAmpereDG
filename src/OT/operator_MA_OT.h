@@ -109,8 +109,7 @@ public:
     // Get a quadrature rule
     int order = std::max(0,
         3 * ((int) localFiniteElement.localBasis().order()));
-    const QuadratureRule<double, dim>& quad =
-        MacroQuadratureRules<double, dim>::rule(element.type(), order, SolverConfig::quadratureType);
+    const QuadratureRule<double, dim>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(element, order);
 
     //init variables for automatic differentiation
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
@@ -280,8 +279,7 @@ public:
     // Get a quadrature rule
     const int order = std::max(0, 3 * ((int) localFiniteElement.localBasis().order()));
     GeometryType gtface = intersection.geometryInInside().type();
-    const QuadratureRule<double, dim - 1>& quad = MacroQuadratureRules<double,
-        dim - 1>::rule(gtface, order, SolverConfig::quadratureType);
+    const QuadratureRule<Config::ValueType, Config::dim-1>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim-1>(gtface, order);
 
     // normal of center in face's reference element
     const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,

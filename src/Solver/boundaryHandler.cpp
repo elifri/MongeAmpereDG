@@ -26,7 +26,7 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
     localView.bind(element);
     localIndexSet.bind(localView);
 
-    const auto& lFE = FETraitsSolver::get_finiteElement(localView);
+    const auto& lFE = SolverConfig::FETraitsSolver::get_finiteElement(localView);
 
     //store local boundary information
     BoolVectorType localIsBoundary = BoolVectorType::Constant(lFE.size(),false);

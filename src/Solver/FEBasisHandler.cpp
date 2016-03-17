@@ -8,10 +8,12 @@
 #include "FEBasisHandler.hpp"
 #include "MA_solver.h"
 
+#include "solver_config.h"
+
 #include <dune/grid/common/mcmgmapper.hh>
 
 template <>
-void FEBasisHandler<PS12Split, FEPS12SplitTraits>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
+void FEBasisHandler<PS12Split, PS12SplitTraits>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
  {
   assert(level == 1);
 
@@ -242,7 +244,7 @@ void FEBasisHandler<PS12Split, FEPS12SplitTraits>::adapt(MA_solver& solver, cons
 }
 
 template <>
-void FEBasisHandler<Mixed, MixedTraits>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
+void FEBasisHandler<Mixed, MixedTraits<SolverConfig::degree, SolverConfig::degreeHessian>>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
 {
   assert(solver.initialised);
   assert(level == 1);
@@ -398,7 +400,7 @@ void FEBasisHandler<Mixed, MixedTraits>::adapt(MA_solver& solver, const int leve
 
 
 template <>
-Config::VectorType FEBasisHandler<PS12Split, FEPS12SplitTraits>::coarse_solution(MA_solver& solver, const int level)
+Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits>::coarse_solution(MA_solver& solver, const int level)
 {
   assert(solver.initialised);
   Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
@@ -406,7 +408,7 @@ Config::VectorType FEBasisHandler<PS12Split, FEPS12SplitTraits>::coarse_solution
    //build gridviewfunction
    Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,Config::VectorType> numericalSolution(*FEBasis_,solution_u);
    auto localnumericalSolution = localFunction(numericalSolution);
-   FEPS12SplitTraits::DiscreteLocalGradientGridFunction localGradient (numericalSolution);
+   PS12SplitTraits::DiscreteLocalGradientGridFunction localGradient (numericalSolution);
 
 
   //we need do generate the coarse basis
@@ -517,7 +519,7 @@ Config::VectorType FEBasisHandler<PS12Split, FEPS12SplitTraits>::coarse_solution
 }
 
 template<>
-Config::VectorType FEBasisHandler<Mixed, MixedTraits>::coarse_solution(MA_solver& solver, const int level)
+Config::VectorType FEBasisHandler<Mixed, MixedTraits<SolverConfig::degree, SolverConfig::degreeHessian>>::coarse_solution(MA_solver& solver, const int level)
 {
   assert(false);
   exit(-1);

@@ -109,8 +109,7 @@ Config::ValueType MA_OT_solver::calculate_L2_errorOT(const FGrad &f) const
 
     // Get a quadrature rule
     int order = std::max(1, 3 * gradient_u_old->localOrder());
-    const QuadratureRule<Config::ValueType, Config::dim>& quad =
-        MacroQuadratureRules<Config::ValueType, Config::dim>::rule(e.type(), order, SolverConfig::quadratureType);
+    const QuadratureRule<Config::ValueType, Config::dim>& quad = FETraits::get_Quadrature<Config::dim>(e, order);
 
     // Loop over all quadrature points
     for (const auto& pt : quad) {

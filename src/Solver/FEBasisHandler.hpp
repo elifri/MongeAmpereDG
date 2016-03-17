@@ -13,6 +13,10 @@
 
 class MA_solver;
 
+///=========================================//
+//               FE Handler                 //
+///=========================================//
+
 template<int FETraitstype, typename FETraits>
 struct FEBasisHandler{
   typedef typename FETraits::FEBasis FEBasisType;
@@ -39,6 +43,7 @@ struct FEBasisHandler{
   const FEBasisType& FEBasis() const{ return *FEBasis_;}
   const FEBasisType& uBasis() const{ return *FEBasis_;}
 };
+
 
 ///specialisation for mixed elements
 template<typename FETraits>
@@ -75,16 +80,16 @@ struct FEBasisHandler<Mixed, FETraits>{
 
 
 template <>
-void FEBasisHandler<PS12Split, FEPS12SplitTraits>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
+void FEBasisHandler<PS12Split, PS12SplitTraits>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
 
 template <>
-void FEBasisHandler<Mixed, MixedTraits>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
+void FEBasisHandler<Mixed, MixedTraits<SolverConfig::degree, SolverConfig::degreeHessian>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
 
 template <>
-Config::VectorType FEBasisHandler<PS12Split, FEPS12SplitTraits>::coarse_solution(MA_solver& solver, const int level);
+Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits>::coarse_solution(MA_solver& solver, const int level);
 
 template <>
-Config::VectorType FEBasisHandler<Mixed, MixedTraits>::coarse_solution(MA_solver& solver, const int level);
+Config::VectorType FEBasisHandler<Mixed, MixedTraits<SolverConfig::degree, SolverConfig::degreeHessian>>::coarse_solution(MA_solver& solver, const int level);
 
 template<int FETraitstype, typename FETraits>
 template <class F>
@@ -114,7 +119,7 @@ void FEBasisHandler<Mixed, FETraits>::project(F f, Config::VectorType &v) const
 
 template <>
 template<class F>
-void FEBasisHandler<PS12Split, FEPS12SplitTraits>::project(F f, Config::VectorType &v) const
+void FEBasisHandler<PS12Split, PS12SplitTraits>::project(F f, Config::VectorType &v) const
 {
   v.setZero(FEBasis_->indexSet().size() + 1);
   Config::VectorType countMultipleDof = Config::VectorType::Zero(v.size());;

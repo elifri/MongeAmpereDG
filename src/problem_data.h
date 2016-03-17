@@ -146,7 +146,7 @@ template
 class Dirichletdata//: public VirtualFunction<FieldVector<double, Config::dim>, double>
 {
 public:
-  typedef std::shared_ptr<FETraitsSolver::DiscreteLocalGridFunction> Function_ptr;
+  typedef std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGridFunction> Function_ptr;
 
   Dirichletdata(){}
 //  Dirichletdata(Function_ptr &exactSolU) : exact_solution(&exactSolU) {}
@@ -200,8 +200,8 @@ namespace PDE_functions{
 
 class RightHandSideReflector{
 public:
-  typedef std::shared_ptr<FETraitsSolver::DiscreteLocalGridFunction> Function_ptr;
-  typedef std::shared_ptr<FETraitsSolver::DiscreteLocalGradientGridFunction> GradFunction_ptr;
+  typedef std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGridFunction> Function_ptr;
+  typedef std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGradientGridFunction> GradFunction_ptr;
 
 
   RightHandSideReflector(OpticalSetting& opticalsetting):

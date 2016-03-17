@@ -8,8 +8,8 @@
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 
-#include "solver_config.h"
-#include "MA_OT_solver.h"
+#include "config.h"
+#include "OT/MA_OT_solver.h"
 #include "Plotter.h"
 
 #include <boost/program_options.hpp>
@@ -91,13 +91,13 @@ try {
   // ////////////////////////////////
   // Generate the grid
   // ////////////////////////////////
-  SolverConfig::UnitCubeType unitcube(setting.lowerLeft, setting.upperRight, 1);
+  Config::UnitCubeType unitcube(setting.lowerLeft, setting.upperRight, 1);
 
-  SolverConfig::GridType &grid = unitcube.grid();
-  SolverConfig::GridView gridView = grid.leafGridView();
+  Config::GridType &grid = unitcube.grid();
+  Config::GridView gridView = grid.leafGridView();
 
   // Output grid
-  VTKWriter<SolverConfig::GridView> vtkWriter(gridView);
+  VTKWriter<Config::GridView> vtkWriter(gridView);
   vtkWriter.write("grid");
 
 

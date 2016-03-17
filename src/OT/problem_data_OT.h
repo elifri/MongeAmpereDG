@@ -17,7 +17,7 @@ private:
   ///find the projection on the desired boundary
   virtual void phi(const Config::SpaceType2d& T, const FieldVector<double, Config::dim> &normal, Config::ValueType &phi) const =0;
 public:
-  typedef std::shared_ptr<FETraitsSolver::DiscreteLocalGradientGridFunction> GradFunction_ptr;
+  typedef std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGradientGridFunction> GradFunction_ptr;
 
 //  virtual ~OTBoundary() {delete (*GradFunction_ptr);}
 
