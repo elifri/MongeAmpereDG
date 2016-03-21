@@ -32,8 +32,8 @@ public:
    * @param x			         local solution coefficients
    * @param v					 local residual (to be returned)
    */
-  template<class LocalView, class LocalIndexSet, class VectorType>
-  void assemble_cell_term(const LocalView& localView, const LocalIndexSet &localIndexSet, const VectorType &x,
+  template<class LocalView, class VectorType>
+  void assemble_cell_term(const LocalView& localView, const VectorType &x,
       VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const {
 /*
     // Get the grid element from the local FE basis view
@@ -174,10 +174,10 @@ public:
 //typedef Dune::Intersection<const Dune::YaspGrid<2>, Dune::YaspIntersection<const Dune::YaspGrid<2> > > IntersectionType;
 //typedef SolverConfig::VectorType VectorType;
 //typedef SolverConfig::MatrixType MatrixType;
-  template<class IntersectionType, class LocalView, class LocalIndexSet, class VectorType>
+  template<class IntersectionType, class LocalView, class VectorType>
   void assemble_inner_face_term(const IntersectionType& intersection,
-      const LocalView &localView,  const LocalIndexSet &localIndexSet, const VectorType &x,
-      const LocalView &localViewn,  const LocalIndexSet &localIndexSetn, const VectorType &xn, VectorType& v,
+      const LocalView &localView, const VectorType &x,
+      const LocalView &localViewn, const VectorType &xn, VectorType& v,
       VectorType& vn, int tag) const {
     /*
     const int dim = IntersectionType::dimension;
@@ -373,9 +373,9 @@ public:
     */
   }
 
-  template<class Intersection, class LocalView, class LocalIndexSet, class VectorType>
+  template<class Intersection, class LocalView, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
-      const LocalView &localView, const LocalIndexSet &localIndexSet,
+      const LocalView &localView,
       const VectorType &x, VectorType& v, int tag) const {
     /*
     const int dim = Intersection::dimension;

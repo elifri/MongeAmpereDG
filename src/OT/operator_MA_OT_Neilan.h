@@ -11,9 +11,12 @@
 #include <dune/common/function.hh>
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
 #include "../utils.hpp"
-#include "../solver_config.h"
+#include "../Solver/solver_config.h"
 
-#include "../problem_data_OT.h"
+#include "problem_data_OT.h"
+#include "../ImageFunction.hpp"
+
+#include "../localfunctions/MAmixedbasisC0.hh"
 
 //automatic differtiation
 #include <adolc/adouble.h>
@@ -26,7 +29,11 @@ template <class value_type>
 inline
 value_type determinant(const FieldMatrix<value_type, 2, 2>& A)
 {
-  return fmax(0,A[0][0])*fmax(0,A[1][1]) - A[0][1]*A[1][0]- SolverConfig::lambda*((fmin(0,A[0][0])*fmin(0,A[0][0])) + (fmin(0,A[1][1])*fmin(0,A[1][1])));
+  if (!ImageFunction::use_adouble_image_evaluation)
+    return std::max(0.,A[0][0].value())*std::max(0.,A[1][1].value())
+             - A[0][1]*A[1][0]
+             - SolverConfig::lambda*((std::min(0.,A[0][0].value())*std::min(0.,A[0][0].value())) + (std::min(0.,A[1][1].value())*std::min(0.,A[1][1].value())));
+  return fmax(0.,A[0][0])*fmax(0.,A[1][1]) - A[0][1]*A[1][0]- SolverConfig::lambda*((fmin(0.,A[0][0])*fmin(0.,A[0][0])) + (fmin(0.,A[1][1])*fmin(0.,A[1][1])));
 }
 
 template <class value_type>
@@ -62,12 +69,12 @@ public:
     int_f = 0;
   }
 
-  ~Local_Operator_MA_OT()
-  {
-    delete &rhoX;
-    delete &rhoY;
-    delete &bc;
-  }
+//  ~Local_Operator_MA_OT()
+//  {
+//    delete &rhoX;
+//    delete &rhoY;
+//    delete &bc;
+//  }
 
 
   /**
@@ -77,15 +84,20 @@ public:
    * @param x			         local solution coefficients
    * @param v					 local residual (to be returned)
    */
-  template<class LocalView, class LocalIndexSet, class VectorType>
-  void assemble_cell_term(const LocalView& localView, const LocalIndexSet &localIndexSet, const VectorType &x,
+  template<class LocalView, class VectorType>
+  void assemble_cell_term(const LocalView& localView, const VectorType &x,
       VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const {
+
+    typedef typename LocalView::GridView GridView;
+    typedef typename LocalView::size_type size_type;
+
+    const int dim = GridView::dimension;
 
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
     const Element& element = localView.element();
 
-    const int dim = Element::dimension;
+    assert(dim == Element::dimension);
     auto geometry = element.geometry();
 
     //assuming galerkin ansatz = test space
@@ -104,14 +116,13 @@ public:
     typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
 
     typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<SolverConfig::value_type, Element::dimension, Element::dimension> FEHessianType;
+    typedef typename Dune::FieldVector<Config::ValueType, dim> JacobianType;
+    typedef typename Dune::FieldMatrix<Config::ValueType, dim, dim> FEHessianType;
     typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType HessianType;
 
     const int size_u = localFiniteElementu.size();
     const int size_u_DH = localFiniteElementuDH_entry.size();
     const int size = localView.size();
-
 
     // Get a quadrature rule
     int order = std::max(0,
@@ -154,13 +165,13 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, SolverConfig::dim> gradu;
+      FieldVector<adouble, dim> gradu;
       assemble_gradients_gradu(localFiniteElementu, jacobian, quadPos,
           gradients, x_adolc.segment(0,size_u), gradu);
 
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size_u);
-      FieldMatrix<adouble, SolverConfig::dim, SolverConfig::dim> Hessu;
+      FieldMatrix<adouble, dim, dim> Hessu;
       assemble_hessians_hessu(localFiniteElementu, jacobian, quadPos, Hessians,
           x_adolc.segment(0,size_u), Hessu);
 
@@ -173,12 +184,14 @@ public:
       for (int col = 0; col < dim; col++)
         for (int row = 0; row < dim; row++)
           for (int j = 0; j < size_u_DH; j++)
-            uDH[row][col] += x_adolc(localIndexSet.flat_local_index(j, row, col))*referenceFunctionValuesHessian[j];
-
+          {
+            const size_type localIndex = Dune::Functions::flat_local_index<GridView, size_type>(size_u,j, row, col);
+            uDH[row][col] += x_adolc(localIndex)*referenceFunctionValuesHessian[j];
+          }
 
       //--------assemble cell integrals in variational form--------
 
-      assert(SolverConfig::dim == 2);
+      assert(Config::dim == 2);
 
       auto x_value = geometry.global(quad[pt].position());
 
@@ -196,7 +209,7 @@ public:
 
       std::cerr << std::setprecision(15);
 
-//      std::cerr << "x " << x_value << " ";
+//      std::cerr << "x " << x_value << " " << " u value " << u_value.value() << ' ';
 //      std::cerr << "f(x) " << f_value<< " maps to " << gradu[0].value() << " " << gradu[1].value() << " with value g(T(x)) " << g_value.value() << std::endl;
 //      std::cerr << " should map to " << (x_value[0]+4.*rhoXSquareToSquare::q_div(x_value[0])*rhoXSquareToSquare::q(x_value[1]))
 //       << " " << (x_value[1]+4.*rhoXSquareToSquare::q(x_value[0])*rhoXSquareToSquare::q_div(x_value[1])) << std::endl;
@@ -219,21 +232,26 @@ public:
       for (int j = 0; j < size_u; j++) // loop over test fcts
       {
         v_adolc(j) += (PDE_rhs-uDH_det)*referenceFunctionValues[j]
+//        v_adolc(j) += referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
       }
 
       //calculate system for second tensor functions
+
       for (int j = 0; j < size_u_DH; j++) // loop over test fcts
       {
         for (int row=0; row < dim; row++)
           for (int col = 0 ; col < dim; col++){
-            v_adolc(localIndexSet.flat_local_index(j, row, col) ) += uDH[row][col]*referenceFunctionValuesHessian[j]
+            const size_type localIndex = Dune::Functions::flat_local_index<GridView, size_type>(size_u,j, row, col);
+
+            v_adolc(localIndex) += uDH[row][col]*referenceFunctionValuesHessian[j]
                                     * quad[pt].weight() * integrationElement;
 
-            v_adolc(localIndexSet.flat_local_index(j, row, col)) -= Hessu[row][col] * referenceFunctionValuesHessian[j]
+            v_adolc(localIndex) -= Hessu[row][col] * referenceFunctionValuesHessian[j]
                                     * quad[pt].weight() * integrationElement;
            }
       }
+
 
       last_equation_adolc += u_value* quad[pt].weight() * integrationElement;
     }
@@ -247,11 +265,14 @@ public:
 
   }
 
-  template<class IntersectionType, class LocalView, class LocalIndexSet, class VectorType>
+  template<class IntersectionType, class LocalView, class VectorType>
   void assemble_inner_face_term(const IntersectionType& intersection,
-      const LocalView &localView,  const LocalIndexSet &localIndexSet, const VectorType &x,
-      const LocalView &localViewn,  const LocalIndexSet &localIndexSetn, const VectorType &xn, VectorType& v,
+      const LocalView &localView, const VectorType &x,
+      const LocalView &localViewn, const VectorType &xn, VectorType& v,
       VectorType& vn, int tag) const{
+    typedef typename LocalView::GridView GridView;
+    typedef typename LocalView::size_type size_type;
+
     const int dim = IntersectionType::dimension;
     const int dimw = IntersectionType::dimensionworld;
 
@@ -277,7 +298,7 @@ public:
     typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
 
     typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
+    typedef FieldVector<Config::ValueType, dim> JacobianType;
     typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType RangeTypeDH;
 
     const unsigned int size_u = localFiniteElementu.size();
@@ -354,11 +375,11 @@ public:
 
       // The gradients of the shape functions on the reference element
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, SolverConfig::dim> gradu(0);
+      FieldVector<adouble, dim> gradu(0);
       assemble_gradients_gradu(localFiniteElementu, jacobian, quadPos,
           gradients, x_adolc.segment(0, size_u), gradu);
       std::vector<JacobianType> gradientsn(size_u);
-      FieldVector<adouble, SolverConfig::dim> gradun(0);
+      FieldVector<adouble, dim> gradun(0);
       assemble_gradients_gradu(localFiniteElementun, jacobiann, quadPosn,
           gradientsn, xn_adolc.segment(0, size_u), gradun);
 
@@ -404,19 +425,22 @@ public:
         for (int row = 0; row < dim; row++)
           for (int col = 0; col < dim; col++)
           {
-          //parts from self
-          // dicr. hessian correction term: jump{avg{mu} grad_u}
-          adouble temp = referenceFunctionValuesHessian[j]*gradu[col];
-          v_adolc(localIndexSet.flat_local_index(j, row, col)) += 0.5 * (temp * normal[row]);
-          temp = referenceFunctionValuesHessian[j]*gradun[col];
-          v_adolc(localIndexSet.flat_local_index(j, row, col)) += -0.5 * (temp * normal[row]); //a - sign for the normal
+            const size_type localIndex = Dune::Functions::flat_local_index<GridView, size_type>(size_u,j, row, col);
+            const size_type localIndexn = Dune::Functions::flat_local_index<GridView, size_type>(size_u,j, row, col);
 
-          //neighbour parts
-          // dicr. hessian correction term: jump{avg{mu} grad_u}
-          temp = referenceFunctionValuesHessiann[j]*gradu[col];
-          vn_adolc(localIndexSetn.flat_local_index(j, row, col)) += 0.5 * (temp * normal[row]);
-          temp = referenceFunctionValuesHessiann[j]*gradun[col];
-          vn_adolc(localIndexSetn.flat_local_index(j, row, col)) += -0.5 * (temp * normal[row]); //a - sign for the normal
+            //parts from self
+            // dicr. hessian correction term: jump{avg{mu} grad_u}
+            adouble temp = referenceFunctionValuesHessian[j]*gradu[col];
+            v_adolc(localIndex) += 0.5 * (temp * normal[row]);
+            temp = referenceFunctionValuesHessian[j]*gradun[col];
+            v_adolc(localIndex) += -0.5 * (temp * normal[row]); //a - sign for the normal
+
+            //neighbour parts
+            // dicr. hessian correction term: jump{avg{mu} grad_u}
+            temp = referenceFunctionValuesHessiann[j]*gradu[col];
+            vn_adolc(localIndexn) += 0.5 * (temp * normal[row]);
+            temp = referenceFunctionValuesHessiann[j]*gradun[col];
+            vn_adolc(localIndexn) += -0.5 * (temp * normal[row]); //a - sign for the normal
           }
       }
     }
@@ -432,10 +456,15 @@ public:
 
   }
 
-  template<class Intersection, class LocalView, class LocalIndexSet, class VectorType>
+
+#ifndef COLLOCATION
+  template<class Intersection, class LocalView, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
-      const LocalView &localView, const LocalIndexSet &localIndexSet,
+      const LocalView &localView,
       const VectorType &x, VectorType& v, int tag) const {
+    typedef typename LocalView::GridView GridView;
+    typedef typename LocalView::size_type size_type;
+
     const int dim = Intersection::dimension;
     const int dimw = Intersection::dimensionworld;
 
@@ -454,7 +483,7 @@ public:
     typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
 
     typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<SolverConfig::value_type, SolverConfig::dim> JacobianType;
+    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
 
     //-----init variables for automatic differentiation
 
@@ -496,6 +525,9 @@ public:
                       * (SolverConfig::degree * SolverConfig::degree);
 //                     * std::pow(intersection.geometry().volume(), SolverConfig::beta);
 
+    assert(SolverConfig::degree == 2 || SolverConfig::degree == 1);
+    const int n = SolverConfig::degree;
+    const int boundaryFaceId = intersection.indexInInside();
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -518,7 +550,7 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, SolverConfig::dim> gradu;
+      FieldVector<adouble, Config::dim> gradu;
       assemble_gradients_gradu(localFiniteElementu, jacobian, quadPos,
           gradients, x_adolc.segment(0,size_u), gradu);
 
@@ -528,11 +560,15 @@ public:
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
-      for (int j = 0; j < size_u; j++) //parts from self
+      for (int i = 0; i < n; i++) //parts from self
       {
+        unsigned int j = n == 2? collocationNo2[boundaryFaceId][i] : collocationNo1[boundaryFaceId][i];
+        assert(j < (unsigned int) size_u);
+        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 0);
+        assert(localFiniteElementu.localCoefficients().localKey(j).subEntity() == j);
         assert(!SolverConfig::Dirichlet);
         v_adolc(j) += penalty_weight * ((gradu * normal) - phi_value) //*((T_value * normal) - phi_value)
-                            * referenceFunctionValues[j] * factor;
+                         * (referenceFunctionValues[j]) * factor;
       }
 
     }
@@ -542,6 +578,10 @@ public:
       v_adolc[i] >>= v[i];
     trace_off();
   }
+#else
+  static_assert(false, "blub");
+#endif
+
 
   const Function& get_right_handside() const {return rhoY;}
 
@@ -549,6 +589,9 @@ public:
   const Function& rhoY;
 
   const OTBoundary& bc;
+
+  static constexpr int collocationNo2[3][2] = {{0,1},{4,5},{2,3}};
+  static constexpr int collocationNo1[3][1] = {{0},{2},{1}};
 
 public:
   mutable double int_f;

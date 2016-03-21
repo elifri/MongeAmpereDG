@@ -11,6 +11,8 @@
 #include "Assembler.h"
 #include "solver_config.h"
 
+#include <dune/functions/functionspacebases/interpolate.hh>
+
 class MA_solver;
 
 ///=========================================//
@@ -52,7 +54,11 @@ struct FEBasisHandler<Mixed, FETraits>{
   typedef typename FETraits::FEuBasis FEuBasisType;
   typedef typename FETraits::FEuDHBasis FEuDHBasisType;
 
-  FEBasisHandler(const Config::GridView& grid): FEBasis_(new FEBasisType(grid)){}
+  typedef typename FETraits::DiscreteGridFunction DiscreteGridFunction;
+
+  FEBasisHandler(const Config::GridView& grid): FEBasis_(new FEBasisType(grid)),
+                                                uBasis_(new FEuBasisType(grid)),
+                                                uDHBasis_(new FEuDHBasisType(grid)){}
 
   template<class F>
   void project(F f, Config::VectorType &V) const;
@@ -63,10 +69,19 @@ struct FEBasisHandler<Mixed, FETraits>{
   Config::VectorType coarse_solution(MA_solver& solver, const int level)
   {assert(false && " Error, dont know FE basis"); exit(-1);}
 
+  void bind(const Config::GridView& gridView)
+  {
+    FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(gridView));
+    uBasis_ = std::shared_ptr<FEuBasisType> (new FEuBasisType(gridView));
+    uDHBasis_ = std::shared_ptr<FEuDHBasisType> (new FEuDHBasisType(gridView));
+  }
+
 
   void bind(const FEBasisType& feBasis)
   {
     FEBasis_ = &feBasis;
+    uBasis_ = std::shared_ptr<FEuBasisType> (new FEuBasisType(FEBasis_.gridView()));
+    uDHBasis_ = std::shared_ptr<FEuDHBasisType> (new FEuDHBasisType(FEBasis_.gridView()));
   }
 
   shared_ptr<FEBasisType> FEBasis_; ///Pointer to finite element basis
@@ -104,14 +119,93 @@ void FEBasisHandler<FETraitstype, FETraits>::project(F f, Config::VectorType &v)
   v(v.size()-1) = 1;
 }
 
+/**
+ * \brief Interpolate given function in discrete function space
+ *
+ * Notice that this will only work if the range type of f and
+ * the block type of coeff are compatible and supported by
+ * FlatIndexContainerAccess.
+ *
+ * \param basis Global function space basis of discrete function space
+ * \param coeff Coefficient vector to represent the interpolation
+ * \param f Function to interpolate
+ * \param bitVector A vector with flags marking ald DOFs that should be interpolated
+ */
+template <class B, class C, class F, class BV>
+void interpolateSecondDerivative(const B& basis, C& coeff, F&& f, BV&& bv)
+{
+  auto treePath = Dune::TypeTree::hybridTreePath();
+  auto nodeToRangeEntry = makeDefaultNodeToRangeMap(basis, treePath);
+
+  using GridView = typename B::GridView;
+  using Element = typename GridView::template Codim<0>::Entity;
+
+  using Tree = typename std::decay<decltype(TypeTree::child(basis.localView().tree(),treePath))>::type;
+
+  using GlobalDomain = typename Element::Geometry::GlobalCoordinate;
+
+  static_assert(Dune::Functions::Concept::isCallable<F, GlobalDomain>(), "Function passed to interpolate does not model the Callable<GlobalCoordinate> concept");
+
+  auto&& gridView = basis.gridView();
+
+  auto basisIndexSet = basis.indexSet();
+  coeff.resize(basisIndexSet.size());
+
+
+  auto&& bitVector = Dune::Functions::makeHierarchicVectorForMultiIndex<typename B::MultiIndex>(bv);
+  auto&& vector = Dune::Functions::makeHierarchicVectorForMultiIndex<typename B::MultiIndex>(coeff);
+  vector.resize(sizeInfo(basis));
+
+  auto localView = basis.localView();
+  auto localIndexSet = basisIndexSet.localIndexSet();
+
+  for (const auto& e : elements(gridView))
+  {
+    localView.bind(e);
+    localIndexSet.bind(localView);
+    f.bind(e);
+
+    auto&& subTree = TypeTree::child(localView.tree(),treePath);
+
+    Functions::Imp::LocalInterpolateVisitor<B, Tree, decltype(nodeToRangeEntry), decltype(vector), decltype(f), decltype(bitVector)> localInterpolateVisitor(basis, vector, bitVector, f, localIndexSet, nodeToRangeEntry);
+    TypeTree::applyToTree(subTree,localInterpolateVisitor);
+
+  }
+}
+
+
 template<typename FETraits>
 template <class F>
 void FEBasisHandler<Mixed, FETraits>::project(F f, Config::VectorType &v) const
 {
   v.resize(FEBasis_->indexSet().size() + 1);
   Config::VectorType v_u;
-  interpolate(FEBasis_, v_u, f);
+  interpolate(*uBasis_, v_u, f);
+
   v.segment(0, v_u.size()) = v_u;
+
+  //init second derivatives
+
+  //build gridviewfunction
+  DiscreteGridFunction numericalSolution(*uBasis_,v_u);
+
+  for (int row = 0; row < Config::dim; row++)
+    for (int col = 0; col < Config::dim; col++)
+    {
+      //calculate second derivative of gridviewfunction
+      Config::VectorType v_uDH_entry;
+      auto localnumericalHessian_entry = localSecondDerivative(numericalSolution, {row,col});
+//      interpolateSecondDerivative(*uDHBasis_, v_uDH_entry, localnumericalHessian_entry, Functions::Imp::AllTrueBitSetVector());
+
+      //copy corresponding dofs
+      const int nDH = Config::dim * Config::dim;
+      for (int i=0; i<v_uDH_entry.size(); i++)
+      {
+        const int j = row*Config::dim + col;
+        v[uBasis_->indexSet().size()+ nDH*i+  j] = v_uDH_entry[i];
+      }
+    }
+
 
   //set scaling factor (last dof) to ensure mass conservation
   v(v.size()-1) = 1;

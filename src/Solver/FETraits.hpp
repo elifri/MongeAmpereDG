@@ -51,9 +51,14 @@ struct FETraits
   static const QuadratureRule<Config::ValueType, dim>& get_Quadrature(const GeometryType & geo, int order)
   { return QuadratureRules<Config::ValueType, Config::dim-1>::rule(geo, order);}
 
+  template <typename LocalIndexSet>
+  static size_t get_index(const LocalIndexSet& localIndexSet, size_t localIndex)
+  {
+    return localIndexSet.index(localIndex)[0];
+  }
 
   template<typename LocalView>
-  static const auto& get_finiteElement(const LocalView& localView)
+  static const auto& get_finiteElementu(const LocalView& localView)
   {
     return localView.tree().finiteElement();
   }
@@ -85,10 +90,16 @@ struct FETraits<Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatr
     return MacroQuadratureRules<Config::ValueType, Config::dim-1>::rule(geo, order, MacroQuadratureType::Powell_Sabin_12_split);
   }
 
-  template<typename LocalView>
-  static const auto& get_finiteElement(const LocalView& localView)
+  template <typename LocalIndexSet>
+  static size_t get_index(const LocalIndexSet& localIndexSet, size_t localIndex)
   {
-    return localView.tree().finiteElement();
+    return localIndexSet.index(localIndex)[0];
+  }
+
+  template<typename LocalView>
+  static const auto& get_finiteElementu(const LocalView& localView)
+  {
+    return localView.tree().template child<0>().finiteElement();
   }
 };
 
@@ -117,8 +128,14 @@ struct FETraits<Functions::MAMixedBasis<Config::GridView, degree, degreeHessian>
   static const QuadratureRule<Config::ValueType, dim>& get_Quadrature(const GeometryType & geo, int order)
   { return QuadratureRules<Config::ValueType, Config::dim-1>::rule(geo, order);}
 
+  template <typename LocalIndexSet>
+  static size_t get_index(const LocalIndexSet& localIndexSet, size_t localIndex)
+  {
+    return localIndexSet.flat_index(localIndex);
+  }
+
   template<typename LocalView>
-  static const auto& get_finiteElement(const LocalView& localView)
+  static const auto& get_finiteElementu(const LocalView& localView)
   {
     return localView.tree().template child<0>().finiteElement();
   }

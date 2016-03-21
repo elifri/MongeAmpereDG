@@ -109,7 +109,7 @@ public:
   //! Same as size(prefix) with empty prefix
   size_type size() const
   {
-    return 2;
+    return uFactory_.size()+nDH*uDHFactory_.size();
   }
 
   //! Return number possible values for next position in multi index
@@ -515,6 +515,14 @@ public:
   }
 };
 
+template<typename GV, class ST>
+ST flat_local_index(const ST size_u, const int j, const int row, const int col)
+{
+  static const int dim = GV::dimension;
+
+  return size_u+dim*(dim*j+row)+col;
+}
+
 template<typename GV, int deg, int degHess, class MI, class TP, class ST, bool HI>
 class MAMixedNodeIndexSet
 {
@@ -566,11 +574,6 @@ public:
     return node_->size();
   }
 
-  MultiIndex index(size_type localIndex) const
-  {
-    return indexImp<useHybridIndices>(localIndex);
-  }
-
   template<bool hi,
     typename std::enable_if<not hi,int>::type = 0>
   MultiIndex indexImp(size_type localIndex) const
@@ -596,30 +599,20 @@ public:
 
   template<bool hi,
     typename std::enable_if<hi,int>::type = 0>
-  MultiIndex indexImp(size_type localIndex) const
+  size_type indexImp(size_type localIndex) const
   {
-    MultiIndex mi;
-    size_type u_size = uNodeIndexSet_.size();
-    mi.push_back(localIndex < u_size? 0 : 1);
-    if (mi[0] == 0) {
-      size_type u_localIndex = localIndex;
-      mi.push_back(uNodeIndexSet_.index(u_localIndex)[0]);
-    }
-    else
-      if (mi[0] == 1) {
-        size_type uDH_comp = (localIndex - u_size)
-                            / nDH;
-        size_type uDH_localIndex = (localIndex - u_size)
-                        % nDH;
-        mi.push_back(uDHNodeIndexSet_.index(uDH_comp)[0]);
-        mi.push_back(uDH_localIndex);
-      }
-    return mi;
+    return flat_index(localIndex);
   }
+
+  auto index(size_type localIndex) const
+  {
+    return indexImp<useHybridIndices>(localIndex);
+  }
+
 
   size_type flat_local_index(const int j, const int row, const int col) const
   {
-    return uNodeIndexSet_.size()+dim*(dim*j+row)+col;
+    return flat_local_index(uNodeIndexSet_.size(),j,row,col);
   }
 
   size_type flat_index(MultiIndex mi) const
@@ -660,7 +653,26 @@ private:
  */
 template<typename GV, int deg, int degHess, class ST = std::size_t>
 using MAMixedBasis = DefaultGlobalBasis<MAMixedNodeFactory<GV, deg, degHess, std::array<ST, 2>, ST> >;
+/*MAMixedBasis : DefaultGlobalBasis<MAMixedNodeFactory<GV, deg, degHess, std::array<ST, 2>, ST> >
+{
+public:
+  typedef DefaultGlobalBasis<MAMixedNodeFactory::PQdegFactory, ST> uBasis;
+  typedef DefaultGlobalBasis<MAMixedNodeFactory::LagrangeDGdegHessNodeFactory, ST> uDHBasis>
 
+  /// \brief Constructor for a given grid view object
+  template<class... T,
+  disableCopyMove<DefaultGlobalBasis, T...> = 0,
+  enableIfConstructible<NodeFactory, T...> = 0>
+  DefaultGlobalBasis(T&&... t) :
+  nodeFactory_(std::forward<T>(t)...)
+  {
+    nodeFactory_.initializeIndices();
+  }
+
+private:
+  shared_ptr<uBasis>
+}
+*/
 
 
 } // end namespace Functions

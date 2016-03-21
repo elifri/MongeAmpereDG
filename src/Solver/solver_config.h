@@ -10,7 +10,7 @@
 
 //#define EIGEN_DEFAULT_DENSE_INDEX_TYPE long
 
-//#define C0Element
+#define C0Element
 
 #include <config.h>
 #include "../config.h"
@@ -83,7 +83,7 @@ struct SolverConfig{
 
   static bool Dirichlet;
 
-	enum{childdim = 4, degree = 2, degreeHessian = 2};
+	enum{childdim = 4, degree = 1, degreeHessian = 0};
 
 	static int startlevel;
 	static int nonlinear_steps;
@@ -100,14 +100,14 @@ struct SolverConfig{
 //  typedef deVeubekeTraits FETraitsSolver;
 
   //-------select PS12 S-Splines
-  typedef PS12SplitTraits FETraitsSolver;
+//  typedef PS12SplitTraits FETraitsSolver;
 //  typedef Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatrixType> FEBasis;
 
   //------select Mixed element-----------------
   typedef Pk2DLocalFiniteElement<ValueType, ValueType, degree> LocalFiniteElementuType;
   typedef Pk2DLocalFiniteElement<ValueType, ValueType, degreeHessian> LocalFiniteElementHessianSingleType;
 
-//  typedef MixedTraits<degree, degreeHessian> FETraitsSolver;
+  typedef MixedTraits<degree, degreeHessian> FETraitsSolver;
 
 	typedef FieldVector<ValueType,1> RangeType;
   typedef FieldMatrix<ValueType,2,2> HessianRangeType;

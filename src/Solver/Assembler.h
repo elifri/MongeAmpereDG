@@ -250,10 +250,13 @@ public:
 
   typedef Eigen::Triplet<double> EntryType;
 
-  typedef typename SolverConfig::FETraitsSolver::FEBasis FEBasisType;
+  typedef typename SolverConfig::FETraitsSolver FETraits;
+  typedef typename FETraits::FEBasis FEBasisType;
+
+  enum AssembleType{ ONLY_OBJECTIVE, ONLY_JACOBIAN, ALL};
 
   Assembler(const FEBasisType& basis, bool no_hanging_nodes) :
-      basis_(&basis),no_hanging_nodes(no_hanging_nodes), picture_no(0) {
+      basis_(&basis),no_hanging_nodes(no_hanging_nodes){
     std::cout << " ndofs assembler constr " << basis.indexSet().size() << std::endl;
     if (basis_)
       boundaryHandler_.init_boundary_dofs(*this);
@@ -323,9 +326,7 @@ public:
    * @param returns the new global dof vector
    */
   template<typename LocalIndexSet>
-  static void set_local_coefficients(const LocalIndexSet &localIndexSet,
-      const Config::VectorType &v_local,
-      Config::VectorType& v);
+  static void set_local_coefficients(const LocalIndexSet &localIndexSet, const Config::VectorType &v_local, Config::VectorType& v);
 
   /**
    *  sets the coeffs v_local to the global dof vector
@@ -333,10 +334,12 @@ public:
    * @param v_local local dof vector (to be added)
    * @param returns the new global dof vector
    */
-  template<typename LocalIndexSet, typename VectorType>
+
+  template<typename FETraits, typename LocalIndexSet, typename VectorType>
   static void set_local_coefficients(const LocalIndexSet &localIndexSet,
       const VectorType &v_local,
       VectorType& v);
+
 
   /**
    *  adds the local jacobian to the global jacobian
@@ -414,7 +417,38 @@ public:
 
   template<typename LocalOperatorType>
   void assemble_DG(const LocalOperatorType &LOP, const Config::VectorType& x,
-      Config::VectorType& v) const;
+      Config::VectorType& v) const
+  {
+    assembleType_ = ONLY_OBJECTIVE;
+    Config::MatrixType m;
+    assemble_DG_Jacobian_(LOP, x, v, m);
+  }
+
+  template<typename LocalOperatorType>
+  void assemble_Jacobian_DG(const LocalOperatorType &LOP, const Config::VectorType& x,
+      Config::MatrixType& m) const
+  {
+    assembleType_ = ONLY_JACOBIAN;
+    Config::VectorType v;
+    assemble_DG_Jacobian_(LOP, x, v, m);
+  }
+
+
+  /**
+   * assembles the function and its derivative at x
+   * @param LOP the local operator providing three functions, namely assemble_cell_term, assemble_inner_face_term and assemble_boundary_face_term
+   * @param x   the FE coefficient
+   * @param v   returns the FE function value
+   * @param m   Jacobian at x
+   */
+  template<typename LocalOperatorType>
+  void assemble_DG_Jacobian(const LocalOperatorType &LOP, const Config::VectorType& x,
+      Config::VectorType& v, Config::MatrixType& m) const
+  {
+    assembleType_ = ALL;
+    assemble_DG_Jacobian_(LOP, x, v, m);
+  }
+
 
 private:
   //helper to assemble jacobians via automatic differentiation
@@ -468,7 +502,7 @@ private:
  */
   template<class LocalView, class VectorType, class MatrixType>
   static bool assemble_jacobian_integral_cell_term(const LocalView& localView,
-      const VectorType &x, MatrixType& m, int tag, const double& scaling_factor, VectorType& last_equation_derivatives, VectorType& scaling_derivatives);
+      const VectorType &x, MatrixType& m, int tag, const double& scaling_factor, VectorType& scaling_derivatives, VectorType& last_equation_derivatives);
 
   template<typename LocalOperatorType, class LocalView, class VectorType, class MatrixType>
   void assemble_jacobianFD_integral_cell_term(const LocalOperatorType lop, const LocalView& localView,
@@ -489,7 +523,7 @@ private:
  */
   template<class LocalView,
      class VectorType, class MatrixType>
-  static void assemble_inner_face_Jacobian(const Intersection& intersection,
+  static bool assemble_inner_face_Jacobian(const Intersection& intersection,
       const LocalView &localView,
       const VectorType &x,
       const LocalView& localViewn,
@@ -499,22 +533,34 @@ private:
 public:
   Eigen::VectorXi estimate_nnz_Jacobian() const;
 
+private:
+  template<typename LocalOperatorType, typename LocalView>
+  void assemble_cell_termHelper(const LocalOperatorType &lop,
+      const LocalView& localView,
+      const Config::VectorType& xLocal, const BoundaryHandler::BoolVectorType& isBoundaryLocal,
+      Config::VectorType& vLocal, Config::DenseMatrixType& mLocal,
+      const Config::ValueType &scaling_factor, Config::ValueType &last_equation,
+      Config::VectorType& scaling_factorDerivatives, Config::VectorType& last_equationDerivatives) const;
+
+  template<typename LocalOperatorType, typename IntersectionType, typename LocalView>
+  void assemble_inner_face_termHelper(const LocalOperatorType &lop, const IntersectionType& is,
+      const LocalView& localView, const LocalView& localViewn,
+      const Config::VectorType& xLocal, const BoundaryHandler::BoolVectorType& isBoundaryLocal,
+      const Config::VectorType& xLocaln, const BoundaryHandler::BoolVectorType& isBoundaryLocaln,
+      Config::VectorType& vLocal, Config::VectorType& vLocaln,
+      Config::DenseMatrixType m_m, Config::DenseMatrixType mn_m,
+      Config::DenseMatrixType m_mn, Config::DenseMatrixType mn_mn) const;
+
+  template<typename LocalOperatorType, typename IntersectionType, typename LocalView>
+  void assemble_boundary_termHelper(const LocalOperatorType &lop, const IntersectionType& is, const LocalView& localView,
+      const Config::VectorType& xLocal, const BoundaryHandler::BoolVectorType& isBoundaryLocal,
+      Config::VectorType& vLocal, Config::DenseMatrixType& mLocal) const;
 
   template<typename LocalOperatorType>
-  void assemble_Jacobian_DG(const LocalOperatorType &LOP, const Config::VectorType& x,
-      Config::MatrixType& m) const;
-
-  /**
-   * assembles the function and its derivative at x
-   * @param LOP	the local operator providing three functions, namely assemble_cell_term, assemble_inner_face_term and assemble_boundary_face_term
-   * @param x		the FE coefficient
-   * @param v		returns the FE function value
-   * @param m		Jacobian at x
-   */
-  template<typename LocalOperatorType>
-  void assemble_DG_Jacobian(const LocalOperatorType &LOP, const Config::VectorType& x,
+  void assemble_DG_Jacobian_(const LocalOperatorType &LOP, const Config::VectorType& x,
       Config::VectorType& v, Config::MatrixType& m) const;
 
+public:
   template<typename LocalOperatorType>
   void assemble_discrete_hessian_system(const LocalOperatorType &lop, Config::VectorType x, Config::MatrixType& m, Config::VectorType& rhs) const;
 
@@ -538,8 +584,10 @@ private:
 
     bool no_hanging_nodes;
 
-    static constexpr bool reuseAdolCTape = false;
+    mutable bool tape0initialised, tape1initialised, tape2initialised;
 
+    static constexpr bool reuseAdolCTape = false;
+    mutable AssembleType assembleType_;
     mutable int picture_no;
 };
 
@@ -772,9 +820,8 @@ Config::VectorType Assembler::calculate_local_coefficients(const LocalIndexSet &
   Config::VectorType v_local(localIndexSet.size());
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
-    v_local[i] = v(localIndexSet.index(i)[0]);
-//     v_local[i] = (i == 12 || i == 14) ? -v(localIndexSet.index(i)[0]) : v(localIndexSet.index(i)[0]);
-//     std::cerr << "calculated from " << i << "  index " << localIndexSet.index(i)[0] << " with value " << v_local[i] << std::endl;
+    v_local[i] = v(FETraits::get_index(localIndexSet, i));
+//   std::cerr << "calculated from " << i << "  index " << FETraits::get_index(localIndexSet, i) << " with value " << v_local[i] << std::endl;
   }
   return v_local;
 }
@@ -785,7 +832,7 @@ BoundaryHandler::BoolVectorType Assembler::calculate_local_bool_coefficients(con
   BoundaryHandler::BoolVectorType v_local(localIndexSet.size());
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
-    v_local[i] = v(localIndexSet.index(i)[0]);
+    v_local[i] = v(FETraits::get_index(localIndexSet, i));
   }
   return v_local;
 }
@@ -796,7 +843,7 @@ AnyVectorType Assembler::calculate_local_coefficients(const LocalIndexSet &local
   AnyVectorType v_local(localIndexSet.size());
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
-    v_local[i] = v(localIndexSet.index(i)[0]);
+    v_local[i] = v(FETraits::get_index(localIndexSet, i));
   }
   return v_local;
 }
@@ -810,9 +857,9 @@ void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const
 //  assert ((unsigned int) v.size() == basis_->indexSet().size()+1);
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
-//    std::cout << i << " -> " << localIndexSet.index(i)[0] <<  " with value " << v_local[i] << std::endl;
-    v(localIndexSet.index(i)[0]) += v_local[i] ;
-//    std::cerr << "add " << i << " to " << localIndexSet.index(i)[0] << " with value " << v_local[i] << " and get " << v(localIndexSet.index(i)[0]) << std::endl;
+//    std::cout << i << " -> " << FETraits::get_index(localIndexSet, i) <<  " with value " << v_local[i] << std::endl;
+    v(FETraits::get_index(localIndexSet, i)) += v_local[i] ;
+//    std::cerr << "add " << i << " to " << FETraits::get_index(localIndexSet, i) << " with value " << v_local[i] << " and get " << v(FETraits::get_index(localIndexSet, i)) << std::endl;
   }
 }
 
@@ -821,15 +868,29 @@ inline
 void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const Config::VectorType &v_local, Config::VectorType& v)
 {
   assert ((unsigned int) v_local.size() == localIndexSet.size());
+  for (size_t i = 0; i < localIndexSet.size(); i++)
+  {
+     v(FETraits::get_index(localIndexSet, i)) = v_local[i];
+  }
+}
+
+template<typename OtherFETraits, typename LocalIndexSet, typename VectorType>
+inline
+void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet,
+                                        const VectorType &v_local,
+                                         VectorType& v)
+{
+  assert(false && "the Traits calling this function do not fit to the one specified in SolverConfig!!");
+  exit(-1);
+  assert ((unsigned int) v_local.size() == localIndexSet.size());
 //  assert ((unsigned int) v.size() == basis_->indexSet().size()+1);
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
     //dofs associated to normal derivatives have to be corrected to the same direction (we define them to either point upwards or to the right)
-     v(localIndexSet.index(i)[0]) = v_local[i];
-//     v(localIndexSet.index(i)[0]) = (i == 12 || i == 14) ? -v_local[i] : v_local[i];
-//     std::cout << "set " << i << " to " << localIndexSet.index(i)[0] << " with value " << v(localIndexSet.index(i)[0]) << std::endl;
-  }
+     v(OtherFETraits::get_index(localIndexSet, i)) = v_local[i];
+ }
 }
+
 
 inline Eigen::VectorXi Assembler::estimate_nnz_Jacobian() const
 {
@@ -848,20 +909,6 @@ inline Eigen::VectorXi Assembler::estimate_nnz_Jacobian() const
 
 }
 
-template<typename LocalIndexSet, typename VectorType>
-inline
-void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const VectorType &v_local, VectorType& v)
-{
-  assert ((unsigned int) v_local.size() == localIndexSet.size());
-//  assert ((unsigned int) v.size() == basis_->indexSet().size()+1);
-  for (size_t i = 0; i < localIndexSet.size(); i++)
-  {
-    //dofs associated to normal derivatives have to be corrected to the same direction (we define them to either point upwards or to the right)
-     v(localIndexSet.index(i)[0]) = v_local[i];
- }
-}
-
-
 template<typename LocalIndexSet>
 inline
 void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexSetTest, const LocalIndexSet &localIndexSetAnsatz, const Config::DenseMatrixType &m_local, Config::MatrixType& m)
@@ -876,7 +923,7 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
     for (int j = 0; j < m_local.cols(); j++)
       if (std::abs(m_local(i,j)) > 1e-13 )
       {
-        m.coeffRef(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0])+=  m_local(i,j);
+        m.coeffRef(FETraits::get_index(localIndexSetTest, i), FETraits::get_index(localIndexSetAnsatz,j)) +=  m_local(i,j);
       }
   }
 }
@@ -892,8 +939,10 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
   {
     for (int j = 0; j < m_local.cols(); j++)
     {
-//      if (std::abs(m_local(i,j)) > 1e-13 )
-      je.push_back(EntryType(localIndexSetTest.index(i)[0],localIndexSetAnsatz.index(j)[0],m_local(i,j)));
+      if (std::abs(m_local(i,j)) > 1e-13 )
+      {
+        je.push_back(EntryType(FETraits::get_index(localIndexSetTest, i),FETraits::get_index(localIndexSetAnsatz,j),m_local(i,j)));
+      }
     }
   }
 }
@@ -991,7 +1040,7 @@ bool Assembler::assemble_integral_cell_term(const LocalView& localView,
 template<class LocalView, class VectorType, class MatrixType>
 inline
 bool Assembler::assemble_jacobian_integral_cell_term(const LocalView& localView,
-    const VectorType &x, MatrixType& m, int tag, const double& scaling_factor, VectorType& last_equation_derivatives, VectorType& scaling_derivatives) {
+    const VectorType &x, MatrixType& m, int tag, const double& scaling_factor, VectorType& scaling_derivatives, VectorType& last_equation_derivatives) {
   //assuming galerkin ansatz = test space
 
   assert((unsigned int) x.size() == localView.size());
@@ -1006,7 +1055,7 @@ bool Assembler::assemble_jacobian_integral_cell_term(const LocalView& localView,
     out[i] = new double[x_c.size()];
   int ierr = jacobian(tag, x_c.size(), x_c.size(), x_c.data(), out);
 
-//  std::cerr << "jacobian cell ierr was " << ierr << std::endl;
+  std::cerr << "jacobian cell ierr was " << ierr << std::endl;
   if(ierr <3)
   {
     std::cerr << " failed proper derivation from tape " << std::endl;
@@ -1023,6 +1072,10 @@ bool Assembler::assemble_jacobian_integral_cell_term(const LocalView& localView,
     scaling_derivatives(i) = out[i][x.size()];
   }
   scaling_derivatives(x.size()) = out[x.size()][x.size()];
+
+  std::cerr << "scaling factor derivatives " << scaling_derivatives.transpose() << std::endl;
+  std::cerr << "last eq der " << last_equation_derivatives.transpose() << std::endl;
+
 
   //free memory
   for (int i = 0; i < x_c.size(); i++)
@@ -1057,9 +1110,9 @@ void Assembler::assemble_jacobianFD_integral_cell_term(const LocalOperatorType l
     Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(n, j);
 
     Config::VectorType temp = x-h*unit_j;
-    lop.assemble_cell_term(localView, localIndexSet, temp , f_minus, 2, x(x.size()-1), v_minus);
+    lop.assemble_cell_term(localView, temp , f_minus, 2, x(x.size()-1), v_minus);
     temp = x+h*unit_j;
-    lop.assemble_cell_term(localView, localIndexSet, temp , f_plus, 2, x(x.size()-1), v_plus);
+    lop.assemble_cell_term(localView, temp , f_plus, 2, x(x.size()-1), v_plus);
 
     Eigen::VectorXd estimated_derivative = (f_plus - f_minus)/2./h;
 
@@ -1076,8 +1129,8 @@ void Assembler::assemble_jacobianFD_integral_cell_term(const LocalOperatorType l
     Config::VectorType f_minus = Config::VectorType::Zero(n), f_plus= Config::VectorType::Zero(n);
     double v_minus = 0, v_plus = 0;
 
-    lop.assemble_cell_term(localView, localIndexSet, x, f_minus, 2, x(x.size()-1)-h, v_minus);
-    lop.assemble_cell_term(localView, localIndexSet, x, f_plus, 2, x(x.size()-1)+h, v_plus);
+    lop.assemble_cell_term(localView, x, f_minus, 2, x(x.size()-1)-h, v_minus);
+    lop.assemble_cell_term(localView, x, f_plus, 2, x(x.size()-1)+h, v_plus);
     Eigen::VectorXd estimated_derivative = (f_plus - f_minus)/2./h;
 
     for (int i = 0; i < n; i++)
@@ -1094,7 +1147,7 @@ void Assembler::assemble_jacobianFD_integral_cell_term(const LocalOperatorType l
 
 template<class LocalView, class VectorType, class MatrixType>
 inline
-void Assembler::assemble_inner_face_Jacobian(const Intersection& intersection,
+bool Assembler::assemble_inner_face_Jacobian(const Intersection& intersection,
     const LocalView &localView,
     const VectorType &x,
     const LocalView& localViewn,
@@ -1123,8 +1176,13 @@ void Assembler::assemble_inner_face_Jacobian(const Intersection& intersection,
     out[i] = new double[n_var];
   int ierr = jacobian(tag, n_var, n_var, x_xn.data(), out);
   assert(ierr >=0);
-  _unused(ierr);
-//  std::cout <<"ierr " << ierr << std::endl;
+
+  std::cerr << "inner face jacobian cell ierr was " << ierr << std::endl;
+  if(ierr <3)
+  {
+    std::cerr << " failed proper derivation from tape for inner face term" << std::endl;
+    return false;
+  }
 
 //TODO any better way to initialise matrix?
   for (int i = 0; i < x.size(); i++)
@@ -1138,220 +1196,192 @@ void Assembler::assemble_inner_face_Jacobian(const Intersection& intersection,
   for (int i = 0; i < n_var; i++)
     delete[] out[i];
   delete[] out;
+  return true;
 }
 
-
-template<typename LocalOperatorType>
-void Assembler::assemble_DG(const LocalOperatorType &lop, const Config::VectorType& x, Config::VectorType& v) const
+template<typename LocalOperatorType, typename IntersectionType, typename LocalView>
+inline
+void Assembler::assemble_inner_face_termHelper(const LocalOperatorType &lop, const IntersectionType& is,
+    const LocalView& localView, const LocalView& localViewn,
+    const Config::VectorType& xLocal, const BoundaryHandler::BoolVectorType& isBoundaryLocal,
+    const Config::VectorType& xLocaln, const BoundaryHandler::BoolVectorType& isBoundaryLocaln,
+    Config::VectorType& vLocal, Config::VectorType& vLocaln,
+    Config::DenseMatrixType m_m, Config::DenseMatrixType mn_m,
+    Config::DenseMatrixType m_mn, Config::DenseMatrixType mn_mn
+) const
 {
-    assert((unsigned int) x.size() == basis_->indexSet().size()+1);
 
-    Config::GridView gridView = basis_->gridView();
-
-    //assuming Galerkin
-    v = Config::VectorType::Zero(x.size());
-    v(v.size()-1) -= G;
-
-    // The index set gives you indices for each element , edge , face , vertex , etc .
-//    const GridViewType::IndexSet& indexSet = gridView.indexSet();
-    auto localView = basis_->localView();
-    auto localViewn = basis_->localView();
-    auto localIndexSet = basis_->indexSet().localIndexSet();
-//    auto localIndexSetn = basis_->indexSet().localIndexSet();
-
-    int tag_count = 0;
-
-    // A loop over all elements of the grid
-    for (auto&& e : elements(gridView)) {
-
-        // Bind the local FE basis view to the current element
-        localView.bind(e);
-        localIndexSet.bind(localView);
-
-
-        Config::VectorType local_vector;
-        local_vector.setZero(localView.size());    // Set all entries to zero
-
-        //get id
-//        IndexType id = indexSet.index(e);
-//        if (id % 100 == 0)
-//          std::cerr << "processing element " << id << std::endl;
-
-        //calculate local coefficients
-        Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
-        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryDoF());
-//        BoundaryHandler::BoolVectorType isBoundaryLocal = BoundaryHandler::BoolVectorType::Constant(localIndexSet.size(), false);
-
-        lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, tag_count, x(x.size()-1), v(v.size()-1));
-        tag_count++;
-
-        for (int i = 0; i < isBoundaryLocal.size(); i++)
-        {
-          if (isBoundaryLocal(i)) local_vector(i) = 0;
-        }
-
-        // Traverse intersections
-        for (auto&& is : intersections(gridView, e)) {
-            if (is.neighbor()) {
-
-                // compute unique id for neighbor
-                const GridViewType::IndexSet::IndexType idn =
-                        gridView.indexSet().index(is.outside());
-
-/*
-                // Visit face if id is bigger
-                bool visit_face = id > idn
-                        || SolverConfig::require_skeleton_two_sided;
-                // unique vist of intersection
-                if (visit_face) {
-                  auto neighbourElement = is.outside();
-
-                  // Bind the local neighbour FE basis view to the neighbour element
-                  localViewn.bind(neighbourElement);
-                  localIndexSetn.bind(localViewn);
-                  Config::VectorType xLocaln = calculate_local_coefficients(localIndexSetn, x);
-                  Config::VectorType local_vectorn = Config::VectorType::Zero(xLocaln.size());
-
-                  lop.assemble_inner_face_term(is, localView, localIndexSet, xLocal,
-                      localViewn, localIndexSetn, xLocaln, local_vector,
-                      local_vectorn, tag_count);
-//
-
-
-//                  std::cout << " v " << local_vector.transpose() << std::endl;
-//                  std::cout << " vn " << local_vectorn.transpose() << std::endl;
-
-//                  std::cout << "add neighbour " << std::endl;
-                  add_local_coefficients(localIndexSetn, local_vectorn, v);
-                  tag_count++;
-                }
-*/
-            } else if (is.boundary()) {
-//                // Boundary integration
-                lop.assemble_boundary_face_term(is, localView,localIndexSet, xLocal,
-                        local_vector, tag_count);
-                tag_count++;
-            } else {
-                std::cerr << " I do not know how to handle this intersection"
-                        << std::endl;
-                exit(-1);
-            }
-        }
-//        std::cout << " add self" << std::endl;
-        add_local_coefficients(localIndexSet, local_vector, v);
+  if (!tape1initialised || !reuseAdolCTape || true) //check if tape has record
+  {
+    lop.assemble_inner_face_term(is, localView, xLocal,
+        localViewn, xLocaln, vLocal, vLocaln, 1);
+    tape1initialised = true;
+  }
+  else
+  {
+    //try to construct function with last tape
+    Config::VectorType currentBoundaryVector =  Config::VectorType::Zero(vLocal.size());
+    bool tapeReconstrutionSuccessfull =   assemble_inner_face_Jacobian(is, localView, xLocal, localViewn, xLocaln,
+        m_m, mn_m, m_mn, mn_mn, 1);
+//              std::cerr << "Tape Reconstruction was successfull ? " << tapeReconstrutionSuccessfull << std::endl;
+    if (!tapeReconstrutionSuccessfull)
+    {
+      lop.assemble_inner_face_term(is, localView, xLocal,
+          localViewn, xLocaln, vLocal, vLocaln, 1);
     }
-    /*cimg_library::CImg<double> image (lop.target_distribution, LocalOperatorType::pixel_width, LocalOperatorType::pixel_height);
-    for (int i = 0; i < LocalOperatorType::pixel_width* LocalOperatorType::pixel_width; i++)  lop.target_distribution[i]*=255;
+    else
+    {
+#ifndef NDEBUG
+      Config::VectorType currentBoundaryVectorExact =  Config::VectorType::Zero(vLocal.size());
+      lop.assemble_inner_face_term(is, localView, xLocal,
+          localViewn, xLocaln, vLocal,
+          vLocaln, 1);
+      double tol = 1e-7;
+      igpm::testblock b(std::cerr);
+      compare_matrices(b, currentBoundaryVector, currentBoundaryVectorExact, "AdolcReconstruction", "exactvalue", true, tol);
+#endif
+      vLocal+= currentBoundaryVector;
+    }
+  }
 
-    std::stringstream ss;
-    ss << "../plots/targetDistributions/target" << picture_no << ".bmp";
-    image.save_bmp(ss.str().c_str());
-    picture_no++;*/
+  assemble_inner_face_Jacobian(is, localView, xLocal, localViewn, xLocaln,
+                                m_m, mn_m, m_mn, mn_mn, 1);
+
+  //delete all equations with boundary dof test function
+  for (int i = 0; i < isBoundaryLocal.size(); i++)
+  {
+    if (isBoundaryLocal(i)) m_m.row(i) = Config::VectorType::Zero(localView.size());
+    if (isBoundaryLocal(i)) m_mn.row(i) = Config::VectorType::Zero(localView.size());
+    if (isBoundaryLocal(i)) vLocal(i) = 0;
+  }
+  for (int i = 0; i < isBoundaryLocaln.size(); i++)
+  {
+    if (isBoundaryLocaln(i)) mn_m.row(i) = Config::VectorType::Zero(localView.size());
+    if (isBoundaryLocaln(i)) mn_mn.row(i) = Config::VectorType::Zero(localView.size());
+    if (isBoundaryLocaln(i)) vLocaln(i) = 0;
+  }
 }
 
-template<typename LocalOperatorType>
-void Assembler::assemble_Jacobian_DG(const LocalOperatorType &lop, const Config::VectorType& x, Config::MatrixType& m) const
+
+template<typename LocalOperatorType, typename IntersectionType, typename LocalView>
+inline
+void Assembler::assemble_boundary_termHelper(const LocalOperatorType &lop, const IntersectionType& is, const LocalView& localView,
+    const Config::VectorType& xLocal, const BoundaryHandler::BoolVectorType& isBoundaryLocal,
+    Config::VectorType& vLocal, Config::DenseMatrixType& mLocal) const
 {
-    assert((unsigned int)x.size() == basis_->indexSet().size()+1);
+  // Boundary integration
 
-    Config::GridView gridView = basis_->gridView();
-
-    //assuming Galerkin
-    m.resize(x.size(), x.size());
-
-    //reserve space
-    std::vector<EntryType> JacobianEntries;
-
-    // The index set gives you indices for each element , edge , face , vertex , etc .
-    const GridViewType::IndexSet& indexSet = gridView.indexSet();
-     FEBasisType::LocalView  localView (*basis_);
-    //    auto localViewn = basis_->localView();
-     FEBasisType::LocalView  localViewn (*basis_);
-    auto localIndexSet = basis_->indexSet().localIndexSet();
-    auto localIndexSetn = basis_->indexSet().localIndexSet();
-
-    int tag_count = 0;
-
-    // A loop over all elements of the grid
-    for (auto&& e : elements(gridView)) {
-
-        // Bind the local FE basis view to the current element
-        localView.bind(e);
-        localIndexSet.bind(localView);
-
-        Config::DenseMatrixType m_m;
-        m_m.setZero(localView.size(), localView.size());
-
-        Config::VectorType last_equation = Config::VectorType::Zero(localView.size()),
-                                  scaling_factor = Config::VectorType::Zero(localView.size()+1);
-
-        //get id
-        IndexType id = indexSet.index(e);
-
-        //calculate local coefficients
-        Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
-
-        assemble_jacobian_integral_cell_term(localView, xLocal, m_m, tag_count, x(x.size()-1), last_equation, scaling_factor);
-        tag_count++;
-
-       // Traverse intersections
-        for (auto&& is : intersections(gridView, e)) {
-            if (is.neighbor()) {
-                // compute unique id for neighbor
-              const GridViewType::IndexSet::IndexType idn =
-                        gridView.indexSet().index(is.outside());
-
-                // Visit face if id is bigger
-              bool visit_face = id > idn
-                        || SolverConfig::require_skeleton_two_sided;
-                // unique vist of intersection
-              if (visit_face) {
-                auto neighbourElement = is.outside();
-
-                  // Bind the local neighbour FE basis view to the neighbour element
-                  localViewn.bind(neighbourElement);
-                  localIndexSetn.bind(localViewn);
-                  Config::VectorType xLocaln = calculate_local_coefficients(localIndexSetn, x);
-
-                  //calculate jacobians
-                  Config::DenseMatrixType mn_m, m_mn, mn_mn;
-                  mn_m.setZero(localViewn.size(), localView.size());
-                  m_mn.setZero(localView.size(), localViewn.size());
-                  mn_mn.setZero(localViewn.size(), localViewn.size());
-
-                  assemble_inner_face_Jacobian(is, localView, xLocal, localViewn, xLocaln,
-                                                m_m, mn_m, m_mn, mn_mn, tag_count);
-                  add_local_coefficients_Jacobian(localIndexSetn, localIndexSet, mn_m, JacobianEntries);
-                  add_local_coefficients_Jacobian(localIndexSet,localIndexSetn, m_mn,JacobianEntries);
-                  add_local_coefficients_Jacobian(localIndexSetn, localIndexSetn, mn_mn, JacobianEntries);
-                  tag_count++;
-                }
-            } else if (is.boundary()) {
-                // Boundary integration
-                assemble_jacobian_integral(localView, xLocal, m_m, tag_count);
-                tag_count++;
-            } else {
-                std::cerr << " I do not know how to handle this intersection"
-                        << std::endl;
-                exit(-1);
-            }
-        }
-        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
-
-        for (unsigned int i = 0; i < localView.size(); i++)
-        {
-          JacobianEntries.push_back(EntryType(localIndexSet.index(i)[0],m.cols()-1,scaling_factor(i)));
-          JacobianEntries.push_back(EntryType(m.rows()-1, localIndexSet.index(i)[0],last_equation(i)));
-        }
-        JacobianEntries.push_back(EntryType(m.rows()-1, m.cols()-1,scaling_factor(localView.size())));
+  if (!tape2initialised || !reuseAdolCTape || true) //check if tape has record
+  {
+    lop.assemble_boundary_face_term(is,localView, xLocal, vLocal, 2);
+    tape1initialised = true;
+  }
+  else
+  {
+    //try to construct function with last tape
+    Config::VectorType currentBoundaryVector =  Config::VectorType::Zero(vLocal.size());
+    bool tapeReconstrutionSuccessfull = assemble_boundary_integral_term(localView, xLocal, currentBoundaryVector, 2);
+//              std::cerr << "Tape Reconstruction was successfull ? " << tapeReconstrutionSuccessfull << std::endl;
+    if (!tapeReconstrutionSuccessfull)
+    {
+      lop.assemble_boundary_face_term(is,localView, xLocal, vLocal, 2);
     }
-    m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
+    else
+    {
+#ifndef NDEBUG
+      Config::VectorType currentBoundaryVectorExact =  Config::VectorType::Zero(vLocal.size());
+      lop.assemble_boundary_face_term(is,localView, xLocal, currentBoundaryVectorExact, 2);
+      double tol = 1e-7;
+      igpm::testblock b(std::cerr);
+      compare_matrices(b, currentBoundaryVector, currentBoundaryVectorExact, "AdolcReconstruction", "exactvalue", true, tol);
+#endif
+      vLocal+= currentBoundaryVector;
+    }
+  }
+
+  //tryp to recover derivation from last tape
+  bool derivationSuccessful = assemble_jacobian_integral(localView, xLocal, mLocal, 2);
+//            std::cerr << "Boundary Derivation was successfull ? " << derivationSuccessful << std::endl;
+  if (!derivationSuccessful)
+  {
+    Config::VectorType currentBoundaryVector =  Config::VectorType::Zero(vLocal.size());
+    lop.assemble_boundary_face_term(is,localView, xLocal, currentBoundaryVector, 2);
+    derivationSuccessful = assemble_jacobian_integral(localView, xLocal, mLocal, 2);
+//              assert(derivationSuccessful);
+    if (!derivationSuccessful)
+      cerr << " Error at derivation " << std::endl; exit(-1);
+  }
 }
 
+template<typename LocalOperatorType, typename LocalView>
+inline
+void Assembler::assemble_cell_termHelper(const LocalOperatorType &lop, const LocalView& localView,
+    const Config::VectorType& xLocal, const BoundaryHandler::BoolVectorType& isBoundaryLocal,
+    Config::VectorType& vLocal, Config::DenseMatrixType& mLocal,
+    const Config::ValueType &scaling_factor, Config::ValueType &last_equation,
+    Config::VectorType& scaling_factorDerivatives, Config::VectorType& last_equationDerivatives) const
+{
+  std::cerr << " is local boundary " << isBoundaryLocal.transpose() << std::endl;
+
+  if (!tape0initialised || !reuseAdolCTape) //check if tape has record
+  {
+    lop.assemble_cell_term(localView, xLocal, vLocal, 0, scaling_factor, last_equation);
+    tape0initialised = true;
+  }
+  else
+  {
+    //try to construct function with last tape
+    bool tapeReconstrutionSuccessfull = assemble_integral_cell_term(localView, xLocal, vLocal, 0, scaling_factor, last_equation);
+//          std::cerr << "Cell Reconstruction was successfull ? " << tapeReconstrutionSuccessfull << std::endl;
+    if (!tapeReconstrutionSuccessfull)
+    {
+      lop.assemble_cell_term(localView, xLocal, vLocal, 0, scaling_factor, last_equation);
+    }
+  }
+
+  //tryp to recover derivation from last tape
+  bool derivationSuccessful = assemble_jacobian_integral_cell_term(localView, xLocal, mLocal, 0, scaling_factor, scaling_factorDerivatives, last_equationDerivatives);
+//        std::cerr << "Cell Derivation was successfull ? " << derivationSuccessful << std::endl;
+  if (!derivationSuccessful )
+  {
+    std::cerr << " derivation was not successful " << std::endl;
+    ImageFunction::use_adouble_image_evaluation = false;
+    vLocal.setZero(); //prevent double addition of local terms
+    lop.assemble_cell_term(localView, xLocal, vLocal, 0, scaling_factor, last_equation);
+    derivationSuccessful = assemble_jacobian_integral_cell_term(localView, xLocal, mLocal, 0, scaling_factor, scaling_factorDerivatives, last_equationDerivatives);
+    ImageFunction::use_adouble_image_evaluation = true;
+    std::cerr << "Cell Derivation was successfull ? " << derivationSuccessful << std::endl;
+
+#ifndef NDEBUG
+    Config::DenseMatrixType m_mFD;
+    m_mFD.setZero(localView.size(), localView.size());
+    Config::VectorType last_equationFD = Config::VectorType::Zero(localView.size()),
+                              scaling_factorFD = Config::VectorType::Zero(localView.size()+1);
+
+    assemble_jacobianFD_integral_cell_term(lop, localView, xLocal, m_mFD, 0, scaling_factor, last_equationFD, scaling_factorFD);
+
+    double tol = 1e-7;
+    igpm::testblock b(std::cerr);
+    compare_matrices(b, mLocal, m_mFD, "CellJacobian", "FD CellJacobian", true, tol);
+    compare_matrices(b, last_equationDerivatives, last_equationFD, "last_equation", "last_equationFD", true, tol);
+    compare_matrices(b, scaling_factorDerivatives, scaling_factorFD, "scaling_factor", "scaling_factorFD", true, tol);
+#endif
+    if (!derivationSuccessful)
+      std::cerr << " Error at second try " << std::endl;
+    assert(derivationSuccessful);
+  }
+
+  //delete all equations with boundary dof test function
+  for (int i = 0; i < isBoundaryLocal.size(); i++)
+  {
+    if (isBoundaryLocal(i)) mLocal.row(i) = Config::VectorType::Zero(localView.size());
+    if (isBoundaryLocal(i)) vLocal(i) = 0;
+  }
+}
 
 //template<class Config>
 template<typename LocalOperatorType>
-void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {
     Config::VectorType boundary = Config::VectorType::Zero(v.size());
     BoundaryHandler::BoolVectorType collocationSet = BoundaryHandler::BoolVectorType::Constant(v.size(), false);
@@ -1375,13 +1405,17 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Config:
 
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
-//    const GridViewType::IndexSet& indexSet = gridView.indexSet();
+    const GridViewType::IndexSet& indexSet = gridView.indexSet();
     auto localView = basis_->localView();
-//    auto localViewn = basis_->localView();
+    auto localViewn = basis_->localView();
     auto localIndexSet = basis_->indexSet().localIndexSet();
-//    auto localIndexSetn = basis_->indexSet().localIndexSet();
+    auto localIndexSetn = basis_->indexSet().localIndexSet();
 
-    bool tape0initialised = false, tape1initialised = false;
+    tape0initialised = false;
+    tape1initialised = false;
+    tape2initialised = false;
+    int tag_count = 0;
+
 
     // A loop over all elements of the grid
     for (auto&& e : elements(gridView)) {
@@ -1404,11 +1438,11 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Config:
         Config::DenseMatrixType m_mB;
         m_mB.setZero(localView.size(), localView.size());
 
-        Config::VectorType last_equation = Config::VectorType::Zero(localView.size()),
-                                  scaling_factor = Config::VectorType::Zero(localView.size()+1);
+        Config::VectorType last_equationDerivatives = Config::VectorType::Zero(localView.size()),
+                                  scaling_factorDerivatives = Config::VectorType::Zero(localView.size()+1);
 
         //get id
-//        IndexType id = indexSet.index(e);
+        IndexType id = indexSet.index(e);
 
         //calculate local coefficients
         Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
@@ -1416,120 +1450,138 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Config:
 //        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryDoF());
 //        BoundaryHandler::BoolVectorType isBoundaryLocal = BoundaryHandler::BoolVectorType::Constant(localIndexSet.size(), false);
 
-        if (!tape0initialised || !reuseAdolCTape) //check if tape has record
+        std::cerr << "isBoundaryLocal " << isBoundaryLocal.transpose() << std::endl;
+
+        switch(assembleType_)
         {
-          lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
-          tape0initialised = true;
-        }
-        else
-        {
-          //try to construct function with last tape
-          bool tapeReconstrutionSuccessfull = assemble_integral_cell_term(localView, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
-//          std::cerr << "Cell Reconstruction was successfull ? " << tapeReconstrutionSuccessfull << std::endl;
-          if (!tapeReconstrutionSuccessfull)
-          {
-            lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
-          }
-        }
-
-        //tryp to recover derivation from last tape
-        bool derivationSuccessful = assemble_jacobian_integral_cell_term(localView, xLocal, m_m, 0, x(x.size()-1), last_equation, scaling_factor);
-//        std::cerr << "Cell Derivation was successfull ? " << derivationSuccessful << std::endl;
-        if (!derivationSuccessful )
-        {
-          std::cerr << " derivation was not successful " << std::endl;
-          ImageFunction::use_adouble_image_evaluation = false;
-          local_vector.setZero(); //prevent double addition of local terms
-          lop.assemble_cell_term(localView, localIndexSet, xLocal, local_vector, 2, x(x.size()-1), v(v.size()-1));
-          derivationSuccessful = assemble_jacobian_integral_cell_term(localView, xLocal, m_m, 2, x(x.size()-1), last_equation, scaling_factor);
-          ImageFunction::use_adouble_image_evaluation = true;
-          std::cerr << "Cell Derivation was successfull ? " << derivationSuccessful << std::endl;
-//          assert(derivationSuccessful);
-        }
-
-
-#ifdef NDEBUG
-        if(!derivationSuccessful || true)
-        {
-
-          Config::DenseMatrixType m_mFD;
-          m_mFD.setZero(localView.size(), localView.size());
-          Config::VectorType last_equationFD = Config::VectorType::Zero(localView.size()),
-                                    scaling_factorFD = Config::VectorType::Zero(localView.size()+1);
-
-          assemble_jacobianFD_integral_cell_term(lop, localView, xLocal, m_mFD, 0, x(x.size()-1), last_equationFD, scaling_factorFD);
-
-          double tol = 1e-7;
-          igpm::testblock b(std::cout);
-          compare_matrices(b, m_m, m_mFD, "CellJacobian", "FD CellJacobian", true, tol);
-          compare_matrices(b, last_equation, last_equationFD, "last_equation", "last_equationFD", true, tol);
-          compare_matrices(b, scaling_factor, scaling_factorFD, "scaling_factor", "scaling_factorFD", true, tol);
-        }
-#endif
-
-        //delete all equations with boundary dof test function
-        for (int i = 0; i < isBoundaryLocal.size(); i++)
-        {
-          if (isBoundaryLocal(i)) m_m.row(i) = Config::VectorType::Zero(localView.size());
-          if (isBoundaryLocal(i)) local_vector(i) = 0;
+        case ONLY_OBJECTIVE: break;
+        case ONLY_JACOBIAN:
+          assemble_jacobian_integral_cell_term(localView, xLocal, m_m, tag_count, x(x.size()-1), scaling_factorDerivatives, last_equationDerivatives);
+          tag_count++;
+          break;
+        case ALL: assemble_cell_termHelper(lop, localView, xLocal, isBoundaryLocal, local_vector, m_m, x(x.size()-1), v(v.size()-1), scaling_factorDerivatives, last_equationDerivatives);
+//        std::cout << " intermediate (ct) m_m " << m_m  << std::endl;
+          break;
+        default: assert(false); std::cerr << " Error: do not know AssembleType" << std::endl; exit(-1);
         }
 //        std::cerr << "local vector after boundary " << local_vector << std::endl;
 
-
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
-          if (is.boundary()) {
+          if (is.neighbor()) {
+              // compute unique id for neighbor
+            const GridViewType::IndexSet::IndexType idn =
+                      gridView.indexSet().index(is.outside());
+
+              // Visit face if id is bigger
+            bool visit_face = id > idn
+                      || SolverConfig::require_skeleton_two_sided;
+              // unique vist of intersection
+            if (visit_face) {
+              auto neighbourElement = is.outside();
+
+              // Bind the local neighbour FE basis view to the neighbour element
+              localViewn.bind(neighbourElement);
+              localIndexSetn.bind(localViewn);
+              Config::VectorType xLocaln = calculate_local_coefficients(localIndexSetn, x);
+              switch(assembleType_)
+              {
+              case ONLY_OBJECTIVE:
+              {
+                Config::VectorType local_vectorn = Config::VectorType::Zero(xLocaln.size());
+                BoundaryHandler::BoolVectorType isBoundaryLocaln = calculate_local_coefficients(localIndexSetn, boundaryHandler_.isBoundaryValueDoF());
+                lop.assemble_inner_face_term(is, localView, xLocal,
+                    localViewn, xLocaln,
+                    local_vector, local_vectorn, tag_count);
+                //delete all equations with boundary dof test function
+                for (int i = 0; i < isBoundaryLocal.size(); i++)
+                {
+                  if (isBoundaryLocal(i)) local_vector(i) = 0;
+                }
+                for (int i = 0; i < isBoundaryLocaln.size(); i++)
+                {
+                  if (isBoundaryLocaln(i)) local_vector(i) = 0;
+                }
+                add_local_coefficients(localIndexSetn, local_vectorn, v);
+                tag_count++;
+              }
+                break;
+              case ONLY_JACOBIAN:
+              {
+                //init temp matrices
+                Config::DenseMatrixType mn_m, m_mn, mn_mn;
+                BoundaryHandler::BoolVectorType isBoundaryLocaln = calculate_local_coefficients(localIndexSetn, boundaryHandler_.isBoundaryValueDoF());
+                mn_m.setZero(localViewn.size(), localView.size());
+                m_mn.setZero(localView.size(), localViewn.size());
+                mn_mn.setZero(localViewn.size(), localViewn.size());
+
+                assemble_inner_face_Jacobian(is, localView, xLocal, localViewn, xLocaln,
+                                              m_m, mn_m, m_mn, mn_mn, tag_count);
+                //delete all equations with boundary dof test function
+                for (int i = 0; i < isBoundaryLocal.size(); i++)
+                {
+                  if (isBoundaryLocal(i)) m_m.row(i) = Config::VectorType::Zero(localView.size());
+                  if (isBoundaryLocal(i)) m_mn.row(i) = Config::VectorType::Zero(localView.size());
+                }
+                for (int i = 0; i < isBoundaryLocaln.size(); i++)
+                {
+                  if (isBoundaryLocaln(i)) mn_m.row(i) = Config::VectorType::Zero(localView.size());
+                  if (isBoundaryLocaln(i)) mn_mn.row(i) = Config::VectorType::Zero(localView.size());
+                }                add_local_coefficients_Jacobian(localIndexSetn, localIndexSet, mn_m, JacobianEntries);
+                add_local_coefficients_Jacobian(localIndexSet,localIndexSetn, m_mn,JacobianEntries);
+                add_local_coefficients_Jacobian(localIndexSetn, localIndexSetn, mn_mn, JacobianEntries);
+                tag_count++;
+              }
+                break;
+              case ALL:
+              {
+                //init temp matrices
+                Config::VectorType local_vectorn = Config::VectorType::Zero(xLocaln.size());
+                Config::DenseMatrixType mn_m, m_mn, mn_mn;
+                BoundaryHandler::BoolVectorType isBoundaryLocaln = calculate_local_coefficients(localIndexSetn, boundaryHandler_.isBoundaryValueDoF());
+                mn_m.setZero(localViewn.size(), localView.size());
+                m_mn.setZero(localView.size(), localViewn.size());
+                mn_mn.setZero(localViewn.size(), localViewn.size());
+
+                assemble_inner_face_termHelper(lop, is, localView, localViewn,
+                    xLocal, isBoundaryLocal, xLocaln, isBoundaryLocaln,
+                    local_vector, local_vectorn, m_m, mn_m, m_mn, mn_mn);
+
+//                std::cout << " intermediate (if) m_m " << m_m  << std::endl;
+
+                add_local_coefficients(localIndexSetn, local_vectorn, v);
+
+                add_local_coefficients_Jacobian(localIndexSetn, localIndexSet, mn_m, JacobianEntries);
+                add_local_coefficients_Jacobian(localIndexSet,localIndexSetn, m_mn,JacobianEntries);
+                add_local_coefficients_Jacobian(localIndexSetn, localIndexSetn, mn_mn, JacobianEntries);
+                tag_count++;
+              }
+              break;
+              }
+            }
+          }
+          else if (is.boundary()) {
             elementHasBoundary = true;
 
-            // Boundary integration
-
-            if (!tape1initialised || !reuseAdolCTape || true) //check if tape has record
+            switch(assembleType_)
             {
-              lop.assemble_boundary_face_term(is,localView, localIndexSet, xLocal, local_boundary, 1);
-              tape1initialised = true;
-            }
-            else
-            {
-              //try to construct function with last tape
-              Config::VectorType currentBoundaryVector =  Config::VectorType::Zero(local_boundary.size());
-              bool tapeReconstrutionSuccessfull = assemble_boundary_integral_term(localView, xLocal, currentBoundaryVector, 1);
-//              std::cerr << "Tape Reconstruction was successfull ? " << tapeReconstrutionSuccessfull << std::endl;
-              if (!tapeReconstrutionSuccessfull)
-              {
-                lop.assemble_boundary_face_term(is,localView, localIndexSet, xLocal, local_boundary, 1);
-              }
-              else
-              {
-#ifndef NDEBUG
-                Config::VectorType currentBoundaryVectorExact =  Config::VectorType::Zero(local_boundary.size());
-                lop.assemble_boundary_face_term(is,localView, localIndexSet, xLocal, currentBoundaryVectorExact, 1);
-                double tol = 1e-7;
-                igpm::testblock b(std::cerr);
-                compare_matrices(b, currentBoundaryVector, currentBoundaryVectorExact, "AdolcReconstruction", "exactvalue", true, tol);
-#endif
-                local_boundary+= currentBoundaryVector;
-              }
+              case ONLY_OBJECTIVE: break;
+              case ONLY_JACOBIAN:
+                assemble_jacobian_integral(localView, xLocal, m_mB, tag_count);
+                tag_count++;
+                break;
+              case ALL: assemble_boundary_termHelper(lop, is, localView, xLocal, isBoundaryLocal, local_boundary, m_mB);
+                std::cerr << " local boundary " << local_boundary  << std::endl;
+                break;
+              default: assert(false); std::cerr << " Error: do not know AssembleType" << std::endl; exit(-1);
             }
 
-            //tryp to recover derivation from last tape
-            bool derivationSuccessful = assemble_jacobian_integral(localView, xLocal, m_mB, 1);
-//            std::cerr << "Boundary Derivation was successfull ? " << derivationSuccessful << std::endl;
-            if (!derivationSuccessful)
-            {
-              Config::VectorType currentBoundaryVector =  Config::VectorType::Zero(local_boundary.size());
-              lop.assemble_boundary_face_term(is,localView, localIndexSet, xLocal, currentBoundaryVector, 1);
-              derivationSuccessful = assemble_jacobian_integral(localView, xLocal, m_mB, 1);
-//              assert(derivationSuccessful);
-              if (!derivationSuccessful)
-                cerr << " Error at derivation " << std::endl; exit(-1);
-            }
-
-            }/* else {
+            } else {
                 std::cerr << " I do not know how to handle this intersection"
                         << std::endl;
                 exit(-1);
             }
-        */}
+        }
 
 #ifdef COLLOCATION
         Config::DenseMatrixType Coll_m_mB;
@@ -1538,20 +1590,20 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Config:
         for (size_t i = 0; i < localIndexSet.size(); i++)
         {
           if (!isBoundaryLocal(i))  continue;
-//          std::cerr << "want " << i << " to " << localIndexSet.index(i)[0] << " with value " << local_boundary[i] << " global vector has value " << boundary(localIndexSet.index(i)[0]) << std::endl;
-          if (!collocationSet(localIndexSet.index(i)[0]))
+//          std::cerr << "want " << i << " to " << FETraits::get_index(localIndexSet, i) << " with value " << local_boundary[i] << " global vector has value " << boundary(FETraits::get_index(localIndexSet, i)) << std::endl;
+          if (!collocationSet(FETraits::get_index(localIndexSet, i)))
           {
-            boundary(localIndexSet.index(i)[0]) = local_boundary[i];
-//            std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(i)[0] << " with value " << local_boundary[i] << std::endl;
+            boundary(FETraits::get_index(localIndexSet, i)) = local_boundary[i];
+//            std::cerr << "set local coll " <<  i << " to " <<FETraits::get_index(localIndexSet, i) << " with value " << local_boundary[i] << std::endl;
             Coll_m_mB.row(i) = m_mB.row(i);
-            collocationSet(localIndexSet.index(i)[0])=true;
+            collocationSet(FETraits::get_index(localIndexSet, i))=true;
           }
           else
           {
             switch(i)
             {
             case 0:
-              assert(std::abs(local_boundary[i]-boundary(localIndexSet.index(i)[0])) < 1e-10 || std::abs(local_boundary[i]) < 1e-14);
+              assert(std::abs(local_boundary[i]-boundary(FETraits::get_index(localIndexSet, i))) < 1e-10 || std::abs(local_boundary[i]) < 1e-14);
             break;
             case 1:
               assert(!collocationSet(localIndexSet.index(2)[0]));
@@ -1568,7 +1620,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Config:
 //              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(1)[0] << " with value " << local_boundary[i] << std::endl;
             break;
             case 4:
-              assert(std::abs(local_boundary[i]-boundary(localIndexSet.index(i)[0])) < 1e-10);
+              assert(std::abs(local_boundary[i]-boundary(FETraits::get_index(localIndexSet, i))) < 1e-10);
             break;
             case 5:
               assert(!collocationSet(localIndexSet.index(6)[0]));
@@ -1585,7 +1637,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Config:
 //              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(5)[0] << " with value " << local_boundary[i] << std::endl;
             break;
             case 8:
-              assert(std::abs(local_boundary[i]-boundary(localIndexSet.index(i)[0])) < 1e-10);
+              assert(std::abs(local_boundary[i]-boundary(FETraits::get_index(localIndexSet, i))) < 1e-10);
             break;
             case 9:
               assert(!collocationSet(localIndexSet.index(10)[0]));
@@ -1613,6 +1665,8 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Config:
         add_local_coefficients(localIndexSet, local_vector, v);
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
 
+//        std::cout << " m_m to add " << m_m <<  std::endl;
+
         //special treatment for boundary elements
         if (elementHasBoundary)
         {
@@ -1620,8 +1674,8 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Config:
         for (size_t i = 0; i < localIndexSet.size(); i++)
         {
           if (!isBoundaryLocal(i))  continue;
-          boundary(localIndexSet.index(i)[0]) += local_boundary[i] ;
-//          std::cerr << "boundary add " << i << " to " << localIndexSet.index(i)[0] << " with value " << local_boundary[i] << " and get " << boundary(localIndexSet.index(i)[0]) << std::endl;
+          boundary(FETraits::get_index(localIndexSet, i)) += local_boundary[i] ;
+//          std::cerr << "boundary add " << i << " to " << FETraits::get_index(localIndexSet, i) << " with value " << local_boundary[i] << " and get " << boundary(FETraits::get_index(localIndexSet, i)) << std::endl;
         }
 #ifndef COLLOCATION
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
@@ -1630,13 +1684,16 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Config:
 #endif
         }
 
+        std::cerr << "outer scaling factor derivatives " << scaling_factorDerivatives.transpose() << std::endl;
+        std::cerr << "outer last eq der " << last_equationDerivatives.transpose() << std::endl;
+
         //add derivatives for scaling factor
         for (unsigned int i = 0; i < localView.size(); i++)
          {
-          if (!isBoundaryLocal(i)) JacobianEntries.push_back(EntryType(localIndexSet.index(i)[0],m.cols()-1,scaling_factor(i)));
-           JacobianEntries.push_back(EntryType(m.rows()-1, localIndexSet.index(i)[0],last_equation(i)));
+          if (!isBoundaryLocal(i)) JacobianEntries.push_back(EntryType(FETraits::get_index(localIndexSet, i),m.cols()-1,scaling_factorDerivatives(i)));
+           JacobianEntries.push_back(EntryType(m.rows()-1, FETraits::get_index(localIndexSet, i),last_equationDerivatives(i)));
          }
-         JacobianEntries.push_back(EntryType(m.rows()-1, m.cols()-1,scaling_factor(localView.size())));
+         JacobianEntries.push_back(EntryType(m.rows()-1, m.cols()-1,scaling_factorDerivatives(localView.size())));
      }
      m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
 
@@ -1647,6 +1704,7 @@ void Assembler::assemble_DG_Jacobian(const LocalOperatorType &lop, const Config:
      std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
      std::cerr << " f_boundary " << boundary.transpose() << std::endl;
      std::cerr << " f          " << v.transpose() << std::endl;
+
 }
 
 #endif /* SRC_ASSEMBLER_HH_ */

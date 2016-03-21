@@ -140,7 +140,7 @@ void FEBasisHandler<PS12Split, PS12SplitTraits>::adapt(MA_solver& solver, const 
 
 //      std::cout << " set local dofs " << localDofs.transpose() << std::endl;
 
-      Assembler::set_local_coefficients(localIndexSet, localDofs, v);
+      Assembler::set_local_coefficients<PS12SplitTraits>(localIndexSet, localDofs, v);
     }
 
   //set scaling factor (last dof) to ensure mass conservation

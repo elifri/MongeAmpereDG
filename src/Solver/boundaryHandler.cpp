@@ -7,6 +7,8 @@
 
 #include "boundaryHandler.h"
 
+#include "solver_config.h"
+#include "FETraits.hpp"
 #include "Assembler.h"
 
 void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Solver_config::FEBasisType &FEBasis)
@@ -26,19 +28,12 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
     localView.bind(element);
     localIndexSet.bind(localView);
 
-    const auto& lFE = SolverConfig::FETraitsSolver::get_finiteElement(localView);
+    const auto& lFE = SolverConfig::FETraitsSolver::get_finiteElementu(localView);
 
     //store local boundary information
     BoolVectorType localIsBoundary = BoolVectorType::Constant(lFE.size(),false);
     BoolVectorType localIsBoundaryValue = BoolVectorType::Constant(lFE.size(),false);
 //    std::fill(localIsBoundary.begin(), localIsBoundary.end(), false);
-
-
-/*    std::cout << " corners " << std::endl;
-    for (int i = 0 ; i < element.geometry().corners(); i++)
-      std::cout << element.geometry().corner(i) << " ";
-    std::cout << std::endl;*/
-
 
     // Traverse intersections
     for (auto&& is : intersections(FEBasis.gridView(), element)) {
@@ -141,12 +136,13 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
 
 //      assembler.set_local_coefficients(localIndexSet, localIsBoundary, isBoundaryDof_);
 
-    for (size_t i = 0; i < localIndexSet.size(); i++)
+    for (size_t i = 0; i < lFE.size(); i++)
     {
-      isBoundaryDof_(localIndexSet.index(i)[0]) = isBoundaryDof_(localIndexSet.index(i)[0]) || localIsBoundary[i] ;
-//      if (isBoundaryDof_(localIndexSet.index(i)[0]))
-//        std::cout << " found boundary dof " << localIndexSet.index(i)[0] << std::endl;
-      isBoundaryValueDof_(localIndexSet.index(i)[0]) = isBoundaryValueDof_(localIndexSet.index(i)[0]) || localIsBoundaryValue[i] ;
+      const auto globalIndex = SolverConfig::FETraitsSolver::get_index(localIndexSet,i);
+      isBoundaryDof_(globalIndex) = isBoundaryDof_(globalIndex) || localIsBoundary[i] ;
+      if (isBoundaryDof_(globalIndex))
+        std::cout << " found boundary dof " << globalIndex << std::endl;
+      isBoundaryValueDof_(globalIndex) = isBoundaryValueDof_(globalIndex) || localIsBoundaryValue[i] ;
     }
   }
 }

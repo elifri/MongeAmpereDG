@@ -239,7 +239,7 @@ public:
 	 */
 	template<class F>
 	void project(F f, VectorType &V) const;
-private:
+protected:
 	template<class F>
 	void test_projection(const F f, VectorType& v) const;
 
@@ -609,7 +609,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
     localView.bind(element);
     localIndexSet.bind(localView);
 
-    const auto & lFE = FETraits::get_finiteElement(localView);
+    const auto & lFE = FETraits::get_finiteElementu(localView);
 
     const auto& geometry = element.geometry();
 
@@ -698,7 +698,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
         //bind to local neighbour context
         localViewn.bind(is.outside());
         localIndexSetn.bind(localViewn);
-        const auto & lFEn = FETraits::get_finiteElement(localViewn);
+        const auto & lFEn = FETraits::get_finiteElementu(localViewn);
 
         VectorType localDofsn = assembler.calculate_local_coefficients(localIndexSetn, v);
 
@@ -719,12 +719,12 @@ void MA_solver::test_projection(const F f, VectorType& v) const
         std::vector<Dune::FieldVector<double, 2>> gradients(lFE.size());
         FieldVector<double, Config::dim> gradu;
         assemble_gradients_gradu(lFE, jacobian, geometry.local(face_center),
-            gradients, localDofs, gradu);
+            gradients, localDofs.segment(0,lFE.size()), gradu);
 
         std::vector<FieldVector<double, 2>> gradientsn(lFE.size());
         FieldVector<double, Config::dim> gradun(0);
         assemble_gradients_gradu(lFEn, jacobian, faceCentern,
-            gradientsn, localDofsn, gradun);
+            gradientsn, localDofsn.segment(0,lFEn.size()), gradun);
 
         std::cout << "normal gradient at " << face_center << " " << (normal*gradu)  << " and " << (normal*gradun) << ", with gradients " << gradu  << " and " << gradun << std::endl;
         std::cout << " gradient at face_center = " << (*gradient_u_old)(geometry.local(face_center)) << std::endl;
@@ -748,12 +748,12 @@ void MA_solver::test_projection(const F f, VectorType& v) const
           std::vector<Dune::FieldVector<double, 2>> gradients(lFE.size());
           FieldVector<double, Config::dim> gradu;
           assemble_gradients_gradu(lFE, jacobian, quadPos,
-              gradients, localDofs, gradu);
+              gradients, localDofs.segment(0,lFE.size()), gradu);
 
           std::vector<FieldVector<double, 2>> gradientsn(lFE.size());
           FieldVector<double, Config::dim> gradun(0);
           assemble_gradients_gradu(lFEn, jacobian, quadPosn,
-              gradientsn, localDofsn, gradun);
+              gradientsn, localDofsn.segment(0,lFEn.size()), gradun);
 
 //          assert(std::abs((gradu-gradun).two_norm() < 1e-10));
           if (std::abs((gradu-gradun).two_norm() > 1e-10))
