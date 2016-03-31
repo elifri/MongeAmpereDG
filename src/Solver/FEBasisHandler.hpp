@@ -192,17 +192,42 @@ void FEBasisHandler<Mixed, FETraits>::project(F f, Config::VectorType &v) const
   for (int row = 0; row < Config::dim; row++)
     for (int col = 0; col < Config::dim; col++)
     {
+
+      std::cerr << " row " << row << " col " << col << std::endl;
       //calculate second derivative of gridviewfunction
       Config::VectorType v_uDH_entry;
+      assert(SolverConfig::degree > 1);
       auto localnumericalHessian_entry = localSecondDerivative(numericalSolution, {row,col});
-//      interpolateSecondDerivative(*uDHBasis_, v_uDH_entry, localnumericalHessian_entry, Functions::Imp::AllTrueBitSetVector());
+      interpolateSecondDerivative(*uDHBasis_, v_uDH_entry, localnumericalHessian_entry, Functions::Imp::AllTrueBitSetVector());
+
+      auto localView = FEBasis_->localView();
+      auto localIndexSet = FEBasis_->indexSet().localIndexSet();
+
+      auto localViewu = uBasis_->localView();
+
+      auto localViewuDH = uDHBasis_->localView();
+      auto localIndexSetuDH = uDHBasis_->indexSet().localIndexSet();
 
       //copy corresponding dofs
       const int nDH = Config::dim * Config::dim;
-      for (int i=0; i<v_uDH_entry.size(); i++)
+      for (auto&& element: elements(FEBasis_->gridView()))
       {
-        const int j = row*Config::dim + col;
-        v[uBasis_->indexSet().size()+ nDH*i+  j] = v_uDH_entry[i];
+        localView.bind(element);
+        localIndexSet.bind(localView);
+
+        localViewu.bind(element);
+
+        localViewuDH.bind(element);
+        localIndexSetuDH.bind(localViewuDH);
+
+        for (int i = 0; i < localViewuDH.size(); i++)
+        {
+          typedef decltype(localView) LocalView;
+
+          const int localIndex = Dune::Functions::flat_local_index<typename LocalView::GridView, typename LocalView::size_type>(localViewu.size(), i, row, col);
+          v[FETraits::get_index(localIndexSet, localIndex)] = v_uDH_entry[localIndexSetuDH.index(i)[0]];
+          std::cout << " v(" << FETraits::get_index(localIndexSet, localIndex) << ")=" << v_uDH_entry[localIndexSetuDH.index(i)[0]] << std::endl;
+        }
       }
     }
 

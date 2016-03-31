@@ -22,7 +22,7 @@
 #include "../problem_data.h"
 //#include "Operator/linear_system_operator_poisson_DG.hh"
 #include "../Operator/operator_MA_Neilan_DG.h"
-#include "../Operator/operator_discrete_Hessian.h"
+//#include "../Operator/operator_discrete_Hessian.h"
 #include "../Plotter.h"
 #include "../matlab_export.hpp"
 #include "solver_config.h"
@@ -381,7 +381,7 @@ template<class F>
 void MA_solver::project(const F f, VectorType& v) const
 {
   FEBasisHandler_.project(f, v);
-#ifdef DEBUG
+#ifndef NDEBUG
   test_projection(f,v);
 #endif
 }
@@ -630,18 +630,21 @@ void MA_solver::test_projection(const F f, VectorType& v) const
        std::cout << "f(corner " << i << ")=" << f(geometry.corner(i))
            << "  approx = " << res << std::endl;
 
-       std::vector<Dune::FieldMatrix<double, 1, 2>> JacobianValues(
-           localView.size());
-       lFE.localBasis().evaluateJacobian(geometry.local(geometry.corner(i)),
-           JacobianValues);
+       const auto& xLocal = geometry.local(geometry.corner(i));
 
+       std::vector<FieldVector<double, 2>> JacobianValues(lFE.size());
        Dune::FieldVector<double, 2> jacApprox;
-       for (int j = 0; j < localDofs.size(); j++) {
-         jacApprox.axpy(localDofs(j), JacobianValues[j][0]);
-       }
+       assemble_gradients_gradu(lFE, geometry.jacobianInverseTransposed(xLocal), xLocal,JacobianValues, localDofs.segment(0,lFE.size()), jacApprox);
 
-       std::cout << "f'(corner " << i << ")=" << geometry.corner(i)[0] << " "
-           << geometry.corner(i)[1] << "  approx = " << jacApprox << std::endl;
+       std::cout << "f'(corner " << i << "=" << geometry.corner(i)[0] << " "
+           << geometry.corner(i)[1] << ")  approx = " << jacApprox << std::endl;
+
+       std::vector<FieldMatrix<double, 2, 2>> HessianValues(lFE.size());
+       Dune::FieldMatrix<double, 2, 2> HessApprox = 0;
+       assemble_hessians_hessu(lFE, geometry.jacobianInverseTransposed(xLocal), xLocal,HessianValues, localDofs.segment(0,lFE.size()), HessApprox);
+
+       std::cout << "f''(corner " << i << "=" << geometry.corner(i)[0] << " "
+           << geometry.corner(i)[1] << ")  approx = " << HessApprox << std::endl;
 
      }
 
@@ -670,15 +673,9 @@ void MA_solver::test_projection(const F f, VectorType& v) const
       std::cerr << "f( " << x << ")=" << f(x)
           << "  approx = " << res << std::endl;
 
-      std::vector<Dune::FieldMatrix<double, 1, 2>> JacobianValues(
-          lFE.size());
-      lFE.localBasis().evaluateJacobian(quadPos,
-          JacobianValues);
-
+      std::vector<FieldVector<double, 2>> JacobianValues(lFE.size());
       Dune::FieldVector<double, 2> jacApprox;
-      for (int j = 0; j < lFE.size(); j++) {
-        jacApprox.axpy(localDofs(j), JacobianValues[j][0]);
-      }
+      assemble_gradients_gradu(lFE, geometry.jacobianInverseTransposed(quadPos), quadPos,JacobianValues, localDofs.segment(0,lFE.size()), jacApprox);
 
       std::cerr << "f'( "
           << x << ") = ?? "

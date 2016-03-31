@@ -11,6 +11,7 @@
 //#define EIGEN_DEFAULT_DENSE_INDEX_TYPE long
 
 #define C0Element
+#define C0Elements
 
 #include <config.h>
 #include "../config.h"
@@ -83,7 +84,7 @@ struct SolverConfig{
 
   static bool Dirichlet;
 
-	enum{childdim = 4, degree = 1, degreeHessian = 0};
+	enum{childdim = 4, degree = 2, degreeHessian = 0};
 
 	static int startlevel;
 	static int nonlinear_steps;

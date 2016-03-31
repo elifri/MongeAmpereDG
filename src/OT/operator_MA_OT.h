@@ -472,6 +472,7 @@ public:
 
   const OTBoundary& bc;
 
+  static bool use_adouble_determinant;
   static constexpr int collocationNo[3][3] = {{0,3,4},{0,11,8},{4,7,8}};
 
 public:

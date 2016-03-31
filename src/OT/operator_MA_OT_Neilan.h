@@ -27,14 +27,7 @@ using namespace Dune;
 
 template <class value_type>
 inline
-value_type determinant(const FieldMatrix<value_type, 2, 2>& A)
-{
-  if (!ImageFunction::use_adouble_image_evaluation)
-    return std::max(0.,A[0][0].value())*std::max(0.,A[1][1].value())
-             - A[0][1]*A[1][0]
-             - SolverConfig::lambda*((std::min(0.,A[0][0].value())*std::min(0.,A[0][0].value())) + (std::min(0.,A[1][1].value())*std::min(0.,A[1][1].value())));
-  return fmax(0.,A[0][0])*fmax(0.,A[1][1]) - A[0][1]*A[1][0]- SolverConfig::lambda*((fmin(0.,A[0][0])*fmin(0.,A[0][0])) + (fmin(0.,A[1][1])*fmin(0.,A[1][1])));
-}
+value_type determinant(const FieldMatrix<value_type, 2, 2>& A);
 
 template <class value_type>
 inline
@@ -187,7 +180,10 @@ public:
           {
             const size_type localIndex = Dune::Functions::flat_local_index<GridView, size_type>(size_u,j, row, col);
             uDH[row][col] += x_adolc(localIndex)*referenceFunctionValuesHessian[j];
+            std::cerr << " x_adolc(" << localIndex  << ") " << x_adolc(localIndex) << std::endl;
           }
+
+      std::cerr << " uDh " << uDH[0][0].value() << ' ' <<uDH[0][1].value() << ' '<<uDH[1][0].value() << ' '<<uDH[1][1].value() << ' ' << std::endl;
 
       //--------assemble cell integrals in variational form--------
 
@@ -227,12 +223,11 @@ public:
       {
 //        std::cerr << "found negative determinant !!!!! " << uDH_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
       }
-//      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
+      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
 
       for (int j = 0; j < size_u; j++) // loop over test fcts
       {
         v_adolc(j) += (PDE_rhs-uDH_det)*referenceFunctionValues[j]
-//        v_adolc(j) += referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
       }
 
@@ -462,8 +457,6 @@ public:
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalView &localView,
       const VectorType &x, VectorType& v, int tag) const {
-    typedef typename LocalView::GridView GridView;
-    typedef typename LocalView::size_type size_type;
 
     const int dim = Intersection::dimension;
     const int dimw = Intersection::dimensionworld;
@@ -565,7 +558,8 @@ public:
         unsigned int j = n == 2? collocationNo2[boundaryFaceId][i] : collocationNo1[boundaryFaceId][i];
         assert(j < (unsigned int) size_u);
         assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 0);
-        assert(localFiniteElementu.localCoefficients().localKey(j).subEntity() == j);
+//        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 2 || localFiniteElementu.localCoefficients().localKey(j).subEntity() == j);
+        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 1 || localFiniteElementu.localCoefficients().localKey(j).subEntity() == boundaryFaceId);
         assert(!SolverConfig::Dirichlet);
         v_adolc(j) += penalty_weight * ((gradu * normal) - phi_value) //*((T_value * normal) - phi_value)
                          * (referenceFunctionValues[j]) * factor;
@@ -582,6 +576,7 @@ public:
   static_assert(false, "blub");
 #endif
 
+  static bool use_adouble_determinant;
 
   const Function& get_right_handside() const {return rhoY;}
 
@@ -590,12 +585,24 @@ public:
 
   const OTBoundary& bc;
 
-  static constexpr int collocationNo2[3][2] = {{0,1},{4,5},{2,3}};
+  static constexpr int collocationNo2[3][2] = {{0,1},{2,4},{3,5}};
   static constexpr int collocationNo1[3][1] = {{0},{2},{1}};
 
 public:
   mutable double int_f;
 
 };
+
+template <class value_type>
+inline
+value_type determinant(const FieldMatrix<value_type, 2, 2>& A)
+{
+  if (!Local_Operator_MA_OT::use_adouble_determinant)
+    return std::max(0.,A[0][0].value())*std::max(0.,A[1][1].value())
+             - A[0][1]*A[1][0]
+             - SolverConfig::lambda*((std::min(0.,A[0][0].value())*std::min(0.,A[0][0].value())) + (std::min(0.,A[1][1].value())*std::min(0.,A[1][1].value())));
+  return fmax(0.,A[0][0])*fmax(0.,A[1][1]) - A[0][1]*A[1][0]- SolverConfig::lambda*((fmin(0.,A[0][0])*fmin(0.,A[0][0])) + (fmin(0.,A[1][1])*fmin(0.,A[1][1])));
+}
+
 
 #endif /* SRC_OPERATOR_HH_ */

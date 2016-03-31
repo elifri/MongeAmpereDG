@@ -9,3 +9,5 @@
 
 constexpr int Local_Operator_MA_OT::collocationNo2[3][2];
 constexpr int Local_Operator_MA_OT::collocationNo1[3][1];
+
+bool Local_Operator_MA_OT::use_adouble_determinant = true;

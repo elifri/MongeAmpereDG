@@ -474,6 +474,8 @@ public:
   RightHandSide rhs;
 //  Dirichletdata bc;
 
+  static bool use_adouble_determinant;
+
 };
 
 #endif /* SRC_OPERATOR_HH_ */
