@@ -189,12 +189,8 @@ void assemble_hessians(const FiniteElement &lfu, const JacobianType &jacobian,
   jacobianTransposed[1][0] = jacobian[0][1];
   jacobianTransposed[0][1] = jacobian[1][0];
   for (size_t i = 0; i < hessians.size(); i++) {
-
-    std::cout << "hessian raw " << hessians[i] << std::endl;
-
-      hessians[i].leftmultiply(jacobianTransposed);
-      hessians[i].rightmultiply(jacobian);
-      std::cout << "hessian " << hessians[i] << std::endl;
+      hessians[i].leftmultiply(jacobian);
+      hessians[i].rightmultiply(jacobianTransposed);
   }
 }
 

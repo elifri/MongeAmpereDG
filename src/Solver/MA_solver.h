@@ -381,7 +381,7 @@ template<class F>
 void MA_solver::project(const F f, VectorType& v) const
 {
   FEBasisHandler_.project(f, v);
-#ifndef NDEBUG
+#ifndef DEBUG
   test_projection(f,v);
 #endif
 }
