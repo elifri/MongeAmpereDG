@@ -227,11 +227,9 @@ void assemble_hessians_hessu(const FiniteElement &lfu,
     assert(hessians.size() == lfu.size());
     assert(x_local.size() == lfu.size());
 
-
-    std::cout << "jacobian " << jacobian << std::endl;
-    std::cout << " local dofs Hess ";
-    for (int i = 0; i < x_local.size(); i++) std::cout << x_local[i] << " ";
-    std::cout << std::endl;
+//    std::cout << " local dofs Hess ";
+//    for (int i = 0; i < x_local.size(); i++) std::cout << x_local[i] << " ";
+//    std::cout << std::endl;
     assemble_hessians(lfu, jacobian, x, hessians);
 
     assert( hessu[0][0] < 1e-14);
@@ -943,7 +941,6 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
     for (int j = 0; j < m_local.cols(); j++)
       if (std::abs(m_local(i,j)) > 1e-13 )
       {
-        std::cerr << " add to Jacobian row " << FETraits::get_index(localIndexSetTest, i) << " from local " << i << std::endl;
         m.coeffRef(FETraits::get_index(localIndexSetTest, i), FETraits::get_index(localIndexSetAnsatz,j)) +=  m_local(i,j);
       }
   }
@@ -962,7 +959,7 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
     {
 //      if (std::abs(m_local(i,j)) > 1e-13 )
       {
-        std::cerr << " add to Jacobian " << FETraits::get_index(localIndexSetTest, i) << " , " << FETraits::get_index(localIndexSetAnsatz, j) << " from local " << i  << "," << j << " with value " << m_local(i,j) << std::endl;
+//        std::cerr << " add to Jacobian " << FETraits::get_index(localIndexSetTest, i) << " , " << FETraits::get_index(localIndexSetAnsatz, j) << " from local " << i  << "," << j << " with value " << m_local(i,j) << std::endl;
         je.push_back(EntryType(FETraits::get_index(localIndexSetTest, i),FETraits::get_index(localIndexSetAnsatz,j),m_local(i,j)));
       }
     }
@@ -1077,7 +1074,7 @@ bool Assembler::assemble_jacobian_integral_cell_term(const LocalView& localView,
     out[i] = new double[x_c.size()];
   int ierr = jacobian(tag, x_c.size(), x_c.size(), x_c.data(), out);
 
-  std::cerr << "jacobian cell ierr was " << ierr << std::endl;
+//  std::cerr << "jacobian cell ierr was " << ierr << std::endl;
   if(ierr <3)
   {
     std::cerr << " failed proper derivation from tape " << std::endl;
@@ -1342,7 +1339,7 @@ bool Assembler::assemble_inner_face_Jacobian(const Intersection& intersection,
   int ierr = jacobian(tag, n_var, n_var, x_xn.data(), out);
   assert(ierr >=0);
 
-  std::cerr << "inner face jacobian cell ierr was " << ierr << std::endl;
+//  std::cerr << "inner face jacobian cell ierr was " << ierr << std::endl;
   if(ierr <3)
   {
     std::cerr << " failed proper derivation from tape for inner face term" << std::endl;
@@ -1378,8 +1375,10 @@ void Assembler::assemble_inner_face_termHelper(const LocalOperatorType &lop, con
 
   if (!tape1initialised || !reuseAdolCTape || true) //check if tape has record
   {
+//    std::cerr << " vlocal before inner " << vLocal << std::endl;
     lop.assemble_inner_face_term(is, localView, xLocal,
         localViewn, xLocaln, vLocal, vLocaln, 1);
+//    std::cerr << " vlocal after inner " << vLocal << std::endl;
     tape1initialised = true;
   }
   else
@@ -1408,7 +1407,7 @@ void Assembler::assemble_inner_face_termHelper(const LocalOperatorType &lop, con
 
   m_m+=m_mB;
 
-#ifndef NDEBUG
+#ifdef DEBUG
   Config::DenseMatrixType m_mFD, mn_mFD, m_mnFD, mn_mnFD;
   m_mFD.setZero(localView.size(), localView.size());
   mn_mFD.setZero(localView.size(), localView.size());
@@ -1488,7 +1487,7 @@ void Assembler::assemble_boundary_termHelper(const LocalOperatorType &lop, const
       cerr << " Error at derivation " << std::endl; exit(-1);
   }
 
-#ifndef NDEBUG
+#ifdef DEBUG
   Config::DenseMatrixType m_mFD;
   m_mFD.setZero(localView.size(), localView.size());
   assemble_jacobianFD_boundary_term(lop, is, localView, xLocal, m_mFD, 2);
@@ -1507,9 +1506,10 @@ void Assembler::assemble_cell_termHelper(const LocalOperatorType &lop, const Loc
     const Config::ValueType &scaling_factor, Config::ValueType &last_equation,
     Config::VectorType& scaling_factorDerivatives, Config::VectorType& last_equationDerivatives) const
 {
-  std::cerr << " is local boundary " << isBoundaryLocal.transpose() << std::endl;
 
-/*  if (!tape0initialised || !reuseAdolCTape) //check if tape has record
+  Config::ValueType localLastEquation = 0;
+
+  if (!tape0initialised || !reuseAdolCTape) //check if tape has record
   {
     lop.assemble_cell_term(localView, xLocal, vLocal, 0, scaling_factor, last_equation);
     tape0initialised = true;
@@ -1533,10 +1533,13 @@ void Assembler::assemble_cell_termHelper(const LocalOperatorType &lop, const Loc
     std::cerr << " derivation was not successful " << std::endl;
     ImageFunction::use_adouble_image_evaluation = false;
     vLocal.setZero(); //prevent double addition of local terms
-    lop.assemble_cell_term(localView, xLocal, vLocal, 0, scaling_factor, last_equation);
+    localLastEquation = 0;
+
+    lop.assemble_cell_term(localView, xLocal, vLocal, 0, scaling_factor, localLastEquation);
     derivationSuccessful = assemble_jacobian_integral_cell_term(localView, xLocal, mLocal, 0, scaling_factor, scaling_factorDerivatives, last_equationDerivatives);
     ImageFunction::use_adouble_image_evaluation = true;
     std::cerr << "Cell Derivation was successfull ? " << derivationSuccessful << std::endl;
+
 
     if (!derivationSuccessful)
     {
@@ -1553,13 +1556,13 @@ void Assembler::assemble_cell_termHelper(const LocalOperatorType &lop, const Loc
       assemble_jacobianFD_integral_cell_term(lop, localView, xLocal, mLocal, 0, scaling_factor, last_equationDerivatives, scaling_factorDerivatives);
       derivationSuccessful = true;
     }
-    assert(derivationSuccessful);
-  }*/
 
-  assemble_jacobianFD_integral_cell_term(lop, localView, xLocal, mLocal, 0, scaling_factor, last_equationDerivatives, scaling_factorDerivatives);
+  }
+
+//  assemble_jacobianFD_integral_cell_term(lop, localView, xLocal, mLocal, 0, scaling_factor, last_equationDerivatives, scaling_factorDerivatives);
 //  derivationSuccessful = true;
 
-#ifndef NDEBUG
+#ifdef DEBUG
     Config::DenseMatrixType m_mFD;
     m_mFD.setZero(localView.size(), localView.size());
     Config::VectorType last_equationFD = Config::VectorType::Zero(localView.size()),
@@ -1574,7 +1577,7 @@ void Assembler::assemble_cell_termHelper(const LocalOperatorType &lop, const Loc
     compare_matrices(b, last_equationDerivatives, last_equationFD, "last_equation", "last_equationFD", true, tol);
     compare_matrices(b, scaling_factorDerivatives, scaling_factorFD, "scaling_factor", "scaling_factorFD", true, tol);
 #endif
-
+    assert(derivationSuccessful);
 
   //delete all equations with boundary dof test function
   for (int i = 0; i < isBoundaryLocal.size(); i++)
@@ -1651,11 +1654,10 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 
         //calculate local coefficients
         Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
-        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryValueDoF());
+//        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryValueDoF());
 //        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryDoF());
-//        BoundaryHandler::BoolVectorType isBoundaryLocal = BoundaryHandler::BoolVectorType::Constant(localIndexSet.size(), false);
+        BoundaryHandler::BoolVectorType isBoundaryLocal = BoundaryHandler::BoolVectorType::Constant(localIndexSet.size(), false);
 
-        std::cerr << "isBoundaryLocal " << isBoundaryLocal.transpose() << std::endl;
 
         switch(assembleType_)
         {
@@ -1673,11 +1675,9 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
           break;
         case ALL:
           assemble_cell_termHelper(lop, localView, xLocal, isBoundaryLocal, local_vector, m_m, x(x.size()-1), v(v.size()-1), scaling_factorDerivatives, last_equationDerivatives);
-          std::cerr << " intermediate (ct) m_m " << m_m  << std::endl;
           break;
         default: assert(false); std::cerr << " Error: do not know AssembleType" << std::endl; exit(-1);
         }
-        std::cerr << "local vector after boundary " << local_vector.transpose() << std::endl;
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
@@ -1765,11 +1765,11 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 
                 add_local_coefficients(localIndexSetn, local_vectorn, v);
 
-                std::cerr << " add interface terms " << std::endl;
+//                std::cerr << " add interface terms " << std::endl;
                 add_local_coefficients_Jacobian(localIndexSetn, localIndexSet, mn_m, JacobianEntries);
                 add_local_coefficients_Jacobian(localIndexSet,localIndexSetn, m_mn,JacobianEntries);
                 add_local_coefficients_Jacobian(localIndexSetn, localIndexSetn, mn_mn, JacobianEntries);
-                std::cerr << " end add interface terms " << std::endl;
+//                std::cerr << " end add interface terms " << std::endl;
               }
               break;
               }
@@ -1881,7 +1881,6 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
         local_vector+=local_boundary;
 #endif
         //add to objective function and jacobian
-//        std::cerr << " add to objective vector " << std::endl;
         add_local_coefficients(localIndexSet, local_vector, v);
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
 
@@ -1903,9 +1902,6 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, Coll_m_mB, JacobianEntries);
 #endif
         }
-
-        std::cerr << "outer scaling factor derivatives " << scaling_factorDerivatives.transpose() << std::endl;
-        std::cerr << "outer last eq der " << last_equationDerivatives.transpose() << std::endl;
 
         //add derivatives for scaling factor
         for (unsigned int i = 0; i < localView.size(); i++)

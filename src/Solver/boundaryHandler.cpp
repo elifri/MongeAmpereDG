@@ -140,8 +140,8 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
     {
       const auto globalIndex = SolverConfig::FETraitsSolver::get_index(localIndexSet,i);
       isBoundaryDof_(globalIndex) = isBoundaryDof_(globalIndex) || localIsBoundary[i] ;
-      if (isBoundaryDof_(globalIndex))
-        std::cout << " found boundary dof " << globalIndex << std::endl;
+//      if (isBoundaryDof_(globalIndex))
+//        std::cout << " found boundary dof " << globalIndex << std::endl;
       isBoundaryValueDof_(globalIndex) = isBoundaryValueDof_(globalIndex) || localIsBoundaryValue[i] ;
     }
   }

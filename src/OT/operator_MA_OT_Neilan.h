@@ -180,10 +180,7 @@ public:
           {
             const size_type localIndex = Dune::Functions::flat_local_index<GridView, size_type>(size_u,j, row, col);
             uDH[row][col] += x_adolc(localIndex)*referenceFunctionValuesHessian[j];
-            std::cerr << " x_adolc(" << localIndex  << ") " << x_adolc(localIndex) << std::endl;
           }
-
-      std::cerr << " uDh " << uDH[0][0].value() << ' ' <<uDH[0][1].value() << ' '<<uDH[1][0].value() << ' '<<uDH[1][1].value() << ' ' << std::endl;
 
       //--------assemble cell integrals in variational form--------
 
@@ -223,7 +220,7 @@ public:
       {
 //        std::cerr << "found negative determinant !!!!! " << uDH_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
       }
-      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
+//      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
 
       for (int j = 0; j < size_u; j++) // loop over test fcts
       {
@@ -256,6 +253,7 @@ public:
       v_adolc[i] >>= v[i]; // select dependent variables
 
     last_equation_adolc >>= last_equation;
+
     trace_off();
 
   }
@@ -389,8 +387,8 @@ public:
       //assemble jump and averages
       adouble u_jump = u_value - un_value;
       adouble grad_u_normaljump = (gradu - gradun) * normal;
-//      std::cout << "gradu " << gradu[0].value() << " " << gradu[1].value() << std::endl;
-//      std::cout << "gradun " << gradun[0].value() << " " << gradun[1].value() << std::endl;
+//      std::cerr << "gradu " << gradu[0].value() << " " << gradu[1].value() << " ";
+//      std::cerr << "gradun " << gradun[0].value() << " " << gradun[1].value() << " -> normaljump " << grad_u_normaljump << std::endl;
 
       //-------calculate integral--------
       auto integrationElement = intersection.geometry().integrationElement(
@@ -405,6 +403,8 @@ public:
         auto grad_times_normal = gradients[j] * normal;
         v_adolc(j) += penalty_weight_gradient * (grad_u_normaljump)
             * (grad_times_normal) * factor;
+
+//        std::cerr << " -> v_adolc(" << j << ") = " << v_adolc(j) << std::endl;
 
 //        //neighbour parts
 //        // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
@@ -429,6 +429,8 @@ public:
             v_adolc(localIndex) += 0.5 * (temp * normal[row]);
             temp = referenceFunctionValuesHessian[j]*gradun[col];
             v_adolc(localIndex) += -0.5 * (temp * normal[row]); //a - sign for the normal
+
+//            std::cerr << " -> v_adolc(" << localIndex << ") = " << v_adolc(j) << std::endl;
 
             //neighbour parts
             // dicr. hessian correction term: jump{avg{mu} grad_u}
@@ -522,6 +524,8 @@ public:
     const int n = SolverConfig::degree;
     const int boundaryFaceId = intersection.indexInInside();
 
+    SolverConfig::ValueType sum = 0;
+
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
 
@@ -556,16 +560,24 @@ public:
       for (int i = 0; i < n; i++) //parts from self
       {
         unsigned int j = n == 2? collocationNo2[boundaryFaceId][i] : collocationNo1[boundaryFaceId][i];
+//        std::cerr << " add to local " << j << std::endl;
         assert(j < (unsigned int) size_u);
         assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 0);
 //        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 2 || localFiniteElementu.localCoefficients().localKey(j).subEntity() == j);
-        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 1 || localFiniteElementu.localCoefficients().localKey(j).subEntity() == boundaryFaceId);
+//        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 1 || localFiniteElementu.localCoefficients().localKey(j).subEntity() == boundaryFaceId);
         assert(!SolverConfig::Dirichlet);
+        sum += (referenceFunctionValues[j]);
         v_adolc(j) += penalty_weight * ((gradu * normal) - phi_value) //*((T_value * normal) - phi_value)
                          * (referenceFunctionValues[j]) * factor;
+//        std::cerr << " test function has value " << (referenceFunctionValues[j]) << " at " << quadPos << std::endl;
+//        std::cerr << " test function values ";
+//        for (auto e: referenceFunctionValues) std::cerr << e << " ";
+//        std::cerr << std::endl;
       }
 
     }
+
+    assert(std::abs(sum) > 1e-10);
 
     // select dependent variables
     for (size_t i = 0; i < localView.size(); i++)
@@ -585,7 +597,7 @@ public:
 
   const OTBoundary& bc;
 
-  static constexpr int collocationNo2[3][2] = {{0,1},{2,4},{3,5}};
+  static constexpr int collocationNo2[3][2] = {{0,1},{3,5},{2,4}};
   static constexpr int collocationNo1[3][1] = {{0},{2},{1}};
 
 public:
