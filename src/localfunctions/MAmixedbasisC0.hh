@@ -18,8 +18,6 @@
 #include <dune/typetree/powernode.hh>
 #include <dune/typetree/compositenode.hh>
 
-#include <dune/functions/functionspacebases/gridviewfunctionspacebasis.hh>
-
 //#include "lagrangedgbasis.hh"
 #include <dune/functions/functionspacebases/lagrangedgbasis.hh>
 

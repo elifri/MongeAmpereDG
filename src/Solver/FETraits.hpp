@@ -36,7 +36,11 @@ struct FETraits
   typedef T FEBasis;
   typedef T FEuBasis;
 
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis,Config::VectorType> DiscreteGridFunction;
+//  typedef Dune::TypeTree::HybridTreePath<> TreePath;
+//  typedef Dune::Functions::DefaultNodeToRangeMap<typename TypeTree::ChildForTreePath<typename FEBasis::LocalView::Tree, TreePath>> NodeToRangeMap;
+
+//  typedef typename Dune::Functions::DiscreteGlobalBasisFunction<FEBasis,Dune::TypeTree::HybridTreePath<>, Config::VectorType, NodeToRangeMap> DiscreteGridFunction;
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis, Config::VectorType> DiscreteGridFunction;
   typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
   typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
 
@@ -72,6 +76,10 @@ struct FETraits<Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatr
   typedef Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatrixType> FEBasis;
   typedef FEBasis FEuBasis;
 
+//  typedef Dune::TypeTree::HybridTreePath<> TreePath;
+//  typedef Dune::Functions::DefaultNodeToRangeMap<typename TypeTree::ChildForTreePath<FEBasis::LocalView::Tree, TreePath>> NodeToRangeMap;
+
+//  typedef typename Dune::Functions::DiscreteGlobalBasisFunction<FEBasis, TreePath,Config::VectorType, NodeToRangeMap> DiscreteGridFunction;
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis,Config::VectorType> DiscreteGridFunction;
   typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
   typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
@@ -103,17 +111,23 @@ struct FETraits<Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatr
   }
 };
 
-template <int degree, int degreeHessian>
-struct FETraits<Functions::MAMixedBasis<Config::GridView, degree, degreeHessian>>
+template <typename GridView, int degree, int degreeHessian>
+struct FETraits<Functions::MAMixedBasis< GridView, degree, degreeHessian>>
 {
   static const FEType Type = Mixed;
-  typedef Functions::MAMixedBasis<Config::GridView, degree, degreeHessian> FEBasis;
+  typedef Functions::MAMixedBasis<GridView, degree, degreeHessian> FEBasis;
   //  typedef FEBasis::Basisu FEuBasis;
-  typedef Functions::PQkNodalBasis<Config::GridView, degree> FEuBasis;
+  typedef Functions::PQkNodalBasis<GridView, degree> FEuBasis;
   //  typedef FEBasis::BasisuDH FEuDHBasis;
-  typedef Functions::LagrangeDGBasis<Config::GridView, degreeHessian> FEuDHBasis;
+  typedef Functions::LagrangeDGBasis<GridView, degreeHessian> FEuDHBasis;
 
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasis,Config::VectorType> DiscreteGridFunction;
+//  typedef decltype(TypeTree::hybridTreePath(Dune::TypeTree::Indices::_0)) TreePath;
+//  typedef Dune::TypeTree::hybridTreePath<Dune::TypeTree::Indices::_0> TreePath;
+
+//  typedef Dune::Functions::DefaultNodeToRangeMap<Dune::TypeTree::ChildForTreePath<FEBasis::LocalView::Tree, TreePath>> NodeToRangeMap;
+
+//  typedef typename Dune::Functions::DiscreteGlobalBasisFunction<FEBasis,TreePath, Config::VectorType> DiscreteGridFunction;
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasis, Config::VectorType> DiscreteGridFunction;
   typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
   typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
 
@@ -144,14 +158,14 @@ struct FETraits<Functions::MAMixedBasis<Config::GridView, degree, degreeHessian>
 
 ///----------typedef for defined Traits--------------------
 
-typedef FETraits<Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatrixType>> PS12SplitTraits;
+template <typename GridView>
+using PS12SplitTraits = FETraits<Functions::PS12SSplineBasis<GridView, Config::SparseMatrixType>>;
 
-template <int degree>
-using LagrangeC0Traits = FETraits<Functions::PQkNodalBasis<Config::GridView, degree>>;
+template <typename GridView, int degree>
+using LagrangeC0Traits = FETraits<Functions::PQkNodalBasis<GridView, degree>>;
 
-template <int degree, int degreeHessian>
-using MixedTraits = FETraits<Functions::MAMixedBasis<Config::GridView, degree, degreeHessian>>;
-
+template <typename GridView, int degree, int degreeHessian>
+using MixedTraits = FETraits<Functions::MAMixedBasis<GridView, degree, degreeHessian>>;
 
 
 
