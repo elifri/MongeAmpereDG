@@ -19,11 +19,12 @@ class MA_solver;
 //               FE Handler                 //
 ///=========================================//
 
-template<int FETraitstype, typename FETraits>
+template<int FETraitstype, typename FT>
 struct FEBasisHandler{
+  typedef FT FETraits;
   typedef typename FETraits::FEBasis FEBasisType;
 
-  FEBasisHandler(const Config::GridView& grid): FEBasis_(new FEBasisType(grid)){}
+  FEBasisHandler(const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)){}
 
   template<class F>
   void project(F f, Config::VectorType &v) const;
@@ -48,15 +49,16 @@ struct FEBasisHandler{
 
 
 ///specialisation for mixed elements
-template<typename FETraits>
-struct FEBasisHandler<Mixed, FETraits>{
+template<typename FT>
+struct FEBasisHandler<Mixed, FT>{
+  typedef FT FETraits;
   typedef typename FETraits::FEBasis FEBasisType;
   typedef typename FETraits::FEuBasis FEuBasisType;
   typedef typename FETraits::FEuDHBasis FEuDHBasisType;
 
   typedef typename FETraits::DiscreteGridFunction DiscreteGridFunction;
 
-  FEBasisHandler(const Config::GridView& grid): FEBasis_(new FEBasisType(grid)),
+  FEBasisHandler(const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)),
                                                 uBasis_(new FEuBasisType(grid)),
                                                 uDHBasis_(new FEuDHBasisType(grid)){}
 
@@ -95,16 +97,16 @@ struct FEBasisHandler<Mixed, FETraits>{
 
 
 template <>
-void FEBasisHandler<PS12Split, PS12SplitTraits>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
+void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
 
 template <>
-void FEBasisHandler<Mixed, MixedTraits<SolverConfig::degree, SolverConfig::degreeHessian>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
+void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
 
 template <>
-Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits>::coarse_solution(MA_solver& solver, const int level);
+Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::coarse_solution(MA_solver& solver, const int level);
 
 template <>
-Config::VectorType FEBasisHandler<Mixed, MixedTraits<SolverConfig::degree, SolverConfig::degreeHessian>>::coarse_solution(MA_solver& solver, const int level);
+Config::VectorType FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::coarse_solution(MA_solver& solver, const int level);
 
 template<int FETraitstype, typename FETraits>
 template <class F>
@@ -181,7 +183,6 @@ void FEBasisHandler<Mixed, FETraits>::project(F f, Config::VectorType &v) const
   v.resize(FEBasis_->indexSet().size() + 1);
   Config::VectorType v_u;
   interpolate(*uBasis_, v_u, f);
-
   v.segment(0, v_u.size()) = v_u;
 
   //init second derivatives
@@ -209,7 +210,7 @@ void FEBasisHandler<Mixed, FETraits>::project(F f, Config::VectorType &v) const
       auto localIndexSetuDH = uDHBasis_->indexSet().localIndexSet();
 
       //copy corresponding dofs
-      const int nDH = Config::dim * Config::dim;
+//      const int nDH = Config::dim * Config::dim;
       for (auto&& element: elements(FEBasis_->gridView()))
       {
         localView.bind(element);
@@ -220,13 +221,13 @@ void FEBasisHandler<Mixed, FETraits>::project(F f, Config::VectorType &v) const
         localViewuDH.bind(element);
         localIndexSetuDH.bind(localViewuDH);
 
-        for (int i = 0; i < localViewuDH.size(); i++)
+        for (unsigned int i = 0; i < localViewuDH.size(); i++)
         {
           typedef decltype(localView) LocalView;
 
           const int localIndex = Dune::Functions::flat_local_index<typename LocalView::GridView, typename LocalView::size_type>(localViewu.size(), i, row, col);
           v[FETraits::get_index(localIndexSet, localIndex)] = v_uDH_entry[localIndexSetuDH.index(i)[0]];
-          std::cout << " v(" << FETraits::get_index(localIndexSet, localIndex) << ")=" << v_uDH_entry[localIndexSetuDH.index(i)[0]] << std::endl;
+//          std::cout << " v(" << FETraits::get_index(localIndexSet, localIndex) << ")=" << v_uDH_entry[localIndexSetuDH.index(i)[0]] << std::endl;
         }
       }
     }
@@ -238,7 +239,7 @@ void FEBasisHandler<Mixed, FETraits>::project(F f, Config::VectorType &v) const
 
 template <>
 template<class F>
-void FEBasisHandler<PS12Split, PS12SplitTraits>::project(F f, Config::VectorType &v) const
+void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F f, Config::VectorType &v) const
 {
   v.setZero(FEBasis_->indexSet().size() + 1);
   Config::VectorType countMultipleDof = Config::VectorType::Zero(v.size());;

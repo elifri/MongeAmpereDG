@@ -13,7 +13,7 @@
 #include <dune/grid/common/mcmgmapper.hh>
 
 template <>
-void FEBasisHandler<PS12Split, PS12SplitTraits>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
+void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
  {
   assert(level == 1);
 
@@ -140,7 +140,7 @@ void FEBasisHandler<PS12Split, PS12SplitTraits>::adapt(MA_solver& solver, const 
 
 //      std::cout << " set local dofs " << localDofs.transpose() << std::endl;
 
-      Assembler::set_local_coefficients<PS12SplitTraits>(localIndexSet, localDofs, v);
+      Assembler::set_local_coefficients<FETraits>(localIndexSet, localDofs, v);
     }
 
   //set scaling factor (last dof) to ensure mass conservation
@@ -244,10 +244,12 @@ void FEBasisHandler<PS12Split, PS12SplitTraits>::adapt(MA_solver& solver, const 
 }
 
 template <>
-void FEBasisHandler<Mixed, MixedTraits<SolverConfig::degree, SolverConfig::degreeHessian>>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
+void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
 {
   assert(solver.initialised);
   assert(level == 1);
+
+  const auto v_old = v;
 
   //gives any element a unique id (preserved by refinement),
   const MA_solver::GridType::Traits::GlobalIdSet&  idSet = solver.grid_ptr->globalIdSet();
@@ -291,7 +293,105 @@ void FEBasisHandler<Mixed, MixedTraits<SolverConfig::degree, SolverConfig::degre
   uDHBasis_ = std::shared_ptr<FEuDHBasisType> (new FEuDHBasisType(*solver.gridView_ptr));
   solver.assembler.bind(*FEBasis_);
 
-  auto localViewRef = FEBasis_->localView();
+  //we need do store the old basis as the (father) finite element depends on the basis
+  typedef MixedTraits<Config::LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>::FEBasis FEBasisCoarseType;
+  FEBasisCoarseType FEBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
+
+  //for u
+  typedef MixedTraits<Config::LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>::FEuBasis FEuBasisCoarseType;
+  FEuBasisCoarseType FEuBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisCoarseType,Config::VectorType> DiscreteGridFunctionuCoarse;
+  DiscreteGridFunctionuCoarse solution_u_Coarse_global (FEuBasisCoarse,solver.solution_u_old_global->dofs());
+
+  v.resize(FEBasis_->indexSet().size() + 1);
+  Config::VectorType v_u;
+  interpolate(*uBasis_, v_u, solution_u_Coarse_global);
+  v.segment(0, v_u.size()) = v_u;
+
+  //adapt discrete hessians
+  typedef MixedTraits<Config::LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>::FEuDHBasis FEuDHBasisCoarseType;
+  FEuDHBasisCoarseType FEuDHBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisCoarseType,Config::VectorType> DiscreteGridFunctionuDHCoarse;
+
+
+  for (int row = 0; row < Config::dim; row++)
+    for (int col = 0; col < Config::dim; col++)
+    {
+      std::cerr << " row " << row << " col " << col << std::endl;
+      //calculate second derivative of gridviewfunction
+      Config::VectorType v_uDH_entry_old(FEuDHBasisCoarse.indexSet().size());
+
+      //extract local dofs for first entry :TODO move to assembler
+      {
+        auto localView = FEBasisCoarse.localView();
+        auto localIndexSet = FEBasisCoarse.indexSet().localIndexSet();
+
+        auto localViewu = FEuBasisCoarse.localView();
+
+        auto localViewuDH = FEuDHBasisCoarse.localView();
+        auto localIndexSetuDH = FEuDHBasisCoarse.indexSet().localIndexSet();
+
+        //copy corresponding dofs
+        for (auto&& element: elements(FEBasisCoarse.gridView()))
+        {
+          localView.bind(element);
+          localIndexSet.bind(localView);
+
+          localViewu.bind(element);
+
+          localViewuDH.bind(element);
+          localIndexSetuDH.bind(localViewuDH);
+
+          for (unsigned int i = 0; i < localViewuDH.size(); i++)
+          {
+            typedef decltype(localView) LocalView;
+
+            const int localIndex = Dune::Functions::flat_local_index<typename LocalView::GridView, typename LocalView::size_type>(localViewu.size(), i, row, col);
+            v_uDH_entry_old[localIndexSetuDH.index(i)[0]] = v_old[FETraits::get_index(localIndexSet, localIndex)];
+          }
+        }
+      }
+
+      Config::VectorType v_uDH_entry;
+
+      DiscreteGridFunctionuDHCoarse solution_uDH_Coarse_global (FEuDHBasisCoarse,v_uDH_entry_old);
+      interpolate(*uDHBasis_, v_uDH_entry, solution_uDH_Coarse_global);
+
+      //copy into new vector
+      {
+        auto localView = FEBasis_->localView();
+        auto localIndexSet = FEBasis_->indexSet().localIndexSet();
+
+        auto localViewu = uBasis_->localView();
+
+        auto localViewuDH = uDHBasis_->localView();
+        auto localIndexSetuDH = uDHBasis_->indexSet().localIndexSet();
+
+        //copy corresponding dofs :TODO move to assembler
+        for (auto&& element: elements(FEBasis_->gridView()))
+        {
+          localView.bind(element);
+          localIndexSet.bind(localView);
+
+          localViewu.bind(element);
+
+          localViewuDH.bind(element);
+          localIndexSetuDH.bind(localViewuDH);
+
+          for (unsigned int i = 0; i < localViewuDH.size(); i++)
+          {
+            typedef decltype(localView) LocalView;
+
+            const int localIndex = Dune::Functions::flat_local_index<typename LocalView::GridView, typename LocalView::size_type>(localViewu.size(), i, row, col);
+            v[FETraits::get_index(localIndexSet, localIndex)] = v_uDH_entry[localIndexSetuDH.index(i)[0]];
+//            std::cout << " v(" << FETraits::get_index(localIndexSet, localIndex) << ")=" << v_uDH_entry[localIndexSetuDH.index(i)[0]] << std::endl;
+          }
+        }
+      }
+    }
+
+
+/*  auto localViewRef = FEBasis_->localView();
   auto localIndexSetRef = FEBasis_->indexSet().localIndexSet();
 
   //init vector v
@@ -392,15 +492,18 @@ void FEBasisHandler<Mixed, MixedTraits<SolverConfig::degree, SolverConfig::degre
       Assembler::set_local_coefficients(localIndexSetRef, preserveSolution[id], v);
     }
 
-  }
+  }*/
   v(v.size()-1)= scaling_factor;
   //reset adaption flags
   solver.grid_ptr->postAdapt();
+
+//  solver.test_projection(solution_u_Coarse_global, v);
+
 }
 
 
 template <>
-Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits>::coarse_solution(MA_solver& solver, const int level)
+Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::coarse_solution(MA_solver& solver, const int level)
 {
   assert(solver.initialised);
   Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
@@ -408,7 +511,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits>::coarse_solution(M
    //build gridviewfunction
    Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,Config::VectorType> numericalSolution(*FEBasis_,solution_u);
    auto localnumericalSolution = localFunction(numericalSolution);
-   PS12SplitTraits::DiscreteLocalGradientGridFunction localGradient (numericalSolution);
+   FETraits::DiscreteLocalGradientGridFunction localGradient (numericalSolution);
 
 
   //we need do generate the coarse basis
@@ -519,75 +622,30 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits>::coarse_solution(M
 }
 
 template<>
-Config::VectorType FEBasisHandler<Mixed, MixedTraits<SolverConfig::degree, SolverConfig::degreeHessian>>::coarse_solution(MA_solver& solver, const int level)
+Config::VectorType FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::coarse_solution(MA_solver& solver, const int level)
 {
-  assert(false);
-  exit(-1);
-  /*
   assert(solver.initialised);
+
   Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
 
    //build gridviewfunction
-   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,Config::VectorType> numericalSolution(*uBasis_,solution_u);
-   auto localnumericalSolution = localFunction(numericalSolution);
-   DiscreteLocalGradientGridFunction localGradient (numericalSolution);
-
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,Config::VectorType> numericalSolution(*uBasis_,solution_u);
 
   //we need do generate the coarse basis
   const auto& levelGridView = solver.grid_ptr->levelGridView(level);
 
-  typedef Functions::MAMixedBasis<SolverConfig::LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian, SolverConfig::SparseMatrixType> FEBasisCoarseType;
-  std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(levelGridView));
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
+  typedef decltype(levelGridView) ConstReflevelGridView;
+  typedef typename std::remove_reference<ConstReflevelGridView>::type ConstlevelGridView;
+  typedef typename std::remove_const<ConstlevelGridView>::type LevelGridView;
+
+  //create handler for coarse basis
+  FEBasisHandler<Mixed, MixedTraits<LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>> HandlerCoarse(levelGridView);
 
   //init vector
-  Config::VectorType v = Config::VectorType::Zero(FEBasisCoarse->indexSet().size() + 1);
+  Config::VectorType v = Config::VectorType::Zero(HandlerCoarse.FEBasis().indexSet().size() + 1);
 
-  auto localViewCoarse = FEBasisCoarse->localView();
-  auto localIndexSetCoarse = FEBasisCoarse->indexSet().localIndexSet();
+  //project
+  HandlerCoarse.project(numericalSolution, v);
 
-  auto localView = FEBasis_->localView();
-  auto localIndexSet = FEBasis_->indexSet().localIndexSet();
-
-  HierarchicSearch<SolverConfig::GridType, SolverConfig::GridView::IndexSet> hs(*solver.grid_ptr, solver.gridView_ptr->indexSet());
-*/
-/*
-  //loop over elements (in coarse grid)
-  for (auto&& elementCoarse : elements(levelGridView)) {
-
-
-    localViewCoarse.bind(elementCoarse);
-    localIndexSetCoarse.bind(localViewCoarse);
-
-    const auto & lFEu = localFiniteElementu = localView.tree().template child<0>().finiteElement();
-    const auto& lFEuDH = localView.tree().template child<1>().child(0).finiteElement();
-
-    const auto& geometry = elementCoarse.geometry();
-
-//    std::cout << " father dofs ";
-//    for (const auto& tempEl : gradient_u_Coarse->localDoFs_ ) std::cout << tempEl << " ";
-//    std::cout << std::endl;
-
-    Config::VectorType localDofs;
-    localDofs.setZero(localViewCoarse.size());
-*/
-
-//  interpolate([&localnumericalSolution,hs](SolverConfig::SpaceType x){
-//        const auto& element = hs.findEntity(x);
-//        localnumericalSolution.bind(element);
-//        const auto localx = element.geometry().local(x);;
-//        return localnumericalSolution(localx);}, v);
-
-/*
-
-      for (unsigned int i = 0; i < localViewCoarse.size(); i++)
-        v(localIndexSetCoarse.index(i)[0]) = localDofs[i];
-    }
-*/
-
-  //set scaling factor (last dof) to ensure mass conservation
-//  v(v.size()-1) = solution(solution.size()-1);
-//
-//  return v;
-
+  return v;
 }
