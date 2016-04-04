@@ -84,7 +84,7 @@ struct SolverConfig{
 
   static bool Dirichlet;
 
-	enum{childdim = 4, degree = 2, degreeHessian = 0};
+	enum{childdim = 4, degree = 2, degreeHessian = 1};
 
 	static int startlevel;
 	static int nonlinear_steps;
@@ -108,7 +108,7 @@ struct SolverConfig{
   typedef Pk2DLocalFiniteElement<ValueType, ValueType, degree> LocalFiniteElementuType;
   typedef Pk2DLocalFiniteElement<ValueType, ValueType, degreeHessian> LocalFiniteElementHessianSingleType;
 
-  typedef MixedTraits<degree, degreeHessian> FETraitsSolver;
+  typedef MixedTraits<Config::GridView, degree, degreeHessian> FETraitsSolver;
 
 	typedef FieldVector<ValueType,1> RangeType;
   typedef FieldMatrix<ValueType,2,2> HessianRangeType;
