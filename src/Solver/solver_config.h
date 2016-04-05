@@ -10,8 +10,7 @@
 
 //#define EIGEN_DEFAULT_DENSE_INDEX_TYPE long
 
-#define C0Element
-#define C0Elements
+#define NeilanMixed
 
 #include <config.h>
 #include "../config.h"
@@ -22,10 +21,6 @@
 #include <adolc/adouble.h>
 #include <adolc/adolc.h>
 #define ADOLC
-
-
-#include <dune/functions/gridfunctions/gridviewfunction.hh>
-//#include <dune/functions/functionspacebases/bsplinebasis.hh>
 
 #include <Grids/Grid2d.hpp> //for povray options
 
@@ -98,17 +93,17 @@ struct SolverConfig{
 	//  typedef LagrangeC0Traits<SolverConfig::degree> FETraitsSolver;
 
   //-------select DeVeubeke-------------
-//  typedef deVeubekeTraits FETraitsSolver;
+	//  typedef deVeubekeTraits FETraitsSolver;
 
-  //-------select PS12 S-Splines
-//  typedef PS12SplitTraits FETraitsSolver;
-//  typedef Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatrixType> FEBasis;
+	//-------select PS12 S-Splines
+  typedef PS12SplitTraits<Config::GridView> FETraitsSolver;
 
   //------select Mixed element-----------------
-  typedef Pk2DLocalFiniteElement<ValueType, ValueType, degree> LocalFiniteElementuType;
-  typedef Pk2DLocalFiniteElement<ValueType, ValueType, degreeHessian> LocalFiniteElementHessianSingleType;
+//	typedef Pk2DLocalFiniteElement<ValueType, ValueType, degree> LocalFiniteElementuType;
+//  typedef Pk2DLocalFiniteElement<ValueType, ValueType, degreeHessian> LocalFiniteElementHessianSingleType;
+//  #define C0Element
 
-  typedef MixedTraits<Config::GridView, degree, degreeHessian> FETraitsSolver;
+//  typedef MixedTraits<Config::GridView, degree, degreeHessian> FETraitsSolver;
 
 	typedef FieldVector<ValueType,1> RangeType;
   typedef FieldMatrix<ValueType,2,2> HessianRangeType;

@@ -107,7 +107,7 @@ struct FETraits<Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatr
   template<typename LocalView>
   static const auto& get_finiteElementu(const LocalView& localView)
   {
-    return localView.tree().template child<0>().finiteElement();
+    return localView.tree().finiteElement();
   }
 };
 

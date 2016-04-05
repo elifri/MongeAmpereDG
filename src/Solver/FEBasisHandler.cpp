@@ -140,7 +140,7 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solv
 
 //      std::cout << " set local dofs " << localDofs.transpose() << std::endl;
 
-      Assembler::set_local_coefficients<FETraits>(localIndexSet, localDofs, v);
+      Assembler::set_local_coefficients<FiniteElementTraits>(localIndexSet, localDofs, v);
     }
 
   //set scaling factor (last dof) to ensure mass conservation
@@ -347,7 +347,7 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
             typedef decltype(localView) LocalView;
 
             const int localIndex = Dune::Functions::flat_local_index<typename LocalView::GridView, typename LocalView::size_type>(localViewu.size(), i, row, col);
-            v_uDH_entry_old[localIndexSetuDH.index(i)[0]] = v_old[FETraits::get_index(localIndexSet, localIndex)];
+            v_uDH_entry_old[localIndexSetuDH.index(i)[0]] = v_old[FiniteElementTraits::get_index(localIndexSet, localIndex)];
           }
         }
       }
@@ -383,8 +383,8 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
             typedef decltype(localView) LocalView;
 
             const int localIndex = Dune::Functions::flat_local_index<typename LocalView::GridView, typename LocalView::size_type>(localViewu.size(), i, row, col);
-            v[FETraits::get_index(localIndexSet, localIndex)] = v_uDH_entry[localIndexSetuDH.index(i)[0]];
-//            std::cout << " v(" << FETraits::get_index(localIndexSet, localIndex) << ")=" << v_uDH_entry[localIndexSetuDH.index(i)[0]] << std::endl;
+            v[FiniteElementTraits::get_index(localIndexSet, localIndex)] = v_uDH_entry[localIndexSetuDH.index(i)[0]];
+//            std::cout << " v(" << FiniteElementTraits::get_index(localIndexSet, localIndex) << ")=" << v_uDH_entry[localIndexSetuDH.index(i)[0]] << std::endl;
           }
         }
       }
@@ -511,7 +511,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
    //build gridviewfunction
    Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,Config::VectorType> numericalSolution(*FEBasis_,solution_u);
    auto localnumericalSolution = localFunction(numericalSolution);
-   FETraits::DiscreteLocalGradientGridFunction localGradient (numericalSolution);
+   FiniteElementTraits::DiscreteLocalGradientGridFunction localGradient (numericalSolution);
 
 
   //we need do generate the coarse basis

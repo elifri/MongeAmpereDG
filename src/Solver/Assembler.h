@@ -331,8 +331,10 @@ public:
    * @param v_local local dof vector (to be added)
    * @param returns the new global dof vector
    */
+/*
   template<typename LocalIndexSet>
   static void set_local_coefficients(const LocalIndexSet &localIndexSet, const Config::VectorType &v_local, Config::VectorType& v);
+*/
 
   /**
    *  sets the coeffs v_local to the global dof vector
@@ -341,10 +343,10 @@ public:
    * @param returns the new global dof vector
    */
 
-  template<typename FETraits, typename LocalIndexSet, typename VectorType>
-  static void set_local_coefficients(const LocalIndexSet &localIndexSet,
-      const VectorType &v_local,
-      VectorType& v);
+  template<typename FT=FETraits>
+  static void set_local_coefficients(const typename FT::FEBasis::LocalIndexSet &localIndexSet,
+      const Config::VectorType &v_local,
+      Config::VectorType& v);
 
 
   /**
@@ -881,9 +883,9 @@ void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const
   }
 }
 
-template<typename LocalIndexSet>
+template<>
 inline
-void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const Config::VectorType &v_local, Config::VectorType& v)
+void Assembler::set_local_coefficients<Assembler::FETraits>(const Assembler::FETraits::FEBasis::LocalIndexSet &localIndexSet, const Config::VectorType &v_local, Config::VectorType& v)
 {
   assert ((unsigned int) v_local.size() == localIndexSet.size());
   for (size_t i = 0; i < localIndexSet.size(); i++)
@@ -892,11 +894,11 @@ void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet, const
   }
 }
 
-template<typename OtherFETraits, typename LocalIndexSet, typename VectorType>
+template<typename OtherFETraits>
 inline
-void Assembler::set_local_coefficients(const LocalIndexSet &localIndexSet,
-                                        const VectorType &v_local,
-                                         VectorType& v)
+void Assembler::set_local_coefficients(const typename OtherFETraits::FEBasis::LocalIndexSet &localIndexSet,
+                                        const Config::VectorType &v_local,
+                                         Config::VectorType& v)
 {
   assert(false && "the Traits calling this function do not fit to the one specified in SolverConfig!!");
   exit(-1);
@@ -1682,7 +1684,10 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
           if (is.neighbor()) {
-              // compute unique id for neighbor
+#ifndef C0Element
+            continue;
+#endif
+            // compute unique id for neighbor
             const GridViewType::IndexSet::IndexType idn =
                       gridView.indexSet().index(is.outside());
 

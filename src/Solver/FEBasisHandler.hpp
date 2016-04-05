@@ -21,8 +21,8 @@ class MA_solver;
 
 template<int FETraitstype, typename FT>
 struct FEBasisHandler{
-  typedef FT FETraits;
-  typedef typename FETraits::FEBasis FEBasisType;
+  typedef FT FiniteElementTraits;
+  typedef typename FiniteElementTraits::FEBasis FEBasisType;
 
   FEBasisHandler(const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)){}
 
@@ -51,12 +51,12 @@ struct FEBasisHandler{
 ///specialisation for mixed elements
 template<typename FT>
 struct FEBasisHandler<Mixed, FT>{
-  typedef FT FETraits;
-  typedef typename FETraits::FEBasis FEBasisType;
-  typedef typename FETraits::FEuBasis FEuBasisType;
-  typedef typename FETraits::FEuDHBasis FEuDHBasisType;
+  typedef FT FiniteElementTraits;
+  typedef typename FiniteElementTraits::FEBasis FEBasisType;
+  typedef typename FiniteElementTraits::FEuBasis FEuBasisType;
+  typedef typename FiniteElementTraits::FEuDHBasis FEuDHBasisType;
 
-  typedef typename FETraits::DiscreteGridFunction DiscreteGridFunction;
+  typedef typename FiniteElementTraits::DiscreteGridFunction DiscreteGridFunction;
 
   FEBasisHandler(const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)),
                                                 uBasis_(new FEuBasisType(grid)),

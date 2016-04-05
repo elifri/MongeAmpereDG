@@ -195,8 +195,6 @@ public:
 
     mutable MA_OT_solver* solver_ptr;
 
-//		Local_Operator_MA_mixed_Neilan lop;
-//		Local_Operator_MA_refl_Brenner lop;
     Local_Operator_MA_OT lop;
 	};
 
@@ -310,7 +308,7 @@ public:
 	/**
 	 * This function is the main function of the MA solver:
 	 * It solves the help problem -laplace u = sqrt(2f) to calculate an initial value.
-	 * It calls the nonlinear solver to solve Neilan's nonlinear system
+	 * It calls the nonlinear solver to solve the nonlinear system defined by the local operator
 	 *
 	 * @brief calculates the solution of the MA equation
 	 * @return
