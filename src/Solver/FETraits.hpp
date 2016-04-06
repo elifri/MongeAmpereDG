@@ -32,7 +32,7 @@ enum FEType{
 template <typename T>
 struct FETraits
 {
-  static const FEType Type = Undefined;
+  static const FEType Type = Lagrange;
   typedef T FEBasis;
   typedef T FEuBasis;
 

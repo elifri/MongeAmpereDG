@@ -10,7 +10,7 @@
 
 #include "../Solver/MA_solver.h"
 
-#ifdef C0Element
+#ifdef USE_MIXED_ELEMENT
 #include "operator_MA_OT_Neilan.h"
 #else
 #include "operator_MA_OT.h"

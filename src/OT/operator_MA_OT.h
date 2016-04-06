@@ -20,6 +20,8 @@
 #include <adolc/adolc.h>
 #include <cmath>
 
+#include "../Solver/boundaryHandler.h"
+
 using namespace Dune;
 
 template <class value_type>
@@ -481,8 +483,8 @@ public:
                       * (SolverConfig::degree * SolverConfig::degree);
 //                     * std::pow(intersection.geometry().volume(), SolverConfig::beta);
 
-    const int n = 3;
     const int boundaryFaceId = intersection.indexInInside();
+    const int n = BoundaryHandler::get_collocation_size<SolverConfig::FETraitsSolver>(boundaryFaceId);
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -517,7 +519,7 @@ public:
       const double factor = quad[pt].weight() * integrationElement;
       for (int i = 0; i < n; i++) //parts from self
       {
-        int j = collocationNo[boundaryFaceId][i];
+        int j = BoundaryHandler::get_collocation_no<SolverConfig::FETraitsSolver>(boundaryFaceId,i);
         assert(!SolverConfig::Dirichlet);
         v_adolc(j) += penalty_weight * ((gradu * normal) - phi_value) //*((T_value * normal) - phi_value)
                             * (referenceFunctionValues[j]+(gradients[j]*normal)) * factor;

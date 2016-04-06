@@ -104,10 +104,16 @@ template <>
 void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
 
 template <>
+void FEBasisHandler<Lagrange, LagrangeC0Traits<Config::GridView, SolverConfig::degree>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
+
+template <>
 void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
 
 template <>
 Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::coarse_solution(MA_solver& solver, const int level);
+
+template <>
+Config::VectorType FEBasisHandler<Lagrange, LagrangeC0Traits<Config::GridView, SolverConfig::degree>>::coarse_solution(MA_solver& solver, const int level);
 
 template <>
 Config::VectorType FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::coarse_solution(MA_solver& solver, const int level);

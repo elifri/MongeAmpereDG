@@ -244,6 +244,48 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solv
 }
 
 template <>
+void FEBasisHandler<Lagrange, LagrangeC0Traits<Config::GridView, SolverConfig::degree>>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
+{
+  assert(solver.initialised);
+  assert(level == 1);
+
+  //mark elements for refinement
+  for (auto&& element : elements(*solver.gridView_ptr))
+  {
+    //mark element for refining
+    solver.grid_ptr->mark(1,element);
+  }
+  double scaling_factor = v(v.size()-1);
+
+  std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
+
+  //adapt grid
+  bool marked = solver.grid_ptr->preAdapt();
+  assert(marked == false);
+  solver.grid_ptr->adapt();
+  solver.count_refined += level;
+
+  std::cout << "new element count " << solver.gridView_ptr->size(0) << std::endl;
+
+  //update member
+  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(*solver.gridView_ptr));
+  solver.assembler.bind(*FEBasis_);
+
+  typedef LagrangeC0Traits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
+  FEBasisCoarseType FEBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
+  DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
+
+  v.resize(FEBasis_->indexSet().size() + 1);
+  Config::VectorType v_u;
+  interpolate(*FEBasis_, v_u, solution_u_Coarse_global);
+  v.segment(0, v_u.size()) = v_u;
+  v(v.size()-1) = scaling_factor;
+  solver.grid_ptr->postAdapt();
+}
+
+
+template <>
 void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
 {
   assert(solver.initialised);
@@ -620,6 +662,38 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 
   return v;
 }
+
+template<>
+Config::VectorType FEBasisHandler<Lagrange, LagrangeC0Traits<Config::GridView, SolverConfig::degree>>::coarse_solution(MA_solver& solver, const int level)
+{
+  assert(solver.initialised);
+
+  Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
+
+   //build gridviewfunction
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,Config::VectorType> numericalSolution(*FEBasis_,solution_u);
+
+  //we need do generate the coarse basis
+  const auto& levelGridView = solver.grid_ptr->levelGridView(level);
+
+  typedef decltype(levelGridView) ConstReflevelGridView;
+  typedef typename std::remove_reference<ConstReflevelGridView>::type ConstlevelGridView;
+  typedef typename std::remove_const<ConstlevelGridView>::type LevelGridView;
+
+  //create handler for coarse basis
+  FEBasisHandler<Lagrange, LagrangeC0Traits<LevelGridView, SolverConfig::degree>> HandlerCoarse(levelGridView);
+
+  //init vector
+  Config::VectorType v = Config::VectorType::Zero(HandlerCoarse.FEBasis().indexSet().size() + 1);
+
+  //project
+  HandlerCoarse.project(numericalSolution, v);
+
+  v(v.size()-1) = solver.solution(solver.solution.size()-1);
+
+  return v;
+}
+
 
 template<>
 Config::VectorType FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::coarse_solution(MA_solver& solver, const int level)
