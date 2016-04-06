@@ -16,12 +16,17 @@ class OTBoundary
 private:
   ///find the projection on the desired boundary
   virtual void phi(const Config::SpaceType2d& T, const FieldVector<double, Config::dim> &normal, Config::ValueType &phi) const =0;
+
+  virtual Config::ValueType LegrendeFenchelTrafo(const Config::SpaceType &normal) const =0;
+
 public:
   typedef std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGradientGridFunction> GradFunction_ptr;
 
 //  virtual ~OTBoundary() {delete (*GradFunction_ptr);}
 
-  OTBoundary(GradFunction_ptr &gradUOld, GeometrySetting& geometrySetting) : gradient_u_old(&gradUOld), geometrySetting(geometrySetting) {}
+  OTBoundary(GradFunction_ptr &gradUOld, GeometrySetting& geometrySetting,
+      const int n = 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps))
+    : gradient_u_old(&gradUOld), geometrySetting(geometrySetting), N_(n){}
 
   ///return the projection of the last iteration's solution (onto the desired boundary)
   template<class Element>
@@ -39,7 +44,46 @@ public:
     return phi_value;
   }
 
+  Config::ValueType H(const Config::SpaceType2d& transportedX, const Config::SpaceType &normalX) const
+  {
+
+    //create discrete version of Lemma 2.1. in "Numerical soltuion of the OT problem using the MA equation" by Benamou, Froese and Oberman
+    Config::ValueType max = 0;
+
+    for (int i = 0; i < N_; i++)
+    {
+      const Config::SpaceType normal = {std::cos(2*M_PI*i/N_), std::sin(2*M_PI*i/N_)};
+      if (normal*normalX >= 0) continue;
+
+      auto tempdistanceFunction = transportedX*normal - LegrendeFenchelTrafo(normal);
+      if(tempdistanceFunction > max)
+        max = tempdistanceFunction;
+    }
+    return max;
+  }
+
+  adouble H(const FieldVector<adouble, Config::dim>& transportedX, const Config::SpaceType &normalX) const
+  {
+//    std::cerr << " T_value " << transportedX[0].value() << " " << transportedX[1].value() << std::endl;
+
+    //create discrete version of Lemma 2.1. in "Numerical soltuion of the OT problem using the MA equation" by Benamou, Froese and Oberman
+    adouble max = -100000000;
+
+    for (int i = 0; i < N_; i++)
+    {
+      const Config::SpaceType normal = {std::cos(2*M_PI*i/N_), std::sin(2*M_PI*i/N_)};
+//      if (normal*normalX >= 0) continue;
+
+      adouble tempdistanceFunction = transportedX*normal - LegrendeFenchelTrafo(normal);
+      max = fmax(tempdistanceFunction, max);
+//      std::cerr << "normal " << normal << " transportedX*normal " << (transportedX*normal).value() << "- H*(n)" <<LegrendeFenchelTrafo(normal) << " tempdistanceFunction " << tempdistanceFunction.value() << " -> max = " << max.value() << std::endl;
+    }
+    return max;
+  }
+
+
 protected:
+  int N_;
   mutable GradFunction_ptr* gradient_u_old;
   GeometrySetting& geometrySetting;
 };
@@ -63,8 +107,29 @@ class BoundarySquare : public OTBoundary
       T_proj[0] = T[0]-geometrySetting.lowerLeftTarget[0] < geometrySetting.upperRightTarget[0] - T[0] ?  geometrySetting.lowerLeftTarget[0] : geometrySetting.upperRightTarget[0];
     else
       T_proj[1] = T[1]-geometrySetting.lowerLeftTarget[1] < geometrySetting.upperRightTarget[1] - T[1] ?  geometrySetting.lowerLeftTarget[1] : geometrySetting.upperRightTarget[1];
+
     phi = T_proj * normal;
   }
+
+  Config::ValueType LegrendeFenchelTrafo(const Config::SpaceType &normal) const
+  {
+    if (normal[0] < 0)
+    {
+      if (normal[1] < 0)
+        return geometrySetting.lowerLeftTarget[0]*normal[0] + geometrySetting.lowerLeftTarget[1]*normal[1];
+      else
+        return geometrySetting.lowerLeftTarget[0]*normal[0] + geometrySetting.upperRightTarget[1]*normal[1];
+    }
+    else
+    {
+      if (normal[1] < 0)
+        return geometrySetting.upperRightTarget[0]*normal[0] + geometrySetting.lowerLeftTarget[1]*normal[1];
+      else
+        return geometrySetting.upperRightTarget[0]*normal[0] + geometrySetting.upperRightTarget[1]*normal[1];
+    }
+  }
+
+
 public:
   BoundarySquare(OTBoundary::GradFunction_ptr &gradUOld, GeometrySetting& geometrySetting): OTBoundary(gradUOld, geometrySetting){}
   ~BoundarySquare() {}

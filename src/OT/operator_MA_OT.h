@@ -512,7 +512,7 @@ public:
           gradients, x_adolc, gradu);
 
       //-------calculate integral--------
-      auto phi_value = bc.phi(element, quadPos, normal);
+      auto signedDistance = bc.H(gradu, normal);
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
