@@ -35,6 +35,10 @@ struct FEBasisHandler{
   Config::VectorType coarse_solution(MA_solver& solver, const int level)
   {assert(false && " Error, dont know FE basis"); exit(-1);}
 
+  void bind(const Config::GridView& gridView)
+  {
+    FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(gridView));
+  }
 
   void bind(const shared_ptr<FEBasisType>& feBasis)
   {
@@ -112,9 +116,9 @@ template<int FETraitstype, typename FETraits>
 template <class F>
 void FEBasisHandler<FETraitstype, FETraits>::project(F f, Config::VectorType &v) const
 {
-  v.resize(FEBasis_->indexSet().size() + 1);
+  v.setZero(FEBasis_->indexSet().size() + 1);
   Config::VectorType v_u;
-  interpolate(FEBasis_, v_u, f);
+  interpolate(*FEBasis_, v_u, f);
   v.segment(0, v_u.size()) = v_u;
 
   //set scaling factor (last dof) to ensure mass conservation
@@ -180,7 +184,7 @@ template<typename FETraits>
 template <class F>
 void FEBasisHandler<Mixed, FETraits>::project(F f, Config::VectorType &v) const
 {
-  v.resize(FEBasis_->indexSet().size() + 1);
+  v.setZero(FEBasis_->indexSet().size() + 1);
   Config::VectorType v_u;
   interpolate(*uBasis_, v_u, f);
   v.segment(0, v_u.size()) = v_u;

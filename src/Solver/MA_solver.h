@@ -120,6 +120,7 @@ public:
 	  grid_ptr->globalRefine(SolverConfig::startlevel);
     std::cout << "constructor n dofs" << get_n_dofs() << std::endl;
 
+    FEBasisHandler_.bind(*gridView_ptr);
 	  assembler.bind(FEBasisHandler_.FEBasis());
 
 	  plotter.set_output_directory(plotOutputDirectory_);
