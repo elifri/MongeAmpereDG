@@ -597,8 +597,8 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 {
   update_solution(v);
 
-  std::cout << "v.size()" << v.size()-1 << std::endl;
-  std::cout << "projected on vector " << std::endl << v.transpose() << std::endl;
+  std::cerr << "v.size()" << v.size()-1 << std::endl;
+  std::cerr << "projected on vector " << std::endl << v.transpose() << std::endl;
 
   auto localView = FEBasisHandler_.FEBasis().localView();
   auto localIndexSet = FEBasisHandler_.FEBasis().indexSet().localIndexSet();
@@ -616,6 +616,8 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
     VectorType localDofs = assembler.calculate_local_coefficients(localIndexSet, v);
 
+    std::cerr << "local dofs " << localDofs << std::endl;
+
     for (int i = 0; i < geometry.corners(); i++) {
        //evaluate test function
        std::vector<Dune::FieldVector<double, 1>> functionValues(
@@ -628,7 +630,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
          res += localDofs(j) * functionValues[j];
        }
 
-       std::cout << "f(corner " << i << ")=" << f(geometry.corner(i))
+       std::cerr << "f(corner " << i << ")=" << f(geometry.corner(i))
            << "  approx = " << res << std::endl;
 
        const auto& xLocal = geometry.local(geometry.corner(i));
@@ -637,14 +639,14 @@ void MA_solver::test_projection(const F f, VectorType& v) const
        Dune::FieldVector<double, 2> jacApprox;
        assemble_gradients_gradu(lFE, geometry.jacobianInverseTransposed(xLocal), xLocal,JacobianValues, localDofs.segment(0,lFE.size()), jacApprox);
 
-       std::cout << "f'(corner " << i << "=" << geometry.corner(i)[0] << " "
+       std::cerr << "f'(corner " << i << "=" << geometry.corner(i)[0] << " "
            << geometry.corner(i)[1] << ")  approx = " << jacApprox << std::endl;
 
        std::vector<FieldMatrix<double, 2, 2>> HessianValues(lFE.size());
        Dune::FieldMatrix<double, 2, 2> HessApprox = 0;
        assemble_hessians_hessu(lFE, geometry.jacobianInverseTransposed(xLocal), xLocal,HessianValues, localDofs.segment(0,lFE.size()), HessApprox);
 
-       std::cout << "f''(corner " << i << "=" << geometry.corner(i)[0] << " "
+       std::cerr << "f''(corner " << i << "=" << geometry.corner(i)[0] << " "
            << geometry.corner(i)[1] << ")  approx = " << HessApprox << std::endl;
 
      }
@@ -700,7 +702,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
         VectorType localDofsn = assembler.calculate_local_coefficients(localIndexSetn, v);
 
-        std::cout << "local dofs   " << localDofs.transpose() << std::endl << "local dofs n " << localDofsn.transpose() << std::endl;
+        std::cerr << "local dofs   " << localDofs.transpose() << std::endl << "local dofs n " << localDofsn.transpose() << std::endl;
 
         //calculate normal derivative
         const FieldVector<double, Config::dim> normal =
@@ -724,8 +726,8 @@ void MA_solver::test_projection(const F f, VectorType& v) const
         assemble_gradients_gradu(lFEn, jacobian, faceCentern,
             gradientsn, localDofsn.segment(0,lFEn.size()), gradun);
 
-        std::cout << "normal gradient at " << face_center << " " << (normal*gradu)  << " and " << (normal*gradun) << ", with gradients " << gradu  << " and " << gradun << std::endl;
-        std::cout << " gradient at face_center = " << (*gradient_u_old)(geometry.local(face_center)) << std::endl;
+        std::cerr << "normal gradient at " << face_center << " " << (normal*gradu)  << " and " << (normal*gradun) << ", with gradients " << gradu  << " and " << gradun << std::endl;
+        std::cerr << " gradient at face_center = " << (*gradient_u_old)(geometry.local(face_center)) << std::endl;
 
         // Get a quadrature rule
         const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
@@ -755,9 +757,9 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
 //          assert(std::abs((gradu-gradun).two_norm() < 1e-10));
           if (std::abs((gradu-gradun).two_norm() > 1e-10))
-            std::cout << "found two gradient not matching at " << x_value << ", namely " << gradu  << " and " << gradun << std::endl;
+            std::cerr << "found two gradient not matching at " << x_value << ", namely " << gradu  << " and " << gradun << std::endl;
           else
-            std::cout << "checked matching gradients at quad point " << std::endl;
+            std::cerr << "checked matching gradients at quad point " << std::endl;
         }
 
       }

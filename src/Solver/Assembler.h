@@ -1625,7 +1625,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
     tape1initialised = false;
     tape2initialised = false;
     int tag_count = 0;
-
+    lop.found_negative = false;
 
     // A loop over all elements of the grid
     for (auto&& e : elements(gridView)) {

@@ -58,10 +58,9 @@ public:
   typedef DensityFunction Function;
 
   Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
-    rhoX(*rhoX), rhoY(*rhoY),bc(*bc)
+    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
   {
     std::cout << " created Local Operator" << endl;
-    int_f = 0;
   }
 
 //  ~Local_Operator_MA_OT()
@@ -200,11 +199,14 @@ public:
       PDE_rhs *= scaling_factor_adolc;
 
       //calculate system for first test functions
-      if (uDH_det.value() < 0 && false)
+      if (uDH_det.value() < 0 && !found_negative)
       {
         std::cerr << "found negative determinant !!!!! " << uDH_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
+        found_negative = true;
       }
 //      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
+
+      assert(PDE_rhs.value() > 0);
 
       for (int j = 0; j < size; j++) // loop over test fcts
       {
@@ -361,8 +363,6 @@ public:
 
 //      std::cerr << " gradu u_jump " << grad_u_normaljump.value() << std::endl;
 
-      assert(std::abs(grad_u_normaljump.value()) < 1e-8);
-
       //      Hess_avg = 0.5*(Hessu+Hessun);
       FieldMatrix<adouble, Config::dim, Config::dim> Hess_avg = cofactor(Hessu);
       Hess_avg += cofactor(Hessu);
@@ -382,7 +382,7 @@ public:
 //        //parts from self
         v_adolc(j) += jump * referenceFunctionValues[j] * factor;
 //        std:: cerr << "v_adolc(" << j << ")+= " << (jump * referenceFunctionValues[j] * factor).value() << std::endl;
-//        // gradient penalty
+        // gradient penalty
         auto grad_times_normal = gradients[j] * normal;
         v_adolc(j) += penalty_weight_gradient * (grad_u_normaljump)
             * (grad_times_normal) * factor;
@@ -657,11 +657,10 @@ public:
   const OTBoundary& bc;
 
   static bool use_adouble_determinant;
-  static constexpr int collocationNo[3][3] = {{0,3,4},{0,11,8},{4,7,8}};
 
 public:
   mutable double int_f;
-
+  mutable bool found_negative;
 
 };
 

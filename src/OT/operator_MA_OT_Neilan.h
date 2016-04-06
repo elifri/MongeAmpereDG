@@ -56,10 +56,9 @@ public:
   typedef DensityFunction Function;
 
   Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
-    rhoX(*rhoX), rhoY(*rhoY),bc(*bc)
+    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
   {
     std::cout << " created Local Operator" << endl;
-    int_f = 0;
   }
 
 //  ~Local_Operator_MA_OT()
@@ -216,9 +215,10 @@ public:
       PDE_rhs *= scaling_factor_adolc;
 
       //calculate system for first test functions
-      if (uDH_det.value() < 0)
+      if (uDH_det.value() < 0 && !found_negative)
       {
-//        std::cerr << "found negative determinant !!!!! " << uDH_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
+        std::cerr << "found negative determinant !!!!! " << uDH_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
+        found_negative = true;
       }
 //      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
 
@@ -602,7 +602,7 @@ public:
 
 public:
   mutable double int_f;
-
+  mutable bool found_negative;
 };
 
 template <class value_type>

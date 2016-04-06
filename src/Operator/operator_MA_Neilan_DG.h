@@ -475,6 +475,8 @@ public:
 //  Dirichletdata bc;
 
   static bool use_adouble_determinant;
+public:
+  mutable bool found_negative;
 
 };
 
