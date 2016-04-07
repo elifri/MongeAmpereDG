@@ -31,8 +31,11 @@ namespace Config{
 
 
 //  typedef YaspGrid<dim> GridType;
+#ifndef BSPLINES
   typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > UnitCubeType;
-//  typedef UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >> UnitCubeType;
+#else
+  typedef UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >> UnitCubeType;
+#endif
   typedef UnitCubeType::GridType GridType;
   typedef GridType::LevelGridView LevelGridView;
   typedef GridType::LeafGridView GridView;

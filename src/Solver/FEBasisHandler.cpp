@@ -348,10 +348,17 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
   solver.assembler.bind(*FEBasis_);
 
   const auto levelGridView = solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1);
-  std::array<unsigned int,FEBasisType::GridView::dimension> elementsSplinesCoarse;
-  std::fill(elementsSplines.begin(), elementsSplines.end(), std::sqrt(levelGridView.size(0)));
 
-  typedef BSplineTraits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
+  typedef decltype(levelGridView) ConstReflevelGridView;
+  typedef typename std::remove_reference<ConstReflevelGridView>::type ConstlevelGridView;
+  typedef typename std::remove_const<ConstlevelGridView>::type LevelGridView;
+
+  std::array<unsigned int,LevelGridView::dimension> elementsSplinesCoarse;
+  std::fill(elementsSplinesCoarse.begin(), elementsSplinesCoarse.end(), std::sqrt(levelGridView.size(0)));
+
+
+
+  typedef BSplineTraits<LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
   FEBasisCoarseType FEBasisCoarse (levelGridView,
       solver.get_setting().lowerLeft, solver.get_setting().upperRight,
       elementsSplinesCoarse, SolverConfig::degree
@@ -359,14 +366,74 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
   DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
 
+  project(solution_u_Coarse_global, v);
+/*
   v.resize(FEBasis_->indexSet().size() + 1);
   Config::VectorType v_u;
   interpolate(*FEBasis_, v_u, solution_u_Coarse_global);
   v.segment(0, v_u.size()) = v_u;
+*/
   v(v.size()-1) = scaling_factor;
   solver.grid_ptr->postAdapt();
 }
+/*template <>
+void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig::degree>>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
+{
+  assert(solver.initialised);
+  assert(level == 1);
 
+  //mark elements for refinement
+  for (auto&& element : elements(*solver.gridView_ptr))
+  {
+    //mark element for refining
+    solver.grid_ptr->mark(1,element);
+  }
+  double scaling_factor = v(v.size()-1);
+
+  std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
+
+  //adapt grid
+  bool marked = solver.grid_ptr->preAdapt();
+  assert(marked == false);
+  solver.grid_ptr->adapt();
+  solver.count_refined += level;
+
+  std::cout << "new element count " << solver.gridView_ptr->size(0) << std::endl;
+
+  //update member
+  std::array<unsigned int,FEBasisType::GridView::dimension> elementsSplines;
+  std::fill(elementsSplines.begin(), elementsSplines.end(), std::sqrt(solver.gridView_ptr->size(0)));
+
+  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(*solver.gridView_ptr,
+      solver.get_setting().lowerLeft, solver.get_setting().upperRight,
+      elementsSplines, SolverConfig::degree));
+
+  solver.assembler.bind(*FEBasis_);
+
+  const auto levelGridView = solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1);
+
+  typedef decltype(levelGridView) ConstReflevelGridView;
+  typedef typename std::remove_reference<ConstReflevelGridView>::type ConstlevelGridView;
+  typedef typename std::remove_const<ConstlevelGridView>::type LevelGridView;
+
+  std::array<unsigned int,LevelGridView::dimension> elementsSplinesCoarse;
+  std::fill(elementsSplinesCoarse.begin(), elementsSplinesCoarse.end(), std::sqrt(levelGridView.size(0)));
+
+
+
+  typedef BSplineTraits<LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
+  FEBasisCoarseType FEBasisCoarse (levelGridView,
+      solver.get_setting().lowerLeft, solver.get_setting().upperRight,
+      elementsSplinesCoarse, SolverConfig::degree
+  );
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
+  DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
+
+  project(solution_u_Coarse_global, solver.solution);
+  v(v.size()-1) = scaling_factor;
+  solver.grid_ptr->postAdapt();
+}
+*/
 
 template <>
 void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::adapt(MA_solver& solver, const int level, Config::VectorType& v)

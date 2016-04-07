@@ -37,8 +37,7 @@ void MA_OT_solver::plot(const std::string& name) const
 
      //build gridviewfunction
     Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(),solution_u);
-     auto localnumericalSolution = localFunction(numericalSolution);
-
+    decltype(numericalSolution)::LocalFunction localnumericalSolution(numericalSolution);
      //build writer
      SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
 

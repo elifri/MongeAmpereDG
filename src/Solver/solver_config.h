@@ -98,6 +98,10 @@ struct SolverConfig{
 	//-------select PS12 S-Splines
 //  typedef PS12SplitTraits<Config::GridView> FETraitsSolver;
 
+	//-------select BSplines------------------
+#ifdef BSPLINES
+	typedef BSplineTraits<Config::GridView, SolverConfig::degree> FETraitsSolver;
+#endif
   //------select Mixed element-----------------
 //	typedef Pk2DLocalFiniteElement<ValueType, ValueType, degree> LocalFiniteElementuType;
 //  typedef Pk2DLocalFiniteElement<ValueType, ValueType, degreeHessian> LocalFiniteElementHessianSingleType;
