@@ -651,6 +651,7 @@ private:
  */
 template<typename GV, int deg, int degHess, class ST = std::size_t>
 using MAMixedBasis = DefaultGlobalBasis<MAMixedNodeFactory<GV, deg, degHess, std::array<ST, 2>, ST> >;
+
 /*MAMixedBasis : DefaultGlobalBasis<MAMixedNodeFactory<GV, deg, degHess, std::array<ST, 2>, ST> >
 {
 public:
@@ -671,6 +672,7 @@ private:
   shared_ptr<uBasis>
 }
 */
+
 
 
 } // end namespace Functions
