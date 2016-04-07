@@ -441,6 +441,7 @@ public:
 
     typedef decltype(localFiniteElement) ConstElementRefType;
     typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    typedef typename std::remove_const<ConstElementType>::type FiniteElementType;
 
     typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
     typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
@@ -483,9 +484,6 @@ public:
                       * (SolverConfig::degree * SolverConfig::degree);
 //                     * std::pow(intersection.geometry().volume(), SolverConfig::beta);
 
-    const int boundaryFaceId = intersection.indexInInside();
-    const int n = BoundaryHandler::get_collocation_size<SolverConfig::FETraitsSolver>(boundaryFaceId);
-
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
 
@@ -513,18 +511,19 @@ public:
 
       //-------calculate integral--------
       auto signedDistance = bc.H(gradu, normal);
+//      std::cerr << " x " << element.geometry().global(quadPos) << " (gradu) " << (gradu) << " (gradu * normal) " << (gradu * normal) << " H " << signedDistance << std::endl;
+
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
-      for (int i = 0; i < n; i++) //parts from self
+      for (int i = 0; i < size_u; i++) //parts from self
       {
-        int j = BoundaryHandler::get_collocation_no<SolverConfig::FETraitsSolver>(boundaryFaceId,i);
         assert(!SolverConfig::Dirichlet);
-        v_adolc(j) += penalty_weight * ((gradu * normal) - phi_value) //*((T_value * normal) - phi_value)
-                            * (referenceFunctionValues[j]+(gradients[j]*normal)) * factor;
-//        std::cerr << "locally add to objective function " <<penalty_weight * ((gradu * normal) - phi_value) //*((T_value * normal) - phi_value)
-//                                * referenceFunctionValues[j] * factor << " -> " <<  v_adolc(j) << std::endl;
+        v_adolc(i) += penalty_weight * signedDistance //*((T_value * normal) - phi_value)
+                            * (referenceFunctionValues[i]+(gradients[i]*normal)) * factor;
+        std::cerr << "locally add to objective function " << i << ", with value "<<penalty_weight * signedDistance //*((T_value * normal) - phi_value)
+                    * (referenceFunctionValues[i]) * factor << " -> " <<  v_adolc(i) << std::endl;
       }
 
     }

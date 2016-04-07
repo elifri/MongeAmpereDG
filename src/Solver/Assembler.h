@@ -1655,8 +1655,8 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 
         //calculate local coefficients
         Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
-//        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryValueDoF());
-        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryDoF());
+        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryValueDoF());
+//        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryDoF());
 //        BoundaryHandler::BoolVectorType isBoundaryLocal = BoundaryHandler::BoolVectorType::Constant(localIndexSet.size(), false);
 
         switch(assembleType_)
@@ -1888,7 +1888,10 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 #else
 
 //        std::cerr << " localVector " << local_vector << std::endl;
-        local_vector+=local_boundary;
+        for (int i = 0; i < isBoundaryLocal.size(); i++)
+        {
+          if (isBoundaryLocal(i)) local_vector(i)+=local_boundary(i);
+        }
 #endif
 //        std::cerr << " localVector " << local_vector << std::endl;
 

@@ -520,12 +520,6 @@ public:
                       * (SolverConfig::degree * SolverConfig::degree);
 //                     * std::pow(intersection.geometry().volume(), SolverConfig::beta);
 
-    assert(SolverConfig::degree == 2 || SolverConfig::degree == 1);
-    const int n = SolverConfig::degree;
-    const int boundaryFaceId = intersection.indexInInside();
-
-    SolverConfig::ValueType sum = 0;
-
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
 
@@ -557,18 +551,14 @@ public:
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
-      for (int i = 0; i < n; i++) //parts from self
+      for (int i = 0; i < size_u; i++) //parts from self
       {
-        unsigned int j = n == 2? collocationNo2[boundaryFaceId][i] : collocationNo1[boundaryFaceId][i];
 //        std::cerr << " add to local " << j << std::endl;
-        assert(j < (unsigned int) size_u);
-        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 0);
 //        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 2 || localFiniteElementu.localCoefficients().localKey(j).subEntity() == j);
 //        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 1 || localFiniteElementu.localCoefficients().localKey(j).subEntity() == boundaryFaceId);
         assert(!SolverConfig::Dirichlet);
-        sum += (referenceFunctionValues[j]);
-        v_adolc(j) += penalty_weight * ((gradu * normal) - phi_value) //*((T_value * normal) - phi_value)
-                         * (referenceFunctionValues[j]) * factor;
+        v_adolc(i) += penalty_weight * ((gradu * normal) - phi_value) //*((T_value * normal) - phi_value)
+                         * (referenceFunctionValues[i]) * factor;
 //        std::cerr << " test function has value " << (referenceFunctionValues[j]) << " at " << quadPos << std::endl;
 //        std::cerr << " test function values ";
 //        for (auto e: referenceFunctionValues) std::cerr << e << " ";
@@ -576,8 +566,6 @@ public:
       }
 
     }
-
-    assert(std::abs(sum) > 1e-10);
 
     // select dependent variables
     for (size_t i = 0; i < localView.size(); i++)
@@ -596,9 +584,6 @@ public:
   const Function& rhoY;
 
   const OTBoundary& bc;
-
-  static constexpr int collocationNo2[3][2] = {{0,1},{3,5},{2,4}};
-  static constexpr int collocationNo1[3][1] = {{0},{2},{1}};
 
 public:
   mutable double int_f;
