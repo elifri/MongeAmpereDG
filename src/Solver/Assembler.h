@@ -189,8 +189,13 @@ void assemble_hessians(const FiniteElement &lfu, const JacobianType &jacobian,
   jacobianTransposed[1][0] = jacobian[0][1];
   jacobianTransposed[0][1] = jacobian[1][0];
   for (size_t i = 0; i < hessians.size(); i++) {
-      hessians[i].leftmultiply(jacobian);
-      hessians[i].rightmultiply(jacobianTransposed);
+#ifdef  BSPLINES
+        leftmultiplyDiagonal(hessians[i],jacobian);
+        rightmultiplyDiagonal(hessians[i],jacobianTransposed);
+#else
+        hessians[i].leftmultiply(jacobian);
+        hessians[i].rightmultiply(jacobianTransposed);
+#endif
   }
 }
 

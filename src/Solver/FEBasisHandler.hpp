@@ -24,7 +24,7 @@ struct FEBasisHandler{
   typedef FT FiniteElementTraits;
   typedef typename FiniteElementTraits::FEBasis FEBasisType;
 
-  FEBasisHandler(const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)){}
+  FEBasisHandler(const MA_solver& solver, const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)){}
 
   template<class F>
   void project(F f, Config::VectorType &v) const;
@@ -35,7 +35,7 @@ struct FEBasisHandler{
   Config::VectorType coarse_solution(MA_solver& solver, const int level)
   {assert(false && " Error, dont know FE basis"); exit(-1);}
 
-  void bind(const Config::GridView& gridView)
+  void bind(const MA_solver& solver, const Config::GridView& gridView)
   {
     FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(gridView));
   }
@@ -62,7 +62,7 @@ struct FEBasisHandler<Mixed, FT>{
 
   typedef typename FiniteElementTraits::DiscreteGridFunction DiscreteGridFunction;
 
-  FEBasisHandler(const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)),
+  FEBasisHandler(const MA_solver& solver, const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)),
                                                 uBasis_(new FEuBasisType(grid)),
                                                 uDHBasis_(new FEuDHBasisType(grid)){}
 
@@ -75,7 +75,7 @@ struct FEBasisHandler<Mixed, FT>{
   Config::VectorType coarse_solution(MA_solver& solver, const int level)
   {assert(false && " Error, dont know FE basis"); exit(-1);}
 
-  void bind(const Config::GridView& gridView)
+  void bind(const MA_solver& ma_solver, const Config::GridView& gridView)
   {
     FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(gridView));
     uBasis_ = std::shared_ptr<FEuBasisType> (new FEuBasisType(gridView));
@@ -98,13 +98,21 @@ struct FEBasisHandler<Mixed, FT>{
   const FEuBasisType& uBasis() const{ return *uBasis_;}
 };
 
+template<>
+FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degree>>::FEBasisHandler(const MA_solver& solver, const typename FEBasisType::GridView& grid);
+template<>
+FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig::degree>>::FEBasisHandler(const MA_solver& solver, const typename FEBasisType::GridView& grid);
 
+template<>
+void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degree>>::bind(const MA_solver& solver, const Config::GridView& gridView);
 
 template <>
 void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
 
 template <>
-void FEBasisHandler<Lagrange, LagrangeC0Traits<Config::GridView, SolverConfig::degree>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
+void FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, SolverConfig::degree>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
+template <>
+void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degree>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
 
 template <>
 void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
@@ -113,7 +121,9 @@ template <>
 Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::coarse_solution(MA_solver& solver, const int level);
 
 template <>
-Config::VectorType FEBasisHandler<Lagrange, LagrangeC0Traits<Config::GridView, SolverConfig::degree>>::coarse_solution(MA_solver& solver, const int level);
+Config::VectorType FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, SolverConfig::degree>>::coarse_solution(MA_solver& solver, const int level);
+template <>
+Config::VectorType FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degree>>::coarse_solution(MA_solver& solver, const int level);
 
 template <>
 Config::VectorType FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::coarse_solution(MA_solver& solver, const int level);

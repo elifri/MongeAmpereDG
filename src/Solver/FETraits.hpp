@@ -18,21 +18,21 @@
 //#include "localfunctions/MAmixedbasisC0C0.hh"
 //#include "localfunctions/deVeubekefunctionspacebasis.hh"
 #include "../localfunctions/PowellSabin12SSplinenodalbasis.hh"
+#include <dune/functions/functionspacebases/bsplinebasis.hh>
 
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
 
 enum FEType{
   PS12Split,
-  Lagrange,
+  Standard,
   Mixed,
-  Undefined
 };
 
 
 template <typename T>
 struct FETraits
 {
-  static const FEType Type = Lagrange;
+  static const FEType Type = Standard;
   typedef T FEBasis;
   typedef T FEuBasis;
 
@@ -167,6 +167,8 @@ using LagrangeC0Traits = FETraits<Functions::PQkNodalBasis<GridView, degree>>;
 template <typename GridView, int degree, int degreeHessian>
 using MixedTraits = FETraits<Functions::MAMixedBasis<GridView, degree, degreeHessian>>;
 
+template <typename GridView, int degree>
+using BSplineTraits = FETraits<Functions::BSplineBasis<GridView>>;
 
 
 #endif /* SRC_SOLVER_FETRAITS_HPP_ */
