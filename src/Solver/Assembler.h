@@ -1134,9 +1134,9 @@ void Assembler::assemble_jacobianFD_integral_cell_term(const LocalOperatorType l
     Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(n, j);
 
     Config::VectorType temp = x-h*unit_j;
-    lop.assemble_cell_term(localView, temp , f_minus, 2, x(x.size()-1), v_minus);
+    lop.assemble_cell_term(localView, temp , f_minus, 2, scaling_factor, v_minus);
     temp = x+h*unit_j;
-    lop.assemble_cell_term(localView, temp , f_plus, 2, x(x.size()-1), v_plus);
+    lop.assemble_cell_term(localView, temp , f_plus, 2, scaling_factor, v_plus);
 
     Eigen::VectorXd estimated_derivative = (f_plus - f_minus)/2./h;
 
@@ -1153,8 +1153,8 @@ void Assembler::assemble_jacobianFD_integral_cell_term(const LocalOperatorType l
     Config::VectorType f_minus = Config::VectorType::Zero(n), f_plus= Config::VectorType::Zero(n);
     double v_minus = 0, v_plus = 0;
 
-    lop.assemble_cell_term(localView, x, f_minus, 2, x(x.size()-1)-h, v_minus);
-    lop.assemble_cell_term(localView, x, f_plus, 2, x(x.size()-1)+h, v_plus);
+    lop.assemble_cell_term(localView, x, f_minus, 2, scaling_factor-h, v_minus);
+    lop.assemble_cell_term(localView, x, f_plus, 2, scaling_factor+h, v_plus);
     Eigen::VectorXd estimated_derivative = (f_plus - f_minus)/2./h;
 
     for (int i = 0; i < n; i++)
