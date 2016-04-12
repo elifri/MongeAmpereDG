@@ -29,17 +29,17 @@
 
 class MA_solver;
 
+#ifndef BSPLINES
 typedef StaticRefinement<GenericGeometry::SimplexTopology<2>::type::id,
         Config::GridType::ctype,
         GenericGeometry::SimplexTopology<2>::type::id,
         2> PlotRefinementType;
-
-/*
+#else
 typedef StaticRefinement<GenericGeometry::CubeTopology<2>::type::id,
-        SolverConfig::GridType::ctype,
+        Config::GridType::ctype,
         GenericGeometry::CubeTopology<2>::type::id,
         2> PlotRefinementType;
-*/
+#endif
 
 
 class Plotter{

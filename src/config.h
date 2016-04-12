@@ -15,6 +15,17 @@
 //to mark variables as unused (used for checking of return values in Petsc etc. in Debug Mode)
 #define _unused(x) ((void)x)
 
+#undef BSPLINES
+#define USE_C0_PENALTY
+#undef USE_MIXED_ELEMENT
+#undef USE_PS12
+
+#ifndef USE_PS12
+#define C0Element
+#else
+#undef C0Element
+#endif
+
 #include "UnitCube.h"
 
 

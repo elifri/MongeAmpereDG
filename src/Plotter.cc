@@ -162,16 +162,15 @@ void Plotter::write_cells(std::ofstream &file) const
 			for (auto it = PlotRefinementType::eBegin(refinement); it != PlotRefinementType::eEnd(refinement); it++)
 			{
 				file << "\t\t\t\t\t";
-				if (false) //hack for quads as the corner numbering of the refinement and vtk differs
-				{
-          auto vertexIndices = it.vertexIndices();
-          file << offset+vertexIndices[0] << " " << offset+vertexIndices[1] << " " << offset+vertexIndices[3] << " " << offset+vertexIndices[2] << "  ";
-				}
-				else{
-          auto vertexIndices = it.vertexIndices();
-          for (const auto& e : vertexIndices)
-            file << offset+e << " ";
-				}
+#ifdef BSPLINES
+//hack for quads as the corner numbering of the refinement and vtk differs
+				auto vertexIndices = it.vertexIndices();
+				file << offset+vertexIndices[0] << " " << offset+vertexIndices[1] << " " << offset+vertexIndices[3] << " " << offset+vertexIndices[2] << "  ";
+#else
+				auto vertexIndices = it.vertexIndices();
+        for (const auto& e : vertexIndices)
+           file << offset+e << " ";
+#endif
 			}
 			offset += PlotRefinementType::nVertices(refinement);
 		}
@@ -183,12 +182,24 @@ void Plotter::write_cells(std::ofstream &file) const
 
 	const int Nelements = this->Nelements();
 	for (int i = 1; i <= Nelements; ++i)
-		file << i * 3 << " ";
-	file << "\n\t\t\t\t</DataArray>";
+	{
+#ifdef BSPLINES
+	  file << i * 4 << " ";
+#else
+    file << i * 3 << " ";
+#endif
+	}
+  file << "\n\t\t\t\t</DataArray>";
 	file
 			<< "\n\t\t\t\t<DataArray type=\"Int32\" Name=\"types\" format=\"ascii\">\n\t\t\t\t\t";
 	for (int i = 1; i <= Nelements; ++i)
-		file << "5 ";  // 5: triangle, 9: quad
+	{
+#ifdef BSPLINES
+	  file << "9 ";  // 9: quad
+#else
+	  file << "5 ";  // 5: triangle,
+#endif
+	}
 	file << "\n\t\t\t\t</DataArray>";
 	file << "\n\t\t\t</Cells>\n";
 }

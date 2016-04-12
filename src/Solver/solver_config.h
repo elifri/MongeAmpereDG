@@ -10,7 +10,6 @@
 
 //#define EIGEN_DEFAULT_DENSE_INDEX_TYPE long
 
-#define C0Element
 
 #include <config.h>
 #include "../config.h"
@@ -79,7 +78,7 @@ struct SolverConfig{
 
   static bool Dirichlet;
 
-	enum{childdim = 4, degree = 2, degreeHessian = 1};
+	enum{childdim = 4, degree = 2, degreeHessian = 2};
 
 	static int startlevel;
 	static int nonlinear_steps;
@@ -90,26 +89,28 @@ struct SolverConfig{
 
 
   //-------select lagrangian element----------
+#ifdef	USE_C0_PENALTY
 	typedef LagrangeC0Traits<Config::GridView, SolverConfig::degree> FETraitsSolver;
-
+#endif
   //-------select DeVeubeke-------------
 	//  typedef deVeubekeTraits FETraitsSolver;
 
 	//-------select PS12 S-Splines
-//  typedef PS12SplitTraits<Config::GridView> FETraitsSolver;
+#ifdef USE_PS12
+  typedef PS12SplitTraits<Config::GridView> FETraitsSolver;
+#endif
 
 	//-------select BSplines------------------
 #ifdef BSPLINES
 	typedef BSplineTraits<Config::GridView, SolverConfig::degree> FETraitsSolver;
 #endif
   //------select Mixed element-----------------
-//	typedef Pk2DLocalFiniteElement<ValueType, ValueType, degree> LocalFiniteElementuType;
-//  typedef Pk2DLocalFiniteElement<ValueType, ValueType, degreeHessian> LocalFiniteElementHessianSingleType;
-//  #define C0Element
-// #define USE_MIXED_ELEMENT
-
-
-//  typedef MixedTraits<Config::GridView, degree, degreeHessian> FETraitsSolver;
+#ifdef USE_MIXED_ELEMENT
+	typedef Pk2DLocalFiniteElement<ValueType, ValueType, degree> LocalFiniteElementuType;
+  typedef Pk2DLocalFiniteElement<ValueType, ValueType, degreeHessian> LocalFiniteElementHessianSingleType;
+////  #define C0Element
+  typedef MixedTraits<Config::GridView, degree, degreeHessian> FETraitsSolver;
+#endif
 
 	typedef FieldVector<ValueType,1> RangeType;
   typedef FieldMatrix<ValueType,2,2> HessianRangeType;
