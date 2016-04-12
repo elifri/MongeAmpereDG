@@ -1493,7 +1493,10 @@ void Assembler::assemble_boundary_termHelper(const LocalOperatorType &lop, const
     derivationSuccessful = assemble_jacobian_integral(localView, xLocal, mLocal, 2);
 //              assert(derivationSuccessful);
     if (!derivationSuccessful)
-      cerr << " Error at derivation " << std::endl; exit(-1);
+    {
+      cerr << " Error at derivation " << std::endl;
+      assemble_jacobianFD_boundary_term(lop, is, localView, xLocal, mLocal, 2);
+    }
   }
 
 #ifdef DEBUG
