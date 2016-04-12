@@ -1607,6 +1607,12 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 
     Config::GridView gridView = basis_->gridView();
 
+//    const auto& v_isBoundary = boundaryHandler_.isBoundaryValueDoF();
+    const auto& v_isBoundary = boundaryHandler_.isBoundaryGradientDoF();
+//    const auto& v_isBoundary = boundaryHandler_.isBoundaryDoF();
+//    BoundaryHandler::BoolVectorType v_isBoundary = BoundaryHandler::BoolVectorType::Constant(v.size()-1, false);
+
+
     //assuming Galerkin
     v = Config::VectorType::Zero(x.size());
     Config::VectorType v_boundary= Config::VectorType::Zero(x.size());
@@ -1661,9 +1667,9 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 
         //calculate local coefficients
         Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
-        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryValueDoF());
-//        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, boundaryHandler_.isBoundaryDoF());
-//        BoundaryHandler::BoolVectorType isBoundaryLocal = BoundaryHandler::BoolVectorType::Constant(localIndexSet.size(), false);
+        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, v_isBoundary);
+
+//        std::cerr << " is local boundaryDof" << isBoundaryLocal.transpose() << std::endl;
 
         switch(assembleType_)
         {
@@ -1693,6 +1699,10 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 #ifndef C0Element
             continue;
 #endif
+#ifdef BSPLINES
+            continue;
+#endif
+
             // compute unique id for neighbor
             const GridViewType::IndexSet::IndexType idn =
                       gridView.indexSet().index(is.outside());
@@ -1734,7 +1744,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
               {
                 //init temp matrices
                 Config::DenseMatrixType mn_m, m_mn, mn_mn;
-                BoundaryHandler::BoolVectorType isBoundaryLocaln = calculate_local_coefficients(localIndexSetn, boundaryHandler_.isBoundaryValueDoF());
+                BoundaryHandler::BoolVectorType isBoundaryLocaln = calculate_local_coefficients(localIndexSetn, v_isBoundary);
                 mn_m.setZero(localViewn.size(), localView.size());
                 m_mn.setZero(localView.size(), localViewn.size());
                 mn_mn.setZero(localViewn.size(), localViewn.size());
@@ -1893,7 +1903,8 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
         }
 #else
 
-//        std::cerr << " localVector " << local_vector << std::endl;
+//        std::cerr << " localVector before boundary" << local_vector << std::endl;
+
         for (int i = 0; i < isBoundaryLocal.size(); i++)
         {
           if (isBoundaryLocal(i)) local_vector(i)+=local_boundary(i);

@@ -33,6 +33,12 @@ public:
     return isBoundaryValueDof_;
   }
 
+  const BoolVectorType& isBoundaryGradientDoF() const
+  {
+    assert(initialised_);
+    return isBoundaryGradientDof_;
+  }
+
   ///gives the number of the i-th dof on the boundary with boundaryID
   template<typename FETraits>
   static int get_collocation_size(const int boundaryID);
@@ -44,6 +50,7 @@ public:
 private:
   BoolVectorType  isBoundaryDof_;
   BoolVectorType  isBoundaryValueDof_;
+  BoolVectorType  isBoundaryGradientDof_;
   bool initialised_;
 };
 

@@ -21,6 +21,7 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
   //init all values with false
   isBoundaryDof_ = BoolVectorType::Constant(FEBasis.indexSet().size(),false);
   isBoundaryValueDof_ = BoolVectorType::Constant(FEBasis.indexSet().size(),false);
+  isBoundaryGradientDof_ = BoolVectorType::Constant(FEBasis.indexSet().size(),false);
 
 //  std::cout << "size " << FEBasis.gridView().size(0) << std::endl;
 
@@ -33,7 +34,7 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
     //store local boundary information
     BoolVectorType localIsBoundary = BoolVectorType::Constant(lFE.size(),false);
     BoolVectorType localIsBoundaryValue = BoolVectorType::Constant(lFE.size(),false);
-//    std::fill(localIsBoundary.begin(), localIsBoundary.end(), false);
+    BoolVectorType localIsBoundaryGradient = BoolVectorType::Constant(lFE.size(),false);
 
     // Traverse intersections
     for (auto&& is : intersections(FEBasis.gridView(), element)) {
@@ -52,7 +53,8 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
             if (localKey.subEntity() == boundaryFaceId) //edge normal dof
             {
               localIsBoundary[k] = true;
-              localIsBoundaryValue[k] = true;
+//              localIsBoundaryValue[k] = true;
+              localIsBoundaryGradient[k] = true;
 //              std::cout << " found (local) boundary dof " << k << std::endl;
             }
             break;
@@ -65,6 +67,8 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
                   localIsBoundary[k] = true;
                   if (localKey.index()== 0)
                     localIsBoundaryValue[k] = true;
+                  else
+                    localIsBoundaryGradient[k] = true;
 //                  std::cout << " found (local) boundary dof " << k << std::endl;
                 }
                 break;
@@ -74,6 +78,8 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
                   localIsBoundary[k] = true;
                   if (localKey.index()== 0)
                     localIsBoundaryValue[k] = true;
+                  else
+                    localIsBoundaryGradient[k] = true;
 //                  std::cout << " found (local) boundary dof " << k << std::endl;
                 }
                 break;
@@ -83,6 +89,8 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
                   localIsBoundary[k] = true;
                   if (localKey.index()== 0)
                     localIsBoundaryValue[k] = true;
+                  else
+                    localIsBoundaryGradient[k] = true;
 //                  std::cout << " found (local) boundary dof " << k << std::endl;
                 }
                 break;
