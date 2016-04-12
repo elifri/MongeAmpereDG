@@ -83,9 +83,9 @@ public:
 
 
 protected:
-  int N_;
   mutable GradFunction_ptr* gradient_u_old;
   GeometrySetting& geometrySetting;
+  int N_;
 };
 
 
