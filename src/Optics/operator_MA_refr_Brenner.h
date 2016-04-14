@@ -236,8 +236,8 @@ public:
    * @param x			         local solution coefficients
    * @param v					 local residual (to be returned)
    */
-  template<class LocalView, class LocalIndexSet, class VectorType>
-  void assemble_cell_term(const LocalView& localView, const LocalIndexSet &localIndexSet, const VectorType &x,
+  template<class LocalView, class VectorType>
+  void assemble_cell_term(const LocalView& localView, const VectorType &x,
       VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const {
 
     assert(opticalSetting);
@@ -270,8 +270,7 @@ public:
     // Get a quadrature rule
     int order = std::max(0,
         3 * ((int) localFiniteElement.localBasis().order()));
-    const QuadratureRule<double, dim>& quad =
-        MacroQuadratureRules<double, dim>::rule(element.type(), order, SolverConfig::quadratureType);
+    const QuadratureRule<double, dim>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(element, order);
 
     //init variables for automatic differentiation
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
@@ -532,10 +531,10 @@ public:
    * @param v					  return residual
    * @param vn				  return residual for neighbour element
    */
-  template<class IntersectionType, class LocalView, class LocalIndexSet, class VectorType>
+  template<class IntersectionType, class LocalView, class VectorType>
   void assemble_inner_face_term(const IntersectionType& intersection,
-      const LocalView &localView,  const LocalIndexSet &localIndexSet, const VectorType &x,
-      const LocalView &localViewn,  const LocalIndexSet &localIndexSetn, const VectorType &xn, VectorType& v,
+      const LocalView &localView, const VectorType &x,
+      const LocalView &localViewn, const VectorType &xn, VectorType& v,
       VectorType& vn, int tag) const {
     assert(opticalSetting);
 
@@ -724,9 +723,9 @@ public:
   }
 
 #ifndef COLLOCATION
-  template<class Intersection, class LocalView, class LocalIndexSet, class VectorType>
+  template<class Intersection, class LocalView, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
-      const LocalView &localView, const LocalIndexSet &localIndexSet,
+      const LocalView &localView,
       const VectorType &x, VectorType& v, int tag) const {
 
     assert(opticalSetting);
@@ -770,8 +769,7 @@ public:
     // Get a quadrature rule
     const int order = std::max(0, 3 * ((int) localFiniteElement.localBasis().order()));
     GeometryType gtface = intersection.geometryInInside().type();
-    const QuadratureRule<double, dim - 1>& quad = MacroQuadratureRules<double,
-        dim - 1>::rule(gtface, order, SolverConfig::quadratureType);
+    const QuadratureRule<double, dim - 1>& quad = SolverConfig::FETraitsSolver::get_Quadrature<dim-1>(gtface, order);
 
     // normal of center in face's reference element
     const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
@@ -854,7 +852,7 @@ public:
       z.axpy(-t*rho_value,x_value);
 
       auto signedDistance = bc.H(z, normal);
-      std::cerr << " signedDistance " << signedDistance << " at " << z[0].value() << " "<< z[1].value()<< " from X "  << x_value << std::endl;
+//      std::cerr << " signedDistance " << signedDistance << " at " << z[0].value() << " "<< z[1].value()<< " from X "  << x_value << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
@@ -872,8 +870,8 @@ public:
           v_adolc(j) += penalty_weight * signedDistance //((T_value * normal) - phi_value) //
                             * (referenceFunctionValues[j]+(gradients[j]*normal)) * factor;
 //          * (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1]) * factor;
-          std::cerr << " add to v_adolc(" << j << ") " << penalty_weight * signedDistance.value()
-              * (referenceFunctionValues[j]+(gradients[j]*normal))* factor << " -> " << v_adolc(j).value() << std::endl;
+//          std::cerr << " add to v_adolc(" << j << ") " << penalty_weight * signedDistance.value()
+//              * (referenceFunctionValues[j]+(gradients[j]*normal))* factor << " -> " << v_adolc(j).value() << std::endl;
         }
       }
 
