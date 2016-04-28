@@ -31,6 +31,8 @@ ImageFunction::ImageFunction(const std::string& filename,
   upperRight_[1] = lowerLeft_[1] + image_.height() * h_;
   minValue_ = std::max(0.0, minValue - image_.min());
 
+  std::cout << " min Value " << minValue_ << std::endl;
+
   image_ += minValue_;
   image_ *= 255.0 / (255.0 + minValue_);
 
@@ -210,3 +212,25 @@ void ImageFunction::convolveOriginal (unsigned int width)
       imageSmooth_ = image_.get_blur(blurCoeff_);
     }
 }
+
+//inline
+Config::SpaceType2d ImageFunction::getCoordinate(double i, double j) const
+{
+  Config::SpaceType2d res ({lowerLeft_[0], upperRight_[1]});
+  res[0] += h_*i;
+  res[1] -= h_*j;
+
+  assert(res[0] > lowerLeft_[0]-1e-10 && res[0] < upperRight_[0]+1e-10 && res[1] > lowerLeft_[1]-1e-10 && res[1] < upperRight_[1]+1e-10);
+
+  return res;
+
+}
+
+//inline
+void ImageFunction::getPixel(const Config::DomainType &x, int& i, int &j) const{
+  i = std::round(std::max( 0.0, std::min( (double) image_.width()-1,  (x[0] - lowerLeft_[0])/h_) ));
+  j = std::round(std::max( 0.0, std::min( (double) image_.height()-1, (upperRight_[1] - x[1])/h_) ));
+  assert(i < image_.height());
+  assert(j < image_.width());
+}
+

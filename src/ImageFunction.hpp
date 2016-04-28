@@ -47,11 +47,16 @@ class ImageFunction : public DensityFunction
         const double minValue=0.0
     );
 
-    const Config::SpaceType2d& lowerLeft(){ return lowerLeft_;}
-    const Config::SpaceType2d& upperRight(){ return upperRight_;}
+    const Config::SpaceType2d& lowerLeft() const { return lowerLeft_;}
+    const Config::SpaceType2d& upperRight() const{ return upperRight_;}
+
+    double minValue() const {return minValue_;}
+
 
     cimg_library::CImg<double>& getOriginalImage () { return image_; }
+    const cimg_library::CImg<double>& getOriginalImage () const { return image_; }
     cimg_library::CImg<double>& getSmoothImage   () { return imageSmooth_; }
+    const cimg_library::CImg<double>& getSmoothImage () const { return imageSmooth_; }
 
     Config::ValueType operator()(const Config::DomainType &x) const;
     double evaluate2d(const double x, const double y);
@@ -96,6 +101,8 @@ class ImageFunction : public DensityFunction
         imageSmooth_.save(filename.c_str());
     }
 
+    Config::SpaceType2d getCoordinate(double i, double j) const;
+    void getPixel(const Config::DomainType &x, int& i, int &j) const;
 };
 
 

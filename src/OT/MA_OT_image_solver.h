@@ -11,6 +11,7 @@
 #include "../ImageFunction.hpp"
 
 #include "MA_OT_solver.h"
+#include "MA_OT_image_Operator.h"
 
 class MA_OT_image_solver : public MA_OT_solver
 {
@@ -88,6 +89,9 @@ public:
   const OpticalSetting& get_setting() const {return setting_;}
 
 private:
+  ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
+  void plot(const std::string& filename) const;
+
   void update_Operator();
   void solve_nonlinear_system();
 

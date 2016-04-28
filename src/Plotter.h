@@ -503,6 +503,7 @@ void Plotter::write_transport_OT(std::ofstream &file, LocalFunction &f) const{
         file << "\t\t\t\t\t";
         for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
           auto diff = (f(it.coords())-(geometry.global(it.coords()))).two_norm();
+          assert(!(diff != diff));
           file << std::setprecision(12) << std::scientific;
           file << diff << " ";
         }

@@ -220,7 +220,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //      plotter.save_rectangular_mesh(*solution_u_old, file);
       file.close();
     }
-    plot("numericalSolutionBeforeRef");
+//    plot("numericalSolutionBeforeRef");
 
     adapt_solution();
 

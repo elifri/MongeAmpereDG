@@ -82,7 +82,7 @@ private:
 
 public:
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
-  void plot(const std::string& filename) const;
+  virtual void plot(const std::string& filename) const;
 
   GeometrySetting& get_setting() {return setting_;}
   const GeometrySetting& get_setting() const {return setting_;}

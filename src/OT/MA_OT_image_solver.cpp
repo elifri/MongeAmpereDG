@@ -10,6 +10,13 @@
 
 #include "MA_OT_image_solver.h"
 
+#include <dune/grid/io/file/vtk/vtkwriter.hh>
+#include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
+#include <dune/grid/io/file/vtk/common.hh>
+
+
+#include "imageOT.hpp"
+
 MA_OT_image_solver::MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting)
  :MA_OT_solver(grid, gridView, config, opticalSetting), setting_(opticalSetting), op(*this)
 {
@@ -24,6 +31,71 @@ MA_OT_image_solver::MA_OT_image_solver(const shared_ptr<GridType>& grid, GridVie
 
    epsMollifier_ = pow((double) epsDivide_, (int) SolverConfig::nonlinear_steps) * epsEnd_;
 }
+
+void MA_OT_image_solver::plot(const std::string& name) const
+{
+  std::cout << "write VTK output? " << writeVTK_ << " ";
+
+  //write vtk files
+  if (writeVTK_)
+  {
+    std::cout << "plot written into ";
+    const int nDH = Config::dim*Config::dim;
+
+    VectorType solution_u = solution.segment(0, get_n_dofs_u());
+
+     //build gridviewfunction
+    Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(),solution_u);
+    decltype(numericalSolution)::LocalFunction localnumericalSolution(numericalSolution);
+     //build writer
+     SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
+
+     //add solution data
+     vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
+
+     //extract hessian (3 entries (because symmetry))
+     Dune::array<int,2> direction = {0,0};
+
+     auto HessianEntry00= localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry00 , VTK::FieldInfo("Hessian00", VTK::FieldInfo::Type::scalar, 1));
+     direction[0] = 1;
+     auto HessianEntry10 = localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry10 , VTK::FieldInfo("Hessian10", VTK::FieldInfo::Type::scalar, 1));
+     direction[0] = 0; direction[1] = 1;
+     auto HessianEntry01 = localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry01 , VTK::FieldInfo("Hessian01", VTK::FieldInfo::Type::scalar, 1));
+     direction[0] = 1;
+     auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
+     vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
+
+     //write to file
+     std::string fname(plotter.get_output_directory());
+     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
+     vtkWriter.write(fname);
+
+
+
+     std::cout << fname  << std::endl;
+  }
+
+  //write to file
+  std::string fname(plotter.get_output_directory());
+  fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "outputGrid.vtu";
+
+  plotter.writeOTVTK(fname, *gradient_u_old);
+
+  std::string fnameOT(plotter.get_output_directory());
+  fnameOT += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "transported.bmp";
+
+  DiscreteGridFunction::GlobalFirstDerivative numericalTransportFunction(*solution_u_old_global);
+  Dune::array<int,2> direction = {0,0};
+  DiscreteGridFunction::GlobalSecondDerivative numericalTransportJacobianFunction(*solution_u_old_global, direction);
+  print_image_OT(numericalTransportFunction, numericalTransportJacobianFunction,
+      op.f_, op.g_,
+      fnameOT, op.g_.getOriginalImage().width(), op.g_.getOriginalImage().height());
+
+}
+
 
 void MA_OT_image_solver::update_Operator()
 {

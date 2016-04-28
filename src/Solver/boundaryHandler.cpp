@@ -53,7 +53,7 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
             if (localKey.subEntity() == boundaryFaceId) //edge normal dof
             {
               localIsBoundary[k] = true;
-//              localIsBoundaryValue[k] = true;
+              localIsBoundaryValue[k] = true;
               localIsBoundaryGradient[k] = true;
 //              std::cout << " found (local) boundary dof " << k << std::endl;
             }
@@ -151,6 +151,7 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
 //      if (isBoundaryDof_(globalIndex))
 //        std::cout << " found boundary dof " << globalIndex << std::endl;
       isBoundaryValueDof_(globalIndex) = isBoundaryValueDof_(globalIndex) || localIsBoundaryValue[i] ;
+      isBoundaryGradientDof_(globalIndex) = isBoundaryGradientDof_(globalIndex) || localIsBoundaryGradient[i] ;
     }
   }
 }

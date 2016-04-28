@@ -183,7 +183,7 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
 
       const double integrationElement = geometry.integrationElement(quadPos);
 
-      for (int j = 0; j < localVector.size(); j++)
+      for (size_t j = 0; j < localVector.size(); j++)
       {
         localVector(j) += f(geometry.global(quadPos))*functionValues[j]* quadpoint.weight() * integrationElement;
 
