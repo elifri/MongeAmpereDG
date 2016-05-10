@@ -16,6 +16,7 @@
 
 
 #include "IO/imageOT.hpp"
+#include "IO/hdf5Export.hpp"
 
 MA_OT_image_solver::MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting)
  :MA_OT_solver(grid, gridView, config, opticalSetting), setting_(opticalSetting), op(*this)
@@ -73,8 +74,6 @@ void MA_OT_image_solver::plot(const std::string& name) const
      fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
      vtkWriter.write(fname);
 
-
-
      std::cout << fname  << std::endl;
   }
 
@@ -94,6 +93,13 @@ void MA_OT_image_solver::plot(const std::string& name) const
       op.f_, op.g_,
       fnameOT, op.g_.getOriginalImage().width(), op.g_.getOriginalImage().height());
 
+
+  std::string fnamehdf5(plotter.get_output_directory());
+  fnamehdf5 += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations);
+
+  savehdf5(*gridView_ptr, setting_.lowerLeft, setting_.upperRight, plotterRefinement_, fnamehdf5, numericalTransportFunction.localFunction());
+
+  std::cout << " saved hdf5 file to " << fnamehdf5 << std::endl;
 }
 
 
