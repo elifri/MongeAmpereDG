@@ -11,13 +11,13 @@
 #include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 
-#include "../config.h"
+#include "MAconfig.h"
 
 //#include "localfunctions/MAmixedbasis.hh"
-#include "../localfunctions/MAmixedbasisC0.hh"
+#include "localfunctions/MAmixedbasisC0.hh"
 //#include "localfunctions/MAmixedbasisC0C0.hh"
 //#include "localfunctions/deVeubekefunctionspacebasis.hh"
-#include "../localfunctions/PowellSabin12SSplinenodalbasis.hh"
+#include "localfunctions/PowellSabin12SSplinenodalbasis.hh"
 #include <dune/functions/functionspacebases/bsplinebasis.hh>
 
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>

@@ -8,10 +8,11 @@
 #ifndef SRC_MA_OT_IMAGE_SOLVER_H_
 #define SRC_MA_OT_IMAGE_SOLVER_H_
 
-#include "../ImageFunction.hpp"
+#include "ImageFunction.hpp"
 
-#include "MA_OT_solver.h"
-#include "MA_OT_image_Operator.h"
+#include "OT/MA_OT_solver.h"
+#include "OT/MA_OT_image_Operator.h"
+#include "OT/operator_MA_OT_Linearisation.hpp"
 
 class MA_OT_image_solver : public MA_OT_solver
 {

@@ -8,22 +8,21 @@
 #ifndef SRC_ASSEMBLER_HH_
 #define SRC_ASSEMBLER_HH_
 
-#include "../utils.hpp"
-#include "../config.h"
-
+#include "utils.hpp"
 #include <dune/geometry/quadraturerules.hh>
 #include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
-#include "../matlab_export.hpp"
+#include "matlab_export.hpp"
 
 //automatic differtiation
 #include <adolc/adouble.h>
 #include <adolc/adolc.h>
 
 #include <CImg.h>
-#include "../Dogleg/utils.hpp"
+#include "Dogleg/utils.hpp"
 
-#include "boundaryHandler.h"
-#include "../ImageFunction.hpp"
+#include "Solver/boundaryHandler.h"
+#include "ImageFunction.hpp"
+#include "MAconfig.h"
 /**
  * evaluate the gradients of test functions at global scope
  * @param lfu			local finite element

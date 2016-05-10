@@ -11,9 +11,9 @@
 #include <dune/common/function.hh>
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
 
-#include "../config.h"
-#include "../utils.hpp"
-#include "../problem_data.h"
+#include "config.h"
+#include "utils.hpp"
+#include "problem_data.h"
 
 //automatic differtiation
 #include <adolc/adouble.h>

@@ -10,17 +10,17 @@
 
 #include <dune/common/function.hh>
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
-#include "../utils.hpp"
-#include "../config.h"
+#include "utils.hpp"
+#include "MAconfig.h"
 
-#include "../OT/problem_data_OT.h"
+#include "OT/problem_data_OT.h"
 
 //automatic differentiation
 #include <adolc/adouble.h>
 #include <adolc/adolc.h>
 #include <cmath>
 
-#include "../Solver/boundaryHandler.h"
+#include "Solver/boundaryHandler.h"
 
 using namespace Dune;
 

@@ -8,7 +8,7 @@
 #ifndef SRC_MA_OT_SOLVER_H_
 #define SRC_MA_OT_SOLVER_H_
 
-#include "../Solver/MA_solver.h"
+#include "Solver/MA_solver.h"
 
 #ifdef USE_MIXED_ELEMENT
 #include "operator_MA_OT_Neilan.h"
@@ -81,6 +81,8 @@ private:
   void solve_nonlinear_system();
 
 public:
+  virtual int get_n_dofs() const{return FEBasisHandler_.FEBasis().indexSet().size();}
+
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
   virtual void plot(const std::string& filename) const;
 

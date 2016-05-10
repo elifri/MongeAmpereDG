@@ -9,7 +9,7 @@
 
 #include "solver_config.h"
 
-#include "../Dogleg/doglegMethod.hpp"
+#include "Dogleg/doglegMethod.hpp"
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;

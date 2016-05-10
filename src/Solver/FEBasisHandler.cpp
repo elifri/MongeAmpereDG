@@ -720,7 +720,6 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   auto localIndexSetCoarse = FEBasisCoarse->indexSet().localIndexSet();
 
   auto localView = FEBasis_->localView();
-  auto localIndexSet = FEBasis_->indexSet().localIndexSet();
 
   //loop over elements (in coarse grid)
   for (auto&& elementCoarse : elements(levelGridView)) {

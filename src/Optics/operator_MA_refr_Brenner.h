@@ -10,10 +10,10 @@
 
 #include <dune/common/function.hh>
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
-#include "../utils.hpp"
-#include "../problem_data.h"
+#include "utils.hpp"
+#include "problem_data.h"
 
-#include "../Solver/solver_config.h"
+#include "Solver/solver_config.h"
 
 using namespace Dune;
 

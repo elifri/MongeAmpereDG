@@ -11,10 +11,10 @@
 #include <dune/common/function.hh>
 #include <dune/geometry/quadraturerules.hh>
 
-#include "../utils.hpp"
-#include "../solver_config.hh"
+#include "utils.hpp"
+#include "solver_config.hh"
 
-#include "../problem_data.hh"
+#include "problem_data.hh"
 
 //automatic differtiation
 #include <adolc/adouble.h>

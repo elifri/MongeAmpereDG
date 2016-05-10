@@ -17,7 +17,7 @@ namespace po = boost::program_options;
 
 #include <Grids/Grid2d.hpp>
 
-#include "../utils.hpp"
+#include "utils.hpp"
 
 MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting)
 :MA_solver(grid, gridView, config), setting_(setting), op(*this)
@@ -31,7 +31,6 @@ void MA_OT_solver::plot(const std::string& name) const
   if (writeVTK_)
   {
     std::cout << "plot written into ";
-    const int nDH = Config::dim*Config::dim;
 
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 

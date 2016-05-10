@@ -8,7 +8,7 @@
 #ifndef SRC_DOGLEG_PETSC_TTILITY_HH_
 #define SRC_DOGLEG_PETSC_TTILITY_HH_
 
-#include "../matlab_export.hpp"
+#include "matlab_export.hpp"
 
 
 static char help[] = "Newton method to solve u'' + u^{2} = f, sequentially.\n\
@@ -32,7 +32,7 @@ T*/
 */
 
 #include <petscsnes.h>
-#include "../solver_config.hh"
+#include "Solver/solver_config.hh"
 
 /*
    User-defined routines

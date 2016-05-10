@@ -16,8 +16,8 @@
 
 #include <string>
 
-#include "../config.h"
-#include "../Solver/solver_config.h"
+#include "MAconfig.h"
+#include "Solver/solver_config.h"
 
 
 //using namespace mirror_problem;

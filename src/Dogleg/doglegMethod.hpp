@@ -19,8 +19,8 @@
 #include <Eigen/Sparse>
 #include <Eigen/UmfPackSupport>
 
-#include "utils.hpp"
-#include "../matlab_export.hpp"
+#include "Dogleg/utils.hpp"
+#include "matlab_export.hpp"
 #include "igpm_t2_lib.hpp"
 
 

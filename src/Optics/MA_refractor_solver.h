@@ -8,7 +8,7 @@
 #ifndef SRC_MA_REFRACTOR_SOLVER_H_
 #define SRC_MA_REFRACTOR_SOLVER_H_
 
-#include "../Solver/MA_solver.h"
+#include "Solver/MA_solver.h"
 #include "operator_MA_refr_Brenner.h"
 
 class MA_refractor_solver: public MA_solver

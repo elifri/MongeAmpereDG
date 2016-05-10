@@ -16,15 +16,15 @@
 #include <dune/functions/functionspacebases/interpolate.hh>
 
 //#define COLLOCATION
-#include "../config.h"
+#include "MAconfig.h"
 
-#include "Assembler.h"
-#include "../problem_data.h"
+#include "Solver/Assembler.h"
+#include "problem_data.h"
 //#include "Operator/linear_system_operator_poisson_DG.hh"
-#include "../Operator/operator_MA_Neilan_DG.h"
+#include "Operator/operator_MA_Neilan_DG.h"
 //#include "../Operator/operator_discrete_Hessian.h"
-#include "../Plotter.h"
-#include "../matlab_export.hpp"
+#include "IO/Plotter.h"
+#include "matlab_export.hpp"
 #include "solver_config.h"
 
 #include "FEBasisHandler.hpp"

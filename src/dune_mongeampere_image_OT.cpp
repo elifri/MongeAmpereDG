@@ -8,9 +8,9 @@
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 
-#include "config.h"
+#include "MAconfig.h"
 #include "OT/MA_OT_image_solver.h"
-#include "Plotter.h"
+#include "IO/Plotter.h"
 
 #include <boost/program_options.hpp>
 

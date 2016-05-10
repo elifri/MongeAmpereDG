@@ -12,9 +12,9 @@
 
 
 #include <config.h>
-#include "../config.h"
+#include "MAconfig.h"
 
-#include "FETraits.hpp"
+#include "Solver/FETraits.hpp"
 
 //automatic differentiation
 #include <adolc/adouble.h>
@@ -23,7 +23,7 @@
 
 #include <Grids/Grid2d.hpp> //for povray options
 
-#include "../Dogleg/doglegMethod.hpp"
+#include "Dogleg/doglegMethod.hpp"
 
 namespace Dune{
 template<> struct PromotionTraits<adouble, double> {typedef adouble PromotedType; };

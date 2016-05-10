@@ -10,7 +10,7 @@
 
 
 #include <string>
-#include "config.h"
+#include "MAconfig.h"
 //#include "Callback_utility.hpp"
 
 #include "problem_data.h"
@@ -414,7 +414,6 @@ void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
       for (auto&& element: elements(*grid))
       {
         fg.bind(element);
-        const auto geometry = element.geometry();
         for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
           auto transportedX = fg(it.coords());
           file << std::setprecision(12) << std::scientific;

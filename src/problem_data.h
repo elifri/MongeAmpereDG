@@ -10,7 +10,7 @@
 
 #include <dune/common/function.hh>
 
-#include "config.h"
+#include "MAconfig.h"
 #include "Dogleg/utils.hpp"
 #include "Integrator.hpp"
 #include "utils.hpp"

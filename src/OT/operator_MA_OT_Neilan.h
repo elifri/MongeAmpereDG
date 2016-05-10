@@ -10,13 +10,13 @@
 
 #include <dune/common/function.hh>
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
-#include "../utils.hpp"
-#include "../Solver/solver_config.h"
+#include "utils.hpp"
+#include "Solver/solver_config.h"
 
-#include "problem_data_OT.h"
-#include "../ImageFunction.hpp"
+#include "OT/problem_data_OT.h"
+#include "ImageFunction.hpp"
 
-#include "../localfunctions/MAmixedbasisC0.hh"
+#include "localfunctions/MAmixedbasisC0.hh"
 
 //automatic differtiation
 #include <adolc/adouble.h>

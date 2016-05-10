@@ -16,7 +16,7 @@
 
 #include "Dogleg/utils.hpp"
 
-#include "config.h"
+#include "MAconfig.h"
 
 
 template <class R, class R2>

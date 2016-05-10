@@ -11,8 +11,8 @@
 
 #include <dune/geometry/quadraturerules.hh>
 
-#include "../solver_config.hh"
-#include "../problem_data.hh"
+#include "Solver/solver_config.hh"
+#include "problem_data.hh"
 
 using namespace Dune;
 

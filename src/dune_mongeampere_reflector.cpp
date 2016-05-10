@@ -8,9 +8,9 @@
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 
-#include "config.h"
+#include "MAconfig.h"
 #include "Optics/MA_reflector_solver.h"
-#include "Plotter.h"
+#include "IO/Plotter.h"
 
 #include <boost/program_options.hpp>
 

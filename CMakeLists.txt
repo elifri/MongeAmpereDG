@@ -73,6 +73,7 @@ find_package(CImg)
 
 
 include_directories(${METHOD_OF_ELLIPSOIDS_INCLUDES} ${CIMG_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${IGPM_T2_LIB_INCLUDES} ${ADOLC_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+include_directories("src")
 message("found boost ${Boost_LIBRARIES}")
 
 

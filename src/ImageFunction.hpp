@@ -15,7 +15,7 @@
 #include <Eigen/Core>
 #include "CImg.h"
 
-#include "config.h"
+#include "MAconfig.h"
 #include "utils.hpp"
 
 #include "OT/problem_data_OT.h"

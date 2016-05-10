@@ -9,7 +9,7 @@
 #ifndef MAGICMIRRORTOOLS_NEWTONMETHOD_HPP
 #define MAGICMIRRORTOOLS_NEWTONMETHOD_HPP
 
-#include "../utils"
+#include "Dogleg/utils"
 
 #include <iostream>
 #include <fstream>
