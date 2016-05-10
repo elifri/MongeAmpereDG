@@ -5,8 +5,8 @@
  *      Author: friebel
  */
 
-#ifndef SRC_CONFIG_H_
-#define SRC_CONFIG_H_
+#ifndef SRC_MACONFIG_H_
+#define SRC_MACONFIG_H_
 
 
 #include<Eigen/Core>
@@ -15,10 +15,10 @@
 //to mark variables as unused (used for checking of return values in Petsc etc. in Debug Mode)
 #define _unused(x) ((void)x)
 
-#undef BSPLINES
-#define USE_C0_PENALTY
-#undef USE_MIXED_ELEMENT
-#undef USE_PS12
+#define BSPLINES
+//#define USE_C0_PENALTY
+//#undef USE_MIXED_ELEMENT
+//#define USE_PS12
 
 #ifndef USE_PS12
 #define C0Element
@@ -62,4 +62,4 @@ namespace Config{
 
 }
 
-#endif /* SRC_CONFIG_H_ */
+#endif /* SRC_MACONFIG_H_ */

@@ -205,7 +205,7 @@ public:
   bool read_configfile(std::string &configFile);
 
 
-	int get_n_dofs() const{return FEBasisHandler_.FEBasis().indexSet().size() + 1;}
+	virtual int get_n_dofs() const{return FEBasisHandler_.FEBasis().indexSet().size() + 1;}
   int get_n_dofs_u() const{return FEBasisHandler_.FEBasis().indexSet().size();}
 
 
@@ -318,6 +318,8 @@ public:
 	virtual GeometrySetting& get_setting() {return setting_;}
   virtual const GeometrySetting& get_setting() const {return setting_;}
 
+  int get_plotRefinement() {return plotterRefinement_;}
+
 
 	//--------Attributes--
 protected:
@@ -382,6 +384,9 @@ template<class F>
 void MA_solver::project(const F f, VectorType& v) const
 {
   FEBasisHandler_.project(f, v);
+  //TODO what to do about right-hand-side scaling
+//  v.conservativeResize(v.size()+1);
+//  v(v.size()-1) = 1;
 #ifdef DEBUG
   test_projection(f,v);
 #endif

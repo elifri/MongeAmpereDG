@@ -19,7 +19,7 @@ namespace po = boost::program_options;
 
 #include <Grids/Grid2d.hpp>
 
-#include "../utils.hpp"
+#include "utils.hpp"
 
 /*
 double MA_solver::calculate_L2_error(const MA_function_type &f) const

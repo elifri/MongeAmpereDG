@@ -9,7 +9,7 @@
 #define SRC_PROBLEM_DATA_OT_H_
 
 #include <dune/common/function.hh>
-#include "../Solver/solver_config.h"
+#include "Solver/solver_config.h"
 
 class OTBoundary
 {
@@ -48,19 +48,45 @@ public:
   {
 
     //create discrete version of Lemma 2.1. in "Numerical soltuion of the OT problem using the MA equation" by Benamou, Froese and Oberman
-    Config::ValueType max = 0;
+    Config::ValueType max = -100000000;
 
     for (int i = 0; i < N_; i++)
     {
       const Config::SpaceType normal = {std::cos(2*M_PI*i/N_), std::sin(2*M_PI*i/N_)};
-      if (normal*normalX >= 0) continue;
+//      if (normal*normalX >= 0) continue;
 
       auto tempdistanceFunction = transportedX*normal - LegrendeFenchelTrafo(normal);
       if(tempdistanceFunction > max)
+      {
         max = tempdistanceFunction;
+//        std::cerr << " found normal "  << normal <<  "and temp dist " << tempdistanceFunction << std::endl;
+      }
     }
     return max;
   }
+
+  Config::SpaceType2d derivativeH(const Config::SpaceType2d& transportedX, const Config::SpaceType &normalX) const
+  {
+
+    //create discrete version of Lemma 2.1. in "Numerical soltuion of the OT problem using the MA equation" by Benamou, Froese and Oberman
+    Config::ValueType max = -100000000;
+    Config::SpaceType2d res;
+
+    for (int i = 0; i < N_; i++)
+    {
+      const Config::SpaceType normal = {std::cos(2*M_PI*i/N_), std::sin(2*M_PI*i/N_)};
+//      if (normal*normalX >= 0) continue;
+
+      auto tempdistanceFunction = transportedX*normal - LegrendeFenchelTrafo(normal);
+      if(tempdistanceFunction > max)
+      {
+        max = tempdistanceFunction;
+        res = normal;
+      }
+    }
+    return res;
+  }
+
 
   adouble H(const FieldVector<adouble, Config::dim>& transportedX, const Config::SpaceType &normalX) const
   {
@@ -94,6 +120,7 @@ class DensityFunction : public virtual Dune::VirtualFunction<Config::DomainType,
 public:
     using Dune::VirtualFunction<Config::DomainType, Config::ValueType>::evaluate;
     virtual void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const = 0;
+    virtual void evaluateDerivative(const FieldVector<double, Config::dim> &x, FieldVector<double, Config::dim> &gradu) const{assert(false); std::cerr<< " derivative density function not implemented " << std::endl;std::exit(-1);}
 };
 
 class BoundarySquare : public OTBoundary

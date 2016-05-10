@@ -134,79 +134,17 @@ template<int FETraitstype, typename FETraits>
 template <class F>
 void FEBasisHandler<FETraitstype, FETraits>::project(F f, Config::VectorType &v) const
 {
-  v.setZero(FEBasis_->indexSet().size() + 1);
+  v.setZero(FEBasis_->indexSet().size());
   Config::VectorType v_u;
   interpolate(*FEBasis_, v_u, f);
   v.segment(0, v_u.size()) = v_u;
-
-  //set scaling factor (last dof) to ensure mass conservation
-  v(v.size()-1) = 1;
 }
 
 template<>
 template <class F>
 void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degree>>::project(F f, Config::VectorType &v) const
 {
-  v.setZero(FEBasis_->indexSet().size() + 1);
-
-  const int dim = FEBasisType::GridView::dimension;
-
-  Config::DenseMatrixType localMassMatrix;
-
-  auto localView = FEBasis_->localView();
-  auto localIndexSet = FEBasis_->indexSet().localIndexSet();
-
-  for (auto&& element : elements(FEBasis_->gridView()))
-  {
-    localView.bind(element);
-    localIndexSet.bind(localView);
-
-    const auto & lFE = localView.tree().finiteElement();
-    const auto& geometry = element.geometry();
-
-    // ----assemble mass matrix and integrate f*test to solve LES --------
-    localMassMatrix.setZero(localView.size(), localView.size());
-    Config::VectorType localVector = Config::VectorType::Zero(localView.size());
-
-    // Get a quadrature rule
-    const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
-    const QuadratureRule<double, dim>& quad =
-        QuadratureRules<double, dim>::rule(geometry.type(), order);
-
-    for (const auto& quadpoint : quad)
-    {
-      const FieldVector<Config::ValueType, dim> &quadPos = quadpoint.position();
-
-      //evaluate test function
-      std::vector<Dune::FieldVector<Config::ValueType, 1>> functionValues(localView.size());
-      lFE.localBasis().evaluateFunction(quadPos, functionValues);
-
-      const double integrationElement = geometry.integrationElement(quadPos);
-
-      for (size_t j = 0; j < localVector.size(); j++)
-      {
-        localVector(j) += f(geometry.global(quadPos))*functionValues[j]* quadpoint.weight() * integrationElement;
-
-        //int v_i*v_j, as mass matrix is symmetric only fill lower part
-        for (size_t i = 0; i <= j; i++)
-          localMassMatrix(j, i) += cwiseProduct(functionValues[i],
-                    functionValues[j]) * quadpoint.weight()*integrationElement;
-
-      }
-    }
-
-    Assembler::set_local_coefficients<FiniteElementTraits>(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
-  }
-
-  //set scaling factor (last dof) to ensure mass conservation
-  v(v.size()-1) = 1;
-}
-
-template<>
-template <class F>
-void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig::degree>>::project(F f, Config::VectorType &v) const
-{
-  v.setZero(FEBasis_->indexSet().size() + 1);
+  v.setZero(FEBasis_->indexSet().size());
 
   const int dim = FEBasisType::GridView::dimension;
 
@@ -247,7 +185,63 @@ void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig:
         localVector(j) += f(geometry.global(quadPos))*functionValues[j]* quadpoint.weight() * integrationElement;
 
         //int v_i*v_j, as mass matrix is symmetric only fill lower part
-        for (size_t i = 0; i <= j; i++)
+        for (int i = 0; i <= j; i++)
+          localMassMatrix(j, i) += cwiseProduct(functionValues[i],
+                    functionValues[j]) * quadpoint.weight()*integrationElement;
+
+      }
+    }
+
+    Assembler::set_local_coefficients<FiniteElementTraits>(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
+  }
+}
+
+template<>
+template <class F>
+void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig::degree>>::project(F f, Config::VectorType &v) const
+{
+  v.setZero(FEBasis_->indexSet().size());
+
+  const int dim = FEBasisType::GridView::dimension;
+
+  Config::DenseMatrixType localMassMatrix;
+
+  auto localView = FEBasis_->localView();
+  auto localIndexSet = FEBasis_->indexSet().localIndexSet();
+
+  for (auto&& element : elements(FEBasis_->gridView()))
+  {
+    localView.bind(element);
+    localIndexSet.bind(localView);
+
+    const auto & lFE = localView.tree().finiteElement();
+    const auto& geometry = element.geometry();
+
+    // ----assemble mass matrix and integrate f*test to solve LES --------
+    localMassMatrix.setZero(localView.size(), localView.size());
+    Config::VectorType localVector = Config::VectorType::Zero(localView.size());
+
+    // Get a quadrature rule
+    const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
+    const QuadratureRule<double, dim>& quad =
+        QuadratureRules<double, dim>::rule(geometry.type(), order);
+
+    for (const auto& quadpoint : quad)
+    {
+      const FieldVector<Config::ValueType, dim> &quadPos = quadpoint.position();
+
+      //evaluate test function
+      std::vector<Dune::FieldVector<Config::ValueType, 1>> functionValues(localView.size());
+      lFE.localBasis().evaluateFunction(quadPos, functionValues);
+
+      const double integrationElement = geometry.integrationElement(quadPos);
+
+      for (int j = 0; j < localVector.size(); j++)
+      {
+        localVector(j) += f(geometry.global(quadPos))*functionValues[j]* quadpoint.weight() * integrationElement;
+
+        //int v_i*v_j, as mass matrix is symmetric only fill lower part
+        for (int i = 0; i <= j; i++)
           localMassMatrix(j, i) += cwiseProduct(functionValues[i],
                     functionValues[j]) * quadpoint.weight()*integrationElement;
 
@@ -261,8 +255,6 @@ void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig:
        v(FiniteElementTraits::get_index(localIndexSet, i)) = v_local[i];
     }
   }
-  //set scaling factor (last dof) to ensure mass conservation
-  v(v.size()-1) = 1;
 }
 
 
@@ -325,7 +317,7 @@ template<typename FETraits>
 template <class F>
 void FEBasisHandler<Mixed, FETraits>::project(F f, Config::VectorType &v) const
 {
-  v.setZero(FEBasis_->indexSet().size() + 1);
+  v.setZero(FEBasis_->indexSet().size());
   Config::VectorType v_u;
   interpolate(*uBasis_, v_u, f);
   v.segment(0, v_u.size()) = v_u;
@@ -376,17 +368,13 @@ void FEBasisHandler<Mixed, FETraits>::project(F f, Config::VectorType &v) const
         }
       }
     }
-
-
-  //set scaling factor (last dof) to ensure mass conservation
-  v(v.size()-1) = 1;
 }
 
 template <>
 template<class F>
 void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F f, Config::VectorType &v) const
 {
-  v.setZero(FEBasis_->indexSet().size() + 1);
+  v.setZero(FEBasis_->indexSet().size());
   Config::VectorType countMultipleDof = Config::VectorType::Zero(v.size());;
 
   Config::DenseMatrixType localMassMatrix;
@@ -509,9 +497,6 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F f, 
   }
 
   v = v.cwiseQuotient(countMultipleDof);
-
-  //set scaling factor (last dof) to ensure mass conservation
-  v(v.size()-1) = 1;
 }
 
 

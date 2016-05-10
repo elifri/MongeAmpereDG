@@ -92,7 +92,7 @@ struct MA_OT_image_Operator_with_Linearisation{
                  (new BoundarySquare(solver.gradient_u_old,solver.get_setting()),
                   &f_,&g_)
                ),
-        lopLinear_ptr(new LOP
+        lopLinear_ptr(new LOPLinear
             (new BoundarySquare(solver.gradient_u_old,solver.get_setting()),
                 &f_,&g_)
         )
@@ -111,7 +111,7 @@ struct MA_OT_image_Operator_with_Linearisation{
       igpm::processtimer timer;
       timer.start();
 //      lop.found_negative = false;
-      solver_ptr->assemble_DG_Jacobian(*lop_ptr, x,v, m); timer.stop();
+      solver_ptr->assembler.assemble_DG_Jacobian(*lop_ptr, *lopLinear_ptr, x,v, m); timer.stop();
     }
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const
@@ -126,8 +126,8 @@ struct MA_OT_image_Operator_with_Linearisation{
       igpm::processtimer timer;
       timer.start();
 //      lop.found_negative = false;
-      solver_ptr->assemble_DG(*lop_ptr, x,v); timer.stop();
-
+      Config::MatrixType m;
+      solver_ptr->assembler.assemble_DG_Jacobian(*lop_ptr, *lopLinear_ptr, x,v, m);
     }
     void Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
     {
@@ -150,7 +150,7 @@ struct MA_OT_image_Operator_with_Linearisation{
     ImageFunction g_;
 
     std::shared_ptr<LOP> lop_ptr;
-    std::shared_ptr<LOP> lopLinear_ptr;
+    std::shared_ptr<LOPLinear> lopLinear_ptr;
 };
 
 

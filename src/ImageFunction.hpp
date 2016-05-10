@@ -63,6 +63,9 @@ class ImageFunction : public DensityFunction
     void evaluate (const Config::DomainType &x, Config::ValueType &u) const;
     void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const;
 
+    void evaluateDerivative (const Config::DomainType &x, FieldVector<double,Config::dim> &gradu) const;
+
+
     double integrate() const
     {
         return sqr(h_)*imageSmooth_.sum();
