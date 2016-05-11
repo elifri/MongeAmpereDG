@@ -1611,9 +1611,9 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
     Config::GridView gridView = basis_->gridView();
 
 //    const auto& v_isBoundary = boundaryHandler_.isBoundaryValueDoF();
-    const auto& v_isBoundary = boundaryHandler_.isBoundaryGradientDoF();
+//    const auto& v_isBoundary = boundaryHandler_.isBoundaryGradientDoF();
 //    const auto& v_isBoundary = boundaryHandler_.isBoundaryDoF();
-//    BoundaryHandler::BoolVectorType v_isBoundary = BoundaryHandler::BoolVectorType::Constant(v.size()-1, false);
+    BoundaryHandler::BoolVectorType v_isBoundary = BoundaryHandler::BoolVectorType::Constant(v.size()-1, false);
 
 
     //assuming Galerkin

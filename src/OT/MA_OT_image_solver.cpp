@@ -15,7 +15,7 @@
 #include <dune/grid/io/file/vtk/common.hh>
 
 
-#include "imageOT.hpp"
+#include "../IO/imageOT.hpp"
 
 MA_OT_image_solver::MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting)
  :MA_OT_solver(grid, gridView, config, opticalSetting), setting_(opticalSetting), op(*this)
