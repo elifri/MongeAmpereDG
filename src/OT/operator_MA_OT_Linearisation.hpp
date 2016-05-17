@@ -171,15 +171,17 @@ public:
           m(j,i) += (cofTimesW*gradients[j]) *quad[pt].weight()*integrationElement;
           //convection term
           m(j,i) += (b*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+          //unification term :) term
+          m(j,i) += referenceFunctionValues[i]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
           //stabilisation term
-          m(j,i) += delta_K*(-FrobeniusProduct(cofHessu,Hessians[i])+b*gradients[i])*(b*gradients[j]) *quad[pt].weight()*integrationElement;
+          m(j,i) += delta_K*(-FrobeniusProduct(cofHessu,Hessians[i])+b*gradients[i]+referenceFunctionValues[i])*(b*gradients[j]) *quad[pt].weight()*integrationElement;
         }
 
         auto detHessu = naive_determinant(Hessu);
         //-f(u_k) [rhs of Newton]
-        v(j) += (-detHessu+f_value/g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        v(j) += (-detHessu+f_value/g_value+u_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         //stabilisation term
-        v(j) += delta_K*(-detHessu+f_value/g_value)*(b*gradients[j])*quad[pt].weight()*integrationElement;
+        v(j) += delta_K*(-detHessu+f_value/g_value+u_value)*(b*gradients[j])*quad[pt].weight()*integrationElement;
       }
     }
   }
@@ -457,7 +459,7 @@ public:
   const Function& rhoY;
   const OTBoundary& bc;
 
-  const double delta_K;
+  mutable double delta_K;
 
   static constexpr int collocationNo[3][3] = {{0,3,4},{0,11,8},{4,7,8}};
 //  static constexpr int collocationNo[3][5] = {{0,1,3,5,4},{0,2,11,9,8},{4,6,7,10,8}};
