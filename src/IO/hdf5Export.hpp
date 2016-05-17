@@ -27,8 +27,9 @@ void savehdf5(const GridView& grid, const Dune::FieldVector<double,2> &lowerLeft
   const double l_x = upperRight[0] - lowerLeft[0];
   const double l_y = upperRight[1] - lowerLeft[1];
 
-  int n_x = std::sqrt(grid.size(0)*l_x/l_y);
-  int n_y = grid.size(0)/n_x;
+
+  int n_x = std::sqrt(grid.size(0)*l_x/l_y*((2*refinement)<< 2));
+  int n_y = grid.size(0)*((2*refinement)<< 2)/n_x;
 
   const double h_x = ((double)l_x)/(n_x-1);
   const double h_y = ((double)l_y)/(n_y-1);
