@@ -156,6 +156,9 @@ public:
       FieldVector<double,dim> b = gradg;
       b *= f_value/g_value/g_value;
 
+      if (pt == 0)
+        delta_K = integrationElement/b.two_norm();
+
       //write calculated distribution
 
       for (int j = 0; j < size; j++) // loop over test fcts
