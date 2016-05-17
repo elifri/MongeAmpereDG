@@ -159,6 +159,11 @@ public:
       if (pt == 0)
         delta_K = integrationElement/b.two_norm();
 
+      auto detHessu = naive_determinant(Hessu);
+
+      if (detHessu < 0)
+        std::cerr << "found negative determinant " << detHessu << " at " << x_value << std::endl;
+
       //write calculated distribution
 
       for (int j = 0; j < size; j++) // loop over test fcts
@@ -177,7 +182,6 @@ public:
           m(j,i) += delta_K*(-FrobeniusProduct(cofHessu,Hessians[i])+b*gradients[i]+referenceFunctionValues[i])*(b*gradients[j]) *quad[pt].weight()*integrationElement;
         }
 
-        auto detHessu = naive_determinant(Hessu);
         //-f(u_k) [rhs of Newton]
         v(j) += (-detHessu+f_value/g_value+u_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         //stabilisation term
