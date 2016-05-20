@@ -126,7 +126,12 @@ void MA_solver::init_from_file(const std::string& filename)
 
 
   for (int i=0; i<get_n_dofs(); ++i) {
-    assert(!fileInitial.eof() && "The inserted coefficient file is too short");
+    if (fileInitial.eof())
+    {
+      std::cerr << "The inserted coefficient file is too short";
+      assert(false);
+      exit(-1);
+    }
     fileInitial >> solution(i);
   }
   fileInitial >> ws;
