@@ -134,10 +134,13 @@ void MA_solver::init_from_file(const std::string& filename)
     }
     fileInitial >> solution(i);
   }
+  double scaling_coefficient;
+  fileInitial >> scaling_coefficient;
   fileInitial >> ws;
   if (!fileInitial.eof())
   {
     std::cerr << "Coefficient initialisation is too long for the specified setting!";
+    assert(false);
     exit(-1);
   }
   fileInitial.close();
