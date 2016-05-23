@@ -29,6 +29,9 @@ struct FEBasisHandler{
   template<class F>
   void project(F f, Config::VectorType &v) const;
 
+  template<class F, class F_Der>
+  void project(F &f, F_Der &grad_f, Config::VectorType &v) const;
+
   void adapt(MA_solver& ma_solver, const int level, Config::VectorType& v)
   {assert(false && " Error, dont know FE basis"); exit(-1);}
 
@@ -479,6 +482,112 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F f, 
       assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
       localDofs(k++) = unit_pointUpwards ? (approxGradientF*normal) : -(approxGradientF*normal);
 //      std::cout << " aprox normal derivative " << approxGradientF*normal << " = " << approxGradientF << " * " << normal << std::endl ;
+
+      //test if this were the right basis function
+#ifndef NDEBUG
+      {
+        std::vector<FieldMatrix<double, 1, 2> > jacobianValues(lFE.size());
+        lFE.localBasis().evaluateJacobian(geometry.local(face_center), jacobianValues);
+        assert(std::abs( std::abs(jacobianValues[k-1][0]*normal)-1) < 1e-10);
+      }
+#endif
+    }
+
+    Assembler::add_local_coefficients(localIndexSet,localDofs, v);
+//    assembler.add_local_coefficients(localIndexSet,VectorType::Ones(localDofs.size()), countMultipleDof);
+    Config::VectorType localmultiples = Config::VectorType::Ones(localDofs.size());
+    Assembler::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
+  }
+
+  v = v.cwiseQuotient(countMultipleDof);
+}
+
+
+template <>
+template<class F, class F_Der>
+void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F &f, F_Der &grad_f, Config::VectorType &v) const
+{
+  v.setZero(FEBasis_->indexSet().size());
+  Config::VectorType countMultipleDof = Config::VectorType::Zero(v.size());;
+
+  auto localView = FEBasis_->localView();
+  auto localIndexSet = FEBasis_->indexSet().localIndexSet();
+
+  for (auto&& element : elements(FEBasis_->gridView()))
+  {
+    localView.bind(element);
+    localIndexSet.bind(localView);
+
+    const auto & lFE = localView.tree().finiteElement();
+    const auto& geometry = element.geometry();
+
+    Config::VectorType localDofs = Config::VectorType::Zero (lFE.size());
+
+    int k = 0;
+    for (int i = 0; i < geometry.corners(); i++)
+    {
+      auto value = f(geometry.corner(i));
+      std::cerr << " value at " << geometry.corner(i) << " to interpolate " << value << std::endl;
+
+      //set dofs associated with values at vertices
+      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
+      localDofs(k++) = value;
+
+#ifndef NDEBUG
+      //test if this was the right basis function
+      {
+        std::vector<FieldVector<double, 1> > functionValues(lFE.size());
+        lFE.localBasis().evaluateFunction(geometry.local(geometry.corner(i)), functionValues);
+        assert(std::abs(functionValues[k-1][0]-1) < 1e-10);
+      }
+#endif
+
+      //set dofs associated with gradient values at vertices
+      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
+      auto u_grad = grad_f(geometry.corner(i));
+      localDofs(k++) = u_grad[0];
+      localDofs(k++) = u_grad[1];
+
+#ifndef NDEBUG
+      //test if this were the right basis function
+      {
+        std::vector<FieldMatrix<double, 1, 2> > jacobianValues(lFE.size());
+        lFE.localBasis().evaluateJacobian(geometry.local(geometry.corner(i)), jacobianValues);
+        assert(std::abs(jacobianValues[k-2][0][0]-1) < 1e-10);
+        assert(std::abs(jacobianValues[k-1][0][1]-1) < 1e-10);
+      }
+#endif
+      k++;
+    }
+    assert(k == 12);
+    for (auto&& is : intersections(FEBasis_->gridView(), element)) //loop over edges
+    {
+      const int i = is.indexInInside();
+
+      // normal of center in face's reference element
+      const Config::SpaceType normal = is.centerUnitOuterNormal();
+
+      bool unit_pointUpwards;
+      if (std::abs(normal[0]+normal[1])< 1e-12)
+        unit_pointUpwards = (normal[1] > 0);
+      else
+        unit_pointUpwards = (normal[0]+normal[1] > 0);
+
+      const auto face_center = is.geometry().center();
+
+      FieldVector<double, 2> gradientF = grad_f(face_center);
+
+      //choose corect local dof
+      if (i == 0)
+        k = 3;
+      else
+        if (i == 1)
+          k = 11;
+        else
+          k = 7;
+
+      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
+      localDofs(k++) = unit_pointUpwards ? (gradientF*normal) : -(gradientF*normal);
 
       //test if this were the right basis function
 #ifndef NDEBUG
