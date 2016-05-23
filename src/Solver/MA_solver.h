@@ -600,15 +600,12 @@ void MA_solver::project_labouriousC1Local(LocalF f, LocalF_grad f_grad, VectorTy
 template<class F>
 void MA_solver::test_projection(const F f, VectorType& v) const
 {
-  update_solution(v);
-
   std::cerr << "v.size()" << v.size()-1 << std::endl;
   std::cerr << "projected on vector " << std::endl << v.transpose() << std::endl;
 
   auto localView = FEBasisHandler_.FEBasis().localView();
   auto localIndexSet = FEBasisHandler_.FEBasis().indexSet().localIndexSet();
 
-  const double h = 1e-5;
 
   for (auto&& element : elements(*gridView_ptr)) {
 
@@ -621,7 +618,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
     VectorType localDofs = assembler.calculate_local_coefficients(localIndexSet, v);
 
-    std::cerr << "local dofs " << localDofs << std::endl;
+//    std::cerr << "local dofs " << localDofs.transpose() << std::endl;
 
     for (int i = 0; i < geometry.corners(); i++) {
        //evaluate test function
@@ -660,8 +657,6 @@ void MA_solver::test_projection(const F f, VectorType& v) const
     const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
     const QuadratureRule<Config::ValueType, Config::dim>& quad = FETraits::get_Quadrature<Config::dim>(element, order);
 
-    double resTest1f = 0, resTest1 = 0;
-
     for (const auto& quadpoint : quad) {
       const FieldVector<Config::ValueType, Config::dim> &quadPos =
           quadpoint.position();
@@ -673,7 +668,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
           functionValues);
 
       double res = 0;
-      for (int j = 0; j < lFE.size(); j++) {
+      for (unsigned int j = 0; j < lFE.size(); j++) {
         res += localDofs(j) * functionValues[j];
       }
       auto x = geometry.global(quadPos);
@@ -693,8 +688,6 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
     auto localViewn = FEBasisHandler_.FEBasis().localView();
     auto localIndexSetn = FEBasisHandler_.FEBasis().indexSet().localIndexSet();
-
-    gradient_u_old->bind(element);
 
     for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
     {
@@ -732,7 +725,6 @@ void MA_solver::test_projection(const F f, VectorType& v) const
             gradientsn, localDofsn.segment(0,lFEn.size()), gradun);
 
         std::cerr << "normal gradient at " << face_center << " " << (normal*gradu)  << " and " << (normal*gradun) << ", with gradients " << gradu  << " and " << gradun << std::endl;
-        std::cerr << " gradient at face_center = " << (*gradient_u_old)(geometry.local(face_center)) << std::endl;
 
         // Get a quadrature rule
         const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
