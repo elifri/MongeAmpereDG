@@ -157,7 +157,12 @@ public:
       b *= f_value/g_value/g_value;
 
       if (pt == 0)
-        delta_K = integrationElement/b.two_norm();
+      {
+        if (std::abs(b.two_norm()) < 1e-8)
+          delta_K = 0;
+        else
+          delta_K = integrationElement/b.two_norm();
+      }
 
       auto detHessu = naive_determinant(Hessu);
 
