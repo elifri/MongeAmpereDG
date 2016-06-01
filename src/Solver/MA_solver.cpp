@@ -113,6 +113,20 @@ void MA_solver::plot(const std::string& name) const
    vtkWriter.write(fname);
 }
 
+void MA_solver::plot(const VectorType& u, const std::string& filename) const
+{
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(), u);
+  auto localnumericalSolution = localFunction(numericalSolution);
+
+  std::string fname(plotter.get_output_directory());
+  fname += "/"+ plotter.get_output_prefix()+ filename + NumberToString(iterations) + ".vtu";
+
+  SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
+  vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
+  vtkWriter.write(fname);
+}
+
+
 void MA_solver::init_from_file(const std::string& filename)
 {
   solution.resize(get_n_dofs());

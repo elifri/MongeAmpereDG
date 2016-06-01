@@ -278,6 +278,7 @@ public:
 
 	///write the current numerical solution to vtk file
 	virtual void plot(const std::string& filename) const;
+	void plot(const VectorType& u, const std::string& filename) const;
 
 protected:
 	///reads the fe coefficients from file
