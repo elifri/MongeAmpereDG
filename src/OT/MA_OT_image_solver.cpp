@@ -89,9 +89,11 @@ void MA_OT_image_solver::plot(const std::string& name) const
   DiscreteGridFunction::GlobalFirstDerivative numericalTransportFunction(*solution_u_old_global);
   Dune::array<int,2> direction = {0,0};
   DiscreteGridFunction::GlobalSecondDerivative numericalTransportJacobianFunction(*solution_u_old_global, direction);
+  /*
   print_image_OT(numericalTransportFunction, numericalTransportJacobianFunction,
       op.f_, op.g_,
       fnameOT, op.g_.getOriginalImage().width(), op.g_.getOriginalImage().height());
+*/
 
 
   std::string fnamehdf5(plotter.get_output_directory());
@@ -157,6 +159,5 @@ void MA_OT_image_solver::solve_nonlinear_system()
   timer.stop();
   std::cout << "needed " << timer << " seconds for nonlinear step, ended with error code " << error << std::endl;
 #endif
-  std::cout << "scaling factor " << solution(solution.size()-1) << endl;
 
   }

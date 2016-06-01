@@ -602,7 +602,7 @@ public:
   template<typename LocalOperatorType>
   void assemble_discrete_hessian_system(const LocalOperatorType &lop, Config::VectorType x, Config::MatrixType& m, Config::VectorType& rhs) const;
 
-  void set_G(const double g){ G = g;}
+  void set_uAtX0(const double g) const{ uAtX0_ = g;}
 
   const FEBasisType& basis() const {return *basis_;}
   const BoundaryHandler::BoolVectorType& isBoundaryDoF() const {return boundaryHandler_.isBoundaryDoF();}
@@ -614,7 +614,7 @@ private:
 
 
 */
-    double G;
+    mutable double uAtX0_;
 
 //    const MA_solver* ma_solver;
     const FEBasisType* basis_;
@@ -859,7 +859,7 @@ Config::VectorType Assembler::calculate_local_coefficients(const LocalIndexSet &
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
     v_local[i] = v(FETraits::get_index(localIndexSet, i));
-//   std::cerr << "calculated from " << i << "  index " << FETraits::get_index(localIndexSet, i) << " with value " << v_local[i] << std::endl;
+//   std::cerr << "       calculated from " << i << "  index " << FETraits::get_index(localIndexSet, i) << " with value " << v_local[i] << std::endl;
   }
   return v_local;
 }
@@ -882,7 +882,7 @@ AnyVectorType Assembler::calculate_local_coefficients(const LocalIndexSet &local
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
     v_local[i] = v(FETraits::get_index(localIndexSet, i));
-//    std::cerr << " local  " << i << " is " << FETraits::get_index(localIndexSet, i) << std::endl;
+//    std::cerr << "       calculated from " << i << "  index " << FETraits::get_index(localIndexSet, i) << " with value " << v_local[i] << std::endl;
   }
   return v_local;
 }
@@ -896,6 +896,7 @@ void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const
 //  assert ((unsigned int) v.size() == basis_->indexSet().size()+1);
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
+    assert(! (v_local[i]!=v_local[i]));
 //    std::cout << i << " -> " << FETraits::get_index(localIndexSet, i) <<  " with value " << v_local[i] << std::endl;
     v(FETraits::get_index(localIndexSet, i)) += v_local[i] ;
 //    std::cerr << "add " << i << " to " << FETraits::get_index(localIndexSet, i) << " with value " << v_local[i] << " and get " << v(FETraits::get_index(localIndexSet, i)) << std::endl;
@@ -1996,10 +1997,6 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
     //reserve space for jacobian entries
     std::vector<EntryType> JacobianEntries;
 
-    //get last equation
-    v(v.size()-1) -= G;
-    std::cerr << "last coeff " << x(x.size()-1) << std::endl;
-
     // The index set gives you indices for each element , edge , face , vertex , etc .
     const GridViewType::IndexSet& indexSet = gridView.indexSet();
     auto localView = basis_->localView();
@@ -2323,7 +2320,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 //    const auto& v_isBoundary = boundaryHandler_.isBoundaryValueDoF();
 //    const auto& v_isBoundary = boundaryHandler_.isBoundaryGradientDoF();
 //    const auto& v_isBoundary = boundaryHandler_.isBoundaryDoF();
-    BoundaryHandler::BoolVectorType v_isBoundary = BoundaryHandler::BoolVectorType::Constant(v.size(), false);
+//    BoundaryHandler::BoolVectorType v_isBoundary = BoundaryHandler::BoolVectorType::Constant(v.size(), false);
 
     //assuming Galerkin
     v = Config::VectorType::Zero(x.size());
@@ -2341,6 +2338,108 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
     auto localIndexSetn = basis_->indexSet().localIndexSet();
 
     lop.found_negative = false;
+
+    Config::VectorType midvalues = Config::VectorType::Zero(v.size());
+    Config::ValueType u_midValue = 0;
+
+    //calculate midvalues //todo has to be done only once per grid refinement
+    for (auto&& e : elements(gridView)) {
+      localView.bind(e);
+      localIndexSet.bind(localView);
+
+      //calculate local coefficients
+      Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
+
+      // Get set of shape functions for this element
+      const auto& localFiniteElement = localView.tree().finiteElement();
+      typedef decltype(localFiniteElement) ConstElementRefType;
+      typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+
+      typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
+      const int size = localView.size();
+
+      // Get a quadrature rule
+      int order = std::max(0,
+          3 * ((int) localFiniteElement.localBasis().order()));
+      const QuadratureRule<double, Config::dim>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(localView.element(), order);
+
+      // Loop over all quadrature points
+      for (size_t pt = 0; pt < quad.size(); pt++) {
+
+        //--------get data------------------------
+        // Position of the current quadrature point in the reference element
+        const FieldVector<double, Config::dim> &quadPos = quad[pt].position();
+        // The multiplicative factor in the integral transformation formula
+        const double integrationElement = localView.element().geometry().integrationElement(quadPos);
+
+        //the shape function values
+        std::vector<RangeType> referenceFunctionValues(size);
+        double u_value = 0;
+        assemble_functionValues_u(localFiniteElement, quadPos,
+            referenceFunctionValues, xLocal, u_value);
+
+        for (int i = 0; i < size; i++) //loop over ansatz fcts
+        {
+          midvalues(FETraits::get_index(localIndexSet, i)) += referenceFunctionValues[i] *quad[pt].weight()*integrationElement;
+        }
+        u_midValue += u_value*quad[pt].weight()*integrationElement;
+      }
+
+    }
+
+    for (auto&& e : elements(gridView)) {
+      localView.bind(e);
+      localIndexSet.bind(localView);
+
+      //calculate local coefficients
+      Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
+
+      // Get set of shape functions for this element
+      const auto& localFiniteElement = localView.tree().finiteElement();
+      typedef decltype(localFiniteElement) ConstElementRefType;
+      typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+
+      typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
+      const int size = localView.size();
+
+      // Get a quadrature rule
+      int order = std::max(0,
+          3 * ((int) localFiniteElement.localBasis().order()));
+      const QuadratureRule<double, Config::dim>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(localView.element(), order);
+
+      // Loop over all quadrature points
+      for (size_t pt = 0; pt < quad.size(); pt++) {
+
+        //--------get data------------------------
+        // Position of the current quadrature point in the reference element
+        const FieldVector<double, Config::dim> &quadPos = quad[pt].position();
+        // The multiplicative factor in the integral transformation formula
+        const double integrationElement = localView.element().geometry().integrationElement(quadPos);
+
+        //the shape function values
+        std::vector<RangeType> referenceFunctionValues(size);
+        double u_value = 0;
+        assemble_functionValues_u(localFiniteElement, quadPos,
+            referenceFunctionValues, xLocal, u_value);
+
+        for (int j = 0; j < size; j++) //loop over test fcts
+        {
+          for (int i = 0; i < midvalues.size(); i++) //loop over ansatz fcts
+          {
+            JacobianEntries.push_back(
+                EntryType(i,
+                          FETraits::get_index(localIndexSet,j),
+                          midvalues[i]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement));
+          }
+        }
+//        u_midValue += u_value*quad[pt].weight()*integrationElement;
+      }
+
+    }
+
+
+
+
 
     // A loop over all elements of the grid
     for (auto&& e : elements(gridView)) {
@@ -2367,12 +2466,13 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 
         //calculate local coefficients
         Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
-        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, v_isBoundary);
+        Config::VectorType midValuesLocal = calculate_local_coefficients(localIndexSet, midvalues);
+//        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, v_isBoundary);
 
 //        std::cerr << " is local boundaryDof" << isBoundaryLocal.transpose() << std::endl;
 
 //        lop.assemble_cell_term(localView, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
-        lopJacobian.assemble_cell_term(localView, xLocal, local_vector, m_m);
+        lopJacobian.assemble_cell_term(localView, xLocal, local_vector, m_m, midValuesLocal, u_midValue);
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
@@ -2412,7 +2512,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 //            std::cerr << " local boundary " << local_boundary << std::endl;
 
 //            lop.assemble_boundary_face_term(is,localView, xLocal, local_boundary, 0);
-            lopJacobian.assemble_boundary_face_term(is, localView, xLocal, local_boundary, m_mB);
+            lopJacobian.assemble_boundary_face_term(is, localView, xLocal, local_vector, local_boundary, m_mB);
 
           } else {
             std::cerr << " I do not know how to handle this intersection"
@@ -2516,7 +2616,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
         for (size_t i = 0; i < localIndexSet.size(); i++)
         {
 //          if (!isBoundaryLocal(i))  continue;
-          boundary(FETraits::get_index(localIndexSet, i)) += (local_boundary.cwiseProduct(local_boundary))[i] ;
+          boundary(FETraits::get_index(localIndexSet, i)) += local_boundary[i] ;
 //          std::cerr << "boundary add " << i << " to " << FETraits::get_index(localIndexSet, i) << " with value " << local_boundary[i] << " and get " << boundary(FETraits::get_index(localIndexSet, i)) << std::endl;
         }
 #ifndef COLLOCATION

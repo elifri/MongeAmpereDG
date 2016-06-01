@@ -94,12 +94,13 @@ struct MA_OT_image_Operator_with_Linearisation{
                ),
         lopLinear_ptr(new LOPLinear
             (new BoundarySquare(solver.gradient_u_old,solver.get_setting()),
-                &f_,&g_)
+                &f_,&g_, solver.get_setting().lowerLeft)
         )
         {}
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
     {
+      std::cerr << " current x " << x.transpose() << std::endl;
       assert(lop_ptr);
 
       if (new_solution)
@@ -111,24 +112,22 @@ struct MA_OT_image_Operator_with_Linearisation{
       igpm::processtimer timer;
       timer.start();
 //      lop.found_negative = false;
+
+
+/*
+      typename Solver::DiscreteGridFunction solution_u_global(solver_ptr->FEBasisHandler_.uBasis(),x);
+      solver_ptr->assembler.set_uAtX0(solution_u_global(solver_ptr->get_setting().lowerLeft));
+*/
+
+
       solver_ptr->assembler.assemble_DG_Jacobian(*lop_ptr, *lopLinear_ptr, x,v, m); timer.stop();
       solver_ptr->plot(v,"Res");
     }
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const
     {
-      assert(lop_ptr);
-      if (new_solution)
-      {
-        solver_ptr->update_solution(x_old);
-      }
-
-      assert(solver_ptr != NULL);
-      igpm::processtimer timer;
-      timer.start();
-//      lop.found_negative = false;
       Config::MatrixType m;
-      solver_ptr->assembler.assemble_DG_Jacobian(*lop_ptr, *lopLinear_ptr, x,v, m);
+      evaluate(x,v, m, x_old, new_solution);
     }
     void Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
     {

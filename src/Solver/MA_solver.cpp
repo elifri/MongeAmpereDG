@@ -199,9 +199,17 @@ const typename MA_solver::VectorType& MA_solver::solve()
     file << solution;
     file.close();
   }
-
   update_solution(solution);
   plot("initialguess");
+
+
+/*
+  adapt_solution();
+  update_solution(solution);
+
+  plot("initialguessAfterAdaption");
+*/
+
 
 //  Config::VectorType f;
 //  SolverConfig::MatrixType J;
@@ -268,6 +276,9 @@ void MA_solver::update_solution(const Config::VectorType& newSolution) const
   solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(FEBasisHandler_.uBasis(),solution_u));
   solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
   gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
+
+  DiscreteGridFunction solution_u_global(FEBasisHandler_.uBasis(),newSolution);
+
 
   solution = newSolution;
 }

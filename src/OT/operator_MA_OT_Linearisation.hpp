@@ -29,8 +29,8 @@ class Local_Operator_MA_OT_Linearisation {
 public:
   typedef DensityFunction Function;
 
-  Local_Operator_MA_OT_Linearisation(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
-    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), delta_K(), int_f(0), sign(1.0), found_negative(false) {
+  Local_Operator_MA_OT_Linearisation(const OTBoundary* bc, const Function* rhoX, const Function* rhoY, const Config::DomainType& X0):
+    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), delta_K(10), X0_(X0), int_f(0), sign(1.0), found_negative(false) {
   }
 
   /**
@@ -42,8 +42,10 @@ public:
    */
   template<class LocalView, class VectorType, class DenseMatrixType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, DenseMatrixType& m) const
+      VectorType& v, DenseMatrixType& m, const VectorType& midValues, const double u_midvalue) const
   {
+
+    std::cerr << "u at x0 " << u_midvalue << std::endl;
 
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
@@ -68,7 +70,27 @@ public:
     typedef typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension> FEHessianType;
 
     const int size = localView.size();
+/*
 
+    //get function values at x_0
+    std::vector<RangeType> FunctionValuesAtX0(size);
+    Config::DomainType X0 = geometry.local(X0_);
+    //check if X0 is inside current triangle
+    if (X0[0] >= 0 && X0[1] >= 0 && X0[0]+X0[1] <= 1.0)
+    {
+      localFiniteElement.localBasis().evaluateFunction(X0, FunctionValuesAtX0);
+      std::cerr << " X-0 " << X0 << " inside cur first corner " << geometry.corner(0) << std::endl;
+    }
+    else
+    {
+      std::fill(FunctionValuesAtX0.begin(),FunctionValuesAtX0.end(),0.0);
+      std::cerr << " X-0 " << X0 << " not inside cur first corner " << geometry.corner(0) << std::endl;
+    }
+    std::cerr << std::setprecision(15);
+    std::cerr << " functionvalues at x0 ";
+    for (const auto& e : FunctionValuesAtX0) std::cerr << e << " ";
+    std::cerr << std::endl;
+*/
 
     // Get a quadrature rule
     int order = std::max(0,
@@ -108,6 +130,7 @@ public:
 
       assert(Config::dim == 2);
 
+//      auto cofHessu = convexified_cofactor(Hessu);
       auto cofHessu = cofactor(Hessu);
 
       auto x_value = geometry.global(quad[pt].position());
@@ -154,17 +177,24 @@ public:
 
       //velocity vector for convection
       FieldVector<double,dim> b = gradg;
-      b *= f_value/g_value/g_value;
+      b *= -f_value/g_value/g_value;
+
+      auto h_T = std::sqrt(integrationElement);
+
+      auto P_T = b.two_norm() * h_T/2./Hessu.frobenius_norm();
 
       if (pt == 0)
       {
-        if (std::abs(b.two_norm()) < 1e-8)
+        if (P_T <= 1.0)
           delta_K = 0;
         else
-          delta_K = integrationElement/b.two_norm();
+          delta_K = h_T/2./b.two_norm()*(1.-1./P_T);
+
+        std::cerr << " |b| " << b.two_norm() << " |b|2 " << b.infinity_norm() << " eps " << Hessu.infinity_norm() << " eps2 " << Hessu.frobenius_norm()  << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  << " old penalty "<< integrationElement/2./b.two_norm()<<std::endl;
       }
 
-      auto detHessu = naive_determinant(Hessu);
+
+      auto detHessu = naive_determinant(cofHessu); //note that determinant of Hessu and cofHessu is the same
 
       if (detHessu < 0)
         std::cerr << "found negative determinant " << detHessu << " at " << x_value << std::endl;
@@ -175,6 +205,30 @@ public:
       {
         for (int i = 0; i < size; i++) //loop over ansatz fcts
         {
+
+//          std::cerr <<" FunctionValuesAtX0[i] " << FunctionValuesAtX0[i] << std::endl;
+
+          //diffusion term
+          FieldVector<double,dim> cofTimesW;
+          cofHessu.mv(gradients[i],cofTimesW);
+          m(j,i) += (cofTimesW*gradients[j]) *quad[pt].weight()*integrationElement;
+          //convection term
+          m(j,i) += (b*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+          //unification term :) term -> MOVED TO ASSEMBLER TO BE REVIEWED
+//          m(j,i) += midValues[i]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+          //stabilisation term
+//          m(j,i) += delta_K*(-FrobeniusProduct(cofHessu,Hessians[i])+b*gradients[i]+FunctionValuesAtX0[i])*(b*gradients[j]) *quad[pt].weight()*integrationElement;
+//          m(j,i) += delta_K*(referenceFunctionValues[i])*(b*gradients[j]) *quad[pt].weight()*integrationElement;
+        }
+
+        //-f(u_k) [rhs of Newton]
+        v(j) += (-detHessu+f_value/g_value+u_midvalue)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+//        v(j) += (u_midvalue)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        //stabilisation term
+//        v(j) += delta_K*(-detHessu+f_value/g_value+u_atX0)*(b*gradients[j])*quad[pt].weight()*integrationElement;
+//        v(j) += delta_K*(u_value)*(b*gradients[j])*quad[pt].weight()*integrationElement;
+        assert(! (v(j)!=v(j)));
+/*
           //diffusion term
           FieldVector<double,dim> cofTimesW;
           cofHessu.mv(gradients[i],cofTimesW);
@@ -191,6 +245,8 @@ public:
         v(j) += (-detHessu+f_value/g_value+u_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         //stabilisation term
         v(j) += delta_K*(-detHessu+f_value/g_value+u_value)*(b*gradients[j])*quad[pt].weight()*integrationElement;
+        assert(! (v(j)!=v(j)));
+*/
       }
     }
   }
@@ -216,7 +272,7 @@ public:
   template<class Intersection, class LocalView, class VectorType, class MatrixType>
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalView &localView,
-      const VectorType &x, VectorType& v, MatrixType& m) const {
+      const VectorType &x, VectorType& v, VectorType& v_boundary, MatrixType& m) const {
 
     const int dim = Intersection::dimension;
     const int dimw = Intersection::dimensionworld;
@@ -227,7 +283,6 @@ public:
 
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
-    const Element& element = localView.element();
 
     const auto& localFiniteElement = localView.tree().finiteElement();
     const int size_u = localFiniteElement.size();
@@ -261,8 +316,8 @@ public:
                       / std::pow(intersection.geometry().volume(), SolverConfig::beta);
     else
       penalty_weight = SolverConfig::sigmaBoundary
-                      * (SolverConfig::degree * SolverConfig::degree);
-//                     * std::pow(intersection.geometry().volume(), SolverConfig::beta);
+                      * (SolverConfig::degree * SolverConfig::degree)
+                     / std::pow(intersection.geometry().volume(), SolverConfig::beta);
 
 //    std::cerr << " start quadrature " << std::endl;
     // Loop over all quadrature points
@@ -304,12 +359,39 @@ public:
 
       auto signedDistance = bc.H(gradu, normal);
 //      auto phi_value = bc.phi(gradu, normal);
-      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
+//      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
-      for (size_t j = 0; j < size_u; j++)
+
+      const auto derivativeHu = bc.derivativeH(gradu, normal);
+
+      #ifdef DEBUG
+      //calculate derivatives of g
+      const double delta = std::sqrt(1e-15);
+
+      //calculate derivative of F in x by finite difference
+      auto temp = gradu;
+      temp[0]+=delta;
+      std::cerr << " gradu " << gradu <<  " temp x Plus " << temp << std::endl;
+      double Dx1PlusF_value = bc.H(temp, normal);
+      temp = gradu;
+      temp[1]+=delta;
+      double Dx2PlusF_value = bc.H(temp, normal);
+
+      FieldVector<double, dim> DxFEx =
+        {
+          (Dx1PlusF_value-signedDistance)/delta,
+          (Dx2PlusF_value-signedDistance)/delta
+        };
+
+      std::cerr << std::setprecision(15);
+      std::cerr << " dH " << derivativeHu << " finite diff H " << DxFEx << std::endl;
+      std::cerr << " H1 " << Dx1PlusF_value << " H2 " << Dx2PlusF_value << std::endl;
+#endif
+
+      for (int j = 0; j < size_u; j++)
       {
 
         if (SolverConfig::Dirichlet)
@@ -318,19 +400,20 @@ public:
         }
         else
         {
-          v(j) += penalty_weight * signedDistance//((gra * normal) - phi_value) //
+          v_boundary(j) += penalty_weight * signedDistance//((gra * normal) - phi_value) //
                             * (referenceFunctionValues[j]+(gradients[j]*normal)) * factor;
 //          * (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1]) * factor;
-          std::cerr << " add to v_adolc(" << j << ") " << penalty_weight * signedDistance
-              * (referenceFunctionValues[j]+(gradients[j]*normal))* factor << " -> " << v(j) << std::endl;
+//          std::cerr << " add to v_adolc(" << j << ") " << penalty_weight * signedDistance
+//              * (referenceFunctionValues[j]+(gradients[j]*normal))* factor << " -> " << v_boundary(j) << std::endl;
 
           for (int i =0; i < size_u; i++)
           {
             FieldVector<double,dim> cofTimesW;
             cofactor(Hessu).mv(gradients[i], cofTimesW);
             m(j,i) += -(cofTimesW*normal)*referenceFunctionValues[j]*factor;
-            m(j,i) += penalty_weight*(bc.derivativeH(gradu, normal)*gradients[i])*(referenceFunctionValues[j]+(gradients[j]*normal))*factor;
+            m(j,i) += penalty_weight*(derivativeHu*gradients[i])*(referenceFunctionValues[j]+(gradients[j]*normal))*factor;
           }
+
         }
       }
     }
@@ -470,10 +553,10 @@ public:
 
   mutable double delta_K;
 
+  const Config::DomainType X0_;
+
   static constexpr int collocationNo[3][3] = {{0,3,4},{0,11,8},{4,7,8}};
 //  static constexpr int collocationNo[3][5] = {{0,1,3,5,4},{0,2,11,9,8},{4,6,7,10,8}};
-
-  static constexpr double& kappa_ = OpticalSetting::kappa;
 public:
   mutable double int_f;
   mutable double sign;
