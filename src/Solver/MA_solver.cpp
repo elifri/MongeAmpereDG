@@ -208,11 +208,6 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //  op.evaluate(solution, f, solution, false);
 //  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
 
-  //calculate integral to fix reflector size
-  Integrator<GridType> integrator(grid_ptr);
-  G = integrator.assemble_integral_of_local_gridFunction(*solution_u_old);
-  std::cout << "reflector size  G " << G << endl;
-  assembler.set_G(G);
 
   for (int i = 0; i < SolverConfig::nonlinear_steps; i++)
   {
