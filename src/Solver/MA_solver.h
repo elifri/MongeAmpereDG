@@ -42,25 +42,6 @@
 
 using namespace Dune;
 
-
-template<class F, typename FEBasis>
-void projectC0_(const FEBasis& febasis, F f, Config::VectorType &V);
-
-template<class F, typename FEBasis>
-void projectC1_(const FEBasis& febasis, F f, Config::VectorType &V);
-
-//project by L2-projection
-template<class F, typename FEBasis>
-void project_labourious(const FEBasis& febasis, const F f, Config::VectorType& v);
-
-//project by setting nodal dofs
-template<class LocalF, class LocalF_grad, typename FEBasis>
-void project_labouriousLocal(const FEBasis& febasis, LocalF f, LocalF_grad f_grad, Config::VectorType& v);
-
-//template<class F, typename FEBasis>
-//void test_projection(const FEBasis& febasis, const F f, Config::VectorType& v);
-
-
 //class Plotter;
 
 class MA_solver {
