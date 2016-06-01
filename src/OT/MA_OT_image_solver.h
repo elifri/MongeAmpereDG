@@ -26,6 +26,8 @@ public:
 private:
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
   void plot(const std::string& filename) const;
+  using MA_OT_solver::plot;
+
 
   void update_Operator();
   void solve_nonlinear_system();

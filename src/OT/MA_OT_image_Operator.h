@@ -112,6 +112,7 @@ struct MA_OT_image_Operator_with_Linearisation{
       timer.start();
 //      lop.found_negative = false;
       solver_ptr->assembler.assemble_DG_Jacobian(*lop_ptr, *lopLinear_ptr, x,v, m); timer.stop();
+      solver_ptr->plot(v,"Res");
     }
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const
