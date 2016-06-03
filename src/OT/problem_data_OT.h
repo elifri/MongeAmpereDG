@@ -107,6 +107,15 @@ public:
     return max;
   }
 
+  template<class Element>
+  Config::SpaceType2d grad_u_old(const Element& element, const Config::SpaceType &xLocal) const
+  {
+    assert(gradient_u_old != NULL);
+    (*gradient_u_old)->bind(element);
+
+    return (**gradient_u_old)(xLocal);
+  }
+
 
 protected:
   mutable GradFunction_ptr* gradient_u_old;

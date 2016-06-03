@@ -336,15 +336,20 @@ public:
 
       //-------calculate integral--------
 
+
+
       auto signedDistance = bc.H(gradu, normal);
-//      auto phi_value = bc.phi(gradu, normal);
+//      auto phi_value = bc.phi(localView.element(), gradu, normal);
 //      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
 
+      const auto grad_u_old = bc.grad_u_old(localView.element(), quadPos);
+
       const auto derivativeHu = bc.derivativeH(gradu, normal);
+      const auto derivativeHu_old = bc.derivativeH(grad_u_old, normal);
 
       #ifdef DEBUG
       //calculate derivatives of g
@@ -379,18 +384,31 @@ public:
         }
         else
         {
-          v_boundary(j) += penalty_weight * signedDistance//((gra * normal) - phi_value) //
-                            * (referenceFunctionValues[j]+(gradients[j]*normal)) * factor;
+//          v_boundary(j) += signedDistance//((gra * normal) - phi_value) //
+//                            * (referenceFunctionValues[j]+(gradients[j]*normal)) * factor;
 //          * (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1]) * factor;
 //          std::cerr << " add to v_adolc(" << j << ") " << penalty_weight * signedDistance
 //              * (referenceFunctionValues[j]+(gradients[j]*normal))* factor << " -> " << v_boundary(j) << std::endl;
+          auto neumannBC = derivativeHu_old;
+          FieldVector<double,dim> cofTimesn;
+          cofactor(Hessu).mv(normal, cofTimesn);
+          neumannBC -= cofTimesn;
+//          v_boundary(j) += (neumannBC*grad_u_old);
+          v_boundary(j) += signedDistance//((gra * normal) - phi_value) //
+                * (referenceFunctionValues[j]) * factor;
+
+          std::cerr << " current boundary " << (neumannBC*gradu) << " derivative H " << derivativeHu_old << " normal " << normal <<  std::endl;
 
           for (int i =0; i < size_u; i++)
           {
             FieldVector<double,dim> cofTimesW;
             cofactor(Hessu).mv(gradients[i], cofTimesW);
-            m(j,i) += -(cofTimesW*normal)*referenceFunctionValues[j]*factor;
-            m(j,i) += penalty_weight*(derivativeHu*gradients[i])*(referenceFunctionValues[j]+(gradients[j]*normal))*factor;
+//            m(j,i) += -(cofTimesW*normal)*referenceFunctionValues[j]*factor;
+//            m(j,i) += penalt  y_weight*(derivativeHu*gradients[i])*(referenceFunctionValues[j]+(gradients[j]*normal))*factor;
+            auto temp = derivativeHu;
+            cofactor(Hessu).mmtv(normal, temp); // temp = derivativeHu - A^tn
+              m(j,i) += (temp*gradients[i])*referenceFunctionValues[j]*factor;
+
           }
 
         }
