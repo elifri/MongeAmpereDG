@@ -23,7 +23,9 @@ struct MA_OT_image_Operator {
         lop_ptr(new LOP
                  (new BoundarySquare(solver.gradient_u_old,solver.get_setting()),
                   &f_,&g_)
-               ){}
+               )
+    {
+    }
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
     {
@@ -100,7 +102,6 @@ struct MA_OT_image_Operator_with_Linearisation{
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
     {
-      std::cerr << " current x " << x.transpose() << std::endl;
       assert(lop_ptr);
 
       if (new_solution)
@@ -114,11 +115,8 @@ struct MA_OT_image_Operator_with_Linearisation{
 //      lop.found_negative = false;
 
 
-/*
       typename Solver::DiscreteGridFunction solution_u_global(solver_ptr->FEBasisHandler_.uBasis(),x);
       solver_ptr->assembler.set_uAtX0(solution_u_global(solver_ptr->get_setting().lowerLeft));
-*/
-
 
       solver_ptr->assembler.assemble_DG_Jacobian(*lop_ptr, *lopLinear_ptr, x,v, m); timer.stop();
       solver_ptr->plot(v,"Res");

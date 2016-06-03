@@ -268,8 +268,8 @@ public:
 
   static constexpr bool use_automatic_differentation=false;
 
-  Assembler(const FEBasisType& basis, bool no_hanging_nodes) :
-      basis_(&basis),no_hanging_nodes(no_hanging_nodes){
+  Assembler(const FEBasisType& basis) :
+      basis_(&basis){
     std::cout << " ndofs assembler constr " << basis.indexSet().size() << std::endl;
     if (basis_)
       boundaryHandler_.init_boundary_dofs(*this);
@@ -603,6 +603,7 @@ public:
   void assemble_discrete_hessian_system(const LocalOperatorType &lop, Config::VectorType x, Config::MatrixType& m, Config::VectorType& rhs) const;
 
   void set_uAtX0(const double g) const{ uAtX0_ = g;}
+  void set_X0(const Config::DomainType& X0) const{ X0_ = X0;}
 
   const FEBasisType& basis() const {return *basis_;}
   const BoundaryHandler::BoolVectorType& isBoundaryDoF() const {return boundaryHandler_.isBoundaryDoF();}
@@ -614,19 +615,20 @@ private:
 
 
 */
-    mutable double uAtX0_;
+  mutable Config::DomainType X0_;
+  mutable double uAtX0_;
 
 //    const MA_solver* ma_solver;
-    const FEBasisType* basis_;
-    BoundaryHandler boundaryHandler_;
+  const FEBasisType* basis_;
+  BoundaryHandler boundaryHandler_;
 
-    bool no_hanging_nodes;
+  bool no_hanging_nodes;
 
-    mutable bool tape0initialised, tape1initialised, tape2initialised;
+  mutable bool tape0initialised, tape1initialised, tape2initialised;
 
-    static constexpr bool reuseAdolCTape = false;
-    mutable AssembleType assembleType_;
-    mutable int picture_no;
+  static constexpr bool reuseAdolCTape = false;
+  mutable AssembleType assembleType_;
+  mutable int picture_no;
 };
 
 template<>
@@ -2339,13 +2341,12 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 
     lop.found_negative = false;
 
-    Config::VectorType midvalues = Config::VectorType::Zero(v.size());
-    Config::ValueType u_midValue = 0;
-
-    //calculate midvalues //todo has to be done only once per grid refinement
+    //get derivatives for unification term
     for (auto&& e : elements(gridView)) {
       localView.bind(e);
       localIndexSet.bind(localView);
+
+      const auto& geometry = e.geometry();
 
       //calculate local coefficients
       Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
@@ -2358,54 +2359,31 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
       typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
       const int size = localView.size();
 
-      // Get a quadrature rule
-      int order = std::max(0,
-          3 * ((int) localFiniteElement.localBasis().order()));
-      const QuadratureRule<double, Config::dim>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(localView.element(), order);
-
-      // Loop over all quadrature points
-      for (size_t pt = 0; pt < quad.size(); pt++) {
-
-        //--------get data------------------------
-        // Position of the current quadrature point in the reference element
-        const FieldVector<double, Config::dim> &quadPos = quad[pt].position();
-        // The multiplicative factor in the integral transformation formula
-        const double integrationElement = localView.element().geometry().integrationElement(quadPos);
-
-        //the shape function values
-        std::vector<RangeType> referenceFunctionValues(size);
-        double u_value = 0;
-        assemble_functionValues_u(localFiniteElement, quadPos,
-            referenceFunctionValues, xLocal, u_value);
-
-        for (int i = 0; i < size; i++) //loop over ansatz fcts
-        {
-          midvalues(FETraits::get_index(localIndexSet, i)) += referenceFunctionValues[i] *quad[pt].weight()*integrationElement;
-        }
-        u_midValue += u_value*quad[pt].weight()*integrationElement;
+/*
+      //get function values at x_0
+      std::vector<RangeType> FunctionValuesAtX0(size);
+      Config::DomainType X0 = geometry.local(X0_);
+      //check if X0 is inside current triangle
+      if (X0[0] >= 0 && X0[1] >= 0 && X0[0]+X0[1] <= 1.0)
+      {
+        localFiniteElement.localBasis().evaluateFunction(X0, FunctionValuesAtX0);
+        std::cerr << " X-0 " << X0 << " inside cur first corner " << geometry.corner(0) << std::endl;
       }
-
-    }
-
-    for (auto&& e : elements(gridView)) {
-      localView.bind(e);
-      localIndexSet.bind(localView);
-
-      //calculate local coefficients
-      Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
-
-      // Get set of shape functions for this element
-      const auto& localFiniteElement = localView.tree().finiteElement();
-      typedef decltype(localFiniteElement) ConstElementRefType;
-      typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
-
-      typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-      const int size = localView.size();
+      else
+      {
+        std::fill(FunctionValuesAtX0.begin(),FunctionValuesAtX0.end(),0.0);
+        std::cerr << " X-0 " << X0 << " not inside cur first corner " << geometry.corner(0) << std::endl;
+      }
+      std::cerr << std::setprecision(15);
+      std::cerr << " functionvalues at x0 ";
+      for (const auto& e : FunctionValuesAtX0) std::cerr << e << " ";
+      std::cerr << std::endl;
+*/
 
       // Get a quadrature rule
       int order = std::max(0,
           3 * ((int) localFiniteElement.localBasis().order()));
-      const QuadratureRule<double, Config::dim>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(localView.element(), order);
+      const QuadratureRule<double, Config::dim>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(e, order);
 
       // Loop over all quadrature points
       for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -2414,7 +2392,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
         // Position of the current quadrature point in the reference element
         const FieldVector<double, Config::dim> &quadPos = quad[pt].position();
         // The multiplicative factor in the integral transformation formula
-        const double integrationElement = localView.element().geometry().integrationElement(quadPos);
+        const double integrationElement = geometry.integrationElement(quadPos);
 
         //the shape function values
         std::vector<RangeType> referenceFunctionValues(size);
@@ -2424,22 +2402,14 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 
         for (int j = 0; j < size; j++) //loop over test fcts
         {
-          for (int i = 0; i < midvalues.size(); i++) //loop over ansatz fcts
-          {
-            JacobianEntries.push_back(
-                EntryType(i,
-                          FETraits::get_index(localIndexSet,j),
-                          midvalues[i]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement));
-          }
+          JacobianEntries.push_back(
+              EntryType(FETraits::get_index(localIndexSet, j),
+                  0, //TODO very nasty stuff here ....
+                  referenceFunctionValues[j] *quad[pt].weight()*integrationElement));
         }
-//        u_midValue += u_value*quad[pt].weight()*integrationElement;
       }
 
     }
-
-
-
-
 
     // A loop over all elements of the grid
     for (auto&& e : elements(gridView)) {
@@ -2466,13 +2436,12 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 
         //calculate local coefficients
         Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
-        Config::VectorType midValuesLocal = calculate_local_coefficients(localIndexSet, midvalues);
 //        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, v_isBoundary);
 
 //        std::cerr << " is local boundaryDof" << isBoundaryLocal.transpose() << std::endl;
 
 //        lop.assemble_cell_term(localView, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
-        lopJacobian.assemble_cell_term(localView, xLocal, local_vector, m_m, midValuesLocal, u_midValue);
+        lopJacobian.assemble_cell_term(localView, xLocal, local_vector, m_m, uAtX0_);
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
@@ -2628,6 +2597,10 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 
      }
      m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
+
+//     std::cout << " m nonzeros " << m.nonZeros() << std::endl;
+//     m.prune(1e-12);
+     std::cerr << " m nonzeros " << m.nonZeros() << std::endl;
 
 #ifdef COLLOCATION
      v+= boundary;

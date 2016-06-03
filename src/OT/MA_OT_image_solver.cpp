@@ -27,6 +27,8 @@ MA_OT_image_solver::MA_OT_image_solver(const shared_ptr<GridType>& grid, GridVie
    const auto integralLightIn = op.lop_ptr->get_input_distribution().integrateOriginal();
    setting_.povRayOpts.lightSourceColor = Eigen::Vector3d::Constant(integralLightOut/integralLightIn*setting_.lightSourceIntensity);
 */
+  assembler.set_X0(opticalSetting.lowerLeft);
+
 
    plotter.set_PovRayOptions(setting_.povRayOpts);
 

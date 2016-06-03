@@ -85,7 +85,7 @@ public:
       plotterRefinement_(config.refinement),
       grid_ptr(grid), gridView_ptr(&gridView),
       FEBasisHandler_(*this, *gridView_ptr),
-      assembler(FEBasisHandler_.FEBasis(), true),
+      assembler(FEBasisHandler_.FEBasis()),
       plotter(gridView),
       op(*this),
       solution_u_old(), gradient_u_old()

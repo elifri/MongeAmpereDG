@@ -42,10 +42,10 @@ public:
    */
   template<class LocalView, class VectorType, class DenseMatrixType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, DenseMatrixType& m, const VectorType& midValues, const double u_midvalue) const
+      VectorType& v, DenseMatrixType& m, const double u_atX0) const
   {
 
-    std::cerr << "u at x0 " << u_midvalue << std::endl;
+    std::cerr << "u at x0 " << u_atX0 << std::endl;
 
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
@@ -70,27 +70,6 @@ public:
     typedef typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension> FEHessianType;
 
     const int size = localView.size();
-/*
-
-    //get function values at x_0
-    std::vector<RangeType> FunctionValuesAtX0(size);
-    Config::DomainType X0 = geometry.local(X0_);
-    //check if X0 is inside current triangle
-    if (X0[0] >= 0 && X0[1] >= 0 && X0[0]+X0[1] <= 1.0)
-    {
-      localFiniteElement.localBasis().evaluateFunction(X0, FunctionValuesAtX0);
-      std::cerr << " X-0 " << X0 << " inside cur first corner " << geometry.corner(0) << std::endl;
-    }
-    else
-    {
-      std::fill(FunctionValuesAtX0.begin(),FunctionValuesAtX0.end(),0.0);
-      std::cerr << " X-0 " << X0 << " not inside cur first corner " << geometry.corner(0) << std::endl;
-    }
-    std::cerr << std::setprecision(15);
-    std::cerr << " functionvalues at x0 ";
-    for (const auto& e : FunctionValuesAtX0) std::cerr << e << " ";
-    std::cerr << std::endl;
-*/
 
     // Get a quadrature rule
     int order = std::max(0,
@@ -190,7 +169,7 @@ public:
         else
           delta_K = h_T/2./b.two_norm()*(1.-1./P_T);
 
-        std::cerr << " |b| " << b.two_norm() << " |b|2 " << b.infinity_norm() << " eps " << Hessu.infinity_norm() << " eps2 " << Hessu.frobenius_norm()  << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  << " old penalty "<< integrationElement/2./b.two_norm()<<std::endl;
+        std::cerr << "gradg" << gradg << " |b| " << b.two_norm() << " |b|2 " << b.infinity_norm() << " eps " << Hessu.infinity_norm() << " eps2 " << Hessu.frobenius_norm()  << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  << " old penalty "<< integrationElement/2./b.two_norm()<<std::endl;
       }
 
 
@@ -222,8 +201,8 @@ public:
         }
 
         //-f(u_k) [rhs of Newton]
-        v(j) += (-detHessu+f_value/g_value+u_midvalue)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-//        v(j) += (u_midvalue)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        v(j) += (-detHessu+f_value/g_value+u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+//        v(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         //stabilisation term
 //        v(j) += delta_K*(-detHessu+f_value/g_value+u_atX0)*(b*gradients[j])*quad[pt].weight()*integrationElement;
 //        v(j) += delta_K*(u_value)*(b*gradients[j])*quad[pt].weight()*integrationElement;
