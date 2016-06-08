@@ -42,10 +42,8 @@ public:
    */
   template<class LocalView, class VectorType, class DenseMatrixType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, DenseMatrixType& m, const double u_atX0) const
+      VectorType& v, DenseMatrixType& m, const double u_atX0, VectorType& entryWx0timesBgradV) const
   {
-
-    std::cerr << "u at x0 " << u_atX0 << std::endl;
 
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
@@ -169,7 +167,8 @@ public:
         else
           delta_K = h_T/2./b.two_norm()*(1.-1./P_T);
 
-        std::cerr << "gradg" << gradg << " |b| " << b.two_norm() << " |b|2 " << b.infinity_norm() << " eps " << Hessu.infinity_norm() << " eps2 " << Hessu.frobenius_norm()  << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  << " old penalty "<< integrationElement/2./b.two_norm()<<std::endl;
+        if (std::abs(delta_K) > 1e-12)
+          std::cerr << "gradg " << gradg << " |b| " << b.two_norm() << " |b|2 " << b.infinity_norm() << " eps " << Hessu.infinity_norm() << " eps2 " << Hessu.frobenius_norm()  << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
       }
 
 
@@ -193,18 +192,20 @@ public:
           m(j,i) += (cofTimesW*gradients[j]) *quad[pt].weight()*integrationElement;
           //convection term
           m(j,i) += (b*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-          //unification term :) term -> MOVED TO ASSEMBLER TO BE REVIEWED
-//          m(j,i) += midValues[i]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
           //stabilisation term
-//          m(j,i) += delta_K*(-FrobeniusProduct(cofHessu,Hessians[i])+b*gradients[i]+FunctionValuesAtX0[i])*(b*gradients[j]) *quad[pt].weight()*integrationElement;
+          m(j,i) += delta_K*(-FrobeniusProduct(cofHessu,Hessians[i])+b*gradients[i])*(b*gradients[j]) *quad[pt].weight()*integrationElement;
 //          m(j,i) += delta_K*(referenceFunctionValues[i])*(b*gradients[j]) *quad[pt].weight()*integrationElement;
         }
 
         //-f(u_k) [rhs of Newton]
         v(j) += (-detHessu+f_value/g_value+u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 //        v(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        //unification term :) term, ATTENTION: works only if w(x_0)=1 for exactly one ansatzfunction
+        entryWx0timesBgradV(j) += referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+
         //stabilisation term
-//        v(j) += delta_K*(-detHessu+f_value/g_value+u_atX0)*(b*gradients[j])*quad[pt].weight()*integrationElement;
+        entryWx0timesBgradV(j) += delta_K* (b*gradients[j]) *quad[pt].weight()*integrationElement; //, ATTENTION: works only if w(x_0)=1 for exactly one ansatzfunction
+        v(j) += delta_K*(-detHessu+f_value/g_value+u_atX0)*(b*gradients[j])*quad[pt].weight()*integrationElement;
 //        v(j) += delta_K*(u_value)*(b*gradients[j])*quad[pt].weight()*integrationElement;
         assert(! (v(j)!=v(j)));
 /*
@@ -397,7 +398,7 @@ public:
           v_boundary(j) += signedDistance//((gra * normal) - phi_value) //
                 * (referenceFunctionValues[j]) * factor;
 
-          std::cerr << " current boundary " << (neumannBC*gradu) << " derivative H " << derivativeHu_old << " normal " << normal <<  std::endl;
+//          v_boundary(j) += (cofTimesW * normal) * (referenceFunctionValues[j]) * factor;
 
           for (int i =0; i < size_u; i++)
           {
@@ -407,7 +408,7 @@ public:
 //            m(j,i) += penalt  y_weight*(derivativeHu*gradients[i])*(referenceFunctionValues[j]+(gradients[j]*normal))*factor;
             auto temp = derivativeHu;
             cofactor(Hessu).mmtv(normal, temp); // temp = derivativeHu - A^tn
-              m(j,i) += (temp*gradients[i])*referenceFunctionValues[j]*factor;
+            m(j,i) += (temp*gradients[i])*referenceFunctionValues[j]*factor;
 
           }
 
