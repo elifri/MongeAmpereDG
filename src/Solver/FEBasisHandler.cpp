@@ -28,6 +28,13 @@ FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig::degr
       solver.get_setting().lowerLeft, solver.get_setting().upperRight,
       elementsSplines, SolverConfig::degree));
 }
+template<>
+FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig::degree>>::FEBasisHandler(const typename FEBasisType::GridView& gridView)
+{
+  assert(false);
+  std::cerr << " need solver to initiate BSplinesBasis" << std::endl;
+  std::exit(-1);
+}
 
 
 template<>
@@ -553,7 +560,6 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 
   typedef Functions::PS12SSplineBasis<Config::LevelGridView, Config::SparseMatrixType> FEBasisCoarseType;
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(levelGridView));
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
 
   //init vector
   Config::VectorType v = Config::VectorType::Zero(FEBasisCoarse->indexSet().size() + 1);
@@ -734,7 +740,7 @@ Config::VectorType FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverCon
   typedef typename std::remove_const<ConstlevelGridView>::type LevelGridView;
 
   //create handler for coarse basis
-  FEBasisHandler<Mixed, MixedTraits<LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>> HandlerCoarse(solver, levelGridView);
+  FEBasisHandler<Mixed, MixedTraits<LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>> HandlerCoarse(levelGridView);
 
   //init vector
   Config::VectorType v = Config::VectorType::Zero(HandlerCoarse.FEBasis().indexSet().size() + 1);

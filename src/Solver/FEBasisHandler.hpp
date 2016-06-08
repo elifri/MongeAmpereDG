@@ -24,6 +24,7 @@ struct FEBasisHandler{
   typedef FT FiniteElementTraits;
   typedef typename FiniteElementTraits::FEBasis FEBasisType;
 
+  FEBasisHandler(const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)){}
   FEBasisHandler(const MA_solver& solver, const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)){}
 
   template<class F>
@@ -65,7 +66,7 @@ struct FEBasisHandler<Mixed, FT>{
 
   typedef typename FiniteElementTraits::DiscreteGridFunction DiscreteGridFunction;
 
-  FEBasisHandler(const MA_solver& solver, const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)),
+  FEBasisHandler(const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)),
                                                 uBasis_(new FEuBasisType(grid)),
                                                 uDHBasis_(new FEuDHBasisType(grid)){}
 
