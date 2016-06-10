@@ -247,11 +247,12 @@ public:
    * @param v           return residual
    * @param vn          return residual for neighbour element
    */
-  template<class IntersectionType, class LocalView, class VectorType>
+  template<class IntersectionType, class LocalView, class VectorType, class MatrixType>
   void assemble_inner_face_term(const IntersectionType& intersection,
       const LocalView &localView, const VectorType &x,
-      const LocalView &localViewn, const VectorType &xn, VectorType& v,
-      VectorType& vn, int tag) const {
+      const LocalView &localViewn, const VectorType &xn,
+      MatrixType & m_m, MatrixType& mn_m, MatrixType & m_mn, MatrixType& mn_mn,
+      VectorType& v, VectorType& vn) const {
   }
 
 #ifndef COLLOCATION
