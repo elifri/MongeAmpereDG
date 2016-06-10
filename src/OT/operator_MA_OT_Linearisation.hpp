@@ -109,6 +109,12 @@ public:
 
 //      auto cofHessu = convexified_cofactor(Hessu);
       auto cofHessu = cofactor(Hessu);
+      double ev0, ev1;
+      calculate_eigenvalues(cofHessu, ev0, ev1);
+//      auto minEVcofHessu = std::min(std::abs(ev0), std::abs(ev1));
+      //if the matrix is convexified both eigenvalues are positiv and ev0 is always smaller
+      auto minEVcofHessu = ev0;
+      assert(std::abs(minEVcofHessu - std::min(std::abs(ev0), std::abs(ev1))) < 1e-10);
 
       auto x_value = geometry.global(quad[pt].position());
 
@@ -158,7 +164,7 @@ public:
 
       auto h_T = std::sqrt(integrationElement);
 
-      auto P_T = b.two_norm() * h_T/2./Hessu.frobenius_norm();
+      auto P_T = b.two_norm() * h_T/2./minEVcofHessu;
 
       if (pt == 0)
       {
