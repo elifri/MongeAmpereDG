@@ -2418,8 +2418,9 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
               m_mn.setZero(localView.size(), localViewn.size());
               mn_mn.setZero(localViewn.size(), localViewn.size());
 
-              lop.assemble_inner_face_term(is, localView, xLocal, localViewn, xLocaln,
-                  m_m, mn_m, m_mn, mn_mn, local_vector, local_vectorn);
+              lopJacobian.assemble_inner_face_term(is, localView, xLocal, localViewn, xLocaln,
+                  m_m, mn_m, m_mn, mn_mn,
+                  local_vector, local_vectorn);
 
 //                std::cout << " intermediate (if) m_m " << m_m  << std::endl;
 //                std::cerr << " localVector " << local_vector << std::endl;
