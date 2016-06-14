@@ -309,7 +309,7 @@ protected:
 
 	GeometrySetting setting_;
 
-  unsigned int epsMollifier_, epsDivide_, epsEnd_;
+  double epsMollifier_, epsDivide_, epsEnd_;
 
   int maxSteps_;
 #ifdef USE_DOGLEG

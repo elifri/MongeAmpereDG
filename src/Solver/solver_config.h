@@ -62,8 +62,8 @@ struct SolverConfig{
   std::string initValue;
 
   std::string outputDirectory, plotOutputDirectory, outputPrefix;
-  static unsigned int epsDivide;
-  static unsigned int epsEnd;
+  static double epsDivide;
+  static double epsEnd;
 
   int maxSteps;
 #ifdef USE_DOGLEG

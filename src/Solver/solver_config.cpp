@@ -23,13 +23,13 @@ ProblemType SolverConfig::problem;
 int SolverConfig::startlevel = 0;
 int SolverConfig::nonlinear_steps = 1;
 
-unsigned int SolverConfig::epsDivide = 1;
-unsigned int SolverConfig::epsEnd = 1;
+double SolverConfig::epsDivide = 1;
+double SolverConfig::epsEnd = 1;
 
 
 double SolverConfig::sigma = 5;
 double SolverConfig::sigmaGrad = 5;
-double SolverConfig::sigmaBoundary = 5;
+double SolverConfig::sigmaBoundary = 20;
 
 bool SolverConfig::Dirichlet = false;
 
@@ -188,8 +188,8 @@ void OpticalSetting::read_configfile(std::string &configFile)
         ("geometry.target.z",        po::value<double>(&OpticalSetting::z_3),    "")
         ("light.in.imageName",       po::value<string>(&OpticalSetting::LightinputImageName), "path to image")
         ("light.out.targetImageName",     po::value<string>(&OpticalSetting::TargetImageName), "")
-        ("solver.epsDivide",  po::value<unsigned int>(&SolverConfig::epsDivide), "")
-        ("solver.epsEnd",  po::value<unsigned int>(&SolverConfig::epsEnd), "")
+        ("solver.epsDivide",  po::value<double>(&SolverConfig::epsDivide), "")
+        ("solver.epsEnd",  po::value<double>(&SolverConfig::epsEnd), "")
         ("solver.minPixelValue",     po::value<double>(&minPixelValue), "")
         ("povray.cameraAngle",       po::value<double>(&(povRayOpts.cameraAngle)),       "")
         ("povray.jitter",            po::value<bool>  (&(povRayOpts.jitter)),            "")
