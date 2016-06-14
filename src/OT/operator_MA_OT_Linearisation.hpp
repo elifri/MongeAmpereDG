@@ -359,6 +359,11 @@ public:
       const auto derivativeHu = bc.derivativeH(gradu, normal);
       const auto derivativeHu_old = bc.derivativeH(grad_u_old, normal);
 
+      const auto cofHessu = cofactor(Hessu);
+
+      //assume n_y of last step
+      FieldVector<double, Config::dim> normalOld;
+      cofHessu.mv(normal, normalOld);
       #ifdef DEBUG
       //calculate derivatives of g
       const double delta = std::sqrt(1e-15);
@@ -397,27 +402,30 @@ public:
 //          * (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1]) * factor;
 //          std::cerr << " add to v_adolc(" << j << ") " << penalty_weight * signedDistance
 //              * (referenceFunctionValues[j]+(gradients[j]*normal))* factor << " -> " << v_boundary(j) << std::endl;
-          auto neumannBC = derivativeHu_old;
-          FieldVector<double,dim> cofTimesn;
-          cofactor(Hessu).mv(normal, cofTimesn);
-          neumannBC -= cofTimesn;
-//          v_boundary(j) += (neumannBC*grad_u_old);
-          v_boundary(j) += signedDistance//((gra * normal) - phi_value) //
-                * (referenceFunctionValues[j]) * factor;
+//          v_boundary(j) += signedDistance//((gra * normal) - phi_value) //
+//                * (referenceFunctionValues[j]) * factor;
 
-//          v_boundary(j) += (cofTimesW * normal) * (referenceFunctionValues[j]) * factor;
+          v_boundary(j) += normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor;
 
+//          auto temp = normalOld;
+//          temp /= normalOld.two_norm();
+//          std::cerr << " gradH " << derivativeHu << " 1/| |A n_x " << temp << " without scaling " << normalOld << std::endl;
+
+
+/*
           for (int i =0; i < size_u; i++)
           {
             FieldVector<double,dim> cofTimesW;
             cofactor(Hessu).mv(gradients[i], cofTimesW);
 //            m(j,i) += -(cofTimesW*normal)*referenceFunctionValues[j]*factor;
-//            m(j,i) += penalt  y_weight*(derivativeHu*gradients[i])*(referenceFunctionValues[j]+(gradients[j]*normal))*factor;
+//            m(j,i) += penalty_weight* referenceFunctionValues[i]*(referenceFunctionValues[j]) * factor;
             auto temp = derivativeHu;
             cofactor(Hessu).mmtv(normal, temp); // temp = derivativeHu - A^tn
             m(j,i) += (temp*gradients[i])*referenceFunctionValues[j]*factor;
-
           }
+*/
+
+
 
         }
       }
