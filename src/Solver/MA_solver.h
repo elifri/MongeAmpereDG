@@ -31,6 +31,7 @@
 
 #ifdef USE_DOGLEG
 #include "../Dogleg/doglegMethod.hpp"
+#include "../Dogleg/newtonMethod.hpp"
 #endif
 
 #ifdef USE_PETSC

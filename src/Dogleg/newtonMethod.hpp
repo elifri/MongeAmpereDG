@@ -9,7 +9,7 @@
 #ifndef MAGICMIRRORTOOLS_NEWTONMETHOD_HPP
 #define MAGICMIRRORTOOLS_NEWTONMETHOD_HPP
 
-#include "Dogleg/utils"
+#include "utils.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -20,10 +20,6 @@
 #include <Eigen/UmfPackSupport>
 
 
-namespace mirror_problem
-{
-
-
 template<typename FunctorType>
 void newtonMethod(
           FunctorType &functor,
@@ -31,6 +27,7 @@ void newtonMethod(
     const double eps,
     const double lambdaMin,
           Eigen::VectorXd &x,
+    bool useCombinedFunctor = false,
     const bool silentmode=false
 ){
     assert(eps>0);
@@ -42,25 +39,30 @@ void newtonMethod(
     Eigen::SparseMatrix<double> Df(n,n);
 
     if (!silentmode)
+    {
         std::cout << "\n\nSolve nonlinear system of equations using Newton's method...\n\n";
+        std::cout << "--------------------------------------------------------------------------------\n";
+        std::cout << "      k    Schritt              ||s||       ||F||inf    ||F'||inf     ||F||2 \n";
+        std::cout << "--------------------------------------------------------------------------------\n";
+    }
 
-    ProgressBar progress;
-    if (!silentmode)
-        progress.start();
-
-    functor.derivative(x,Df);
     Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_Df;
-    lu_of_Df.analyzePattern(Df);
 
     for (unsigned int i=0; i<maxIter; i++) {
 
-        // update progressbar
-        if (!silentmode)
-            progress.status(i, maxIter);
-
         // solve Df*s = +f using UmfPack:
-        functor.evaluate(x,f);
-        functor.derivative(x,Df);
+        if (useCombinedFunctor)
+          functor.evaluate(x,f,Df, x, false);
+        else
+        {
+          functor.evaluate(x,f,x, false);
+          functor.derivative(x,Df);
+    //      make_FD_Jacobian(functor, x, J);
+        }
+        if (i == 0)
+          lu_of_Df.analyzePattern(Df);
+
+
         lu_of_Df.factorize(Df);
         if (lu_of_Df.info()!=0) {
             // decomposition failed
@@ -77,40 +79,34 @@ void newtonMethod(
 
         // compute damped Newton step
         Eigen::VectorXd xNew(n);
-        Eigen::VectorXd sNew(n);
-        double lambda  = 1.0;
-        double cLambda = 1.0;
 
-        do {
-            if (lambda<lambdaMin) {
-                progress.stop();
-                return;
-            }
+         // update cLambda and lambda
+         xNew     = x   - s;
 
-            // update cLambda and lambda
-            xNew     = x   - lambda * s;
-            cLambda  = 1.0 - lambda / 4.0;
-            lambda  *= 0.5;
+         if (!silentmode)
+         {
+           std::cout << "   " << std::setw(6) << i;
+           std::cout << "  Newton-step          ";
+           std::cout << std::scientific << std::setprecision(3) << s.norm();
+         }
 
-            functor.evaluate(xNew, f);
-            sNew = lu_of_Df.solve(f);
-            if(lu_of_Df.info()!=0) {
-                std::cerr << "\nError: Could solve the equation Df(x)*sNew=-f(xNew)!\n";
-                exit(1);
-            }
-        } while (sNew.norm() > cLambda*s.norm());
+         x=xNew;
 
-        x=xNew;
+         if (!silentmode)
+         {
+            std::cout << "   " << std::scientific << std::setprecision(3) << f.lpNorm<Eigen::Infinity>();
+            std::cout << "   " << std::scientific << std::setprecision(3) << "?????????";
+            std::cout << "   " << std::scientific << std::setprecision(3) << f.norm();
+            std::cout << std::endl;
+         }
 
-        if (sNew.norm() <= eps)
+        if (s.norm() <= eps)
             break;
     }
 
-    if (!silentmode)
-        progress.stop();
+//    if (!silentmode)
+//        progress.stop();
 }
 
-
-} // end of namespace mirror_problem
 
 #endif // MAGICMIRRORTOOLS_NEWTONMETHOD_HPP
