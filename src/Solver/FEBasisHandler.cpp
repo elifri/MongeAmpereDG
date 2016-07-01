@@ -150,11 +150,9 @@ void FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, SolverConfig::d
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
   DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
 
-  v.resize(FEBasis_->indexSet().size() + 1);
+  v.resize(FEBasis_->indexSet().size());
   Config::VectorType v_u;
-  interpolate(*FEBasis_, v_u, solution_u_Coarse_global);
-  v.segment(0, v_u.size()) = v_u;
-  v(v.size()-1) = scaling_factor;
+  interpolate(*FEBasis_, v, solution_u_Coarse_global);
   solver.grid_ptr->postAdapt();
 }
 template <>
