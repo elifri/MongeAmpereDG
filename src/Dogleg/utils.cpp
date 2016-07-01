@@ -106,7 +106,7 @@ bool openInputFile (const std::string filename, std::ifstream &file) {
 }
 
 
-void compare_matrices(igpm::testblock &b, const Eigen::MatrixXd &A, const Eigen::MatrixXd &B, const std::string &Aname, const std::string &Bname, bool output, const double tol) {
+bool compare_matrices(igpm::testblock &b, const Eigen::MatrixXd &A, const Eigen::MatrixXd &B, const std::string &Aname, const std::string &Bname, bool output, const double tol) {
 
 	std::stringstream S;
 	S << "Compare matrix dimensions of " << Aname << " and " << Bname;
@@ -130,11 +130,14 @@ void compare_matrices(igpm::testblock &b, const Eigen::MatrixXd &A, const Eigen:
 			}
 		}
 	}
+	bool res = b;
+
 	if (output)	b.check(S.str());
 
+	return res;
 }
 
-void compare_matrices(igpm::testblock &b, const Eigen::SparseMatrix<double> &A, const Eigen::SparseMatrix<double> &B, const std::string &Aname, const std::string &Bname, bool output, const double tol) {
+bool compare_matrices(igpm::testblock &b, const Eigen::SparseMatrix<double> &A, const Eigen::SparseMatrix<double> &B, const std::string &Aname, const std::string &Bname, bool output, const double tol) {
 
 	std::stringstream S;
 	S << "Compare matrix dimensions of " << Aname << " and " << Bname;
@@ -163,6 +166,7 @@ void compare_matrices(igpm::testblock &b, const Eigen::SparseMatrix<double> &A, 
 			}
 		}
 	}
+	bool res = b;
 	if (output)	b.check(S.str());
-
+	return res;
 }

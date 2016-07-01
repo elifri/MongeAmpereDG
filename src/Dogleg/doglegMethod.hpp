@@ -78,16 +78,15 @@ bool checkJacobian(
 	make_FD_Jacobian(f,x,estimated_J);
 	igpm::testblock b(std::cout);
 
-	if (b && exportFDJacobianifFalse)
-	{
-	  MATLAB_export(x, "x");
-	  MATLAB_export(temp, "f");
-		MATLAB_export(J, "Jacobian");
-		MATLAB_export(estimated_J, "FDJacobian");
-	}
+	bool compared = compare_matrices(b, J, estimated_J, "Jacobian", "FD Jacobian", true, tol);
 
-	compare_matrices(b, J, estimated_J, "Jacobian", "FD Jacobian", true, tol);
-
+  if (!compared && exportFDJacobianifFalse)
+  {
+    MATLAB_export(x, "x");
+    MATLAB_export(temp, "f");
+    MATLAB_export(J, "Jacobian");
+    MATLAB_export(estimated_J, "FDJacobian");
+  }
 
 	//	MATLAB_export(x, "startvector");
 
@@ -107,7 +106,7 @@ void make_FD_Jacobian(
 	int n = x.size();
 
 
-	std::cout << std::setprecision(9);
+	std::cerr << std::setprecision(15);
 
 	double h = 1e-8/2.;//to sqrt(eps)
 
@@ -401,7 +400,7 @@ bool doglegMethod (
                 J = Jn;
 
               if (opts.check_Jacobian)
-                	checkJacobian(functor, xnew);
+                	checkJacobian(functor, xnew, opts.exportFDJacobianifFalse);
 //                make_FD_Jacobian(functor, x, J);
 
               lu_of_J.compute(J);
