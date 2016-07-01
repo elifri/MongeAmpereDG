@@ -85,10 +85,15 @@ FieldMatrix<value_type, 2, 2> convexified_cofactor(const FieldMatrix<value_type,
   assert(!(EW0_quadr != EW0_quadr) && "The smaller eigenvalue is nan");
   assert(!(EW1_quadr != EW1_quadr) && "The bigger eigenvalue is nan");
 
+  int counter = 0;
+
   //ensure positive definite diffusion matrix
-  while (EW0_quadr < epsilon-10e-12)
+  while (EW0_quadr < epsilon-10e-12 && counter < 10)
   {
-    std::cerr << " convexified diffusion matrix " << std::endl;
+    if (counter > 0)
+      std::cerr << " try convexification again! " << counter << " EW0_quadr < epsilon-10e-12? " << (EW0_quadr < epsilon-10e-12) << "EW0_quadr < epsilon-10e-14 " << (EW0_quadr < epsilon-10e-14) << std::endl;
+
+//    std::cerr << " convexified diffusion matrix " << std::endl;
 
     cofA[0][0] += (-EW0_quadr+epsilon);
     cofA[1][1] += (-EW0_quadr+epsilon);
@@ -100,9 +105,11 @@ FieldMatrix<value_type, 2, 2> convexified_cofactor(const FieldMatrix<value_type,
     if (EW0_quadr > EW1_quadr)
       std::swap(EW0_quadr, EW1_quadr);
 
-    std::cerr << "new eigenvalue is " << EW0_quadr << " " << EW1_quadr << endl;
+//    std::cerr << "new eigenvalue is " << EW0_quadr << " " << EW1_quadr << endl;
     assert(!(EW0_quadr != EW0_quadr) && "The smaller eigenvalue is nan");
     assert(!(EW1_quadr != EW1_quadr) && "The bigger eigenvalue is nan");
+
+    counter++;
    }
 
   assert(EW0_quadr> epsilon-10e-12);
