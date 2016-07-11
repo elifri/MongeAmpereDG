@@ -159,8 +159,40 @@ public:
 
 
       //velocity vector for convection
-      FieldVector<double,dim> b = gradg;
-      b *= -f_value/g_value/g_value;
+      FieldVector<double,dim> b(0);
+      double avg_g_value = 0;
+
+      //calculate average convection term
+      const double h = 1e-5;
+      std::vector<FieldVector<double,dim>> convectionTerm(5);
+
+      ///enumeration of averaging stencil
+      //   2
+      // 3 0 1
+      //   4
+      for (int i = 0 ; i < 5; i++)
+      {
+        FieldVector<double,dim> transportedX = gradu;
+        switch(i) {
+        case 1: transportedX[0] += h; break;
+        case 2: transportedX[1] += h; break;
+        case 3: transportedX[0] -= h; break;
+        case 4: transportedX[1] -= h; break;
+        }
+
+        rhoY.evaluate(gradu, g_value);
+        rhoY.evaluateDerivative(gradu, gradg);
+
+        //ATTENTION: ASUMMING F is constant!!!!!!!!!!!!!!
+        convectionTerm[i] = gradg;
+        convectionTerm[i] *= -f_value/g_value/g_value;
+
+        b += convectionTerm[i];
+        avg_g_value += g_value;
+      }
+
+      b /= 5.;
+      avg_g_value /= 5.;
 
       auto h_T = std::sqrt(integrationElement);
 
