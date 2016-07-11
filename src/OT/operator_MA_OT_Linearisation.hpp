@@ -107,8 +107,8 @@ public:
 
       assert(Config::dim == 2);
 
-//      auto cofHessu = convexified_cofactor(Hessu);
-      auto cofHessu = cofactor(Hessu);
+      auto cofHessu = convexified_cofactor(Hessu);
+//      auto cofHessu = cofactor(Hessu);
       double ev0, ev1;
       calculate_eigenvalues(cofHessu, ev0, ev1);
 //      auto minEVcofHessu = std::min(std::abs(ev0), std::abs(ev1));
@@ -177,6 +177,7 @@ public:
           std::cerr << "gradg " << gradg << " |b| " << b.two_norm() << " |b|2 " << b.infinity_norm() << " eps " << Hessu.infinity_norm() << " eps2 " << Hessu.frobenius_norm()  << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
       }
 
+//      delta_K  = 0;
 
       auto detHessu = naive_determinant(cofHessu); //note that determinant of Hessu and cofHessu is the same
 
@@ -214,25 +215,7 @@ public:
         v(j) += delta_K*(-detHessu+f_value/g_value+u_atX0)*(b*gradients[j])*quad[pt].weight()*integrationElement;
 //        v(j) += delta_K*(u_value)*(b*gradients[j])*quad[pt].weight()*integrationElement;
         assert(! (v(j)!=v(j)));
-/*
-          //diffusion term
-          FieldVector<double,dim> cofTimesW;
-          cofHessu.mv(gradients[i],cofTimesW);
-          m(j,i) += (cofTimesW*gradients[j]) *quad[pt].weight()*integrationElement;
-          //convection term
-          m(j,i) += (b*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-          //unification term :) term
-          m(j,i) += referenceFunctionValues[i]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-          //stabilisation term
-          m(j,i) += delta_K*(-FrobeniusProduct(cofHessu,Hessians[i])+b*gradients[i]+referenceFunctionValues[i])*(b*gradients[j]) *quad[pt].weight()*integrationElement;
-        }
 
-        //-f(u_k) [rhs of Newton]
-        v(j) += (-detHessu+f_value/g_value+u_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-        //stabilisation term
-        v(j) += delta_K*(-detHessu+f_value/g_value+u_value)*(b*gradients[j])*quad[pt].weight()*integrationElement;
-        assert(! (v(j)!=v(j)));
-*/
       }
     }
   }
@@ -402,29 +385,12 @@ public:
 //          * (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1]) * factor;
 //          std::cerr << " add to v_adolc(" << j << ") " << penalty_weight * signedDistance
 //              * (referenceFunctionValues[j]+(gradients[j]*normal))* factor << " -> " << v_boundary(j) << std::endl;
-//          v_boundary(j) += signedDistance//((gra * normal) - phi_value) //
-//                * (referenceFunctionValues[j]) * factor;
 
           v_boundary(j) += normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor;
 
 //          auto temp = normalOld;
 //          temp /= normalOld.two_norm();
 //          std::cerr << " gradH " << derivativeHu << " 1/| |A n_x " << temp << " without scaling " << normalOld << std::endl;
-
-
-/*
-          for (int i =0; i < size_u; i++)
-          {
-            FieldVector<double,dim> cofTimesW;
-            cofactor(Hessu).mv(gradients[i], cofTimesW);
-//            m(j,i) += -(cofTimesW*normal)*referenceFunctionValues[j]*factor;
-//            m(j,i) += penalty_weight* referenceFunctionValues[i]*(referenceFunctionValues[j]) * factor;
-            auto temp = derivativeHu;
-            cofactor(Hessu).mmtv(normal, temp); // temp = derivativeHu - A^tn
-            m(j,i) += (temp*gradients[i])*referenceFunctionValues[j]*factor;
-          }
-*/
-
 
 
         }
