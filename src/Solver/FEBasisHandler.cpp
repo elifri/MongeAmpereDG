@@ -35,6 +35,17 @@ FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig::degr
   std::cerr << " need solver to initiate BSplinesBasis" << std::endl;
   std::exit(-1);
 }
+template<>
+FEBasisHandler<Standard, BSplineTraits<Config::RectangularGridView, SolverConfig::degree> >::FEBasisHandler(const Config::RectangularGridView& grid, const Config::DomainType& lowerLeft, const Config::DomainType& upperRight)
+{
+  std::array<unsigned int,FEBasisType::GridView::dimension> elementsSplines;
+  std::fill(elementsSplines.begin(), elementsSplines.end(), std::sqrt(grid.size(0)));
+
+  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid,
+      lowerLeft, upperRight,
+      elementsSplines, SolverConfig::degree));
+}
+
 
 
 template<>

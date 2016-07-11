@@ -8,6 +8,7 @@
 #ifndef SRC_FEC0C1DISTINGUISHER_HPP_
 #define SRC_FEC0C1DISTINGUISHER_HPP_
 
+#include "MAconfig.h"
 #include "Assembler.h"
 #include "solver_config.h"
 
@@ -26,6 +27,7 @@ struct FEBasisHandler{
 
   FEBasisHandler(const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)){}
   FEBasisHandler(const MA_solver& solver, const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)){}
+  FEBasisHandler(const typename FEBasisType::GridView& grid, const Config::DomainType& lowerLeft, const Config::DomainType& upperRight): FEBasis_(new FEBasisType(grid)){}
 
   template<class F>
   void project(F f, Config::VectorType &v) const;
@@ -106,6 +108,9 @@ template<>
 FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degree>>::FEBasisHandler(const MA_solver& solver, const typename FEBasisType::GridView& grid);
 template<>
 FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig::degree>>::FEBasisHandler(const MA_solver& solver, const typename FEBasisType::GridView& grid);
+
+template<>
+FEBasisHandler<Standard, BSplineTraits<Config::RectangularGridView, SolverConfig::degree> >::FEBasisHandler(const Config::RectangularGridView& grid, const Config::DomainType& lowerLeft, const Config::DomainType& upperRight);
 
 template<>
 void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degree>>::bind(const MA_solver& solver, const Config::GridView& gridView);
