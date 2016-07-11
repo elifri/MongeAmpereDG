@@ -43,6 +43,7 @@ struct FETraits
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis, Config::VectorType> DiscreteGridFunction;
   typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
   typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
+  typedef typename DiscreteGridFunction::LocalSecondDerivative DiscreteLocalSecondDerivativeGridFunction;
 
   template<int dim>
   static const QuadratureRule<Config::ValueType, dim>& get_Quadrature(const Config::ElementType & element, int order)
@@ -83,6 +84,7 @@ struct FETraits<Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatr
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis,Config::VectorType> DiscreteGridFunction;
   typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
   typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
+  typedef typename DiscreteGridFunction::LocalSecondDerivative DiscreteLocalSecondDerivativeGridFunction;
 
   template<int dim>
   static const QuadratureRule<Config::ValueType, dim>& get_Quadrature(const Config::ElementType & element, int order)
@@ -130,6 +132,7 @@ struct FETraits<Functions::MAMixedBasis< GridView, degree, degreeHessian>>
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasis, Config::VectorType> DiscreteGridFunction;
   typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
   typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasis, Config::VectorType>::LocalFunction DiscreteLocalSecondDerivativeGridFunction;
 
   template<int dim>
   static const QuadratureRule<Config::ValueType, dim>& get_Quadrature(const Config::ElementType & element, int order)
