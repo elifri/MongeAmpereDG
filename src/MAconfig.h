@@ -47,6 +47,9 @@ namespace Config{
 #else
   typedef UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >> UnitCubeType;
 #endif
+  typedef UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >> RectangularGridType;
+  typedef RectangularGridType::GridType::LeafGridView RectangularGridView;
+
   typedef UnitCubeType::GridType GridType;
   typedef GridType::LevelGridView LevelGridView;
   typedef GridType::LeafGridView GridView;
