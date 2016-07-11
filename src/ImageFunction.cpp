@@ -47,7 +47,7 @@ ImageFunction::ImageFunction(const std::string& filename,
 Config::ValueType ImageFunction::operator()(const Config::DomainType &x) const
 {
   Config::ValueType u;
-  evaluate(x, u);
+  ImageFunction::evaluate(x, u);
   return u;
 }
 
@@ -211,7 +211,7 @@ double ImageFunction::omega_integrate(const unsigned int n) const
 //  return integrator.assemble_integral([this](const Config::DomainType &x) {return operator()(x)/omega(x);});
 }
 
-void ImageFunction::convolveOriginal (unsigned int width)
+void ImageFunction::convolveOriginal (double width)
 {
     if (width == 1)
     {
@@ -219,6 +219,7 @@ void ImageFunction::convolveOriginal (unsigned int width)
     }
     else
     {
+
 /*
         width = 2*width + 1;
 
@@ -244,7 +245,9 @@ void ImageFunction::convolveOriginal (unsigned int width)
         imageSmooth_=image_;
         imageSmooth_.convolve(mollifier, 1, false);
 */
+
       //TODO adapt width when calling function not here
+
       int maxBlur = pow((double) SolverConfig::epsDivide, (int) SolverConfig::nonlinear_steps) * SolverConfig::epsEnd;
       std::cout << " maxBlur " << maxBlur << " ((double)(width-1)/(maxBlur-1)) " << ((double)(width-1)/(maxBlur-1))<< " maybe " <<((double)(width-1))/(maxBlur-1) << std::endl;
       blurCoeff_ = 1+ ((double)(width-1))/(maxBlur-1)*29;
@@ -252,6 +255,7 @@ void ImageFunction::convolveOriginal (unsigned int width)
 
       std::cout << " blurring with " << blurCoeff_ << std::endl;
       imageSmooth_ = image_.get_blur(blurCoeff_);
+
     }
 }
 

@@ -23,7 +23,7 @@
 class ImageFunction : public DensityFunction
 {
 
-  private:
+  protected:
 
     cimg_library::CImg<double> image_;
     cimg_library::CImg<double> imageSmooth_;
@@ -92,7 +92,7 @@ class ImageFunction : public DensityFunction
         factor_ = 1.0/integrate2(SolverConfig::startlevel+SolverConfig::nonlinear_steps+1);
     }
 
-    void convolveOriginal (unsigned int width);
+    void convolveOriginal (double width);
 
     void setToOriginal ()
     {
