@@ -40,9 +40,10 @@ struct ConvectionFunction{
   typedef MA_OT_image_solver::DiscreteLocalGradientGridFunction LocalGradFunction;
 
   enum outputVariant{
-    BicubicInterpolation,
-    BSplineInterpolation,
-    OnlyGradientNorm
+    Normal,
+    InputGradient,
+    OnlyGradientNorm,
+    Averaged
   };
 
   template<typename Solver, typename LOP, typename LOPLinear>
@@ -63,7 +64,7 @@ struct ConvectionFunction{
   {
     switch(variant_)
     {
-    case BicubicInterpolation:
+    case Normal:
     {
       double f_value;
       rhoX.evaluate(x, f_value);
@@ -84,12 +85,13 @@ struct ConvectionFunction{
       return b.two_norm();
     }
       break;
-    case BSplineInterpolation:
+    case InputGradient:
     {
+      //ATTENTION, works only if f constant
       double f_value;
       rhoX.evaluate(x, f_value);
 
-      auto gradu = (*localgradu_)(x);
+      auto gradu = localgradu_->localContext().geometry().global(x);
 
       double g_value;
       FieldVector<double, Config::dim> gradg;
@@ -109,14 +111,63 @@ struct ConvectionFunction{
     {
       auto gradu = (*localgradu_)(x);
 
-      double g_value;
       FieldVector<double, Config::dim> gradg;
       rhoY.evaluateDerivative(gradu, gradg);
 
       return gradg.two_norm();
     }
       break;
+    case Averaged:
+    {
+      double f_value;
+      rhoX.evaluate(x, f_value);
+
+      auto gradu = (*localgradu_)(x);
+
+      double g_value;
+      FieldVector<double, Config::dim> gradg;
+
+      //velocity vector for convection
+      FieldVector<double,Config::dim> b(0);
+
+      //calculate average convection term
+      const double h = 1e-3;
+      FieldVector<double,Config::dim> convectionTerm;
+
+      const int N = 9;
+
+      ///enumeration of averaging stencil
+      //   2
+      // 3 0 1
+      //   4
+      for (int i = 0 ; i < N; i++)
+      {
+        FieldVector<double,Config::dim> transportedX = gradu;
+        if (i == 2 || i == 1 || i == 8)
+          transportedX[0] += h;
+        if (i > 1 && i < 5)
+          transportedX[1] += h;
+        if (i > 3 && i < 7)
+          transportedX[0] -= h;
+        if (i > 5 && i < 9)
+          transportedX[1] -= h;
+
+        rhoY.evaluate(gradu, g_value);
+        rhoY.evaluateDerivative(gradu, gradg);
+
+        //ATTENTION: ASUMMING F is constant!!!!!!!!!!!!!!
+        convectionTerm = gradg;
+        convectionTerm *= -f_value/g_value/g_value;
+
+        b += convectionTerm[i];
+      }
+
+      b /= N;
+      return b.two_norm();
     }
+    break;
+    }
+    return 0;
   }
 
   void unbind()
@@ -132,11 +183,11 @@ struct ConvectionFunction{
   static outputVariant variant_;
 
   std::shared_ptr<LocalGradFunction> localgradu_;
-  const SmoothImageFunction& rhoX;
-  const SmoothImageFunction& rhoY;
+  const ImageFunction& rhoX;
+  const ImageFunction& rhoY;
 };
 
-ConvectionFunction::outputVariant ConvectionFunction::variant_ = BicubicInterpolation;
+ConvectionFunction::outputVariant ConvectionFunction::variant_ = Normal;
 
 struct TargetFunction{
 
@@ -158,16 +209,6 @@ struct TargetFunction{
 
   double operator()(const LocalGradFunction::Domain& x) const
   {
-    if (target_old)
-    {
-      auto gradu = (*localgradu_)(x);
-
-      //calculate illumination at target plane
-      double g_value;
-      rhoY.evaluateNonSmooth(gradu, g_value);
-      return g_value;
-
-    }
     auto gradu = (*localgradu_)(x);
 
     //calculate illumination at target plane
@@ -189,7 +230,7 @@ struct TargetFunction{
   static bool target_old;
 
   std::shared_ptr<LocalGradFunction> localgradu_;
-  const SmoothImageFunction& rhoY;
+  const ImageFunction& rhoY;
 };
 
 bool TargetFunction::target_old = false;
@@ -225,7 +266,7 @@ struct EigenValueFunction{
    */
   void bind(const LocalHessScalarFunction::Element& element)
   {
-    for (int i= 0; i < localHessu_.size(); i++)
+    for (unsigned int i= 0; i < localHessu_.size(); i++)
       localHessu_[i]->bind(element);
   }
 
@@ -244,7 +285,7 @@ struct EigenValueFunction{
 
   void unbind()
   {
-    for (int i= 0; i < localHessu_.size(); i++)
+    for (unsigned int i= 0; i < localHessu_.size(); i++)
       localHessu_[i]->unbind();
   }
 
@@ -266,7 +307,6 @@ void MA_OT_image_solver::plot(const std::string& name) const
   if (writeVTK_)
   {
     std::cout << "plot written into ";
-    const int nDH = Config::dim*Config::dim;
 
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
@@ -331,12 +371,12 @@ void MA_OT_image_solver::plot(const std::string& name) const
   std::cout << " saved hdf5 file to " << fnamehdf5 << std::endl;
 
   ConvectionFunction convectionNorm(gradient_u_old, op);
-  convectionNorm.variant_ = ConvectionFunction::BSplineInterpolation;
+  convectionNorm.variant_ = ConvectionFunction::Normal;
 
   std::string fnameConvection(plotter.get_output_directory());
   fnameConvection += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "Convection.vtu";
 
-  SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,3);
+  SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,1);
   vtkWriter.addVertexData(convectionNorm, VTK::FieldInfo("ConvectionNorm", VTK::FieldInfo::Type::scalar, 1));
 
   TargetFunction interpolatedTargetFunction(gradient_u_old, op);
@@ -344,29 +384,42 @@ void MA_OT_image_solver::plot(const std::string& name) const
 
   vtkWriter.addVertexData(interpolatedTargetFunction, VTK::FieldInfo("interpolTarget", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter.write(fnameConvection);
-
   std::cout << " wrote Convection to " << fnameConvection << std::endl;
+
+
+  std::string fnameConvGradient(plotter.get_output_directory());
+  fnameConvGradient += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "ConvectionGradient.vtu";
+  //works only if source domain = target domain
+  assert(std::abs(get_setting().lowerLeft[0] - get_setting().lowerLeftTarget[0]) < 1e-10 &&
+      std::abs(get_setting().lowerLeft[1] - get_setting().lowerLeftTarget[1]) < 1e-10 &&
+      std::abs(get_setting().upperRight[0] - get_setting().upperRightTarget[0]) < 1e-10 &&
+      std::abs(get_setting().upperRight[1] - get_setting().upperRightTarget[1]) < 1e-10);
+  convectionNorm.variant_ = ConvectionFunction::InputGradient;
+  vtkWriter.addVertexData(convectionNorm, VTK::FieldInfo("ConvectionNormByGradient", VTK::FieldInfo::Type::scalar, 1));
+  vtkWriter.write(fnameConvGradient);
+  std::cout << " wrote Convection by Gradient to " << fnameConvGradient << std::endl;
+
 
   std::string fnameGradient(plotter.get_output_directory());
   fnameGradient += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "Gradient.vtu";
   convectionNorm.variant_ = ConvectionFunction::OnlyGradientNorm;
-  SubsamplingVTKWriter<GridViewType> vtkWriter3(*gridView_ptr,3);
+  SubsamplingVTKWriter<GridViewType> vtkWriter3(*gridView_ptr,1);
   vtkWriter3.addVertexData(convectionNorm, VTK::FieldInfo("GradientNorm", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter3.write(fnameGradient);
   std::cout << " wrote Gradient Norm to " << fnameGradient << std::endl;
 
   std::string fnameConvectionOld(plotter.get_output_directory());
-  fnameConvectionOld += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "ConvectionOld.vtu";
+  fnameConvectionOld += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "ConvectionAvg.vtu";
 
   interpolatedTargetFunction.target_old = true;
-  convectionNorm.variant_ = ConvectionFunction::BicubicInterpolation;
+  convectionNorm.variant_ = ConvectionFunction::Averaged;
 
   SubsamplingVTKWriter<GridViewType> vtkWriter2(*gridView_ptr,3);
   vtkWriter2.addVertexData(convectionNorm, VTK::FieldInfo("ConvectionNorm", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter2.addVertexData(interpolatedTargetFunction, VTK::FieldInfo("interpolTarget", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter2.write(fnameConvectionOld);
 
-  std::cout << " wrote Convection Old to " << fnameConvectionOld << std::endl;
+  std::cout << " wrote Convection Avg to " << fnameConvectionOld << std::endl;
 
 /*
   SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
