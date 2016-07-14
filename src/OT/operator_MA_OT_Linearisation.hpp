@@ -163,25 +163,43 @@ public:
       double avg_g_value = 0;
 
       //calculate average convection term
-      const double h = 1e-5;
-      std::vector<FieldVector<double,dim>> convectionTerm(5);
+      const double h = h_T/3.;
+      const int N = 9;
+      std::vector<FieldVector<double,dim>> convectionTerm(N);
+      std::vector<FieldVector<double,dim>> transportedXs(N);
+      std::vector<FieldVector<double,dim>> gradGs(N);
 
       ///enumeration of averaging stencil
-      //   2
-      // 3 0 1
-      //   4
-      for (int i = 0 ; i < 5; i++)
+      // 4 3 2
+      // 5 0 1
+      // 6 7 8
+      for (int i = 0 ; i < N; i++)
       {
-        FieldVector<double,dim> transportedX = gradu;
-        switch(i) {
-        case 1: transportedX[0] += h; break;
-        case 2: transportedX[1] += h; break;
-        case 3: transportedX[0] -= h; break;
-        case 4: transportedX[1] -= h; break;
-        }
+        transportedXs[i] = gradu;
+        if (i == 2 || i == 1 || i == 8)
+          transportedXs[i][0] += h;
+        if (i > 1 && i < 5)
+          transportedXs[i][1] += h;
+        if (i > 3 && i < 7)
+          transportedXs[i][0] -= h;
+        if (i > 5 && i < 9)
+          transportedXs[i][1] -= h;
 
-        rhoY.evaluate(gradu, g_value);
-        rhoY.evaluateDerivative(gradu, gradg);
+/*
+        if (i == 1)
+          transportedX[0] += h;
+        if (i == 2)
+          transportedX[1] += h;
+        if (i == 3)
+          transportedX[0] -= h;
+        if (i == 4)
+          transportedX[1] -= h;
+*/
+
+        rhoY.evaluate(transportedXs[i], g_value);
+        rhoY.evaluateDerivative(transportedXs[i], gradg);
+
+        gradGs[i] = gradg;
 
         //ATTENTION: ASUMMING F is constant!!!!!!!!!!!!!!
         convectionTerm[i] = gradg;
@@ -191,10 +209,9 @@ public:
         avg_g_value += g_value;
       }
 
-      b /= 5.;
-      avg_g_value /= 5.;
+      b /= N;
 
-      auto h_T = std::sqrt(integrationElement);
+      avg_g_value /= N;
 
       auto P_T = b.two_norm() * h_T/2./minEVcofHessu;
 
@@ -205,8 +222,16 @@ public:
         else
           delta_K = h_T/2./b.two_norm()*(1.-1./P_T);
 
+/*
         if (std::abs(delta_K) > 1e-12)
-          std::cerr << "gradg " << gradg << " |b| " << b.two_norm() << " |b|2 " << b.infinity_norm() << " eps " << Hessu.infinity_norm() << " eps2 " << Hessu.frobenius_norm()  << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
+        {
+          for (int i = 0; i < convectionTerm.size(); i++)
+            std::cerr << " at " << gradu << " grad g " << i << " " << gradGs[i] << " convectionTerm " << i << " " << convectionTerm[i] << std::endl;
+          std::cerr << std::setprecision(16);
+          std::cerr << " difference averaged and not, avg: " << b << " not avg: " << convectionTerm[0] << " -> difference " << (b-convectionTerm[0])<< std::endl;
+          std::cerr << "gradg " << gradg << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
+        }
+*/
       }
 
 //      delta_K  = 0;
@@ -237,14 +262,14 @@ public:
         }
 
         //-f(u_k) [rhs of Newton]
-        v(j) += (-detHessu+f_value/g_value+u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        v(j) += (-detHessu+f_value/avg_g_value+u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 //        v(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         //unification term :) term, ATTENTION: works only if w(x_0)=1 for exactly one ansatzfunction
         entryWx0timesBgradV(j) += referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 
         //stabilisation term
         entryWx0timesBgradV(j) += delta_K* (b*gradients[j]) *quad[pt].weight()*integrationElement; //, ATTENTION: works only if w(x_0)=1 for exactly one ansatzfunction
-        v(j) += delta_K*(-detHessu+f_value/g_value+u_atX0)*(b*gradients[j])*quad[pt].weight()*integrationElement;
+        v(j) += delta_K*(-detHessu+f_value/avg_g_value+u_atX0)*(b*gradients[j])*quad[pt].weight()*integrationElement;
 //        v(j) += delta_K*(u_value)*(b*gradients[j])*quad[pt].weight()*integrationElement;
         assert(! (v(j)!=v(j)));
 
