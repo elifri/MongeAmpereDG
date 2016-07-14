@@ -205,6 +205,7 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
   }
 }
 
+
 template<>
 template <class F>
 void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig::degree>>::project(F f, Config::VectorType &v) const
@@ -533,7 +534,6 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F &f,
     for (int i = 0; i < geometry.corners(); i++)
     {
       auto value = f(geometry.corner(i));
-      std::cerr << " value at " << geometry.corner(i) << " to interpolate " << value << std::endl;
 
       //set dofs associated with values at vertices
       assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
