@@ -43,7 +43,7 @@ struct ConvectionFunction{
     Normal,
     InputGradient,
     OnlyGradientNorm,
-    Averaged
+    Smooth
   };
 
   template<typename Solver, typename LOP, typename LOPLinear>
@@ -117,7 +117,7 @@ struct ConvectionFunction{
       return gradg.two_norm();
     }
       break;
-    case Averaged:
+    case Smooth:
     {
       double f_value;
       rhoX.evaluate(x, f_value);
@@ -131,38 +131,29 @@ struct ConvectionFunction{
       FieldVector<double,Config::dim> b(0);
 
       //calculate average convection term
-      const double h = 1e-3;
+      const double h = std::sqrt(localgradu_->localContext().geometry().integrationElement(x));
       FieldVector<double,Config::dim> convectionTerm;
 
       const int N = 9;
 
       ///enumeration of averaging stencil
-      //   2
-      // 3 0 1
-      //   4
-      for (int i = 0 ; i < N; i++)
+      for (int i = -smoothingKernel_.n_ ; i <= smoothingKernel_.n_; i++)
+        for (int j = -smoothingKernel_.n_ ; j <= smoothingKernel_.n_; j++)
       {
         FieldVector<double,Config::dim> transportedX = gradu;
-        if (i == 2 || i == 1 || i == 8)
-          transportedX[0] += h;
-        if (i > 1 && i < 5)
-          transportedX[1] += h;
-        if (i > 3 && i < 7)
-          transportedX[0] -= h;
-        if (i > 5 && i < 9)
-          transportedX[1] -= h;
+        transportedX[0] += i*h;
+        transportedX[1] += j*h;
 
-        rhoY.evaluate(gradu, g_value);
-        rhoY.evaluateDerivative(gradu, gradg);
+        rhoY.evaluate(transportedX, g_value);
+        rhoY.evaluateDerivative(transportedX, gradg);
 
         //ATTENTION: ASUMMING F is constant!!!!!!!!!!!!!!
-        convectionTerm = gradg;
+        FieldVector<double,Config::dim> convectionTerm = gradg;
         convectionTerm *= -f_value/g_value/g_value;
 
-        b += convectionTerm[i];
+        b.axpy(smoothingKernel_(i+smoothingKernel_.n_,j+smoothingKernel_.n_),convectionTerm);
       }
 
-      b /= N;
       return b.two_norm();
     }
     break;
@@ -185,9 +176,11 @@ struct ConvectionFunction{
   std::shared_ptr<LocalGradFunction> localgradu_;
   const ImageFunction& rhoX;
   const ImageFunction& rhoY;
+  static SmoothingKernel smoothingKernel_;
 };
 
 ConvectionFunction::outputVariant ConvectionFunction::variant_ = Normal;
+SmoothingKernel ConvectionFunction::smoothingKernel_;
 
 struct TargetFunction{
 
@@ -371,7 +364,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
   std::cout << " saved hdf5 file to " << fnamehdf5 << std::endl;
 
   ConvectionFunction convectionNorm(gradient_u_old, op);
-  convectionNorm.variant_ = ConvectionFunction::Normal;
+  convectionNorm.variant_ = ConvectionFunction::Smooth;
 
   std::string fnameConvection(plotter.get_output_directory());
   fnameConvection += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "Convection.vtu";
@@ -387,6 +380,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
   std::cout << " wrote Convection to " << fnameConvection << std::endl;
 
 
+/*
   std::string fnameConvGradient(plotter.get_output_directory());
   fnameConvGradient += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "ConvectionGradient.vtu";
   //works only if source domain = target domain
@@ -398,8 +392,10 @@ void MA_OT_image_solver::plot(const std::string& name) const
   vtkWriter.addVertexData(convectionNorm, VTK::FieldInfo("ConvectionNormByGradient", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter.write(fnameConvGradient);
   std::cout << " wrote Convection by Gradient to " << fnameConvGradient << std::endl;
+*/
 
 
+/*
   std::string fnameGradient(plotter.get_output_directory());
   fnameGradient += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "Gradient.vtu";
   convectionNorm.variant_ = ConvectionFunction::OnlyGradientNorm;
@@ -407,7 +403,9 @@ void MA_OT_image_solver::plot(const std::string& name) const
   vtkWriter3.addVertexData(convectionNorm, VTK::FieldInfo("GradientNorm", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter3.write(fnameGradient);
   std::cout << " wrote Gradient Norm to " << fnameGradient << std::endl;
+*/
 
+/*
   std::string fnameConvectionOld(plotter.get_output_directory());
   fnameConvectionOld += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "ConvectionAvg.vtu";
 
@@ -420,6 +418,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
   vtkWriter2.write(fnameConvectionOld);
 
   std::cout << " wrote Convection Avg to " << fnameConvectionOld << std::endl;
+*/
 
 /*
   SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
