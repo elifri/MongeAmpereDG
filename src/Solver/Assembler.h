@@ -2362,9 +2362,6 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
         Config::DenseMatrixType m_mB;
         m_mB.setZero(localView.size(), localView.size());
 
-        //get id
-        IndexType id = indexSet.index(e);
-
         //calculate local coefficients
         Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
 //        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, v_isBoundary);
@@ -2395,6 +2392,9 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 #ifdef BSPLINES
             continue;
 #else
+            const GridViewType::IndexSet::IndexType id =
+                      gridView.indexSet().index(is.inside());
+
             // compute unique id for neighbor
             const GridViewType::IndexSet::IndexType idn =
                       gridView.indexSet().index(is.outside());
@@ -2565,9 +2565,9 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
      v+= boundary;
 #endif
      std::cerr << std::endl << " local boundary term " << boundary.norm()<< " whole norm " << v.norm() << std::endl;
-     std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
-     std::cerr << " f_boundary " << boundary.transpose() << std::endl;
-     std::cerr << " f          " << v.transpose() << std::endl;
+//     std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
+//     std::cerr << " f_boundary " << boundary.transpose() << std::endl;
+//     std::cerr << " f          " << v.transpose() << std::endl;
 
 }
 
