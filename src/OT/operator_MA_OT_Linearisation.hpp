@@ -8,6 +8,8 @@
 #ifndef SRC_OT_OPERATOR_MA_OT_LINEARISATION_HPP_
 #define SRC_OT_OPERATOR_MA_OT_LINEARISATION_HPP_
 
+#include <math.h>
+
 #include <dune/common/function.hh>
 #include "utils.hpp"
 #include "OT/problem_data_OT.h"
@@ -24,10 +26,90 @@ value_type FrobeniusProduct(const FieldMatrix<value_type, 2, 2>& A, const FieldM
   return A[0][0]*B[0][0]+A[0][1]*B[0][1]+A[1][0]*B[1][0]+A[1][1]*B[1][1];
 }
 
+struct SmoothingKernel
+{
+
+
+  SmoothingKernel()
+  {
+    std::cout << " init smoothing kernel " << std::endl;
+
+    smoothingKernelValues.resize(2*n_+1, 2*n_+1);
+//////---------Gaussian Filter ---------
+
+/*
+    for (int i = -n_; i <= n_; i++)
+      for (int j = -n_; j <= n_; j++)
+      {
+        smoothingKernelValues.coeffRef(i+n_,j+n_) = 1./2./M_PI/sigmaSqr_*std::exp(-(i*i+j*j)/2./sigmaSqr_);
+//        std::cout << " kernel " << i << ' ' << j << " " << smoothingKernelValues[i+n][j+n] << std::endl;
+      }
+*/
+
+//-----------twice a moving average----------
+
+
+    static_assert(n_== 2, "wrong filter dimension");
+    for (int i = -n_; i <= n_; i++)
+      for (int j = -n_; j <= n_; j++)
+      {
+        const int distance = std::abs(i) + std::abs(j);
+        switch(distance)
+        {
+        case 0: smoothingKernelValues.coeffRef(i+n_,j+n_) = 9; break;
+        case 1: smoothingKernelValues.coeffRef(i+n_,j+n_) = 6; break;
+        case 2:
+          if (i == 1 || i == -1)
+            smoothingKernelValues.coeffRef(i+n_,j+n_) = 4;
+          else
+            smoothingKernelValues.coeffRef(i+n_,j+n_) = 3;
+          break;
+        case 3: smoothingKernelValues.coeffRef(i+n_,j+n_) = 2; break;
+        case 4: smoothingKernelValues.coeffRef(i+n_,j+n_) = 1; break;
+        }
+//        std::cout << " kernel " << i << ' ' << j << " " << smoothingKernelValues[i+n][j+n] << std::endl;
+      }
+
+
+    //-----------simple moving average----------
+
+
+/*
+    static_assert(n_== 1, " wrong filter dimension");
+
+        for (int i = -n_; i <= n_; i++)
+          for (int j = -n_; j <= n_; j++)
+          {
+            smoothingKernelValues.coeffRef(i+n_,j+n_) = 1;
+    //        std::cout << " kernel " << i << ' ' << j << " " << smoothingKernelValues[i+n][j+n] << std::endl;
+          }
+*/
+
+    //--------no smoothing------------------
+/*
+    static_assert(n_== 0, " wrong filter dimension");
+    smoothingKernelValues.coeffRef(0,0) = 1.;
+*/
+
+    smoothingKernelValues /= smoothingKernelValues.sum();
+    std::cout << "kernel " << smoothingKernelValues << std::endl;
+  }
+
+//  double operator[](int i){ return smoothingKernelValues[i];}
+  double operator()(int i, int j){ return smoothingKernelValues(i,j);}
+
+  static const int n_ = 2;
+  Config::DenseMatrixType smoothingKernelValues;
+  static constexpr double sigmaSqr_=2;
+};
+
+
 class Local_Operator_MA_OT_Linearisation {
 
 public:
   typedef DensityFunction Function;
+
+
 
   Local_Operator_MA_OT_Linearisation(const OTBoundary* bc, const Function* rhoX, const Function* rhoY, const Config::DomainType& X0):
     rhoX(*rhoX), rhoY(*rhoY),bc(*bc), delta_K(10), X0_(X0), int_f(0), sign(1.0), found_negative(false) {
@@ -126,10 +208,7 @@ public:
 
       //calculate illumination at target plane
       double g_value;
-      rhoY.evaluate(gradu, g_value);
-
       FieldVector<double, dim> gradg;
-      rhoY.evaluateDerivative(gradu, gradg);
 
 #ifdef DEBUG
       //calculate derivatives of g
@@ -157,61 +236,41 @@ public:
       std::cerr << " g1 " << Dx1PlusF_value << " g2 " << Dx2PlusF_value << std::endl;
 #endif
 
+      auto h_T = std::sqrt(integrationElement);
 
       //velocity vector for convection
       FieldVector<double,dim> b(0);
       double avg_g_value = 0;
 
       //calculate average convection term
-      const double h = h_T/3.;
-      const int N = 9;
-      std::vector<FieldVector<double,dim>> convectionTerm(N);
-      std::vector<FieldVector<double,dim>> transportedXs(N);
-      std::vector<FieldVector<double,dim>> gradGs(N);
+      const double h = h_T;
+      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> convectionTerm(2*n_+1,2*n_+1);
+      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> transportedXs(2*n_+1,2*n_+1);
+      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> gradGs(2*n_+1,2*n_+1);
 
       ///enumeration of averaging stencil
       // 4 3 2
       // 5 0 1
       // 6 7 8
-      for (int i = 0 ; i < N; i++)
+      for (int i = -n_ ; i <= n_; i++)
+        for (int j = -n_ ; j <= n_; j++)
       {
-        transportedXs[i] = gradu;
-        if (i == 2 || i == 1 || i == 8)
-          transportedXs[i][0] += h;
-        if (i > 1 && i < 5)
-          transportedXs[i][1] += h;
-        if (i > 3 && i < 7)
-          transportedXs[i][0] -= h;
-        if (i > 5 && i < 9)
-          transportedXs[i][1] -= h;
+        transportedXs(i+n_,j+n_) = gradu;
+        transportedXs(i+n_,j+n_)[0] += i*h;
+        transportedXs(i+n_,j+n_)[1] += j*h;
 
-/*
-        if (i == 1)
-          transportedX[0] += h;
-        if (i == 2)
-          transportedX[1] += h;
-        if (i == 3)
-          transportedX[0] -= h;
-        if (i == 4)
-          transportedX[1] -= h;
-*/
+        rhoY.evaluate(transportedXs(i+n_,j+n_), g_value);
+        rhoY.evaluateDerivative(transportedXs(i+n_,j+n_), gradg);
 
-        rhoY.evaluate(transportedXs[i], g_value);
-        rhoY.evaluateDerivative(transportedXs[i], gradg);
-
-        gradGs[i] = gradg;
+        gradGs(i+n_,j+n_) = gradg;
 
         //ATTENTION: ASUMMING F is constant!!!!!!!!!!!!!!
-        convectionTerm[i] = gradg;
-        convectionTerm[i] *= -f_value/g_value/g_value;
+        convectionTerm(i+n_,j+n_) = gradg;
+        convectionTerm(i+n_,j+n_) *= -f_value/g_value/g_value;
 
-        b += convectionTerm[i];
-        avg_g_value += g_value;
+        b.axpy(smoothingKernel_(i+n_,j+n_),convectionTerm(i+n_,j+n_));
+        avg_g_value += smoothingKernel_(i+n_,j+n_)*g_value;
       }
-
-      b /= N;
-
-      avg_g_value /= N;
 
       auto P_T = b.two_norm() * h_T/2./minEVcofHessu;
 
@@ -222,21 +281,22 @@ public:
         else
           delta_K = h_T/2./b.two_norm()*(1.-1./P_T);
 
-/*
         if (std::abs(delta_K) > 1e-12)
         {
-          for (int i = 0; i < convectionTerm.size(); i++)
-            std::cerr << " at " << gradu << " grad g " << i << " " << gradGs[i] << " convectionTerm " << i << " " << convectionTerm[i] << std::endl;
+          for (int i = -n_ ; i <= n_; i++)
+            for (int j = -n_ ; j <= n_; j++)
+              std::cerr << " at " << transportedXs(i+n_,j+n_) << " grad g " << i << " " << j << ": " << gradGs(i+n_,j+n_) << " convectionTerm " << i << " " << j << ": "<< " " << convectionTerm(i+n_,j+n_) << std::endl;
           std::cerr << std::setprecision(16);
-          std::cerr << " difference averaged and not, avg: " << b << " not avg: " << convectionTerm[0] << " -> difference " << (b-convectionTerm[0])<< std::endl;
+          std::cerr << " difference averaged and not, avg: " << b << " not avg: " << convectionTerm(0,0) << " -> difference " << (b-convectionTerm(0,0))<< std::endl;
           std::cerr << "gradg " << gradg << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
         }
-*/
+
       }
 
 //      delta_K  = 0;
 
       auto detHessu = naive_determinant(cofHessu); //note that determinant of Hessu and cofHessu is the same
+      rhoY.evaluate(gradu, g_value);
 
       if (detHessu < 0)
         std::cerr << "found negative determinant " << detHessu << " at " << x_value << std::endl;
@@ -262,15 +322,14 @@ public:
         }
 
         //-f(u_k) [rhs of Newton]
-        v(j) += (-detHessu+f_value/avg_g_value+u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        v(j) += (-detHessu+f_value/g_value+u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 //        v(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         //unification term :) term, ATTENTION: works only if w(x_0)=1 for exactly one ansatzfunction
         entryWx0timesBgradV(j) += referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 
         //stabilisation term
         entryWx0timesBgradV(j) += delta_K* (b*gradients[j]) *quad[pt].weight()*integrationElement; //, ATTENTION: works only if w(x_0)=1 for exactly one ansatzfunction
-        v(j) += delta_K*(-detHessu+f_value/avg_g_value+u_atX0)*(b*gradients[j])*quad[pt].weight()*integrationElement;
-//        v(j) += delta_K*(u_value)*(b*gradients[j])*quad[pt].weight()*integrationElement;
+        v(j) += delta_K*(-detHessu+f_value/g_value+u_atX0)*(b*gradients[j])*quad[pt].weight()*integrationElement;
         assert(! (v(j)!=v(j)));
 
       }
@@ -440,14 +499,16 @@ public:
 //          v_boundary(j) += signedDistance//((gra * normal) - phi_value) //
 //                            * (referenceFunctionValues[j]+(gradients[j]*normal)) * factor;
 //          * (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1]) * factor;
-//          std::cerr << " add to v_adolc(" << j << ") " << penalty_weight * signedDistance
-//              * (referenceFunctionValues[j]+(gradients[j]*normal))* factor << " -> " << v_boundary(j) << std::endl;
 
           v_boundary(j) += normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor;
+//          std::cerr << " add to v_boundary(" << j << ") " << normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor
+//              << " -> " << v_boundary(j) << std::endl;
+
+//          std:: cerr << " normal old " << normalOld << " norm " << normalOld.two_norm() <<
 
 //          auto temp = normalOld;
 //          temp /= normalOld.two_norm();
-//          std::cerr << " gradH " << derivativeHu << " 1/| |A n_x " << temp << " without scaling " << normalOld << std::endl;
+//          std::cerr << " gradH " << derivativeHu << " 1/| |A n_x ?? " << " without scaling " << normalOld << std::endl;
 
 
         }
@@ -592,6 +653,8 @@ public:
   const Config::DomainType X0_;
 
   static constexpr int collocationNo[3][3] = {{0,3,4},{0,11,8},{4,7,8}};
+  static SmoothingKernel smoothingKernel_;
+  static const int n_ = smoothingKernel_.n_;
 //  static constexpr int collocationNo[3][5] = {{0,1,3,5,4},{0,2,11,9,8},{4,6,7,10,8}};
 public:
   mutable double int_f;
