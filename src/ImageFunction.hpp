@@ -51,7 +51,7 @@ class ImageFunction : public DensityFunction
     const Config::SpaceType2d& upperRight() const{ return upperRight_;}
 
     double minValue() const {return minValue_;}
-
+    double gridWidth() const {return h_;}
 
     cimg_library::CImg<double>& getOriginalImage () { return image_; }
     const cimg_library::CImg<double>& getOriginalImage () const { return image_; }

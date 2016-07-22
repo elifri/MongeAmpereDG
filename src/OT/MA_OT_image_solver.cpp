@@ -134,8 +134,6 @@ struct ConvectionFunction{
       const double h = std::sqrt(localgradu_->localContext().geometry().integrationElement(x));
       FieldVector<double,Config::dim> convectionTerm;
 
-      const int N = 9;
-
       ///enumeration of averaging stencil
       for (int i = -smoothingKernel_.n_ ; i <= smoothingKernel_.n_; i++)
         for (int j = -smoothingKernel_.n_ ; j <= smoothingKernel_.n_; j++)

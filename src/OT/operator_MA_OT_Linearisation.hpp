@@ -243,15 +243,12 @@ public:
       double avg_g_value = 0;
 
       //calculate average convection term
-      const double h = h_T;
+//      const double h = rhoY.gridWidth()/2.;
+      const double h = h_T/2.;
       Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> convectionTerm(2*n_+1,2*n_+1);
       Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> transportedXs(2*n_+1,2*n_+1);
       Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> gradGs(2*n_+1,2*n_+1);
 
-      ///enumeration of averaging stencil
-      // 4 3 2
-      // 5 0 1
-      // 6 7 8
       for (int i = -n_ ; i <= n_; i++)
         for (int j = -n_ ; j <= n_; j++)
       {
