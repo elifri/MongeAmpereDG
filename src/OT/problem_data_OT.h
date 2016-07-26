@@ -128,8 +128,8 @@ class DensityFunction : public virtual Dune::VirtualFunction<Config::DomainType,
 {
 public:
     using Dune::VirtualFunction<Config::DomainType, Config::ValueType>::evaluate;
-    virtual void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const = 0;
     virtual void evaluateDerivative(const FieldVector<double, Config::dim> &x, FieldVector<double, Config::dim> &gradu) const{assert(false); std::cerr<< " derivative density function not implemented " << std::endl;std::exit(-1);}
+    virtual double gridWidth() const{return 1e-3;};
 };
 
 class BoundarySquare : public OTBoundary
