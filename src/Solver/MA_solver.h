@@ -190,6 +190,8 @@ public:
 	virtual int get_n_dofs() const{return FEBasisHandler_.FEBasis().indexSet().size() + 1;}
   int get_n_dofs_u() const{return FEBasisHandler_.FEBasis().indexSet().size();}
 
+  const GridType& grid() const {return *grid_ptr;}
+  const GridViewType& gridView() const {return *gridView_ptr;}
 
 public:
 
