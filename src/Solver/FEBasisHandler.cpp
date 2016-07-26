@@ -140,7 +140,6 @@ void FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, SolverConfig::d
     //mark element for refining
     solver.grid_ptr->mark(1,element);
   }
-  double scaling_factor = v(v.size()-1);
 
   std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
 
