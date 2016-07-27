@@ -8,14 +8,10 @@
 #ifndef SRC_OT_OPERATOR_MA_OT_LINEARISATION_HPP_
 #define SRC_OT_OPERATOR_MA_OT_LINEARISATION_HPP_
 
-#include <math.h>
-
-#include <dune/common/function.hh>
-#include "utils.hpp"
-#include "OT/problem_data_OT.h"
-
-#include "Solver/solver_config.h"
 #include "OT/operator_MA_OT.h"
+#include "OT/problem_data_OT.h"
+#include "Solver/solver_config.h"
+#include "utils.hpp"
 
 using namespace Dune;
 
@@ -145,10 +141,10 @@ class Local_Operator_MA_OT_Linearisation {
 public:
   typedef DensityFunction Function;
 
-
-
-  Local_Operator_MA_OT_Linearisation(const OTBoundary* bc, const Function* rhoX, const Function* rhoY, const Config::DomainType& X0):
-    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), delta_K(10), X0_(X0), int_f(0), sign(1.0), found_negative(false) {
+  template<typename GridView>
+  Local_Operator_MA_OT_Linearisation(const OTBoundary* bc, const Function* rhoX, const Function* rhoY, const GridView& gridView):
+    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), delta_K(10), int_f(0), sign(1.0), found_negative(false), hash(gridView), EntititiesForUnifikationTerm_(10,hash)
+  {
   }
 
   /**
@@ -160,8 +156,9 @@ public:
    */
   template<class LocalView, class VectorType, class DenseMatrixType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, DenseMatrixType& m, const double u_atX0, VectorType& entryWx0timesBgradV) const
+      VectorType& v, DenseMatrixType& m, const double u_atX0, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const
   {
+    assert(entryWx0.size() == entryWx0timesBgradV.size());
 
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
@@ -272,6 +269,7 @@ public:
       std::cerr << " g1 " << Dx1PlusF_value << " g2 " << Dx2PlusF_value << std::endl;
 #endif
 
+
       auto h_T = std::sqrt(integrationElement);
 
       //velocity vector for convection
@@ -326,6 +324,7 @@ public:
 
       }
 
+
 //      delta_K  = 0;
 
       auto detHessu = naive_determinant(cofHessu); //note that determinant of Hessu and cofHessu is the same
@@ -340,29 +339,36 @@ public:
       {
         for (int i = 0; i < size; i++) //loop over ansatz fcts
         {
-
-//          std::cerr <<" FunctionValuesAtX0[i] " << FunctionValuesAtX0[i] << std::endl;
-
           //diffusion term
           FieldVector<double,dim> cofTimesW;
           cofHessu.mv(gradients[i],cofTimesW);
-          m(j,i) += (cofTimesW*gradients[j]) *quad[pt].weight()*integrationElement;
+//          m(j,i) += (cofTimesW*gradients[j]) *quad[pt].weight()*integrationElement;
           //convection term
-          m(j,i) += (b*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-          //stabilisation term
-          m(j,i) += delta_K*(-FrobeniusProduct(cofHessu,Hessians[i])+b*gradients[i])*(b*gradients[j]) *quad[pt].weight()*integrationElement;
-//          m(j,i) += delta_K*(referenceFunctionValues[i])*(b*gradients[j]) *quad[pt].weight()*integrationElement;
+//          m(j,i) += (b*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         }
 
         //-f(u_k) [rhs of Newton]
-        v(j) += (-detHessu+f_value/g_value+u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-//        v(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-        //unification term :) term, ATTENTION: works only if w(x_0)=1 for exactly one ansatzfunction
-        entryWx0timesBgradV(j) += referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+//        v(j) += (-detHessu+f_value/g_value+u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        v(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        //derivative unification term :) term, ATTENTION: works only if w(x_0)=1 for exactly one ansatzfunction
 
-        //stabilisation term
-        entryWx0timesBgradV(j) += delta_K* (b*gradients[j]) *quad[pt].weight()*integrationElement; //, ATTENTION: works only if w(x_0)=1 for exactly one ansatzfunction
-        v(j) += delta_K*(-detHessu+f_value/g_value+u_atX0)*(b*gradients[j])*quad[pt].weight()*integrationElement;
+        LocalView localViewFixingElement = localView;
+        for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
+        {
+          const auto& fixingElement = fixingElementAndOffset.first;
+          int noDof_fixingElement = fixingElementAndOffset.second;
+
+          localViewFixingElement.bind(fixingElement);
+          const auto& geometryFixingElement = fixingElement.geometry();
+
+          for (unsigned int k = 0; k < localViewFixingElement.size(); k++)
+          {
+            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+            noDof_fixingElement++;
+//            std::cerr << " add at quadPOs " << quadPos << " in fixing Element " << noDof_fixingElement << " basisFunction "  << k << std::endl;
+          }
+        }
+
         assert(! (v(j)!=v(j)));
 
       }
@@ -387,7 +393,6 @@ public:
       VectorType& v, VectorType& vn) const {
   }
 
-#ifndef COLLOCATION
   template<class Intersection, class LocalView, class VectorType, class MatrixType>
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalView &localView,
@@ -533,7 +538,7 @@ public:
 //                            * (referenceFunctionValues[j]+(gradients[j]*normal)) * factor;
 //          * (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1]) * factor;
 
-          v_boundary(j) += normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor;
+//          v_boundary(j) += normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor;
 //          std::cerr << " add to v_boundary(" << j << ") " << normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor
 //              << " -> " << v_boundary(j) << std::endl;
 
@@ -548,134 +553,37 @@ public:
       }
     }
   }
-#else
-  template<class Intersection, class LocalView, class LocalIndexSet, class VectorType>
-  void assemble_boundary_face_term(const Intersection& intersection,
-      const LocalView &localView, const LocalIndexSet &localIndexSet,
-      const VectorType &x, VectorType& v, int tag) const {
-    assert(opticalSetting);
-
-    const int dim = Intersection::dimension;
-    const int dimw = Intersection::dimensionworld;
-
-    //assuming galerkin
-    assert((unsigned int) x.size() == localView.size());
-    assert((unsigned int) v.size() == localView.size());
-
-    // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
-    const Element& element = localView.element();
-
-    const auto& localFiniteElement = localView.tree().finiteElement();
-    const int size_u = localFiniteElement.size();
-
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
-
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
-
-    //-----init variables for automatic differentiation
-
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(
-        localView.size());
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(
-        localView.size());
-    for (size_t i = 0; i < localView.size(); i++)
-      v_adolc[i] <<= v[i];
-
-    trace_on(tag);
-    //init independent variables
-    for (size_t i = 0; i < localView.size(); i++)
-      x_adolc[i] <<= x[i];
-
-    // ----start quadrature--------
-
-    // Get a quadrature rule
-    const int order = std::max(0, 3 * ((int) localFiniteElement.localBasis().order()));
-    GeometryType gtface = intersection.geometryInInside().type();
-
-    // normal of center in face's reference element
-    const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
-        dim - 1>::general(intersection.geometry().type()).position(0, 0);
-    const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
-        face_center);
-
-    const int n = 3;
-    const int boundaryFaceId = intersection.indexInInside();
-
-    // penalty weight for NIPG / SIPG
-    //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
-    double penalty_weight = SolverConfig::sigmaBoundary
-                      * (SolverConfig::degree * SolverConfig::degree)
-                      * std::pow(intersection.geometry().volume(), SolverConfig::beta);
-
-
-    // Loop over all quadrature points
-    for (size_t i = 0; i < n; i++) {
-
-      //------get data----------
-
-      // Position of the current collocation point in the reference element
-      FieldVector<double, dim> collocationPos =
-          intersection.geometryInInside().global((double) (i) / double (n-1));
-
-      // The transposed inverse Jacobian of the map from the reference element to the element
-      const auto& jacobian =
-          intersection.inside().geometry().jacobianInverseTransposed(collocationPos);
-
-      //the shape function values
-      std::vector<RangeType> referenceFunctionValues(size_u);
-      adouble rho_value = 0;
-      assemble_functionValues_u(localFiniteElement, collocationPos,
-          referenceFunctionValues, x_adolc.segment(0, size_u), rho_value);
-
-      //selection local dof no for collocation point
-      int j = collocationNo[boundaryFaceId][i];
-      if ((i == 0 || i == n-1) && std::abs(referenceFunctionValues[j] - 1) > 1e-12)
-      {
-        collocationPos = intersection.geometryInInside().global((double) (n-1-i) / double (n-1));
-        rho_value = 0;
-        assemble_functionValues_u(localFiniteElement, collocationPos,
-                  referenceFunctionValues, x_adolc.segment(0, size_u), rho_value);
-      }
-      auto x_value = intersection.inside().geometry().global(collocationPos);
-
-      // The gradients
-      std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, Config::dim> gradrho;
-      assemble_gradients_gradu(localFiniteElement, jacobian, collocationPos,
-          gradients, x_adolc, gradrho);
-
-      //-------calculate integral--------
-      double omega_value = omega(x_value);
-
-      adouble t = rho_value*omega_value-SolverConfig::z_3;
-      t /= rho_value*omega_value;
-
-      adouble F_value = F(x_value, rho_value, gradrho);
-
-      FieldVector<adouble, Config::dim> w = gradrho;
-      w *= 2*F_value*rho_value;
-
-      FieldVector<adouble, Config::dim> z = x_value;
-      z *= rho_value;
-      z.axpy(t,w);
-      z.axpy(-t*rho_value,x_value);
-
-      auto signedDistance = bc.H(z, normal);
-
-      v_adolc(j) += penalty_weight * signedDistance;
-//          std::cerr << " add to v_adolc(" << j << ") " << (penalty_weight * ((T_value * normal) - phi_value)* referenceFunctionValues[j] * factor).value() << " -> " << v_adolc(j).value() << std::endl;
-
+  int insert_entitity_for_unifikation_term(Config::Entity element, int size)
+  {
+    auto search = EntititiesForUnifikationTerm_.find(element);
+    if (search == EntititiesForUnifikationTerm_.end())
+    {
+      const int newOffset = size*EntititiesForUnifikationTerm_.size();
+      EntititiesForUnifikationTerm_[element] = newOffset;
+      return newOffset;
     }
-
-    // select dependent variables
-    for (size_t i = 0; i < localView.size(); i++)
-      v_adolc[i] >>= v[i];
-    trace_off();
+    return EntititiesForUnifikationTerm_[element];
   }
-#endif
+
+  const Config::EntityMap EntititiesForUnifikationTerm() const
+  {
+    return EntititiesForUnifikationTerm_;
+  }
+
+
+  int get_offset_of_entity_for_unifikation_term(Config::Entity element) const
+  {
+    return EntititiesForUnifikationTerm_.at(element);
+  }
+  int get_number_of_entities_for_unifikation_term() const
+  {
+    return EntititiesForUnifikationTerm_.size();
+  }
+
+  void clear_entitities_for_unifikation_term()
+  {
+    EntititiesForUnifikationTerm_.clear();
+  }
 
   const Function& rhoX;
   const Function& rhoY;
@@ -683,7 +591,8 @@ public:
 
   mutable double delta_K;
 
-  const Config::DomainType X0_;
+  Config::EntityCompare hash;
+  Config::EntityMap EntititiesForUnifikationTerm_;
 
   static constexpr int collocationNo[3][3] = {{0,3,4},{0,11,8},{4,7,8}};
   static SmoothingKernel smoothingKernel_;

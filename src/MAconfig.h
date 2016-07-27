@@ -12,6 +12,9 @@
 #include<Eigen/Core>
 #include<Eigen/Sparse>
 
+#include <unordered_set>
+#include <unordered_map>
+
 //to mark variables as unused (used for checking of return values in Petsc etc. in Debug Mode)
 #define _unused(x) ((void)x)
 
@@ -62,6 +65,23 @@ namespace Config{
 
   static_assert(std::is_same<SpaceType, DomainType>::value, "Grid domain type must be equal to function type");
 
+
+  typedef typename GridView::template Codim<0>::Entity Entity;
+
+  struct EntityCompare {
+    EntityCompare(const GridView& gridView):indexSet(gridView.indexSet()) {}
+    bool operator() (const Entity& e1, const Entity& e2) const
+    {return indexSet.index(e1)<indexSet.index(e2);}
+
+    int operator() (const Entity& e) const
+    {return indexSet.index(e);}
+
+//    solver_ptr->gridView().indexSet()
+    const typename GridView::IndexSet& indexSet;
+  };
+
+  typedef std::unordered_set<Entity> EntitySet;
+  typedef std::unordered_map<Entity,int, EntityCompare> EntityMap;
 
 }
 

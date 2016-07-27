@@ -8,7 +8,9 @@
 #ifndef SRC_OT_MA_OT_IMAGE_OPERATOR_H_
 #define SRC_OT_MA_OT_IMAGE_OPERATOR_H_
 
-#include "../ImageFunction.hpp"
+#include "ImageFunction.hpp"
+#include "SmoothImageFunction.h"
+
 
 template<typename Solver, typename LOP>
 struct MA_OT_image_Operator {
@@ -82,7 +84,11 @@ struct MA_OT_image_Operator {
 
 template<typename Solver, typename LOP, typename LOPLinear>
 struct MA_OT_image_Operator_with_Linearisation{
-  MA_OT_image_Operator_with_Linearisation():solver_ptr(NULL), lop_ptr(), lopLinear_ptr(){}
+  typedef typename Solver::GridViewType GridView;
+
+  MA_OT_image_Operator_with_Linearisation():solver_ptr(NULL), lop_ptr(), lopLinear_ptr(){
+
+  }
 //    MA_OT_Operator(MA_OT_solver& solver):solver_ptr(&solver), lop_ptr(new Local_Operator_MA_OT(new BoundarySquare(solver.gradient_u_old, solver.get_setting()), new rhoXSquareToSquare(), new rhoYSquareToSquare())){}
     // lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
     MA_OT_image_Operator_with_Linearisation(Solver& solver):solver_ptr(&solver),
@@ -96,9 +102,16 @@ struct MA_OT_image_Operator_with_Linearisation{
                ),
         lopLinear_ptr(new LOPLinear
             (new BoundarySquare(solver.gradient_u_old,solver.get_setting()),
-                &f_,&g_, solver.get_setting().lowerLeft)
+                &f_,&g_, solver.gridView())
         )
-        {}
+        {
+
+
+      HierarchicSearch<typename GridView::Grid, typename GridView::IndexSet> hs(solver.grid(), solver.gridView().indexSet());
+
+      const FieldVector<double, 2> findCell = {0.5,0.15};
+      fixingElement = hs.findEntity(findCell);
+        }
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
     {
@@ -114,9 +127,54 @@ struct MA_OT_image_Operator_with_Linearisation{
       timer.start();
 //      lop.found_negative = false;
 
+      lopLinear_ptr->clear_entitities_for_unifikation_term();
+      auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
+      auto localIndexSet = solver_ptr->FEBasisHandler_.uBasis().indexSet().localIndexSet();
 
-      typename Solver::DiscreteGridFunction solution_u_global(solver_ptr->FEBasisHandler_.uBasis(),x);
-      solver_ptr->assembler.set_uAtX0(solution_u_global(solver_ptr->get_setting().lowerLeft));
+      Config::ValueType res = 0;
+      std::vector<Config::ValueType> entryWx0;
+
+      //prepare to find elements in current FE grid
+      HierarchicSearch<typename GridView::Grid, typename GridView::IndexSet> hs(solver_ptr->grid(), solver_ptr->gridView().indexSet());
+
+      //collect quadrature rule
+      int order = 5;
+      const QuadratureRule<double, Config::dim>& quadRule = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(fixingElement, order);
+
+      for (const auto& quad : quadRule) {
+        auto quadPos = quad.position();
+        auto x_global = fixingElement.geometry().global(quadPos);
+
+        //find element
+        const auto& element = hs.findEntity(x_global);
+        localView.bind(element);
+        localIndexSet.bind(localView);
+        const auto lfu = localView.tree().finiteElement();
+        std::vector<FieldVector<Config::ValueType,1>> values(localView.size());
+        lfu.localBasis().evaluateFunction(element.geometry().local(x_global), values);
+
+        //get local assignment of dofs
+        Config::VectorType localXValues = Assembler::calculate_local_coefficients(localIndexSet, x);
+
+        unsigned int entityDofNo = lopLinear_ptr->insert_entitity_for_unifikation_term(element, localView.size());
+
+        if (entityDofNo >= entryWx0.size())
+        {
+          entryWx0.resize(entryWx0.size()+localView.size(), 0);
+          assert(entryWx0.size() == entityDofNo+localView.size());
+        }
+
+        for (int i = 0; i < localView.size(); i++)
+        {
+          res += (localXValues[i]*values[i])* quad.weight()*fixingElement.geometry().integrationElement(quadPos);
+          entryWx0[entityDofNo] += values[i][0]* quad.weight()*fixingElement.geometry().integrationElement(quadPos);
+          entityDofNo++;
+        }
+      }
+//      res /= fixingElement.geometry().volume();
+
+      solver_ptr->assembler.set_uAtX0(res);
+      solver_ptr->assembler.set_entryWx0(entryWx0);
 
       solver_ptr->assembler.assemble_DG_Jacobian(*lop_ptr, *lopLinear_ptr, x,v, m); timer.stop();
       solver_ptr->plot(v,"Res");
@@ -149,6 +207,8 @@ struct MA_OT_image_Operator_with_Linearisation{
 
     std::shared_ptr<LOP> lop_ptr;
     std::shared_ptr<LOPLinear> lopLinear_ptr;
+
+    Config::Entity fixingElement;
 };
 
 

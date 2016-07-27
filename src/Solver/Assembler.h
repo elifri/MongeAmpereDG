@@ -604,6 +604,7 @@ public:
 
   void set_uAtX0(const double g) const{ uAtX0_ = g;}
   void set_X0(const Config::DomainType& X0) const{ X0_ = X0;}
+  void set_entryWx0(const std::vector<Config::ValueType>& entryWx0) const{ entryWx0_ = entryWx0;}
 
   const FEBasisType& basis() const {return *basis_;}
   const BoundaryHandler::BoolVectorType& isBoundaryDoF() const {return boundaryHandler_.isBoundaryDoF();}
@@ -617,6 +618,7 @@ private:
 */
   mutable Config::DomainType X0_;
   mutable double uAtX0_;
+  mutable std::vector<Config::ValueType> entryWx0_;
 
 //    const MA_solver* ma_solver;
   const FEBasisType* basis_;
@@ -1978,6 +1980,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 template<typename LocalOperatorType>
 void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {
+  std::exit(-1);
     Config::VectorType boundary = Config::VectorType::Zero(v.size());
     BoundaryHandler::BoolVectorType collocationSet = BoundaryHandler::BoolVectorType::Constant(v.size(), false);
 
@@ -2179,86 +2182,10 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
             }
         }
 
-#ifdef COLLOCATION
-        Config::DenseMatrixType Coll_m_mB;
-        Coll_m_mB.setZero(localView.size(), localView.size());
-        //set collocation boundary,
-        for (size_t i = 0; i < localIndexSet.size(); i++)
-        {
-          if (!isBoundaryLocal(i))  continue;
-//          std::cerr << "want " << i << " to " << FETraits::get_index(localIndexSet, i) << " with value " << local_boundary[i] << " global vector has value " << boundary(FETraits::get_index(localIndexSet, i)) << std::endl;
-          if (!collocationSet(FETraits::get_index(localIndexSet, i)))
-          {
-            boundary(FETraits::get_index(localIndexSet, i)) = local_boundary[i];
-//            std::cerr << "set local coll " <<  i << " to " <<FETraits::get_index(localIndexSet, i) << " with value " << local_boundary[i] << std::endl;
-            Coll_m_mB.row(i) = m_mB.row(i);
-            collocationSet(FETraits::get_index(localIndexSet, i))=true;
-          }
-          else
-          {
-            switch(i)
-            {
-            case 0:
-              assert(std::abs(local_boundary[i]-boundary(FETraits::get_index(localIndexSet, i))) < 1e-10 || std::abs(local_boundary[i]) < 1e-14);
-            break;
-            case 1:
-              assert(!collocationSet(localIndexSet.index(2)[0]));
-              boundary(localIndexSet.index(2)[0]) = local_boundary[i];
-              Coll_m_mB.row(2) = m_mB.row(i);
-              collocationSet(localIndexSet.index(2)[0]) = true;
-//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(2)[0] << " with value " << local_boundary[i] << std::endl;
-            break;
-            case 2:
-              assert(!collocationSet(localIndexSet.index(2)[0]));
-              boundary(localIndexSet.index(1)[0]) = local_boundary[i];
-              Coll_m_mB.row(1) = m_mB.row(i);
-              collocationSet(localIndexSet.index(1)[0]) = true;
-//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(1)[0] << " with value " << local_boundary[i] << std::endl;
-            break;
-            case 4:
-              assert(std::abs(local_boundary[i]-boundary(FETraits::get_index(localIndexSet, i))) < 1e-10);
-            break;
-            case 5:
-              assert(!collocationSet(localIndexSet.index(6)[0]));
-              boundary(localIndexSet.index(6)[0]) = local_boundary[i];
-              Coll_m_mB.row(6) = m_mB.row(i);
-              collocationSet(localIndexSet.index(6)[0]) = true;
-//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(6)[0] << " with value " << local_boundary[i] << std::endl;
-            break;
-            case 6:
-              assert(!collocationSet(localIndexSet.index(5)[0]));
-              boundary(localIndexSet.index(5)[0]) = local_boundary[i];
-              Coll_m_mB.row(5) = m_mB.row(i);
-              collocationSet(localIndexSet.index(5)[0]) = true;
-//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(5)[0] << " with value " << local_boundary[i] << std::endl;
-            break;
-            case 8:
-              assert(std::abs(local_boundary[i]-boundary(FETraits::get_index(localIndexSet, i))) < 1e-10);
-            break;
-            case 9:
-              assert(!collocationSet(localIndexSet.index(10)[0]));
-              boundary(localIndexSet.index(10)[0]) = local_boundary[i];
-              Coll_m_mB.row(10) = m_mB.row(i);
-              collocationSet(localIndexSet.index(10)[0]) = true;
-//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(10)[0] << " with value " << local_boundary[i] << std::endl;
-            break;
-            case 10:
-              assert(!collocationSet(localIndexSet.index(9)[0]));
-              boundary(localIndexSet.index(9)[0]) = local_boundary[i];
-              Coll_m_mB.row(9) = m_mB.row(i);
-              collocationSet(localIndexSet.index(9)[0]) = true;
-//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(9)[0] << " with value " << local_boundary[i] << std::endl;
-            break;
-            default: assert(false);
-            }
-          }
-        }
-#else
 
 //        std::cerr << " localVector before boundary" << local_vector.transpose() << std::endl;
 
         local_vector+=local_boundary.cwiseProduct(local_boundary);
-#endif
 //        std::cerr << " localVector " << local_vector << std::endl;
 
         //add to objective function and jacobian
@@ -2277,15 +2204,11 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
           boundary(FETraits::get_index(localIndexSet, i)) += (local_boundary.cwiseProduct(local_boundary))[i] ;
 //          std::cerr << "boundary add " << i << " to " << FETraits::get_index(localIndexSet, i) << " with value " << local_boundary[i] << " and get " << boundary(FETraits::get_index(localIndexSet, i)) << std::endl;
         }
-#ifndef COLLOCATION
         Config::DenseMatrixType temp = 2*m_mB;
         for (int i = 0; i < m_mB.rows(); i++)
           for (int j = 0; j < m_mB.cols(); j++)
             temp(i,j) *= local_boundary(i);
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, temp, JacobianEntries);
-#else
-        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, Coll_m_mB, JacobianEntries);
-#endif
         }
 
         //add derivatives for scaling factor
@@ -2298,9 +2221,6 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
      }
      m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
 
-#ifdef COLLOCATION
-     v+= boundary;
-#endif
      std::cerr << std::endl << " local boundary term " << boundary.norm()<< " whole norm " << v.norm() << std::endl;
      std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
      std::cerr << " f_boundary " << boundary.transpose() << std::endl;
@@ -2336,8 +2256,10 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
     // The index set gives you indices for each element , edge , face , vertex , etc .
     const GridViewType::IndexSet& indexSet = gridView.indexSet();
     auto localView = basis_->localView();
+    auto localViewFixingElement = basis_->localView();
     auto localViewn = basis_->localView();
     auto localIndexSet = basis_->indexSet().localIndexSet();
+    auto localIndexSetFixingElement = basis_->indexSet().localIndexSet();
     auto localIndexSetn = basis_->indexSet().localIndexSet();
 
     lop.found_negative = false;
@@ -2367,20 +2289,35 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 //        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, v_isBoundary);
 
         //additional vector for unification term
-        Config::VectorType entryWx0timesBgradV;
-        entryWx0timesBgradV.setZero(localView.size());    // Set all entries to zero
+        std::vector<Config::VectorType> entryWx0timesBgradV (lopJacobian.get_number_of_entities_for_unifikation_term()*localView.size());
+        for (unsigned int i = 0; i < entryWx0timesBgradV.size(); i++)
+          entryWx0timesBgradV[i].setZero(localView.size());    // Set all entries to zero
 //        std::cerr << " is local boundaryDof" << isBoundaryLocal.transpose() << std::endl;
 
 //        lop.assemble_cell_term(localView, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
-        lopJacobian.assemble_cell_term(localView, xLocal, local_vector, m_m, uAtX0_, entryWx0timesBgradV);
+        lopJacobian.assemble_cell_term(localView, xLocal, local_vector, m_m, uAtX0_, entryWx0_, entryWx0timesBgradV);
 
         //write derivatives of unification term into vector
-        for (int j = 0; j < entryWx0timesBgradV.size(); j++)
+        for (const auto& fixingElementandOffset : lopJacobian.EntititiesForUnifikationTerm())
         {
-          JacobianEntries.push_back(
-            EntryType(FETraits::get_index(localIndexSet, j),
-                0, //TODO very nasty stuff here ....
-                entryWx0timesBgradV(j)));
+          const auto& fixingElement = fixingElementandOffset.first;
+          int no_fixingElement =fixingElementandOffset.second;
+
+          localViewFixingElement.bind(fixingElement);
+          localIndexSetFixingElement.bind(localViewFixingElement);
+
+          for (unsigned int i = 0; i < localView.size(); i++)
+          {
+            for (unsigned int j = 0; j < localViewFixingElement.size(); j++)
+            {
+            JacobianEntries.push_back(
+            EntryType(FETraits::get_index(localIndexSet, i),
+                      FETraits::get_index(localIndexSetFixingElement, j),
+                      entryWx0timesBgradV[no_fixingElement](i)));
+            }
+            no_fixingElement++;
+          }
+
         }
 
        // Traverse intersections
@@ -2449,86 +2386,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
           }
         }
 
-#ifdef COLLOCATION
-        Config::DenseMatrixType Coll_m_mB;
-        Coll_m_mB.setZero(localView.size(), localView.size());
-        //set collocation boundary,
-        for (size_t i = 0; i < localIndexSet.size(); i++)
-        {
-          if (!isBoundaryLocal(i))  continue;
-//          std::cerr << "want " << i << " to " << FETraits::get_index(localIndexSet, i) << " with value " << local_boundary[i] << " global vector has value " << boundary(FETraits::get_index(localIndexSet, i)) << std::endl;
-          if (!collocationSet(FETraits::get_index(localIndexSet, i)))
-          {
-            boundary(FETraits::get_index(localIndexSet, i)) = local_boundary[i];
-//            std::cerr << "set local coll " <<  i << " to " <<FETraits::get_index(localIndexSet, i) << " with value " << local_boundary[i] << std::endl;
-            Coll_m_mB.row(i) = m_mB.row(i);
-            collocationSet(FETraits::get_index(localIndexSet, i))=true;
-          }
-          else
-          {
-            switch(i)
-            {
-            case 0:
-              assert(std::abs(local_boundary[i]-boundary(FETraits::get_index(localIndexSet, i))) < 1e-10 || std::abs(local_boundary[i]) < 1e-14);
-            break;
-            case 1:
-              assert(!collocationSet(localIndexSet.index(2)[0]));
-              boundary(localIndexSet.index(2)[0]) = local_boundary[i];
-              Coll_m_mB.row(2) = m_mB.row(i);
-              collocationSet(localIndexSet.index(2)[0]) = true;
-//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(2)[0] << " with value " << local_boundary[i] << std::endl;
-            break;
-            case 2:
-              assert(!collocationSet(localIndexSet.index(2)[0]));
-              boundary(localIndexSet.index(1)[0]) = local_boundary[i];
-              Coll_m_mB.row(1) = m_mB.row(i);
-              collocationSet(localIndexSet.index(1)[0]) = true;
-//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(1)[0] << " with value " << local_boundary[i] << std::endl;
-            break;
-            case 4:
-              assert(std::abs(local_boundary[i]-boundary(FETraits::get_index(localIndexSet, i))) < 1e-10);
-            break;
-            case 5:
-              assert(!collocationSet(localIndexSet.index(6)[0]));
-              boundary(localIndexSet.index(6)[0]) = local_boundary[i];
-              Coll_m_mB.row(6) = m_mB.row(i);
-              collocationSet(localIndexSet.index(6)[0]) = true;
-//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(6)[0] << " with value " << local_boundary[i] << std::endl;
-            break;
-            case 6:
-              assert(!collocationSet(localIndexSet.index(5)[0]));
-              boundary(localIndexSet.index(5)[0]) = local_boundary[i];
-              Coll_m_mB.row(5) = m_mB.row(i);
-              collocationSet(localIndexSet.index(5)[0]) = true;
-//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(5)[0] << " with value " << local_boundary[i] << std::endl;
-            break;
-            case 8:
-              assert(std::abs(local_boundary[i]-boundary(FETraits::get_index(localIndexSet, i))) < 1e-10);
-            break;
-            case 9:
-              assert(!collocationSet(localIndexSet.index(10)[0]));
-              boundary(localIndexSet.index(10)[0]) = local_boundary[i];
-              Coll_m_mB.row(10) = m_mB.row(i);
-              collocationSet(localIndexSet.index(10)[0]) = true;
-//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(10)[0] << " with value " << local_boundary[i] << std::endl;
-            break;
-            case 10:
-              assert(!collocationSet(localIndexSet.index(9)[0]));
-              boundary(localIndexSet.index(9)[0]) = local_boundary[i];
-              Coll_m_mB.row(9) = m_mB.row(i);
-              collocationSet(localIndexSet.index(9)[0]) = true;
-//              std::cerr << "set local coll " <<  i << " to " <<localIndexSet.index(9)[0] << " with value " << local_boundary[i] << std::endl;
-            break;
-            default: assert(false);
-            }
-          }
-        }
-#else
-
-//        std::cerr << " localVector before boundary" << local_vector.transpose() << std::endl;
-
         local_vector+=local_boundary;
-#endif
 //        std::cerr << " localVector " << local_vector << std::endl;
 
         //add to objective function and jacobian
@@ -2547,11 +2405,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
           boundary(FETraits::get_index(localIndexSet, i)) += local_boundary[i] ;
 //          std::cerr << "boundary add " << i << " to " << FETraits::get_index(localIndexSet, i) << " with value " << local_boundary[i] << " and get " << boundary(FETraits::get_index(localIndexSet, i)) << std::endl;
         }
-#ifndef COLLOCATION
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
-#else
-        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, Coll_m_mB, JacobianEntries);
-#endif
         }
 
      }
@@ -2561,9 +2415,6 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 //     m.prune(1e-12);
      std::cerr << " m nonzeros " << m.nonZeros() << std::endl;
 
-#ifdef COLLOCATION
-     v+= boundary;
-#endif
      std::cerr << std::endl << " local boundary term " << boundary.norm()<< " whole norm " << v.norm() << std::endl;
 //     std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
 //     std::cerr << " f_boundary " << boundary.transpose() << std::endl;
