@@ -314,10 +314,10 @@ public:
 
         if (std::abs(delta_K) > 1e-12)
         {
-          for (int i = -n_ ; i <= n_; i++)
+   /*       for (int i = -n_ ; i <= n_; i++)
             for (int j = -n_ ; j <= n_; j++)
               std::cerr << " at " << transportedXs(i+n_,j+n_) << " grad g " << i << " " << j << ": " << gradGs(i+n_,j+n_) << " convectionTerm " << i << " " << j << ": "<< " " << convectionTerm(i+n_,j+n_) << std::endl;
-          std::cerr << std::setprecision(16);
+   */       std::cerr << std::setprecision(16);
           std::cerr << " difference averaged and not, avg: " << b << " not avg: " << convectionTerm(0,0) << " -> difference " << (b-convectionTerm(0,0))<< std::endl;
           std::cerr << "gradg " << gradg << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
         }
@@ -365,7 +365,7 @@ public:
           {
             entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
             noDof_fixingElement++;
-//            std::cerr << " add at quadPOs " << quadPos << " in fixing Element " << noDof_fixingElement << " basisFunction "  << k << std::endl;
+//            std::cerr << " add at quadPOs " << quadPos << " in fixing Element " << noDof_fixingElement << " basisFunction "  << k << "(" << entryWx0[noDof_fixingElement] << ")"<< std::endl;
           }
         }
 
@@ -534,10 +534,6 @@ public:
         }
         else
         {
-//          v_boundary(j) += signedDistance//((gra * normal) - phi_value) //
-//                            * (referenceFunctionValues[j]+(gradients[j]*normal)) * factor;
-//          * (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1]) * factor;
-
 //          v_boundary(j) += normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor;
 //          std::cerr << " add to v_boundary(" << j << ") " << normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor
 //              << " -> " << v_boundary(j) << std::endl;
@@ -553,16 +549,35 @@ public:
       }
     }
   }
-  int insert_entitity_for_unifikation_term(Config::Entity element, int size)
+  int insert_entitity_for_unifikation_term(const Config::Entity &element, int size)
   {
     auto search = EntititiesForUnifikationTerm_.find(element);
     if (search == EntititiesForUnifikationTerm_.end())
     {
       const int newOffset = size*EntititiesForUnifikationTerm_.size();
       EntititiesForUnifikationTerm_[element] = newOffset;
+
+      const auto& geometry = element.geometry();
+      std::cerr << " add new element with corners " << geometry.corner(0) << "  "
+          << geometry.corner(1) << "  "
+          << geometry.corner(2) << "  "
+          << geometry.corner(3) << "  " << std::endl;
+
       return newOffset;
     }
     return EntititiesForUnifikationTerm_[element];
+  }
+
+  void insert_descendant_entities(const Config::Entity& element)
+  {
+    auto search = EntititiesForUnifikationTerm_.find(element);
+    int size = search->second;
+    assert(search != EntititiesForUnifikationTerm_.end());
+    EntititiesForUnifikationTerm_.erase(search);
+    for (const auto& e : descendantElements(element,1))
+    {
+      insert_entitity_for_unifikation_term(e, size);
+    }
   }
 
   const Config::EntityMap EntititiesForUnifikationTerm() const

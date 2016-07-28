@@ -2297,11 +2297,12 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 //        lop.assemble_cell_term(localView, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
         lopJacobian.assemble_cell_term(localView, xLocal, local_vector, m_m, uAtX0_, entryWx0_, entryWx0timesBgradV);
 
+
         //write derivatives of unification term into vector
         for (const auto& fixingElementandOffset : lopJacobian.EntititiesForUnifikationTerm())
         {
           const auto& fixingElement = fixingElementandOffset.first;
-          int no_fixingElement =fixingElementandOffset.second;
+          int no_fixingElement_offset =fixingElementandOffset.second;
 
           localViewFixingElement.bind(fixingElement);
           localIndexSetFixingElement.bind(localViewFixingElement);
@@ -2313,9 +2314,9 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
             JacobianEntries.push_back(
             EntryType(FETraits::get_index(localIndexSet, i),
                       FETraits::get_index(localIndexSetFixingElement, j),
-                      entryWx0timesBgradV[no_fixingElement](i)));
+                      entryWx0timesBgradV[no_fixingElement_offset+j](i)));
             }
-            no_fixingElement++;
+
           }
 
         }

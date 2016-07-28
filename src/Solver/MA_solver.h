@@ -172,6 +172,8 @@ public:
       solver_ptr->assemble_Jacobian_DG(lop, x,m);
     }
 
+    void adapt() const{}
+
     mutable MA_solver* solver_ptr;
 
     Local_Operator_MA_mixed_Neilan lop;
