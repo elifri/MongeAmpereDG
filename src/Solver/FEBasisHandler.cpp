@@ -85,7 +85,6 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solv
     //mark element for refining
     solver.grid_ptr->mark(1,element);
   }
-  double scaling_factor = v(v.size()-1);
 
   std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
   std::cout << " grid febasis " << solver.solution_u_old_global->basis().nodeFactory().gridView().size(2) << std::endl;

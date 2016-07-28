@@ -342,14 +342,14 @@ public:
           //diffusion term
           FieldVector<double,dim> cofTimesW;
           cofHessu.mv(gradients[i],cofTimesW);
-//          m(j,i) += (cofTimesW*gradients[j]) *quad[pt].weight()*integrationElement;
+          m(j,i) += (cofTimesW*gradients[j]) *quad[pt].weight()*integrationElement;
           //convection term
-//          m(j,i) += (b*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+          m(j,i) += (b*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         }
 
         //-f(u_k) [rhs of Newton]
-//        v(j) += (-detHessu+f_value/g_value+u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-        v(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        v(j) += (-detHessu+f_value/g_value+u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+//        v(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         //derivative unification term :) term, ATTENTION: works only if w(x_0)=1 for exactly one ansatzfunction
 
         LocalView localViewFixingElement = localView;
@@ -359,13 +359,11 @@ public:
           int noDof_fixingElement = fixingElementAndOffset.second;
 
           localViewFixingElement.bind(fixingElement);
-          const auto& geometryFixingElement = fixingElement.geometry();
 
           for (unsigned int k = 0; k < localViewFixingElement.size(); k++)
           {
             entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
             noDof_fixingElement++;
-//            std::cerr << " add at quadPOs " << quadPos << " in fixing Element " << noDof_fixingElement << " basisFunction "  << k << "(" << entryWx0[noDof_fixingElement] << ")"<< std::endl;
           }
         }
 
@@ -534,7 +532,7 @@ public:
         }
         else
         {
-//          v_boundary(j) += normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor;
+          v_boundary(j) += normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor;
 //          std::cerr << " add to v_boundary(" << j << ") " << normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor
 //              << " -> " << v_boundary(j) << std::endl;
 
@@ -549,7 +547,7 @@ public:
       }
     }
   }
-  int insert_entitity_for_unifikation_term(const Config::Entity &element, int size)
+  int insert_entitity_for_unifikation_term(const Config::Entity element, int size)
   {
     auto search = EntititiesForUnifikationTerm_.find(element);
     if (search == EntititiesForUnifikationTerm_.end())
@@ -568,16 +566,25 @@ public:
     return EntititiesForUnifikationTerm_[element];
   }
 
-  void insert_descendant_entities(const Config::Entity& element)
+  void insert_descendant_entities(const Config::GridType& grid, const Config::Entity element)
   {
+    std::cerr << " inserting new elements via descendent ... " << std::endl;
+    const auto& geometry = element.geometry();
+    std::cerr << "old element with corners " << geometry.corner(0) << "  "
+        << geometry.corner(1) << "  "
+        << geometry.corner(2) << "  "
+        << geometry.corner(3) << "  " << std::endl;
+
+
     auto search = EntititiesForUnifikationTerm_.find(element);
     int size = search->second;
     assert(search != EntititiesForUnifikationTerm_.end());
-    EntititiesForUnifikationTerm_.erase(search);
-    for (const auto& e : descendantElements(element,1))
+    for (const auto& e : descendantElements(element,grid.maxLevel() ))
     {
       insert_entitity_for_unifikation_term(e, size);
     }
+    EntititiesForUnifikationTerm_.erase(search);
+
   }
 
   const Config::EntityMap EntititiesForUnifikationTerm() const

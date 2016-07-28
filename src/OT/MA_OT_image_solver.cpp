@@ -427,6 +427,12 @@ void MA_OT_image_solver::plot(const std::string& name) const
 
 }
 
+void MA_OT_image_solver::adapt_solution(const int level)
+{
+  FEBasisHandler_.adapt(*this, level, solution);
+  std::cerr << " adapting operator " << std::endl;
+  op.adapt();
+}
 
 void MA_OT_image_solver::update_Operator()
 {

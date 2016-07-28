@@ -248,7 +248,7 @@ public:
 	 * adapts the solver into the global refined space (refines grid, and transforms solution & exact solution data)
 	 * @param level
 	 */
-	void adapt_solution(const int level=1);
+	virtual void adapt_solution(const int level=1);
 
   /**
    * adapts the solution into a coarser grid space

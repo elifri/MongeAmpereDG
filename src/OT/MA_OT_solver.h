@@ -87,6 +87,8 @@ public:
   virtual void plot(const std::string& filename) const;
   using MA_solver::plot;
 
+  using MA_solver::adapt;
+
   GeometrySetting& get_setting() {return setting_;}
   const GeometrySetting& get_setting() const {return setting_;}
 

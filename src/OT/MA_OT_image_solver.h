@@ -28,6 +28,7 @@ private:
   void plot(const std::string& filename) const;
   using MA_OT_solver::plot;
 
+  void adapt_solution(const int level);
 
   void update_Operator();
   void solve_nonlinear_system();

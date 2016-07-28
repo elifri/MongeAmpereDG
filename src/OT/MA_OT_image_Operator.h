@@ -114,7 +114,7 @@ struct MA_OT_image_Operator_with_Linearisation{
 
       auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
       localView.bind(fixingElement);
-
+      lopLinear_ptr->insert_entitity_for_unifikation_term(fixingElement, localView.size());
       assert(lopLinear_ptr->insert_entitity_for_unifikation_term(fixingElement, localView.size()) == 0);
 
       std::vector<Config::ValueType> entryWx0(localView.size());
@@ -195,7 +195,6 @@ struct MA_OT_image_Operator_with_Linearisation{
           for (unsigned int i = 0; i < localView.size(); i++)
           {
             res += (localXValues[i]*values[i])* quad.weight()*fixingElementDescendant.geometry().integrationElement(quadPos);
-
             noDof_fixingElement++;
           }
         }
@@ -234,14 +233,14 @@ struct MA_OT_image_Operator_with_Linearisation{
       auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
       auto localIndexSet = solver_ptr->FEBasisHandler_.uBasis().indexSet().localIndexSet();
 
+
       //-----update and assemble values for mid value derivatives in small area----------
 
       std::vector<Config::ValueType> entryWx0;
       for (const auto& fixingElementAndOffset : lopLinear_ptr->EntititiesForUnifikationTerm())
       {
         const auto& fixingElementToRefine = fixingElementAndOffset.first;
-
-        insert_descendant_entities(fixingElementToRefine);
+        lopLinear_ptr->insert_descendant_entities(solver_ptr->grid(),fixingElementToRefine);
       }
 
       //assemble derivatives
@@ -249,7 +248,7 @@ struct MA_OT_image_Operator_with_Linearisation{
         for (const auto& fixingElementAndOffset : lopLinear_ptr->EntititiesForUnifikationTerm())
         {
           const auto& fixingElementDescendant = fixingElementAndOffset.first;
-          int noDof_fixingElement_offset = fixingElementAndOffset.second;
+          unsigned int noDof_fixingElement_offset = fixingElementAndOffset.second;
 
           //get local data
           localView.bind(fixingElementDescendant);
@@ -274,7 +273,7 @@ struct MA_OT_image_Operator_with_Linearisation{
             lfu.localBasis().evaluateFunction(quadPos, values);
 
             int noDof_fixingElement = noDof_fixingElement_offset;
-            for (int i = 0; i < localView.size(); i++)
+            for (unsigned int i = 0; i < localView.size(); i++)
             {
               entryWx0[noDof_fixingElement] += values[i][0]* quad.weight()*fixingElementDescendant.geometry().integrationElement(quadPos);
               noDof_fixingElement++;

@@ -286,7 +286,6 @@ void MA_solver::update_solution(const Config::VectorType& newSolution) const
 void MA_solver::adapt_solution(const int level)
 {
   FEBasisHandler_.adapt(*this, level, solution);
-  op.adapt();
 }
 
 
