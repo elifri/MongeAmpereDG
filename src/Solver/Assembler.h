@@ -603,6 +603,7 @@ public:
   void assemble_discrete_hessian_system(const LocalOperatorType &lop, Config::VectorType x, Config::MatrixType& m, Config::VectorType& rhs) const;
 
   void set_uAtX0(const double g) const{ uAtX0_ = g;}
+  void set_VolumeMidU(const double g) const{ volumeMidU_ = g;}
   void set_X0(const Config::DomainType& X0) const{ X0_ = X0;}
   void set_entryWx0(const std::vector<Config::ValueType>& entryWx0) const{ entryWx0_ = entryWx0;}
 
@@ -618,6 +619,7 @@ private:
 */
   mutable Config::DomainType X0_;
   mutable double uAtX0_;
+  mutable double volumeMidU_;
   mutable std::vector<Config::ValueType> entryWx0_;
 
 //    const MA_solver* ma_solver;
@@ -2246,7 +2248,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
     Config::VectorType v_boundary= Config::VectorType::Zero(x.size());
     m.resize(x.size(), x.size());
 
-    Config::VectorType boundary = Config::VectorType::Zero(v.size());
+    Config::VectorType midValue = Config::VectorType::Zero(v.size());
     BoundaryHandler::BoolVectorType collocationSet = BoundaryHandler::BoolVectorType::Constant(v.size(), false);
 
 
@@ -2275,8 +2277,8 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
         //get zero vector to store local function values
         Config::VectorType local_vector;
         local_vector.setZero(localView.size());    // Set all entries to zero
-        Config::VectorType local_boundary;
-        local_boundary.setZero(localView.size());    // Set all entries to zero
+        Config::VectorType local_midvalue;
+        local_midvalue.setZero(localView.size());    // Set all entries to zero
 
         //get zero matrix to store local jacobian
         Config::DenseMatrixType m_m;
@@ -2295,7 +2297,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 //        std::cerr << " is local boundaryDof" << isBoundaryLocal.transpose() << std::endl;
 
 //        lop.assemble_cell_term(localView, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
-        lopJacobian.assemble_cell_term(localView, xLocal, local_vector, m_m, uAtX0_, entryWx0_, entryWx0timesBgradV);
+        lopJacobian.assemble_cell_term(localView, xLocal, local_vector, local_midvalue, m_m, uAtX0_, volumeMidU_, entryWx0_, entryWx0timesBgradV);
 
 
         //write derivatives of unification term into vector
@@ -2378,7 +2380,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 //            std::cerr << " local boundary " << local_boundary << std::endl;
 
 //            lop.assemble_boundary_face_term(is,localView, xLocal, local_boundary, 0);
-            lopJacobian.assemble_boundary_face_term(is, localView, xLocal, local_vector, local_boundary, m_mB);
+            lopJacobian.assemble_boundary_face_term(is, localView, xLocal, local_vector, m_mB);
 
           } else {
             std::cerr << " I do not know how to handle this intersection"
@@ -2387,7 +2389,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
           }
         }
 
-        local_vector+=local_boundary;
+        local_vector+=local_midvalue;
 //        std::cerr << " localVector " << local_vector << std::endl;
 
         //add to objective function and jacobian
@@ -2403,7 +2405,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
         for (size_t i = 0; i < localIndexSet.size(); i++)
         {
 //          if (!isBoundaryLocal(i))  continue;
-          boundary(FETraits::get_index(localIndexSet, i)) += local_boundary[i] ;
+          midValue(FETraits::get_index(localIndexSet, i)) += local_midvalue[i] ;
 //          std::cerr << "boundary add " << i << " to " << FETraits::get_index(localIndexSet, i) << " with value " << local_boundary[i] << " and get " << boundary(FETraits::get_index(localIndexSet, i)) << std::endl;
         }
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
@@ -2416,7 +2418,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 //     m.prune(1e-12);
      std::cerr << " m nonzeros " << m.nonZeros() << std::endl;
 
-     std::cerr << std::endl << " local boundary term " << boundary.norm()<< " whole norm " << v.norm() << std::endl;
+     std::cerr << std::endl << " local midvalue term " << midValue.norm()<< " whole norm " << v.norm() << std::endl;
 //     std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
 //     std::cerr << " f_boundary " << boundary.transpose() << std::endl;
 //     std::cerr << " f          " << v.transpose() << std::endl;

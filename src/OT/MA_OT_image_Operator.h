@@ -199,8 +199,10 @@ struct MA_OT_image_Operator_with_Linearisation{
           }
         }
       }
-//      res /= fixingElement.geometry().volume();
+      res /= fixingElement.geometry().volume();
 
+      solver_ptr->assembler.set_uAtX0(res);
+      solver_ptr->assembler.set_VolumeMidU(fixingElement.geometry().volume());
       solver_ptr->assembler.set_uAtX0(res);
       std::cerr << "integral in fixed cell is " << res <<  " beteiligte zellen sind " << lopLinear_ptr->get_number_of_entities_for_unifikation_term() << std::endl;
 

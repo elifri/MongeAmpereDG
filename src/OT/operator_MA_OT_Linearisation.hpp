@@ -156,7 +156,8 @@ public:
    */
   template<class LocalView, class VectorType, class DenseMatrixType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, DenseMatrixType& m, const double u_atX0, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const
+      VectorType& v, VectorType& v_midvalue, DenseMatrixType& m,
+      const double u_atX0, const double volumeMidU, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const
   {
     assert(entryWx0.size() == entryWx0timesBgradV.size());
 
@@ -312,15 +313,17 @@ public:
         else
           delta_K = h_T/2./b.two_norm()*(1.-1./P_T);
 
+/*
         if (std::abs(delta_K) > 1e-12)
         {
-   /*       for (int i = -n_ ; i <= n_; i++)
+          for (int i = -n_ ; i <= n_; i++)
             for (int j = -n_ ; j <= n_; j++)
               std::cerr << " at " << transportedXs(i+n_,j+n_) << " grad g " << i << " " << j << ": " << gradGs(i+n_,j+n_) << " convectionTerm " << i << " " << j << ": "<< " " << convectionTerm(i+n_,j+n_) << std::endl;
-   */       std::cerr << std::setprecision(16);
+          std::cerr << std::setprecision(16);
           std::cerr << " difference averaged and not, avg: " << b << " not avg: " << convectionTerm(0,0) << " -> difference " << (b-convectionTerm(0,0))<< std::endl;
           std::cerr << "gradg " << gradg << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
         }
+*/
 
       }
 
@@ -348,7 +351,9 @@ public:
         }
 
         //-f(u_k) [rhs of Newton]
-        v(j) += (-detHessu+f_value/g_value+u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+//        v(j) += (-detHessu+f_value/g_value+u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        v(j) += (-detHessu+f_value/g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        v_midvalue(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 //        v(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         //derivative unification term :) term, ATTENTION: works only if w(x_0)=1 for exactly one ansatzfunction
 
@@ -362,7 +367,7 @@ public:
 
           for (unsigned int k = 0; k < localViewFixingElement.size(); k++)
           {
-            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]/volumeMidU*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
             noDof_fixingElement++;
           }
         }
@@ -394,7 +399,7 @@ public:
   template<class Intersection, class LocalView, class VectorType, class MatrixType>
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalView &localView,
-      const VectorType &x, VectorType& v, VectorType& v_boundary, MatrixType& m) const {
+      const VectorType &x, VectorType& v, MatrixType& m) const {
 
     const int dim = Intersection::dimension;
     const int dimw = Intersection::dimensionworld;
@@ -476,10 +481,7 @@ public:
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
           x, Hessu);
 
-
       //-------calculate integral--------
-
-
 
       auto signedDistance = bc.H(gradu, normal);
 //      auto phi_value = bc.phi(localView.element(), gradu, normal);
@@ -488,11 +490,6 @@ public:
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
-
-      const auto grad_u_old = bc.grad_u_old(localView.element(), quadPos);
-
-      const auto derivativeHu = bc.derivativeH(gradu, normal);
-      const auto derivativeHu_old = bc.derivativeH(grad_u_old, normal);
 
       const auto cofHessu = cofactor(Hessu);
 
@@ -532,7 +529,7 @@ public:
         }
         else
         {
-          v_boundary(j) += normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor;
+          v(j) += normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor;
 //          std::cerr << " add to v_boundary(" << j << ") " << normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor
 //              << " -> " << v_boundary(j) << std::endl;
 
