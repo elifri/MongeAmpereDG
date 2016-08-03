@@ -46,7 +46,7 @@ struct SmoothingKernel
 //-----------twice a moving average----------
 
 
-    static_assert(n_== 3, "wrong filter dimension");
+    static_assert(n_== 2, "wrong filter dimension");
     for (int i = -n_; i <= n_; i++)
       for (int j = -n_; j <= n_; j++)
       {
@@ -83,6 +83,7 @@ struct SmoothingKernel
 
     //-----------twice a moving average----------
 
+/*
 
     static_assert(n_== 3, "wrong filter dimension");
     for (int i = -n_; i <= n_; i++)
@@ -115,6 +116,7 @@ struct SmoothingKernel
         case 6: smoothingKernelValues.coeffRef(i+n_,j+n_) = 1; break;
         }
       }
+*/
 
 
     //--------no smoothing------------------
@@ -130,7 +132,7 @@ struct SmoothingKernel
 //  double operator[](int i){ return smoothingKernelValues[i];}
   double operator()(int i, int j){ return smoothingKernelValues(i,j);}
 
-  static const int n_ = 3;
+  static const int n_ = 2;
   Config::DenseMatrixType smoothingKernelValues;
   static constexpr double sigmaSqr_=2;
 };
@@ -279,8 +281,8 @@ public:
       double avg_g_value = 0;
 
       //calculate average convection term
-//      const double h = rhoY.gridWidth()/2.;
-      const double h = h_T/2.;
+      const double h = rhoY.gridWidth()/2.;
+//      const double h = h_T/2.;
       Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> convectionTerm(2*n_+1,2*n_+1);
       Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> transportedXs(2*n_+1,2*n_+1);
       Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> gradGs(2*n_+1,2*n_+1);
@@ -342,12 +344,10 @@ public:
         }
 
         //-f(u_k) [rhs of Newton]
-//        v(j) += (-detHessu+f_value/g_value+u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         v(j) += (-detHessu+f_value/g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-//        v(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         v_midvalue(j) += (u_atX0-u0_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-        //derivative unification term :) term, ATTENTION: works only if w(x_0)=1 for exactly one ansatzfunction
 
+        //derivative unification term
         LocalView localViewFixingElement = localView;
         for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
         {
