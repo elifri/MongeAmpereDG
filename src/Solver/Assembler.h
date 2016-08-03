@@ -2247,7 +2247,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 //    BoundaryHandler::BoolVectorType v_isBoundary = BoundaryHandler::BoolVectorType::Constant(v.size(), false);
 
     //assuming Galerkin
-    v = Config::VectorType::Constant(x.size(), uAtX0_-u0AtX0_);
+    v = Config::VectorType::Zero(x.size());
     std::cerr << " uAtX0_" << uAtX0_ << " u0AtX0_ " << u0AtX0_ << std::endl;
     Config::VectorType v_boundary= Config::VectorType::Zero(x.size());
     m.resize(x.size(), x.size());
@@ -2269,28 +2269,6 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
     auto localIndexSetn = basis_->indexSet().localIndexSet();
 
     lop.found_negative = false;
-
-    //assemble global values
-    for (int i = 0; i < x.size(); i++)
-    {
-      //write derivatives of unification term into vector
-      for (const auto& fixingElementandOffset : lopJacobian.EntititiesForUnifikationTerm())
-      {
-        const auto& fixingElement = fixingElementandOffset.first;
-        int no_fixingElement_offset =fixingElementandOffset.second;
-
-        localViewFixingElement.bind(fixingElement);
-        localIndexSetFixingElement.bind(localViewFixingElement);
-
-        for (unsigned int j = 0; j < localViewFixingElement.size(); j++)
-        {
-          JacobianEntries.push_back(
-          EntryType(i,
-                    FETraits::get_index(localIndexSetFixingElement, j),
-                    entryWx0_[no_fixingElement_offset+j]));
-          }
-        }
-      }
 
     // A loop over all elements of the grid
     for (auto&& e : elements(gridView)) {
@@ -2323,7 +2301,30 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 //        std::cerr << " is local boundaryDof" << isBoundaryLocal.transpose() << std::endl;
 
 //        lop.assemble_cell_term(localView, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
-        lopJacobian.assemble_cell_term(localView, xLocal, local_vector, local_midvalue, m_m, uAtX0_, volumeMidU_, entryWx0_, entryWx0timesBgradV);
+        lopJacobian.assemble_cell_term(localView, xLocal, local_vector, local_midvalue, m_m,
+            uAtX0_, u0AtX0_, entryWx0_, entryWx0timesBgradV);
+
+        //write derivatives of unification term into vector
+        for (const auto& fixingElementandOffset : lopJacobian.EntititiesForUnifikationTerm())
+        {
+          const auto& fixingElement = fixingElementandOffset.first;
+          int no_fixingElement_offset =fixingElementandOffset.second;
+
+          localViewFixingElement.bind(fixingElement);
+          localIndexSetFixingElement.bind(localViewFixingElement);
+
+          for (unsigned int i = 0; i < localView.size(); i++)
+          {
+            for (unsigned int j = 0; j < localViewFixingElement.size(); j++)
+            {
+              JacobianEntries.push_back(
+                  EntryType(FETraits::get_index(localIndexSet, i),
+                            FETraits::get_index(localIndexSetFixingElement, j),
+                            entryWx0timesBgradV[no_fixingElement_offset+j](i)));
+            }
+          }
+        }
+
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
@@ -2391,7 +2392,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
           }
         }
 
-//        local_vector+=local_midvalue;
+        local_vector+=local_midvalue;
 
         //add to objective function and jacobian
         add_local_coefficients(localIndexSet, local_vector, v);

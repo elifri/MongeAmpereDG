@@ -157,7 +157,8 @@ public:
   template<class LocalView, class VectorType, class DenseMatrixType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
       VectorType& v, VectorType& v_midvalue, DenseMatrixType& m,
-      const double u_atX0, const double volumeMidU, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const
+      const double u_atX0, const double u0_atX0,
+      std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const
   {
     assert(entryWx0.size() == entryWx0timesBgradV.size());
 
@@ -336,6 +337,9 @@ public:
       if (detHessu < 0)
         std::cerr << "found negative determinant " << detHessu << " at " << x_value << std::endl;
 
+//      std::cerr << " det -f/g " << -detHessu+f_value/g_value << std::endl;
+
+
       //write calculated distribution
 
       for (int j = 0; j < size; j++) // loop over test fcts
@@ -357,7 +361,6 @@ public:
 //        v(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         //derivative unification term :) term, ATTENTION: works only if w(x_0)=1 for exactly one ansatzfunction
 
-/*
         LocalView localViewFixingElement = localView;
         for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
         {
@@ -368,11 +371,10 @@ public:
 
           for (unsigned int k = 0; k < localViewFixingElement.size(); k++)
           {
-            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]/volumeMidU*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
             noDof_fixingElement++;
           }
         }
-*/
 
         assert(! (v(j)!=v(j)));
 
