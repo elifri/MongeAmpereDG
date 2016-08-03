@@ -357,6 +357,7 @@ public:
 //        v(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         //derivative unification term :) term, ATTENTION: works only if w(x_0)=1 for exactly one ansatzfunction
 
+/*
         LocalView localViewFixingElement = localView;
         for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
         {
@@ -371,6 +372,7 @@ public:
             noDof_fixingElement++;
           }
         }
+*/
 
         assert(! (v(j)!=v(j)));
 
@@ -455,9 +457,6 @@ public:
       // Position of the current quadrature point in the reference element
       const FieldVector<double, dim> &quadPos =
           intersection.geometryInInside().global(quad[pt].position());
-      auto x_value = intersection.inside().geometry().global(quadPos);
-
-//      std::cerr << " quadpos " << quadPos << " x " << x_value << " weight " <<quad[pt].weight()<< std::endl;
 
       // The transposed inverse Jacobian of the map from the reference element to the element
       const auto& jacobian =
@@ -484,8 +483,6 @@ public:
       //-------calculate integral--------
 
       auto signedDistance = bc.H(gradu, normal);
-//      auto phi_value = bc.phi(localView.element(), gradu, normal);
-//      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
@@ -532,14 +529,6 @@ public:
           v(j) += normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor;
 //          std::cerr << " add to v_boundary(" << j << ") " << normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor
 //              << " -> " << v_boundary(j) << std::endl;
-
-//          std:: cerr << " normal old " << normalOld << " norm " << normalOld.two_norm() <<
-
-//          auto temp = normalOld;
-//          temp /= normalOld.two_norm();
-//          std::cerr << " gradH " << derivativeHu << " 1/| |A n_x ?? " << " without scaling " << normalOld << std::endl;
-
-
         }
       }
     }

@@ -288,6 +288,57 @@ struct EigenValueFunction{
   std::array<std::shared_ptr<LocalHessScalarFunction>,4> localHessu_;
 };
 
+void MA_OT_image_solver::create_initial_guess()
+{
+  project([](Config::SpaceType x){return x.two_norm2()/2.0;},
+//    project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
+//  project_labouriousC1([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
+//                        [](Config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},
+//                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
+                        solution);
+
+  auto localView = FEBasisHandler_.uBasis().localView();
+  auto localIndexSet = FEBasisHandler_.uBasis().indexSet().localIndexSet();
+
+  Config::ValueType res = 0;
+
+  for (const auto& fixingElementAndOffset : op.lopLinear_ptr->EntititiesForUnifikationTerm())
+  {
+    const auto& fixingElementDescendant = fixingElementAndOffset.first;
+    int noDof_fixingElement_offset = fixingElementAndOffset.second;
+
+    localView.bind(fixingElementDescendant);
+    localIndexSet.bind(localView);
+    const auto& lfu = localView.tree().finiteElement();
+
+    //get local assignment of dofs
+    Config::VectorType localXValues = Assembler::calculate_local_coefficients(localIndexSet, solution);
+
+    //collect quadrature rule
+    int order = std::max(0, 3 * ((int) lfu.localBasis().order()));;
+    const QuadratureRule<double, Config::dim>& quadRule = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(fixingElementDescendant, order);
+
+    for (const auto& quad : quadRule) {
+      auto quadPos = quad.position();
+
+      std::vector<FieldVector<Config::ValueType,1>> values(localView.size());
+      lfu.localBasis().evaluateFunction(quadPos, values);
+
+      int noDof_fixingElement = noDof_fixingElement_offset;
+
+      for (unsigned int i = 0; i < localView.size(); i++)
+      {
+        res += (localXValues[i]*values[i])* quad.weight()*fixingElementDescendant.geometry().integrationElement(quadPos);
+        noDof_fixingElement++;
+      }
+    }
+  }
+  res /= assembler.volumeMidU();
+  assembler.set_u0AtX0(res);
+
+}
+
+
 
 
 void MA_OT_image_solver::plot(const std::string& name) const

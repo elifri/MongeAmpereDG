@@ -141,7 +141,12 @@ struct MA_OT_image_Operator_with_Linearisation{
           noDof_fixingElement++;
         }
       }
+      for (int i = 0; i < entryWx0.size(); i++)
+        entryWx0[i]/=fixingElement.geometry().volume();
       solver_ptr->assembler.set_entryWx0(entryWx0);
+
+      solver_ptr->assembler.set_VolumeMidU(fixingElement.geometry().volume());
+
     }
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
@@ -284,6 +289,8 @@ struct MA_OT_image_Operator_with_Linearisation{
         }
       }
 
+      for (int i = 0; i < entryWx0.size(); i++)
+        entryWx0[i]/=fixingElement.geometry().volume();
       solver_ptr->assembler.set_entryWx0(entryWx0);
 
     }
