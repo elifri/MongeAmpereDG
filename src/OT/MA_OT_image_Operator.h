@@ -86,7 +86,7 @@ template<typename Solver, typename LOP, typename LOPLinear>
 struct MA_OT_image_Operator_with_Linearisation{
   typedef typename Solver::GridViewType GridView;
 
-  MA_OT_image_Operator_with_Linearisation():solver_ptr(NULL), lop_ptr(), lopLinear_ptr(){
+  MA_OT_image_Operator_with_Linearisation():solver_ptr(NULL), lop_ptr(), lopLinear_ptr(), fixingPoint({0.5,0.15}){
 
   }
 //    MA_OT_Operator(MA_OT_solver& solver):solver_ptr(&solver), lop_ptr(new Local_Operator_MA_OT(new BoundarySquare(solver.gradient_u_old, solver.get_setting()), new rhoXSquareToSquare(), new rhoYSquareToSquare())){}
@@ -103,9 +103,12 @@ struct MA_OT_image_Operator_with_Linearisation{
         lopLinear_ptr(new LOPLinear
             (new BoundarySquare(solver.gradient_u_old,solver.get_setting()),
                 &f_,&g_, solver.gridView())
-        )
+          ),
+    fixingPoint{0.5,0.15}
     {
 
+      //-------------------select cell for mid value-------------------------
+      /*
       lopLinear_ptr->clear_entitities_for_unifikation_term();
       HierarchicSearch<typename GridView::Grid, typename GridView::IndexSet> hs(solver.grid(), solver.gridView().indexSet());
 
@@ -147,7 +150,36 @@ struct MA_OT_image_Operator_with_Linearisation{
       solver_ptr->assembler.set_entryWx0(entryWx0);
 
       solver_ptr->assembler.set_VolumeMidU(fixingElement.geometry().volume());
+*/
 
+      //select fixing point
+      HierarchicSearch<typename GridView::Grid, typename GridView::IndexSet> hs(solver.grid(), solver.gridView().indexSet());
+
+//      const FieldVector<double, 2> findCell = {0.,0.};
+      Config::Entity fixingElement = hs.findEntity(fixingPoint);
+
+      auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
+      localView.bind(fixingElement);
+
+      lopLinear_ptr->insert_entitity_for_unifikation_term(fixingElement, localView.size());
+
+      std::vector<Config::ValueType> entryWx0(localView.size());
+      for (unsigned int i = 0; i < localView.size(); i++)
+        entryWx0[i] = 0;
+
+      const auto& lfu = localView.tree().finiteElement();
+
+      //assemble quadrature
+      int noDof_fixingElement = 0;
+      std::vector<FieldVector<Config::ValueType,1>> values(localView.size());
+      lfu.localBasis().evaluateFunction(fixingElement.geometry().local(fixingPoint), values);
+
+      for (unsigned int i = 0; i < localView.size(); i++)
+      {
+        entryWx0[noDof_fixingElement] += values[i][0];
+        noDof_fixingElement++;
+      }
+      solver_ptr->assembler.set_entryWx0(entryWx0);
     }
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
@@ -157,6 +189,8 @@ struct MA_OT_image_Operator_with_Linearisation{
       if (new_solution)
       {
         solver_ptr->update_solution(x_old);
+          solver_ptr->iterations++;
+          solver_ptr->plot("intermediateStep");
       }
 
       assert(solver_ptr != NULL);
@@ -165,7 +199,7 @@ struct MA_OT_image_Operator_with_Linearisation{
 //      lop.found_negative = false;
 
       //-----assemble mid value in small area----------
-
+/*
       auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
       auto localIndexSet = solver_ptr->FEBasisHandler_.uBasis().indexSet().localIndexSet();
 
@@ -203,10 +237,13 @@ struct MA_OT_image_Operator_with_Linearisation{
         }
       }
       res /= fixingElement.geometry().volume();
+*/
+      typename Solver::DiscreteGridFunction solution_u_global(solver_ptr->FEBasisHandler_.uBasis(),x);
+      auto res = solution_u_global(fixingPoint);
 
       solver_ptr->assembler.set_uAtX0(res);
-      std::cerr << "integral in fixed cell is " << res <<  " beteiligte zellen sind " << lopLinear_ptr->get_number_of_entities_for_unifikation_term() << " size of cell is " << fixingElement.geometry().volume() << std::endl;
-
+//      std::cerr << "integral in fixed cell is " << res <<  " beteiligte zellen sind " << lopLinear_ptr->get_number_of_entities_for_unifikation_term() << " size of cell is " << fixingElement.geometry().volume() << std::endl;
+      std::cerr << "value at fixed point is " << res << std::endl;
       solver_ptr->assembler.assemble_DG_Jacobian(*lop_ptr, *lopLinear_ptr, x,v, m); timer.stop();
       solver_ptr->plot(v,"Res");
     }
@@ -233,12 +270,12 @@ struct MA_OT_image_Operator_with_Linearisation{
 
     void adapt()
     {
+      /*
       auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
       auto localIndexSet = solver_ptr->FEBasisHandler_.uBasis().indexSet().localIndexSet();
 
 
       //-----update and assemble values for mid value derivatives in small area----------
-
       std::vector<Config::ValueType> entryWx0;
       for (const auto& fixingElementAndOffset : lopLinear_ptr->EntititiesForUnifikationTerm())
       {
@@ -288,7 +325,38 @@ struct MA_OT_image_Operator_with_Linearisation{
       for (unsigned int i = 0; i < entryWx0.size(); i++)
         entryWx0[i]/=fixingElement.geometry().volume();
       solver_ptr->assembler.set_entryWx0(entryWx0);
+*/
 
+      //------assemble values for fixing grid point -----------------
+      lopLinear_ptr->clear_entitities_for_unifikation_term();
+
+      HierarchicSearch<typename GridView::Grid, typename GridView::IndexSet> hs(solver_ptr->grid(), solver_ptr->gridView().indexSet());
+
+      Config::Entity fixingElement = hs.findEntity(fixingPoint);
+
+      auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
+      localView.bind(fixingElement);
+
+      //remember element for later assembling
+      lopLinear_ptr->insert_entitity_for_unifikation_term(fixingElement, localView.size());
+
+      std::vector<Config::ValueType> entryWx0(localView.size());
+      for (unsigned int i = 0; i < localView.size(); i++)
+        entryWx0[i] = 0;
+
+      const auto& lfu = localView.tree().finiteElement();
+
+      //assemble quadrature
+      int noDof_fixingElement = 0;
+      std::vector<FieldVector<Config::ValueType,1>> values(localView.size());
+      lfu.localBasis().evaluateFunction(fixingElement.geometry().local(fixingPoint), values);
+
+      for (unsigned int i = 0; i < localView.size(); i++)
+      {
+        entryWx0[noDof_fixingElement] += values[i][0];
+        noDof_fixingElement++;
+      }
+      solver_ptr->assembler.set_entryWx0(entryWx0);
     }
 
 
@@ -300,7 +368,8 @@ struct MA_OT_image_Operator_with_Linearisation{
     std::shared_ptr<LOP> lop_ptr;
     std::shared_ptr<LOPLinear> lopLinear_ptr;
 
-    Config::Entity fixingElement;
+    const FieldVector<double, 2> fixingPoint;
+//    Config::Entity fixingElement;
 };
 
 

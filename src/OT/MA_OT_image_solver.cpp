@@ -297,6 +297,9 @@ void MA_OT_image_solver::create_initial_guess()
 //                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
                         solution);
 
+
+  //------------determine init mid value------------------
+/*
   auto localView = FEBasisHandler_.uBasis().localView();
   auto localIndexSet = FEBasisHandler_.uBasis().indexSet().localIndexSet();
 
@@ -334,8 +337,12 @@ void MA_OT_image_solver::create_initial_guess()
     }
   }
   res /= assembler.volumeMidU();
-  assembler.set_u0AtX0(res);
+*/
 
+  DiscreteGridFunction solution_u_global(FEBasisHandler_.uBasis(),solution);
+  auto res = solution_u_global(op.fixingPoint);
+
+  assembler.set_u0AtX0(res);
 }
 
 

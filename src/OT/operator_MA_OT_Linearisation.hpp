@@ -306,16 +306,8 @@ public:
       }
 
       auto P_T = b.two_norm() * h_T/2./minEVcofHessu;
-
-      if (pt == 0)
-      {
-        if (P_T <= 1.0)
-          delta_K = 0;
-        else
-          delta_K = h_T/2./b.two_norm()*(1.-1./P_T);
-
 /*
-        if (std::abs(delta_K) > 1e-12)
+        if (std::abs(dP_T) > 1.)
         {
           for (int i = -n_ ; i <= n_; i++)
             for (int j = -n_ ; j <= n_; j++)
@@ -325,11 +317,6 @@ public:
           std::cerr << "gradg " << gradg << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
         }
 */
-
-      }
-
-
-//      delta_K  = 0;
 
       auto detHessu = naive_determinant(cofHessu); //note that determinant of Hessu and cofHessu is the same
       rhoY.evaluate(gradu, g_value);
@@ -357,8 +344,8 @@ public:
         //-f(u_k) [rhs of Newton]
 //        v(j) += (-detHessu+f_value/g_value+u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         v(j) += (-detHessu+f_value/g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-        v_midvalue(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 //        v(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        v_midvalue(j) += (u_atX0-u0_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         //derivative unification term :) term, ATTENTION: works only if w(x_0)=1 for exactly one ansatzfunction
 
         LocalView localViewFixingElement = localView;
