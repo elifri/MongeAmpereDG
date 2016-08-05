@@ -247,7 +247,8 @@ const typename MA_solver::VectorType& MA_solver::solve()
     }
 //    plot("numericalSolutionBeforeRef");
 
-    adapt_solution();
+    if (i < SolverConfig::nonlinear_steps-1)
+      adapt_solution();
 
     update_solution(solution);
     plot("numericalSolution");
