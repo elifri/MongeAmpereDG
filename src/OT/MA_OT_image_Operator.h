@@ -189,8 +189,8 @@ struct MA_OT_image_Operator_with_Linearisation{
       if (new_solution)
       {
         solver_ptr->update_solution(x_old);
-          solver_ptr->iterations++;
-          solver_ptr->plot("intermediateStep");
+//          solver_ptr->iterations++;
+//          solver_ptr->plot("intermediateStep");
       }
 
       assert(solver_ptr != NULL);

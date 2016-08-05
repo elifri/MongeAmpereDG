@@ -226,7 +226,7 @@ public:
 
       assert(Config::dim == 2);
 
-      auto cofHessu = convexified_cofactor(Hessu);
+      auto cofHessu = convexified_penalty_cofactor(Hessu);
 //      auto cofHessu = cofactor(Hessu);
       double ev0, ev1;
       calculate_eigenvalues(cofHessu, ev0, ev1);
@@ -320,11 +320,15 @@ public:
         }
 */
 
-      auto detHessu = naive_determinant(cofHessu); //note that determinant of Hessu and cofHessu is the same
+      auto detHessu = determinant(Hessu); //note that determinant of Hessu and cofHessu is the same
       rhoY.evaluate(gradu, g_value);
 
       if (detHessu < 0)
+      {
         std::cerr << "found negative determinant " << detHessu << " at " << x_value << std::endl;
+        std::cerr << " rhs was  " << f_value/g_value << std::endl;
+        std::cerr << "gradg " << gradg << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
+      }
 
 //      std::cerr << " det -f/g " << -detHessu+f_value/g_value << std::endl;
 
@@ -339,13 +343,20 @@ public:
           FieldVector<double,dim> cofTimesW;
           cofHessu.mv(gradients[i],cofTimesW);
           m(j,i) += (cofTimesW*gradients[j]) *quad[pt].weight()*integrationElement;
+//          m(j,i) += (-FrobeniusProduct(cofHessu,Hessians[i]))*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
           //convection term
           m(j,i) += (b*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         }
 
         //-f(u_k) [rhs of Newton]
         v(j) += (-detHessu+f_value/g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-        v_midvalue(j) += (u_atX0-u0_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+//        v(j) += (-detHessu)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        v_midvalue(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        if (detHessu < 0)
+        {
+          std::cerr << "-detHessu+f_value/g_value" << -detHessu+f_value/g_value << " u_atX0-u0_atX0" << u_atX0-u0_atX0 << std::endl;
+        }
+
 
         //derivative unification term
         LocalView localViewFixingElement = localView;
@@ -362,6 +373,7 @@ public:
             noDof_fixingElement++;
           }
         }
+
 
         assert(! (v(j)!=v(j)));
 
@@ -477,7 +489,7 @@ public:
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
 
-      const auto cofHessu = cofactor(Hessu);
+      const auto cofHessu = convexified_penalty_cofactor(Hessu);
 
       //assume n_y of last step
       FieldVector<double, Config::dim> normalOld;
