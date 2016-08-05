@@ -233,7 +233,7 @@ public:
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
       VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const {
-
+/*
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
     const Element& element = localView.element();
@@ -383,7 +383,7 @@ public:
 
     last_equation_adolc >>= last_equation;
     trace_off();
-
+ */
   }
 
   template<class IntersectionType, class LocalView, class VectorType>
