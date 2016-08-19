@@ -160,7 +160,7 @@ public:
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
       VectorType& v, VectorType& v_midvalue, DenseMatrixType& m,
       const double u_atX0, const double u0_atX0,
-      std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const
+      LocalView& localViewTemp, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const
   {
     assert(entryWx0.size() == entryWx0timesBgradV.size());
 
@@ -359,15 +359,14 @@ public:
 
 
         //derivative unification term
-        LocalView localViewFixingElement = localView;
         for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
         {
           const auto& fixingElement = fixingElementAndOffset.first;
           int noDof_fixingElement = fixingElementAndOffset.second;
 
-          localViewFixingElement.bind(fixingElement);
+          localViewTemp.bind(fixingElement);
 
-          for (unsigned int k = 0; k < localViewFixingElement.size(); k++)
+          for (unsigned int k = 0; k < localViewTemp.size(); k++)
           {
             entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
             noDof_fixingElement++;

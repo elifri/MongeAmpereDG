@@ -2302,7 +2302,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 
 //        lop.assemble_cell_term(localView, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
         lopJacobian.assemble_cell_term(localView, xLocal, local_vector, local_midvalue, m_m,
-            uAtX0_, u0AtX0_, entryWx0_, entryWx0timesBgradV);
+            uAtX0_, u0AtX0_, localViewFixingElement, entryWx0_, entryWx0timesBgradV);
 
         //write derivatives of unification term into vector
         for (const auto& fixingElementandOffset : lopJacobian.EntititiesForUnifikationTerm())
