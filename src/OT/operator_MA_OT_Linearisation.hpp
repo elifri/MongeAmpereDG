@@ -487,7 +487,7 @@ public:
           x, Hessu);
       std::vector<FEHessianType> Hessiansn(size);
       FieldMatrix<double, Config::dim, Config::dim> Hessun;
-      assemble_hessians_hessu(localFiniteElementn, jacobian, quadPos, Hessiansn,
+      assemble_hessians_hessu(localFiniteElementn, jacobian, quadPosn, Hessiansn,
           x, Hessun);
 
       //assemble jump and averages
@@ -497,8 +497,10 @@ public:
 
       double grad_u_normaljump = (gradu - gradun) * normal;
 
-      FieldMatrix<double, Config::dim, Config::dim> Hess_avg = cofactor(Hessu);
-      Hess_avg += cofactor(Hessun);
+      auto cofacHessu  = cofactor(Hessu);
+      auto cofacHessun = cofactor(Hessun);
+      FieldMatrix<double, Config::dim, Config::dim> Hess_avg = cofacHessu;
+      Hess_avg += cofacHessun;
       Hess_avg *= 0.5;
 
       //-------calculate integral--------
@@ -508,30 +510,38 @@ public:
 
       for (int j = 0; j < size; j++) {
         FieldVector<double, Config::dim> temp;
-        Hess_avg.mv(gradu, temp);
-        double jump = (temp*normal);
-        Hess_avg.mv(gradun, temp);
-        jump -= (temp*normal);
-//        //parts from self
-        v(j) += jump * referenceFunctionValues[j] * factor;
-//        std:: cerr << "v_adolc(" << j << ")+= " << (jump * referenceFunctionValues[j] * factor).value() << std::endl;
+
+        for (int i= 0; i < size; i++)
+        {
+          //parts from self
+          cofacHessu.mv(gradients[i], temp);
+          m_m(j,i) -= 0.5*(temp*normal) * referenceFunctionValues[j] * factor;
+          mn_m(j,i) -= 0.5*(temp*normal) * referenceFunctionValuesn[j] * factor;
+          std:: cerr << "m_m(" << j << "," << i << ")+= " << -(temp*normal) * referenceFunctionValues[j] * factor << std::endl;
+          std:: cerr << "mn_m(" << j << "," << i << ")+= " << -(temp*normal) * referenceFunctionValuesn[j] * factor << std::endl;
+
+
+          //        //neighbour parts
+          cofacHessun.mv(gradientsn[i], temp);
+          m_mn(j,i) -= -0.5*(temp*normal) * referenceFunctionValues[j] * factor;
+          mn_mn(j,i) -= -0.5*(temp*normal) * referenceFunctionValuesn[j] * factor;
+          std:: cerr << "m_mn(" << j << "," << i << ")+= " << (temp*normal) * referenceFunctionValues[j] * factor << std::endl;
+          std:: cerr << "mn_mn(" << j << "," << i << ")+= " << (temp*normal) * referenceFunctionValuesn[j] * factor << std::endl;
+
+
+          //        std:: cerr << "v_adolc(" << j << ")+= " << (jump * referenceFunctionValues[j] * factor).value() << std::endl;
         // gradient penalty
         auto grad_times_normal = gradients[j] * normal;
-        v(j) += penalty_weight_gradient * (grad_u_normaljump)
-            * (grad_times_normal) * factor;
-//        std:: cerr << "v_adolc(" << j << ")+= " << (penalty_weight_gradient * (grad_u_normaljump)
-//            * (grad_times_normal) * factor).value() << std::endl;
-
-//        //neighbour parts
-        vn(j) += jump * referenceFunctionValuesn[j] * factor;
-//        std:: cerr << "v_adolcn(" << j << ")+= " << (jump * referenceFunctionValuesn[j] * factor).value() << std::endl;
+//        v(j) += penalty_weight_gradient * (grad_u_normaljump)
+//            * (grad_times_normal) * factor;
 
 //        // gradient penalty
         grad_times_normal = gradientsn[j] * normal;
-        vn(j) += penalty_weight_gradient * (grad_u_normaljump)
-            * (-grad_times_normal) * factor;
+//        vn(j) += penalty_weight_gradient * (grad_u_normaljump)
+//            * (-grad_times_normal) * factor;
 //        std:: cerr << "v_adolcn(" << j << ")+= " << (penalty_weight_gradient * (grad_u_normaljump)
 //            * (-grad_times_normal) * factor).value() << std::endl;
+        }
       }
     }
 
