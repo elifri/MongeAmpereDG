@@ -517,17 +517,11 @@ public:
           cofacHessu.mv(gradients[i], temp);
           m_m(j,i) -= 0.5*(temp*normal) * referenceFunctionValues[j] * factor;
           mn_m(j,i) -= 0.5*(temp*normal) * referenceFunctionValuesn[j] * factor;
-          std:: cerr << "m_m(" << j << "," << i << ")+= " << -(temp*normal) * referenceFunctionValues[j] * factor << std::endl;
-          std:: cerr << "mn_m(" << j << "," << i << ")+= " << -(temp*normal) * referenceFunctionValuesn[j] * factor << std::endl;
-
 
           //        //neighbour parts
           cofacHessun.mv(gradientsn[i], temp);
           m_mn(j,i) -= -0.5*(temp*normal) * referenceFunctionValues[j] * factor;
           mn_mn(j,i) -= -0.5*(temp*normal) * referenceFunctionValuesn[j] * factor;
-          std:: cerr << "m_mn(" << j << "," << i << ")+= " << (temp*normal) * referenceFunctionValues[j] * factor << std::endl;
-          std:: cerr << "mn_mn(" << j << "," << i << ")+= " << (temp*normal) * referenceFunctionValuesn[j] * factor << std::endl;
-
 
           //        std:: cerr << "v_adolc(" << j << ")+= " << (jump * referenceFunctionValues[j] * factor).value() << std::endl;
         // gradient penalty
