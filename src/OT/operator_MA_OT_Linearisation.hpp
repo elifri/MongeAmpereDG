@@ -669,16 +669,18 @@ public:
         }
         else
         {
-//          v(j) += normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor;
+          v(j) += normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor;
 //          std::cerr << " add to v_boundary(" << j << ") " << normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor
 //              << " -> " << v_boundary(j) << std::endl;
 
+/*
         for (int i = 0; i < size_u; i++)
         {
           FieldVector<double, Config::dim> temp;
           cofHessu.mv(gradients[i], temp);
-          m(i,j) += (temp*normal) * (referenceFunctionValues[j]) * factor;
+          m(j,i) -= (temp*normal) * (referenceFunctionValues[j]) * factor;
         }
+*/
 
         }
       }
