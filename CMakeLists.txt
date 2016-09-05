@@ -74,11 +74,11 @@ include(DuneMacros)
 #unset(Boost_FOUND CACHE)
 find_package(Umfpack REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(adolc REQUIRED)
+find_package(adolc)
 find_package(MethodOfEllipsoids)
 find_package(CImg)
 find_package(HDF5 REQUIRED)
-find_package(libffo_core)
+find_package(libffo_core REQUIRED)
 
 
 include_directories(${LIBFFO_CORE_INCLUDES} ${METHOD_OF_ELLIPSOIDS_INCLUDES} ${CIMG_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${Boost_INCLUDE_DIRS})

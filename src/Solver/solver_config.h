@@ -16,14 +16,17 @@
 
 #include "Solver/FETraits.hpp"
 
+
+#define HAVE_ADOLC 0
 //automatic differentiation
+#if HAVE_ADOLC
 #include <adolc/adouble.h>
 #include <adolc/adolc.h>
-#define ADOLC
-
+#endif
 
 #include "Dogleg/doglegMethod.hpp"
 
+#if HAVE_ADOLC
 namespace Dune{
 template<> struct PromotionTraits<adouble, double> {typedef adouble PromotedType; };
 //template<> struct PromotionTraits<int,int>   { typedef int PromotedType; };
@@ -35,6 +38,7 @@ inline void DenseMatrix<Dune::FieldMatrix<adouble, 2, 2>>::luDecomposition(Dense
 }
 
 }
+#endif
 
 using namespace Dune;
 

@@ -15,9 +15,11 @@
 #include "MAconfig.h"
 #include "problem_data.h"
 
+#if HAVE_ADOLC
 //automatic differtiation
 #include <adolc/adouble.h>
 #include <adolc/adolc.h>
+#endif
 
 using namespace Dune;
 

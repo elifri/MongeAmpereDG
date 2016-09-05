@@ -190,8 +190,9 @@ namespace PDE_functions{
 	void f(const Config::SpaceType2d& x, Config::ValueType &out);
 
 	void g_initial(const Config::SpaceType2d& z, Config::ValueType &out);
+#if HAVE_ADOLC
 	void g_initial_a(const FieldVector<adouble,2>& z, adouble &out);
-
+#endif
 	void Dg_initial(const Config::SpaceType2d& z, Config::SpaceType2d &out); /// derivative of g_initial
 }
 
@@ -363,6 +364,7 @@ public:
     return max;
   }
 
+#if HAVE_ADOLC
   adouble H(const FieldVector<adouble, Config::dim>& transportedX, const Config::SpaceType &normalX) const
   {
 //    std::cerr << " T_value " << transportedX[0].value() << " " << transportedX[1].value() << std::endl;
@@ -381,6 +383,7 @@ public:
     }
     return max;
   }
+#endif
 
 private:
   const OpticalSetting& opticalsetting;

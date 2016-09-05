@@ -87,7 +87,7 @@ public:
     return res;
   }
 
-
+#if HAVE_ADOLC
   adouble H(const FieldVector<adouble, Config::dim>& transportedX, const Config::SpaceType &normalX) const
   {
 //    std::cerr << " T_value " << transportedX[0].value() << " " << transportedX[1].value() << std::endl;
@@ -106,6 +106,7 @@ public:
     }
     return max;
   }
+#endif
 
   template<class Element>
   Config::SpaceType2d grad_u_old(const Element& element, const Config::SpaceType &xLocal) const
@@ -184,10 +185,12 @@ public:
 //    std::cout << " 1 + 4*" << (q_div2(x[0])*q(x[1])+q(x[0])*q_div2(x[1])) << " +16*" << (q(x[0])*q(x[1])*q_div2(x[0])*q_div2(x[1]) - sqr(q_div(x[0]))*sqr(q_div(x[1])) ) << std::endl;
 //    std::cout << "q_div2(x[0])*q(x[1]) " <<q_div2(x[0])*q(x[1]) << std::endl;
   }
+#if HAVE_ADOLC
   void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
   {
     u = 1.+4.*(q_div2(x[0])*q(x[1])+q(x[0])*q_div2(x[1])) +16.*(q(x[0])*q(x[1])*q_div2(x[0])*q_div2(x[1]) - sqr(q_div(x[0]))*sqr(q_div(x[1])) );
   }
+#endif
 
 public :
   static Config::ValueType q(const Config::ValueType& z)
@@ -204,6 +207,7 @@ public :
     return 8.*M_PI*std::cos(8.*M_PI*z)*z*z-2.*M_PI*std::cos(8.*M_PI*z)+2*z*std::sin(8.*M_PI*z);
   }
 
+#if HAVE_ADOLC
   static adouble q(const adouble& z)
   {
     return (-1./8./M_PI*z*z+1./256./M_PI/M_PI/M_PI +1./32./M_PI)* cos(8.*M_PI*z)
@@ -217,6 +221,7 @@ public :
   {
     return 8.*M_PI*cos(8.*M_PI*z)*z*z-2.*M_PI*cos(8.*M_PI*z)+2*z*sin(8.*M_PI*z);
   }
+#endif
 };
 
 class rhoYSquareToSquare : public DensityFunction
@@ -228,10 +233,12 @@ public:
   {
     u = 1;
   }
+#if HAVE_ADOLC
   void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
   {
     u = 1;
   }
+#endif
 };
 
 class rhoXGaussians : public DensityFunction
@@ -265,6 +272,8 @@ public:
       }
 
   }
+
+#if HAVE_ADOLC
   void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
   {
     FieldVector<adouble, Config::dim> corner;
@@ -292,6 +301,7 @@ public:
       }
   u = 2.+1./0.2/0.2 * exp(-12.5*(x-corner).two_norm2());
   }
+#endif
 };
 
 class rhoYGaussians : public DensityFunction
@@ -303,9 +313,11 @@ public:
   {
     u = 2.+1./0.2/0.2 * std::exp(-12.5*x.two_norm2());
   }
+#if HAVE_ADOLC
   void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
   {
     u = 2.+1./0.2/0.2 * exp(-12.5*x.two_norm2());
   }
+#endif
 };
 #endif /* SRC_PROBLEM_DATA_OT_H_ */

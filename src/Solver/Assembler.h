@@ -14,8 +14,10 @@
 #include "matlab_export.hpp"
 
 //automatic differtiation
+#if HAVE_ADOLC
 #include <adolc/adouble.h>
 #include <adolc/adolc.h>
+#endif
 
 #include <CImg.h>
 #include "Dogleg/utils.hpp"
@@ -48,6 +50,7 @@ void assemble_functionValues_u(const FiniteElement &lfu,
         u_value += x_local(i) * values[i];
 }
 
+#if HAVE_ADOLC
 template<class FiniteElement, class VectorType>
 inline
 void assemble_functionValues_u(const FiniteElement &lfu,
@@ -65,6 +68,7 @@ void assemble_functionValues_u(const FiniteElement &lfu,
     for (size_t i = 0; i < values.size(); i++)
         u_value += x_local(i) * values[i];
 }
+
 
 template<class FiniteElement, int m, int n, class VectorType, class RangeType>
 inline
@@ -92,6 +96,7 @@ void assemble_functionValues_u(const FiniteElement &lfu,
     for (size_t i = 0; i < values.size(); i++)
         u_value.axpy(x_local(i), values[i]);
 }
+#endif
 
 /**
  * evaluate the gradients of test functions at global scope
@@ -996,6 +1001,8 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
     }
   }
 }
+
+#if HAVE_ADOLC
 
 template<class LocalView, class VectorType>
 inline
@@ -2232,6 +2239,16 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
      std::cerr << " f          " << v.transpose() << std::endl;
 
 }
+#else
+template<typename LocalOperatorType>
+void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+{
+//  static_assert(false,"adolc library not found");
+  std::cerr << " This program has to be linked against the adolc library!" << std::endl;
+  std::exit(-1);
+}
+
+#endif
 
 template<typename LocalOperatorType, typename LocalOperatorJacobianType>
 void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalOperatorJacobianType &lopJacobian,
@@ -2248,7 +2265,6 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 
     //assuming Galerkin
     v = Config::VectorType::Zero(x.size());
-    std::cerr << " uAtX0_" << uAtX0_ << " u0AtX0_ " << u0AtX0_ << std::endl;
     Config::VectorType v_boundary= Config::VectorType::Zero(x.size());
     m.resize(x.size(), x.size());
 
@@ -2415,9 +2431,9 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 
 //     std::cout << " m nonzeros " << m.nonZeros() << std::endl;
 //     m.prune(1e-12);
-     std::cerr << " m nonzeros " << m.nonZeros() << std::endl;
+//     std::cerr << " m nonzeros " << m.nonZeros() << std::endl;
 
-     std::cerr << std::endl << " local midvalue term " << midValue.norm()<< " whole norm " << v.norm() << std::endl;
+//     std::cerr << std::endl << " local midvalue term " << midValue.norm()<< " whole norm " << v.norm() << std::endl;
 //     std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
 //     std::cerr << " f_boundary " << boundary.transpose() << std::endl;
 //     std::cerr << " f          " << v.transpose() << std::endl;

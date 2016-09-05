@@ -10,7 +10,9 @@
 #include "Integrator.hpp"
 #include "problem_data.h"
 
+#if HAVE_ADOLC
 #include <adolc/adolc.h>
+#endif
 
 bool ImageFunction::use_adouble_image_evaluation = true;
 
@@ -133,6 +135,7 @@ void ImageFunction::evaluateDerivative (const Config::DomainType &input, FieldVe
   gradu[1] = -factor_/h_*0.5f*((-Ip+In) + 2*dy*(2*Ip-5*Ic+4*In-Ia) + 3*dy*dy*(-Ip+3*Ic-3*In+Ia));
 }
 
+#if HAVE_ADOLC
 void ImageFunction::evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
 {
 
@@ -171,7 +174,7 @@ void ImageFunction::evaluate (const FieldVector<adouble, Config::dim> &x, adoubl
     u = factor_ * imageSmooth_._cubic_atXY(fx,fy);
   }
 }
-
+#endif
 
 void ImageFunction::omega_normalize(const unsigned int n)
 {

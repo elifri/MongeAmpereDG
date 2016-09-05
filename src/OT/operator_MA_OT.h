@@ -15,9 +15,12 @@
 
 #include "OT/problem_data_OT.h"
 
+#if HAVE_ADOLC
 //automatic differentiation
 #include <adolc/adouble.h>
 #include <adolc/adolc.h>
+#endif
+
 #include <cmath>
 
 #include "Solver/boundaryHandler.h"
@@ -812,5 +815,28 @@ public:
   mutable bool found_negative;
 
 };
+#else
+class Local_Operator_MA_OT {
+public:
+  typedef DensityFunction Function;
+  mutable bool found_negative;
+
+  Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY){}
+
+  template<class LocalView, class VectorType>
+  void assemble_cell_term(const LocalView& localView, const VectorType &x,
+      VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const { std::cerr << "did not found adolc"<< std::endl; std::exit(-1); }
+  template<class IntersectionType, class LocalView, class VectorType>
+  void assemble_inner_face_term(const IntersectionType& intersection,
+      const LocalView &localView, const VectorType &x,
+      const LocalView &localViewn, const VectorType &xn, VectorType& v,
+      VectorType& vn, int tag) const{ std::cerr << "did not found adolc"<< std::endl; std::exit(-1);}
+
+  template<class Intersection, class LocalView, class VectorType>
+  void assemble_boundary_face_term(const Intersection& intersection,
+      const LocalView &localView,
+      const VectorType &x, VectorType& v, int tag) const { std::cerr << "did not found adolc"<< std::endl; std::exit(-1);}
+};
+#endif
 
 #endif /* OPERATOR_MA_OT_HH_ */

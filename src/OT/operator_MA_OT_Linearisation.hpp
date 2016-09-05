@@ -490,13 +490,6 @@ public:
       assemble_hessians_hessu(localFiniteElementn, jacobian, quadPosn, Hessiansn,
           x, Hessun);
 
-      //assemble jump and averages
-      adouble u_jump = u_value - un_value;
-
-      assert(std::abs(u_jump.value()) < 1e-8);
-
-      double grad_u_normaljump = (gradu - gradun) * normal;
-
       auto cofacHessu  = cofactor(Hessu);
       auto cofacHessun = cofactor(Hessun);
       FieldMatrix<double, Config::dim, Config::dim> Hess_avg = cofacHessu;

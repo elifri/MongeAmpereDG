@@ -17,10 +17,11 @@ void PDE_functions::g_initial(const Config::SpaceType2d& z, Config::ValueType &o
 	out = 1;
 }
 
+#if HAVE_ADOLC
 void PDE_functions::g_initial_a(const FieldVector<adouble,2>& z, adouble &out){
 	out = 1;
 }
-
+#endif
 
 void PDE_functions::Dg_initial(const Config::SpaceType2d& z, Config::SpaceType2d &out){
 	out[0] = 0;
@@ -28,7 +29,7 @@ void PDE_functions::Dg_initial(const Config::SpaceType2d& z, Config::SpaceType2d
 }
 
 
-
+#if HAVE_ADOLC
 adouble interpolate_cubic_atXY(cimg_library::CImg<double> image , const adouble fx, const adouble fy, const int z, const int c)
 {
   const adouble
@@ -54,7 +55,7 @@ adouble interpolate_cubic_atXY(cimg_library::CImg<double> image , const adouble 
     Ia = Ica + 0.5f*(dx*(-Ipa+Ina) + dx*dx*(2*Ipa-5*Ica+4*Ina-Iaa) + dx*dx*dx*(-Ipa+3*Ica-3*Ina+Iaa));
   return Ic + 0.5f*(dy*(-Ip+In) + dy*dy*(2*Ip-5*Ic+4*In-Ia) + dy*dy*dy*(-Ip+3*Ic-3*In+Ia));
 }
-
+#endif
 
 void RightHandSideReflector::phi(const Config::SpaceType2d& T, const FieldVector<double, Config::dim> &normal, Config::ValueType &phi) const
  {

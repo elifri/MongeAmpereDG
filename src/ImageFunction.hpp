@@ -61,8 +61,9 @@ class ImageFunction : public DensityFunction
     Config::ValueType operator()(const Config::DomainType &x) const;
     double evaluate2d(const double x, const double y);
     void evaluate (const Config::DomainType &x, Config::ValueType &u) const;
+#if HAVE_ADOLC
     void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const;
-
+#endif
     void evaluateDerivative (const Config::DomainType &x, FieldVector<double,Config::dim> &gradu) const;
 
 
