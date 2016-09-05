@@ -66,7 +66,6 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules"
 include(DuneMacros)
 
 #fieser hack ... 
-#set(EIGEN3_INCLUDE_DIR "/home/data/friebel/workspace/eigen")
 #set(METHOD_OF_ELLIPSOIDS_PATH "$ENV{HOME}/workspace/Method\ of\ Ellipsoids")
 
 #unset(LIBFFO_CORE_INCLUDES CACHE)

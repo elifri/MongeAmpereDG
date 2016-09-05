@@ -67,6 +67,7 @@ else (EIGEN3_INCLUDE_DIR)
       ${KDE4_INCLUDE_DIR}
       $ENV{EIGEN3_LIBDIR}
       $ENV{HOME}/lib
+      $ENV{HOME}/workspace/eigen
       PATH_SUFFIXES eigen3 eigen
     )
 
