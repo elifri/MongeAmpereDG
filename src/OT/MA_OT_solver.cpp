@@ -15,8 +15,6 @@ namespace po = boost::program_options;
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk/common.hh>
 
-#include <Grids/Grid2d.hpp>
-
 #include "utils.hpp"
 
 MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting)
@@ -144,6 +142,6 @@ void MA_OT_solver::solve_nonlinear_system()
                                                       x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
                                                       x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
 
-  std::cout << "scaling factor " << solution(solution.size()-1) << endl;
+  std::cout << "scaling factor " << solution(solution.size()-1) << std::endl;
 
   }

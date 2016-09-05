@@ -21,7 +21,6 @@
 #include <adolc/adolc.h>
 #define ADOLC
 
-#include <Grids/Grid2d.hpp> //for povray options
 
 #include "Dogleg/doglegMethod.hpp"
 
@@ -49,6 +48,45 @@ enum ProblemType
 };
 
 std::ostream& operator <<(std::ostream &output, const ProblemType &p);
+
+struct PovRayOpts
+{
+    unsigned int maxTraceLevel;
+    unsigned int nPhotons;
+    bool jitter;
+
+    Eigen::Vector3d cameraLocation;
+    Eigen::Vector3d cameraLookAt;
+    double cameraAngle; /// angle in degree
+
+    Eigen::Vector3d lightSourceLocation;
+    Eigen::Vector3d lightSourceTarget;
+    Eigen::Vector3d lightSourceColor;
+    double lightSourceRadius;
+    double lightSourceFalloff;
+    double lightSourceTightness;
+
+    Eigen::Vector3d planeColor;
+    double planeCoordZ;
+
+    PovRayOpts ()
+     : maxTraceLevel(2), nPhotons(1000000), jitter(true),
+       cameraLocation(0.0, 0.0, 0.5),
+       cameraLookAt(0.0, 0.0, 0.0),
+       cameraAngle(120),
+       lightSourceLocation(0.0, 0.0, 0.0),
+       lightSourceTarget(0.0, 0.0, 1.0),
+       lightSourceColor(1.0, 1.0, 1.0),
+       lightSourceRadius(80),
+       lightSourceFalloff(80),
+       lightSourceTightness(0),
+       planeColor(1.0, 1.0, 1.0),
+       planeCoordZ(0.0)
+    {}
+
+    ~PovRayOpts() {}
+};
+
 
 struct SolverConfig{
 
@@ -163,7 +201,7 @@ struct OpticalSetting : GeometrySetting{
   double minPixelValue;
 
   ///pov ray options for output
-  mirror_problem::Grid2d::PovRayOpts povRayOpts;
+  PovRayOpts povRayOpts;
   static SolverConfig::ValueType lightSourceIntensity;
 
   static double kappa;

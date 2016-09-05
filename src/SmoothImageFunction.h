@@ -33,8 +33,8 @@ public:
     bSplineBasisHandler_.project([this](Config::SpaceType x){return ImageFunction::operator()(x);}, dofs_);
     std::cout << " done"<< std::endl;
 
-    stringstream filename2; filename2 << "../data/BSplines/OT/"<< "TargetImage" <<  "initial.fec";
-    ofstream file(filename2.str(),std::ios::out);
+    std::stringstream filename2; filename2 << "../data/BSplines/OT/"<< "TargetImage" <<  "initial.fec";
+    std::ofstream file(filename2.str(),std::ios::out);
     file << dofs_;
     file.close();
 

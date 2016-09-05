@@ -18,6 +18,8 @@
 #include "IO/imageOT.hpp"
 #include "IO/hdf5Export.hpp"
 
+using namespace std;
+
 MA_OT_image_solver::MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting)
  :MA_OT_solver(grid, gridView, config, opticalSetting), setting_(opticalSetting), op(*this)
 {

@@ -21,6 +21,7 @@
 
 using namespace Dune;
 namespace po = boost::program_options;
+using namespace std;
 
 void read_parameters(int argc, char *argv[], std::string& configFileMASolver, std::string& configFileSetting)
 {

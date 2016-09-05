@@ -14,8 +14,6 @@
 #include <Eigen/Sparse>
 #include <cmath>
 
-#include "igpm_t2_lib.hpp"
-
 template<typename T>
 inline T sqr (const T& x)
 {
@@ -162,8 +160,8 @@ inline void checkFileExtension (std::string &name, std::string extension=".vtu")
     name.insert(name.length(), extension);
 }
 
-bool compare_matrices(igpm::testblock &b, const Eigen::MatrixXd &A, const Eigen::MatrixXd &B, const std::string &Aname, const std::string &Bname, bool output, const double tol);
+bool compare_matrices(std::ostream& os, const Eigen::MatrixXd &A, const Eigen::MatrixXd &B, const std::string &Aname, const std::string &Bname, bool output, const double tol);
 
-bool compare_matrices(igpm::testblock &b, const Eigen::SparseMatrix<double> &A, const Eigen::SparseMatrix<double> &B, const std::string &Aname, const std::string &Bname, bool output, const double tol);
+bool compare_matrices(std::ostream& os, const Eigen::SparseMatrix<double> &A, const Eigen::SparseMatrix<double> &B, const std::string &Aname, const std::string &Bname, bool output, const double tol);
 
 #endif // DOGLEG_UTILS_HPP

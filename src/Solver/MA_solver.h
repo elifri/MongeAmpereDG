@@ -144,9 +144,10 @@ public:
       }
 
       assert(solver_ptr != NULL);
-      igpm::processtimer timer;
-      timer.start();
-      solver_ptr->assemble_DG_Jacobian(lop, x,v, m); timer.stop();
+      auto start = std::chrono::steady_clock::now();
+      solver_ptr->assemble_DG_Jacobian(lop, x,v, m);
+      auto end = std::chrono::steady_clock::now();
+      std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
     }
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const
@@ -157,9 +158,11 @@ public:
       }
 
       assert(solver_ptr != NULL);
-      igpm::processtimer timer;
-      timer.start();
-      solver_ptr->assemble_DG(lop, x,v); timer.stop();
+      auto start = std::chrono::steady_clock::now();
+      solver_ptr->assemble_DG(lop, x,v);
+      auto end = std::chrono::steady_clock::now();
+      std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
+
     }
     void Jacobian(const Config::VectorType& x,  Config::MatrixType& m) const
     {

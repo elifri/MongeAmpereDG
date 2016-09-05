@@ -21,7 +21,11 @@
 
 #include "Dogleg/utils.hpp"
 #include "matlab_export.hpp"
-#include "igpm_t2_lib.hpp"
+
+//for timer
+#include <ctime>
+#include <ratio>
+#include <chrono>
 
 
 #include <cmath>
@@ -76,9 +80,8 @@ bool checkJacobian(
 	Eigen::SparseMatrix<double> estimated_J(n,n);
 
 	make_FD_Jacobian(f,x,estimated_J);
-	igpm::testblock b(std::cout);
 
-	bool compared = compare_matrices(b, J, estimated_J, "Jacobian", "FD Jacobian", true, tol);
+	bool compared = compare_matrices(std::cout, J, estimated_J, "Jacobian", "FD Jacobian", true, tol);
 
   if (!compared && exportFDJacobianifFalse)
   {
@@ -94,7 +97,7 @@ bool checkJacobian(
 //	std::cout << "FD J nonzeros " << estimated_J.nonZeros() << std::endl;
 
 
-	return b;
+	return compared;
 }
 
 template<typename FunctorType>
@@ -150,8 +153,8 @@ bool doglegMethod (
           Eigen::VectorXd &x,
           bool useCombinedFunctor = false
 ){
-    igpm::processtimer gesamtzeit;
-    gesamtzeit.start();
+
+    auto start = std::chrono::steady_clock::now();
 
     if (!opts.silentmode)
         std::cout << "Starting DogLeg solver..." << std::endl;
@@ -456,7 +459,7 @@ bool doglegMethod (
         }
     }
 
-    gesamtzeit.stop();
+    auto end = std::chrono::steady_clock::now();
 //    if (!opts.silentmode)
 //    {
         std::cout << "||f(x)||2   = " << sqrt(2*F) << "\n";
@@ -465,7 +468,7 @@ bool doglegMethod (
         std::cout << "||dx||2     = " << nh << "\n";
         std::cout << "delta       = " << delta << std::endl;
         std::cout << k-1 << " steps needed." << std::endl;
-        std::cout << "Gesamt-Zeit = " << gesamtzeit << " Sekunden" << std::endl;
+        std::cout << "total time = " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
 //    }
     return (stop<3);
 }

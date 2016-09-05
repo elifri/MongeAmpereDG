@@ -203,7 +203,7 @@ FieldMatrix<value_type, 2, 2> convexified_penalty_cofactor(const FieldMatrix<val
   return cofA;
 }
 
-
+#if HAVE_ADOLC
 class Local_Operator_MA_OT {
 
 public:
@@ -212,7 +212,7 @@ public:
   Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
     rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
   {
-    std::cout << " created Local Operator" << endl;
+    std::cout << " created Local Operator" << std::endl;
   }
 
 //  ~Local_Operator_MA_OT()

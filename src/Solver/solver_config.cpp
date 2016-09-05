@@ -16,7 +16,7 @@ namespace po = boost::program_options;
 
 
 using namespace Dune;
-using std::cout;
+using namespace std;
 
 ProblemType SolverConfig::problem;
 
@@ -71,7 +71,7 @@ void SolverConfig::read_configfile(std::string &configFile)
   po::options_description config("Configuration of the MA FE solver");
   config.add_options()
         ("solver.initValueFromFile",     po::value<bool>(&initValueFromFile), "")
-        ("solver.initValue",     po::value<string>(&initValue), "")
+        ("solver.initValue",     po::value<std::string>(&initValue), "")
         ("solver.startlevel",  po::value<int>(&SolverConfig::startlevel), "")
         ("solver.nonlinearSteps",  po::value<int>(&SolverConfig::nonlinear_steps), "")
         ("solver.maxSteps",     po::value<int>(&maxSteps), "")

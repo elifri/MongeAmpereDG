@@ -8,7 +8,7 @@
 
 #include "Plotter.h"
 
-
+using namespace std;
 using std::cout;
 
 //////////////////////////////////////////////////////////

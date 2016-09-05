@@ -17,9 +17,10 @@ namespace po = boost::program_options;
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk/common.hh>
 
-#include <Grids/Grid2d.hpp>
 
 #include "utils.hpp"
+
+using namespace std;
 
 /*
 double MA_solver::calculate_L2_error(const MA_function_type &f) const

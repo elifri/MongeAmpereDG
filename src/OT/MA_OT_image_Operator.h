@@ -39,10 +39,11 @@ struct MA_OT_image_Operator {
       }
 
       assert(solver_ptr != NULL);
-      igpm::processtimer timer;
-      timer.start();
+      auto start = std::chrono::steady_clock::now();
 //      lop.found_negative = false;
-      solver_ptr->assemble_DG_Jacobian(*lop_ptr, x,v, m); timer.stop();
+      solver_ptr->assemble_DG_Jacobian(*lop_ptr, x,v, m);
+      auto end = std::chrono::steady_clock::now();
+      std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
     }
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const
@@ -54,11 +55,11 @@ struct MA_OT_image_Operator {
       }
 
       assert(solver_ptr != NULL);
-      igpm::processtimer timer;
-      timer.start();
+      auto start = std::chrono::steady_clock::now();
 //      lop.found_negative = false;
-      solver_ptr->assemble_DG(*lop_ptr, x,v); timer.stop();
-
+      solver_ptr->assemble_DG(*lop_ptr, x,v);
+      auto end = std::chrono::steady_clock::now();
+      std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
     }
     void Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
     {
@@ -191,8 +192,7 @@ struct MA_OT_image_Operator_with_Linearisation{
       }
 
       assert(solver_ptr != NULL);
-      igpm::processtimer timer;
-      timer.start();
+      auto start = std::chrono::steady_clock::now();
 //      lop.found_negative = false;
 
       //-----assemble mid value in small area----------
@@ -245,8 +245,9 @@ struct MA_OT_image_Operator_with_Linearisation{
       solver_ptr->assembler.set_uAtX0(res);
 //      std::cerr << "integral in fixed cell is " << res <<  " beteiligte zellen sind " << lopLinear_ptr->get_number_of_entities_for_unifikation_term() << " size of cell is " << fixingElement.geometry().volume() << std::endl;
       std::cerr << "value at fixed point is " << res << std::endl;
-      solver_ptr->assembler.assemble_DG_Jacobian(*lop_ptr, *lopLinear_ptr, x,v, m); timer.stop();
-      solver_ptr->plot(v,"Res");
+      solver_ptr->assembler.assemble_DG_Jacobian(*lop_ptr, *lopLinear_ptr, x,v, m);
+      auto end = std::chrono::steady_clock::now();
+//      std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
     }
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const

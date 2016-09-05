@@ -66,10 +66,8 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules"
 include(DuneMacros)
 
 #fieser hack ... 
-set(EIGEN3_INCLUDE_DIR "/home/data/friebel/workspace/eigen")
-set(IGPM_T2_LIB_INCLUDES "/home/data/friebel/workspace/igpm_t2_lib/include")
-set(METHOD_OF_ELLIPSOIDS_PATH "$ENV{HOME}/workspace/Method\ of\ Ellipsoids")
-set(CIMG_PATH "$ENV{HOME}/workspace/CImg-1.6.0")
+#set(EIGEN3_INCLUDE_DIR "/home/data/friebel/workspace/eigen")
+#set(METHOD_OF_ELLIPSOIDS_PATH "$ENV{HOME}/workspace/Method\ of\ Ellipsoids")
 
 #unset(LIBFFO_CORE_INCLUDES CACHE)
 #unset(LIBFFO_CORE_LIBRARIES CACHE)
@@ -83,14 +81,18 @@ find_package(HDF5 REQUIRED)
 find_package(libffo_core)
 
 
-include_directories(${LIBFFO_CORE_INCLUDES} ${METHOD_OF_ELLIPSOIDS_INCLUDES} ${CIMG_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${IGPM_T2_LIB_INCLUDES} ${ADOLC_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+include_directories(${LIBFFO_CORE_INCLUDES} ${METHOD_OF_ELLIPSOIDS_INCLUDES} ${CIMG_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${Boost_INCLUDE_DIRS})
+if (METHOD_OF_ELLIPSOIDS_INCLUDES)
+include_directories(${METHOD_OF_ELLIPSOIDS_INCLUDES})
+endif (METHOD_OF_ELLIPSOIDS_INCLUDES)
+if (ADOLC_FOUND)
+include_directories(${ADOLC_INCLUDE_DIRS})
+endif (ADOLC_FOUND)
 include_directories("src")
-message("found boost ${Boost_LIBRARIES}")
 
 
 # start a dune project with information from dune.module
 dune_project()
-message("found boost ${Boost_LIBRARIES}")
 
 add_subdirectory("src")
 add_subdirectory("Testing")
@@ -99,14 +101,8 @@ add_subdirectory("dune")
 add_subdirectory("doc")
 add_subdirectory("cmake/modules")
 
-
-message("found boost ${Boost_LIBRARIES}")
-
 # finalize the dune project, e.g. generating config.h etc.
 finalize_dune_project(GENERATE_CONFIG_H_CMAKE)
-
-
-message("found boost ${Boost_LIBRARIES}")
 
 message("compiling mode: ${CMAKE_BUILD_TYPE}")
 message("cmake flags mode: ${CMAKE_CXX_FLAGS}")

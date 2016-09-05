@@ -23,7 +23,6 @@
 #include "problem_data.h"
 
 #include <dune/geometry/refinement.hh>
-#include <Grids/Grid2d.hpp>
 
 #include <fstream>
 
@@ -50,7 +49,7 @@ private:
 	int refinement; ///choose the refinement level before plotting
 
 	GeometrySetting geometrySetting;
-	mirror_problem::Grid2d::PovRayOpts povRayOpts;
+	PovRayOpts povRayOpts;
 
 
 	int Nelements() const;
@@ -84,7 +83,7 @@ public:
 	void read_vtk_header(std::ifstream& file, int &Nnodes, int &Nelements) const; ///reads vtk header
 
 	template <typename T>
-	void write_point_data(std::ofstream &file, const string name, Eigen::Matrix<T, Eigen::Dynamic, 1> celldata) const;
+	void write_point_data(std::ofstream &file, const std::string name, Eigen::Matrix<T, Eigen::Dynamic, 1> celldata) const;
 	void write_points(std::ofstream &file) const;///writes the point coordinates into file
 	void write_cells(std::ofstream &file) const; ///write cells into file
 
@@ -160,7 +159,7 @@ public:
 	void set_refinement(const int refinement){	this->refinement = refinement;}
 	void set_output_directory(std::string outputdir) {this->output_directory = outputdir;}
 	void set_output_prefix(std::string prefix) {this->output_prefix = prefix;}
-	void set_PovRayOptions(const  mirror_problem::Grid2d::PovRayOpts& opts) {this->povRayOpts = opts;}
+	void set_PovRayOptions(const  PovRayOpts& opts) {this->povRayOpts = opts;}
   void set_geometrySetting(const  GeometrySetting& opts) {this->geometrySetting = opts;}
 
 //	void set_rhs(vector_function_type get_rhs){ this->get_rhs = get_rhs;}
@@ -357,7 +356,7 @@ void Plotter::write_points_reflector(std::ofstream &file, Function &f) const{
           auto x_2d = geometry.global(it.coords());
           auto rho = 1.0/f(it.coords());
           file << std::setprecision(12) << std::scientific;
-          file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  omega(x_2d)*rho << endl;
+          file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  omega(x_2d)*rho << std::endl;
           vertex_no++;
         }
       }
@@ -388,7 +387,7 @@ void Plotter::write_points_refractor(std::ofstream &file, Function &f) const{
           auto x_2d = geometry.global(it.coords());
           auto rho = f(it.coords());
           file << std::setprecision(12) << std::scientific;
-          file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  omega(x_2d)*rho << endl;
+          file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  omega(x_2d)*rho << std::endl;
           vertex_no++;
         }
       }
@@ -417,7 +416,7 @@ void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
         for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
           auto transportedX = fg(it.coords());
           file << std::setprecision(12) << std::scientific;
-          file << "\t\t\t\t\t" << transportedX[0] << " " << transportedX[1] << " 0" << endl;
+          file << "\t\t\t\t\t" << transportedX[0] << " " << transportedX[1] << " 0" << std::endl;
           vertex_no++;
 //          std::cerr << " transported " << geometry.global(it.coords()) << " to " << transportedX << std::endl;
         }
@@ -451,7 +450,7 @@ void Plotter::write_error(std::ofstream &file, LocalFunction &f, Function &exact
           file << std::setprecision(12) << std::scientific;
           file << diff << " ";
         }
-        file << endl;
+        file << std::endl;
       }
     }
   file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
@@ -481,7 +480,7 @@ void Plotter::write_error_OT(std::ofstream &file, LocalFunction &f, const Functi
           file << std::setprecision(12) << std::scientific;
           file << diff << " ";
         }
-        file << endl;
+        file << std::endl;
       }
     }
   file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
@@ -506,7 +505,7 @@ void Plotter::write_transport_OT(std::ofstream &file, LocalFunction &f) const{
           file << std::setprecision(12) << std::scientific;
           file << diff << " ";
         }
-        file << endl;
+        file << std::endl;
       }
     }
   file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
@@ -542,7 +541,7 @@ void Plotter::write_points_reflector_pov(std::ofstream &file, Function & f) cons
           auto x_2d = geometry.global(it.coords());
           auto rho = 1.0/f(it.coords());
           file << std::setprecision(12) << std::scientific;
-          file << "\t\t <"  << x_2d[0]*rho << ", " << x_2d[1]*rho << ", " <<  omega(x_2d)*rho<< ">," << endl;
+          file << "\t\t <"  << x_2d[0]*rho << ", " << x_2d[1]*rho << ", " <<  omega(x_2d)*rho<< ">," << std::endl;
           vertex_no++;
         }
       }
@@ -580,7 +579,7 @@ void Plotter::write_points_refractor_pov(std::ofstream &file, Function & f) cons
           auto x_2d = geometry.global(it.coords());
           auto rho = f(it.coords());
           file << std::setprecision(12) << std::scientific;
-          file << "\t\t <"  << x_2d[0]*rho << ", " << x_2d[1]*rho << ", " <<  omega(x_2d)*rho<< ">," << endl;
+          file << "\t\t <"  << x_2d[0]*rho << ", " << x_2d[1]*rho << ", " <<  omega(x_2d)*rho<< ">," << std::endl;
           vertex_no++;
         }
       }
