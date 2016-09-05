@@ -417,7 +417,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
   std::string fnamehdf5(plotter.get_output_directory());
   fnamehdf5 += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations);
 
-  savehdf5(*gridView_ptr, setting_.lowerLeft, setting_.upperRight, plotterRefinement_, fnamehdf5, numericalTransportFunction.localFunction());
+  savehdf5Outputgrid(*gridView_ptr, setting_.lowerLeft, setting_.upperRight, plotterRefinement_, fnamehdf5, numericalTransportFunction.localFunction());
 
   std::cout << " saved hdf5 file to " << fnamehdf5 << std::endl;
 

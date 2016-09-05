@@ -15,7 +15,7 @@
 #include <dataexchange/ff3D/ff3D.h>
 
 template <typename GridView, class Function>
-void savehdf5(const GridView& grid, const Dune::FieldVector<double,2> &lowerLeft, const Dune::FieldVector<double,2> &upperRight,
+void savehdf5Outputgrid(const GridView& grid, const Dune::FieldVector<double,2> &lowerLeft, const Dune::FieldVector<double,2> &upperRight,
     const int refinement,
     std::string& filename, Function &fg)
 {
@@ -83,5 +83,54 @@ void savehdf5(const GridView& grid, const Dune::FieldVector<double,2> &lowerLeft
   ff3D::save_ff3D_22P(ff3D_savepaths, groupname, X, Y, PD);
 }
 
+
+template <typename GridView, class Function>
+void savehdf5(const GridView& grid, const Dune::FieldVector<double,2> &lowerLeft, const Dune::FieldVector<double,2> &upperRight,
+    std::string& filename, Function &fg)
+{
+  stdmapss ff3D_savepaths{{"hdf5", filename}};
+  std::string groupname("dune_mongeampere");
+
+
+  //get information
+  const double l_x = upperRight[0] - lowerLeft[0];
+  const double l_y = upperRight[1] - lowerLeft[1];
+
+  int n_x = std::sqrt(grid.size(0)*l_x/l_y);
+  int n_y = grid.size(0)/n_x;
+
+  const double h_x = ((double)l_x)/(n_x);
+  const double h_y = ((double)l_y)/(n_y);
+
+  Array2Dd X(n_x+1,n_y+1);
+  Array2Dd Y(n_x+1,n_y+1);
+  Array2Dd BsplineCoeffs(n_x+1,n_y+1);
+
+  {   // save points in file
+    for (auto&& element: elements(grid))
+    {
+      fg.bind(element);
+      const auto geometry = element.geometry();
+
+      for (int i = 0; i < geometry.corners(); i++)
+      {
+        const auto& x_local = geometry.corner(i);
+        const auto& x_global = element.geometry().global(x_local);
+        auto u_value = fg(x_local);
+
+        int index_x = (x_global[0]-lowerLeft[0])/h_x;
+        int index_y = (x_global[1]-lowerLeft[1])/h_y; //index of the bottom left corner of the rectangle where x lies in
+
+        X(index_x,index_y) = x_global[0];
+        Y(index_x,index_y) = x_global[1];
+        BsplineCoeffs(index_x,index_y) = 0.0;
+        assert(false);
+        DUNE_THROW(NotImplemented, "BSplinehdf5Export::interpolate");
+      }
+    }
+  }
+
+  ff3D::save_ff3D_22P(ff3D_savepaths, groupname, X, Y, BsplineCoeffs);
+}
 
 #endif /* SRC_IO_HDF5EXPORT_HPP_ */
