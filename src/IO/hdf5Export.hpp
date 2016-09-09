@@ -69,8 +69,8 @@ void savehdf5Outputgrid(const GridView& grid, const Dune::FieldVector<double,2> 
           int index_x = (x_global[0]-lowerLeft[0])/h_x;
           int index_y = (x_global[1]-lowerLeft[1])/h_y; //index of the bottom left corner of the rectangle where x lies in
 
-          assert(isfinite(transportedX[0]));
-          assert(isfinite(transportedX[1]));
+          assert(std::isfinite(transportedX[0]));
+          assert(std::isfinite(transportedX[1]));
 
           X(index_x,index_y) = transportedX[0];
           Y(index_x,index_y) = transportedX[1];
