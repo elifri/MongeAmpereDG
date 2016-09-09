@@ -105,7 +105,8 @@ struct MA_OT_image_Operator_with_Linearisation{
             (new BoundarySquare(solver.gradient_u_old,solver.get_setting()),
                 &f_,&g_, solver.gridView())
           ),
-    fixingPoint{0.5,0.15}
+//    fixingPoint{0.5,0.15}
+    fixingPoint{0.,0.}
     {
 
       //-------------------select cell for mid value-------------------------
@@ -252,8 +253,16 @@ struct MA_OT_image_Operator_with_Linearisation{
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const
     {
-      Config::MatrixType m;
-      evaluate(x,v, m, x_old, new_solution);
+      //-----assemble fixed grid point----------
+      typename Solver::DiscreteGridFunction solution_u_global(solver_ptr->FEBasisHandler_.uBasis(),x);
+      auto res = solution_u_global(fixingPoint);
+
+
+      solver_ptr->assembler.set_uAtX0(res);
+//      std::cerr << "integral in fixed cell is " << res <<  " beteiligte zellen sind " << lopLinear_ptr->get_number_of_entities_for_unifikation_term() << " size of cell is " << fixingElement.geometry().volume() << std::endl;
+      std::cerr << "value at fixed point is " << res << std::endl;
+      solver_ptr->assembler.assemble_DG_Only(*lopLinear_ptr, x,v);
+      auto end = std::chrono::steady_clock::now();
     }
     void Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
     {

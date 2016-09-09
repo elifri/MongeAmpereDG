@@ -300,6 +300,14 @@ void MA_OT_image_solver::create_initial_guess()
                         solution);
 
 
+/*
+  solution.resize(get_n_dofs());
+  for (int i = 0; i < get_n_dofs(); i++)
+    solution[i] = i % 10;
+*/
+
+
+
   //------------determine init mid value------------------
 /*
   auto localView = FEBasisHandler_.uBasis().localView();
@@ -352,8 +360,6 @@ void MA_OT_image_solver::create_initial_guess()
 
 void MA_OT_image_solver::plot(const std::string& name) const
 {
-  std::cout << "write VTK output? " << writeVTK_ << " ";
-
   //write vtk files
   if (writeVTK_)
   {
@@ -421,6 +427,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
 
   std::cout << " saved hdf5 file to " << fnamehdf5 << std::endl;
 
+  /*
   ConvectionFunction convectionNorm(gradient_u_old, op);
   convectionNorm.variant_ = ConvectionFunction::Smooth;
 
@@ -435,10 +442,9 @@ void MA_OT_image_solver::plot(const std::string& name) const
 
   vtkWriter.addVertexData(interpolatedTargetFunction, VTK::FieldInfo("interpolTarget", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter.write(fnameConvection);
-  std::cout << " wrote Convection to " << fnameConvection << std::endl;
+//  std::cout << " wrote Convection to " << fnameConvection << std::endl;
 
 
-/*
   std::string fnameConvGradient(plotter.get_output_directory());
   fnameConvGradient += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "ConvectionGradient.vtu";
   //works only if source domain = target domain
