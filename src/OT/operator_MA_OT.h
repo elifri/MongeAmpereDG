@@ -103,7 +103,7 @@ FieldMatrix<value_type, 2, 2> convexified_cofactor(const FieldMatrix<value_type,
 
     calculate_eigenvalues(cofA, EW0_quadr, EW1_quadr);
 
-    assert(std::abs(naive_determinant(cofA) - EW0_quadr*EW1_quadr) < 1e-12);
+    assert(std::abs((naive_determinant(cofA) - EW0_quadr*EW1_quadr)/naive_determinant(cofA)) < 1e-10);
 
     if (EW0_quadr > EW1_quadr)
       std::swap(EW0_quadr, EW1_quadr);
@@ -188,7 +188,7 @@ FieldMatrix<value_type, 2, 2> convexified_penalty_cofactor(const FieldMatrix<val
 
     calculate_eigenvalues(cofA, EW0_quadr, EW1_quadr);
 
-    assert(std::abs(naive_determinant(cofA) - EW0_quadr*EW1_quadr) < 1e-12);
+    assert(std::abs((naive_determinant(cofA) - EW0_quadr*EW1_quadr)/naive_determinant(cofA)) < 1e-7);
 
     if (EW0_quadr > EW1_quadr)
       std::swap(EW0_quadr, EW1_quadr);

@@ -96,8 +96,6 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solv
   solver.grid_ptr->adapt();
   solver.count_refined += level;
 
-  std::cout << "new element count " << solver.gridView_ptr->size(0) << std::endl;
-
   //we need do store the old basis as the (father) finite element depends on the basis
   typedef Functions::PS12SSplineBasis<Config::LevelGridView, Config::SparseMatrixType> FEBasisCoarseType;
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1)));

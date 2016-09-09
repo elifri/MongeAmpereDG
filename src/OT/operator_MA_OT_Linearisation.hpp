@@ -145,7 +145,7 @@ public:
 
   template<typename GridView>
   Local_Operator_MA_OT_Linearisation(const OTBoundary* bc, const Function* rhoX, const Function* rhoY, const GridView& gridView):
-    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), delta_K(10), int_f(0), sign(1.0), found_negative(false), hash(gridView), EntititiesForUnifikationTerm_(10,hash)
+    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), delta_K(10), int_f(0), sign(1.0), hash(gridView), EntititiesForUnifikationTerm_(10,hash), found_negative(false)
   {
   }
 
@@ -688,10 +688,6 @@ public:
       EntititiesForUnifikationTerm_[element] = newOffset;
 
       const auto& geometry = element.geometry();
-      std::cerr << " add new element with corners ";
-      for (int i = 0; i < geometry.corners(); i++)
-        std::cerr << geometry.corner(i) << "  ";\
-      std::cerr << std::endl;
 
       return newOffset;
     }
@@ -700,13 +696,7 @@ public:
 
   void insert_descendant_entities(const Config::GridType& grid, const Config::Entity element)
   {
-    std::cerr << " inserting new elements via descendent ... " << std::endl;
     const auto& geometry = element.geometry();
-    std::cerr << "old element with corners " << geometry.corner(0) << "  "
-        << geometry.corner(1) << "  "
-        << geometry.corner(2) << "  "
-        << geometry.corner(3) << "  " << std::endl;
-
 
     auto search = EntititiesForUnifikationTerm_.find(element);
     int size = search->second;

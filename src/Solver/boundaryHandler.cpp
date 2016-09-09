@@ -50,7 +50,7 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
           case 0:
             break;
           case 1: //case of facet
-            if (localKey.subEntity() == boundaryFaceId) //edge normal dof
+            if (localKey.subEntity() == (unsigned int) boundaryFaceId) //edge normal dof
             {
               localIsBoundary[k] = true;
               localIsBoundaryValue[k] = true;
