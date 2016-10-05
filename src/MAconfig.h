@@ -18,10 +18,10 @@
 //to mark variables as unused (used for checking of return values in Petsc etc. in Debug Mode)
 #define _unused(x) ((void)x)
 
-#define BSPLINES
+//#define BSPLINES
 //#define USE_C0_PENALTY
 //#undef USE_MIXED_ELEMENT
-//#define USE_PS12
+#define USE_PS12
 
 #ifndef USE_PS12
 #define C0Element

@@ -123,8 +123,13 @@ void SolverConfig::read_configfile(std::string &configFile)
 Config::SpaceType GeometrySetting::lowerLeft = {0,0};
 Config::SpaceType GeometrySetting::upperRight = {1,1};
 
+std::string GeometrySetting::gridinputFile = "";
+
 Config::SpaceType GeometrySetting::lowerLeftTarget = {0,0};
 Config::SpaceType GeometrySetting::upperRightTarget= {1,1};
+
+std::string GeometrySetting::gridinputTargetFile = "";
+
 double GeometrySetting::z_3 = 0;
 
 void GeometrySetting::read_configfile(std::string &configFile)
@@ -138,6 +143,7 @@ void GeometrySetting::read_configfile(std::string &configFile)
         ("geometry.input.xMax",  po::value<double>(&GeometrySetting::upperRight[0]), "")
         ("geometry.input.yMin",  po::value<double>(&GeometrySetting::lowerLeft[1]), "")
         ("geometry.input.yMax",  po::value<double>(&GeometrySetting::upperRight[1]), "")
+        ("geometry.input.gridfile",  po::value<string>(&GeometrySetting::gridinputFile), "")
         ("geometry.target.xMin",     po::value<double>(&GeometrySetting::lowerLeftTarget[0]), "")
         ("geometry.target.xMax",     po::value<double>(&GeometrySetting::upperRightTarget[0]), "")
         ("geometry.target.yMin",     po::value<double>(&GeometrySetting::lowerLeftTarget[1]), "")
@@ -181,10 +187,12 @@ void OpticalSetting::read_configfile(std::string &configFile)
         ("geometry.optic.xMax",  po::value<double>(&OpticalSetting::upperRight[0]), "")
         ("geometry.optic.yMin",  po::value<double>(&OpticalSetting::lowerLeft[1]), "")
         ("geometry.optic.yMax",  po::value<double>(&OpticalSetting::upperRight[1]), "")
+        ("geometry.optic.gridfile",  po::value<string>(&OpticalSetting::gridinputFile), "")
         ("geometry.target.xMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[0]), "")
         ("geometry.target.xMax",     po::value<double>(&OpticalSetting::upperRightTarget[0]), "")
         ("geometry.target.yMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[1]), "")
         ("geometry.target.yMax",     po::value<double>(&OpticalSetting::upperRightTarget[1]), "")
+        ("geometry.target.gridfile",  po::value<string>(&OpticalSetting::gridinputTargetFile), "")
         ("geometry.target.z",        po::value<double>(&OpticalSetting::z_3),    "")
         ("light.in.imageName",       po::value<string>(&OpticalSetting::LightinputImageName), "path to image")
         ("light.out.targetImageName",     po::value<string>(&OpticalSetting::TargetImageName), "")
