@@ -30,6 +30,16 @@ public:
 
   /**
    * integrates the function on the current mesh numerically
+   * @param f callback to the funciton to integrate
+   * @param quad_degree order of the quadrature rule
+   * @return  numerical integral
+   */
+  template<typename function_type>
+  double assemble_boundary_integral(const function_type &f, const int quad_degree = 4) const;
+
+
+  /**
+   * integrates the function on the current mesh numerically
    * @param f callback to the function to integrate, the function is locally bind to each element
    * @param quad_degree order of the quadrature rule
    * @return  numerical integral
@@ -64,6 +74,47 @@ double Integrator<GT>::assemble_integral(const function_type &f, const int quad_
 		}
 	}
 	return res;
+}
+
+template<typename GT>
+template <typename function_type>
+double Integrator<GT>::assemble_boundary_integral(const function_type &f, const int quad_degree) const{
+  double res = 0;
+
+  for(auto&& e: elements(grid_ptr->leafGridView()))
+  {
+    for (auto&& is : intersections(grid_ptr->leafGridView(), e)) {
+
+      if(is.boundary())
+      {
+        typedef decltype(is) ConstIntersectionRefType;
+        typedef typename std::remove_reference<ConstIntersectionRefType>::type ConstIntersectionType;
+
+        const int dim = ConstIntersectionType::dimension;
+        const int dimw = ConstIntersectionType::dimensionworld;
+
+        // Get a quadrature rule
+        GeometryType gtface = is.geometryInInside().type();
+        const QuadratureRule<double, Config::dim - 1>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim-1>(gtface, quad_degree);
+
+        // normal of center in face's reference element
+        const FieldVector<double, Config::dim - 1>& face_center = ReferenceElements<double,
+            dim - 1>::general(is.geometry().type()).position(0, 0);
+        const FieldVector<double, dimw> normal = is.unitOuterNormal(
+            face_center);
+
+        // Loop over all quadrature points
+        for (const auto& pt : quad) {
+          const FieldVector<double, dimw> x_value = is.inside().geometry().global(is.geometryInInside().global(pt.position()));
+          Config::ValueType f_value = f(x_value, normal);
+
+          auto factor = pt.weight()*is.geometry().integrationElement(pt.position());
+          res += f_value*factor;
+        }
+      }
+    }
+  }
+  return res;
 }
 
 template<typename GT>

@@ -227,7 +227,6 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
     update_solution(solution);
     plot("numericalSolution");
-    cout << "u(x_0) " << (*solution_u_old_global)(get_setting().lowerLeft) << endl;
 
     update_Operator();
 
@@ -238,7 +237,6 @@ const typename MA_solver::VectorType& MA_solver::solve()
     {
       //write current solution to file
       update_solution(solution);
-      cout << "u(x_0) " << (*solution_u_old_global)(get_setting().lowerLeft) << endl;
 
       stringstream filename2; filename2 << outputDirectory_ << "/"<< outputPrefix_ << iterations << ".fec";
       ofstream file(filename2.str(),std::ios::out);

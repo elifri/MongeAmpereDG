@@ -105,7 +105,7 @@ struct MA_OT_image_Operator_with_Linearisation{
             (new BoundarySquare(solver.gradient_u_old,solver.get_setting()),
                 &f_,&g_, solver.gridView())
           ),
-//    fixingPoint{0.5,0.15}
+//    fixingPoint{0.5,0.5}
     fixingPoint{0.,0.}
     {
 
@@ -248,7 +248,7 @@ struct MA_OT_image_Operator_with_Linearisation{
       std::cerr << "value at fixed point is " << res << std::endl;
       solver_ptr->assembler.assemble_DG_Jacobian(*lop_ptr, *lopLinear_ptr, x,v, m);
       auto end = std::chrono::steady_clock::now();
-//      std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
+      std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
     }
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const
@@ -371,6 +371,8 @@ struct MA_OT_image_Operator_with_Linearisation{
       solver_ptr->assembler.set_entryWx0(entryWx0);
 
     }
+
+    const FieldVector<double, 2> get_fixingPoint(){return fixingPoint;}
 
 
     mutable Solver* solver_ptr;

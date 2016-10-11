@@ -2432,7 +2432,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
     auto localIndexSetFixingElement = basis_->indexSet().localIndexSet();
     auto localIndexSetn = basis_->indexSet().localIndexSet();
 
-    lop.found_negative = false;
+//    lop.found_negative = false;
 
     // A loop over all elements of the grid
     for (auto&& e : elements(gridView)) {
@@ -2526,7 +2526,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
               mn_m.setZero(localViewn.size(), localView.size());
               m_mn.setZero(localView.size(), localViewn.size());
               mn_mn.setZero(localViewn.size(), localViewn.size());
-              std::cerr << " intermediate (bef if) m_m " << m_m  << std::endl;
+//              std::cerr << " intermediate (bef if) m_m " << m_m  << std::endl;
 
               lopJacobian.assemble_inner_face_term(is, localView, xLocal, localViewn, xLocaln,
                   m_m, mn_m, m_mn, mn_mn,
@@ -2534,15 +2534,15 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 
 //                std::cerr << " localVector " << local_vector << std::endl;
 
-              std::cerr << " intermediate (if) m_m " << m_m  << std::endl;
+//              std::cerr << " intermediate (if) m_m " << m_m  << std::endl;
               add_local_coefficients(localIndexSetn, local_vectorn, v);
 
 //                std::cerr << " add interface terms " << std::endl;
-              std::cerr << " intermediate (if) mn_m " << mn_m  << std::endl;
+//              std::cerr << " intermediate (if) mn_m " << mn_m  << std::endl;
               add_local_coefficients_Jacobian(localIndexSetn, localIndexSet, mn_m, JacobianEntries);
-              std::cerr << " intermediate (if) m_mn " << m_mn  << std::endl;
+//              std::cerr << " intermediate (if) m_mn " << m_mn  << std::endl;
               add_local_coefficients_Jacobian(localIndexSet,localIndexSetn, m_mn,JacobianEntries);
-              std::cerr << " intermediate (if) mn_mn " << mn_mn  << std::endl;
+//              std::cerr << " intermediate (if) mn_mn " << mn_mn  << std::endl;
               add_local_coefficients_Jacobian(localIndexSetn, localIndexSetn, mn_mn, JacobianEntries);
             }
 #endif
@@ -2566,13 +2566,13 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 
         //add to objective function and jacobian
         add_local_coefficients(localIndexSet, local_vector, v);
-        std::cerr << " add cell and inner terms, i.e. m_m " << std::endl;
+//        std::cerr << " add cell and inner terms, i.e. m_m " << std::endl;
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
 
         //special treatment for boundary elements
         if (elementHasBoundary)
         {
-          std::cerr << " add boundary terms " << std::endl;
+//          std::cerr << " add boundary terms " << std::endl;
           add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
         }
 

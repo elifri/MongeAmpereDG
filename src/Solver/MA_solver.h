@@ -180,6 +180,9 @@ public:
     mutable MA_solver* solver_ptr;
 
     Local_Operator_MA_mixed_Neilan lop;
+    const FieldVector<double, 2> get_fixingPoint(){return fixingPoint;}
+
+    const FieldVector<double, 2> fixingPoint;
   };
 
 	//-----functions--------
@@ -307,6 +310,7 @@ public:
 
 	virtual GeometrySetting& get_setting() {return setting_;}
   virtual const GeometrySetting& get_setting() const {return setting_;}
+
 
   int get_plotRefinement() {return plotterRefinement_;}
 
@@ -635,7 +639,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
            << geometry.corner(i)[1] << ")  approx = " << jacApprox << std::endl;
 
        std::vector<FieldMatrix<double, 2, 2>> HessianValues(lFE.size());
-       Dune::FieldMatrix<double, 2, 2> HessApprox = 0;
+       Dune::FieldMatrix<double, 2, 2> HessApprox;
        assemble_hessians_hessu(lFE, geometry.jacobianInverseTransposed(xLocal), xLocal,HessianValues, localDofs.segment(0,lFE.size()), HessApprox);
 
        std::cerr << "f''(corner " << i << "=" << geometry.corner(i)[0] << " "

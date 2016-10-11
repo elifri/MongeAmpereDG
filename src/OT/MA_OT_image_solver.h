@@ -17,6 +17,8 @@
 class MA_OT_image_solver : public MA_OT_solver
 {
 public:
+  typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
+
   MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView,
        const SolverConfig& config, OpticalSetting& opticalSetting);
 
@@ -24,6 +26,8 @@ public:
   const OpticalSetting& get_setting() const {return setting_;}
 
 private:
+  ///performs one step of the semi-implicit method mentioned in "Two numerical methods for ..." by Benamou, Froese and Oberman
+  void one_Poisson_Step();
   ///creates the initial guess
   void create_initial_guess();
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
@@ -37,7 +41,7 @@ private:
 
   OpticalSetting& setting_;
 //  MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT> op;
-  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> op;
+  OperatorType op;
 
   friend MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT>;
   friend MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation>;

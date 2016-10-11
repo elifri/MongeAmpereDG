@@ -18,6 +18,8 @@
 #include "IO/imageOT.hpp"
 #include "IO/hdf5Export.hpp"
 
+#include "Operator/linear_system_operator_poisson_NeumannBC.h"
+
 using namespace std;
 
 MA_OT_image_solver::MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting)
@@ -290,6 +292,51 @@ struct EigenValueFunction{
   std::array<std::shared_ptr<LocalHessScalarFunction>,4> localHessu_;
 };
 
+
+void MA_OT_image_solver::one_Poisson_Step()
+{
+//  Config::SpaceType x0 = {0.0,0.0};
+  Config::SpaceType x0 = {0.5,0.5};
+
+  Integrator<Config::GridType> integrator(grid_ptr);
+  auto k = 1.0;
+//  auto rhs = [&](Config::SpaceType x){return k*std::sqrt(op.f_(x)/op.g_(x-x0));};
+//  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return ((x-x0)*normal)-op.lopLinear_ptr->bc.H(x-x0, normal);};
+
+  auto rhs = [&](Config::SpaceType x){return 2*M_PI*M_PI*std::sin(M_PI*x[0])*std::sin(M_PI*x[1]);};
+//  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return normal[0]*(x[1]+std::sin(M_PI*x[1])*M_PI*std::cos(M_PI*x[0]))
+//                                                                     +normal[1]*(x[0]+std::sin(M_PI*x[0])*M_PI*std::cos(M_PI*x[1]));};
+  auto bc = [&](Config::SpaceType x){return (x[0]*x[1]+std::sin(M_PI*x[1])*std::sin(M_PI*x[0]));};
+
+/*
+  std::cout << " before int sqrt(f/g) " << integrator.assemble_integral(rhs) << std::endl;
+
+//  k = -integrator.assemble_boundary_integral(bc)/integrator.assemble_integral(rhs);
+  std::cout << " int ksqrt(f/g) " << integrator.assemble_integral(rhs) << " int boundary y_0-H... " << integrator.assemble_boundary_integral(bc) << std::endl;;
+  std::cout << " difference " << std::abs(integrator.assemble_boundary_integral(bc)+integrator.assemble_integral(rhs)) << std::endl;
+  assert(std::abs(integrator.assemble_boundary_integral(bc)+integrator.assemble_integral(rhs)) < 1e-4);
+*/
+
+  //assemble linear poisson equation
+  Linear_System_Local_Operator_Poisson_NeumannBC<decltype(rhs), decltype(bc)> Poisson_op(gridView(),rhs, bc);
+
+  Config::MatrixType m;
+  Config::VectorType v;
+  assembler.assemble_DG_Jacobian(Poisson_op, Poisson_op, solution, v, m);
+
+  //solve linear equation
+  m.makeCompressed();
+  Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_m;
+  lu_of_m.compute(m);
+
+  if (lu_of_m.info()!= Eigen::EigenSuccess) {
+      // decomposition failed
+      std::cout << "\nError: "<< lu_of_m.info() << " Could not compute LU decomposition for initialising poisson equation!\n";
+      exit(1);
+  }
+  solution = lu_of_m.solve(v);
+}
+
 void MA_OT_image_solver::create_initial_guess()
 {
   project([](Config::SpaceType x){return x.two_norm2()/2.0;},
@@ -300,12 +347,14 @@ void MA_OT_image_solver::create_initial_guess()
                         solution);
 
 
+
+
 /*
   solution.resize(get_n_dofs());
   for (int i = 0; i < get_n_dofs(); i++)
     solution[i] = i % 10;
 */
-
+  one_Poisson_Step();
 
 
   //------------determine init mid value------------------
@@ -427,6 +476,17 @@ void MA_OT_image_solver::plot(const std::string& name) const
 
   std::cout << " saved hdf5 file to " << fnamehdf5 << std::endl;
 
+
+  //write exact solution
+  project([](Config::SpaceType x){return x[0]*x[1]+std::sin(M_PI*x[0])*std::sin(M_PI*x[1]);}, exactsol);
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalExactSolution(FEBasisHandler_.uBasis(),exactsol);
+  decltype(numericalExactSolution)::LocalFunction localnumericalSolution(numericalExactSolution);
+  SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
+  vtkWriter.addVertexData(numericalExactSolution, VTK::FieldInfo("exact solution", VTK::FieldInfo::Type::scalar, 1));
+  //write to file
+  std::string fnameExact(plotter.get_output_directory());
+  fnameExact += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "exactSolution.vtu";
+  vtkWriter.write(fnameExact);
   /*
   ConvectionFunction convectionNorm(gradient_u_old, op);
   convectionNorm.variant_ = ConvectionFunction::Smooth;
