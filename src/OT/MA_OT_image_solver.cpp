@@ -295,6 +295,7 @@ struct EigenValueFunction{
 
 void MA_OT_image_solver::one_Poisson_Step()
 {
+
 //  Config::SpaceType x0 = {0.0,0.0};
   Config::SpaceType x0 = {0.5,0.5};
 
@@ -304,9 +305,9 @@ void MA_OT_image_solver::one_Poisson_Step()
 //  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return ((x-x0)*normal)-op.lopLinear_ptr->bc.H(x-x0, normal);};
 
   auto rhs = [&](Config::SpaceType x){return 2*M_PI*M_PI*std::sin(M_PI*x[0])*std::sin(M_PI*x[1]);};
-//  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return normal[0]*(x[1]+std::sin(M_PI*x[1])*M_PI*std::cos(M_PI*x[0]))
-//                                                                     +normal[1]*(x[0]+std::sin(M_PI*x[0])*M_PI*std::cos(M_PI*x[1]));};
-  auto bc = [&](Config::SpaceType x){return (x[0]*x[1]+std::sin(M_PI*x[1])*std::sin(M_PI*x[0]));};
+  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return normal[0]*(x[1]+std::sin(M_PI*x[1])*M_PI*std::cos(M_PI*x[0]))
+                                                                     +normal[1]*(x[0]+std::sin(M_PI*x[0])*M_PI*std::cos(M_PI*x[1]));};
+//  auto bc = [&](Config::SpaceType x){return (x[0]*x[1]+std::sin(M_PI*x[1])*std::sin(M_PI*x[0]));};
 
 /*
   std::cout << " before int sqrt(f/g) " << integrator.assemble_integral(rhs) << std::endl;
@@ -320,6 +321,43 @@ void MA_OT_image_solver::one_Poisson_Step()
   //assemble linear poisson equation
   Linear_System_Local_Operator_Poisson_NeumannBC<decltype(rhs), decltype(bc)> Poisson_op(gridView(),rhs, bc);
 
+
+  ///-------------Code copied from MA_Operator to be reviewed, init data for fixing point
+  auto fixingPoint = op.fixingPoint;
+
+  //select fixing point
+  HierarchicSearch<GridViewType::Grid, GridViewType::IndexSet> hs(*grid_ptr, gridView().indexSet());
+
+//      const FieldVector<double, 2> findCell = {0.,0.};
+  Config::Entity fixingElement = hs.findEntity(fixingPoint);
+
+  auto localView = FEBasisHandler_.uBasis().localView();
+  localView.bind(fixingElement);
+
+  Poisson_op.insert_entitity_for_unifikation_term(fixingElement, localView.size());
+
+  std::vector<Config::ValueType> entryWx0(localView.size());
+  for (unsigned int i = 0; i < localView.size(); i++)
+    entryWx0[i] = 0;
+
+  const auto& lfu = localView.tree().finiteElement();
+
+  //assemble values at fixing point
+  int noDof_fixingElement = 0;
+  std::vector<FieldVector<Config::ValueType,1>> values(localView.size());
+  lfu.localBasis().evaluateFunction(fixingElement.geometry().local(fixingPoint), values);
+
+  for (unsigned int i = 0; i < localView.size(); i++)
+  {
+    entryWx0[noDof_fixingElement] += values[i][0];
+    noDof_fixingElement++;
+  }
+  assembler.set_entryWx0(entryWx0);
+
+  ///------
+
+
+
   Config::MatrixType m;
   Config::VectorType v;
   assembler.assemble_DG_Jacobian(Poisson_op, Poisson_op, solution, v, m);
@@ -332,8 +370,9 @@ void MA_OT_image_solver::one_Poisson_Step()
   if (lu_of_m.info()!= Eigen::EigenSuccess) {
       // decomposition failed
       std::cout << "\nError: "<< lu_of_m.info() << " Could not compute LU decomposition for initialising poisson equation!\n";
-      exit(1);
+      exit(-1);
   }
+
   solution = lu_of_m.solve(v);
 }
 

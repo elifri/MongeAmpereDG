@@ -102,7 +102,7 @@ public:
         v(j) += f*referenceFunctionValues[j]
           * pt.weight() * integrationElement;
 
-        v_midvalue(j) += (u_atX0)*referenceFunctionValues[j] * pt.weight()*integrationElement;
+//        v_midvalue(j) += (u_atX0)*referenceFunctionValues[j] * pt.weight()*integrationElement;
 
         //derivative unification term
         for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
@@ -114,8 +114,8 @@ public:
 
           for (unsigned int k = 0; k < localViewTemp.size(); k++)
           {
-//            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *pt.weight()*integrationElement;
-            entryWx0timesBgradV[noDof_fixingElement](j) = 0;
+            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *pt.weight()*integrationElement;
+//            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement] *pt.weight()*integrationElement;
             noDof_fixingElement++;
           }
         }
@@ -309,15 +309,15 @@ void assemble_boundary_face_term(const Intersection& intersection,
     assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
         gradients, x, gradu);
 
-//    double g = bc(intersection.inside().geometry().global(quadPos),normal);
-    double g = bc(intersection.inside().geometry().global(quadPos));
+    double g = bc(intersection.inside().geometry().global(quadPos),normal);
+//    double g = bc(intersection.inside().geometry().global(quadPos));
 
     //-------calculate integral--------
     const auto integrationElement = intersection.geometry().integrationElement(pt.position());
     double factor = pt.weight()*integrationElement;
     for (unsigned int j=0; j<m.rows(); j++) //parts from self
     {
-      for (int i = 0; i < m.cols(); i++)
+/*      for (int i = 0; i < m.cols(); i++)
       {
         // NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
         m(j,i) += penalty_weight * referenceFunctionValues[i]*referenceFunctionValues[j]*factor;
@@ -331,10 +331,12 @@ void assemble_boundary_face_term(const Intersection& intersection,
 			// NIPG / SIPG penalty term: sigma/|gamma|^beta * [u]*[v]
 			rhs(j) += penalty_weight *g*referenceFunctionValues[j]*factor;
 
-//      rhs(j) += g*referenceFunctionValues[j]*factor;
 
 			  // epsilon * <Kgradv*my>[u]
 			rhs(j) += SolverConfig::epsilon*(gradients[j]*normal)*g*factor;
+			*/
+
+      rhs(j) += g*referenceFunctionValues[j]*factor;
 
     }
 	}

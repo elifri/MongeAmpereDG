@@ -168,7 +168,7 @@ struct MA_OT_image_Operator_with_Linearisation{
 
       const auto& lfu = localView.tree().finiteElement();
 
-      //assemble quadrature
+      //assemble values at fixing point
       int noDof_fixingElement = 0;
       std::vector<FieldVector<Config::ValueType,1>> values(localView.size());
       lfu.localBasis().evaluateFunction(fixingElement.geometry().local(fixingPoint), values);
