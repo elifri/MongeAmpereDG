@@ -115,7 +115,6 @@ public:
           for (unsigned int k = 0; k < localViewTemp.size(); k++)
           {
             entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *pt.weight()*integrationElement;
-//            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement] *pt.weight()*integrationElement;
             noDof_fixingElement++;
           }
         }

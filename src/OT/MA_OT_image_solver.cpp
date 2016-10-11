@@ -296,27 +296,28 @@ struct EigenValueFunction{
 void MA_OT_image_solver::one_Poisson_Step()
 {
 
-//  Config::SpaceType x0 = {0.0,0.0};
-  Config::SpaceType x0 = {0.5,0.5};
+  Config::SpaceType x0 = {0.0,0.0};
+//  Config::SpaceType x0 = {0.5,0.5};
 
   Integrator<Config::GridType> integrator(grid_ptr);
   auto k = 1.0;
-//  auto rhs = [&](Config::SpaceType x){return k*std::sqrt(op.f_(x)/op.g_(x-x0));};
-//  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return ((x-x0)*normal)-op.lopLinear_ptr->bc.H(x-x0, normal);};
+  auto rhs = [&](Config::SpaceType x){return -k*std::sqrt(op.f_(x)/op.g_(x-x0));};
+  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return ((x-x0)*normal)-op.lopLinear_ptr->bc.H(x-x0, normal);};
 
-  auto rhs = [&](Config::SpaceType x){return 2*M_PI*M_PI*std::sin(M_PI*x[0])*std::sin(M_PI*x[1]);};
-  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return normal[0]*(x[1]+std::sin(M_PI*x[1])*M_PI*std::cos(M_PI*x[0]))
-                                                                     +normal[1]*(x[0]+std::sin(M_PI*x[0])*M_PI*std::cos(M_PI*x[1]));};
-//  auto bc = [&](Config::SpaceType x){return (x[0]*x[1]+std::sin(M_PI*x[1])*std::sin(M_PI*x[0]));};
-
+  ///---Code with known solution
 /*
+//  auto rhs = [&](Config::SpaceType x){return 2*M_PI*M_PI*std::sin(M_PI*x[0])*std::sin(M_PI*x[1]);};
+//  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return normal[0]*(x[1]+std::sin(M_PI*x[1])*M_PI*std::cos(M_PI*x[0]))
+//                                                                     +normal[1]*(x[0]+std::sin(M_PI*x[0])*M_PI*std::cos(M_PI*x[1]));};
+//  auto bc = [&](Config::SpaceType x){return (x[0]*x[1]+std::sin(M_PI*x[1])*std::sin(M_PI*x[0]));};
+*/
+
   std::cout << " before int sqrt(f/g) " << integrator.assemble_integral(rhs) << std::endl;
 
-//  k = -integrator.assemble_boundary_integral(bc)/integrator.assemble_integral(rhs);
+  k = -integrator.assemble_boundary_integral(bc)/integrator.assemble_integral(rhs);
   std::cout << " int ksqrt(f/g) " << integrator.assemble_integral(rhs) << " int boundary y_0-H... " << integrator.assemble_boundary_integral(bc) << std::endl;;
   std::cout << " difference " << std::abs(integrator.assemble_boundary_integral(bc)+integrator.assemble_integral(rhs)) << std::endl;
   assert(std::abs(integrator.assemble_boundary_integral(bc)+integrator.assemble_integral(rhs)) < 1e-4);
-*/
 
   //assemble linear poisson equation
   Linear_System_Local_Operator_Poisson_NeumannBC<decltype(rhs), decltype(bc)> Poisson_op(gridView(),rhs, bc);

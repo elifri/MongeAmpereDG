@@ -105,8 +105,8 @@ struct MA_OT_image_Operator_with_Linearisation{
             (new BoundarySquare(solver.gradient_u_old,solver.get_setting()),
                 &f_,&g_, solver.gridView())
           ),
-//    fixingPoint{0.5,0.5}
-    fixingPoint{0.,0.}
+    fixingPoint{0.5,0.5}
+//    fixingPoint{0.,0.}
     {
 
       //-------------------select cell for mid value-------------------------
