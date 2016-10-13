@@ -437,7 +437,7 @@ private:
 
       for (unsigned int i = 0; i < ijk.cycle(); i++, ++ijk)
       {
-        for (int dim = 0; dim < Traits::dimDomain; dim++)
+        for (unsigned int dim = 0; dim < Traits::dimDomain; dim++)
         {
           out[i][0][dim] = R(0);
 
@@ -462,13 +462,14 @@ public:
 
     BarycCoordType barycPos;
     calcBarycCoords(x, barycPos);
-    deCasteljauEvaluateBaryc(directions[1], barycPos, out);
+    deCasteljauEvaluateBaryc(directions, directionsDerivative, barycPos, out);
   }
 
 private:
   ///formula 18.14 with r=2 from Farin ...
+  template<size_t dOrder> //order of derivative
   inline
-  static void deCasteljauEvaluateBaryc(const BarycCoordType& direction, const BarycCoordType& baryc_x, std::vector<typename Traits::Range>& out)
+  static void deCasteljauEvaluateBaryc(const std::array<BarycCoordType,2>& directions, const std::array<int,dOrder> directionsDerivative, const BarycCoordType& baryc_x, std::vector<typename Traits::Range>& out)
   {
     out.resize(n);
 
@@ -506,32 +507,47 @@ private:
           //B_200
           if (ijk[0] > 1)
             out[i][0] += O*(O-1) // O!/(O-2)!
-                         *direction[0]*direction[0] //B^2_200(d)
+                         *directions[directionsDerivative[0]][0]*directions[directionsDerivative[1]][0] //B^2_200(d)
                          *B[O-2][ijk[0]-2][ijk[1]][ijk[2]]; //B^(O-2)_{ijk-200}(u)
           //B110
           if (ijk[0] > 0 && ijk[1] > 0)
+          {
             out[i][0] += O*(O-1)// O!/(O-2)!
-                         *R(2.0)*direction[0]*direction[1]//B^2_110(d)
+                         *directions[directionsDerivative[0]][0]*directions[directionsDerivative[1]][1]//B^2_110(d)
                          *B[O-2][ijk[0]-1][ijk[1]-1][ijk[2]];//B^(O-2)_{ijk-110}(u)
+            out[i][0] += O*(O-1)// O!/(O-2)!
+                         *directions[directionsDerivative[0]][1]*directions[directionsDerivative[1]][0]//B^2_110(d)
+                         *B[O-2][ijk[0]-1][ijk[1]-1][ijk[2]];//B^(O-2)_{ijk-110}(u)
+          }
           //B_020
           if (ijk[1] > 1)
             out[i][0] += O*(O-1) // O!/(O-2)!
-                         *direction[1]*direction[1] //B^2_020(d)
+                         *directions[directionsDerivative[0]][1]*directions[directionsDerivative[1]][1] //B^2_020(d)
                          *B[O-2][ijk[0]][ijk[1]-2][ijk[2]]; //B^(O-2)_{ijk-020}(u)
           //B101
           if (ijk[0] > 0 && ijk[2] > 0)
+          {
             out[i][0] += O*(O-1)// O!/(O-2)!
-                         *R(2.0)*direction[0]*direction[2]//B^2_101(d)
+                         *directions[directionsDerivative[0]][0]*directions[directionsDerivative[1]][2]//B^2_101(d)
                          *B[O-2][ijk[0]-1][ijk[1]][ijk[2]-1];//B^(O-2)_{ijk-101}(u)
-          //B011
-          if (ijk[1] > 0 && ijk[2] > 0)
             out[i][0] += O*(O-1)// O!/(O-2)!
-                         *R(2.0)*direction[1]*direction[2]//B^2_011(d)
+                         *directions[directionsDerivative[0]][2]*directions[directionsDerivative[1]][0]//B^2_101(d)
+                         *B[O-2][ijk[0]-1][ijk[1]][ijk[2]-1];//B^(O-2)_{ijk-101}(u)
+          }
+            //B011
+          if (ijk[1] > 0 && ijk[2] > 0)
+          {
+            out[i][0] += O*(O-1)// O!/(O-2)!
+                         *directions[directionsDerivative[0]][1]*directions[directionsDerivative[1]][2]//B^2_011(d)
                          *B[O-2][ijk[0]][ijk[1]-1][ijk[2]-1];//B^(O-2)_{ijk-011}(u)
-          //B_002
+            out[i][0] += O*(O-1)// O!/(O-2)!
+                         *directions[directionsDerivative[0]][2]*directions[directionsDerivative[1]][1]//B^2_011(d)
+                         *B[O-2][ijk[0]][ijk[1]-1][ijk[2]-1];//B^(O-2)_{ijk-011}(u)
+          }
+            //B_002
           if (ijk[2] > 1)
             out[i][0] += O*(O-1) // O!/(O-2)!
-                         *direction[2]*direction[2] //B^2_002(d)
+                         *directions[directionsDerivative[0]][2]*directions[directionsDerivative[1]][2] //B^2_002(d)
                          *B[O-2][ijk[0]][ijk[1]][ijk[2]-2]; //B^(O-2)_{ijk-002}(u)
         }
 //        std::cout << " out[" << i << "]=" << out[i][0] << std::endl;
