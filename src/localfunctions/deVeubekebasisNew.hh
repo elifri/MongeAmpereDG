@@ -352,6 +352,7 @@ private:
   inline
   static void deCasteljauBaryc(const BarycCoordType& baryc_x, std::vector<typename Traits::Range>& out)
   {
+    out.resize(n);
     //
     R B[O][O][O][O];
 
@@ -403,10 +404,11 @@ public:
     deCasteljauDerivativeBaryc(barycPos, directions, out);
   }
 private:
-  ///formula 18.13 from Farin ...
+  ///formula 18.14 with r=1 from Farin ...
   inline
   static void deCasteljauDerivativeBaryc(const BarycCoordType& baryc_x, const std::array<BarycCoordType,2>& directions, std::vector<typename Traits::JacobianType>& out)
   {
+    out.resize(n);
     //
     R B[O][O][O][O];
 
@@ -445,6 +447,92 @@ private:
             out[i][0][dim] += O*directions[dim][1]*B[O-1][ijk[0]][ijk[1]-1][ijk[2]];
           if (ijk[2] > 0)
             out[i][0][dim] += O*directions[dim][2]*B[O-1][ijk[0]][ijk[1]][ijk[2]-1];
+        }
+//        std::cout << " out[" << i << "]=" << out[i][0] << std::endl;
+      }
+    }
+  }
+
+public:
+  template<size_t dOrder> //order of derivative
+  inline
+  static void deCasteljauEvaluate(const std::array<BarycCoordType,2>& directions, const std::array<int,dOrder> directionsDerivative, const typename Traits::DomainLocal& x, std::vector<typename Traits::Range>& out)
+  {
+    static_assert(dOrder==2, "evaluate is only implemented for second derivative");
+
+    BarycCoordType barycPos;
+    calcBarycCoords(x, barycPos);
+    deCasteljauEvaluateBaryc(directions[1], barycPos, out);
+  }
+
+private:
+  ///formula 18.14 with r=2 from Farin ...
+  inline
+  static void deCasteljauEvaluateBaryc(const BarycCoordType& direction, const BarycCoordType& baryc_x, std::vector<typename Traits::Range>& out)
+  {
+    out.resize(n);
+
+    R B[O][O][O][O];
+
+    //init constant polynomials
+    {
+      B[0][0][0][0] = R(1.0);
+    }
+
+    for (int r = 1; r < O-1; r++)
+    {
+      BarycCounter ijk (r);
+
+      for (unsigned int i = 0; i < ijk.cycle(); i++, ++ijk)
+      {
+        if (ijk[0] > 0)
+          B[r][ijk[0]][ijk[1]][ijk[2]] += baryc_x[0]*B[r-1][ijk[0]-1][ijk[1]][ijk[2]];
+        if (ijk[1] > 0)
+          B[r][ijk[0]][ijk[1]][ijk[2]] += baryc_x[1]*B[r-1][ijk[0]][ijk[1]-1][ijk[2]];
+        if (ijk[2] > 0)
+          B[r][ijk[0]][ijk[1]][ijk[2]] += baryc_x[2]*B[r-1][ijk[0]][ijk[1]][ijk[2]-1];
+      }
+    }
+    {
+      BarycCounter ijk(O);
+      assert(ijk.cycle() == n);
+
+      for (unsigned int i = 0; i < ijk.cycle(); i++, ++ijk)
+      {
+//        for (int dim = 0; dim < Traits::dimDomain; dim++)
+        {
+          out[i][0] = R(0);
+
+          //B_200
+          if (ijk[0] > 1)
+            out[i][0] += O*(O-1) // O!/(O-2)!
+                              *direction[0]*direction[0] //B^2_200(d)
+                              *B[O-2][ijk[0]-2][ijk[1]][ijk[2]]; //B^(O-2)_{ijk-200}(u)
+          //B110
+          if (ijk[0] > 0 && ijk[1] > 0)
+            out[i][0] += O*(O-1)// O!/(O-2)!
+                              *R(2.0)*direction[0]*direction[1]//B^2_110(d)
+                              *B[O-2][ijk[0]-1][ijk[1]-1][ijk[2]];//B^(O-2)_{ijk-110}(u)
+          //B_020
+          if (ijk[1] > 1)
+            out[i][0] += O*(O-1) // O!/(O-2)!
+                              *direction[1]*direction[1] //B^2_020(d)
+                              *B[O-2][ijk[0]][ijk[1]-2][ijk[2]]; //B^(O-2)_{ijk-020}(u)
+          //B101
+          if (ijk[0] > 0 && ijk[2] > 0)
+            out[i][0] += O*(O-1)// O!/(O-2)!
+                              *R(2.0)*direction[0]*direction[2]//B^2_101(d)
+                              *B[O-2][ijk[0]-1][ijk[1]][ijk[2]-1];//B^(O-2)_{ijk-101}(u)
+          //B011
+          if (ijk[1] > 0 && ijk[2] > 0)
+            out[i][0] += O*(O-1)// O!/(O-2)!
+                              *R(2.0)*direction[1]*direction[2]//B^2_011(d)
+                              *B[O-2][ijk[0]][ijk[1]-1][ijk[2]-1];//B^(O-2)_{ijk-011}(u)
+          //B_002
+          if (ijk[2] > 1)
+            out[i][0] += O*(O-1) // O!/(O-2)!
+                              *direction[2]*direction[2] //B^2_002(d)
+                              *B[O-2][ijk[0]][ijk[1]][ijk[2]-2]; //B^(O-2)_{ijk-002}(u)
         }
 //        std::cout << " out[" << i << "]=" << out[i][0] << std::endl;
       }

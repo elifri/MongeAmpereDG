@@ -45,6 +45,54 @@ void testEvaluateFunction(const BernsteinBezier32DLocalBasis<double,double>& ber
   std::cout << std::endl;
 }
 
+void testJacobian(const BernsteinBezier32DLocalBasis<double,double>& bernsteinBasis, const std::array<BarycCoordType, 2> &directionAxis, const Dune::FieldVector<double,2> &point)
+{
+  auto start = std::chrono::steady_clock::now();
+  std::vector<FieldMatrix<double,1,2>> outBernstein(bernsteinBasis.size());
+  bernsteinBasis.evaluateJacobian(point, outBernstein);
+  auto end = std::chrono::steady_clock::now();
+  std::cerr << "total time for bernstein evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
+
+  start = std::chrono::steady_clock::now();
+  std::vector<FieldMatrix<double,1,2>>  outCasteljau(outBernstein.size());
+  deVeubekeGlobalBasis<GeometryType, double, double>::deCasteljauDerivative(point, directionAxis, outCasteljau);
+  end = std::chrono::steady_clock::now();
+  std::cerr << "total time for casteljau evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
+
+  std::cout << " Bernstein";
+  for (const auto& e : outBernstein)  std::cout << " " << e;
+  std::cout << std::endl;
+
+  std::cout << " Casteljau";
+  for (const auto& e : outCasteljau)  std::cout << " " << e;
+  std::cout << std::endl;
+}
+
+void testEvaluatePartial(const BernsteinBezier32DLocalBasis<double,double>& bernsteinBasis, const std::array<BarycCoordType, 2> &directionAxis, const Dune::FieldVector<double,2> &point)
+{
+  const size_t dim = 2;
+  const std::array<int,dim> directions = {1,1};
+
+  auto start = std::chrono::steady_clock::now();
+  std::vector<FieldVector<double,1>> outBernstein(bernsteinBasis.size());
+  bernsteinBasis.template evaluate<2>(directions, point, outBernstein);
+  auto end = std::chrono::steady_clock::now();
+  std::cerr << "total time for bernstein evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
+
+  start = std::chrono::steady_clock::now();
+  std::vector<FieldVector<double,1>>  outCasteljau(outBernstein.size());
+  deVeubekeGlobalBasis<GeometryType, double, double>::deCasteljauEvaluate(directionAxis, directions, point, outCasteljau);
+  end = std::chrono::steady_clock::now();
+  std::cerr << "total time for casteljau evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
+
+  std::cout << " Bernstein";
+  for (const auto& e : outBernstein)  std::cout << " " << e;
+  std::cout << std::endl;
+
+  std::cout << " Casteljau";
+  for (const auto& e : outCasteljau)  std::cout << " " << e;
+  std::cout << std::endl;
+}
 
 void testdeCasteljau() {
   // tolerance for floating-point comparisons
@@ -96,26 +144,8 @@ void testdeCasteljau() {
   directionAxis[1][1] = (b0[0]-b2[0]) / determinantBarycTrafo;
   directionAxis[1][2] = (-b0[0]+b1[0]) / determinantBarycTrafo;
 
-  auto start = std::chrono::steady_clock::now();
-  std::vector<FieldMatrix<double,1,2>> outBernstein(bernsteinBasis.size());
-  bernsteinBasis.evaluateJacobian(point, outBernstein);
-  auto end = std::chrono::steady_clock::now();
-  std::cerr << "total time for bernstein evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
-
-  start = std::chrono::steady_clock::now();
-  std::vector<FieldMatrix<double,1,2>>  outCasteljau(outBernstein.size());
-  deVeubekeGlobalBasis<GeometryType, double, double>::deCasteljauDerivative(point, directionAxis, outCasteljau);
-  end = std::chrono::steady_clock::now();
-  std::cerr << "total time for casteljau evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
-
-  std::cout << " Bernstein";
-  for (const auto& e : outBernstein)  std::cout << " " << e;
-  std::cout << std::endl;
-
-  std::cout << " Casteljau";
-  for (const auto& e : outCasteljau)  std::cout << " " << e;
-  std::cout << std::endl;
-
+  testJacobian(bernsteinBasis, directionAxis, point);
+  testEvaluatePartial(bernsteinBasis, directionAxis, point);
 
 }
 
