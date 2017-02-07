@@ -87,12 +87,13 @@ endif (METHOD_OF_ELLIPSOIDS_INCLUDES)
 if (ADOLC_FOUND)
 include_directories(${ADOLC_INCLUDE_DIRS})
 endif (ADOLC_FOUND)
-include_directories("src")
+include_directories("include")
 
 
 # start a dune project with information from dune.module
 dune_project()
 
+add_subdirectory("include")
 add_subdirectory("src")
 add_subdirectory("Testing")
 add_subdirectory("m4")

@@ -8,7 +8,7 @@
 
 
 
-#include "MA_solver.h"
+#include "Solver/MA_solver.h"
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;

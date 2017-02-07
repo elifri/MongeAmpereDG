@@ -6,7 +6,7 @@
  */
 
 
-#include "MA_OT_solver.h"
+#include "OT/MA_OT_solver.h"
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;

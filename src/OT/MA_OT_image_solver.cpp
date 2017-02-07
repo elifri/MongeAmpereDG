@@ -8,7 +8,7 @@
 
 
 
-#include "MA_OT_image_solver.h"
+#include "OT/MA_OT_image_solver.h"
 
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>

@@ -5,7 +5,7 @@
  *      Author: friebel
  */
 
-#include "Assembler.h"
+#include "Solver/Assembler.h"
 
 template<>
 void Assembler::bind(const FEBasisType& basis)

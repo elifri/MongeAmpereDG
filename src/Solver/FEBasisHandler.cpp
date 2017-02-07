@@ -5,10 +5,10 @@
  *      Author: friebel
  */
 
-#include "FEBasisHandler.hpp"
-#include "MA_solver.h"
+#include "Solver/FEBasisHandler.hpp"
+#include "Solver/MA_solver.h"
 
-#include "solver_config.h"
+#include "Solver/solver_config.h"
 
 #include <dune/grid/common/mcmgmapper.hh>
 

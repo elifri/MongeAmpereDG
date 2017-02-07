@@ -6,7 +6,7 @@
  */
 
 
-#include "Plotter.h"
+#include "IO/Plotter.h"
 
 using namespace std;
 using std::cout;
