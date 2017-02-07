@@ -153,7 +153,12 @@ public:
   void writeOTVTK(std::string filename, LocalFunction &fg, const Function& f) const;
 
   template<typename Functiontype>
-  void save_rectangular_mesh(Functiontype &f, std::ofstream &of) const;
+  void save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Config::SpaceType& upperRight, Functiontype &f, std::ofstream &of) const;
+
+  ///saves the BpSpline coefficients in a simple ASCII format
+  template<typename BSplineNodeFactoryType>
+  void save_BSplineCoeffs(const BSplineNodeFactoryType &bSplineNodeFactory, const Config::VectorType& coeffs, std::ofstream &of) const;
+
 
 	void set_grid(Config::GridView* grid){	this->grid = grid;}
 	void set_refinement(const int refinement){	this->refinement = refinement;}
@@ -725,15 +730,16 @@ void Plotter::writeRefractorPOV(std::string filename, Function &f) const {
   write_lens(file, f);
 }
 
-/*
+#ifdef BSPLINES
 template<typename Functiontype>
-void Plotter::save_rectangular_mesh(Functiontype &f, std::ofstream &of) const
+void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Config::SpaceType& upperRight,
+                                    Functiontype &f, std::ofstream &of) const
 {
-  static_assert(std::is_same<SolverConfig::GridType,Dune::YaspGrid<2, EquidistantOffsetCoordinates<double,2> > >::value, "saving in rectangular mesh format works only for yaspgrids so far!");
+  static_assert(std::is_same<Config::GridType,Dune::YaspGrid<2, EquidistantOffsetCoordinates<double,2> > >::value, "saving in rectangular mesh format works only for yaspgrids so far!");
 
   //get information
-  const double l_x = SolverConfig::upperRight[0] - SolverConfig::lowerLeft[0];
-  const double l_y = SolverConfig::upperRight[1] - SolverConfig::lowerLeft[1];
+  const double l_x = upperRight[0] - lowerLeft[0];
+  const double l_y = upperRight[1] - lowerLeft[1];
 
   int n_x = std::sqrt(grid->size(0)*l_x/l_y);
   int n_y = grid->size(0)/n_x;
@@ -755,8 +761,8 @@ void Plotter::save_rectangular_mesh(Functiontype &f, std::ofstream &of) const
     for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
       const auto& x_local = it.coords();
       const auto& x_global = element.geometry().global(x_local);
-      int index_x = (x_global[0]-SolverConfig::lowerLeft[0])/h_x;
-      int index_y = (x_global[1]-SolverConfig::lowerLeft[1])/h_y; //index of the bottom left corner of the rectangle where x lies in
+      int index_x = (x_global[0]-lowerLeft[0])/h_x;
+      int index_y = (x_global[1]-lowerLeft[1])/h_y; //index of the bottom left corner of the rectangle where x lies in
 
       //special case at right boundary
       if (index_x == n_x) index_x--;
@@ -770,7 +776,7 @@ void Plotter::save_rectangular_mesh(Functiontype &f, std::ofstream &of) const
 
   of << n_x << " " << n_y << " "
      << h_x << " " << h_y << " "
-     << SolverConfig::lowerLeft[0] << " " << SolverConfig::lowerLeft[1] << std::endl;
+     << lowerLeft[0] << " " << lowerLeft[1] << std::endl;
 
   for (int y=0; y < n_y; y++)
   {
@@ -783,6 +789,41 @@ void Plotter::save_rectangular_mesh(Functiontype &f, std::ofstream &of) const
 
 }
 
-*/
+template<typename BSplineNodeFactoryType>
+void Plotter::save_BSplineCoeffs(const BSplineNodeFactoryType &bSplineNodeFactory, const Config::VectorType& coeffs, std::ofstream &of) const
+{
+  static_assert(std::is_same<Config::GridType,Dune::YaspGrid<2, EquidistantOffsetCoordinates<double,2> > >::value, "saving Bspline coefficients works only for yaspgrids so far!");
+  assert(bSplineNodeFactory.order_[0]==bSplineNodeFactory.order_[1]);
+
+  of << "#Bpline of order " << bSplineNodeFactory.order_[0];
+
+  of << std::setprecision(12) << std::scientific;
+
+
+  //get knot vectors
+  for (int i = 0; i < Config::dim; i++)
+  {
+    of << "#knot vector in dimension " << i << std::endl;
+    for (const auto& e: bSplineNodeFactory.knotVectors_[i])
+      of << e << " ";
+    of << std::endl;
+  }
+
+  //write coefficients to file
+  //coeffs are ordered in the fashion b00, b01, b02 ..., b0n_y, b10, b11, ... bn_xn_y
+
+  of << "#bspline coefficients, coeffs are ordered in the fashion b00, b01, b02 ..., b0n_y, b10, b11, ... bn_xn_y"
+
+  // size of nodeFactory_->size(i)
+  assert(coeffs.size() == bSplineNodeFactory.size(0)*bSplineNodeFactory.size(1));
+  for (int i=0; i < coeffs.size(); i++)
+  {
+    of << coeffs[i] << std::endl;
+  }
+
+}
+
+
+#endif
 
 #endif /* SRC_PLOTTER_HH_ */

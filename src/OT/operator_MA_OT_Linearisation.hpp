@@ -145,7 +145,7 @@ public:
 
   template<typename GridView>
   Local_Operator_MA_OT_Linearisation(const OTBoundary* bc, const Function* rhoX, const Function* rhoY, const GridView& gridView):
-    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), delta_K(10), int_f(0), sign(1.0), hash(gridView), EntititiesForUnifikationTerm_(10,hash), found_negative(false)
+  delta_K(10), hash(gridView), EntititiesForUnifikationTerm_(10,hash), rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), sign(1.0), found_negative(false)
   {
   }
 
@@ -729,10 +729,6 @@ public:
     EntititiesForUnifikationTerm_.clear();
   }
 
-  const Function& rhoX;
-  const Function& rhoY;
-  const OTBoundary& bc;
-
   mutable double delta_K;
 
   Config::EntityCompare hash;
@@ -743,6 +739,10 @@ public:
   static const int n_ = smoothingKernel_.n_;
 //  static constexpr int collocationNo[3][5] = {{0,1,3,5,4},{0,2,11,9,8},{4,6,7,10,8}};
 public:
+  const Function& rhoX;
+  const Function& rhoY;
+  const OTBoundary& bc;
+
   mutable double int_f;
   mutable double sign;
 

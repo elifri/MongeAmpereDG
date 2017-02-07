@@ -462,11 +462,15 @@ public:
 
     BarycCoordType barycPos;
     calcBarycCoords(x, barycPos);
+    auto direction = directions[directionsDerivative[0]];
+    direction += directions[directionsDerivative[1]];
+    direction /= 2.0;
+    std::cout << " direction " << direction << std::endl;
     deCasteljauEvaluateBaryc(directions, directionsDerivative, barycPos, out);
   }
 
 private:
-  ///formula 18.14 with r=2 from Farin ...
+  ///formula 18.14 twice with r=1 and different d(given by directions) from Farin ...
   template<size_t dOrder> //order of derivative
   inline
   static void deCasteljauEvaluateBaryc(const std::array<BarycCoordType,2>& directions, const std::array<int,dOrder> directionsDerivative, const BarycCoordType& baryc_x, std::vector<typename Traits::Range>& out)
@@ -500,7 +504,6 @@ private:
 
       for (unsigned int i = 0; i < ijk.cycle(); i++, ++ijk)
       {
-//        for (int dim = 0; dim < Traits::dimDomain; dim++)
         {
           out[i][0] = R(0);
 

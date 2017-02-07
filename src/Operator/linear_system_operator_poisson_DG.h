@@ -11,8 +11,8 @@
 
 #include <dune/geometry/quadraturerules.hh>
 
-#include "Solver/solver_config.hh"
-#include "problem_data.hh"
+#include "Solver/solver_config.h"
+#include "problem_data.h"
 
 using namespace Dune;
 
@@ -21,6 +21,8 @@ template< typename Rhs, typename BC>
 class Linear_System_Local_Operator_Poisson_DG{
 
 public:
+  Linear_System_Local_Operator_Poisson_DG(const Rhs &rhs, const BC &bc): rhs(rhs), bc(bc) {}
+
 /**
  * implements the local volume integral
  * @param element		     the element the integral is evaluated on

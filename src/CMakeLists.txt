@@ -51,3 +51,8 @@ target_link_dune_default_libraries("poisson")
 
 add_executable("testPS12Split" localfunctions/test-PS12SSpline.cc)
 target_link_dune_default_libraries("testPS12Split")
+
+add_executable("testdeVeubekeNew" localfunctions/test-deVeubekeNew.cc)
+target_link_dune_default_libraries("testdeVeubekeNew")
+
+

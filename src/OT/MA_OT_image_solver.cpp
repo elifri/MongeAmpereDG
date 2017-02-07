@@ -509,6 +509,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
       fnameOT, op.g_.getOriginalImage().width(), op.g_.getOriginalImage().height());
 */
 
+
   std::string fnamehdf5(plotter.get_output_directory());
   fnamehdf5 += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations);
 

@@ -93,9 +93,12 @@ try {
   // ////////////////////////////////
   // Generate the grid
   // ////////////////////////////////
-//  Config::UnitCubeType unitcube(setting.lowerLeft, setting.upperRight, 1);
+#ifdef BSPLINES
+  Config::UnitCubeType unitcube(setting.lowerLeft, setting.upperRight, 1);
+  std::shared_ptr<Config::GridType> grid_ptr = unitcube.grid_ptr();
+#else
   std::shared_ptr<Config::GridType> grid_ptr(GmshReader<Config::GridType>::read(setting.gridinputFile));
-
+#endif
   Config::GridView gridView = grid_ptr->leafGridView();
 
   // Output grid

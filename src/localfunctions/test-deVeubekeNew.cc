@@ -71,7 +71,7 @@ void testJacobian(const BernsteinBezier32DLocalBasis<double,double>& bernsteinBa
 void testEvaluatePartial(const BernsteinBezier32DLocalBasis<double,double>& bernsteinBasis, const std::array<BarycCoordType, 2> &directionAxis, const Dune::FieldVector<double,2> &point)
 {
   const size_t dim = 2;
-  const std::array<int,dim> directions = {1,1};
+  const std::array<int,dim> directions = {0,0};
 
   auto start = std::chrono::steady_clock::now();
   std::vector<FieldVector<double,1>> outBernstein(bernsteinBasis.size());
