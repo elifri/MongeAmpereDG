@@ -17,7 +17,7 @@ void PDE_functions::g_initial(const Config::SpaceType2d& z, Config::ValueType &o
 	out = 1;
 }
 
-#if HAVE_ADOLC
+#ifdef HAVE_ADOLC
 void PDE_functions::g_initial_a(const FieldVector<adouble,2>& z, adouble &out){
 	out = 1;
 }
@@ -29,7 +29,7 @@ void PDE_functions::Dg_initial(const Config::SpaceType2d& z, Config::SpaceType2d
 }
 
 
-#if HAVE_ADOLC
+#ifdef HAVE_ADOLC
 adouble interpolate_cubic_atXY(cimg_library::CImg<double> image , const adouble fx, const adouble fy, const int z, const int c)
 {
   const adouble

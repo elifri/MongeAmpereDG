@@ -19,6 +19,8 @@
 #include "IO/hdf5Export.hpp"
 
 #include "Operator/linear_system_operator_poisson_NeumannBC.h"
+#include "OT/operator_utils.h"
+#include "OT/SmoothingKernel.h"
 
 using namespace std;
 
@@ -302,7 +304,11 @@ void MA_OT_image_solver::one_Poisson_Step()
   Integrator<Config::GridType> integrator(grid_ptr);
   auto k = 1.0;
   auto rhs = [&](Config::SpaceType x){return -k*std::sqrt(op.f_(x)/op.g_(x-x0));};
+#ifndef C0Element
   auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return ((x-x0)*normal)-op.lopLinear_ptr->bc.H(x-x0, normal);};
+#else
+  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return ((x-x0)*normal)-op.lop_ptr->bc.H(x-x0, normal);};
+#endif
 
   ///---Code with known solution
 /*
@@ -517,7 +523,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
 
   std::cout << " saved hdf5 file to " << fnamehdf5 << std::endl;
 
-
+/*
   //write exact solution
   project([](Config::SpaceType x){return x[0]*x[1]+std::sin(M_PI*x[0])*std::sin(M_PI*x[1]);}, exactsol);
   Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalExactSolution(FEBasisHandler_.uBasis(),exactsol);
@@ -528,6 +534,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
   std::string fnameExact(plotter.get_output_directory());
   fnameExact += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "exactSolution.vtu";
   vtkWriter.write(fnameExact);
+  */
   /*
   ConvectionFunction convectionNorm(gradient_u_old, op);
   convectionNorm.variant_ = ConvectionFunction::Smooth;

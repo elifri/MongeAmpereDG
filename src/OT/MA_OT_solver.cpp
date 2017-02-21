@@ -87,17 +87,17 @@ void MA_OT_solver::plot(const std::string& name) const
   std::string fname(plotter.get_output_directory());
   fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "outputGrid.vtu";
 
-//  plotter.writeOTVTK(fname, *gradient_u_old, [](Config::SpaceType x)
-//      {return Dune::FieldVector<double, Config::dim> ({
-//                                                      x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
-//                                                      x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});});
-  plotter.writeOTVTK(fname, *gradient_u_old);
+  plotter.writeOTVTK(fname, *gradient_u_old, [](Config::SpaceType x)
+      {return Dune::FieldVector<double, Config::dim> ({
+                                                      x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
+                                                      x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});});
+//  plotter.writeOTVTK(fname, *gradient_u_old);
 }
 
 void MA_OT_solver::create_initial_guess()
 {
-  project([](Config::SpaceType x){return x.two_norm2()/2.0;},
-//    project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
+//  project([](Config::SpaceType x){return x.two_norm2()/2.0;},
+    project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
 //  project_labouriousC1([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
 //                        [](Config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},
 //                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},

@@ -10,7 +10,7 @@
 #include "Integrator.hpp"
 #include "problem_data.h"
 
-#if HAVE_ADOLC
+#ifdef HAVE_ADOLC
 #include <adolc/adolc.h>
 #endif
 
@@ -135,7 +135,8 @@ void ImageFunction::evaluateDerivative (const Config::DomainType &input, FieldVe
   gradu[1] = -factor_/h_*0.5f*((-Ip+In) + 2*dy*(2*Ip-5*Ic+4*In-Ia) + 3*dy*dy*(-Ip+3*Ic-3*In+Ia));
 }
 
-#if HAVE_ADOLC
+#ifdef HAVE_ADOLC
+inline
 void ImageFunction::evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
 {
 
