@@ -5,11 +5,11 @@
  *      Author: friebel
  */
 
-#include "boundaryHandler.h"
+#include "Solver/boundaryHandler.h"
 
-#include "solver_config.h"
-#include "FETraits.hpp"
-#include "Assembler.h"
+#include "Solver/solver_config.h"
+#include "Solver/FETraits.hpp"
+#include "Solver/Assembler.h"
 
 void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Solver_config::FEBasisType &FEBasis)
 {
@@ -50,7 +50,7 @@ void BoundaryHandler::init_boundary_dofs(const Assembler& assembler) //const Sol
           case 0:
             break;
           case 1: //case of facet
-            if (localKey.subEntity() == boundaryFaceId) //edge normal dof
+            if (localKey.subEntity() == (unsigned int) boundaryFaceId) //edge normal dof
             {
               localIsBoundary[k] = true;
               localIsBoundaryValue[k] = true;

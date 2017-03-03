@@ -10,7 +10,9 @@
 #include "Integrator.hpp"
 #include "problem_data.h"
 
+#ifdef HAVE_ADOLC
 #include <adolc/adolc.h>
+#endif
 
 bool ImageFunction::use_adouble_image_evaluation = true;
 
@@ -47,7 +49,7 @@ ImageFunction::ImageFunction(const std::string& filename,
 Config::ValueType ImageFunction::operator()(const Config::DomainType &x) const
 {
   Config::ValueType u;
-  evaluate(x, u);
+  ImageFunction::evaluate(x, u);
   return u;
 }
 
@@ -91,6 +93,50 @@ void ImageFunction::evaluate (const Config::DomainType &x, Config::ValueType &u)
   u = factor_ * imageSmooth_._cubic_atXY(fx,fy);
 }
 
+inline
+void ImageFunction::evaluateDerivative (const Config::DomainType &input, FieldVector<double,Config::dim> &gradu) const
+{
+  const int width = imageSmooth_.width();
+  const int height = imageSmooth_.height();
+
+  const double fx = std::max( 0.0, std::min( (double) width-1,  (input[0] - lowerLeft_[0])/h_ - 0.5 ) );
+  const double fy = std::max( 0.0, std::min( (double) height-1, (upperRight_[1] - input[1])/h_ - 0.5 ) );
+
+  const int z=0,c=0;
+
+  const double
+    nfx = fx<0?0:(fx>width-1?width-1:fx),
+    nfy = fy<0?0:(fy>height-1?height-1:fy);
+  const int x = (int)nfx, y = (int)nfy;
+  const double dx = nfx - x, dy = nfy - y;
+
+  const int
+    px = x-1<0?0:x-1, nx = dx>0?x+1:x, ax = x+2>=width?width-1:x+2,
+    py = y-1<0?0:y-1, ny = dy>0?y+1:y, ay = y+2>=height?height-1:y+2;
+  const double
+    Ipp = (double)imageSmooth_(px,py,z,c), Icp = (double)imageSmooth_(x,py,z,c), Inp = (double)imageSmooth_(nx,py,z,c),
+    Iap = (double)imageSmooth_(ax,py,z,c),
+    Ip = Icp + 0.5f*(dx*(-Ipp+Inp) + dx*dx*(2*Ipp-5*Icp+4*Inp-Iap) + dx*dx*dx*(-Ipp+3*Icp-3*Inp+Iap)),
+    dxIp =  0.5f*((-Ipp+Inp) + 2*dx*(2*Ipp-5*Icp+4*Inp-Iap) + 3*dx*dx*(-Ipp+3*Icp-3*Inp+Iap)),
+    Ipc = (double)imageSmooth_(px,y,z,c),  Icc = (double)imageSmooth_(x, y,z,c), Inc = (double)imageSmooth_(nx,y,z,c),
+    Iac = (double)imageSmooth_(ax,y,z,c),
+    Ic = Icc + 0.5f*(dx*(-Ipc+Inc) + dx*dx*(2*Ipc-5*Icc+4*Inc-Iac) + dx*dx*dx*(-Ipc+3*Icc-3*Inc+Iac)),
+    dxIc = 0.5f*((-Ipc+Inc) + 2*dx*(2*Ipc-5*Icc+4*Inc-Iac) + 3*dx*dx*(-Ipc+3*Icc-3*Inc+Iac)),
+    Ipn = (double)imageSmooth_(px,ny,z,c), Icn = (double)imageSmooth_(x,ny,z,c), Inn = (double)imageSmooth_(nx,ny,z,c),
+    Ian = (double)imageSmooth_(ax,ny,z,c),
+    In = Icn + 0.5f*(dx*(-Ipn+Inn) + dx*dx*(2*Ipn-5*Icn+4*Inn-Ian) + dx*dx*dx*(-Ipn+3*Icn-3*Inn+Ian)),
+    dxIn = 0.5f*((-Ipn+Inn) + 2*dx*(2*Ipn-5*Icn+4*Inn-Ian) + 3*dx*dx*(-Ipn+3*Icn-3*Inn+Ian)),
+    Ipa = (double)imageSmooth_(px,ay,z,c), Ica = (double)imageSmooth_(x,ay,z,c), Ina = (double)imageSmooth_(nx,ay,z,c),
+    Iaa = (double)imageSmooth_(ax,ay,z,c),
+    Ia = Ica + 0.5f*(dx*(-Ipa+Ina) + dx*dx*(2*Ipa-5*Ica+4*Ina-Iaa) + dx*dx*dx*(-Ipa+3*Ica-3*Ina+Iaa)),
+    dxIa = 0.5f*((-Ipa+Ina) + 2*dx*(2*Ipa-5*Ica+4*Ina-Iaa) + 3*dx*dx*(-Ipa+3*Ica-3*Ina+Iaa));
+
+  gradu[0] = factor_/h_*(dxIc + 0.5f*(dy*(-dxIp+dxIn) + dy*dy*(2*dxIp-5*dxIc+4*dxIn-dxIa) + dy*dy*dy*(-dxIp+3*dxIc-3*dxIn+dxIa)));
+  gradu[1] = -factor_/h_*0.5f*((-Ip+In) + 2*dy*(2*Ip-5*Ic+4*In-Ia) + 3*dy*dy*(-Ip+3*Ic-3*In+Ia));
+}
+
+#ifdef HAVE_ADOLC
+inline
 void ImageFunction::evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
 {
 
@@ -129,7 +175,7 @@ void ImageFunction::evaluate (const FieldVector<adouble, Config::dim> &x, adoubl
     u = factor_ * imageSmooth_._cubic_atXY(fx,fy);
   }
 }
-
+#endif
 
 void ImageFunction::omega_normalize(const unsigned int n)
 {
@@ -169,7 +215,7 @@ double ImageFunction::omega_integrate(const unsigned int n) const
 //  return integrator.assemble_integral([this](const Config::DomainType &x) {return operator()(x)/omega(x);});
 }
 
-void ImageFunction::convolveOriginal (unsigned int width)
+void ImageFunction::convolveOriginal (double width)
 {
     if (width == 1)
     {
@@ -177,6 +223,7 @@ void ImageFunction::convolveOriginal (unsigned int width)
     }
     else
     {
+
 /*
         width = 2*width + 1;
 
@@ -202,7 +249,9 @@ void ImageFunction::convolveOriginal (unsigned int width)
         imageSmooth_=image_;
         imageSmooth_.convolve(mollifier, 1, false);
 */
+
       //TODO adapt width when calling function not here
+
       int maxBlur = pow((double) SolverConfig::epsDivide, (int) SolverConfig::nonlinear_steps) * SolverConfig::epsEnd;
       std::cout << " maxBlur " << maxBlur << " ((double)(width-1)/(maxBlur-1)) " << ((double)(width-1)/(maxBlur-1))<< " maybe " <<((double)(width-1))/(maxBlur-1) << std::endl;
       blurCoeff_ = 1+ ((double)(width-1))/(maxBlur-1)*29;
@@ -210,6 +259,7 @@ void ImageFunction::convolveOriginal (unsigned int width)
 
       std::cout << " blurring with " << blurCoeff_ << std::endl;
       imageSmooth_ = image_.get_blur(blurCoeff_);
+
     }
 }
 

@@ -5,10 +5,10 @@
  *      Author: friebel
  */
 
-#include "FEBasisHandler.hpp"
-#include "MA_solver.h"
+#include "Solver/FEBasisHandler.hpp"
+#include "Solver/MA_solver.h"
 
-#include "solver_config.h"
+#include "Solver/solver_config.h"
 
 #include <dune/grid/common/mcmgmapper.hh>
 
@@ -28,6 +28,24 @@ FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig::degr
       solver.get_setting().lowerLeft, solver.get_setting().upperRight,
       elementsSplines, SolverConfig::degree));
 }
+template<>
+FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig::degree>>::FEBasisHandler(const typename FEBasisType::GridView& gridView)
+{
+  assert(false);
+  std::cerr << " need solver to initiate BSplinesBasis" << std::endl;
+  std::exit(-1);
+}
+template<>
+FEBasisHandler<Standard, BSplineTraits<Config::RectangularGridView, SolverConfig::degree> >::FEBasisHandler(const Config::RectangularGridView& grid, const Config::DomainType& lowerLeft, const Config::DomainType& upperRight)
+{
+  std::array<unsigned int,FEBasisType::GridView::dimension> elementsSplines;
+  std::fill(elementsSplines.begin(), elementsSplines.end(), std::sqrt(grid.size(0)));
+
+  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid,
+      lowerLeft, upperRight,
+      elementsSplines, SolverConfig::degree));
+}
+
 
 
 template<>
@@ -67,7 +85,6 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solv
     //mark element for refining
     solver.grid_ptr->mark(1,element);
   }
-  double scaling_factor = v(v.size()-1);
 
   std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
   std::cout << " grid febasis " << solver.solution_u_old_global->basis().nodeFactory().gridView().size(2) << std::endl;
@@ -79,194 +96,29 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solv
   solver.grid_ptr->adapt();
   solver.count_refined += level;
 
-  std::cout << "new element count " << solver.gridView_ptr->size(0) << std::endl;
-
   //we need do store the old basis as the (father) finite element depends on the basis
   typedef Functions::PS12SSplineBasis<Config::LevelGridView, Config::SparseMatrixType> FEBasisCoarseType;
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1)));
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
   typedef typename DiscreteGridFunctionCoarse::LocalFunction DiscreteLocalGridFunctionCoarse;
   typedef typename DiscreteGridFunctionCoarse::LocalFirstDerivative DiscreteLocalGradientGridFunctionCoarse;
-  std::shared_ptr<DiscreteGridFunctionCoarse> solution_u_Coarse_global = std::shared_ptr<DiscreteGridFunctionCoarse> (new DiscreteGridFunctionCoarse(*FEBasisCoarse,solver.solution_u_old_global->dofs()));
-  std::shared_ptr<DiscreteLocalGridFunctionCoarse> solution_u_Coarse = std::shared_ptr<DiscreteLocalGridFunctionCoarse> (new DiscreteLocalGridFunctionCoarse(*solution_u_Coarse_global));
-  std::shared_ptr<DiscreteLocalGradientGridFunctionCoarse> gradient_u_Coarse = std::shared_ptr<DiscreteLocalGradientGridFunctionCoarse> (new DiscreteLocalGradientGridFunctionCoarse(*solution_u_Coarse_global));
+  DiscreteGridFunctionCoarse solution_u_Coarse_global (*FEBasisCoarse,solver.solution_u_old_global->dofs());
+  DiscreteLocalGridFunctionCoarse solution_u_Coarse(solution_u_Coarse_global);
+  DiscreteGridFunctionCoarse::GlobalFirstDerivative gradient_u_Coarse_global (solution_u_Coarse_global);
 
   //update member
-  std::cout << " grid febasis " << solution_u_Coarse_global->basis().nodeFactory().gridView().size(2) << std::endl;
+  std::cout << " grid febasis " << solution_u_Coarse_global.basis().nodeFactory().gridView().size(2) << std::endl;
 
   FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(*solver.gridView_ptr));
   solver.assembler.bind(*FEBasis_);
 
-  v.setZero(solver.get_n_dofs());
+  project(solution_u_Coarse_global, gradient_u_Coarse_global, v);
 
-  auto localView = FEBasis_->localView();
-  auto localIndexSet = FEBasis_->indexSet().localIndexSet();
-
-  //loop over elements (in refined grid)
-  for (auto&& element : elements(*solver.gridView_ptr)) {
-
-    const auto father = element.father();
-
-    localView.bind(element);
-    localIndexSet.bind(localView);
-
-    solution_u_Coarse->bind(father);
-    gradient_u_Coarse->bind(father);
-
-    const auto & lFE = localView.tree().finiteElement();
-    const auto& geometry = element.geometry();
-
-    Config::VectorType localDofs = Config::VectorType::Zero(lFE.size());
-
-    int k = 0;
-    for (int i = 0; i < geometry.corners(); i++) { //loop over nodes
-      const auto x = father.geometry().local(geometry.corner(i));
-//      std::cout << "local coordinate " << x << std::endl;
-
-      auto value = (*solution_u_Coarse)(x);
-//      std::cout << "value " << value << " at " << geometry.corner(i) << std::endl;
-      //set dofs associated with values at vertices
-      localDofs(k++) = value;
-
-      const auto gradient = (*gradient_u_Coarse)(x);
-//      std::cout << " gradient at the same " << gradient << std::endl;
-      localDofs(k++) = gradient[0];
-
-      localDofs(k++) = gradient[1];
-      k++;
-    }
-
-    for (auto&& is : intersections(*solver.gridView_ptr, element)) //loop over edges
-    {
-      const int i = is.indexInInside();
-
-      //calculate local key
-      if (i == 0)
-        k = 3;
-      else
-        if (i == 1)
-          k = 11;
-        else
-          k = 7;
-
-      // normal of center in face's reference element
-      const FieldVector<double, Config::dim> normal =
-            is.centerUnitOuterNormal();
-
-      const auto face_center = is.geometry().center();
-      //set dofs according to global normal direction
-
-      int signNormal;
-
-      if (std::abs(normal[0]+ normal[1]) < 1e-12)
-        signNormal = normal[1] > 0 ? 1 : -1;
-      else
-        signNormal = normal[0]+normal[1] > 0 ? 1 : -1;
-
-      localDofs(k) = signNormal * ((*gradient_u_Coarse)(father.geometry().local(face_center)) * normal);
-//      std::cout << "grad at " << face_center << " is " << (*gradient_u_Coarse)(father.geometry().local(face_center)) << " normal " << normal << " -> " << ((*gradient_u_Coarse)(father.geometry().local(face_center)) * normal) << " signNormal " << signNormal << std::endl;
-      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
-      }
-
-//      std::cout << " set local dofs " << localDofs.transpose() << std::endl;
-
-      Assembler::set_local_coefficients<FiniteElementTraits>(localIndexSet, localDofs, v);
-    }
-
-  //set scaling factor (last dof) to ensure mass conservation
-  v(v.size()-1)= scaling_factor;
-
-#define BDEBUG
+/*
 #ifdef DEBUG
-  std::cout << "refinement :" << std::endl;
-
-  for (auto&& element : elements(*solver.gridView_ptr)) {
-
-    localView.bind(element);
-    localIndexSet.bind(localView);
-
-    const auto & lFE = localView.tree().finiteElement();
-    const auto& geometry = element.geometry();
-
-    VectorType localDofs = assembler.calculate_local_coefficients(localIndexSet, solution);
-
-    // Get a quadrature rule
-    const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
-    const QuadratureRule<double, Config::dim>& quad =
-        MacroQuadratureRules<double, Config::dim>::rule(element.type(),
-            order, SolverConfig::quadratureType);
-
-    double resTest1f = 0, resTest1 = 0;
-
-    for (int i = 0; i < geometry.corners(); i++) {
-
-      std::cout << "corner " << i << " = " << geometry.corner(i) << std::endl;
-
-      //evaluate test function
-      std::vector<Dune::FieldVector<double, 1>> functionValues(
-          localView.size());
-      lFE.localBasis().evaluateFunction(geometry.local(geometry.corner(i)),
-          functionValues);
-
-      double res = 0;
-      for (int j = 0; j < localDofs.size(); j++) {
-        res += localDofs(j) * functionValues[j];
-      }
-      solution_u_Coarse->bind(element.father());
-      std::cout << "approx(corner " << i << ")="<< res
-          << " f(corner " << i << ")= " << (*solution_u_Coarse)(element.father().geometry().local(geometry.corner(i)))<< std::endl;
-
-      //evaluate jacobian at node
-      std::vector<Dune::FieldMatrix<double, 1, 2>> JacobianValues(
-          localView.size());
-      lFE.localBasis().evaluateJacobian(geometry.local(geometry.corner(i)),
-          JacobianValues);
-
-      Dune::FieldVector<double, 2> jacApprox;
-      for (int j = 0; j < localDofs.size(); j++) {
-        jacApprox.axpy(localDofs(j), JacobianValues[j][0]);
-      }
-
-      gradient_u_Coarse->bind(element.father());
-      std::cout << "approx'(corner " << i << ")=" << (*gradient_u_Coarse)(element.father().geometry().local(geometry.corner(i)))
-          << "  approx = " << jacApprox << std::endl;
-
-    }
-
-    for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
-    {
-      //evaluate jacobian at edge mid
-      std::vector<Dune::FieldMatrix<double, 1, 2>> JacobianValues(
-          localView.size());
-      lFE.localBasis().evaluateJacobian(geometry.local(is.geometry().center()),
-            JacobianValues);
-
-      Dune::FieldVector<double, 2> jacApprox;
-      for (int j = 0; j < localDofs.size(); j++) {
-        jacApprox.axpy(localDofs(j), JacobianValues[j][0]);
-      }
-
-      const int i = is.indexInInside();
-
-      // normal of center in face's reference element
-      const FieldVector<double, Config::dim> normal =
-              is.centerUnitOuterNormal();
-
-      const auto face_center = is.geometry().center();
-      std::cout << " f (face center " << i  << "=" << face_center << " )= ";
-      if (normal[0]+normal[1] < 0 )
-        std::cout << -((*gradient_u_Coarse)(element.father().geometry().local(face_center)) * normal)
-          << " = " <<(*gradient_u_Coarse)(element.father().geometry().local(face_center)) << "*" << normal;
-      else
-        std::cout << (*gradient_u_Coarse)(element.father().geometry().local(face_center)) * normal
-          << " = " << (*gradient_u_Coarse)(element.father().geometry().local(face_center)) << "*" <<normal;
-      std::cout << " approx (face center " << i  << " )= " << jacApprox*normal
-          << " = " << jacApprox << "*" << normal << std::endl;
-//        std::cout << " global dof no " << localIndexSet.index(k) << " has value " << solution[localIndexSet.index(k)] << std::endl;
-    }
-
-  }
+  solver.test_projection(solution_u_Coarse_global, v);
 #endif
+*/
 
 
   //reset adaption flags
@@ -285,7 +137,6 @@ void FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, SolverConfig::d
     //mark element for refining
     solver.grid_ptr->mark(1,element);
   }
-  double scaling_factor = v(v.size()-1);
 
   std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
 
@@ -306,11 +157,9 @@ void FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, SolverConfig::d
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
   DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
 
-  v.resize(FEBasis_->indexSet().size() + 1);
+  v.resize(FEBasis_->indexSet().size());
   Config::VectorType v_u;
-  interpolate(*FEBasis_, v_u, solution_u_Coarse_global);
-  v.segment(0, v_u.size()) = v_u;
-  v(v.size()-1) = scaling_factor;
+  interpolate(*FEBasis_, v, solution_u_Coarse_global);
   solver.grid_ptr->postAdapt();
 }
 template <>
@@ -367,6 +216,11 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
   DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
 
   project(solution_u_Coarse_global, v);
+
+#ifndef NDEBUG
+  solver.test_projection(solution_u_Coarse_global, v);
+#endif
+
 /*
   v.resize(FEBasis_->indexSet().size() + 1);
   Config::VectorType v_u;
@@ -467,7 +321,6 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
     //store local dofs
     preserveSolution[idSet.id(element)]  = Assembler::calculate_local_coefficients(localIndexSet, v);
   }
-  double scaling_factor = v(v.size()-1);
 
   std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
 
@@ -495,7 +348,7 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisCoarseType,Config::VectorType> DiscreteGridFunctionuCoarse;
   DiscreteGridFunctionuCoarse solution_u_Coarse_global (FEuBasisCoarse,solver.solution_u_old_global->dofs());
 
-  v.resize(FEBasis_->indexSet().size() + 1);
+  v.resize(FEBasis_->indexSet().size());
   Config::VectorType v_u;
   interpolate(*uBasis_, v_u, solution_u_Coarse_global);
   v.segment(0, v_u.size()) = v_u;
@@ -685,7 +538,6 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
     }
 
   }*/
-  v(v.size()-1)= scaling_factor;
   //reset adaption flags
   solver.grid_ptr->postAdapt();
 
@@ -711,7 +563,6 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 
   typedef Functions::PS12SSplineBasis<Config::LevelGridView, Config::SparseMatrixType> FEBasisCoarseType;
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(levelGridView));
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
 
   //init vector
   Config::VectorType v = Config::VectorType::Zero(FEBasisCoarse->indexSet().size() + 1);
@@ -720,7 +571,6 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   auto localIndexSetCoarse = FEBasisCoarse->indexSet().localIndexSet();
 
   auto localView = FEBasis_->localView();
-  auto localIndexSet = FEBasis_->indexSet().localIndexSet();
 
   //loop over elements (in coarse grid)
   for (auto&& elementCoarse : elements(levelGridView)) {
@@ -893,10 +743,10 @@ Config::VectorType FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverCon
   typedef typename std::remove_const<ConstlevelGridView>::type LevelGridView;
 
   //create handler for coarse basis
-  FEBasisHandler<Mixed, MixedTraits<LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>> HandlerCoarse(solver, levelGridView);
+  FEBasisHandler<Mixed, MixedTraits<LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>> HandlerCoarse(levelGridView);
 
   //init vector
-  Config::VectorType v = Config::VectorType::Zero(HandlerCoarse.FEBasis().indexSet().size() + 1);
+  Config::VectorType v = Config::VectorType::Zero(HandlerCoarse.FEBasis().indexSet().size());
 
   //project
   HandlerCoarse.project(numericalSolution, v);

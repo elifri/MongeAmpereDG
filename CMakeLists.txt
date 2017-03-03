@@ -15,6 +15,13 @@ SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
 SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 SET(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g")
 
+set(CMAKE_EXE_LINK_DYNAMIC_C_FLAGS "")
+set(CMAKE_EXE_LINK_DYNAMIC_CXX_FLAGS "")
+set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
+set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
+set(LINK_SEARCH_START_STATIC "")
+set(LINK_SEARCH_END_STATIC "")
+
 
 message("compiling mode: ${CMAKE_BUILD_TYPE}")
 message("cmake flags mode: ${CMAKE_CXX_FLAGS}")
@@ -27,7 +34,7 @@ IF(MY_SITE STREQUAL "indigo7")
    SET(SNES_LIBRARY Dogleg)
    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_DOGLEG")
    SET(ADOLC_PATH $ENV{HOME}/lib/adolc)
-   unset(Boost_FOUND CACHE)
+   #unset(Boost_FOUND CACHE)
    SET(Boost_LIBRARIES /usr/local/gcc-5.2.0/lib/libboost_program_options.so)
    SET(BoostPO_LIBRARIES ${Boost_LIBRARIES})
 ELSE()
@@ -59,27 +66,34 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules"
 include(DuneMacros)
 
 #fieser hack ... 
-set(EIGEN3_INCLUDE_DIR "/home/data/friebel/workspace/eigen")
-set(IGPM_T2_LIB_INCLUDES "/home/data/friebel/workspace/igpm_t2_lib/include")
-set(METHOD_OF_ELLIPSOIDS_PATH "$ENV{HOME}/workspace/Method\ of\ Ellipsoids")
-set(CIMG_PATH "$ENV{HOME}/workspace/CImg-1.6.0")
+#set(METHOD_OF_ELLIPSOIDS_PATH "$ENV{HOME}/workspace/Method\ of\ Ellipsoids")
 
-#unset(CIMG_FOUND CACHE)
+#unset(LIBFFO_CORE_INCLUDES CACHE)
+#unset(LIBFFO_CORE_LIBRARIES CACHE)
+#unset(Boost_FOUND CACHE)
 find_package(Umfpack REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(adolc REQUIRED)
+find_package(adolc)
 find_package(MethodOfEllipsoids)
 find_package(CImg)
+find_package(HDF5 REQUIRED)
+find_package(libffo_core REQUIRED)
 
 
-include_directories(${METHOD_OF_ELLIPSOIDS_INCLUDES} ${CIMG_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${IGPM_T2_LIB_INCLUDES} ${ADOLC_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
-message("found boost ${Boost_LIBRARIES}")
+include_directories(${LIBFFO_CORE_INCLUDES} ${METHOD_OF_ELLIPSOIDS_INCLUDES} ${CIMG_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${Boost_INCLUDE_DIRS})
+if (METHOD_OF_ELLIPSOIDS_INCLUDES)
+include_directories(${METHOD_OF_ELLIPSOIDS_INCLUDES})
+endif (METHOD_OF_ELLIPSOIDS_INCLUDES)
+if (ADOLC_FOUND)
+include_directories(${ADOLC_INCLUDE_DIRS})
+endif (ADOLC_FOUND)
+include_directories("include")
 
 
 # start a dune project with information from dune.module
 dune_project()
-message("found boost ${Boost_LIBRARIES}")
 
+add_subdirectory("include")
 add_subdirectory("src")
 add_subdirectory("Testing")
 add_subdirectory("m4")
@@ -87,14 +101,8 @@ add_subdirectory("dune")
 add_subdirectory("doc")
 add_subdirectory("cmake/modules")
 
-
-message("found boost ${Boost_LIBRARIES}")
-
 # finalize the dune project, e.g. generating config.h etc.
 finalize_dune_project(GENERATE_CONFIG_H_CMAKE)
-
-
-message("found boost ${Boost_LIBRARIES}")
 
 message("compiling mode: ${CMAKE_BUILD_TYPE}")
 message("cmake flags mode: ${CMAKE_CXX_FLAGS}")

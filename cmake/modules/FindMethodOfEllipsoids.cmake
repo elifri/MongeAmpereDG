@@ -8,7 +8,7 @@ find_path(METHOD_OF_ELLIPSOIDS_INCLUDES
   PATHS
   $ENV{IGPM_T2_LIBDIR}
   ${INCLUDE_INSTALL_DIR}
-  ${HOME}/workspace/Method\ of\ Ellipsoids/src
+  $ENV{HOME}/workspace/Method\ of\ Ellipsoids/src
   ${METHOD_OF_ELLIPSOIDS_PATH}/src
 )
 

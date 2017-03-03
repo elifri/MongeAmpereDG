@@ -12,7 +12,7 @@
 #include "MA_reflector_solver.h"
 #include "init_with_ellipsoid_method.hpp"
 
-#include "../utils.hpp"
+#include "utils.hpp"
 
 
 MA_reflector_solver::MA_reflector_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting, const std::string& configFileEllipsoid)

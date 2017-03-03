@@ -6,7 +6,7 @@
  */
 
 
-#include "MA_OT_solver.h"
+#include "OT/MA_OT_solver.h"
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
@@ -15,9 +15,7 @@ namespace po = boost::program_options;
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk/common.hh>
 
-#include <Grids/Grid2d.hpp>
-
-#include "../utils.hpp"
+#include "utils.hpp"
 
 MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting)
 :MA_solver(grid, gridView, config), setting_(setting), op(*this)
@@ -31,7 +29,6 @@ void MA_OT_solver::plot(const std::string& name) const
   if (writeVTK_)
   {
     std::cout << "plot written into ";
-    const int nDH = Config::dim*Config::dim;
 
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
@@ -90,21 +87,22 @@ void MA_OT_solver::plot(const std::string& name) const
   std::string fname(plotter.get_output_directory());
   fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "outputGrid.vtu";
 
-//  plotter.writeOTVTK(fname, *gradient_u_old, [](Config::SpaceType x)
-//      {return Dune::FieldVector<double, Config::dim> ({
-//                                                      x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
-//                                                      x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});});
-  plotter.writeOTVTK(fname, *gradient_u_old);
+  plotter.writeOTVTK(fname, *gradient_u_old, [](Config::SpaceType x)
+      {return Dune::FieldVector<double, Config::dim> ({
+                                                      x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
+                                                      x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});});
+//  plotter.writeOTVTK(fname, *gradient_u_old);
 }
 
 void MA_OT_solver::create_initial_guess()
 {
-  project([](Config::SpaceType x){return x.two_norm2()/2.0;},
-//    project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
+//  project([](Config::SpaceType x){return x.two_norm2()/2.0;},
+    project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
 //  project_labouriousC1([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
 //                        [](Config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},
 //                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
                         solution);
+
 }
 
 
@@ -113,6 +111,15 @@ void MA_OT_solver::solve_nonlinear_system()
   assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
 
   std::cout << "n dofs" << get_n_dofs() << std::endl;
+
+  if (iterations == 0)
+  {
+
+    std::cout << " L2 error is " << calculate_L2_errorOT([](Config::SpaceType x)
+        {return Dune::FieldVector<double, Config::dim> ({
+                                                        x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
+                                                        x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
+  }
 
   // /////////////////////////
   // Compute solution
@@ -144,7 +151,5 @@ void MA_OT_solver::solve_nonlinear_system()
       {return Dune::FieldVector<double, Config::dim> ({
                                                       x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
                                                       x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
-
-  std::cout << "scaling factor " << solution(solution.size()-1) << endl;
 
   }

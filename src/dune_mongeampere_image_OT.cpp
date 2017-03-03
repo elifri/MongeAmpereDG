@@ -4,13 +4,14 @@
 
 
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
+#include <dune/grid/io/file/gmshreader.hh>
 
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 
-#include "config.h"
+#include "MAconfig.h"
 #include "OT/MA_OT_image_solver.h"
-#include "Plotter.h"
+#include "IO/Plotter.h"
 
 #include <boost/program_options.hpp>
 
@@ -21,6 +22,7 @@
 
 using namespace Dune;
 namespace po = boost::program_options;
+using namespace std;
 
 void read_parameters(int argc, char *argv[], std::string& configFileMASolver, std::string& configFileSetting)
 {
@@ -91,10 +93,13 @@ try {
   // ////////////////////////////////
   // Generate the grid
   // ////////////////////////////////
+#ifdef BSPLINES
   Config::UnitCubeType unitcube(setting.lowerLeft, setting.upperRight, 1);
-
-  Config::GridType &grid = unitcube.grid();
-  Config::GridView gridView = grid.leafGridView();
+  std::shared_ptr<Config::GridType> grid_ptr = unitcube.grid_ptr();
+#else
+  std::shared_ptr<Config::GridType> grid_ptr(GmshReader<Config::GridType>::read(setting.gridinputFile));
+#endif
+  Config::GridView gridView = grid_ptr->leafGridView();
 
   // Output grid
   VTKWriter<Config::GridView> vtkWriter(gridView);
@@ -102,7 +107,7 @@ try {
 
 
   //solve
-  MA_OT_image_solver ma_solver(unitcube.grid_ptr(), gridView, config, setting);
+  MA_OT_image_solver ma_solver(grid_ptr, gridView, config, setting);
   ma_solver.solve();
 
   std::cout << "done" << std::endl;

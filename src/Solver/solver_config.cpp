@@ -7,29 +7,29 @@
 
 
 
-#include "solver_config.h"
+#include "Solver/solver_config.h"
 
-#include "../Dogleg/doglegMethod.hpp"
+#include "Dogleg/doglegMethod.hpp"
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
 
 using namespace Dune;
-using std::cout;
+using namespace std;
 
 ProblemType SolverConfig::problem;
 
 int SolverConfig::startlevel = 0;
 int SolverConfig::nonlinear_steps = 1;
 
-unsigned int SolverConfig::epsDivide = 1;
-unsigned int SolverConfig::epsEnd = 1;
+double SolverConfig::epsDivide = 1;
+double SolverConfig::epsEnd = 1;
 
 
 double SolverConfig::sigma = 5;
 double SolverConfig::sigmaGrad = 5;
-double SolverConfig::sigmaBoundary = 5;
+double SolverConfig::sigmaBoundary = 20;
 
 bool SolverConfig::Dirichlet = false;
 
@@ -71,7 +71,7 @@ void SolverConfig::read_configfile(std::string &configFile)
   po::options_description config("Configuration of the MA FE solver");
   config.add_options()
         ("solver.initValueFromFile",     po::value<bool>(&initValueFromFile), "")
-        ("solver.initValue",     po::value<string>(&initValue), "")
+        ("solver.initValue",     po::value<std::string>(&initValue), "")
         ("solver.startlevel",  po::value<int>(&SolverConfig::startlevel), "")
         ("solver.nonlinearSteps",  po::value<int>(&SolverConfig::nonlinear_steps), "")
         ("solver.maxSteps",     po::value<int>(&maxSteps), "")
@@ -123,8 +123,13 @@ void SolverConfig::read_configfile(std::string &configFile)
 Config::SpaceType GeometrySetting::lowerLeft = {0,0};
 Config::SpaceType GeometrySetting::upperRight = {1,1};
 
+std::string GeometrySetting::gridinputFile = "";
+
 Config::SpaceType GeometrySetting::lowerLeftTarget = {0,0};
 Config::SpaceType GeometrySetting::upperRightTarget= {1,1};
+
+std::string GeometrySetting::gridinputTargetFile = "";
+
 double GeometrySetting::z_3 = 0;
 
 void GeometrySetting::read_configfile(std::string &configFile)
@@ -138,6 +143,7 @@ void GeometrySetting::read_configfile(std::string &configFile)
         ("geometry.input.xMax",  po::value<double>(&GeometrySetting::upperRight[0]), "")
         ("geometry.input.yMin",  po::value<double>(&GeometrySetting::lowerLeft[1]), "")
         ("geometry.input.yMax",  po::value<double>(&GeometrySetting::upperRight[1]), "")
+        ("geometry.input.gridfile",  po::value<string>(&GeometrySetting::gridinputFile), "")
         ("geometry.target.xMin",     po::value<double>(&GeometrySetting::lowerLeftTarget[0]), "")
         ("geometry.target.xMax",     po::value<double>(&GeometrySetting::upperRightTarget[0]), "")
         ("geometry.target.yMin",     po::value<double>(&GeometrySetting::lowerLeftTarget[1]), "")
@@ -181,15 +187,17 @@ void OpticalSetting::read_configfile(std::string &configFile)
         ("geometry.optic.xMax",  po::value<double>(&OpticalSetting::upperRight[0]), "")
         ("geometry.optic.yMin",  po::value<double>(&OpticalSetting::lowerLeft[1]), "")
         ("geometry.optic.yMax",  po::value<double>(&OpticalSetting::upperRight[1]), "")
+        ("geometry.optic.gridfile",  po::value<string>(&OpticalSetting::gridinputFile), "")
         ("geometry.target.xMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[0]), "")
         ("geometry.target.xMax",     po::value<double>(&OpticalSetting::upperRightTarget[0]), "")
         ("geometry.target.yMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[1]), "")
         ("geometry.target.yMax",     po::value<double>(&OpticalSetting::upperRightTarget[1]), "")
+        ("geometry.target.gridfile",  po::value<string>(&OpticalSetting::gridinputTargetFile), "")
         ("geometry.target.z",        po::value<double>(&OpticalSetting::z_3),    "")
         ("light.in.imageName",       po::value<string>(&OpticalSetting::LightinputImageName), "path to image")
         ("light.out.targetImageName",     po::value<string>(&OpticalSetting::TargetImageName), "")
-        ("solver.epsDivide",  po::value<unsigned int>(&SolverConfig::epsDivide), "")
-        ("solver.epsEnd",  po::value<unsigned int>(&SolverConfig::epsEnd), "")
+        ("solver.epsDivide",  po::value<double>(&SolverConfig::epsDivide), "")
+        ("solver.epsEnd",  po::value<double>(&SolverConfig::epsEnd), "")
         ("solver.minPixelValue",     po::value<double>(&minPixelValue), "")
         ("povray.cameraAngle",       po::value<double>(&(povRayOpts.cameraAngle)),       "")
         ("povray.jitter",            po::value<bool>  (&(povRayOpts.jitter)),            "")

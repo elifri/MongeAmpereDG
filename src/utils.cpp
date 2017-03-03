@@ -9,8 +9,7 @@
 
 #include "utils.hpp"
 
-using std::cout;
-using std::cerr;
+using namespace std;
 
 bool is_close(const double a, const double b, const double tolerance) {
 	bool B=( std::abs(b-a) < tolerance);

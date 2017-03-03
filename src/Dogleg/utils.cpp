@@ -32,7 +32,7 @@ unsigned int pq(const double a, const double b, const double c, double &x1, doub
     q = c / a;
 
     // calculate radicant
-    if (fabs(p) < sqrt(MaxDouble))
+    if (std::fabs(p) < sqrt(MaxDouble))
     {
         // small radicant
         r = ((p / 2) * (p / 2)) - q;
@@ -106,63 +106,64 @@ bool openInputFile (const std::string filename, std::ifstream &file) {
 }
 
 
-void compare_matrices(igpm::testblock &b, const Eigen::MatrixXd &A, const Eigen::MatrixXd &B, const std::string &Aname, const std::string &Bname, bool output, const double tol) {
-
-	std::stringstream S;
-	S << "Compare matrix dimensions of " << Aname << " and " << Bname;
+bool compare_matrices(std::ostream& os, const Eigen::MatrixXd &A, const Eigen::MatrixXd &B, const std::string &Aname, const std::string &Bname, bool output, const double tol) {
+  bool b = true;
+	os << "Compare matrix dimensions of " << Aname << " and " << Bname;
 	b = b && is_equal(B.rows(), A.rows());
 	b = b && is_equal(B.cols(), A.cols());
-	if (output)	b.check(S.str());
+	if (output)	os << " comparison yields " << b << std::endl;
 
-	S.str("");;
-	S << "Compare matrix entries of " << Aname << " and " << Bname;
+	os << std::endl;;
+	os << "Compare matrix entries of " << Aname << " and " << Bname;
 	for(int i=0;i< A.rows(); ++i) {
 		for(int j=0;j< A.cols(); ++j) {
 			const double &d1=A.coeff(i,j);
 			const double &d2=B.coeff(i,j);
-			const bool res=is_close( d1, d2, tol * max(1.0, std::fabs(d1)) );
+			const bool res=is_close( d1, d2, tol * std::max(1.0, std::fabs(d1)) );
 			b = b && res;
 			if(!res) {
-				std::cerr << "entry (" << i << ", " << j << "): " << Aname << "=" << d1 << ", " << Bname << "=" <<  d2
+				os << "entry (" << i << ", " << j << "): " << Aname << "=" << d1 << ", " << Bname << "=" <<  d2
 						  << ", absolute error=" << std::fabs(d2-d1)
 				          << ", relative error=" << std::fabs((d2-d1)/d2) << std::endl;
 
 			}
 		}
 	}
-	if (output)	b.check(S.str());
 
+	if (output)	os << " matrix comparison finished with value " << b << std::endl;
+
+	return b;
 }
 
-void compare_matrices(igpm::testblock &b, const Eigen::SparseMatrix<double> &A, const Eigen::SparseMatrix<double> &B, const std::string &Aname, const std::string &Bname, bool output, const double tol) {
+bool compare_matrices(std::ostream& os, const Eigen::SparseMatrix<double> &A, const Eigen::SparseMatrix<double> &B, const std::string &Aname, const std::string &Bname, bool output, const double tol) {
+  bool b = true;
 
-	std::stringstream S;
-	S << "Compare matrix dimensions of " << Aname << " and " << Bname;
+	os << "Compare matrix dimensions of " << Aname << " and " << Bname;
 	b = b && is_equal(B.rows(), A.rows());
 	b = b && is_equal(B.cols(), A.cols());
-	if (output)	b.check(S.str());
+	if (output)	os << " comparison yields " << b << std::endl;
 
-	S.str("");
-	S << "Compare number of nonzeros of " << Aname << " and " << Bname;
+	os << std::endl;
+	os << "Compare number of nonzeros of " << Aname << " and " << Bname;
 	b = b && is_equal(B.nonZeros(), A.nonZeros()   );
-	if (output)	b.check(S.str());
+	if (output)	os << " comparison yields " << b << std::endl;
 
-	S.str("");;
-	S << "Compare matrix entries of " << Aname << " and " << Bname;
+	os << std::endl;
+	os << "Compare matrix entries of " << Aname << " and " << Bname;
 	for(int i=0;i< A.rows(); ++i) {
 		for(int j=0;j< A.cols(); ++j) {
 			const double &d1=A.coeff(i,j);
 			const double &d2=B.coeff(i,j);
-			const bool res=is_close( d1, d2, tol * max(1.0, std::fabs(d1)) );
+			const bool res=is_close( d1, d2, tol * std::max(1.0, std::fabs(d1)) );
 			b = b && res;
 			if(!res) {
-				std::cout << "entry (" << i << ", " << j << "): " << Aname << "=" << d1 << ", " << Bname << "=" <<  d2
+				os << "entry (" << i << ", " << j << "): " << Aname << "=" << d1 << ", " << Bname << "=" <<  d2
 						  << ", absolute error=" << std::fabs(d2-d1)
 				          << ", relative error=" << std::fabs((d2-d1)/d2) << std::endl;
 
 			}
 		}
 	}
-	if (output)	b.check(S.str());
-
+	if (output)	os << " matrix comparison finished with value "  << (b?"ok":"failed")  << std::endl;
+	return b;
 }

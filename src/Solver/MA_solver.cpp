@@ -8,7 +8,7 @@
 
 
 
-#include "MA_solver.h"
+#include "Solver/MA_solver.h"
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
@@ -17,9 +17,10 @@ namespace po = boost::program_options;
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk/common.hh>
 
-#include <Grids/Grid2d.hpp>
 
-#include "../utils.hpp"
+#include "utils.hpp"
+
+using namespace std;
 
 /*
 double MA_solver::calculate_L2_error(const MA_function_type &f) const
@@ -113,6 +114,20 @@ void MA_solver::plot(const std::string& name) const
    vtkWriter.write(fname);
 }
 
+void MA_solver::plot(const VectorType& u, const std::string& filename) const
+{
+  Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(), u);
+  auto localnumericalSolution = localFunction(numericalSolution);
+
+  std::string fname(plotter.get_output_directory());
+  fname += "/"+ plotter.get_output_prefix()+ filename + NumberToString(iterations) + ".vtu";
+
+  SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
+  vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
+  vtkWriter.write(fname);
+}
+
+
 void MA_solver::init_from_file(const std::string& filename)
 {
   solution.resize(get_n_dofs());
@@ -126,13 +141,21 @@ void MA_solver::init_from_file(const std::string& filename)
 
 
   for (int i=0; i<get_n_dofs(); ++i) {
-    assert(!fileInitial.eof() && "The inserted coefficient file is too short");
+    if (fileInitial.eof())
+    {
+      std::cerr << "The inserted coefficient file is too short";
+      assert(false);
+      exit(-1);
+    }
     fileInitial >> solution(i);
   }
+  double scaling_coefficient;
+  fileInitial >> scaling_coefficient;
   fileInitial >> ws;
   if (!fileInitial.eof())
   {
     std::cerr << "Coefficient initialisation is too long for the specified setting!";
+    assert(false);
     exit(-1);
   }
   fileInitial.close();
@@ -177,20 +200,23 @@ const typename MA_solver::VectorType& MA_solver::solve()
     file << solution;
     file.close();
   }
-
   update_solution(solution);
   plot("initialguess");
+
+
+/*
+  adapt_solution();
+  update_solution(solution);
+
+  plot("initialguessAfterAdaption");
+*/
+
 
 //  Config::VectorType f;
 //  SolverConfig::MatrixType J;
 //  op.evaluate(solution, f, solution, false);
 //  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
 
-  //calculate integral to fix reflector size
-  Integrator<GridType> integrator(grid_ptr);
-  G = integrator.assemble_integral_of_local_gridFunction(*solution_u_old);
-  std::cout << "reflector size  G " << G << endl;
-  assembler.set_G(G);
 
   for (int i = 0; i < SolverConfig::nonlinear_steps; i++)
   {
@@ -198,7 +224,6 @@ const typename MA_solver::VectorType& MA_solver::solve()
     solve_nonlinear_system();
     iterations++;
     std::cerr << " solved nonlinear system" << std::endl;
-    cout << "scaling factor " << solution(solution.size()-1) << endl;
 
     update_solution(solution);
     plot("numericalSolution");
@@ -208,7 +233,6 @@ const typename MA_solver::VectorType& MA_solver::solve()
     solve_nonlinear_system();
     iterations++;
     std::cerr << " solved nonlinear system" << std::endl;
-    cout << "scaling factor " << solution(solution.size()-1) << endl;
 
     {
       //write current solution to file
@@ -222,7 +246,8 @@ const typename MA_solver::VectorType& MA_solver::solve()
     }
 //    plot("numericalSolutionBeforeRef");
 
-    adapt_solution();
+    if (i < SolverConfig::nonlinear_steps-1)
+      adapt_solution();
 
     update_solution(solution);
     plot("numericalSolution");
@@ -251,6 +276,9 @@ void MA_solver::update_solution(const Config::VectorType& newSolution) const
   solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(FEBasisHandler_.uBasis(),solution_u));
   solution_u_old = std::shared_ptr<DiscreteLocalGridFunction> (new DiscreteLocalGridFunction(*solution_u_old_global));
   gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
+
+  DiscreteGridFunction solution_u_global(FEBasisHandler_.uBasis(),newSolution);
+
 
   solution = newSolution;
 }
