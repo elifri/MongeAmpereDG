@@ -22,16 +22,16 @@ namespace po = boost::program_options;
 
 void read_parameters(int argc, char *argv[], std::string& configFileMASolver, std::string& configFileOpticalSetting)
 {
-  string petscConfig;
+  std::string petscConfig;
 
   po::options_description cmdline("Generic options");
   cmdline.add_options()
       ("version,v",   "print version string")
       ("help,h",      "produce help message")
       ("help-all,a",  "produce help message (including config file options)")
-      ("solver,c", po::value<string>(&configFileMASolver),  "config file for the MA finite element method")
-      ("geometry,g",   po::value<string>(&configFileOpticalSetting),  "config file for optical setting")
-      ("Petsoptionsfile,o", po::value<string>(&petscConfig), "config file for petsc")
+      ("solver,c", po::value<std::string>(&configFileMASolver),  "config file for the MA finite element method")
+      ("geometry,g",   po::value<std::string>(&configFileOpticalSetting),  "config file for optical setting")
+      ("Petsoptionsfile,o", po::value<std::string>(&petscConfig), "config file for petsc")
       ;
 
   po::options_description cmdline_options;

@@ -6,7 +6,7 @@
  */
 
 
-#include "MA_refractor_solver.h"
+#include "Optics/MA_refractor_solver.h"
 
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
@@ -16,8 +16,8 @@ MA_refractor_solver::MA_refractor_solver(const shared_ptr<GridType>& grid, GridV
  :MA_solver(grid, gridView, config), setting_(opticalSetting), op(*this)
 {
    //adjust light intensity
-   const auto integralLightOut = op.lop.get_right_handside().get_target_distribution().integrateOriginal();
-   const auto integralLightIn = op.lop.get_right_handside().get_input_distribution().integrateOriginal();
+   const auto integralLightOut = op.get_lop().get_right_handside().get_target_distribution().integrateOriginal();
+   const auto integralLightIn = op.get_lop().get_right_handside().get_input_distribution().integrateOriginal();
    setting_.povRayOpts.lightSourceColor = Eigen::Vector3d::Constant(integralLightOut/integralLightIn*setting_.lightSourceIntensity);
 
    plotter.set_PovRayOptions(setting_.povRayOpts);
@@ -98,14 +98,14 @@ void MA_refractor_solver::update_Operator()
 {
   //blurr target distributation
   std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
-  op.lop.rhs.convolveTargetDistributionAndNormalise(epsMollifier_);
+  op.get_lop().get_right_handside().convolveTargetDistributionAndNormalise(epsMollifier_);
 
   //print blurred target distribution
   if (true) {
-      ostringstream filename2; filename2 << plotOutputDirectory_+"/lightOut" << iterations << ".bmp";
+      std::ostringstream filename2; filename2 << plotOutputDirectory_+"/lightOut" << iterations << ".bmp";
       std::cout << "saved image to " << filename2.str() << std::endl;
-      op.lop.get_right_handside().get_target_distribution().saveImage (filename2.str());
-      assert(std::abs(op.lop.get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
+      op.get_lop().get_right_handside().get_target_distribution().saveImage (filename2.str());
+      assert(std::abs(op.get_lop().get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
   }
   epsMollifier_ /= epsDivide_;
 }
@@ -138,7 +138,6 @@ void MA_refractor_solver::solve_nonlinear_system()
   timer.stop();
   std::cout << "needed " << timer << " seconds for nonlinear step, ended with error code " << error << std::endl;
 #endif
-  std::cout << "scaling factor " << solution(solution.size()-1) << endl;
 }
 
 

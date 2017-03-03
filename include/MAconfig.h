@@ -20,9 +20,9 @@
 
 //for definition of ADOLC see solver_config #define HAVE_ADOLC
 
-//#define BSPLINES
+#define BSPLINES
 //#define USE_C0_PENALTY
-#define USE_MIXED_ELEMENT
+//#define USE_MIXED_ELEMENT
 //#define USE_PS12
 
 #ifdef USE_C0_PENALTY

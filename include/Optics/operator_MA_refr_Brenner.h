@@ -15,45 +15,23 @@
 
 #include "Solver/solver_config.h"
 
+#include "OT/operator_utils.h"
+
 using namespace Dune;
-
-template <class value_type>
-inline
-value_type determinant(const FieldMatrix<value_type, 2, 2>& A)
-{
-  return fmax(0,A[0][0])*fmax(0,A[1][1]) - A[0][1]*A[1][0]- SolverConfig::lambda*((fmin(0,A[0][0])*fmin(0,A[0][0])) + (fmin(0,A[1][1])*fmin(0,A[1][1])));
-}
-
-template <class value_type>
-inline
-value_type naive_determinant(const FieldMatrix<value_type, 2, 2>& A)
-{
-  return A[0][0]*A[1][1]-A[0][1]*A[1][0];
-}
-
-
-template <class value_type>
-inline
-FieldMatrix<value_type, 2, 2> cofactor(const FieldMatrix<value_type, 2, 2>& A)
-{
-  FieldMatrix<value_type, 2, 2> cofA;
-  cofA[0][0] = A[1][1];
-  cofA[1][1] = A[0][0];
-  cofA[0][1] = -A[0][1];
-  cofA[1][0] = -A[1][0];
-
-  return cofA;
-}
 
 class Local_Operator_MA_refr_Brenner {
 
 public:
+/*
   Local_Operator_MA_refr_Brenner():
     opticalSetting(NULL), rhs(*opticalSetting), bc(*opticalSetting, 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps)), sign(1.0) {
     int_f = 0;
   }
+*/
 
-  Local_Operator_MA_refr_Brenner(OpticalSetting &opticalSetting,RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld):
+  template<typename GridView>
+  Local_Operator_MA_refr_Brenner(OpticalSetting &opticalSetting, const GridView& gridView, RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld):
+    hash(gridView), EntititiesForUnifikationTerm_(10,hash),
     opticalSetting(&opticalSetting),
     rhs(solUOld, gradUOld, opticalSetting),
     bc(opticalSetting, 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps)), sign(1.0) {
@@ -61,14 +39,16 @@ public:
   }
 
 
-  Local_Operator_MA_refr_Brenner(OpticalSetting &opticalSetting,RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld,
+  template<typename GridView>
+  Local_Operator_MA_refr_Brenner(OpticalSetting &opticalSetting, const GridView& gridView, RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld,
       std::shared_ptr<Rectangular_mesh_interpolator> &exactSolU):
+    hash(gridView), EntititiesForUnifikationTerm_(10,hash),
     opticalSetting(&opticalSetting),
     rhs(solUOld, gradUOld, opticalSetting),
     bc(opticalSetting, 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps)),
     bcDirichlet(exactSolU), sign(1.0){
 
-    std::cout << " created Local Operator" << endl;
+    std::cout << " created Local Operator" << std::endl;
 
     int_f = 0;
   }
@@ -238,7 +218,8 @@ public:
    */
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const {
+      VectorType& v, const int tag, const double u_atX0, const double u0_atX0,
+      LocalView& localViewTemp, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const {
 
     assert(opticalSetting);
 
@@ -279,14 +260,12 @@ public:
 
     for (int i = 0; i < size; i++)
       v_adolc[i] <<= v[i];
-    last_equation_adolc <<= last_equation;
 
     trace_on(tag);
 
     //init independent variables
     for (int i = 0; i < size; i++)
       x_adolc[i] <<= x[i];
-    scaling_factor_adolc <<= scaling_factor;
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -500,16 +479,33 @@ public:
           std::cerr << "at " << x_value << " T " << z[0].value() << " " << z[1].value() << " u " << u_value.value() << " det() " << uDH_pertubed_det.value() << " rhs " << PDE_rhs.value() << endl;
         }
 */
+
+        //unification term
+        v_adolc(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        //derivative unification term
+        for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
+        {
+          const auto& fixingElement = fixingElementAndOffset.first;
+          int noDof_fixingElement = fixingElementAndOffset.second;
+
+          localViewTemp.bind(fixingElement);
+
+          for (unsigned int k = 0; k < localViewTemp.size(); k++)
+          {
+            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+            noDof_fixingElement++;
+          }
+        }
+
+        assert(! (v(j)!=v(j)));
       }
 
-      last_equation_adolc += rho_value* quad[pt].weight() * integrationElement;
     }
 
 
     for (int i = 0; i < size; i++)
       v_adolc[i] >>= v[i]; // select dependent variables
 
-    last_equation_adolc >>= last_equation;
     trace_off();
     /*std::size_t stats[11];
     tapestats(tag, stats);
@@ -1011,9 +1007,64 @@ public:
   }
 #endif
 
+  int insert_entitity_for_unifikation_term(const Config::Entity element, int size)
+  {
+    auto search = EntititiesForUnifikationTerm_.find(element);
+    if (search == EntititiesForUnifikationTerm_.end())
+    {
+      const int newOffset = size*EntititiesForUnifikationTerm_.size();
+      EntititiesForUnifikationTerm_[element] = newOffset;
+
+      const auto& geometry = element.geometry();
+
+      return newOffset;
+    }
+    return EntititiesForUnifikationTerm_[element];
+  }
+
+  void insert_descendant_entities(const Config::GridType& grid, const Config::Entity element)
+  {
+    const auto& geometry = element.geometry();
+
+    auto search = EntititiesForUnifikationTerm_.find(element);
+    int size = search->second;
+    assert(search != EntititiesForUnifikationTerm_.end());
+    for (const auto& e : descendantElements(element,grid.maxLevel() ))
+    {
+      insert_entitity_for_unifikation_term(e, size);
+    }
+    EntititiesForUnifikationTerm_.erase(search);
+
+  }
+
+  const Config::EntityMap EntititiesForUnifikationTerm() const
+  {
+    return EntititiesForUnifikationTerm_;
+  }
+
+
+  int get_offset_of_entity_for_unifikation_term(Config::Entity element) const
+  {
+    return EntititiesForUnifikationTerm_.at(element);
+  }
+  int get_number_of_entities_for_unifikation_term() const
+  {
+    return EntititiesForUnifikationTerm_.size();
+  }
+
+  void clear_entitities_for_unifikation_term()
+  {
+    EntititiesForUnifikationTerm_.clear();
+  }
+
+  Config::EntityCompare hash;
+  Config::EntityMap EntititiesForUnifikationTerm_;
+
+
   OpticalSetting* opticalSetting;
 
   const RightHandSideReflector& get_right_handside() const {return rhs;}
+  RightHandSideReflector& get_right_handside() {return rhs;}
 
   RightHandSideReflector rhs;
   HamiltonJacobiBC bc;

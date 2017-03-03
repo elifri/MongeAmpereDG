@@ -812,7 +812,7 @@ void Plotter::save_BSplineCoeffs(const BSplineNodeFactoryType &bSplineNodeFactor
   //write coefficients to file
   //coeffs are ordered in the fashion b00, b01, b02 ..., b0n_y, b10, b11, ... bn_xn_y
 
-  of << "#bspline coefficients, coeffs are ordered in the fashion b00, b01, b02 ..., b0n_y, b10, b11, ... bn_xn_y"
+  of << "#bspline coefficients, coeffs are ordered in the fashion b00, b01, b02 ..., b0n_y, b10, b11, ... bn_xn_y";
 
   // size of nodeFactory_->size(i)
   assert(coeffs.size() == bSplineNodeFactory.size(0)*bSplineNodeFactory.size(1));

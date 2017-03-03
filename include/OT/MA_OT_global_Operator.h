@@ -28,6 +28,11 @@ public:
     init();
   }
 
+  MA_OT_Operator(Solver& solver, const std::shared_ptr<LOP>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr), fixingPoint{0,0}
+      {
+          init();
+      }
+
   void init()
   {
     //-------------------select cell for mid value-------------------------
@@ -80,7 +85,6 @@ public:
 
     auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
     std::cout << " ndofs u " << solver_ptr->FEBasisHandler_.uBasis().indexSet().size() << std::endl;
-    std::cout << " ndofs uDH " << solver_ptr->FEBasisHandler_.uDHBasis_->indexSet().size() << std::endl;
     localView.bind(fixingElement);
 
     insert_entities_for_unification_term_to_local_operator(fixingElement, localView.size());
@@ -106,6 +110,16 @@ public:
       std::cout << e << " ";
     std::cout << std::endl;
     solver_ptr->assembler.set_entryWx0(entryWx0);
+  }
+
+  const LOP& get_lop() const
+  {
+    return *lop_ptr;
+  }
+
+  LOP& get_lop()
+  {
+    return *lop_ptr;
   }
 
   void prepare_fixing_point_term(const Config::VectorType& x) const
@@ -163,7 +177,7 @@ public:
   virtual void assemble_with_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
   {
     assert(lop_ptr);
-    solver_ptr->assemble_DG_Jacobian(*lop_ptr, x,v, m);
+    solver_ptr->assemble_DG_Jacobian(get_lop(), x,v, m);
   }
 
   void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
@@ -190,7 +204,7 @@ public:
   virtual void assemble(const Config::VectorType& x, Config::VectorType& v) const
   {
     assert(lop_ptr);
-    solver_ptr->assemble_DG(*lop_ptr, x,v);
+    solver_ptr->assemble_DG(get_lop(), x,v);
   }
 
   void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const
@@ -218,7 +232,7 @@ public:
   {
     assert(lop_ptr);
     assert(solver_ptr != NULL);
-    solver_ptr->assemble_Jacobian_DG(*lop_ptr, x,m);
+    solver_ptr->assemble_Jacobian_DG(get_lop(), x,m);
   }
   void Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
     {
