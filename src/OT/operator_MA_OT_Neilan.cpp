@@ -8,4 +8,4 @@
 #include "OT/operator_MA_OT_Neilan.h"
 
 
-bool Local_Operator_MA_OT::use_adouble_determinant = true;
+bool Local_Operator_MA_OT_Neilan::use_adouble_determinant = true;

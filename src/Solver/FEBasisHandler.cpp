@@ -321,7 +321,6 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
     //store local dofs
     preserveSolution[idSet.id(element)]  = Assembler::calculate_local_coefficients(localIndexSet, v);
   }
-  double scaling_factor = v(v.size()-1);
 
   std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
 
@@ -349,7 +348,7 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisCoarseType,Config::VectorType> DiscreteGridFunctionuCoarse;
   DiscreteGridFunctionuCoarse solution_u_Coarse_global (FEuBasisCoarse,solver.solution_u_old_global->dofs());
 
-  v.resize(FEBasis_->indexSet().size() + 1);
+  v.resize(FEBasis_->indexSet().size());
   Config::VectorType v_u;
   interpolate(*uBasis_, v_u, solution_u_Coarse_global);
   v.segment(0, v_u.size()) = v_u;
@@ -539,7 +538,6 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
     }
 
   }*/
-  v(v.size()-1)= scaling_factor;
   //reset adaption flags
   solver.grid_ptr->postAdapt();
 
@@ -748,7 +746,7 @@ Config::VectorType FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverCon
   FEBasisHandler<Mixed, MixedTraits<LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>> HandlerCoarse(levelGridView);
 
   //init vector
-  Config::VectorType v = Config::VectorType::Zero(HandlerCoarse.FEBasis().indexSet().size() + 1);
+  Config::VectorType v = Config::VectorType::Zero(HandlerCoarse.FEBasis().indexSet().size());
 
   //project
   HandlerCoarse.project(numericalSolution, v);

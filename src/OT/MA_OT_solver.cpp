@@ -102,6 +102,7 @@ void MA_OT_solver::create_initial_guess()
 //                        [](Config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},
 //                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
                         solution);
+
 }
 
 
@@ -110,6 +111,15 @@ void MA_OT_solver::solve_nonlinear_system()
   assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
 
   std::cout << "n dofs" << get_n_dofs() << std::endl;
+
+  if (iterations == 0)
+  {
+
+    std::cout << " L2 error is " << calculate_L2_errorOT([](Config::SpaceType x)
+        {return Dune::FieldVector<double, Config::dim> ({
+                                                        x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
+                                                        x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
+  }
 
   // /////////////////////////
   // Compute solution
@@ -141,7 +151,5 @@ void MA_OT_solver::solve_nonlinear_system()
       {return Dune::FieldVector<double, Config::dim> ({
                                                       x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
                                                       x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
-
-  std::cout << "scaling factor " << solution(solution.size()-1) << std::endl;
 
   }
