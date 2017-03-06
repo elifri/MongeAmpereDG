@@ -195,7 +195,7 @@ public:
   bool read_configfile(std::string &configFile);
 
 
-	virtual int get_n_dofs() const{return FEBasisHandler_.FEBasis().indexSet().size() + 1;}
+	virtual int get_n_dofs() const{return FEBasisHandler_.FEBasis().indexSet().size();}
   int get_n_dofs_u() const{return FEBasisHandler_.FEBasis().indexSet().size();}
 
   const GridType& grid() const {return *grid_ptr;}

@@ -773,9 +773,6 @@ public:
     const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
         face_center);
 
-    const int n = 3;
-    const int boundaryFaceId = intersection.indexInInside();
-
     // penalty weight for NIPG / SIPG
     //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
     double penalty_weight;
@@ -813,8 +810,6 @@ public:
           intersection.geometryInInside().global(quad[pt].position());
       auto x_value = intersection.inside().geometry().global(quadPos);
 
-//      std::cerr << " quadpos " << quadPos << " x " << x_value << " weight " <<quad[pt].weight()<< std::endl;
-
       // The transposed inverse Jacobian of the map from the reference element to the element
       const auto& jacobian =
           intersection.inside().geometry().jacobianInverseTransposed(quadPos);
@@ -848,15 +843,13 @@ public:
       z.axpy(-t*rho_value,x_value);
 
       auto signedDistance = bc.H(z, normal);
-//      std::cerr << " signedDistance " << signedDistance << " at " << z[0].value() << " "<< z[1].value()<< " from X "  << x_value << std::endl;
+      std::cerr << " signedDistance " << signedDistance << " at " << z[0].value() << " "<< z[1].value()<< " from X "  << x_value << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
-      for (size_t i = 0; i < n; i++)
+      for (size_t j = 0; j < localView.size(); j++)
       {
-
-        int j = collocationNo[boundaryFaceId][i];
         if (SolverConfig::Dirichlet)
         {
           assert(false);

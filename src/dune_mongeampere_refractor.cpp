@@ -90,7 +90,7 @@ try {
   // Generate the grid
   // ////////////////////////////////
 
-	Config::UnitCubeType unitcube(opticalSetting.lowerLeft, opticalSetting.upperRight, 0);
+	Config::UnitCubeType unitcube(opticalSetting.lowerLeft, opticalSetting.upperRight, 1);
 
 	Config::GridType &grid = unitcube.grid();
 	Config::GridView gridView = grid.leafGridView();

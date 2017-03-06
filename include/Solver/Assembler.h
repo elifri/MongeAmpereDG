@@ -2123,7 +2123,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
                             entryWx0timesBgradV[no_fixingElement_offset+j](i)));
 
             }
-            std::cerr << " adding " << entryWx0timesBgradV[no_fixingElement_offset+2](i) << " to " <<FETraits::get_index(localIndexSet, i) << " and " << FETraits::get_index(localIndexSetFixingElement, 2) << std::endl;
+//            std::cerr << " adding " << entryWx0timesBgradV[no_fixingElement_offset+2](i) << " to " <<FETraits::get_index(localIndexSet, i) << " and " << FETraits::get_index(localIndexSetFixingElement, 2) << std::endl;
           }
 
         }
@@ -2215,7 +2215,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
               }
             }
           }
-/*          else if (is.boundary()) {
+          else if (is.boundary()) {
             elementHasBoundary = true;
 
 //            std::cerr << " local boundary " << local_boundary << std::endl;
@@ -2242,7 +2242,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
                 std::cerr << " I do not know how to handle this intersection"
                         << std::endl;
                 exit(-1);
-            }*/
+            }
         }
 
 
