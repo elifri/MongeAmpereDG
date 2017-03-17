@@ -183,14 +183,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
   update_Operator();
 
   //get or create initial guess
-  if(initValueFromFile_)
-  {
-    init_from_file(initValue_);
-  }
-  else
-  {
-    this->create_initial_guess();
-  }
+  this->create_initial_guess();
   {
     //write initial guess into file
     stringstream filename2; filename2 << outputDirectory_ <<  "/" << outputPrefix_ << "initial.fec";

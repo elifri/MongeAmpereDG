@@ -385,23 +385,29 @@ void MA_OT_image_solver::one_Poisson_Step()
 
 void MA_OT_image_solver::create_initial_guess()
 {
-  project([](Config::SpaceType x){return x.two_norm2()/2.0;},
-//    project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
-//  project_labouriousC1([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
-//                        [](Config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},
-//                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
-                        solution);
+  if(initValueFromFile_)
+  {
+    init_from_file(initValue_);
+  }
+  else
+  {
+    project([](Config::SpaceType x){return x.two_norm2()/2.0;},
+  //    project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
+  //  project_labouriousC1([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
+  //                        [](Config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},
+  //                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
+                          solution);
 
 
 
 
-/*
-  solution.resize(get_n_dofs());
-  for (int i = 0; i < get_n_dofs(); i++)
-    solution[i] = i % 10;
-*/
-  one_Poisson_Step();
-
+  /*
+    solution.resize(get_n_dofs());
+    for (int i = 0; i < get_n_dofs(); i++)
+      solution[i] = i % 10;
+  */
+    one_Poisson_Step();
+  }
 
   //------------determine init mid value------------------
 /*

@@ -15,6 +15,7 @@
 MA_refractor_solver::MA_refractor_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting)
  :MA_solver(grid, gridView, config), setting_(opticalSetting), op(*this)
 {
+
    //adjust light intensity
    const auto integralLightOut = op.get_lop().get_right_handside().get_target_distribution().integrateOriginal();
    const auto integralLightIn = op.get_lop().get_right_handside().get_input_distribution().integrateOriginal();
@@ -28,8 +29,21 @@ MA_refractor_solver::MA_refractor_solver(const shared_ptr<GridType>& grid, GridV
 
 void MA_refractor_solver::create_initial_guess()
 {
-  //  solution = VectorType::Zero(dof_handler.get_n_dofs());
-  project([](Config::SpaceType x){return 1.12;}, solution);
+  if(initValueFromFile_)
+  {
+    init_from_file(initValue_);
+  }
+  else
+  {
+    //  solution = VectorType::Zero(dof_handler.get_n_dofs());
+    project([](Config::SpaceType x){return 1;}, solution);
+  }
+
+  //set fixing grid point for refractor (fix distance to light source)
+  DiscreteGridFunction solution_u_global(FEBasisHandler_.uBasis(),solution);
+  auto res = solution_u_global(op.fixingPoint);
+
+  assembler.set_u0AtX0(res);
 }
 
 void MA_refractor_solver::plot(const std::string& name) const
@@ -92,6 +106,13 @@ void MA_refractor_solver::plot(const std::string& name) const
 
    plotter.writeRefractorPOV(refrPovname, *solution_u_old);
    std::cout << refrPovname << std::endl;
+}
+
+void MA_refractor_solver::adapt_solution(const int level)
+{
+  FEBasisHandler_.adapt(*this, level, solution);
+  std::cerr << " adapting operator " << std::endl;
+  op.adapt();
 }
 
 void MA_refractor_solver::update_Operator()

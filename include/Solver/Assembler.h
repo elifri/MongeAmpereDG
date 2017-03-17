@@ -625,6 +625,10 @@ public:
   void set_X0(const Config::DomainType& X0) const{ X0_ = X0;}
   void set_entryWx0(const std::vector<Config::ValueType>& entryWx0) const{ entryWx0_ = entryWx0;}
 
+  double uAtX0() const{return uAtX0_;}
+  double u0AtX0() const{return u0AtX0_;}
+  const std::vector<Config::ValueType>& entryWx0() const{ return entryWx0_;}
+
   const FEBasisType& basis() const {return *basis_;}
   const BoundaryHandler::BoolVectorType& isBoundaryDoF() const {return boundaryHandler_.isBoundaryDoF();}
   const BoundaryHandler::BoolVectorType& isBoundaryValueDoF() const{return boundaryHandler_.isBoundaryValueDoF();}
@@ -2101,7 +2105,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 
 
         //write derivatives of unification term into vector
-
+/*
         for (const auto& fixingElementandOffset : lop.EntititiesForUnifikationTerm())
         {
           const auto& fixingElement = fixingElementandOffset.first;
@@ -2126,7 +2130,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 //            std::cerr << " adding " << entryWx0timesBgradV[no_fixingElement_offset+2](i) << " to " <<FETraits::get_index(localIndexSet, i) << " and " << FETraits::get_index(localIndexSetFixingElement, 2) << std::endl;
           }
 
-        }
+        }*/
 
 
        // Traverse intersections
@@ -2249,6 +2253,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 
 //        std::cerr << " localVector before boundary" << local_vector.transpose() << std::endl;
 
+//        local_vector+=local_boundary;
         local_vector+=local_boundary.cwiseProduct(local_boundary);
 //        std::cerr << " localVector " << local_vector << std::endl;
 
@@ -2261,34 +2266,39 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
         //special treatment for boundary elements
         if (elementHasBoundary)
         {
-//        add_local_coefficients(localIndexSet, local_boundary, boundary);
-        for (size_t i = 0; i < localIndexSet.size(); i++)
-        {
+          for (size_t i = 0; i < localIndexSet.size(); i++)
+          {
 //          if (!isBoundaryLocal(i))  continue;
-          boundary(FETraits::get_index(localIndexSet, i)) += (local_boundary.cwiseProduct(local_boundary))[i] ;
+            boundary(FETraits::get_index(localIndexSet, i)) += (local_boundary.cwiseProduct(local_boundary))[i] ;
+//          boundary(FETraits::get_index(localIndexSet, i)) += local_boundary[i] ;
 //          std::cerr << "boundary add " << i << " to " << FETraits::get_index(localIndexSet, i) << " with value " << local_boundary[i] << " and get " << boundary(FETraits::get_index(localIndexSet, i)) << std::endl;
-        }
-        Config::DenseMatrixType temp = 2*m_mB;
-        for (int i = 0; i < m_mB.rows(); i++)
-          for (int j = 0; j < m_mB.cols(); j++)
-            temp(i,j) *= local_boundary(i);
-        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, temp, JacobianEntries);
+          }
+
+          Config::DenseMatrixType temp = 2*m_mB;
+          for (int i = 0; i < m_mB.rows(); i++)
+            for (int j = 0; j < m_mB.cols(); j++)
+              temp(i,j) *= local_boundary(i);
+          add_local_coefficients_Jacobian(localIndexSet, localIndexSet, temp, JacobianEntries);
+
+          //        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
         }
 
         //add derivatives for scaling factor
+/*
         for (unsigned int i = 0; i < localView.size(); i++)
          {
             JacobianEntries.push_back(EntryType(FETraits::get_index(localIndexSet, i),m.cols()-1,scaling_factorDerivatives(i)));
            JacobianEntries.push_back(EntryType(m.rows()-1, FETraits::get_index(localIndexSet, i),last_equationDerivatives(i)));
          }
          JacobianEntries.push_back(EntryType(m.rows()-1, m.cols()-1,scaling_factorDerivatives(localView.size())));
+*/
      }
      m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
 
      std::cerr << std::endl << " local boundary term " << boundary.norm()<<" inner term " << (v-boundary).norm()<< " whole norm " << v.norm() << std::endl;
 //     std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
 //     std::cerr << " f_boundary " << boundary.transpose() << std::endl;
-//     std::cerr << " f          " << v.transpose() << std::endl;
+     std::cerr << " f          " << v.transpose() << std::endl;
 
 }
 #else
