@@ -218,8 +218,8 @@ public:
    */
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag, const double u_atX0, const double u0_atX0,
-      LocalView& localViewTemp, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const {
+      VectorType& v, const int tag, double &integralU, const double dummy,
+      LocalView& localViewDummy, const std::vector<double>& vectorDummy, std::vector<VectorType>& derUnificationterm) const {
 
     assert(opticalSetting);
 
@@ -256,7 +256,6 @@ public:
     //init variables for automatic differentiation
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(size);
-    adouble scaling_factor_adolc, last_equation_adolc;
 
     for (int i = 0; i < size; i++)
       v_adolc[i] <<= v[i];
@@ -290,7 +289,7 @@ public:
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradrho);
 
-      // The hessian of the shape functions
+      // The hessian localof the shape functions
       std::vector<FEHessianType> Hessians(size);
       FieldMatrix<adouble, Config::dim, Config::dim> Hessrho;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
@@ -390,6 +389,14 @@ public:
 //                << " z " << z[0].value() << " " << z[1].value() << std::endl
 //                << std::endl;
 
+/*      if (z[0] < rhs.g.lowerLeft()[0] || z[0] > rhs.g.upperRight()[0] ||
+          z[1] < rhs.g.lowerLeft()[1] || z[1] > rhs.g.upperRight()[1])
+      {
+        std::cerr << "       rho_value " << rho_value.value()
+                    << " X " << X << std::endl
+                    << "        z " << z[0].value() << " " << z[1].value() << std::endl;
+      }*/
+
 
       assert(std::abs(((omega_value*rho_value) - t*rho_value*omega_value - opticalSetting->z_3).value()) < 1e-8 && "something with t is not as expected!");
 
@@ -456,8 +463,8 @@ public:
       //calculate system for first test functions
       if (uDH_pertubed_det.value() < 0 && !found_negative)
       {
-        std::cerr << "found negative determinant !!!!! " << uDH_pertubed_det.value() << " at " << x_value  << "matrix is " << Hessrho << std::endl;
-        std::cerr << "det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
+        std::cerr << "       found negative determinant !!!!! " << uDH_pertubed_det.value() << " at " << x_value  << "matrix is " << Hessrho << std::endl;
+        std::cerr << "       det(u)-f=" << uDH_pertubed_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_pertubed_det-PDE_rhs).value()<< std::endl;
         found_negative = true;
       }
 
@@ -466,7 +473,7 @@ public:
 
       for (int j = 0; j < size; j++) // loop over test fcts
       {
-        v_adolc(j) += (scaling_factor_adolc*PDE_rhs-uDH_pertubed_det)*
+        v_adolc(j) += (PDE_rhs-uDH_pertubed_det)*
             (referenceFunctionValues[j])
 //            (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1])
             *quad[pt].weight() * integrationElement;
@@ -481,21 +488,7 @@ public:
 */
 
         //unification term
-        v_adolc(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-        //derivative unification term
-        for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
-        {
-          const auto& fixingElement = fixingElementAndOffset.first;
-          int noDof_fixingElement = fixingElementAndOffset.second;
-
-          localViewTemp.bind(fixingElement);
-
-          for (unsigned int k = 0; k < localViewTemp.size(); k++)
-          {
-            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-            noDof_fixingElement++;
-          }
-        }
+        //last_equation_adolc += rho_value* quad[pt].weight() * integrationElement;
 
         assert(! (v(j)!=v(j)));
       }
@@ -843,7 +836,7 @@ public:
       z.axpy(-t*rho_value,x_value);
 
       auto signedDistance = bc.H(z, normal);
-      std::cerr << " signedDistance " << signedDistance << " at " << z[0].value() << " "<< z[1].value()<< " from X "  << x_value << std::endl;
+//      std::cerr << "      signedDistance " << signedDistance << " at " << z[0].value() << " "<< z[1].value()<< " from X "  << x_value << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
@@ -1030,7 +1023,7 @@ public:
 
   }
 
-  const Config::EntityMap EntititiesForUnifikationTerm() const
+  const Config::EntityMap& EntititiesForUnifikationTerm() const
   {
     return EntititiesForUnifikationTerm_;
   }

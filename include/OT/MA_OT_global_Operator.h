@@ -28,7 +28,7 @@ public:
     init();
   }
 
-  MA_OT_Operator(Solver& solver, const std::shared_ptr<LOP>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr), fixingPoint{0,0}
+  MA_OT_Operator(Solver& solver, const std::shared_ptr<LOP>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr), fixingPoint{-0.3,0}
       {
           init();
       }
@@ -114,11 +114,13 @@ public:
 
   const LOP& get_lop() const
   {
+    assert(lop_ptr);
     return *lop_ptr;
   }
 
   LOP& get_lop()
   {
+    assert(lop_ptr);
     return *lop_ptr;
   }
 
@@ -203,7 +205,6 @@ public:
 
   virtual void assemble(const Config::VectorType& x, Config::VectorType& v) const
   {
-    assert(lop_ptr);
     solver_ptr->assemble_DG(get_lop(), x,v);
   }
 
@@ -230,7 +231,6 @@ public:
 
   virtual void assemble_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
   {
-    assert(lop_ptr);
     assert(solver_ptr != NULL);
     solver_ptr->assemble_Jacobian_DG(get_lop(), x,m);
   }
@@ -252,7 +252,7 @@ public:
   {
     lop_ptr->insert_entitity_for_unifikation_term(fixingElement, n);
   }
-  void adapt()
+  virtual void adapt()
   {
     //-----update and assemble values for mid value derivatives in small area----------
 /*

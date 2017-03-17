@@ -684,7 +684,7 @@ public:
 
   }
 
-  const Config::EntityMap EntititiesForUnifikationTerm() const
+  const Config::EntityMap& EntititiesForUnifikationTerm() const
   {
     return EntititiesForUnifikationTerm_;
   }
