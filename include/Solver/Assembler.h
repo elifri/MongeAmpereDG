@@ -2039,7 +2039,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
     auto localViewFixingElement = basis_->localView();
     auto localViewn = basis_->localView();
     auto localIndexSet = basis_->indexSet().localIndexSet();
-    auto localIndexSetFixingElement = basis_->indexSet().localIndexSet();
+//    auto localIndexSetFixingElement = basis_->indexSet().localIndexSet();
     auto localIndexSetn = basis_->indexSet().localIndexSet();
 
     tape0initialised = false;

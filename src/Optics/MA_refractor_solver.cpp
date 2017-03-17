@@ -140,9 +140,11 @@ void MA_refractor_solver::solve_nonlinear_system()
   // /////////////////////////
 
   Config::VectorType newSolution = solution;
+  newSolution.conservativeResize(solution.size()+1);
+  newSolution(solution.size()) = 1;//init value for lagrangian parameter
 
 #ifdef USE_DOGLEG
-  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
+  doglegMethod(op, doglegOpts_, newSolution, evaluateJacobianSimultaneously_);
 #endif
 #ifdef USE_PETSC
   igpm::processtimer timer;
@@ -159,6 +161,8 @@ void MA_refractor_solver::solve_nonlinear_system()
   timer.stop();
   std::cout << "needed " << timer << " seconds for nonlinear step, ended with error code " << error << std::endl;
 #endif
+  solution = newSolution.head(get_n_dofs());
+  std::cout << " Lagrangian Parameter for fixing grid Point " << newSolution.tail(1)[0] << std::endl;
 }
 
 

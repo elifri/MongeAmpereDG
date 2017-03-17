@@ -23,29 +23,42 @@ struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
   {}
   virtual void assemble_with_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
   {
-    this->solver_ptr->assemble_DG_Jacobian(this->get_lop(), x,v, m);
+    assert(x.size()==this->solver_ptr->get_n_dofs()+1);
+    assert(v.size()==this->solver_ptr->get_n_dofs()+1);
+    assert(m.rows()==this->solver_ptr->get_n_dofs()+1);
+    assert(m.cols()==this->solver_ptr->get_n_dofs()+1);
+
+    //todo jede Menge copy past
+    Config::MatrixType tempM(m.rows()-1, m.cols()-1);
+    auto tempX = x.head(x.size()-1);
+    Config::VectorType tempV(v.size()-1);
+
+    //assemble everything
+    this->solver_ptr->assemble_DG_Jacobian(this->get_lop(), tempX,tempV, tempM);
+
+    //copy SparseMatrix todo move to EigenUtility
+    std::vector< Eigen::Triplet<double> > tripletList;
+    tripletList.reserve(tempM.nonZeros());
+    for (int k=0; k<tempM.outerSize(); ++k)
+      for (Config::MatrixType::InnerIterator it(tempM,k); it; ++it)
+      {
+        tripletList.push_back(Eigen::Triplet<Config::ValueType>(it.row(), it.col(), it.value()));
+      }
+    m.setFromTriplets(tripletList.begin(), tripletList.end());
+
 
     const auto& assembler = this->solver_ptr->assembler;
 
+    //assemble lagrangian multiplier for grid fixing point
     assert(this->get_lop().EntititiesForUnifikationTerm().size()==1);
     auto localViewFixingElement = assembler.basis().localView();
     auto localIndexSetFixingElement = assembler.basis().indexSet().localIndexSet();
-    localViewFixingElement.bind(this->get_lop().EntititiesForUnifikationTerm().begin()->first);
-    localIndexSetFixingElement.bind(localViewFixingElement);
 
+    int indexFixingGridEquation = m.rows()-1;
 
-
-    v(Solver::FETraits::get_index(localIndexSetFixingElement, 4)) = assembler.uAtX0()-assembler.u0AtX0();
-    std::cerr << " fixing grid point equation yields, v(" << Solver::FETraits::get_index(localIndexSetFixingElement, 4) << ")=" << v(Solver::FETraits::get_index(localIndexSetFixingElement, 4)) << std::endl;
+    v(indexFixingGridEquation) = x(indexFixingGridEquation)*assembler.uAtX0()-assembler.u0AtX0();
+    std::cerr << " fixing grid point equation yields, v(" << indexFixingGridEquation << ")=" << v(indexFixingGridEquation) << std::endl;
 //     v(0) = 0;
-
-    //delete derivatives from adolc
-     for (int k=0; k<m.outerSize(); ++k)
-       for (Config::MatrixType::InnerIterator it(m,k); it; ++it)
-       {
-         if ((unsigned int) it.row() == Solver::FETraits::get_index(localIndexSetFixingElement, 4))
-         it.valueRef()=0;
-       }
 
     //derivative unification equation
     for (const auto& fixingElementAndOffset : this->get_lop().EntititiesForUnifikationTerm())
@@ -60,29 +73,33 @@ struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
 
       for (unsigned int j = 0; j < localSizeUFixingElement; j++)
       {
-        m.coeffRef(Solver::FETraits::get_index(localIndexSetFixingElement, 4),Solver::FETraits::get_index(localIndexSetFixingElement, j))=assembler.entryWx0()[no_fixingElement_offset+j];
-//        std::cout << " j is " << j << " " <<  Solver::FETraits::get_index(localIndexSetFixingElement, j) << " and " << assembler.entryWx0()[no_fixingElement_offset+j] << std::endl;
+        m.insert(indexFixingGridEquation,Solver::FETraits::get_index(localIndexSetFixingElement, j))
+            =assembler.entryWx0()[no_fixingElement_offset+j];
+        //indexLagrangianParameter = indexFixingGridEquation
+        m.insert(Solver::FETraits::get_index(localIndexSetFixingElement, j),indexFixingGridEquation)
+                =assembler.entryWx0()[no_fixingElement_offset+j];
 
       }
-      assert(std::abs(assembler.entryWx0()[no_fixingElement_offset+4]-1) < 1e-6 && "should be the first dof in this context");
 //            std::cerr << " adding " << entryWx0timesBgradV[no_fixingElement_offset+2](i) << " to " <<FETraits::get_index(localIndexSet, i) << " and " << FETraits::get_index(localIndexSetFixingElement, 2) << std::endl;
     }
   }
 
   virtual void assemble(const Config::VectorType& x, Config::VectorType& v) const
   {
-    this->solver_ptr->assemble_DG(this->get_lop(), x,v);
+    assert(x.size()==this->solver_ptr->get_n_dofs()+1);
+    assert(v.size()==this->solver_ptr->get_n_dofs()+1);
+
+    auto tempX = x.head(x.size()-1);
+    Config::VectorType tempV(v.size()-1);
+
+    this->solver_ptr->assemble_DG(this->get_lop(), tempX,tempV);
     const auto& assembler = this->solver_ptr->assembler;
 
+    v.head(tempV.size()) = tempV;
     //get fixingElement
     assert(this->get_lop().EntititiesForUnifikationTerm().size()==1);
-    auto localViewFixingElement = assembler.basis().localView();
-    auto localIndexSetFixingElement = assembler.basis().indexSet().localIndexSet();
-    const auto& FixingEntityMap = this->get_lop().EntititiesForUnifikationTerm();
-    localViewFixingElement.bind(FixingEntityMap.begin()->first);
-    localIndexSetFixingElement.bind(localViewFixingElement);
 
-    v(Solver::FETraits::get_index(localIndexSetFixingElement, 4)) = assembler.uAtX0()-assembler.u0AtX0();
+    v(v.size()-1) = assembler.uAtX0()-assembler.u0AtX0();
 //    v(0) = 0;
   }
 };
