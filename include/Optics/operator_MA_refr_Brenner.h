@@ -477,7 +477,6 @@ public:
             (referenceFunctionValues[j])
 //            (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1])
             *quad[pt].weight() * integrationElement;
-
 /*
         if (((PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]* quad[pt].weight() * integrationElement).value() > 1e-6)
         {
@@ -490,7 +489,7 @@ public:
         //unification term
         //last_equation_adolc += rho_value* quad[pt].weight() * integrationElement;
 
-        assert(! (v(j)!=v(j)));
+        assert ( ! (v_adolc(j).value() != v_adolc(j).value()));
       }
 
     }
@@ -696,9 +695,11 @@ public:
 
     // select dependent variables
     for (int i = 0; i < size; i++) {
+      assert ( ! (v_adolc(i).value() != v_adolc(i).value()));
       v_adolc[i] >>= v[i];
     }
     for (int i = 0; i < size; i++) {
+      assert ( ! (vn_adolc(i).value() != vn_adolc(i).value()));
       vn_adolc[i] >>= vn[i];
     }
     trace_off();
@@ -854,6 +855,7 @@ public:
 //          * (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1]) * factor;
 //          std::cerr << " add to v_adolc(" << j << ") " << penalty_weight * signedDistance.value()
 //              * (referenceFunctionValues[j]+(gradients[j]*normal))* factor << " -> " << v_adolc(j).value() << std::endl;
+          assert ( ! (v_adolc(j).value() != v_adolc(j).value()));
         }
       }
 

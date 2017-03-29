@@ -2298,7 +2298,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
      std::cerr << std::endl << " local boundary term " << boundary.norm()<<" inner term " << (v-boundary).norm()<< " whole norm " << v.norm() << std::endl;
 //     std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
 //     std::cerr << " f_boundary " << boundary.transpose() << std::endl;
-     std::cerr << " f          " << v.transpose() << std::endl;
+     //std::cerr << " f          " << v.transpose() << std::endl;
 
 }
 #else
