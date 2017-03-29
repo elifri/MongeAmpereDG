@@ -30,7 +30,7 @@ struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
 
     //todo jede Menge copy past
     Config::MatrixType tempM(m.rows()-1, m.cols()-1);
-    auto tempX = x.head(x.size()-1);
+    Config::VectorType tempX = x.head(x.size()-1);
     Config::VectorType tempV(v.size()-1);
 
     //assemble everything
