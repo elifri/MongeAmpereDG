@@ -36,6 +36,10 @@ struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
     //assemble everything
     this->solver_ptr->assemble_DG_Jacobian(this->get_lop(), tempX,tempV, tempM);
 
+    std::cerr << " m*u-v (ohne lambda) norm " << (tempM*tempX-tempV).norm() << " values "<< (tempM*tempX-tempV).transpose() << std::endl;
+    std::cerr << " m*u (ohne lambda) norm " << (tempM*tempX).norm()  << " values " << (tempM*tempX).transpose() << std::endl;
+
+    v.head(tempV.size()) = tempV;
     //copy SparseMatrix todo move to EigenUtility
     std::vector< Eigen::Triplet<double> > tripletList;
     tripletList.reserve(tempM.nonZeros());
@@ -56,9 +60,10 @@ struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
 
     int indexFixingGridEquation = m.rows()-1;
 
-    v(indexFixingGridEquation) = x(indexFixingGridEquation)*assembler.uAtX0()-assembler.u0AtX0();
+//    v(indexFixingGridEquation) = x(indexFixingGridEquation)*assembler.uAtX0()-assembler.u0AtX0();
+//    v(indexFixingGridEquation) = x(indexFixingGridEquation)*assembler.uAtX0();
     std::cerr << " fixing grid point equation yields, v(" << indexFixingGridEquation << ")=" << v(indexFixingGridEquation) << std::endl;
-//     v(0) = 0;
+     v(indexFixingGridEquation) = 0;
 
     //derivative unification equation
     for (const auto& fixingElementAndOffset : this->get_lop().EntititiesForUnifikationTerm())
@@ -99,8 +104,9 @@ struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
     //get fixingElement
     assert(this->get_lop().EntititiesForUnifikationTerm().size()==1);
 
-    v(v.size()-1) = assembler.uAtX0()-assembler.u0AtX0();
-//    v(0) = 0;
+    //    v(v.size()-1) = assembler.uAtX0()-assembler.u0AtX0();
+//    v(v.size()-1) = assembler.uAtX0();
+    v(v.size()-1) = 0;
   }
 };
 

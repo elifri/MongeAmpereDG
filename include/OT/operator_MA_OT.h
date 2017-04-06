@@ -34,8 +34,9 @@ class Local_Operator_MA_OT {
 public:
   typedef DensityFunction Function;
 
-  Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
-    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
+  template<typename GridView>
+  Local_Operator_MA_OT(const GridView& gridView, const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
+    hash(gridView), EntititiesForUnifikationTerm_(10,hash), rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
   {
     std::cout << " created Local Operator" << std::endl;
   }
@@ -57,8 +58,9 @@ public:
    */
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const {
-/*
+      VectorType& v, const int tag, double &integralU, const double dummy,
+      LocalView& localViewDummy, const std::vector<double>& vectorDummy, std::vector<VectorType>& derUnificationterm) const  {
+
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
     const Element& element = localView.element();
@@ -92,18 +94,15 @@ public:
     //init variables for automatic differentiation
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(size);
-    adouble scaling_factor_adolc, last_equation_adolc;
 
     for (int i = 0; i < size; i++)
       v_adolc[i] <<= v[i];
-    last_equation_adolc <<= last_equation;
 
     trace_on(tag);
 
     //init independent variables
     for (int i = 0; i < size; i++)
       x_adolc[i] <<= x[i];
-    scaling_factor_adolc <<= scaling_factor;
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -165,9 +164,6 @@ public:
 
       adouble PDE_rhs = f_value / g_value ;
 
-      ///multiply by term for boundary integration
-      PDE_rhs *= scaling_factor_adolc;
-
       //calculate system for first test functions
       if (uDH_det.value() < 0 && !found_negative)
       {
@@ -199,16 +195,14 @@ public:
 //        }
       }
 
-      last_equation_adolc += u_value* quad[pt].weight() * integrationElement;
     }
 
 
     for (int i = 0; i < size; i++)
       v_adolc[i] >>= v[i]; // select dependent variables
 
-    last_equation_adolc >>= last_equation;
     trace_off();
- */
+
   }
 
   template<class IntersectionType, class LocalView, class VectorType>
@@ -483,7 +477,7 @@ public:
 
       //-------calculate integral--------
       auto signedDistance = bc.H(gradu, normal);
-//      std::cerr << " x " << element.geometry().global(quadPos) << " (gradu) " << (gradu) << " (gradu * normal) " << (gradu * normal) << " H " << signedDistance << std::endl;
+      std::cerr << " x " << intersection.inside().geometry().global(quadPos) << " (gradu) " << (gradu) << " (gradu * normal) " << (gradu * normal) << " H " << signedDistance << std::endl;
 
 //      std::cerr << "gradients at " << quadPos << " : ";
 //      for( const auto& e: gradients)  std::cerr << e << "/" << (e*normal) << " , ";
@@ -621,6 +615,59 @@ public:
   }
 
 #endif
+
+  int insert_entitity_for_unifikation_term(const Config::Entity element, int size)
+  {
+    auto search = EntititiesForUnifikationTerm_.find(element);
+    if (search == EntititiesForUnifikationTerm_.end())
+    {
+      const int newOffset = size*EntititiesForUnifikationTerm_.size();
+      EntititiesForUnifikationTerm_[element] = newOffset;
+
+      const auto& geometry = element.geometry();
+
+      return newOffset;
+    }
+    return EntititiesForUnifikationTerm_[element];
+  }
+
+  void insert_descendant_entities(const Config::GridType& grid, const Config::Entity element)
+  {
+    const auto& geometry = element.geometry();
+
+    auto search = EntititiesForUnifikationTerm_.find(element);
+    int size = search->second;
+    assert(search != EntititiesForUnifikationTerm_.end());
+    for (const auto& e : descendantElements(element,grid.maxLevel() ))
+    {
+      insert_entitity_for_unifikation_term(e, size);
+    }
+    EntititiesForUnifikationTerm_.erase(search);
+
+  }
+
+  const Config::EntityMap& EntititiesForUnifikationTerm() const
+  {
+    return EntititiesForUnifikationTerm_;
+  }
+
+
+  int get_offset_of_entity_for_unifikation_term(Config::Entity element) const
+  {
+    return EntititiesForUnifikationTerm_.at(element);
+  }
+  int get_number_of_entities_for_unifikation_term() const
+  {
+    return EntititiesForUnifikationTerm_.size();
+  }
+
+  void clear_entitities_for_unifikation_term()
+  {
+    EntititiesForUnifikationTerm_.clear();
+  }
+
+  Config::EntityCompare hash;
+  Config::EntityMap EntititiesForUnifikationTerm_;
 
   const Function& get_input_distribution() const {return rhoX;}
   const Function& get_target_distribution() const {return rhoY;}

@@ -132,9 +132,11 @@ void MA_OT_solver::solve_nonlinear_system()
   // /////////////////////////
 
   Config::VectorType newSolution = solution;
+  newSolution.conservativeResize(solution.size()+1);
+  newSolution(solution.size()) = 0;//init value for lagrangian parameter
 #ifdef USE_DOGLEG
 
-  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
+  doglegMethod(op, doglegOpts_, newSolution, evaluateJacobianSimultaneously_);
 
 #endif
 #ifdef USE_PETSC
@@ -152,6 +154,8 @@ void MA_OT_solver::solve_nonlinear_system()
   timer.stop();
   std::cout << "needed " << timer << " seconds for nonlinear step, ended with error code " << error << std::endl;
 #endif
+  solution = newSolution.head(get_n_dofs());
+  std::cout << " Lagrangian Parameter for fixing grid Point " << newSolution.tail(1)[0] << std::endl;
 
   std::cout << " L2 error is " << calculate_L2_errorOT([](Config::SpaceType x)
       {return Dune::FieldVector<double, Config::dim> ({

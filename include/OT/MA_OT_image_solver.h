@@ -13,7 +13,7 @@
 
 #include "OT/MA_OT_solver.h"
 
-#ifdef C0Element
+#ifndef C1Element
   #include "OT/operator_MA_OT_Brenner.h"
 #else
   #include "OT/operator_MA_OT_Linearisation.hpp"
@@ -23,7 +23,7 @@
 class MA_OT_image_solver : public MA_OT_solver
 {
 public:
-#ifndef C0Element
+#ifdef C1Element
   typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
 #endif
 
@@ -49,7 +49,7 @@ private:
 
   OpticalSetting& setting_;
 
-#ifdef C0Element
+#ifndef C1Element
   MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT> op;
   friend MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT>;
 #else

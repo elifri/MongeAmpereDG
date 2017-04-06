@@ -25,14 +25,22 @@
 //#define USE_MIXED_ELEMENT
 //#define USE_PS12
 
-#ifdef USE_C0_PENALTY
+#ifndef USE_PS12
   #define C0Element
 #else
-  #ifdef USE_MIXED_ELEMENT
-    #define C0Element
+  #undef C0Element
+#endif
+
+#ifdef USE_PS12
+  #define C1Element
+#else
+/*
+  #ifdef BSPLINES
+    #define C1Element
   #else
-    #undef C0Element
+    #undef C1Element
   #endif
+*/
 #endif
 
 #include "UnitCube.h"

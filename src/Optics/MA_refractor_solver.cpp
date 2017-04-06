@@ -141,7 +141,7 @@ void MA_refractor_solver::solve_nonlinear_system()
 
   Config::VectorType newSolution = solution;
   newSolution.conservativeResize(solution.size()+1);
-  newSolution(solution.size()) = 1;//init value for lagrangian parameter
+  newSolution(solution.size()) = 0;//init value for lagrangian parameter
 
 #ifdef USE_DOGLEG
   doglegMethod(op, doglegOpts_, newSolution, evaluateJacobianSimultaneously_);

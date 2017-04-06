@@ -2136,7 +2136,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
           if (is.neighbor()) {
-#ifndef C0Element
+#ifdef C1Element
             continue;
 #endif
 #ifdef BSPLINES
@@ -2298,7 +2298,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
      std::cerr << std::endl << " local boundary term " << boundary.norm()<<" inner term " << (v-boundary).norm()<< " whole norm " << v.norm() << std::endl;
 //     std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
 //     std::cerr << " f_boundary " << boundary.transpose() << std::endl;
-     //std::cerr << " f          " << v.transpose() << std::endl;
+//     std::cerr << " f          " << v.transpose() << std::endl;
 
 }
 #else
@@ -2395,7 +2395,7 @@ void Assembler::assemble_DG_Only_(const LocalOperatorType &lop, const Config::Ve
      // Traverse intersections
       for (auto&& is : intersections(gridView, e)) {
         if (is.neighbor()) {
-#ifndef C0Element
+#ifdef C1Element
           continue;
 #endif
 #ifdef BSPLINES
@@ -2545,7 +2545,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
           if (is.neighbor()) {
-#ifndef C0Element
+#ifdef C1Element
             continue;
 #endif
 #ifdef BSPLINES
