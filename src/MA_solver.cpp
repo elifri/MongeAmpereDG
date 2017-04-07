@@ -374,6 +374,7 @@ void MA_solver::update_solution(const Solver_config::VectorType& newSolution) co
   gradient_u_old = std::shared_ptr<DiscreteLocalGradientGridFunction> (new DiscreteLocalGradientGridFunction(*solution_u_old_global));
 
   solution = newSolution;
+  for (int i = 0; i < solution.size(); i++) assert ( ! (solution(i) != solution(i)));
 }
 
 void MA_solver::adapt_solution(const int level)

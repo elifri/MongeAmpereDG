@@ -2253,8 +2253,8 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 
 //        std::cerr << " localVector before boundary" << local_vector.transpose() << std::endl;
 
-//        local_vector+=local_boundary;
-        local_vector+=local_boundary.cwiseProduct(local_boundary);
+        local_vector+=local_boundary;
+//        local_vector+=local_boundary.cwiseProduct(local_boundary);
 //        std::cerr << " localVector " << local_vector << std::endl;
 
         //add to objective function and jacobian
@@ -2269,29 +2269,21 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
           for (size_t i = 0; i < localIndexSet.size(); i++)
           {
 //          if (!isBoundaryLocal(i))  continue;
-            boundary(FETraits::get_index(localIndexSet, i)) += (local_boundary.cwiseProduct(local_boundary))[i] ;
-//          boundary(FETraits::get_index(localIndexSet, i)) += local_boundary[i] ;
+//            boundary(FETraits::get_index(localIndexSet, i)) += (local_boundary.cwiseProduct(local_boundary))[i] ;
+          boundary(FETraits::get_index(localIndexSet, i)) += local_boundary[i] ;
 //          std::cerr << "boundary add " << i << " to " << FETraits::get_index(localIndexSet, i) << " with value " << local_boundary[i] << " and get " << boundary(FETraits::get_index(localIndexSet, i)) << std::endl;
           }
 
+/*
           Config::DenseMatrixType temp = 2*m_mB;
           for (int i = 0; i < m_mB.rows(); i++)
             for (int j = 0; j < m_mB.cols(); j++)
               temp(i,j) *= local_boundary(i);
           add_local_coefficients_Jacobian(localIndexSet, localIndexSet, temp, JacobianEntries);
-
-          //        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
-        }
-
-        //add derivatives for scaling factor
-/*
-        for (unsigned int i = 0; i < localView.size(); i++)
-         {
-            JacobianEntries.push_back(EntryType(FETraits::get_index(localIndexSet, i),m.cols()-1,scaling_factorDerivatives(i)));
-           JacobianEntries.push_back(EntryType(m.rows()-1, FETraits::get_index(localIndexSet, i),last_equationDerivatives(i)));
-         }
-         JacobianEntries.push_back(EntryType(m.rows()-1, m.cols()-1,scaling_factorDerivatives(localView.size())));
 */
+
+          add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
+        }
      }
      m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
 

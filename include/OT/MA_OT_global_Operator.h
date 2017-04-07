@@ -77,14 +77,13 @@ public:
           solver_ptr->assembler.set_entryWx0(entryWx0);*/
 
 
-    //select fixing point
-    HierarchicSearch<typename GridView::Grid, typename GridView::IndexSet> hs(solver_ptr->grid(), solver_ptr->gridView().indexSet());
+    //-------------------select fixing point-------------------------
+/*    HierarchicSearch<typename GridView::Grid, typename GridView::IndexSet> hs(solver_ptr->grid(), solver_ptr->gridView().indexSet());
 
     //      const FieldVector<double, 2> findCell = {0.,0.};
     Config::Entity fixingElement = hs.findEntity(fixingPoint);
 
     auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
-    std::cout << " ndofs u " << solver_ptr->FEBasisHandler_.uBasis().indexSet().size() << std::endl;
     localView.bind(fixingElement);
 
     insert_entities_for_unification_term_to_local_operator(fixingElement, localView.size());
@@ -109,7 +108,49 @@ public:
     for (const auto& e: entryWx0)
       std::cout << e << " ";
     std::cout << std::endl;
-    solver_ptr->assembler.set_entryWx0(entryWx0);
+    solver_ptr->assembler.set_entryWx0(entryWx0);*/
+
+    //-------------------select  mid value-------------------------
+    auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
+    auto localIndexSet = solver_ptr->FEBasisHandler_.uBasis().indexSet().localIndexSet();
+
+    lagrangianFixingPointOperator = Config::VectorType::Zero(solver_ptr->FEBasisHandler_.uBasis().indexSet().size());
+
+    for (auto&& e : elements(solver_ptr->gridView())) {
+      localView.bind(e);
+      localIndexSet.bind(localView);
+
+      const auto& lfu = localView.tree().finiteElement();
+
+      Config::VectorType localMidvalue (localView.size());
+      for (unsigned int i = 0; i < localMidvalue.size(); i++)
+        localMidvalue[i] = 0;
+
+      //get a quadratureRule
+      int order = std::max(0,
+          3 * ((int) lfu.localBasis().order()));
+      const QuadratureRule<double, Config::dim>& quadRule = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(e, order);\
+
+      for (const auto& quad : quadRule)
+      {
+        //assemble values
+        std::vector<FieldVector<Config::ValueType,1>> values(localView.size());
+        lfu.localBasis().evaluateFunction(quad.position(), values);
+        const auto integrationElement = e.geometry().integrationElement(quad.position());
+
+        for (unsigned int i = 0; i < lfu.localBasis().size(); i++)
+        {
+          localMidvalue[i] += values[i][0]*quad.weight()*integrationElement;
+        }
+      }
+      //divide by element volume
+      for (unsigned int i = 0; i < lfu.localBasis().size(); i++)
+      {
+        localMidvalue[i] /= e.geometry().volume();
+      }
+      Assembler::add_local_coefficients(localIndexSet,localMidvalue, lagrangianFixingPointOperator);
+    }
+    std::cout << " midvalues " << lagrangianFixingPointOperator.transpose() << std::endl;
   }
 
   const LOP& get_lop() const
@@ -168,12 +209,55 @@ public:
     */
 
     //-----assemble fixed grid point----------
+/*
     typename Solver::DiscreteGridFunction solution_u_global(solver_ptr->FEBasisHandler_.uBasis(),x);
     auto res = solution_u_global(fixingPoint);
 
     solver_ptr->assembler.set_uAtX0(res);
     //      std::cerr << "integral in fixed cell is " << res <<  " beteiligte zellen sind " << lopLinear_ptr->get_number_of_entities_for_unifikation_term() << " size of cell is " << fixingElement.geometry().volume() << std::endl;
     std::cerr << "value at fixed point is " << res << std::endl;
+*/
+    //-----assemble mid value----------
+    auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
+    auto localIndexSet = solver_ptr->FEBasisHandler_.uBasis().indexSet().localIndexSet();
+    Config::ValueType res = 0;
+
+    for (auto&& e : elements(solver_ptr->gridView())) {
+      //bind to element context
+      localView.bind(e);
+      localIndexSet.bind(localView);
+      const auto& lfu = localView.tree().finiteElement();
+
+      //get local coefficients
+      Config::VectorType xLocal = Assembler::calculate_local_coefficients(localIndexSet, x);
+
+      //get a quadratureRule
+      int order = std::max(0,
+          3 * ((int) lfu.localBasis().order()));
+      const QuadratureRule<double, Config::dim>& quadRule = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(e, order);\
+
+      Config::ValueType resE = 0;
+
+      for (const auto& quad : quadRule)
+      {
+        //assemble values
+        std::vector<FieldVector<Config::ValueType,1>> values(localView.size());
+        lfu.localBasis().evaluateFunction(quad.position(), values);
+
+        const auto integrationElement = e.geometry().integrationElement(quad.position());
+        //evaluate u at quad point by linear combination of basis values
+        for (unsigned int i = 0; i < lfu.localBasis().size(); i++)
+        {
+          resE += xLocal[i]*values[i][0]*quad.weight()*integrationElement;
+        }
+      }
+
+      //divide by element volume
+      resE /= e.geometry().volume();
+      res += resE;
+    }
+
+    std::cerr << "current mid value " << res << std::endl;
   }
 
   virtual void assemble_with_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
@@ -205,12 +289,13 @@ public:
 
     const auto& assembler = this->solver_ptr->assembler;
 
+    int indexFixingGridEquation = m.rows()-1;
     //assemble lagrangian multiplier for grid fixing point
-    assert(this->get_lop().EntititiesForUnifikationTerm().size()==1);
+/*    assert(this->get_lop().EntititiesForUnifikationTerm().size()==1);
     auto localViewFixingElement = assembler.basis().localView();
     auto localIndexSetFixingElement = assembler.basis().indexSet().localIndexSet();
 
-    int indexFixingGridEquation = m.rows()-1;
+
 
 //    v(indexFixingGridEquation) = x(indexFixingGridEquation)*assembler.uAtX0()-assembler.u0AtX0();
 //    v(indexFixingGridEquation) = x(indexFixingGridEquation)*assembler.uAtX0();
@@ -228,7 +313,7 @@ public:
 
       unsigned int localSizeUFixingElement = Solver::FETraits::get_localSize_finiteElementu(localViewFixingElement);
 
-      for (unsigned int j = 0; j < localSizeUFixingElement; j++)
+            for (unsigned int j = 0; j < localSizeUFixingElement; j++)
       {
         m.insert(indexFixingGridEquation,Solver::FETraits::get_index(localIndexSetFixingElement, j))
             =assembler.entryWx0()[no_fixingElement_offset+j];
@@ -237,8 +322,23 @@ public:
                 =assembler.entryWx0()[no_fixingElement_offset+j];
 
       }
-//            std::cerr << " adding " << entryWx0timesBgradV[no_fixingElement_offset+2](i) << " to " <<FETraits::get_index(localIndexSet, i) << " and " << FETraits::get_index(localIndexSetFixingElement, 2) << std::endl;
+     }
     }
+      */
+
+    //-------------------select  mid value-------------------------
+    auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
+    auto localIndexSet = solver_ptr->FEBasisHandler_.uBasis().indexSet().localIndexSet();
+
+    assert(lagrangianFixingPointOperator.size() == m.rows()-1);
+    for (unsigned int i = 0; i < lagrangianFixingPointOperator.size(); i++)
+    {
+      //indexLagrangianParameter = indexFixingGridEquation
+      m.insert(indexFixingGridEquation,i)=lagrangianFixingPointOperator(i);
+      m.insert(i,indexFixingGridEquation)=lagrangianFixingPointOperator(i);
+    }
+    v(indexFixingGridEquation) = assembler.u0AtX0()-assembler.uAtX0();
+    std::cerr << " f " << v.transpose() << std::endl;
   }
 
   void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
@@ -279,7 +379,7 @@ public:
 
     v.head(tempV.size()) = tempV;
     //get fixingElement
-    assert(this->get_lop().EntititiesForUnifikationTerm().size()==1);
+//    assert(this->get_lop().EntititiesForUnifikationTerm().size()==1);
 
     //    v(v.size()-1) = assembler.uAtX0()-assembler.u0AtX0();
 //    v(v.size()-1) = assembler.uAtX0();
@@ -390,8 +490,7 @@ public:
 
 
     //------assemble values for fixing grid point -----------------
-
-    clear_local_entity_data();
+/*    clear_local_entity_data();
 
     HierarchicSearch<typename GridView::Grid, typename GridView::IndexSet> hs(solver_ptr->grid(), solver_ptr->gridView().indexSet());
 
@@ -419,8 +518,10 @@ public:
       entryWx0[noDof_fixingElement] += values[i][0];
       noDof_fixingElement++;
     }
-    solver_ptr->assembler.set_entryWx0(entryWx0);
+    solver_ptr->assembler.set_entryWx0(entryWx0);*/
 
+    //-------update data for assembling mid value--------
+    init();
   }
 
   const FieldVector<double, 2> get_fixingPoint(){return fixingPoint;}
@@ -437,6 +538,10 @@ public:
   //store a grid point, whose function value is fixed
   const FieldVector<double, 2> fixingPoint;
   //    Config::Entity fixingElement;
+
+
+  Config::VectorType lagrangianFixingPointOperator;
+
   };
 
 

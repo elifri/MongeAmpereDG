@@ -109,6 +109,7 @@ void MA_OT_solver::create_initial_guess()
   //                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
                           solution);
   }
+//  this->test_projection([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);}, solution);
 }
 
 
@@ -163,3 +164,10 @@ void MA_OT_solver::solve_nonlinear_system()
                                                       x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
 
   }
+
+void MA_OT_solver::adapt_solution(const int level)
+{
+  FEBasisHandler_.adapt(*this, level, solution);
+  std::cerr << " adapting operator " << std::endl;
+  op.adapt();
+}

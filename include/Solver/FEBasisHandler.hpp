@@ -509,8 +509,9 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F f, 
     Config::VectorType localmultiples = Config::VectorType::Ones(localDofs.size());
     Assembler::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
   }
-
+  for (int i = 0; i < v.size(); i++) assert ( ! (v(i) != v(i)));
   v = v.cwiseQuotient(countMultipleDof);
+  for (int i = 0; i < v.size(); i++) assert ( ! (v(i) != v(i)));
 }
 
 

@@ -37,6 +37,8 @@ private:
 public:
   virtual int get_n_dofs() const{return FEBasisHandler_.FEBasis().indexSet().size();}
 
+  virtual void adapt_solution(const int level);
+
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
   virtual void plot(const std::string& filename) const;
   using MA_solver::plot;
