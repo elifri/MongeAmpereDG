@@ -25,12 +25,31 @@
 #include "Solver/boundaryHandler.h"
 #include "ImageFunction.hpp"
 #include "MAconfig.h"
+
 /**
- * evaluate the gradients of test functions at global scope
+ * evaluate the ansatz functions of test functions at global scope
+ * @param lfu     local finite element
+ * @param x       local position of x
+ * @param values  return the function values
+ */
+template<class FiniteElement>
+inline
+void assemble_functionValues(const FiniteElement &lfu,
+        const Config::SpaceType& x, std::vector<typename FiniteElement::Traits::LocalBasisType::Traits::RangeType>& values) {
+    assert(values.size() == lfu.size());
+
+    // The gradients of the shape functions on the reference element
+    lfu.localBasis().evaluateFunction(x, values);
+}
+
+
+/**matr
+ * evaluate the ansatz functions of test functions at global scope
  * @param lfu			local finite element
- * @param jacobian		jacobian of the cell transformation
  * @param x				local position of x
- * @param gradients		return the gradients
+ * @param values	return the function values
+ * @param x_local local coefficients
+ * @param u_value return the function value
  */
 template<class FiniteElement, class VectorType, class RangeType>
 inline
@@ -277,7 +296,7 @@ public:
       basis_(&basis){
     std::cout << " ndofs assembler constr " << basis.indexSet().size() << std::endl;
     if (basis_)
-      boundaryHandler_.init_boundary_dofs(*this);
+      boundaryHandler_.init_boundary_dofs(*basis_);
   }
 
   template<typename OtherFEBasisType>
@@ -387,7 +406,18 @@ public:
       const Config::DenseMatrixType &m_local,
       std::vector<EntryType> & je);
 
-
+  /**
+   *  adds the local jacobian to the global jacobian
+   * @param localIndexSetTest indexset bound to the local contex where the current test functions are from (to determine rows)
+   * @param localIndexSetTest indexset bound to the local contex where the current ansatz functions are from (to determine cols)
+   * @param m_local local jacobian (to be added)
+   * @param je  the list of entries where the new entries are added to
+   */
+  template<typename LocalIndexSetRow, typename LocalIndexSetCol>
+  static void add_local_coefficients_matrix(const LocalIndexSetRow &localIndexSetTest,
+      const LocalIndexSetCol &localIndexSetAnsatz,
+      const Config::DenseMatrixType &m_local,
+      std::vector<EntryType> & je);
 
   /**
    * adds the coeffs v_local to the global dof vector to assemble the linear sytem for the discrete hessiang
@@ -634,7 +664,7 @@ public:
   const BoundaryHandler::BoolVectorType& isBoundaryValueDoF() const{return boundaryHandler_.isBoundaryValueDoF();}
   double volumeMidU() const {return volumeMidU_;}
 
-private:
+protected:
 /*
   const GridViewType* gridView_ptr;
 
@@ -1014,6 +1044,26 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
 //        std::cerr << " add to Jacobian " << FETraits::get_index(localIndexSetTest, i) << " , " << FETraits::get_index(localIndexSetAnsatz, j) << " from local " << i  << "," << j << " with value " << m_local(i,j) << std::endl;
         je.push_back(EntryType(FETraits::get_index(localIndexSetTest, i),FETraits::get_index(localIndexSetAnsatz,j),m_local(i,j)));
       }
+    }
+  }
+}
+
+template<typename LocalIndexSetRow, typename LocalIndexSetCol>
+inline
+void Assembler::add_local_coefficients_matrix(const LocalIndexSetRow &localIndexSetTest,
+    const LocalIndexSetCol &localIndexSetAnsatz,
+    const Config::DenseMatrixType &m_local,
+    std::vector<EntryType> & je)
+{
+  assert ((unsigned int) m_local.rows() == localIndexSetTest.size());
+  assert ((unsigned int) m_local.cols() == localIndexSetAnsatz.size());
+
+  for (int i = 0; i < m_local.rows(); i++)
+  {
+    for (int j = 0; j < m_local.cols(); j++)
+    {
+      je.push_back(EntryType(FETraits::get_index(localIndexSetTest, i),FETraits::get_index(localIndexSetAnsatz,j),m_local(i,j)));
+      std::cerr << " add to J(" << FETraits::get_index(localIndexSetTest, i) << "," << FETraits::get_index(localIndexSetAnsatz,j) <<") the value " <<m_local(i,j) << std::endl;
     }
   }
 }
@@ -2224,7 +2274,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 
 //            std::cerr << " local boundary " << local_boundary << std::endl;
 
-            switch(assembleType_)
+/*            switch(assembleType_)
             {
               case ONLY_OBJECTIVE:
                 lop.assemble_boundary_face_term(is,localView, xLocal, local_boundary, tag_count);
@@ -2240,7 +2290,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 //                std::cerr << " local boundary Jacobian " << m_mB  << std::endl;
                 break;
               default: assert(false); std::cerr << " Error: do not know AssembleType" << std::endl; exit(-1);
-            }
+            }*/
 
             } else {
                 std::cerr << " I do not know how to handle this intersection"
@@ -2293,7 +2343,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 //     std::cerr << " f          " << v.transpose() << std::endl;
 
 }
-#else
+#else //HAVE_ADOLC
 template<typename LocalOperatorType>
 void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {

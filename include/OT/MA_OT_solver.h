@@ -11,6 +11,9 @@
 
 #include "Solver/MA_solver.h"
 
+#include "Solver/AssemblerLagrangian1d.h"
+#include "Solver/AssemblerLagrangian.h"
+
 #include "MA_OT_global_Operator.h"
 
 #ifdef USE_C0_PENALTY
@@ -27,6 +30,11 @@ class MA_OT_solver: public MA_solver
 {
 //  using MA_solver::MA_solver;
 public:
+  //export types for langrangian multiplier boundary
+  typedef SolverConfig::FETraitsSolverQ FETraitsQ;
+  typedef FETraitsQ::FEBasis FEBasisQType;
+
+
   MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting);
 private:
   ///creates the initial guess
@@ -35,7 +43,12 @@ private:
   void solve_nonlinear_system();
 
 public:
-  virtual int get_n_dofs() const{return FEBasisHandler_.FEBasis().indexSet().size();}
+  virtual int get_n_dofs_V_h() const{return FEBasisHandler_.FEBasis().indexSet().size();}
+  virtual int get_n_dofs_Q_h() const{return assemblerLMCoarse_.get_number_of_Boundary_dofs();}
+  virtual int get_n_dofs() const{return get_n_dofs_V_h() + 1 + get_n_dofs_Q_h();}
+
+  template<class F>
+  void project(const F f, VectorType& v) const;
 
   virtual void adapt_solution(const int level);
 
@@ -54,6 +67,14 @@ public:
 private:
   GeometrySetting& setting_;
 
+  ///FEBasis for Lagrangian Multiplier for Boundary
+  FEBasisHandler<FETraitsQ::Type, FETraitsQ> FEBasisHandlerQ_;
+
+  //assembler for lagrangian multiplier
+  AssemblerLagrangianMultiplier1D assemblerLM1D_;
+  AssemblerLagrangianMultiplierCoarse assemblerLMCoarse_;
+
+  //find correct operator
 #ifdef USE_C0_PENALTY
   typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Brenner> OperatorType;
 #else
@@ -70,6 +91,24 @@ private:
 
   friend OperatorType;
 };
+
+template<class F>
+void MA_OT_solver::project(const F f, VectorType& v) const
+{
+  this->FEBasisHandler_.project(f, v);
+
+  v.conservativeResize(get_n_dofs());
+
+  int V_h_size = get_n_dofs_V_h();
+  for (int i = V_h_size; i < v.size(); i++)
+  {
+    v(i) = 0;
+  }
+
+#ifdef DEBUG
+  test_projection(f,v.head(get_n_dofs_V()));
+#endif
+}
 
 template<typename FGrad>
 Config::ValueType MA_OT_solver::calculate_L2_errorOT(const FGrad &f) const

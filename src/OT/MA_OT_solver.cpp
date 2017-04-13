@@ -18,7 +18,12 @@ namespace po = boost::program_options;
 #include "utils.hpp"
 
 MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting)
-:MA_solver(grid, gridView, config), setting_(setting), op(*this)
+:MA_solver(grid, gridView, config),
+ setting_(setting),
+ FEBasisHandlerQ_(*this, grid->levelGridView(grid->maxLevel()-1)),
+ assemblerLM1D_(FEBasisHandler_.FEBasis()),
+ assemblerLMCoarse_(FEBasisHandler_.FEBasis(),FEBasisHandlerQ_.FEBasis()),
+ op(*this)
 {}
 
 void MA_OT_solver::plot(const std::string& name) const
@@ -117,7 +122,7 @@ void MA_OT_solver::solve_nonlinear_system()
 {
   assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
 
-  std::cout << "n dofs" << get_n_dofs() << std::endl;
+  std::cout << "n dofs" << get_n_dofs() << " V_h_dofs " << get_n_dofs_V_h() << " Q_h_dofs " << get_n_dofs_Q_h() << std::endl;
 
   if (iterations == 0)
   {
@@ -132,12 +137,9 @@ void MA_OT_solver::solve_nonlinear_system()
   // Compute solution
   // /////////////////////////
 
-  Config::VectorType newSolution = solution;
-  newSolution.conservativeResize(solution.size()+1);
-  newSolution(solution.size()) = 0;//init value for lagrangian parameter
 #ifdef USE_DOGLEG
 
-  doglegMethod(op, doglegOpts_, newSolution, evaluateJacobianSimultaneously_);
+  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
 
 #endif
 #ifdef USE_PETSC
@@ -155,8 +157,7 @@ void MA_OT_solver::solve_nonlinear_system()
   timer.stop();
   std::cout << "needed " << timer << " seconds for nonlinear step, ended with error code " << error << std::endl;
 #endif
-  solution = newSolution.head(get_n_dofs());
-  std::cout << " Lagrangian Parameter for fixing grid Point " << newSolution.tail(1)[0] << std::endl;
+  std::cout << " Lagrangian Parameter for fixing grid Point " << solution(get_n_dofs_V_h()) << std::endl;
 
   std::cout << " L2 error is " << calculate_L2_errorOT([](Config::SpaceType x)
       {return Dune::FieldVector<double, Config::dim> ({
@@ -168,6 +169,11 @@ void MA_OT_solver::solve_nonlinear_system()
 void MA_OT_solver::adapt_solution(const int level)
 {
   FEBasisHandler_.adapt(*this, level, solution);
+  assembler.bind(FEBasisHandler_.uBasis());
+
+  FEBasisHandlerQ_.adapt_after_grid_change(this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1));
+  assemblerLMCoarse_.bind(FEBasisHandlerQ_.FEBasis());
+
   std::cerr << " adapting operator " << std::endl;
   op.adapt();
 }

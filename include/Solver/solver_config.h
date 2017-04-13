@@ -160,6 +160,11 @@ struct SolverConfig{
   typedef MixedTraits<Config::GridView, degree, degreeHessian> FETraitsSolver;
 #endif
 
+
+  /////-------select langrangian boundary element ----------------
+  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree> FETraitsSolverQ;
+
+
 	typedef FieldVector<ValueType,1> RangeType;
   typedef FieldMatrix<ValueType,2,2> HessianRangeType;
 

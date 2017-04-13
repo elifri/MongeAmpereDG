@@ -8,6 +8,11 @@
 #ifndef INCLUDE_OT_MA_OT_GLOBAL_OPERATOR_H_
 #define INCLUDE_OT_MA_OT_GLOBAL_OPERATOR_H_
 
+#include "Solver/AssemblerLagrangian1d.h"
+#include "OT/operator_LagrangianBoundary.h"
+
+#include "utils.hpp"
+
 template<typename Solver, typename LOP>
 class MA_OT_Operator {
   typedef typename Solver::GridViewType GridView;
@@ -21,6 +26,8 @@ public:
           new rhoXSquareToSquare(), new rhoYSquareToSquare()
                               //     lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
                 )),
+      lopLMMidvalue(new Local_operator_LangrangianMidValue()),
+      lopLMBoundary(new Local_Operator_LagrangianBoundary(lop_ptr->get_bc())),
       fixingPoint{0.3,0}
   {
     std::cout << " solver n_dofs "<< solver.get_n_dofs() << std::endl;
@@ -111,7 +118,7 @@ public:
     solver_ptr->assembler.set_entryWx0(entryWx0);*/
 
     //-------------------select  mid value-------------------------
-    auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
+/*    auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
     auto localIndexSet = solver_ptr->FEBasisHandler_.uBasis().indexSet().localIndexSet();
 
     lagrangianFixingPointOperator = Config::VectorType::Zero(solver_ptr->FEBasisHandler_.uBasis().indexSet().size());
@@ -150,7 +157,8 @@ public:
       }
       Assembler::add_local_coefficients(localIndexSet,localMidvalue, lagrangianFixingPointOperator);
     }
-    std::cout << " midvalues " << lagrangianFixingPointOperator.transpose() << std::endl;
+    std::cout << " midvalues " << lagrangianFixingPointOperator.transpose() << std::endl;*/
+    solver_ptr->assemblerLM1D_.assemble_u_independent_matrix(*lopLMMidvalue, lagrangianFixingPointDiscreteOperator);
   }
 
   const LOP& get_lop() const
@@ -218,7 +226,7 @@ public:
     std::cerr << "value at fixed point is " << res << std::endl;
 */
     //-----assemble mid value----------
-    auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
+/*    auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
     auto localIndexSet = solver_ptr->FEBasisHandler_.uBasis().indexSet().localIndexSet();
     Config::ValueType res = 0;
 
@@ -255,7 +263,10 @@ public:
       //divide by element volume
       resE /= e.geometry().volume();
       res += resE;
-    }
+    }*/
+    Config::ValueType res = 0;
+    solver_ptr->assemblerLM1D_.assembleRhs(*lopLMMidvalue, x, res);
+    solver_ptr->assembler.set_uAtX0(res);
 
     std::cerr << "current mid value " << res << std::endl;
   }
@@ -264,32 +275,35 @@ public:
   {
     assert(lop_ptr);
 
-    assert(x.size()==this->solver_ptr->get_n_dofs()+1);
-    assert(v.size()==this->solver_ptr->get_n_dofs()+1);
-    assert(m.rows()==this->solver_ptr->get_n_dofs()+1);
-    assert(m.cols()==this->solver_ptr->get_n_dofs()+1);
+    int V_h_size = this->solver_ptr->get_n_dofs_V_h();
+    int Q_h_size = this->solver_ptr->get_n_dofs_Q_h();
+
+    assert(x.size()==this->solver_ptr->get_n_dofs());
+    assert(v.size()==this->solver_ptr->get_n_dofs());
+    assert(m.rows()==this->solver_ptr->get_n_dofs());
+    assert(m.cols()==this->solver_ptr->get_n_dofs());
+
+    prepare_fixing_point_term(x);
+
+    //assemble MA PDE in temporary variables
 
     //todo jede Menge copy past
-    Config::MatrixType tempM(m.rows()-1, m.cols()-1);
-    Config::VectorType tempX = x.head(x.size()-1);
-    Config::VectorType tempV(v.size()-1);
+    Config::MatrixType tempM(V_h_size, V_h_size);
+    Config::VectorType tempX = x.head(V_h_size);
+    Config::VectorType tempV(V_h_size);
     solver_ptr->assemble_DG_Jacobian(get_lop(), tempX,tempV, tempM);
 
+    //copy system
     v.head(tempV.size()) = tempV;
     //copy SparseMatrix todo move to EigenUtility
     std::vector< Eigen::Triplet<double> > tripletList;
-    tripletList.reserve(tempM.nonZeros());
-    for (int k=0; k<tempM.outerSize(); ++k)
-      for (Config::MatrixType::InnerIterator it(tempM,k); it; ++it)
-      {
-        tripletList.push_back(Eigen::Triplet<Config::ValueType>(it.row(), it.col(), it.value()));
-      }
-    m.setFromTriplets(tripletList.begin(), tripletList.end());
+    copy_to_new_sparse_matrix(tempM, m);
 
 
+    //assemble part of first lagrangian multiplier for fixing midvalue
     const auto& assembler = this->solver_ptr->assembler;
 
-    int indexFixingGridEquation = m.rows()-1;
+    int indexFixingGridEquation = V_h_size;
     //assemble lagrangian multiplier for grid fixing point
 /*    assert(this->get_lop().EntititiesForUnifikationTerm().size()==1);
     auto localViewFixingElement = assembler.basis().localView();
@@ -327,18 +341,33 @@ public:
       */
 
     //-------------------select  mid value-------------------------
-    auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
-    auto localIndexSet = solver_ptr->FEBasisHandler_.uBasis().indexSet().localIndexSet();
-
-    assert(lagrangianFixingPointOperator.size() == m.rows()-1);
-    for (unsigned int i = 0; i < lagrangianFixingPointOperator.size(); i++)
+    assert(lagrangianFixingPointDiscreteOperator.size() == V_h_size);
+    //copy in system matrix
+    for (unsigned int i = 0; i < lagrangianFixingPointDiscreteOperator.size(); i++)
     {
       //indexLagrangianParameter = indexFixingGridEquation
-      m.insert(indexFixingGridEquation,i)=lagrangianFixingPointOperator(i);
-      m.insert(i,indexFixingGridEquation)=lagrangianFixingPointOperator(i);
+      m.insert(indexFixingGridEquation,i)=lagrangianFixingPointDiscreteOperator(i);
+      m.insert(i,indexFixingGridEquation)=lagrangianFixingPointDiscreteOperator(i);
     }
+    //set rhs of langrangian multipler
     v(indexFixingGridEquation) = assembler.u0AtX0()-assembler.uAtX0();
     std::cerr << " f " << v.transpose() << std::endl;
+
+    //assemble part of second lagrangian multiplier for fixing boundary
+    tempM.resize(Q_h_size, V_h_size);
+    tempM.setZero();
+    tempV.setZero(Q_h_size);
+    solver_ptr->assemblerLMCoarse_.assemble_Boundarymatrix(*lopLMBoundary, tempM, x, tempV);
+
+    assert(Q_h_size == tempV.size());
+    assert(Q_h_size == tempM.rows());
+
+    MATLAB_export(tempM, "B_H");
+
+    //copy to system
+    copy_to_sparse_matrix(tempM, m, V_h_size, 0);
+    v.tail(Q_h_size) = tempV;
+
   }
 
   void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
@@ -535,12 +564,15 @@ public:
 
   std::shared_ptr<LOP> lop_ptr;
 
+  std::shared_ptr<Local_operator_LangrangianMidValue> lopLMMidvalue;
+  std::shared_ptr<Local_Operator_LagrangianBoundary> lopLMBoundary;
+
   //store a grid point, whose function value is fixed
   const FieldVector<double, 2> fixingPoint;
   //    Config::Entity fixingElement;
 
 
-  Config::VectorType lagrangianFixingPointOperator;
+  Config::VectorType lagrangianFixingPointDiscreteOperator;
 
   };
 

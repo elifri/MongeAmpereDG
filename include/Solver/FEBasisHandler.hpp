@@ -35,6 +35,11 @@ struct FEBasisHandler{
   template<class F, class F_Der>
   void project(F &f, F_Der &grad_f, Config::VectorType &v) const;
 
+  void adapt_after_grid_change(const typename FEBasisType::GridView& grid)
+  {
+    FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid));
+  }
+
   void adapt(MA_solver& ma_solver, const int level, Config::VectorType& v)
   {assert(false && " Error, dont know FE basis"); exit(-1);}
 
@@ -78,6 +83,13 @@ struct FEBasisHandler<Mixed, FT>{
 
   template<class F>
   void project(F f, Config::VectorType &V) const;
+
+  void adapt_after_grid_change(const typename FEBasisType::GridView& grid)
+  {
+    FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid));
+    uBasis_ = std::shared_ptr<FEBasisType> (new FEuBasisType(grid));
+    uDHBasis_ = std::shared_ptr<FEBasisType> (new FEuDHBasisType(grid));
+  }
 
   void adapt(MA_solver& ma_solver, const int level, Config::VectorType& v)
   {assert(false && " Error, dont know FE basis"); exit(-1);}
