@@ -47,6 +47,7 @@ public:
   {
     assert (initialised_);
     assert((unsigned int) global_i < basisToBoundary_.size());
+    assert(basisToBoundary_[global_i] <NumberOfBoundaryDofs_);
     return basisToBoundary_[global_i];
   }
 
@@ -255,7 +256,7 @@ void BoundaryHandler::add_local_coefficients_Only_Boundary_row(const LocalIndexS
     {
       int globalIndexRow = SolverConfig::FETraitsSolver::get_index(localIndexSetRow, i);
       if (isBoundaryDof_(globalIndexRow))
-        je.push_back(EntryType(globalIndexRow,SolverConfig::FETraitsSolver::get_index(localIndexSetCol,j),m_local(i,j)));
+        je.push_back(EntryType(BoundaryNo(globalIndexRow),SolverConfig::FETraitsSolver::get_index(localIndexSetCol,j),m_local(i,j)));
     }
   }
 }

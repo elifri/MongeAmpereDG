@@ -61,7 +61,7 @@ public:
       auto x_value = intersection.inside().geometry().global(quadPosV);
 
       const FieldVector<double, dim> &quadPosQ = intersection.inside().geometryInFather().global(quadPosV);
-      std::cout << "local Coordinate " << quadPosV << " was evaluated in father to " << quadPosQ;
+      std::cerr << "local Coordinate " << quadPosV << " was evaluated in father to " << quadPosQ << std::endl;
 
       // The transposed inverse Jacobian of the map from the reference element to the element
       const auto& jacobianV =
@@ -112,9 +112,9 @@ public:
         {
           //(\nabla H(\nabla u)*\nabla w)q
           m(j,i) += 1./normalOld.two_norm()*(normalOld*gradientsV[i])*referenceFunctionValuesQ[j]*factor;
-          std::cerr << " add locally " << 1./normalOld.two_norm()*(normalOld*gradientsV[i])*referenceFunctionValuesQ[j]*factor
-              << "=" << 1./normalOld.two_norm() << "*" << (normalOld*gradientsV[i]) << " * " << referenceFunctionValuesQ[j] << " * " << factor
-              << " to m(" << j << "," << i <<")" << std::endl;
+//          std::cerr << " add locally " << 1./normalOld.two_norm()*(normalOld*gradientsV[i])*referenceFunctionValuesQ[j]*factor
+//              << "=" << 1./normalOld.two_norm() << "*" << (normalOld*gradientsV[i]) << " * " << referenceFunctionValuesQ[j] << " * " << factor
+//              << " to m(" << j << "," << i <<")" << std::endl;
         }
       }
 

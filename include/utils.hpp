@@ -54,6 +54,7 @@ void rightmultiply (Dune::FieldMatrix<R,dim,dim>& A, const Dune::DiagonalMatrix<
     }
 }
 
+
 template<class MatrixType, class R>
 inline
 void copy_to_sparse_matrix(const Eigen::Matrix<R,Eigen::Dynamic,Eigen::Dynamic> &m_local, int offset_row, int offset_col, MatrixType &m)
@@ -97,6 +98,17 @@ void copy_to_sparse_matrix(const SparseMatrixType &m_local, SparseMatrixType &m,
 {
   for (int k=0; k<m_local.outerSize(); ++k)
     for (typename SparseMatrixType::InnerIterator it(m_local,k); it; ++it)
+    {
+      m.coeffRef(offset_row+it.row(), offset_col+it.col()) = it.value();
+    }
+}
+
+template<class SparseMatrixTypeA, class SparseMatrixTypeB>
+inline
+void copy_sparse_to_sparse_matrix(const SparseMatrixTypeA &m_local, SparseMatrixTypeB &m, int offset_row, int offset_col)
+{
+  for (int k=0; k<m_local.outerSize(); ++k)
+    for (typename SparseMatrixTypeA::InnerIterator it(m_local,k); it; ++it)
     {
       m.coeffRef(offset_row+it.row(), offset_col+it.col()) = it.value();
     }

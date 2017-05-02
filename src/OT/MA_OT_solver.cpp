@@ -168,11 +168,26 @@ void MA_OT_solver::solve_nonlinear_system()
 
 void MA_OT_solver::adapt_solution(const int level)
 {
+  //adapt febasis and solution
   FEBasisHandler_.adapt(*this, level, solution);
-  assembler.bind(FEBasisHandler_.uBasis());
 
+  //bind assembler to new context
+  assembler.bind(FEBasisHandler_.uBasis());
+  assemblerLM1D_.bind(FEBasisHandler_.uBasis());
+
+  //adapt boundary febasis and bind to assembler
   FEBasisHandlerQ_.adapt_after_grid_change(this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1));
-  assemblerLMCoarse_.bind(FEBasisHandlerQ_.FEBasis());
+  assemblerLMCoarse_.bind(FEBasisHandler_.uBasis(), FEBasisHandlerQ_.FEBasis());
+
+  //init lagrangian multiplier variables
+  solution.conservativeResize(get_n_dofs());
+
+  int V_h_size = get_n_dofs_V_h();
+  for (int i = V_h_size; i < solution.size(); i++)
+  {
+    solution(i) = 0;
+  }
+
 
   std::cerr << " adapting operator " << std::endl;
   op.adapt();

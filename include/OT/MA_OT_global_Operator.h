@@ -365,9 +365,10 @@ public:
     MATLAB_export(tempM, "B_H");
 
     //copy to system
-    copy_to_sparse_matrix(tempM, m, V_h_size, 0);
+    copy_to_sparse_matrix(tempM, m, V_h_size+1, 0);
+    copy_sparse_to_sparse_matrix(tempM.transpose(), m, 0, V_h_size+1);
+    assert(V_h_size+1+Q_h_size==m.rows());
     v.tail(Q_h_size) = tempV;
-
   }
 
   void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const

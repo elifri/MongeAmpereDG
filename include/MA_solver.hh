@@ -270,7 +270,7 @@ public:
 	 * @param f	callback function representing the function
 	 * @param V	returns the coefficient vector of the projection of f
 	 */
-	void project(const MA_function_type f, const MA_derivative_function_type f_DH, VectorType &v) const;
+	virtual void project(const MA_function_type f, const MA_derivative_function_type f_DH, VectorType &v) const;
 
 	/**
 	 * updates all members to newSolution

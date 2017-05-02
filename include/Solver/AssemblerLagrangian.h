@@ -29,6 +29,12 @@ public:
       boundaryHandlerQ_.init_boundary_dofs(*basisLM_);
   }
 
+  template<typename OtherFEBasisType, typename OtherFEBasisTypeQ>
+  void bind(const OtherFEBasisType& basis, const OtherFEBasisTypeQ& basisQ)
+  {
+    assert(false && " wrong basis type"); exit(-1);
+  }
+
   /**
    * assembles the function and its derivative at x
    * @param LOP the local operator providing a function, namely assemble_boundary_face_term
@@ -45,6 +51,8 @@ private:
   BoundaryHandler boundaryHandlerQ_;
 };
 
+template<>
+void AssemblerLagrangianMultiplierCoarse::bind(const Assembler::FEBasisType& basis, const FEBasisQType& basisQ);
 
 template<typename LocalOperatorType>
 void AssemblerLagrangianMultiplierCoarse::assemble_Boundarymatrix(const LocalOperatorType &lop,
@@ -57,8 +65,6 @@ void AssemblerLagrangianMultiplierCoarse::assemble_Boundarymatrix(const LocalOpe
   int Q_h_size = get_number_of_Boundary_dofs();
 
   assert(x.size() > V_h_size);
-
-  Config::GridView gridViewV = basisV_.gridView();
 
   //assuming Galerkin
   m.resize(Q_h_size, V_h_size);
@@ -117,6 +123,7 @@ void AssemblerLagrangianMultiplierCoarse::assemble_Boundarymatrix(const LocalOpe
     boundaryHandlerQ_.add_local_coefficients_Only_Boundary_row(localIndexSetQ, localIndexSetV, m_m, mEntries);
   }
   m.setFromTriplets(mEntries.begin(), mEntries.end());
+  std::cerr << " boundary term " << v.norm()<< " whole norm " << v.norm() << std::endl;
 }
 
 #endif /* ASSEMBLERLAGRANGIAN_H_ */
