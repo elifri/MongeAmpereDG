@@ -28,6 +28,11 @@ MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridV
 
 void MA_OT_solver::plot(const std::string& name) const
 {
+  plot(name, iterations);
+}
+
+void MA_OT_solver::plot(const std::string& name, int no) const
+{
   std::cout << "write VTK output? " << writeVTK_ << " ";
 
   //write vtk files
@@ -82,7 +87,7 @@ void MA_OT_solver::plot(const std::string& name) const
 */
      //write to file
      std::string fname(plotter.get_output_directory());
-     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
+     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + ".vtu";
      vtkWriter.write(fname);
 
      std::cout << fname  << std::endl;
@@ -90,7 +95,7 @@ void MA_OT_solver::plot(const std::string& name) const
 
   //write to file
   std::string fname(plotter.get_output_directory());
-  fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "outputGrid.vtu";
+  fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + "outputGrid.vtu";
 
   plotter.writeOTVTK(fname, *gradient_u_old, [](Config::SpaceType x)
       {return Dune::FieldVector<double, Config::dim> ({

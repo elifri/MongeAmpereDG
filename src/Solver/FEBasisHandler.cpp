@@ -174,7 +174,6 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
     //mark element for refining
     solver.grid_ptr->mark(1,element);
   }
-  double scaling_factor = v(v.size()-1);
 
   std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
 
@@ -217,7 +216,7 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
 
   project(solution_u_Coarse_global, v);
 
-#ifndef NDEBUG
+#ifdef NDEBUG
   solver.test_projection(solution_u_Coarse_global, v);
 #endif
 
@@ -227,7 +226,6 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
   interpolate(*FEBasis_, v_u, solution_u_Coarse_global);
   v.segment(0, v_u.size()) = v_u;
 */
-  v(v.size()-1) = scaling_factor;
   solver.grid_ptr->postAdapt();
 }
 /*template <>
@@ -242,7 +240,6 @@ void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig:
     //mark element for refining
     solver.grid_ptr->mark(1,element);
   }
-  double scaling_factor = v(v.size()-1);
 
   std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
 
@@ -284,7 +281,6 @@ void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig:
   DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
 
   project(solution_u_Coarse_global, solver.solution);
-  v(v.size()-1) = scaling_factor;
   solver.grid_ptr->postAdapt();
 }
 */

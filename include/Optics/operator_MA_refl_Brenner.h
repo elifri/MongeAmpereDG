@@ -135,7 +135,7 @@ public:
    */
   template<class LocalView, class LocalIndexSet, class VectorType>
   void assemble_cell_term(const LocalView& localView, const LocalIndexSet &localIndexSet, const VectorType &x,
-      VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const {
+      VectorType& v, const int tag) const {
 
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
@@ -171,18 +171,15 @@ public:
     //init variables for automatic differentiation
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(size);
-    adouble scaling_factor_adolc, last_equation_adolc;
 
     for (int i = 0; i < size; i++)
       v_adolc[i] <<= v[i];
-    last_equation_adolc <<= last_equation;
 
     trace_on(tag);
 
     //init independent variables
     for (int i = 0; i < size; i++)
       x_adolc[i] <<= x[i];
-    scaling_factor_adolc <<= scaling_factor;
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -289,13 +286,11 @@ public:
       auto uTimesZ0 = Z_0;
       uTimesZ0 *= u_value;
       PDE_rhs *= (((uTimesZ0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value;
-//      PDE_rhs *= scaling_factor_adolc;
 //      cout<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value).value() << "/" << (4.0*b_tilde*omega_value*g_value).value() << std::endl;
 //      cout << "rhs *= " <<  ((u_value*((Z_0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value).value() <<
 //                    " = (" <<  u_value.value() << "*scalarProd"
 //                        << "/(" << (t*t).value() << "*" << D_psi_norm.value() << "*" << omega_value << ")" << endl;
 //      cout<<  "*scalarProd = " << ((Z_0-X)*D_Psi_value).value() << " = "<< (Z_0-X)[0].value()<<"," << ((Z_0-X)[1]).value() << "*"<< (D_Psi_value)[0].value()<<"," << ((D_Psi_value)[1]).value();
-//      cout << "scaling factor " << scaling_factor_adolc.value() << endl;
 //      cout << " atilde " << a_tilde_value << " f " << f_value << endl;
 
       //calculate system for first test functions
@@ -311,9 +306,7 @@ public:
 
       for (int j = 0; j < size; j++) // loop over test fcts
       {
-//        v_adolc(j) += (scaling_factor_adolc*PDE_rhs-uDH_pertubed_det)*
-        //(PDE_rhs-uDH_pertubed_det)*
-        v_adolc(j) += (scaling_factor_adolc*PDE_rhs-uDH_pertubed_det)*
+        v_adolc(j) += (PDE_rhs-uDH_pertubed_det)*
         referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
 

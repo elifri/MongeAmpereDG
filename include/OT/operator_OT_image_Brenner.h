@@ -62,7 +62,7 @@ public:
    */
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const {
+      VectorType& v, const int tag) const {
 
     assert(opticalSetting);
 
@@ -99,18 +99,15 @@ public:
     //init variables for automatic differentiation
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(size);
-    adouble scaling_factor_adolc, last_equation_adolc;
 
     for (int i = 0; i < size; i++)
       v_adolc[i] <<= v[i];
-    last_equation_adolc <<= last_equation;
 
     trace_on(tag);
 
     //init independent variables
     for (int i = 0; i < size; i++)
       x_adolc[i] <<= x[i];
-    scaling_factor_adolc <<= scaling_factor;
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -177,7 +174,7 @@ public:
 
       for (int j = 0; j < size; j++) // loop over test fcts
       {
-        v_adolc(j) += (scaling_factor_adolc*PDE_rhs-uDH_det)*
+        v_adolc(j) += (PDE_rhs-uDH_det)*
             (referenceFunctionValues[j])
 //            (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1])
             *quad[pt].weight() * integrationElement;
@@ -192,14 +189,12 @@ public:
 */
       }
 
-      last_equation_adolc += u_value* quad[pt].weight() * integrationElement;
     }
 
 
     for (int i = 0; i < size; i++)
       v_adolc[i] >>= v[i]; // select dependent variables
 
-    last_equation_adolc >>= last_equation;
     trace_off();
     /*std::size_t stats[11];
     tapestats(tag, stats);

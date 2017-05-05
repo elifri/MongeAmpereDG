@@ -123,7 +123,7 @@ public:
    */
   template<class LocalView, class LocalIndexSet, class VectorType>
   void assemble_cell_term(const LocalView& localView, const LocalIndexSet &localIndexSet, const VectorType &x,
-      VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const {
+      VectorType& v, const int tag) const {
 
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
@@ -177,7 +177,6 @@ public:
     //init independent variables
     for (int i = 0; i < size; i++)
       x_adolc[i] <<= x[i];
-    scaling_factor_adolc <<= scaling_factor;
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -299,7 +298,6 @@ public:
       auto uTimesZ0 = Z_0;
       uTimesZ0 *= u_value;
       PDE_rhs *= (((uTimesZ0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value;
-      PDE_rhs *= scaling_factor_adolc;
 //      cout<< "rhs = "  <<  (a_tilde_value*a_tilde_value*a_tilde_value*f_value).value() << "/" << (4.0*b_tilde*omega_value*g_value).value() << std::endl;
 //      cout << "rhs *= " <<  ((u_value*((Z_0-X)*D_Psi_value))/t/t/D_psi_norm/omega_value).value() <<
 //                    " = (" <<  u_value.value() << "*scalarProd"
@@ -332,14 +330,12 @@ public:
                                     * quad[pt].weight() * integrationElement;
            }
       }
-      last_equation_adolc += u_value* quad[pt].weight() * integrationElement;
     }
 
 
     for (int i = 0; i < size; i++)
       v_adolc[i] >>= v[i]; // select dependent variables
 
-    last_equation_adolc >>= last_equation;
     trace_off();
     /*std::size_t stats[11];
     tapestats(tag, stats);

@@ -542,8 +542,6 @@ private:
  * @param x             local solution coefficients
  * @param v             local residual (to be returned)
  * @param tag           the tag of the adolc tape
- * @param scaling_factor the scaling factor for the PDE right-hand side
- * @param last_equation local part of last equation is added to last equation
  */
   template<class LocalView, class VectorType>
   inline
@@ -556,7 +554,6 @@ private:
  * @param x              local solution coefficients
  * @param v          local residual (to be returned)
  * @param tag           the tag of the adolc tape
- * @param scaling_factor the scaling factor for the PDE right-hand side
  */
   template<class LocalView, class VectorType, class MatrixType>
   static bool assemble_jacobian_integral(const LocalView& localView,
@@ -568,8 +565,6 @@ private:
  * @param localView     localView bound to the current context
  * @param x              local solution coefficients
  * @param v          local residual (to be returned)
- * @param scaling_factor  ----TODO better doc!   these two are to give the derivaties for the special variable scaling factor
- * @param last_equation_der
  */
   template<class LocalView, class VectorType, class MatrixType>
   static bool assemble_jacobian_integral_cell_term(const LocalView& localView,
@@ -1022,7 +1017,7 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
       if (std::abs(m_local(i,j)) > 1e-13 )
       {
         m.coeffRef(FETraits::get_index(localIndexSetTest, i), FETraits::get_index(localIndexSetAnsatz,j)) +=  m_local(i,j);
-        std::cerr << " add to Jacobian " << FETraits::get_index(localIndexSetTest, i) << " , " << FETraits::get_index(localIndexSetAnsatz, j) << " from local " << i  << "," << j << " with value " << m_local(i,j) << std::endl;
+//        std::cerr << " add to Jacobian " << FETraits::get_index(localIndexSetTest, i) << " , " << FETraits::get_index(localIndexSetAnsatz, j) << " from local " << i  << "," << j << " with value " << m_local(i,j) << std::endl;
       }
   }
 }
@@ -1040,7 +1035,7 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
     {
 //      if (std::abs(m_local(i,j)) > 1e-13 )
       {
-        std::cerr << " add to Jacobian " << FETraits::get_index(localIndexSetTest, i) << " , " << FETraits::get_index(localIndexSetAnsatz, j) << " from local " << i  << "," << j << " with value " << m_local(i,j) << std::endl;
+//        std::cerr << " add to Jacobian " << FETraits::get_index(localIndexSetTest, i) << " , " << FETraits::get_index(localIndexSetAnsatz, j) << " from local " << i  << "," << j << " with value " << m_local(i,j) << std::endl;
         je.push_back(EntryType(FETraits::get_index(localIndexSetTest, i),FETraits::get_index(localIndexSetAnsatz,j),m_local(i,j)));
       }
     }
@@ -1605,19 +1600,19 @@ void Assembler::assemble_cell_termHelper(const LocalOperatorType &lop, const Loc
       /*LocalOperatorType::use_adouble_determinant = false;
       ImageFunction::use_adouble_image_evaluation = false;
       vLocal.setZero(); //prevent double addition of local terms
-      lop.assemble_cell_term(localView, xLocal, vLocal, 0, scaling_factor, last_equation);
-      derivationSuccessful = assemble_jacobian_integral_cell_term(localView, xLocal, mLocal, 0, scaling_factor, scaling_factorDerivatives, last_equationDerivatives);
+      lop.assemble_cell_term(localView, xLocal, vLocal, 0);
+      derivationSuccessful = assemble_jacobian_integral_cell_term(localView, xLocal, mLocal, 0);
       LocalOperatorType::use_adouble_determinant = true;
       ImageFunction::use_adouble_image_evaluation = true;*/
 
-//      assemble_jacobianFD_integral_cell_term(lop, localView, xLocal, mLocal, 0, scaling_factor, last_equationDerivatives, scaling_factorDerivatives);
+//      assemble_jacobianFD_integral_cell_term(lop, localView, xLocal, mLocal, 0);
 //      assert(false && " Error FD is not uptodate");
       derivationSuccessful = true;
     }
 
   }
 
-//  assemble_jacobianFD_integral_cell_term(lop, localView, xLocal, mLocal, 0, scaling_factor, last_equationDerivatives, scaling_factorDerivatives);
+//  assemble_jacobianFD_integral_cell_term(lop, localView, xLocal, mLocal, 0);
 //  derivationSuccessful = true;
 
 #ifdef DEBUG

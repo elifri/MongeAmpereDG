@@ -219,7 +219,7 @@ void BoundaryHandler::init_boundary_dofs(const FEBasis& feBasis)
       if (!isBoundaryDof_(globalIndex) && localIsBoundary[i])
       {
         basisToBoundary_[globalIndex]=NumberOfBoundaryDofs_++;
-        std::cerr << " found boundary dof " << globalIndex << std::endl;
+//        std::cerr << " found boundary dof " << globalIndex << std::endl;
       }
       isBoundaryDof_(globalIndex) = isBoundaryDof_(globalIndex) || localIsBoundary[i] ;
       isBoundaryValueDof_(globalIndex) = isBoundaryValueDof_(globalIndex) || localIsBoundaryValue[i] ;

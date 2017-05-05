@@ -270,6 +270,7 @@ public:
 
 	///write the current numerical solution to vtk file
 	virtual void plot(const std::string& filename) const;
+  virtual void plot(const std::string& filename, int no) const;
 	void plot(const VectorType& u, const std::string& filename) const;
 
 protected:
@@ -638,6 +639,10 @@ void MA_solver::test_projection(const F f, VectorType& v) const
        std::cerr << "f'(corner " << i << "=" << geometry.corner(i)[0] << " "
            << geometry.corner(i)[1] << ")  approx = " << jacApprox << std::endl;
 
+       auto x = geometry.corner(i);
+       std::cerr << " should be " << x[0]+4*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1])
+                 << ",  " << x[1]+4*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0]) << std::endl;
+
        std::vector<FieldMatrix<double, 2, 2>> HessianValues(lFE.size());
        Dune::FieldMatrix<double, 2, 2> HessApprox;
        assemble_hessians_hessu(lFE, geometry.jacobianInverseTransposed(xLocal), xLocal,HessianValues, localDofs.segment(0,lFE.size()), HessApprox);
@@ -677,6 +682,9 @@ void MA_solver::test_projection(const F f, VectorType& v) const
       std::cerr << "f'( "
           << x << ") = ?? "
           <<  "  approx = " << jacApprox << std::endl;
+      std::cerr << " should be " << x[0]+4*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1])
+                << ",  " << x[1]+4*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0]) << std::endl;
+
 
     }
 
@@ -694,7 +702,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
         VectorType localDofsn = assembler.calculate_local_coefficients(localIndexSetn, v);
 
-        std::cerr << "local dofs   " << localDofs.transpose() << std::endl << "local dofs n " << localDofsn.transpose() << std::endl;
+        std::cerr << "->local dofs   " << localDofs.transpose() << std::endl << "local dofs n " << localDofsn.transpose() << std::endl;
 
         //calculate normal derivative
         const FieldVector<double, Config::dim> normal =

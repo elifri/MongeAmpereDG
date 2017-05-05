@@ -169,7 +169,7 @@ public:
         std::cerr << "found negative determinant !!!!! " << uDH_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
         found_negative = true;
       }
-      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
+//      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
 //      std::cerr << "-log(u)-f=" << (-log(uDH_det)+(-log(scaling_factor_adolc*g_value)+log(scaling_factor_adolc*f_value))).value()<< std::endl;
 
       assert(PDE_rhs.value() > 0);
@@ -475,7 +475,7 @@ public:
 
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const { std::cerr << "did not found adolc"<< std::endl; std::exit(-1); }
+      VectorType& v, const int tag) const { std::cerr << "did not found adolc"<< std::endl; std::exit(-1); }
   template<class IntersectionType, class LocalView, class VectorType>
   void assemble_inner_face_term(const IntersectionType& intersection,
       const LocalView &localView, const VectorType &x,

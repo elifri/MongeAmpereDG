@@ -350,7 +350,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
     solve_nonlinear_system();
     iterations++;
-//    plot_with_mirror("numericalSolutionBeforeRef");
+    plot_with_mirror("numericalSolutionBeforeRef");
 
     adapt_solution();
 //    project([this](Solver_config::SpaceType x){return 1.0/this->exact_solution->evaluate(x);}, exactsol);

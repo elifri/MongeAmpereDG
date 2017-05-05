@@ -72,7 +72,6 @@ public:
     //init variables for automatic differentiation
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(size);
-    adouble scaling_factor_adolc, last_equation_adolc;
 
     for (int i = 0; i < size; i++)
       v_adolc[i] <<= v[i];
@@ -147,7 +146,7 @@ public:
 
       for (int j = 0; j < size; j++) // loop over test fcts
       {
-        v_adolc(j) += (scaling_factor_adolc*PDE_rhs-uDH_det)*
+        v_adolc(j) += (PDE_rhs-uDH_det)*
             (referenceFunctionValues[j])
 //            (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1])
             *quad[pt].weight() * integrationElement;

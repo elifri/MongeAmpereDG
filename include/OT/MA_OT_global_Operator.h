@@ -18,7 +18,7 @@ class MA_OT_Operator {
   typedef typename Solver::GridViewType GridView;
 
 public:
-  MA_OT_Operator():solver_ptr(NULL), lop_ptr(){}
+  MA_OT_Operator():solver_ptr(NULL), lop_ptr(), intermediateSolCounter(){}
   MA_OT_Operator(Solver& solver):solver_ptr(&solver),
       lop_ptr(new LOP(
           solver.gridView(),
@@ -28,7 +28,8 @@ public:
                 )),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
       lopLMBoundary(new Local_Operator_LagrangianBoundary(lop_ptr->get_bc())),
-      fixingPoint{0.3,0}
+      fixingPoint{0.3,0},
+      intermediateSolCounter()
   {
     std::cout << " solver n_dofs "<< solver.get_n_dofs() << std::endl;
 
@@ -294,12 +295,9 @@ public:
 
     //copy system
     v.head(tempV.size()) = tempV;
-    for (int i = tempV.size(); i < v.size(); i++) v(i) = 0; //tODO if comment is removed, this is not necessary
     //copy SparseMatrix todo move to EigenUtility
     std::vector< Eigen::Triplet<double> > tripletList;
     copy_to_new_sparse_matrix(tempM, m);
-    MATLAB_export(tempM, "tempM");
-    MATLAB_export(m, "m");
     std::cerr << " l(v) with norm " << tempV.norm() << std::endl;//<< " : " << tempV.transpose() << std::endl;
     //assemble part of first lagrangian multiplier for fixing midvalue
     const auto& assembler = this->solver_ptr->assembler;
@@ -340,7 +338,7 @@ public:
      }
     }
       */
-/*
+
 
     //-------------------select  mid value-------------------------
     assert(lagrangianFixingPointDiscreteOperator.size() == V_h_size);
@@ -375,8 +373,6 @@ public:
     assert(V_h_size+1+Q_h_size==m.rows());
     v.tail(Q_h_size) = tempV;
     std::cerr << " l_H(q) with norm " << tempV.norm() << std::endl;//" : " << tempV.transpose() << std::endl;
-*/
-
   }
 
   void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
@@ -397,16 +393,15 @@ public:
     prepare_fixing_point_term(x);
     assemble_with_Jacobian(x,v, m);
 
-    for (int i = 0; i < v.size(); i++)
-    {
-      std::cerr << "    i  " << i << " "<<  v(i) << std::endl;
-      assert ( ! (v(i) != v(i)));
-    }
+    for (int i = 0; i < v.size(); i++)  assert ( ! (v(i) != v(i)));
 
     //output
     auto end = std::chrono::steady_clock::now();
     std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
-    }
+
+    intermediateSolCounter++;
+//    solver_ptr->plot("intermediate", intermediateSolCounter);
+  }
 
   virtual void assemble(const Config::VectorType& x, Config::VectorType& v) const
   {
@@ -425,9 +420,6 @@ public:
     v.head(tempV.size()) = tempV;
     assert(lagrangianFixingPointDiscreteOperator.size() == V_h_size);
 
-    for (int i = tempV.size(); i < v.size(); i++) v(i) = 0; //tODO if comment is removed, this is not necessary
-
-/*
     int indexFixingGridEquation = V_h_size;
     auto lambda = x(indexFixingGridEquation);
 
@@ -435,15 +427,17 @@ public:
 //    std::cerr << " u_0 - u = " << assembler.u0AtX0() << '-'  <<-assembler.uAtX0() << "="<< v(indexFixingGridEquation) << std::endl;
 
     //assemble part of second lagrangian multiplier for fixing boundary
+    Config::MatrixType tempM(Q_h_size, V_h_size);
     tempV.setZero(Q_h_size);
-    //TODO change into rhs solver_ptr->assemblerLMCoarse_.assemble_Boundarymatrix(*lopLMBoundary, tempM, x, tempV);
+    //todo if used often write own assembler
+    solver_ptr->assemblerLMCoarse_.assemble_Boundarymatrix(*lopLMBoundary, tempM, x, tempV);
 
     assert(Q_h_size == tempV.size());
 
     //copy to system
     v.tail(Q_h_size) = tempV;
     std::cerr << " l_H(q) with norm " << tempV.norm() << std::endl;//" : " << tempV.transpose() << std::endl;
-*/
+
   }
 
   void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const
@@ -604,6 +598,8 @@ public:
 
 
   Config::VectorType lagrangianFixingPointDiscreteOperator;
+
+  mutable int intermediateSolCounter;
 
   };
 
