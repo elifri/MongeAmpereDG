@@ -58,8 +58,7 @@ public:
    */
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag, double &integralU, const double dummy,
-      LocalView& localViewDummy, const std::vector<double>& vectorDummy, std::vector<VectorType>& derUnificationterm) const  {
+      VectorType& v, const int tag) const  {
 
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
@@ -170,7 +169,7 @@ public:
         std::cerr << "found negative determinant !!!!! " << uDH_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
         found_negative = true;
       }
-//      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
+      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
 //      std::cerr << "-log(u)-f=" << (-log(uDH_det)+(-log(scaling_factor_adolc*g_value)+log(scaling_factor_adolc*f_value))).value()<< std::endl;
 
       assert(PDE_rhs.value() > 0);

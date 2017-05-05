@@ -54,8 +54,7 @@ public:
    */
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag, const double u_atX0, const double u0_atX0,
-      LocalView& localViewTemp, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const {
+      VectorType& v, const int tag) const {
 
     typedef typename LocalView::GridView GridView;
     typedef typename LocalView::size_type size_type;
@@ -207,33 +206,12 @@ public:
       for (int j = 0; j < size_u; j++) // loop over test fcts
       {
 //        v_adolc(j) += (PDE_rhs-uDH_det+u_atX0)*referenceFunctionValues[j]
-        v_adolc(j) += (u_atX0)*referenceFunctionValues[j]
-	          	* quad[pt].weight() * integrationElement;
-
-        //unification term
-//already added above        v_adolc(j) += u_atX0*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-
-        //derivative unification term
-        for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
-        {
-          const auto& fixingElement = fixingElementAndOffset.first;
-          int noDof_fixingElement = fixingElementAndOffset.second;
-
-          assert(noDof_fixingElement==0);
-
-          localViewTemp.bind(fixingElement);
-
-          for (unsigned int k = 0; k < localViewTemp.size(); k++)
-          {
-            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-            noDof_fixingElement++;
-          }
-        }
-      }
-
-
+        assert(false);
+//        v_adolc(j) += (u_atX0)*referenceFunctionValues[j]
+//	          	* quad[pt].weight() * integrationElement;
 
       //calculate system for second tensor functions
+      }
 
       for (int j = 0; j < size_u_DH; j++) // loop over test fcts
       {

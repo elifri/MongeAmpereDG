@@ -283,8 +283,6 @@ public:
     assert(m.rows()==this->solver_ptr->get_n_dofs());
     assert(m.cols()==this->solver_ptr->get_n_dofs());
 
-    prepare_fixing_point_term(x);
-
     //assemble MA PDE in temporary variables
 
     //todo jede Menge copy past
@@ -293,13 +291,16 @@ public:
     Config::VectorType tempV(V_h_size);
     solver_ptr->assemble_DG_Jacobian(get_lop(), tempX,tempV, tempM);
 
+
     //copy system
     v.head(tempV.size()) = tempV;
+    for (int i = tempV.size(); i < v.size(); i++) v(i) = 0; //tODO if comment is removed, this is not necessary
     //copy SparseMatrix todo move to EigenUtility
     std::vector< Eigen::Triplet<double> > tripletList;
     copy_to_new_sparse_matrix(tempM, m);
-
-
+    MATLAB_export(tempM, "tempM");
+    MATLAB_export(m, "m");
+    std::cerr << " l(v) with norm " << tempV.norm() << std::endl;//<< " : " << tempV.transpose() << std::endl;
     //assemble part of first lagrangian multiplier for fixing midvalue
     const auto& assembler = this->solver_ptr->assembler;
 
@@ -339,9 +340,12 @@ public:
      }
     }
       */
+/*
 
     //-------------------select  mid value-------------------------
     assert(lagrangianFixingPointDiscreteOperator.size() == V_h_size);
+
+    auto lambda = x(indexFixingGridEquation);
     //copy in system matrix
     for (unsigned int i = 0; i < lagrangianFixingPointDiscreteOperator.size(); i++)
     {
@@ -351,7 +355,8 @@ public:
     }
     //set rhs of langrangian multipler
     v(indexFixingGridEquation) = assembler.u0AtX0()-assembler.uAtX0();
-    std::cerr << " f " << v.transpose() << std::endl;
+    std::cerr << " u_0 - u = " << assembler.u0AtX0() << '-'  <<-assembler.uAtX0() << "="<< v(indexFixingGridEquation) << std::endl;
+
 
     //assemble part of second lagrangian multiplier for fixing boundary
     tempM.resize(Q_h_size, V_h_size);
@@ -362,13 +367,16 @@ public:
     assert(Q_h_size == tempV.size());
     assert(Q_h_size == tempM.rows());
 
-    MATLAB_export(tempM, "B_H");
+//    MATLAB_export(tempM, "B_H");
 
     //copy to system
     copy_to_sparse_matrix(tempM, m, V_h_size+1, 0);
     copy_sparse_to_sparse_matrix(tempM.transpose(), m, 0, V_h_size+1);
     assert(V_h_size+1+Q_h_size==m.rows());
     v.tail(Q_h_size) = tempV;
+    std::cerr << " l_H(q) with norm " << tempV.norm() << std::endl;//" : " << tempV.transpose() << std::endl;
+*/
+
   }
 
   void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
@@ -389,7 +397,11 @@ public:
     prepare_fixing_point_term(x);
     assemble_with_Jacobian(x,v, m);
 
-    for (int i = 0; i < v.size(); i++) assert ( ! (v(i) != v(i)));
+    for (int i = 0; i < v.size(); i++)
+    {
+      std::cerr << "    i  " << i << " "<<  v(i) << std::endl;
+      assert ( ! (v(i) != v(i)));
+    }
 
     //output
     auto end = std::chrono::steady_clock::now();
@@ -398,22 +410,40 @@ public:
 
   virtual void assemble(const Config::VectorType& x, Config::VectorType& v) const
   {
-    assert(x.size()==solver_ptr->get_n_dofs()+1);
-    assert(v.size()==solver_ptr->get_n_dofs()+1);
+    assert(x.size()==solver_ptr->get_n_dofs());
+    assert(v.size()==solver_ptr->get_n_dofs());
 
-    auto tempX = x.head(x.size()-1);
-    Config::VectorType tempV(v.size()-1);
+    int V_h_size = this->solver_ptr->get_n_dofs_V_h();
+    int Q_h_size = this->solver_ptr->get_n_dofs_Q_h();
+
+    auto tempX = x.head(V_h_size);
+    Config::VectorType tempV(V_h_size);
 
     solver_ptr->assemble_DG(get_lop(), tempX,tempV);
     const auto& assembler = solver_ptr->assembler;
 
     v.head(tempV.size()) = tempV;
-    //get fixingElement
-//    assert(this->get_lop().EntititiesForUnifikationTerm().size()==1);
+    assert(lagrangianFixingPointDiscreteOperator.size() == V_h_size);
 
-    //    v(v.size()-1) = assembler.uAtX0()-assembler.u0AtX0();
-//    v(v.size()-1) = assembler.uAtX0();
-    v(v.size()-1) = 0;
+    for (int i = tempV.size(); i < v.size(); i++) v(i) = 0; //tODO if comment is removed, this is not necessary
+
+/*
+    int indexFixingGridEquation = V_h_size;
+    auto lambda = x(indexFixingGridEquation);
+
+    v(indexFixingGridEquation) = assembler.u0AtX0()-assembler.uAtX0();
+//    std::cerr << " u_0 - u = " << assembler.u0AtX0() << '-'  <<-assembler.uAtX0() << "="<< v(indexFixingGridEquation) << std::endl;
+
+    //assemble part of second lagrangian multiplier for fixing boundary
+    tempV.setZero(Q_h_size);
+    //TODO change into rhs solver_ptr->assemblerLMCoarse_.assemble_Boundarymatrix(*lopLMBoundary, tempM, x, tempV);
+
+    assert(Q_h_size == tempV.size());
+
+    //copy to system
+    v.tail(Q_h_size) = tempV;
+    std::cerr << " l_H(q) with norm " << tempV.norm() << std::endl;//" : " << tempV.transpose() << std::endl;
+*/
   }
 
   void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const

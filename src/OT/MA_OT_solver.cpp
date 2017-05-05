@@ -115,6 +115,10 @@ void MA_OT_solver::create_initial_guess()
                           solution);
   }
 //  this->test_projection([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);}, solution);
+  Config::ValueType res = 0;
+
+  assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), solution, res);
+  assembler.set_u0AtX0(res);
 }
 
 
@@ -140,6 +144,7 @@ void MA_OT_solver::solve_nonlinear_system()
 #ifdef USE_DOGLEG
 
   doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
+//  newtonMethod(op, doglegOpts_.maxsteps, doglegOpts_.stopcriteria[0], 0.5, solution, evaluateJacobianSimultaneously_);
 
 #endif
 #ifdef USE_PETSC

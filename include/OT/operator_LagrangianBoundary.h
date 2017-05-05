@@ -61,7 +61,7 @@ public:
       auto x_value = intersection.inside().geometry().global(quadPosV);
 
       const FieldVector<double, dim> &quadPosQ = intersection.inside().geometryInFather().global(quadPosV);
-      std::cerr << "local Coordinate " << quadPosV << " was evaluated in father to " << quadPosQ << std::endl;
+//      std::cerr << "local Coordinate " << quadPosV << " was evaluated in father to " << quadPosQ << std::endl;
 
       // The transposed inverse Jacobian of the map from the reference element to the element
       const auto& jacobianV =
@@ -95,11 +95,11 @@ public:
       FieldVector<double, dimw> normalOld;
       cofHessu.mv(normal, normalOld);
 
-      std::cerr << " normal old " << normalOld << std::endl;
+//      std::cerr << " normal old " << normalOld << std::endl;
 
       //-------calculate integral--------
       auto signedDistance = bc.H(gradu, normal);
-      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
+//      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
