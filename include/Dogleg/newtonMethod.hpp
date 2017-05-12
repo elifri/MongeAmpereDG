@@ -67,6 +67,7 @@ void newtonMethod(
         if (lu_of_Df.info()!=0) {
             // decomposition failed
             std::cerr << "\nError: Could not compute LU decomposition of Df(x)!\n";
+            MATLAB_export(Df,"J");
             exit(1);
         }
 

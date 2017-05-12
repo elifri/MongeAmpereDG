@@ -112,7 +112,7 @@ void MA_OT_solver::create_initial_guess()
   }
   else
   {
-  //  project([](Config::SpaceType x){return x.two_norm2()/2.0;},
+//    project([](Config::SpaceType x){return x.two_norm2()/2.0;},
       project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
   //  project_labouriousC1([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
   //                        [](Config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},
@@ -120,10 +120,12 @@ void MA_OT_solver::create_initial_guess()
                           solution);
   }
 //  this->test_projection([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);}, solution);
+
+
   Config::ValueType res = 0;
 
   assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), solution, res);
-  assembler.set_u0AtX0(res);
+  assembler_.set_u0AtX0(res);
 }
 
 
@@ -148,8 +150,8 @@ void MA_OT_solver::solve_nonlinear_system()
 
 #ifdef USE_DOGLEG
 
-  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
-//  newtonMethod(op, doglegOpts_.maxsteps, doglegOpts_.stopcriteria[0], 0.5, solution, evaluateJacobianSimultaneously_);
+//  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
+  newtonMethod(op, doglegOpts_.maxsteps, doglegOpts_.stopcriteria[0], 0.5, solution, evaluateJacobianSimultaneously_);
 
 #endif
 #ifdef USE_PETSC
@@ -176,13 +178,18 @@ void MA_OT_solver::solve_nonlinear_system()
 
   }
 
+void MA_OT_solver::adapt_operator()
+{
+  op.adapt();
+}
+
 void MA_OT_solver::adapt_solution(const int level)
 {
   //adapt febasis and solution
   FEBasisHandler_.adapt(*this, level, solution);
 
   //bind assembler to new context
-  assembler.bind(FEBasisHandler_.uBasis());
+  assembler_.bind(FEBasisHandler_.uBasis());
   assemblerLM1D_.bind(FEBasisHandler_.uBasis());
 
   //adapt boundary febasis and bind to assembler
@@ -197,8 +204,5 @@ void MA_OT_solver::adapt_solution(const int level)
   {
     solution(i) = 0;
   }
-
-
-  std::cerr << " adapting operator " << std::endl;
-  op.adapt();
+  this->adapt_operator();
 }

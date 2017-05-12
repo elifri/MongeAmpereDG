@@ -244,8 +244,10 @@ const typename MA_solver::VectorType& MA_solver::solve()
     }
     plot("numericalSolutionBeforeRef");
 
+    std::cout << " adapting ...";
     if (i < SolverConfig::nonlinear_steps-1)
       adapt_solution();
+    std::cout << " ... done " << std::endl;
 
     update_solution(solution);
     plot("numericalSolution");

@@ -38,9 +38,10 @@ public:
   MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting);
 private:
   ///creates the initial guess
-  void create_initial_guess();
+  virtual void create_initial_guess();
 //  void update_Operator();
-  void solve_nonlinear_system();
+  virtual void solve_nonlinear_system();
+  virtual void adapt_operator();
 
 public:
   virtual int get_n_dofs_V_h() const{return FEBasisHandler_.FEBasis().indexSet().size();}
@@ -54,7 +55,6 @@ public:
 
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
   virtual void plot(const std::string& filename) const;
-private:
   virtual void plot(const std::string& filename, int no) const;
 public:
 
@@ -63,10 +63,13 @@ public:
   GeometrySetting& get_setting() {return setting_;}
   const GeometrySetting& get_setting() const {return setting_;}
 
+  const AssemblerLagrangianMultiplier1D& get_assembler_lagrangian_midvalue() const { return assemblerLM1D_;}
+  const AssemblerLagrangianMultiplierCoarse& get_assembler_lagrangian_boundary() const { return assemblerLMCoarse_;}
+
   template<typename FGrad>
   Config::ValueType calculate_L2_errorOT(const FGrad &f) const;
 
-private:
+protected:
   GeometrySetting& setting_;
 
   ///FEBasis for Lagrangian Multiplier for Boundary
@@ -92,6 +95,7 @@ private:
   OperatorType op;
 
   friend OperatorType;
+  virtual OperatorType& get_operator(){ return op;}
 };
 
 template<class F>

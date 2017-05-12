@@ -86,12 +86,12 @@ public:
       plotterRefinement_(config.refinement),
       grid_ptr(grid), gridView_ptr(&gridView),
       FEBasisHandler_(*this, *gridView_ptr),
-      assembler(FEBasisHandler_.FEBasis()),
+      assembler_(FEBasisHandler_.FEBasis()),
       plotter(gridView),
       op(*this),
       solution_u_old(), gradient_u_old()
 	{
-    std::cout << "constructor n dofs" << get_n_dofs() << std::endl;
+    std::cout << "constructor n dofs " << get_n_dofs() << std::endl;
 #ifdef USE_DOGLEG
     doglegOpts_.maxsteps = maxSteps_;
 #endif
@@ -100,10 +100,10 @@ public:
 	  plotter.set_geometrySetting(get_setting());
 
 	  grid_ptr->globalRefine(SolverConfig::startlevel);
-    std::cout << "constructor n dofs" << get_n_dofs() << std::endl;
+    std::cout << "refined grid to startlevel " << SolverConfig::startlevel << " constructor n dofs " << get_n_dofs() << std::endl;
 
     FEBasisHandler_.bind(*this, *gridView_ptr);
-	  assembler.bind(FEBasisHandler_.FEBasis());
+	  assembler_.bind(FEBasisHandler_.FEBasis());
 
 	  plotter.set_output_directory(plotOutputDirectory_);
 	  plotter.set_output_prefix(outputPrefix_);
@@ -113,7 +113,7 @@ public:
     plotter.add_plot_stream("l2projError", plotOutputDirectory_+"/Data/"+outputPrefix_+"l2projError"); //write L2 error to projection in this file
 	  count_refined = SolverConfig::startlevel;
 
-    std::cout << "constructor n dofs" << get_n_dofs() << std::endl;
+    std::cout << "adapted basis to refined grid: constructor n dofs " << get_n_dofs() << std::endl;
 
 	}
 
@@ -208,21 +208,21 @@ public:
 	void assemble_DG(const LocalOperatorType &lop, const VectorType& x,
 			VectorType& v) const {
 		assert (initialised);
-		assembler.assemble_DG(lop, x, v);
+		assembler_.assemble_DG(lop, x, v);
 	}
 
 	///assembles the (global) Jacobian of the FE function as specified in LOP
 	template<typename LocalOperatorType>
 	void assemble_Jacobian_DG(const LocalOperatorType &LOP, const VectorType& x, MatrixType& m) const {
 		assert (initialised);
-		assembler.assemble_Jacobian_DG(LOP, x, m);
+		assembler_.assemble_Jacobian_DG(LOP, x, m);
 	}
 
   ///assembles the (global) Jacobian of the FE function as specified in LOP
   template<typename LocalOperatorType>
   void assemble_DG_Jacobian(const LocalOperatorType &LOP, const VectorType& x, VectorType& v, MatrixType& m) const {
     assert (initialised);
-    assembler.assemble_DG_Jacobian(LOP, x, v, m);
+    assembler_.assemble_DG_Jacobian(LOP, x, v, m);
   }
 
 	/**
@@ -312,6 +312,14 @@ public:
 	virtual GeometrySetting& get_setting() {return setting_;}
   virtual const GeometrySetting& get_setting() const {return setting_;}
 
+  const Assembler& get_assembler() const { return assembler_;}
+  Assembler& get_assembler() { return assembler_;}
+
+  const std::string& get_output_directory() const{ return outputDirectory_;}
+  const std::string& get_plot_output_directory() const{ return plotOutputDirectory_;}
+  const std::string& get_output_prefix() const{ return outputPrefix_;}
+
+  shared_ptr<DiscreteLocalGradientGridFunction>& get_gradient_u_old_ptr() {return gradient_u_old;}
 
   int get_plotRefinement() {return plotterRefinement_;}
 
@@ -347,7 +355,7 @@ protected:
 
 	FEBasisHandler<FETraits::Type, FETraits> FEBasisHandler_;
 
-	Assembler assembler; ///handles all (integral) assembly processes
+	Assembler assembler_; ///handles all (integral) assembly processes
 	Plotter plotter; ///handles all output generation
 
   double G; /// fixes the reflector size
@@ -611,7 +619,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
     const auto& geometry = element.geometry();
 
-    VectorType localDofs = assembler.calculate_local_coefficients(localIndexSet, v);
+    VectorType localDofs = assembler_.calculate_local_coefficients(localIndexSet, v);
 
 //    std::cerr << "local dofs " << localDofs.transpose() << std::endl;
 
@@ -700,7 +708,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
         localIndexSetn.bind(localViewn);
         const auto & lFEn = FETraits::get_finiteElementu(localViewn);
 
-        VectorType localDofsn = assembler.calculate_local_coefficients(localIndexSetn, v);
+        VectorType localDofsn = assembler_.calculate_local_coefficients(localIndexSetn, v);
 
         std::cerr << "->local dofs   " << localDofs.transpose() << std::endl << "local dofs n " << localDofsn.transpose() << std::endl;
 

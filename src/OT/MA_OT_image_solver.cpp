@@ -25,7 +25,7 @@
 using namespace std;
 
 MA_OT_image_solver::MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting)
- :MA_OT_solver(grid, gridView, config, opticalSetting), setting_(opticalSetting), op(*this)
+ :MA_OT_solver(grid, gridView, config, opticalSetting), setting_(opticalSetting), op_image(*this)
 {
    //adjust light intensity
 /*
@@ -33,7 +33,7 @@ MA_OT_image_solver::MA_OT_image_solver(const shared_ptr<GridType>& grid, GridVie
    const auto integralLightIn = op.lop_ptr->get_input_distribution().integrateOriginal();
    setting_.povRayOpts.lightSourceColor = Eigen::Vector3d::Constant(integralLightOut/integralLightIn*setting_.lightSourceIntensity);
 */
-  assembler.set_X0(opticalSetting.lowerLeft);
+  assembler_.set_X0(opticalSetting.lowerLeft);
 
 
    plotter.set_PovRayOptions(setting_.povRayOpts);
@@ -303,11 +303,11 @@ void MA_OT_image_solver::one_Poisson_Step()
 
   Integrator<Config::GridType> integrator(grid_ptr);
   auto k = 1.0;
-  auto rhs = [&](Config::SpaceType x){return -k*std::sqrt(op.f_(x)/op.g_(x-x0));};
+  auto rhs = [&](Config::SpaceType x){return -k*std::sqrt(op_image.f_(x)/op_image.g_(x-x0));};
 #ifdef C1Element
-  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return ((x-x0)*normal)-op.lopLinear_ptr->bc.H(x-x0, normal);};
+  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return ((x-x0)*normal)-op_image.lopLinear_ptr->bc.H(x-x0, normal);};
 #else
-  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return ((x-x0)*normal)-op.lop_ptr->bc.H(x-x0, normal);};
+  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return ((x-x0)*normal)-op_image.lop_ptr->bc.H(x-x0, normal);};
 #endif
 
   ///---Code with known solution
@@ -325,49 +325,18 @@ void MA_OT_image_solver::one_Poisson_Step()
   std::cout << " difference " << std::abs(integrator.assemble_boundary_integral(bc)+integrator.assemble_integral(rhs)) << std::endl;
   assert(std::abs(integrator.assemble_boundary_integral(bc)+integrator.assemble_integral(rhs)) < 1e-4);
 
+  assert(false); //lagrangian needs to be added
   //assemble linear poisson equation
-  Linear_System_Local_Operator_Poisson_NeumannBC<decltype(rhs), decltype(bc)> Poisson_op(gridView(),rhs, bc);
+  Linear_System_Local_Operator_Poisson_NeumannBC<decltype(rhs), decltype(bc)> Poisson_op(rhs, bc);
 
 
   ///-------------Code copied from MA_Operator to be reviewed, init data for fixing point
-  auto fixingPoint = op.fixingPoint;
-
-  //select fixing point
-  HierarchicSearch<GridViewType::Grid, GridViewType::IndexSet> hs(*grid_ptr, gridView().indexSet());
-
-//      const FieldVector<double, 2> findCell = {0.,0.};
-  Config::Entity fixingElement = hs.findEntity(fixingPoint);
-
-  auto localView = FEBasisHandler_.uBasis().localView();
-  localView.bind(fixingElement);
-
-  Poisson_op.insert_entitity_for_unifikation_term(fixingElement, localView.size());
-
-  std::vector<Config::ValueType> entryWx0(localView.size());
-  for (unsigned int i = 0; i < localView.size(); i++)
-    entryWx0[i] = 0;
-
-  const auto& lfu = localView.tree().finiteElement();
-
-  //assemble values at fixing point
-  int noDof_fixingElement = 0;
-  std::vector<FieldVector<Config::ValueType,1>> values(localView.size());
-  lfu.localBasis().evaluateFunction(fixingElement.geometry().local(fixingPoint), values);
-
-  for (unsigned int i = 0; i < localView.size(); i++)
-  {
-    entryWx0[noDof_fixingElement] += values[i][0];
-    noDof_fixingElement++;
-  }
-  assembler.set_entryWx0(entryWx0);
-
+  //assert(false);
   ///------
-
-
 
   Config::MatrixType m;
   Config::VectorType v;
-  assembler.assemble_DG_Jacobian(Poisson_op, Poisson_op, solution, v, m);
+  assembler_.assemble_DG_Jacobian(Poisson_op, Poisson_op, solution, v, m);
 
   //solve linear equation
   m.makeCompressed();
@@ -398,62 +367,14 @@ void MA_OT_image_solver::create_initial_guess()
   //                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
                           solution);
 
-
-
-
-  /*
-    solution.resize(get_n_dofs());
-    for (int i = 0; i < get_n_dofs(); i++)
-      solution[i] = i % 10;
-  */
-    one_Poisson_Step();
+    //TODO reanimiate Poisson step
+//    one_Poisson_Step();
   }
-
-  //------------determine init mid value------------------
-/*
-  auto localView = FEBasisHandler_.uBasis().localView();
-  auto localIndexSet = FEBasisHandler_.uBasis().indexSet().localIndexSet();
-
   Config::ValueType res = 0;
 
-  for (const auto& fixingElementAndOffset : op.lopLinear_ptr->EntititiesForUnifikationTerm())
-  {
-    const auto& fixingElementDescendant = fixingElementAndOffset.first;
-    int noDof_fixingElement_offset = fixingElementAndOffset.second;
-
-    localView.bind(fixingElementDescendant);
-    localIndexSet.bind(localView);
-    const auto& lfu = localView.tree().finiteElement();
-
-    //get local assignment of dofs
-    Config::VectorType localXValues = Assembler::calculate_local_coefficients(localIndexSet, solution);
-
-    //collect quadrature rule
-    int order = std::max(0, 3 * ((int) lfu.localBasis().order()));;
-    const QuadratureRule<double, Config::dim>& quadRule = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(fixingElementDescendant, order);
-
-    for (const auto& quad : quadRule) {
-      auto quadPos = quad.position();
-
-      std::vector<FieldVector<Config::ValueType,1>> values(localView.size());
-      lfu.localBasis().evaluateFunction(quadPos, values);
-
-      int noDof_fixingElement = noDof_fixingElement_offset;
-
-      for (unsigned int i = 0; i < localView.size(); i++)
-      {
-        res += (localXValues[i]*values[i])* quad.weight()*fixingElementDescendant.geometry().integrationElement(quadPos);
-        noDof_fixingElement++;
-      }
-    }
-  }
-  res /= assembler.volumeMidU();
-*/
-
-  DiscreteGridFunction solution_u_global(FEBasisHandler_.uBasis(),solution);
-  auto res = solution_u_global(op.fixingPoint);
-
-  assembler.set_u0AtX0(res);
+  assemblerLM1D_.assembleRhs(*(op_image.lopLMMidvalue), solution, res);
+  assembler_.set_u0AtX0(res);
+  std::cerr << " setting start midvalue " << res << std::endl;
 }
 
 
@@ -607,32 +528,25 @@ void MA_OT_image_solver::plot(const std::string& name) const
 
 }
 
-void MA_OT_image_solver::adapt_solution(const int level)
-{
-  FEBasisHandler_.adapt(*this, level, solution);
-  std::cerr << " adapting operator " << std::endl;
-  op.adapt();
-}
-
 void MA_OT_image_solver::update_Operator()
 {
   if (iterations== 0)
   {
-    op.f_.normalize();
-    op.g_.normalize();
+    op_image.f_.normalize();
+    op_image.g_.normalize();
   }
 
   //blurr target distributation
   std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
-  op.g_.convolveOriginal(epsMollifier_);
-  op.g_.normalize();
+  op_image.g_.convolveOriginal(epsMollifier_);
+  op_image.g_.normalize();
 
   //print blurred target distribution
   if (true) {
       ostringstream filename2; filename2 << plotOutputDirectory_+"/lightOut" << iterations << ".bmp";
       std::cout << "saved image to " << filename2.str() << std::endl;
-      op.g_.saveImage (filename2.str());
-      assert(std::abs(op.g_.integrate2()) - 1 < 1e-10);
+      op_image.g_.saveImage (filename2.str());
+      assert(std::abs(op_image.g_.integrate2()) - 1 < 1e-10);
   }
   epsMollifier_ /= epsDivide_;
 }
@@ -650,14 +564,15 @@ void MA_OT_image_solver::solve_nonlinear_system()
   Config::VectorType newSolution = solution;
 #ifdef USE_DOGLEG
 
-  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
+//  doglegMethod(op_image, doglegOpts_, solution, evaluateJacobianSimultaneously_);
+  newtonMethod(op_image, doglegOpts_.maxsteps, doglegOpts_.stopcriteria[0], 0.5, solution, evaluateJacobianSimultaneously_);
 
 #endif
 #ifdef USE_PETSC
   igpm::processtimer timer;
   timer.start();
 
-  PETSC_SNES_Wrapper<MA_OT_solver::Operator>::op = op;
+  PETSC_SNES_Wrapper<MA_OT_solver::Operator>::op = op_image;
 
   PETSC_SNES_Wrapper<MA_OT_solver::Operator> snes;
 
@@ -670,3 +585,8 @@ void MA_OT_image_solver::solve_nonlinear_system()
 #endif
 
   }
+
+void MA_OT_image_solver::adapt_operator()
+{
+  op_image.adapt();
+}

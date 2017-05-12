@@ -17,14 +17,14 @@
 
 using namespace Dune;
 
-class Local_Operator_MA_OT {
+class Local_Operator_MA_OT_Brenner {
 
 public:
   typedef DensityFunction Function;
 
   template<typename GridView>
-  Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY, const GridView& gridView):
-    hash(gridView), EntititiesForUnifikationTerm_(10,hash), rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false){
+  Local_Operator_MA_OT_Brenner(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
+    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false){
   }
 
   /**
@@ -38,6 +38,8 @@ public:
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
       VectorType& v, const int tag, const double u_atX0, const double u0_atX0,
       LocalView& localViewTemp, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const {
+
+    assert(false); // not up to date code?
 
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
@@ -154,21 +156,6 @@ public:
 
         v_adolc(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         assert(! (v_adolc(j).value()!=v_adolc(j).value()));
-
-        //derivative unification term
-        for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
-        {
-          const auto& fixingElement = fixingElementAndOffset.first;
-          int noDof_fixingElement = fixingElementAndOffset.second;
-
-          localViewTemp.bind(fixingElement);
-
-          for (unsigned int k = 0; k < localViewTemp.size(); k++)
-          {
-            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-            noDof_fixingElement++;
-          }
-        }
 
       }
     }
@@ -524,60 +511,8 @@ public:
     trace_off();
   }
 
-  int insert_entitity_for_unifikation_term(const Config::Entity element, int size)
-  {
-    auto search = EntititiesForUnifikationTerm_.find(element);
-    if (search == EntititiesForUnifikationTerm_.end())
-    {
-      const int newOffset = size*EntititiesForUnifikationTerm_.size();
-      EntititiesForUnifikationTerm_[element] = newOffset;
-
-      const auto& geometry = element.geometry();
-
-      return newOffset;
-    }
-    return EntititiesForUnifikationTerm_[element];
-  }
-
-  void insert_descendant_entities(const Config::GridType& grid, const Config::Entity element)
-  {
-    const auto& geometry = element.geometry();
-
-    auto search = EntititiesForUnifikationTerm_.find(element);
-    int size = search->second;
-    assert(search != EntititiesForUnifikationTerm_.end());
-    for (const auto& e : descendantElements(element,grid.maxLevel() ))
-    {
-      insert_entitity_for_unifikation_term(e, size);
-    }
-    EntititiesForUnifikationTerm_.erase(search);
-
-  }
-
-  const Config::EntityMap& EntititiesForUnifikationTerm() const
-  {
-    return EntititiesForUnifikationTerm_;
-  }
-
-
-  int get_offset_of_entity_for_unifikation_term(Config::Entity element) const
-  {
-    return EntititiesForUnifikationTerm_.at(element);
-  }
-  int get_number_of_entities_for_unifikation_term() const
-  {
-    return EntititiesForUnifikationTerm_.size();
-  }
-
-  void clear_entitities_for_unifikation_term()
-  {
-    EntititiesForUnifikationTerm_.clear();
-  }
-
   const OTBoundary& get_bc() {return bc;}
 private:
-  Config::EntityCompare hash;
-  Config::EntityMap EntititiesForUnifikationTerm_;
 
   const Function& rhoX;
   const Function& rhoY;

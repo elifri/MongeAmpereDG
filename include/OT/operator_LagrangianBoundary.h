@@ -58,7 +58,7 @@ public:
       // Position of the current quadrature point in the reference element
       const FieldVector<double, dim> &quadPosV =
           intersection.geometryInInside().global(quad[pt].position());
-      auto x_value = intersection.inside().geometry().global(quadPosV);
+//      auto x_value = intersection.inside().geometry().global(quadPosV);
 
       const FieldVector<double, dim> &quadPosQ = intersection.inside().geometryInFather().global(quadPosV);
 //      std::cerr << "local Coordinate " << quadPosV << " was evaluated in father to " << quadPosQ << std::endl;

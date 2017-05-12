@@ -1974,7 +1974,6 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
     auto localViewFixingElement = basis_->localView();
     auto localViewn = basis_->localView();
     auto localIndexSet = basis_->indexSet().localIndexSet();
-    auto localIndexSetFixingElement = basis_->indexSet().localIndexSet();
     auto localIndexSetn = basis_->indexSet().localIndexSet();
 
 //    lop.found_negative = false;
@@ -2002,40 +2001,6 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
         //calculate local coefficients
         Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
 //        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, v_isBoundary);
-
-        //additional vector for unification term
-        std::vector<Config::VectorType> entryWx0timesBgradV (lopJacobian.get_number_of_entities_for_unifikation_term()*localView.size());
-        for (unsigned int i = 0; i < entryWx0timesBgradV.size(); i++)
-          entryWx0timesBgradV[i].setZero(localView.size());    // Set all entries to zero
-//        std::cerr << " is local boundaryDof" << isBoundaryLocal.transpose() << std::endl;
-
-//        lop.assemble_cell_term(localView, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
-        lopJacobian.assemble_cell_term(localView, xLocal, local_vector, local_midvalue, m_m,
-            uAtX0_, u0AtX0_, localViewFixingElement, entryWx0_, entryWx0timesBgradV);
-
-        //write derivatives of unification term into vector
-
-        for (const auto& fixingElementandOffset : lopJacobian.EntititiesForUnifikationTerm())
-        {
-          const auto& fixingElement = fixingElementandOffset.first;
-          int no_fixingElement_offset =fixingElementandOffset.second;
-
-          localViewFixingElement.bind(fixingElement);
-          localIndexSetFixingElement.bind(localViewFixingElement);
-
-          for (unsigned int i = 0; i < localView.size(); i++)
-          {
-            for (unsigned int j = 0; j < localViewFixingElement.size(); j++)
-            {
-              JacobianEntries.push_back(
-                  EntryType(FETraits::get_index(localIndexSet, i),
-                            FETraits::get_index(localIndexSetFixingElement, j),
-                            entryWx0timesBgradV[no_fixingElement_offset+j](i)));
-            }
-          }
-        }
-
-
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {

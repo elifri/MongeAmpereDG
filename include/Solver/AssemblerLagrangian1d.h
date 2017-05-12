@@ -56,7 +56,7 @@ public:
 
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      Config::ValueType& v) const
+      Config::ValueType& v, Config::ValueType& volume) const
   {
     assert((unsigned int) x.size() == localView.size());
 
@@ -76,7 +76,6 @@ public:
         3 * ((int) localFiniteElement.localBasis().order()));
     const QuadratureRule<double, Config::dim>& quadRule = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(element, order);
 
-    Config::ValueType resE = 0;
     for (const auto& quad : quadRule)
     {
       //the shape function values
@@ -87,11 +86,10 @@ public:
 
       const auto integrationElement = element.geometry().integrationElement(quad.position());
 
-      resE += u_value*quad.weight()*integrationElement;;
+      v += u_value*quad.weight()*integrationElement;
     }
     //divide by element volume
-    resE /= element.geometry().volume();
-    v += resE;
+    volume += element.geometry().volume();
   }
 };
 
@@ -143,6 +141,9 @@ void AssemblerLagrangianMultiplier1D::assembleRhs(const LocalOperatorType &lop,c
   auto localView = basis_.localView();
   auto localIndexSet = basis_.indexSet().localIndexSet();
 
+  v=0;
+  Config::ValueType volume = 0;
+
   // A loop over all elements of the grid
   for (auto&& e : elements(basis_.gridView())) {
     // Bind the local FE basis view to the current element
@@ -151,11 +152,9 @@ void AssemblerLagrangianMultiplier1D::assembleRhs(const LocalOperatorType &lop,c
 
     Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
 
-    //get zero matrix to store local matrix
-    Config::VectorType local_vector(localView.size());
-
-    lop.assemble_cell_term(localView, xLocal, v);
+    lop.assemble_cell_term(localView, xLocal, v, volume);
   }
+  v/=volume;
 }
 
 #endif /* ASSEMBLERLAGRANGIAN1d_H_ */

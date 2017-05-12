@@ -110,7 +110,7 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solv
   std::cout << " grid febasis " << solution_u_Coarse_global.basis().nodeFactory().gridView().size(2) << std::endl;
 
   FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(*solver.gridView_ptr));
-  solver.assembler.bind(*FEBasis_);
+  solver.get_assembler().bind(*FEBasis_);
 
   project(solution_u_Coarse_global, gradient_u_Coarse_global, v);
 
@@ -150,7 +150,7 @@ void FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, SolverConfig::d
 
   //update member
   FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(*solver.gridView_ptr));
-  solver.assembler.bind(*FEBasis_);
+  solver.get_assembler().bind(*FEBasis_);
 
   typedef LagrangeC0Traits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
   FEBasisCoarseType FEBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
@@ -193,7 +193,7 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
       solver.get_setting().lowerLeft, solver.get_setting().upperRight,
       elementsSplines, SolverConfig::degree));
 
-  solver.assembler.bind(*FEBasis_);
+  solver.get_assembler().bind(*FEBasis_);
 
   const auto levelGridView = solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1);
 
@@ -216,7 +216,7 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
 
   project(solution_u_Coarse_global, v);
 
-#ifdef NDEBUG
+#ifdef DEBUG
   solver.test_projection(solution_u_Coarse_global, v);
 #endif
 
@@ -332,7 +332,7 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
   FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(*solver.gridView_ptr));
   uBasis_ = std::shared_ptr<FEuBasisType> (new FEuBasisType(*solver.gridView_ptr));
   uDHBasis_ = std::shared_ptr<FEuDHBasisType> (new FEuDHBasisType(*solver.gridView_ptr));
-  solver.assembler.bind(*FEBasis_);
+  solver.get_assembler().bind(*FEBasis_);
 
   //we need do store the old basis as the (father) finite element depends on the basis
   typedef MixedTraits<Config::LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>::FEBasis FEBasisCoarseType;
@@ -561,7 +561,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(levelGridView));
 
   //init vector
-  Config::VectorType v = Config::VectorType::Zero(FEBasisCoarse->indexSet().size() + 1);
+  Config::VectorType v = Config::VectorType::Zero(FEBasisCoarse->indexSet().size());
 
   auto localViewCoarse = FEBasisCoarse->localView();
   auto localIndexSetCoarse = FEBasisCoarse->indexSet().localIndexSet();
@@ -653,8 +653,6 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
         v(localIndexSetCoarse.index(i)[0]) = localDofs[i];
     }
 
-  //set scaling factor (last dof) to ensure mass conservation
-  v(v.size()-1) = solver.solution(solver.solution.size()-1);
 
   return v;
 }
@@ -685,7 +683,6 @@ Config::VectorType FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, S
   //project
   HandlerCoarse.project(numericalSolution, v);
 
-  v(v.size()-1) = solver.solution(solver.solution.size()-1);
 
   return v;
 }
@@ -714,8 +711,6 @@ Config::VectorType FEBasisHandler<Standard, BSplineTraits<Config::GridView, Solv
 
   //project
   HandlerCoarse.project(numericalSolution, v);
-
-  v(v.size()-1) = solver.solution(solver.solution.size()-1);
 
   return v;
 }

@@ -8,7 +8,7 @@
 #ifndef SRC_MA_OT_IMAGE_SOLVER_H_
 #define SRC_MA_OT_IMAGE_SOLVER_H_
 
-#include <OT/MA_OT_global_image_Operator.h>
+#include "OT/MA_OT_global_image_Operator.h"
 #include "ImageFunction.hpp"
 
 #include "OT/MA_OT_solver.h"
@@ -25,6 +25,8 @@ class MA_OT_image_solver : public MA_OT_solver
 public:
 #ifdef C1Element
   typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
+#else
+  typedef MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT> OperatorType;
 #endif
 
   MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView,
@@ -42,20 +44,16 @@ private:
   void plot(const std::string& filename) const;
   using MA_OT_solver::plot;
 
-  void adapt_solution(const int level);
+  void adapt_operator();
+  using MA_OT_solver::adapt_solution;
 
   void update_Operator();
   void solve_nonlinear_system();
 
   OpticalSetting& setting_;
 
-#ifndef C1Element
-  MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT> op;
-  friend MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT>;
-#else
-  OperatorType op;
-  friend MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation>;
-#endif
+
+  OperatorType op_image;
 
 };
 
