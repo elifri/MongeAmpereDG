@@ -167,12 +167,11 @@ public:
     void Jacobian(const Config::VectorType& x,  Config::MatrixType& m) const
     {
       assert(solver_ptr != NULL);
-      solver_ptr->assemble_Jacobian_DG(lop, x,m);
+      solver_ptr->assemble_DG_Jacobian_only(lop, x,m);
     }
     void derivative(const Config::VectorType& x,  Config::MatrixType& m) const
     {
-      assert(solver_ptr != NULL);
-      solver_ptr->assemble_Jacobian_DG(lop, x,m);
+      Jacobian(x,m);
     }
 
     void adapt() const{}
@@ -213,9 +212,9 @@ public:
 
 	///assembles the (global) Jacobian of the FE function as specified in LOP
 	template<typename LocalOperatorType>
-	void assemble_Jacobian_DG(const LocalOperatorType &LOP, const VectorType& x, MatrixType& m) const {
+	void assemble_DG_Jacobian_only(const LocalOperatorType &LOP, const VectorType& x, MatrixType& m) const {
 		assert (initialised);
-		assembler_.assemble_Jacobian_DG(LOP, x, m);
+		assembler_.assemble_DG_Jacobian_only(LOP, x, m);
 	}
 
   ///assembles the (global) Jacobian of the FE function as specified in LOP

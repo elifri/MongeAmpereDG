@@ -13,6 +13,7 @@
 
 #include "MAconfig.h"
 
+#include "localfunctions/lagrange/pqkboundary2dnodalbasis.hpp"
 #include "localfunctions/lagrange/pqktracenodalbasis.hh"
 //#include "localfunctions/MAmixedbasis.hh"
 #include "localfunctions/MAmixed/MAmixedbasisC0.hh"
@@ -187,6 +188,7 @@ template <typename GridView, int degree>
 using LagrangeC0Traits = FETraits<Functions::PQkNodalBasis<GridView, degree>>;
 
 template <typename GridView, int degree>
+//using LagrangeC0BoundaryTraits = FETraits<Functions::PQkBoundaryNodalBasis<GridView, degree>>;
 using LagrangeC0BoundaryTraits = FETraits<Functions::PQkTraceNodalBasis<GridView, degree>>;
 
 

@@ -58,13 +58,10 @@ public:
   void add_local_coefficients_Only_Boundary_row (const LocalIndexSetRow & localIndexSetRow, const LocalIndexSetCol & localIndexSetCol,
       const Config::DenseMatrixType &m_local, std::vector<EntryType> & je) const;
 
-  ///gives the number of the i-th dof on the boundary with boundaryID
-  template<typename FETraits>
-  static int get_collocation_size(const int boundaryID);
-
-  ///gives the number of the i-th dof on the boundary with boundaryID
-  template<typename FETraits>
-  static int get_collocation_no(const int boundaryID, const int i);
+  ///add artifical zeroes such that trace boundary may handle it
+  Config::VectorType blow_up_boundary_vector(const Config::VectorType& v) const;
+  ///remove artifical zeroes from trace boundary
+  Config::VectorType shrink_to_boundary_vector(const Config::VectorType& v) const;
 
 private:
   BoolVectorType  isBoundaryDof_;
@@ -76,6 +73,38 @@ private:
   std::vector<int> basisToBoundary_;
 };
 
+template<typename LocalIndexSet>
+inline
+void BoundaryHandler::add_local_coefficients_Only_Boundary(const LocalIndexSet &localIndexSet, const Config::VectorType &v_local, Config::VectorType& v) const
+{
+  assert ((unsigned int) v_local.size() == localIndexSet.size());
+  assert(v.size() == get_number_of_Boundary_dofs());
+  for (size_t i = 0; i < localIndexSet.size(); i++)
+  {
+    assert(! (v_local[i]!=v_local[i]));
+    int global_index = SolverConfig::FETraitsSolver::get_index(localIndexSet, i);
+    if (isBoundaryDof_(global_index))
+      v(BoundaryNo(global_index)) += v_local[i] ;
+  }
+}
+
+template<typename LocalIndexSetRow, typename LocalIndexSetCol, typename EntryType>
+void BoundaryHandler::add_local_coefficients_Only_Boundary_row(const LocalIndexSetRow & localIndexSetRow, const LocalIndexSetCol & localIndexSetCol,
+    const Config::DenseMatrixType &m_local, std::vector<EntryType> & je) const
+{
+  assert ((unsigned int) m_local.rows() == localIndexSetRow.size());
+  assert ((unsigned int) m_local.cols() == localIndexSetCol.size());
+
+  for (int i = 0; i < m_local.rows(); i++)
+  {
+    for (int j = 0; j < m_local.cols(); j++)
+    {
+      int globalIndexRow = SolverConfig::FETraitsSolver::get_index(localIndexSetRow, i);
+      if (isBoundaryDof_(globalIndexRow))
+        je.push_back(EntryType(BoundaryNo(globalIndexRow),SolverConfig::FETraitsSolver::get_index(localIndexSetCol,j),m_local(i,j)));
+    }
+  }
+}
 
 template<typename FEBasis>
 void BoundaryHandler::init_boundary_dofs(const FEBasis& feBasis)
@@ -226,214 +255,6 @@ void BoundaryHandler::init_boundary_dofs(const FEBasis& feBasis)
       isBoundaryGradientDof_(globalIndex) = isBoundaryGradientDof_(globalIndex) || localIsBoundaryGradient[i] ;
     }
   }
-}
-
-template<typename LocalIndexSet>
-inline
-void BoundaryHandler::add_local_coefficients_Only_Boundary(const LocalIndexSet &localIndexSet, const Config::VectorType &v_local, Config::VectorType& v) const
-{
-  assert ((unsigned int) v_local.size() == localIndexSet.size());
-  assert(v.size() == get_number_of_Boundary_dofs());
-  for (size_t i = 0; i < localIndexSet.size(); i++)
-  {
-    assert(! (v_local[i]!=v_local[i]));
-    int global_index = SolverConfig::FETraitsSolver::get_index(localIndexSet, i);
-    if (isBoundaryDof_(global_index))
-      v(BoundaryNo(global_index)) += v_local[i] ;
-  }
-}
-
-template<typename LocalIndexSetRow, typename LocalIndexSetCol, typename EntryType>
-void BoundaryHandler::add_local_coefficients_Only_Boundary_row(const LocalIndexSetRow & localIndexSetRow, const LocalIndexSetCol & localIndexSetCol,
-    const Config::DenseMatrixType &m_local, std::vector<EntryType> & je) const
-{
-  assert ((unsigned int) m_local.rows() == localIndexSetRow.size());
-  assert ((unsigned int) m_local.cols() == localIndexSetCol.size());
-
-  for (int i = 0; i < m_local.rows(); i++)
-  {
-    for (int j = 0; j < m_local.cols(); j++)
-    {
-      int globalIndexRow = SolverConfig::FETraitsSolver::get_index(localIndexSetRow, i);
-      if (isBoundaryDof_(globalIndexRow))
-        je.push_back(EntryType(BoundaryNo(globalIndexRow),SolverConfig::FETraitsSolver::get_index(localIndexSetCol,j),m_local(i,j)));
-    }
-  }
-}
-
-
-
-
-template<>
-inline
-int BoundaryHandler::get_collocation_size<PS12SplitTraits<Config::GridView>>(const int boundaryID)
-{
-  return 3;
-}
-
-template<>
-inline
-int BoundaryHandler::get_collocation_size<LagrangeC0Traits<Config::GridView, 1>> (const int boundaryID)
-{
-  return 1;
-}
-
-template<>
-inline
-int BoundaryHandler::get_collocation_size<LagrangeC0Traits<Config::GridView, 2>> (const int boundaryID)
-{
-  return 2;
-}
-
-template<>
-inline
-int BoundaryHandler::get_collocation_size<LagrangeC0Traits<Config::GridView, 3>> (const int boundaryID)
-{
-  return 4;
-}
-
-template<typename FETraits>
-inline
-int BoundaryHandler::get_collocation_size(const int boundaryID)
-{
-  assert(false);
-  DUNE_THROW(Dune::NotImplemented, "no enumeration for the boundary of this element implemented");
-}
-
-template<>
-inline
-int BoundaryHandler::get_collocation_no<PS12SplitTraits<Config::GridView>>(const int boundaryID, const int i)
-{
-  switch(boundaryID)
-  {
-  case 0:
-    switch(i)
-    {
-    case 0: return 0; break;
-    case 1: return 3; break;
-    case 2: return 4; break;
-    default: DUNE_THROW(Dune::RangeError, "there is no " << i << "-th element on a boundary edge");
-    }
-    break;
-  case 1:
-    switch(i)
-    {
-    case 0: return 0; break;
-    case 1: return 11; break;
-    case 2: return 8; break;
-    default: DUNE_THROW(Dune::RangeError, "there is no " << i << "-th element on a boundary edge");
-    }
-    break;
-  case 2:
-    switch(i)
-    {
-    case 0: return 4; break;
-    case 1: return 7; break;
-    case 2: return 8; break;
-    default: DUNE_THROW(Dune::RangeError, "there is no " << i << "-th element on a boundary edge");
-    }
-    break;
-  default: DUNE_THROW(Dune::RangeError, "there is no " << boundaryID << "for the geometry of the PS12 element");
-  }
-}
-
-template<>
-inline
-int BoundaryHandler::get_collocation_no<LagrangeC0Traits<Config::GridView, 1>> (const int boundaryID, const int i)
-{
-  assert(i == 1);
-
-  switch(boundaryID)
-  {
-  case 0: return 0; break;
-  case 1: return 2; break;
-  case 2: return 1; break;
-  default: DUNE_THROW(Dune::RangeError, "there is no " << boundaryID << "for the P1 element");
-  }
-}
-
-
-template<>
-inline
-int BoundaryHandler::get_collocation_no<LagrangeC0Traits<Config::GridView, 2>> (const int boundaryID, const int i)
-{
-  switch(boundaryID)
-  {
-  case 0:
-    switch(i)
-    {
-    case 0: return 0; break;
-    case 1: return 1; break;
-    default: DUNE_THROW(Dune::RangeError, "there is no " << i << "-th element on a boundary edge");
-    }
-    break;
-  case 1:
-    switch(i)
-    {
-    case 0: return 3; break;
-    case 1: return 5; break;
-    default: DUNE_THROW(Dune::RangeError, "there is no " << i << "-th element on a boundary edge");
-    }
-    break;
-  case 2:
-    switch(i)
-    {
-    case 0: return 2; break;
-    case 1: return 4; break;
-    default: DUNE_THROW(Dune::RangeError, "there is no " << i << "-th element on a boundary edge");
-    }
-    break;
-  default: DUNE_THROW(Dune::RangeError, "there is no " << boundaryID << "for the P2 element");
-  }
-}
-
-template<>
-inline
-int BoundaryHandler::get_collocation_no<LagrangeC0Traits<Config::GridView, 3>> (const int boundaryID, const int i)
-{
-  switch(boundaryID)
-  {
-  case 0:
-    switch(i)
-    {
-    case 0: return 0; break;
-    case 1: return 1; break;
-    case 2: return 2; break;
-    case 3: return 3; break;
-    default: DUNE_THROW(Dune::RangeError, "there is no " << i << "-th element on a boundary edge");
-    }
-    break;
-  case 1:
-    switch(i)
-    {
-    case 0: return 4; break;
-    case 1: return 7; break;
-    case 2: return 9; break;
-    case 3: return 0; break;
-    default: DUNE_THROW(Dune::RangeError, "there is no " << i << "-th element on a boundary edge");
-    }
-    break;
-  case 2:
-    switch(i)
-    {
-    case 0: return 3; break;
-    case 1: return 6; break;
-    case 2: return 8; break;
-    case 3: return 9; break;
-    default: DUNE_THROW(Dune::RangeError, "there is no " << i << "-th element on a boundary edge");
-    }
-    break;
-  default: DUNE_THROW(Dune::RangeError, "there is no " << boundaryID << "for the P2 element");
-  }
-}
-
-
-template<typename FiniteElement>
-inline
-int BoundaryHandler::get_collocation_no(const int boundaryID, const int i)
-{
-  assert(false);
-  DUNE_THROW(Dune::NotImplemented, "no enumeration for the boundary of this element implemented");
 }
 
 

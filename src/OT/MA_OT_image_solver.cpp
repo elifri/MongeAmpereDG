@@ -331,7 +331,7 @@ void MA_OT_image_solver::one_Poisson_Step()
 
 
   ///-------------Code copied from MA_Operator to be reviewed, init data for fixing point
-  //assert(false);
+  assert(false);
   ///------
 
   Config::MatrixType m;

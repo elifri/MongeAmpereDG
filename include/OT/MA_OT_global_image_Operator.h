@@ -33,31 +33,8 @@ struct MA_OT_image_Operator: MA_OT_Operator<Solver,LOP> {
                )
     {}
 
-/*
-    virtual void assemble(const Config::VectorType& x, Config::VectorType& v) const
-    {
-      solver_ptr->assemble_DG(*lop_ptr, x,v);
-    }
-    virtual void assemble_with_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
-    {
-      solver_ptr->assemble_DG_Jacobian(*lop_ptr, x,v, m);
-    }
-    virtual void assemble_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
-    {
-      solver_ptr->assemble_Jacobian_DG(*lop_ptr, x,m);
-    }
-
-    template<typename Element>
-    virtual void insert_entities_for_unification_term_to_local_operator(Element fixingElement, int n)
-    {
-      lop_ptr->insert_entitity_for_unifikation_term(fixingElement, n);
-    }
-*/
-
     ImageFunction f_;
     ImageFunction g_;
-
-//    std::shared_ptr<LOP> lop_ptr;
 };
 
 
@@ -69,25 +46,26 @@ struct MA_OT_image_Operator_with_Linearisation:MA_OT_image_Operator<Solver,LOP>{
 //  MA_OT_image_Operator_with_Linearisation():solver_ptr(NULL), lop_ptr(), lopLinear_ptr(), fixingPoint({0.5,0.15}){ }
 //    MA_OT_Operator(MA_OT_solver& solver):solver_ptr(&solver), lop_ptr(new Local_Operator_MA_OT(new BoundarySquare(solver.gradient_u_old, solver.get_setting()), new rhoXSquareToSquare(), new rhoYSquareToSquare())){}
     // lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
-  MA_OT_image_Operator_with_Linearisation(Solver& solver):MA_OT_image_Operator<Solver,LOP>::solver_ptr(&solver),
+  MA_OT_image_Operator_with_Linearisation(Solver& solver):MA_OT_image_Operator<Solver,LOP>::MA_OT_image_Operator(solver),
         lopLinear_ptr(new LOPLinear
-            (new BoundarySquare(solver.gradient_u_old,solver.get_setting()),
-                &this->f_,&this->g_, solver.gridView())
+            (new BoundarySquare(solver.get_gradient_u_old_ptr(),solver.get_setting()),
+                &this->f_,&this->g_)
           )
     {
     }
 
-  virtual void assemble(const Config::VectorType& x, Config::VectorType& v) const
+  virtual void assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const
   {
-    this->solver_ptr->assembler.assemble_DG_Only(*lopLinear_ptr, x,v);
+    this->solver_ptr->get_assembler().assemble_DG_Only(this->get_lop(), x,v);
   }
-  virtual void assemble_with_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+  virtual void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
   {
-    this->solver_ptr->assembler.assemble_DG_Jacobian(*this->lop_ptr, *lopLinear_ptr, x,v, m);
+    this->solver_ptr->get_assembler().assemble_DG_Jacobian(*this->lop_ptr, *lopLinear_ptr, x,v, m);
   }
-  virtual void assemble_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
+  virtual void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
   {
-    this->solver_ptr->assemble_Jacobian_DG(*this->lop_ptr, *lopLinear_ptr, x,m);
+    Config::VectorType tempV;
+    this->solver_ptr->get_assembler().assemble_DG_Jacobian(*this->lop_ptr, *lopLinear_ptr, x, tempV,m);
   }
 
     std::shared_ptr<LOPLinear> lopLinear_ptr;

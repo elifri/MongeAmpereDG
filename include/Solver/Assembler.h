@@ -484,7 +484,7 @@ public:
 
 
   template<typename LocalOperatorType>
-  void assemble_Jacobian_DG(const LocalOperatorType &LOP, const Config::VectorType& x,
+  void assemble_DG_Jacobian_only(const LocalOperatorType &LOP, const Config::VectorType& x,
       Config::MatrixType& m) const
   {
     assembleType_ = ONLY_JACOBIAN;
@@ -1803,7 +1803,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
   std::cerr << " This operator needs automatic differentiation for the derivative, please provide adolc library " << std::endl;
   std::exit(-1);
 }
-
+#endif
 
 
 template<typename LocalOperatorType>
@@ -1815,12 +1815,6 @@ void Assembler::assemble_DG_Only_(const LocalOperatorType &lop, const Config::Ve
 
   //assuming Galerkin
   v = Config::VectorType::Zero(x.size());
-  Config::VectorType v_boundary= Config::VectorType::Zero(x.size());
-
-  Config::VectorType midValue = Config::VectorType::Zero(v.size());
-
-  //reserve space for jacobian entries
-  std::vector<EntryType> JacobianEntries;
 
   // The index set gives you indices for each element , edge , face , vertex , etc .
   const GridViewType::IndexSet& indexSet = gridView.indexSet();
@@ -1847,46 +1841,11 @@ void Assembler::assemble_DG_Only_(const LocalOperatorType &lop, const Config::Ve
       Config::VectorType local_midvalue;
       local_midvalue.setZero(localView.size());    // Set all entries to zero
 
-      //get zero matrix to store local jacobian
-      Config::DenseMatrixType m_m;
-      m_m.setZero(localView.size(), localView.size());
-      Config::DenseMatrixType m_mB;
-      m_mB.setZero(localView.size(), localView.size());
-
       //calculate local coefficients
       Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
 
-      //additional vector for unification term
-      std::vector<Config::VectorType> entryWx0timesBgradV (lop.get_number_of_entities_for_unifikation_term()*localView.size());
-      for (unsigned int i = 0; i < entryWx0timesBgradV.size(); i++)
-        entryWx0timesBgradV[i].setZero(localView.size());    // Set all entries to zero
-//        std::cerr << " is local boundaryDof" << isBoundaryLocal.transpose() << std::endl;
+      lop.assemble_cell_term(localView, xLocal, local_vector,0);
 
-//        lop.assemble_cell_term(localView, xLocal, local_vector, 0, x(x.size()-1), v(v.size()-1));
-      lop.assemble_cell_term(localView, xLocal, local_vector, local_midvalue, m_m,
-          uAtX0_, u0AtX0_, localViewFixingElement, entryWx0_, entryWx0timesBgradV);
-      //write derivatives of unification term into vector
-/*
-      for (const auto& fixingElementandOffset : lopJacobian.EntititiesForUnifikationTerm())
-      {
-        const auto& fixingElement = fixingElementandOffset.first;
-        int no_fixingElement_offset =fixingElementandOffset.second;
-
-        localViewFixingElement.bind(fixingElement);
-        localIndexSetFixingElement.bind(localViewFixingElement);
-
-        for (unsigned int i = 0; i < localView.size(); i++)
-        {
-          for (unsigned int j = 0; j < localViewFixingElement.size(); j++)
-          {
-            JacobianEntries.push_back(
-                EntryType(FETraits::get_index(localIndexSet, i),
-                          FETraits::get_index(localIndexSetFixingElement, j),
-                          entryWx0timesBgradV[no_fixingElement_offset+j](i)));
-          }
-        }
-      }
-*/
      // Traverse intersections
       for (auto&& is : intersections(gridView, e)) {
         if (is.neighbor()) {
@@ -1923,14 +1882,13 @@ void Assembler::assemble_DG_Only_(const LocalOperatorType &lop, const Config::Ve
             mn_mn.setZero(localViewn.size(), localViewn.size());
 
             lop.assemble_inner_face_term(is, localView, xLocal, localViewn, xLocaln,
-                m_m, mn_m, m_mn, mn_mn,
                 local_vector, local_vectorn);
           }
 #endif
         }
         else if (is.boundary()) {
           elementHasBoundary = true;
-          lop.assemble_boundary_face_term(is, localView, xLocal, local_vector, m_mB);
+          lop.assemble_boundary_face_term(is, localView, xLocal, local_vector);
 
         } else {
           std::cerr << " I do not know how to handle this intersection"
@@ -1939,14 +1897,10 @@ void Assembler::assemble_DG_Only_(const LocalOperatorType &lop, const Config::Ve
         }
       }
 
-      local_vector+=local_midvalue;
-
-      //add to objective function and jacobian
+      //add to objective function
       add_local_coefficients(localIndexSet, local_vector, v);
    }
 }
-
-#endif
 
 template<typename LocalOperatorType, typename LocalOperatorJacobianType>
 void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalOperatorJacobianType &lopJacobian,
@@ -1958,12 +1912,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 
     //assuming Galerkin
     v = Config::VectorType::Zero(x.size());
-    Config::VectorType v_boundary= Config::VectorType::Zero(x.size());
     m.resize(x.size(), x.size());
-
-    Config::VectorType midValue = Config::VectorType::Zero(v.size());
-    BoundaryHandler::BoolVectorType collocationSet = BoundaryHandler::BoolVectorType::Constant(v.size(), false);
-
 
     //reserve space for jacobian entries
     std::vector<EntryType> JacobianEntries;
@@ -2000,7 +1949,8 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 
         //calculate local coefficients
         Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
-//        BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, v_isBoundary);
+
+        lopJacobian.assemble_cell_term(localView, xLocal, local_vector, m_m);
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
@@ -2063,7 +2013,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 //            std::cerr << " local boundary " << local_boundary << std::endl;
 
 //            lop.assemble_boundary_face_term(is,localView, xLocal, local_boundary, 0);
-            lopJacobian.assemble_boundary_face_term(is, localView, xLocal, local_vector, m_mB);
+            lopJacobian.assemble_boundary_face_term(is, localView, xLocal, local_vector, m_m);
 
           } else {
             std::cerr << " I do not know how to handle this intersection"
@@ -2072,34 +2022,16 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
           }
         }
 
-        local_vector+=local_midvalue;
-
         //add to objective function and jacobian
         add_local_coefficients(localIndexSet, local_vector, v);
 //        std::cerr << " add cell and inner terms, i.e. m_m " << std::endl;
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
 
-        //special treatment for boundary elements
-        if (elementHasBoundary)
-        {
-//          std::cerr << " add boundary terms " << std::endl;
-          add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
-        }
-
-        for (size_t i = 0; i < localIndexSet.size(); i++)
-        {
-          midValue(FETraits::get_index(localIndexSet, i)) += local_midvalue[i] ;
-        }
-
-
      }
      m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
 
-//     std::cout << " m nonzeros " << m.nonZeros() << std::endl;
-//     m.prune(1e-12);
      std::cerr << " m nonzeros " << m.nonZeros() << std::endl;
 
-     std::cerr << std::endl << " local midvalue term " << midValue.norm()<< " whole norm " << v.norm() << std::endl;
 //     std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
 //     std::cerr << " f_boundary " << boundary.transpose() << std::endl;
 //     std::cerr << " f          " << v.transpose() << std::endl;

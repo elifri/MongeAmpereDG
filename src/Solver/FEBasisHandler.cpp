@@ -543,6 +543,24 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
 
 
 template <>
+Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>>::adapt_after_grid_change(const typename FEBasisType::GridView& gridOld, const typename FEBasisType::GridView& grid, Config::VectorType& v)
+{
+  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid));
+
+//  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
+  FEBasisType FEBasisCoarse (gridOld);
+//  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,Config::VectorType> DiscreteGridFunctionCoarse;
+  DiscreteGridFunction solution_u_Coarse_global (FEBasisCoarse,v);
+
+  Config::VectorType vNew;
+  vNew.resize(FEBasis_->indexSet().size());
+  interpolate(*FEBasis_, vNew, solution_u_Coarse_global);
+  return vNew;
+}
+
+
+
+template <>
 Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::coarse_solution(MA_solver& solver, const int level)
 {
   assert(solver.initialised);

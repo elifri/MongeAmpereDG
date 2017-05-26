@@ -32,9 +32,7 @@ public:
  */
   template<class LocalView, class VectorType, class DenseMatrixType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, VectorType& v_midvalue, DenseMatrixType& m,
-      const double u_atX0, const double u0_atX0,
-      LocalView& localViewTemp, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const
+      VectorType& v, DenseMatrixType& m) const
   {
 
     // Get the grid element from the local FE basis view
@@ -268,7 +266,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
 	const FieldVector<double,dimw> normal = intersection.unitOuterNormal(face_center);
 
 	// penalty weight for NIPG / SIPG
-	double penalty_weight = SolverConfig::sigma*(SolverConfig::degree*SolverConfig::degree) / std::pow(intersection.geometry().volume(), SolverConfig::beta);
+//	double penalty_weight = SolverConfig::sigma*(SolverConfig::degree*SolverConfig::degree) / std::pow(intersection.geometry().volume(), SolverConfig::beta);
 
 	// Loop over all quadrature points
 	for (const auto &pt : quad) {

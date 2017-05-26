@@ -393,7 +393,7 @@ public:
   template<class Intersection, class LocalView, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalView &localView,
-      const VectorType &x, VectorType& v, int tag) const {
+      const VectorType &x, VectorType& v, int tag=0) const {
 
   }
 

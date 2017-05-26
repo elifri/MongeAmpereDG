@@ -13,7 +13,7 @@
 
 #include "OT/MA_OT_solver.h"
 
-#ifndef C1Element
+#ifndef USE_ANALYTIC_JACOBIAN
   #include "OT/operator_MA_OT_Brenner.h"
 #else
   #include "OT/operator_MA_OT_Linearisation.hpp"
@@ -23,11 +23,15 @@
 class MA_OT_image_solver : public MA_OT_solver
 {
 public:
-#ifdef C1Element
-  typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
-#else
-  typedef MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT> OperatorType;
-#endif
+//#ifdef C1Element
+  #ifdef USE_ANALYTIC_JACOBIAN
+    typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
+  #else
+    typedef MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT> OperatorType;
+  #endif
+//#else
+//    typedef MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT> OperatorType;
+//#endif
 
   MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView,
        const SolverConfig& config, OpticalSetting& opticalSetting);

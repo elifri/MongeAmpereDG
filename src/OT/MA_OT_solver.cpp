@@ -185,6 +185,8 @@ void MA_OT_solver::adapt_operator()
 
 void MA_OT_solver::adapt_solution(const int level)
 {
+  Config::VectorType p = assemblerLMCoarse_.boundaryHandler().blow_up_boundary_vector(solution.tail(get_n_dofs_Q_h()));
+
   //adapt febasis and solution
   FEBasisHandler_.adapt(*this, level, solution);
 
@@ -193,16 +195,14 @@ void MA_OT_solver::adapt_solution(const int level)
   assemblerLM1D_.bind(FEBasisHandler_.uBasis());
 
   //adapt boundary febasis and bind to assembler
-  FEBasisHandlerQ_.adapt_after_grid_change(this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1));
+  auto p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-2),
+                                           this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1), p);
   assemblerLMCoarse_.bind(FEBasisHandler_.uBasis(), FEBasisHandlerQ_.FEBasis());
 
   //init lagrangian multiplier variables
   solution.conservativeResize(get_n_dofs());
+  solution.tail(get_n_dofs_Q_h()) = assemblerLMCoarse_.boundaryHandler().shrink_to_boundary_vector(p_adapted);
 
-  int V_h_size = get_n_dofs_V_h();
-  for (int i = V_h_size; i < solution.size(); i++)
-  {
-    solution(i) = 0;
-  }
+
   this->adapt_operator();
 }

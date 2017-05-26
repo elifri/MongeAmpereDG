@@ -35,6 +35,7 @@ public:
     assert(false && " wrong basis type"); exit(-1);
   }
 
+  const BoundaryHandler& boundaryHandler() {return boundaryHandlerQ_;}
   /**
    * assembles the function and its derivative at x
    * @param LOP the local operator providing a function, namely assemble_boundary_face_term
@@ -64,7 +65,7 @@ void AssemblerLagrangianMultiplierCoarse::assemble_Boundarymatrix(const LocalOpe
   int V_h_size = basisV_.indexSet().size();
   int Q_h_size = get_number_of_Boundary_dofs();
 
-  assert(x.size() > V_h_size);
+  assert(x.size() == V_h_size);
 
   //assuming Galerkin
   m.resize(Q_h_size, V_h_size);
