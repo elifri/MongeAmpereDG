@@ -300,7 +300,7 @@ public:
     solver_ptr->assemble_DG_Jacobian(this->get_lop(), x, v, m);
 
   }
-  void assemble_with_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+  void assemble_with_langrangian_Jacobian(const Config::VectorType& xNew, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
   {
     assert(lop_ptr);
 
@@ -322,6 +322,7 @@ public:
     Config::VectorType tempV(V_h_size);
     this->assemble_without_langrangian_Jacobian(tempX,tempV, tempM);
     std::cerr << "  w " << tempX.transpose() << std::endl;
+    std::cerr << "  wNew " << xNew.transpose() << std::endl;
 
 
     //copy system
@@ -410,7 +411,7 @@ public:
     tempM.resize(Q_h_size, V_h_size);
     tempM.setZero();
     tempV.setZero(Q_h_size);
-    solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, tempX, tempV);
+    solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xNew.head(V_h_size), tempV);
 
     assert(Q_h_size == tempV.size());
     assert(Q_h_size == tempM.rows());
@@ -431,23 +432,23 @@ public:
     std::cerr << " l_H(q) with norm " << tempV.norm() << std::endl << " : " << tempV.transpose() << std::endl;
   }
 
-  void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
+  void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& xNew, const bool new_solution=true) const
   {
     assert(solver_ptr != NULL);
 
-    //if necessary update old solution
+/*    //if necessary update old solution
     if (new_solution)
     {
       solver_ptr->update_solution(x_old);
-    }
+    }*/
 
-    for (int i = 0; i < x.size(); i++) assert ( ! (x(i) != x(i)));
+//    for (int i = 0; i < x.size(); i++) assert ( ! (x(i) != x(i)));
 
     //prepare clock to time computations
     auto start = std::chrono::steady_clock::now();
 
     prepare_fixing_point_term(x);
-    assemble_with_langrangian_Jacobian(x,v, m);
+    assemble_with_langrangian_Jacobian(xNew,x,v, m);
 
     for (int i = 0; i < v.size(); i++)  assert ( ! (v(i) != v(i)));
 
@@ -466,7 +467,7 @@ public:
 
     solver_ptr->assemble_DG(this->get_lop(), x, v);
   }
-  void assemble_with_langrangian(const Config::VectorType& x, Config::VectorType& v) const
+  void assemble_with_langrangian(const Config::VectorType& xNew, const Config::VectorType& x, Config::VectorType& v) const
   {
     assert(x.size()==solver_ptr->get_n_dofs());
     assert(v.size()==solver_ptr->get_n_dofs());
@@ -477,7 +478,7 @@ public:
     auto tempX = x.head(V_h_size);
     Config::VectorType tempV(V_h_size);
 
-    assemble_with_langrangian(tempX,tempV);
+    assemble_without_langrangian(tempX,tempV);
     const auto& assembler = solver_ptr->get_assembler();
 
     v.head(tempV.size()) = tempV;
@@ -493,7 +494,7 @@ public:
     Config::MatrixType tempM(Q_h_size, V_h_size);
     tempV.setZero(Q_h_size);
     //todo if used often write own assembler
-    solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, x, tempV);
+    solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xNew, tempV);
 
     assert(Q_h_size == tempV.size());
 
@@ -503,21 +504,23 @@ public:
 
   }
 
-  void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const
+  void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& xNew, const bool new_solution=true) const
     {
       assert(solver_ptr != NULL);
 
+/*
       //if necessary update old solution
       if (new_solution)
       {
         solver_ptr->update_solution(x_old);
       }
+*/
 
       auto start = std::chrono::steady_clock::now();
 //      lop.found_negative = false;
 
       prepare_fixing_point_term(x);
-      assemble_with_langrangian(x,v);
+      assemble_with_langrangian(xNew, x,v);
 
       //output
       auto end = std::chrono::steady_clock::now();
