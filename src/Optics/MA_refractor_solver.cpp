@@ -164,7 +164,6 @@ void MA_refractor_solver::solve_nonlinear_system()
   std::cout << "needed " << timer << " seconds for nonlinear step, ended with error code " << error << std::endl;
 #endif
   solution = newSolution.head(get_n_dofs());
-  std::cout << " Lagrangian Parameter for fixing grid Point " << newSolution.tail(1)[0] << std::endl;
 }
 
 
