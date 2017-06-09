@@ -34,6 +34,19 @@ public:
   typedef SolverConfig::FETraitsSolverQ FETraitsQ;
   typedef FETraitsQ::FEBasis FEBasisQType;
 
+  //find correct operator
+#ifdef USE_C0_PENALTY
+  typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Brenner> OperatorType;
+#else
+  #ifdef USE_MIXED_ELEMENT
+    typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Neilan> OperatorType;
+  #else
+    typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT> OperatorType;
+//todo C1 is not for nonimage
+    //    typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
+  #endif
+#endif
+
 
   MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting);
 private:
@@ -78,19 +91,6 @@ protected:
   //assembler for lagrangian multiplier
   AssemblerLagrangianMultiplier1D assemblerLM1D_;
   AssemblerLagrangianMultiplierCoarse assemblerLMCoarse_;
-
-  //find correct operator
-#ifdef USE_C0_PENALTY
-  typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Brenner> OperatorType;
-#else
-  #ifdef USE_MIXED_ELEMENT
-    typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Neilan> OperatorType;
-  #else
-    typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT> OperatorType;
-//todo C1 is not for nonimage
-    //    typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
-  #endif
-#endif
 
   OperatorType op;
 
