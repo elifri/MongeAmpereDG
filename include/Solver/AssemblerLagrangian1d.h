@@ -13,7 +13,7 @@
 class Local_operator_LangrangianMidValue{
 public:
   template<class LocalView, class VectorType>
-  void assemble_u_independent_cell_term_(const LocalView& localView, VectorType& v) const
+  void assemble_u_independent_cell_term_(const LocalView& localView, VectorType& v, Config::ValueType& volume) const
   {
     assert((unsigned int) v.size() == localView.size());
 
@@ -47,11 +47,7 @@ public:
         v[i] += referenceFunctionValues[i][0]*quad.weight()*integrationElement;
       }
     }
-    //divide by element volume
-    for (unsigned int i = 0; i < v.size(); i++)
-    {
-      v[i] /= element.geometry().volume();
-    }
+    volume += element.geometry().volume();
   }
 
   template<class LocalView, class VectorType>
@@ -117,6 +113,7 @@ template<typename LocalOperatorType>
 void AssemblerLagrangianMultiplier1D::assemble_u_independent_matrix(const LocalOperatorType &lop, Config::VectorType& v) const{
   const auto& basis_ = *(this->basis_);
   v = Config::VectorType::Zero(basis_.size());
+  Config::ValueType volume = 0;
 
   auto localView = basis_.localView();
   auto localIndexSet = basis_.indexSet().localIndexSet();
@@ -128,9 +125,10 @@ void AssemblerLagrangianMultiplier1D::assemble_u_independent_matrix(const LocalO
     //get zero matrix to store local matrix
     Config::VectorType local_vector = Config::VectorType::Zero(localView.size());
 
-    lop.assemble_u_independent_cell_term_(localView, local_vector);
+    lop.assemble_u_independent_cell_term_(localView, local_vector, volume);
 
     add_local_coefficients(localIndexSet,local_vector, v);
+    v/=volume;
   }
 }
 
