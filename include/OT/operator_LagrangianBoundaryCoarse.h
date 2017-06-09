@@ -5,16 +5,16 @@
  *      Author: friebel
  */
 
-#ifndef INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARY_H_
-#define INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARY_H_
+#ifndef INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARYCOARSE_H_
+#define INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARYCOARSE_H_
 
 #include "OT/problem_data_OT.h"
 #include "OT/operator_utils.h"
 
-class Local_Operator_LagrangianBoundary {
+class Local_Operator_LagrangianBoundaryCoarse {
 public:
-//  Local_Operator_LagrangianBoundary(const OTBoundary* bc): bc(*bc){}
-  Local_Operator_LagrangianBoundary(const OTBoundary& bc): bc(bc){}
+//  Local_Operator_LagrangianBoundaryCoarse(const OTBoundary* bc): bc(*bc){}
+  Local_Operator_LagrangianBoundaryCoarse(const OTBoundary& bc): bc(bc){}
 
   template<class Intersection, class LocalViewV, class LocalViewQ, class DenseMatrixType, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
@@ -126,4 +126,4 @@ public:
 
 
 
-#endif /* INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARY_H_ */
+#endif /* INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARYCOARSE_H_ */

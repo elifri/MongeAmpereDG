@@ -13,7 +13,6 @@
 #include <fstream>
 
 #include "Solver/AssemblerLagrangian1d.h"
-#include "OT/operator_LagrangianBoundary.h"
 
 #include "utils.hpp"
 
@@ -30,7 +29,7 @@ public:
                               //     lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
                 )),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopLMBoundary(new Local_Operator_LagrangianBoundary(lop_ptr->get_bc())),
+      lopLMBoundary(new Local_Operator_LagrangianBoundaryCoarse(lop_ptr->get_bc())),
       fixingPoint{0.3,0},
       intermediateSolCounter()
   {
@@ -41,7 +40,7 @@ public:
 
   MA_OT_Operator(Solver& solver, const std::shared_ptr<LOP>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopLMBoundary(new Local_Operator_LagrangianBoundary(lop_ptr->get_bc())),
+      lopLMBoundary(new Local_Operator_LagrangianBoundaryCoarse(lop_ptr->get_bc())),
       fixingPoint{0.3,0},
       intermediateSolCounter()
       {
@@ -50,7 +49,7 @@ public:
 
   MA_OT_Operator(Solver& solver, LOP* lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopLMBoundary(new Local_Operator_LagrangianBoundary(lop_ptr->get_bc())),
+      lopLMBoundary(new Local_Operator_LagrangianBoundaryCoarse(lop_ptr->get_bc())),
       fixingPoint{0.3,0},
       intermediateSolCounter()
   {
@@ -648,7 +647,7 @@ public:
   std::shared_ptr<LOP> lop_ptr;
 
   std::shared_ptr<Local_operator_LangrangianMidValue> lopLMMidvalue;
-  std::shared_ptr<Local_Operator_LagrangianBoundary> lopLMBoundary;
+  std::shared_ptr<Local_Operator_LagrangianBoundaryCoarse> lopLMBoundary;
 
   //store a grid point, whose function value is fixed
   const FieldVector<double, 2> fixingPoint;
