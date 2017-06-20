@@ -29,6 +29,12 @@ public:
     return isBoundaryDof_;
   }
 
+  bool isBoundaryDoF(const int i) const
+  {
+    assert(initialised_);
+    return isBoundaryDof_(i);
+  }
+
   const BoolVectorType& isBoundaryValueDoF() const
   {
     assert(initialised_);
@@ -83,7 +89,7 @@ void BoundaryHandler::add_local_coefficients_Only_Boundary(const LocalIndexSet &
   {
     assert(! (v_local[i]!=v_local[i]));
     int global_index = SolverConfig::FETraitsSolver::get_index(localIndexSet, i);
-    if (isBoundaryDof_(global_index))
+    if (isBoundaryDoF(global_index))
       v(BoundaryNo(global_index)) += v_local[i] ;
   }
 }
@@ -100,7 +106,7 @@ void BoundaryHandler::add_local_coefficients_Only_Boundary_row(const LocalIndexS
     for (int j = 0; j < m_local.cols(); j++)
     {
       int globalIndexRow = SolverConfig::FETraitsSolver::get_index(localIndexSetRow, i);
-      if (isBoundaryDof_(globalIndexRow))
+      if (isBoundaryDoF(globalIndexRow))
         je.push_back(EntryType(BoundaryNo(globalIndexRow),SolverConfig::FETraitsSolver::get_index(localIndexSetCol,j),m_local(i,j)));
     }
   }
