@@ -8,12 +8,12 @@
 #ifndef INCLUDE_OT_MA_OT_GLOBAL_OPERATOR_H_
 #define INCLUDE_OT_MA_OT_GLOBAL_OPERATOR_H_
 
+#include <OT/operator_LagrangianBoundary.h>
 #include <iostream>
 #include <string>
 #include <fstream>
 
 #include "Solver/AssemblerLagrangian1d.h"
-
 #include "utils.hpp"
 
 template<typename Solver, typename LOP>
@@ -26,10 +26,12 @@ public:
       lop_ptr(new LOP(
           new BoundarySquare(solver.gradient_u_old, solver.get_setting()),
           new rhoXSquareToSquare(), new rhoYSquareToSquare()
-                              //     lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
+//          new rhoXGaussianSquare(), new rhoYGaussianSquare()
+//          new rhoXGaussians(), new rhoYGaussians()
                 )),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopLMBoundary(new Local_Operator_LagrangianBoundaryCoarse(lop_ptr->get_bc())),
+//      lopLMBoundary(new Local_Operator_LagrangianBoundaryCoarse(lop_ptr->get_bc())),
+      lopLMBoundary(new Local_Operator_LagrangianBoundary(lop_ptr->get_bc())),
       fixingPoint{0.3,0},
       intermediateSolCounter()
   {
@@ -40,7 +42,7 @@ public:
 
   MA_OT_Operator(Solver& solver, const std::shared_ptr<LOP>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopLMBoundary(new Local_Operator_LagrangianBoundaryCoarse(lop_ptr->get_bc())),
+      lopLMBoundary(new Local_Operator_LagrangianBoundary(lop_ptr->get_bc())),
       fixingPoint{0.3,0},
       intermediateSolCounter()
       {
@@ -49,7 +51,7 @@ public:
 
   MA_OT_Operator(Solver& solver, LOP* lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopLMBoundary(new Local_Operator_LagrangianBoundaryCoarse(lop_ptr->get_bc())),
+      lopLMBoundary(new Local_Operator_LagrangianBoundary(lop_ptr->get_bc())),
       fixingPoint{0.3,0},
       intermediateSolCounter()
   {
@@ -299,12 +301,12 @@ public:
     solver_ptr->assemble_DG_Jacobian(this->get_lop(), x, v, m);
 
   }
-  void assemble_with_langrangian_Jacobian(const Config::VectorType& xNew, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+  void assemble_with_langrangian_Jacobian(Config::VectorType& xNew, Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
   {
     assert(lop_ptr);
 
     int V_h_size = this->solver_ptr->get_n_dofs_V_h();
-    int Q_h_size = this->solver_ptr->get_n_dofs_Q_h();
+    int Q_h_size = this->solver_ptr->get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();
 
     assert(x.size()==this->solver_ptr->get_n_dofs());
     assert(v.size()==this->solver_ptr->get_n_dofs());
@@ -315,14 +317,11 @@ public:
 
     //assemble MA PDE in temporary variables
 
-    //todo jede Menge copy past
+    //todo jede Menge copy paste
     Config::MatrixType tempM(V_h_size, V_h_size);
     Config::VectorType tempX = x.head(V_h_size);
     Config::VectorType tempV(V_h_size);
     this->assemble_without_langrangian_Jacobian(tempX,tempV, tempM);
-    std::cerr << "  w " << tempX.transpose() << std::endl;
-    std::cerr << "  wNew " << xNew.transpose() << std::endl;
-
 
     //copy system
     v.head(tempV.size()) = tempV;
@@ -339,7 +338,12 @@ public:
       std::ofstream file(filename.str(),std::ios::out);
       MATLAB_export(file, x, "x");
     }
-    std::cerr << "  l(v) with norm " << tempV.norm() << std::endl << "  : " << tempV.transpose() << std::endl;
+    {
+      std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "lF" << intermediateSolCounter << ".m";
+      std::ofstream file(filename.str(),std::ios::out);
+      MATLAB_export(file, tempV, "l_v");
+    }
+    std::cerr << "  l(v) with norm " << tempV.norm() << std::endl;//<< "  : " << tempV.transpose() << std::endl;
     //assemble part of first lagrangian multiplier for fixing midvalue
     const auto& assembler = this->solver_ptr->get_assembler();
 
@@ -404,13 +408,36 @@ public:
       MATLAB_export(file, lagrangianFixingPointDiscreteOperator, "Bm");
     }
 
-
-    std::cerr << "  p " << x.tail(Q_h_size).transpose() << std::endl;
     //assemble part of second lagrangian multiplier for fixing boundary
     tempM.resize(Q_h_size, V_h_size);
     tempM.setZero();
     tempV.setZero(Q_h_size);
-    solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xNew.head(V_h_size), tempV);
+
+    //assemble boundary terms
+//    solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xNew.head(V_h_size), tempV);
+    const auto& boundaryHandlerV = solver_ptr->get_assembler().get_boundaryHandler();
+    solver_ptr->get_assembler_lagrangian_boundary().assemble_BoundarymatrixSmall(boundaryHandlerV, *lopLMBoundary, tempM, xNew.head(V_h_size), tempV);
+
+    //remove the qs from langrangian boundary multiplier
+    auto xNewBoundaryLagrangianMultiplier = solver_ptr->get_assembler_lagrangian_boundary().shrink_to_boundary_vector(xNew.tail(Q_h_size));
+    auto xBoundaryLagrangianMultiplier = solver_ptr->get_assembler_lagrangian_boundary().shrink_to_boundary_vector(x.tail(Q_h_size));
+
+    Q_h_size = tempM.rows();
+
+    m.conservativeResize(this->solver_ptr->get_n_dofs(), this->solver_ptr->get_n_dofs());
+    v.conservativeResize(this->solver_ptr->get_n_dofs());
+    xNew.conservativeResize(this->solver_ptr->get_n_dofs());
+    xNew.tail(Q_h_size) = xNewBoundaryLagrangianMultiplier;
+    x.conservativeResize(this->solver_ptr->get_n_dofs());
+    x.tail(Q_h_size) = xBoundaryLagrangianMultiplier;
+
+    //crop terms "far from boundary"
+/*
+    Config::VectorType boundaryWeights;
+    solver_ptr->get_assembler_lagrangian_boundary().assemble_BoundarymatrixWeights(solver_ptr->get_assembler().isBoundaryValueDoF(), boundaryWeights);
+    multiply_every_row_of_sparse_matrix(boundaryWeights, tempM);
+*/
+
 
     assert(Q_h_size == tempV.size());
     assert(Q_h_size == tempM.rows());
@@ -428,12 +455,23 @@ public:
       MATLAB_export(file, tempM, "Bboundary");
       std::cerr << " matlab file written to " << filename.str() << std::endl;
     }
-    std::cerr << " l_H(q) with norm " << tempV.norm() << std::endl << " : " << tempV.transpose() << std::endl;
+    {
+      std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "Lboundary" << intermediateSolCounter << ".m";
+      std::ofstream file(filename.str(),std::ios::out);
+      MATLAB_export(file, tempV, "Lboundary");
+      std::cerr << " matlab file written to " << filename.str() << std::endl;
+    }
+    std::cerr << " l_H(q) with norm " << tempV.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
   }
 
-  void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& xNew, const bool new_solution=true) const
+  void evaluate(Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, Config::VectorType& xNew, const bool new_solution=true) const
   {
     assert(solver_ptr != NULL);
+
+    intermediateSolCounter++;
+    solver_ptr->update_solution(x);
+    solver_ptr->plot("intermediateBeginning", intermediateSolCounter);
+
 
 /*    //if necessary update old solution
     if (new_solution)
@@ -455,8 +493,16 @@ public:
     auto end = std::chrono::steady_clock::now();
     std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
 
-    intermediateSolCounter++;
-//    solver_ptr->plot("intermediate", intermediateSolCounter);
+//    intermediateSolCounter++;
+    solver_ptr->update_solution(x);
+    solver_ptr->plot("intermediate", intermediateSolCounter);
+
+    std::cout << "   current L2 error is " << solver_ptr->calculate_L2_errorOT([](Config::SpaceType x)
+        {return Dune::FieldVector<double, Config::dim> ({
+                                                        x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
+                                                        x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
+
+
   }
 
   virtual void assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const
@@ -503,7 +549,7 @@ public:
 
   }
 
-  void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& xNew, const bool new_solution=true) const
+  void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::VectorType& xNew, const bool new_solution=true) const
     {
       assert(solver_ptr != NULL);
 
@@ -647,7 +693,8 @@ public:
   std::shared_ptr<LOP> lop_ptr;
 
   std::shared_ptr<Local_operator_LangrangianMidValue> lopLMMidvalue;
-  std::shared_ptr<Local_Operator_LagrangianBoundaryCoarse> lopLMBoundary;
+//  std::shared_ptr<Local_Operator_LagrangianBoundaryCoarse> lopLMBoundary;
+  std::shared_ptr<Local_Operator_LagrangianBoundary> lopLMBoundary;
 
   //store a grid point, whose function value is fixed
   const FieldVector<double, 2> fixingPoint;

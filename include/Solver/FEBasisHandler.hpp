@@ -42,7 +42,8 @@ struct FEBasisHandler{
     FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid));
   }
 
-  Config::VectorType adapt_after_grid_change(const typename FEBasisType::GridView& gridOld, const typename FEBasisType::GridView& grid, Config::VectorType& v)
+  template <typename GridTypeOld>
+  Config::VectorType adapt_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, Config::VectorType& v)
   {assert(false && " Error, dont know FE basis and works only for levelGridViews"); exit(-1);}
 
   void adapt(MA_solver& ma_solver, const int level, Config::VectorType& v)
@@ -154,7 +155,12 @@ template <>
 void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
 
 template <>
+template <>
 Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>>::adapt_after_grid_change(const typename FEBasisType::GridView& gridOld, const typename FEBasisType::GridView& grid, Config::VectorType& v);
+
+template <>
+template <>
+Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::GridView, SolverConfig::degree>>::adapt_after_grid_change(const typename Config::LevelGridView& gridOld, const typename FEBasisType::GridView& grid, Config::VectorType& v);
 
 
 template <>

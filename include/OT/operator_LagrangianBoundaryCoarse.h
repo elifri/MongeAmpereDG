@@ -99,7 +99,12 @@ public:
 
       //-------calculate integral--------
       auto signedDistance = bc.H(gradu, normal);
+      auto signedDistanceDerivative = bc.derivativeH(gradu,normal);
+
+      auto estimatedDertivate = normalOld;
+      estimatedDertivate /= 1./normalOld.two_norm();
 //      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
+          std::cerr << " signedDistance derivative " << signedDistanceDerivative << " estimated " << estimatedDertivate << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());

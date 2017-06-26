@@ -23,10 +23,10 @@
 //use analytic derivation (if implemented)
 #define USE_ANALYTIC_JACOBIAN
 
-#define BSPLINES
+//#define BSPLINES
 //#define USE_C0_PENALTY
 //#define USE_MIXED_ELEMENT
-//#define USE_PS12
+#define USE_PS12
 
 #ifndef USE_PS12
   #define C0Element

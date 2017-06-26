@@ -162,7 +162,8 @@ struct SolverConfig{
 
 
   /////-------select langrangian boundary element ----------------
-  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree> FETraitsSolverQ;
+//  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree> FETraitsSolverQ;
+  typedef LagrangeC0BoundaryTraits<Config::GridView, SolverConfig::degree> FETraitsSolverQ;
 
 
 	typedef FieldVector<ValueType,1> RangeType;

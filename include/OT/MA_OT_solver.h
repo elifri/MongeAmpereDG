@@ -13,6 +13,7 @@
 
 #include "Solver/AssemblerLagrangian1d.h"
 #include "Solver/AssemblerLagrangian.h"
+#include "Solver/AssemblerLagrangianBoundary.h"
 
 #include "MA_OT_global_Operator.h"
 
@@ -58,7 +59,7 @@ private:
 
 public:
   virtual int get_n_dofs_V_h() const{return FEBasisHandler_.FEBasis().indexSet().size();}
-  virtual int get_n_dofs_Q_h() const{return assemblerLMCoarse_.get_number_of_Boundary_dofs();}
+  virtual int get_n_dofs_Q_h() const{return get_assembler_lagrangian_boundary().get_number_of_filtered_Boundary_dofs();}
   virtual int get_n_dofs() const{return get_n_dofs_V_h() + 1 + get_n_dofs_Q_h();}
 
   template<class F>
@@ -77,7 +78,9 @@ public:
   const GeometrySetting& get_setting() const {return setting_;}
 
   const AssemblerLagrangianMultiplier1D& get_assembler_lagrangian_midvalue() const { return assemblerLM1D_;}
-  const AssemblerLagrangianMultiplierCoarse& get_assembler_lagrangian_boundary() const { return assemblerLMCoarse_;}
+//  const AssemblerLagrangianMultiplierCoarse& get_assembler_lagrangian_boundary() const { return assemblerLMCoarse_;}
+  AssemblerLagrangianMultiplierBoundary& get_assembler_lagrangian_boundary() { return assemblerLMBoundary_;}
+  const AssemblerLagrangianMultiplierBoundary& get_assembler_lagrangian_boundary() const { return assemblerLMBoundary_;}
 
   template<typename FGrad>
   Config::ValueType calculate_L2_errorOT(const FGrad &f) const;
@@ -90,7 +93,8 @@ protected:
 
   //assembler for lagrangian multiplier
   AssemblerLagrangianMultiplier1D assemblerLM1D_;
-  AssemblerLagrangianMultiplierCoarse assemblerLMCoarse_;
+//  AssemblerLagrangianMultiplierCoarse assemblerLMCoarse_;
+  AssemblerLagrangianMultiplierBoundary assemblerLMBoundary_;
 
   OperatorType op;
 

@@ -78,6 +78,7 @@ public:
 #ifdef USE_DOGLEG
       doglegOpts_(config.doglegOpts),
 #endif
+      iterations(0),
       initValueFromFile_(config.initValueFromFile),
       initValue_(config.initValue),
       evaluateJacobianSimultaneously_(config.evalJacSimultaneously),

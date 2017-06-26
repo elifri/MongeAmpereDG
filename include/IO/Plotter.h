@@ -412,8 +412,6 @@ void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
 
     int vertex_no = 0;
 
-    //the reflector is given by X*rho, where rho is the PDE solution. X is calculated from the 2d mesh by adding the third coordiante omega(x)
-
     {   // save points in file after refinement
       for (auto&& element: elements(*grid))
       {

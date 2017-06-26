@@ -294,9 +294,11 @@ public:
 
   Assembler(const FEBasisType& basis) :
       basis_(&basis){
-    std::cout << " ndofs assembler constr " << basis.indexSet().size() << std::endl;
+    std::cout << " ndofs assembler constr " << basis.indexSet().size()  << " init boundary dofs ... "<< std::endl;
     if (basis_)
+    {
       boundaryHandler_.init_boundary_dofs(*basis_);
+    }
   }
 
   template<typename OtherFEBasisType>
@@ -653,6 +655,7 @@ public:
   const std::vector<Config::ValueType>& entryWx0() const{ return entryWx0_;}
 
   const FEBasisType& basis() const {return *basis_;}
+  const BoundaryHandler get_boundaryHandler() const { return boundaryHandler_;}
   const BoundaryHandler::BoolVectorType& isBoundaryDoF() const {return boundaryHandler_.isBoundaryDoF();}
   const BoundaryHandler::BoolVectorType& isBoundaryValueDoF() const{return boundaryHandler_.isBoundaryValueDoF();}
   double volumeMidU() const {return volumeMidU_;}
@@ -2037,7 +2040,6 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 //     std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
 //     std::cerr << " f_boundary " << boundary.transpose() << std::endl;
 //     std::cerr << " f          " << v.transpose() << std::endl;
-
 }
 
 

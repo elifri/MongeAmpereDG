@@ -54,6 +54,18 @@ void rightmultiply (Dune::FieldMatrix<R,dim,dim>& A, const Dune::DiagonalMatrix<
     }
 }
 
+template<class R>
+inline
+void multiply_every_row_of_sparse_matrix(const Eigen::Matrix<R, Eigen::Dynamic, 1> & v, Eigen::SparseMatrix<R>& m)
+{
+  for (int k=0; k<m.outerSize(); ++k)
+    for (typename Eigen::SparseMatrix<R>::InnerIterator it(m,k); it; ++it)
+    {
+//      std::cerr << " was value " << it.value();
+      it.valueRef()*= v(it.col());
+//      std::cerr << " changed to " << it.value() << std::endl;
+    }
+}
 
 template<class MatrixType, class R>
 inline
