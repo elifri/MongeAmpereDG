@@ -48,7 +48,6 @@ public:
   }
 
   ///calculates a boundary no from global index, undefined behaviour if global_i is not a boundary dof
-  inline
   const int BoundaryNo(int global_i) const
   {
     assert (initialised_);
@@ -56,6 +55,22 @@ public:
     assert(basisToBoundary_[global_i] <NumberOfBoundaryDofs_);
     return basisToBoundary_[global_i];
   }
+
+  ///calculates from the local boundary no the global index, not efficient
+  const int GlobalNo(int local_i) const
+  {
+    assert (initialised_);
+    assert( local_i < NumberOfBoundaryDofs_);
+
+    int globalIndex = 0;
+    while(basisToBoundary_[globalIndex] != local_i)
+    {
+      globalIndex++;
+      assert((unsigned int) globalIndex < basisToBoundary_.size());
+    }
+    return globalIndex;
+  }
+
 
   template<typename LocalIndexSet>
   void add_local_coefficients_Only_Boundary (const LocalIndexSet &localIndexSet, const Config::VectorType &v_local, Config::VectorType& v) const;
@@ -75,8 +90,10 @@ private:
   BoolVectorType  isBoundaryGradientDof_;
   bool initialised_;
   int NumberOfBoundaryDofs_;
+  int NumberOfBoundaryValueDofs_;
 
   std::vector<int> basisToBoundary_;
+  std::vector<int> basisToBoundaryValue_;
 };
 
 template<typename LocalIndexSet>
@@ -120,6 +137,7 @@ void BoundaryHandler::init_boundary_dofs(const FEBasis& feBasis)
   auto localIndexSet = feBasis.indexSet().localIndexSet();
 
   basisToBoundary_.resize(feBasis.indexSet().size());
+  basisToBoundaryValue_.resize(feBasis.indexSet().size());
 
   //init all values with false
   isBoundaryDof_ = BoolVectorType::Constant(feBasis.indexSet().size(),false);
@@ -127,6 +145,7 @@ void BoundaryHandler::init_boundary_dofs(const FEBasis& feBasis)
   isBoundaryGradientDof_ = BoolVectorType::Constant(feBasis.indexSet().size(),false);
 
   NumberOfBoundaryDofs_ = 0;
+  NumberOfBoundaryValueDofs_ = 0;
 //  std::cout << "size " << FEBasis.gridView().size(0) << std::endl;
 
   for (auto&& element : elements(feBasis.gridView())) {
@@ -251,16 +270,30 @@ void BoundaryHandler::init_boundary_dofs(const FEBasis& feBasis)
     for (size_t i = 0; i < lFE.size(); i++)
     {
       const auto globalIndex = SolverConfig::FETraitsSolver::get_index(localIndexSet,i);
+
+      //check if boundary dof
+
       if (!isBoundaryDof_(globalIndex) && localIsBoundary[i])
       {
         basisToBoundary_[globalIndex]=NumberOfBoundaryDofs_++;
 //        std::cerr << " found boundary dof " << globalIndex << std::endl;
       }
+
       isBoundaryDof_(globalIndex) = isBoundaryDof_(globalIndex) || localIsBoundary[i] ;
+
+      //check if boundary value dof (first segment dof)
+      if (!isBoundaryValueDof_(globalIndex) && localIsBoundaryValue[i])
+      {
+        basisToBoundaryValue_[globalIndex]=NumberOfBoundaryValueDofs_++;
+//        std::cerr << " found boundary dof " << globalIndex << std::endl;
+      }
       isBoundaryValueDof_(globalIndex) = isBoundaryValueDof_(globalIndex) || localIsBoundaryValue[i] ;
+
+      //check if boundary gradient dof, not first segment dof
       isBoundaryGradientDof_(globalIndex) = isBoundaryGradientDof_(globalIndex) || localIsBoundaryGradient[i] ;
     }
   }
+  std::cout << " found " << NumberOfBoundaryDofs_ << " boundary dofs and " <<  NumberOfBoundaryValueDofs_ << " boundary value dofs " << std::endl;
 }
 
 

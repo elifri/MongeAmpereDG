@@ -128,8 +128,8 @@ void AssemblerLagrangianMultiplier1D::assemble_u_independent_matrix(const LocalO
     lop.assemble_u_independent_cell_term_(localView, local_vector, volume);
 
     add_local_coefficients(localIndexSet,local_vector, v);
-    v/=volume;
   }
+  v/=volume;
 }
 
 template<typename LocalOperatorType>
