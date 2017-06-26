@@ -17,6 +17,7 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+#include<Eigen/SparseLU>
 #include <Eigen/UmfPackSupport>
 
 
@@ -46,12 +47,14 @@ void newtonMethod(
         std::cout << "--------------------------------------------------------------------------------\n";
     }
 
-    Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_Df;
+//    Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_Df;
+    Eigen::SparseLU<Eigen::SparseMatrix<double> > lu_of_Df;
+
 
     for (unsigned int i=0; i<maxIter; i++) {
     Eigen::VectorXd s;
       Eigen::VectorXd xNew(x);
-      const unsigned int maxIterBoundaryConditions = 1;
+      const unsigned int maxIterBoundaryConditions = 5;
       for (unsigned int j = 0; j < maxIterBoundaryConditions; j++)
       {
         // solve Df*s = +f using UmfPack:
@@ -112,11 +115,11 @@ void newtonMethod(
          }
 
 
-         if (!silentmode)
+//         if (!silentmode)
          {
-            std::cout << "   " << std::scientific << std::setprecision(3) << f.lpNorm<Eigen::Infinity>();
-            std::cout << "   " << std::scientific << std::setprecision(3) << "?????????";
-            std::cout << "   " << std::scientific << std::setprecision(3) << f.norm();
+//            std::cout << "   " << std::scientific << std::setprecision(3) << f.lpNorm<Eigen::Infinity>();
+//            std::cout << "   " << std::scientific << std::setprecision(3) << "?????????";
+//            std::cout << "   " << std::scientific << std::setprecision(3) << f.norm();
             std::cout << std::endl;
          }
 
