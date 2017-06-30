@@ -110,7 +110,7 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solv
   std::cout << " grid febasis " << solution_u_Coarse_global.basis().nodeFactory().gridView().size(2) << std::endl;
 
   FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(*solver.gridView_ptr));
-  solver.assembler.bind(*FEBasis_);
+  solver.get_assembler().bind(*FEBasis_);
 
   project(solution_u_Coarse_global, gradient_u_Coarse_global, v);
 
@@ -150,7 +150,7 @@ void FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, SolverConfig::d
 
   //update member
   FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(*solver.gridView_ptr));
-  solver.assembler.bind(*FEBasis_);
+  solver.get_assembler().bind(*FEBasis_);
 
   typedef LagrangeC0Traits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
   FEBasisCoarseType FEBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
@@ -194,7 +194,7 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
       solver.get_setting().lowerLeft, solver.get_setting().upperRight,
       elementsSplines, SolverConfig::degree));
 
-  solver.assembler.bind(*FEBasis_);
+  solver.get_assembler().bind(*FEBasis_);
 
   const auto levelGridView = solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1);
 
@@ -262,7 +262,7 @@ void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig:
       solver.get_setting().lowerLeft, solver.get_setting().upperRight,
       elementsSplines, SolverConfig::degree));
 
-  solver.assembler.bind(*FEBasis_);
+  solver.get_assembler().bind(*FEBasis_);
 
   const auto levelGridView = solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1);
 
@@ -336,7 +336,7 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
   FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(*solver.gridView_ptr));
   uBasis_ = std::shared_ptr<FEuBasisType> (new FEuBasisType(*solver.gridView_ptr));
   uDHBasis_ = std::shared_ptr<FEuDHBasisType> (new FEuDHBasisType(*solver.gridView_ptr));
-  solver.assembler.bind(*FEBasis_);
+  solver.get_assembler().bind(*FEBasis_);
 
   //we need do store the old basis as the (father) finite element depends on the basis
   typedef MixedTraits<Config::LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>::FEBasis FEBasisCoarseType;
@@ -449,18 +449,18 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
 
   //local refined mass matrix m_ij = \int mu_child_i * mu_j
   std::vector<MA_solver::DenseMatrixType> localrefinementMatrices(SolverConfig::childdim);
-  solver.assembler.calculate_refined_local_mass_matrix_ansatz(localFiniteElementu, localrefinementMatrices);
+  solver.get_assembler().calculate_refined_local_mass_matrix_ansatz(localFiniteElementu, localrefinementMatrices);
   //local mass matrix m_ij = \int mu_i * mu_j
   MA_solver::DenseMatrixType localMassMatrix;
-  solver.assembler.calculate_local_mass_matrix_ansatz(localFiniteElementu, localMassMatrix);
+  solver.get_assembler().calculate_local_mass_matrix_ansatz(localFiniteElementu, localMassMatrix);
 
   //everything for the hessian ansatz function as well
   //local refined mass matrix m_ij = \int mu_child_i * mu_j
   std::vector<MA_solver::DenseMatrixType> localrefinementMatrices_DH(SolverConfig::childdim);
-  solver.assembler.calculate_refined_local_mass_matrix_ansatz(localFiniteElementuDH, localrefinementMatrices_DH);
+  solver.get_assembler().calculate_refined_local_mass_matrix_ansatz(localFiniteElementuDH, localrefinementMatrices_DH);
   //local mass matrix m_ij = \int mu_i * mu_j
   MA_solver::DenseMatrixType localMassMatrix_DH;
-  solver.assembler.calculate_local_mass_matrix_ansatz(localFiniteElementuDH, localMassMatrix_DH);
+  solver.get_assembler().calculate_local_mass_matrix_ansatz(localFiniteElementuDH, localMassMatrix_DH);
 
   const int nDH = Config::dim*Config::dim;
   const int size_u = localFiniteElementu.size();

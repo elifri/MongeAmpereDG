@@ -21,14 +21,15 @@ public:
           solver.gridView()
                               //     lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
                 )),
-      fixingPoint{0,0}
+      fixingPoint{0,0},
+      intermediateSolCounter(0)
   {
     std::cout << " solver n_dofs "<< solver.get_n_dofs() << std::endl;
 
     init();
   }
 
-  MA_OT_Operator(Solver& solver, const std::shared_ptr<LOP>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr), fixingPoint{-0.3,0}
+  MA_OT_Operator(Solver& solver, const std::shared_ptr<LOP>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr), fixingPoint{-0.3,0}, intermediateSolCounter(0)
       {
           init();
       }
@@ -198,6 +199,12 @@ public:
     prepare_fixing_point_term(x);
     assemble_with_Jacobian(x,v, m);
 
+    {
+      std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "lF" << intermediateSolCounter << ".m";
+      std::ofstream file(filename.str(),std::ios::out);
+      MATLAB_export(file, v, "v");
+    }
+
     //output
     auto end = std::chrono::steady_clock::now();
     std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
@@ -341,7 +348,7 @@ public:
       entryWx0[noDof_fixingElement] += values[i][0];
       noDof_fixingElement++;
     }
-    solver_ptr->assembler.set_entryWx0(entryWx0);
+    solver_ptr->get_assembler().set_entryWx0(entryWx0);
 
   }
 
@@ -359,6 +366,8 @@ public:
   //store a grid point, whose function value is fixed
   const FieldVector<double, 2> fixingPoint;
   //    Config::Entity fixingElement;
+
+  int intermediateSolCounter;
   };
 
 

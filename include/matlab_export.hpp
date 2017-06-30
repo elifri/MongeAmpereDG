@@ -23,13 +23,13 @@
  * \param A   Dense matrix A
  */
 template<typename Derived_A>
-void MATLAB_export_full(const Derived_A& A, std::string s)
+void MATLAB_export_full(std::ostream& os, const Derived_A& A, std::string s)
 {
 	const unsigned int Ar = A.rows(), Ac = A.cols();
 
 	for (unsigned int i=0; i<Ar; ++i)
 		for (unsigned int j=0; j<Ac; ++j)
-			std::cerr << s << "(" << std::setw(4) << i+1 << ", " << std::setw(4) << j+1 << ") = " << std::setw(23) << std::scientific << std::setprecision(16) << A(i,j)  << ";"<< "\n";
+			os << s << "(" << std::setw(4) << i+1 << ", " << std::setw(4) << j+1 << ") = " << std::setw(23) << std::scientific << std::setprecision(16) << A(i,j)  << ";"<< "\n";
 }
 
 /*!
@@ -53,19 +53,19 @@ void c_export_full(const Derived_A& A, std::string s)
  * \param A   Sparse matrix A
  */
 template<typename Derived_A>
-void MATLAB_export_sparse(const Derived_A &A, std::string s)
+void MATLAB_export_sparse(std::ostream& os, const Derived_A &A, std::string s)
 {
-	const unsigned int Ar = A.rows(),
-			Ac = A.cols();
+  const unsigned int Ar = A.rows(),
+      Ac = A.cols();
 
-	std::cerr << s << "=sparse(" << Ar << ", " << Ac << ");\n";
+  os << s << "=sparse(" << Ar << ", " << Ac << ");\n";
 
-	for (int kA=0; kA<A.outerSize(); ++kA)
-		for (typename Derived_A::InnerIterator itA(A,kA); itA; ++itA)
-		{
-			const unsigned int iA = itA.row(), jA = itA.col();
-			std::cerr << s << "(" << std::setw(4) << iA+1 << ", " << std::setw(4) << jA+1 << ") = " << std::setw(23) << std::scientific << std::setprecision(16) << itA.value() << ";\n";
-		}
+  for (int kA=0; kA<A.outerSize(); ++kA)
+    for (typename Derived_A::InnerIterator itA(A,kA); itA; ++itA)
+    {
+      const unsigned int iA = itA.row(), jA = itA.col();
+      os << s << "(" << std::setw(4) << iA+1 << ", " << std::setw(4) << jA+1 << ") = " << std::setw(23) << std::scientific << std::setprecision(16) << itA.value() << ";\n";
+    }
 }
 
 /*!
@@ -90,6 +90,7 @@ void c_export_sparse(const Derived_A &A, std::string s)
 }
 
 
+
 /*!
  * Exports dense matrices in MATLAB-readable format.
  *
@@ -97,7 +98,12 @@ void c_export_sparse(const Derived_A &A, std::string s)
  */
 template<typename A>
 void MATLAB_export(const Eigen::MatrixBase<A>& a, std::string s="output") {
-	MATLAB_export_full(a.derived(), s);
+	MATLAB_export_full(std::cerr, a.derived(), s);
+}
+
+template<typename A>
+void MATLAB_export(std::ostream& os, const Eigen::MatrixBase<A>& a, std::string s="output") {
+  MATLAB_export_full(os, a.derived(), s);
 }
 
 template<typename A>
@@ -112,7 +118,12 @@ void c_export(const Eigen::MatrixBase<A>& a, std::string s="output") {
  */
 template<typename A>
 void MATLAB_export(const Eigen::SparseMatrixBase<A>& a, std::string s="output") {
-	MATLAB_export_sparse(a.derived(), s);
+	MATLAB_export_sparse(std::cerr, a.derived(), s);
+}
+
+template<typename A>
+void MATLAB_export(std::ostream& os, const Eigen::SparseMatrixBase<A>& a, std::string s="output") {
+  MATLAB_export_sparse(os, a.derived(), s);
 }
 
 template<typename A>
