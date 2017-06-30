@@ -85,7 +85,8 @@ public:
     Config::Entity fixingElement = hs.findEntity(fixingPoint);
 
     auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
-    std::cout << " ndofs u " << solver_ptr->FEBasisHandler_.uBasis().indexSet().size() << std::endl;
+    std::cout << " ndofs u " << solver_ptr->FEBasisHandler_.uBasis().indexSet().size()
+              << " all ndofs " << solver_ptr->get_n_dofs() << std::endl;
     localView.bind(fixingElement);
 
     insert_entities_for_unification_term_to_local_operator(fixingElement, localView.size());
@@ -110,7 +111,7 @@ public:
     for (const auto& e: entryWx0)
       std::cout << e << " ";
     std::cout << std::endl;
-    solver_ptr->assembler.set_entryWx0(entryWx0);
+    solver_ptr->get_assembler().set_entryWx0(entryWx0);
   }
 
   const LOP& get_lop() const
@@ -172,7 +173,7 @@ public:
     typename Solver::DiscreteGridFunction solution_u_global(solver_ptr->FEBasisHandler_.uBasis(),x);
     auto res = solution_u_global(fixingPoint);
 
-    solver_ptr->assembler.set_uAtX0(res);
+    solver_ptr->get_assembler().set_uAtX0(res);
     //      std::cerr << "integral in fixed cell is " << res <<  " beteiligte zellen sind " << lopLinear_ptr->get_number_of_entities_for_unifikation_term() << " size of cell is " << fixingElement.geometry().volume() << std::endl;
     std::cerr << "value at fixed point is " << res << std::endl;
   }
@@ -229,7 +230,9 @@ public:
 //      lop.found_negative = false;
 
       prepare_fixing_point_term(x);
-      assemble(x,v);
+//      assemble(x,v);
+      Config::MatrixType m;
+      assemble_with_Jacobian(x,v,m);
 
       //output
       auto end = std::chrono::steady_clock::now();
