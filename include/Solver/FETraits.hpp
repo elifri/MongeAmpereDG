@@ -14,8 +14,8 @@
 #include "MAconfig.h"
 
 //#include "localfunctions/MAmixedbasis.hh"
-#include "localfunctions/MAmixedbasisC0.hh"
-//#include "localfunctions/MAmixedbasisC0C0.hh"
+//#include "localfunctions/MAmixedbasisC0.hh"
+#include "localfunctions/MAmixedbasisC0C0.hh"
 //#include "localfunctions/deVeubekefunctionspacebasis.hh"
 #include "localfunctions/PowellSabin12SSplinenodalbasis.hh"
 #include <dune/functions/functionspacebases/bsplinebasis.hh>
@@ -133,7 +133,8 @@ struct FETraits<Functions::MAMixedBasis< GridView, degree, degreeHessian>>
   //  typedef FEBasis::Basisu FEuBasis;
   typedef Functions::PQkNodalBasis<GridView, degree> FEuBasis;
   //  typedef FEBasis::BasisuDH FEuDHBasis;
-  typedef Functions::LagrangeDGBasis<GridView, degreeHessian> FEuDHBasis;
+//  typedef Functions::LagrangeDGBasis<GridView, degreeHessian> FEuDHBasis;
+  typedef Functions::PQkNodalBasis<GridView, degreeHessian> FEuDHBasis;
 
 //  typedef decltype(TypeTree::hybridTreePath(Dune::TypeTree::Indices::_0)) TreePath;
 //  typedef Dune::TypeTree::hybridTreePath<Dune::TypeTree::Indices::_0> TreePath;
