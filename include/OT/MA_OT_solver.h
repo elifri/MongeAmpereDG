@@ -39,6 +39,10 @@ private:
 
 public:
   virtual int get_n_dofs() const{return FEBasisHandler_.FEBasis().indexSet().size();}
+#ifdef USE_MIXED_ELEMENT
+  virtual int get_n_dofs_u() const{return FEBasisHandler_.uBasis().indexSet().size();}
+  virtual int get_n_dofs_u_DH() const{return Config::dim*Config::dim*FEBasisHandler_.uDHBasis().indexSet().size();}
+#endif
 
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
   virtual void plot(const std::string& filename) const;

@@ -35,11 +35,18 @@ void MA_OT_solver::plot(const std::string& name) const
      //build gridviewfunction
     Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(),solution_u);
     decltype(numericalSolution)::LocalFunction localnumericalSolution(numericalSolution);
-     //build writer
+
+    //build errorfunction
+    Config::VectorType diff = solution_u-exactsol_u.segment(0, get_n_dofs_u());
+    Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolutionError(FEBasisHandler_.uBasis(),diff);
+    decltype(numericalSolution)::LocalFunction localnumericalSolutionError(numericalSolutionError);
+
+    //build writer
      SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
 
      //add solution data
      vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
+     vtkWriter.addVertexData(localnumericalSolutionError, VTK::FieldInfo("error", VTK::FieldInfo::Type::scalar, 1));
 
      //extract hessian (3 entries (because symmetry))
      Dune::array<int,2> direction = {0,0};
@@ -56,25 +63,28 @@ void MA_OT_solver::plot(const std::string& name) const
      auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
      vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
 
-     //extract hessian (3 entries (because symmetry))
-/*     typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
-     DerivativeVectorType derivativeSolution(uDHBasis->indexSet().size());
+#ifdef USE_MIXED_ELEMENT
+     std::array<Config::VectorType,Config::dim*Config::dim> derivativeSolution;
+     for (int i = 0; i < Config::dim*Config::dim; i++)
+         derivativeSolution[i] = Config::VectorType::Zero(get_n_dofs_u_DH()/Config::dim/Config::dim);
 
      //extract dofs
      for (int i=0; i<derivativeSolution.size(); i++)
-       for (int j=0; j< nDH; j++)
-       {
-         if (j == 2) continue;
-         int index_j = j > 2? 2 : j;
-         derivativeSolution[i][index_j] = solution[get_n_dofs_u()+ nDH*i+j];
-       }
+       for (int row=0; row< Config::dim; row++)
+         for (int col=0; col< Config::dim; col++)
+         {
+           derivativeSolution[row*Config::dim+col](i) = solution[get_n_dofs_u()+ i*4+row*Config::dim+col];
+         }
 
-     //build gridview function
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
-     auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
-
-     vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("DiscreteHessian", VTK::FieldInfo::Type::vector, 3));
-*/
+     for (int i = 0; i < Config::dim*Config::dim; i++)
+     {
+       //build gridview function
+       Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuDHBasis,Config::VectorType> numericalSolutionHessian(FEBasisHandler_.uDHBasis(),derivativeSolution[i]);
+       auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
+       std::string hessianEntryName = "DiscreteHessian" + NumberToString(i);
+       vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo(hessianEntryName, VTK::FieldInfo::Type::scalar, 1));
+     }
+#endif
      //write to file
      std::string fname(plotter.get_output_directory());
      fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
@@ -102,13 +112,15 @@ void MA_OT_solver::create_initial_guess()
   }
   else
   {
-  //  project([](Config::SpaceType x){return x.two_norm2()/2.0;},
+//    project([](Config::SpaceType x){return x.two_norm2()/2.0;},
       project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
   //  project_labouriousC1([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
   //                        [](Config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},
   //                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
                           solution);
   }
+
+  project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},exactsol_u);
 }
 
 
