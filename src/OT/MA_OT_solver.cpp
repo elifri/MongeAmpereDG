@@ -63,16 +63,24 @@ void MA_OT_solver::plot(const std::string& name) const
      auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
      vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
 
-#ifdef USE_MIXED_ELEMENT
+     //write to file
+     std::string fname(plotter.get_output_directory());
+     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
+     vtkWriter.write(fname);
+
+     std::cout << fname  << std::endl;
+
+     #ifdef USE_MIXED_ELEMENT
      std::array<Config::VectorType,Config::dim*Config::dim> derivativeSolution;
      for (int i = 0; i < Config::dim*Config::dim; i++)
          derivativeSolution[i] = Config::VectorType::Zero(get_n_dofs_u_DH()/Config::dim/Config::dim);
 
      //extract dofs
-     for (int i=0; i<derivativeSolution.size(); i++)
+     for (int i=0; i<derivativeSolution[0].size(); i++)
        for (int row=0; row< Config::dim; row++)
          for (int col=0; col< Config::dim; col++)
          {
+           std::cerr << " get index i " << i << "(" << row << "," << col << ") from " << get_n_dofs_u()+ i*4+row*Config::dim+col << ", namely " << solution[get_n_dofs_u()+ i*4+row*Config::dim+col] << std::endl;
            derivativeSolution[row*Config::dim+col](i) = solution[get_n_dofs_u()+ i*4+row*Config::dim+col];
          }
 
@@ -83,14 +91,15 @@ void MA_OT_solver::plot(const std::string& name) const
        auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
        std::string hessianEntryName = "DiscreteHessian" + NumberToString(i);
        vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo(hessianEntryName, VTK::FieldInfo::Type::scalar, 1));
+
+       //write to file
+       std::string fname(plotter.get_output_directory());
+       fname += "/"+ plotter.get_output_prefix()+ name + "DiscreteHessian"+NumberToString(i)+"No" +NumberToString(iterations) + ".vtu";
+       vtkWriter.write(fname);
+
      }
 #endif
-     //write to file
-     std::string fname(plotter.get_output_directory());
-     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
-     vtkWriter.write(fname);
 
-     std::cout << fname  << std::endl;
   }
 
   //write to file
