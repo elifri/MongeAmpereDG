@@ -166,10 +166,8 @@ void AssemblerLagrangianMultiplierBoundary::assemble_BoundarymatrixSmall(const B
     Config::MatrixType& m, const Config::VectorType &x, Config::VectorType &v) const{
   assemble_Boundarymatrix(lop, m, x, v);
 
-
-  //sort entries by size
-  //std::set<EntryType,EntryCompare> mEntries;
   std::vector<EntryType> mEntries;
+/*  //sort entries by size
 //  std::cerr << " inserted ";
   for (int k=0; k<m.outerSize(); ++k)
     for (Config::MatrixType::InnerIterator it(m,k); it; ++it)
@@ -186,7 +184,7 @@ void AssemblerLagrangianMultiplierBoundary::assemble_BoundarymatrixSmall(const B
 
   std::cerr << " delete row ";
   //filter the greater half of entries
-  while(filter.size() < 0)
+  while(filter.size() < 30)
   {
     if(boundaryHandlerV.isBoundaryGradientDoF()(it->col()))
     {
@@ -222,15 +220,65 @@ void AssemblerLagrangianMultiplierBoundary::assemble_BoundarymatrixSmall(const B
     if(filteredBoundaryQ_.isNotFilteredDof(it->row()))
     {
       m.insert(filteredBoundaryQ_.NotFilteredNumber(it->row()), it->col()) = it->value();
-//      assert (filteredBoundaryQ_.NotFilteredNumber(it->row()) == boundaryHandlerQ_.BoundaryNo(it->row()));
 //      std::cerr << "[" << filteredBoundaryQ_.NotFilteredNumber(it->row()) << "<-" << it->row() << "), " << it->col() << "], ";
     }
-    else
+    it++;
+  }*/
+
+  Config::VectorType sum_row = Config::VectorType::Zero(m.rows());
+
+  for (int k=0; k<m.outerSize(); ++k)
+    for (Config::MatrixType::InnerIterator it(m,k); it; ++it)
     {
-//      std::cerr << " ignored entry (" << boundaryHandlerQ_.BoundaryNo(it->row()) << "," << it->col() << "=" << it->value() << std::endl;
+      sum_row[it.row()] += it.value();
+      mEntries.push_back(EntryType(boundaryHandlerQ_.GlobalNo(it.row()), it.col(), it.value()));
+    }
+
+  std::set<int> filter;
+
+  std::cerr << " delete row ";
+  //filter the greater half of entries
+  while(filter.size() < 10)
+  {
+    Config::ValueType max = 0;
+    int max_index = 0;
+    for (int i = 0; i < sum_row.size(); i++)
+    {
+      if (sum_row[i] > max)
+      {
+        max = sum_row[i];
+        max_index = i;
+      }
+    }
+    filter.insert(boundaryHandlerQ_.GlobalNo(max_index));
+    sum_row[max_index] = -1;
+    std::cerr << max_index << ", ";
+  }
+  std::cerr << std::endl;
+
+  //add notBoundaryDofs to Filter, such that boundary handler is no longer needed
+  for (unsigned int i = 0; i < basisLM_->indexSet().size(); i++)
+  {
+    if(!boundaryHandlerQ_.isBoundaryDoF(i))
+    {
+      filter.insert(i);
+    }
+  }
+
+  filteredBoundaryQ_.bind(filter,basisLM_->indexSet().size());
+  filtered_ = true;
+
+  m.resize(filteredBoundaryQ_.get_number_of_not_filtered_dofs(), this->basis_->indexSet().size());
+  auto it = mEntries.begin();
+  while(it != mEntries.end())
+  {
+    if(filteredBoundaryQ_.isNotFilteredDof(it->row()))
+    {
+      m.insert(filteredBoundaryQ_.NotFilteredNumber(it->row()), it->col()) = it->value();
     }
     it++;
   }
+
   v = shrink_to_boundary_vector(v);
 }
 
