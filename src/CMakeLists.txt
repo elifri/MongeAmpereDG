@@ -67,4 +67,9 @@ target_link_dune_default_libraries("testPS12Split")
 #add_executable("testdeVeubekeNew" localfunctions/test-deVeubekeNew.cc)
 #target_link_dune_default_libraries("testdeVeubekeNew")
 
+message("linking opennurbs ${OPENNURBS_LINKLIBRARIES}")
+
+add_executable("example_write_NURBS" NURBS/example_ud.cpp NURBS/example_write.cpp)
+target_link_libraries(example_write_NURBS ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES})
+#target_link_dune_default_libraries("testdeVeubekeNew")
 
