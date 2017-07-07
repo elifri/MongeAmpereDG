@@ -78,9 +78,10 @@ find_package(MethodOfEllipsoids)
 find_package(CImg)
 find_package(HDF5 REQUIRED)
 find_package(libffo_core REQUIRED)
+find_package(libnurbs REQUIRED)
 
-
-include_directories(${LIBFFO_CORE_INCLUDES} ${METHOD_OF_ELLIPSOIDS_INCLUDES} ${CIMG_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${Boost_INCLUDE_DIRS})
+message("libnurbs includes ${LIBNURBS_INCLUDES}")
+include_directories(${LIBFFO_CORE_INCLUDES} ${LIBNURBS_INCLUDES} ${METHOD_OF_ELLIPSOIDS_INCLUDES} ${CIMG_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${Boost_INCLUDE_DIRS})
 if (METHOD_OF_ELLIPSOIDS_INCLUDES)
 include_directories(${METHOD_OF_ELLIPSOIDS_INCLUDES})
 endif (METHOD_OF_ELLIPSOIDS_INCLUDES)
