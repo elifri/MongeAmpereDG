@@ -298,7 +298,7 @@ void MA_OT_solver::adapt_operator()
 
 void MA_OT_solver::adapt_solution(const int level)
 {
-  Config::VectorType p = get_assembler_lagrangian_boundary().boundaryFilter().blow_up_boundary_vector(solution.tail(get_n_dofs_Q_h()));
+  Config::VectorType p = get_assembler_lagrangian_boundary().boundaryHandler().blow_up_boundary_vector(solution.tail(get_n_dofs_Q_h()));
 
   //adapt febasis and solution
   FEBasisHandler_.adapt(*this, level, solution);
@@ -316,7 +316,7 @@ void MA_OT_solver::adapt_solution(const int level)
 
   //init lagrangian multiplier variables
   solution.conservativeResize(get_n_dofs());
-  solution.tail(get_n_dofs_Q_h()) = get_assembler_lagrangian_boundary().boundaryFilter().shrink_to_boundary_vector(p_adapted);
+  solution.tail(get_n_dofs_Q_h()) = get_assembler_lagrangian_boundary().boundaryHandler().shrink_to_boundary_vector(p_adapted);
 
 
   this->adapt_operator();

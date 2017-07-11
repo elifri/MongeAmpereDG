@@ -414,9 +414,7 @@ public:
     tempV.setZero(Q_h_size);
 
     //assemble boundary terms
-//    solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xNew.head(V_h_size), tempV);
-    const auto& boundaryHandlerV = solver_ptr->get_assembler().get_boundaryHandler();
-    solver_ptr->get_assembler_lagrangian_boundary().assemble_BoundarymatrixSmall(boundaryHandlerV, *lopLMBoundary, tempM, xNew.head(V_h_size), tempV);
+    solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xNew.head(V_h_size), tempV);
 
     //remove the qs from langrangian boundary multiplier
     auto xNewBoundaryLagrangianMultiplier = solver_ptr->get_assembler_lagrangian_boundary().shrink_to_boundary_vector(xNew.tail(Q_h_size));

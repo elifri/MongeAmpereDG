@@ -59,7 +59,7 @@ private:
 
 public:
   virtual int get_n_dofs_V_h() const{return FEBasisHandler_.FEBasis().indexSet().size();}
-  virtual int get_n_dofs_Q_h() const{return get_assembler_lagrangian_boundary().get_number_of_filtered_Boundary_dofs();}
+  virtual int get_n_dofs_Q_h() const{return get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();}
   virtual int get_n_dofs() const{return get_n_dofs_V_h() + 1 + get_n_dofs_Q_h();}
 
   template<class F>
