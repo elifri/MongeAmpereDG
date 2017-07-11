@@ -13,14 +13,16 @@
 
 #include "MAconfig.h"
 
-#include "localfunctions/lagrange/pqkboundary2dnodalbasis.hpp"
-#include "localfunctions/lagrange/pqktracenodalbasis.hh"
 //#include "localfunctions/MAmixedbasis.hh"
 #include "localfunctions/MAmixed/MAmixedbasisC0.hh"
 //#include "localfunctions/MAmixedbasisC0C0.hh"
 //#include "localfunctions/deVeubekefunctionspacebasis.hh"
 #include "localfunctions/PowellSabin12Split/PowellSabin12SSplinenodalbasis.hh"
 #include <dune/functions/functionspacebases/bsplinebasis.hh>
+
+#include "localfunctions/lagrange/pqkboundary2dnodalbasis.hpp"
+#include "localfunctions/lagrange/pqktracenodalbasis.hh"
+#include "localfunctions/lagrange/RefinedLagrange/pk2dRefinednodalbasis.hpp"
 
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
 
@@ -189,7 +191,8 @@ using LagrangeC0Traits = FETraits<Functions::PQkNodalBasis<GridView, degree>>;
 
 template <typename GridView, int degree>
 //using LagrangeC0BoundaryTraits = FETraits<Functions::PQkBoundaryNodalBasis<GridView, degree>>;
-using LagrangeC0BoundaryTraits = FETraits<Functions::PQkTraceNodalBasis<GridView, degree>>;
+//using LagrangeC0BoundaryTraits = FETraits<Functions::PQkTraceNodalBasis<GridView, degree>>;
+using LagrangeC0BoundaryTraits = FETraits<Functions::Pk2dRefinedNodalBasis<GridView, degree>>;
 
 
 template <typename GridView, int degree, int degreeHessian>
