@@ -13,7 +13,6 @@
  *
  */
 #include "Assembler.h"
-#include "FEBasisFilter.h"
 
 class AssemblerLagrangianMultiplierBoundary:public Assembler{
 

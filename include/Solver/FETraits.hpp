@@ -191,8 +191,10 @@ using LagrangeC0Traits = FETraits<Functions::PQkNodalBasis<GridView, degree>>;
 
 template <typename GridView, int degree>
 //using LagrangeC0BoundaryTraits = FETraits<Functions::PQkBoundaryNodalBasis<GridView, degree>>;
-//using LagrangeC0BoundaryTraits = FETraits<Functions::PQkTraceNodalBasis<GridView, degree>>;
-using LagrangeC0BoundaryTraits = FETraits<Functions::Pk2dRefinedNodalBasis<GridView, degree>>;
+using LagrangeC0BoundaryTraits = FETraits<Functions::PQkTraceNodalBasis<GridView, degree>>;
+
+template <typename GridView, int degree>
+using LagrangeC0FineBoundaryTraits = FETraits<Functions::Pk2dRefinedNodalBasis<GridView, degree>>;
 
 
 template <typename GridView, int degree, int degreeHessian>
