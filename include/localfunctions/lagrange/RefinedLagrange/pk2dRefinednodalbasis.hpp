@@ -299,8 +299,7 @@ public:
       {
         if (element.type().isTriangle())
         {
-          const int interiorLagrangeNodesPerTriangle = (k-1)*(k-2)/2;
-          return {{ nodeFactory_->triangleOffset_ + interiorLagrangeNodesPerTriangle*gridIndexSet.subIndex(element,0,0) + localKey.index() }};
+          return {{ nodeFactory_->triangleOffset_ + nodeFactory_->dofsPerTriangle*gridIndexSet.subIndex(element,0,0) + localKey.index() }};
         }
         else
           DUNE_THROW(Dune::NotImplemented, "2d elements have to be triangles or quadrilaterals");

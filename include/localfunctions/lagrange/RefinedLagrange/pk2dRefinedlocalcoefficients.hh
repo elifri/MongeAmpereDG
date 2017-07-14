@@ -24,9 +24,9 @@ namespace Dune
   template<unsigned int k>
   class Pk2DRefinedLocalCoefficients
   {
-    enum {N = (k+1)*(k+2)/2};
-
     static const int k_fine = 2*k;
+    enum {N = (k_fine+1)*(k_fine+2)/2};
+
   public:
     //! \brief Standard constructor
     Pk2DRefinedLocalCoefficients () : li(N)

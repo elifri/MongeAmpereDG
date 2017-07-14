@@ -30,7 +30,7 @@ class Pk2DRefinedLocalBasis
 public:
 
 	/** \brief Export the number of degrees of freedom */
-	enum {N = 4*(k+1)*(k+2)/2-(3+3*(k-2)), childdim = 4};
+	enum {N = (2*k+1)*(2*k+2)/2, childdim = 4};
 
 	/** \brief Export the element order
 	 OS: Surprising that we need to export this both statically and dynamically!
@@ -66,29 +66,28 @@ public:
 	inline void evaluateFunction (const typename Traits::DomainType& x,
 			std::vector<typename Traits::RangeType>& out) const
 	{
-		auto y = x;
+		auto temp = x;
+    typename Traits::DomainType xRefined;
 		//now the quick and dirty way ...
 		int child = get_child_no(x);
 
 		//get refined coordinates
 		//TODO should be done by refgeometry (geometry in Father)
-		for (unsigned int i = 0; i < refBasis_.size(); i++)
-		{
-		  y+=b_[child];
-		  if (child == 3)
-		    A3_.mv(x,y);
-		  else
-		    A_.mv(x,y);
-		}
+		temp+=b_[child];
+		if (child == 3)
+		  A3_.mv(temp,xRefined);
+		else
+		  A_.mv(temp,xRefined);
 
 		//evaluate in referenzBasis
 		std::vector<typename Traits::RangeType> outlocal(Pk2DLocalBasis<D,R,k>::N);
-		refBasis_.evaluateFunction(y,outlocal);
+		refBasis_.evaluateFunction(xRefined,outlocal);
 
 		//write into coarse vector
 		out.resize(N);
 		for (int i = 0; i < N; i++) out[i] = 0;
-		for (int i = 0; i < Pk2DLocalBasis<D,R,k>::N; i++) out[mapDoF[child][i]] = outlocal[i];
+		for (int i = 0; i < Pk2DLocalBasis<D,R,k>::N; i++)
+		  out[mapDoF[child][i]] = outlocal[i];
 
 	}
 
