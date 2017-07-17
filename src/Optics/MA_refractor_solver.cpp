@@ -140,7 +140,7 @@ void MA_refractor_solver::plot(const std::string& name, int no) const
 
    std::string refrNurbsname(plotter.get_output_directory());
    refrNurbsname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".3dm";
-   nurbsWriter_.write_refractor_mesh(refrPovname, *solution_u_old);
+   nurbsWriter_.write_refractor_mesh(refrNurbsname, *solution_u_old);
 
 }
 
