@@ -61,6 +61,10 @@ public:
   virtual int get_n_dofs_V_h() const{return FEBasisHandler_.FEBasis().indexSet().size();}
   virtual int get_n_dofs_Q_h() const{return get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();}
   virtual int get_n_dofs() const{return get_n_dofs_V_h() + 1 + get_n_dofs_Q_h();}
+#ifdef USE_MIXED_ELEMENT
+  virtual int get_n_dofs_u() const{return FEBasisHandler_.uBasis().indexSet().size();}
+  virtual int get_n_dofs_u_DH() const{return Config::dim*Config::dim*FEBasisHandler_.uDHBasis().indexSet().size();}
+#endif
 
   template<class F>
   void project(const F f, VectorType& v) const;

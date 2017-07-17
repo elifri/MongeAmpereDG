@@ -152,7 +152,7 @@ void BoundaryHandler::init_boundary_dofs(const FEBasis& feBasis)
     localView.bind(element);
     localIndexSet.bind(localView);
 
-    const auto& lFE = SolverConfig::FETraitsSolver::get_finiteElementu(localView);
+    const auto& lFE = FETraits<FEBasis>::get_finiteElementu(localView);
 
     //store local boundary information
     BoolVectorType localIsBoundary = BoolVectorType::Constant(lFE.size(),false);
@@ -269,7 +269,7 @@ void BoundaryHandler::init_boundary_dofs(const FEBasis& feBasis)
 
     for (size_t i = 0; i < lFE.size(); i++)
     {
-      const auto globalIndex = SolverConfig::FETraitsSolver::get_index(localIndexSet,i);
+      const auto globalIndex = FETraits<FEBasis>::get_index(localIndexSet,i);
 
       //check if boundary dof
 

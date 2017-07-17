@@ -259,7 +259,7 @@ void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig:
       solver.get_setting().lowerLeft, solver.get_setting().upperRight,
       elementsSplines, SolverConfig::degree));
 
-  solver.assembler.bind(*FEBasis_);
+  solver.get_assembler().bind(*FEBasis_);
 
   const auto levelGridView = solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1);
 
@@ -445,18 +445,18 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
 
   //local refined mass matrix m_ij = \int mu_child_i * mu_j
   std::vector<MA_solver::DenseMatrixType> localrefinementMatrices(SolverConfig::childdim);
-  solver.assembler.calculate_refined_local_mass_matrix_ansatz(localFiniteElementu, localrefinementMatrices);
+  solver.get_assembler().calculate_refined_local_mass_matrix_ansatz(localFiniteElementu, localrefinementMatrices);
   //local mass matrix m_ij = \int mu_i * mu_j
   MA_solver::DenseMatrixType localMassMatrix;
-  solver.assembler.calculate_local_mass_matrix_ansatz(localFiniteElementu, localMassMatrix);
+  solver.get_assembler().calculate_local_mass_matrix_ansatz(localFiniteElementu, localMassMatrix);
 
   //everything for the hessian ansatz function as well
   //local refined mass matrix m_ij = \int mu_child_i * mu_j
   std::vector<MA_solver::DenseMatrixType> localrefinementMatrices_DH(SolverConfig::childdim);
-  solver.assembler.calculate_refined_local_mass_matrix_ansatz(localFiniteElementuDH, localrefinementMatrices_DH);
+  solver.get_assembler().calculate_refined_local_mass_matrix_ansatz(localFiniteElementuDH, localrefinementMatrices_DH);
   //local mass matrix m_ij = \int mu_i * mu_j
   MA_solver::DenseMatrixType localMassMatrix_DH;
-  solver.assembler.calculate_local_mass_matrix_ansatz(localFiniteElementuDH, localMassMatrix_DH);
+  solver.get_assembler().calculate_local_mass_matrix_ansatz(localFiniteElementuDH, localMassMatrix_DH);
 
   const int nDH = Config::dim*Config::dim;
   const int size_u = localFiniteElementu.size();

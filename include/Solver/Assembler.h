@@ -1697,6 +1697,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
         default: assert(false); std::cerr << " Error: do not know AssembleType" << std::endl; exit(-1);
         }
 
+
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
           if (is.neighbor()) {
@@ -1780,6 +1781,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
             }
           }
           else if (is.boundary()) {
+            assert(false); //brauchen wir eine boundaryfunction
             } else {
                 std::cerr << " I do not know how to handle this intersection"
                         << std::endl;
@@ -1787,16 +1789,34 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
             }
         }
 
+//        local_vector+=local_boundary;
+
         //add to objective function and jacobian
         add_local_coefficients(localIndexSet, local_vector, v);
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
+
+/*
+        //special treatment for boundary elements
+        if (elementHasBoundary)
+        {
+          for (size_t i = 0; i < localIndexSet.size(); i++)
+          {
+//          if (!isBoundaryLocal(i))  continue;
+          boundary(FETraits::get_index(localIndexSet, i)) += local_boundary[i] ;
+//          std::cerr << "boundary add " << i << " to " << FETraits::get_index(localIndexSet, i) << " with value " << local_boundary[i] << " and get " << boundary(FETraits::get_index(localIndexSet, i)) << std::endl;
+          }
+
+          add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
+        }
+*/
+
      }
      m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
 
      std::cerr << " inner term " << v.norm()<< " whole norm " << v.norm() << std::endl;
 //     std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
 //     std::cerr << " f_boundary " << boundary.transpose() << std::endl;
-//     std::cerr << " f          " << v.transpose() << std::endl;
+     std::cerr << " f          " << v.transpose() << std::endl;
 
 }
 #else //HAVE_ADOLC

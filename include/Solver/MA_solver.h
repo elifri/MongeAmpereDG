@@ -196,7 +196,7 @@ public:
 
 
 	virtual int get_n_dofs() const{return FEBasisHandler_.FEBasis().indexSet().size();}
-  int get_n_dofs_u() const{return FEBasisHandler_.FEBasis().indexSet().size();}
+  virtual int get_n_dofs_u() const{return FEBasisHandler_.FEBasis().indexSet().size();}
 
   const GridType& grid() const {return *grid_ptr;}
   const GridViewType& gridView() const {return *gridView_ptr;}
@@ -216,6 +216,9 @@ public:
 	void assemble_DG_Jacobian_only(const LocalOperatorType &LOP, const VectorType& x, MatrixType& m) const {
 		assert (initialised);
 		assembler_.assemble_DG_Jacobian_only(LOP, x, m);
+//=======
+//		assembler_.assemble_Jacobian_DG(LOP, x, m);
+//>>>>>>> master
 	}
 
   ///assembles the (global) Jacobian of the FE function as specified in LOP
@@ -513,7 +516,7 @@ void MA_solver::project_labouriousC1(const F f, const F_derX f_derX, const F_der
       localDofs(3*geometry.corners()+i) = i %2 == 0? -(GradientF*normal): GradientF*normal;
       //      std::cout << " aprox normal derivative " << GradientF*normal << " = " << GradientF << " * " << normal << std::endl ;
     }
-    assembler.set_local_coefficients(localIndexSet,localDofs, v);
+    assembler_.set_local_coefficients(localIndexSet,localDofs, v);
   }
 
   //set scaling factor (last dof) to ensure mass conservation
@@ -589,7 +592,7 @@ void MA_solver::project_labouriousC1Local(LocalF f, LocalF_grad f_grad, VectorTy
     }
 
     //    std::cerr << "vertex 0 = " << geometry.corner(0) << std::endl;
-    assembler.set_local_coefficients(localIndexSet, localDofs, v);
+    assembler_.set_local_coefficients(localIndexSet, localDofs, v);
   }
 
   //set scaling factor (last dof) to ensure mass conservation

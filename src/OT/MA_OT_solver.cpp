@@ -192,8 +192,37 @@ void MA_OT_solver::plot(const std::string& name, int no) const
      fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + ".vtu";
      vtkWriter.write(fname);
 
-     std::cerr << fname  << std::endl;
+     std::cout << fname  << std::endl;
 
+     #ifdef USE_MIXED_ELEMENT
+     std::array<Config::VectorType,Config::dim*Config::dim> derivativeSolution;
+     for (int i = 0; i < Config::dim*Config::dim; i++)
+         derivativeSolution[i] = Config::VectorType::Zero(get_n_dofs_u_DH()/Config::dim/Config::dim);
+
+     //extract dofs
+     for (int i=0; i<derivativeSolution[0].size(); i++)
+       for (int row=0; row< Config::dim; row++)
+         for (int col=0; col< Config::dim; col++)
+         {
+           std::cerr << " get index i " << i << "(" << row << "," << col << ") from " << get_n_dofs_u()+ i*4+row*Config::dim+col << ", namely " << solution[get_n_dofs_u()+ i*4+row*Config::dim+col] << std::endl;
+           derivativeSolution[row*Config::dim+col](i) = solution[get_n_dofs_u()+ i*4+row*Config::dim+col];
+         }
+
+     for (int i = 0; i < Config::dim*Config::dim; i++)
+     {
+       //build gridview function
+       Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuDHBasis,Config::VectorType> numericalSolutionHessian(FEBasisHandler_.uDHBasis(),derivativeSolution[i]);
+       auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
+       std::string hessianEntryName = "DiscreteHessian" + NumberToString(i);
+       vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo(hessianEntryName, VTK::FieldInfo::Type::scalar, 1));
+
+       //write to file
+       std::string fname(plotter.get_output_directory());
+       fname += "/"+ plotter.get_output_prefix()+ name + "DiscreteHessian"+NumberToString(i)+"No" +NumberToString(iterations) + ".vtu";
+       vtkWriter.write(fname);
+
+     }
+#endif
 
   }
 
@@ -219,7 +248,6 @@ void MA_OT_solver::create_initial_guess()
   else
   {
 //    project([](Config::SpaceType x){return x.two_norm2()/2.0;},
-//    project([](Config::SpaceType x){return 0.5*x[0]*x[0]+x[0]+0.25*x[1]*x[1];},
       project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
 //    project_labouriousC1([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
   //                        [](Config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},

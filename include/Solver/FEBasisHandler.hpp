@@ -128,6 +128,7 @@ struct FEBasisHandler<Mixed, FT>{
 
   const FEBasisType& FEBasis() const{ return *FEBasis_;}
   const FEuBasisType& uBasis() const{ return *uBasis_;}
+  const FEuDHBasisType& uDHBasis() const{ return *uDHBasis_;}
 };
 
 template<>

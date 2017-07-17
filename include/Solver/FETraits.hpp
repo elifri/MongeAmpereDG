@@ -137,7 +137,8 @@ struct FETraits<Functions::MAMixedBasis< GridView, degree, degreeHessian>>
   //  typedef FEBasis::Basisu FEuBasis;
   typedef Functions::PQkNodalBasis<GridView, degree> FEuBasis;
   //  typedef FEBasis::BasisuDH FEuDHBasis;
-  typedef Functions::LagrangeDGBasis<GridView, degreeHessian> FEuDHBasis;
+//  typedef Functions::LagrangeDGBasis<GridView, degreeHessian> FEuDHBasis;
+  typedef Functions::PQkNodalBasis<GridView, degreeHessian> FEuDHBasis;
 
 //  typedef decltype(TypeTree::hybridTreePath(Dune::TypeTree::Indices::_0)) TreePath;
 //  typedef Dune::TypeTree::hybridTreePath<Dune::TypeTree::Indices::_0> TreePath;
@@ -148,7 +149,8 @@ struct FETraits<Functions::MAMixedBasis< GridView, degree, degreeHessian>>
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasis, Config::VectorType> DiscreteGridFunction;
   typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
   typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasis, Config::VectorType>::LocalFunction DiscreteLocalSecondDerivativeGridFunction;
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasis, Config::VectorType> DiscreteSecondDerivativeGridFunction;
+  typedef typename DiscreteSecondDerivativeGridFunction::LocalFunction DiscreteLocalSecondDerivativeGridFunction;
 
   template<int dim>
   static const QuadratureRule<Config::ValueType, dim>& get_Quadrature(const Config::ElementType & element, int order)
