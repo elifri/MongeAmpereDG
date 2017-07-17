@@ -25,9 +25,10 @@ struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
 
 MA_refractor_solver::MA_refractor_solver(GridHandlerType& gridHandler, const shared_ptr<GridType>& gridTarget,
     const SolverConfig& config, OpticalSetting& opticalSetting)
- :MA_OT_solver(gridHandler, gridTarget, config, opticalSetting, false), setting_(opticalSetting)
+ :MA_OT_solver(gridHandler, gridTarget, config, opticalSetting, false), setting_(opticalSetting), nurbsWriter_(gridView)
 {
    this->op = std::make_shared<OperatorType>(*this, setting_);
+   nurbsWriter_.set_refinement(this->plotterRefinement_);
 
    //adjust light intensity
    const auto integralLightOut = get_refr_operator().get_actual_g().integrateOriginal();
@@ -135,6 +136,12 @@ void MA_refractor_solver::plot(const std::string& name, int no) const
    refrPovname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".pov";
 
    plotter.writeRefractorPOV(refrPovname, *solution_u_old);
+   std::cout << refrPovname << std::endl;
+
+   std::string refrNurbsname(plotter.get_output_directory());
+   refrNurbsname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".3dm";
+   nurbsWriter_.write_refractor_mesh(refrPovname, *solution_u_old);
+
 }
 
 void MA_refractor_solver::update_Operator()
