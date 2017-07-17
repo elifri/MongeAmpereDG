@@ -25,7 +25,7 @@ struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
   {
     this->solver_ptr->assemble_DG_Jacobian(this->get_lop(), x,v, m);
 
-    const auto& assembler = this->solver_ptr->assembler;
+    const auto& assembler = this->solver_ptr->assembler_;
 
     assert(this->get_lop().EntititiesForUnifikationTerm().size()==1);
     auto localViewFixingElement = assembler.basis().localView();
@@ -72,7 +72,7 @@ struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
   virtual void assemble(const Config::VectorType& x, Config::VectorType& v) const
   {
     this->solver_ptr->assemble_DG(this->get_lop(), x,v);
-    const auto& assembler = this->solver_ptr->assembler;
+    const auto& assembler = this->solver_ptr->assembler_;
 
     //get fixingElement
     assert(this->get_lop().EntititiesForUnifikationTerm().size()==1);
