@@ -16,7 +16,7 @@
 #include "opennurbs.h"
 #include "examples_linking_pragmas.h"
 
-#include "example_userdata/example_ud.h"
+#include "example_ud.h"
 
 static bool write_simple_file_example(
             FILE* fp,
