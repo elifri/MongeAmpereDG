@@ -21,7 +21,7 @@ target_link_libraries(dune_mongeampere_reflector MA_reflector_solver ${PureSolve
 target_link_dune_default_libraries("dune_mongeampere_reflector")
 
 add_executable("dune_mongeampere_refractor" dune_mongeampere_refractor.cpp)
-target_link_libraries(dune_mongeampere_refractor MA_refractor_solver ${PureSolverLibs} ${SNES_LIBRARY} ${LensProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
+target_link_libraries(dune_mongeampere_refractor MA_refractor_solver ${PureSolverLibs} ${IONurbsLibs} ${SNES_LIBRARY} ${LensProblemLibs} Solver_Config utils ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
 target_link_dune_default_libraries("dune_mongeampere_refractor")
 
 add_executable("dune_mongeampere_OT" dune_mongeampere_OT.cpp)

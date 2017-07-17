@@ -13,8 +13,9 @@
 #include <dune/grid/io/file/vtk/common.hh>
 
 MA_refractor_solver::MA_refractor_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting)
- :MA_solver(grid, gridView, config), setting_(opticalSetting), op(*this)
+ :MA_solver(grid, gridView, config), setting_(opticalSetting), nurbsWriter_(gridView), op(*this)
 {
+  nurbsWriter_.set_refinement(this->plotterRefinement_);
 
    //adjust light intensity
    const auto integralLightOut = op.get_lop().get_right_handside().get_target_distribution().integrateOriginal();
@@ -43,7 +44,7 @@ void MA_refractor_solver::create_initial_guess()
   DiscreteGridFunction solution_u_global(FEBasisHandler_.uBasis(),solution);
   auto res = solution_u_global(op.fixingPoint);
 
-  assembler.set_u0AtX0(res);
+  assembler_.set_u0AtX0(res);
 }
 
 void MA_refractor_solver::plot(const std::string& name) const
@@ -106,6 +107,11 @@ void MA_refractor_solver::plot(const std::string& name) const
 
    plotter.writeRefractorPOV(refrPovname, *solution_u_old);
    std::cout << refrPovname << std::endl;
+
+   std::string refrNurbsname(plotter.get_output_directory());
+   refrNurbsname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".3dm";
+   nurbsWriter_.write_refractor_mesh(refrPovname, *solution_u_old);
+
 }
 
 void MA_refractor_solver::adapt_solution(const int level)

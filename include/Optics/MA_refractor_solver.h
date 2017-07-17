@@ -12,6 +12,7 @@
 #include "OT/MA_OT_global_Operator.h"
 #include "Optics/operator_MA_refr_Brenner.h"
 
+#include "IO/nurbsWriter.h"
 
 template<typename Solver, typename LOP>
 struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
@@ -109,6 +110,7 @@ public:
 
 private:
   OpticalSetting& setting_;
+  NurbsWriter nurbsWriter_;
 
   typedef MA_refr_Operator<MA_refractor_solver, Local_Operator_MA_refr_Brenner> Operatortype;
   Operatortype op;
