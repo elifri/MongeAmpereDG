@@ -2105,7 +2105,6 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 
 
         //write derivatives of unification term into vector
-/*
         for (const auto& fixingElementandOffset : lop.EntititiesForUnifikationTerm())
         {
           const auto& fixingElement = fixingElementandOffset.first;
@@ -2130,7 +2129,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 //            std::cerr << " adding " << entryWx0timesBgradV[no_fixingElement_offset+2](i) << " to " <<FETraits::get_index(localIndexSet, i) << " and " << FETraits::get_index(localIndexSetFixingElement, 2) << std::endl;
           }
 
-        }*/
+        }
 
 
        // Traverse intersections
@@ -2298,7 +2297,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
      std::cerr << std::endl << " local boundary term " << boundary.norm()<<" inner term " << (v-boundary).norm()<< " whole norm " << v.norm() << std::endl;
 //     std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
 //     std::cerr << " f_boundary " << boundary.transpose() << std::endl;
-     std::cerr << " f          " << v.transpose() << std::endl;
+//     std::cerr << " f          " << v.transpose() << std::endl;
 
 }
 #else

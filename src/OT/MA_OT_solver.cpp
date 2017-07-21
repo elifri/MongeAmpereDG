@@ -80,7 +80,6 @@ void MA_OT_solver::plot(const std::string& name) const
        for (int row=0; row< Config::dim; row++)
          for (int col=0; col< Config::dim; col++)
          {
-           std::cerr << " get index i " << i << "(" << row << "," << col << ") from " << get_n_dofs_u()+ i*4+row*Config::dim+col << ", namely " << solution[get_n_dofs_u()+ i*4+row*Config::dim+col] << std::endl;
            derivativeSolution[row*Config::dim+col](i) = solution[get_n_dofs_u()+ i*4+row*Config::dim+col];
          }
 

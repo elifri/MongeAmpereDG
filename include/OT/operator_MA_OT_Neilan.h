@@ -74,6 +74,7 @@ public:
     assert((unsigned int) x.size() == localView.size());
     assert((unsigned int) v.size() == localView.size());
 
+
     // Get set of shape functions for this element
     const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
     const auto& localFiniteElementuDH_entry = localView.tree().template child<1>().child(0).finiteElement();
@@ -206,9 +207,8 @@ public:
 
       for (int j = 0; j < size_u; j++) // loop over test fcts
       {
-//        v_adolc(j) += (PDE_rhs-uDH_det+u_atX0)*referenceFunctionValues[j]
-        v_adolc(j) += (u_atX0)*referenceFunctionValues[j]
-	          	* quad[pt].weight() * integrationElement;
+        v_adolc(j) += (PDE_rhs-uDH_det)*referenceFunctionValues[j]* quad[pt].weight() * integrationElement;
+        v_adolc(j) += (u_atX0)*referenceFunctionValues[j]	* quad[pt].weight() * integrationElement;
 
         //unification term
 //already added above        v_adolc(j) += u_atX0*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
@@ -254,7 +254,10 @@ public:
 
 
     for (int i = 0; i < size; i++)
+    {
       v_adolc[i] >>= v[i]; // select dependent variables
+//      std::cerr << " v[i]is now " << v[i] << std::endl;
+    }
 
     trace_off();
 
@@ -451,6 +454,7 @@ public:
     for (int i = 0; i < size; i++) {
       vn_adolc[i] >>= vn[i];
     }
+
     trace_off();
 
   }
@@ -492,6 +496,7 @@ public:
       v_adolc[i] <<= v[i];
 
     trace_on(tag);
+
     //init independent variables
     for (size_t i = 0; i < localView.size(); i++)
       x_adolc[i] <<= x[i];
