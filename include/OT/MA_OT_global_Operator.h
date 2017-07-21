@@ -62,6 +62,7 @@ public:
   void init()
   {
 		solver_ptr->get_assembler_lagrangian_midvalue().assemble_u_independent_matrix(*lopLMMidvalue, lagrangianFixingPointDiscreteOperator);
+    assert(lagrangianFixingPointDiscreteOperator.size() == this->solver_ptr-> get_n_dofs_u());
   }
 
   const LOP& get_lop() const
@@ -99,7 +100,8 @@ public:
   {
     assert(lop_ptr);
 
-    int V_h_size = this->solver_ptr->get_n_dofs_V_h();
+    int V_h_mixed_size = this->solver_ptr->get_n_dofs_V_h();
+    int V_h_size = this->solver_ptr->get_n_dofs_u();
     int Q_h_size = this->solver_ptr->get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();
 
     assert(x.size()==this->solver_ptr->get_n_dofs());
@@ -112,9 +114,9 @@ public:
     //assemble MA PDE in temporary variables
 
     //todo jede Menge copy paste
-    Config::MatrixType tempM(V_h_size, V_h_size);
-    Config::VectorType tempX = x.head(V_h_size);
-    Config::VectorType tempV(V_h_size);
+    Config::MatrixType tempM(V_h_mixed_size, V_h_mixed_size);
+    Config::VectorType tempX = x.head(V_h_mixed_size);
+    Config::VectorType tempV(V_h_mixed_size);
     this->assemble_without_langrangian_Jacobian(tempX,tempV, tempM);
 
     //copy system
@@ -141,7 +143,7 @@ public:
     //assemble part of first lagrangian multiplier for fixing midvalue
     const auto& assembler = this->solver_ptr->get_assembler();
 
-    int indexFixingGridEquation = V_h_size;
+    int indexFixingGridEquation = V_h_mixed_size;
     //assemble lagrangian multiplier for grid fixing point
 
     //-------------------select  mid value-------------------------
@@ -194,9 +196,9 @@ public:
 //    MATLAB_export(tempM, "B_H");
 
     //copy to system
-    copy_to_sparse_matrix(tempM, m, V_h_size+1, 0);
-    copy_sparse_to_sparse_matrix(tempM.transpose(), m, 0, V_h_size+1);
-    assert(V_h_size+1+Q_h_size==m.rows());
+    copy_to_sparse_matrix(tempM, m, V_h_mixed_size+1, 0);
+    copy_sparse_to_sparse_matrix(tempM.transpose(), m, 0, V_h_mixed_size+1);
+    assert(V_h_mixed_size+1+Q_h_size==m.rows());
     v.tail(Q_h_size) = tempV;
     {
       std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "Bboundary" << intermediateSolCounter << ".m";
