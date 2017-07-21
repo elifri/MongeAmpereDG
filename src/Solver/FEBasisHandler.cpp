@@ -315,7 +315,7 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
     solver.grid_ptr->mark(1,element);
 
     //store local dofs
-    preserveSolution[idSet.id(element)]  = Assembler::calculate_local_coefficients(localIndexSet, v);
+    preserveSolution[idSet.id(element)]  = Assembler<FiniteElementTraits>::calculate_local_coefficients(localIndexSet, v);
   }
 
   std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
@@ -350,7 +350,8 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
   v.segment(0, v_u.size()) = v_u;
 
   //adapt discrete hessians
-  typedef MixedTraits<Config::LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>::FEuDHBasis FEuDHBasisCoarseType;
+  typedef MixedTraits<Config::LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian> FEuDHBasisCoarseTraitsType;
+  typedef FEuDHBasisCoarseTraitsType::FEuDHBasis FEuDHBasisCoarseType;
   FEuDHBasisCoarseType FEuDHBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisCoarseType,Config::VectorType> DiscreteGridFunctionuDHCoarse;
 
@@ -388,7 +389,7 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
             typedef decltype(localView) LocalView;
 
             const int localIndex = Dune::Functions::flat_local_index<typename LocalView::GridView, typename LocalView::size_type>(localViewu.size(), i, row, col);
-            v_uDH_entry_old[localIndexSetuDH.index(i)[0]] = v_old[FiniteElementTraits::get_index(localIndexSet, localIndex)];
+            v_uDH_entry_old[localIndexSetuDH.index(i)[0]] = v_old[FEuDHBasisCoarseTraitsType::get_index(localIndexSet, localIndex)];
           }
         }
       }

@@ -22,9 +22,9 @@ MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridV
  setting_(setting),
 // FEBasisHandlerQ_(*this, grid->levelGridView(grid->maxLevel()-1)),
  FEBasisHandlerQ_(*this, gridView),
- assemblerLM1D_(FEBasisHandler_.FEBasis()),
+ assemblerLM1D_(FEBasisHandler_.uBasis()),
 // assemblerLMCoarse_(FEBasisHandler_.FEBasis(),FEBasisHandlerQ_.FEBasis()),
- assemblerLMBoundary_(FEBasisHandler_.FEBasis(),FEBasisHandlerQ_.FEBasis()),
+ assemblerLMBoundary_(FEBasisHandler_.uBasis(),FEBasisHandlerQ_.FEBasis()),
  op(*this)
 {
   {
@@ -159,33 +159,52 @@ void MA_OT_solver::plot(const std::string& name, int no) const
      auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
      vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
 
-     //extract hessian (3 entries (because symmetry))
-/*     typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
-     DerivativeVectorType derivativeSolution(uDHBasis->indexSet().size());
+#ifdef USE_MIXED_ELEMENT
+     using GlobalHessScalarFunction = typename FETraits::DiscreteSecondDerivativeGridFunction;
+     using LocalHessScalarFunction = typename FETraits::DiscreteLocalSecondDerivativeGridFunction;
+
+     std::array<Config::VectorType,Config::dim*Config::dim> derivativeSolution;
+     std::vector<std::unique_ptr<GlobalHessScalarFunction>> numericalSolutionHessians;
+     std::vector<std::unique_ptr<LocalHessScalarFunction>> localnumericalSolutionHessians;
+
+     for (int i = 0; i < Config::dim*Config::dim; i++)
+       derivativeSolution[i] = Config::VectorType::Zero(get_n_dofs_u_DH()/Config::dim/Config::dim);
 
      //extract dofs
-     for (int i=0; i<derivativeSolution.size(); i++)
-       for (int j=0; j< nDH; j++)
-       {
-         if (j == 2) continue;
-         int index_j = j > 2? 2 : j;
-         derivativeSolution[i][index_j] = solution[get_n_dofs_u()+ nDH*i+j];
-       }
+      for (int i=0; i<derivativeSolution[0].size(); i++)
+        for (int row=0; row< Config::dim; row++)
+          for (int col=0; col< Config::dim; col++)
+          {
+            std::cerr << " get index i " << i << "(" << row << "," << col << ") from " << get_n_dofs_u()+ i*4+row*Config::dim+col << ", namely " << solution[get_n_dofs_u()+ i*4+row*Config::dim+col] << std::endl;
+            derivativeSolution[row*Config::dim+col](i) = solution[get_n_dofs_u()+ i*4+row*Config::dim+col];
+          }
 
-     //build gridview function
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
-     auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
+      for (int i = 0; i < Config::dim*Config::dim; i++)
+      {
+        //build gridview function
+        numericalSolutionHessians.push_back(std::make_unique<GlobalHessScalarFunction>(FEBasisHandler_.uDHBasis(),derivativeSolution[i]));
+        localnumericalSolutionHessians.push_back(std::make_unique<LocalHessScalarFunction>(*numericalSolutionHessians[i]));
+        std::string hessianEntryName = "DiscreteHessian" + NumberToString(i);
+        vtkWriter.addVertexData(*localnumericalSolutionHessians[i], VTK::FieldInfo(hessianEntryName, VTK::FieldInfo::Type::scalar, 1));
+      }
+#endif
 
-     vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("DiscreteHessian", VTK::FieldInfo::Type::vector, 3));
-*/
 
+#ifndef USE_MIXED_ELEMENT
      ResidualFunction residual(gradient_u_old,op,HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
+#else
+     ResidualFunction residual(gradient_u_old,op,
+         *localnumericalSolutionHessians[0],
+         *localnumericalSolutionHessians[1],
+         *localnumericalSolutionHessians[2],
+         *localnumericalSolutionHessians[3]);
+#endif
+
      std::string fnameResidual(plotter.get_output_directory());
      fnameResidual += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "Res.vtu";
 //     SubsamplingVTKWriter<GridViewType> vtkWriter2(*gridView_ptr,3);
      vtkWriter.addVertexData(residual, VTK::FieldInfo("Residual", VTK::FieldInfo::Type::scalar, 1));
 //     vtkWriter2.write(fnameResidual);
-
 
      //write to file
      std::string fname(plotter.get_output_directory());
@@ -193,37 +212,6 @@ void MA_OT_solver::plot(const std::string& name, int no) const
      vtkWriter.write(fname);
 
      std::cout << fname  << std::endl;
-
-     #ifdef USE_MIXED_ELEMENT
-     std::array<Config::VectorType,Config::dim*Config::dim> derivativeSolution;
-     for (int i = 0; i < Config::dim*Config::dim; i++)
-         derivativeSolution[i] = Config::VectorType::Zero(get_n_dofs_u_DH()/Config::dim/Config::dim);
-
-     //extract dofs
-     for (int i=0; i<derivativeSolution[0].size(); i++)
-       for (int row=0; row< Config::dim; row++)
-         for (int col=0; col< Config::dim; col++)
-         {
-           std::cerr << " get index i " << i << "(" << row << "," << col << ") from " << get_n_dofs_u()+ i*4+row*Config::dim+col << ", namely " << solution[get_n_dofs_u()+ i*4+row*Config::dim+col] << std::endl;
-           derivativeSolution[row*Config::dim+col](i) = solution[get_n_dofs_u()+ i*4+row*Config::dim+col];
-         }
-
-     for (int i = 0; i < Config::dim*Config::dim; i++)
-     {
-       //build gridview function
-       Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuDHBasis,Config::VectorType> numericalSolutionHessian(FEBasisHandler_.uDHBasis(),derivativeSolution[i]);
-       auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
-       std::string hessianEntryName = "DiscreteHessian" + NumberToString(i);
-       vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo(hessianEntryName, VTK::FieldInfo::Type::scalar, 1));
-
-       //write to file
-       std::string fname(plotter.get_output_directory());
-       fname += "/"+ plotter.get_output_prefix()+ name + "DiscreteHessian"+NumberToString(i)+"No" +NumberToString(iterations) + ".vtu";
-       vtkWriter.write(fname);
-
-     }
-#endif
-
   }
 
   //write to file

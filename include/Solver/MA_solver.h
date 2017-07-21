@@ -64,6 +64,7 @@ public:
 	typedef typename Config::MatrixType MatrixType;
 
   typedef SolverConfig::FETraitsSolver FETraits;
+  using FEuTraits = FETraits::FEuTraits;
   typedef FETraits::FEBasis FEBasisType;
 
 	typedef FETraits::DiscreteGridFunction DiscreteGridFunction;
@@ -315,8 +316,8 @@ public:
 	virtual GeometrySetting& get_setting() {return setting_;}
   virtual const GeometrySetting& get_setting() const {return setting_;}
 
-  const Assembler& get_assembler() const { return assembler_;}
-  Assembler& get_assembler() { return assembler_;}
+  const auto& get_assembler() const { return assembler_;}
+  auto& get_assembler() { return assembler_;}
 
   const std::string& get_output_directory() const{ return outputDirectory_;}
   const std::string& get_plot_output_directory() const{ return plotOutputDirectory_;}
@@ -358,7 +359,7 @@ protected:
 
 	FEBasisHandler<FETraits::Type, FETraits> FEBasisHandler_;
 
-	Assembler assembler_; ///handles all (integral) assembly processes
+	Assembler<FETraits> assembler_; ///handles all (integral) assembly processes
 	Plotter plotter; ///handles all output generation
 
   double G; /// fixes the reflector size
@@ -448,7 +449,7 @@ void project_labourious(const FEBasis& febasis, const F f, Config::VectorType& v
       }
     }
 
-    Assembler::set_local_coefficients(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
+    Assembler<SolverConfig::FETraitsSolver>::set_local_coefficients(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
     }
 
   //set scaling factor (last dof) to ensure mass conservation

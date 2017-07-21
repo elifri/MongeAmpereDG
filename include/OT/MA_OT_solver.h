@@ -50,6 +50,17 @@ public:
 
 
   MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting);
+
+  //getter and setter
+  GeometrySetting& get_setting() {return setting_;}
+  const GeometrySetting& get_setting() const {return setting_;}
+
+  const auto& get_assembler_lagrangian_midvalue() const { return assemblerLM1D_;}
+//  const AssemblerLagrangianMultiplierCoarse& get_assembler_lagrangian_boundary() const { return assemblerLMCoarse_;}
+  auto& get_assembler_lagrangian_boundary() { return assemblerLMBoundary_;}
+  const auto& get_assembler_lagrangian_boundary() const { return assemblerLMBoundary_;}
+
+
 private:
   ///creates the initial guess
   virtual void create_initial_guess();
@@ -58,34 +69,35 @@ private:
   virtual void adapt_operator();
 
 public:
+  ///export number of degree of freedoms for ansatz space V_h
   virtual int get_n_dofs_V_h() const{return FEBasisHandler_.FEBasis().indexSet().size();}
+  ///export number of degree of freedoms for ansatz space Q_h, i.e. ansatz for langrangian multiplier
   virtual int get_n_dofs_Q_h() const{return get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();}
+  ///export all combined degree of freedoms
   virtual int get_n_dofs() const{return get_n_dofs_V_h() + 1 + get_n_dofs_Q_h();}
 #ifdef USE_MIXED_ELEMENT
+  ///export number of degree of freedoms for ansatz space for the unknown function u
   virtual int get_n_dofs_u() const{return FEBasisHandler_.uBasis().indexSet().size();}
+  ///export number of degree of freedoms for ansatz space for the hessian of the unknown function u
   virtual int get_n_dofs_u_DH() const{return Config::dim*Config::dim*FEBasisHandler_.uDHBasis().indexSet().size();}
 #endif
 
+  ///projects the function f in the current FE space
   template<class F>
   void project(const F f, VectorType& v) const;
 
+  ///adapts all member to a (uniformly) refined grid
   virtual void adapt_solution(const int level);
 
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
   virtual void plot(const std::string& filename) const;
+  ///write the current numerical solution to pov (and ggf. vtk) file with prefix name, and a number(nested iteration step)
   virtual void plot(const std::string& filename, int no) const;
 public:
 
   using MA_solver::adapt;
 
-  GeometrySetting& get_setting() {return setting_;}
-  const GeometrySetting& get_setting() const {return setting_;}
-
-  const AssemblerLagrangianMultiplier1D& get_assembler_lagrangian_midvalue() const { return assemblerLM1D_;}
-//  const AssemblerLagrangianMultiplierCoarse& get_assembler_lagrangian_boundary() const { return assemblerLMCoarse_;}
-  AssemblerLagrangianMultiplierBoundary& get_assembler_lagrangian_boundary() { return assemblerLMBoundary_;}
-  const AssemblerLagrangianMultiplierBoundary& get_assembler_lagrangian_boundary() const { return assemblerLMBoundary_;}
-
+  ///compares the current solution to an exact solution
   template<typename FGrad>
   Config::ValueType calculate_L2_errorOT(const FGrad &f) const;
 
@@ -96,10 +108,11 @@ protected:
   FEBasisHandler<FETraitsQ::Type, FETraitsQ> FEBasisHandlerQ_;
 
   //assembler for lagrangian multiplier
-  AssemblerLagrangianMultiplier1D assemblerLM1D_;
+  AssemblerLagrangianMultiplier1D<FEuTraits> assemblerLM1D_;
 //  AssemblerLagrangianMultiplierCoarse assemblerLMCoarse_;
-  AssemblerLagrangianMultiplierBoundary assemblerLMBoundary_;
+  AssemblerLagrangianMultiplierBoundary<FEuTraits, FETraitsQ> assemblerLMBoundary_;
 
+  ///the operator evaluating globally the FE tests
   OperatorType op;
 
   friend OperatorType;

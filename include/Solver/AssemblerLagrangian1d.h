@@ -94,9 +94,16 @@ public:
  * B(u,q) for u \in V_h and q \in Q_h where Q_h is a space defined one a grid one level coarser than the grid of V_h
  *
  */
-class AssemblerLagrangianMultiplier1D:public Assembler{
+template<typename FETraits>
+class AssemblerLagrangianMultiplier1D:public Assembler<FETraits>{
+
+
 public:
-  using Assembler::Assembler;
+  using Assembler<FETraits>::Assembler;
+  //TODO: why is this necessary, shouldnt the compiler find it itself?
+  using Assembler<FETraits>::calculate_local_coefficients;
+  using Assembler<FETraits>::add_local_coefficients;
+
   /**
    * assembles the matrix (col dimension =1), note that this matrix does not depend on the last step u
    * @param lop     the local operator
@@ -109,8 +116,9 @@ public:
   void assembleRhs(const LocalOperatorType &lop, const Config::VectorType& x, Config::ValueType& v) const;
 };
 
+template<typename FETraits>
 template<typename LocalOperatorType>
-void AssemblerLagrangianMultiplier1D::assemble_u_independent_matrix(const LocalOperatorType &lop, Config::VectorType& v) const{
+void AssemblerLagrangianMultiplier1D<FETraits>::assemble_u_independent_matrix(const LocalOperatorType &lop, Config::VectorType& v) const{
   const auto& basis_ = *(this->basis_);
   v = Config::VectorType::Zero(basis_.size());
   Config::ValueType volume = 0;
@@ -132,8 +140,9 @@ void AssemblerLagrangianMultiplier1D::assemble_u_independent_matrix(const LocalO
   v/=volume;
 }
 
+template<typename FETraits>
 template<typename LocalOperatorType>
-void AssemblerLagrangianMultiplier1D::assembleRhs(const LocalOperatorType &lop,const Config::VectorType& x, Config::ValueType& v) const{
+void AssemblerLagrangianMultiplier1D<FETraits>::assembleRhs(const LocalOperatorType &lop,const Config::VectorType& x, Config::ValueType& v) const{
   const auto& basis_ = *(this->basis_);
 
   auto localView = basis_.localView();

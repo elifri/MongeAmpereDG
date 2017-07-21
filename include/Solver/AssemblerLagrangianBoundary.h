@@ -13,27 +13,26 @@
  *
  */
 #include "Assembler.h"
+template<typename FEVTraits, typename FEQTraits>
+class AssemblerLagrangianMultiplierBoundary:public Assembler<FEVTraits>{
 
-class AssemblerLagrangianMultiplierBoundary:public Assembler{
+  using FEBasisVType = typename FEVTraits::FEBasis;
+  using FEBasisQType = typename FEQTraits::FEBasis;
 
-  typedef FEBasisType FEBasisVType;
+  using EntryType = typename Assembler<FEVTraits>::EntryType;
 
-  typedef SolverConfig::FETraitsSolverQ FETraitsQ;
-  typedef FETraitsQ::FEBasis FEBasisQType;
+  using Assembler<FEVTraits>::calculate_local_coefficients;
+
 public:
   const int get_number_of_Boundary_dofs() const {return boundaryHandlerQ_.get_number_of_Boundary_dofs();}
 
-  AssemblerLagrangianMultiplierBoundary(const FEBasisVType& basisV, const FEBasisQType& basisQ): Assembler(basisV), basisLM_(&basisQ)
+  AssemblerLagrangianMultiplierBoundary(const FEBasisVType& basisV, const FEBasisQType& basisQ): Assembler<FEVTraits>(basisV), basisLM_(&basisQ)
   {
     if(basisLM_)
       boundaryHandlerQ_.init_boundary_dofs(*basisLM_);
   }
 
-  template<typename OtherFEBasisType, typename OtherFEBasisTypeQ>
-  void bind(const OtherFEBasisType& basis, const OtherFEBasisTypeQ& basisQ)
-  {
-    assert(false && " wrong basis type"); exit(-1);
-  }
+  void bind(const FEBasisVType& basis, const FEBasisQType& basisQ);
 
   const BoundaryHandler& boundaryHandler() {return boundaryHandlerQ_;}
 
@@ -58,11 +57,9 @@ private:
   BoundaryHandler boundaryHandlerQ_;
 };
 
-template<>
-void AssemblerLagrangianMultiplierBoundary::bind(const Assembler::FEBasisType& basis, const FEBasisQType& basisQ);
-
+template<typename FEVTraits, typename FEQTraits>
 template<typename LocalOperatorType>
-void AssemblerLagrangianMultiplierBoundary::assemble_Boundarymatrix(const LocalOperatorType &lop,
+void AssemblerLagrangianMultiplierBoundary<FEVTraits, FEQTraits>::assemble_Boundarymatrix(const LocalOperatorType &lop,
     Config::MatrixType& m, const Config::VectorType &x, Config::VectorType &v) const{
 
   const auto& basisV_ = *(this->basis_);
@@ -131,6 +128,27 @@ void AssemblerLagrangianMultiplierBoundary::assemble_Boundarymatrix(const LocalO
   std::cerr << " boundary term " << v.norm()<< " whole norm " << v.norm() << std::endl;
 }
 
+
+template<typename FEVTraits, typename FEQTraits>
+void AssemblerLagrangianMultiplierBoundary<FEVTraits, FEQTraits>::bind(const FEBasisVType& basis, const FEBasisQType& basisQ)
+{
+  this->basis_ = &basis;
+  this->boundaryHandler_.init_boundary_dofs(basis);
+  basisLM_ = &basisQ;
+  boundaryHandlerQ_.init_boundary_dofs(basisQ);
+}
+
+template<typename FEVTraits, typename FEQTraits>
+Config::VectorType AssemblerLagrangianMultiplierBoundary<FEVTraits, FEQTraits>::shrink_to_boundary_vector(const Config::VectorType& v) const
+{
+  Config::VectorType vCropped(boundaryHandlerQ_.get_number_of_Boundary_dofs());
+  for (int i = 0; i < vCropped.size(); i++)
+  {
+    vCropped(i) = v(boundaryHandlerQ_.BoundaryNo(boundaryHandlerQ_.GlobalNo(i)));
+  }
+
+  return vCropped;
+}
 
 
 

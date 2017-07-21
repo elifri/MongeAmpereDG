@@ -160,6 +160,11 @@ struct SolverConfig{
   typedef MixedTraits<Config::GridView, degree, degreeHessian> FETraitsSolver;
 #endif
 
+#ifndef USE_MIXED_ELEMENT
+  using FEuTraitsSolver = FETraitsSolver;
+#else
+  using FEuTraitsSolver = FETraitsSolver::FEuTraits;
+#endif
 
   /////-------select langrangian boundary element ----------------
 //  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree> FETraitsSolverQ;

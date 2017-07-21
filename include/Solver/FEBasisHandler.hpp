@@ -237,7 +237,7 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
       }
     }
 
-    Assembler::set_local_coefficients<FiniteElementTraits>(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
+    Assembler<FiniteElementTraits>::set_local_coefficients(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
   }
 }
 
@@ -294,12 +294,14 @@ void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig:
       }
     }
 
-//    Assembler::set_local_coefficients<FiniteElementTraits>(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
+    Assembler<FiniteElementTraits>::set_local_coefficients(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
+/*
     const Config::VectorType v_local = localMassMatrix.ldlt().solve(localVector);
     for (size_t i = 0; i < localIndexSet.size(); i++)
     {
        v(FiniteElementTraits::get_index(localIndexSet, i)) = v_local[i];
     }
+*/
   }
 }
 
@@ -536,10 +538,10 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F f, 
 #endif
     }
 
-    Assembler::add_local_coefficients(localIndexSet,localDofs, v);
+    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localDofs, v);
 //    assembler.add_local_coefficients(localIndexSet,VectorType::Ones(localDofs.size()), countMultipleDof);
     Config::VectorType localmultiples = Config::VectorType::Ones(localDofs.size());
-    Assembler::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
+    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
   }
   for (int i = 0; i < v.size(); i++) assert ( ! (v(i) != v(i)));
   v = v.cwiseQuotient(countMultipleDof);
@@ -642,10 +644,10 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F &f,
 #endif
     }
 
-    Assembler::add_local_coefficients(localIndexSet,localDofs, v);
+    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localDofs, v);
 //    assembler.add_local_coefficients(localIndexSet,VectorType::Ones(localDofs.size()), countMultipleDof);
     Config::VectorType localmultiples = Config::VectorType::Ones(localDofs.size());
-    Assembler::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
+    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
   }
 
   v = v.cwiseQuotient(countMultipleDof);

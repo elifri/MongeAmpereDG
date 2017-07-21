@@ -32,13 +32,14 @@ enum FEType{
   Mixed,
 };
 
-
 template <typename T>
 struct FETraits
 {
   static const FEType Type = Standard;
   typedef T FEBasis;
   typedef T FEuBasis;
+
+  using FEuTraits = FETraits<FEuBasis>;
 
 //  typedef Dune::TypeTree::HybridTreePath<> TreePath;
 //  typedef Dune::Functions::DefaultNodeToRangeMap<typename TypeTree::ChildForTreePath<typename FEBasis::LocalView::Tree, TreePath>> NodeToRangeMap;
@@ -60,20 +61,17 @@ struct FETraits
   static const QuadratureRule<Config::ValueType, dim>& get_Quadrature(const GeometryType & geo, int order)
   { return QuadratureRules<Config::ValueType, Config::dim-1>::rule(geo, order);}
 
-  template <typename LocalIndexSet>
-  static size_t get_index(const LocalIndexSet& localIndexSet, size_t localIndex)
+  static size_t get_index(const typename FEBasis::LocalIndexSet& localIndexSet, size_t localIndex)
   {
     return localIndexSet.index(localIndex)[0];
   }
 
-  template<typename LocalView>
-  static const auto get_localSize_finiteElementu(const LocalView& localView)
+  static const auto get_localSize_finiteElementu(const typename FEBasis::LocalView& localView)
   {
     return localView.tree().finiteElement().size();
   }
 
-  template<typename LocalView>
-  static const auto& get_finiteElementu(const LocalView& localView)
+  static const auto& get_finiteElementu(const typename FEBasis::LocalView& localView)
   {
     return localView.tree().finiteElement();
   }
@@ -140,6 +138,9 @@ struct FETraits<Functions::MAMixedBasis< GridView, degree, degreeHessian>>
 //  typedef Functions::LagrangeDGBasis<GridView, degreeHessian> FEuDHBasis;
   typedef Functions::PQkNodalBasis<GridView, degreeHessian> FEuDHBasis;
 
+  using FEuTraits = FETraits<FEuBasis>;
+  using FEuDHScalarTraits = FETraits<FEuDHBasis>;
+
 //  typedef decltype(TypeTree::hybridTreePath(Dune::TypeTree::Indices::_0)) TreePath;
 //  typedef Dune::TypeTree::hybridTreePath<Dune::TypeTree::Indices::_0> TreePath;
 
@@ -163,11 +164,17 @@ struct FETraits<Functions::MAMixedBasis< GridView, degree, degreeHessian>>
   static const QuadratureRule<Config::ValueType, dim>& get_Quadrature(const GeometryType & geo, int order)
   { return QuadratureRules<Config::ValueType, Config::dim-1>::rule(geo, order);}
 
-  template <typename LocalIndexSet>
-  static size_t get_index(const LocalIndexSet& localIndexSet, size_t localIndex)
+  static size_t get_index(const typename FEBasis::LocalIndexSet& localIndexSet, size_t localIndex)
   {
     return localIndexSet.flat_index(localIndex);
   }
+
+/*  static size_t get_index(const typename FEBasis::LocalIndexSet& localIndexSet, size_t localIndex)
+  {
+    return localIndexSet.flat_index(localIndex);
+  }*/
+
+
 
   template<typename LocalView>
   static const auto get_localSize_finiteElementu(const LocalView& localView)
@@ -204,6 +211,27 @@ using MixedTraits = FETraits<Functions::MAMixedBasis<GridView, degree, degreeHes
 
 template <typename GridView, int degree>
 using BSplineTraits = FETraits<Functions::BSplineBasis<GridView>>;
+
+
+
+namespace FETraitsUtil
+{
+  template <typename GridView, int degree, int degreeHessian>
+  size_t get_index(const typename MixedTraits<GridView, degree, degreeHessian>::LocalIndexSet& localIndexSet, size_t localIndex)
+  {
+    std::cerr << " used mixed index " << std::endl;
+    return localIndexSet.flat_index(localIndex);
+  }
+
+  template <typename LocalIndexSet>
+  size_t get_index(const LocalIndexSet& localIndexSet, size_t localIndex)
+  {
+    return localIndexSet.index(localIndex)[0];
+  }
+
+
+}
+
 
 
 #endif /* SRC_SOLVER_FETRAITS_HPP_ */

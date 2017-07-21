@@ -14,26 +14,23 @@
  */
 #include "Assembler.h"
 
-class AssemblerLagrangianMultiplierCoarse:public Assembler{
+template <typename FEVTraits, typename FEQTraits>
+class AssemblerLagrangianMultiplierCoarse:public Assembler<FEVTraits>{
 
-  typedef FEBasisType FEBasisVType;
+  using FEBasisVType = typename FEVTraits::FEBasisType;
+  using FEBasisQType = typename FEQTraits::FEBasisType;
 
-  typedef SolverConfig::FETraitsSolverQ FETraitsQ;
-  typedef FETraitsQ::FEBasis FEBasisQType;
+  using EntryType = typename Assembler<FEVTraits>::EntryType;
 public:
   const int get_number_of_Boundary_dofs() const {return boundaryHandlerQ_.get_number_of_Boundary_dofs();}
 
-  AssemblerLagrangianMultiplierCoarse(const FEBasisVType& basisV, const FEBasisQType& basisQ): Assembler(basisV), basisLM_(&basisQ)
+  AssemblerLagrangianMultiplierCoarse(const FEBasisVType& basisV, const FEBasisQType& basisQ): Assembler<FEVTraits>(basisV), basisLM_(&basisQ)
   {
     if(basisLM_)
       boundaryHandlerQ_.init_boundary_dofs(*basisLM_);
   }
 
-  template<typename OtherFEBasisType, typename OtherFEBasisTypeQ>
-  void bind(const OtherFEBasisType& basis, const OtherFEBasisTypeQ& basisQ)
-  {
-    assert(false && " wrong basis type"); exit(-1);
-  }
+  void bind(const FEBasisVType& basis, const FEBasisQType& basisQ);
 
   const BoundaryHandler& boundaryHandler() {return boundaryHandlerQ_;}
   /**
@@ -52,11 +49,18 @@ private:
   BoundaryHandler boundaryHandlerQ_;
 };
 
-template<>
-void AssemblerLagrangianMultiplierCoarse::bind(const Assembler::FEBasisType& basis, const FEBasisQType& basisQ);
+template<typename FEVTraits, typename FEQTraits>
+void AssemblerLagrangianMultiplierCoarse<FEVTraits, FEQTraits>::bind(const FEBasisVType& basis, const FEBasisQType& basisQ)
+{
+  this->basis_ = &basis;
+  this->boundaryHandler_.init_boundary_dofs(basis);
+  basisLM_ = &basisQ;
+  boundaryHandlerQ_.init_boundary_dofs(basisQ);
+}
 
+template<typename FEVTraits, typename FEQTraits>
 template<typename LocalOperatorType>
-void AssemblerLagrangianMultiplierCoarse::assemble_Boundarymatrix(const LocalOperatorType &lop,
+void AssemblerLagrangianMultiplierCoarse<FEVTraits, FEQTraits>::assemble_Boundarymatrix(const LocalOperatorType &lop,
     Config::MatrixType& m, const Config::VectorType &x, Config::VectorType &v) const{
 
   const auto& basisV_ = *(this->basis_);
