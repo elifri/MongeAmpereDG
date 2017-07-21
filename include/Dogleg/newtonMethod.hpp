@@ -54,7 +54,7 @@ void newtonMethod(
     for (unsigned int i=0; i<maxIter; i++) {
     Eigen::VectorXd s;
       Eigen::VectorXd xNew(x);
-      const unsigned int maxIterBoundaryConditions = 5;
+      const unsigned int maxIterBoundaryConditions = 1;
       for (unsigned int j = 0; j < maxIterBoundaryConditions; j++)
       {
         // solve Df*s = +f using UmfPack:
