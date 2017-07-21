@@ -30,7 +30,6 @@ class Local_Operator_MA_OT_Neilan {
 public:
   typedef DensityFunction Function;
 
-  template<typename GridView>
   Local_Operator_MA_OT_Neilan(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
     rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
   {
@@ -205,8 +204,8 @@ public:
 
       for (int j = 0; j < size_u; j++) // loop over test fcts
       {
-//        v_adolc(j) += (PDE_rhs-uDH_det+u_atX0)*referenceFunctionValues[j]
-        assert(false);
+        v_adolc(j) += (PDE_rhs-uDH_det)*referenceFunctionValues[j]* quad[pt].weight() * integrationElement;
+//        assert(false);
 //        v_adolc(j) += (u_atX0)*referenceFunctionValues[j]
 //	          	* quad[pt].weight() * integrationElement;
 
@@ -562,7 +561,12 @@ public:
 
   static bool use_adouble_determinant;
 
+  const Function& get_input_distribution() const {return rhoX;}
+  const Function& get_target_distribution() const {return rhoY;}
+
   const Function& get_right_handside() const {return rhoY;}
+
+  const OTBoundary& get_bc() {return bc;}
 
   const Function& rhoX;
   const Function& rhoY;
