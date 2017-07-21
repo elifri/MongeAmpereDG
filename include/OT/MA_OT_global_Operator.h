@@ -201,9 +201,13 @@ public:
     assemble_with_Jacobian(x,v, m);
 
     {
-      std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "lF" << intermediateSolCounter << ".m";
+      std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "BF" << intermediateSolCounter << ".m";      \
       std::ofstream file(filename.str(),std::ios::out);
-      MATLAB_export(file, v, "v");
+      MATLAB_export(file, m, "m");
+
+      std::stringstream filename2; filename2 << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "lF" << intermediateSolCounter << ".m";
+      std::ofstream file2(filename2.str(),std::ios::out);
+      MATLAB_export(file2, v, "v");
     }
 
     //output
