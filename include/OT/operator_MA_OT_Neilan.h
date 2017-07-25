@@ -37,14 +37,6 @@ public:
     std::cout << " created Local Operator" << std::endl;
   }
 
-//  ~Local_Operator_MA_OT()
-//  {
-//    delete &rhoX;
-//    delete &rhoY;
-//    delete &bc;
-//  }
-
-
   /**
    * implements the local volume integral
    * @param element		     the element the integral is evaluated on
@@ -208,10 +200,10 @@ public:
       for (int j = 0; j < size_u; j++) // loop over test fcts
       {
         v_adolc(j) += (PDE_rhs-uDH_det)*referenceFunctionValues[j]* quad[pt].weight() * integrationElement;
-        v_adolc(j) += (u_atX0)*referenceFunctionValues[j]	* quad[pt].weight() * integrationElement;
 
         //unification term
-//already added above        v_adolc(j) += u_atX0*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+//already added above
+        v_adolc(j) += u_atX0*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 
         //derivative unification term
         for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
@@ -567,7 +559,7 @@ public:
 //        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 2 || localFiniteElementu.localCoefficients().localKey(j).subEntity() == j);
 //        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 1 || localFiniteElementu.localCoefficients().localKey(j).subEntity() == boundaryFaceId);
         assert(!SolverConfig::Dirichlet);
-        v_adolc(i) += penalty_weight * signedDistance * (referenceFunctionValues[i]+(gradients[i]*normal)) * factor;
+//        v_adolc(i) += penalty_weight * signedDistance * (referenceFunctionValues[i]+(gradients[i]*normal)) * factor;
 
 //        std::cerr << " test function has value " << (referenceFunctionValues[j]) << " at " << quadPos << std::endl;
 //        std::cerr << " test function values ";
@@ -640,6 +632,9 @@ public:
   Config::EntityMap EntititiesForUnifikationTerm_;
 
   static bool use_adouble_determinant;
+
+  const Function& get_input_distribution() const {return rhoX;}
+  const Function& get_target_distribution() const {return rhoY;}
 
   const Function& get_right_handside() const {return rhoY;}
 
