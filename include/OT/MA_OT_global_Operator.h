@@ -213,7 +213,10 @@ public:
     //output
     auto end = std::chrono::steady_clock::now();
     std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
-    }
+
+    solver_ptr->plot("numericalSolutionIntermediate",intermediateSolCounter);
+    intermediateSolCounter++;
+  }
 
   virtual void assemble(const Config::VectorType& x, Config::VectorType& v) const
   {
@@ -374,7 +377,7 @@ public:
   const FieldVector<double, 2> fixingPoint;
   //    Config::Entity fixingElement;
 
-  int intermediateSolCounter;
+  mutable int intermediateSolCounter;
   };
 
 
