@@ -19,6 +19,7 @@
 #include <CImg.h>
 #include <algorithm>
 #include <functional>
+#include <memory>
 
 using namespace Dune;
 
@@ -172,6 +173,7 @@ private:
   friend Local_Operator_MA_refl_Neilan;
 };
 
+
 class RightHandSideInitial: public VirtualFunction<Config::SpaceType, Config::ValueType> {
 public:
 //	RightHandSideInitial(RightHandSide rhs)
@@ -195,7 +197,7 @@ namespace PDE_functions{
 	void Dg_initial(const Config::SpaceType2d& z, Config::SpaceType2d &out); /// derivative of g_initial
 }
 
-
+Dirichletdata* make_Dirichletdata();
 
 
 class RightHandSideReflector{

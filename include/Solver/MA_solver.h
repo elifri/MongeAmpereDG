@@ -131,8 +131,12 @@ public:
 */
 
   struct MA_Operator {
-    MA_Operator():solver_ptr(NULL){}
-    MA_Operator(MA_solver &solver):solver_ptr(&solver){}
+//    MA_Operator():solver_ptr(NULL){}
+    MA_Operator(MA_solver &solver):solver_ptr(&solver),
+        lop(new RightHandSide(),
+//            Dirichletdata([](Config::SpaceType x){return 0.0;}))
+            make_Dirichletdata())
+    {}
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v,  Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
     {

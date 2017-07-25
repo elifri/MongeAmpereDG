@@ -171,7 +171,7 @@ void MA_solver::create_initial_guess()
   else
   {
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
-    project([](Config::SpaceType x){return 1.12;}, solution);
+    project([](Config::SpaceType x){return x.two_norm2()/2.0;},solution);
   }
 }
 

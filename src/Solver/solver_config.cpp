@@ -18,7 +18,7 @@ namespace po = boost::program_options;
 using namespace Dune;
 using namespace std;
 
-ProblemType SolverConfig::problem;
+ProblemType SolverConfig::problem = MA_SMOOTH;
 
 int SolverConfig::startlevel = 0;
 int SolverConfig::nonlinear_steps = 1;
