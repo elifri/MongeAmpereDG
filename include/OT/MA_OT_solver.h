@@ -30,6 +30,19 @@ class MA_OT_solver: public MA_solver
 {
 //  using MA_solver::MA_solver;
 public:
+#ifdef USE_C0_PENALTY
+  typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Brenner> OperatorType;
+#else
+  #ifdef USE_MIXED_ELEMENT
+    typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Neilan> OperatorType;
+  #else
+    typedef  Local_Operator_MA_OT OperatorType;
+//todo C1 is not for nonimage
+    //    typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
+  #endif
+#endif
+
+
   MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting);
 private:
   ///creates the initial guess
@@ -46,7 +59,7 @@ public:
 
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
   virtual void plot(const std::string& filename) const;
-  using MA_solver::plot;
+  virtual void plot(const std::string& filename, int no) const;
 
   using MA_solver::adapt;
 
@@ -58,18 +71,6 @@ public:
 
 private:
   GeometrySetting& setting_;
-
-#ifdef USE_C0_PENALTY
-  typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Brenner> OperatorType;
-#else
-  #ifdef USE_MIXED_ELEMENT
-    typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Neilan> OperatorType;
-  #else
-    typedef  Local_Operator_MA_OT OperatorType;
-//todo C1 is not for nonimage
-    //    typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
-  #endif
-#endif
 
   OperatorType op;
 

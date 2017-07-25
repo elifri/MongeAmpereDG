@@ -21,14 +21,93 @@ MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridV
 :MA_solver(grid, gridView, config), setting_(setting), op(*this)
 {}
 
+struct ResidualFunction{
+
+  typedef MA_OT_solver::FETraits::DiscreteLocalSecondDerivativeGridFunction LocalHessScalarFunction;
+  typedef MA_OT_solver::DiscreteLocalGradientGridFunction LocalGradFunction;
+
+  ResidualFunction(std::shared_ptr<LocalGradFunction> &u, const MA_OT_solver::OperatorType& op, std::shared_ptr<LocalHessScalarFunction> &u00, std::shared_ptr<LocalHessScalarFunction> &u10,
+      std::shared_ptr<LocalHessScalarFunction> &u01,std::shared_ptr<LocalHessScalarFunction> &u11):
+        localgradu_(u), rhoX(op.get_lop().get_input_distribution()), rhoY(op.get_lop().get_target_distribution())
+  {
+    localHessu_[0]= u00;
+    localHessu_[1] =u10;
+    localHessu_[2] =u01;
+    localHessu_[3]=u11;
+  }
+
+  ResidualFunction(std::shared_ptr<LocalGradFunction> &u, const MA_OT_solver::OperatorType& op, LocalHessScalarFunction &u00, LocalHessScalarFunction &u10,
+      LocalHessScalarFunction &u01, LocalHessScalarFunction &u11):
+        localgradu_(u), rhoX(op.get_lop().get_input_distribution()), rhoY(op.get_lop().get_target_distribution())
+  {
+    localHessu_[0]= std::make_shared<LocalHessScalarFunction>(u00);
+    localHessu_[1] = std::make_shared<LocalHessScalarFunction>(u10);
+    localHessu_[2] = std::make_shared<LocalHessScalarFunction>(u01);
+    localHessu_[3]= std::make_shared<LocalHessScalarFunction>(u11);
+  }
+
+
+  /**
+   * \brief Bind LocalFunction to grid element.
+   *
+   * You must call this method before evaluate()
+   * and after changes to the coefficient vector.
+   */
+  void bind(const LocalHessScalarFunction::Element& element)
+  {
+    localgradu_->bind(element);
+    for (unsigned int i= 0; i < localHessu_.size(); i++)
+      localHessu_[i]->bind(element);
+  }
+
+  double operator()(const LocalHessScalarFunction::Domain& x) const
+  {
+    Dune::FieldMatrix<Config::ValueType, Config::dim, Config::dim> Hessu;
+    Hessu[0][0] = (*(localHessu_[0]))(x);
+    Hessu[0][1] = (*(localHessu_[1]))(x);
+    Hessu[0][1] = (*(localHessu_[2]))(x);
+    Hessu[1][1] = (*(localHessu_[3]))(x);
+
+    double f_value;
+    rhoX.evaluate(localgradu_->localContext().geometry().global(x), f_value);
+
+    auto gradu = (*localgradu_)(x);
+    double g_value;
+    rhoY.evaluate(gradu, g_value);
+
+    return determinant(Hessu)-f_value/g_value;
+  }
+
+  void unbind()
+  {
+    localgradu_->unbind();
+    for (unsigned int i= 0; i < localHessu_.size(); i++)
+      localHessu_[i]->unbind();
+  }
+
+  const LocalHessScalarFunction::Element& localContext() const
+  {
+    return localHessu_[0]->localContext();
+  }
+
+  std::array<std::shared_ptr<LocalHessScalarFunction>,4> localHessu_;
+  std::shared_ptr<LocalGradFunction> localgradu_;
+  const DensityFunction& rhoX;
+  const DensityFunction& rhoY;
+//  static SmoothingKernel ConvectionFunction::smoothingKernel_;
+};
+
 void MA_OT_solver::plot(const std::string& name) const
 {
-  std::cout << "write VTK output? " << writeVTK_ << " ";
+  plot(name, iterations);
+}
 
-  //write vtk files
+void MA_OT_solver::plot(const std::string& name, int no) const
+{
+   //write vtk files
   if (writeVTK_)
   {
-    std::cout << "plot written into ";
+    std::cerr << "plot written into ";
 
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
@@ -63,17 +142,17 @@ void MA_OT_solver::plot(const std::string& name) const
      auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
      vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
 
-     //write to file
-     std::string fname(plotter.get_output_directory());
-     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
-     vtkWriter.write(fname);
 
-     std::cout << fname  << std::endl;
+#ifdef USE_MIXED_ELEMENT
+     using GlobalHessScalarFunction = typename FETraits::DiscreteSecondDerivativeGridFunction;
+     using LocalHessScalarFunction = typename FETraits::DiscreteLocalSecondDerivativeGridFunction;
 
-     #ifdef USE_MIXED_ELEMENT
      std::array<Config::VectorType,Config::dim*Config::dim> derivativeSolution;
+     std::vector<std::unique_ptr<GlobalHessScalarFunction>> numericalSolutionHessians;
+     std::vector<std::unique_ptr<LocalHessScalarFunction>> localnumericalSolutionHessians;
+
      for (int i = 0; i < Config::dim*Config::dim; i++)
-         derivativeSolution[i] = Config::VectorType::Zero(get_n_dofs_u_DH()/Config::dim/Config::dim);
+       derivativeSolution[i] = Config::VectorType::Zero(get_n_dofs_u_DH()/Config::dim/Config::dim);
 
      //extract dofs
      for (int i=0; i<derivativeSolution[0].size(); i++)
@@ -83,27 +162,41 @@ void MA_OT_solver::plot(const std::string& name) const
            derivativeSolution[row*Config::dim+col](i) = solution[get_n_dofs_u()+ i*4+row*Config::dim+col];
          }
 
-     for (int i = 0; i < Config::dim*Config::dim; i++)
-     {
-       //build gridview function
-       Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuDHBasis,Config::VectorType> numericalSolutionHessian(FEBasisHandler_.uDHBasis(),derivativeSolution[i]);
-       auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
-       std::string hessianEntryName = "DiscreteHessian" + NumberToString(i);
-       vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo(hessianEntryName, VTK::FieldInfo::Type::scalar, 1));
-
-       //write to file
-       std::string fname(plotter.get_output_directory());
-       fname += "/"+ plotter.get_output_prefix()+ name + "DiscreteHessian"+NumberToString(i)+"No" +NumberToString(iterations) + ".vtu";
-       vtkWriter.write(fname);
-
-     }
+      for (int i = 0; i < Config::dim*Config::dim; i++)
+      {
+        //build gridview function
+        numericalSolutionHessians.push_back(std::make_unique<GlobalHessScalarFunction>(FEBasisHandler_.uDHBasis(),derivativeSolution[i]));
+        localnumericalSolutionHessians.push_back(std::make_unique<LocalHessScalarFunction>(*numericalSolutionHessians[i]));
+        std::string hessianEntryName = "DiscreteHessian" + NumberToString(i);
+        vtkWriter.addVertexData(*localnumericalSolutionHessians[i], VTK::FieldInfo(hessianEntryName, VTK::FieldInfo::Type::scalar, 1));
+      }
 #endif
+
+
+#ifndef USE_MIXED_ELEMENT
+     ResidualFunction residual(gradient_u_old,op,HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
+#else
+     ResidualFunction residual(gradient_u_old,op,
+         *localnumericalSolutionHessians[0],
+         *localnumericalSolutionHessians[1],
+         *localnumericalSolutionHessians[2],
+         *localnumericalSolutionHessians[3]);
+#endif
+
+			 vtkWriter.addVertexData(residual, VTK::FieldInfo("Residual", VTK::FieldInfo::Type::scalar, 1));
+       
+     //write to file
+     std::string fname(plotter.get_output_directory());
+     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + ".vtu";
+     vtkWriter.write(fname);
+
+     std::cerr << fname  << std::endl;
 
   }
 
   //write to file
   std::string fname(plotter.get_output_directory());
-  fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "outputGrid.vtu";
+  fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + "outputGrid.vtu";
 
   plotter.writeOTVTK(fname, *gradient_u_old, [](Config::SpaceType x)
       {return Dune::FieldVector<double, Config::dim> ({
