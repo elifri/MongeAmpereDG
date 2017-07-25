@@ -1011,7 +1011,7 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
     {
 //      if (std::abs(m_local(i,j)) > 1e-13 )
       {
-//        std::cerr << " add to Jacobian " << FETraits::get_index(localIndexSetTest, i) << " , " << FETraits::get_index(localIndexSetAnsatz, j) << " from local " << i  << "," << j << " with value " << m_local(i,j) << std::endl;
+        std::cerr << " add to Jacobian " << FETraits::get_index(localIndexSetTest, i) << " , " << FETraits::get_index(localIndexSetAnsatz, j) << " from local " << i  << "," << j << " with value " << m_local(i,j) << std::endl;
         je.push_back(EntryType(FETraits::get_index(localIndexSetTest, i),FETraits::get_index(localIndexSetAnsatz,j),m_local(i,j)));
       }
     }
@@ -2078,8 +2078,9 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
         Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
         BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, v_isBoundary);
 
-        //additional vector for unification term
-        std::vector<Config::VectorType> entryWx0timesBgradV (lop.get_number_of_entities_for_unifikation_term()*localView.size());
+       //additional vector for unification term
+//        std::vector<Config::VectorType> entryWx0timesBgradV (lop.get_number_of_entities_for_unifikation_term()*localView.size());
+        std::vector<Config::VectorType> entryWx0timesBgradV;
         for (unsigned int i = 0; i < entryWx0timesBgradV.size(); i++)
           entryWx0timesBgradV[i].setZero(localView.size());    // Set all entries to zero
 
@@ -2104,6 +2105,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
         }
 
 
+/*
         //write derivatives of unification term into vector
         for (const auto& fixingElementandOffset : lop.EntititiesForUnifikationTerm())
         {
@@ -2131,6 +2133,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 
         }
 
+*/
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
@@ -2252,8 +2255,8 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 
 //        std::cerr << " localVector before boundary" << local_vector.transpose() << std::endl;
 
-//        local_vector+=local_boundary;
-        local_vector+=local_boundary.cwiseProduct(local_boundary);
+        local_vector+=local_boundary;
+//        local_vector+=local_boundary.cwiseProduct(local_boundary);
 //        std::cerr << " localVector " << local_vector << std::endl;
 
         //add to objective function and jacobian
@@ -2268,18 +2271,20 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
           for (size_t i = 0; i < localIndexSet.size(); i++)
           {
 //          if (!isBoundaryLocal(i))  continue;
-            boundary(FETraits::get_index(localIndexSet, i)) += (local_boundary.cwiseProduct(local_boundary))[i] ;
-//          boundary(FETraits::get_index(localIndexSet, i)) += local_boundary[i] ;
+//            boundary(FETraits::get_index(localIndexSet, i)) += (local_boundary.cwiseProduct(local_boundary))[i] ;
+          boundary(FETraits::get_index(localIndexSet, i)) += local_boundary[i] ;
 //          std::cerr << "boundary add " << i << " to " << FETraits::get_index(localIndexSet, i) << " with value " << local_boundary[i] << " and get " << boundary(FETraits::get_index(localIndexSet, i)) << std::endl;
           }
 
+/*
           Config::DenseMatrixType temp = 2*m_mB;
           for (int i = 0; i < m_mB.rows(); i++)
             for (int j = 0; j < m_mB.cols(); j++)
               temp(i,j) *= local_boundary(i);
           add_local_coefficients_Jacobian(localIndexSet, localIndexSet, temp, JacobianEntries);
+*/
 
-          //        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
+          add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
         }
 
         //add derivatives for scaling factor
@@ -2293,6 +2298,8 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 */
      }
      m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
+
+     std::cerr << " m.coeffRef(0,0) " << m.coeffRef(0,0) << std::endl;
 
      std::cerr << std::endl << " local boundary term " << boundary.norm()<<" inner term " << (v-boundary).norm()<< " whole norm " << v.norm() << std::endl;
 //     std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
