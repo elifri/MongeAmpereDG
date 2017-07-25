@@ -24,7 +24,7 @@
 #include <cmath>
 
 #include "Solver/boundaryHandler.h"
-#include "operator_utils.h"
+#include "Operator/operator_utils.h"
 
 using namespace Dune;
 

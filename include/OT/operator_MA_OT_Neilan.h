@@ -17,7 +17,7 @@
 #include "ImageFunction.hpp"
 
 #include "localfunctions/MAmixedbasisC0.hh"
-#include "operator_utils.h"
+#include "Operator/operator_utils.h"
 //automatic differtiation
 #include <adolc/adouble.h>
 #include <adolc/adolc.h>

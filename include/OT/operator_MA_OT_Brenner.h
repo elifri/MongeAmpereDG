@@ -11,7 +11,7 @@
 #include <dune/common/function.hh>
 #include "utils.hpp"
 #include "OT/problem_data_OT.h"
-#include "OT/operator_utils.h"
+#include "Operator/operator_utils.h"
 
 #include "Solver/solver_config.h"
 

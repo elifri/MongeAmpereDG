@@ -13,7 +13,7 @@
 #include "Solver/solver_config.h"
 #include "utils.hpp"
 #include "SmoothingKernel.h"
-#include "operator_utils.h"
+#include "Operator/operator_utils.h"
 
 using namespace Dune;
 

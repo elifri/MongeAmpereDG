@@ -12,6 +12,7 @@
 #include <dune/geometry/quadraturerules.hh>
 
 #include "utils.hpp"
+#include "Operator/operator_utils.h"
 #include "MAconfig.h"
 #include "problem_data.h"
 

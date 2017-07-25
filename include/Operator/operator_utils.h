@@ -10,6 +10,7 @@
 
 #include "utils.hpp"
 #include "MAconfig.h"
+#include "Solver/solver_config.h"
 
 template <class value_type>
 inline
