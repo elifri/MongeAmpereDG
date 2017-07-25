@@ -10,11 +10,11 @@ add_library(Dogleg Dogleg/utils.cpp)
 
 set(PureSolverLibs ${PureSolverLibs} ${IOLibs})
 
-#add_executable("dune_mongeampere" dune_mongeampere.cc)
+add_executable("dune_mongeampere" dune_mongeampere.cc)
 #message("ZLIB libraries ${ZLIB_LIBRARIES}")
 #message("Boost libraries ${Boost_LIBRARIES}")
-#target_link_libraries(dune_mongeampere ${PureSolverLibs} ${SNES_LIBRARY} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11)
-#target_link_dune_default_libraries("dune_mongeampere")
+target_link_libraries(dune_mongeampere ${PureSolverLibs} ${SNES_LIBRARY} problemData Solver_Config ImageFunction utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
+target_link_dune_default_libraries("dune_mongeampere")
 
 add_executable("dune_mongeampere_reflector" dune_mongeampere_reflector.cpp)
 target_link_libraries(dune_mongeampere_reflector MA_reflector_solver ${PureSolverLibs} ${SNES_LIBRARY} EllipsoidMethod ${MirrorProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
