@@ -18,6 +18,7 @@
 
 #include <CImg.h>
 #include <algorithm>
+#include <functional>
 
 using namespace Dune;
 
@@ -141,19 +142,18 @@ public:
 };
 
 // A class implementing the analytical dirichlet boundary
-template
-<class ExactFunctionType>
-class Dirichletdata//: public VirtualFunction<FieldVector<double, Config::dim>, double>
+class Dirichletdata:public VirtualFunction<Config::SpaceType, Config::ValueType>
 {
 public:
   typedef std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGridFunction> Function_ptr;
+  using ExactFunctionType = std::function<Config::ValueType(const Config::SpaceType&)>;
 
-  Dirichletdata(){}
 //  Dirichletdata(Function_ptr &exactSolU) : exact_solution(&exactSolU) {}
-  Dirichletdata(ExactFunctionType &exactSolU) : exact_solution(&exactSolU) {}
+  Dirichletdata() : exact_solution() {}
+  Dirichletdata(const ExactFunctionType &exactSolU) : exact_solution(exactSolU) {}
 
-	void evaluate(const Config::SpaceType& in, Config::ValueType& out){
-	  out = (*exact_solution)->evaluate_inverse(in);
+	void evaluate(const Config::SpaceType& in, Config::ValueType& out) const{
+	  out = exact_solution(in);
 	}
 
 	void derivative(const Config::SpaceType& in, SolverConfig::HessianRangeType& out)
@@ -163,12 +163,11 @@ public:
 
 	void evaluate_exact_sol(const Config::SpaceType& x, Config::ValueType& out) const
 	{
-	  assert(exact_solution != NULL);
-	  out = (*exact_solution)->evaluate_inverse(x);
+//	  out = exact_solution(x);
 	}
 
 private:
-  mutable ExactFunctionType* exact_solution;
+  ExactFunctionType exact_solution;
 
   friend Local_Operator_MA_refl_Neilan;
 };
