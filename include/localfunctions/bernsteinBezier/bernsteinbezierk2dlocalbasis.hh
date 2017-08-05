@@ -75,7 +75,7 @@ public:
 	    {
 	      unsigned int lambda1 = k - lambda3 - lambda2;
 	      out[n] = factorial[k]/factorial[lambda1]/factorial[lambda2]/factorial[lambda3]
-	                *std::pow(x[0],lambda1)*std::pow(x[1],lambda2)*std::pow(1-x[0]-x[1],lambda3);
+	                *std::pow(1-x[0]-x[1],lambda1)*std::pow(x[0],lambda2)*std::pow(x[1],lambda3);
 	      n++;
 	    }
 	}
@@ -106,19 +106,19 @@ public:
         //use product rule, determine the factors' derivatives
         if (lambda1 > 0)
         {
-          out[n][0][0] += lambda1*std::pow(x[0],lambda1-1)*std::pow(1-x[0]-x[1],lambda3);
+          out[n][0][0] += lambda1*std::pow(1-x[0]-x[1],lambda1-1)*std::pow(x[1],lambda3);
         }
         if (lambda2 > 0)
-          out[n][0][1] += lambda2*std::pow(x[1],lambda2-1)*std::pow(1-x[0]-x[1],lambda3);
+          out[n][0][1] += lambda2*std::pow(x[0],lambda2-1)*std::pow(x[1],lambda3);
         if (lambda3 > 0)
         {
-          out[n][0][0] -= lambda3*std::pow(1-x[0]-x[1],lambda3-1)*std::pow(x[0],lambda1);
-          out[n][0][1] -= lambda3*std::pow(1-x[0]-x[1],lambda3-1)*std::pow(x[1],lambda2);
+          out[n][0][0] -= lambda3*std::pow(x[1],lambda3-1)*std::pow(1-x[0]-x[1],lambda1);
+          out[n][0][1] -= lambda3*std::pow(x[1],lambda3-1)*std::pow(x[0],lambda2);
         }
 
         //multiply constant factor
-        out[n][0][0] *= factor*std::pow(x[1],lambda2);
-        out[n][0][1] *= factor*std::pow(x[0],lambda1);
+        out[n][0][0] *= factor*std::pow(x[0],lambda2);
+        out[n][0][1] *= factor*std::pow(1-x[0]-x[1],lambda1);
         n++;
       }
 	}
@@ -149,19 +149,19 @@ public:
            //use product rule, determine the factors' derivatives
            if (directions[0] == 0 && lambda1 > 0)
            {
-             out[n][0] += lambda1*std::pow(x[0],lambda1-1)*std::pow(1-x[0]-x[1],lambda3);
+             out[n][0] += lambda1*std::pow(1-x[0]-x[1],lambda1-1)*std::pow(x[1],lambda3);
            }
            else if (directions[0] == 1 && lambda2 > 0)
-             out[n][0] += lambda2*std::pow(x[1],lambda2-1)*std::pow(1-x[0]-x[1],lambda3);
+             out[n][0] += lambda2*std::pow(x[0],lambda2-1)*std::pow(x[1],lambda3);
            if (lambda3 > 0)
            {
-             out[n][0] -= directions[0] == 0? lambda3*std::pow(1-x[0]-x[1],lambda3-1)*std::pow(x[0],lambda1)
-                                             :lambda3*std::pow(1-x[0]-x[1],lambda3-1)*std::pow(x[1],lambda2);
+             out[n][0] -= directions[0] == 0? lambda3*std::pow(x[1],lambda3-1)*std::pow(1-x[0]-x[1],lambda1)
+                                             :lambda3*std::pow(x[1],lambda3-1)*std::pow(x[0],lambda2);
            }
 
            //multiply constant factor
-           out[n][0] *= directions[0] == 0? factor*std::pow(x[1],lambda2) :
-                                               factor*std::pow(x[0],lambda1);
+           out[n][0] *= directions[0] == 0? factor*std::pow(x[0],lambda2) :
+                                               factor*std::pow(1-x[0]-x[1],lambda1);
            n++;
          }
      }
@@ -228,10 +228,10 @@ private:
   typename Traits::RangeType bernsteinFactor(const int no, const int lambda, const typename Traits::DomainType& x) const
   {
     if (no == 0)
-      return std::pow(x[0], lambda);
+      return std::pow(1-x[0]-x[1], lambda);
     if (no ==1)
-      return std::pow(x[1], lambda);
-    return std::pow(1-x[0]-x[1], lambda);
+      return std::pow(x[0], lambda);
+    return std::pow(x[1], lambda);
   }
 
   /** \brief Returns the derivative of a single Lagrangian factor of l_ij evaluated at x
@@ -241,11 +241,11 @@ private:
   {
     if (lambda == 0)  return R(0);
     if (no == 0)
-      return (direction == 0) ? lambda*std::pow(x[0],lambda-1) : R(0);
-    if (no == 1)
-      return (direction == 1) ? lambda*std::pow(x[1],lambda-1) : R(0);
-    if (no == 2)
       return -lambda*std::pow(1-x[0]-x[1],lambda-1);
+    if (no == 1)
+      return (direction == 0) ? lambda*std::pow(x[0],lambda-1) : R(0);
+    if (no == 2)
+      return (direction == 1) ? lambda*std::pow(x[1],lambda-1) : R(0);
   }
 
   template<unsigned int directionSize=2u>
@@ -254,11 +254,12 @@ private:
 //    static_assert(directionSize == 2);
     if (lambda < 2)  return R(0);
     if (no == 0)
-      return (directions[0] == 0 && directions[1] == 0) ? lambda*(lambda-1)*std::pow(x[0],lambda-2) : R(0);
+      return lambda*(lambda-1)*std::pow(1-x[0]-x[1],lambda-2);
     if (no == 1)
-      return (directions[0] == 1 && directions[1] == 1) ? lambda*(lambda-1)*std::pow(x[1],lambda-2) : R(0);
+      return (directions[0] == 0 && directions[1] == 0) ? lambda*(lambda-1)*std::pow(x[0],lambda-2) : R(0);
+
+    return (directions[0] == 1 && directions[1] == 1) ? lambda*(lambda-1)*std::pow(x[1],lambda-2) : R(0);
     //else
-    return lambda*(lambda-1)*std::pow(1-x[0]-x[1],lambda-2);
   }
 
 R factorial[k+1];

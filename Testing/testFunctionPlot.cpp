@@ -43,7 +43,7 @@ void plot_basis_function(const FEBasis& febasis)
   }
 
   //write to file
-  std::string fname = "../plots/test/basisFunctions.vtu";
+  std::string fname = "/home/gereon/workspace/dune/build/dune-mongeampere/plots/test/basisFunctions.vtu";
   vtkWriter.write(fname);
   std::cout<< "written to file " << fname << std::endl;
 }
@@ -59,7 +59,8 @@ int main(int argc, char** argv) {
     Config::GridType &grid = unitcube.grid();
     Config::GridView gridView = grid.leafGridView();
 
-    FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::GridView,2>> febasisHandler(gridView);
+//    FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::GridView,2>> febasisHandler(gridView);
+    FEBasisHandler<Standard, BezierTraits<Config::GridView,2>> febasisHandler(gridView);
 
     plot_basis_function(febasisHandler.FEBasis());
 

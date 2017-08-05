@@ -15,10 +15,11 @@
 
 //#include "localfunctions/MAmixedbasis.hh"
 //#include "localfunctions/MAmixedbasisC0.hh"
-#include "localfunctions/MAmixedbasisC0C0.hh"
+#include "localfunctions/MAmixed/MAmixedbasisC0C0.hh"
 //#include "localfunctions/deVeubekefunctionspacebasis.hh"
-#include "localfunctions/PowellSabin12SSplinenodalbasis.hh"
+#include "localfunctions/PowellSabin12Split/PowellSabin12SSplinenodalbasis.hh"
 #include <dune/functions/functionspacebases/bsplinebasis.hh>
+#include "localfunctions/bernsteinBezier/bernsteinbezierk2dnodalbasis.h"
 
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
 
@@ -193,6 +194,10 @@ using MixedTraits = FETraits<Functions::MAMixedBasis<GridView, degree, degreeHes
 
 template <typename GridView, int degree>
 using BSplineTraits = FETraits<Functions::BSplineBasis<GridView>>;
+
+
+template <typename GridView, int degree>
+using BezierTraits = FETraits<Functions::BernsteinBezierk2dNodalBasis<GridView, degree>>;
 
 
 #endif /* SRC_SOLVER_FETRAITS_HPP_ */
