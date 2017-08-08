@@ -193,21 +193,21 @@ public:
            R factor = factorial[k]/factorial[lambda1]/factorial[lambda2]/factorial[lambda3];
 
            //use product rule, determine the factors' derivatives
-           if (directions[0] == 0 && lambda1 > 0)
+           if (lambda1 > 0)
            {
-             out[n][0] += lambda1*std::pow(1-x[0]-x[1],lambda1-1)*std::pow(x[1],lambda3);
+             out[n][0] -= directions[0] == 0? lambda1*std::pow(1-x[0]-x[1],lambda1-1)*std::pow(x[0],lambda2)
+                                             :lambda1*std::pow(1-x[0]-x[1],lambda1-1)*std::pow(x[1],lambda3);
            }
-           else if (directions[0] == 1 && lambda2 > 0)
-             out[n][0] += lambda2*std::pow(x[0],lambda2-1)*std::pow(x[1],lambda3);
-           if (lambda3 > 0)
+           if (directions[0] == 0 && lambda2 > 0)
            {
-             out[n][0] -= directions[0] == 0? lambda3*std::pow(x[1],lambda3-1)*std::pow(1-x[0]-x[1],lambda1)
-                                             :lambda3*std::pow(x[1],lambda3-1)*std::pow(x[0],lambda2);
+             out[n][0] += lambda2*std::pow(x[0],lambda2-1)*std::pow(1-x[0]-x[1],lambda1);
            }
+           else if (directions[0] == 1 && lambda3 > 0)
+             out[n][0] += lambda3*std::pow(x[1],lambda3-1)*std::pow(1-x[0]-x[1],lambda1);
 
            //multiply constant factor
-           out[n][0] *= directions[0] == 0? factor*std::pow(x[0],lambda2) :
-                                               factor*std::pow(1-x[0]-x[1],lambda1);
+           out[n][0] *= directions[0] == 0? factor*std::pow(x[1],lambda3) :
+                                               factor*std::pow(x[0],lambda2);
            n++;
          }
      }

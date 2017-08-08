@@ -12,9 +12,9 @@ int main(int argc, char** argv) {
     bool success = test_Bezier_lFE<2>();
 //    success = success && test_Bezier_lFE<3>();
     if (success)
-      std::cout << "Test FE DeVeubeke succeeded" << std::endl;
+      std::cout << "Test FE Bezier succeeded" << std::endl;
     else
-      std::cout << "Test FE DeVeubeke failed" << std::endl;
+      std::cout << "Test FE Bezier failed" << std::endl;
 
   }
   catch (const Dune::Exception& e) {
