@@ -13,6 +13,8 @@ message("SolverLibs are ${SolverLibs}")
 target_link_libraries(testPoisson ${SolverLibs} ${SNES_LIBRARY} Solver_Config utils ${ZLIB_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
 target_link_dune_default_libraries("testPoisson")
 
+add_executable("testlocalBezier" testlocalBezier.cpp)
+target_link_dune_default_libraries("testlocalBezier")
 
 
 add_executable("testFunctionPlot" testFunctionPlot.cpp)

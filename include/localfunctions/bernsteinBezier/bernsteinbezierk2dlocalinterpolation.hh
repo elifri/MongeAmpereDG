@@ -6,6 +6,9 @@
 #include <vector>
 #include <dune/geometry/quadraturerules.hh>
 
+#include "MAconfig.h"
+#include <Eigen/Dense>
+
 namespace Dune
 {
   template<class LB>
