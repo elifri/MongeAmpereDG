@@ -57,6 +57,53 @@ public:
 		return N;
 	}
 
+/*  void get_baryc_coord_bezier(const int no, baryc_type &b) const ///< calculates the barycentric coordinates of the control point
+  {
+    static_assert(k==2);
+    switch (no)
+    {
+    case 0: b(0) = 1; b(1) = 0; b(2) = 0; break;
+    case 1: b(0) = 0.5; b(1) = 0.5; b(2) = 0; break;
+    case 2: b(0) = 0.5; b(1) = 0; b(2) = 0.5; break;
+    case 3: b(0) = 0; b(1) = 1; b(2) = 0; break;
+    case 4: b(0) = 0; b(1) = 0.5; b(2) = 0.5; break;
+    case 5: b(0) = 0; b(1) = 0; b(2) = 1; break;
+    default: assert(false && "I do not know this bezier control point number!");
+    }
+  }*/
+
+  static int get_local_bezier_no(const int i, const int j, const int l)
+  {
+    assert (i >= 0 && j >= 0 && l >= 0 && "Coefficient indices must be positive! ");
+    assert (i <= k && j <= k && l <= k && "Coefficient indices must be smaller or equal than 2! ");
+    assert ( i+ j + l == k && "Sum of indices must be equal degree ");
+
+    assert ( k == 2 && "Degrees other than two are not support yet");
+
+    return l*(l-1)/2+l*(k+1);
+  }
+
+  static int get_local_bezier_no(const Eigen::Vector3i &indeces)
+  {
+    return get_local_bezier_no(indeces(0), indeces(1), indeces(2));
+  }
+
+  ///return the local no of the function belonging to the control point at node n
+  static int get_local_bezier_no_from_node(int n)
+  {
+    assert (n >= 0 && n < 3 && "Ther is no node with No "+n);
+
+    assert ( k == 2 && "Degrees other than two are not support yet");
+
+    switch (n)
+    {
+    case 0: return 0;
+    case 1: return 3;
+    case 2: return 5;
+    default:  std::cerr << "Error: Could not find node " << n << std::endl; std::exit(1);
+    }
+  }
+
 	//! \brief Evaluate all shape functions
 	inline void evaluateFunction (const typename Traits::DomainType& x,
 			std::vector<typename Traits::RangeType>& out) const
