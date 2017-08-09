@@ -43,7 +43,7 @@ public:
 #endif
 
 
-  MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting);
+  MA_OT_solver(const shared_ptr<GridType>& grid, const shared_ptr<GridType>& gridConvexifier, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting);
 private:
   ///creates the initial guess
   void create_initial_guess();

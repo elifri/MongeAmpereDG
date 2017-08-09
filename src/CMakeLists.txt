@@ -25,7 +25,7 @@ target_link_libraries(dune_mongeampere_refractor MA_refractor_solver ${PureSolve
 target_link_dune_default_libraries("dune_mongeampere_refractor")
 
 add_executable("dune_mongeampere_OT" dune_mongeampere_OT.cpp)
-target_link_libraries(dune_mongeampere_OT MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} Solver_Config ImageFunction utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
+target_link_libraries(dune_mongeampere_OT MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} problemData Solver_Config ImageFunction utils ${IPOPT_LIBRARIES} ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
 target_link_dune_default_libraries("dune_mongeampere_OT")
 
 message("linking poure solver libs ${IOLibs}")

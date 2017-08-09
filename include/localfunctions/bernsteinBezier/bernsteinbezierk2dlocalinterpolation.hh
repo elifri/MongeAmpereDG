@@ -7,6 +7,7 @@
 #include <dune/geometry/quadraturerules.hh>
 
 #include "MAconfig.h"
+#include "utils.hpp"
 #include <Eigen/Dense>
 
 namespace Dune

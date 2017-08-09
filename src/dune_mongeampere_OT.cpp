@@ -93,6 +93,7 @@ try {
   // Generate the grid
   // ////////////////////////////////
   Config::UnitCubeType unitcube(setting.lowerLeft, setting.upperRight, 1);
+  Config::UnitCubeType unitcubeConvexifier(setting.lowerLeft, setting.upperRight, 1);
 
   Config::GridType &grid = unitcube.grid();
   Config::GridView gridView = grid.leafGridView();
@@ -103,7 +104,7 @@ try {
 
 
   //solve
-  MA_OT_solver ma_solver(unitcube.grid_ptr(), gridView, config, setting);
+  MA_OT_solver ma_solver(unitcube.grid_ptr(), unitcubeConvexifier.grid_ptr(), gridView, config, setting);
   ma_solver.solve();
 
   std::cout << "done" << std::endl;

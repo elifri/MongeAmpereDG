@@ -28,6 +28,7 @@
 #include "solver_config.h"
 
 #include "FEBasisHandler.hpp"
+#include "Solver/Convexifier.h"
 
 #ifdef USE_DOGLEG
 #include "../Dogleg/doglegMethod.hpp"
@@ -70,7 +71,7 @@ public:
 	typedef FETraits::DiscreteLocalGridFunction DiscreteLocalGridFunction;
   typedef FETraits::DiscreteLocalGradientGridFunction DiscreteLocalGradientGridFunction;
 
-	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, SolverConfig config):
+	MA_solver(const shared_ptr<GridType>& grid, const shared_ptr<GridType>& gridConvexifier, GridViewType& gridView, SolverConfig config):
 	    initialised(true),
 			epsDivide_(config.epsDivide),
 			epsEnd_(config.epsEnd),
@@ -86,6 +87,7 @@ public:
       plotterRefinement_(config.refinement),
       grid_ptr(grid), gridView_ptr(&gridView),
       FEBasisHandler_(*this, *gridView_ptr),
+      Convexifier_(gridConvexifier),
       assembler_(FEBasisHandler_.FEBasis()),
       plotter(gridView),
       op(*this),
@@ -103,6 +105,7 @@ public:
     std::cout << "constructor n dofs" << get_n_dofs() << std::endl;
 
     FEBasisHandler_.bind(*this, *gridView_ptr);
+    Convexifier_.adapt(SolverConfig::startlevel+2);
 	  assembler_.bind(FEBasisHandler_.FEBasis());
 
 	  plotter.set_output_directory(plotOutputDirectory_);
@@ -117,8 +120,8 @@ public:
 
 	}
 
-  MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, SolverConfig config, const GeometrySetting& geometrySetting)
-      :MA_solver(grid, gridView, config)
+  MA_solver(const shared_ptr<GridType>& grid, const shared_ptr<GridType>& gridConvexifier, GridViewType& gridView, SolverConfig config, const GeometrySetting& geometrySetting)
+      :MA_solver(grid, gridConvexifier, gridView, config)
   {
     setting_ = geometrySetting;
   }
@@ -358,6 +361,7 @@ protected:
 	const GridViewType* gridView_ptr; /// Pointer to gridView
 
 	FEBasisHandler<FETraits::Type, FETraits> FEBasisHandler_;
+	Convexifier<2> Convexifier_;
 
 	Assembler assembler_; ///handles all (integral) assembly processes
 	Plotter plotter; ///handles all output generation

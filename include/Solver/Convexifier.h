@@ -8,6 +8,12 @@
 #ifndef INCLUDE_SOLVER_CONVEXIFIER_H_
 #define INCLUDE_SOLVER_CONVEXIFIER_H_
 
+#include "IpIpoptApplication.hpp"
+
+#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
+
+#include "Solver/ConvexifyNLP.hpp"
+
 #include "MAconfig.h"
 //#include "localfunctions/bernsteinBezier/bernsteinbezierk2dlocalbasis.h"
 #include "Solver/FETraits.hpp"
@@ -16,12 +22,23 @@
 
 template<int k>
 class Convexifier{
+public:
   using difference_type = std::pair<Eigen::Vector2i, Eigen::Vector2i>;
 
   ///struct to store a coefficient and barycentric coordinate for a term in a condition, i.e. constant and c_{ijk}
   struct BezierBarycTermType
   {
     BezierBarycTermType(): coefficient(1), coord(0,0,0) {}
+    BezierBarycTermType(Config::ValueType coeff, std::initializer_list<int> c): coefficient(coeff)
+    {
+      //to be improved ...
+      auto cIt = c.begin();
+      coord[0] = *cIt;
+      cIt++;
+      coord[1] = *cIt;
+      cIt++;
+      coord[2] = *cIt;
+    }
 
     BezierBarycTermType& operator+=(Eigen::Vector3i coord)
     {
@@ -52,6 +69,7 @@ class Convexifier{
 
   using BarycCoordType = Eigen::Vector3d;
 
+private:
   ///< performs the difference operatore \Delta_ij on c
   void Delta(const int i, const int j, const BezierBarycTermType& c, BezierBarycTermListType &c_output);
 
@@ -94,21 +112,41 @@ class Convexifier{
   void conditions_for_convexity_triangle_over_edges(const Intersection& interSection,
       const LocalIndexSet& localIndexSet, const int flip,
       const LocalIndexSet& localIndexSetN, const int flipN, int& conditionOffset, TripletListType& tripletList);
+
+  Config::VectorType solve_quad_prog_with_ie_constraints(const Config::MatrixType &H, const Config::VectorType &g,
+          const Config::MatrixType &C, const Config::VectorType & c_lowerbound,
+          const Config::VectorType & x0);
+
 public:
-  template<typename GridView>
-  Convexifier(const GridView& gridView): bezierBasisHandler_(gridView)
+  Convexifier(const shared_ptr<Config::GridType>& grid): grid_ptr(grid), bezierBasisHandler_(grid->leafGridView())
   {
-    init(bezierBasisHandler_.feBasis());
+    init(bezierBasisHandler_.FEBasis());
   }
 
   template<typename GridView>
   void init(const Dune::Functions::BernsteinBezierk2dNodalBasis<GridView, k>& bezierBasis);
+
+  void adapt(int level=1)
+  {
+    grid_ptr->globalRefine(level);
+    bezierBasisHandler_ = FEBasisHandler<Standard, BezierTraits<Config::GridView,k>>(grid_ptr->leafGridView());
+  }
+
+  template<typename F>
+  auto convexify(F f) const;
+
+  void convexify(Config::VectorType& v) const;
+
+  auto globalSolution(const Config::VectorType &v) const{
+    return Dune::Functions::makeDiscreteGlobalBasisFunction<double>(bezierBasisHandler_.FEBasis(),v);
+  }
 
 private:
   const int k_ = k;
   Config::MatrixType A_;///evaluation matrix for a spline
   Config::MatrixType C_;///convexity conditions for a bezier spline
 //  BernsteinBezierk2DLocalBasis localBezierBasis_;
+  const shared_ptr<Config::GridType> grid_ptr;
   FEBasisHandler<Standard, BezierTraits<Config::GridView,k>> bezierBasisHandler_;
 };
 
@@ -137,10 +175,12 @@ void Convexifier<k>::Delta_twice(Eigen::Vector2i diff1, Eigen::Vector2i diff2, c
   c_output.clear();
   BezierBarycTermListType c_temp, c_temp_child;
 
-  for (unsigned int i = 0; i < c.size(); i++)
-  {
-    Delta(diff1(0), diff1(1), c[i], c_temp);
-  }
+//  for (unsigned int i = 0; i < c.size(); i++)
+//  {
+//    Delta(diff1(0), diff1(1), c[i], c_temp);
+//  }
+  Delta(diff1(0), diff1(1), c, c_temp);
+
 
   for (unsigned int i = 0; i < c_temp.size(); i++)
   {
@@ -159,7 +199,7 @@ void Convexifier<k>::add_equation_to_matrix(const LocalIndexSet& localIndexSet, 
   for (const auto& c_term : c_equation)
   {
 //        cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
-    auto bezierIndex = localIndexSet.index(BernsteinBezierk2DLocalBasis<double, double, k>::get_local_bezier_no(c_term.coord));
+    auto bezierIndex = localIndexSet.index(BernsteinBezierk2DLocalBasis<double, double, k>::get_local_bezier_no(c_term.coord))[0];
     tripletList.push_back( TripletType( condition_index, bezierIndex, c_term.coefficient));
   }
 }
@@ -279,7 +319,7 @@ void Convexifier<k>::conditions_for_convexity_triangle_interior(const LocalIndex
 }
 
 template<typename GeometryType>
-Convexifier<2>::BarycCoordType get_baryc_coordinates (const GeometryType& geometry, const Config::DomainType & x, Convexifier<2>::BarycCoordType &baryc)
+Convexifier<2>::BarycCoordType get_baryc_coordinates (const GeometryType& geometry, const Config::DomainType & x)
 {
   assert(geometry.corners() == 3);
 
@@ -287,7 +327,7 @@ Convexifier<2>::BarycCoordType get_baryc_coordinates (const GeometryType& geomet
   Eigen::Matrix3d LGS;
   for (int i = 0; i < 3; i++)
   {
-    const auto& corner = geometry.corner();
+    const auto& corner = geometry.corner(i);
     LGS(0,i) = corner[0];
     LGS(1,i) = corner[1];
     LGS(2,i) = 1.;
@@ -347,7 +387,7 @@ void Convexifier<k>::conditions_for_convexity_triangle_over_edges(const Intersec
     case 1:
       c_equationTermsN.push_back(BezierBarycTermType(1.,{jN,0,iN}));
       break;
-    case 0:
+    case 2:
       c_equationTermsN.push_back(BezierBarycTermType(1.,{0,iN,jN}));
       break;
     }
@@ -481,7 +521,7 @@ void Convexifier<k>::init(const Dune::Functions::BernsteinBezierk2dNodalBasis<Gr
     localView.bind(element);
     localIndexSet.bind(localView);
 
-    conditions_for_convexity_triangle_interior(localView, conditionIndex, tripletList);
+    conditions_for_convexity_triangle_interior(localIndexSet, conditionIndex, tripletList);
     static_assert(k==2, " Error, Convexifier is only fully implemented for degree 2");
     evaluation_matrix(localIndexSet, A_);
 
@@ -527,6 +567,61 @@ void Convexifier<k>::init(const Dune::Functions::BernsteinBezierk2dNodalBasis<Gr
   }
 
   C_.setFromTriplets(tripletList.begin(), tripletList.end());
+
+}
+
+template<int k>
+Config::VectorType Convexifier<k>::solve_quad_prog_with_ie_constraints(const Config::MatrixType &H, const Config::VectorType &g,
+        const Config::MatrixType &C, const Config::VectorType & c_lowerbound,
+        const Config::VectorType & x0)
+{
+  auto app = init_app();
+
+  ///delete nlp_ptr;
+  Ipopt::SmartPtr<ConvexifyNLP> nlp_ptr = new ConvexifyNLP(H, g, C, c_lowerbound, x0);
+  assert (IsValid(app));
+  // Ask Ipopt to solve the problem
+  Ipopt::ApplicationReturnStatus status = app->OptimizeTNLP(nlp_ptr);
+
+  if (status == Solve_Succeeded) {
+    std::cout << std::endl << std::endl << "*** The quadratic problem solved!" << std::endl;
+  }
+  else {
+    std::cout << std::endl << std::endl << "*** The quadratic problem FAILED!" << std::endl;
+    std::cout << " last point x " << nlp_ptr->get_solution().transpose() << std::endl;
+    std::cout << "minimal constraint " << (C*nlp_ptr->get_solution()-c_lowerbound).minCoeff() << std::endl;
+//         exit(1);
+    }
+
+    return nlp_ptr->get_solution();
+}
+
+template<int k>
+template<typename F>
+auto Convexifier<k>::convexify(F f) const
+{
+  Config::VectorType v;
+  bezierBasisHandler_.interpolate(f, v);
+  convexify(v);
+
+  return v;
+}
+
+template<int k>
+void Convexifier<k>::convexify(Config::VectorType& v) const
+{
+  assert(v.size() == bezierBasisHandler_.FEBasis().size());
+
+  //pos. def. matrix in quadr. cost function
+  Config::MatrixType G2 = A_.transpose() * A_;
+
+  Config::VectorType ci0 = Eigen::VectorXd::Zero(C_.rows());
+
+  Config::VectorType f = -A_.transpose() * v;
+
+  std::cout << "minimum constr violating coefficient is " << (C_ * v - ci0).minCoeff() << std::endl;
+
+  v = solve_quad_prog_with_ie_constraints(G2, f, C_, ci0, v);
 
 }
 
