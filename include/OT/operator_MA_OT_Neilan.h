@@ -16,7 +16,7 @@
 #include "OT/problem_data_OT.h"
 #include "ImageFunction.hpp"
 
-#include "localfunctions/MAmixedbasisC0.hh"
+#include "localfunctions/MAmixed/MAmixedbasisC0.hh"
 #include "Operator/operator_utils.h"
 //automatic differtiation
 #include <adolc/adouble.h>

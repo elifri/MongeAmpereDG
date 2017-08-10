@@ -75,12 +75,12 @@ public:
   static int get_local_bezier_no(const int i, const int j, const int l)
   {
     assert (i >= 0 && j >= 0 && l >= 0 && "Coefficient indices must be positive! ");
-    assert (i <= k && j <= k && l <= k && "Coefficient indices must be smaller or equal than 2! ");
-    assert ( i+ j + l == k && "Sum of indices must be equal degree ");
+    assert (i <= (int) k && j <= (int) k && l <= (int) k && "Coefficient indices must be smaller or equal than 2! ");
+    assert ( i+ j + l == (int) k && "Sum of indices must be equal degree ");
 
     assert ( k == 2 && "Degrees other than two are not support yet");
 
-    return l*(l-1)/2+l*(k+1);
+    return -l*(l-1)/2+l*(k+1);
   }
 
   static int get_local_bezier_no(const Eigen::Vector3i &indeces)

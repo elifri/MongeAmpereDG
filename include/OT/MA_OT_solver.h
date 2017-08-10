@@ -12,6 +12,8 @@
 //#include <adolc.h>
 //#endif
 
+#include "Solver/Convexifier.h"
+
 #include "Solver/MA_solver.h"
 
 #include "MA_OT_global_Operator.h"

@@ -5,7 +5,7 @@
 #  IPOPT_LIBRARY_DIRS - The library directories needed to use IpOpt
 #  IPOPT_LIBRARIES    - The libraries needed to use IpOpt
 
-SET(IPOPT_HOME ${HOME}/lib/ipopt/build)
+SET(IPOPT_HOME $ENV{HOME}/lib/ipopt/build)
 
 if (IPOPT_INCLUDE_DIR)
   # in cache already
@@ -39,6 +39,7 @@ if (WIN32)
     ENDIF(IPOPT_INCLUDE_DIR)
 
 ELSE( WIN32 )
+message("search for file ${IPOPT_HOME}/include/coin/IpNLP.hpp")
    find_path(IPOPT_INCLUDE_DIR NAMES IpNLP.hpp
      PATHS  "${IPOPT_HOME}/include/coin"
             "/usr/include/coin"

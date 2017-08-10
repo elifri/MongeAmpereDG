@@ -8,9 +8,10 @@
 #ifndef INCLUDE_SOLVER_CONVEXIFIER_H_
 #define INCLUDE_SOLVER_CONVEXIFIER_H_
 
+#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
+
 #include "IpIpoptApplication.hpp"
 
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
 #include "Solver/ConvexifyNLP.hpp"
 
@@ -382,13 +383,13 @@ void Convexifier<k>::conditions_for_convexity_triangle_over_edges(const Intersec
     //add \hat c_{i,j,1}
     switch(intersection.indexInOutside())    {
     case 0:
-      c_equationTermsN.push_back(BezierBarycTermType(1.,{iN,jN,0}));
+      c_equationTermsN.push_back(BezierBarycTermType(1.,{iN,jN,1}));
       break;
     case 1:
-      c_equationTermsN.push_back(BezierBarycTermType(1.,{jN,0,iN}));
+      c_equationTermsN.push_back(BezierBarycTermType(1.,{jN,1,iN}));
       break;
     case 2:
-      c_equationTermsN.push_back(BezierBarycTermType(1.,{0,iN,jN}));
+      c_equationTermsN.push_back(BezierBarycTermType(1.,{1,iN,jN}));
       break;
     }
 
@@ -498,7 +499,6 @@ template<int k>
 template<typename GridView>
 void Convexifier<k>::init(const Dune::Functions::BernsteinBezierk2dNodalBasis<GridView, k>& bezierBasis)
 {
-  C_.resize(bezierBasis.size(), bezierBasis.size());
   std::vector< Eigen::Triplet<double> > tripletList;
   tripletList.reserve(16*bezierBasis.size());
 
@@ -566,6 +566,8 @@ void Convexifier<k>::init(const Dune::Functions::BernsteinBezierk2dNodalBasis<Gr
 
   }
 
+  std::cout << "Set up " << conditionIndex << " conditions for convexity" << std::endl;
+  C_.resize(conditionIndex, bezierBasis.size());
   C_.setFromTriplets(tripletList.begin(), tripletList.end());
 
 }
