@@ -10,7 +10,7 @@ ENDIF(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
 SET(CMAKE_BUILD_TYPE DEBUG)
 
 # Select flags.
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fmax-errors=3  -ftemplate-backtrace-limit=0 -fopenmp -Wno-error=strict-overflow")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fmax-errors=3  -ftemplate-backtrace-limit=0 -fopenmp -Wno-error=strict-overflow -Wno-deprecated")
 SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
 SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 SET(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g")
@@ -70,18 +70,22 @@ include(DuneMacros)
 
 #unset(LIBFFO_CORE_INCLUDES CACHE)
 #unset(LIBFFO_CORE_LIBRARIES CACHE)
-#unset(Boost_FOUND CACHE)
+unset(EIGEN3_INCLUDE_DIR CACHE)
+message("eigen3 includes ${EIGEN3_INCLUDE_DIR}")
 find_package(Umfpack REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(adolc)
 find_package(MethodOfEllipsoids)
 find_package(CImg)
-find_package(HDF5 REQUIRED)
-find_package(libffo_core REQUIRED)
+#find_package(HDF5 REQUIRED)
+#find_package(libffo_core REQUIRED)
 find_package(IPOPT REQUIRED)
 
 
 include_directories(${IPOPT_INCLUDE_DIR} ${METHOD_OF_ELLIPSOIDS_INCLUDES} ${CIMG_INCLUDES} ${IPOPT_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${Boost_INCLUDE_DIRS})
+
+message("include: ${IPOPT_INCLUDE_DIR}")
+
 if (METHOD_OF_ELLIPSOIDS_INCLUDES)
 include_directories(${METHOD_OF_ELLIPSOIDS_INCLUDES})
 endif (METHOD_OF_ELLIPSOIDS_INCLUDES)
@@ -97,10 +101,9 @@ dune_project()
 add_subdirectory("include")
 add_subdirectory("src")
 add_subdirectory("Testing")
-add_subdirectory("m4")
-add_subdirectory("dune")
-add_subdirectory("doc")
-add_subdirectory("cmake/modules")
+#add_subdirectory("dune")
+#add_subdirectory("doc")
+#add_subdirectory("cmake/modules")
 
 # finalize the dune project, e.g. generating config.h etc.
 finalize_dune_project(GENERATE_CONFIG_H_CMAKE)

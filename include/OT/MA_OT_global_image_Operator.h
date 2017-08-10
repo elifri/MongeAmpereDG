@@ -17,6 +17,7 @@ template<typename Solver, typename LOP>
 class MA_OT_Operator;
 
 template<typename Solver, typename LOP>
+
 struct MA_OT_image_Operator: MA_OT_Operator<Solver,LOP> {
   typedef typename Solver::GridViewType GridView;
 //  using MA_OT_Operator<Solver,LOP>::MA_OT_Operator();

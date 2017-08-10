@@ -80,7 +80,7 @@ public:
 
     assert ( k == 2 && "Degrees other than two are not support yet");
 
-    return -l*(l-1)/2+l*(k+1);
+    return -l*(l-1)/2+l*(k+1)+j;
   }
 
   static int get_local_bezier_no(const Eigen::Vector3i &indeces)

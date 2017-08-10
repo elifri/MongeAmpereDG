@@ -30,7 +30,7 @@
 #define USE_PS12
 
 
-#ifndef USE_PS12
+#ifdef USE_C0_PENALTY
   #define C0Element
 #else
   #undef C0Element

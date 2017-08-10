@@ -21,7 +21,6 @@
 #include <dune/functions/functionspacebases/bsplinebasis.hh>
 #include "localfunctions/bernsteinBezier/bernsteinbezierk2dnodalbasis.h"
 
-#include "localfunctions/lagrange/pqkboundary2dnodalbasis.hpp"
 #include "localfunctions/lagrange/pqktracenodalbasis.hh"
 #include "localfunctions/lagrange/RefinedLagrange/pk2dRefinednodalbasis.hpp"
 

@@ -24,6 +24,7 @@ add_executable("dune_mongeampere_refractor" dune_mongeampere_refractor.cpp)
 target_link_libraries(dune_mongeampere_refractor MA_refractor_solver ${PureSolverLibs} ${SNES_LIBRARY} ${LensProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
 target_link_dune_default_libraries("dune_mongeampere_refractor")
 
+message("ipopt libraries ${IPOPT_LIBRARIES}")
 add_executable("dune_mongeampere_OT" dune_mongeampere_OT.cpp)
 target_link_libraries(dune_mongeampere_OT MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} problemData Solver_Config ImageFunction utils ${IPOPT_LIBRARIES} ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
 target_link_dune_default_libraries("dune_mongeampere_OT")
@@ -34,13 +35,13 @@ target_link_libraries(dune_mongeampere_image_OT MA_OT_image_solver MA_OT_solver 
 target_link_dune_default_libraries("dune_mongeampere_image_OT")
 
 
-ADD_LIBRARY(libcoreLibs STATIC IMPORTED)
-SET_TARGET_PROPERTIES(libcoreLibs PROPERTIES
-    IMPORTED_LOCATION ${LIBFFO_CORE_LIBRARIES})
+#ADD_LIBRARY(libcoreLibs STATIC IMPORTED)
+#SET_TARGET_PROPERTIES(libcoreLibs PROPERTIES
+#    IMPORTED_LOCATION ${LIBFFO_CORE_LIBRARIES})
 
-message("linking ffo core libs ${LIBFFO_CORE_LIBRARIES}")
-add_executable("core_test" test_core.cpp)
-target_link_libraries(core_test libcoreLibs ${HDF5_LIBRARIES})
+#message("linking ffo core libs ${LIBFFO_CORE_LIBRARIES}")
+#add_executable("core_test" test_core.cpp)
+#target_link_libraries(core_test libcoreLibs ${HDF5_LIBRARIES})
 
 
 add_executable("poisson" poisson.cc)
