@@ -10,6 +10,8 @@
 
 #include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
 
+#include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
+
 #include "IpIpoptApplication.hpp"
 
 
@@ -116,7 +118,10 @@ private:
 
   Config::VectorType solve_quad_prog_with_ie_constraints(const Config::MatrixType &H, const Config::VectorType &g,
           const Config::MatrixType &C, const Config::VectorType & c_lowerbound,
-          const Config::VectorType & x0);
+          const Config::VectorType & x0) const;
+
+  void convexify(Config::VectorType& v) const;
+
 
 public:
   Convexifier(const shared_ptr<Config::GridType>& grid): grid_ptr(grid), bezierBasisHandler_(grid->leafGridView())
@@ -131,12 +136,11 @@ public:
   {
     grid_ptr->globalRefine(level);
     bezierBasisHandler_ = FEBasisHandler<Standard, BezierTraits<Config::GridView,k>>(grid_ptr->leafGridView());
+    init(bezierBasisHandler_.FEBasis());
   }
 
   template<typename F>
   auto convexify(F f) const;
-
-  void convexify(Config::VectorType& v) const;
 
   auto globalSolution(const Config::VectorType &v) const{
     return Dune::Functions::makeDiscreteGlobalBasisFunction<double>(bezierBasisHandler_.FEBasis(),v);
@@ -575,7 +579,7 @@ void Convexifier<k>::init(const Dune::Functions::BernsteinBezierk2dNodalBasis<Gr
 template<int k>
 Config::VectorType Convexifier<k>::solve_quad_prog_with_ie_constraints(const Config::MatrixType &H, const Config::VectorType &g,
         const Config::MatrixType &C, const Config::VectorType & c_lowerbound,
-        const Config::VectorType & x0)
+        const Config::VectorType & x0) const
 {
   auto app = init_app();
 
@@ -603,8 +607,28 @@ template<typename F>
 auto Convexifier<k>::convexify(F f) const
 {
   Config::VectorType v;
-  bezierBasisHandler_.interpolate(f, v);
+  bezierBasisHandler_.project(f, v);
+
+  {
+    //init writer
+    SubsamplingVTKWriter<Config::GridView> vtkWriter(bezierBasisHandler_.FEBasis().gridView(),2);
+    auto function = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(bezierBasisHandler_.FEBasis(),v);
+    vtkWriter.addVertexData(function, VTK::FieldInfo("BezierInterpol", VTK::FieldInfo::Type::scalar, 1));
+    vtkWriter.write("../plots/test/bezier.vtu");
+    std::cerr << " written bezierinterpolant in ../plots/test/bezier.vtu" << std::endl;
+  }
+
   convexify(v);
+
+  {
+    //init writer
+    SubsamplingVTKWriter<Config::GridView> vtkWriter(bezierBasisHandler_.FEBasis().gridView(),2);
+    auto function = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(bezierBasisHandler_.FEBasis(),v);
+    vtkWriter.addVertexData(function, VTK::FieldInfo("BezierConvexified", VTK::FieldInfo::Type::scalar, 1));
+    vtkWriter.write("../plots/test/bezierConvexified.vtu");
+    std::cerr << " written Convexified in ../plots/test/bezierConvexified.vtu" << std::endl;
+  }
+
 
   return v;
 }
@@ -621,6 +645,7 @@ void Convexifier<k>::convexify(Config::VectorType& v) const
 
   Config::VectorType f = -A_.transpose() * v;
 
+  std::cerr << "C*v " << C_ * v << std::endl;
   std::cout << "minimum constr violating coefficient is " << (C_ * v - ci0).minCoeff() << std::endl;
 
   v = solve_quad_prog_with_ie_constraints(G2, f, C_, ci0, v);

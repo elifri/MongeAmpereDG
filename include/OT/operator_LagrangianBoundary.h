@@ -9,7 +9,7 @@
 #define INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARY_H_
 
 #include "OT/problem_data_OT.h"
-#include "OT/operator_utils.h"
+#include "Operator/operator_utils.h"
 
 class Local_Operator_LagrangianBoundary{
 public:

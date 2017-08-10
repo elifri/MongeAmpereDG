@@ -22,6 +22,7 @@
 #include "problem_data.h"
 //#include "Operator/linear_system_operator_poisson_DG.hh"
 #include "Operator/operator_MA_Neilan_DG.h"
+#include "Operator/operator_MA_Brenner.h"
 //#include "../Operator/operator_discrete_Hessian.h"
 #include "IO/Plotter.h"
 #include "matlab_export.hpp"
@@ -106,7 +107,7 @@ public:
     std::cout << "refined grid to startlevel " << SolverConfig::startlevel << " constructor n dofs " << get_n_dofs() << std::endl;
 
     FEBasisHandler_.bind(*this, *gridView_ptr);
-    Convexifier_.adapt(SolverConfig::startlevel+2);
+    Convexifier_.adapt(SolverConfig::startlevel+1);
 
 	  assembler_.bind(FEBasisHandler_.FEBasis());
 
@@ -187,7 +188,16 @@ public:
 
     mutable MA_solver* solver_ptr;
 
-    Local_Operator_MA_mixed_Neilan lop;
+
+    //find correct operator
+  #ifdef USE_MIXED_ELEMENT
+    using OperatorType = Local_Operator_MA_mixed_Neilan;
+  #else
+    using OperatorType = Local_Operator_MA_Brenner;
+  #endif
+
+
+    OperatorType lop;
     const FieldVector<double, 2> get_fixingPoint(){return fixingPoint;}
 
     const FieldVector<double, 2> fixingPoint;
@@ -205,6 +215,9 @@ public:
 
 	virtual int get_n_dofs() const{return FEBasisHandler_.FEBasis().indexSet().size();}
   virtual int get_n_dofs_u() const{return FEBasisHandler_.FEBasis().indexSet().size();}
+
+  const auto get_FEBasis() const {return FEBasisHandler_.FEBasis();}
+  const auto get_FEBasis_u() const {return FEBasisHandler_.uBasis();}
 
   const GridType& grid() const {return *grid_ptr;}
   const GridViewType& gridView() const {return *gridView_ptr;}
@@ -224,8 +237,7 @@ public:
 	void assemble_DG_Jacobian_only(const LocalOperatorType &LOP, const VectorType& x, MatrixType& m) const {
 		assert (initialised);
 
-		assembler_.assemble_Jacobian_DG(LOP, x, m);
-//		assembler_.assemble_DG_Jacobian_only(LOP, x, m);
+		assembler_.assemble_DG_Jacobian_only(LOP, x, m);
 	}
 
   ///assembles the (global) Jacobian of the FE function as specified in LOP

@@ -36,84 +36,6 @@ MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, const shared_ptr<Gr
   }
 }
 
-
-struct ResidualFunction{
-
-  typedef MA_OT_solver::FETraits::DiscreteLocalSecondDerivativeGridFunction LocalHessScalarFunction;
-  typedef MA_OT_solver::DiscreteLocalGradientGridFunction LocalGradFunction;
-
-  ResidualFunction(std::shared_ptr<LocalGradFunction> &u, const MA_OT_solver::OperatorType& op, std::shared_ptr<LocalHessScalarFunction> &u00, std::shared_ptr<LocalHessScalarFunction> &u10,
-      std::shared_ptr<LocalHessScalarFunction> &u01,std::shared_ptr<LocalHessScalarFunction> &u11):
-        localgradu_(u), rhoX(op.get_lop().get_input_distribution()), rhoY(op.get_lop().get_target_distribution())
-  {
-    localHessu_[0]= u00;
-    localHessu_[1] =u10;
-    localHessu_[2] =u01;
-    localHessu_[3]=u11;
-  }
-
-  ResidualFunction(std::shared_ptr<LocalGradFunction> &u, const MA_OT_solver::OperatorType& op, LocalHessScalarFunction &u00, LocalHessScalarFunction &u10,
-      LocalHessScalarFunction &u01, LocalHessScalarFunction &u11):
-        localgradu_(u), rhoX(op.get_lop().get_input_distribution()), rhoY(op.get_lop().get_target_distribution())
-  {
-    localHessu_[0]= std::make_shared<LocalHessScalarFunction>(u00);
-    localHessu_[1] = std::make_shared<LocalHessScalarFunction>(u10);
-    localHessu_[2] = std::make_shared<LocalHessScalarFunction>(u01);
-    localHessu_[3]= std::make_shared<LocalHessScalarFunction>(u11);
-  }
-
-
-  /**
-   * \brief Bind LocalFunction to grid element.
-   *
-   * You must call this method before evaluate()
-   * and after changes to the coefficient vector.
-   */
-  void bind(const LocalHessScalarFunction::Element& element)
-  {
-    localgradu_->bind(element);
-    for (unsigned int i= 0; i < localHessu_.size(); i++)
-      localHessu_[i]->bind(element);
-  }
-
-  double operator()(const LocalHessScalarFunction::Domain& x) const
-  {
-    Dune::FieldMatrix<Config::ValueType, Config::dim, Config::dim> Hessu;
-    Hessu[0][0] = (*(localHessu_[0]))(x);
-    Hessu[0][1] = (*(localHessu_[1]))(x);
-    Hessu[0][1] = (*(localHessu_[2]))(x);
-    Hessu[1][1] = (*(localHessu_[3]))(x);
-
-    double f_value;
-    rhoX.evaluate(localgradu_->localContext().geometry().global(x), f_value);
-
-    auto gradu = (*localgradu_)(x);
-    double g_value;
-    rhoY.evaluate(gradu, g_value);
-
-    return determinant(Hessu)-f_value/g_value;
-  }
-
-  void unbind()
-  {
-    localgradu_->unbind();
-    for (unsigned int i= 0; i < localHessu_.size(); i++)
-      localHessu_[i]->unbind();
-  }
-
-  const LocalHessScalarFunction::Element& localContext() const
-  {
-    return localHessu_[0]->localContext();
-  }
-
-  std::array<std::shared_ptr<LocalHessScalarFunction>,4> localHessu_;
-  std::shared_ptr<LocalGradFunction> localgradu_;
-  const DensityFunction& rhoX;
-  const DensityFunction& rhoY;
-//  static SmoothingKernel ConvectionFunction::smoothingKernel_;
-};
-
-
 struct ResidualFunction{
 
   typedef MA_OT_solver::FETraits::DiscreteLocalSecondDerivativeGridFunction LocalHessScalarFunction;
@@ -395,6 +317,9 @@ void MA_OT_solver::adapt_solution(const int level)
 
   //adapt febasis and solution
   FEBasisHandler_.adapt(*this, level, solution);
+
+  //adapt convexifier
+  Convexifier_.adapt(level);
 
   //bind assembler to new context
   assembler_.bind(FEBasisHandler_.uBasis());

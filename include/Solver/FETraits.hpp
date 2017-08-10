@@ -14,7 +14,7 @@
 #include "MAconfig.h"
 
 //#include "localfunctions/MAmixedbasis.hh"
-#include "localfunctions/MAmixedbasisC0.hh"
+#include "localfunctions/MAmixed/MAmixedbasisC0.hh"
 //#include "localfunctions/MAmixed/MAmixedbasisC0C0.hh"
 //#include "localfunctions/deVeubekefunctionspacebasis.hh"
 #include "localfunctions/PowellSabin12Split/PowellSabin12SSplinenodalbasis.hh"

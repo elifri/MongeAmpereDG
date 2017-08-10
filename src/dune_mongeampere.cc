@@ -82,6 +82,8 @@ try {
 //	FieldVector<double, dim> l(1);
 //	std::array<int, dim> elements = { 10, 10 };
 
+  std::assert(false); //revise chossing operator
+
 	std::string configFileMASolver;
 
 	read_parameters(argc, argv, configFileMASolver);

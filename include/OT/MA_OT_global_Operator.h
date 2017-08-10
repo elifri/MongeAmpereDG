@@ -8,6 +8,8 @@
 #ifndef INCLUDE_OT_MA_OT_GLOBAL_OPERATOR_H_
 #define INCLUDE_OT_MA_OT_GLOBAL_OPERATOR_H_
 
+#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
+
 #include <OT/operator_LagrangianBoundary.h>
 #include <iostream>
 #include <string>
@@ -383,18 +385,25 @@ public:
     auto end = std::chrono::steady_clock::now();
     std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
 
+
 //    solver_ptr->plot("numericalSolutionIntermediate",intermediateSolCounter);
 //    intermediateSolCounter++;
 
-//    intermediateSolCounter++;
     solver_ptr->update_solution(x);
     solver_ptr->plot("intermediate", intermediateSolCounter);
+
+    start = std::chrono::steady_clock::now();
+    SolverConfig::FETraitsSolver::DiscreteGridFunction numericalSolution(solver_ptr->get_FEBasis_u(),x);
+    auto localnumericalSolution = localFunction(numericalSolution);
+    solver_ptr->Convexifier_.convexify(numericalSolution);
+    end = std::chrono::steady_clock::now();
+    std::cerr << "total time for convexification= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
+
 
     std::cout << "   current L2 error is " << solver_ptr->calculate_L2_errorOT([](Config::SpaceType x)
         {return Dune::FieldVector<double, Config::dim> ({
                                                         x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
                                                         x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
-
 
   }
 
@@ -442,7 +451,7 @@ public:
 
   }
 
-  void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::VectorType& xNew, const bool new_solution=true) const
+  void evaluate(Config::VectorType& x, Config::VectorType& v, Config::VectorType& xNew, const bool new_solution=true) const
     {
       assert(solver_ptr != NULL);
 
@@ -459,8 +468,9 @@ public:
 
       prepare_fixing_point_term(x);
       //TODO should be assembled without jacobian
+//      assemble_with_langrangian(xNew, x,v);
       Config::MatrixType m;
-      assemble_with_langrangian(xNew, x,v,m);
+      assemble_with_langrangian_Jacobian(xNew, x,v,m);
 
       //output
       auto end = std::chrono::steady_clock::now();

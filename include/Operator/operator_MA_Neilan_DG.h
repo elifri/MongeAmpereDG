@@ -47,9 +47,14 @@ public:
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
       VectorType& v, const int tag) const {
+    typedef typename LocalView::GridView GridView;
+    typedef typename LocalView::size_type size_type;
+
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
     const Element& element = localView.element();
+
+    const int dim = GridView::dimension;
 
     assert(dim == Element::dimension);
     auto geometry = element.geometry();
