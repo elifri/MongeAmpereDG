@@ -16,7 +16,9 @@
 
 #include "UnitCube.h"
 #include "Solver/FEBasisHandler.hpp"
+
 #include "Solver/Assembler.h"
+
 
 template< typename FEBasis>
 void plot_basis_function(const FEBasis& febasis)
@@ -47,6 +49,7 @@ void plot_basis_function(const FEBasis& febasis)
   vtkWriter.write(fname);
   std::cout<< "written to file " << fname << std::endl;
 }
+
 
 template<typename FEBasis, typename F>
 void test_interpolation(const FEBasis& febasis, const F f, Config::VectorType v, bool writeOutput= true)
@@ -225,6 +228,7 @@ void test_interpolation(const FEBasis& febasis, const F f, Config::VectorType v,
 }
 
 
+
 int main(int argc, char** argv) {
   try {
     //generate_grid from file
@@ -233,6 +237,7 @@ int main(int argc, char** argv) {
 
     Config::GridType &grid = unitcube.grid();
     Config::GridView gridView = grid.leafGridView();
+
 
 //    FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::GridView,2>> febasisHandler(gridView);
     FEBasisHandler<Standard, BezierTraits<Config::GridView,2>> febasisHandler(gridView);
@@ -250,6 +255,7 @@ int main(int argc, char** argv) {
     }
 
     test_interpolation(febasisHandler.FEBasis(), [](Config::SpaceType x){return x.two_norm2()/2.0;}, v);
+
 
   }
   catch (const Dune::Exception& e) {

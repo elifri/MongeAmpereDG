@@ -17,6 +17,7 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
+#include<Eigen/SparseLU>
 #include <Eigen/UmfPackSupport>
 
 
@@ -46,57 +47,79 @@ void newtonMethod(
         std::cout << "--------------------------------------------------------------------------------\n";
     }
 
-    Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_Df;
+//    Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_Df;
+    Eigen::SparseLU<Eigen::SparseMatrix<double> > lu_of_Df;
+
 
     for (unsigned int i=0; i<maxIter; i++) {
-
+    Eigen::VectorXd s;
+      Eigen::VectorXd xNew(x);
+      const unsigned int maxIterBoundaryConditions = 5;
+      for (unsigned int j = 0; j < maxIterBoundaryConditions; j++)
+      {
         // solve Df*s = +f using UmfPack:
-        if (useCombinedFunctor)
-          functor.evaluate(x,f,Df, x, false);
-        else
-        {
-          functor.evaluate(x,f,x, false);
-          functor.derivative(x,Df);
-    //      make_FD_Jacobian(functor, x, J);
-        }
-        if (i == 0)
-          lu_of_Df.analyzePattern(Df);
+          if (useCombinedFunctor)
+            functor.evaluate(x,f,Df, xNew, false);
+          else
+          {
+            functor.evaluate(x,f,xNew, false);
+            functor.derivative(x,Df);
+      //      make_FD_Jacobian(functor, x, J);
+          }
+          if (i == 0)
+            lu_of_Df.analyzePattern(Df);
 
 
-        lu_of_Df.factorize(Df);
-        if (lu_of_Df.info()!=0) {
-            // decomposition failed
-            std::cerr << "\nError: Could not compute LU decomposition of Df(x)!\n";
-            exit(1);
-        }
+          lu_of_Df.factorize(Df);
+          if (lu_of_Df.info()!=0) {
+              // decomposition failed
+              std::cerr << "\nError: Could not compute LU decomposition of Df(x)!\n";
+              MATLAB_export(Df,"J");
+              exit(1);
+          }
 
-        Eigen::VectorXd s = lu_of_Df.solve(f);
-        if(lu_of_Df.info()!=0) {
-            // solving failed
-            std::cerr << "\nError: Could solve the equation Df(x)*s=-f(x)!\n";
-            exit(1);
-        }
+          s = lu_of_Df.solve(f);
+          if(lu_of_Df.info()!=0) {
+              // solving failed
+              std::cerr << "\nError: Could solve the equation Df(x)*s=-f(x)!\n";
+              exit(1);
+          }
 
-        // compute damped Newton step
-        Eigen::VectorXd xNew(n);
+          xNew-=lambdaMin*s;
 
-         // update cLambda and lambda
-         xNew     = x   - s;
-
-         if (!silentmode)
-         {
-           std::cout << "   " << std::setw(6) << i;
-           std::cout << "  Newton-step          ";
-           std::cout << std::scientific << std::setprecision(3) << s.norm();
-         }
-
-         x=xNew;
-
-         if (!silentmode)
-         {
+          if (!silentmode)
+          {
+            std::cerr << "     boundary-step     ";
+            std::cout << "   " << std::setw(6) << i;
+            std::cout << "     boundary-step     ";
+            std::cout << std::scientific << std::setprecision(3) << lambdaMin*s.norm();
+            if (s.norm() <= eps)
+              break;
             std::cout << "   " << std::scientific << std::setprecision(3) << f.lpNorm<Eigen::Infinity>();
             std::cout << "   " << std::scientific << std::setprecision(3) << "?????????";
             std::cout << "   " << std::scientific << std::setprecision(3) << f.norm();
+            std::cout << std::endl;
+          }
+          if (s.norm() <= eps)
+              break;
+      }
+      // compute damped Newton step
+
+      x = xNew;
+
+      if (!silentmode)
+         {
+           std::cout << "   " << std::setw(6) << i;
+           std::cout << "  Newton-step          ";
+           std::cout << std::scientific << std::setprecision(3) << lambdaMin*s.norm();
+         }
+
+
+//         if (!silentmode)
+         {
+//            std::cout << "   " << std::scientific << std::setprecision(3) << f.lpNorm<Eigen::Infinity>();
+//            std::cout << "   " << std::scientific << std::setprecision(3) << "?????????";
+//            std::cout << "   " << std::scientific << std::setprecision(3) << f.norm();
             std::cout << std::endl;
          }
 

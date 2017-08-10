@@ -46,13 +46,7 @@ public:
    */
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag, const double u_atX0, const double u0_atX0,
-      LocalView& localViewTemp, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const {
-    typedef typename LocalView::GridView GridView;
-    typedef typename LocalView::size_type size_type;
-
-    const int dim = GridView::dimension;
-
+      VectorType& v, const int tag) const {
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
     const Element& element = localView.element();

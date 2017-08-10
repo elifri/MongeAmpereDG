@@ -71,6 +71,11 @@ double MA_solver::calculate_L2_error(const MA_function_type &f) const
 
 void MA_solver::plot(const std::string& name) const
 {
+  plot(name, iterations);
+}
+
+void MA_solver::plot(const std::string& name, int no) const
+{
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
   Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(),solution_u);
@@ -106,7 +111,7 @@ void MA_solver::plot(const std::string& name) const
 
 */
    std::string fname(plotter.get_output_directory());
-   fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
+   fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + ".vtu";
 
    SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
    vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
@@ -237,10 +242,12 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //      plotter.save_rectangular_mesh(*solution_u_old, file);
       file.close();
     }
-//    plot("numericalSolutionBeforeRef");
+    plot("numericalSolutionBeforeRef");
 
+    std::cout << " adapting ...";
     if (i < SolverConfig::nonlinear_steps-1)
       adapt_solution();
+    std::cout << " ... done " << std::endl;
 
     update_solution(solution);
     plot("numericalSolution");

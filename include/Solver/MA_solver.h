@@ -79,6 +79,7 @@ public:
 #ifdef USE_DOGLEG
       doglegOpts_(config.doglegOpts),
 #endif
+      iterations(0),
       initValueFromFile_(config.initValueFromFile),
       initValue_(config.initValue),
       evaluateJacobianSimultaneously_(config.evalJacSimultaneously),
@@ -93,7 +94,7 @@ public:
       op(*this),
       solution_u_old(), gradient_u_old()
 	{
-    std::cout << "constructor n dofs" << get_n_dofs() << std::endl;
+    std::cout << "constructor n dofs " << get_n_dofs() << std::endl;
 #ifdef USE_DOGLEG
     doglegOpts_.maxsteps = maxSteps_;
 #endif
@@ -102,10 +103,11 @@ public:
 	  plotter.set_geometrySetting(get_setting());
 
 	  grid_ptr->globalRefine(SolverConfig::startlevel);
-    std::cout << "constructor n dofs" << get_n_dofs() << std::endl;
+    std::cout << "refined grid to startlevel " << SolverConfig::startlevel << " constructor n dofs " << get_n_dofs() << std::endl;
 
     FEBasisHandler_.bind(*this, *gridView_ptr);
     Convexifier_.adapt(SolverConfig::startlevel+2);
+
 	  assembler_.bind(FEBasisHandler_.FEBasis());
 
 	  plotter.set_output_directory(plotOutputDirectory_);
@@ -116,7 +118,7 @@ public:
     plotter.add_plot_stream("l2projError", plotOutputDirectory_+"/Data/"+outputPrefix_+"l2projError"); //write L2 error to projection in this file
 	  count_refined = SolverConfig::startlevel;
 
-    std::cout << "constructor n dofs" << get_n_dofs() << std::endl;
+    std::cout << "adapted basis to refined grid: constructor n dofs " << get_n_dofs() << std::endl;
 
 	}
 
@@ -174,12 +176,11 @@ public:
     void Jacobian(const Config::VectorType& x,  Config::MatrixType& m) const
     {
       assert(solver_ptr != NULL);
-      solver_ptr->assemble_Jacobian_DG(lop, x,m);
+      solver_ptr->assemble_DG_Jacobian_only(lop, x,m);
     }
     void derivative(const Config::VectorType& x,  Config::MatrixType& m) const
     {
-      assert(solver_ptr != NULL);
-      solver_ptr->assemble_Jacobian_DG(lop, x,m);
+      Jacobian(x,m);
     }
 
     void adapt() const{}
@@ -220,9 +221,11 @@ public:
 
 	///assembles the (global) Jacobian of the FE function as specified in LOP
 	template<typename LocalOperatorType>
-	void assemble_Jacobian_DG(const LocalOperatorType &LOP, const VectorType& x, MatrixType& m) const {
+	void assemble_DG_Jacobian_only(const LocalOperatorType &LOP, const VectorType& x, MatrixType& m) const {
 		assert (initialised);
+
 		assembler_.assemble_Jacobian_DG(LOP, x, m);
+//		assembler_.assemble_DG_Jacobian_only(LOP, x, m);
 	}
 
   ///assembles the (global) Jacobian of the FE function as specified in LOP
@@ -277,6 +280,7 @@ public:
 
 	///write the current numerical solution to vtk file
 	virtual void plot(const std::string& filename) const;
+  virtual void plot(const std::string& filename, int no) const;
 	void plot(const VectorType& u, const std::string& filename) const;
 
 protected:
@@ -326,7 +330,6 @@ public:
   const std::string& get_output_prefix() const{ return outputPrefix_;}
 
   shared_ptr<DiscreteLocalGradientGridFunction>& get_gradient_u_old_ptr() {return gradient_u_old;}
-
 
   int get_plotRefinement() {return plotterRefinement_;}
 
@@ -655,6 +658,10 @@ void MA_solver::test_projection(const F f, VectorType& v) const
        std::cerr << "f'(corner " << i << "=" << geometry.corner(i)[0] << " "
            << geometry.corner(i)[1] << ")  approx = " << jacApprox << std::endl;
 
+       auto x = geometry.corner(i);
+       std::cerr << " should be " << x[0]+4*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1])
+                 << ",  " << x[1]+4*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0]) << std::endl;
+
        std::vector<FieldMatrix<double, 2, 2>> HessianValues(lFE.size());
        Dune::FieldMatrix<double, 2, 2> HessApprox;
        assemble_hessians_hessu(lFE, geometry.jacobianInverseTransposed(xLocal), xLocal,HessianValues, localDofs.segment(0,lFE.size()), HessApprox);
@@ -694,6 +701,9 @@ void MA_solver::test_projection(const F f, VectorType& v) const
       std::cerr << "f'( "
           << x << ") = ?? "
           <<  "  approx = " << jacApprox << std::endl;
+      std::cerr << " should be " << x[0]+4*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1])
+                << ",  " << x[1]+4*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0]) << std::endl;
+
 
     }
 
@@ -711,7 +721,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
 
         VectorType localDofsn = assembler_.calculate_local_coefficients(localIndexSetn, v);
 
-        std::cerr << "local dofs   " << localDofs.transpose() << std::endl << "local dofs n " << localDofsn.transpose() << std::endl;
+        std::cerr << "->local dofs   " << localDofs.transpose() << std::endl << "local dofs n " << localDofsn.transpose() << std::endl;
 
         //calculate normal derivative
         const FieldVector<double, Config::dim> normal =

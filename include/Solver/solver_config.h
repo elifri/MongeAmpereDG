@@ -19,7 +19,7 @@
 
 #define HAVE_ADOLC 1
 
-#ifdef C0Element
+#ifndef C1Element
   #ifndef HAVE_ADOLC
    static_assert(false,"C0 Elements work only with automatic differentiation via ADOLC");
   #endif
@@ -157,9 +157,15 @@ struct SolverConfig{
 #ifdef USE_MIXED_ELEMENT
 	typedef Pk2DLocalFiniteElement<ValueType, ValueType, degree> LocalFiniteElementuType;
   typedef Pk2DLocalFiniteElement<ValueType, ValueType, degreeHessian> LocalFiniteElementHessianSingleType;
-////  #define C0Element
   typedef MixedTraits<Config::GridView, degree, degreeHessian> FETraitsSolver;
 #endif
+
+
+  /////-------select langrangian boundary element ----------------
+//  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree> FETraitsSolverQ;
+  typedef LagrangeC0BoundaryTraits<Config::GridView, SolverConfig::degree> FETraitsSolverQ;
+//  typedef LagrangeC0FineBoundaryTraits<Config::GridView, SolverConfig::degree> FETraitsSolverQ;
+
 
 	typedef FieldVector<ValueType,1> RangeType;
   typedef FieldMatrix<ValueType,2,2> HessianRangeType;

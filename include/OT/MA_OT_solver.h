@@ -8,13 +8,14 @@
 #ifndef SRC_MA_OT_SOLVER_H_
 #define SRC_MA_OT_SOLVER_H_
 
-//#ifdef C0Element
-//#include <adolc.h>
-//#endif
 
 #include "Solver/Convexifier.h"
 
 #include "Solver/MA_solver.h"
+
+#include "Solver/AssemblerLagrangian1d.h"
+#include "Solver/AssemblerLagrangian.h"
+#include "Solver/AssemblerLagrangianBoundary.h"
 
 #include "MA_OT_global_Operator.h"
 
@@ -32,52 +33,101 @@ class MA_OT_solver: public MA_solver
 {
 //  using MA_solver::MA_solver;
 public:
+  //export types for langrangian multiplier boundary
+  typedef SolverConfig::FETraitsSolverQ FETraitsQ;
+  typedef FETraitsQ::FEBasis FEBasisQType;
+
+  //find correct operator
 #ifdef USE_C0_PENALTY
   typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Brenner> OperatorType;
 #else
   #ifdef USE_MIXED_ELEMENT
     typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Neilan> OperatorType;
   #else
-    typedef  Local_Operator_MA_OT OperatorType;
+    typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT> OperatorType;
 //todo C1 is not for nonimage
     //    typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
   #endif
 #endif
 
 
+
   MA_OT_solver(const shared_ptr<GridType>& grid, const shared_ptr<GridType>& gridConvexifier, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting);
+
 private:
   ///creates the initial guess
-  void create_initial_guess();
+  virtual void create_initial_guess();
 //  void update_Operator();
-  void solve_nonlinear_system();
+  virtual void solve_nonlinear_system();
+  virtual void adapt_operator();
 
 public:
-  virtual int get_n_dofs() const{return FEBasisHandler_.FEBasis().indexSet().size();}
 #ifdef USE_MIXED_ELEMENT
   virtual int get_n_dofs_u() const{return FEBasisHandler_.uBasis().indexSet().size();}
   virtual int get_n_dofs_u_DH() const{return Config::dim*Config::dim*FEBasisHandler_.uDHBasis().indexSet().size();}
 #endif
+  virtual int get_n_dofs_V_h() const{return FEBasisHandler_.FEBasis().indexSet().size();}
+  virtual int get_n_dofs_Q_h() const{return get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();}
+  virtual int get_n_dofs() const{return get_n_dofs_V_h() + 1 + get_n_dofs_Q_h();}
+
+  template<class F>
+  void project(const F f, VectorType& v) const;
+
+  virtual void adapt_solution(const int level);
 
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
   virtual void plot(const std::string& filename) const;
   virtual void plot(const std::string& filename, int no) const;
+
+public:
 
   using MA_solver::adapt;
 
   GeometrySetting& get_setting() {return setting_;}
   const GeometrySetting& get_setting() const {return setting_;}
 
+  const AssemblerLagrangianMultiplier1D& get_assembler_lagrangian_midvalue() const { return assemblerLM1D_;}
+//  const AssemblerLagrangianMultiplierCoarse& get_assembler_lagrangian_boundary() const { return assemblerLMCoarse_;}
+  AssemblerLagrangianMultiplierBoundary& get_assembler_lagrangian_boundary() { return assemblerLMBoundary_;}
+  const AssemblerLagrangianMultiplierBoundary& get_assembler_lagrangian_boundary() const { return assemblerLMBoundary_;}
+
   template<typename FGrad>
   Config::ValueType calculate_L2_errorOT(const FGrad &f) const;
 
-private:
+protected:
   GeometrySetting& setting_;
+
+  ///FEBasis for Lagrangian Multiplier for Boundary
+  FEBasisHandler<FETraitsQ::Type, FETraitsQ> FEBasisHandlerQ_;
+
+  //assembler for lagrangian multiplier
+  AssemblerLagrangianMultiplier1D assemblerLM1D_;
+//  AssemblerLagrangianMultiplierCoarse assemblerLMCoarse_;
+  AssemblerLagrangianMultiplierBoundary assemblerLMBoundary_;
 
   OperatorType op;
 
   friend OperatorType;
+  virtual OperatorType& get_operator(){ return op;}
 };
+
+template<class F>
+void MA_OT_solver::project(const F f, VectorType& v) const
+{
+  this->FEBasisHandler_.project(f, v);
+
+  v.conservativeResize(get_n_dofs());
+
+  int V_h_size = get_n_dofs_V_h();
+  for (int i = V_h_size; i < v.size(); i++)
+  {
+    v(i) = 0;
+  }
+
+#ifdef DEBUG
+  test_projection(f,v.head(get_n_dofs_V()));
+#endif
+}
 
 template<typename FGrad>
 Config::ValueType MA_OT_solver::calculate_L2_errorOT(const FGrad &f) const

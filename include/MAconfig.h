@@ -20,20 +20,35 @@
 
 //for definition of ADOLC see solver_config #define HAVE_ADOLC
 
+
+//use analytic derivation (if implemented)
+#define USE_ANALYTIC_JACOBIAN
+
 //#define BSPLINES
 //#define USE_C0_PENALTY
-#define USE_MIXED_ELEMENT
-//#define USE_PS12
+//#define USE_MIXED_ELEMENT
+#define USE_PS12
 
-#ifdef USE_C0_PENALTY
+
+#ifndef USE_PS12
   #define C0Element
 #else
-  #ifdef USE_MIXED_ELEMENT
-    #define C0Element
-  #else
-    #undef C0Element
-  #endif
+  #undef C0Element
 #endif
+
+#ifdef USE_PS12
+  #define C1Element
+#else
+/*
+  #ifdef BSPLINES
+    #define C1Element
+  #else
+    #undef C1Element
+  #endif
+*/
+#endif
+
+
 
 #include "UnitCube.h"
 

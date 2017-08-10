@@ -174,7 +174,6 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
     //mark element for refining
     solver.grid_ptr->mark(1,element);
   }
-  double scaling_factor = v(v.size()-1);
 
   std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
 
@@ -217,7 +216,7 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
 
   project(solution_u_Coarse_global, v);
 
-#ifndef NDEBUG
+#ifdef DEBUG
   solver.test_projection(solution_u_Coarse_global, v);
 #endif
 
@@ -227,7 +226,6 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
   interpolate(*FEBasis_, v_u, solution_u_Coarse_global);
   v.segment(0, v_u.size()) = v_u;
 */
-  v(v.size()-1) = scaling_factor;
   solver.grid_ptr->postAdapt();
 }
 /*template <>
@@ -242,7 +240,6 @@ void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig:
     //mark element for refining
     solver.grid_ptr->mark(1,element);
   }
-  double scaling_factor = v(v.size()-1);
 
   std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
 
@@ -284,7 +281,6 @@ void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig:
   DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
 
   project(solution_u_Coarse_global, solver.solution);
-  v(v.size()-1) = scaling_factor;
   solver.grid_ptr->postAdapt();
 }
 */
@@ -547,6 +543,41 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
 
 
 template <>
+template <>
+Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>>::adapt_after_grid_change(const typename FEBasisType::GridView& gridOld, const typename FEBasisType::GridView& grid, Config::VectorType& v)
+{
+  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid));
+
+//  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
+  FEBasisType FEBasisCoarse (gridOld);
+//  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,Config::VectorType> DiscreteGridFunctionCoarse;
+  DiscreteGridFunction solution_u_Coarse_global (FEBasisCoarse,v);
+
+  Config::VectorType vNew;
+  vNew.resize(FEBasis_->indexSet().size());
+  interpolate(*FEBasis_, vNew, solution_u_Coarse_global);
+  return vNew;
+}
+
+template <>
+template <>
+Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::GridView, SolverConfig::degree>>::adapt_after_grid_change(const typename Config::LevelGridView& gridOld, const typename FEBasisType::GridView& grid, Config::VectorType& v)
+{
+  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid));
+
+  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
+  FEBasisCoarseType FEBasisCoarse (gridOld);
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
+  DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
+
+  Config::VectorType vNew;
+  vNew.resize(FEBasis_->indexSet().size());
+  interpolate(*FEBasis_, vNew, solution_u_Coarse_global);
+  return vNew;
+}
+
+
+template <>
 Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::coarse_solution(MA_solver& solver, const int level)
 {
   assert(solver.initialised);
@@ -565,7 +596,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(levelGridView));
 
   //init vector
-  Config::VectorType v = Config::VectorType::Zero(FEBasisCoarse->indexSet().size() + 1);
+  Config::VectorType v = Config::VectorType::Zero(FEBasisCoarse->indexSet().size());
 
   auto localViewCoarse = FEBasisCoarse->localView();
   auto localIndexSetCoarse = FEBasisCoarse->indexSet().localIndexSet();
@@ -657,8 +688,6 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
         v(localIndexSetCoarse.index(i)[0]) = localDofs[i];
     }
 
-  //set scaling factor (last dof) to ensure mass conservation
-  v(v.size()-1) = solver.solution(solver.solution.size()-1);
 
   return v;
 }
@@ -689,7 +718,6 @@ Config::VectorType FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, S
   //project
   HandlerCoarse.project(numericalSolution, v);
 
-  v(v.size()-1) = solver.solution(solver.solution.size()-1);
 
   return v;
 }
@@ -718,8 +746,6 @@ Config::VectorType FEBasisHandler<Standard, BSplineTraits<Config::GridView, Solv
 
   //project
   HandlerCoarse.project(numericalSolution, v);
-
-  v(v.size()-1) = solver.solution(solver.solution.size()-1);
 
   return v;
 }
