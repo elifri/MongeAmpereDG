@@ -395,9 +395,13 @@ public:
     start = std::chrono::steady_clock::now();
     SolverConfig::FETraitsSolver::DiscreteGridFunction numericalSolution(solver_ptr->get_FEBasis_u(),x);
     auto localnumericalSolution = localFunction(numericalSolution);
-    solver_ptr->Convexifier_.convexify(numericalSolution);
+    auto x_convexify = solver_ptr->Convexifier_.convexify(numericalSolution);
     end = std::chrono::steady_clock::now();
     std::cerr << "total time for convexification= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
+
+    solver_ptr->project(solver_ptr->Convexifier_.globalSolution(x_convexify), x);
+    solver_ptr->update_solution(x);
+    solver_ptr->plot("intermediateConvexified", intermediateSolCounter);
 
 
     std::cout << "   current L2 error is " << solver_ptr->calculate_L2_errorOT([](Config::SpaceType x)

@@ -113,8 +113,8 @@ private:
 
   template<typename LocalIndexSet, typename Intersection>
   void conditions_for_convexity_triangle_over_edges(const Intersection& interSection,
-      const LocalIndexSet& localIndexSet, const int flip,
-      const LocalIndexSet& localIndexSetN, const int flipN, int& conditionOffset, TripletListType& tripletList);
+      const LocalIndexSet& localIndexSet,
+      const LocalIndexSet& localIndexSetN, const int flipped, int& conditionOffset, TripletListType& tripletList);
 
   Config::VectorType solve_quad_prog_with_ie_constraints(const Config::MatrixType &H, const Config::VectorType &g,
           const Config::MatrixType &C, const Config::VectorType & c_lowerbound,
@@ -203,10 +203,9 @@ void Convexifier<k>::add_equation_to_matrix(const LocalIndexSet& localIndexSet, 
 {
   for (const auto& c_term : c_equation)
   {
-//        cout << "Added (" << condition_index << ") "<< c_matrix[j].coord.transpose() << " -> " << c_matrix[j].get_no() << " with coeff " << c_matrix[j].coefficient <<endl;
     auto bezierIndex = localIndexSet.index(BernsteinBezierk2DLocalBasis<double, double, k>::get_local_bezier_no(c_term.coord))[0];
     tripletList.push_back( TripletType( condition_index, bezierIndex, c_term.coefficient));
-    std::cout << "Added (" << condition_index << ") "<< c_term.coord.transpose() << "("<< BernsteinBezierk2DLocalBasis<double, double, k>::get_local_bezier_no(c_term.coord) << ") -> " << bezierIndex << " with coeff " << c_term.coefficient << std::endl;
+    std::cerr << "Added (" << condition_index << ") "<< c_term.coord.transpose() << "("<< BernsteinBezierk2DLocalBasis<double, double, k>::get_local_bezier_no(c_term.coord) << ") -> " << bezierIndex << " with coeff " << c_term.coefficient << std::endl;
   }
 }
 
@@ -219,7 +218,7 @@ void Convexifier<k>::add_scaled_equation_to_matrix(const LocalIndexSet& localInd
   {
     auto bezierIndex = localIndexSet.index(BernsteinBezierk2DLocalBasis<double, double, k>::get_local_bezier_no(c_term.coord));
     tripletList.push_back( TripletType( condition_index, bezierIndex, scalar*c_term.coefficient));
-    std::cout << "Added (" << condition_index << ") "<< c_term.coord.transpose() << " -> " << bezierIndex << " with coeff " << scalar*c_term.coefficient << std::endl;
+    std::cerr << "Added (" << condition_index << ") "<< c_term.coord.transpose() << " -> " << bezierIndex << " with coeff " << scalar*c_term.coefficient << std::endl;
   }
 }
 
@@ -254,6 +253,7 @@ void Convexifier<k>::conditions_for_convexity_triangle_interior(const LocalIndex
   operations.push_back(difference_type(Eigen::Vector2i(0,2), Eigen::Vector2i(1,2)));    // + Delta13 Delta23 >= 0
   operations.push_back(difference_type(Eigen::Vector2i(0,2), Eigen::Vector2i(0,2)));    // 2 Delta13 Delta13
 
+  std::cerr << "set up inner conditions(first) for a triangle " << std::endl;
   for (unsigned int i = 0; i < operations.size(); i++)
   {
     //first half of linear equation
@@ -301,7 +301,7 @@ void Convexifier<k>::conditions_for_convexity_triangle_interior(const LocalIndex
   operations.push_back(difference_type(Eigen::Vector2i(0,2), Eigen::Vector2i(1,2)));    // +3 Delta13 Delta23
   operations.push_back(difference_type(Eigen::Vector2i(0,2), Eigen::Vector2i(0,2)));    // +2 Delta13 Delta13 >= 0
 */
-
+  std::cerr << "set up inner conditions(latter) for a triangle " << std::endl;
   //add first conditions to triples
   assert (operations.size() % 3 == 0);
   for (unsigned int i_opt = 0; i_opt < operations.size(); i_opt++)
@@ -323,7 +323,7 @@ void Convexifier<k>::conditions_for_convexity_triangle_interior(const LocalIndex
     conditionOffset+=2;
   }
 
-  std::cerr << " inner conditions done " << std::endl;
+  std::cerr << " inner conditions for a triangle done " << std::endl;
 }
 
 template<typename GeometryType>
@@ -351,9 +351,11 @@ Convexifier<2>::BarycCoordType get_baryc_coordinates (const GeometryType& geomet
 }
 
 template<typename GeometryType>
-Convexifier<2>::BarycCoordType get_baryc_coordinates_of_neighbour_node(const GeometryType& geometryInside, const GeometryType& geometryOutside, int localFaceInside)
+Convexifier<2>::BarycCoordType get_baryc_coordinates_of_neighbour_node(const GeometryType& geometryInside, const GeometryType& geometryOutside, int localFaceOutside)
 {
-  switch(localFaceInside)
+
+
+  switch(localFaceOutside)
   {
     case 0:
       return get_baryc_coordinates(geometryInside, geometryOutside.corner(2));
@@ -372,10 +374,19 @@ template<int k>
 template<typename LocalIndexSet, typename Intersection>
 inline
 void Convexifier<k>::conditions_for_convexity_triangle_over_edges(const Intersection& intersection,
-    const LocalIndexSet& localIndexSet, const int flip,
-    const LocalIndexSet& localIndexSetN, const int flipN, int& conditionOffset, TripletListType& tripletList)
+    const LocalIndexSet& localIndexSet,
+    const LocalIndexSet& localIndexSetN, const int flipped, int& conditionOffset, TripletListType& tripletList)
 {
 
+
+  {
+    const auto& geometryInside = intersection.inside().geometry();
+    std::cerr << " corners inside " << geometryInside.corner(0) << " , " << geometryInside.corner(1) << " , " << geometryInside.corner(2) << std::endl;
+    const auto& geometryOutside = intersection.outside().geometry();
+    std::cerr << " corners outside " << geometryOutside.corner(0) << " , " << geometryOutside.corner(1) << " , " << geometryOutside.corner(2) << std::endl;
+    std::cerr << " local face inside " << intersection.indexInInside() << " local face outside " << intersection.indexInOutside() << std::endl;
+    std::cerr << " flipped " << flipped << std::endl;
+  }
 
   //store barycentric coordinates of not adjacent corner of neighbouring element
   BarycCoordType beta = get_baryc_coordinates_of_neighbour_node(intersection.inside().geometry(), intersection.outside().geometry(), intersection.indexInOutside());
@@ -388,71 +399,71 @@ void Convexifier<k>::conditions_for_convexity_triangle_over_edges(const Intersec
     BezierBarycTermListType c_equationTerms, c_equationTermsN;
 
     int iN(i), jN(j);
-    if (flipN)
+    if (flipped)
       std::swap(iN,jN);
 
     //add \hat c_{i,j,1}
     switch(intersection.indexInOutside())    {
     case 0:
-      c_equationTermsN.push_back(BezierBarycTermType(1.,{iN,jN,1}));
+      c_equationTermsN.push_back(BezierBarycTermType(1.,{jN,iN,1}));
       break;
     case 1:
-      c_equationTermsN.push_back(BezierBarycTermType(1.,{jN,1,iN}));
+      c_equationTermsN.push_back(BezierBarycTermType(1.,{iN,1,jN}));
       break;
     case 2:
-      c_equationTermsN.push_back(BezierBarycTermType(1.,{1,iN,jN}));
+      c_equationTermsN.push_back(BezierBarycTermType(1.,{1,jN,iN}));
       break;
     }
 
     //rhs of (3.11) \beta_1 c_{i+1,0,j} + \beta_2 c_{i,1,j} +\beta_1 c_{i,0,j+1}
     switch(intersection.indexInInside())    {
     case 0:
-      if (flip)
-      {
-        //reverse numbering
-        c_equationTerms.push_back(BezierBarycTermType(beta[0],{i+1,j,0}));
-        c_equationTerms.push_back(BezierBarycTermType(beta[2],{i, j,1}));
-        c_equationTerms.push_back(BezierBarycTermType(beta[1],{i,j+1,0}));
-      }
-      else
-      {
+//      if (flip)
+//      {
+//        //reverse numbering
+//        c_equationTerms.push_back(BezierBarycTermType(beta[0],{i+1,j,0}));
+//        c_equationTerms.push_back(BezierBarycTermType(beta[2],{i, j,1}));
+//        c_equationTerms.push_back(BezierBarycTermType(beta[1],{i,j+1,0}));
+//      }
+//      else
+//      {
         //thm 3.6. enumeration twice rotated clockwise
         c_equationTerms.push_back(BezierBarycTermType(beta[1],{j,i+1,0}));
         c_equationTerms.push_back(BezierBarycTermType(beta[2],{j, i,1}));
         c_equationTerms.push_back(BezierBarycTermType(beta[0],{j+1,i,0}));
-      }
+//      }
       break;
     case 1:
-      if (flip)
-      {
-        //reverse numbering
-        c_equationTerms.push_back(BezierBarycTermType(beta[2],{j,0,i+1}));
-        c_equationTerms.push_back(BezierBarycTermType(beta[1],{j,1,i}));
-        c_equationTerms.push_back(BezierBarycTermType(beta[0],{j+1,0,i}));
-      }
-      else
-      {
+//      if (flip)
+//      {
+//        //reverse numbering
+//        c_equationTerms.push_back(BezierBarycTermType(beta[2],{j,0,i+1}));
+//        c_equationTerms.push_back(BezierBarycTermType(beta[1],{j,1,i}));
+//        c_equationTerms.push_back(BezierBarycTermType(beta[0],{j+1,0,i}));
+//      }
+//      else
+//      {
         //original terms from formulation of thm 3.6.
         c_equationTerms.push_back(BezierBarycTermType(beta[0],{i+1,0,j}));
         c_equationTerms.push_back(BezierBarycTermType(beta[1],{i,1,j}));
         c_equationTerms.push_back(BezierBarycTermType(beta[2],{i,0,j+1}));
-      }
+//      }
       break;
     case 2:
-      if (flip)
-      {
-        //reversed numbering
-        c_equationTerms.push_back(BezierBarycTermType(beta[1],{0,i+1,j}));
-        c_equationTerms.push_back(BezierBarycTermType(beta[0],{1,i,j}));
-        c_equationTerms.push_back(BezierBarycTermType(beta[2],{0,i,j+1}));
-      }
-      else
-      {
+//      if (flip)
+//      {
+//        //reversed numbering
+//        c_equationTerms.push_back(BezierBarycTermType(beta[1],{0,i+1,j}));
+//        c_equationTerms.push_back(BezierBarycTermType(beta[0],{1,i,j}));
+//        c_equationTerms.push_back(BezierBarycTermType(beta[2],{0,i,j+1}));
+//      }
+//      else
+//      {
         //thm 3.6. enumeration rotated clockwise
         c_equationTerms.push_back(BezierBarycTermType(beta[2],{0,j,i+1}));
         c_equationTerms.push_back(BezierBarycTermType(beta[0],{1,j,i}));
         c_equationTerms.push_back(BezierBarycTermType(beta[1],{0,j+1,i}));
-      }
+//      }
       break;
     }
     add_scaled_equation_to_matrix(localIndexSet, conditionOffset, -1., c_equationTerms, tripletList);
@@ -460,7 +471,20 @@ void Convexifier<k>::conditions_for_convexity_triangle_over_edges(const Intersec
     conditionOffset++;
   }
 
+  std::cerr << " edge conditions done " << std::endl;
 }
+
+///returns the local corner index for the local Face (enumeration is clockwise in the reference element)
+template<typename LocalView>
+int get_starting_corner_clockwise(const LocalView& localView, int localFaceNo)
+{
+  if (localFaceNo == 0)
+    return 0;
+  if (localFaceNo == 1)
+    return 2;
+  else return 1;
+}
+
 
 template<int k>
 template<typename LocalView, typename LocalIndexSet>
@@ -535,7 +559,7 @@ void Convexifier<k>::evaluation_matrix(const LocalView& localView, const LocalIn
     for (int j = 0; j < m_local.cols(); j++)
       if (std::abs(m_local(i,j)) > 1e-13 )
       {
-        A.coeffRef(localIndexSet.index(i), localIndexSet.index(j)) +=  m_local(i,j);
+        A.coeffRef(localIndexSet.index(i), localIndexSet.index(j)) =  m_local(i,j);
       }
   }
 }
@@ -591,22 +615,20 @@ void Convexifier<k>::init(const Dune::Functions::BernsteinBezierk2dNodalBasis<Gr
       int localFaceNo = is.indexInInside();
       int localFaceNoN = is.indexInOutside();
 
-      // we have to reverse the numbering if the local triangle edge is
-      // not aligned with the global edge
+      // we have to reverse the numbering if the local triangle edges are not aligned
       const Dune::ReferenceElement<double,Config::dim>& refElement
           = Dune::ReferenceElements<double,Config::dim>::general(element.type());
 
-      size_t v0 = gridIndexSet.subIndex(element,refElement.subEntity(localFaceNo,1,0,Config::dim),Config::dim);
-      size_t v1 = gridIndexSet.subIndex(element,refElement.subEntity(localFaceNo,1,1,Config::dim),Config::dim);
-      bool flip = (v0 > v1);
-
       const Dune::ReferenceElement<double,Config::dim>& refElementN
           = Dune::ReferenceElements<double,Config::dim>::general(elementN.type());
-      v0 = gridIndexSet.subIndex(elementN,refElementN.subEntity(localFaceNoN,1,0,Config::dim),Config::dim);
-      v1 = gridIndexSet.subIndex(elementN,refElementN.subEntity(localFaceNoN,1,1,Config::dim),Config::dim);
-      bool flipN = (v0 > v1);
 
-      conditions_for_convexity_triangle_over_edges(is, localIndexSet, flip, localIndexSetN, flipN, conditionIndex, tripletList);
+      std::cerr << " localFaceNo "  << localFaceNo << " starts at corner " << refElement.subEntity(localFaceNo,1,0,Config::dim) << std::endl;
+
+      size_t v0 = gridIndexSet.subIndex(element,get_starting_corner_clockwise(localView, localFaceNo),Config::dim);
+      size_t v0N =  gridIndexSet.subIndex(elementN,get_starting_corner_clockwise(localView, localFaceNoN),Config::dim);
+      bool flipped = (v0 != v0N);
+
+      conditions_for_convexity_triangle_over_edges(is, localIndexSet, localIndexSetN, flipped, conditionIndex, tripletList);
     }
 
   }
@@ -692,8 +714,18 @@ void Convexifier<k>::convexify(Config::VectorType& v) const
 
   Config::VectorType f = -A_.transpose() * v;
 
-  std::cerr << "C*v " << C_ * v << std::endl;
-  std::cout << "minimum constr violating coefficient is " << (C_ * v - ci0).minCoeff() << std::endl;
+  {
+    std::stringstream filename; filename << "../plots/test/CTimesV.m";
+    std::ofstream file(filename.str(),std::ios::out);
+    MATLAB_export(file, C_ * v, "Cv");
+  }
+
+//  std::cerr << "C*v " << C_ * v << std::endl;
+  int coeffRow = -1;
+  int *minCoeffRow = &coeffRow;
+
+  std::cout << "minimum constr violating coefficient is " << (C_ * v - ci0).minCoeff(minCoeffRow)
+      << " at entry " << *minCoeffRow  << std::endl;
 
   v = solve_quad_prog_with_ie_constraints(G2, f, C_, ci0, v);
 

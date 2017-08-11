@@ -327,8 +327,6 @@ public:
           DUNE_THROW(Dune::NotImplemented, "2d elements have to be triangles");
       } else
       {
-        const Dune::ReferenceElement<double,dim>& refElement
-            = Dune::ReferenceElements<double,dim>::general(element.type());
 
         if (k>=3)
           DUNE_THROW(Dune::NotImplemented, "BernsteinBezierk2dNodalBasis for grids is only implemented if k<3");
