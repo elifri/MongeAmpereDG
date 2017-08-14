@@ -1011,7 +1011,7 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
     {
 //      if (std::abs(m_local(i,j)) > 1e-13 )
       {
-        std::cerr << " add to Jacobian " << FETraits::get_index(localIndexSetTest, i) << " , " << FETraits::get_index(localIndexSetAnsatz, j) << " from local " << i  << "," << j << " with value " << m_local(i,j) << std::endl;
+//        std::cerr << " add to Jacobian " << FETraits::get_index(localIndexSetTest, i) << " , " << FETraits::get_index(localIndexSetAnsatz, j) << " from local " << i  << "," << j << " with value " << m_local(i,j) << std::endl;
         je.push_back(EntryType(FETraits::get_index(localIndexSetTest, i),FETraits::get_index(localIndexSetAnsatz,j),m_local(i,j)));
       }
     }
@@ -2314,7 +2314,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
   std::cerr << " This operator needs automatic differentiation for the derivative, please provide adolc library " << std::endl;
   std::exit(-1);
 }
-
+#endif
 
 
 template<typename LocalOperatorType>
@@ -2456,8 +2456,6 @@ void Assembler::assemble_DG_Only_(const LocalOperatorType &lop, const Config::Ve
       add_local_coefficients(localIndexSet, local_vector, v);
    }
 }
-
-#endif
 
 template<typename LocalOperatorType, typename LocalOperatorJacobianType>
 void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalOperatorJacobianType &lopJacobian,

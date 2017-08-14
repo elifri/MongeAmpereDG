@@ -243,6 +243,13 @@ public:
   {
     u = 1;
   }
+  void evaluateDerivative(const FieldVector<double, Config::dim> &x, FieldVector<double, Config::dim> &gradu) const
+  {
+    gradu[0] = 0;
+    gradu[1] = 0;
+  }
+
+
 #ifdef HAVE_ADOLC
   void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
   {

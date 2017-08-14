@@ -36,7 +36,7 @@ public:
 
   template<typename GridView>
   Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY, const GridView& gridView):
-    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
+  hash(gridView), EntititiesForUnifikationTerm_(10,hash), rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
   {
     std::cout << " created Local Operator" << std::endl;
   }
@@ -57,8 +57,9 @@ public:
    * @param v					 local residual (to be returned)
    */
   template<class LocalView, class VectorType>
-  void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const {
+    void assemble_cell_term(const LocalView& localView, const VectorType &x,
+        VectorType& v, const int tag, const double u_atX0, const double u0_atX0,
+        LocalView& localViewTemp, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const {
     assert(false);
 /*
     // Get the grid element from the local FE basis view
@@ -624,13 +625,58 @@ public:
 
 #endif
 
-  int insert_entitity_for_unifikation_term(const Config::Entity element, int size){ assert(false); return 0;}
-  void insert_descendant_entities(const Config::GridType& grid, const Config::Entity element){assert(false);}
-  const Config::EntityMap EntititiesForUnifikationTerm() const{assert(false); std::exit(-1);}
-  int get_offset_of_entity_for_unifikation_term(Config::Entity element) const{assert(false); return 0;}
-  int get_number_of_entities_for_unifikation_term() const{assert(false); return 0;}
-  void clear_entitities_for_unifikation_term(){assert(false);}
+  int insert_entitity_for_unifikation_term(const Config::Entity element, int size)
+  {
+    auto search = EntititiesForUnifikationTerm_.find(element);
+    if (search == EntititiesForUnifikationTerm_.end())
+    {
+      const int newOffset = size*EntititiesForUnifikationTerm_.size();
+      EntititiesForUnifikationTerm_[element] = newOffset;
 
+      const auto& geometry = element.geometry();
+
+      return newOffset;
+    }
+    return EntititiesForUnifikationTerm_[element];
+  }
+
+  void insert_descendant_entities(const Config::GridType& grid, const Config::Entity element)
+  {
+    const auto& geometry = element.geometry();
+
+    auto search = EntititiesForUnifikationTerm_.find(element);
+    int size = search->second;
+    assert(search != EntititiesForUnifikationTerm_.end());
+    for (const auto& e : descendantElements(element,grid.maxLevel() ))
+    {
+      insert_entitity_for_unifikation_term(e, size);
+    }
+    EntititiesForUnifikationTerm_.erase(search);
+
+  }
+
+  const Config::EntityMap EntititiesForUnifikationTerm() const
+  {
+    return EntititiesForUnifikationTerm_;
+  }
+
+
+  int get_offset_of_entity_for_unifikation_term(Config::Entity element) const
+  {
+    return EntititiesForUnifikationTerm_.at(element);
+  }
+  int get_number_of_entities_for_unifikation_term() const
+  {
+    return EntititiesForUnifikationTerm_.size();
+  }
+
+  void clear_entitities_for_unifikation_term()
+  {
+    EntititiesForUnifikationTerm_.clear();
+  }
+
+  Config::EntityCompare hash;
+  Config::EntityMap EntititiesForUnifikationTerm_;
   const Function& get_input_distribution() const {return rhoX;}
   const Function& get_target_distribution() const {return rhoY;}
 
