@@ -16,7 +16,7 @@ public:
   MA_OT_Operator():solver_ptr(NULL), lop_ptr(){}
   MA_OT_Operator(Solver& solver):solver_ptr(&solver),
       lop_ptr(new LOP(
-          new BoundarySquare(solver.gradient_u_old, solver.get_setting()),
+          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
           new rhoXSquareToSquare(), new rhoYSquareToSquare(),
           solver.gridView()
                               //     lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
@@ -380,6 +380,45 @@ public:
   mutable int intermediateSolCounter;
   };
 
+
+template<typename Solver, typename LOP, typename LOPLinear>
+struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<Solver, LOP>{
+  typedef typename Solver::GridViewType GridView;
+
+  MA_OT_Operator_with_Linearisation():MA_OT_Operator<Solver, LOP>(), lopLinear_ptr(){}
+//  MA_OT_image_Operator_with_Linearisation():solver_ptr(NULL), lop_ptr(), lopLinear_ptr(), fixingPoint({0.5,0.15}){ }
+//    MA_OT_Operator(MA_OT_solver& solver):solver_ptr(&solver), lop_ptr(new Local_Operator_MA_OT(new BoundarySquare(solver.gradient_u_old, solver.get_setting()), new rhoXSquareToSquare(), new rhoYSquareToSquare())){}
+    // lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
+  MA_OT_Operator_with_Linearisation(Solver& solver):MA_OT_Operator<Solver, LOP>(solver),
+        lopLinear_ptr(new LOPLinear
+            (new BoundarySquare(solver.gradient_u_old,solver.get_setting()),
+                new rhoXSquareToSquare(), new rhoYSquareToSquare(),
+                solver.gridView()))
+    {
+    }
+
+  void assemble(const Config::VectorType& x, Config::VectorType& v) const
+  {
+    (this->solver_ptr)->assembler_.assemble_DG_Only(*lopLinear_ptr, x,v);
+  }
+  void assemble_with_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+  {
+    (this->solver_ptr)->assembler_.assemble_DG_Jacobian(*(this->lop_ptr), *lopLinear_ptr, x,v, m);
+  }
+  void assemble_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
+  {
+    assert(false);
+//    this->solver_ptr->assemble_Jacobian_DG(*(this->lop_ptr), *lopLinear_ptr, x,m);
+  }
+
+  template<typename Element>
+  void insert_entities_for_unification_term_to_local_operator(Element fixingElement, int n)
+  {
+    lopLinear_ptr->insert_entitity_for_unifikation_term(fixingElement, n);
+  }
+
+    std::shared_ptr<LOPLinear> lopLinear_ptr;
+};
 
 
 #endif /* INCLUDE_OT_MA_OT_GLOBAL_OPERATOR_H_ */

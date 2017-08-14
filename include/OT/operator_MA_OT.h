@@ -34,7 +34,8 @@ class Local_Operator_MA_OT {
 public:
   typedef DensityFunction Function;
 
-  Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
+  template<typename GridView>
+  Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY, const GridView& gridView):
     rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
   {
     std::cout << " created Local Operator" << std::endl;
@@ -58,6 +59,7 @@ public:
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
       VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const {
+    assert(false);
 /*
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
@@ -621,6 +623,13 @@ public:
   }
 
 #endif
+
+  int insert_entitity_for_unifikation_term(const Config::Entity element, int size){ assert(false); return 0;}
+  void insert_descendant_entities(const Config::GridType& grid, const Config::Entity element){assert(false);}
+  const Config::EntityMap EntititiesForUnifikationTerm() const{assert(false); std::exit(-1);}
+  int get_offset_of_entity_for_unifikation_term(Config::Entity element) const{assert(false); return 0;}
+  int get_number_of_entities_for_unifikation_term() const{assert(false); return 0;}
+  void clear_entitities_for_unifikation_term(){assert(false);}
 
   const Function& get_input_distribution() const {return rhoX;}
   const Function& get_target_distribution() const {return rhoY;}

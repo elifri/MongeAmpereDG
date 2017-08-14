@@ -23,6 +23,7 @@
     #include "operator_MA_OT_Neilan.h"
   #else
     #include "operator_MA_OT.h"
+    #include "operator_MA_OT_Linearisation.hpp"
   #endif
 #endif
 
@@ -36,7 +37,8 @@ public:
   #ifdef USE_MIXED_ELEMENT
     typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Neilan> OperatorType;
   #else
-    typedef  Local_Operator_MA_OT OperatorType;
+//    typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT> OperatorType;
+    typedef MA_OT_Operator_with_Linearisation<MA_OT_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
 //todo C1 is not for nonimage
     //    typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
   #endif
@@ -75,6 +77,8 @@ private:
   OperatorType op;
 
   friend OperatorType;
+  //todo befriend when linearise?
+  friend MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT>;
 };
 
 template<typename FGrad>
