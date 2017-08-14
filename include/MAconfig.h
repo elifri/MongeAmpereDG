@@ -74,6 +74,8 @@ namespace Config{
   typedef UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >> RectangularGridType;
   typedef RectangularGridType::GridType::LeafGridView RectangularGridView;
 
+  typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > TriangularUnitCubeType;
+
   typedef UnitCubeType::GridType GridType;
   typedef GridType::LevelGridView LevelGridView;
   typedef GridType::LeafGridView GridView;

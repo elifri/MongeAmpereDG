@@ -18,7 +18,7 @@ namespace po = boost::program_options;
 #include "utils.hpp"
 
 
-MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, const shared_ptr<GridType>& gridConvexifier, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting)
+MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, const shared_ptr<Config::TriangularUnitCubeType::GridType>& gridConvexifier, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting)
 :MA_solver(grid, gridConvexifier, gridView, config),
  setting_(setting),
 // FEBasisHandlerQ_(*this, grid->levelGridView(grid->maxLevel()-1)),

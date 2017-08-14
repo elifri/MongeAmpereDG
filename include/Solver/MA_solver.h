@@ -72,7 +72,8 @@ public:
 	typedef FETraits::DiscreteLocalGridFunction DiscreteLocalGridFunction;
   typedef FETraits::DiscreteLocalGradientGridFunction DiscreteLocalGradientGridFunction;
 
-	MA_solver(const shared_ptr<GridType>& grid, const shared_ptr<GridType>& gridConvexifier, GridViewType& gridView, SolverConfig config):
+	MA_solver(const shared_ptr<GridType>& grid, const shared_ptr<Config::TriangularUnitCubeType::GridType>& gridConvexifier,
+	    GridViewType& gridView, SolverConfig config):
 	    initialised(true),
 			epsDivide_(config.epsDivide),
 			epsEnd_(config.epsEnd),
@@ -123,7 +124,7 @@ public:
 
 	}
 
-  MA_solver(const shared_ptr<GridType>& grid, const shared_ptr<GridType>& gridConvexifier, GridViewType& gridView, SolverConfig config, const GeometrySetting& geometrySetting)
+  MA_solver(const shared_ptr<GridType>& grid, const shared_ptr<Config::TriangularUnitCubeType::GridType>& gridConvexifier, GridViewType& gridView, SolverConfig config, const GeometrySetting& geometrySetting)
       :MA_solver(grid, gridConvexifier, gridView, config)
   {
     setting_ = geometrySetting;

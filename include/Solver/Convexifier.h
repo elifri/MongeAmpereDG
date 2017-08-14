@@ -72,6 +72,10 @@ public:
 
   using BarycCoordType = Eigen::Vector3d;
 
+  using GridType = Config::TriangularUnitCubeType::GridType ;
+
+  using FETraitsBezier = BezierTraits<GridType::LeafGridView,k>;
+
 private:
   ///< performs the difference operatore \Delta_ij on c
   void Delta(const int i, const int j, const BezierBarycTermType& c, BezierBarycTermListType &c_output);
@@ -124,18 +128,17 @@ private:
 
 
 public:
-  Convexifier(const shared_ptr<Config::GridType>& grid): grid_ptr(grid), bezierBasisHandler_(grid->leafGridView())
+  Convexifier(const shared_ptr<GridType>& grid): grid_ptr(grid), bezierBasisHandler_(grid->leafGridView())
   {
     init(bezierBasisHandler_.FEBasis());
   }
 
-  template<typename GridView>
-  void init(const Dune::Functions::BernsteinBezierk2dNodalBasis<GridView, k>& bezierBasis);
+  void init(const Dune::Functions::BernsteinBezierk2dNodalBasis<GridType::LeafGridView, k>& bezierBasis);
 
   void adapt(int level=1)
   {
     grid_ptr->globalRefine(level);
-    bezierBasisHandler_ = FEBasisHandler<Standard, BezierTraits<Config::GridView,k>>(grid_ptr->leafGridView());
+    bezierBasisHandler_ = FEBasisHandler<Standard, FETraitsBezier>(grid_ptr->leafGridView());
     init(bezierBasisHandler_.FEBasis());
   }
 
@@ -143,7 +146,8 @@ public:
   auto convexify(F f) const;
 
   auto globalSolution(const Config::VectorType &v) const{
-    return Dune::Functions::makeDiscreteGlobalBasisFunction<double>(bezierBasisHandler_.FEBasis(),v);
+//    return Dune::Functions::makeDiscreteGlobalBasisFunction<double>(bezierBasisHandler_.FEBasis(),v);
+    return typename FETraitsBezier::DiscreteGridFunction(bezierBasisHandler_.FEBasis(),v);
   }
 
 private:
@@ -151,8 +155,8 @@ private:
   Config::MatrixType A_;///evaluation matrix for a spline
   Config::MatrixType C_;///convexity conditions for a bezier spline
 //  BernsteinBezierk2DLocalBasis localBezierBasis_;
-  const shared_ptr<Config::GridType> grid_ptr;
-  FEBasisHandler<Standard, BezierTraits<Config::GridView,k>> bezierBasisHandler_;
+  const shared_ptr<GridType> grid_ptr;
+  FEBasisHandler<Standard, FETraitsBezier> bezierBasisHandler_;
 };
 
 template<int k>
@@ -205,7 +209,7 @@ void Convexifier<k>::add_equation_to_matrix(const LocalIndexSet& localIndexSet, 
   {
     auto bezierIndex = localIndexSet.index(BernsteinBezierk2DLocalBasis<double, double, k>::get_local_bezier_no(c_term.coord))[0];
     tripletList.push_back( TripletType( condition_index, bezierIndex, c_term.coefficient));
-    std::cerr << "Added (" << condition_index << ") "<< c_term.coord.transpose() << "("<< BernsteinBezierk2DLocalBasis<double, double, k>::get_local_bezier_no(c_term.coord) << ") -> " << bezierIndex << " with coeff " << c_term.coefficient << std::endl;
+//    std::cerr << "Added (" << condition_index << ") "<< c_term.coord.transpose() << "("<< BernsteinBezierk2DLocalBasis<double, double, k>::get_local_bezier_no(c_term.coord) << ") -> " << bezierIndex << " with coeff " << c_term.coefficient << std::endl;
   }
 }
 
@@ -218,7 +222,7 @@ void Convexifier<k>::add_scaled_equation_to_matrix(const LocalIndexSet& localInd
   {
     auto bezierIndex = localIndexSet.index(BernsteinBezierk2DLocalBasis<double, double, k>::get_local_bezier_no(c_term.coord));
     tripletList.push_back( TripletType( condition_index, bezierIndex, scalar*c_term.coefficient));
-    std::cerr << "Added (" << condition_index << ") "<< c_term.coord.transpose() << " -> " << bezierIndex << " with coeff " << scalar*c_term.coefficient << std::endl;
+//    std::cerr << "Added (" << condition_index << ") "<< c_term.coord.transpose() << " -> " << bezierIndex << " with coeff " << scalar*c_term.coefficient << std::endl;
   }
 }
 
@@ -253,7 +257,7 @@ void Convexifier<k>::conditions_for_convexity_triangle_interior(const LocalIndex
   operations.push_back(difference_type(Eigen::Vector2i(0,2), Eigen::Vector2i(1,2)));    // + Delta13 Delta23 >= 0
   operations.push_back(difference_type(Eigen::Vector2i(0,2), Eigen::Vector2i(0,2)));    // 2 Delta13 Delta13
 
-  std::cerr << "set up inner conditions(first) for a triangle " << std::endl;
+//  std::cerr << "set up inner conditions(first) for a triangle " << std::endl;
   for (unsigned int i = 0; i < operations.size(); i++)
   {
     //first half of linear equation
@@ -301,7 +305,7 @@ void Convexifier<k>::conditions_for_convexity_triangle_interior(const LocalIndex
   operations.push_back(difference_type(Eigen::Vector2i(0,2), Eigen::Vector2i(1,2)));    // +3 Delta13 Delta23
   operations.push_back(difference_type(Eigen::Vector2i(0,2), Eigen::Vector2i(0,2)));    // +2 Delta13 Delta13 >= 0
 */
-  std::cerr << "set up inner conditions(latter) for a triangle " << std::endl;
+//  std::cerr << "set up inner conditions(latter) for a triangle " << std::endl;
   //add first conditions to triples
   assert (operations.size() % 3 == 0);
   for (unsigned int i_opt = 0; i_opt < operations.size(); i_opt++)
@@ -323,7 +327,7 @@ void Convexifier<k>::conditions_for_convexity_triangle_interior(const LocalIndex
     conditionOffset+=2;
   }
 
-  std::cerr << " inner conditions for a triangle done " << std::endl;
+//  std::cerr << " inner conditions for a triangle done " << std::endl;
 }
 
 template<typename GeometryType>
@@ -345,7 +349,7 @@ Convexifier<2>::BarycCoordType get_baryc_coordinates (const GeometryType& geomet
   rhs << x[0], x[1], 1;
 
   Convexifier<2>::BarycCoordType temp = LGS.colPivHouseholderQr().solve(rhs);
-  std::cerr << " baryc " << temp.transpose() << std::endl;
+//  std::cerr << " baryc " << temp.transpose() << std::endl;
 
   return LGS.colPivHouseholderQr().solve(rhs);
 }
@@ -379,14 +383,14 @@ void Convexifier<k>::conditions_for_convexity_triangle_over_edges(const Intersec
 {
 
 
-  {
+/*  {
     const auto& geometryInside = intersection.inside().geometry();
     std::cerr << " corners inside " << geometryInside.corner(0) << " , " << geometryInside.corner(1) << " , " << geometryInside.corner(2) << std::endl;
     const auto& geometryOutside = intersection.outside().geometry();
     std::cerr << " corners outside " << geometryOutside.corner(0) << " , " << geometryOutside.corner(1) << " , " << geometryOutside.corner(2) << std::endl;
     std::cerr << " local face inside " << intersection.indexInInside() << " local face outside " << intersection.indexInOutside() << std::endl;
     std::cerr << " flipped " << flipped << std::endl;
-  }
+  }*/
 
   //store barycentric coordinates of not adjacent corner of neighbouring element
   BarycCoordType beta = get_baryc_coordinates_of_neighbour_node(intersection.inside().geometry(), intersection.outside().geometry(), intersection.indexInOutside());
@@ -471,7 +475,7 @@ void Convexifier<k>::conditions_for_convexity_triangle_over_edges(const Intersec
     conditionOffset++;
   }
 
-  std::cerr << " edge conditions done " << std::endl;
+//  std::cerr << " edge conditions done " << std::endl;
 }
 
 ///returns the local corner index for the local Face (enumeration is clockwise in the reference element)
@@ -565,8 +569,7 @@ void Convexifier<k>::evaluation_matrix(const LocalView& localView, const LocalIn
 }
 
 template<int k>
-template<typename GridView>
-void Convexifier<k>::init(const Dune::Functions::BernsteinBezierk2dNodalBasis<GridView, k>& bezierBasis)
+void Convexifier<k>::init(const Dune::Functions::BernsteinBezierk2dNodalBasis<GridType::LeafGridView, k>& bezierBasis)
 {
   std::vector< Eigen::Triplet<double> > tripletList;
   tripletList.reserve(16*bezierBasis.size());
@@ -621,8 +624,6 @@ void Convexifier<k>::init(const Dune::Functions::BernsteinBezierk2dNodalBasis<Gr
 
       const Dune::ReferenceElement<double,Config::dim>& refElementN
           = Dune::ReferenceElements<double,Config::dim>::general(elementN.type());
-
-      std::cerr << " localFaceNo "  << localFaceNo << " starts at corner " << refElement.subEntity(localFaceNo,1,0,Config::dim) << std::endl;
 
       size_t v0 = gridIndexSet.subIndex(element,get_starting_corner_clockwise(localView, localFaceNo),Config::dim);
       size_t v0N =  gridIndexSet.subIndex(elementN,get_starting_corner_clockwise(localView, localFaceNoN),Config::dim);
@@ -680,7 +681,7 @@ auto Convexifier<k>::convexify(F f) const
 
   {
     //init writer
-    SubsamplingVTKWriter<Config::GridView> vtkWriter(bezierBasisHandler_.FEBasis().gridView(),2);
+    SubsamplingVTKWriter<GridType::LeafGridView> vtkWriter(bezierBasisHandler_.FEBasis().gridView(),2);
     auto function = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(bezierBasisHandler_.FEBasis(),v);
     vtkWriter.addVertexData(function, VTK::FieldInfo("BezierInterpol", VTK::FieldInfo::Type::scalar, 1));
     vtkWriter.write("../plots/test/bezier.vtu");
@@ -691,7 +692,7 @@ auto Convexifier<k>::convexify(F f) const
 
   {
     //init writer
-    SubsamplingVTKWriter<Config::GridView> vtkWriter(bezierBasisHandler_.FEBasis().gridView(),2);
+    SubsamplingVTKWriter<GridType::LeafGridView> vtkWriter(bezierBasisHandler_.FEBasis().gridView(),2);
     auto function = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(bezierBasisHandler_.FEBasis(),v);
     vtkWriter.addVertexData(function, VTK::FieldInfo("BezierConvexified", VTK::FieldInfo::Type::scalar, 1));
     vtkWriter.write("../plots/test/bezierConvexified.vtu");

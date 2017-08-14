@@ -93,7 +93,7 @@ try {
   // Generate the grid
   // ////////////////////////////////
   Config::UnitCubeType unitcube(setting.lowerLeft, setting.upperRight, 1);
-  Config::UnitCubeType unitcubeConvexifier(setting.lowerLeft, setting.upperRight, 1);
+  Config::TriangularUnitCubeType unitcubeConvexifier(setting.lowerLeft, setting.upperRight, 1);
 
   Config::GridType &grid = unitcube.grid();
   Config::GridView gridView = grid.leafGridView();

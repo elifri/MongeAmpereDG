@@ -399,7 +399,8 @@ public:
     end = std::chrono::steady_clock::now();
     std::cerr << "total time for convexification= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
 
-    solver_ptr->project(solver_ptr->Convexifier_.globalSolution(x_convexify), x);
+    auto gobalConvexifiedsolution = solver_ptr->Convexifier_.globalSolution(x_convexify);
+    solver_ptr->project(gobalConvexifiedsolution, x);
     solver_ptr->update_solution(x);
     solver_ptr->plot("intermediateConvexified", intermediateSolCounter);
 
