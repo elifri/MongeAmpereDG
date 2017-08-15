@@ -214,6 +214,13 @@ public:
     auto end = std::chrono::steady_clock::now();
     std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
 
+
+    std::cerr << " L2 error is " << solver_ptr->calculate_L2_errorOT([](Config::SpaceType x)
+        {return Dune::FieldVector<double, Config::dim> ({
+                                                        x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
+                                                        x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
+
+
     solver_ptr->plot("numericalSolutionIntermediate",intermediateSolCounter);
     intermediateSolCounter++;
   }
