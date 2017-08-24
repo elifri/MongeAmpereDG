@@ -157,7 +157,7 @@ Config::ValueType MA_OT_solver::calculate_L2_errorOT(const FGrad &f) const
 //      cout << "res = " << res << "u_ value " << u_value << " f_value " << f_value << std::endl;
     }
   }
-  std::cout << " Maximal L2error found in gradient is " << max_error << std::endl;
+  std::cerr << " Maximal L2error found in gradient is " << max_error << std::endl;
 
   return std::sqrt(res);
 }

@@ -212,7 +212,7 @@ public:
     solver_ptr->assemble_DG_Jacobian(this->get_lop(), x, v, m);
 
   }
-  void assemble_with_langrangian_Jacobian(Config::VectorType& xNew, Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+  void assemble_with_langrangian_Jacobian(Config::VectorType& xBoundary, Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
   {
     assert(lop_ptr);
 
@@ -255,6 +255,7 @@ public:
       MATLAB_export(file, tempV, "l_v");
     }
     std::cerr << "  l(v) with norm " << tempV.norm() << std::endl;//<< "  : " << tempV.transpose() << std::endl;
+
     //assemble part of first lagrangian multiplier for fixing midvalue
     const auto& assembler = this->solver_ptr->get_assembler();
 
@@ -290,28 +291,22 @@ public:
     tempV.setZero(Q_h_size);
 
     //assemble boundary terms
-    solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xNew.head(V_h_size), tempV);
+    solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xBoundary.head(V_h_size), tempV);
 
     //remove the qs from langrangian boundary multiplier
-    auto xNewBoundaryLagrangianMultiplier = solver_ptr->get_assembler_lagrangian_boundary().shrink_to_boundary_vector(xNew.tail(Q_h_size));
+    auto xNewBoundaryLagrangianMultiplier = solver_ptr->get_assembler_lagrangian_boundary().shrink_to_boundary_vector(xBoundary.tail(Q_h_size));
     auto xBoundaryLagrangianMultiplier = solver_ptr->get_assembler_lagrangian_boundary().shrink_to_boundary_vector(x.tail(Q_h_size));
 
     Q_h_size = tempM.rows();
 
     m.conservativeResize(this->solver_ptr->get_n_dofs(), this->solver_ptr->get_n_dofs());
     v.conservativeResize(this->solver_ptr->get_n_dofs());
-    xNew.conservativeResize(this->solver_ptr->get_n_dofs());
-    xNew.tail(Q_h_size) = xNewBoundaryLagrangianMultiplier;
+    xBoundary.conservativeResize(this->solver_ptr->get_n_dofs());
+    xBoundary.tail(Q_h_size) = xNewBoundaryLagrangianMultiplier;
     x.conservativeResize(this->solver_ptr->get_n_dofs());
     x.tail(Q_h_size) = xBoundaryLagrangianMultiplier;
 
     //crop terms "far from boundary"
-/*
-    Config::VectorType boundaryWeights;
-    solver_ptr->get_assembler_lagrangian_boundary().assemble_BoundarymatrixWeights(solver_ptr->get_assembler().isBoundaryValueDoF(), boundaryWeights);
-    multiply_every_row_of_sparse_matrix(boundaryWeights, tempM);
-*/
-
 
     assert(Q_h_size == tempV.size());
     assert(Q_h_size == tempM.rows());
@@ -336,9 +331,11 @@ public:
       std::cerr << " matlab file written to " << filename.str() << std::endl;
     }
     std::cerr << " l_H(q) with norm " << tempV.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
+
+    std::cerr << " l with norm " << v.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
   }
 
-  void evaluate(Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, Config::VectorType& xNew, const bool new_solution=true) const
+  void evaluate(Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, Config::VectorType& xBoundary, const bool new_solution=true) const
   {
     assert(solver_ptr != NULL);
 
@@ -359,7 +356,7 @@ public:
     auto start = std::chrono::steady_clock::now();
 
     prepare_fixing_point_term(x);
-    assemble_with_langrangian_Jacobian(xNew,x,v, m);
+    assemble_with_langrangian_Jacobian(xBoundary,x,v, m);
 
     for (int i = 0; i < v.size(); i++)  assert ( ! (v(i) != v(i)));
 
@@ -371,7 +368,7 @@ public:
     solver_ptr->update_solution(x);
     solver_ptr->plot("intermediate", intermediateSolCounter);
 
-    std::cout << "   current L2 error is " << solver_ptr->calculate_L2_errorOT([](Config::SpaceType x)
+    std::cerr << "   current L2 error is " << solver_ptr->calculate_L2_errorOT([](Config::SpaceType x)
         {return Dune::FieldVector<double, Config::dim> ({
                                                         x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
                                                         x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;

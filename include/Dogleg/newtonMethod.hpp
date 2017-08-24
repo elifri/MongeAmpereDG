@@ -53,16 +53,16 @@ void newtonMethod(
 
     for (unsigned int i=0; i<maxIter; i++) {
     Eigen::VectorXd s;
-      Eigen::VectorXd xNew(x);
+      Eigen::VectorXd xBoundary(x);
       const unsigned int maxIterBoundaryConditions = 5;
       for (unsigned int j = 0; j < maxIterBoundaryConditions; j++)
       {
         // solve Df*s = +f using UmfPack:
           if (useCombinedFunctor)
-            functor.evaluate(x,f,Df, xNew, false);
+            functor.evaluate(x,f,Df, xBoundary, false);
           else
           {
-            functor.evaluate(x,f,xNew, false);
+            functor.evaluate(x,f,xBoundary, false);
             functor.derivative(x,Df);
       //      make_FD_Jacobian(functor, x, J);
           }
@@ -85,7 +85,9 @@ void newtonMethod(
               exit(1);
           }
 
-          xNew-=lambdaMin*s;
+          xBoundary-=lambdaMin*s;
+
+          std::cerr << " xBoundary " << xBoundary.transpose() << std::endl;
 
           if (!silentmode)
           {
@@ -105,7 +107,8 @@ void newtonMethod(
       }
       // compute damped Newton step
 
-      x = xNew;
+      x = xBoundary;
+      std::cerr << " xNew Newton " << xBoundary.transpose() << std::endl;
 
       if (!silentmode)
          {
