@@ -2501,6 +2501,8 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
         local_vector.setZero(localView.size());    // Set all entries to zero
         Config::VectorType local_midvalue;
         local_midvalue.setZero(localView.size());    // Set all entries to zero
+        Config::VectorType local_boundary;
+        local_boundary.setZero(localView.size());    // Set all entries to zero
 
         //get zero matrix to store local jacobian
         Config::DenseMatrixType m_m;
@@ -2607,7 +2609,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 //            std::cerr << " local boundary " << local_boundary << std::endl;
 
 //            lop.assemble_boundary_face_term(is,localView, xLocal, local_boundary, 0);
-            lopJacobian.assemble_boundary_face_term(is, localView, xLocal, local_vector, m_mB);
+            lopJacobian.assemble_boundary_face_term(is, localView, xLocal, local_boundary, m_mB);
 
           } else {
             std::cerr << " I do not know how to handle this intersection"
@@ -2616,6 +2618,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
           }
         }
 
+        local_vector+=local_boundary;
         local_vector+=local_midvalue;
 
         //add to objective function and jacobian
@@ -2628,6 +2631,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
         {
 //          std::cerr << " add boundary terms " << std::endl;
           add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
+          add_local_coefficients(localIndexSet, local_boundary, v_boundary);
         }
 
         for (size_t i = 0; i < localIndexSet.size(); i++)
@@ -2644,6 +2648,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
      std::cerr << " m nonzeros " << m.nonZeros() << std::endl;
 
      std::cerr << std::endl << " local midvalue term " << midValue.norm()<< " whole norm " << v.norm() << std::endl;
+     std::cerr << " local boundary term " << v_boundary.norm()<< " inner norm " << (v-v_boundary).norm() << std::endl;
 //     std::cerr << " f_inner    " << (v-boundary).transpose() << std::endl;
 //     std::cerr << " f_boundary " << boundary.transpose() << std::endl;
 //     std::cerr << " f          " << v.transpose() << std::endl;
