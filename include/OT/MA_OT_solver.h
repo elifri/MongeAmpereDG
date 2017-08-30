@@ -152,7 +152,7 @@ Config::ValueType MA_OT_solver::calculate_L2_errorOT(const FGrad &f) const
       if ((u_value-f_value).two_norm() > max_error)
       {
         max_error = (u_value-f_value).two_norm();
-        std::cerr << "found greater error at " << geometry.global(pt.position()) << ", namely " << max_error << std::endl;
+//        std::cerr << "found greater error at " << geometry.global(pt.position()) << ", namely " << max_error << std::endl;
       }
 //      cout << "res = " << res << "u_ value " << u_value << " f_value " << f_value << std::endl;
     }
