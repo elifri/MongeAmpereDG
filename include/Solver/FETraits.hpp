@@ -13,11 +13,11 @@
 
 #include "MAconfig.h"
 
-//#include "localfunctions/MAmixedbasis.hh"
-//#include "localfunctions/MAmixedbasisC0.hh"
-#include "localfunctions/MAmixedbasisC0C0.hh"
-//#include "localfunctions/deVeubekefunctionspacebasis.hh"
-#include "localfunctions/PowellSabin12SSplinenodalbasis.hh"
+//#include "localfunctions/MAmixed/MAmixedbasis.hh"
+//#include "localfunctions/MAmixed/MAmixedbasisC0.hh"
+#include "localfunctions/MAmixed/MAmixedbasisC0C0.hh"
+//#include "localfunctions/deVeubeke/deVeubekefunctionspacebasis.hh"
+#include "localfunctions/PowellSabin12Split/PowellSabin12SSplinenodalbasis.hh"
 #include <dune/functions/functionspacebases/bsplinebasis.hh>
 
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
