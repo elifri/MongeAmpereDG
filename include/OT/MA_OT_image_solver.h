@@ -57,6 +57,11 @@ private:
   friend MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation>;
 #endif
 
+  friend OperatorType;
+  //todo befriend when linearise?
+  friend MA_OT_Operator<MA_OT_image_solver, Local_Operator_MA_OT>;
+
+
 };
 
 

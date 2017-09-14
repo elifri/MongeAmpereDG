@@ -5,8 +5,8 @@
  *      Author: friebel
  */
 
-#ifndef REFL_OPERATOR_HH_
-#define REFL_OPERATOR_HH_
+#ifndef OPERATOR_NEILAN_MA_OT_HH_
+#define OPERATOR_NEILAN_MA_OT_HH_
 
 #include <dune/common/function.hh>
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
@@ -16,7 +16,7 @@
 #include "OT/problem_data_OT.h"
 #include "ImageFunction.hpp"
 
-#include "localfunctions/MAmixedbasisC0.hh"
+#include "localfunctions/MAmixed/MAmixedbasisC0.hh"
 #include "Operator/operator_utils.h"
 //automatic differtiation
 #include <adolc/adouble.h>

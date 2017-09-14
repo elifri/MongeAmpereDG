@@ -29,7 +29,7 @@ public:
     init();
   }
 
-  MA_OT_Operator(Solver& solver, const std::shared_ptr<LOP>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr), fixingPoint{-0.3,0}, intermediateSolCounter(0)
+  MA_OT_Operator(Solver& solver, const std::shared_ptr<LOP>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr), fixingPoint{0.3,0}, intermediateSolCounter(0)
       {
           init();
       }

@@ -19,7 +19,7 @@
 #include "IO/hdf5Export.hpp"
 
 #include "Operator/linear_system_operator_poisson_NeumannBC.h"
-#include "OT/operator_utils.h"
+#include "Operator/operator_utils.h"
 #include "OT/SmoothingKernel.h"
 
 using namespace std;
@@ -33,7 +33,7 @@ MA_OT_image_solver::MA_OT_image_solver(const shared_ptr<GridType>& grid, GridVie
    const auto integralLightIn = op.lop_ptr->get_input_distribution().integrateOriginal();
    setting_.povRayOpts.lightSourceColor = Eigen::Vector3d::Constant(integralLightOut/integralLightIn*setting_.lightSourceIntensity);
 */
-  assembler.set_X0(opticalSetting.lowerLeft);
+  assembler_.set_X0(opticalSetting.lowerLeft);
 
 
    plotter.set_PovRayOptions(setting_.povRayOpts);
@@ -359,7 +359,7 @@ void MA_OT_image_solver::one_Poisson_Step()
     entryWx0[noDof_fixingElement] += values[i][0];
     noDof_fixingElement++;
   }
-  assembler.set_entryWx0(entryWx0);
+  assembler_.set_entryWx0(entryWx0);
 
   ///------
 
@@ -367,7 +367,7 @@ void MA_OT_image_solver::one_Poisson_Step()
 
   Config::MatrixType m;
   Config::VectorType v;
-  assembler.assemble_DG_Jacobian(Poisson_op, Poisson_op, solution, v, m);
+  assembler_.assemble_DG_Jacobian(Poisson_op, Poisson_op, solution, v, m);
 
   //solve linear equation
   m.makeCompressed();
@@ -453,7 +453,7 @@ void MA_OT_image_solver::create_initial_guess()
   DiscreteGridFunction solution_u_global(FEBasisHandler_.uBasis(),solution);
   auto res = solution_u_global(op.fixingPoint);
 
-  assembler.set_u0AtX0(res);
+  assembler_.set_u0AtX0(res);
 }
 
 
@@ -515,11 +515,10 @@ void MA_OT_image_solver::plot(const std::string& name) const
   DiscreteGridFunction::GlobalFirstDerivative numericalTransportFunction(*solution_u_old_global);
   Dune::array<int,2> direction = {0,0};
   DiscreteGridFunction::GlobalSecondDerivative numericalTransportJacobianFunction(*solution_u_old_global, direction);
-  /*
+
   print_image_OT(numericalTransportFunction, numericalTransportJacobianFunction,
       op.f_, op.g_,
       fnameOT, op.g_.getOriginalImage().width(), op.g_.getOriginalImage().height());
-*/
 
 
   std::string fnamehdf5(plotter.get_output_directory());

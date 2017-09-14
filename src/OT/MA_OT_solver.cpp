@@ -116,16 +116,16 @@ void MA_OT_solver::plot(const std::string& name, int no) const
     decltype(numericalSolution)::LocalFunction localnumericalSolution(numericalSolution);
 
     //build errorfunction
-    Config::VectorType diff = solution_u-exactsol_u.segment(0, get_n_dofs_u());
-    Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolutionError(FEBasisHandler_.uBasis(),diff);
-    decltype(numericalSolution)::LocalFunction localnumericalSolutionError(numericalSolutionError);
+//    Config::VectorType diff = solution_u-exactsol_u.segment(0, get_n_dofs_u());
+//    Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolutionError(FEBasisHandler_.uBasis(),diff);
+//    decltype(numericalSolution)::LocalFunction localnumericalSolutionError(numericalSolutionError);
 
     //build writer
      SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
 
      //add solution data
      vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
-     vtkWriter.addVertexData(localnumericalSolutionError, VTK::FieldInfo("error", VTK::FieldInfo::Type::scalar, 1));
+//     vtkWriter.addVertexData(localnumericalSolutionError, VTK::FieldInfo("error", VTK::FieldInfo::Type::scalar, 1));
 
      //extract hessian (3 entries (because symmetry))
      Dune::array<int,2> direction = {0,0};

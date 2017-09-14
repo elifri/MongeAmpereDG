@@ -37,7 +37,7 @@ endif (LIBFFO_CORE_FOUND)
 
 message("linking poure solver libs ${IOLibs}")
 add_executable("dune_mongeampere_image_OT" dune_mongeampere_image_OT.cpp)
-target_link_libraries(dune_mongeampere_image_OT MA_OT_image_solver MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} Solver_Config ImageFunction utils ${ZLIB_LIBRARIES} ${BsplineHdf5Libraries} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
+target_link_libraries(dune_mongeampere_image_OT MA_OT_image_solver MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} problemData Solver_Config ImageFunction utils ${ZLIB_LIBRARIES} ${BsplineHdf5Libraries} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
 target_link_dune_default_libraries("dune_mongeampere_image_OT")
 
 if(LIBFFO_CORE_FOUND)
