@@ -112,6 +112,134 @@ struct ResidualFunction{
 //  static SmoothingKernel ConvectionFunction::smoothingKernel_;
 };
 
+
+struct EV1Function{
+
+  typedef MA_OT_solver::FETraits::DiscreteLocalSecondDerivativeGridFunction LocalHessScalarFunction;
+
+  EV1Function(std::shared_ptr<LocalHessScalarFunction> &u00, std::shared_ptr<LocalHessScalarFunction> &u10,
+      std::shared_ptr<LocalHessScalarFunction> &u01,std::shared_ptr<LocalHessScalarFunction> &u11)
+  {
+    localHessu_[0]= u00;
+    localHessu_[1] =u10;
+    localHessu_[2] =u01;
+    localHessu_[3]=u11;
+  }
+
+  EV1Function(LocalHessScalarFunction &u00, LocalHessScalarFunction &u10,
+      LocalHessScalarFunction &u01, LocalHessScalarFunction &u11)
+  {
+    localHessu_[0]= std::make_shared<LocalHessScalarFunction>(u00);
+    localHessu_[1] = std::make_shared<LocalHessScalarFunction>(u10);
+    localHessu_[2] = std::make_shared<LocalHessScalarFunction>(u01);
+    localHessu_[3]= std::make_shared<LocalHessScalarFunction>(u11);
+  }
+
+
+  /**
+   * \brief Bind LocalFunction to grid element.
+   *
+   * You must call this method before evaluate()
+   * and after changes to the coefficient vector.
+   */
+  void bind(const LocalHessScalarFunction::Element& element)
+  {
+    for (unsigned int i= 0; i < localHessu_.size(); i++)
+      localHessu_[i]->bind(element);
+  }
+
+  double operator()(const LocalHessScalarFunction::Domain& x) const
+  {
+    Dune::FieldMatrix<Config::ValueType, Config::dim, Config::dim> Hessu;
+    Hessu[0][0] = (*(localHessu_[0]))(x);
+    Hessu[0][1] = (*(localHessu_[1]))(x);
+    Hessu[0][1] = (*(localHessu_[2]))(x);
+    Hessu[1][1] = (*(localHessu_[3]))(x);
+
+    Config::ValueType a, b;
+    calculate_eigenvalues(Hessu, a, b);
+
+    return a;
+  }
+
+  void unbind()
+  {
+    for (unsigned int i= 0; i < localHessu_.size(); i++)
+      localHessu_[i]->unbind();
+  }
+
+  const LocalHessScalarFunction::Element& localContext() const
+  {
+    return localHessu_[0]->localContext();
+  }
+
+  std::array<std::shared_ptr<LocalHessScalarFunction>,4> localHessu_;
+};
+
+struct EV2Function{
+
+  typedef MA_OT_solver::FETraits::DiscreteLocalSecondDerivativeGridFunction LocalHessScalarFunction;
+
+  EV2Function(std::shared_ptr<LocalHessScalarFunction> &u00, std::shared_ptr<LocalHessScalarFunction> &u10,
+      std::shared_ptr<LocalHessScalarFunction> &u01,std::shared_ptr<LocalHessScalarFunction> &u11)
+  {
+    localHessu_[0]= u00;
+    localHessu_[1] =u10;
+    localHessu_[2] =u01;
+    localHessu_[3]=u11;
+  }
+
+  EV2Function(LocalHessScalarFunction &u00, LocalHessScalarFunction &u10,
+      LocalHessScalarFunction &u01, LocalHessScalarFunction &u11)
+  {
+    localHessu_[0]= std::make_shared<LocalHessScalarFunction>(u00);
+    localHessu_[1] = std::make_shared<LocalHessScalarFunction>(u10);
+    localHessu_[2] = std::make_shared<LocalHessScalarFunction>(u01);
+    localHessu_[3]= std::make_shared<LocalHessScalarFunction>(u11);
+  }
+
+
+  /**
+   * \brief Bind LocalFunction to grid element.
+   *
+   * You must call this method before evaluate()
+   * and after changes to the coefficient vector.
+   */
+  void bind(const LocalHessScalarFunction::Element& element)
+  {
+    for (unsigned int i= 0; i < localHessu_.size(); i++)
+      localHessu_[i]->bind(element);
+  }
+
+  double operator()(const LocalHessScalarFunction::Domain& x) const
+  {
+    Dune::FieldMatrix<Config::ValueType, Config::dim, Config::dim> Hessu;
+    Hessu[0][0] = (*(localHessu_[0]))(x);
+    Hessu[0][1] = (*(localHessu_[1]))(x);
+    Hessu[0][1] = (*(localHessu_[2]))(x);
+    Hessu[1][1] = (*(localHessu_[3]))(x);
+
+    Config::ValueType a, b;
+    calculate_eigenvalues(Hessu, a, b);
+
+    return b;
+  }
+
+  void unbind()
+  {
+    for (unsigned int i= 0; i < localHessu_.size(); i++)
+      localHessu_[i]->unbind();
+  }
+
+  const LocalHessScalarFunction::Element& localContext() const
+  {
+    return localHessu_[0]->localContext();
+  }
+
+  std::array<std::shared_ptr<LocalHessScalarFunction>,4> localHessu_;
+};
+
+
 void MA_OT_solver::plot(const std::string& name) const
 {
   plot(name, iterations);
@@ -185,6 +313,11 @@ void MA_OT_solver::plot(const std::string& name, int no) const
 //     SubsamplingVTKWriter<GridViewType> vtkWriter2(*gridView_ptr,3);
      vtkWriter.addVertexData(residual, VTK::FieldInfo("Residual", VTK::FieldInfo::Type::scalar, 1));
 //     vtkWriter2.write(fnameResidual);
+
+     EV1Function ev1(HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
+     EV2Function ev2(HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
+     vtkWriter.addVertexData(ev1, VTK::FieldInfo("EV1", VTK::FieldInfo::Type::scalar, 1));
+     vtkWriter.addVertexData(ev2, VTK::FieldInfo("EV2", VTK::FieldInfo::Type::scalar, 1));
 
 
      //write to file

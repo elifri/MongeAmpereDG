@@ -21,10 +21,13 @@ class MA_OT_Operator {
   typedef typename Solver::GridViewType GridView;
 
 public:
+  using SolverType = Solver;
+  using LocalOperatorType = LOP;
+
   MA_OT_Operator():solver_ptr(NULL), lop_ptr(), intermediateSolCounter(){}
   MA_OT_Operator(Solver& solver):solver_ptr(&solver),
       lop_ptr(new LOP(
-          new BoundarySquare(solver.gradient_u_old, solver.get_setting()),
+          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
           new rhoXSquareToSquare(), new rhoYSquareToSquare()
 //          new rhoXGaussianSquare(), new rhoYGaussianSquare()
 //          new rhoXGaussians(), new rhoYGaussians()
@@ -224,7 +227,7 @@ public:
     assert(m.rows()==this->solver_ptr->get_n_dofs());
     assert(m.cols()==this->solver_ptr->get_n_dofs());
 
-
+    Config::VectorType w = xBoundary.head(V_h_size)-x.head(V_h_size);
 
     //assemble MA PDE in temporary variables
 
@@ -236,6 +239,8 @@ public:
 
     //copy system
     v.head(tempV.size()) = tempV;
+    v.head(V_h_size) += tempM*w;
+
     //copy SparseMatrix todo move to EigenUtility
     std::vector< Eigen::Triplet<double> > tripletList;
     copy_to_new_sparse_matrix(tempM, m);
@@ -254,7 +259,7 @@ public:
       std::ofstream file(filename.str(),std::ios::out);
       MATLAB_export(file, tempV, "l_v");
     }
-    std::cerr << "  l(v) with norm " << tempV.norm() << std::endl;//<< "  : " << tempV.transpose() << std::endl;
+    std::cerr << "  l(v) with norm " << std::scientific << std::setprecision(3) << tempV.norm() << std::endl;//<< "  : " << tempV.transpose() << std::endl;
 
     //assemble part of first lagrangian multiplier for fixing midvalue
     const auto& assembler = this->solver_ptr->get_assembler();
@@ -277,7 +282,8 @@ public:
     }
     //set rhs of langrangian multipler
     v(indexFixingGridEquation) = assembler.u0AtX0()-assembler.uAtX0();
-    std::cerr << " u_0 - u = " << assembler.u0AtX0() << '-'  <<assembler.uAtX0() << "="<< v(indexFixingGridEquation) << std::endl;
+    std::cerr << " u_0 - u = " << assembler.u0AtX0() << '-'  <<assembler.uAtX0() << "="<< std::scientific << std::setprecision(3)<< v(indexFixingGridEquation) << std::endl;
+    v(indexFixingGridEquation) += lagrangianFixingPointDiscreteOperator.dot(w);
 
     {
       std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "Bm" << intermediateSolCounter << ".m";
@@ -330,27 +336,14 @@ public:
       MATLAB_export(file, tempV, "Lboundary");
       std::cerr << " matlab file written to " << filename.str() << std::endl;
     }
-    std::cerr << " l_H(q) with norm " << tempV.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
+    std::cerr << " l_H(q) with norm " << std::scientific << std::setprecision(3)<< tempV.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
 
-    std::cerr << " l with norm " << v.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
+    std::cerr << " l with norm " << std::scientific << std::setprecision(3)<< v.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
   }
 
   void evaluate(Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, Config::VectorType& xBoundary, const bool new_solution=true) const
   {
     assert(solver_ptr != NULL);
-
-    intermediateSolCounter++;
-    solver_ptr->update_solution(x);
-    solver_ptr->plot("intermediateBeginning", intermediateSolCounter);
-
-
-/*    //if necessary update old solution
-    if (new_solution)
-    {
-      solver_ptr->update_solution(x_old);
-    }*/
-
-//    for (int i = 0; i < x.size(); i++) assert ( ! (x(i) != x(i)));
 
     //prepare clock to time computations
     auto start = std::chrono::steady_clock::now();
@@ -364,7 +357,7 @@ public:
     auto end = std::chrono::steady_clock::now();
     std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
 
-//    intermediateSolCounter++;
+    intermediateSolCounter++;
     solver_ptr->update_solution(x);
     solver_ptr->plot("intermediate", intermediateSolCounter);
 
@@ -404,13 +397,13 @@ public:
 //    auto lambda = x(indexFixingGridEquation);
 
     v(indexFixingGridEquation) = assembler.u0AtX0()-assembler.uAtX0();
-//    std::cerr << " u_0 - u = " << assembler.u0AtX0() << '-'  <<-assembler.uAtX0() << "="<< v(indexFixingGridEquation) << std::endl;
+    std::cerr << " u_0 - u = " << assembler.u0AtX0() << '-'  <<-assembler.uAtX0() << "="<< v(indexFixingGridEquation) << std::endl;
 
     //assemble part of second lagrangian multiplier for fixing boundary
     Config::MatrixType tempM(Q_h_size, V_h_size);
     tempV.setZero(Q_h_size);
     //todo if used often write own assembler
-    solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xNew, tempV);
+    solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xNew.head(V_h_size), tempV);
 
     assert(Q_h_size == tempV.size());
 
