@@ -60,8 +60,9 @@ public:
     void assemble_cell_term(const LocalView& localView, const VectorType &x,
         VectorType& v, const int tag, const double u_atX0, const double u0_atX0,
         LocalView& localViewTemp, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const {
-    assert(false);
-/*
+
+    assert(entryWx0.size() == entryWx0timesBgradV.size());
+
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
     const Element& element = localView.element();
@@ -95,18 +96,15 @@ public:
     //init variables for automatic differentiation
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(size);
-    adouble scaling_factor_adolc, last_equation_adolc;
 
     for (int i = 0; i < size; i++)
       v_adolc[i] <<= v[i];
-    last_equation_adolc <<= last_equation;
 
     trace_on(tag);
 
     //init independent variables
     for (int i = 0; i < size; i++)
       x_adolc[i] <<= x[i];
-    scaling_factor_adolc <<= scaling_factor;
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -168,9 +166,6 @@ public:
 
       adouble PDE_rhs = f_value / g_value ;
 
-      ///multiply by term for boundary integration
-      PDE_rhs *= scaling_factor_adolc;
-
       //calculate system for first test functions
       if (uDH_det.value() < 0 && !found_negative)
       {
@@ -188,30 +183,30 @@ public:
         v_adolc(j) += (PDE_rhs-uDH_det)*referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
 
-//        adouble temp = 0;
-//        v_adolc(j)+= (-log(uDH_det)+(-log(g_value)+log(scaling_factor_adolc*f_value)))*referenceFunctionValues[j]* quad[pt].weight() * integrationElement;
-//        v_adolc(j)+= max(temp,temp2);
-//        std::cerr << " max is " << std::max(temp.value(),temp2.value()) << " from " << temp.value() << " and " << temp2.value() << std::endl;
+        //unification term
+        v_adolc(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 
-//        if (((PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]* quad[pt].weight() * integrationElement).value() > 1e-6)
-//        {
-//          std:: cerr << "v_adolc(" << j << ")+=" << (-log(uDH_det)) << " " << (-log(g_value)+log(f_value))
-//                              * quad[pt].weight() * integrationElement).value()
-//                     << " -> " << v_adolc(j).value() << std::endl;
-//          std::cerr << "at " << x_value << " T " << z[0].value() << " " << z[1].value() << " u " << u_value.value() << " det() " << uDH_pertubed_det.value() << " rhs " << PDE_rhs.value() << endl;
-//        }
+        //derivative unification term
+        for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
+        {
+          const auto& fixingElement = fixingElementAndOffset.first;
+          int noDof_fixingElement = fixingElementAndOffset.second;
+
+          localViewTemp.bind(fixingElement);
+
+          for (unsigned int k = 0; k < localViewTemp.size(); k++)
+          {
+            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+            noDof_fixingElement++;
+          }
+        }
       }
-
-      last_equation_adolc += u_value* quad[pt].weight() * integrationElement;
     }
-
 
     for (int i = 0; i < size; i++)
       v_adolc[i] >>= v[i]; // select dependent variables
 
-    last_equation_adolc >>= last_equation;
     trace_off();
- */
   }
 
   template<class IntersectionType, class LocalView, class VectorType>

@@ -19,7 +19,9 @@
 
 #define HAVE_ADOLC 1
 
-#ifdef C0Element
+//#define USE_ANALYTIC_DERIVATION
+
+#if defined(C0Element) || !defined(USE_ANALYTIC_DERIVATION)
   #ifndef HAVE_ADOLC
    static_assert(false,"C0 Elements work only with automatic differentiation via ADOLC");
   #endif

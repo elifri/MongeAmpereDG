@@ -304,10 +304,10 @@ void MA_OT_image_solver::one_Poisson_Step()
   Integrator<Config::GridType> integrator(grid_ptr);
   auto k = 1.0;
   auto rhs = [&](Config::SpaceType x){return -k*std::sqrt(op.f_(x)/op.g_(x-x0));};
-#ifndef C0Element
-  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return ((x-x0)*normal)-op.lopLinear_ptr->bc.H(x-x0, normal);};
+#ifndef USE_ANALYTIC_DERIVATION
+  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return ((x-x0)*normal)-op.get_bc().H(x-x0, normal);};
 #else
-  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return ((x-x0)*normal)-op.lop_ptr->bc.H(x-x0, normal);};
+  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return ((x-x0)*normal)-op.get_bc().H(x-x0, normal);};
 #endif
 
   ///---Code with known solution
@@ -509,6 +509,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
 
   plotter.writeOTVTK(fname, *gradient_u_old);
 
+
   std::string fnameOT(plotter.get_output_directory());
   fnameOT += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "transported.bmp";
 
@@ -516,9 +517,11 @@ void MA_OT_image_solver::plot(const std::string& name) const
   Dune::array<int,2> direction = {0,0};
   DiscreteGridFunction::GlobalSecondDerivative numericalTransportJacobianFunction(*solution_u_old_global, direction);
 
-  print_image_OT(numericalTransportFunction, numericalTransportJacobianFunction,
+  /*
+      print_image_OT(numericalTransportFunction, numericalTransportJacobianFunction,
       op.f_, op.g_,
       fnameOT, op.g_.getOriginalImage().width(), op.g_.getOriginalImage().height());
+*/
 
 
   std::string fnamehdf5(plotter.get_output_directory());

@@ -30,9 +30,9 @@ public:
   }
 
   MA_OT_Operator(Solver& solver, const std::shared_ptr<LOP>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr), fixingPoint{0.3,0}, intermediateSolCounter(0)
-      {
-          init();
-      }
+  {
+    init();
+  }
 
   void init()
   {
@@ -112,6 +112,11 @@ public:
       std::cout << e << " ";
     std::cout << std::endl;
     solver_ptr->get_assembler().set_entryWx0(entryWx0);
+  }
+
+  virtual const OTBoundary& get_bc() const
+  {
+    return lop_ptr->bc;
   }
 
   const LOP& get_lop() const
@@ -337,7 +342,7 @@ public:
 
     //------assemble values for fixing grid point -----------------
 
-    clear_local_entity_data();
+    this->clear_local_entity_data();
 
     HierarchicSearch<typename GridView::Grid, typename GridView::IndexSet> hs(solver_ptr->grid(), solver_ptr->gridView().indexSet());
 
@@ -347,7 +352,7 @@ public:
     localView.bind(fixingElement);
 
     //remember element for later local assembling
-    insert_entities_for_unification_term_to_local_operator(fixingElement, localView.size());
+    this->insert_entities_for_unification_term_to_local_operator(fixingElement, localView.size());
 
     std::vector<Config::ValueType> entryWx0(localView.size());
     for (unsigned int i = 0; i < localView.size(); i++)
@@ -419,6 +424,16 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<Solver, LOP>{
 //    this->solver_ptr->assemble_Jacobian_DG(*(this->lop_ptr), *lopLinear_ptr, x,m);
   }
 
+  const OTBoundary& get_bc() const
+  {
+    return lopLinear_ptr->bc;
+  }
+
+
+  void clear_local_entity_data()
+  {
+    lopLinear_ptr->clear_entitities_for_unifikation_term();
+  }
 
   void insert_entities_for_unification_term_to_local_operator(Config::Entity fixingElement, int n)
   {

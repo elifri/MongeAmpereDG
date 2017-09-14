@@ -160,7 +160,6 @@ public:
       std::cerr << " g1 " << Dx1PlusF_value << " g2 " << Dx2PlusF_value << std::endl;
 #endif
 
-
       auto h_T = std::sqrt(integrationElement);
 
       //velocity vector for convection
@@ -461,7 +460,7 @@ public:
 
     // penalty weight for NIPG / SIPG
     //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
-    double penalty_weight;
+/*    double penalty_weight;
     if (SolverConfig::Dirichlet)
       penalty_weight = SolverConfig::sigmaBoundary
                       * (SolverConfig::degree * SolverConfig::degree)
@@ -469,7 +468,7 @@ public:
     else
       penalty_weight = SolverConfig::sigmaBoundary
                       * (SolverConfig::degree * SolverConfig::degree)
-                     / std::pow(intersection.geometry().volume(), SolverConfig::beta);
+                     / std::pow(intersection.geometry().volume(), SolverConfig::beta);*/
 
 //    std::cerr << " start quadrature " << std::endl;
     // Loop over all quadrature points

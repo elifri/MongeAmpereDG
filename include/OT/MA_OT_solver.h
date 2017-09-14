@@ -8,9 +8,6 @@
 #ifndef SRC_MA_OT_SOLVER_H_
 #define SRC_MA_OT_SOLVER_H_
 
-//#ifdef C0Element
-//#include <adolc.h>
-//#endif
 
 #include "Solver/MA_solver.h"
 
@@ -37,10 +34,11 @@ public:
   #ifdef USE_MIXED_ELEMENT
     typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Neilan> OperatorType;
   #else
-//    typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT> OperatorType;
-    typedef MA_OT_Operator_with_Linearisation<MA_OT_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
-//todo C1 is not for nonimage
-    //    typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
+    #ifdef USE_ANALYTIC_DERIVATION
+      typedef MA_OT_Operator_with_Linearisation<MA_OT_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
+    #else
+      typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT> OperatorType;
+    #endif
   #endif
 #endif
 

@@ -90,6 +90,16 @@ struct MA_OT_image_Operator_with_Linearisation:MA_OT_image_Operator<Solver,LOP>{
 //	  (this->solver_ptr)->get_assembler().assemble_DG_Jacobian(*(this->lop_ptr), *lopLinear_ptr, x,v, m);
   }
 
+  const OTBoundary& get_bc() const
+  {
+    return lopLinear_ptr->bc;
+  }
+
+  void clear_local_entity_data()
+  {
+    lopLinear_ptr->clear_entitities_for_unifikation_term();
+  }
+
   virtual void insert_entities_for_unification_term_to_local_operator(Config::Entity fixingElement, int n)
   {
     lopLinear_ptr->insert_entitity_for_unifikation_term(fixingElement, n);

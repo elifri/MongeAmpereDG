@@ -13,7 +13,7 @@
 
 #include "OT/MA_OT_solver.h"
 
-#ifdef C0Element
+#ifndef USE_ANALYTIC_DERIVATION
   #include "OT/operator_MA_OT_Brenner.h"
 #else
   #include "OT/operator_MA_OT_Linearisation.hpp"
@@ -23,9 +23,10 @@
 class MA_OT_image_solver : public MA_OT_solver
 {
 public:
-#ifndef C0Element
+#ifdef USE_ANALYTIC_DERIVATION
   typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
 #endif
+  typedef  MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT> OperatorType;
 
   MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView,
        const SolverConfig& config, OpticalSetting& opticalSetting);
@@ -49,13 +50,13 @@ private:
 
   OpticalSetting& setting_;
 
-#ifdef C0Element
-  MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT> op;
+#ifndef USE_ANALYTIC_DERIVATION
   friend MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT>;
 #else
-  OperatorType op;
   friend MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation>;
 #endif
+
+  OperatorType op;
 
   friend OperatorType;
   //todo befriend when linearise?

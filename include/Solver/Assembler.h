@@ -2079,8 +2079,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
         BoundaryHandler::BoolVectorType isBoundaryLocal = calculate_local_coefficients(localIndexSet, v_isBoundary);
 
        //additional vector for unification term
-//        std::vector<Config::VectorType> entryWx0timesBgradV (lop.get_number_of_entities_for_unifikation_term()*localView.size());
-        std::vector<Config::VectorType> entryWx0timesBgradV;
+        std::vector<Config::VectorType> entryWx0timesBgradV (lop.get_number_of_entities_for_unifikation_term()*localView.size());
         for (unsigned int i = 0; i < entryWx0timesBgradV.size(); i++)
           entryWx0timesBgradV[i].setZero(localView.size());    // Set all entries to zero
 
@@ -2105,7 +2104,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
         }
 
 
-/*
+
         //write derivatives of unification term into vector
         for (const auto& fixingElementandOffset : lop.EntititiesForUnifikationTerm())
         {
@@ -2133,7 +2132,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 
         }
 
-*/
+
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {
