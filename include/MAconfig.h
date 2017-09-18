@@ -66,6 +66,7 @@ namespace Config{
   typedef Dune::FieldVector<GridView::ctype, GridView::dimension> DomainType;
 
   typedef FieldVector<ValueType, dim> SpaceType;
+  typedef FieldVector<ValueType, 1> SpaceType1d;
   typedef FieldVector<ValueType, 2> SpaceType2d;
   typedef FieldVector<ValueType, 3> SpaceType3d;
 

@@ -21,7 +21,7 @@ class OTBoundary
 {
 private:
   ///find the projection on the desired boundary
-  virtual void phi(const Config::SpaceType2d& T, const FieldVector<double, Config::dim> &normal, Config::ValueType &phi) const =0;
+//  virtual void phi(const Config::SpaceType2d& T, const FieldVector<double, Config::dim> &normal, Config::ValueType &phi) const =0;
 
   virtual Config::ValueType LegrendeFenchelTrafo(const Config::SpaceType &normal) const =0;
 
@@ -30,12 +30,17 @@ public:
 
 //  virtual ~OTBoundary() {delete (*GradFunction_ptr);}
 
+  OTBoundary(GeometrySetting& geometrySetting,
+      const int n = 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps))
+    : geometrySetting(geometrySetting), N_(n){}
+
+
   OTBoundary(GradFunction_ptr &gradUOld, GeometrySetting& geometrySetting,
       const int n = 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps))
     : gradient_u_old(&gradUOld), geometrySetting(geometrySetting), N_(n){}
 
   ///return the projection of the last iteration's solution (onto the desired boundary)
-  template<class Element>
+/*  template<class Element>
   Config::ValueType phi(const Element& element, const Config::DomainType& xLocal, const FieldVector<double, Config::dim> &normal) const
   {
     //get last step's gradient
@@ -48,7 +53,7 @@ public:
     Config::ValueType phi_value;
     phi(gradu, normal, phi_value);
     return phi_value;
-  }
+  }*/
 
   Config::ValueType H(const Config::SpaceType2d& transportedX, const Config::SpaceType &normalX) const
   {
@@ -114,14 +119,14 @@ public:
   }
 #endif
 
-  template<class Element>
+/*  template<class Element>
   Config::SpaceType2d grad_u_old(const Element& element, const Config::SpaceType &xLocal) const
   {
     assert(gradient_u_old != NULL);
     (*gradient_u_old)->bind(element);
 
     return (**gradient_u_old)(xLocal);
-  }
+  }*/
 
 
 protected:

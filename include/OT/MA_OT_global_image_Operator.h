@@ -24,6 +24,7 @@ struct MA_OT_image_Operator: MA_OT_Operator<Solver,LOP> {
             solver.get_setting().lowerLeft, solver.get_setting().upperRight, solver.get_setting().minPixelValue),
         g_(solver.get_setting().TargetImageName,
                 solver.get_setting().lowerLeftTarget, solver.get_setting().upperRightTarget, solver.get_setting().minPixelValue),
+        bc_(),
 		MA_OT_Operator<Solver, LOP>(solver, std::make_shared<LOP>
                  (new BoundarySquare(solver.get_gradient_u_old_ptr(),solver.get_setting()),
                   &f_,&g_,
@@ -54,6 +55,8 @@ struct MA_OT_image_Operator: MA_OT_Operator<Solver,LOP> {
 
     ImageFunction f_;
     ImageFunction g_;
+
+    OTBoundary bc_;
 
 //    std::shared_ptr<LOP> lop_ptr;
 };

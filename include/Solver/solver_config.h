@@ -19,7 +19,7 @@
 
 #define HAVE_ADOLC 1
 
-//#define USE_ANALYTIC_DERIVATION
+#define USE_ANALYTIC_DERIVATION
 
 #if defined(C0Element) || !defined(USE_ANALYTIC_DERIVATION)
   #ifndef HAVE_ADOLC

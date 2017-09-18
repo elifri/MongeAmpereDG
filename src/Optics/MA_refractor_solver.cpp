@@ -12,8 +12,25 @@
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk/common.hh>
 
+
+/*
+struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
+  MA_refr_Operator(Solver &solver):MA_OT_Operator<Solver,LOP>(solver,
+          std::shared_ptr<LOP>(new LOP(
+                   solver.setting_, solver.gridView(), solver.solution_u_old, solver.gradient_u_old, solver.exact_solution
+                  )
+          ))
+*/
+
 MA_refractor_solver::MA_refractor_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting)
- :MA_solver(grid, gridView, config), setting_(opticalSetting), op(*this)
+ :MA_solver(grid, gridView, config), setting_(opticalSetting),
+#ifdef USE_ANALYTIC_DERIVATION
+  op(*this,std::shared_ptr<OperatorType::LocalOperatorType>(new OperatorType::LocalOperatorType(
+#else
+  op(*this,std::shared_ptr<Local_Operator_MA_refr_Brenner>(new Local_Operator_MA_refr_Brenner(
+#endif
+      setting_, gridView, solution_u_old, gradient_u_old
+     )))
 {
 
    //adjust light intensity
@@ -43,10 +60,15 @@ void MA_refractor_solver::create_initial_guess()
   DiscreteGridFunction solution_u_global(FEBasisHandler_.uBasis(),solution);
   auto res = solution_u_global(op.fixingPoint);
 
-  assembler.set_u0AtX0(res);
+  assembler_.set_u0AtX0(res);
 }
 
 void MA_refractor_solver::plot(const std::string& name) const
+{
+  plot(name, iterations);
+}
+
+void MA_refractor_solver::plot(const std::string& name, int no) const
 {
   std::cout << "write? " << writeVTK_ << " ";
   std::cout << "plot written into ";

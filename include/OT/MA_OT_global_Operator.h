@@ -13,14 +13,10 @@ class MA_OT_Operator {
   typedef typename Solver::GridViewType GridView;
 
 public:
+  using LocalOperatorType = LOP;
+
   MA_OT_Operator():solver_ptr(NULL), lop_ptr(){}
   MA_OT_Operator(Solver& solver):solver_ptr(&solver),
-      lop_ptr(new LOP(
-          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
-          new rhoXSquareToSquare(), new rhoYSquareToSquare(),
-          solver.gridView()
-                              //     lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
-                )),
       fixingPoint{0,0},
       intermediateSolCounter(0)
   {
@@ -114,7 +110,7 @@ public:
     solver_ptr->get_assembler().set_entryWx0(entryWx0);
   }
 
-  virtual const OTBoundary& get_bc() const
+  virtual const auto& get_bc() const
   {
     return lop_ptr->bc;
   }
@@ -220,10 +216,12 @@ public:
     std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
 
 
+/*
     std::cerr << " L2 error is " << solver_ptr->calculate_L2_errorOT([](Config::SpaceType x)
         {return Dune::FieldVector<double, Config::dim> ({
                                                         x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
                                                         x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
+*/
 
 
     solver_ptr->plot("numericalSolutionIntermediate",intermediateSolCounter);
@@ -397,6 +395,9 @@ template<typename Solver, typename LOP, typename LOPLinear>
 struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<Solver, LOP>{
   typedef typename Solver::GridViewType GridView;
 
+  using LocalOperatorType = LOPLinear;
+  using LocalOperatorTypeNotLinear = LOP;
+
   MA_OT_Operator_with_Linearisation():MA_OT_Operator<Solver, LOP>(), lopLinear_ptr(){}
 //  MA_OT_image_Operator_with_Linearisation():solver_ptr(NULL), lop_ptr(), lopLinear_ptr(), fixingPoint({0.5,0.15}){ }
 //    MA_OT_Operator(MA_OT_solver& solver):solver_ptr(&solver), lop_ptr(new Local_Operator_MA_OT(new BoundarySquare(solver.gradient_u_old, solver.get_setting()), new rhoXSquareToSquare(), new rhoYSquareToSquare())){}
@@ -409,6 +410,20 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<Solver, LOP>{
     {
     this->init();
     }
+
+  MA_OT_Operator_with_Linearisation(Solver& solver, const std::shared_ptr<LOPLinear>& lopLinear):MA_OT_Operator<Solver, LOP>(solver),
+        lopLinear_ptr(lopLinear)
+    {
+    this->init();
+    }
+
+  MA_OT_Operator_with_Linearisation(Solver& solver, const std::shared_ptr<LOP> lop, const std::shared_ptr<LOPLinear>& lopLinear):
+    MA_OT_Operator<Solver, LOP>(solver, lop),
+        lopLinear_ptr(lopLinear)
+    {
+    this->init();
+    }
+
 
   void assemble(const Config::VectorType& x, Config::VectorType& v) const
   {
@@ -424,7 +439,7 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<Solver, LOP>{
 //    this->solver_ptr->assemble_Jacobian_DG(*(this->lop_ptr), *lopLinear_ptr, x,m);
   }
 
-  const OTBoundary& get_bc() const
+  const auto& get_bc() const
   {
     return lopLinear_ptr->bc;
   }

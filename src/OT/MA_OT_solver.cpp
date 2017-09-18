@@ -18,7 +18,13 @@ namespace po = boost::program_options;
 #include "utils.hpp"
 
 MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting)
-:MA_solver(grid, gridView, config), setting_(setting), op(*this)
+:MA_solver(grid, gridView, config), setting_(setting),
+ op(*this,std::shared_ptr<OperatorType::LocalOperatorType>(new OperatorType::LocalOperatorType(
+     new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
+     new rhoXSquareToSquare(), new rhoYSquareToSquare(),
+     solver.gridView()
+                         //     lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
+           )))
 {}
 
 struct ResidualFunction{
