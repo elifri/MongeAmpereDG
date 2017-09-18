@@ -24,8 +24,9 @@
 
 using namespace std;
 
-MA_OT_image_solver::MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting)
- :MA_OT_solver(grid, gridView, config, opticalSetting), setting_(opticalSetting), op(*this)
+MA_OT_image_solver::MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const shared_ptr<GridType>& gridTarget,
+    const SolverConfig& config, OpticalSetting& opticalSetting)
+ :MA_OT_solver(grid, gridView, config, opticalSetting), setting_(opticalSetting), gridTarget_ptr(gridTarget), op(*this)
 {
    //adjust light intensity
 /*
@@ -33,8 +34,8 @@ MA_OT_image_solver::MA_OT_image_solver(const shared_ptr<GridType>& grid, GridVie
    const auto integralLightIn = op.lop_ptr->get_input_distribution().integrateOriginal();
    setting_.povRayOpts.lightSourceColor = Eigen::Vector3d::Constant(integralLightOut/integralLightIn*setting_.lightSourceIntensity);
 */
-  assembler_.set_X0(opticalSetting.lowerLeft);
-
+//  assembler_.set_X0(opticalSetting.lowerLeft);
+  gridTarget_ptr->globalRefine(SolverConfig::startlevel);
 
    plotter.set_PovRayOptions(setting_.povRayOpts);
 
@@ -613,6 +614,7 @@ void MA_OT_image_solver::adapt_solution(const int level)
 {
   FEBasisHandler_.adapt(*this, level, solution);
   std::cerr << " adapting operator " << std::endl;
+  gridTarget_ptr->globalRefine(level);
   op.adapt();
 }
 

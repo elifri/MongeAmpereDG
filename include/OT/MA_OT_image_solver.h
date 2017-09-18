@@ -28,7 +28,7 @@ public:
 #endif
   typedef  MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT> OperatorType;
 
-  MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView,
+  MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const shared_ptr<GridType>& gridTarget,
        const SolverConfig& config, OpticalSetting& opticalSetting);
 
   OpticalSetting& get_setting() {return setting_;}
@@ -50,6 +50,9 @@ private:
 
   OpticalSetting& setting_;
 
+  const shared_ptr<GridType> gridTarget_ptr;
+
+
 #ifndef USE_ANALYTIC_DERIVATION
   friend MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT>;
 #else
@@ -61,7 +64,6 @@ private:
   friend OperatorType;
   //todo befriend when linearise?
   friend MA_OT_Operator<MA_OT_image_solver, Local_Operator_MA_OT>;
-
 
 };
 

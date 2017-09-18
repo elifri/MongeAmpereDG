@@ -10,6 +10,7 @@
 
 #include <dune/common/function.hh>
 #include "Solver/solver_config.h"
+#include <dune/grid/io/file/vtk/boundaryiterators.hh>
 
 #ifdef HAVE_ADOLC
 //automatic differentiation
@@ -186,6 +187,65 @@ public:
   BoundarySquare(OTBoundary::GradFunction_ptr &gradUOld, GeometrySetting& geometrySetting): OTBoundary(gradUOld, geometrySetting){}
   ~BoundarySquare() {}
 };
+
+template<typename GT>
+class GenerealOTBoundary : OTBoundary{
+  using GridType = GT;
+  using GridView = typename GridType::LeafGridView;
+  using IndexSet = typename GridView::IndexSet;
+  void init()
+  {
+    Hvalues_.resize(N_Y+1);
+    std::fill (Hvalues_.begin(), Hvalues_.end(), -100);
+
+    //find for all normals sup_{y in boundary} y*n, see Benamou et alt. /Journal of Compu.Phys 260(2014) p. 110-111
+    Dune::VTK::BoundaryIterator<GridView> itBoundary(grid_ptr->gridView());
+    while (itBoundary != BoundaryIterator(grid_ptr->gridView(),true)) //loop over boundary edges
+    {
+      for(int i = 0; i < boundaryPointPerEdge_; i++)//loop over boundary point in edge
+      {
+        //calculate global coordinates of boundary point
+        Config::SpaceType1d localBoundaryPos ({((Config::ValueType) i) /  boundaryPointPerEdge_-1});
+        Config::SpaceType2d globalBoundaryPos = itBoundary.geometryInInside().global(localBoundaryPos);
+
+        for (int j = 0; j <= N_Y; j++)
+        {
+          //calculate normal
+          Config::SpaceType2d currentNormal ({std::cos(2*M_PI*j/N_Y), std::sin(2*M_PI*j/N_Y)});
+
+          //update supremum
+          Config::ValueType temp = globalBoundaryPos*currentNormal;
+          if (temp > Hvalues_[j])
+            Hvalues_[j] = temp;
+        }
+      }
+      itBoundary++;
+    }
+  }
+
+public:  GenerealOTBoundary(std::shared_ptr<GridType> grid_ptr): grid_ptr(grid_ptr){
+  init();
+}
+
+
+
+Config::ValueType LegrendeFenchelTrafo(const Config::SpaceType &normal) const
+  {
+    return Hvalues_[std::round(std::acos(normal[0])*N_Y/2./M_PI)];
+  }
+
+void adapt()
+{
+  init();
+}
+
+  int N_Y;
+  const int boundaryPointPerEdge_=5;
+
+  std::vector<Config::ValueType> Hvalues_;
+  std::shared_ptr<GridType> grid_ptr;
+};
+
 
 
 
