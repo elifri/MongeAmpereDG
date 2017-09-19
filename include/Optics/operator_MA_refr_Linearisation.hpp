@@ -576,8 +576,9 @@ public:
       int_f += f_value* quad[pt].weight() * integrationElement;
 
       //calculate illumination at target plane
-      adouble g_value;
-      rhs.g.evaluate(z, g_value);
+      FdimVector<Config::ValueType> z_value = {z[0].value(), z[1].value()};
+      double g_value;
+      rhs.g.evaluate(z_value, g_value);
 
       //calculate illumination at target plane
       FieldVector<adouble, dim> gradg;
@@ -620,6 +621,7 @@ public:
 //      auto h_T = std::sqrt(integrationElement);
 
       //velocity vector for convection
+/*
       FieldVector<double,dim> gradgSmoothed(0);
       double avg_g_value = 0;
 
@@ -646,6 +648,7 @@ public:
         gradgSmoothed.axpy(smoothingKernel_(i+n_,j+n_),tempGradg);
         avg_g_value += smoothingKernel_(i+n_,j+n_)*g_value.value();
       }
+*/
 
 //      Config::VectorType b = -f_value/avg_g_value/avg_g_value* gradgSmoothed*DT[i]);
 
