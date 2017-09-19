@@ -110,11 +110,6 @@ public:
     solver_ptr->get_assembler().set_entryWx0(entryWx0);
   }
 
-  virtual const auto& get_bc() const
-  {
-    return lop_ptr->bc;
-  }
-
   const LOP& get_lop() const
   {
     assert(lop_ptr);

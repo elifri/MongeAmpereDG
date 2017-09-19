@@ -728,10 +728,6 @@ public:
     assert((unsigned int) x.size() == localView.size());
     assert((unsigned int) v.size() == localView.size());
 
-    // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
-    const Element& element = localView.element();
-
     const auto& localFiniteElement = localView.tree().finiteElement();
     const int size_u = localFiniteElement.size();
 

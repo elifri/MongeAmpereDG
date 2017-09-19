@@ -14,6 +14,7 @@
 #include "utils.hpp"
 #include "OT/SmoothingKernel.h"
 #include "Operator/operator_utils.h"
+#include "problem_data.h"
 
 using namespace Dune;
 
@@ -200,7 +201,7 @@ public:
 
   ///calcs the derivatives of the terms A, H and T using the automatic differentiation tool adolc
   bool calc_AHT_derivatives(const int tag, const Config::VectorType &x, const int adolc_size,
-      std::vector<Config::DenseMatrixType> & DA, std::vector<Config::ValueType> &DH, std::vector<Config::SpaceType> &DT) const
+      std::vector<FieldMatrix<Config::ValueType,Config::dim,Config::dim>> & DA, std::vector<Config::ValueType> &DH, std::vector<Config::SpaceType> &DT) const
   {
     assert(Config::dim == 2);
 
@@ -218,14 +219,14 @@ public:
       int counter = 0;
       for (int i_A = 0; i_A < Config::dim; i_A++)
         for (int j_A = 0; j_A < Config::dim; j_A++)
-          DA[j](i_A, j_A) += out[counter++][j];
+          DA[j][i_A][j_A] += out[counter++][j];
 
       DH[j] += out[counter++][j];
 
       for (int i_T = 0; i_T < Config::dim; i_T++)
         DT[j][i_T] += out[counter++][j];
 
-      assert(coutner == adolc_size);
+      assert(counter == adolc_size);
     }
 
     for (int i = 0; i < adolc_size; i++)
@@ -415,7 +416,6 @@ public:
       adouble t = rho_value*omega_value-opticalSetting->z_3;
       t /= rho_value*omega_value;
 
-      FieldVector<double, 3> grad_hat = { gradrho[0].value(), gradrho[1].value(), 0 };
       //calculate w, the intersection between refracted light and {x_3=0}-plane
       FieldVector<adouble, Config::dim> w = gradrho;
       w *= 2*F_value*rho_value;
@@ -492,7 +492,6 @@ public:
       FieldVector<Config::ValueType, dim> T;
 
       //mark variables for automatic derivation
-      int counter = 0;
       //A
       for (int i = 0; i < Config::dim; i++)
         for (int j = 0; j < Config::dim; j++)
@@ -501,10 +500,15 @@ public:
       H_adolc >>= H_value;
       //T
       for (int i = 0; i < Config::dim; i++)
-       z >>= T[i];
+       z[i] >>= T[i];
       trace_off();
 
-      std::vector<Config::DenseMatrixType> DA(size);
+      FEHessianType Hessrho_value;
+      for (int i = 0; i < Config::dim; i++)
+        for (int j = 0; j < Config::dim; j++)
+        	Hessrho_value[i][j] = Hessrho[i][j].value();
+
+      std::vector<FEHessianType> DA(size);
       std::vector<Config::ValueType> DH(size);
       std::vector<Config::SpaceType> DT(size);
 
@@ -518,11 +522,11 @@ public:
       int_f += f_value* quad[pt].weight() * integrationElement;
 
       //calculate illumination at target plane
-      double g_value;
+      adouble g_value;
       rhs.g.evaluate(z, g_value);
 
       //calculate illumination at target plane
-      FieldVector<double, dim> gradg;
+      FieldVector<adouble, dim> gradg;
 
       FieldMatrix<double, dim, dim> rhoDH_pertubed = Hessrho;
       rhoDH_pertubed+=A;
@@ -531,7 +535,7 @@ public:
       //      auto cofHessrhoA = convexified_penalty_cofactor(rhoDH_pertubed);
       auto cofHessrhoA = cofactor(rhoDH_pertubed);
       auto cofA = cofactor(A);
-      auto cofHessrho = cofactor(Hessrho);
+      auto cofHessrho = cofactor(Hessrho_value);
 
 #ifdef DEBUG
       //calculate derivatives of g
@@ -568,10 +572,8 @@ public:
       //calculate average convection term
       const double h = rhs.get_target_distribution().gridWidth()/2.;
 //      const double h = h_T/2.;
-      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> fGT(2*n_+1,2*n_+1);
-      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> fGTSquared(2*n_+1,2*n_+1);
-      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> transportedXs(2*n_+1,2*n_+1);
-      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> gradGs(2*n_+1,2*n_+1);
+      Eigen::Matrix<FieldVector<adouble,dim>, Eigen::Dynamic, Eigen::Dynamic> transportedXs(2*n_+1,2*n_+1);
+      Eigen::Matrix<FieldVector<adouble,dim>, Eigen::Dynamic, Eigen::Dynamic> gradGs(2*n_+1,2*n_+1);
 
       for (int i = -n_ ; i <= n_; i++)
         for (int j = -n_ ; j <= n_; j++)
@@ -581,12 +583,14 @@ public:
         transportedXs(i+n_,j+n_)[1] += j*h;
 
         rhs.g.evaluate(transportedXs(i+n_,j+n_), g_value);
-        rhs.g.evaluateDerivative(transportedXs(i+n_,j+n_), gradg);
+        FieldVector<double,dim> tempTransportedX({transportedXs(i+n_,j+n_)[0].value(), transportedXs(i+n_,j+n_)[1].value()});
+        FieldVector<double,dim> tempGradg({gradg[0].value(), gradg[1].value()});
+        rhs.g.evaluateDerivative(tempTransportedX, tempGradg);
 
         gradGs(i+n_,j+n_) = gradg;
 
-        gradgSmoothed.axpy(smoothingKernel_(i+n_,j+n_),gradg);
-        avg_g_value += smoothingKernel_(i+n_,j+n_)*g_value;
+        gradgSmoothed.axpy(smoothingKernel_(i+n_,j+n_),tempGradg);
+        avg_g_value += smoothingKernel_(i+n_,j+n_)*g_value.value();
       }
 
 //      Config::VectorType b = -f_value/avg_g_value/avg_g_value* gradgSmoothed*DT[i]);
@@ -631,14 +635,16 @@ public:
           m(j,i) += (divATimesW*gradients[j]) *quad[pt].weight()*integrationElement;
 
           //divergence term
-          m(j,i) += FrobeniusProduct(-cofA+cofHessrho, DA[i]);
+          FieldMatrix<double, dim, dim> MinusCofAHessrho=cofHessrho;
+          MinusCofAHessrho+=cofA;
+          m(j,i) += FrobeniusProduct(MinusCofAHessrho, DA[i]);
 
           //convection term
-          m(j,i) += (-f_value/avg_g_value*DH[i] -f_value/avg_g_value/avg_g_value* gradgSmoothed*DT[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+          m(j,i) += (-f_value/avg_g_value*DH[i] -f_value/avg_g_value/avg_g_value* (gradgSmoothed*DT[i]))*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         }
 
         //-f(u_k) [rhs of Newton]
-        v(j) += (-detHessrhoA+f_value/g_value*H_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        v(j) += (-detHessrhoA+f_value/g_value*H_value).value()*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 //        v(j) += (-detHessu)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         v_midvalue(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 
