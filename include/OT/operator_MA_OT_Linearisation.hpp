@@ -26,9 +26,10 @@ value_type FrobeniusProduct(const FieldMatrix<value_type, 2, 2>& A, const FieldM
 
 
 class Local_Operator_MA_OT_Linearisation {
+  using Function = DensityFunction;
 
 public:
-  typedef DensityFunction Function;
+  using FunctionType = Function;///interface typedef
 
   template<typename GridView>
   Local_Operator_MA_OT_Linearisation(const OTBoundary* bc, const Function* rhoX, const Function* rhoY, const GridView& gridView):

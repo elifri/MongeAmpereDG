@@ -30,15 +30,20 @@ class Local_Operator_MA_refr_Linearisation {
 
 public:
   typedef DensityFunction Function;
+  template<typename valueType>
+  using FdimVector = FieldVector<valueType, Config::dim>;
+  template<typename valueType>
+  using FdimMatrix = FieldMatrix<valueType, Config::dim, Config::dim>;
+
 
   template<typename GridView>
   Local_Operator_MA_refr_Linearisation(OpticalSetting &opticalSetting, const GridView& gridView,
-      RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld):
+      const RightHandSideReflector& rhs, const HamiltonJacobiBC &bc):
   delta_K(10),
   hash(gridView), EntititiesForUnifikationTerm_(10,hash),
   opticalSetting(&opticalSetting),
-  rhs(solUOld, gradUOld, opticalSetting),
-  bc(opticalSetting, 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps))
+  rhs(rhs),
+  bc(bc)
   {
   }
 
@@ -106,7 +111,7 @@ public:
 
   template<class value_type>
   inline
-  adouble Phi(const value_type& s) const
+  value_type Phi(const value_type& s) const
   {
     if (kappa_*kappa_ + s*s -1 < 0) return s;
     return s - sqrt(kappa_*kappa_ + s*s -1);
@@ -114,20 +119,88 @@ public:
 
   template<class value_type>
   inline
-  adouble DPhi(const value_type& s) const
+  value_type DPhi(const value_type& s) const
   {
 //    std::cerr  << " 1/kappa ? "<< s/sqrt(kappa_*kappa_ + s*s -1) << " 1/kappa " << 1./kappa_ << endl;
     if (kappa_*kappa_ + s*s -1 < 0) return 1;
     return 1. - s/sqrt(kappa_*kappa_ + s*s -1);
   }
+
+  template<class value_type>
+  inline
+  value_type calc_t(const value_type& rho_value, const Config::ValueType& omega_value, const Config::ValueType& z_3) const
+  {
+    return (rho_value*omega_value-z_3)/(rho_value*omega_value);
+  }
+
+  template<class value_type>
+  inline
+  FdimVector<value_type>calc_w(const value_type& rho_value, const FdimVector<value_type>& gradrho, const value_type& F_value) const
+  {
+    FdimVector<value_type> w = gradrho;
+    w *= 2*F_value*rho_value;
+    return w;
+  }
+
+  template<class value_type>
+  inline
+  FdimVector<value_type>calc_z(const FdimVector<Config::ValueType>& x_value, const value_type& rho_value,
+      const value_type& t, const FdimVector<value_type>& w) const
+  {
+    FieldVector<value_type, Config::dim> z = x_value;
+    z *= rho_value;
+    z.axpy(t,w);
+    z.axpy(-t*rho_value,x_value);
+    return z;
+  }
+
+  template<class value_type>
+  inline
+  FdimMatrix<value_type>calc_A(const FdimVector<Config::ValueType>& x_value, const Config::ValueType& omega_value, const FdimVector<Config::ValueType>&DOmega_value,
+      const value_type& rho_value, const FdimVector<value_type>& gradrho,
+      const value_type& F_value, const value_type& DuF, const FdimVector<value_type>& DxF, const FdimVector<value_type>& DpF,
+      const value_type& t, const FdimVector<value_type>& w) const
+  {
+
+    //M_invers = Id - gradu x DpF / ...
+    FdimMatrix<value_type> M_invers;
+    M_invers[0][0] = -gradrho[0]*DpF[0]; M_invers[0][1] = -gradrho[0]*DpF[1];
+    M_invers[1][0] = -gradrho[1]*DpF[0]; M_invers[1][1] = -gradrho[1]*DpF[1];
+    M_invers /= (F_value+(gradrho*DpF));
+    M_invers[0][0] += 1.; M_invers[1][1] += 1.;
+//      std::cerr << " M^-1 " << M_invers << std::endl;
+
+    FdimMatrix<value_type> B;
+    B[0][0] = 2.*F_value*gradrho[0]*gradrho[0] + 2.*rho_value*gradrho[0]*DxF[0] + DuF*2.*rho_value*gradrho[0]*gradrho[0];
+    B[0][1] = 2.*F_value*gradrho[0]*gradrho[1] + 2.*rho_value*gradrho[0]*DxF[1] + DuF*2.*rho_value*gradrho[0]*gradrho[1];
+    B[1][0] = 2.*F_value*gradrho[1]*gradrho[0] + 2.*rho_value*gradrho[1]*DxF[0] + DuF*2.*rho_value*gradrho[1]*gradrho[0];
+    B[1][1] = 2.*F_value*gradrho[1]*gradrho[1] + 2.*rho_value*gradrho[1]*DxF[1] + DuF*2.*rho_value*gradrho[1]*gradrho[1];
+
+    FdimMatrix<value_type> C;
+    C[0][0] = gradrho[0]*x_value[0] + rho_value + 1./rho_value/omega_value*(w[0]-rho_value*x_value[0])*(gradrho[0]*omega_value + rho_value*DOmega_value[0]);
+    C[0][1] = gradrho[1]*x_value[0]             + 1./rho_value/omega_value*(w[0]-rho_value*x_value[0])*(gradrho[1]*omega_value + rho_value*DOmega_value[1]);
+    C[1][0] = gradrho[0]*x_value[1]             + 1./rho_value/omega_value*(w[1]-rho_value*x_value[1])*(gradrho[0]*omega_value + rho_value*DOmega_value[0]);
+    C[1][1] = gradrho[1]*x_value[1] + rho_value + 1./rho_value/omega_value*(w[1]-rho_value*x_value[1])*(gradrho[1]*omega_value + rho_value*DOmega_value[1]);
+
+    FdimMatrix<value_type> A;
+    A = B;
+    A *= t;
+    A.axpy(1.-t,C);
+    A.leftmultiply(M_invers);
+    A /= 2.*t*rho_value*F_value;
+
+    return A;
+  }
+
   template<class value_type>
   inline
   value_type F(const Config::SpaceType &x, const value_type &u, const FieldVector<value_type,2> &p) const
   {
     value_type G = sqrt(sqr(u) + (p*p) - sqr((p * x)));
+    value_type uDivG = u/G;
 //    std::cout << " G " << G.value();
 //    std::cout << " phi(u/G) " << (Phi(u/G)).value() <<  " result " << ( 0.5*Phi(u/G)/(-G+(u+(p*x))*Phi(u/G))).value()<<  std::endl;
-    return  0.5*Phi(u/G)/(-G+(u+(p*x))*Phi(u/G));
+    return  0.5*Phi(uDivG)/(-G+(u+(p*x))*Phi(uDivG));
   }
 
   template<class value_type>
@@ -150,27 +223,28 @@ public:
     DpG /= sqrt(sqr(u) + (p*p) - sqr((p * x)));
 
     //calculate derivative of Phi(u/G) in u
-    value_type Phi_u_G = Phi(u/G);
+    value_type uDivG = u/G;
+    value_type Phi_u_G = Phi(uDivG);
 
     //calculate derivative of Phi(u/G) in x
     FieldVector<value_type,2> DxPhi_u_G = DxG;
-    DxPhi_u_G *= -DPhi(u/G)/sqr(G);
+    DxPhi_u_G *= -DPhi(uDivG)/sqr(G);
 
     //calculate derivative of Phi(u/G) in u
-    value_type DuPhi_u_G = DPhi(u/G)*(1./G-u*DuG/sqr(G));
+    value_type DuPhi_u_G = DPhi(uDivG)*(1./G-u*DuG/sqr(G));
 //    std::cerr << " DPhi(u/G) " << DPhi(u/G) << std::endl;
 
 
     //calculate derivative of Phi(u/G) in p
     FieldVector<value_type,2> DpPhi_u_G = DpG;
-    DpPhi_u_G *= -DPhi(u/G)/sqr(G);
+    DpPhi_u_G *= -DPhi(uDivG)/sqr(G);
 
     //scalar Coefficient appearing in all partial derivatives of F
-    adouble denominator = -G+(u+(p*x))*Phi_u_G;
+    value_type denominator = -G+(u+(p*x))*Phi_u_G;
 //    std::cerr << " denominator  " << denominator.value() << std::endl;
     value_type scalarCoefficient = Phi_u_G/ sqr(denominator);
 
-    F = 0.5*Phi(u/G)/(-G+(u+(p*x))*Phi(u/G));
+    F = 0.5*Phi(uDivG)/(-G+(u+(p*x))*Phi(uDivG));
 //    std::cerr << " DxG " << DxG << std::endl;
 
     //calculate derivative of F in x
@@ -194,8 +268,6 @@ public:
     DpF.axpy(-scalarCoefficient*Phi_u_G,x);
     DpF.axpy(-scalarCoefficient*(u+(p*x)),DpPhi_u_G);
     DpF /= 2.;
-
-    assert ( ! (DpF[0].value() != DpF[0].value()));
   }
 
 
@@ -205,10 +277,10 @@ public:
   {
     assert(Config::dim == 2);
 
-    double** out = new double*[x.size()];
+    double** out = new double*[adolc_size];
     for (int i = 0; i < adolc_size; i++)
       out[i] = new double[x.size()];
-    int ierr = jacobian(tag, x.size(), x.size(), x.data(), out);
+    int ierr = jacobian(tag, adolc_size, x.size(), x.data(), out);
 
     if(ierr <3)
       return false;
@@ -236,6 +308,28 @@ public:
     return true;
   }
 
+  ///calcs the derivatives of the term H using the automatic differentiation tool adolc
+  bool calc_H_derivatives(const int tag, const Config::VectorType &x, std::vector<Config::ValueType> &DH) const
+  {
+    assert(Config::dim == 2);
+
+    double** out = new double*[1];
+    out[0] = new double[x.size()];
+    int ierr = jacobian(tag, 1, x.size(), x.data(), out);
+
+    if(ierr <3)
+      return false;
+
+    for (int j = 0; j < x.size(); j++)
+    {
+      DH[j] += out[0][j];
+    }
+
+    delete[] out[0];
+
+    delete[] out;
+    return true;
+  }
 
   /**
    * implements the local volume integral
@@ -292,15 +386,14 @@ public:
     for (int i = 0; i < adolc_size; i++)
       AHT_adolc[i] <<= 0;
 
-    const int tag = 0;
-    trace_on(tag);
-
-    //init independent variables
-    for (int i = 0; i < size; i++)
-      x_adolc[i] <<= x[i];
-
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
+      const int tag = 0;
+      trace_on(tag);
+
+      //init independent variables
+      for (int i = 0; i < size; i++)
+        x_adolc[i] <<= x[i];
 
       //--------get data------------------------
       // Position of the current quadrature point in the reference element
@@ -316,7 +409,7 @@ public:
       assemble_functionValues_u(localFiniteElement, quadPos,
           referenceFunctionValues, x_adolc, rho_value);
 
-      // The gradients
+      // The gradientsHessrho
       std::vector<JacobianType> gradients(size);
       FieldVector<adouble, Config::dim> gradrho;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
@@ -347,7 +440,7 @@ public:
 
 
 #ifdef DEBUG
-
+      assert ( ! (DpF[0].value() != DpF[0].value()));
         double ev0, ev1;
         calculate_eigenvalues(cofHessu, ev0, ev1);
         //      auto minEVcofHessu = std::min(std::abs(ev0), std::abs(ev1));
@@ -405,7 +498,7 @@ public:
       if (!(std::abs(DuF.value() - DuFEx.value()) < 1e-5))
       if (!(std::abs( DpF[0].value() -  DpFEx[0].value()) < 1e-3 && abs( DpF[1].value() -  DpFEx[1].value()) < 1e-3))
         std::cerr << " F " << F_value << " vs. " << F_valueEx << std::endl
-                << " DxFEx " << DxF[0].value() << ' ' << DxF[1].value() << " vs. " <<  DxFEx[0].value() << ' ' << DxFEx[1].value() << std::endl
+                << " DxFEx " << DxF[0].value() << ' ' << DxF[1].value()Hessrho << " vs. " <<  DxFEx[0].value() << ' ' << DxFEx[1].value() << std::endl
                 << " DuFEx " << DuF.value() << " vs. " <<  DuFEx.value()  << std::endl
                 << " DpFEx " << DpF[0].value() << ' ' << DpF[1].value() << " vs. " <<  DpFEx[0].value() << ' ' << DpFEx[1].value() << std::endl;
       }
@@ -413,17 +506,12 @@ public:
 
       //calculate Z = X/u +t(Z_0-X/u) = point on reflector + reflected vector
       //calculate t: distance between refractor and target plane (refracted vector)
-      adouble t = rho_value*omega_value-opticalSetting->z_3;
-      t /= rho_value*omega_value;
+      adouble t = calc_t(rho_value,omega_value,opticalSetting->z_3);
 
       //calculate w, the intersection between refracted light and {x_3=0}-plane
-      FieldVector<adouble, Config::dim> w = gradrho;
-      w *= 2*F_value*rho_value;
+      FieldVector<adouble, Config::dim> w = calc_w(rho_value, gradrho, F_value);
 
-      FieldVector<adouble, Config::dim> z = x_value;
-      z *= rho_value;
-      z.axpy(t,w);
-      z.axpy(-t*rho_value,x_value);
+      FieldVector<adouble, Config::dim> z = calc_z(x_value, rho_value, t, w);
 
 //      std::cerr << "rho_value " << rho_value.value()
 //                << " F " << F_value << std::endl
@@ -434,45 +522,11 @@ public:
 //                << " z " << z[0].value() << " " << z[1].value() << std::endl
 //                << std::endl;
 
-/*      if (z[0] < rhs.g.lowerLeft()[0] || z[0] > rhs.g.upperRight()[0] ||
-          z[1] < rhs.g.lowerLeft()[1] || z[1] > rhs.g.upperRight()[1])
-      {
-        std::cerr << "       rho_value " << rho_value.value()
-                    << " X " << X << std::endl
-                    << "        z " << z[0].value() << " " << z[1].value() << std::endl;
-      }*/
-
-
       assert(std::abs(((omega_value*rho_value) - t*rho_value*omega_value - opticalSetting->z_3).value()) < 1e-8 && "something with t is not as expected!");
 
       assert(check_refraction(x_value, X, rho_value.value(), gradrho, z));
 
-      //M_invers = Id - gradu x DpF / ...
-      FieldMatrix<adouble, dim, dim> M_invers;
-      M_invers[0][0] = -gradrho[0]*DpF[0]; M_invers[0][1] = -gradrho[0]*DpF[1];
-      M_invers[1][0] = -gradrho[1]*DpF[0]; M_invers[1][1] = -gradrho[1]*DpF[1];
-      M_invers /= (F_value+(gradrho*DpF));
-      M_invers[0][0] += 1.; M_invers[1][1] += 1.;
-//      std::cerr << " M^-1 " << M_invers << std::endl;
-
-      FieldMatrix<adouble, dim, dim> B;
-      B[0][0] = 2.*F_value*gradrho[0]*gradrho[0] + 2.*rho_value*gradrho[0]*DxF[0] + DuF*2.*rho_value*gradrho[0]*gradrho[0];
-      B[0][1] = 2.*F_value*gradrho[0]*gradrho[1] + 2.*rho_value*gradrho[0]*DxF[1] + DuF*2.*rho_value*gradrho[0]*gradrho[1];
-      B[1][0] = 2.*F_value*gradrho[1]*gradrho[0] + 2.*rho_value*gradrho[1]*DxF[0] + DuF*2.*rho_value*gradrho[1]*gradrho[0];
-      B[1][1] = 2.*F_value*gradrho[1]*gradrho[1] + 2.*rho_value*gradrho[1]*DxF[1] + DuF*2.*rho_value*gradrho[1]*gradrho[1];
-
-      FieldMatrix<adouble, dim, dim> C;
-      C[0][0] = gradrho[0]*x_value[0] + rho_value + 1./rho_value/omega_value*(w[0]-rho_value*x_value[0])*(gradrho[0]*omega_value + rho_value*DOmega_value[0]);
-      C[0][1] = gradrho[1]*x_value[0]             + 1./rho_value/omega_value*(w[0]-rho_value*x_value[0])*(gradrho[1]*omega_value + rho_value*DOmega_value[1]);
-      C[1][0] = gradrho[0]*x_value[1]             + 1./rho_value/omega_value*(w[1]-rho_value*x_value[1])*(gradrho[0]*omega_value + rho_value*DOmega_value[0]);
-      C[1][1] = gradrho[1]*x_value[1] + rho_value + 1./rho_value/omega_value*(w[1]-rho_value*x_value[1])*(gradrho[1]*omega_value + rho_value*DOmega_value[1]);
-
-      FieldMatrix<adouble, dim, dim> A_adolc;
-      A_adolc = B;
-      A_adolc *= t;
-      A_adolc.axpy(1.-t,C);
-      A_adolc.leftmultiply(M_invers);
-      A_adolc /= 2.*t*rho_value*F_value;
+      FieldMatrix<adouble, dim, dim> A_adolc = calc_A(x_value, omega_value, DOmega_value,rho_value, gradrho, F_value, DuF, DxF, DpF, t, w);
 
       FieldVector<double, 3> D_Psi_value;
       D_Psi_value[0] = 0; D_Psi_value[1] = 0;
@@ -528,7 +582,7 @@ public:
       //calculate illumination at target plane
       FieldVector<adouble, dim> gradg;
 
-      FieldMatrix<double, dim, dim> rhoDH_pertubed = Hessrho;
+      FieldMatrix<double, dim, dim> rhoDH_pertubed= Hessrho_value;
       rhoDH_pertubed+=A;
 
 
@@ -563,7 +617,7 @@ public:
       std::cerr << " g1 " << Dx1PlusF_value << " g2 " << Dx2PlusF_value << std::endl;
 #endif
 
-      auto h_T = std::sqrt(integrationElement);
+//      auto h_T = std::sqrt(integrationElement);
 
       //velocity vector for convection
       FieldVector<double,dim> gradgSmoothed(0);
@@ -725,14 +779,6 @@ public:
     const FieldVector<double, dim> normal = intersection.unitOuterNormal(
         face_center);
 
-    // penalty weight for NIPG / SIPG
-//    double penalty_weight = SolverConfig::sigma
-//        * (SolverConfig::degree * SolverConfig::degree)
-//        / std::pow(intersection.geometry().volume(), SolverConfig::beta);
-    double penalty_weight_gradient = SolverConfig::sigmaGrad
-        * (SolverConfig::degree * SolverConfig::degree)
-        * std::pow(intersection.geometry().volume(), SolverConfig::beta);
-
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
 
@@ -749,42 +795,48 @@ public:
       const auto& jacobiann =
           intersection.outside().geometry().jacobianInverseTransposed(quadPos);
       // The shape functions on the reference elements
-      // The shape functions
+      // The shape functions //u = un since we have C1 Elements
       std::vector<RangeType> referenceFunctionValues(size);
-      double u_value = 0;
+      double rho_value = 0;
       assemble_functionValues_u(localFiniteElement, quadPos,
-          referenceFunctionValues, x, u_value);
-      std::vector<RangeType> referenceFunctionValuesn(size);
-      double un_value = 0;
-      assemble_functionValues_u(localFiniteElementn, quadPosn,
-          referenceFunctionValuesn, xn, un_value);
+          referenceFunctionValues, x, rho_value);
 
       // The gradients of the shape functions on the reference element
+      // The shape functions grad u = grad u n since we have C1 Elements
       std::vector<JacobianType> gradients(size);
-      FieldVector<double, Config::dim> gradu(0);
+      FieldVector<double, Config::dim> gradrho(0);
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
-          gradients, x, gradu);
-      std::vector<JacobianType> gradientsn(size);
-      FieldVector<double, Config::dim> gradun(0);
-      assemble_gradients_gradu(localFiniteElementn, jacobiann, quadPosn,
-          gradientsn, xn, gradun);
+          gradients, x, gradrho);
 
       //the shape function values of hessian ansatz functions
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size);
-      FieldMatrix<double, Config::dim, Config::dim> Hessu;
+      FieldMatrix<double, Config::dim, Config::dim> HessrhoA;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
-          x, Hessu);
+          x, HessrhoA);
       std::vector<FEHessianType> Hessiansn(size);
-      FieldMatrix<double, Config::dim, Config::dim> Hessun;
-      assemble_hessians_hessu(localFiniteElementn, jacobian, quadPosn, Hessiansn,
-          x, Hessun);
+      FieldMatrix<double, Config::dim, Config::dim> HessrhoAn;
+      assemble_hessians_hessu(localFiniteElementn, jacobiann, quadPosn, Hessiansn,
+          x, HessrhoAn);
 
-      auto cofacHessu  = cofactor(Hessu);
-      auto cofacHessun = cofactor(Hessun);
-      FieldMatrix<double, Config::dim, Config::dim> Hess_avg = cofacHessu;
-      Hess_avg += cofacHessun;
-      Hess_avg *= 0.5;
+      //---assemble geometric data for integral---------------------
+      auto x_value = intersection.inside().geometry().global(quadPos);
+      Config::ValueType omega_value = omega(x_value);
+      FdimVector<Config::ValueType> DOmega_value = DOmega(x_value);
+
+      Config::ValueType F_value, DuF;
+      FdimVector<Config::ValueType> DxF, DpF;
+      calc_F_and_derivatives(x_value,rho_value, gradrho, F_value, DxF, DuF, DpF);
+
+      Config::ValueType t = calc_t(rho_value, omega_value, opticalSetting->z_3);
+      FdimVector<Config::ValueType> w = calc_w(rho_value, gradrho, F_value);
+
+      FdimMatrix<Config::ValueType> A = calc_A(x_value, omega_value, DOmega_value, rho_value, gradrho, F_value, DuF, DxF, DpF, t, w);
+      HessrhoA+=A;
+      HessrhoAn += A;
+
+      auto cofacHessRhoA  = cofactor(HessrhoA);
+      auto cofacHessRhoAn = cofactor(HessrhoAn);
 
       //-------calculate integral--------
       auto integrationElement = intersection.geometry().integrationElement(
@@ -797,27 +849,16 @@ public:
         for (int i= 0; i < size; i++)
         {
           //parts from self
-          cofacHessu.mv(gradients[i], temp);
+          cofacHessRhoA.mv(gradients[i], temp);
           m_m(j,i) -= 0.5*(temp*normal) * referenceFunctionValues[j] * factor;
-          mn_m(j,i) -= 0.5*(temp*normal) * referenceFunctionValuesn[j] * factor;
+          mn_m(j,i) -= 0.5*(temp*normal) * referenceFunctionValues[j] * factor;
 
           //        //neighbour parts
-          cofacHessun.mv(gradientsn[i], temp);
+          cofacHessRhoAn.mv(gradients[i], temp);
           m_mn(j,i) -= -0.5*(temp*normal) * referenceFunctionValues[j] * factor;
-          mn_mn(j,i) -= -0.5*(temp*normal) * referenceFunctionValuesn[j] * factor;
+          mn_mn(j,i) -= -0.5*(temp*normal) * referenceFunctionValues[j] * factor;
 
           //        std:: cerr << "v_adolc(" << j << ")+= " << (jump * referenceFunctionValues[j] * factor).value() << std::endl;
-        // gradient penalty
-        auto grad_times_normal = gradients[j] * normal;
-//        v(j) += penalty_weight_gradient * (grad_u_normaljump)
-//            * (grad_times_normal) * factor;
-
-//        // gradient penalty
-        grad_times_normal = gradientsn[j] * normal;
-//        vn(j) += penalty_weight_gradient * (grad_u_normaljump)
-//            * (-grad_times_normal) * factor;
-//        std:: cerr << "v_adolcn(" << j << ")+= " << (penalty_weight_gradient * (grad_u_normaljump)
-//            * (-grad_times_normal) * factor).value() << std::endl;
         }
       }
     }
@@ -849,9 +890,12 @@ public:
     typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
     typedef typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension> FEHessianType;
 
+    Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size_u);
+
     // ----start quadrature--------
 
     // Get a quadrature rule
+
     const int order = std::max(0, 3 * ((int) localFiniteElement.localBasis().order()));
     GeometryType gtface = intersection.geometryInInside().type();
     const QuadratureRule<double, dim - 1>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim-1>(gtface, order);
@@ -862,21 +906,15 @@ public:
     const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
         face_center);
 
-    // penalty weight for NIPG / SIPG
-    //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
-/*    double penalty_weight;
-    if (SolverConfig::Dirichlet)
-      penalty_weight = SolverConfig::sigmaBoundary
-                      * (SolverConfig::degree * SolverConfig::degree)
-                      / std::pow(intersection.geometry().volume(), SolverConfig::beta);
-    else
-      penalty_weight = SolverConfig::sigmaBoundary
-                      * (SolverConfig::degree * SolverConfig::degree)
-                     / std::pow(intersection.geometry().volume(), SolverConfig::beta);*/
-
-//    std::cerr << " start quadrature " << std::endl;
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
+
+      const int tag = 1;
+      trace_on(tag);
+
+      //init independent variables
+      for (int i = 0; i < size_u; i++)
+        x_adolc[i] <<= x[i];
 
       //------get data----------
 
@@ -890,85 +928,84 @@ public:
 
       //the shape function values
       std::vector<RangeType> referenceFunctionValues(size_u);
-      double u_value = 0;
+      adouble rho_adolc = 0;
       assemble_functionValues_u(localFiniteElement, quadPos,
-          referenceFunctionValues, x.segment(0, size_u), u_value);
+          referenceFunctionValues, x_adolc, rho_adolc);
+      Config::ValueType rho_value = rho_adolc.value();
 
       // The gradients
       std::vector<JacobianType> gradients(size_u);
-      FieldVector<double, Config::dim> gradu;
+      FieldVector<adouble, Config::dim> gradrho_adolc;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
-          gradients, x, gradu);
+          gradients, x_adolc, gradrho_adolc);
+      FdimVector<Config::ValueType> gradrho = {gradrho_adolc[0].value(), gradrho_adolc[1].value()};
 
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size_u);
-      FieldMatrix<double, Config::dim, Config::dim> Hessu;
+      FieldMatrix<double, Config::dim, Config::dim> Hessrho;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
-          x, Hessu);
+          x.segment(0,size_u), Hessrho);
+
+      //---assemble geometric data for integral---------------------
+      auto x_value = intersection.inside().geometry().global(quadPos);
+      Config::ValueType omega_value = omega(x_value);
+      FdimVector<Config::ValueType> DOmega_value = DOmega(x_value);
+
+      adouble F_adolc = F(x_value, rho_adolc, gradrho_adolc);
+
+      Config::ValueType F_value, DuF;
+      FdimVector<Config::ValueType> DxF, DpF;
+      calc_F_and_derivatives(x_value,rho_value, gradrho, F_value, DxF, DuF, DpF);
+
+      adouble t_adolc = calc_t(rho_adolc, omega_value, opticalSetting->z_3);
+      FdimVector<adouble> w_adolc = calc_w(rho_adolc, gradrho_adolc, F_adolc);
+      FdimVector<Config::ValueType> w = {w_adolc[0].value(), w_adolc[1].value()};
+
+
+      FdimVector<adouble> z = calc_z(x_value, rho_adolc, t_adolc, w_adolc);
+
+      FdimMatrix<double> HessrhoA = calc_A(x_value, omega_value, DOmega_value, rho_value, gradrho,
+          F_value, DuF, DxF, DpF, t_adolc.value(), w);
+      HessrhoA+=Hessrho;
+
+      auto cofacHessRhoA  = cofactor(HessrhoA);
+
 
       //-------calculate integral--------
 
-      auto signedDistance = bc.H(gradu, normal);
+      auto H_adolc = bc.H(z, normal);
+
+      //mark H for derivation
+      Config::ValueType signedDistance;
+      H_adolc >>= signedDistance;
+      trace_off();
+
+      //get derivatives
+      std::vector<Config::ValueType> DH(size_u);
+      calc_H_derivatives(tag, x.segment(0,size_u), DH);
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
-
-      const auto cofHessu = convexified_penalty_cofactor(Hessu);
-
-      //assume n_y of last step
-      FieldVector<double, Config::dim> normalOld;
-      cofHessu.mv(normal, normalOld);
-      #ifdef DEBUG
-      //calculate derivatives of g
-      const double delta = std::sqrt(1e-15);
-
-      //calculate derivative of F in x by finite difference
-      auto temp = gradu;
-      temp[0]+=delta;
-      std::cerr << " gradu " << gradu <<  " temp x Plus " << temp << std::endl;
-      double Dx1PlusF_value = bc.H(temp, normal);
-      temp = gradu;
-      temp[1]+=delta;
-      double Dx2PlusF_value = bc.H(temp, normal);
-
-      FieldVector<double, dim> DxFEx =
-        {
-          (Dx1PlusF_value-signedDistance)/delta,
-          (Dx2PlusF_value-signedDistance)/delta
-        };
-
-      std::cerr << std::setprecision(15);
-      std::cerr << " dH " << derivativeHu << " finite diff H " << DxFEx << std::endl;
-      std::cerr << " H1 " << Dx1PlusF_value << " H2 " << Dx2PlusF_value << std::endl;
-#endif
-
-      for (int j = 0; j < size_u; j++)
+     for (int j = 0; j < size_u; j++)
       {
 
-        if (SolverConfig::Dirichlet)
-        {
-          assert(false);
-        }
-        else
-        {
-          v(j) += normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor;
+       v(j) += signedDistance* (referenceFunctionValues[j]) * factor;
 //          std::cerr << " add to v_boundary(" << j << ") " << normalOld.two_norm()*signedDistance* (referenceFunctionValues[j]) * factor
 //              << " -> " << v_boundary(j) << std::endl;
 
-/*
-        for (int i = 0; i < size_u; i++)
-        {
-          FieldVector<double, Config::dim> temp;
-          cofHessu.mv(gradients[i], temp);
-          m(j,i) -= (temp*normal) * (referenceFunctionValues[j]) * factor;
-        }
-*/
 
-        }
+       for (int i = 0; i < size_u; i++)
+       {
+         FieldVector<double, Config::dim> temp;
+         cofacHessRhoA.mv(gradients[i], temp);
+         m(j,i) -= (temp*normal) * (referenceFunctionValues[j]) * factor;
+         m(j,i) += DH[i]* (referenceFunctionValues[j]) * factor;
+       }
       }
     }
   }
+
   int insert_entitity_for_unifikation_term(const Config::Entity element, int size)
   {
     auto search = EntititiesForUnifikationTerm_.find(element);
@@ -1031,15 +1068,13 @@ public:
   OpticalSetting* opticalSetting;
 
   const RightHandSideReflector& get_right_handside() const {return rhs;}
-  RightHandSideReflector& get_right_handside() {return rhs;}
 
-  RightHandSideReflector rhs;
-  HamiltonJacobiBC bc;
+  const RightHandSideReflector & rhs;
+  const HamiltonJacobiBC & bc;
 
   static constexpr double& kappa_ = OpticalSetting::kappa;
 
   mutable double int_f;
-  mutable double sign;
 
   mutable bool found_negative;
 };

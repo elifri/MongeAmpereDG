@@ -31,11 +31,11 @@ public:
 
   template<typename GridView>
   Local_Operator_MA_refr_Brenner(OpticalSetting &opticalSetting, const GridView& gridView,
-      RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld):
+      const RightHandSideReflector& rhs, const HamiltonJacobiBC &bc):
     hash(gridView), EntititiesForUnifikationTerm_(10,hash),
     opticalSetting(&opticalSetting),
-    rhs(solUOld, gradUOld, opticalSetting),
-    bc(opticalSetting, 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps)), sign(1.0) {
+    rhs(rhs),
+    bc(bc){
     int_f = 0;
   }
 
@@ -384,7 +384,7 @@ public:
       z.axpy(-t*rho_value,x_value);
 
 //      std::cerr << "rho_value " << rho_value.value()
-//                << " F " << F_value << std::endl
+//                << " F " << F_value <data < std::endl
 //                << " X " << X << std::endl
 //                << " rhogradu " << gradrho[0].value() << " " << gradrho[1].value() << std::endl
 //                << " t " << t.value()
@@ -818,7 +818,7 @@ public:
           gradients, x_adolc, gradrho);
 
       //-------calculate integral--------
-      double omega_value = omega(x_value);
+      Config::ValueType omega_value = omega(x_value);
 
       adouble t = rho_value*omega_value-opticalSetting->z_3;
       t /= rho_value*omega_value;
@@ -920,19 +920,13 @@ public:
   OpticalSetting* opticalSetting;
 
   const RightHandSideReflector& get_right_handside() const {return rhs;}
-  RightHandSideReflector& get_right_handside() {return rhs;}
 
-  RightHandSideReflector rhs;
-  HamiltonJacobiBC bc;
-//  Dirichletdata<std::shared_ptr<Rectangular_mesh_interpolator> > bcDirichlet;
-
-  static constexpr int collocationNo[3][3] = {{0,3,4},{0,11,8},{4,7,8}};
-//  static constexpr int collocationNo[3][5] = {{0,1,3,5,4},{0,2,11,9,8},{4,6,7,10,8}};
+  const RightHandSideReflector & rhs;
+  const HamiltonJacobiBC & bc;
 
   static constexpr double& kappa_ = OpticalSetting::kappa;
 public:
   mutable double int_f;
-  mutable double sign;
 
   mutable bool found_negative;
 };

@@ -9,7 +9,8 @@
 #define SRC_MA_REFRACTOR_SOLVER_H_
 
 #include "Solver/MA_solver.h"
-#include "OT/MA_OT_global_Operator.h"
+
+#include "Optics/MA_OT_global_optic_Operator.h"
 #include "Optics/operator_MA_refr_Brenner.h"
 #include "Optics/operator_MA_refr_Linearisation.hpp"
 
@@ -35,13 +36,17 @@ public:
   GeometrySetting& get_setting() {return setting_;}
   const GeometrySetting& get_setting() const {return setting_;}
 
+  OpticalSetting& get_optical_setting() {return setting_;}
+  const OpticalSetting& get_optical_setting() const {return setting_;}
+
+
 private:
   OpticalSetting& setting_;
 
 #ifndef USE_ANALYTIC_DERIVATION
-  typedef MA_OT_Operator<MA_refractor_solver, Local_Operator_MA_refr_Brenner> OperatorType;
+  typedef MA_OT_Optic_Operator<MA_refractor_solver, Local_Operator_MA_refr_Brenner> OperatorType;
 #else
-  typedef MA_OT_Operator_with_Linearisation<MA_refractor_solver, Local_Operator_MA_refr_Brenner, Local_Operator_MA_refr_Linearisation> OperatorType;
+  typedef MA_OT_Optic_Operator_with_Linearisation<MA_refractor_solver, Local_Operator_MA_refr_Brenner, Local_Operator_MA_refr_Linearisation> OperatorType;
 #endif
 
   OperatorType op;

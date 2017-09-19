@@ -5,7 +5,7 @@
  *      Author: friebel
  */
 
-#include "OT/operator_MA_OT_Linearisation.hpp"
+#include "Optics/operator_MA_OT_Linearisation.hpp"
 
 //double SmoothingKernel::sigma;
 

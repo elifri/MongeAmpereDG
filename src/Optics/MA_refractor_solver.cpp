@@ -24,18 +24,12 @@ struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
 
 MA_refractor_solver::MA_refractor_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting)
  :MA_solver(grid, gridView, config), setting_(opticalSetting),
-#ifdef USE_ANALYTIC_DERIVATION
-  op(*this,std::shared_ptr<OperatorType::LocalOperatorType>(new OperatorType::LocalOperatorType(
-#else
-  op(*this,std::shared_ptr<Local_Operator_MA_refr_Brenner>(new Local_Operator_MA_refr_Brenner(
-#endif
-      setting_, gridView, solution_u_old, gradient_u_old
-     )))
+  op(*this)
 {
 
    //adjust light intensity
-   const auto integralLightOut = op.get_lop().get_right_handside().get_target_distribution().integrateOriginal();
-   const auto integralLightIn = op.get_lop().get_right_handside().get_input_distribution().integrateOriginal();
+   const auto integralLightOut = op.rhs_.get_target_distribution().integrateOriginal();
+   const auto integralLightIn = op.rhs_.get_input_distribution().integrateOriginal();
    setting_.povRayOpts.lightSourceColor = Eigen::Vector3d::Constant(integralLightOut/integralLightIn*setting_.lightSourceIntensity);
 
    plotter.set_PovRayOptions(setting_.povRayOpts);
@@ -141,7 +135,7 @@ void MA_refractor_solver::update_Operator()
 {
   //blurr target distributation
   std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
-  op.get_lop().get_right_handside().convolveTargetDistributionAndNormalise(epsMollifier_);
+  op.rhs_.convolveTargetDistributionAndNormalise(epsMollifier_);
 
   //print blurred target distribution
   if (true) {

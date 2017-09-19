@@ -267,12 +267,14 @@ public:
 
   virtual void clear_local_entity_data()
   {
-    lop_ptr->clear_entitities_for_unifikation_term();
+    if(lop_ptr)
+      lop_ptr->clear_entitities_for_unifikation_term();
   }
 
   virtual void insert_entities_for_unification_term_to_local_operator(Config::Entity fixingElement, int n)
   {
-    lop_ptr->insert_entitity_for_unifikation_term(fixingElement, n);
+    if(lop_ptr)
+      lop_ptr->insert_entitity_for_unifikation_term(fixingElement, n);
   }
   virtual void adapt()
   {

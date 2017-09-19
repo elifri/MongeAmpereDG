@@ -337,6 +337,7 @@ public:
   const std::string& get_plot_output_directory() const{ return plotOutputDirectory_;}
   const std::string& get_output_prefix() const{ return outputPrefix_;}
 
+  shared_ptr<DiscreteLocalGridFunction>& get_u_old_ptr() {return solution_u_old;}
   shared_ptr<DiscreteLocalGradientGridFunction>& get_gradient_u_old_ptr() {return gradient_u_old;}
 
   int get_plotRefinement() {return plotterRefinement_;}
