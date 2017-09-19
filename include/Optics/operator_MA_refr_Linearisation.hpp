@@ -697,12 +697,12 @@ public:
           m(j,i) += FrobeniusProduct(MinusCofAHessrho, DA[i]);
 
           //convection term
-          m(j,i) += (-f_value/avg_g_value*DH[i] -f_value/avg_g_value/avg_g_value* (gradgSmoothed*DT[i]))*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+//          m(j,i) += (-f_value/avg_g_value*DH[i] -f_value/avg_g_value/avg_g_value* (gradgSmoothed*DT[i]))*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         }
 
         //-f(u_k) [rhs of Newton]
-        v(j) += (-detHessrhoA+f_value/g_value*H_value).value()*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-//        v(j) += (-detHessu)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+//        v(j) += (-detHessrhoA+f_value/g_value*H_value).value()*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        v(j) += (-detHessrhoA)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         v_midvalue(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 
         //derivative unification term

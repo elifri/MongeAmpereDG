@@ -2608,7 +2608,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 //            std::cerr << " local boundary " << local_boundary << std::endl;
 
 //            lop.assemble_boundary_face_term(is,localView, xLocal, local_boundary, 0);
-            lopJacobian.assemble_boundary_face_term(is, localView, xLocal, local_boundary, m_mB);
+//            lopJacobian.assemble_boundary_face_term(is, localView, xLocal, local_boundary, m_mB);
 
           } else {
             std::cerr << " I do not know how to handle this intersection"
