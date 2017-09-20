@@ -47,7 +47,7 @@ void MA_refractor_solver::create_initial_guess()
   else
   {
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
-    project([](Config::SpaceType x){return 1;}, solution);
+    project([](Config::SpaceType x){return 1.12;}, solution);
   }
 
   //set fixing grid point for refractor (fix distance to light source)
@@ -59,13 +59,16 @@ void MA_refractor_solver::create_initial_guess()
 
 void MA_refractor_solver::plot(const std::string& name) const
 {
+  std::cout << "write? " << writeVTK_ << " ";
+  std::cout << "plot written into ";
   plot(name, iterations);
+  std::string refrPovname(plotter.get_output_directory());
+  refrPovname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".pov";
+  std::cout << refrPovname << std::endl;
 }
 
 void MA_refractor_solver::plot(const std::string& name, int no) const
 {
-  std::cout << "write? " << writeVTK_ << " ";
-  std::cout << "plot written into ";
 
   //write vtk files
   if (writeVTK_)
@@ -113,7 +116,7 @@ void MA_refractor_solver::plot(const std::string& name, int no) const
 //     plotter.writeReflectorVTK(reflname, localnumericalSolution, *exact_solution);
      plotter.writeRefractorVTK(reflname, localnumericalSolution);
 
-     std::cout << fname  << " " << reflname << " and ";
+//     std::cout << fname  << " " << reflname << " and ";
   }
 
   //write povray output
@@ -121,7 +124,7 @@ void MA_refractor_solver::plot(const std::string& name, int no) const
    refrPovname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".pov";
 
    plotter.writeRefractorPOV(refrPovname, *solution_u_old);
-   std::cout << refrPovname << std::endl;
+
 }
 
 void MA_refractor_solver::adapt_solution(const int level)

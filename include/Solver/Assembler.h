@@ -2021,8 +2021,8 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 
 //    const auto& v_isBoundary = boundaryHandler_.isBoundaryValueDoF();
 //    const auto& v_isBoundary = boundaryHandler_.isBoundaryGradientDoF();
-//    const auto& v_isBoundary = boundaryHandler_.isBoundaryDoF();
-    BoundaryHandler::BoolVectorType v_isBoundary = BoundaryHandler::BoolVectorType::Constant(v.size(), false);
+    const auto& v_isBoundary = boundaryHandler_.isBoundaryDoF();
+//    BoundaryHandler::BoolVectorType v_isBoundary = BoundaryHandler::BoolVectorType::Constant(v.size(), false);
 
 
     //assuming Galerkin
@@ -2068,9 +2068,6 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
         Config::DenseMatrixType m_mB;
         m_mB.setZero(localView.size(), localView.size());
 
-        Config::VectorType last_equationDerivatives = Config::VectorType::Zero(localView.size()),
-                                  scaling_factorDerivatives = Config::VectorType::Zero(localView.size()+1);
-
         //get id
         IndexType id = indexSet.index(e);
 
@@ -2094,7 +2091,8 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
           tag_count++;
           break;
         case ONLY_JACOBIAN:
-          assemble_jacobian_integral_cell_term(localView, xLocal, m_m, tag_count, x(x.size()-1), scaling_factorDerivatives, last_equationDerivatives);
+          assert(false);
+//          assemble_jacobian_integral_cell_term(localView, xLocal, m_m, tag_count, x(x.size()-1), scaling_factorDerivatives, last_equationDerivatives);
           tag_count++;
           break;
         case ALL:
@@ -2250,41 +2248,46 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
             }
         }
 
-
-
-//        std::cerr << " localVector before boundary" << local_vector.transpose() << std::endl;
-
-        local_vector+=local_boundary;
-//        local_vector+=local_boundary.cwiseProduct(local_boundary);
-//        std::cerr << " localVector " << local_vector << std::endl;
-
-        //add to objective function and jacobian
-        add_local_coefficients(localIndexSet, local_vector, v);
-        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
-
-//        std::cout << " m_m to add " << m_m <<  std::endl;
-
         //special treatment for boundary elements
         if (elementHasBoundary)
         {
           for (size_t i = 0; i < localIndexSet.size(); i++)
           {
-//          if (!isBoundaryLocal(i))  continue;
+          if (!isBoundaryLocal(i))  continue;
 //            boundary(FETraits::get_index(localIndexSet, i)) += (local_boundary.cwiseProduct(local_boundary))[i] ;
+          local_vector(i)+= local_boundary[i] ;
           boundary(FETraits::get_index(localIndexSet, i)) += local_boundary[i] ;
 //          std::cerr << "boundary add " << i << " to " << FETraits::get_index(localIndexSet, i) << " with value " << local_boundary[i] << " and get " << boundary(FETraits::get_index(localIndexSet, i)) << std::endl;
           }
 
-/*
+/*  hack for squared norm
           Config::DenseMatrixType temp = 2*m_mB;
           for (int i = 0; i < m_mB.rows(); i++)
             for (int j = 0; j < m_mB.cols(); j++)
               temp(i,j) *= local_boundary(i);
-          add_local_coefficients_Jacobian(localIndexSet, localIndexSet, temp, JacobianEntries);
 */
+// hack for only boundary
+          Config::DenseMatrixType temp = m_mB;
+          for (int i = 0; i < m_mB.rows(); i++)
+            for (int j = 0; j < m_mB.cols(); j++)
+              temp(i,j) *= isBoundaryLocal(i);
 
-          add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
+          add_local_coefficients_Jacobian(localIndexSet, localIndexSet, temp, JacobianEntries);
+
+//          add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
         }
+
+//        local_vector+=local_boundary;
+
+//        local_vector+=local_boundary.cwiseProduct(local_boundary);
+//        std::cerr << " localVector " << local_vector << std::endl;
+
+                //add to objective function and jacobian
+        add_local_coefficients(localIndexSet, local_vector, v);
+        add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
+
+//        std::cout << " m_m to add " << m_m <<  std::endl;
+
 
         //add derivatives for scaling factor
 /*
@@ -2525,6 +2528,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 
         //write derivatives of unification term into vector
 
+
         for (const auto& fixingElementandOffset : lopJacobian.EntititiesForUnifikationTerm())
         {
           const auto& fixingElement = fixingElementandOffset.first;
@@ -2544,6 +2548,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
             }
           }
         }
+
 
 
 
@@ -2607,8 +2612,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
 
 //            std::cerr << " local boundary " << local_boundary << std::endl;
 
-//            lop.assemble_boundary_face_term(is,localView, xLocal, local_boundary, 0);
-//            lopJacobian.assemble_boundary_face_term(is, localView, xLocal, local_boundary, m_mB);
+            lopJacobian.assemble_boundary_face_term(is, localView, xLocal, local_boundary, m_mB);
 
           } else {
             std::cerr << " I do not know how to handle this intersection"
@@ -2632,6 +2636,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
           add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_mB, JacobianEntries);
           add_local_coefficients(localIndexSet, local_boundary, v_boundary);
         }
+
 
         for (size_t i = 0; i < localIndexSet.size(); i++)
         {

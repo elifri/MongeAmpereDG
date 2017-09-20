@@ -464,7 +464,7 @@ public:
 
       // The hessian localof the shape functions
       FieldMatrix<adouble, Config::dim, Config::dim> Hessrho_adolc;
-      for (size_t i = 0; i < size; i++)
+      for (int i = 0; i < size; i++)
         Hessrho_adolc.axpy(x_adolc(i), Hessians[i]);
 
       //--------assemble cell integrals in variational form--------
@@ -550,10 +550,10 @@ public:
       }
 #endif
 
-      std::cerr << " F " << F_value << std::endl
-            << " DxFEx " << DxF[0].value() << ' ' << DxF[1].value()  << std::endl
-            << " DuFEx " << DuF.value()  << std::endl
-            << " DpFEx " << DpF[0].value() << ' ' << DpF[1].value()  << std::endl;
+//      std::cerr << " F " << F_value << std::endl
+//            << " DxFEx " << DxF[0].value() << ' ' << DxF[1].value()  << std::endl
+//            << " DuFEx " << DuF.value()  << std::endl
+//            << " DpFEx " << DpF[0].value() << ' ' << DpF[1].value()  << std::endl;
 
 
       //calculate Z = X/u +t(Z_0-X/u) = point on reflector + reflected vector
@@ -565,14 +565,14 @@ public:
 
       FieldVector<adouble, Config::dim> z = calc_z(x_value, rho_value, t, w);
 
-      std::cerr << "rho_value " << rho_value.value()
+/*      std::cerr << "rho_value " << rho_value.value()
                 << " F " << F_value << std::endl
                 << " X " << X << std::endl
                 << " rhogradu " << gradrho[0].value() << " " << gradrho[1].value() << std::endl
                 << " t " << t.value()
                 << " w " << w[0].value() << " " << w[1].value() << std::endl
                 << " z " << z[0].value() << " " << z[1].value() << std::endl
-                << std::endl;
+                << std::endl;*/
 
       assert(std::abs(((omega_value*rho_value) - t*rho_value*omega_value - opticalSetting->z_3).value()) < 1e-8 && "something with t is not as expected!");
 
@@ -625,11 +625,6 @@ public:
 
       adolc_size=8;
       calc_AHT_derivatives(tag, x, adolc_size, DA, DH, DT, Ddet);
-
-      std::cerr << " Derivatives determinant ";
-      for (auto& e : Ddet)  std::cerr << e << ", ";
-      std::cerr << std::endl;
-
 
       //calculate illumination at \Omega
       double f_value;
@@ -738,7 +733,7 @@ public:
       FdimVector<Config::ValueType> gradrho_value = {gradrho[0].value(), gradrho[1].value()};
       auto divA = calc_divA(x_value, rho_value.value(), gradrho_value, A);
 
-      std::cerr << " A " << A << std::endl;
+//      std::cerr << " A " << A << std::endl;
 
 //      std::cerr << " det -f/g " << -detHessu+f_value/g_value << std::endl;
 
@@ -749,28 +744,29 @@ public:
       {
         for (int i = 0; i < size; i++) //loop over ansatz fcts
         {
-/*
+
           //diffusion term  (cof(D^2\rho+A)\nabla w) \cdot \nabla v
           FieldVector<double,dim> cofTimesW;
           cofHessrhoA.mv(gradients[i],cofTimesW);
-          m(j,i) += (cofTimesW*gradients[j]) *quad[pt].weight()*integrationElement;
+//          m(j,i) += (cofTimesW*gradients[j]) *quad[pt].weight()*integrationElement;
 
-          m(j,i) -= (divA*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-*/
+//          m(j,i) += (divA*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+
           //divergence term
           FieldMatrix<double, dim, dim> CofAHessrho=cofA;
           CofAHessrho+=cofHessrho;
-//          m(j,i) += FrobeniusProduct(MinusCofAHessrho, DA[i])*quad[pt].weight()*integrationElement;
+//          m(j,i) -= FrobeniusProduct(CofAHessrho, DA[i])*quad[pt].weight()*integrationElement;
 
 
           m(j,i) += -(FrobeniusProduct(cofHessrho, Hessians[i])+FrobeniusProduct(CofAHessrho, DA[i])
               +FrobeniusProduct(Hessians[i], cofA))*referenceFunctionValues[j]*quad[pt].weight()*integrationElement;
 
-          std::cerr << " (" << FrobeniusProduct(cofHessrho, Hessians[i]) << "+" << FrobeniusProduct(CofAHessrho, DA[i])
-              << "+" << FrobeniusProduct(Hessians[i], cofA) <<") = " << (FrobeniusProduct(cofHessrho, Hessians[i])+FrobeniusProduct(CofAHessrho, DA[i])
-                  +FrobeniusProduct(Hessians[i], cofA))
-                  << "       should be " << Ddet[i] << " error " << (FrobeniusProduct(cofHessrho, Hessians[i])+FrobeniusProduct(CofAHessrho, DA[i])
-                      +FrobeniusProduct(Hessians[i], cofA))-Ddet[i]<< std::endl;
+/*
+          std::cerr << " (" << cofTimesW*gradients[j] << "+" << (divA*gradients[i])
+              << "+" << -FrobeniusProduct(CofAHessrho, DA[i]) <<") = " << -(+FrobeniusProduct(Hessians[i], cofA)+FrobeniusProduct(cofHessrho, Hessians[i])) << "+" << -FrobeniusProduct(CofAHessrho, DA[i])
+               << " = " << cofTimesW*gradients[j]+(divA*gradients[i])-FrobeniusProduct(CofAHessrho, DA[i])
+                  << "       should be " << -Ddet[i] << " error " << cofTimesW*gradients[j]+(divA*gradients[i])-FrobeniusProduct(CofAHessrho, DA[i])+Ddet[i]<< std::endl;
+*/
 
           //convection term
 //          m(j,i) += (-f_value/avg_g_value*DH[i] -f_value/avg_g_value/avg_g_value* (gradgSmoothed*DT[i]))*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
@@ -779,7 +775,7 @@ public:
         //-f(u_k) [rhs of Newton]
 //        v(j) += (-detHessrhoA+f_value/g_value*H_value).value()*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         v(j) += (-detHessrhoA)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-//        v_midvalue(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        v_midvalue(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 
         //derivative unification term
 /*        for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
@@ -931,11 +927,14 @@ public:
           cofacHessRhoA.mv(gradients[i], temp);
           m_m(j,i) -= 0.5*(temp*normal) * referenceFunctionValues[j] * factor;
           mn_m(j,i) -= 0.5*(temp*normal) * referenceFunctionValues[j] * factor;
+          std::cerr << " at internal boundary " << temp*normal << std::endl;
 
           //        //neighbour parts
           cofacHessRhoAn.mv(gradients[i], temp);
           m_mn(j,i) -= -0.5*(temp*normal) * referenceFunctionValues[j] * factor;
           mn_mn(j,i) -= -0.5*(temp*normal) * referenceFunctionValues[j] * factor;
+
+          std::cerr << " at other side of internal boundary " << -(temp*normal) << std::endl;
 
           //        std:: cerr << "v_adolc(" << j << ")+= " << (jump * referenceFunctionValues[j] * factor).value() << std::endl;
         }
@@ -1078,7 +1077,8 @@ public:
        {
          FieldVector<double, Config::dim> temp;
          cofacHessRhoA.mv(gradients[i], temp);
-         m(j,i) -= (temp*normal) * (referenceFunctionValues[j]) * factor;
+//         m(j,i) -= (temp*normal) * (referenceFunctionValues[j]) * factor;
+         std::cerr << " boundary term " << -(temp*normal) << std::endl;
          m(j,i) += DH[i]* (referenceFunctionValues[j]) * factor;
        }
       }
