@@ -128,72 +128,6 @@ public:
 
   template<class value_type>
   inline
-  value_type calc_t(const value_type& rho_value, const Config::ValueType& omega_value, const Config::ValueType& z_3) const
-  {
-    return (rho_value*omega_value-z_3)/(rho_value*omega_value);
-  }
-
-  template<class value_type>
-  inline
-  FdimVector<value_type>calc_w(const value_type& rho_value, const FdimVector<value_type>& gradrho, const value_type& F_value) const
-  {
-    FdimVector<value_type> w = gradrho;
-    w *= 2*F_value*rho_value;
-    return w;
-  }
-
-  template<class value_type>
-  inline
-  FdimVector<value_type>calc_z(const FdimVector<Config::ValueType>& x_value, const value_type& rho_value,
-      const value_type& t, const FdimVector<value_type>& w) const
-  {
-    FieldVector<value_type, Config::dim> z = x_value;
-    z *= rho_value;
-    z.axpy(t,w);
-    z.axpy(-t*rho_value,x_value);
-    return z;
-  }
-
-  template<class value_type>
-  inline
-  FdimMatrix<value_type>calc_A(const FdimVector<Config::ValueType>& x_value, const Config::ValueType& omega_value, const FdimVector<Config::ValueType>&DOmega_value,
-      const value_type& rho_value, const FdimVector<value_type>& gradrho,
-      const value_type& F_value, const value_type& DuF, const FdimVector<value_type>& DxF, const FdimVector<value_type>& DpF,
-      const value_type& t, const FdimVector<value_type>& w) const
-  {
-
-    //M_invers = Id - gradu x DpF / ...
-    FdimMatrix<value_type> M_invers;
-    M_invers[0][0] = -gradrho[0]*DpF[0]; M_invers[0][1] = -gradrho[0]*DpF[1];
-    M_invers[1][0] = -gradrho[1]*DpF[0]; M_invers[1][1] = -gradrho[1]*DpF[1];
-    M_invers /= (F_value+(gradrho*DpF));
-    M_invers[0][0] += 1.; M_invers[1][1] += 1.;
-//      std::cerr << " M^-1 " << M_invers << std::endl;
-
-    FdimMatrix<value_type> B;
-    B[0][0] = 2.*F_value*gradrho[0]*gradrho[0] + 2.*rho_value*gradrho[0]*DxF[0] + DuF*2.*rho_value*gradrho[0]*gradrho[0];
-    B[0][1] = 2.*F_value*gradrho[0]*gradrho[1] + 2.*rho_value*gradrho[0]*DxF[1] + DuF*2.*rho_value*gradrho[0]*gradrho[1];
-    B[1][0] = 2.*F_value*gradrho[1]*gradrho[0] + 2.*rho_value*gradrho[1]*DxF[0] + DuF*2.*rho_value*gradrho[1]*gradrho[0];
-    B[1][1] = 2.*F_value*gradrho[1]*gradrho[1] + 2.*rho_value*gradrho[1]*DxF[1] + DuF*2.*rho_value*gradrho[1]*gradrho[1];
-
-    FdimMatrix<value_type> C;
-    C[0][0] = gradrho[0]*x_value[0] + rho_value + 1./rho_value/omega_value*(w[0]-rho_value*x_value[0])*(gradrho[0]*omega_value + rho_value*DOmega_value[0]);
-    C[0][1] = gradrho[1]*x_value[0]             + 1./rho_value/omega_value*(w[0]-rho_value*x_value[0])*(gradrho[1]*omega_value + rho_value*DOmega_value[1]);
-    C[1][0] = gradrho[0]*x_value[1]             + 1./rho_value/omega_value*(w[1]-rho_value*x_value[1])*(gradrho[0]*omega_value + rho_value*DOmega_value[0]);
-    C[1][1] = gradrho[1]*x_value[1] + rho_value + 1./rho_value/omega_value*(w[1]-rho_value*x_value[1])*(gradrho[1]*omega_value + rho_value*DOmega_value[1]);
-
-    FdimMatrix<value_type> A;
-    A = B;
-    A *= t;
-    A.axpy(1.-t,C);
-    A.leftmultiply(M_invers);
-    A /= 2.*t*rho_value*F_value;
-
-    return A;
-  }
-
-  template<class value_type>
-  inline
   value_type F(const Config::SpaceType &x, const value_type &u, const FieldVector<value_type,2> &p) const
   {
     value_type G = sqrt(sqr(u) + (p*p) - sqr((p * x)));
@@ -270,10 +204,118 @@ public:
     DpF /= 2.;
   }
 
+  template<class value_type>
+  inline
+  value_type calc_t(const value_type& rho_value, const Config::ValueType& omega_value, const Config::ValueType& z_3) const
+  {
+    return (rho_value*omega_value-z_3)/(rho_value*omega_value);
+  }
+
+  template<class value_type>
+  inline
+  FdimVector<value_type>calc_w(const value_type& rho_value, const FdimVector<value_type>& gradrho, const value_type& F_value) const
+  {
+    FdimVector<value_type> w = gradrho;
+    w *= 2*F_value*rho_value;
+    return w;
+  }
+
+  template<class value_type>
+  inline
+  FdimVector<value_type>calc_z(const FdimVector<Config::ValueType>& x_value, const value_type& rho_value,
+      const value_type& t, const FdimVector<value_type>& w) const
+  {
+    FieldVector<value_type, Config::dim> z = x_value;
+    z *= rho_value;
+    z.axpy(t,w);
+    z.axpy(-t*rho_value,x_value);
+    return z;
+  }
+
+  template<class value_type>
+  inline
+  FdimMatrix<value_type>calc_A(const FdimVector<Config::ValueType>& x_value, const Config::ValueType& omega_value, const FdimVector<Config::ValueType>&DOmega_value,
+      const value_type& rho_value, const FdimVector<value_type>& gradrho,
+      const value_type& F_value, const value_type& DuF, const FdimVector<value_type>& DxF, const FdimVector<value_type>& DpF,
+      const value_type& t, const FdimVector<value_type>& w) const
+  {
+
+    //M_invers = Id - gradu x DpF / ...
+    FdimMatrix<value_type> M_invers;
+    M_invers[0][0] = -gradrho[0]*DpF[0]; M_invers[0][1] = -gradrho[0]*DpF[1];
+    M_invers[1][0] = -gradrho[1]*DpF[0]; M_invers[1][1] = -gradrho[1]*DpF[1];
+    M_invers /= (F_value+(gradrho*DpF));
+    M_invers[0][0] += 1.; M_invers[1][1] += 1.;
+//      std::cerr << " M^-1 " << M_invers << std::endl;
+
+    FdimMatrix<value_type> B;
+    B[0][0] = 2.*F_value*gradrho[0]*gradrho[0] + 2.*rho_value*gradrho[0]*DxF[0] + DuF*2.*rho_value*gradrho[0]*gradrho[0];
+    B[0][1] = 2.*F_value*gradrho[0]*gradrho[1] + 2.*rho_value*gradrho[0]*DxF[1] + DuF*2.*rho_value*gradrho[0]*gradrho[1];
+    B[1][0] = 2.*F_value*gradrho[1]*gradrho[0] + 2.*rho_value*gradrho[1]*DxF[0] + DuF*2.*rho_value*gradrho[1]*gradrho[0];
+    B[1][1] = 2.*F_value*gradrho[1]*gradrho[1] + 2.*rho_value*gradrho[1]*DxF[1] + DuF*2.*rho_value*gradrho[1]*gradrho[1];
+
+    FdimMatrix<value_type> C;
+    C[0][0] = gradrho[0]*x_value[0] + rho_value + 1./rho_value/omega_value*(w[0]-rho_value*x_value[0])*(gradrho[0]*omega_value + rho_value*DOmega_value[0]);
+    C[0][1] = gradrho[1]*x_value[0]             + 1./rho_value/omega_value*(w[0]-rho_value*x_value[0])*(gradrho[1]*omega_value + rho_value*DOmega_value[1]);
+    C[1][0] = gradrho[0]*x_value[1]             + 1./rho_value/omega_value*(w[1]-rho_value*x_value[1])*(gradrho[0]*omega_value + rho_value*DOmega_value[0]);
+    C[1][1] = gradrho[1]*x_value[1] + rho_value + 1./rho_value/omega_value*(w[1]-rho_value*x_value[1])*(gradrho[1]*omega_value + rho_value*DOmega_value[1]);
+
+    FdimMatrix<value_type> A;
+    A = B;
+    A *= t;
+    A.axpy(1.-t,C);
+    A.leftmultiply(M_invers);
+    A /= 2.*t*rho_value*F_value;
+
+    return A;
+  }
+
+  template<class value_type>
+  inline
+  FdimMatrix<value_type> calc_A(const FdimVector<Config::ValueType> &x_value,
+      const value_type& rho_value, const FdimVector<value_type>& gradrho) const
+  {
+    const Config::ValueType omega_value = omega(x_value);
+    const FdimVector<Config::ValueType> DOmega_value = DOmega(x_value);
+
+    value_type F_value, DuF;
+    FdimVector<value_type> DxF, DpF;
+    calc_F_and_derivatives(x_value, rho_value, gradrho, F_value, DxF, DuF, DpF);
+    value_type t = calc_t(rho_value, omega_value, opticalSetting->z_3);
+    FdimVector<value_type> w = calc_w(rho_value, gradrho, F_value);
+    return calc_A(x_value, omega_value, DOmega_value, rho_value, gradrho, F_value, DuF, DxF, DpF, t, w);
+ }
+
+  template<class value_type>
+  inline
+  FdimVector<value_type> calc_divA(const FdimVector<Config::ValueType> &x_value,
+      const value_type& rho_value, const FdimVector<value_type>& gradrho, const FdimMatrix<value_type>& A) const
+  {
+
+    const double delta = std::sqrt(1e-15);
+
+    auto temp = x_value;
+    temp[0]+=delta;
+    FdimMatrix<value_type> Ax0Plus = calc_A(temp, rho_value, gradrho);
+    temp = x_value;
+    temp[1]+=delta;
+    FdimMatrix<value_type> Ax1Plus = calc_A(temp, rho_value, gradrho);
+
+    FdimVector<value_type> divA =
+    {
+        Ax0Plus[0][0]-A[0][0]+Ax1Plus[0][1]-A[0][1],
+        Ax0Plus[1][0]-A[1][0]+Ax1Plus[1][1]-A[1][1]
+    };
+
+    divA/=delta;
+    return divA;
+  }
+
+
 
   ///calcs the derivatives of the terms A, H and T using the automatic differentiation tool adolc
   bool calc_AHT_derivatives(const int tag, const Config::VectorType &x, const int adolc_size,
-      std::vector<FieldMatrix<Config::ValueType,Config::dim,Config::dim>> & DA, std::vector<Config::ValueType> &DH, std::vector<Config::SpaceType> &DT) const
+      std::vector<FieldMatrix<Config::ValueType,Config::dim,Config::dim>> & DA, std::vector<Config::ValueType> &DH, std::vector<Config::SpaceType> &DT, std::vector<Config::ValueType> &Ddet) const
   {
     assert(Config::dim == 2);
 
@@ -297,6 +339,8 @@ public:
 
       for (int i_T = 0; i_T < Config::dim; i_T++)
         DT[j][i_T] += out[counter++][j];
+
+      Ddet[j] += out[counter++][j];
 
       assert(counter == adolc_size);
     }
@@ -381,10 +425,7 @@ public:
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
     //store derivatives of A, H and T
     int adolc_size = Config::dim*Config::dim + 1 + Config::dim;
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> AHT_adolc(adolc_size);
 
-    for (int i = 0; i < adolc_size; i++)
-      AHT_adolc[i] <<= 0;
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -417,9 +458,14 @@ public:
 
       // The hessian localof the shape functions
       std::vector<FEHessianType> Hessians(size);
-      FieldMatrix<adouble, Config::dim, Config::dim> Hessrho;
+      FieldMatrix<double, Config::dim, Config::dim> Hessrho;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
-          x_adolc, Hessrho);
+          x, Hessrho);
+
+      // The hessian localof the shape functions
+      FieldMatrix<adouble, Config::dim, Config::dim> Hessrho_adolc;
+      for (size_t i = 0; i < size; i++)
+        Hessrho_adolc.axpy(x_adolc(i), Hessians[i]);
 
       //--------assemble cell integrals in variational form--------
 
@@ -428,7 +474,7 @@ public:
       assert(Config::dim == 2);
 
 
-      auto x_value = geometry.global(quad[pt].position());
+      auto x_value = geometry.global(quadPos);
       Config::SpaceType3d X = { x_value[0], x_value[1], omega(x_value) };
 
       double omega_value = omega(x_value);
@@ -504,6 +550,12 @@ public:
       }
 #endif
 
+      std::cerr << " F " << F_value << std::endl
+            << " DxFEx " << DxF[0].value() << ' ' << DxF[1].value()  << std::endl
+            << " DuFEx " << DuF.value()  << std::endl
+            << " DpFEx " << DpF[0].value() << ' ' << DpF[1].value()  << std::endl;
+
+
       //calculate Z = X/u +t(Z_0-X/u) = point on reflector + reflected vector
       //calculate t: distance between refractor and target plane (refracted vector)
       adouble t = calc_t(rho_value,omega_value,opticalSetting->z_3);
@@ -513,14 +565,14 @@ public:
 
       FieldVector<adouble, Config::dim> z = calc_z(x_value, rho_value, t, w);
 
-//      std::cerr << "rho_value " << rho_value.value()
-//                << " F " << F_value << std::endl
-//                << " X " << X << std::endl
-//                << " rhogradu " << gradrho[0].value() << " " << gradrho[1].value() << std::endl
-//                << " t " << t.value()
-//                << " w " << w[0].value() << " " << w[1].value() << std::endl
-//                << " z " << z[0].value() << " " << z[1].value() << std::endl
-//                << std::endl;
+      std::cerr << "rho_value " << rho_value.value()
+                << " F " << F_value << std::endl
+                << " X " << X << std::endl
+                << " rhogradu " << gradrho[0].value() << " " << gradrho[1].value() << std::endl
+                << " t " << t.value()
+                << " w " << w[0].value() << " " << w[1].value() << std::endl
+                << " z " << z[0].value() << " " << z[1].value() << std::endl
+                << std::endl;
 
       assert(std::abs(((omega_value*rho_value) - t*rho_value*omega_value - opticalSetting->z_3).value()) < 1e-8 && "something with t is not as expected!");
 
@@ -545,6 +597,11 @@ public:
       Config::ValueType H_value;
       FieldVector<Config::ValueType, dim> T;
 
+      FieldMatrix<adouble, dim, dim> rhoDH_pertubed_adolc= Hessrho_adolc;
+      rhoDH_pertubed_adolc*=-1;
+      rhoDH_pertubed_adolc+=A_adolc;
+      adouble det = determinant(rhoDH_pertubed_adolc);
+
       //mark variables for automatic derivation
       //A
       for (int i = 0; i < Config::dim; i++)
@@ -555,18 +612,23 @@ public:
       //T
       for (int i = 0; i < Config::dim; i++)
        z[i] >>= T[i];
-      trace_off();
 
-      FEHessianType Hessrho_value;
-      for (int i = 0; i < Config::dim; i++)
-        for (int j = 0; j < Config::dim; j++)
-        	Hessrho_value[i][j] = Hessrho[i][j].value();
+      double temp_det;
+      det >>= temp_det;
+
+      trace_off();
 
       std::vector<FEHessianType> DA(size);
       std::vector<Config::ValueType> DH(size);
       std::vector<Config::SpaceType> DT(size);
+      std::vector<Config::ValueType> Ddet(size);
 
-      calc_AHT_derivatives(tag, x, adolc_size, DA, DH, DT);
+      adolc_size=8;
+      calc_AHT_derivatives(tag, x, adolc_size, DA, DH, DT, Ddet);
+
+      std::cerr << " Derivatives determinant ";
+      for (auto& e : Ddet)  std::cerr << e << ", ";
+      std::cerr << std::endl;
 
 
       //calculate illumination at \Omega
@@ -583,14 +645,14 @@ public:
       //calculate illumination at target plane
       FieldVector<adouble, dim> gradg;
 
-      FieldMatrix<double, dim, dim> rhoDH_pertubed= Hessrho_value;
+      FieldMatrix<double, dim, dim> rhoDH_pertubed= Hessrho;
       rhoDH_pertubed+=A;
 
 
       //      auto cofHessrhoA = convexified_penalty_cofactor(rhoDH_pertubed);
       auto cofHessrhoA = cofactor(rhoDH_pertubed);
       auto cofA = cofactor(A);
-      auto cofHessrho = cofactor(Hessrho_value);
+      auto cofHessrho = cofactor(Hessrho);
 
 #ifdef DEBUG
       //calculate derivatives of g
@@ -634,7 +696,7 @@ public:
       for (int i = -n_ ; i <= n_; i++)
         for (int j = -n_ ; j <= n_; j++)
       {
-        transportedXs(i+n_,j+n_) = z;
+        transportedXs(i+n_,j+n_) = z;no
         transportedXs(i+n_,j+n_)[0] += i*h;
         transportedXs(i+n_,j+n_)[1] += j*h;
 
@@ -673,6 +735,11 @@ public:
 //        std::cerr << "gradg " << gradg << " eps " << Hessrho.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << << " delta_T " << delta_K  <<std::endl;
       }
 
+      FdimVector<Config::ValueType> gradrho_value = {gradrho[0].value(), gradrho[1].value()};
+      auto divA = calc_divA(x_value, rho_value.value(), gradrho_value, A);
+
+      std::cerr << " A " << A << std::endl;
+
 //      std::cerr << " det -f/g " << -detHessu+f_value/g_value << std::endl;
 
 
@@ -682,31 +749,40 @@ public:
       {
         for (int i = 0; i < size; i++) //loop over ansatz fcts
         {
+/*
           //diffusion term  (cof(D^2\rho+A)\nabla w) \cdot \nabla v
           FieldVector<double,dim> cofTimesW;
           cofHessrhoA.mv(gradients[i],cofTimesW);
           m(j,i) += (cofTimesW*gradients[j]) *quad[pt].weight()*integrationElement;
 
-          FieldVector<double,dim> divATimesW;
-          A.mv(gradients[i],divATimesW);
-          m(j,i) += (divATimesW*gradients[j]) *quad[pt].weight()*integrationElement;
-
+          m(j,i) -= (divA*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+*/
           //divergence term
-          FieldMatrix<double, dim, dim> MinusCofAHessrho=cofHessrho;
-          MinusCofAHessrho+=cofA;
-          m(j,i) += FrobeniusProduct(MinusCofAHessrho, DA[i]);
+          FieldMatrix<double, dim, dim> CofAHessrho=cofA;
+          CofAHessrho+=cofHessrho;
+//          m(j,i) += FrobeniusProduct(MinusCofAHessrho, DA[i])*quad[pt].weight()*integrationElement;
+
+
+          m(j,i) += -(FrobeniusProduct(cofHessrho, Hessians[i])+FrobeniusProduct(CofAHessrho, DA[i])
+              +FrobeniusProduct(Hessians[i], cofA))*referenceFunctionValues[j]*quad[pt].weight()*integrationElement;
+
+          std::cerr << " (" << FrobeniusProduct(cofHessrho, Hessians[i]) << "+" << FrobeniusProduct(CofAHessrho, DA[i])
+              << "+" << FrobeniusProduct(Hessians[i], cofA) <<") = " << (FrobeniusProduct(cofHessrho, Hessians[i])+FrobeniusProduct(CofAHessrho, DA[i])
+                  +FrobeniusProduct(Hessians[i], cofA))
+                  << "       should be " << Ddet[i] << " error " << (FrobeniusProduct(cofHessrho, Hessians[i])+FrobeniusProduct(CofAHessrho, DA[i])
+                      +FrobeniusProduct(Hessians[i], cofA))-Ddet[i]<< std::endl;
 
           //convection term
 //          m(j,i) += (-f_value/avg_g_value*DH[i] -f_value/avg_g_value/avg_g_value* (gradgSmoothed*DT[i]))*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         }
-
+        std::cerr << std::endl;
         //-f(u_k) [rhs of Newton]
 //        v(j) += (-detHessrhoA+f_value/g_value*H_value).value()*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         v(j) += (-detHessrhoA)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-        v_midvalue(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+//        v_midvalue(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 
         //derivative unification term
-        for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
+/*        for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
         {
           const auto& fixingElement = fixingElementAndOffset.first;
           int noDof_fixingElement = fixingElementAndOffset.second;
@@ -718,7 +794,7 @@ public:
             entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
             noDof_fixingElement++;
           }
-        }
+        }*/
 
 
         assert(! (v(j)!=v(j)));
