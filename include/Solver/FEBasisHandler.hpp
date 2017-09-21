@@ -38,6 +38,9 @@ struct FEBasisHandler{
   void adapt(MA_solver& ma_solver, const int level, Config::VectorType& v)
   {assert(false && " Error, dont know FE basis"); exit(-1);}
 
+  void adapt(std::shared_ptr<Config::GridType> oldGrid, Config::GridView gridView, const Config::VectorType& v_old, Config::VectorType& v)
+  {assert(false && " Error, dont know FE basis"); exit(-1);}
+
   Config::VectorType coarse_solution(MA_solver& solver, const int level)
   {assert(false && " Error, dont know FE basis"); exit(-1);}
 
@@ -122,6 +125,10 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
 
 template <>
 void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
+
+template<>
+void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(std::shared_ptr<Config::GridType> oldGrid, Config::GridView gridView, const Config::VectorType& v_old, Config::VectorType& v);
+
 
 template <>
 void FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, SolverConfig::degree>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);

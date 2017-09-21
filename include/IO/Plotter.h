@@ -43,7 +43,7 @@ typedef StaticRefinement<GenericGeometry::CubeTopology<2>::type::id,
 
 class Plotter{
 private:
-	const Config::GridView* grid;
+	Config::GridView& grid;
 	PlotRefinementType refined_grid;
 
 	int refinement; ///choose the refinement level before plotting
@@ -56,15 +56,15 @@ private:
 	int Nnodes() const
 	{
 	  if (refinement == 0)
-	    return grid->size(Config::dim);
-	  return grid->size(0)*PlotRefinementType::nVertices(refinement);
+	    return grid.size(Config::dim);
+	  return grid.size(0)*PlotRefinementType::nVertices(refinement);
 	}
 
 
 public:
 	typedef Eigen::Matrix<SolverConfig::RangeType, Eigen::Dynamic, 1> PointdataVectorType;
 
-	Plotter(const Config::GridView& gridView):grid(&gridView) {};
+	Plotter(Config::GridView& gridView):grid(gridView) {}
 
 	std::string output_directory, output_prefix;
 
@@ -75,6 +75,8 @@ public:
 	  for (auto& stream : plot_streams)
 	    delete stream.second;
 	}
+
+	void update_gridView(Config::GridView& gridView) {grid = gridView;}
 
 	//helper for vtk parts
 
@@ -160,7 +162,6 @@ public:
   void save_BSplineCoeffs(const BSplineNodeFactoryType &bSplineNodeFactory, const Config::VectorType& coeffs, std::ofstream &of) const;
 
 
-	void set_grid(Config::GridView* grid){	this->grid = grid;}
 	void set_refinement(const int refinement){	this->refinement = refinement;}
 	void set_output_directory(std::string outputdir) {this->output_directory = outputdir;}
 	void set_output_prefix(std::string prefix) {this->output_prefix = prefix;}
@@ -344,7 +345,7 @@ void Plotter::write_points_reflector(std::ofstream &file, Function &f) const{
     {
       // collect points
 /*
-      for (auto&& vertex: vertices(*grid)) {
+      for (auto&& vertex: vertices(grid)) {
         auto x_2d = vertex.geometry().center();
         auto rho = 1.0/solution_vertex[vertex_no];
         file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  Local_Operator_MA_refl_Neilan::omega(x_2d)*rho << endl;
@@ -353,7 +354,7 @@ void Plotter::write_points_reflector(std::ofstream &file, Function &f) const{
 */
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(*grid))
+      for (auto&& element: elements(grid))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -384,7 +385,7 @@ void Plotter::write_points_refractor(std::ofstream &file, Function &f) const{
     {
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(*grid))
+      for (auto&& element: elements(grid))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -415,7 +416,7 @@ void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
     //the reflector is given by X*rho, where rho is the PDE solution. X is calculated from the 2d mesh by adding the third coordiante omega(x)
 
     {   // save points in file after refinement
-      for (auto&& element: elements(*grid))
+      for (auto&& element: elements(grid))
       {
         fg.bind(element);
         for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
@@ -445,7 +446,7 @@ void Plotter::write_error(std::ofstream &file, LocalFunction &f, Function &exact
       // collect points
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(*grid))
+      for (auto&& element: elements(grid))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -475,7 +476,7 @@ void Plotter::write_error_OT(std::ofstream &file, LocalFunction &f, const Functi
       // collect points
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(*grid))
+      for (auto&& element: elements(grid))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -499,7 +500,7 @@ void Plotter::write_transport_OT(std::ofstream &file, LocalFunction &f) const{
       << "ascii" << "\">\n";
 
     {   // save points in file after refinement
-      for (auto&& element: elements(*grid))
+      for (auto&& element: elements(grid))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -529,7 +530,7 @@ void Plotter::write_points_reflector_pov(std::ofstream &file, Function & f) cons
     if (refinement == 0)
     {
       // collect points
-      /*for (auto&& vertex: vertices(*grid)) {
+      /*for (auto&& vertex: vertices(grid)) {
         auto x_2d = vertex.geometry().center();
         f.bind(vertex. );
         auto rho = 1.0/f(x_2d);
@@ -538,7 +539,7 @@ void Plotter::write_points_reflector_pov(std::ofstream &file, Function & f) cons
       }*/
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(*grid))
+      for (auto&& element: elements(grid))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -567,7 +568,7 @@ void Plotter::write_points_refractor_pov(std::ofstream &file, Function & f) cons
     if (refinement == 0)
     {
       // collect points
-      /*for (auto&& vertex: vertices(*grid)) {
+      /*for (auto&& vertex: vertices(grid)) {
         auto x_2d = vertex.geometry().center();
         f.bind(vertex. );
         auto rho = 1.0/f(x_2d);
@@ -576,7 +577,7 @@ void Plotter::write_points_refractor_pov(std::ofstream &file, Function & f) cons
       }*/
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(*grid))
+      for (auto&& element: elements(grid))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -741,8 +742,8 @@ void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Co
   const double l_x = upperRight[0] - lowerLeft[0];
   const double l_y = upperRight[1] - lowerLeft[1];
 
-  int n_x = std::sqrt(grid->size(0)*l_x/l_y);
-  int n_y = grid->size(0)/n_x;
+  int n_x = std::sqrt(grid.size(0)*l_x/l_y);
+  int n_y = grid.size(0)/n_x;
 
   n_x <<= refinement;
   n_y <<= refinement;
@@ -755,7 +756,7 @@ void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Co
   //evaluate at mesh points and save to matrix
   Eigen::MatrixXd solution_values(n_x,n_y);
 
-  for (auto&& element: elements(*grid))
+  for (auto&& element: elements(grid))
   {
     f.bind(element);
     for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){

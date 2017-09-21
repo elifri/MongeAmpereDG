@@ -77,7 +77,7 @@ void check_file_extension(std::string &name, std::string extension) {
 inline
 int Plotter::Nelements() const
 {
-	int Nelements = grid->size(0);
+	int Nelements = grid.size(0);
 	if (refinement != 0)
 		Nelements *= PlotRefinementType::nElements(refinement);
 	return Nelements;
@@ -119,11 +119,11 @@ void Plotter::write_points(std::ofstream &file) const{
 		if (refinement == 0)
 		{
 			// collect points
-			for (auto&& vertex: vertices(*grid)) {
+			for (auto&& vertex: vertices(grid)) {
 				file << "\t\t\t\t\t" << vertex.geometry().center() << " 0" << endl;
 			}
 		}else {		// save points in file after refinement
-			for (auto&& element: elements(*grid))
+			for (auto&& element: elements(grid))
 			{
 				const auto geometry = element.geometry();
 				for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
@@ -144,9 +144,9 @@ void Plotter::write_cells(std::ofstream &file) const
 
 
 	if (refinement == 0){
-		const Config::GridView::IndexSet& indexSet = grid->indexSet();
+		const Config::GridView::IndexSet& indexSet = grid.indexSet();
 
-		for (auto&& e : elements(*grid)) {
+		for (auto&& e : elements(grid)) {
 			for (unsigned int i = 0; i < e.subEntities(Config::dim); i++) //loop over corners
 				{file << "\t\t\t\t\t";
 //				for (const auto& vertex : geometry.corners()) {
@@ -157,8 +157,8 @@ void Plotter::write_cells(std::ofstream &file) const
 	}
 	else{ //refined
 		int offset = 0;
-//		for (auto&& element : elements(*grid)) {
-		for (int i = 0; i < grid->size(0); i++){
+//		for (auto&& element : elements(grid)) {
+		for (int i = 0; i < grid.size(0); i++){
 			for (auto it = PlotRefinementType::eBegin(refinement); it != PlotRefinementType::eEnd(refinement); it++)
 			{
 				file << "\t\t\t\t\t";
@@ -333,9 +333,9 @@ void Plotter::write_aperture(std::ofstream &file) const
 			<< "\t\t\t" << this->Nelements()*2 << std::endl;
 	// make connectivity
 	if (refinement == 0){
-		const Config::GridView::IndexSet& indexSet = grid->indexSet();
+		const Config::GridView::IndexSet& indexSet = grid.indexSet();
 
-		for (auto&& e : elements(*grid)) {
+		for (auto&& e : elements(grid)) {
 			for (unsigned int i = 0; i < e.subEntities(Config::dim); i++) //loop over corners
 				{file << "\t\t\t";
 //				for (const auto& vertex : geometry.corners()) {
@@ -347,8 +347,8 @@ void Plotter::write_aperture(std::ofstream &file) const
 	}
 	else{ //refined
 		int offset = 0;
-//		for (auto&& element : elements(*grid)) {
-		for (int i = 0; i < grid->size(0); i++){
+//		for (auto&& element : elements(grid)) {
+		for (int i = 0; i < grid.size(0); i++){
 			for (auto it = PlotRefinementType::eBegin(refinement); it != PlotRefinementType::eEnd(refinement); it++)
 			{
         auto vertexIndices = it.vertexIndices();
@@ -370,9 +370,9 @@ void Plotter::write_face_indices_pov(std::ofstream &file) const
       << "\t\t\t" << this->Nelements() << std::endl;
   // make connectivity
   if (refinement == 0){
-    const Config::GridView::IndexSet& indexSet = grid->indexSet();
+    const Config::GridView::IndexSet& indexSet = grid.indexSet();
 
-    for (auto&& e : elements(*grid)) {
+    for (auto&& e : elements(grid)) {
       for (unsigned int i = 0; i < e.subEntities(Config::dim); i++) //loop over corners
         {file << "\t\t\t";
 //        for (const auto& vertex : geometry.corners()) {
@@ -384,8 +384,8 @@ void Plotter::write_face_indices_pov(std::ofstream &file) const
   }
   else{ //refined
     int offset = 0;
-//    for (auto&& element : elements(*grid)) {
-    for (int i = 0; i < grid->size(0); i++){
+//    for (auto&& element : elements(grid)) {
+    for (int i = 0; i < grid.size(0); i++){
       for (auto it = PlotRefinementType::eBegin(refinement); it != PlotRefinementType::eEnd(refinement); it++)
       {
         auto vertexIndices = it.vertexIndices();

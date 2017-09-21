@@ -62,6 +62,7 @@ public:
   virtual void plot(const std::string& filename, int no) const;
 
   using MA_solver::adapt;
+  using MA_solver::adapt_solution;
 
   GeometrySetting& get_setting() {return setting_;}
   const GeometrySetting& get_setting() const {return setting_;}
@@ -84,7 +85,7 @@ Config::ValueType MA_OT_solver::calculate_L2_errorOT(const FGrad &f) const
 {
   Config::ValueType res = 0, max_error = 0;
 
-  for(auto&& e: elements(*gridView_ptr))
+  for(auto&& e: elements(gridView()))
   {
     auto geometry = e.geometry();
 

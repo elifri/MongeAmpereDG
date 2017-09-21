@@ -13,6 +13,7 @@
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
+#include <dune/grid/io/file/gmshreader.hh>
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk/common.hh>
@@ -29,7 +30,7 @@ double MA_solver::calculate_L2_error(const MA_function_type &f) const
 
   double res = 0;
 
-  for(auto&& e: elements(*gridView_ptr))
+  for(auto&& e: elements(gridView()))
   {
     assert(localFiniteElement.type() == e.type());
 
@@ -108,7 +109,7 @@ void MA_solver::plot(const std::string& name) const
    std::string fname(plotter.get_output_directory());
    fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
 
-   SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
+   SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),2);
    vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
 //   vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
    vtkWriter.write(fname);
@@ -122,7 +123,7 @@ void MA_solver::plot(const VectorType& u, const std::string& filename) const
   std::string fname(plotter.get_output_directory());
   fname += "/"+ plotter.get_output_prefix()+ filename + NumberToString(iterations) + ".vtu";
 
-  SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
+  SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),2);
   vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter.write(fname);
 }
@@ -276,9 +277,40 @@ void MA_solver::update_solution(const Config::VectorType& newSolution) const
   solution = newSolution;
 }
 
+shared_ptr<MA_solver::GridType> MA_solver::adapt_grid(const int level)
+{
+  shared_ptr<GridType> oldGrid = grid_ptr;
+
+  std::string gridInputFile;
+
+  switch (iterations)
+  {
+  case 2:  gridInputFile = "../inputData/grids/level2.msh"; break;
+  case 4:  gridInputFile = "../inputData/grids/level3.msh"; break;
+  case 6:  gridInputFile = "../inputData/grids/level4.msh"; break;
+  case 8:  gridInputFile = "../inputData/grids/level5.msh"; break;
+  case 10:  gridInputFile = "../inputData/grids/level6.msh"; break;
+  case 12:  gridInputFile = "../inputData/grids/level7.msh"; break;
+  case 14:  gridInputFile = "../inputData/grids/level8.msh"; break;
+  default: std::cerr << " Dont know which grid to use .. " << std::endl; assert(false); std::exit(-1); break;
+  }
+
+  grid_ptr = std::shared_ptr<GridType>(GmshReader<Config::GridType>::read(gridInputFile));
+  gridView_ = grid_ptr->leafGridView();
+  std::cout << " read grid vom file " << gridInputFile << std::endl;
+//  gridView_ptr = &(grid_ptr->leafGridView());
+  return oldGrid;
+}
+
 void MA_solver::adapt_solution(const int level)
 {
-  FEBasisHandler_.adapt(*this, level, solution);
+
+  auto old_grid = adapt_grid(level);
+
+  Config::VectorType u_solution = solution;
+  FEBasisHandler_.adapt(old_grid, gridView(), u_solution, solution);
+  get_assembler().bind(FEBasisHandler_.FEBasis());
+  plotter.update_gridView(gridView_);
 }
 
 

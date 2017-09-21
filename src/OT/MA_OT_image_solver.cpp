@@ -473,7 +473,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
     Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(),solution_u);
     decltype(numericalSolution)::LocalFunction localnumericalSolution(numericalSolution);
      //build writer
-     SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
+     SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
 
      //add solution data
      vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
@@ -528,7 +528,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
   std::string fnamehdf5(plotter.get_output_directory());
   fnamehdf5 += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations);
 
-  savehdf5Outputgrid(*gridView_ptr, setting_.lowerLeft, setting_.upperRight, plotterRefinement_, fnamehdf5, numericalTransportFunction.localFunction());
+  savehdf5Outputgrid(gridView(), setting_.lowerLeft, setting_.upperRight, plotterRefinement_, fnamehdf5, numericalTransportFunction.localFunction());
 
   std::cout << " saved hdf5 file to " << fnamehdf5 << std::endl;
 
@@ -537,7 +537,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
   project([](Config::SpaceType x){return x[0]*x[1]+std::sin(M_PI*x[0])*std::sin(M_PI*x[1]);}, exactsol);
   Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalExactSolution(FEBasisHandler_.uBasis(),exactsol);
   decltype(numericalExactSolution)::LocalFunction localnumericalSolution(numericalExactSolution);
-  SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
+  SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
   vtkWriter.addVertexData(numericalExactSolution, VTK::FieldInfo("exact solution", VTK::FieldInfo::Type::scalar, 1));
   //write to file
   std::string fnameExact(plotter.get_output_directory());
@@ -551,7 +551,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
   std::string fnameConvection(plotter.get_output_directory());
   fnameConvection += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "Convection.vtu";
 
-  SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,1);
+  SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),1);
   vtkWriter.addVertexData(convectionNorm, VTK::FieldInfo("ConvectionNorm", VTK::FieldInfo::Type::scalar, 1));
 
   TargetFunction interpolatedTargetFunction(gradient_u_old, op);
@@ -580,7 +580,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
   std::string fnameGradient(plotter.get_output_directory());
   fnameGradient += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "Gradient.vtu";
   convectionNorm.variant_ = ConvectionFunction::OnlyGradientNorm;
-  SubsamplingVTKWriter<GridViewType> vtkWriter3(*gridView_ptr,1);
+  SubsamplingVTKWriter<GridViewType> vtkWriter3(gridView(),1);
   vtkWriter3.addVertexData(convectionNorm, VTK::FieldInfo("GradientNorm", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter3.write(fnameGradient);
   std::cout << " wrote Gradient Norm to " << fnameGradient << std::endl;
@@ -593,7 +593,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
   interpolatedTargetFunction.target_old = true;
   convectionNorm.variant_ = ConvectionFunction::Averaged;
 
-  SubsamplingVTKWriter<GridViewType> vtkWriter2(*gridView_ptr,3);
+  SubsamplingVTKWriter<GridViewType> vtkWriter2(gridView(),3);
   vtkWriter2.addVertexData(convectionNorm, VTK::FieldInfo("ConvectionNorm", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter2.addVertexData(interpolatedTargetFunction, VTK::FieldInfo("interpolTarget", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter2.write(fnameConvectionOld);
@@ -602,7 +602,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
 */
 
 /*
-  SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
+  SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),2);
   vtkWriter.addVertexData(interpolatedTargetFunction, VTK::FieldInfo("interpolTarget", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter.write(fnameTarget);
 */
@@ -612,7 +612,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
 
 void MA_OT_image_solver::adapt_solution(const int level)
 {
-  FEBasisHandler_.adapt(*this, level, solution);
+  MA_OT_solver::adapt_solution(level);
   std::cerr << " adapting operator " << std::endl;
   gridTarget_ptr->globalRefine(level);
   op.adapt();

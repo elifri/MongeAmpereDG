@@ -86,8 +86,8 @@ public:
       writeVTK_(config.writeVTK),
       outputDirectory_(config.outputDirectory), plotOutputDirectory_(config.plotOutputDirectory), outputPrefix_(config.outputPrefix),
       plotterRefinement_(config.refinement),
-      grid_ptr(grid), gridView_ptr(&gridView),
-      FEBasisHandler_(*this, *gridView_ptr),
+      grid_ptr(grid), gridView_(gridView),
+      FEBasisHandler_(*this, gridView),
       assembler_(FEBasisHandler_.FEBasis()),
       plotter(gridView),
       op(*this),
@@ -101,10 +101,10 @@ public:
 	  plotter.set_refinement(plotterRefinement_);
 	  plotter.set_geometrySetting(get_setting());
 
-	  grid_ptr->globalRefine(SolverConfig::startlevel);
+//	  grid_ptr->globalRefine(SolverConfig::startlevel);
     std::cout << "refined grid to startlevel " << SolverConfig::startlevel << " constructor n dofs " << get_n_dofs() << std::endl;
 
-    FEBasisHandler_.bind(*this, *gridView_ptr);
+    FEBasisHandler_.bind(*this, gridView);
 
 	  assembler_.bind(FEBasisHandler_.FEBasis());
 
@@ -217,7 +217,7 @@ public:
   const auto get_FEBasis_u() const {return FEBasisHandler_.uBasis();}
 
   const GridType& grid() const {return *grid_ptr;}
-  const GridViewType& gridView() const {return *gridView_ptr;}
+  const GridViewType& gridView() const {return gridView_;}
 
 public:
 
@@ -269,6 +269,8 @@ public:
 	 */
 	void update_solution(const Config::VectorType& newSolution) const;
 
+
+	shared_ptr<GridType> adapt_grid(const int level);
 	/**
 	 * adapts the solver into the global refined space (refines grid, and transforms solution & exact solution data)
 	 * @param level
@@ -369,8 +371,9 @@ protected:
 	std::string outputDirectory_, plotOutputDirectory_, outputPrefix_; ///outputdirectories
   int plotterRefinement_; ///number of (virtual) grid refinements for output generation
 
-	const shared_ptr<GridType> grid_ptr; ///Pointer to grid
-	const GridViewType* gridView_ptr; /// Pointer to gridView
+	shared_ptr<GridType> grid_ptr; ///Pointer to grid
+  GridViewType gridView_; /// Pointer to gridView
+//	shared_ptr<GridViewType> gridView_ptr; /// Pointer to gridView
 
 	FEBasisHandler<FETraits::Type, FETraits> FEBasisHandler_;
 
@@ -629,7 +632,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
   auto localIndexSet = FEBasisHandler_.FEBasis().indexSet().localIndexSet();
 
 
-  for (auto&& element : elements(*gridView_ptr)) {
+  for (auto&& element : elements(gridView())) {
 
     localView.bind(element);
     localIndexSet.bind(localView);
@@ -718,7 +721,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
     auto localViewn = FEBasisHandler_.FEBasis().localView();
     auto localIndexSetn = FEBasisHandler_.FEBasis().indexSet().localIndexSet();
 
-    for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
+    for (auto&& is : intersections(gridView(), element)) //loop over edges
     {
       if (is.neighbor()) {
 

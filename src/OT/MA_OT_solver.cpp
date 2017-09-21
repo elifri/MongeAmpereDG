@@ -128,7 +128,7 @@ void MA_OT_solver::plot(const std::string& name, int no) const
 //    decltype(numericalSolution)::LocalFunction localnumericalSolutionError(numericalSolutionError);
 
     //build writer
-     SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
+     SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
 
      //add solution data
      vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
