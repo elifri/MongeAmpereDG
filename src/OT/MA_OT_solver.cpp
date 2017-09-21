@@ -20,9 +20,9 @@ namespace po = boost::program_options;
 MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting)
 :MA_solver(grid, gridView, config), setting_(setting),
  op(*this,std::shared_ptr<OperatorType::LocalOperatorType>(new OperatorType::LocalOperatorType(
-     new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
+     new BoundarySquare(get_gradient_u_old_ptr(), get_setting()),
      new rhoXSquareToSquare(), new rhoYSquareToSquare(),
-     solver.gridView()
+     gridView
                          //     lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
            )))
 {}
@@ -42,7 +42,8 @@ struct ResidualFunction{
     localHessu_[3]=u11;
   }
 
-  ResidualFunction(std::shared_ptr<LocalGradFunction> &u, const MA_OT_solver::OperatorType& op, LocalHessScalarFunction &u00, LocalHessScalarFunction &u10,
+  template<typename OperatorType>
+  ResidualFunction(std::shared_ptr<LocalGradFunction> &u, const OperatorType& op, LocalHessScalarFunction &u00, LocalHessScalarFunction &u10,
       LocalHessScalarFunction &u01, LocalHessScalarFunction &u11):
         localgradu_(u), rhoX(op.get_lop().get_input_distribution()), rhoY(op.get_lop().get_target_distribution())
   {
@@ -179,8 +180,8 @@ void MA_OT_solver::plot(const std::string& name, int no) const
 #endif
 
 
-#ifndef USE_MIXED_ELEMENT
-     ResidualFunction residual(gradient_u_old,op,HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
+/*#ifndef USE_MIXED_ELEMENT
+     ResidualFunction residual(gradient_u_old,this->op,HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
 #else
      ResidualFunction residual(gradient_u_old,op,
          *localnumericalSolutionHessians[0],
@@ -189,7 +190,7 @@ void MA_OT_solver::plot(const std::string& name, int no) const
          *localnumericalSolutionHessians[3]);
 #endif
 
-			 vtkWriter.addVertexData(residual, VTK::FieldInfo("Residual", VTK::FieldInfo::Type::scalar, 1));
+			 vtkWriter.addVertexData(residual, VTK::FieldInfo("Residual", VTK::FieldInfo::Type::scalar, 1));*/
        
      //write to file
      std::string fname(plotter.get_output_directory());

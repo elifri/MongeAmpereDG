@@ -25,8 +25,9 @@ class MA_OT_image_solver : public MA_OT_solver
 public:
 #ifdef USE_ANALYTIC_DERIVATION
   typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
-#endif
+#else
   typedef  MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT> OperatorType;
+#endif
 
   MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const shared_ptr<GridType>& gridTarget,
        const SolverConfig& config, OpticalSetting& opticalSetting);
