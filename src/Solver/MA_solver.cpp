@@ -279,8 +279,9 @@ void MA_solver::update_solution(const Config::VectorType& newSolution) const
 
 shared_ptr<MA_solver::GridType> MA_solver::adapt_grid(const int level)
 {
-  shared_ptr<GridType> oldGrid = grid_ptr;
 
+  shared_ptr<GridType> oldGrid = grid_ptr;
+#ifndef BSPLINES
   std::string gridInputFile;
 
   switch (iterations)
@@ -298,18 +299,26 @@ shared_ptr<MA_solver::GridType> MA_solver::adapt_grid(const int level)
   grid_ptr = std::shared_ptr<GridType>(GmshReader<Config::GridType>::read(gridInputFile));
   gridView_ = grid_ptr->leafGridView();
   std::cout << " read grid vom file " << gridInputFile << std::endl;
+#else
+  assert(false); std::exit(-1);
+#endif
+
 //  gridView_ptr = &(grid_ptr->leafGridView());
   return oldGrid;
 }
 
 void MA_solver::adapt_solution(const int level)
 {
-
+#ifndef BSPLINES
   auto old_grid = adapt_grid(level);
 
   Config::VectorType u_solution = solution;
   FEBasisHandler_.adapt(old_grid, gridView(), u_solution, solution);
   get_assembler().bind(FEBasisHandler_.FEBasis());
+#else
+  FEBasisHandler_.adapt(*this, level, solution);
+  gridView_ = grid_ptr->leafGridView();
+#endif
   plotter.update_gridView(gridView_);
 }
 
