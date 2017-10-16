@@ -34,6 +34,8 @@ void newtonMethod(
     assert(eps>0);
     assert(lambdaMin>0);
 
+    std::cerr << " Start Newton ..." << std::endl;
+
     const unsigned int n=x.size();
 
     Eigen::VectorXd f(n);
@@ -54,15 +56,15 @@ void newtonMethod(
     for (unsigned int i=0; i<maxIter; i++) {
     Eigen::VectorXd s;
       Eigen::VectorXd xBoundary(x);
-      const unsigned int maxIterBoundaryConditions = 5;
+      const unsigned int maxIterBoundaryConditions = 1;
       for (unsigned int j = 0; j < maxIterBoundaryConditions; j++)
       {
         // solve Df*s = +f using UmfPack:
           if (useCombinedFunctor)
-            functor.evaluate(x,f,Df, xBoundary, false);
+            functor.evaluate(x,f,Df, xBoundary, true);
           else
           {
-            functor.evaluate(x,f,xBoundary, false);
+            functor.evaluate(x,f,xBoundary, true);
             functor.derivative(x,Df);
       //      make_FD_Jacobian(functor, x, J);
           }
@@ -87,7 +89,9 @@ void newtonMethod(
 
           xBoundary-=lambdaMin*s;
 
-          std::cerr << " xBoundary " << xBoundary.transpose() << std::endl;
+          std::cerr << "  newton residual is " << std::scientific << std::setprecision(3) << f.norm();
+
+          std::cerr << std::endl << std::endl;
 
           if (!silentmode)
           {
@@ -102,13 +106,12 @@ void newtonMethod(
             std::cout << "   " << std::scientific << std::setprecision(3) << f.norm();
             std::cout << std::endl;
           }
-          if (s.norm() <= eps)
+          if (s.norm() <= eps && i>0)
               break;
       }
       // compute damped Newton step
 
       x = xBoundary;
-      std::cerr << " xNew Newton " << xBoundary.transpose() << std::endl;
 
       if (!silentmode)
          {
@@ -126,7 +129,7 @@ void newtonMethod(
             std::cout << std::endl;
          }
 
-        if (s.norm() <= eps)
+        if (s.norm() <= eps && i>0)
             break;
     }
 
