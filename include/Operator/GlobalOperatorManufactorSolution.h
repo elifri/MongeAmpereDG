@@ -45,8 +45,13 @@ public:
         << " - " << rhsBar(this->solver_ptr->get_n_dofs_V_h())<< std::endl;
     std::cerr << "  ****    bar l_H(q) with norm " << std::scientific << std::setprecision(3) <<  v.tail(this->solver_ptr->get_n_dofs_Q_h()).norm() << std::endl;
 
-    std::cerr << "  ****    current bar u L2 error is " << this->solver_ptr->calculate_L2_errorOT([](Config::SpaceType x)
+    if (new_solution)
+    {
+      std::cerr << "  ****    current bar u L2 error is " << this->solver_ptr->calculate_L2_error([](Config::SpaceType x)
+        {return x.two_norm2()/2.0;}) << std::endl;
+      std::cerr << "  ****    current bar grad u L2 error is " << this->solver_ptr->calculate_L2_errorOT([](Config::SpaceType x)
         {return Dune::FieldVector<double, Config::dim> ({x[0], x[1]});}) << std::endl;
+    }
   }
 
   void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::VectorType& xNew, const bool new_solution=true) const

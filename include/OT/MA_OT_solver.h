@@ -85,6 +85,10 @@ public:
   template<typename FGrad>
   Config::ValueType calculate_L2_errorOT(const FGrad &f) const;
 
+  template<typename F>
+  Config::ValueType calculate_L2_error(const F &f) const;
+
+
 protected:
   GeometrySetting& setting_;
 
@@ -119,6 +123,51 @@ void MA_OT_solver::project(const F f, VectorType& v) const
   test_projection(f,v.head(get_n_dofs_V()));
 #endif
 }
+
+template<typename F>
+Config::ValueType MA_OT_solver::calculate_L2_error(const F &f) const
+{
+  Config::ValueType res = 0, max_error = 0;
+
+  for(auto&& e: elements(*gridView_ptr))
+  {
+    auto geometry = e.geometry();
+
+    solution_u_old->bind(e);
+
+    // Get a quadrature rule
+    int order = std::max(1, 3);
+    const QuadratureRule<Config::ValueType, Config::dim>& quad = FETraits::get_Quadrature<Config::dim>(e, order);
+
+    // Loop over all quadrature points
+    for (const auto& pt : quad) {
+
+      // Position of the current quadrature point in the reference element
+      const Config::DomainType &quadPos = pt.position();
+
+      auto u_value = (*solution_u_old)(quadPos);
+
+      decltype(u_value) f_value;
+      f_value = f(geometry.global(pt.position()));
+
+      auto factor = pt.weight()*geometry.integrationElement(pt.position());
+
+      res += (u_value - f_value)*(u_value - f_value)*factor;
+//      std::cerr << " u_value - f_value " << (u_value - f_value) << " = "  << u_value << "-" << f_value << std::endl;
+
+      if (std::abs(u_value-f_value) > max_error)
+      {
+        max_error = std::abs(u_value-f_value);
+//        std::cerr << "found greater error at " << geometry.global(pt.position()) << ", namely " << max_error << std::endl;
+      }
+//      cout << "res = " << res << "u_ value " << u_value << " f_value " << f_value << std::endl;
+    }
+  }
+  std::cerr << " Maximal L2error found is " << max_error << std::endl;
+
+  return std::sqrt(res);
+}
+
 
 template<typename FGrad>
 Config::ValueType MA_OT_solver::calculate_L2_errorOT(const FGrad &f) const
