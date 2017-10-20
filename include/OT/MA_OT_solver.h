@@ -16,6 +16,7 @@
 #include "Solver/AssemblerLagrangianBoundary.h"
 
 #include "MA_OT_global_Operator.h"
+#include "Operator/GlobalOperatorManufactorSolution.h"
 
 #ifdef USE_C0_PENALTY
   #include "operator_MA_OT_Brenner.h"
@@ -37,15 +38,21 @@ public:
 
   //find correct operator
 #ifdef USE_C0_PENALTY
-  typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Brenner> OperatorType;
+  using GlobalMA_OT_Operator =  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Brenner>;
 #else
   #ifdef USE_MIXED_ELEMENT
-    typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Neilan> OperatorType;
+  using GlobalMA_OT_Operator = MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Neilan>;
   #else
-    typedef  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT> OperatorType;
+    using GlobalMA_OT_Operator = MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT>;
 //todo C1 is not for nonimage
     //    typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
   #endif
+#endif
+
+#ifdef MANUFACTOR_SOLUTION
+    using OperatorType = OperatorManufactorSolution<GlobalMA_OT_Operator>;
+#else
+    using OperatorType = GlobalMA_OT_Operator;
 #endif
 
 

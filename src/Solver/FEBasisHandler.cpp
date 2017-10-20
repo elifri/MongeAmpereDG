@@ -185,7 +185,7 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
 
   std::cout << "new element count " << solver.gridView_ptr->size(0) << std::endl;
 
-  //update member
+  //update memberDEBUG
   std::array<unsigned int,FEBasisType::GridView::dimension> elementsSplines;
   std::fill(elementsSplines.begin(), elementsSplines.end(), std::sqrt(solver.gridView_ptr->size(0)));
 
@@ -544,8 +544,9 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
 
 template <>
 template <>
-Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>>::adapt_after_grid_change(const typename FEBasisType::GridView& gridOld, const typename FEBasisType::GridView& grid, Config::VectorType& v)
+Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>>::adapt_after_grid_change(const typename FEBasisType::GridView& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v)
 {
+  std::cout << " build new basis " << std::endl;
   FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid));
 
 //  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
@@ -555,24 +556,72 @@ Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::Lev
 
   Config::VectorType vNew;
   vNew.resize(FEBasis_->indexSet().size());
+  std::cout << " going to interpolate " << std::endl;
   interpolate(*FEBasis_, vNew, solution_u_Coarse_global);
+  std::cout << "interpolated " << std::endl;
   return vNew;
 }
 
 template <>
 template <>
-Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::GridView, SolverConfig::degree>>::adapt_after_grid_change(const typename Config::LevelGridView& gridOld, const typename FEBasisType::GridView& grid, Config::VectorType& v)
+Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::GridView, SolverConfig::degree>>::adapt_after_grid_change(const Config::LevelGridView& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v)
 {
-  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid));
+  std::cerr << static_cast<const void*>(&gridOld) << " and " << static_cast<const void*>(&grid) << std::endl;
+  std::cerr << __FILE__ << ":" << __LINE__ << " build new basis with levelgrid " << std::endl;
+  //FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid));
 
-  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
+//  std::cerr << " build old basis " << std::endl;
+//  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
+  //FEBasisCoarseType FEBasisCoarse (gridOld);
+//  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
+  //DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
+
+//  std::cerr << " interpolate " << std::endl;
+  Config::VectorType vNew;
+  //vNew.resize(FEBasis_->indexSet().size());
+//  std::cerr << "start interpolate " << std::endl;
+  //interpolate(*FEBasis_, vNew, solution_u_Coarse_global);
+  //interpolate(*FEBasis_, vNew, DiscreteGridFunctionCoarse(FEBasisCoarse,v));
+  std::cerr << " interpolated and return vNew" << std::endl;
+  return vNew;
+}
+
+template <>
+Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::GridView, SolverConfig::degree>>::adapt_after_grid_change()
+{
+  std::cerr << __FILE__ << ":" << __LINE__ << " without parameters build new basis with levelgrid " << std::endl;
+  //FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid));
+
+//  std::cerr << " build old basis " << std::endl;
+//  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
+  //FEBasisCoarseType FEBasisCoarse (gridOld);
+//  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
+  //DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
+
+//  std::cerr << " interpolate " << std::endl;
+  Config::VectorType vNew;
+  //vNew.resize(FEBasis_->indexSet().size());
+//  std::cerr << "start interpolate " << std::endl;
+  //interpolate(*FEBasis_, vNew, solution_u_Coarse_global);
+  //interpolate(*FEBasis_, vNew, DiscreteGridFunctionCoarse(FEBasisCoarse,v));
+  std::cerr << " interpolated and return vNew" << std::endl;
+  return vNew;
+}
+
+
+template <>
+template <>
+Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt_function_after_grid_change(const typename Config::LevelGridView& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
+{
+  typedef PS12SplitTraits<Config::LevelGridView>::FEBasis FEBasisCoarseType;
   FEBasisCoarseType FEBasisCoarse (gridOld);
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
   DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
+  DiscreteGridFunctionCoarse::GlobalFirstDerivative gradient_u_Coarse_global (solution_u_Coarse_global);
 
   Config::VectorType vNew;
   vNew.resize(FEBasis_->indexSet().size());
-  interpolate(*FEBasis_, vNew, solution_u_Coarse_global);
+  project(solution_u_Coarse_global, gradient_u_Coarse_global, vNew);
   return vNew;
 }
 

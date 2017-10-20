@@ -304,7 +304,7 @@ void MA_OT_image_solver::one_Poisson_Step()
   Integrator<Config::GridType> integrator(grid_ptr);
   auto k = 1.0;
   auto rhs = [&](Config::SpaceType x){return -k*std::sqrt(op_image.f_(x)/op_image.g_(x-x0));};
-#ifdef C1Element
+#ifdef USE_ANALYTIC_JACOBIAN
   auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return ((x-x0)*normal)-op_image.lopLinear_ptr->bc.H(x-x0, normal);};
 #else
   auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return ((x-x0)*normal)-op_image.lop_ptr->bc.H(x-x0, normal);};

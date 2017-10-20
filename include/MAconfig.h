@@ -23,6 +23,8 @@
 //use analytic derivation (if implemented)
 #define USE_ANALYTIC_JACOBIAN
 
+#define MANUFACTOR_SOLUTION
+
 //#define BSPLINES
 //#define USE_C0_PENALTY
 //#define USE_MIXED_ELEMENT

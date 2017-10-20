@@ -226,11 +226,11 @@ const typename MA_solver::VectorType& MA_solver::solve()
     update_solution(solution);
     plot("numericalSolution");
 
-    update_Operator();
+/*    update_Operator();
 
     solve_nonlinear_system();
     iterations++;
-    std::cerr << " solved nonlinear system" << std::endl;
+    std::cerr << " solved nonlinear system" << std::endl;*/
 
     {
       //write current solution to file
@@ -244,10 +244,12 @@ const typename MA_solver::VectorType& MA_solver::solve()
     }
     plot("numericalSolutionBeforeRef");
 
+    std::cerr << "Adapting solution" << std::endl;
     std::cout << " adapting ...";
     if (i < SolverConfig::nonlinear_steps-1)
       adapt_solution();
     std::cout << " ... done " << std::endl;
+    std::cerr << "done." << std::endl;
 
     update_solution(solution);
     plot("numericalSolution");

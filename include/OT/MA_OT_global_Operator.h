@@ -281,9 +281,9 @@ public:
       m.insert(i,indexFixingGridEquation)=lagrangianFixingPointDiscreteOperator(i);
     }
     //set rhs of langrangian multipler
-    v(indexFixingGridEquation) = assembler.u0AtX0()-assembler.uAtX0();
-    std::cerr << " u_0 - u = " << assembler.u0AtX0() << '-'  <<assembler.uAtX0() << "="<< std::scientific << std::setprecision(3)<< v(indexFixingGridEquation) << std::endl;
+    std::cerr << " at v (" << indexFixingGridEquation << ") is " << v(indexFixingGridEquation) << " going to be " << assembler.u0AtX0()-assembler.uAtX0() << std::endl;
     v(indexFixingGridEquation) = assembler.uAtX0() - assembler.u0AtX0();
+    std::cerr << " u_0 - u = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation) << " = " << assembler.u0AtX0() << '-'  <<assembler.uAtX0() << std::endl;
     v(indexFixingGridEquation) += lagrangianFixingPointDiscreteOperator.dot(w);
 
     {

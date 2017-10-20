@@ -259,9 +259,9 @@ void MA_OT_solver::plot(const std::string& name, int no) const
     decltype(numericalSolution)::LocalFunction localnumericalSolution(numericalSolution);
 
     //build errorfunction
-    Config::VectorType diff = solution_u-exactsol_u.segment(0, get_n_dofs_u());
-    Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolutionError(FEBasisHandler_.uBasis(),diff);
-    decltype(numericalSolution)::LocalFunction localnumericalSolutionError(numericalSolutionError);
+//    Config::VectorType diff = solution_u-exactsol_u.segment(0, get_n_dofs_u());
+//    Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolutionError(FEBasisHandler_.uBasis(),diff);
+//    decltype(numericalSolution)::LocalFunction localnumericalSolutionError(numericalSolutionError);
 
 
     //build writer
@@ -270,7 +270,7 @@ void MA_OT_solver::plot(const std::string& name, int no) const
 
      //add solution data
      vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
-     vtkWriter.addVertexData(localnumericalSolutionError, VTK::FieldInfo("error", VTK::FieldInfo::Type::scalar, 1));
+//     vtkWriter.addVertexData(localnumericalSolutionError, VTK::FieldInfo("error", VTK::FieldInfo::Type::scalar, 1));
 
      //extract hessian (3 entries (because symmetry))
      Dune::array<int,2> direction = {0,0};
@@ -335,10 +335,12 @@ void MA_OT_solver::plot(const std::string& name, int no) const
   fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + "outputGrid.vtu";
 
   plotter.writeOTVTK(fname, *gradient_u_old, [](Config::SpaceType x)
-      {return Dune::FieldVector<double, Config::dim> ({
-                                                      x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
-                                                      x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});});
-//  plotter.writeOTVTK(fname, *gradient_u_old);
+//      {return Dune::FieldVector<double, Config::dim> ({
+//                                                      x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
+//                                                      x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});});
+      {return Dune::FieldVector<double, Config::dim> ({x[0], x[1]});});
+
+      //  plotter.writeOTVTK(fname, *gradient_u_old);
 
 
 }
@@ -351,9 +353,10 @@ void MA_OT_solver::create_initial_guess()
   }
   else
   {
-//    project([](Config::SpaceType x){return x.two_norm2()/2.0;},
+//    const double epsilon = 0.1;
+    project([](Config::SpaceType x){return 2*x.two_norm2()/2.0;},
 //    project([](Config::SpaceType x){return 0.5*x[0]*x[0]+x[0]+0.25*x[1]*x[1];},
-      project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
+//      project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
 //    project_labouriousC1([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
   //                        [](Config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},
   //                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
@@ -362,12 +365,23 @@ void MA_OT_solver::create_initial_guess()
 //  this->test_projection([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);}, solution);
 
 
-  project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},exactsol_u);
+  project([](Config::SpaceType x){return x.two_norm2()/2.0;},exactsol_u);
+//  project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},exactsol_u);
 
   Config::ValueType res = 0;
 
   assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), solution, res);
+//  assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), exactsol_u, res);
   assembler_.set_u0AtX0(res);
+  std::cerr << " set u_0^mid to " << res << std::endl;
+
+  update_solution(solution);
+
+#ifdef MANUFACTOR_SOLUTION
+  std::cerr << " init bar u ... " << std::endl;
+  op.init(exactsol_u);
+  std::cerr << "  ... done init bar u" << std::endl;
+  #endif
 }
 
 
@@ -381,9 +395,12 @@ void MA_OT_solver::solve_nonlinear_system()
   {
 
     std::cout << " L2 error is " << calculate_L2_errorOT([](Config::SpaceType x)
-        {return Dune::FieldVector<double, Config::dim> ({
-                                                        x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
-                                                        x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
+//        {return Dune::FieldVector<double, Config::dim> ({
+//                                                        x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
+//                                                        x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
+        {return Dune::FieldVector<double, Config::dim> ({x[0], x[1]});}) << std::endl;
+
+
     //---exact solution of rhoXGaussianSquare-------
 //            {return Dune::FieldVector<double, Config::dim> ({ x[0]+1.,x[1]/2.});}) << std::endl;
   }
@@ -416,9 +433,11 @@ void MA_OT_solver::solve_nonlinear_system()
   std::cout << " Lagrangian Parameter for fixing grid Point " << solution(get_n_dofs_V_h()) << std::endl;
 
   std::cout << " L2 error is " << calculate_L2_errorOT([](Config::SpaceType x)
-      {return Dune::FieldVector<double, Config::dim> ({
-                                                      x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
-                                                      x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
+//      {return Dune::FieldVector<double, Config::dim> ({
+//                                                      x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
+//                                                      x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
+  {return Dune::FieldVector<double, Config::dim> ({x[0], x[1]});}) << std::endl;
+
   //---exact solution of rhoXGaussianSquare-------
 //      {return Dune::FieldVector<double, Config::dim> ({ x[0]+1.,x[1]/2.});}) << std::endl;
 
@@ -427,6 +446,15 @@ void MA_OT_solver::solve_nonlinear_system()
 void MA_OT_solver::adapt_operator()
 {
   op.adapt();
+
+#ifdef MANUFACTOR_SOLUTION
+  std::cerr << " adapt uBar " << std::endl;
+  auto uBar_adapted = FEBasisHandler_.adapt_function_after_grid_change(this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1),
+                                             this->gridView(), op.get_uBar());
+  uBar_adapted.conservativeResize(get_n_dofs());
+  std::cerr <<" init new rhs Bar " << std::endl;
+  op.init(uBar_adapted);
+#endif
 }
 
 void MA_OT_solver::adapt_solution(const int level)
@@ -443,16 +471,39 @@ void MA_OT_solver::adapt_solution(const int level)
   //adapt boundary febasis and bind to assembler
 //  auto p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-2),
 //                                           this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1), p);
-  auto p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1),
-                                           this->gridView(), p);
-  get_assembler_lagrangian_boundary().bind(FEBasisHandler_.uBasis(), FEBasisHandlerQ_.FEBasis());
+  std::cerr << " going to adapt lagrangian multiplier " << std::endl;
+
+  std::cerr << __FILE__ << ":" << __LINE__ << " grid " << this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1).size(0) << std::endl;
+  std::cerr << __FILE__ << ":" << __LINE__ << " gridView " << this->gridView().size(0) << std::endl;
+
+  std::cerr << static_cast<const void*>(this->grid_ptr.get()) << " and " << static_cast<const void*>(this->gridView_ptr) << std::endl;
+
+  Config::VectorType p_adapted;
+
+  {
+    auto gridViewOld = this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1);
+
+//    FEBasisHandlerQ_.adapt_after_grid_change(this->gridView());
+//    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change();
+      p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1),
+                                               this->gridView(), p);
+
+    //this is not working, I have no idea why ... reading assembly code did not explain what happens
+  }
+//  auto p_adapted = p;
+  std::cerr << " going to bind lagrangian boundary" << std::endl;
+
+  auto& assembler = get_assembler_lagrangian_boundary();
+  assembler.bind(FEBasisHandler_.uBasis(), FEBasisHandlerQ_.FEBasis());
 
   //init lagrangian multiplier variables
   solution.conservativeResize(get_n_dofs());
-  solution.tail(get_n_dofs_Q_h()) = get_assembler_lagrangian_boundary().boundaryHandler().shrink_to_boundary_vector(p_adapted);
+  solution(get_n_dofs_V_h()) = 0;
+//  solution.tail(get_n_dofs_Q_h()) = get_assembler_lagrangian_boundary().boundaryHandler().shrink_to_boundary_vector(p_adapted);
 
+  std::cerr << " going to adapt operator " << std::endl;
 
-  this->adapt_operator();
+  adapt_operator();
 }
 
 
@@ -550,7 +601,7 @@ void MA_OT_solver::newtonMethod(const unsigned int maxIter, const double eps, co
         std::cout << std::endl;
      }
 
-    if (s.norm() <= eps)
+    if (s.norm() <= eps)RELEASE
         break;
   }
 
