@@ -48,11 +48,6 @@ struct FEBasisHandler{
     std::cerr <<  " Error, dont know FE basis and works only for levelGridViews" << std::endl;
     DUNE_THROW(Dune::NotImplemented, " Error, dont know FE basis and works only for levelGridViews"); exit(-1);}
 
-  Config::VectorType adapt_after_grid_change()
-  { assert(false && " Error, dont know FE basis and works only for levelGridViews");
-    std::cerr <<  " Error, dont know FE basis and works only for levelGridViews" << std::endl;
-    DUNE_THROW(Dune::NotImplemented, " Error, dont know FE basis and works only for levelGridViews"); exit(-1);}
-
 
   template <typename GridTypeOld>
   Config::VectorType adapt_function_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
@@ -173,8 +168,6 @@ template <>
 template <>
 Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>>::adapt_after_grid_change(const typename FEBasisType::GridView& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v);
 
-template <>
-Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::GridView, SolverConfig::degree>>::adapt_after_grid_change();
 
 template <>
 template <>
