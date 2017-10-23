@@ -7,6 +7,8 @@
             von Yasemin Hafizogullari und Andreas Platen
             an PDE_solver-Struktur angepasst
   Datum:    August 2002, modifiziert im September 2009
+  http://orbit.dtu.dk/en/publications/methods-for-nonlinear-least-squares-problems-2nd-ed(f08ec0a8-7588-4262-b963-838202c420a8).html
+  S.31
 ***********************************************************/
 
 
@@ -83,7 +85,7 @@ bool checkJacobian(
 
 	bool compared = compare_matrices(std::cout, J, estimated_J, "Jacobian", "FD Jacobian", true, tol);
 
-  if (!compared && exportFDJacobianifFalse)
+  if ((!compared && exportFDJacobianifFalse) || true)
   {
     MATLAB_export(x, "x");
     MATLAB_export(temp, "f");
@@ -167,6 +169,8 @@ bool doglegMethod (
     double dL = 0;
     double nh = 0;
 
+//    for (int i = 0; i < n; i++) assert ( ! (f(i) != f(i)));
+
     if (useCombinedFunctor)
       functor.evaluate(x,f,J, x, false);
     else
@@ -176,6 +180,7 @@ bool doglegMethod (
 //      make_FD_Jacobian(functor, x, J);
     }
 
+//    for (int i = 0; i < n; i++) assert ( ! (f(i) != f(i)));
 //    std::cerr << "f " << f.transpose() << std::endl;
 
 
@@ -378,14 +383,12 @@ bool doglegMethod (
         if (!stop)
         {
             // Perform step
-
             // new function evaluation
             const Eigen::VectorXd xnew(x + h);
             if (useCombinedFunctor)
               functor.evaluate(xnew,fn,Jn, x);
             else
               functor.evaluate(xnew,fn,x);
-
             const double Fn = fn.squaredNorm() / 2.0;
 //            std::cerr << "f " << fn.transpose() << std::endl;
 //            std::cerr << " function norm 2 /2" << Fn << std::endl;

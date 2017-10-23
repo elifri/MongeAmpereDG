@@ -134,6 +134,13 @@ void MA_refractor_solver::adapt_solution(const int level)
   op.adapt();
 }
 
+void MA_refractor_solver::adapt_solution(const int level)
+{
+  FEBasisHandler_.adapt(*this, level, solution);
+  std::cerr << " adapting operator " << std::endl;
+  op.adapt();
+}
+
 void MA_refractor_solver::update_Operator()
 {
   //blurr target distributation
@@ -152,6 +159,8 @@ void MA_refractor_solver::update_Operator()
 
 void MA_refractor_solver::solve_nonlinear_system()
 {
+  for (int i = 0; i < solution.size(); i++) assert ( ! (solution(i) != solution(i)));
+
   assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
   std::cout << "n dofs" << get_n_dofs() << std::endl;
   // /////////////////////////
@@ -159,9 +168,11 @@ void MA_refractor_solver::solve_nonlinear_system()
   // /////////////////////////
 
   Config::VectorType newSolution = solution;
+  newSolution.conservativeResize(solution.size()+1);
+  newSolution(solution.size()) = 0;//init value for lagrangian parameter
 
 #ifdef USE_DOGLEG
-  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
+  doglegMethod(op, doglegOpts_, newSolution, evaluateJacobianSimultaneously_);
 #endif
 #ifdef USE_PETSC
   igpm::processtimer timer;
@@ -178,6 +189,7 @@ void MA_refractor_solver::solve_nonlinear_system()
   timer.stop();
   std::cout << "needed " << timer << " seconds for nonlinear step, ended with error code " << error << std::endl;
 #endif
+  solution = newSolution.head(get_n_dofs());
 }
 
 

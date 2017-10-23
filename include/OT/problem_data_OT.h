@@ -118,6 +118,29 @@ public:
     }
     return max;
   }
+
+  FieldVector<adouble, Config::dim> derivativeH(const FieldVector<adouble, Config::dim>& transportedX, const Config::SpaceType &normalX) const
+  {
+
+    //create discrete version of Lemma 2.1. in "Numerical soltuion of the OT problem using the MA equation" by Benamou, Froese and Oberman
+    adouble max = -100000000;
+    FieldVector<adouble, Config::dim> res;
+
+    for (int i = 0; i < N_; i++)
+    {
+      const Config::SpaceType normal = {std::cos(2*M_PI*i/N_), std::sin(2*M_PI*i/N_)};
+//      if (normal*normalX >= 0) continue;
+
+      adouble tempdistanceFunction = transportedX*normal;
+      tempdistanceFunction -= LegrendeFenchelTrafo(normal);
+      if(tempdistanceFunction > max)
+      {
+        max = tempdistanceFunction;
+        res = normal;
+      }
+    }
+    return res;
+  }
 #endif
 
 /*  template<class Element>
@@ -299,6 +322,7 @@ public :
 #endif
 };
 
+
 class rhoYSquareToSquare : public DensityFunction
 {
 public:
@@ -319,6 +343,40 @@ public:
   void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
   {
     u = 1;
+  }
+#endif
+};
+
+class rhoXGaussianSquare : public DensityFunction
+{
+public:
+  ~rhoXGaussianSquare(){}
+
+  void evaluate (const Config::DomainType &x, Config::ValueType &u) const
+  {
+    u = 1./0.16*std::exp(-0.5*x[0]*x[0]/0.4/0.4 - 0.5*x[1]*x[1]/0.4/0.4);
+  }
+#ifdef HAVE_ADOLC
+  void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
+  {
+    u = 1./0.16*exp(-0.5*x[0]*x[0]/0.4/0.4 - 0.5*x[1]*x[1]/0.4/0.4);
+  }
+#endif
+};
+
+class rhoYGaussianSquare : public DensityFunction
+{
+public:
+  ~rhoYGaussianSquare() {}
+
+  void evaluate (const Config::DomainType &x, Config::ValueType &u) const
+  {
+    u = 1./0.08*std::exp(-0.5*(x[0]-1)*(x[0]-1)/0.4/0.4 - 0.5*x[1]*x[1]/0.2/0.2);
+  }
+#ifdef HAVE_ADOLC
+  void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
+  {
+    u = 1./0.08*exp(-0.5*(x[0]-1)*(x[0]-1)/0.4/0.4 - 0.5*x[1]*x[1]/0.2/0.2);
   }
 #endif
 };

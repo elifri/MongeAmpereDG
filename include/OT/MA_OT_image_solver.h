@@ -8,12 +8,12 @@
 #ifndef SRC_MA_OT_IMAGE_SOLVER_H_
 #define SRC_MA_OT_IMAGE_SOLVER_H_
 
-#include <OT/MA_OT_global_image_Operator.h>
+#include "OT/MA_OT_global_image_Operator.h"
 #include "ImageFunction.hpp"
 
 #include "OT/MA_OT_solver.h"
 
-#ifndef USE_ANALYTIC_DERIVATION
+#ifndef USE_ANALYTIC_JACOBIAN
   #include "OT/operator_MA_OT_Brenner.h"
 #else
   #include "OT/operator_MA_OT_Linearisation.hpp"
@@ -23,11 +23,15 @@
 class MA_OT_image_solver : public MA_OT_solver
 {
 public:
-#ifdef USE_ANALYTIC_DERIVATION
-  typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
-#else
-  typedef  MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT> OperatorType;
-#endif
+//#ifdef C1Element
+  #ifdef USE_ANALYTIC_JACOBIAN
+    typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
+  #else
+    typedef MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT> OperatorType;
+  #endif
+//#else
+//    typedef MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT> OperatorType;
+//#endif
 
   MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const shared_ptr<GridType>& gridTarget,
        const SolverConfig& config, OpticalSetting& opticalSetting);
@@ -44,21 +48,14 @@ private:
   void plot(const std::string& filename) const;
   using MA_OT_solver::plot;
 
-  void adapt_solution(const int level);
+  void adapt_operator();
+  using MA_OT_solver::adapt_solution;
 
   void update_Operator();
   void solve_nonlinear_system();
 
   OpticalSetting& setting_;
-
-  const shared_ptr<GridType> gridTarget_ptr;
-
-
-#ifndef USE_ANALYTIC_DERIVATION
-  friend MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT>;
-#else
-  friend MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation>;
-#endif
+  OperatorType op_image;
 
   OperatorType op;
 

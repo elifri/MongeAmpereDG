@@ -101,7 +101,7 @@ public:
 	  plotter.set_refinement(plotterRefinement_);
 	  plotter.set_geometrySetting(get_setting());
 
-//	  grid_ptr->globalRefine(SolverConfig::startlevel);
+	  grid_ptr->globalRefine(SolverConfig::startlevel);
     std::cout << "refined grid to startlevel " << SolverConfig::startlevel << " constructor n dofs " << get_n_dofs() << std::endl;
 
     FEBasisHandler_.bind(*this, gridView);
@@ -174,7 +174,7 @@ public:
     void Jacobian(const Config::VectorType& x,  Config::MatrixType& m) const
     {
       assert(solver_ptr != NULL);
-      solver_ptr->assemble_Jacobian_DG(lop, x,m);
+      solver_ptr->assemble_DG_Jacobian_only(lop, x,m);
     }
     void derivative(const Config::VectorType& x,  Config::MatrixType& m) const
     {
@@ -231,10 +231,9 @@ public:
 
 	///assembles the (global) Jacobian of the FE function as specified in LOP
 	template<typename LocalOperatorType>
-	void assemble_Jacobian_DG(const LocalOperatorType &lop, const VectorType& x, MatrixType& m) const {
+	void assemble_DG_Jacobian_only(const LocalOperatorType &LOP, const VectorType& x, MatrixType& m) const {
 		assert (initialised);
-
-		assembler_.assemble_Jacobian_DG(lop, x,m);
+		assembler_.assemble_DG_Jacobian_only(LOP, x, m);
 	}
 
   ///assembles the (global) Jacobian of the FE function as specified in LOP
@@ -291,7 +290,8 @@ public:
 
 	///write the current numerical solution to vtk file
 	virtual void plot(const std::string& filename) const;
- 	void plot(const VectorType& u, const std::string& filename) const;
+  virtual void plot(const std::string& filename, int no) const;
+	void plot(const VectorType& u, const std::string& filename) const;
 
 protected:
 	///reads the fe coefficients from file

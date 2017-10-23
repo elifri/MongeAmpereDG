@@ -34,9 +34,8 @@ class Local_Operator_MA_OT {
 public:
   typedef DensityFunction Function;
 
-  template<typename GridView>
-  Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY, const GridView& gridView):
-  hash(gridView), EntititiesForUnifikationTerm_(10,hash), rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
+  Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
+  rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
   {
     std::cout << " created Local Operator" << std::endl;
   }
@@ -57,12 +56,8 @@ public:
    * @param v					 local residual (to be returned)
    */
   template<class LocalView, class VectorType>
-    void assemble_cell_term(const LocalView& localView, const VectorType &x,
-        VectorType& v, const int tag, const double u_atX0, const double u0_atX0,
-        LocalView& localViewTemp, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const {
-
-    assert(entryWx0.size() == entryWx0timesBgradV.size());
-
+  void assemble_cell_term(const LocalView& localView, const VectorType &x,
+      VectorType& v, const int tag) const  {
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
     const Element& element = localView.element();
@@ -182,24 +177,6 @@ public:
 
         v_adolc(j) += (PDE_rhs-uDH_det)*referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
-
-        //unification term
-        v_adolc(j) += (u_atX0)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-
-        //derivative unification term
-        for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
-        {
-          const auto& fixingElement = fixingElementAndOffset.first;
-          int noDof_fixingElement = fixingElementAndOffset.second;
-
-          localViewTemp.bind(fixingElement);
-
-          for (unsigned int k = 0; k < localViewTemp.size(); k++)
-          {
-            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-            noDof_fixingElement++;
-          }
-        }
       }
     }
 
@@ -395,285 +372,10 @@ public:
 
   }
 
-#ifndef COLLOCATION
-  template<class Intersection, class LocalView, class VectorType>
-  void assemble_boundary_face_term(const Intersection& intersection,
-      const LocalView &localView,
-      const VectorType &x, VectorType& v, int tag) const {
-    const int dim = Intersection::dimension;
-    const int dimw = Intersection::dimensionworld;
-
-    //assuming galerkin
-    assert((unsigned int) x.size() == localView.size());
-    assert((unsigned int) v.size() == localView.size());
-
-    const auto& localFiniteElement = localView.tree().finiteElement();
-    const int size_u = localFiniteElement.size();
-
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
-
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
-
-    //-----init variables for automatic differentiation
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(
-        localView.size());
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(
-        localView.size());
-    for (size_t i = 0; i < localView.size(); i++)
-      v_adolc[i] <<= v[i];
-
-    trace_on(tag);
-    //init independent variables
-    for (size_t i = 0; i < localView.size(); i++)
-      x_adolc[i] <<= x[i];
-
-    // ----start quadrature--------
-
-    // Get a quadrature rule
-    const int order = std::max(0, 3 * ((int) localFiniteElement.localBasis().order()));
-    GeometryType gtface = intersection.geometryInInside().type();
-    const QuadratureRule<Config::ValueType, Config::dim-1>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim-1>(gtface, order);
-
-    // normal of center in face's reference element
-    const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
-        dim - 1>::general(intersection.geometry().type()).position(0, 0);
-    const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
-        face_center);
-
-    // penalty weight for NIPG / SIPG
-    //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
-    double penalty_weight;
-    if (SolverConfig::Dirichlet)
-      penalty_weight = SolverConfig::sigmaBoundary
-                      * (SolverConfig::degree * SolverConfig::degree)
-                      / std::pow(intersection.geometry().volume(), SolverConfig::beta);
-    else
-      penalty_weight = SolverConfig::sigmaBoundary
-                      * (SolverConfig::degree * SolverConfig::degree);
-//                     * std::pow(intersection.geometry().volume(), SolverConfig::beta);
-
-    // Loop over all quadrature points
-    for (size_t pt = 0; pt < quad.size(); pt++) {
-
-      //------get data----------
-
-      // Position of the current quadrature point in the reference element
-      const FieldVector<double, dim> &quadPos =
-          intersection.geometryInInside().global(quad[pt].position());
-
-      // The transposed inverse Jacobian of the map from the reference element to the element
-      const auto& jacobian =
-          intersection.inside().geometry().jacobianInverseTransposed(quadPos);
-
-      //the shape function values
-      std::vector<RangeType> referenceFunctionValues(size_u);
-      adouble u_value = 0;
-      assemble_functionValues_u(localFiniteElement, quadPos,
-          referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
-
-      // The gradients
-      std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, Config::dim> gradu;
-      assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
-          gradients, x_adolc, gradu);
-
-      //-------calculate integral--------
-      auto signedDistance = bc.H(gradu, normal);
-//      std::cerr << " x " << element.geometry().global(quadPos) << " (gradu) " << (gradu) << " (gradu * normal) " << (gradu * normal) << " H " << signedDistance << std::endl;
-
-//      std::cerr << "gradients at " << quadPos << " : ";
-//      for( const auto& e: gradients)  std::cerr << e << "/" << (e*normal) << " , ";
-//      std::cerr << std::endl;
-
-      const auto integrationElement =
-          intersection.geometry().integrationElement(quad[pt].position());
-      const double factor = quad[pt].weight() * integrationElement;
-      for (int i = 0; i < size_u; i++) //parts from self
-      {
-        assert(!SolverConfig::Dirichlet);
-        v_adolc(i) += penalty_weight * signedDistance //*((T_value * normal) - phi_value)
-                            * (referenceFunctionValues[i]+(gradients[i]*normal)) * factor;
-//        std::cerr << "locally add to objective function " << i << ", with value "<<penalty_weight * signedDistance //*((T_value * normal) - phi_value)
-//            * (referenceFunctionValues[i]+(gradients[i]*normal)) * factor << " -> " <<  v_adolc(i) << std::endl;
-      }
-
-    }
-
-    // select dependent variables
-    for (size_t i = 0; i < localView.size(); i++)
-      v_adolc[i] >>= v[i];
-    trace_off();
-  }
-#else
-  template<class Intersection, class LocalView, class LocalIndexSet, class VectorType>
-  void assemble_boundary_face_term(const Intersection& intersection,
-      const LocalView &localView, const LocalIndexSet &localIndexSet,
-      const VectorType &x, VectorType& v, int tag) const {
-    const int dim = Intersection::dimension;
-    const int dimw = Intersection::dimensionworld;
-
-    //assuming galerkin
-    assert((unsigned int) x.size() == localView.size());
-    assert((unsigned int) v.size() == localView.size());
-
-    // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
-    const Element& element = localView.element();
-
-    const auto& localFiniteElement = localView.tree().finiteElement();
-    const int size_u = localFiniteElement.size();
-
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
-
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
-
-    //-----init variables for automatic differentiation
-
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(
-        localView.size());
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(
-        localView.size());
-    for (size_t i = 0; i < localView.size(); i++)
-      v_adolc[i] <<= v[i];
-
-    trace_on(tag);
-    //init independent variables
-    for (size_t i = 0; i < localView.size(); i++)
-      x_adolc[i] <<= x[i];
-
-    // ----start quadrature--------
-
-    // Get a quadrature rule
-    const int order = std::max(0, 3 * ((int) localFiniteElement.localBasis().order()));
-    GeometryType gtface = intersection.geometryInInside().type();
-    const QuadratureRule<double, dim - 1>& quad = QuadratureRules<double,
-        dim - 1>::rule(gtface, order);
-
-    // normal of center in face's reference element
-    const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
-        dim - 1>::general(intersection.geometry().type()).position(0, 0);
-    const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
-        face_center);
-
-    // penalty weight for NIPG / SIPG
-    //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
-    double penalty_weight;
-    if (SolverConfig::Dirichlet)
-      penalty_weight = SolverConfig::sigmaBoundary
-                      * (SolverConfig::degree * SolverConfig::degree)
-                      / std::pow(intersection.geometry().volume(), SolverConfig::beta);
-    else
-      penalty_weight = SolverConfig::sigmaBoundary
-                      * (SolverConfig::degree * SolverConfig::degree);
-//                     * std::pow(intersection.geometry().volume(), SolverConfig::beta);
-
-
-    // Loop over all quadrature points
-    for (size_t pt = 0; pt < quad.size(); pt++) {
-
-      //------get data----------
-
-      // Position of the current quadrature point in the reference element
-      const FieldVector<double, dim> &quadPos =
-          intersection.geometryInInside().global(quad[pt].position());
-
-      // The transposed inverse Jacobian of the map from the reference element to the element
-      const auto& jacobian =
-          intersection.inside().geometry().jacobianInverseTransposed(quadPos);
-
-      //the shape function values
-      std::vector<RangeType> referenceFunctionValues(size_u);
-      adouble u_value = 0;
-      assemble_functionValues_u(localFiniteElement, quadPos,
-          referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
-
-      // The gradients
-      std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, Config::dim> gradu;
-      assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
-          gradients, x_adolc, gradu);
-
-      //-------calculate integral--------
-      auto phi_value = bc.phi(element, quadPos, normal);
-
-      const auto integrationElement =
-          intersection.geometry().integrationElement(quad[pt].position());
-      const double factor = quad[pt].weight() * integrationElement;
-      for (int j = 0; j < size_u; j++) //parts from self
-      {
-        assert(!SolverConfig::Dirichlet);
-        v_adolc(j) += penalty_weight * ((gradu * normal) - phi_value) //*((T_value * normal) - phi_value)
-                            * referenceFunctionValues[j] * factor;
-      }
-
-    }
-
-    // select dependent variables
-    for (size_t i = 0; i < localView.size(); i++)
-      v_adolc[i] >>= v[i];
-    trace_off();
-  }
-
-#endif
-
-  int insert_entitity_for_unifikation_term(const Config::Entity element, int size)
-  {
-    auto search = EntititiesForUnifikationTerm_.find(element);
-    if (search == EntititiesForUnifikationTerm_.end())
-    {
-      const int newOffset = size*EntititiesForUnifikationTerm_.size();
-      EntititiesForUnifikationTerm_[element] = newOffset;
-
-      const auto& geometry = element.geometry();
-
-      return newOffset;
-    }
-    return EntititiesForUnifikationTerm_[element];
-  }
-
-  void insert_descendant_entities(const Config::GridType& grid, const Config::Entity element)
-  {
-    const auto& geometry = element.geometry();
-
-    auto search = EntititiesForUnifikationTerm_.find(element);
-    int size = search->second;
-    assert(search != EntititiesForUnifikationTerm_.end());
-    for (const auto& e : descendantElements(element,grid.maxLevel() ))
-    {
-      insert_entitity_for_unifikation_term(e, size);
-    }
-    EntititiesForUnifikationTerm_.erase(search);
-
-  }
-
-  const Config::EntityMap EntititiesForUnifikationTerm() const
-  {
-    return EntititiesForUnifikationTerm_;
-  }
-
-
-  int get_offset_of_entity_for_unifikation_term(Config::Entity element) const
-  {
-    return EntititiesForUnifikationTerm_.at(element);
-  }
-  int get_number_of_entities_for_unifikation_term() const
-  {
-    return EntititiesForUnifikationTerm_.size();
-  }
-
-  void clear_entitities_for_unifikation_term()
-  {
-    EntititiesForUnifikationTerm_.clear();
-  }
-
-  Config::EntityCompare hash;
-  Config::EntityMap EntititiesForUnifikationTerm_;
   const Function& get_input_distribution() const {return rhoX;}
   const Function& get_target_distribution() const {return rhoY;}
+
+  const OTBoundary& get_bc() {return bc;}
 
   const Function& rhoX;
   const Function& rhoY;
@@ -693,11 +395,9 @@ public:
   typedef DensityFunction Function;
   mutable bool found_negative;
 
-  Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY){}
-
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const { std::cerr << "did not found adolc"<< std::endl; std::exit(-1); }
+      VectorType& v, const int tag) const { std::cerr << "did not found adolc"<< std::endl; std::exit(-1); }
   template<class IntersectionType, class LocalView, class VectorType>
   void assemble_inner_face_term(const IntersectionType& intersection,
       const LocalView &localView, const VectorType &x,

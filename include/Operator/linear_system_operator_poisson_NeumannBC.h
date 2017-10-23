@@ -21,8 +21,7 @@ template< typename Rhs, typename BC>
 class Linear_System_Local_Operator_Poisson_NeumannBC{
 
 public:
-  template<typename GridView>
-  Linear_System_Local_Operator_Poisson_NeumannBC(const GridView& gridView, const Rhs &rhs, const BC &bc): hash(gridView), EntititiesForUnifikationTerm_(10,hash), rhs(rhs), bc(bc){}
+  Linear_System_Local_Operator_Poisson_NeumannBC(const Rhs &rhs, const BC &bc): rhs(rhs), bc(bc){}
 
 /**
  * implements the local volume integral
@@ -33,9 +32,7 @@ public:
  */
   template<class LocalView, class VectorType, class DenseMatrixType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, VectorType& v_midvalue, DenseMatrixType& m,
-      const double u_atX0, const double u0_atX0,
-      LocalView& localViewTemp, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const
+      VectorType& v, DenseMatrixType& m) const
   {
 
     // Get the grid element from the local FE basis view
@@ -103,21 +100,6 @@ public:
           * pt.weight() * integrationElement;
 
 //        v_midvalue(j) += (u_atX0)*referenceFunctionValues[j] * pt.weight()*integrationElement;
-
-        //derivative unification term
-        for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
-        {
-          const auto& fixingElement = fixingElementAndOffset.first;
-          int noDof_fixingElement = fixingElementAndOffset.second;
-
-          localViewTemp.bind(fixingElement);
-
-          for (unsigned int k = 0; k < localViewTemp.size(); k++)
-          {
-            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *pt.weight()*integrationElement;
-            noDof_fixingElement++;
-          }
-        }
 
       }
     }
@@ -257,7 +239,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
 	const int dimw = Intersection::dimensionworld;
 
   // Get the grid element from the local FE basis view
-  typedef typename LocalView::Element Element;
+//  typedef typename LocalView::Element Element;
 
   const auto& localFiniteElement = localView.tree().finiteElement();
 
@@ -284,7 +266,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
 	const FieldVector<double,dimw> normal = intersection.unitOuterNormal(face_center);
 
 	// penalty weight for NIPG / SIPG
-	double penalty_weight = SolverConfig::sigma*(SolverConfig::degree*SolverConfig::degree) / std::pow(intersection.geometry().volume(), SolverConfig::beta);
+//	double penalty_weight = SolverConfig::sigma*(SolverConfig::degree*SolverConfig::degree) / std::pow(intersection.geometry().volume(), SolverConfig::beta);
 
 	// Loop over all quadrature points
 	for (const auto &pt : quad) {
@@ -341,59 +323,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
 	}
 }
 
-int insert_entitity_for_unifikation_term(const Config::Entity element, int size)
-{
-  auto search = EntititiesForUnifikationTerm_.find(element);
-  if (search == EntititiesForUnifikationTerm_.end())
-  {
-    const int newOffset = size*EntititiesForUnifikationTerm_.size();
-    EntititiesForUnifikationTerm_[element] = newOffset;
-
-    const auto& geometry = element.geometry();
-
-    return newOffset;
-  }
-  return EntititiesForUnifikationTerm_[element];
-}
-
-void insert_descendant_entities(const Config::GridType& grid, const Config::Entity element)
-{
-  const auto& geometry = element.geometry();
-
-  auto search = EntititiesForUnifikationTerm_.find(element);
-  int size = search->second;
-  assert(search != EntititiesForUnifikationTerm_.end());
-  for (const auto& e : descendantElements(element,grid.maxLevel() ))
-  {
-    insert_entitity_for_unifikation_term(e, size);
-  }
-  EntititiesForUnifikationTerm_.erase(search);
-
-}
-
-const Config::EntityMap EntititiesForUnifikationTerm() const
-{
-  return EntititiesForUnifikationTerm_;
-}
-
-
-int get_offset_of_entity_for_unifikation_term(Config::Entity element) const
-{
-  return EntititiesForUnifikationTerm_.at(element);
-}
-int get_number_of_entities_for_unifikation_term() const
-{
-  return EntititiesForUnifikationTerm_.size();
-}
-
-void clear_entitities_for_unifikation_term()
-{
-  EntititiesForUnifikationTerm_.clear();
-}
-
 private:
-  Config::EntityCompare hash;
-  Config::EntityMap EntititiesForUnifikationTerm_;
 
   const Rhs& rhs;
   const BC& bc;

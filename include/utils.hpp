@@ -54,6 +54,19 @@ void rightmultiply (Dune::FieldMatrix<R,dim,dim>& A, const Dune::DiagonalMatrix<
     }
 }
 
+template<class R>
+inline
+void multiply_every_row_of_sparse_matrix(const Eigen::Matrix<R, Eigen::Dynamic, 1> & v, Eigen::SparseMatrix<R>& m)
+{
+  for (int k=0; k<m.outerSize(); ++k)
+    for (typename Eigen::SparseMatrix<R>::InnerIterator it(m,k); it; ++it)
+    {
+//      std::cerr << " was value " << it.value();
+      it.valueRef()*= v(it.col());
+//      std::cerr << " changed to " << it.value() << std::endl;
+    }
+}
+
 template<class MatrixType, class R>
 inline
 void copy_to_sparse_matrix(const Eigen::Matrix<R,Eigen::Dynamic,Eigen::Dynamic> &m_local, int offset_row, int offset_col, MatrixType &m)
@@ -75,7 +88,43 @@ void copy_to_sparse_matrix(const R** &m_local, int offset_row, int offset_col, i
 			m.coeffRef(offset_row+i,offset_col+j) += m_local[i][j];
 }
 
+template<class SparseMatrixType>
+inline
+void copy_to_new_sparse_matrix(const SparseMatrixType &m_local, SparseMatrixType &m, int offset_row=0, int offset_col=0)
+{
+  typedef typename SparseMatrixType::Scalar Scalar;
 
+  std::vector< Eigen::Triplet<Scalar> > tripletList;
+  tripletList.reserve(m_local.nonZeros());
+  for (int k=0; k<m_local.outerSize(); ++k)
+    for (typename SparseMatrixType::InnerIterator it(m_local,k); it; ++it)
+    {
+      tripletList.push_back(Eigen::Triplet<Config::ValueType>(it.row(), it.col(), it.value()));
+    }
+  m.setFromTriplets(tripletList.begin(), tripletList.end());
+}
+
+template<class SparseMatrixType>
+inline
+void copy_to_sparse_matrix(const SparseMatrixType &m_local, SparseMatrixType &m, int offset_row, int offset_col)
+{
+  for (int k=0; k<m_local.outerSize(); ++k)
+    for (typename SparseMatrixType::InnerIterator it(m_local,k); it; ++it)
+    {
+      m.coeffRef(offset_row+it.row(), offset_col+it.col()) = it.value();
+    }
+}
+
+template<class SparseMatrixTypeA, class SparseMatrixTypeB>
+inline
+void copy_sparse_to_sparse_matrix(const SparseMatrixTypeA &m_local, SparseMatrixTypeB &m, int offset_row, int offset_col)
+{
+  for (int k=0; k<m_local.outerSize(); ++k)
+    for (typename SparseMatrixTypeA::InnerIterator it(m_local,k); it; ++it)
+    {
+      m.coeffRef(offset_row+it.row(), offset_col+it.col()) = it.value();
+    }
+}
 
 template < typename T >
 /** Convert number to string.
