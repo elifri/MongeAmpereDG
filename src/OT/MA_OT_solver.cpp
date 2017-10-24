@@ -35,6 +35,17 @@ MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridV
   }
 }
 
+void MA_OT_solver::init_lagrangian_values(Config::VectorType& v) const
+{
+  v.conservativeResize(get_n_dofs());
+
+  int V_h_size = get_n_dofs_V_h();
+  for (int i = V_h_size; i < v.size(); i++)
+  {
+    v(i) = 0;
+  }
+}
+
 
 struct ResidualFunction{
 
@@ -354,18 +365,23 @@ void MA_OT_solver::create_initial_guess()
   else
   {
 //    const double epsilon = 0.1;
-    project([](Config::SpaceType x){return 2*x.two_norm2()/2.0;},
+    project([](Config::SpaceType x){return (1.1)*x.two_norm2()/2.0;},
 //    project([](Config::SpaceType x){return 0.5*x[0]*x[0]+x[0]+0.25*x[1]*x[1];},
 //      project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
 //    project_labouriousC1([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
   //                        [](Config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},
   //                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
-                          solution);
+
+//        [](Config::SpaceType x){return Dune::FieldVector<double, Config::dim> ({x[0], x[1]});},
+        solution);
   }
 //  this->test_projection([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);}, solution);
 
 
-  project([](Config::SpaceType x){return x.two_norm2()/2.0;},exactsol_u);
+  project(
+      [](Config::SpaceType x){return x.two_norm2()/2.0;},
+      [](Config::SpaceType x){return Dune::FieldVector<double, Config::dim> ({x[0], x[1]});},
+      exactsol_u);
 //  project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},exactsol_u);
 
   Config::ValueType res = 0;
@@ -412,7 +428,7 @@ void MA_OT_solver::solve_nonlinear_system()
 #ifdef USE_DOGLEG
 
 //  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
-  newtonMethod(op, doglegOpts_.maxsteps, doglegOpts_.stopcriteria[0], 0.5, solution, evaluateJacobianSimultaneously_);
+  newtonMethod(op, doglegOpts_.maxsteps, doglegOpts_.stopcriteria[0], 1.0, solution, evaluateJacobianSimultaneously_);
 
 #endif
 #ifdef USE_PETSC

@@ -64,6 +64,8 @@ private:
   virtual void solve_nonlinear_system();
   virtual void adapt_operator();
 
+  void init_lagrangian_values(VectorType& v) const;
+
 public:
   virtual int get_n_dofs_V_h() const{return FEBasisHandler_.FEBasis().indexSet().size();}
   virtual int get_n_dofs_Q_h() const{return get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();}
@@ -71,6 +73,10 @@ public:
 
   template<class F>
   void project(const F f, VectorType& v) const;
+
+  template<class F, class GradF>
+  void project(const F f, GradF gradf, VectorType& v) const;
+
 
   virtual void adapt_solution(const int level);
 
@@ -113,18 +119,24 @@ protected:
   virtual OperatorType& get_operator(){ return op;}
 };
 
+
+
 template<class F>
 void MA_OT_solver::project(const F f, VectorType& v) const
 {
   this->FEBasisHandler_.project(f, v);
+  init_lagrangian_values(v);
 
-  v.conservativeResize(get_n_dofs());
+#ifdef DEBUG
+  test_projection(f,v.head(get_n_dofs_V()));
+#endif
+}
 
-  int V_h_size = get_n_dofs_V_h();
-  for (int i = V_h_size; i < v.size(); i++)
-  {
-    v(i) = 0;
-  }
+template<class F, class GradF>
+void MA_OT_solver::project(const F f, GradF gradf, VectorType& v) const
+{
+  this->FEBasisHandler_.project(f, gradf, v);
+  init_lagrangian_values(v);
 
 #ifdef DEBUG
   test_projection(f,v.head(get_n_dofs_V()));
