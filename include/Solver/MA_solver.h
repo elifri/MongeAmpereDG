@@ -250,6 +250,17 @@ public:
 	 */
 	template<class F>
 	void project(F f, VectorType &V) const;
+
+  /**
+   * projects a function into the grid space, for the initialisation of the hessian dofs the piecewise hessian is interpolated
+   * @param f function representing the function
+   * @param f function representing the gradient of the function
+   * @param V returns the coefficient vector of the projection of f
+   */
+  template<class F, class FGrad>
+  void project(F f, FGrad gradf, VectorType &V) const;
+
+
 protected:
 	template<class F>
 	void test_projection(const F f, VectorType& v) const;
@@ -409,6 +420,19 @@ template<class F>
 void MA_solver::project(const F f, VectorType& v) const
 {
   FEBasisHandler_.project(f, v);
+  //TODO what to do about right-hand-side scaling
+//  v.conservativeResize(v.size()+1);
+//  v(v.size()-1) = 1;
+#ifdef DEBUG
+  test_projection(f,v);
+#endif
+}
+
+
+template<class F, class FGrad>
+void MA_solver::project(F f, FGrad gradf, VectorType &v) const
+{
+  FEBasisHandler_.project(f, gradf, v);
   //TODO what to do about right-hand-side scaling
 //  v.conservativeResize(v.size()+1);
 //  v(v.size()-1) = 1;
