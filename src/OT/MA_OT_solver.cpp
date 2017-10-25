@@ -427,8 +427,8 @@ void MA_OT_solver::solve_nonlinear_system()
 
 #ifdef USE_DOGLEG
 
-//  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
-  newtonMethod(op, doglegOpts_.maxsteps, doglegOpts_.stopcriteria[0], 1.0, solution, evaluateJacobianSimultaneously_);
+  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
+//  newtonMethod(op, doglegOpts_.maxsteps, doglegOpts_.stopcriteria[0], 1.0, solution, evaluateJacobianSimultaneously_);
 
 #endif
 #ifdef USE_PETSC

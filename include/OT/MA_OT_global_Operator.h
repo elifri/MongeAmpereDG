@@ -215,7 +215,7 @@ public:
     solver_ptr->assemble_DG_Jacobian(this->get_lop(), x, v, m);
 
   }
-  void assemble_with_langrangian_Jacobian(Config::VectorType& xBoundary, Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+  void assemble_with_langrangian_Jacobian(const Config::VectorType& xBoundary, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
   {
     assert(lop_ptr);
 
@@ -258,6 +258,7 @@ public:
       std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "lF" << intermediateSolCounter << ".m";
       std::ofstream file(filename.str(),std::ios::out);
       MATLAB_export(file, tempV, "l_v");
+      std::cerr << "written lv to file " << filename.str() << std::endl;
     }
     std::cerr << "  l(v) with norm " << std::scientific << std::setprecision(3) << tempV.norm() << std::endl;//<< "  : " << tempV.transpose() << std::endl;
 
@@ -304,14 +305,7 @@ public:
     auto xNewBoundaryLagrangianMultiplier = solver_ptr->get_assembler_lagrangian_boundary().shrink_to_boundary_vector(xBoundary.tail(Q_h_size));
     auto xBoundaryLagrangianMultiplier = solver_ptr->get_assembler_lagrangian_boundary().shrink_to_boundary_vector(x.tail(Q_h_size));
 
-    Q_h_size = tempM.rows();
-
     m.conservativeResize(this->solver_ptr->get_n_dofs(), this->solver_ptr->get_n_dofs());
-    v.conservativeResize(this->solver_ptr->get_n_dofs());
-    xBoundary.conservativeResize(this->solver_ptr->get_n_dofs());
-    xBoundary.tail(Q_h_size) = xNewBoundaryLagrangianMultiplier;
-    x.conservativeResize(this->solver_ptr->get_n_dofs());
-    x.tail(Q_h_size) = xBoundaryLagrangianMultiplier;
 
     //crop terms "far from boundary"
 
@@ -342,7 +336,7 @@ public:
     std::cerr << " l with norm " << std::scientific << std::setprecision(3)<< v.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
   }
 
-  void evaluate(Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, Config::VectorType& xBoundary, const bool new_solution=true) const
+  void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& xBoundary, const bool new_solution=true) const
   {
     assert(solver_ptr != NULL);
 
@@ -420,7 +414,7 @@ public:
 
   }
 
-  void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::VectorType& xNew, const bool new_solution=true) const
+  void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& xNew, const bool new_solution=true) const
     {
       assert(solver_ptr != NULL);
 
