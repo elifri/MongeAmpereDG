@@ -99,8 +99,8 @@ try {
   Config::UnitCubeType unitcube(setting.lowerLeft, setting.upperRight, 1);
   std::shared_ptr<Config::GridType> grid_ptr = unitcube.grid_ptr();
 #else
-  std::shared_ptr<Config::GridType> grid_ptr(GmshReader<Config::GridType>::read(setting.gridinputFile));
   std::cout << " read grid vom file " << setting.gridinputFile << std::endl;
+  std::shared_ptr<Config::GridType> grid_ptr(GmshReader<Config::GridType>::read(setting.gridinputFile));
 #endif
 
   Config::GridView gridView = grid_ptr->leafGridView();
@@ -111,10 +111,10 @@ try {
 
 //-----target area grid--------
 #ifndef BSPLINES
+  std::cout << " read target grid vom file " << setting.gridTargetFile << std::endl;
   std::shared_ptr<Config::GridType> gridTarget_ptr(GmshReader<Config::GridType>::read(setting.gridTargetFile));
   VTKWriter<Config::GridView> vtkWriterTarget(gridTarget_ptr->leafGridView());
   vtkWriter.write("gridTarget");
-  std::cout << " read target grid vom file " << setting.gridTargetFile << std::endl;
 #endif
 
 

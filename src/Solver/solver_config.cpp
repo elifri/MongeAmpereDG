@@ -149,6 +149,7 @@ void GeometrySetting::read_configfile(std::string &configFile)
         ("geometry.target.yMin",     po::value<double>(&GeometrySetting::lowerLeftTarget[1]), "")
         ("geometry.target.yMax",     po::value<double>(&GeometrySetting::upperRightTarget[1]), "")
         ("geometry.target.z",        po::value<double>(&GeometrySetting::z_3),    "")
+        ("geometry.target.gridfile",  po::value<string>(&GeometrySetting::gridTargetFile), "")
   ;
 
 
