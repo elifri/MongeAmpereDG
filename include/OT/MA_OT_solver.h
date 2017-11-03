@@ -92,6 +92,8 @@ public:
   GeometrySetting& get_setting() {return setting_;}
   const GeometrySetting& get_setting() const {return setting_;}
 
+  const auto& get_gridTarget_ptr() const {return gridTarget_ptr;}
+
   const AssemblerLagrangianMultiplier1D& get_assembler_lagrangian_midvalue() const { return assemblerLM1D_;}
 //  const AssemblerLagrangianMultiplierCoarse& get_assembler_lagrangian_boundary() const { return assemblerLMCoarse_;}
   AssemblerLagrangianMultiplierBoundary& get_assembler_lagrangian_boundary() { return assemblerLMBoundary_;}

@@ -34,8 +34,8 @@ class Local_Operator_MA_OT {
 public:
   typedef DensityFunction Function;
 
-  Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
-  rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
+  Local_Operator_MA_OT(const OTBoundary& bc, const Function* rhoX, const Function* rhoY):
+  rhoX(*rhoX), rhoY(*rhoY),bc(bc), int_f(0), found_negative(false)
   {
     std::cout << " created Local Operator" << std::endl;
   }

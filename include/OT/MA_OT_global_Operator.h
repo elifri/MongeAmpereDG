@@ -26,11 +26,14 @@ public:
 
   MA_OT_Operator():solver_ptr(NULL), lop_ptr(), intermediateSolCounter(){}
   MA_OT_Operator(Solver& solver):solver_ptr(&solver),
+      boundary_(new GenerealOTBoundary<Config::GridType>(solver.get_gridTarget_ptr())),
       lop_ptr(new LOP(
-          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
-          new rhoXSquareToSquare(), new rhoYSquareToSquare()
+//          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
+          *boundary_,
+//          new rhoXSquareToSquare(), new rhoYSquareToSquare()
 //          new rhoXGaussianSquare(), new rhoYGaussianSquare()
 //          new rhoXGaussians(), new rhoYGaussians()
+          new ConstOneFunction(), new ConstOneFunction()
                 )),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
 //      lopLMBoundary(new Local_Operator_LagrangianBoundaryCoarse(lop_ptr->get_bc())),
@@ -474,6 +477,8 @@ public:
   const FieldVector<double, 2> get_fixingPoint(){return fixingPoint;}
 
   const Solver* solver_ptr;
+
+  std::shared_ptr<OTBoundary> boundary_;
 
   std::shared_ptr<LOP> lop_ptr;
 

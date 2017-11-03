@@ -31,14 +31,16 @@ public:
 
 //  virtual ~OTBoundary() {delete (*GradFunction_ptr);}
 
-  OTBoundary(GeometrySetting& geometrySetting,
+
+  OTBoundary(//GeometrySetting& geometrySetting,
       const int n = 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps))
-    : geometrySetting(geometrySetting), N_(n){}
+    : N_(n){}
 
 
-  OTBoundary(GradFunction_ptr &gradUOld, GeometrySetting& geometrySetting,
+  OTBoundary(GradFunction_ptr &gradUOld, //GeometrySetting& geometrySetting,
       const int n = 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps))
-    : gradient_u_old(&gradUOld), geometrySetting(geometrySetting), N_(n){}
+    : gradient_u_old(&gradUOld), //geometrySetting(geometrySetting),
+      N_(n){}
 
   ///return the projection of the last iteration's solution (onto the desired boundary)
 /*  template<class Element>
@@ -155,7 +157,7 @@ public:
 
 protected:
   mutable GradFunction_ptr* gradient_u_old;
-  GeometrySetting& geometrySetting;
+//  GeometrySetting& geometrySetting;
   int N_;
 };
 
@@ -207,12 +209,14 @@ class BoundarySquare : public OTBoundary
 
 
 public:
-  BoundarySquare(OTBoundary::GradFunction_ptr &gradUOld, GeometrySetting& geometrySetting): OTBoundary(gradUOld, geometrySetting){}
+  BoundarySquare(OTBoundary::GradFunction_ptr &gradUOld, GeometrySetting& geometrySetting): OTBoundary(gradUOld), geometrySetting(geometrySetting){}
   ~BoundarySquare() {}
+
+  GeometrySetting& geometrySetting;
 };
 
 template<typename GT>
-class GenerealOTBoundary : OTBoundary{
+class GenerealOTBoundary : public OTBoundary{
   using GridType = GT;
   using GridView = typename GridType::LeafGridView;
   using IndexSet = typename GridView::IndexSet;
@@ -221,15 +225,18 @@ class GenerealOTBoundary : OTBoundary{
     Hvalues_.resize(N_Y+1);
     std::fill (Hvalues_.begin(), Hvalues_.end(), -100);
 
+    using BoundaryIterator = Dune::VTK::BoundaryIterator<GridView>;
+
     //find for all normals sup_{y in boundary} y*n, see Benamou et alt. /Journal of Compu.Phys 260(2014) p. 110-111
-    Dune::VTK::BoundaryIterator<GridView> itBoundary(grid_ptr->gridView());
-    while (itBoundary != BoundaryIterator(grid_ptr->gridView(),true)) //loop over boundary edges
+    BoundaryIterator itBoundary(grid_ptr->leafGridView());
+    while (itBoundary != BoundaryIterator(grid_ptr->leafGridView(),true)) //loop over boundary edges
     {
       for(int i = 0; i < boundaryPointPerEdge_; i++)//loop over boundary point in edge
       {
         //calculate global coordinates of boundary point
-        Config::SpaceType1d localBoundaryPos ({((Config::ValueType) i) /  boundaryPointPerEdge_-1});
-        Config::SpaceType2d globalBoundaryPos = itBoundary.geometryInInside().global(localBoundaryPos);
+        Config::SpaceType1d localBoundaryPosScale ({((Config::ValueType) i) /  (boundaryPointPerEdge_-1)});
+        Config::SpaceType2d localBoundaryPos = itBoundary->geometryInInside().global(localBoundaryPosScale);
+        Config::SpaceType2d globalBoundaryPos = itBoundary->inside().geometry().global(localBoundaryPos);
 
         for (int j = 0; j <= N_Y; j++)
         {
@@ -239,14 +246,19 @@ class GenerealOTBoundary : OTBoundary{
           //update supremum
           Config::ValueType temp = globalBoundaryPos*currentNormal;
           if (temp > Hvalues_[j])
+          {
             Hvalues_[j] = temp;
+          }
         }
       }
       itBoundary++;
     }
   }
 
-public:  GenerealOTBoundary(std::shared_ptr<GridType> grid_ptr): grid_ptr(grid_ptr){
+public:
+  using OTBoundary::OTBoundary;
+
+  GenerealOTBoundary(const std::shared_ptr<GridType> grid_ptr): grid_ptr(grid_ptr){
   init();
 }
 
@@ -262,11 +274,11 @@ void adapt()
   init();
 }
 
-  int N_Y;
+  const int N_Y = N_;
   const int boundaryPointPerEdge_=5;
 
   std::vector<Config::ValueType> Hvalues_;
-  std::shared_ptr<GridType> grid_ptr;
+  const std::shared_ptr<GridType> grid_ptr;
 };
 
 
@@ -323,10 +335,10 @@ public :
 };
 
 
-class rhoYSquareToSquare : public DensityFunction
+class ConstOneFunction : public DensityFunction
 {
 public:
-  ~rhoYSquareToSquare() {}
+  ~ConstOneFunction() {}
 
   void evaluate (const Config::DomainType &x, Config::ValueType &u) const
   {
@@ -346,6 +358,8 @@ public:
   }
 #endif
 };
+
+using rhoYSquareToSquare = ConstOneFunction;
 
 class rhoXGaussianSquare : public DensityFunction
 {
