@@ -20,19 +20,25 @@
 #include<Eigen/SparseLU>
 #include <Eigen/UmfPackSupport>
 
+static const double epsRes = -4;
+
 
 template<typename FunctorType>
 void newtonMethod(
-          FunctorType &functor,
-    const unsigned int maxIter,
-    const double eps,
-    const double lambdaMin,
-          Eigen::VectorXd &x,
-    bool useCombinedFunctor = false,
-    const bool silentmode=false
+          FunctorType &functor, ///the function whose root has to be found
+    const unsigned int maxIter, ///maximum amount of steps
+    const double eps, ///stop criteria for residual
+    double omega, ///damping parameter
+          Eigen::VectorXd &x, ///Initial guess and returns approximate solution
+    bool useCombinedFunctor = false, ///evaluate function and Jacobian at the same time
+    const bool silentmode=false ///plot output
 ){
     assert(eps>0);
-    assert(lambdaMin>0);
+    assert(omega>0);
+
+    double initialResidual;
+    double lastResidual;
+    Eigen::VectorXd oldX;
 
     std::cerr << " Start Newton ..." << std::endl;
 
@@ -45,7 +51,7 @@ void newtonMethod(
     {
         std::cout << "\n\nSolve nonlinear system of equations using Newton's method...\n\n";
         std::cout << "--------------------------------------------------------------------------------\n";
-        std::cout << "      k    Schritt              ||s||       ||F||inf    ||F'||inf     ||F||2 \n";
+        std::cout << "      k    Schritt              ||s||       ||F||inf    ||F||2/Init   ||F||2 \n";
         std::cout << "--------------------------------------------------------------------------------\n";
     }
 
@@ -61,15 +67,56 @@ void newtonMethod(
       {
         // solve Df*s = +f using UmfPack:
           if (useCombinedFunctor)
+          {
             functor.evaluate(x,f,Df, xBoundary, true);
+          }
           else
           {
             functor.evaluate(x,f,xBoundary, true);
             functor.derivative(x,Df);
       //      make_FD_Jacobian(functor, x, J);
           }
-          if (i == 0)
+
+          if (i == 0 && j == 0)
+          {
             lu_of_Df.analyzePattern(Df);
+            initialResidual = f.norm();
+            lastResidual = initialResidual;
+            oldX = xBoundary;
+          }
+
+          //dismiss newton step
+          if(f.norm() > lastResidual)
+          {
+            omega /= 2;
+            xBoundary = oldX;
+            x = oldX;
+            j--;
+
+            if (!silentmode)
+            {
+                 std::cout << "   " << std::setw(6) << i;
+                 std::cout << " dissmiss Newton-step ";
+                 std::cout << std::scientific << std::setprecision(3) << omega*2*s.norm() << "   "  << f.norm()
+                 << " xBoundaryNorm " << xBoundary.norm() << " decreased omega to " << omega
+                         << std::endl;
+            }
+            continue;
+
+          }
+          if (f.norm() < lastResidual/2)
+          {
+
+            omega*= 2;
+            omega = std::min(omega, 1.0);
+            if (!silentmode)
+            {
+                 std::cout << "   " << std::setw(6) << i;
+                 std::cout << " increase damping to             ";
+                 std::cout << std::scientific << std::setprecision(3) << omega << " xBoundaryNorm " << xBoundary.norm() << std::endl;
+            }
+          }
+
 
 
           lu_of_Df.factorize(Df);
@@ -87,7 +134,12 @@ void newtonMethod(
               exit(1);
           }
 
-          xBoundary-=lambdaMin*s;
+          //store last step's information
+          lastResidual = f.norm();
+          oldX = xBoundary;
+
+          //perform newton step
+          xBoundary-=omega*s;
 
           std::cerr << "  newton residual is " << std::scientific << std::setprecision(3) << f.norm();
 
@@ -98,16 +150,16 @@ void newtonMethod(
             std::cerr << "     boundary-step     ";
             std::cout << "   " << std::setw(6) << i;
             std::cout << "     boundary-step     ";
-            std::cout << std::scientific << std::setprecision(3) << lambdaMin*s.norm();
-            if (s.norm() <= eps)
-              break;
+            std::cout << std::scientific << std::setprecision(3) << omega*s.norm();
             std::cout << "   " << std::scientific << std::setprecision(3) << f.lpNorm<Eigen::Infinity>();
-            std::cout << "   " << std::scientific << std::setprecision(3) << "?????????";
+            std::cout << "   " << std::scientific << std::setprecision(3) << f.norm()/initialResidual;
             std::cout << "   " << std::scientific << std::setprecision(3) << f.norm();
+            std::cout << "xBoundaryNorm " << xBoundary.norm();
             std::cout << std::endl;
           }
           if (s.norm() <= eps && i>0)
               break;
+
       }
       // compute damped Newton step
 
@@ -117,11 +169,11 @@ void newtonMethod(
          {
            std::cout << "   " << std::setw(6) << i;
            std::cout << "  Newton-step          ";
-           std::cout << std::scientific << std::setprecision(3) << lambdaMin*s.norm();
+           std::cout << std::scientific << std::setprecision(3) << omega*s.norm();
          }
 
 
-//         if (!silentmode)
+         if (!silentmode)
          {
 //            std::cout << "   " << std::scientific << std::setprecision(3) << f.lpNorm<Eigen::Infinity>();
 //            std::cout << "   " << std::scientific << std::setprecision(3) << "?????????";
@@ -129,8 +181,23 @@ void newtonMethod(
             std::cout << std::endl;
          }
 
-        if (s.norm() <= eps && i>0)
-            break;
+         if (i > 0)
+         {
+           if (s.norm() <= eps)
+           {
+             if (!silentmode)
+                 std::cout << "||s||2 small enough. Finished." << std::endl;
+             break;
+           }
+           if (std::log10(f.norm()/initialResidual) < epsRes)
+           {
+             if (!silentmode)
+                 std::cout << "log(||f||2/inital) big enough. Finished." << std::endl;
+             break;
+           }
+         }
+
+
     }
 
 //    if (!silentmode)
