@@ -58,9 +58,9 @@ void newtonMethod(
 //    Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_Df;
     Eigen::SparseLU<Eigen::SparseMatrix<double> > lu_of_Df;
 
+    Eigen::VectorXd s;
 
     for (unsigned int i=0; i<maxIter; i++) {
-    Eigen::VectorXd s;
       Eigen::VectorXd xBoundary(x);
       const unsigned int maxIterBoundaryConditions = 1;
       for (unsigned int j = 0; j < maxIterBoundaryConditions; j++)
@@ -86,25 +86,24 @@ void newtonMethod(
           }
 
           //dismiss newton step
-          if(f.norm() > lastResidual)
+//          if(f.norm() > lastResidual)
+          if(functor.get_lop().found_negative)
           {
             omega /= 2;
-            xBoundary = oldX;
-            x = oldX;
+            xBoundary = oldX-omega*s;
+            x = xBoundary;
             j--;
 
             if (!silentmode)
             {
                  std::cout << "   " << std::setw(6) << i;
                  std::cout << " dissmiss Newton-step ";
-                 std::cout << std::scientific << std::setprecision(3) << omega*2*s.norm() << "   "  << f.norm()
-                 << " xBoundaryNorm " << xBoundary.norm() << " decreased omega to " << omega
-                         << std::endl;
+                 std::cout << std::scientific << std::setprecision(3) << "   ||F||2 was "  << f.norm() <<
+                 " decreased omega to " << omega << std::endl;
             }
             continue;
-
           }
-          if (f.norm() < lastResidual/2)
+          if (f.norm() < lastResidual/(1+omega))
           {
 
             omega*= 2;
@@ -113,7 +112,7 @@ void newtonMethod(
             {
                  std::cout << "   " << std::setw(6) << i;
                  std::cout << " increase damping to             ";
-                 std::cout << std::scientific << std::setprecision(3) << omega << " xBoundaryNorm " << xBoundary.norm() << std::endl;
+                 std::cout << std::scientific << std::setprecision(3) << omega << std::endl;
             }
           }
 
@@ -154,7 +153,6 @@ void newtonMethod(
             std::cout << "   " << std::scientific << std::setprecision(3) << f.lpNorm<Eigen::Infinity>();
             std::cout << "   " << std::scientific << std::setprecision(3) << f.norm()/initialResidual;
             std::cout << "   " << std::scientific << std::setprecision(3) << f.norm();
-            std::cout << "xBoundaryNorm " << xBoundary.norm();
             std::cout << std::endl;
           }
           if (s.norm() <= eps && i>0)
