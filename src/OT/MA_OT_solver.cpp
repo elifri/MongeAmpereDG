@@ -20,9 +20,12 @@ namespace po = boost::program_options;
 MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const shared_ptr<GridType>& gridTarget,
     const SolverConfig& config, GeometrySetting& setting)
 :MA_solver(grid, gridView, config), setting_(setting), gridTarget_ptr(gridTarget),
+#ifdef USE_COARSE_Q_H
+ FEBasisHandlerQ_(*this, this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1)),
+#else
  FEBasisHandlerQ_(*this, gridView),
+#endif
  assemblerLM1D_(FEBasisHandler_.FEBasis()),
-// assemblerLMCoarse_(FEBasisHandler_.FEBasis(),FEBasisHandlerQ_.FEBasis()),
  assemblerLMBoundary_(FEBasisHandler_.FEBasis(),FEBasisHandlerQ_.FEBasis()),
  op(*this)
 {
@@ -569,8 +572,6 @@ void MA_OT_solver::adapt_solution(const int level)
   assemblerLM1D_.bind(FEBasisHandler_.uBasis());
 
   //adapt boundary febasis and bind to assembler
-//  auto p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-2),
-//                                           this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1), p);
   std::cerr << " going to adapt lagrangian multiplier " << std::endl;
 
   Config::VectorType p_adapted;
@@ -580,8 +581,13 @@ void MA_OT_solver::adapt_solution(const int level)
 
 //    FEBasisHandlerQ_.adapt_after_grid_change(this->gridView());
 //    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change();
-      p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1),
+#ifdef USE_COARSE_Q_H
+    auto p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-2),
+        this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1), p);
+#else
+    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1),
                                                this->gridView(), p);
+#endif
   }
   auto& assembler = get_assembler_lagrangian_boundary();
   assembler.bind(FEBasisHandler_.uBasis(), FEBasisHandlerQ_.FEBasis());

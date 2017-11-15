@@ -12,8 +12,11 @@
 #include "Solver/MA_solver.h"
 
 #include "Solver/AssemblerLagrangian1d.h"
-#include "Solver/AssemblerLagrangian.h"
-#include "Solver/AssemblerLagrangianBoundary.h"
+#ifdef USE_COARSE_Q_H
+  #include "Solver/AssemblerLagrangian.h"
+#else
+  #include "Solver/AssemblerLagrangianBoundary.h"
+#endif
 
 #include "MA_OT_global_Operator.h"
 #include "Operator/GlobalOperatorManufactorSolution.h"
@@ -56,6 +59,12 @@ public:
     using OperatorType = GlobalMA_OT_Operator;
 #endif
 
+#ifdef USE_COARSE_Q_H
+  using AssemblerLagrangianMultiplierBoundaryType = AssemblerLagrangianMultiplierCoarse;
+#else
+  using AssemblerLagrangianMultiplierBoundaryType = AssemblerLagrangianMultiplierBoundary;
+#endif
+
 
   MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const shared_ptr<GridType>& gridTarget, const SolverConfig& config, GeometrySetting& setting);
 private:
@@ -96,8 +105,8 @@ public:
 
   const AssemblerLagrangianMultiplier1D& get_assembler_lagrangian_midvalue() const { return assemblerLM1D_;}
 //  const AssemblerLagrangianMultiplierCoarse& get_assembler_lagrangian_boundary() const { return assemblerLMCoarse_;}
-  AssemblerLagrangianMultiplierBoundary& get_assembler_lagrangian_boundary() { return assemblerLMBoundary_;}
-  const AssemblerLagrangianMultiplierBoundary& get_assembler_lagrangian_boundary() const { return assemblerLMBoundary_;}
+  AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() { return assemblerLMBoundary_;}
+  const AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() const { return assemblerLMBoundary_;}
 
   template<typename FGrad>
   Config::ValueType calculate_L2_errorOT(const FGrad &f) const;
@@ -116,8 +125,7 @@ protected:
 
   //assembler for lagrangian multiplier
   AssemblerLagrangianMultiplier1D assemblerLM1D_;
-//  AssemblerLagrangianMultiplierCoarse assemblerLMCoarse_;
-  AssemblerLagrangianMultiplierBoundary assemblerLMBoundary_;
+  AssemblerLagrangianMultiplierBoundaryType assemblerLMBoundary_;
 
   OperatorType op;
 

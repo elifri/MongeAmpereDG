@@ -8,7 +8,12 @@
 #ifndef INCLUDE_OT_MA_OT_GLOBAL_OPERATOR_H_
 #define INCLUDE_OT_MA_OT_GLOBAL_OPERATOR_H_
 
-#include <OT/operator_LagrangianBoundary.h>
+#ifdef USE_COARSE_Q_H
+  #include <OT/operator_LagrangianBoundaryCoarse.h>
+#else
+  #include <OT/operator_LagrangianBoundary.h>
+#endif
+
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -23,6 +28,12 @@ class MA_OT_Operator {
 public:
   using SolverType = Solver;
   using LocalOperatorType = LOP;
+#ifdef USE_COARSE_Q_H
+  using LocalOperatorLagrangianBoundaryType = Local_Operator_LagrangianBoundaryCoarse;
+#else
+  using LocalOperatorLagrangianBoundaryType = Local_Operator_LagrangianBoundary;
+#endif
+
 
   MA_OT_Operator():solver_ptr(NULL), lop_ptr(), intermediateSolCounter(){}
   MA_OT_Operator(Solver& solver):solver_ptr(&solver),
@@ -30,14 +41,13 @@ public:
       lop_ptr(new LOP(
 //          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
           *boundary_,
-//          new rhoXSquareToSquare(), new rhoYSquareToSquare()
+          new rhoXSquareToSquare(), new rhoYSquareToSquare()
 //          new rhoXGaussianSquare(), new rhoYGaussianSquare()
 //          new rhoXGaussians(), new rhoYGaussians()
-          new ConstOneFunction(), new ConstOneFunction()
+//          new ConstOneFunction(), new ConstOneFunction()
                 )),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-//      lopLMBoundary(new Local_Operator_LagrangianBoundaryCoarse(lop_ptr->get_bc())),
-      lopLMBoundary(new Local_Operator_LagrangianBoundary(lop_ptr->get_bc())),
+      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(lop_ptr->get_bc())),
       fixingPoint{0.3,0},
       intermediateSolCounter()
   {
@@ -48,7 +58,7 @@ public:
 
   MA_OT_Operator(Solver& solver, const std::shared_ptr<LOP>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopLMBoundary(new Local_Operator_LagrangianBoundary(lop_ptr->get_bc())),
+      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(lop_ptr->get_bc())),
       fixingPoint{0.3,0},
       intermediateSolCounter()
       {
@@ -57,7 +67,7 @@ public:
 
   MA_OT_Operator(Solver& solver, LOP* lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopLMBoundary(new Local_Operator_LagrangianBoundary(lop_ptr->get_bc())),
+      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(lop_ptr->get_bc())),
       fixingPoint{0.3,0},
       intermediateSolCounter()
   {
@@ -303,18 +313,10 @@ public:
     //assemble boundary terms
     solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xBoundary.head(V_h_size), tempV);
 
-    //remove the qs from langrangian boundary multiplier
-    auto xNewBoundaryLagrangianMultiplier = solver_ptr->get_assembler_lagrangian_boundary().shrink_to_boundary_vector(xBoundary.tail(Q_h_size));
-    auto xBoundaryLagrangianMultiplier = solver_ptr->get_assembler_lagrangian_boundary().shrink_to_boundary_vector(x.tail(Q_h_size));
-
     Q_h_size = tempM.rows();
 
     m.conservativeResize(this->solver_ptr->get_n_dofs(), this->solver_ptr->get_n_dofs());
     v.conservativeResize(this->solver_ptr->get_n_dofs());
-    xBoundary.conservativeResize(this->solver_ptr->get_n_dofs());
-    xBoundary.tail(Q_h_size) = xNewBoundaryLagrangianMultiplier;
-    x.conservativeResize(this->solver_ptr->get_n_dofs());
-    x.tail(Q_h_size) = xBoundaryLagrangianMultiplier;
 
     //crop terms "far from boundary"
 
@@ -483,8 +485,7 @@ public:
   std::shared_ptr<LOP> lop_ptr;
 
   std::shared_ptr<Local_operator_LangrangianMidValue> lopLMMidvalue;
-//  std::shared_ptr<Local_Operator_LagrangianBoundaryCoarse> lopLMBoundary;
-  std::shared_ptr<Local_Operator_LagrangianBoundary> lopLMBoundary;
+  std::shared_ptr<LocalOperatorLagrangianBoundaryType> lopLMBoundary;
 
   //store a grid point, whose function value is fixed
   const FieldVector<double, 2> fixingPoint;
