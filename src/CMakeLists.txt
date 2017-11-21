@@ -29,20 +29,28 @@ add_executable("dune_mongeampere_OT" dune_mongeampere_OT.cpp)
 target_link_libraries(dune_mongeampere_OT MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} problemData Solver_Config ImageFunction utils ${IPOPT_LIBRARIES} ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
 target_link_dune_default_libraries("dune_mongeampere_OT")
 
+if(LIBFFO_CORE_FOUND)
+set(BsplineHdf5Libraries ${LIBFFO_CORE_LIBRARIES} ${HDF5_LIBRARIES})
+else (LIBFFO_CORE_FOUND)
+set(BsplineHdf5Libraries )
+endif (LIBFFO_CORE_FOUND)
+
+
 message("linking poure solver libs ${IOLibs}")
 add_executable("dune_mongeampere_image_OT" dune_mongeampere_image_OT.cpp)
-target_link_libraries(dune_mongeampere_image_OT MA_OT_image_solver MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} Solver_Config ImageFunction utils ${ZLIB_LIBRARIES} ${LIBFFO_CORE_LIBRARIES} ${HDF5_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
+target_link_libraries(dune_mongeampere_image_OT MA_OT_image_solver MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} problemData Solver_Config ImageFunction utils ${ZLIB_LIBRARIES} ${BsplineHdf5Libraries} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
 target_link_dune_default_libraries("dune_mongeampere_image_OT")
 
+if(LIBFFO_CORE_FOUND)
+ADD_LIBRARY(libcoreLibs STATIC IMPORTED)
+SET_TARGET_PROPERTIES(libcoreLibs PROPERTIES
+    IMPORTED_LOCATION ${LIBFFO_CORE_LIBRARIES})
 
-#ADD_LIBRARY(libcoreLibs STATIC IMPORTED)
-#SET_TARGET_PROPERTIES(libcoreLibs PROPERTIES
-#    IMPORTED_LOCATION ${LIBFFO_CORE_LIBRARIES})
 
-#message("linking ffo core libs ${LIBFFO_CORE_LIBRARIES}")
-#add_executable("core_test" test_core.cpp)
-#target_link_libraries(core_test libcoreLibs ${HDF5_LIBRARIES})
-
+message("linking ffo core libs ${LIBFFO_CORE_LIBRARIES}")
+add_executable("core_test" test_core.cpp)
+target_link_libraries(core_test libcoreLibs ${HDF5_LIBRARIES})
+endif(LIBFFO_CORE_FOUND)
 
 add_executable("poisson" poisson.cc)
 target_link_dune_default_libraries("poisson")

@@ -15,7 +15,7 @@
 
 #include "Solver/solver_config.h"
 
-#include "OT/operator_utils.h"
+#include "Operator/operator_utils.h"
 
 using namespace Dune;
 
@@ -30,15 +30,17 @@ public:
 */
 
   template<typename GridView>
-  Local_Operator_MA_refr_Brenner(OpticalSetting &opticalSetting, const GridView& gridView, RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld):
+  Local_Operator_MA_refr_Brenner(OpticalSetting &opticalSetting, const GridView& gridView,
+      const RightHandSideReflector& rhs, const HamiltonJacobiBC &bc):
     hash(gridView), EntititiesForUnifikationTerm_(10,hash),
     opticalSetting(&opticalSetting),
-    rhs(solUOld, gradUOld, opticalSetting),
-    bc(opticalSetting, 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps)), sign(1.0) {
+    rhs(rhs),
+    bc(bc){
     int_f = 0;
   }
 
 
+/*
   template<typename GridView>
   Local_Operator_MA_refr_Brenner(OpticalSetting &opticalSetting, const GridView& gridView, RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld,
       std::shared_ptr<Rectangular_mesh_interpolator> &exactSolU):
@@ -52,6 +54,7 @@ public:
 
     int_f = 0;
   }
+*/
 
   ///helper function that checks wether the calculated reflection is consistent with the vector calculated by direct application of the reflection law
   bool check_refraction(const Config::SpaceType& x_value, const FieldVector<adouble, 3>& X,
@@ -381,7 +384,7 @@ public:
       z.axpy(-t*rho_value,x_value);
 
 //      std::cerr << "rho_value " << rho_value.value()
-//                << " F " << F_value << std::endl
+//                << " F " << F_value <data < std::endl
 //                << " X " << X << std::endl
 //                << " rhogradu " << gradrho[0].value() << " " << gradrho[1].value() << std::endl
 //                << " t " << t.value()
@@ -712,7 +715,6 @@ public:
 //			<< "numer of buffer size " << stats[4] << std::endl;
   }
 
-#ifndef COLLOCATION
   template<class Intersection, class LocalView, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalView &localView,
@@ -726,10 +728,6 @@ public:
     //assuming galerkin
     assert((unsigned int) x.size() == localView.size());
     assert((unsigned int) v.size() == localView.size());
-
-    // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
-    const Element& element = localView.element();
 
     const auto& localFiniteElement = localView.tree().finiteElement();
     const int size_u = localFiniteElement.size();
@@ -821,7 +819,7 @@ public:
           gradients, x_adolc, gradrho);
 
       //-------calculate integral--------
-      double omega_value = omega(x_value);
+      Config::ValueType omega_value = omega(x_value);
 
       adouble t = rho_value*omega_value-opticalSetting->z_3;
       t /= rho_value*omega_value;
@@ -866,134 +864,6 @@ public:
       v_adolc[i] >>= v[i];
     trace_off();
   }
-#else
-  template<class Intersection, class LocalView, class LocalIndexSet, class VectorType>
-  void assemble_boundary_face_term(const Intersection& intersection,
-      const LocalView &localView, const LocalIndexSet &localIndexSet,
-      const VectorType &x, VectorType& v, int tag) const {
-    assert(opticalSetting);
-
-    const int dim = Intersection::dimension;
-    const int dimw = Intersection::dimensionworld;
-
-    //assuming galerkin
-    assert((unsigned int) x.size() == localView.size());
-    assert((unsigned int) v.size() == localView.size());
-
-    // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
-    const Element& element = localView.element();
-
-    const auto& localFiniteElement = localView.tree().finiteElement();
-    const int size_u = localFiniteElement.size();
-
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
-
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
-
-    //-----init variables for automatic differentiation
-
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(
-        localView.size());
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(
-        localView.size());
-    for (size_t i = 0; i < localView.size(); i++)
-      v_adolc[i] <<= v[i];
-
-    trace_on(tag);
-    //init independent variables
-    for (size_t i = 0; i < localView.size(); i++)
-      x_adolc[i] <<= x[i];
-
-    // ----start quadrature--------
-
-    // Get a quadrature rule
-    const int order = std::max(0, 3 * ((int) localFiniteElement.localBasis().order()));
-    GeometryType gtface = intersection.geometryInInside().type();
-
-    // normal of center in face's reference element
-    const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
-        dim - 1>::general(intersection.geometry().type()).position(0, 0);
-    const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
-        face_center);
-
-    const int n = 3;
-    const int boundaryFaceId = intersection.indexInInside();
-
-    // penalty weight for NIPG / SIPG
-    //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
-    double penalty_weight = SolverConfig::sigmaBoundary
-                      * (SolverConfig::degree * SolverConfig::degree)
-                      * std::pow(intersection.geometry().volume(), SolverConfig::beta);
-
-
-    // Loop over all quadrature points
-    for (size_t i = 0; i < n; i++) {
-
-      //------get data----------
-
-      // Position of the current collocation point in the reference element
-      FieldVector<double, dim> collocationPos =
-          intersection.geometryInInside().global((double) (i) / double (n-1));
-
-      // The transposed inverse Jacobian of the map from the reference element to the element
-      const auto& jacobian =
-          intersection.inside().geometry().jacobianInverseTransposed(collocationPos);
-
-      //the shape function values
-      std::vector<RangeType> referenceFunctionValues(size_u);
-      adouble rho_value = 0;
-      assemble_functionValues_u(localFiniteElement, collocationPos,
-          referenceFunctionValues, x_adolc.segment(0, size_u), rho_value);
-
-      //selection local dof no for collocation point
-      int j = collocationNo[boundaryFaceId][i];
-      if ((i == 0 || i == n-1) && std::abs(referenceFunctionValues[j] - 1) > 1e-12)
-      {
-        collocationPos = intersection.geometryInInside().global((double) (n-1-i) / double (n-1));
-        rho_value = 0;
-        assemble_functionValues_u(localFiniteElement, collocationPos,
-                  referenceFunctionValues, x_adolc.segment(0, size_u), rho_value);
-      }
-      auto x_value = intersection.inside().geometry().global(collocationPos);
-
-      // The gradients
-      std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, Config::dim> gradrho;
-      assemble_gradients_gradu(localFiniteElement, jacobian, collocationPos,
-          gradients, x_adolc, gradrho);
-
-      //-------calculate integral--------
-      double omega_value = omega(x_value);
-
-      adouble t = rho_value*omega_value-SolverConfig::z_3;
-      t /= rho_value*omega_value;
-
-      adouble F_value = F(x_value, rho_value, gradrho);
-
-      FieldVector<adouble, Config::dim> w = gradrho;
-      w *= 2*F_value*rho_value;
-
-      FieldVector<adouble, Config::dim> z = x_value;
-      z *= rho_value;
-      z.axpy(t,w);
-      z.axpy(-t*rho_value,x_value);
-
-      auto signedDistance = bc.H(z, normal);
-
-      v_adolc(j) += penalty_weight * signedDistance;
-//          std::cerr << " add to v_adolc(" << j << ") " << (penalty_weight * ((T_value * normal) - phi_value)* referenceFunctionValues[j] * factor).value() << " -> " << v_adolc(j).value() << std::endl;
-
-    }
-
-    // select dependent variables
-    for (size_t i = 0; i < localView.size(); i++)
-      v_adolc[i] >>= v[i];
-    trace_off();
-  }
-#endif
 
   int insert_entitity_for_unifikation_term(const Config::Entity element, int size)
   {
@@ -1052,19 +922,13 @@ public:
   OpticalSetting* opticalSetting;
 
   const RightHandSideReflector& get_right_handside() const {return rhs;}
-  RightHandSideReflector& get_right_handside() {return rhs;}
 
-  RightHandSideReflector rhs;
-  HamiltonJacobiBC bc;
-  Dirichletdata<std::shared_ptr<Rectangular_mesh_interpolator> > bcDirichlet;
-
-  static constexpr int collocationNo[3][3] = {{0,3,4},{0,11,8},{4,7,8}};
-//  static constexpr int collocationNo[3][5] = {{0,1,3,5,4},{0,2,11,9,8},{4,6,7,10,8}};
+  const RightHandSideReflector & rhs;
+  const HamiltonJacobiBC & bc;
 
   static constexpr double& kappa_ = OpticalSetting::kappa;
 public:
   mutable double int_f;
-  mutable double sign;
 
   mutable bool found_negative;
 };

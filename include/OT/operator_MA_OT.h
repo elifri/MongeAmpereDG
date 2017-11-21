@@ -34,8 +34,8 @@ class Local_Operator_MA_OT {
 public:
   typedef DensityFunction Function;
 
-  Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
-    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
+  Local_Operator_MA_OT(const OTBoundary& bc, const Function& rhoX, const Function& rhoY):
+  rhoX(rhoX), rhoY(rhoY),bc(bc), int_f(0), found_negative(false)
   {
     std::cout << " created Local Operator" << std::endl;
   }
@@ -58,7 +58,6 @@ public:
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
       VectorType& v, const int tag) const  {
-
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
     const Element& element = localView.element();
@@ -166,6 +165,7 @@ public:
       if (uDH_det.value() < 0 && !found_negative)
       {
         std::cerr << "found negative determinant !!!!! " << uDH_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
+        std::cerr << " x was " << x.transpose() << " at triangle " << geometry.corner(0) << "," << geometry.corner(1) << " and " << geometry.corner(2) << std::endl;
         found_negative = true;
       }
 //      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
@@ -178,29 +178,13 @@ public:
 
         v_adolc(j) += (PDE_rhs-uDH_det)*referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
-
-//        adouble temp = 0;
-//        v_adolc(j)+= (-log(uDH_det)+(-log(g_value)+log(scaling_factor_adolc*f_value)))*referenceFunctionValues[j]* quad[pt].weight() * integrationElement;
-//        v_adolc(j)+= max(temp,temp2);
-//        std::cerr << " max is " << std::max(temp.value(),temp2.value()) << " from " << temp.value() << " and " << temp2.value() << std::endl;
-
-//        if (((PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]* quad[pt].weight() * integrationElement).value() > 1e-6)
-//        {
-//          std:: cerr << "v_adolc(" << j << ")+=" << (-log(uDH_det)) << " " << (-log(g_value)+log(f_value))
-//                              * quad[pt].weight() * integrationElement).value()
-//                     << " -> " << v_adolc(j).value() << std::endl;
-//          std::cerr << "at " << x_value << " T " << z[0].value() << " " << z[1].value() << " u " << u_value.value() << " det() " << uDH_pertubed_det.value() << " rhs " << PDE_rhs.value() << endl;
-//        }
       }
-
     }
-
 
     for (int i = 0; i < size; i++)
       v_adolc[i] >>= v[i]; // select dependent variables
 
     trace_off();
-
   }
 
   template<class IntersectionType, class LocalView, class VectorType>
@@ -386,14 +370,6 @@ public:
 //      << "numer of live activ var " << stats[2] << std::endl
 //      << "numer of size of value stack " << stats[3] << std::endl
 //      << "numer of buffer size " << stats[4] << std::endl;
-
-  }
-
-
-  template<class Intersection, class LocalView, class VectorType>
-  void assemble_boundary_face_term(const Intersection& intersection,
-      const LocalView &localView,
-      const VectorType &x, VectorType& v, int tag=0) const {
 
   }
 

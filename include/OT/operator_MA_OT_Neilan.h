@@ -5,8 +5,8 @@
  *      Author: friebel
  */
 
-#ifndef REFL_OPERATOR_HH_
-#define REFL_OPERATOR_HH_
+#ifndef OPERATOR_NEILAN_MA_OT_HH_
+#define OPERATOR_NEILAN_MA_OT_HH_
 
 #include <dune/common/function.hh>
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
@@ -31,8 +31,8 @@ public:
   typedef DensityFunction Function;
 
   template<typename GridView>
-  Local_Operator_MA_OT_Neilan(const OTBoundary* bc, const Function* rhoX, const Function* rhoY, const GridView& gridView):
-   rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
+  Local_Operator_MA_OT_Neilan(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
+    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
   {
     std::cout << " created Local Operator" << std::endl;
   }
@@ -198,11 +198,13 @@ public:
 
       for (int j = 0; j < size_u; j++) // loop over test fcts
       {
-        v_adolc(j) += (PDE_rhs-uDH_det)*referenceFunctionValues[j]* quad[pt].weight() * integrationElement;
-      }
-
+//        v_adolc(j) += (PDE_rhs-uDH_det+u_atX0)*referenceFunctionValues[j]
+        assert(false);
+//        v_adolc(j) += (u_atX0)*referenceFunctionValues[j]
+//	          	* quad[pt].weight() * integrationElement;
 
       //calculate system for second tensor functions
+      }
 
       for (int j = 0; j < size_u_DH; j++) // loop over test fcts
       {
@@ -218,7 +220,8 @@ public:
            }
       }
 
-    }//end loop quadrature points
+
+    }
 
 
     for (int i = 0; i < size; i++)
@@ -553,6 +556,7 @@ public:
 #else
   static_assert(false, "blub");
 #endif
+
 
   static bool use_adouble_determinant;
 

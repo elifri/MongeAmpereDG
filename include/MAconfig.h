@@ -20,9 +20,10 @@
 
 //for definition of ADOLC see solver_config #define HAVE_ADOLC
 
-
 //use analytic derivation (if implemented)
 #define USE_ANALYTIC_JACOBIAN
+
+#define MANUFACTOR_SOLUTION
 
 //#define BSPLINES
 //#define USE_C0_PENALTY
@@ -77,12 +78,14 @@ namespace Config{
   typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > TriangularUnitCubeType;
 
   typedef UnitCubeType::GridType GridType;
+  typedef TriangularUnitCubeType::GridType TriangularGridType;
   typedef GridType::LevelGridView LevelGridView;
   typedef GridType::LeafGridView GridView;
   typedef GridType::Codim<0>::Entity ElementType;
   typedef Dune::FieldVector<GridView::ctype, GridView::dimension> DomainType;
 
   typedef FieldVector<ValueType, dim> SpaceType;
+  typedef FieldVector<ValueType, 1> SpaceType1d;
   typedef FieldVector<ValueType, 2> SpaceType2d;
   typedef FieldVector<ValueType, 3> SpaceType3d;
 

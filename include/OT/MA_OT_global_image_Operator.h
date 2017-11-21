@@ -14,6 +14,7 @@
 #include "MA_OT_global_Operator.h"
 
 template<typename Solver, typename LOP>
+
 class MA_OT_Operator;
 
 template<typename Solver, typename LOP>

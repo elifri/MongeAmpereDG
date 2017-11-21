@@ -72,8 +72,9 @@ public:
 	typedef FETraits::DiscreteLocalGridFunction DiscreteLocalGridFunction;
   typedef FETraits::DiscreteLocalGradientGridFunction DiscreteLocalGradientGridFunction;
 
-	MA_solver(const shared_ptr<GridType>& grid, const shared_ptr<Config::TriangularUnitCubeType::GridType>& gridConvexifier,
-	    GridViewType& gridView, SolverConfig config):
+	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView,
+	    const shared_ptr<Config::TriangularUnitCubeType::GridType>& gridConvexifier,
+	    SolverConfig config):
 	    initialised(true),
 			epsDivide_(config.epsDivide),
 			epsEnd_(config.epsEnd),
@@ -88,8 +89,8 @@ public:
       writeVTK_(config.writeVTK),
       outputDirectory_(config.outputDirectory), plotOutputDirectory_(config.plotOutputDirectory), outputPrefix_(config.outputPrefix),
       plotterRefinement_(config.refinement),
-      grid_ptr(grid), gridView_ptr(&gridView),
-      FEBasisHandler_(*this, *gridView_ptr),
+      grid_ptr(grid), gridView_(gridView),
+      FEBasisHandler_(*this, gridView),
       Convexifier_(gridConvexifier),
       assembler_(FEBasisHandler_.FEBasis()),
       plotter(gridView),
@@ -107,7 +108,7 @@ public:
 	  grid_ptr->globalRefine(SolverConfig::startlevel);
     std::cout << "refined grid to startlevel " << SolverConfig::startlevel << " constructor n dofs " << get_n_dofs() << std::endl;
 
-    FEBasisHandler_.bind(*this, *gridView_ptr);
+    FEBasisHandler_.bind(*this, gridView);
     Convexifier_.adapt(SolverConfig::startlevel+1);
 
 	  assembler_.bind(FEBasisHandler_.FEBasis());
@@ -124,8 +125,10 @@ public:
 
 	}
 
-  MA_solver(const shared_ptr<GridType>& grid, const shared_ptr<Config::TriangularUnitCubeType::GridType>& gridConvexifier, GridViewType& gridView, SolverConfig config, const GeometrySetting& geometrySetting)
-      :MA_solver(grid, gridConvexifier, gridView, config)
+  MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView,
+      const shared_ptr<Config::TriangularUnitCubeType::GridType>& gridConvexifier,
+      SolverConfig config, const GeometrySetting& geometrySetting)
+      :MA_solver(grid, gridView, gridConvexifier, config)
   {
     setting_ = geometrySetting;
   }
@@ -221,7 +224,7 @@ public:
   const auto get_FEBasis_u() const {return FEBasisHandler_.uBasis();}
 
   const GridType& grid() const {return *grid_ptr;}
-  const GridViewType& gridView() const {return *gridView_ptr;}
+  const GridViewType& gridView() const {return gridView_;}
 
 public:
 
@@ -255,6 +258,17 @@ public:
 	 */
 	template<class F>
 	void project(F f, VectorType &V) const;
+
+  /**
+   * projects a function into the grid space, for the initialisation of the hessian dofs the piecewise hessian is interpolated
+   * @param f function representing the function
+   * @param f function representing the gradient of the function
+   * @param V returns the coefficient vector of the projection of f
+   */
+  template<class F, class FGrad>
+  void project(F f, FGrad gradf, VectorType &V) const;
+
+
 protected:
 	template<class F>
 	void test_projection(const F f, VectorType& v) const;
@@ -273,6 +287,8 @@ public:
 	 */
 	void update_solution(const Config::VectorType& newSolution) const;
 
+
+	shared_ptr<GridType> adapt_grid(const int level);
 	/**
 	 * adapts the solver into the global refined space (refines grid, and transforms solution & exact solution data)
 	 * @param level
@@ -342,6 +358,7 @@ public:
   const std::string& get_plot_output_directory() const{ return plotOutputDirectory_;}
   const std::string& get_output_prefix() const{ return outputPrefix_;}
 
+  shared_ptr<DiscreteLocalGridFunction>& get_u_old_ptr() {return solution_u_old;}
   shared_ptr<DiscreteLocalGradientGridFunction>& get_gradient_u_old_ptr() {return gradient_u_old;}
 
   int get_plotRefinement() {return plotterRefinement_;}
@@ -373,8 +390,9 @@ protected:
 	std::string outputDirectory_, plotOutputDirectory_, outputPrefix_; ///outputdirectories
   int plotterRefinement_; ///number of (virtual) grid refinements for output generation
 
-	const shared_ptr<GridType> grid_ptr; ///Pointer to grid
-	const GridViewType* gridView_ptr; /// Pointer to gridView
+	shared_ptr<GridType> grid_ptr; ///Pointer to grid
+  GridViewType gridView_; /// Pointer to gridView
+//	shared_ptr<GridViewType> gridView_ptr; /// Pointer to gridView
 
 	FEBasisHandler<FETraits::Type, FETraits> FEBasisHandler_;
 	Convexifier<2> Convexifier_;
@@ -411,6 +429,19 @@ template<class F>
 void MA_solver::project(const F f, VectorType& v) const
 {
   FEBasisHandler_.project(f, v);
+  //TODO what to do about right-hand-side scaling
+//  v.conservativeResize(v.size()+1);
+//  v(v.size()-1) = 1;
+#ifdef DEBUG
+  test_projection(f,v);
+#endif
+}
+
+
+template<class F, class FGrad>
+void MA_solver::project(F f, FGrad gradf, VectorType &v) const
+{
+  FEBasisHandler_.project(f, gradf, v);
   //TODO what to do about right-hand-side scaling
 //  v.conservativeResize(v.size()+1);
 //  v(v.size()-1) = 1;
@@ -634,7 +665,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
   auto localIndexSet = FEBasisHandler_.FEBasis().indexSet().localIndexSet();
 
 
-  for (auto&& element : elements(*gridView_ptr)) {
+  for (auto&& element : elements(gridView())) {
 
     localView.bind(element);
     localIndexSet.bind(localView);
@@ -723,7 +754,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
     auto localViewn = FEBasisHandler_.FEBasis().localView();
     auto localIndexSetn = FEBasisHandler_.FEBasis().indexSet().localIndexSet();
 
-    for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
+    for (auto&& is : intersections(gridView(), element)) //loop over edges
     {
       if (is.neighbor()) {
 

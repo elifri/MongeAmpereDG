@@ -12,13 +12,24 @@
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk/common.hh>
 
+
+/*
+struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
+  MA_refr_Operator(Solver &solver):MA_OT_Operator<Solver,LOP>(solver,
+          std::shared_ptr<LOP>(new LOP(
+                   solver.setting_, solver.gridView(), solver.solution_u_old, solver.gradient_u_old, solver.exact_solution
+                  )
+          ))
+*/
+
 MA_refractor_solver::MA_refractor_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting)
- :MA_solver(grid, gridView, config), setting_(opticalSetting), op(*this)
+ :MA_solver(grid, gridView, config), setting_(opticalSetting),
+  op(*this)
 {
 
    //adjust light intensity
-   const auto integralLightOut = op.get_lop().get_right_handside().get_target_distribution().integrateOriginal();
-   const auto integralLightIn = op.get_lop().get_right_handside().get_input_distribution().integrateOriginal();
+   const auto integralLightOut = op.rhs_.get_target_distribution().integrateOriginal();
+   const auto integralLightIn = op.rhs_.get_input_distribution().integrateOriginal();
    setting_.povRayOpts.lightSourceColor = Eigen::Vector3d::Constant(integralLightOut/integralLightIn*setting_.lightSourceIntensity);
 
    plotter.set_PovRayOptions(setting_.povRayOpts);
@@ -36,20 +47,28 @@ void MA_refractor_solver::create_initial_guess()
   else
   {
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
-    project([](Config::SpaceType x){return 1;}, solution);
+    project([](Config::SpaceType x){return 1.12;}, solution);
   }
 
   //set fixing grid point for refractor (fix distance to light source)
   DiscreteGridFunction solution_u_global(FEBasisHandler_.uBasis(),solution);
   auto res = solution_u_global(op.fixingPoint);
 
-  assembler.set_u0AtX0(res);
+  assembler_.set_u0AtX0(res);
 }
 
 void MA_refractor_solver::plot(const std::string& name) const
 {
   std::cout << "write? " << writeVTK_ << " ";
   std::cout << "plot written into ";
+  plot(name, iterations);
+  std::string refrPovname(plotter.get_output_directory());
+  refrPovname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".pov";
+  std::cout << refrPovname << std::endl;
+}
+
+void MA_refractor_solver::plot(const std::string& name, int no) const
+{
 
   //write vtk files
   if (writeVTK_)
@@ -97,7 +116,7 @@ void MA_refractor_solver::plot(const std::string& name) const
 //     plotter.writeReflectorVTK(reflname, localnumericalSolution, *exact_solution);
      plotter.writeRefractorVTK(reflname, localnumericalSolution);
 
-     std::cout << fname  << " " << reflname << " and ";
+//     std::cout << fname  << " " << reflname << " and ";
   }
 
   //write povray output
@@ -105,7 +124,14 @@ void MA_refractor_solver::plot(const std::string& name) const
    refrPovname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".pov";
 
    plotter.writeRefractorPOV(refrPovname, *solution_u_old);
-   std::cout << refrPovname << std::endl;
+
+}
+
+void MA_refractor_solver::adapt_solution(const int level)
+{
+  FEBasisHandler_.adapt(*this, level, solution);
+  std::cerr << " adapting operator " << std::endl;
+  op.adapt();
 }
 
 void MA_refractor_solver::adapt_solution(const int level)
@@ -119,7 +145,7 @@ void MA_refractor_solver::update_Operator()
 {
   //blurr target distributation
   std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
-  op.get_lop().get_right_handside().convolveTargetDistributionAndNormalise(epsMollifier_);
+  op.rhs_.convolveTargetDistributionAndNormalise(epsMollifier_);
 
   //print blurred target distribution
   if (true) {

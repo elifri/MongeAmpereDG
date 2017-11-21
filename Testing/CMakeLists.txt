@@ -1,6 +1,8 @@
 
-#add_executable("testAdolc" testAdolc.cpp)
-#target_link_libraries(testAdolc ${ADOLC_LIBRARIES})
+if(ADOLC_FOUND)
+add_executable("testAdolc" testAdolc.cpp)
+target_link_libraries(testAdolc ${ADOLC_LIBRARIES})
+endif(ADOLC_FOUND)
 
 #add_executable("test-deVeubeke" test-deVeubeke.cc)
 #target_link_dune_default_libraries("test-deVeubeke")

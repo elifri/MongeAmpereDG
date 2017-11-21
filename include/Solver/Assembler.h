@@ -1909,8 +1909,6 @@ template<typename LocalOperatorType, typename LocalOperatorJacobianType>
 void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalOperatorJacobianType &lopJacobian,
     const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {
-  std::cerr << " wAssembler " << x.transpose() << std::endl;
-
     assert((unsigned int) x.size() == basis_->indexSet().size());
 
     Config::GridView gridView = basis_->gridView();
@@ -1945,6 +1943,8 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
         local_vector.setZero(localView.size());    // Set all entries to zero
         Config::VectorType local_midvalue;
         local_midvalue.setZero(localView.size());    // Set all entries to zero
+        Config::VectorType local_boundary;
+        local_boundary.setZero(localView.size());    // Set all entries to zero
 
         //get zero matrix to store local jacobian
         Config::DenseMatrixType m_m;
@@ -1956,6 +1956,7 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalO
         Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
 
         lopJacobian.assemble_cell_term(localView, xLocal, local_vector, m_m);
+
 
        // Traverse intersections
         for (auto&& is : intersections(gridView, e)) {

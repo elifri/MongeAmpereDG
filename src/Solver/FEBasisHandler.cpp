@@ -68,7 +68,7 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solv
   auto localViewOld = FEBasis_->localView();
 
   //mark elements for refinement
-  for (auto&& element : elements(*solver.gridView_ptr))
+  for (auto&& element : elements(solver.gridView()))
   {
 //    localViewOld.bind(element);
 //    solution_u_old->bind(element);
@@ -86,7 +86,7 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solv
     solver.grid_ptr->mark(1,element);
   }
 
-  std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
+  std::cout << "old element count " << solver.gridView().size(0) << std::endl;
   std::cout << " grid febasis " << solver.solution_u_old_global->basis().nodeFactory().gridView().size(2) << std::endl;
 
   //adapt grid
@@ -109,7 +109,7 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solv
   //update member
   std::cout << " grid febasis " << solution_u_Coarse_global.basis().nodeFactory().gridView().size(2) << std::endl;
 
-  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(*solver.gridView_ptr));
+  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(solver.gridView()));
   solver.get_assembler().bind(*FEBasis_);
 
   project(solution_u_Coarse_global, gradient_u_Coarse_global, v);
@@ -126,19 +126,41 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solv
 }
 
 template <>
+void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(std::shared_ptr<Config::GridType> oldGrid, Config::GridView gridView, const Config::VectorType& v_old, Config::VectorType& v)
+ {
+
+  //we need do store the old basis as the (father) finite element depends on the basis
+  std::shared_ptr<FEBasisType> FEBasisOld = std::shared_ptr<FEBasisType> (new FEBasisType(oldGrid->leafGridView()));
+  FiniteElementTraits::DiscreteGridFunction solution_u_Coarse_global (*FEBasisOld,v_old);
+  FiniteElementTraits::DiscreteLocalGridFunction solution_u_Coarse(solution_u_Coarse_global);
+  typename FiniteElementTraits::DiscreteGridFunction::GlobalFirstDerivative gradient_u_Coarse_global (solution_u_Coarse_global);
+
+//  FEBasisNew_ = std::shared_ptr<FEBasisType> (new FEBasisType(gridView));
+
+  //update member
+  std::cout << " grid febasis " << solution_u_Coarse_global.basis().nodeFactory().gridView().size(2) << std::endl;
+  std::cout << " new grid febasis " << gridView.size(2) << std::endl;
+
+  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(gridView));
+//  solver.get_assembler().bind(*FEBasis_);
+
+  project(solution_u_Coarse_global, gradient_u_Coarse_global, v);
+}
+
+template <>
 void FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, SolverConfig::degree>>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
 {
   assert(solver.initialised);
   assert(level == 1);
 
   //mark elements for refinement
-  for (auto&& element : elements(*solver.gridView_ptr))
+  for (auto&& element : elements(solver.gridView()))
   {
     //mark element for refining
     solver.grid_ptr->mark(1,element);
   }
 
-  std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
+  std::cout << "old element count " << solver.gridView().size(0) << std::endl;
 
   //adapt grid
   bool marked = solver.grid_ptr->preAdapt();
@@ -146,10 +168,10 @@ void FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, SolverConfig::d
   solver.grid_ptr->adapt();
   solver.count_refined += level;
 
-  std::cout << "new element count " << solver.gridView_ptr->size(0) << std::endl;
+  std::cout << "new element count " << solver.gridView().size(0) << std::endl;
 
   //update member
-  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(*solver.gridView_ptr));
+  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(solver.gridView()));
   solver.get_assembler().bind(*FEBasis_);
 
   typedef LagrangeC0Traits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
@@ -169,13 +191,13 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
   assert(level == 1);
 
   //mark elements for refinement
-  for (auto&& element : elements(*solver.gridView_ptr))
+  for (auto&& element : elements(solver.gridView()))
   {
     //mark element for refining
     solver.grid_ptr->mark(1,element);
   }
 
-  std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
+  std::cout << "old element count " << solver.gridView().size(0) << std::endl;
 
   //adapt grid
   bool marked = solver.grid_ptr->preAdapt();
@@ -183,13 +205,13 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
   solver.grid_ptr->adapt();
   solver.count_refined += level;
 
-  std::cout << "new element count " << solver.gridView_ptr->size(0) << std::endl;
+  std::cout << "new element count " << solver.gridView().size(0) << std::endl;
 
-  //update member
+  //update memberDEBUG
   std::array<unsigned int,FEBasisType::GridView::dimension> elementsSplines;
-  std::fill(elementsSplines.begin(), elementsSplines.end(), std::sqrt(solver.gridView_ptr->size(0)));
+  std::fill(elementsSplines.begin(), elementsSplines.end(), std::sqrt(solver.gridView().size(0)));
 
-  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(*solver.gridView_ptr,
+  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(solver.gridView(),
       solver.get_setting().lowerLeft, solver.get_setting().upperRight,
       elementsSplines, SolverConfig::degree));
 
@@ -235,13 +257,13 @@ void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig:
   assert(level == 1);
 
   //mark elements for refinement
-  for (auto&& element : elements(*solver.gridView_ptr))
+  for (auto&& element : elements(solver.gridView()))
   {
     //mark element for refining
     solver.grid_ptr->mark(1,element);
   }
 
-  std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
+  std::cout << "old element count " << solver.gridView().size(0) << std::endl;
 
   //adapt grid
   bool marked = solver.grid_ptr->preAdapt();
@@ -249,13 +271,13 @@ void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig:
   solver.grid_ptr->adapt();
   solver.count_refined += level;
 
-  std::cout << "new element count " << solver.gridView_ptr->size(0) << std::endl;
+  std::cout << "new element count " << solver.gridView().size(0) << std::endl;
 
   //update member
   std::array<unsigned int,FEBasisType::GridView::dimension> elementsSplines;
-  std::fill(elementsSplines.begin(), elementsSplines.end(), std::sqrt(solver.gridView_ptr->size(0)));
+  std::fill(elementsSplines.begin(), elementsSplines.end(), std::sqrt(solver.gridView().size(0)));
 
-  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(*solver.gridView_ptr,
+  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(solver.gridView(),
       solver.get_setting().lowerLeft, solver.get_setting().upperRight,
       elementsSplines, SolverConfig::degree));
 
@@ -305,7 +327,7 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
   std::map<IdType, Config::VectorType>  preserveSolution;
 
   //mark elements for refinement
-  for (auto&& element : elements(*solver.gridView_ptr))
+  for (auto&& element : elements(solver.gridView()))
   {
     // Bind the local FE basis view to the current element
     localView.bind(element);
@@ -318,7 +340,7 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
     preserveSolution[idSet.id(element)]  = Assembler::calculate_local_coefficients(localIndexSet, v);
   }
 
-  std::cout << "old element count " << solver.gridView_ptr->size(0) << std::endl;
+  std::cout << "old element count " << solver.gridView().size(0) << std::endl;
 
   //adapt grid
   bool marked = solver.grid_ptr->preAdapt();
@@ -326,12 +348,12 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
   solver.grid_ptr->adapt();
   solver.count_refined += level;
 
-  std::cout << "new element count " << solver.gridView_ptr->size(0) << std::endl;
+  std::cout << "new element count " << solver.gridView().size(0) << std::endl;
 
   //update member
-  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(*solver.gridView_ptr));
-  uBasis_ = std::shared_ptr<FEuBasisType> (new FEuBasisType(*solver.gridView_ptr));
-  uDHBasis_ = std::shared_ptr<FEuDHBasisType> (new FEuDHBasisType(*solver.gridView_ptr));
+  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(solver.gridView()));
+  uBasis_ = std::shared_ptr<FEuBasisType> (new FEuBasisType(solver.gridView()));
+  uDHBasis_ = std::shared_ptr<FEuDHBasisType> (new FEuDHBasisType(solver.gridView()));
   solver.get_assembler().bind(*FEBasis_);
 
   //we need do store the old basis as the (father) finite element depends on the basis
@@ -470,7 +492,7 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
   std::fill(already_refined.begin(), already_refined.end(), false);
 
   //calculate new dof vector
-  for (auto&& element : elements(*solver.gridView_ptr))
+  for (auto&& element : elements(solver.gridView()))
   {
     if (element.isNew())
     {
@@ -544,8 +566,9 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
 
 template <>
 template <>
-Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>>::adapt_after_grid_change(const typename FEBasisType::GridView& gridOld, const typename FEBasisType::GridView& grid, Config::VectorType& v)
+Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>>::adapt_after_grid_change(const typename FEBasisType::GridView& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v)
 {
+  std::cout << " build new basis " << std::endl;
   FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid));
 
 //  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
@@ -555,24 +578,46 @@ Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::Lev
 
   Config::VectorType vNew;
   vNew.resize(FEBasis_->indexSet().size());
+  std::cout << " going to interpolate " << std::endl;
   interpolate(*FEBasis_, vNew, solution_u_Coarse_global);
+  std::cout << "interpolated " << std::endl;
   return vNew;
 }
 
 template <>
 template <>
-Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::GridView, SolverConfig::degree>>::adapt_after_grid_change(const typename Config::LevelGridView& gridOld, const typename FEBasisType::GridView& grid, Config::VectorType& v)
+Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::GridView, SolverConfig::degree>>::adapt_after_grid_change(const Config::LevelGridView& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v)
 {
   FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid));
 
+//  std::cerr << " build old basis " << std::endl;
   typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
   FEBasisCoarseType FEBasisCoarse (gridOld);
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
   DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
 
+//  std::cerr << " interpolate " << std::endl;
   Config::VectorType vNew;
   vNew.resize(FEBasis_->indexSet().size());
+//  std::cerr << "start interpolate " << std::endl;
   interpolate(*FEBasis_, vNew, solution_u_Coarse_global);
+//  std::cerr << " interpolated and return vNew" << std::endl;
+  return vNew;
+}
+
+template <>
+template <>
+Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt_function_after_grid_change(const typename Config::LevelGridView& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
+{
+  typedef PS12SplitTraits<Config::LevelGridView>::FEBasis FEBasisCoarseType;
+  FEBasisCoarseType FEBasisCoarse (gridOld);
+  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
+  DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
+  DiscreteGridFunctionCoarse::GlobalFirstDerivative gradient_u_Coarse_global (solution_u_Coarse_global);
+
+  Config::VectorType vNew;
+  vNew.resize(FEBasis_->indexSet().size());
+  project(solution_u_Coarse_global, gradient_u_Coarse_global, vNew);
   return vNew;
 }
 
@@ -606,7 +651,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   //loop over elements (in coarse grid)
   for (auto&& elementCoarse : elements(levelGridView)) {
 
-    HierarchicSearch<Config::GridType, Config::GridView::IndexSet> hs(*solver.grid_ptr, solver.gridView_ptr->indexSet());
+    HierarchicSearch<Config::GridType, Config::GridView::IndexSet> hs(*solver.grid_ptr, solver.gridView().indexSet());
 
     localViewCoarse.bind(elementCoarse);
     localIndexSetCoarse.bind(localViewCoarse);

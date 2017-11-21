@@ -26,9 +26,10 @@ value_type FrobeniusProduct(const FieldMatrix<value_type, 2, 2>& A, const FieldM
 
 
 class Local_Operator_MA_OT_Linearisation {
+  using Function = DensityFunction;
 
 public:
-  typedef DensityFunction Function;
+  using FunctionType = Function;///interface typedef
 
   Local_Operator_MA_OT_Linearisation(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
   delta_K(10), rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), sign(1.0), found_negative(false)
@@ -155,7 +156,6 @@ public:
       std::cerr << " dg " << gradg << " finite diff g " << DxFEx << std::endl;
       std::cerr << " g1 " << Dx1PlusF_value << " g2 " << Dx2PlusF_value << std::endl;
 #endif
-
 
       auto h_T = std::sqrt(integrationElement);
 

@@ -162,8 +162,13 @@ struct SolverConfig{
 
 
   /////-------select langrangian boundary element ----------------
-//  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree> FETraitsSolverQ;
+//#define USE_COARSE_Q_H
+
+#ifdef USE_COARSE_Q_H
+  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree> FETraitsSolverQ;
+#else
   typedef LagrangeC0BoundaryTraits<Config::GridView, SolverConfig::degree> FETraitsSolverQ;
+#endif
 //  typedef LagrangeC0FineBoundaryTraits<Config::GridView, SolverConfig::degree> FETraitsSolverQ;
 
 
@@ -206,7 +211,7 @@ struct GeometrySetting{
   static Config::SpaceType upperRightTarget; ///upper left of target grid (target must be in x-y-plane)
 
   static std::string gridinputFile;
-  static std::string gridinputTargetFile;
+  static std::string gridTargetFile;
 
   static SolverConfig::ValueType z_3; /// third coordinate of target grid (target must be in x-y-plane)
 };

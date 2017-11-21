@@ -100,6 +100,7 @@ inline FieldVector<valueType, 3> T(const FieldVector<Config::ValueType, 3>& x, c
 class Local_Operator_MA_refl_Neilan;
 class Local_Operator_MA_refl_Brenner;
 class Local_Operator_MA_refr_Brenner;
+class Local_Operator_MA_refr_Linearisation;
 
 // A class implementing the analytical right hand side
 class RightHandSide: public VirtualFunction<Config::SpaceType, Config::ValueType> {
@@ -322,6 +323,7 @@ private:
   friend Local_Operator_MA_refl_Neilan;
   friend Local_Operator_MA_refl_Brenner;
   friend Local_Operator_MA_refr_Brenner;
+  friend Local_Operator_MA_refr_Linearisation;
 };
 
 

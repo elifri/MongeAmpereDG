@@ -10,6 +10,7 @@
 
 #include <dune/common/function.hh>
 #include "Solver/solver_config.h"
+#include <dune/grid/io/file/vtk/boundaryiterators.hh>
 
 #ifdef HAVE_ADOLC
 //automatic differentiation
@@ -21,7 +22,7 @@ class OTBoundary
 {
 private:
   ///find the projection on the desired boundary
-  virtual void phi(const Config::SpaceType2d& T, const FieldVector<double, Config::dim> &normal, Config::ValueType &phi) const =0;
+//  virtual void phi(const Config::SpaceType2d& T, const FieldVector<double, Config::dim> &normal, Config::ValueType &phi) const =0;
 
   virtual Config::ValueType LegrendeFenchelTrafo(const Config::SpaceType &normal) const =0;
 
@@ -30,12 +31,19 @@ public:
 
 //  virtual ~OTBoundary() {delete (*GradFunction_ptr);}
 
-  OTBoundary(GradFunction_ptr &gradUOld, GeometrySetting& geometrySetting,
+
+  OTBoundary(//GeometrySetting& geometrySetting,
       const int n = 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps))
-    : gradient_u_old(&gradUOld), geometrySetting(geometrySetting), N_(n){}
+    : N_(n){}
+
+
+  OTBoundary(GradFunction_ptr &gradUOld, //GeometrySetting& geometrySetting,
+      const int n = 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps))
+    : gradient_u_old(&gradUOld), //geometrySetting(geometrySetting),
+      N_(n){}
 
   ///return the projection of the last iteration's solution (onto the desired boundary)
-  template<class Element>
+/*  template<class Element>
   Config::ValueType phi(const Element& element, const Config::DomainType& xLocal, const FieldVector<double, Config::dim> &normal) const
   {
     //get last step's gradient
@@ -48,7 +56,7 @@ public:
     Config::ValueType phi_value;
     phi(gradu, normal, phi_value);
     return phi_value;
-  }
+  }*/
 
   Config::ValueType H(const Config::SpaceType2d& transportedX, const Config::SpaceType &normalX) const
   {
@@ -137,19 +145,19 @@ public:
   }
 #endif
 
-  template<class Element>
+/*  template<class Element>
   Config::SpaceType2d grad_u_old(const Element& element, const Config::SpaceType &xLocal) const
   {
     assert(gradient_u_old != NULL);
     (*gradient_u_old)->bind(element);
 
     return (**gradient_u_old)(xLocal);
-  }
+  }*/
 
 
 protected:
   mutable GradFunction_ptr* gradient_u_old;
-  GeometrySetting& geometrySetting;
+//  GeometrySetting& geometrySetting;
   int N_;
 };
 
@@ -158,6 +166,13 @@ class DensityFunction : public virtual Dune::VirtualFunction<Config::DomainType,
 {
 public:
     using Dune::VirtualFunction<Config::DomainType, Config::ValueType>::evaluate;
+
+    Config::ValueType operator()(const Config::DomainType& x) const
+    {
+      Config::ValueType y;
+      evaluate(x,y);
+      return y;
+    }
 
 #ifdef HAVE_ADOLC
     virtual void evaluate (const Dune::FieldVector<adouble, Config::dim> &x, adouble &u) const {};
@@ -201,9 +216,78 @@ class BoundarySquare : public OTBoundary
 
 
 public:
-  BoundarySquare(OTBoundary::GradFunction_ptr &gradUOld, GeometrySetting& geometrySetting): OTBoundary(gradUOld, geometrySetting){}
+  BoundarySquare(OTBoundary::GradFunction_ptr &gradUOld, GeometrySetting& geometrySetting): OTBoundary(gradUOld), geometrySetting(geometrySetting){}
   ~BoundarySquare() {}
+
+  GeometrySetting& geometrySetting;
 };
+
+template<typename GT>
+class GenerealOTBoundary : public OTBoundary{
+  using GridType = GT;
+  using GridView = typename GridType::LeafGridView;
+  using IndexSet = typename GridView::IndexSet;
+  void init()
+  {
+    Hvalues_.resize(N_Y+1);
+    std::fill (Hvalues_.begin(), Hvalues_.end(), -100);
+
+    using BoundaryIterator = Dune::VTK::BoundaryIterator<GridView>;
+
+    //find for all normals sup_{y in boundary} y*n, see Benamou et alt. /Journal of Compu.Phys 260(2014) p. 110-111
+    BoundaryIterator itBoundary(grid_ptr->leafGridView());
+    while (itBoundary != BoundaryIterator(grid_ptr->leafGridView(),true)) //loop over boundary edges
+    {
+      for(int i = 0; i < boundaryPointPerEdge_; i++)//loop over boundary point in edge
+      {
+        //calculate global coordinates of boundary point
+        Config::SpaceType1d localBoundaryPosScale ({((Config::ValueType) i) /  (boundaryPointPerEdge_-1)});
+        Config::SpaceType2d localBoundaryPos = itBoundary->geometryInInside().global(localBoundaryPosScale);
+        Config::SpaceType2d globalBoundaryPos = itBoundary->inside().geometry().global(localBoundaryPos);
+
+        for (int j = 0; j <= N_Y; j++)
+        {
+          //calculate normal
+          Config::SpaceType2d currentNormal ({std::cos(2*M_PI*j/N_Y), std::sin(2*M_PI*j/N_Y)});
+
+          //update supremum
+          Config::ValueType temp = globalBoundaryPos*currentNormal;
+          if (temp > Hvalues_[j])
+          {
+            Hvalues_[j] = temp;
+          }
+        }
+      }
+      itBoundary++;
+    }
+  }
+
+public:
+  using OTBoundary::OTBoundary;
+
+  GenerealOTBoundary(const std::shared_ptr<GridType> grid_ptr): grid_ptr(grid_ptr){
+  init();
+}
+
+
+
+Config::ValueType LegrendeFenchelTrafo(const Config::SpaceType &normal) const
+  {
+    return Hvalues_[std::round(std::acos(normal[0])*N_Y/2./M_PI)];
+  }
+
+void adapt()
+{
+  init();
+}
+
+  const int N_Y = N_;
+  const int boundaryPointPerEdge_=5;
+
+  std::vector<Config::ValueType> Hvalues_;
+  const std::shared_ptr<GridType> grid_ptr;
+};
+
 
 
 
@@ -258,15 +342,22 @@ public :
 };
 
 
-class rhoYSquareToSquare : public DensityFunction
+class ConstOneFunction : public DensityFunction
 {
 public:
-  ~rhoYSquareToSquare() {}
+  ~ConstOneFunction() {}
 
   void evaluate (const Config::DomainType &x, Config::ValueType &u) const
   {
     u = 1;
   }
+  void evaluateDerivative(const FieldVector<double, Config::dim> &x, FieldVector<double, Config::dim> &gradu) const
+  {
+    gradu[0] = 0;
+    gradu[1] = 0;
+  }
+
+
 #ifdef HAVE_ADOLC
   void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
   {
@@ -274,6 +365,8 @@ public:
   }
 #endif
 };
+
+using rhoYSquareToSquare = ConstOneFunction;
 
 class rhoXGaussianSquare : public DensityFunction
 {
