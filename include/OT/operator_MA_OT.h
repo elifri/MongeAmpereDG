@@ -34,8 +34,8 @@ class Local_Operator_MA_OT {
 public:
   typedef DensityFunction Function;
 
-  Local_Operator_MA_OT(const OTBoundary& bc, const Function* rhoX, const Function* rhoY):
-  rhoX(*rhoX), rhoY(*rhoY),bc(bc), int_f(0), found_negative(false)
+  Local_Operator_MA_OT(const OTBoundary& bc, const Function& rhoX, const Function& rhoY):
+  rhoX(rhoX), rhoY(rhoY),bc(bc), int_f(0), found_negative(false)
   {
     std::cout << " created Local Operator" << std::endl;
   }
@@ -165,6 +165,7 @@ public:
       if (uDH_det.value() < 0 && !found_negative)
       {
         std::cerr << "found negative determinant !!!!! " << uDH_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
+        std::cerr << " x was " << x.transpose() << " at triangle " << geometry.corner(0) << "," << geometry.corner(1) << " and " << geometry.corner(2) << std::endl;
         found_negative = true;
       }
 //      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
