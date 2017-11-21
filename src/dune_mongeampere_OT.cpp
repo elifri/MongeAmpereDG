@@ -106,15 +106,19 @@ try {
   Config::GridView gridView = grid_ptr->leafGridView();
 
   // Output grid
-  VTKWriter<Config::GridView> vtkWriter(gridView);
-  vtkWriter.write("grid");
+  {
+    VTKWriter<Config::GridView> vtkWriter(gridView);
+    vtkWriter.write("grid");
+  }
 
 //-----target area grid--------
 #ifndef BSPLINES
   std::cout << " read target grid vom file " << setting.gridTargetFile << std::endl;
   std::shared_ptr<Config::GridType> gridTarget_ptr(GmshReader<Config::GridType>::read(setting.gridTargetFile));
-  VTKWriter<Config::GridView> vtkWriterTarget(gridTarget_ptr->leafGridView());
-  vtkWriter.write("gridTarget");
+  {
+    VTKWriter<Config::GridView> vtkWriterTarget(gridTarget_ptr->leafGridView());
+    vtkWriterTarget.write("gridTarget");
+  }
 #endif
 
 
