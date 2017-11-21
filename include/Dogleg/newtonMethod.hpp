@@ -27,17 +27,18 @@ template<typename FunctorType>
 void newtonMethod(
           FunctorType &functor, ///the function whose root has to be found
     const unsigned int maxIter, ///maximum amount of steps
-    const double eps, ///stop criteria for residual
+    const double eps [], ///stop criteria for residual
     double omega, ///damping parameter
           Eigen::VectorXd &x, ///Initial guess and returns approximate solution
     bool useCombinedFunctor = false, ///evaluate function and Jacobian at the same time
     const bool silentmode=false ///plot output
 ){
-    assert(eps>0);
+    assert(eps[0]>0);
+    assert(eps[1]>0);
     assert(omega>0);
 
     double initialResidual;
-    double lastResidual;
+    double lastResidual, diffLastResidual;
     Eigen::VectorXd oldX;
 
     std::cerr << " Start Newton ..." << std::endl;
@@ -84,6 +85,8 @@ void newtonMethod(
             lastResidual = initialResidual;
             oldX = xBoundary;
           }
+
+          diffLastResidual = lastResidual-f.norm();
 
           //dismiss newton step
 //          if(f.norm() > lastResidual)
@@ -134,7 +137,6 @@ void newtonMethod(
           }
 
           //store last step's information
-          lastResidual = f.norm();
           oldX = xBoundary;
 
           //perform newton step
@@ -146,18 +148,24 @@ void newtonMethod(
 
           if (!silentmode)
           {
-            std::cerr << "     boundary-step     ";
+            std::cerr << "     boundary-step     "
+                << std::scientific << std::setprecision(3) << omega*s.norm()
+                << std::scientific << std::setprecision(3) << "   omega   " << omega
+                << std::endl << "       ";
             std::cout << "   " << std::setw(6) << i;
             std::cout << "     boundary-step     ";
             std::cout << std::scientific << std::setprecision(3) << omega*s.norm();
             std::cout << "   " << std::scientific << std::setprecision(3) << f.lpNorm<Eigen::Infinity>();
             std::cout << "   " << std::scientific << std::setprecision(3) << f.norm()/initialResidual;
-            std::cout << "   " << std::scientific << std::setprecision(3) << f.norm();
+            std::cout << "   " << std::scientific << std::setprecision(10) << f.norm();
             std::cout << std::endl;
           }
-          if (s.norm() <= eps && i>0)
+          if (   s.norm() <= eps[1]
+              || (std::abs(diffLastResidual) <= eps[0] && i > 0 && i <maxIter-1)
+              || f.norm() <= eps[2])
               break;
 
+          lastResidual = f.norm();
       }
       // compute damped Newton step
 
@@ -179,18 +187,30 @@ void newtonMethod(
             std::cout << std::endl;
          }
 
-         if (i > 0)
+//         if (i > 0)
          {
-           if (s.norm() <= eps)
+           if (s.norm() <= eps[1])
            {
              if (!silentmode)
-                 std::cout << "||s||2 small enough. Finished." << std::endl;
+                 std::cout << "||s||2 too small. Finished." << std::endl;
              break;
            }
            if (std::log10(f.norm()/initialResidual) < epsRes)
            {
              if (!silentmode)
                  std::cout << "log(||f||2/inital) big enough. Finished." << std::endl;
+             break;
+           }
+           if (std::abs(diffLastResidual) <= eps[0] && i > 0)
+           {
+             if (!silentmode)
+                 std::cout << "||delta f||2 too small. Finished." << std::endl;
+             break;
+           }
+           if (f.norm() < eps[2])
+           {
+             if (!silentmode)
+                 std::cout << "||f||2 small enough. Finished." << std::endl;
              break;
            }
          }

@@ -512,7 +512,7 @@ void MA_OT_solver::solve_nonlinear_system()
 //  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
 //  if (iterations>1)
 //    omega = 0.5;
-  newtonMethod(op, doglegOpts_.maxsteps, doglegOpts_.stopcriteria[0], omega, solution, evaluateJacobianSimultaneously_);
+  newtonMethod(op, doglegOpts_.maxsteps, doglegOpts_.stopcriteria, omega, solution, evaluateJacobianSimultaneously_);
 
 #endif
 #ifdef USE_PETSC
