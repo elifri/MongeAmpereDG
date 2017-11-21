@@ -167,6 +167,13 @@ class DensityFunction : public virtual Dune::VirtualFunction<Config::DomainType,
 public:
     using Dune::VirtualFunction<Config::DomainType, Config::ValueType>::evaluate;
 
+    Config::ValueType operator()(const Config::DomainType& x) const
+    {
+      Config::ValueType y;
+      evaluate(x,y);
+      return y;
+    }
+
 #ifdef HAVE_ADOLC
     virtual void evaluate (const Dune::FieldVector<adouble, Config::dim> &x, adouble &u) const {};
 #endif
