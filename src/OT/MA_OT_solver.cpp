@@ -17,6 +17,8 @@ namespace po = boost::program_options;
 
 #include "utils.hpp"
 
+#include "Operator/linear_system_operator_poisson_NeumannBC.h"
+
 MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const shared_ptr<GridType>& gridTarget,
     const SolverConfig& config, GeometrySetting& setting)
 :MA_solver(grid, gridView, config), setting_(setting), gridTarget_ptr(gridTarget),
@@ -439,6 +441,89 @@ void MA_OT_solver::plot(const std::string& name, int no) const
 
 }
 
+void MA_OT_solver::one_Poisson_Step()
+{
+
+//  Config::SpaceType x0 = {0.0,0.0};
+//  Config::SpaceType x0 = {-0.5,-0.5};
+  Config::SpaceType x0 = {0.5,-0.9};
+  Config::ValueType a = 1.0;
+  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,2.5}};
+
+  Integrator<Config::GridType> integrator(grid_ptr);
+  auto k = 1.0;
+  const auto& f = get_operator().get_f();
+  const auto& g = get_operator().get_g();
+  const auto& OTbc = get_operator().get_bc();
+
+//  auto y0 = [&](Config::SpaceType x){x=x0;A.umv(x,x); return x;};
+  auto y0 = [&](Config::SpaceType x){return x+x0;};
+
+  auto rhs = [&](Config::SpaceType x){return -k*std::sqrt(f(x)/g(y0(x)));};
+  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return (y0(x)*normal)-OTbc.H(y0(x), normal);};
+
+  ///---Code with known solution
+
+//  auto rhs = [&](Config::SpaceType x){return 2*M_PI*M_PI*std::sin(M_PI*x[0])*std::sin(M_PI*x[1]);};
+//  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return normal[0]*(x[1]+std::sin(M_PI*x[1])*M_PI*std::cos(M_PI*x[0]))
+//                                                                     +normal[1]*(x[0]+std::sin(M_PI*x[0])*M_PI*std::cos(M_PI*x[1]));};
+//  auto bc = [&](Config::SpaceType x){return (x[0]*x[1]+std::sin(M_PI*x[1])*std::sin(M_PI*x[0]));};
+
+
+  std::cout << " before int sqrt(f/g) " << integrator.assemble_integral(rhs) << std::endl;
+
+  k = -integrator.assemble_boundary_integral(bc)/integrator.assemble_integral(rhs);
+  std::cout << " k " << k << std::endl;
+  std::cout << " int ksqrt(f/g) " << integrator.assemble_integral(rhs) << " int boundary y_0-H... " << integrator.assemble_boundary_integral(bc) << std::endl;
+  std::cout << " difference " << std::abs(integrator.assemble_boundary_integral(bc)+integrator.assemble_integral(rhs)) << std::endl;
+  assert(std::abs(integrator.assemble_boundary_integral(bc)+integrator.assemble_integral(rhs)) < 1e-4);
+
+  //assemble linear poisson equation
+  Linear_System_Local_Operator_Poisson_NeumannBC<decltype(rhs), decltype(bc)> Poisson_op(rhs, bc);
+
+  ///-------------Code copied from MA_Operator to be reviewed, init data for fixing point
+
+
+  Config::MatrixType m;
+  Config::VectorType v;
+  assembler_.assemble_DG_Jacobian(Poisson_op, Poisson_op, solution.head(get_n_dofs_V_h()), v, m);
+
+
+  m.makeCompressed();
+
+  //add lagrang multiplier for mean value
+  const int V_h_size = get_n_dofs_V_h();
+  m.conservativeResize(V_h_size+1, V_h_size+1);
+  v.conservativeResize(V_h_size+1);
+
+  int indexFixingGridEquation = V_h_size;
+  //assemble lagrangian multiplier for grid fixing point
+
+  //-------------------select  mid value-------------------------
+  assert(get_operator().lagrangianFixingPointDiscreteOperator.size() == V_h_size);
+
+  //copy in system matrix
+  for (unsigned int i = 0; i < get_operator().lagrangianFixingPointDiscreteOperator.size(); i++)
+  {
+    //indexLagrangianParameter = indexFixingGridEquation
+    m.insert(indexFixingGridEquation,i)=get_operator().lagrangianFixingPointDiscreteOperator(i);
+    m.insert(i,indexFixingGridEquation)=get_operator().lagrangianFixingPointDiscreteOperator(i);
+  }
+
+  //solve linear equation
+  Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_m;
+  lu_of_m.compute(m);
+
+  if (lu_of_m.info()!= Eigen::EigenSuccess) {
+      // decomposition failed
+      std::cout << "\nError: "<< lu_of_m.info() << " Could not compute LU decomposition for initialising poisson equation!\n";
+      exit(-1);
+  }
+
+  solution.head(get_n_dofs_V_h()+1) = lu_of_m.solve(v);
+}
+
+
 void MA_OT_solver::create_initial_guess()
 {
   if(initValueFromFile_)
@@ -448,16 +533,20 @@ void MA_OT_solver::create_initial_guess()
   else
   {
 //    const double epsilon = 0.1;
-    project([](Config::SpaceType x){return (1.1)*x.two_norm2()/2.0;},
+    project([](Config::SpaceType x){return x.two_norm2()/2.0;},
 //    project([](Config::SpaceType x){return 0.5*x[0]*x[0]+x[0]+0.25*x[1]*x[1];},
 //      project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
 //    project_labouriousC1([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
   //                        [](Config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},
   //                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
 
-//        [](Config::SpaceType x){return Dune::FieldVector<double, Config::dim> ({x[0], x[1]});},
+        [](Config::SpaceType x){return Dune::FieldVector<double, Config::dim> ({x[0], x[1]});},
         solution);
+
+    one_Poisson_Step();
+
   }
+
 
   project(
       [](Config::SpaceType x){return x.two_norm2()/2.0;},
@@ -467,8 +556,8 @@ void MA_OT_solver::create_initial_guess()
 
   Config::ValueType res = 0;
 
-  assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), solution, res);
-//  assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), exactsol_u, res);
+//  assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), solution, res);
+  assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), exactsol_u, res);
   assembler_.set_u0AtX0(res);
   std::cerr << " set u_0^mid to " << res << std::endl;
 

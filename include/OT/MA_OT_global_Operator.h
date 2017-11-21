@@ -135,6 +135,8 @@ public:
   const FunctionTypeX& get_f(){ return f_;}
   const FunctionTypeY& get_g(){ return g_;}
 
+  const auto& get_bc(){return *boundary_;}
+
 private:
   void prepare_fixing_point_term(const Config::VectorType& x) const;
 
@@ -195,6 +197,7 @@ public:
 
   mutable int intermediateSolCounter;
 
+  friend SolverType;
   };
 
 

@@ -41,8 +41,8 @@ public:
   typedef FETraitsQ::FEBasis FEBasisQType;
 
   template<typename LOP>
-  using Problem_MA_OT_Operator = MA_OT_Operator<ProblemSquareToSquareOperatorTraits<MA_OT_solver,LOP>>;
-//  using Problem_MA_OT_Operator = MA_OT_Operator<ProblemConstOneOperatorTraits<MA_OT_solver,LOP>>;
+//  using Problem_MA_OT_Operator = MA_OT_Operator<ProblemSquareToSquareOperatorTraits<MA_OT_solver,LOP>>;
+  using Problem_MA_OT_Operator = MA_OT_Operator<ConstOneOperatorTraits<MA_OT_solver,LOP>>;
 
   //find correct operator
 #ifdef USE_C0_PENALTY
@@ -72,6 +72,8 @@ public:
 
   MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const shared_ptr<GridType>& gridTarget, const SolverConfig& config, GeometrySetting& setting);
 private:
+  ///performs one step of the semi-implicit method mentioned in "Two numerical methods for ..." by Benamou, Froese and Oberman
+  void one_Poisson_Step();
   ///creates the initial guess
   virtual void create_initial_guess();
 //  void update_Operator();
