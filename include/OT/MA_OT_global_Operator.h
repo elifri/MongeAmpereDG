@@ -22,12 +22,57 @@
 #include "utils.hpp"
 
 template<typename Solver, typename LOP>
+struct GeneralOperatorTraits{
+  using SolverType = Solver;
+
+  using LocalOperatorType = LOP;
+
+  using FunctionTypeX = DensityFunction;
+  using FunctionTypeY = DensityFunction;
+};
+
+template<typename Solver, typename LOP>
+struct ProblemSquareToSquareOperatorTraits{
+  using SolverType = Solver;
+
+  using LocalOperatorType = LOP;
+
+  using FunctionTypeX = rhoXSquareToSquare;
+  using FunctionTypeY = rhoYSquareToSquare;
+};
+
+template<typename Solver, typename LOP>
+struct GaussianOperatorTraits{
+  using SolverType = Solver;
+
+  using LocalOperatorType = LOP;
+
+  using FunctionTypeX = rhoXGaussianSquare;
+  using FunctionTypeY = rhoYSquareToSquare;
+  //          new rhoXGaussians(), new rhoYGaussians()
+};
+
+template<typename Solver, typename LOP>
+struct ConstOneOperatorTraits{
+  using SolverType = Solver;
+
+  using LocalOperatorType = LOP;
+
+  using FunctionTypeX = ConstOneFunction;
+  using FunctionTypeY = ConstOneFunction;
+};
+
+template<typename OperatorTraits>
 class MA_OT_Operator {
-  typedef typename Solver::GridViewType GridView;
+  using GridView = typename OperatorTraits::SolverType::GridViewType;
 
 public:
-  using SolverType = Solver;
-  using LocalOperatorType = LOP;
+  using SolverType = typename OperatorTraits::SolverType;
+  using LocalOperatorType = typename OperatorTraits::LocalOperatorType;
+
+  using FunctionTypeX = typename OperatorTraits::FunctionTypeX;
+  using FunctionTypeY = typename OperatorTraits::FunctionTypeY;
+
 #ifdef USE_COARSE_Q_H
   using LocalOperatorLagrangianBoundaryType = Local_Operator_LagrangianBoundaryCoarse;
 #else
@@ -36,16 +81,14 @@ public:
 
 
   MA_OT_Operator():solver_ptr(NULL), lop_ptr(), intermediateSolCounter(){}
-  MA_OT_Operator(Solver& solver):solver_ptr(&solver),
+
+  MA_OT_Operator(SolverType& solver):solver_ptr(&solver),
       boundary_(new GenerealOTBoundary<Config::GridType>(solver.get_gridTarget_ptr())),
-      lop_ptr(new LOP(
+      f_(),
+      g_(),
+      lop_ptr(new LocalOperatorType(
 //          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
-          *boundary_,
-          new rhoXSquareToSquare(), new rhoYSquareToSquare()
-//          new rhoXGaussianSquare(), new rhoYGaussianSquare()
-//          new rhoXGaussians(), new rhoYGaussians()
-//          new ConstOneFunction(), new ConstOneFunction()
-                )),
+          *boundary_, f_, g_)),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
       lopLMBoundary(new LocalOperatorLagrangianBoundaryType(lop_ptr->get_bc())),
       fixingPoint{0.3,0},
@@ -56,7 +99,7 @@ public:
     init();
   }
 
-  MA_OT_Operator(Solver& solver, const std::shared_ptr<LOP>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
+  MA_OT_Operator(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
       lopLMBoundary(new LocalOperatorLagrangianBoundaryType(lop_ptr->get_bc())),
       fixingPoint{0.3,0},
@@ -65,7 +108,7 @@ public:
           init();
       }
 
-  MA_OT_Operator(Solver& solver, LOP* lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
+  MA_OT_Operator(SolverType& solver, LocalOperatorType* lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
       lopLMBoundary(new LocalOperatorLagrangianBoundaryType(lop_ptr->get_bc())),
       fixingPoint{0.3,0},
@@ -77,35 +120,57 @@ public:
 
   void init();
 
-  const LOP& get_lop() const
+  const LocalOperatorType& get_lop() const
   {
     assert(lop_ptr);
     return *lop_ptr;
   }
 
-  LOP& get_lop()
+  LocalOperatorType& get_lop()
   {
     assert(lop_ptr);
     return *lop_ptr;
   }
 
-  const auto& get
+  const FunctionTypeX& get_f(){ return f_;}
+  const FunctionTypeY& get_g(){ return g_;}
 
 private:
   void prepare_fixing_point_term(const Config::VectorType& x) const;
 
   ///assembles the system of the MA PDE
-  virtual void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
+//  virtual void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
+  virtual void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+  {
+    assert(x.size()==this->solver_ptr->get_n_dofs_V_h());
+    assert(v.size()==this->solver_ptr->get_n_dofs_V_h());
+    assert(m.rows()==this->solver_ptr->get_n_dofs_V_h());
+    assert(m.cols()==this->solver_ptr->get_n_dofs_V_h());
+
+    solver_ptr->assemble_DG_Jacobian(this->get_lop(), x, v, m);
+
+  }
+
   void assemble_with_langrangian_Jacobian(Config::VectorType& xBoundary, Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
 
-  virtual void assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const;
+  virtual void assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const
+  {
+    assert(x.size()==solver_ptr->get_n_dofs_V_h());
+    assert(v.size()==solver_ptr->get_n_dofs_V_h());
+
+    solver_ptr->assemble_DG(this->get_lop(), x, v);
+  }
   void assemble_with_langrangian(const Config::VectorType& xNew, const Config::VectorType& x, Config::VectorType& v) const;
 
   virtual void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const;
+//  {
+//    assert(solver_ptr != NULL);
+//    solver_ptr->assemble_DG_Jacobian_only(this->get_lop(), x,m);
+//  }
 
 public:
   ///assembles the system of combination of the MA PDE and the lagrangian multiplier for fixing the mean value and boundary condition
-  void evaluate(Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, Config::VectorType& xBoundary, const bool new_solution=true);
+  void evaluate(Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, Config::VectorType& xBoundary, const bool new_solution=true) const;
   ///assembles the rhs of the system of combination of the MA PDE and the lagrangian multiplier for fixing the mean value and boundary condition
   void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::VectorType& xNew, const bool new_solution=true) const;
 
@@ -129,14 +194,14 @@ public:
 
   const FieldVector<double, 2> get_fixingPoint(){return fixingPoint;}
 
-  const Solver* solver_ptr;
+  const SolverType* solver_ptr;
 
   std::shared_ptr<OTBoundary> boundary_;
 
-  DensityFunction f_;
-  DensityFunction g_
+  FunctionTypeX f_;
+  FunctionTypeY g_;
 
-  std::shared_ptr<LOP> lop_ptr;
+  std::shared_ptr<LocalOperatorType> lop_ptr;
 
   std::shared_ptr<Local_operator_LangrangianMidValue> lopLMMidvalue;
   std::shared_ptr<LocalOperatorLagrangianBoundaryType> lopLMBoundary;
@@ -153,18 +218,19 @@ public:
   };
 
 
-template<typename Solver, typename LOP, typename LOPLinear>
-struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<Solver, LOP>{
-  typedef typename Solver::GridViewType GridView;
+template<typename OperatorTraits, typename LOPLinear>
+struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
+  using GridView = typename MA_OT_Operator<OperatorTraits>::GridView;
 
+  using SolverType = typename OperatorTraits::SolverType;
   using LocalOperatorType = LOPLinear;
-  using LocalOperatorTypeNotLinear = LOP;
+  using LocalOperatorTypeNotLinear = typename OperatorTraits::LocalOperatorType;
 
-  MA_OT_Operator_with_Linearisation():MA_OT_Operator<Solver, LOP>(), lopLinear_ptr(){}
+  MA_OT_Operator_with_Linearisation():MA_OT_Operator<OperatorTraits>(), lopLinear_ptr(){}
 //  MA_OT_image_Operator_with_Linearisation():solver_ptr(NULL), lop_ptr(), lopLinear_ptr(), fixingPoint({0.5,0.15}){ }
 //    MA_OT_Operator(MA_OT_solver& solver):solver_ptr(&solver), lop_ptr(new Local_Operator_MA_OT(new BoundarySquare(solver.gradient_u_old, solver.get_setting()), new rhoXSquareToSquare(), new rhoYSquareToSquare())){}
     // lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
-  MA_OT_Operator_with_Linearisation(Solver& solver):MA_OT_Operator<Solver, LOP>(solver),
+  MA_OT_Operator_with_Linearisation(SolverType& solver):MA_OT_Operator<OperatorTraits>(solver),
         lopLinear_ptr(new LOPLinear
             (new BoundarySquare(solver.gradient_u_old,solver.get_setting()),
                 new rhoXSquareToSquare(), new rhoYSquareToSquare(),
@@ -173,14 +239,14 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<Solver, LOP>{
     this->init();
     }
 
-  MA_OT_Operator_with_Linearisation(Solver& solver, const std::shared_ptr<LOPLinear>& lopLinear):MA_OT_Operator<Solver, LOP>(solver),
+  MA_OT_Operator_with_Linearisation(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lopLinear):MA_OT_Operator<OperatorTraits>(solver),
         lopLinear_ptr(lopLinear)
     {
     this->init();
     }
 
-  MA_OT_Operator_with_Linearisation(Solver& solver, const std::shared_ptr<LOP> lop, const std::shared_ptr<LOPLinear>& lopLinear):
-    MA_OT_Operator<Solver, LOP>(solver, lop),
+  MA_OT_Operator_with_Linearisation(SolverType& solver, const std::shared_ptr<LocalOperatorTypeNotLinear> lop, const std::shared_ptr<LocalOperatorType>& lopLinear):
+    MA_OT_Operator<OperatorTraits>(solver, lop),
         lopLinear_ptr(lopLinear)
     {
     this->init();
@@ -217,13 +283,13 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<Solver, LOP>{
     lopLinear_ptr->insert_entitity_for_unifikation_term(fixingElement, n);
   }
 
-    std::shared_ptr<LOPLinear> lopLinear_ptr;
+    std::shared_ptr<LocalOperatorType> lopLinear_ptr;
 };
 
 
 
-template<typename Solver, typename LOP>
-void init()
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>::init()
 {
   //-------------------select cell for mid value-------------------------
   /*      lopLinear_ptr->clear_entitities_for_unifikation_term();
@@ -346,8 +412,8 @@ void init()
 }
 
 
-template<typename Solver, typename LOP>
-void MA_OT_Operator<Solver,LOP>::prepare_fixing_point_term(const Config::VectorType& x) const
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>::prepare_fixing_point_term(const Config::VectorType& x) const
 {
   Config::ValueType res = 0;
   solver_ptr->get_assembler_lagrangian_midvalue().assembleRhs(*lopLMMidvalue, x, res);
@@ -356,8 +422,8 @@ void MA_OT_Operator<Solver,LOP>::prepare_fixing_point_term(const Config::VectorT
   std::cerr << "current mid value " << res << std::endl;
 }
 
-template<typename Solver, typename LOP>
-virtual void MA_OT_Operator<Solver,LOP>::assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+/*template<typename OperatorTraits>
+virtual void MA_OT_Operator<OperatorTraits>::assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {
   assert(x.size()==this->solver_ptr->get_n_dofs_V_h());
   assert(v.size()==this->solver_ptr->get_n_dofs_V_h());
@@ -366,10 +432,10 @@ virtual void MA_OT_Operator<Solver,LOP>::assemble_without_langrangian_Jacobian(c
 
   solver_ptr->assemble_DG_Jacobian(this->get_lop(), x, v, m);
 
-}
+}*/
 
-template<typename Solver, typename LOP>
-void MA_OT_Operator<Solver,LOP>::assemble_with_langrangian_Jacobian(Config::VectorType& xBoundary, Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(Config::VectorType& xBoundary, Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {
   assert(lop_ptr);
 
@@ -488,8 +554,8 @@ void MA_OT_Operator<Solver,LOP>::assemble_with_langrangian_Jacobian(Config::Vect
   std::cerr << " l with norm " << std::scientific << std::setprecision(3)<< v.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
 }
 
-template<typename Solver, typename LOP>
-void MA_OT_Operator<Solver,LOP>::evaluate(Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, Config::VectorType& xBoundary, const bool new_solution=true) const
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>::evaluate(Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, Config::VectorType& xBoundary, const bool new_solution) const
 {
   assert(solver_ptr != NULL);
 
@@ -532,17 +598,19 @@ void MA_OT_Operator<Solver,LOP>::evaluate(Config::VectorType& x, Config::VectorT
   }
 }
 
-template<typename Solver, typename LOP>
-virtual void MA_OT_Operator<Solver,LOP>::assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const
+/*
+template<typename OperatorTraits>
+virtual void MA_OT_Operator<OperatorTraits>::assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const
 {
   assert(x.size()==solver_ptr->get_n_dofs_V_h());
   assert(v.size()==solver_ptr->get_n_dofs_V_h());
 
   solver_ptr->assemble_DG(this->get_lop(), x, v);
 }
+*/
 
-template<typename Solver, typename LOP>
-void MA_OT_Operator<Solver,LOP>::assemble_with_langrangian(const Config::VectorType& xNew, const Config::VectorType& x, Config::VectorType& v) const
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian(const Config::VectorType& xNew, const Config::VectorType& x, Config::VectorType& v) const
 {
   assert(x.size()==solver_ptr->get_n_dofs());
   assert(v.size()==solver_ptr->get_n_dofs());
@@ -579,8 +647,8 @@ void MA_OT_Operator<Solver,LOP>::assemble_with_langrangian(const Config::VectorT
 
 }
 
-template<typename Solver, typename LOP>
-void MA_OT_Operator<Solver,LOP>::evaluate(const Config::VectorType& x, Config::VectorType& v, Config::VectorType& xNew, const bool new_solution=true) const
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Config::VectorType& v, Config::VectorType& xNew, const bool new_solution) const
   {
     assert(solver_ptr != NULL);
 
@@ -603,8 +671,8 @@ void MA_OT_Operator<Solver,LOP>::evaluate(const Config::VectorType& x, Config::V
     std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
   }
 
-template<typename Solver, typename LOP>
-virtual void MA_OT_Operator<Solver,LOP>::assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>::assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
 {
   assert(solver_ptr != NULL);
   solver_ptr->assemble_DG_Jacobian_only(this->get_lop(), x,m);

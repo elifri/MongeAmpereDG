@@ -40,14 +40,18 @@ public:
   typedef SolverConfig::FETraitsSolverQ FETraitsQ;
   typedef FETraitsQ::FEBasis FEBasisQType;
 
+  template<typename LOP>
+  using Problem_MA_OT_Operator = MA_OT_Operator<ProblemSquareToSquareOperatorTraits<MA_OT_solver,LOP>>;
+//  using Problem_MA_OT_Operator = MA_OT_Operator<ProblemConstOneOperatorTraits<MA_OT_solver,LOP>>;
+
   //find correct operator
 #ifdef USE_C0_PENALTY
-  using GlobalMA_OT_Operator =  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Brenner>;
+  using GlobalMA_OT_Operator =  Problem_MA_OT_Operator<Local_Operator_MA_OT_Brenner>;
 #else
   #ifdef USE_MIXED_ELEMENT
-  using GlobalMA_OT_Operator = MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Neilan>;
+  using GlobalMA_OT_Operator = Problem_MA_OT_Operator<Local_Operator_MA_OT_Neilan>;
   #else
-    using GlobalMA_OT_Operator = MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT>;
+    using GlobalMA_OT_Operator = Problem_MA_OT_Operator<Local_Operator_MA_OT>;
 //todo C1 is not for nonimage
     //    typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
   #endif
