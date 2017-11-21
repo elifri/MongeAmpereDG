@@ -585,8 +585,7 @@ void MA_OT_solver::adapt_solution(const int level)
     auto p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-2),
         this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1), p);
 #else
-    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1),
-                                               this->gridView(), p);
+    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(gridViewOld, this->gridView(), p);
 #endif
   }
   auto& assembler = get_assembler_lagrangian_boundary();

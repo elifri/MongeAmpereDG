@@ -139,34 +139,14 @@ private:
   void prepare_fixing_point_term(const Config::VectorType& x) const;
 
   ///assembles the system of the MA PDE
-//  virtual void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
-  virtual void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
-  {
-    assert(x.size()==this->solver_ptr->get_n_dofs_V_h());
-    assert(v.size()==this->solver_ptr->get_n_dofs_V_h());
-    assert(m.rows()==this->solver_ptr->get_n_dofs_V_h());
-    assert(m.cols()==this->solver_ptr->get_n_dofs_V_h());
-
-    solver_ptr->assemble_DG_Jacobian(this->get_lop(), x, v, m);
-
-  }
+  virtual void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
 
   void assemble_with_langrangian_Jacobian(Config::VectorType& xBoundary, Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
 
-  virtual void assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const
-  {
-    assert(x.size()==solver_ptr->get_n_dofs_V_h());
-    assert(v.size()==solver_ptr->get_n_dofs_V_h());
-
-    solver_ptr->assemble_DG(this->get_lop(), x, v);
-  }
+  virtual void assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const;
   void assemble_with_langrangian(const Config::VectorType& xNew, const Config::VectorType& x, Config::VectorType& v) const;
 
   virtual void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const;
-//  {
-//    assert(solver_ptr != NULL);
-//    solver_ptr->assemble_DG_Jacobian_only(this->get_lop(), x,m);
-//  }
 
 public:
   ///assembles the system of combination of the MA PDE and the lagrangian multiplier for fixing the mean value and boundary condition
@@ -422,8 +402,8 @@ void MA_OT_Operator<OperatorTraits>::prepare_fixing_point_term(const Config::Vec
   std::cerr << "current mid value " << res << std::endl;
 }
 
-/*template<typename OperatorTraits>
-virtual void MA_OT_Operator<OperatorTraits>::assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>::assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {
   assert(x.size()==this->solver_ptr->get_n_dofs_V_h());
   assert(v.size()==this->solver_ptr->get_n_dofs_V_h());
@@ -432,7 +412,7 @@ virtual void MA_OT_Operator<OperatorTraits>::assemble_without_langrangian_Jacobi
 
   solver_ptr->assemble_DG_Jacobian(this->get_lop(), x, v, m);
 
-}*/
+}
 
 template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(Config::VectorType& xBoundary, Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
@@ -598,16 +578,16 @@ void MA_OT_Operator<OperatorTraits>::evaluate(Config::VectorType& x, Config::Vec
   }
 }
 
-/*
+
 template<typename OperatorTraits>
-virtual void MA_OT_Operator<OperatorTraits>::assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const
+void MA_OT_Operator<OperatorTraits>::assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const
 {
   assert(x.size()==solver_ptr->get_n_dofs_V_h());
   assert(v.size()==solver_ptr->get_n_dofs_V_h());
 
   solver_ptr->assemble_DG(this->get_lop(), x, v);
 }
-*/
+
 
 template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian(const Config::VectorType& xNew, const Config::VectorType& x, Config::VectorType& v) const
