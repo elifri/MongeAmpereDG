@@ -46,6 +46,7 @@ struct FETraits
 //  typedef typename Dune::Functions::DiscreteGlobalBasisFunction<FEBasis,Dune::TypeTree::HybridTreePath<>, Config::VectorType, NodeToRangeMap> DiscreteGridFunction;
   typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis, Config::VectorType> DiscreteGridFunction;
   typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
+  typedef typename DiscreteGridFunction::GlobalFirstDerivative DiscreteGradientGridFunction;
   typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
   typedef typename DiscreteGridFunction::LocalSecondDerivative DiscreteLocalSecondDerivativeGridFunction;
   typedef typename DiscreteGridFunction::GlobalSecondDerivative DiscreteSecondDerivativeGridFunction;

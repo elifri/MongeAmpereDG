@@ -478,34 +478,21 @@ void MA_OT_solver::one_Poisson_Step()
   //assemble linear poisson equation
   Linear_System_Local_Operator_Poisson_NeumannBC<decltype(rhs), decltype(bc)> Poisson_op(rhs, bc);
 
-
-//  using C0Traits = LagrangeC0Traits<GridViewType, 2>;
-  using C0Traits = SolverConfig::FETraitsSolver;
-  FEBasisHandler<C0Traits::Type, C0Traits> lagrangeHandler(gridView());
-  Assembler<C0Traits> lagrangeAssembler(lagrangeHandler.FEBasis());
-
-
   ///-------------Code copied from MA_Operator to be reviewed, init data for fixing point
-
-
   Config::MatrixType m;
   Config::VectorType v;
-  lagrangeAssembler.assemble_DG_Jacobian(Poisson_op, Poisson_op, solution.head(lagrangeHandler.FEBasis().indexSet().size()), v, m);
+  assembler_.assemble_DG_Jacobian(Poisson_op, Poisson_op, solution.head(get_n_dofs_V_h()), v, m);
 
-  Config::VectorType lagrangianFixingPointDiscreteOperator;
-  AssemblerLagrangianMultiplier1D<C0Traits> lagrangeAssemblerMidvalue(gridView());
-  lagrangeAssemblerMidvalue.assemble_u_independent_matrix(*get_operator().lopLMMidvalue, lagrangianFixingPointDiscreteOperator);
-
+  Config::VectorType lagrangianFixingPointDiscreteOperator = get_operator().lagrangianFixingPointDiscreteOperator;
 
   m.makeCompressed();
 
-  //add lagrang multiplier for mean value
-  const int V_h_size = lagrangeHandler.FEBasis().indexSet().size();
+  //add lagrange multiplier for mean value
+  const int V_h_size = get_n_dofs_V_h();
   m.conservativeResize(V_h_size+1, V_h_size+1);
   v.conservativeResize(V_h_size+1);
 
   int indexFixingGridEquation = V_h_size;
-  //assemble lagrangian multiplier for grid fixing point
 
   //-------------------select  mid value-------------------------
   assert(lagrangianFixingPointDiscreteOperator.size() == V_h_size);
@@ -529,27 +516,23 @@ void MA_OT_solver::one_Poisson_Step()
       exit(-1);
   }
 
-  Config::VectorType lagrangeCoeffs = lu_of_m.solve(v);
-  C0Traits::DiscreteGridFunction globalSolution(lagrangeHandler.FEBasis(), lagrangeCoeffs);
-  C0Traits::DiscreteGradientGridFunction globalGradient(globalSolution);
+  Config::VectorType Coeffs = lu_of_m.solve(v);
 
   //write to file
+/*
   SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
    //add solution data
   vtkWriter.addVertexData(localFunction(globalSolution), VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
   std::string fname(plotter.get_output_directory());
   fname += "/"+ plotter.get_output_prefix()+ "C0initialguess.vtu";
   vtkWriter.write(fname);
+*/
 
-
-//  project(globalSolution, globalGradient, solution);
-  solution.head(get_n_dofs_V_h()+1) = lagrangeCoeffs;
+  solution.head(get_n_dofs_V_h()+1) = Coeffs;
 
 
   /////test--------
-  update_solution(solution);
-  plot("afterPoisson");
-
+#ifdef DEBUG
 //  const auto& f = get_operator().get_f();
 //  const auto& g = get_operator().get_g();
   const auto& u = *solution_u_old_global;
@@ -567,7 +550,7 @@ void MA_OT_solver::one_Poisson_Step()
 
   std::cout << " residual " << integrator.assemble_integral(residualF) << std::endl;
   /////---------------
-
+#endif
 }
 
 
@@ -610,10 +593,8 @@ void MA_OT_solver::create_initial_guess()
 
   one_Poisson_Step();
 
-
-  plot("initialGuessNotConvexified");
-
   //convexify
+/*
   auto start = std::chrono::steady_clock::now();
   SolverConfig::FETraitsSolver::DiscreteGridFunction numericalSolution(get_FEBasis_u(),solution.head(get_n_dofs_V_h()));
   auto localnumericalSolution = localFunction(numericalSolution);
@@ -631,8 +612,7 @@ void MA_OT_solver::create_initial_guess()
   end = std::chrono::steady_clock::now();
   std::cerr << "total time for convexification and projection= "
   << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
-
-
+*/
 
 
   update_solution(solution);

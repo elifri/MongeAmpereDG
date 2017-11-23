@@ -337,7 +337,7 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
     solver.grid_ptr->mark(1,element);
 
     //store local dofs
-    preserveSolution[idSet.id(element)]  = Assembler::calculate_local_coefficients(localIndexSet, v);
+    preserveSolution[idSet.id(element)]  = Assembler<FiniteElementTraits>::calculate_local_coefficients(localIndexSet, v);
   }
 
   std::cout << "old element count " << solver.gridView().size(0) << std::endl;

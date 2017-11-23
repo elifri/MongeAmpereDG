@@ -14,7 +14,7 @@
  */
 #include "Assembler.h"
 
-class AssemblerLagrangianMultiplierBoundary:public Assembler{
+class AssemblerLagrangianMultiplierBoundary:public Assembler<SolverConfig::FETraitsSolver>{
 
   typedef FEBasisType FEBasisVType;
 

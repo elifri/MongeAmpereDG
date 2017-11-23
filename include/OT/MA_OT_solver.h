@@ -120,7 +120,7 @@ public:
 
   const auto& get_gridTarget_ptr() const {return gridTarget_ptr;}
 
-  const AssemblerLagrangianMultiplier1D& get_assembler_lagrangian_midvalue() const { return assemblerLM1D_;}
+  const AssemblerLagrangianMultiplier1D<>& get_assembler_lagrangian_midvalue() const { return assemblerLM1D_;}
 //  const AssemblerLagrangianMultiplierCoarse& get_assembler_lagrangian_boundary() const { return assemblerLMCoarse_;}
   AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() { return assemblerLMBoundary_;}
   const AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() const { return assemblerLMBoundary_;}
@@ -141,7 +141,7 @@ protected:
   FEBasisHandler<FETraitsQ::Type, FETraitsQ> FEBasisHandlerQ_;
 
   //assembler for lagrangian multiplier
-  AssemblerLagrangianMultiplier1D assemblerLM1D_;
+  AssemblerLagrangianMultiplier1D<> assemblerLM1D_;
   AssemblerLagrangianMultiplierBoundaryType assemblerLMBoundary_;
 
   OperatorType op;

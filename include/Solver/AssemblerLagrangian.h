@@ -14,7 +14,7 @@
  */
 #include "Assembler.h"
 
-class AssemblerLagrangianMultiplierCoarse:public Assembler{
+class AssemblerLagrangianMultiplierCoarse:public Assembler<>{
 
   typedef FEBasisType FEBasisVType;
 

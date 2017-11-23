@@ -351,8 +351,8 @@ public:
 	virtual GeometrySetting& get_setting() {return setting_;}
   virtual const GeometrySetting& get_setting() const {return setting_;}
 
-  const Assembler& get_assembler() const { return assembler_;}
-  Assembler& get_assembler() { return assembler_;}
+  const Assembler<>& get_assembler() const { return assembler_;}
+  Assembler<>& get_assembler() { return assembler_;}
 
   const std::string& get_output_directory() const{ return outputDirectory_;}
   const std::string& get_plot_output_directory() const{ return plotOutputDirectory_;}
@@ -397,7 +397,7 @@ protected:
 	FEBasisHandler<FETraits::Type, FETraits> FEBasisHandler_;
 	Convexifier<2> Convexifier_;
 
-	Assembler assembler_; ///handles all (integral) assembly processes
+	Assembler<> assembler_; ///handles all (integral) assembly processes
 	Plotter plotter; ///handles all output generation
 
   double G; /// fixes the reflector size
@@ -500,7 +500,7 @@ void project_labourious(const FEBasis& febasis, const F f, Config::VectorType& v
       }
     }
 
-    Assembler::set_local_coefficients(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
+    Assembler<>::set_local_coefficients(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
     }
 
   //set scaling factor (last dof) to ensure mass conservation
