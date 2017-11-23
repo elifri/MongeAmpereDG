@@ -466,13 +466,6 @@ void MA_OT_solver::one_Poisson_Step()
     return res*normal;
   };
 
-  ///---Code with known solution
-
-//  auto rhs = [&](Config::SpaceType x){return 2*M_PI*M_PI*std::sin(M_PI*x[0])*std::sin(M_PI*x[1]);};
-//  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return normal[0]*(x[1]+std::sin(M_PI*x[1])*M_PI*std::cos(M_PI*x[0]))
-//                                                                     +normal[1]*(x[0]+std::sin(M_PI*x[0])*M_PI*std::cos(M_PI*x[1]));};
-//  auto bc = [&](Config::SpaceType x){return (x[0]*x[1]+std::sin(M_PI*x[1])*std::sin(M_PI*x[0]));};
-
 
   std::cout << " before int sqrt(f/g) " << integrator.assemble_integral(rhs) << std::endl;
 
@@ -485,18 +478,29 @@ void MA_OT_solver::one_Poisson_Step()
   //assemble linear poisson equation
   Linear_System_Local_Operator_Poisson_NeumannBC<decltype(rhs), decltype(bc)> Poisson_op(rhs, bc);
 
+
+//  using C0Traits = LagrangeC0Traits<GridViewType, 2>;
+  using C0Traits = SolverConfig::FETraitsSolver;
+  FEBasisHandler<C0Traits::Type, C0Traits> lagrangeHandler(gridView());
+  Assembler<C0Traits> lagrangeAssembler(lagrangeHandler.FEBasis());
+
+
   ///-------------Code copied from MA_Operator to be reviewed, init data for fixing point
 
 
   Config::MatrixType m;
   Config::VectorType v;
-  assembler_.assemble_DG_Jacobian(Poisson_op, Poisson_op, solution.head(get_n_dofs_V_h()), v, m);
+  lagrangeAssembler.assemble_DG_Jacobian(Poisson_op, Poisson_op, solution.head(lagrangeHandler.FEBasis().indexSet().size()), v, m);
+
+  Config::VectorType lagrangianFixingPointDiscreteOperator;
+  AssemblerLagrangianMultiplier1D<C0Traits> lagrangeAssemblerMidvalue(gridView());
+  lagrangeAssemblerMidvalue.assemble_u_independent_matrix(*get_operator().lopLMMidvalue, lagrangianFixingPointDiscreteOperator);
 
 
   m.makeCompressed();
 
   //add lagrang multiplier for mean value
-  const int V_h_size = get_n_dofs_V_h();
+  const int V_h_size = lagrangeHandler.FEBasis().indexSet().size();
   m.conservativeResize(V_h_size+1, V_h_size+1);
   v.conservativeResize(V_h_size+1);
 
@@ -504,15 +508,15 @@ void MA_OT_solver::one_Poisson_Step()
   //assemble lagrangian multiplier for grid fixing point
 
   //-------------------select  mid value-------------------------
-  assert(get_operator().lagrangianFixingPointDiscreteOperator.size() == V_h_size);
+  assert(lagrangianFixingPointDiscreteOperator.size() == V_h_size);
 
   v(indexFixingGridEquation) = assembler_.u0AtX0();
   //copy in system matrix
-  for (unsigned int i = 0; i < get_operator().lagrangianFixingPointDiscreteOperator.size(); i++)
+  for (unsigned int i = 0; i < lagrangianFixingPointDiscreteOperator.size(); i++)
   {
     //indexLagrangianParameter = indexFixingGridEquation
-    m.insert(indexFixingGridEquation,i)=get_operator().lagrangianFixingPointDiscreteOperator(i);
-    m.insert(i,indexFixingGridEquation)=get_operator().lagrangianFixingPointDiscreteOperator(i);
+    m.insert(indexFixingGridEquation,i)=lagrangianFixingPointDiscreteOperator(i);
+    m.insert(i,indexFixingGridEquation)=lagrangianFixingPointDiscreteOperator(i);
   }
 
   //solve linear equation
@@ -525,11 +529,26 @@ void MA_OT_solver::one_Poisson_Step()
       exit(-1);
   }
 
-  solution.head(get_n_dofs_V_h()+1) = lu_of_m.solve(v);
+  Config::VectorType lagrangeCoeffs = lu_of_m.solve(v);
+  C0Traits::DiscreteGridFunction globalSolution(lagrangeHandler.FEBasis(), lagrangeCoeffs);
+  C0Traits::DiscreteGradientGridFunction globalGradient(globalSolution);
+
+  //write to file
+  SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
+   //add solution data
+  vtkWriter.addVertexData(localFunction(globalSolution), VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
+  std::string fname(plotter.get_output_directory());
+  fname += "/"+ plotter.get_output_prefix()+ "C0initialguess.vtu";
+  vtkWriter.write(fname);
+
+
+//  project(globalSolution, globalGradient, solution);
+  solution.head(get_n_dofs_V_h()+1) = lagrangeCoeffs;
 
 
   /////test--------
   update_solution(solution);
+  plot("afterPoisson");
 
 //  const auto& f = get_operator().get_f();
 //  const auto& g = get_operator().get_g();
@@ -591,6 +610,8 @@ void MA_OT_solver::create_initial_guess()
 
   one_Poisson_Step();
 
+
+  plot("initialGuessNotConvexified");
 
   //convexify
   auto start = std::chrono::steady_clock::now();

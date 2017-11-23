@@ -7,10 +7,4 @@
 
 #include "Solver/Assembler.h"
 
-template<>
-void Assembler::bind(const FEBasisType& basis)
-{
-    basis_ = &basis;
-    boundaryHandler_.init_boundary_dofs(basis);
-}
 

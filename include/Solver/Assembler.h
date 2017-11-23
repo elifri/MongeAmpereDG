@@ -271,6 +271,7 @@ void assemble_hessians_hessu(const FiniteElement &lfu,
 }
 
 /// a class handling all assembling processes, in particular it provides assembling processes for systems and local mass matrices
+template<typename FETraits = SolverConfig::FETraitsSolver>
 class Assembler{
 public:
   //-----typedefs---------
@@ -285,7 +286,6 @@ public:
 
   typedef Eigen::Triplet<double> EntryType;
 
-  typedef typename SolverConfig::FETraitsSolver FETraits;
   typedef typename FETraits::FEBasis FEBasisType;
 
   enum AssembleType{ ONLY_OBJECTIVE, ONLY_JACOBIAN, ALL};
@@ -305,6 +305,12 @@ public:
   void bind(const OtherFEBasisType& basis)
   {
     assert(false && " wrong basis type"); exit(-1);
+  }
+
+  void bind(const FEBasisType& basis)
+  {
+      basis_ = &basis;
+      boundaryHandler_.init_boundary_dofs(basis);
   }
 
   /**
@@ -376,8 +382,7 @@ public:
    * @param returns the new global dof vector
    */
 
-  template<typename FT=FETraits>
-  static void set_local_coefficients(const typename FT::FEBasis::LocalIndexSet &localIndexSet,
+  static void set_local_coefficients(const typename FETraits::FEBasis::LocalIndexSet &localIndexSet,
       const Config::VectorType &v_local,
       Config::VectorType& v);
 
@@ -685,12 +690,11 @@ protected:
   mutable int picture_no;
 };
 
-template<>
-void Assembler::bind(const FEBasisType& basis);
 
 
+template<typename FETraits>
 template<typename LocalFiniteElement>
-void Assembler::calculate_local_mass_matrix_ansatz(
+void Assembler<FETraits>::calculate_local_mass_matrix_ansatz(
         const LocalFiniteElement &lfu, Config::DenseMatrixType& m) const {
     const int size = lfu.size();
 
@@ -727,8 +731,9 @@ void Assembler::calculate_local_mass_matrix_ansatz(
     }
 }
 
+template<typename FETraits>
 template<typename LocalView>
-void Assembler::calculate_local_mass_matrix_detailed(
+void Assembler<FETraits>::calculate_local_mass_matrix_detailed(
         const LocalView &localView, Config::DenseMatrixType& m) const {
     const int size = localView.size();
 
@@ -772,8 +777,9 @@ void Assembler::calculate_local_mass_matrix_detailed(
     }
 }
 
+template<typename FETraits>
 template<typename LocalFiniteElement>
-void Assembler::calculate_refined_local_mass_matrix_ansatz(
+void Assembler<FETraits>::calculate_refined_local_mass_matrix_ansatz(
         const LocalFiniteElement &lfu, std::vector<Config::DenseMatrixType>& m,
         const int level) const {
 
@@ -844,8 +850,9 @@ void Assembler::calculate_refined_local_mass_matrix_ansatz(
 }
 
 
+template<typename FETraits>
 template<typename LocalView>
-void Assembler::calculate_refined_local_mass_matrix_detailed(const LocalView &localViewFather, const LocalView &localViewChild, Config::DenseMatrixType& m,
+void Assembler<FETraits>::calculate_refined_local_mass_matrix_detailed(const LocalView &localViewFather, const LocalView &localViewChild, Config::DenseMatrixType& m,
         const int level) const {
   assert(level == 1);
 
@@ -907,9 +914,10 @@ void Assembler::calculate_refined_local_mass_matrix_detailed(const LocalView &lo
 }
 
 
+template<typename FETraits>
 template<typename LocalIndexSet>
 inline
-Config::VectorType Assembler::calculate_local_coefficients(const LocalIndexSet &localIndexSet, const Config::VectorType &v)
+Config::VectorType Assembler<FETraits>::calculate_local_coefficients(const LocalIndexSet &localIndexSet, const Config::VectorType &v)
 {
   Config::VectorType v_local(localIndexSet.size());
   for (size_t i = 0; i < localIndexSet.size(); i++)
@@ -920,8 +928,9 @@ Config::VectorType Assembler::calculate_local_coefficients(const LocalIndexSet &
   return v_local;
 }
 
+template<typename FETraits>
 template<typename LocalIndexSet>
-BoundaryHandler::BoolVectorType Assembler::calculate_local_bool_coefficients(const LocalIndexSet &localIndexSet, const BoundaryHandler::BoolVectorType &v)
+BoundaryHandler::BoolVectorType Assembler<FETraits>::calculate_local_bool_coefficients(const LocalIndexSet &localIndexSet, const BoundaryHandler::BoolVectorType &v)
 {
   BoundaryHandler::BoolVectorType v_local(localIndexSet.size());
   for (size_t i = 0; i < localIndexSet.size(); i++)
@@ -931,8 +940,9 @@ BoundaryHandler::BoolVectorType Assembler::calculate_local_bool_coefficients(con
   return v_local;
 }
 
+template<typename FETraits>
 template<typename LocalIndexSet, typename AnyVectorType>
-AnyVectorType Assembler::calculate_local_coefficients(const LocalIndexSet &localIndexSet, const AnyVectorType &v)
+AnyVectorType Assembler<FETraits>::calculate_local_coefficients(const LocalIndexSet &localIndexSet, const AnyVectorType &v)
 {
   AnyVectorType v_local(localIndexSet.size());
   for (size_t i = 0; i < localIndexSet.size(); i++)
@@ -944,9 +954,10 @@ AnyVectorType Assembler::calculate_local_coefficients(const LocalIndexSet &local
 }
 
 
+template<typename FETraits>
 template<typename LocalIndexSet>
 inline
-void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const Config::VectorType &v_local, Config::VectorType& v)
+void Assembler<FETraits>::add_local_coefficients(const LocalIndexSet &localIndexSet, const Config::VectorType &v_local, Config::VectorType& v)
 {
   assert ((unsigned int) v_local.size() == localIndexSet.size());
 //  assert ((unsigned int) v.size() == basis_->indexSet().size()+1);
@@ -959,9 +970,9 @@ void Assembler::add_local_coefficients(const LocalIndexSet &localIndexSet, const
   }
 }
 
-template<>
+template<typename FETraits>
 inline
-void Assembler::set_local_coefficients<Assembler::FETraits>(const Assembler::FETraits::FEBasis::LocalIndexSet &localIndexSet, const Config::VectorType &v_local, Config::VectorType& v)
+void Assembler<FETraits>::set_local_coefficients(const typename FETraits::FEBasis::LocalIndexSet &localIndexSet, const Config::VectorType &v_local, Config::VectorType& v)
 {
   assert ((unsigned int) v_local.size() == localIndexSet.size());
   for (size_t i = 0; i < localIndexSet.size(); i++)
@@ -970,25 +981,8 @@ void Assembler::set_local_coefficients<Assembler::FETraits>(const Assembler::FET
   }
 }
 
-template<typename OtherFETraits>
-inline
-void Assembler::set_local_coefficients(const typename OtherFETraits::FEBasis::LocalIndexSet &localIndexSet,
-                                        const Config::VectorType &v_local,
-                                         Config::VectorType& v)
-{
-  assert(false && "the Traits calling this function do not fit to the one specified in SolverConfig!!");
-  exit(-1);
-  assert ((unsigned int) v_local.size() == localIndexSet.size());
-//  assert ((unsigned int) v.size() == basis_->indexSet().size()+1);
-  for (size_t i = 0; i < localIndexSet.size(); i++)
-  {
-    //dofs associated to normal derivatives have to be corrected to the same direction (we define them to either point upwards or to the right)
-     v(OtherFETraits::get_index(localIndexSet, i)) = v_local[i];
- }
-}
-
-
-inline Eigen::VectorXi Assembler::estimate_nnz_Jacobian() const
+template<typename FETraits>
+inline Eigen::VectorXi Assembler<FETraits>::estimate_nnz_Jacobian() const
 {
     Eigen::VectorXi est_nnz = Eigen::VectorXi::Constant(basis_->indexSet().size()+1,basis_->indexSet().size()+1);
 //  Eigen::VectorXi est_nnz (basis_->indexSet().size()+1);
@@ -1005,9 +999,10 @@ inline Eigen::VectorXi Assembler::estimate_nnz_Jacobian() const
 
 }
 
+template<typename FETraits>
 template<typename LocalIndexSet>
 inline
-void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexSetTest, const LocalIndexSet &localIndexSetAnsatz, const Config::DenseMatrixType &m_local, Config::MatrixType& m)
+void Assembler<FETraits>::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexSetTest, const LocalIndexSet &localIndexSetAnsatz, const Config::DenseMatrixType &m_local, Config::MatrixType& m)
 {
   assert ((unsigned int) m_local.rows() == localIndexSetTest.size());
   assert ((unsigned int) m_local.cols() == localIndexSetAnsatz.size());
@@ -1025,9 +1020,10 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
   }
 }
 
+template<typename FETraits>
 template<typename LocalIndexSet>
 inline
-void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexSetTest, const LocalIndexSet &localIndexSetAnsatz, const Config::DenseMatrixType &m_local, std::vector<EntryType> & je)
+void Assembler<FETraits>::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexSetTest, const LocalIndexSet &localIndexSetAnsatz, const Config::DenseMatrixType &m_local, std::vector<EntryType> & je)
 {
   assert ((unsigned int) m_local.rows() == localIndexSetTest.size());
   assert ((unsigned int) m_local.cols() == localIndexSetAnsatz.size());
@@ -1045,9 +1041,10 @@ void Assembler::add_local_coefficients_Jacobian(const LocalIndexSet &localIndexS
   }
 }
 
+template<typename FETraits>
 template<typename LocalIndexSetRow, typename LocalIndexSetCol>
 inline
-void Assembler::add_local_coefficients_matrix(const LocalIndexSetRow &localIndexSetTest,
+void Assembler<FETraits>::add_local_coefficients_matrix(const LocalIndexSetRow &localIndexSetTest,
     const LocalIndexSetCol &localIndexSetAnsatz,
     const Config::DenseMatrixType &m_local,
     std::vector<EntryType> & je)
@@ -1067,9 +1064,10 @@ void Assembler::add_local_coefficients_matrix(const LocalIndexSetRow &localIndex
 
 #ifdef HAVE_ADOLC
 
+template<typename FETraits>
 template<class LocalView, class VectorType>
 inline
-bool Assembler::assemble_boundary_integral_term(const LocalView& localView,
+bool Assembler<FETraits>::assemble_boundary_integral_term(const LocalView& localView,
     const VectorType &x, VectorType& v, int tag) {
   //assuming galerkin ansatz = test space
 
@@ -1097,9 +1095,10 @@ bool Assembler::assemble_boundary_integral_term(const LocalView& localView,
   return true;
 }
 
+template<typename FETraits>
 template<class LocalView, class VectorType, class MatrixType>
 inline
-bool Assembler::assemble_jacobian_integral(const LocalView& localView,
+bool Assembler<FETraits>::assemble_jacobian_integral(const LocalView& localView,
     const VectorType &x, MatrixType& m, int tag) {
   //assuming galerkin ansatz = test space
 
@@ -1129,9 +1128,11 @@ bool Assembler::assemble_jacobian_integral(const LocalView& localView,
   delete[] out;
   return true;
 }
+
+template<typename FETraits>
 template<class LocalView, class VectorType>
 inline
-bool Assembler::assemble_integral_cell_term(const LocalView& localView,
+bool Assembler<FETraits>::assemble_integral_cell_term(const LocalView& localView,
     const VectorType &x, VectorType& v, int tag) {
   assert((unsigned int) x.size() == localView.size());
   assert((unsigned int) v.size() == localView.size());
@@ -1157,9 +1158,11 @@ bool Assembler::assemble_integral_cell_term(const LocalView& localView,
   delete[] out;
   return true;
 }
+
+template<typename FETraits>
 template<class LocalView, class VectorType, class MatrixType>
 inline
-bool Assembler::assemble_jacobian_integral_cell_term(const LocalView& localView,
+bool Assembler<FETraits>::assemble_jacobian_integral_cell_term(const LocalView& localView,
     const VectorType &x, MatrixType& m, int tag) {
   //assuming galerkin ansatz = test space
 
@@ -1188,9 +1191,10 @@ bool Assembler::assemble_jacobian_integral_cell_term(const LocalView& localView,
   return true;
 }
 
+template<typename FETraits>
 template<typename LocalOperatorType, class LocalView, class VectorType, class MatrixType>
 inline
-void Assembler::assemble_jacobianFD_integral_cell_term(const LocalOperatorType lop, const LocalView& localView,
+void Assembler<FETraits>::assemble_jacobianFD_integral_cell_term(const LocalOperatorType lop, const LocalView& localView,
     const VectorType &x, MatrixType& m, int tag) const{
   //assuming galerkin ansatz = test space
 
@@ -1230,9 +1234,10 @@ void Assembler::assemble_jacobianFD_integral_cell_term(const LocalOperatorType l
 
 }
 
+template<typename FETraits>
 template<typename IntersectionType, typename LocalOperatorType, class LocalView, class VectorType, class MatrixType>
 inline
-void Assembler::assemble_jacobianFD_inner_face_term(const IntersectionType& is, const LocalOperatorType lop,
+void Assembler<FETraits>::assemble_jacobianFD_inner_face_term(const IntersectionType& is, const LocalOperatorType lop,
     const LocalView& localView, const VectorType &x,
     const LocalView& localViewn, const VectorType &xn,
     MatrixType& m_m, MatrixType& mn_m, MatrixType& m_mn, MatrixType& mn_mn) const{
@@ -1337,9 +1342,10 @@ void Assembler::assemble_jacobianFD_inner_face_term(const IntersectionType& is, 
   }
 }
 
+template<typename FETraits>
 template<typename LocalOperatorType, typename IntersectionType, class LocalView, class VectorType, class MatrixType>
 inline
-void Assembler::assemble_jacobianFD_boundary_term(const LocalOperatorType lop, const IntersectionType& is, const LocalView& localView,
+void Assembler<FETraits>::assemble_jacobianFD_boundary_term(const LocalOperatorType lop, const IntersectionType& is, const LocalView& localView,
     const VectorType &x, MatrixType& m, int tag) const{
   //assuming galerkin ansatz = test space
 
@@ -1378,9 +1384,10 @@ void Assembler::assemble_jacobianFD_boundary_term(const LocalOperatorType lop, c
 }
 
 
+template<typename FETraits>
 template<class LocalView, class VectorType, class MatrixType>
 inline
-bool Assembler::assemble_inner_face_Jacobian(const Intersection& intersection,
+bool Assembler<FETraits>::assemble_inner_face_Jacobian(const Intersection& intersection,
     const LocalView &localView,
     const VectorType &x,
     const LocalView& localViewn,
@@ -1432,9 +1439,10 @@ bool Assembler::assemble_inner_face_Jacobian(const Intersection& intersection,
   return true;
 }
 
+template<typename FETraits>
 template<typename LocalOperatorType, typename IntersectionType, typename LocalView>
 inline
-void Assembler::assemble_inner_face_termHelper(const LocalOperatorType &lop, const IntersectionType& is,
+void Assembler<FETraits>::assemble_inner_face_termHelper(const LocalOperatorType &lop, const IntersectionType& is,
     const LocalView& localView, const LocalView& localViewn,
     const Config::VectorType& xLocal,
     const Config::VectorType& xLocaln,
@@ -1494,9 +1502,10 @@ void Assembler::assemble_inner_face_termHelper(const LocalOperatorType &lop, con
 
 }
 
+template<typename FETraits>
 template<typename LocalOperatorType, typename IntersectionType, typename LocalView>
 inline
-void Assembler::assemble_boundary_termHelper(const LocalOperatorType &lop, const IntersectionType& is, const LocalView& localView,
+void Assembler<FETraits>::assemble_boundary_termHelper(const LocalOperatorType &lop, const IntersectionType& is, const LocalView& localView,
     const Config::VectorType& xLocal,
     Config::VectorType& vLocal, Config::DenseMatrixType& mLocal) const
 {
@@ -1558,9 +1567,10 @@ void Assembler::assemble_boundary_termHelper(const LocalOperatorType &lop, const
 
 }
 
+template<typename FETraits>
 template<typename LocalOperatorType, typename LocalView>
 inline
-void Assembler::assemble_cell_termHelper(const LocalOperatorType &lop, const LocalView& localView,
+void Assembler<FETraits>::assemble_cell_termHelper(const LocalOperatorType &lop, const LocalView& localView,
     const Config::VectorType& xLocal, Config::VectorType& vLocal, Config::DenseMatrixType& mLocal) const
 {
 
@@ -1631,8 +1641,9 @@ void Assembler::assemble_cell_termHelper(const LocalOperatorType &lop, const Loc
 }
 
 //template<class Config>
+template<typename FETraits>
 template<typename LocalOperatorType>
-void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+void Assembler<FETraits>::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {
     assert((unsigned int) x.size() == basis_->indexSet().size());
 
@@ -1800,8 +1811,9 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 
 }
 #else //HAVE_ADOLC
+template<typename FETraits>
 template<typename LocalOperatorType>
-void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+void Assembler<FETraits>::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {
   std::cerr << " This operator needs automatic differentiation for the derivative, please provide adolc library " << std::endl;
   std::exit(-1);
@@ -1809,8 +1821,9 @@ void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config
 #endif
 
 
+template<typename FETraits>
 template<typename LocalOperatorType>
-void Assembler::assemble_DG_Only_(const LocalOperatorType &lop, const Config::VectorType& x, Config::VectorType& v) const
+void Assembler<FETraits>::assemble_DG_Only_(const LocalOperatorType &lop, const Config::VectorType& x, Config::VectorType& v) const
 {
   assert((unsigned int) x.size() == basis_->indexSet().size());
 
@@ -1905,8 +1918,9 @@ void Assembler::assemble_DG_Only_(const LocalOperatorType &lop, const Config::Ve
    }
 }
 
+template<typename FETraits>
 template<typename LocalOperatorType, typename LocalOperatorJacobianType>
-void Assembler::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalOperatorJacobianType &lopJacobian,
+void Assembler<FETraits>::assemble_DG_Jacobian_(const LocalOperatorType &lop, const LocalOperatorJacobianType &lopJacobian,
     const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {
     assert((unsigned int) x.size() == basis_->indexSet().size());
