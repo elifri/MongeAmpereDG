@@ -444,9 +444,9 @@ void MA_OT_solver::plot(const std::string& name, int no) const
 void MA_OT_solver::one_Poisson_Step()
 {
 
-//  Config::SpaceType x0 = {0.0,0.0};
+  Config::SpaceType x0 = {0.0,0.0};
 //  Config::SpaceType x0 = {-0.5,-0.5};
-  Config::SpaceType x0 = {0.5,-0.9};
+//  Config::SpaceType x0 = {0.5,-0.9};
   Config::ValueType a = 1.0;
   FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,2.5}};
 
@@ -460,7 +460,11 @@ void MA_OT_solver::one_Poisson_Step()
   auto y0 = [&](Config::SpaceType x){return x+x0;};
 
   auto rhs = [&](Config::SpaceType x){return -k*std::sqrt(f(x)/g(y0(x)));};
-  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return (y0(x)*normal)-OTbc.H(y0(x), normal);};
+  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){
+    auto y=y0(x), res = y; res.axpy(-OTbc.H(y), OTbc.derivativeH(y));
+    std::cerr << "y " << y << " mapped to " << res << std::endl;
+    return res*normal;
+  };
 
   ///---Code with known solution
 
@@ -502,6 +506,7 @@ void MA_OT_solver::one_Poisson_Step()
   //-------------------select  mid value-------------------------
   assert(get_operator().lagrangianFixingPointDiscreteOperator.size() == V_h_size);
 
+  v(indexFixingGridEquation) = assembler_.u0AtX0();
   //copy in system matrix
   for (unsigned int i = 0; i < get_operator().lagrangianFixingPointDiscreteOperator.size(); i++)
   {
@@ -521,6 +526,29 @@ void MA_OT_solver::one_Poisson_Step()
   }
 
   solution.head(get_n_dofs_V_h()+1) = lu_of_m.solve(v);
+
+
+  /////test--------
+  update_solution(solution);
+
+//  const auto& f = get_operator().get_f();
+//  const auto& g = get_operator().get_g();
+  const auto& u = *solution_u_old_global;
+
+  FETraits::DiscreteSecondDerivativeGridFunction Hessian00 (u,std::array<int,2>({0,0}));
+  FETraits::DiscreteSecondDerivativeGridFunction Hessian11 (u,std::array<int,2>({1,1}));
+
+  FETraits::DiscreteGradientGridFunction gradu (u);
+
+
+  auto residualF = [&](Config::SpaceType x){
+//    std::cerr << " hess00(x) " << x <<
+        return std::pow(Hessian00(x),2)+std::pow(Hessian11(x),2)-k*std::sqrt(f(x)/g(gradu(x)));};
+//  auto residualF = [&](Config::SpaceType x){return Hessian00(x)*Hessian11(x)-k*std::sqrt(f(x)/1.0);};
+
+  std::cout << " residual " << integrator.assemble_integral(residualF) << std::endl;
+  /////---------------
+
 }
 
 
@@ -542,9 +570,6 @@ void MA_OT_solver::create_initial_guess()
 
         [](Config::SpaceType x){return Dune::FieldVector<double, Config::dim> ({x[0], x[1]});},
         solution);
-
-    one_Poisson_Step();
-
   }
 
 
@@ -562,6 +587,32 @@ void MA_OT_solver::create_initial_guess()
   assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), exactsol_u, res);
   assembler_.set_u0AtX0(res);
   std::cerr << " set u_0^mid to " << res << std::endl;
+
+
+  one_Poisson_Step();
+
+
+  //convexify
+  auto start = std::chrono::steady_clock::now();
+  SolverConfig::FETraitsSolver::DiscreteGridFunction numericalSolution(get_FEBasis_u(),solution.head(get_n_dofs_V_h()));
+  auto localnumericalSolution = localFunction(numericalSolution);
+  auto x_convexify = Convexifier_.convexify(numericalSolution);
+
+  auto end = std::chrono::steady_clock::now();
+
+  std::cerr << "total time for convexification= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
+
+  auto gobalConvexifiedsolution = Convexifier_.globalSolution(x_convexify);
+  project(gobalConvexifiedsolution, solution);
+  update_solution(solution);
+  plot("initialGuessConvexified");
+
+  end = std::chrono::steady_clock::now();
+  std::cerr << "total time for convexification and projection= "
+  << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
+
+
+
 
   update_solution(solution);
 
