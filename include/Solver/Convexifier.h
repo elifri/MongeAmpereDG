@@ -22,7 +22,7 @@
 #include "Solver/FETraits.hpp"
 #include "Solver/FEBasisHandler.hpp"
 
-
+///int k degree of bezier in bezier patches
 template<int k>
 class Convexifier{
 public:
