@@ -348,7 +348,7 @@ Convexifier<2>::BarycCoordType get_baryc_coordinates (const GeometryType& geomet
   Convexifier<2>::BarycCoordType rhs;
   rhs << x[0], x[1], 1;
 
-  Convexifier<2>::BarycCoordType temp = LGS.colPivHouseholderQr().solve(rhs);
+//  Convexifier<2>::BarycCoordType temp = LGS.colPivHouseholderQr().solve(rhs);
 //  std::cerr << " baryc " << temp.transpose() << std::endl;
 
   return LGS.colPivHouseholderQr().solve(rhs);
@@ -619,11 +619,6 @@ void Convexifier<k>::init(const Dune::Functions::BernsteinBezierk2dNodalBasis<Gr
       int localFaceNoN = is.indexInOutside();
 
       // we have to reverse the numbering if the local triangle edges are not aligned
-      const Dune::ReferenceElement<double,Config::dim>& refElement
-          = Dune::ReferenceElements<double,Config::dim>::general(element.type());
-
-      const Dune::ReferenceElement<double,Config::dim>& refElementN
-          = Dune::ReferenceElements<double,Config::dim>::general(elementN.type());
 
       size_t v0 = gridIndexSet.subIndex(element,get_starting_corner_clockwise(localView, localFaceNo),Config::dim);
       size_t v0N =  gridIndexSet.subIndex(elementN,get_starting_corner_clockwise(localView, localFaceNoN),Config::dim);
