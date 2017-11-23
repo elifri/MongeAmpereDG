@@ -58,7 +58,7 @@ public:
     return phi_value;
   }*/
 
-  Config::ValueType H(const Config::SpaceType2d& transportedX, const Config::SpaceType &normalX) const
+  Config::ValueType H(const Config::SpaceType2d& transportedX) const
   {
 
     //create discrete version of Lemma 2.1. in "Numerical soltuion of the OT problem using the MA equation" by Benamou, Froese and Oberman
@@ -69,7 +69,7 @@ public:
       const Config::SpaceType normal = {std::cos(2*M_PI*i/N_), std::sin(2*M_PI*i/N_)};
 //      if (normal*normalX >= 0) continue;
 
-      auto tempdistanceFunction = transportedX*normal - LegrendeFenchelTrafo(normal);
+      const auto tempdistanceFunction = transportedX*normal - LegrendeFenchelTrafo(normal);
       if(tempdistanceFunction > max)
       {
         max = tempdistanceFunction;
@@ -79,7 +79,7 @@ public:
     return max;
   }
 
-  Config::SpaceType2d derivativeH(const Config::SpaceType2d& transportedX, const Config::SpaceType &normalX) const
+  Config::SpaceType2d derivativeH(const Config::SpaceType2d& transportedX) const
   {
 
     //create discrete version of Lemma 2.1. in "Numerical soltuion of the OT problem using the MA equation" by Benamou, Froese and Oberman
@@ -102,7 +102,7 @@ public:
   }
 
 #ifdef HAVE_ADOLC
-  adouble H(const FieldVector<adouble, Config::dim>& transportedX, const Config::SpaceType &normalX) const
+  adouble H(const FieldVector<adouble, Config::dim>& transportedX) const
   {
 //    std::cerr << " T_value " << transportedX[0].value() << " " << transportedX[1].value() << std::endl;
 
@@ -273,6 +273,8 @@ public:
 
 Config::ValueType LegrendeFenchelTrafo(const Config::SpaceType &normal) const
   {
+//    std::cerr << " normal is " << normal << "(" << std::acos(normal[0])*N_Y/2./M_PI << " and value is " <<  Hvalues_[std::round(std::acos(normal[0])*N_Y/2./M_PI)] << std::endl;
+
     return Hvalues_[std::round(std::acos(normal[0])*N_Y/2./M_PI)];
   }
 
