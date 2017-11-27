@@ -333,12 +333,12 @@ void MA_OT_solver::plot(const std::string& name, int no) const
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
      //build gridviewfunction
-    Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(),solution_u);
+    FETraits::DiscreteGridFunction numericalSolution(FEBasisHandler_.uBasis(),solution_u);
     decltype(numericalSolution)::LocalFunction localnumericalSolution(numericalSolution);
 
     //build errorfunction
 //    Config::VectorType diff = solution_u-exactsol_u.segment(0, get_n_dofs_u());
-//    Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolutionError(FEBasisHandler_.uBasis(),diff);
+//    FETraits::DiscreteGridFunction numericalSolutionError(FEBasisHandler_.uBasis(),diff);
 //    decltype(numericalSolution)::LocalFunction localnumericalSolutionError(numericalSolutionError);
 
     //build writer
@@ -596,7 +596,7 @@ void MA_OT_solver::create_initial_guess()
   //convexify
 /*
   auto start = std::chrono::steady_clock::now();
-  SolverConfig::FETraitsSolver::DiscreteGridFunction numericalSolution(get_FEBasis_u(),solution.head(get_n_dofs_V_h()));
+  FETraits::DiscreteGridFunction numericalSolution(get_FEBasis_u(),solution.head(get_n_dofs_V_h()));
   auto localnumericalSolution = localFunction(numericalSolution);
   auto x_convexify = Convexifier_.convexify(numericalSolution);
 

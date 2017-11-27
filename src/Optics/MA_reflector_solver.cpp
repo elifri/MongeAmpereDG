@@ -78,8 +78,8 @@ void MA_reflector_solver::plot(const std::string& name) const
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
      //build gridviewfunction
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> numericalSolution(FEBasisHandler_.uBasis(),solution_u);
-     auto localnumericalSolution = localFunction(numericalSolution);
+    FETraitsSolver::DiscreteGridFunction numericalSolution(FEBasisHandler_.uBasis(),solution_u);
+    auto localnumericalSolution = localFunction(numericalSolution);
 
      //build writer
      SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
@@ -91,7 +91,7 @@ void MA_reflector_solver::plot(const std::string& name) const
      Config::VectorType boundaryDofs(EigenBoundaryDofs.size());
      for (int i = 0; i < EigenBoundaryDofs.size(); i++) boundaryDofs[i] = EigenBoundaryDofs(i);
 
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,VectorType> boundarySolution(FEBasisHandler_.FEBasis(),boundaryDofs);
+     FETraitsSolver::DiscreteGridFunction boundarySolution(FEBasisHandler_.FEBasis(),boundaryDofs);
      auto localBoundarySolution = localFunction(boundarySolution);
 
      vtkWriter.addVertexData(localBoundarySolution, VTK::FieldInfo("boundary", VTK::FieldInfo::Type::scalar, 1));

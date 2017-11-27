@@ -10,7 +10,6 @@
 
 #include "utils.hpp"
 #include <dune/geometry/quadraturerules.hh>
-#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
 #include "matlab_export.hpp"
 
 //automatic differtiation

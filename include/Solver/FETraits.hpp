@@ -8,7 +8,8 @@
 #ifndef SRC_SOLVER_FETRAITS_HPP_
 #define SRC_SOLVER_FETRAITS_HPP_
 
-#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
+//#include <dune/functions/gridfunctions/discretescalarglobalbasisfunction.hh>
+//#include "localfunctions/discreteScalarGlobalBasisFunction.hpp"
 #include <dune/functions/functionspacebases/pqknodalbasis.hh>
 
 #include "MAconfig.h"
@@ -25,6 +26,8 @@
 #include "localfunctions/lagrange/RefinedLagrange/pk2dRefinednodalbasis.hpp"
 
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
+
+#include "localfunctions/discreteScalarGlobalBasisFunction.hpp"
 
 enum FEType{
   PS12Split,
@@ -44,7 +47,7 @@ struct FETraits
 //  typedef Dune::Functions::DefaultNodeToRangeMap<typename TypeTree::ChildForTreePath<typename FEBasis::LocalView::Tree, TreePath>> NodeToRangeMap;
 
 //  typedef typename Dune::Functions::DiscreteGlobalBasisFunction<FEBasis,Dune::TypeTree::HybridTreePath<>, Config::VectorType, NodeToRangeMap> DiscreteGridFunction;
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis, Config::VectorType> DiscreteGridFunction;
+  typedef typename Dune::MongeAmpere::MyDiscreteScalarGlobalBasisFunction<FEBasis, Config::VectorType, false> DiscreteGridFunction;
   typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
   typedef typename DiscreteGridFunction::GlobalFirstDerivative DiscreteGradientGridFunction;
   typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
@@ -93,7 +96,7 @@ struct FETraits<Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatr
 //  typedef Dune::Functions::DefaultNodeToRangeMap<typename TypeTree::ChildForTreePath<FEBasis::LocalView::Tree, TreePath>> NodeToRangeMap;
 
 //  typedef typename Dune::Functions::DiscreteGlobalBasisFunction<FEBasis, TreePath,Config::VectorType, NodeToRangeMap> DiscreteGridFunction;
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasis,Config::VectorType> DiscreteGridFunction;
+  typedef typename Dune::MongeAmpere::MyDiscreteScalarGlobalBasisFunction<FEBasis,Config::VectorType, true> DiscreteGridFunction;
   typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
   typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
   typedef typename DiscreteGridFunction::GlobalFirstDerivative DiscreteGradientGridFunction;
@@ -133,6 +136,7 @@ struct FETraits<Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatr
   }
 };
 
+
 template <typename GridView, int degree, int degreeHessian>
 struct FETraits<Functions::MAMixedBasis< GridView, degree, degreeHessian>>
 {
@@ -150,10 +154,10 @@ struct FETraits<Functions::MAMixedBasis< GridView, degree, degreeHessian>>
 //  typedef Dune::Functions::DefaultNodeToRangeMap<Dune::TypeTree::ChildForTreePath<FEBasis::LocalView::Tree, TreePath>> NodeToRangeMap;
 
 //  typedef typename Dune::Functions::DiscreteGlobalBasisFunction<FEBasis,TreePath, Config::VectorType> DiscreteGridFunction;
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasis, Config::VectorType> DiscreteGridFunction;
+  typedef typename Dune::MongeAmpere::MyDiscreteScalarGlobalBasisFunction<FEuBasis, Config::VectorType, false> DiscreteGridFunction;
   typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
   typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasis, Config::VectorType> DiscreteSecondDerivativeGridFunction;
+  typedef typename Dune::MongeAmpere::MyDiscreteScalarGlobalBasisFunction<FEuDHBasis, Config::VectorType, false> DiscreteSecondDerivativeGridFunction;
   typedef typename DiscreteSecondDerivativeGridFunction::LocalFunction DiscreteLocalSecondDerivativeGridFunction;
 
 
@@ -213,6 +217,23 @@ using BSplineTraits = FETraits<Functions::BSplineBasis<GridView>>;
 
 template <typename GridView, int degree>
 using BezierTraits = FETraits<Functions::BernsteinBezierk2dNodalBasis<GridView, degree>>;
+
+///======================
+
+template<typename FT>
+struct isC1{
+  static const bool value = false;
+};
+
+template <typename GridView>
+struct isC1<PS12SplitTraits<GridView>>{
+  static const bool value = true;
+};
+
+template <typename GridView, int degree>
+struct isC1<BSplineTraits<GridView, degree>>{
+  static const bool value = true;
+};
 
 
 #endif /* SRC_SOLVER_FETRAITS_HPP_ */

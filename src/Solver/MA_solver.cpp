@@ -79,7 +79,7 @@ void MA_solver::plot(const std::string& name, int no) const
 {
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(),solution_u);
+  FETraits::DiscreteGridFunction numericalSolution(FEBasisHandler_.uBasis(),solution_u);
   auto localnumericalSolution = localFunction(numericalSolution);
 
   //extract hessian
@@ -107,7 +107,7 @@ void MA_solver::plot(const std::string& name, int no) const
      }
 
    //build gridview function
-   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
+   FETraits::DiscreteSecondDerivativeGridFunction numericalSolutionHessian(*uDHBasis,derivativeSolution);
    auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
 
 */
@@ -122,7 +122,7 @@ void MA_solver::plot(const std::string& name, int no) const
 
 void MA_solver::plot(const VectorType& u, const std::string& filename) const
 {
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(), u);
+  FETraits::DiscreteGridFunction numericalSolution(FEBasisHandler_.uBasis(), u);
   auto localnumericalSolution = localFunction(numericalSolution);
 
   std::string fname(plotter.get_output_directory());

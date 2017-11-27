@@ -97,11 +97,13 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solv
   solver.count_refined += level;
 
   //we need do store the old basis as the (father) finite element depends on the basis
-  typedef Functions::PS12SSplineBasis<Config::LevelGridView, Config::SparseMatrixType> FEBasisCoarseType;
+  using FEBasisCoarseType = Functions::PS12SSplineBasis<Config::LevelGridView, Config::SparseMatrixType>;
+  using CoarseTraits = FETraits<FEBasisCoarseType>;
+  using DiscreteGridFunctionCoarse = typename CoarseTraits::DiscreteGridFunction;
+  using DiscreteLocalGridFunctionCoarse = typename CoarseTraits::DiscreteLocalGridFunction;
+
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1)));
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
-  typedef typename DiscreteGridFunctionCoarse::LocalFunction DiscreteLocalGridFunctionCoarse;
-  typedef typename DiscreteGridFunctionCoarse::LocalFirstDerivative DiscreteLocalGradientGridFunctionCoarse;
+
   DiscreteGridFunctionCoarse solution_u_Coarse_global (*FEBasisCoarse,solver.solution_u_old_global->dofs());
   DiscreteLocalGridFunctionCoarse solution_u_Coarse(solution_u_Coarse_global);
   DiscreteGridFunctionCoarse::GlobalFirstDerivative gradient_u_Coarse_global (solution_u_Coarse_global);
@@ -176,8 +178,9 @@ void FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, SolverConfig::d
 
   typedef LagrangeC0Traits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
   FEBasisCoarseType FEBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
-  DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
+
+  using CoarseTraits = FETraits<FEBasisCoarseType>;
+  CoarseTraits::DiscreteGridFunction solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
 
   v.resize(FEBasis_->indexSet().size());
   Config::VectorType v_u;
@@ -220,8 +223,8 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
   const auto levelGridView = solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1);
 
   typedef decltype(levelGridView) ConstReflevelGridView;
-  typedef typename std::remove_reference<ConstReflevelGridView>::type ConstlevelGridView;
-  typedef typename std::remove_const<ConstlevelGridView>::type LevelGridView;
+  using ConstlevelGridView = typename std::remove_reference<ConstReflevelGridView>::type;
+  using LevelGridView = typename std::remove_const<ConstlevelGridView>::type;
 
   std::array<unsigned int,LevelGridView::dimension> elementsSplinesCoarse;
   std::fill(elementsSplinesCoarse.begin(), elementsSplinesCoarse.end(), std::sqrt(levelGridView.size(0)));
@@ -233,8 +236,9 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
       solver.get_setting().lowerLeft, solver.get_setting().upperRight,
       elementsSplinesCoarse, SolverConfig::degree
   );
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
-  DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
+
+  using CoarseTraits = FETraits<FEBasisCoarseType>;
+  CoarseTraits::DiscreteGridFunction solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
 
   project(solution_u_Coarse_global, v);
 
@@ -286,8 +290,8 @@ void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig:
   const auto levelGridView = solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1);
 
   typedef decltype(levelGridView) ConstReflevelGridView;
-  typedef typename std::remove_reference<ConstReflevelGridView>::type ConstlevelGridView;
-  typedef typename std::remove_const<ConstlevelGridView>::type LevelGridView;
+  using ConstlevelGridView = typename std::remove_reference<ConstReflevelGridView>::type;
+  using LevelGridView = typename std::remove_const<ConstlevelGridView>::type;
 
   std::array<unsigned int,LevelGridView::dimension> elementsSplinesCoarse;
   std::fill(elementsSplinesCoarse.begin(), elementsSplinesCoarse.end(), std::sqrt(levelGridView.size(0)));
@@ -299,8 +303,9 @@ void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig:
       solver.get_setting().lowerLeft, solver.get_setting().upperRight,
       elementsSplinesCoarse, SolverConfig::degree
   );
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
-  DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
+
+  using CoarseTraits = FETraits<FEBasisCoarseType>;
+  CoarseTraits::DiscreteGridFunction solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
 
   project(solution_u_Coarse_global, solver.solution);
   solver.grid_ptr->postAdapt();
@@ -357,13 +362,14 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
   solver.get_assembler().bind(*FEBasis_);
 
   //we need do store the old basis as the (father) finite element depends on the basis
-  typedef MixedTraits<Config::LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>::FEBasis FEBasisCoarseType;
-  FEBasisCoarseType FEBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
+
+  using FEBasisCoarseTraits = MixedTraits<Config::LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>;
+  FEBasisCoarseTraits::FEBasis FEBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
 
   //for u
-  typedef MixedTraits<Config::LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>::FEuBasis FEuBasisCoarseType;
-  FEuBasisCoarseType FEuBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisCoarseType,Config::VectorType> DiscreteGridFunctionuCoarse;
+  using FEuBasisCoarseTraits = FETraits<FEBasisCoarseTraits::FEuBasis>;
+  FEuBasisCoarseTraits::FEBasis FEuBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
+  using DiscreteGridFunctionuCoarse = FEuBasisCoarseTraits::DiscreteGridFunction;
   DiscreteGridFunctionuCoarse solution_u_Coarse_global (FEuBasisCoarse,solver.solution_u_old_global->dofs());
 
   v.resize(FEBasis_->indexSet().size());
@@ -372,9 +378,9 @@ void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, S
   v.segment(0, v_u.size()) = v_u;
 
   //adapt discrete hessians
-  typedef MixedTraits<Config::LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>::FEuDHBasis FEuDHBasisCoarseType;
-  FEuDHBasisCoarseType FEuDHBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisCoarseType,Config::VectorType> DiscreteGridFunctionuDHCoarse;
+  using FEuDHBasisCoarseTraits = FETraits<FEBasisCoarseTraits::FEuDHBasis>;
+  FEuDHBasisCoarseTraits::FEBasis FEuDHBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
+  using DiscreteGridFunctionuDHCoarse = typename FEuDHBasisCoarseTraits::DiscreteGridFunction;
 
 
   for (int row = 0; row < Config::dim; row++)
@@ -571,9 +577,7 @@ Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::Lev
   std::cout << " build new basis " << std::endl;
   FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid));
 
-//  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
   FEBasisType FEBasisCoarse (gridOld);
-//  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,Config::VectorType> DiscreteGridFunctionCoarse;
   DiscreteGridFunction solution_u_Coarse_global (FEBasisCoarse,v);
 
   Config::VectorType vNew;
@@ -591,9 +595,9 @@ Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::Gri
   FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid));
 
 //  std::cerr << " build old basis " << std::endl;
-  typedef LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
-  FEBasisCoarseType FEBasisCoarse (gridOld);
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
+  using CoarseTraits = LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>;
+  CoarseTraits::FEBasis FEBasisCoarse (gridOld);
+  using DiscreteGridFunctionCoarse = CoarseTraits::DiscreteGridFunction;
   DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
 
 //  std::cerr << " interpolate " << std::endl;
@@ -609,9 +613,10 @@ template <>
 template <>
 Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt_function_after_grid_change(const typename Config::LevelGridView& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
 {
-  typedef PS12SplitTraits<Config::LevelGridView>::FEBasis FEBasisCoarseType;
-  FEBasisCoarseType FEBasisCoarse (gridOld);
-  typedef typename Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisCoarseType,Config::VectorType> DiscreteGridFunctionCoarse;
+  using CoarseTraits = PS12SplitTraits<Config::LevelGridView>;
+
+  CoarseTraits::FEBasis FEBasisCoarse (gridOld);
+  using DiscreteGridFunctionCoarse = CoarseTraits::DiscreteGridFunction;
   DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
   DiscreteGridFunctionCoarse::GlobalFirstDerivative gradient_u_Coarse_global (solution_u_Coarse_global);
 
@@ -629,9 +634,9 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
 
    //build gridviewfunction
-   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,Config::VectorType> numericalSolution(*FEBasis_,solution_u);
-   auto localnumericalSolution = localFunction(numericalSolution);
-   FiniteElementTraits::DiscreteLocalGradientGridFunction localGradient (numericalSolution);
+  FiniteElementTraits::DiscreteGridFunction numericalSolution(*FEBasis_,solution_u);
+  auto localnumericalSolution = localFunction(numericalSolution);
+  FiniteElementTraits::DiscreteLocalGradientGridFunction localGradient (numericalSolution);
 
 
   //we need do generate the coarse basis
@@ -745,14 +750,14 @@ Config::VectorType FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, S
   Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
 
    //build gridviewfunction
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,Config::VectorType> numericalSolution(*FEBasis_,solution_u);
+  FiniteElementTraits::DiscreteGridFunction numericalSolution(*FEBasis_,solution_u);
 
   //we need do generate the coarse basis
   const auto& levelGridView = solver.grid_ptr->levelGridView(level);
 
   typedef decltype(levelGridView) ConstReflevelGridView;
-  typedef typename std::remove_reference<ConstReflevelGridView>::type ConstlevelGridView;
-  typedef typename std::remove_const<ConstlevelGridView>::type LevelGridView;
+  using ConstlevelGridView = typename std::remove_reference<ConstReflevelGridView>::type;
+  using LevelGridView = typename std::remove_const<ConstlevelGridView>::type;
 
   //create handler for coarse basis
   FEBasisHandler<Standard, LagrangeC0Traits<LevelGridView, SolverConfig::degree>> HandlerCoarse(solver, levelGridView);
@@ -774,14 +779,14 @@ Config::VectorType FEBasisHandler<Standard, BSplineTraits<Config::GridView, Solv
   Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
 
    //build gridviewfunction
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEBasisType,Config::VectorType> numericalSolution(*FEBasis_,solution_u);
+  FiniteElementTraits::DiscreteGridFunction numericalSolution(*FEBasis_,solution_u);
 
   //we need do generate the coarse basis
   const auto& levelGridView = solver.grid_ptr->levelGridView(level);
 
   typedef decltype(levelGridView) ConstReflevelGridView;
-  typedef typename std::remove_reference<ConstReflevelGridView>::type ConstlevelGridView;
-  typedef typename std::remove_const<ConstlevelGridView>::type LevelGridView;
+  using ConstlevelGridView = typename std::remove_reference<ConstReflevelGridView>::type;
+  using LevelGridView = typename std::remove_const<ConstlevelGridView>::type;
 
   //create handler for coarse basis
   FEBasisHandler<Standard, BSplineTraits<LevelGridView, SolverConfig::degree>> HandlerCoarse(solver,levelGridView);
@@ -804,14 +809,14 @@ Config::VectorType FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverCon
   Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
 
    //build gridviewfunction
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuBasisType,Config::VectorType> numericalSolution(*uBasis_,solution_u);
+  FiniteElementTraits::DiscreteGridFunction numericalSolution(*uBasis_,solution_u);
 
   //we need do generate the coarse basis
   const auto& levelGridView = solver.grid_ptr->levelGridView(level);
 
   typedef decltype(levelGridView) ConstReflevelGridView;
-  typedef typename std::remove_reference<ConstReflevelGridView>::type ConstlevelGridView;
-  typedef typename std::remove_const<ConstlevelGridView>::type LevelGridView;
+  using ConstlevelGridView = typename std::remove_reference<ConstReflevelGridView>::type;
+  using LevelGridView = typename std::remove_const<ConstlevelGridView>::type;
 
   //create handler for coarse basis
   FEBasisHandler<Mixed, MixedTraits<LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>> HandlerCoarse(levelGridView);

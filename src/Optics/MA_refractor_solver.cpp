@@ -77,8 +77,8 @@ void MA_refractor_solver::plot(const std::string& name, int no) const
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
     //build gridviewfunction
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<MA_solver::FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(),solution_u);
-     auto localnumericalSolution = localFunction(numericalSolution);
+    FETraitsSolver::DiscreteGridFunction numericalSolution(FEBasisHandler_.uBasis(),solution_u);
+    auto localnumericalSolution = localFunction(numericalSolution);
 
      //build writer
      SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());

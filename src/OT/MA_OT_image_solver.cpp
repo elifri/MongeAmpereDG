@@ -390,7 +390,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
      //build gridviewfunction
-    Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(),solution_u);
+    FETraitsSolver::DiscreteGridFunction numericalSolution(FEBasisHandler_.uBasis(),solution_u);
     decltype(numericalSolution)::LocalFunction localnumericalSolution(numericalSolution);
      //build writer
      SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
@@ -455,7 +455,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
 /*
   //write exact solution
   project([](Config::SpaceType x){return x[0]*x[1]+std::sin(M_PI*x[0])*std::sin(M_PI*x[1]);}, exactsol);
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalExactSolution(FEBasisHandler_.uBasis(),exactsol);
+  FETraitsSolver::DiscreteGridFunction numericalExactSolution(FEBasisHandler_.uBasis(),exactsol);
   decltype(numericalExactSolution)::LocalFunction localnumericalSolution(numericalExactSolution);
   SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
   vtkWriter.addVertexData(numericalExactSolution, VTK::FieldInfo("exact solution", VTK::FieldInfo::Type::scalar, 1));
