@@ -348,6 +348,15 @@ void MA_OT_solver::plot(const std::string& name, int no) const
      vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
 //     vtkWriter.addVertexData(localnumericalSolutionError, VTK::FieldInfo("error", VTK::FieldInfo::Type::scalar, 1));
 
+
+     //add gradient data
+     auto gradu= localFirstDerivative(numericalSolution);
+     vtkWriter.addVertexData(gradu , VTK::FieldInfo("gradx", VTK::FieldInfo::Type::scalar, 2));
+/*
+     auto gradEntry1= localFirstDerivative(numericalSolution);
+     vtkWriter.addVertexData(gradEntry1 , VTK::FieldInfo("gradx", VTK::FieldInfo::Type::scalar, 1));
+*/
+
      //extract hessian (3 entries (because symmetry))
      Dune::array<int,2> direction = {0,0};
 
@@ -447,8 +456,10 @@ void MA_OT_solver::one_Poisson_Step()
   Config::SpaceType x0 = {0.0,0.0};
 //  Config::SpaceType x0 = {-0.5,-0.5};
 //  Config::SpaceType x0 = {0.5,-0.9};
+//  Config::SpaceType x0 = {-0.25,-0.25};
   Config::ValueType a = 1.0;
-  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,2.5}};
+//  FieldMatrix<Config::ValueType, 2, 2> A = {{1.5,0},{0,1.5}};
+  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,1}};
 
   Integrator<Config::GridType> integrator(grid_ptr);
   auto k = 1.0;
@@ -456,8 +467,21 @@ void MA_OT_solver::one_Poisson_Step()
   const auto& g = get_operator().get_g();
   const auto& OTbc = get_operator().get_bc();
 
-//  auto y0 = [&](Config::SpaceType x){x=x0;A.umv(x,x); return x;};
-  auto y0 = [&](Config::SpaceType x){return x+x0;};
+
+  auto y0 = [&](Config::SpaceType x){
+    std::cerr << " x " << x ;
+    auto y=x0;A.umv(x,y);
+    std::cerr << " is mapped to " << y << std::endl; return y;};
+
+  //write to file
+  {
+    std::string fname(plotter.get_output_directory());
+    fname += "/"+ plotter.get_output_prefix()+ "y0.vtu";
+    plotter.writeOTVTKGlobal(fname, y0);
+  }
+
+
+//  auto y0 = [&](Config::SpaceType x){return x+x0;};
 
   auto rhs = [&](Config::SpaceType x){return -k*std::sqrt(f(x)/g(y0(x)));};
   auto bc = [&](Config::SpaceType x, Config::SpaceType normal){
@@ -465,7 +489,7 @@ void MA_OT_solver::one_Poisson_Step()
     std::cerr << "y " << y << " mapped to " << res << std::endl;
     return res*normal;
   };
-
+//  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return (y0(x)*normal)-OTbc.H(y0(x));};
 
   std::cout << " before int sqrt(f/g) " << integrator.assemble_integral(rhs) << std::endl;
 
@@ -478,17 +502,26 @@ void MA_OT_solver::one_Poisson_Step()
   //assemble linear poisson equation
   Linear_System_Local_Operator_Poisson_NeumannBC<decltype(rhs), decltype(bc)> Poisson_op(rhs, bc);
 
-  ///-------------Code copied from MA_Operator to be reviewed, init data for fixing point
+  //init - c0 stuff-------------------
+  using C0Traits = LagrangeC0Traits<GridViewType, 2>;
+//  using C0Traits = SolverConfig::FETraits;
+  FEBasisHandler<C0Traits::Type, C0Traits> lagrangeHandler(gridView());
+  Assembler<C0Traits> lagrangeAssembler(lagrangeHandler.FEBasis());
+
   Config::MatrixType m;
   Config::VectorType v;
-  assembler_.assemble_DG_Jacobian(Poisson_op, Poisson_op, solution.head(get_n_dofs_V_h()), v, m);
+  lagrangeAssembler.assemble_DG_Jacobian(Poisson_op, Poisson_op, solution.head(lagrangeHandler.FEBasis().indexSet().size()), v, m);
 
-  Config::VectorType lagrangianFixingPointDiscreteOperator = get_operator().lagrangianFixingPointDiscreteOperator;
+  Config::VectorType lagrangianFixingPointDiscreteOperator;
+  AssemblerLagrangianMultiplier1D<C0Traits> lagrangeAssemblerMidvalue(gridView());
+  lagrangeAssemblerMidvalue.assemble_u_independent_matrix(*get_operator().lopLMMidvalue, lagrangianFixingPointDiscreteOperator);
+
+//  Config::VectorType lagrangianFixingPointDiscreteOperator = get_operator().lagrangianFixingPointDiscreteOperator;
 
   m.makeCompressed();
 
   //add lagrange multiplier for mean value
-  const int V_h_size = get_n_dofs_V_h();
+  const int V_h_size = lagrangeHandler.FEBasis().indexSet().size();//get_n_dofs_V_h();
   m.conservativeResize(V_h_size+1, V_h_size+1);
   v.conservativeResize(V_h_size+1);
 
@@ -516,23 +549,76 @@ void MA_OT_solver::one_Poisson_Step()
       exit(-1);
   }
 
-  Config::VectorType Coeffs = lu_of_m.solve(v);
+  Config::VectorType lagrangeCoeffs = lu_of_m.solve(v);
+  C0Traits::DiscreteGridFunction globalSolution(lagrangeHandler.FEBasis(), lagrangeCoeffs);
+  C0Traits::DiscreteGradientGridFunction globalGradient(globalSolution);
+  auto localGradient = localFirstDerivative(globalSolution);
+
+  Config::VectorType lagrangeDerivativeXCoeffs, lagrangeDerivativeYCoeffs;
+
+  auto gradX = [&](Config::SpaceType x){return globalGradient(x)[0];};
+  auto gradY = [&](Config::SpaceType x){return globalGradient(x)[1];};
+
+  lagrangeHandler.project(gradX, lagrangeDerivativeXCoeffs);
+  lagrangeHandler.project(gradY, lagrangeDerivativeYCoeffs);
+  C0Traits::DiscreteGridFunction globalProjectedGradientX(lagrangeHandler.FEBasis(), lagrangeDerivativeXCoeffs);
+  C0Traits::DiscreteGridFunction globalProjectedGradientY(lagrangeHandler.FEBasis(), lagrangeDerivativeYCoeffs);
+  auto localProjectedGradientX = localFunction(globalProjectedGradientX);
+  auto localProjectedGradientY = localFunction(globalProjectedGradientY);
+
+//  Config::VectorType Coeffs = lu_of_m.solve(v);
 
   //write to file
-/*
-  SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
+  {
+    SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
    //add solution data
-  vtkWriter.addVertexData(localFunction(globalSolution), VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
-  std::string fname(plotter.get_output_directory());
-  fname += "/"+ plotter.get_output_prefix()+ "C0initialguess.vtu";
-  vtkWriter.write(fname);
-*/
+    vtkWriter.addVertexData(localFunction(globalSolution), VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
+    vtkWriter.addVertexData(localGradient , VTK::FieldInfo("grad", VTK::FieldInfo::Type::scalar, 2));
+    vtkWriter.addVertexData(localProjectedGradientX, VTK::FieldInfo("PgradX", VTK::FieldInfo::Type::scalar, 1));
+    vtkWriter.addVertexData(localProjectedGradientY, VTK::FieldInfo("PgradY", VTK::FieldInfo::Type::scalar, 1));
 
-  solution.head(get_n_dofs_V_h()+1) = Coeffs;
+    std::string fnameC0(plotter.get_output_directory());
+    fnameC0 += "/"+ plotter.get_output_prefix()+ "C0initialguess.vtu";
+    vtkWriter.write(fnameC0);
+
+    std::string fname(plotter.get_output_directory());
+    fname += "/"+ plotter.get_output_prefix()+ "C0outputGrid.vtu";
+    plotter.writeOTVTK(fname, localGradient);
+  }
+
+#ifndef DEBUG
+  {
+    C0Traits::DiscreteSecondDerivativeGridFunction Hessian00 (globalSolution,std::array<int,2>({0,0}));
+    C0Traits::DiscreteSecondDerivativeGridFunction Hessian11 (globalSolution,std::array<int,2>({1,1}));
+
+    auto residualF = [&](Config::SpaceType x){
+//    std::cerr << " hess00(x) " << x <<
+        return std::pow(Hessian00(x),2)+std::pow(Hessian11(x),2)-k*std::sqrt(f(x)/g(globalGradient(x)));};
+//  auto residualF = [&](Config::SpaceType x){return Hessian00(x)*Hessian11(x)-k*std::sqrt(f(x)/1.0);};
+
+    std::cout << " C0residual " << integrator.assemble_integral(residualF) << std::endl;
+
+    auto residualBC = [&](Config::SpaceType x, Config::SpaceType normal){return OTbc.H(globalGradient(x));};
+    auto residualBC2 = [&](Config::SpaceType x, Config::SpaceType normal){
+      auto y=globalGradient(x), res = y; res.axpy(-OTbc.H(y), OTbc.derivativeH(y));
+      std::cerr << "y " << y << " mapped to " << res << std::endl;
+      return (y-res)*normal;
+    };
+
+    std::cout << " C0residual boundary1  " << integrator.assemble_boundary_integral(residualBC) << std::endl;
+    std::cout << " C0residual boundary2  " << integrator.assemble_boundary_integral(residualBC2) << std::endl;
+  }
+  /////---------------
+#endif
+
+
+  project(globalSolution, globalGradient, solution);
+//  solution.head(get_n_dofs_V_h()+1) = Coeffs;
 
 
   /////test--------
-#ifdef DEBUG
+#ifndef DEBUG
+  update_solution(solution);
 //  const auto& f = get_operator().get_f();
 //  const auto& g = get_operator().get_g();
   const auto& u = *solution_u_old_global;
@@ -549,6 +635,19 @@ void MA_OT_solver::one_Poisson_Step()
 //  auto residualF = [&](Config::SpaceType x){return Hessian00(x)*Hessian11(x)-k*std::sqrt(f(x)/1.0);};
 
   std::cout << " residual " << integrator.assemble_integral(residualF) << std::endl;
+
+  auto residualBC = [&](Config::SpaceType x, Config::SpaceType normal){return OTbc.H(gradu(x));};
+  auto residualBC2 = [&](Config::SpaceType x, Config::SpaceType normal){
+    auto y=gradu(x), res = y; res.axpy(-OTbc.H(y), OTbc.derivativeH(y));
+    std::cerr << "y " << y << " mapped to " << res << std::endl;
+    return (y-res)*normal;
+  };
+
+  std::cout << " residual boundary 1" << integrator.assemble_boundary_integral(residualBC) << std::endl;
+  std::cout << " residual boundary 2" << integrator.assemble_boundary_integral(residualBC2) << std::endl;
+
+
+
   /////---------------
 #endif
 }
