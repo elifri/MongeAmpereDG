@@ -97,7 +97,11 @@ public:
   template <class Function>
   void write_points_refractor(std::ofstream &file, Function &f) const;
 
-	///writes the transported point array to file (transport is given by gradient)
+  ///writes the transported point array to file (transport is given by global gradient fg)
+  template <class Function>
+  void write_points_OT_global(std::ofstream &file, Function &fg) const;
+
+	///writes the transported point array to file (transport is given by local gradient fg)
 	template <class LocalFunction>
 	void write_points_OT(std::ofstream &file, LocalFunction &fg) const;
 
@@ -147,6 +151,9 @@ public:
 
 	template <class LocalFunction, class Function>
 	void writeReflectorVTK(std::string filename, LocalFunction &f, Function& exact_solution) const;
+
+	template <class GlobalFunction>
+	void writeOTVTKGlobal(std::string filename, GlobalFunction &f) const;
 
   template <class LocalFunction>
   void writeOTVTK(std::string filename, LocalFunction &f) const;
@@ -277,6 +284,27 @@ void Plotter::writeReflectorVTK(std::string filename, LocalFunction &f, Function
   }
 }
 
+template <class GlobalFunction>
+void Plotter::writeOTVTKGlobal(std::string filename, GlobalFunction &f) const {
+  //--------------------------------------
+  // open file
+    check_file_extension(filename, ".vtu");
+    std::ofstream file(filename.c_str(), std::ios::out);
+    if (file.rdstate()) {
+      std::cerr << "Error: Couldn't open '" << filename << "'!\n";
+      return;
+    }
+
+    //write file
+    write_vtk_header(file);
+
+    write_points_OT_global(file, f);
+    write_cells(file);
+
+    write_vtk_end(file);
+
+}
+
 template <class LocalFunction>
 void Plotter::writeOTVTK(std::string filename, LocalFunction &f) const {
   //--------------------------------------
@@ -405,6 +433,31 @@ void Plotter::write_points_refractor(std::ofstream &file, Function &f) const{
 void evaluateRhoX (const Config::DomainType &x, Config::ValueType &u);
 
 template <class Function>
+void Plotter::write_points_OT_global(std::ofstream &file, Function &fg) const{
+  // write points
+    file << "\t\t\t<Points>\n"
+      << "\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\""
+      << "ascii" << "\">\n";
+
+    int vertex_no = 0;
+
+    {   // save points in file after refinement
+      for (auto&& element: elements(grid))
+      {
+        for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
+          auto transportedX = fg(element.geometry().global(it.coords()));
+          file << std::setprecision(12) << std::scientific;
+          file << "\t\t\t\t\t" << transportedX[0] << " " << transportedX[1] << " 0" << std::endl;
+          vertex_no++;
+//          std::cerr << " transported " << element.geometry().global(it.coords()) << " to " << transportedX << std::endl;
+        }
+      }
+    }
+  file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
+}
+
+
+template <class Function>
 void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
   // write points
     file << "\t\t\t<Points>\n"
@@ -489,6 +542,7 @@ void Plotter::write_error_OT(std::ofstream &file, LocalFunction &f, const Functi
     }
   file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
 }
+
 
 template <class LocalFunction>
 void Plotter::write_transport_OT(std::ofstream &file, LocalFunction &f) const{
