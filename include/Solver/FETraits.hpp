@@ -85,11 +85,11 @@ struct FETraits
 
 };
 
-template<>
-struct FETraits<Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatrixType>>
+template<typename GridView>
+struct FETraits<Functions::PS12SSplineBasis<GridView, Config::SparseMatrixType>>
 {
   static const FEType Type = PS12Split;
-  typedef Functions::PS12SSplineBasis<Config::GridView, Config::SparseMatrixType> FEBasis;
+  typedef Functions::PS12SSplineBasis<GridView, Config::SparseMatrixType> FEBasis;
   typedef FEBasis FEuBasis;
 
 //  typedef Dune::TypeTree::HybridTreePath<> TreePath;
