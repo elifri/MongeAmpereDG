@@ -76,6 +76,7 @@ public:
 //        std::cerr << " found normal "  << normal <<  "and temp dist " << tempdistanceFunction << std::endl;
       }
     }
+//    std::cerr << " returned H " << max << std::endl;
     return max;
   }
 
@@ -98,6 +99,7 @@ public:
         res = normal;
       }
     }
+//    std::cerr << " returned div H " << res << std::endl;
     return res;
   }
 
@@ -273,9 +275,17 @@ public:
 
 Config::ValueType LegrendeFenchelTrafo(const Config::SpaceType &normal) const
   {
-//    std::cerr << " normal is " << normal << "(" << std::acos(normal[0])*N_Y/2./M_PI << " and value is " <<  Hvalues_[std::round(std::acos(normal[0])*N_Y/2./M_PI)] << std::endl;
+    int j;
+    if (normal[1] >= 0.)
+      j = std::round(std::acos(normal[0])*N_Y/2./M_PI);
+    else
+      j = std::round((2.*M_PI-std::acos(normal[0]))*N_Y/2./M_PI);
 
-    return Hvalues_[std::round(std::acos(normal[0])*N_Y/2./M_PI)];
+//    std::cerr << " normal is " << normal << "(" << std::acos(normal[0])*N_Y/2./M_PI << ") and value is " <<  Hvalues_[std::round(std::acos(normal[0])*N_Y/2./M_PI)] << std::endl;
+    assert( std::abs(normal[0]-std::cos(2*M_PI*j/N_Y)) < 1e-10 );
+    assert( std::abs(normal[1]-std::sin(2*M_PI*j/N_Y)) < 1e-10 );
+
+    return Hvalues_[j];
   }
 
 void adapt()
