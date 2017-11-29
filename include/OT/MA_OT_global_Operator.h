@@ -588,6 +588,7 @@ void MA_OT_Operator<OperatorTraits>::evaluate(Config::VectorType& x, Config::Vec
     solver_ptr->update_solution(x);
     solver_ptr->plot("intermediate", intermediateSolCounter);
 
+/*
     std::cerr << std::scientific << std::setprecision(5)
         << "   current L2 error is " << solver_ptr->calculate_L2_error([](Config::SpaceType x)
         {return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);}) << std::endl;
@@ -596,6 +597,16 @@ void MA_OT_Operator<OperatorTraits>::evaluate(Config::VectorType& x, Config::Vec
         {return Dune::FieldVector<double, Config::dim> ({
                                                                   x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
                                                                   x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
+*/
+
+    std::cerr << std::scientific << std::setprecision(5)
+        << "   current L2 error is ?" << std::endl;
+    std::cerr << std::scientific << std::setprecision(3)
+        << "   current L2 grad error is " << solver_ptr->calculate_L2_errorOT([](Config::SpaceType x)
+        {return Dune::FieldVector<double, Config::dim> ({
+          0.7071067810*x[0]-0.7071067810*x[1], 0.8838834762*x[0]+1.060660172*x[1]});}) << std::endl;
+
+
   }
 }
 
