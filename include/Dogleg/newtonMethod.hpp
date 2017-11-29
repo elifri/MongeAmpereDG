@@ -90,21 +90,29 @@ void newtonMethod(
 
           //dismiss newton step
 //          if(f.norm() > lastResidual)
-          if(functor.get_lop().found_negative)
+          if(functor.get_lop().found_negative && omega/2 > 1e-4)
           {
-            omega /= 2;
-            xBoundary = oldX-omega*s;
-            x = xBoundary;
-            j--;
-
-            if (!silentmode)
+            if (i == 0)
             {
+              std::cout << " The initial guess was not convex, going to continue anyway. " << std::endl;
+              omega /= 2;
+            }
+            else
+            {
+              omega /= 2;
+              xBoundary = oldX-omega*s;
+              x = xBoundary;
+              j--;
+
+              if (!silentmode)
+              {
                  std::cout << "   " << std::setw(6) << i;
                  std::cout << " dissmiss Newton-step ";
                  std::cout << std::scientific << std::setprecision(3) << "   ||F||2 was "  << f.norm() <<
                  " decreased omega to " << omega << std::endl;
+              }
+              continue;
             }
-            continue;
           }
           if (f.norm() < lastResidual/(1+omega))
           {
