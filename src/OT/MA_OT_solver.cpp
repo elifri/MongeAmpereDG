@@ -15,6 +15,9 @@ namespace po = boost::program_options;
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk/common.hh>
 
+#include <dune/functions/gridfunctions/gridviewfunction.hh>
+#include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
+
 #include "utils.hpp"
 
 #include "Operator/linear_system_operator_poisson_NeumannBC.h"
@@ -453,13 +456,15 @@ void MA_OT_solver::plot(const std::string& name, int no) const
 void MA_OT_solver::one_Poisson_Step()
 {
 
-  Config::SpaceType x0 = {0.0,0.0};
+//  Config::SpaceType x0 = {0.0,0.0};
 //  Config::SpaceType x0 = {-0.5,-0.5};
-//  Config::SpaceType x0 = {0.5,-0.9};
+  Config::SpaceType x0 = {0.5,-0.9};
 //  Config::SpaceType x0 = {-0.25,-0.25};
+//  Config::SpaceType x0 = {-0.25,0.25};
   Config::ValueType a = 1.0;
 //  FieldMatrix<Config::ValueType, 2, 2> A = {{1.5,0},{0,1.5}};
-  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,1}};
+  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,1.5}};
+//  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,1}};
 
   Integrator<Config::GridType> integrator(grid_ptr);
   auto k = 1.0;
@@ -469,15 +474,34 @@ void MA_OT_solver::one_Poisson_Step()
 
 
   auto y0 = [&](Config::SpaceType x){
-    std::cerr << " x " << x ;
+//    std::cerr << " x " << x ;
     auto y=x0;A.umv(x,y);
-    std::cerr << " is mapped to " << y << std::endl; return y;};
+//    std::cerr << " is mapped to " << y << std::endl;
+    return y;};
 
   //write to file
   {
     std::string fname(plotter.get_output_directory());
     fname += "/"+ plotter.get_output_prefix()+ "y0.vtu";
     plotter.writeOTVTKGlobal(fname, y0);
+
+    auto projection = [&](Config::SpaceType x){
+      auto y=y0(x), res = y; res.axpy(-OTbc.H(y), OTbc.derivativeH(y));
+      return res;
+    };
+
+    // Make a grid function supporting local evaluation out of f
+    auto gf = Dune::Functions::makeGridViewFunction(projection, gridView());
+    // Obtain a local view of f
+    auto localF = localFunction(gf);
+
+    SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
+   //add solution data
+    vtkWriter.addVertexData(localF, VTK::FieldInfo("projection", VTK::FieldInfo::Type::scalar, 2));
+
+    std::string fnameProj(plotter.get_output_directory());
+    fnameProj += "/"+ plotter.get_output_prefix()+ "y0Projection.vtu";
+    vtkWriter.write(fnameProj);
   }
 
 
@@ -486,7 +510,7 @@ void MA_OT_solver::one_Poisson_Step()
   auto rhs = [&](Config::SpaceType x){return -k*std::sqrt(f(x)/g(y0(x)));};
   auto bc = [&](Config::SpaceType x, Config::SpaceType normal){
     auto y=y0(x), res = y; res.axpy(-OTbc.H(y), OTbc.derivativeH(y));
-    std::cerr << "y " << y << " mapped to " << res << std::endl;
+//    std::cerr << "x " << x << " y " << y << " mapped to " << res << std::endl;
     return res*normal;
   };
 //  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return (y0(x)*normal)-OTbc.H(y0(x));};
@@ -565,6 +589,10 @@ void MA_OT_solver::one_Poisson_Step()
   C0Traits::DiscreteGridFunction globalProjectedGradientY(lagrangeHandler.FEBasis(), lagrangeDerivativeYCoeffs);
   auto localProjectedGradientX = localFunction(globalProjectedGradientX);
   auto localProjectedGradientY = localFunction(globalProjectedGradientY);
+  auto localProjectedGradient = [&](Config::SpaceType x){return globalGradient(x)[0];};
+
+  auto globalProjectedGradient = [&](Config::SpaceType x){return Dune::FieldVector<double, Config::dim> ({globalProjectedGradientX(x),globalProjectedGradientY(x)});};
+
 
 //  Config::VectorType Coeffs = lu_of_m.solve(v);
 
@@ -598,10 +626,12 @@ void MA_OT_solver::one_Poisson_Step()
 
     std::cout << " C0residual " << integrator.assemble_integral(residualF) << std::endl;
 
-    auto residualBC = [&](Config::SpaceType x, Config::SpaceType normal){return OTbc.H(globalGradient(x));};
+    auto residualBC = [&](Config::SpaceType x, Config::SpaceType normal){
+//      std::cerr << " sol x " << x << " sol y " << globalGradient(x) << " distance " << OTbc.H(globalGradient(x)) << std::endl;
+      return OTbc.H(globalGradient(x));};
     auto residualBC2 = [&](Config::SpaceType x, Config::SpaceType normal){
       auto y=globalGradient(x), res = y; res.axpy(-OTbc.H(y), OTbc.derivativeH(y));
-      std::cerr << "y " << y << " mapped to " << res << std::endl;
+//      std::cerr << " sol x " << x << " sol y " << y << " mapped to " << res << std::endl;
       return (y-res)*normal;
     };
 
@@ -612,7 +642,7 @@ void MA_OT_solver::one_Poisson_Step()
 #endif
 
 
-  project(globalSolution, globalGradient, solution);
+  project(globalSolution, globalProjectedGradient, solution);
 //  solution.head(get_n_dofs_V_h()+1) = Coeffs;
 
 
@@ -639,7 +669,7 @@ void MA_OT_solver::one_Poisson_Step()
   auto residualBC = [&](Config::SpaceType x, Config::SpaceType normal){return OTbc.H(gradu(x));};
   auto residualBC2 = [&](Config::SpaceType x, Config::SpaceType normal){
     auto y=gradu(x), res = y; res.axpy(-OTbc.H(y), OTbc.derivativeH(y));
-    std::cerr << "y " << y << " mapped to " << res << std::endl;
+//    std::cerr << "y " << y << " mapped to " << res << std::endl;
     return (y-res)*normal;
   };
 
