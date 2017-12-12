@@ -24,9 +24,8 @@ namespace po = boost::program_options;
 
 MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView,
     const shared_ptr<GridType>& gridTarget,
-    const shared_ptr<Config::TriangularUnitCubeType::GridType>& gridConvexifier,
     const SolverConfig& config, GeometrySetting& setting)
-:MA_solver(grid, gridView, gridConvexifier, config),
+:MA_solver(grid, gridView, config),
  setting_(setting), gridTarget_ptr(gridTarget),
 #ifdef USE_COARSE_Q_H
  FEBasisHandlerQ_(*this, this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1)),
@@ -752,29 +751,6 @@ void MA_OT_solver::create_initial_guess()
 
   one_Poisson_Step();
 
-  //convexify
-
-/*
-  auto start = std::chrono::steady_clock::now();
-  FETraits::DiscreteGridFunction numericalSolution(get_FEBasis_u(),solution.head(get_n_dofs_V_h()));
-  auto localnumericalSolution = localFunction(numericalSolution);
-  auto x_convexify = Convexifier_.convexify(numericalSolution);
-
-  auto end = std::chrono::steady_clock::now();
-
-  std::cerr << "total time for convexification= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
-
-  auto gobalConvexifiedsolution = Convexifier_.globalSolution(x_convexify);
-  project(gobalConvexifiedsolution, solution);
-  update_solution(solution);
-  plot("initialGuessConvexified");
-
-  end = std::chrono::steady_clock::now();
-  std::cerr << "total time for convexification and projection= "
-  << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
-*/
-
-
   update_solution(solution);
 
 #ifdef MANUFACTOR_SOLUTION
@@ -869,9 +845,6 @@ void MA_OT_solver::adapt_solution(const int level)
 
   //adapt target grid
   gridTarget_ptr->globalRefine(level);
-
-  //adapt convexifier
-  Convexifier_.adapt(level);
 
   //bind assembler to new context
   assembler_.bind(FEBasisHandler_.uBasis());

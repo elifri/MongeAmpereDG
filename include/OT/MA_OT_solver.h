@@ -9,8 +9,6 @@
 #define SRC_MA_OT_SOLVER_H_
 
 
-#include "Solver/Convexifier.h"
-
 #include "Solver/MA_solver.h"
 
 #include "Solver/AssemblerLagrangian1d.h"
@@ -74,7 +72,6 @@ public:
 
   MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView,
       const shared_ptr<GridType>& gridTarget,
-      const shared_ptr<Config::TriangularUnitCubeType::GridType>& gridConvexifier,
       const SolverConfig& config, GeometrySetting& setting);
 
 private:

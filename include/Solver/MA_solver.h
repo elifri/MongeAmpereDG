@@ -29,7 +29,6 @@
 #include "solver_config.h"
 
 #include "FEBasisHandler.hpp"
-#include "Solver/Convexifier.h"
 
 #ifdef USE_DOGLEG
 #include "../Dogleg/doglegMethod.hpp"
@@ -73,7 +72,6 @@ public:
   typedef FETraits::DiscreteLocalGradientGridFunction DiscreteLocalGradientGridFunction;
 
 	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView,
-	    const shared_ptr<Config::TriangularUnitCubeType::GridType>& gridConvexifier,
 	    SolverConfig config):
 	    initialised(true),
 			epsDivide_(config.epsDivide),
@@ -91,7 +89,6 @@ public:
       plotterRefinement_(config.refinement),
       grid_ptr(grid), gridView_(gridView),
       FEBasisHandler_(*this, gridView),
-      Convexifier_(gridConvexifier),
       assembler_(FEBasisHandler_.FEBasis()),
       plotter(gridView),
       op(*this),
@@ -109,7 +106,6 @@ public:
     std::cout << "refined grid to startlevel " << SolverConfig::startlevel << " constructor n dofs " << get_n_dofs() << std::endl;
 
     FEBasisHandler_.bind(*this, gridView);
-    Convexifier_.adapt(SolverConfig::startlevel+1);
 
 	  assembler_.bind(FEBasisHandler_.FEBasis());
 
@@ -126,9 +122,8 @@ public:
 	}
 
   MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView,
-      const shared_ptr<Config::TriangularUnitCubeType::GridType>& gridConvexifier,
       SolverConfig config, const GeometrySetting& geometrySetting)
-      :MA_solver(grid, gridView, gridConvexifier, config)
+      :MA_solver(grid, gridView, config)
   {
     setting_ = geometrySetting;
   }
@@ -395,7 +390,6 @@ protected:
 //	shared_ptr<GridViewType> gridView_ptr; /// Pointer to gridView
 
 	FEBasisHandler<FETraits::Type, FETraits> FEBasisHandler_;
-	Convexifier<2> Convexifier_;
 
 	Assembler<> assembler_; ///handles all (integral) assembly processes
 	Plotter plotter; ///handles all output generation

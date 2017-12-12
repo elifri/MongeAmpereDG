@@ -7,4 +7,4 @@ add_library(FEBasisHandler FEBasisHandler.cpp)
 add_library(ConvexifyNLP ConvexifyNLP.cpp) 
 add_library(operator_MA_Neilan_DG ../Operator/operator_MA_Neilan_DG.cpp)
 
-Set(PureSolverLibs MA_solver FEBasisHandler Assembler operator_MA_Neilan_DG FEBasisFilter operator_MA_Neilan_DG BoundaryHandler ConvexifyNLP PARENT_SCOPE)
+Set(PureSolverLibs MA_solver FEBasisHandler Assembler operator_MA_Neilan_DG FEBasisFilter operator_MA_Neilan_DG BoundaryHandler PARENT_SCOPE)

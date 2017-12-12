@@ -328,8 +328,6 @@ void MA_solver::adapt_solution(const int level)
   FEBasisHandler_.adapt(*this, level, solution);
   gridView_ = grid_ptr->leafGridView();
 #endif
-  //TODO how expensive is it to take the convexifier, maybe unnecessary here
-  Convexifier_.adapt(level);
   plotter.update_gridView(gridView_);
 }
 

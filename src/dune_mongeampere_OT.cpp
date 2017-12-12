@@ -128,7 +128,7 @@ try {
 
 
   //solve
-  MA_OT_solver ma_solver(grid_ptr, gridView, gridTarget_ptr, gridConvexifier_ptr, config, setting);
+  MA_OT_solver ma_solver(grid_ptr, gridView, gridTarget_ptr, config, setting);
 
   ma_solver.solve();
 

@@ -564,24 +564,6 @@ void MA_OT_Operator<OperatorTraits>::evaluate(Config::VectorType& x, Config::Vec
   auto end = std::chrono::steady_clock::now();
   std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
 
-  /*  //convexify
-  start = std::chrono::steady_clock::now();
-  SolverConfig::FETraitsSolver::DiscreteGridFunction numericalSolution(solver_ptr->get_FEBasis_u(),x);
-  auto localnumericalSolution = localFunction(numericalSolution);
-  auto x_convexify = solver_ptr->Convexifier_.convexify(numericalSolution);
-
-  std::cerr << "total time for convexification= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
-
-  auto gobalConvexifiedsolution = solver_ptr->Convexifier_.globalSolution(x_convexify);
-  solver_ptr->project(gobalConvexifiedsolution, x);
-  solver_ptr->update_solution(x);
-  solver_ptr->plot("intermediateConvexified", intermediateSolCounter);
-
-  end = std::chrono::steady_clock::now();
-  std::cerr << "total time for convexification and projection= "
-  << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
-  */
-
   if (new_solution)
   {
     intermediateSolCounter++;
