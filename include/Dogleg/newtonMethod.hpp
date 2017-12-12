@@ -39,7 +39,7 @@ void newtonMethod(
 
     double initialResidual;
     double lastResidual, diffLastResidual;
-    Eigen::VectorXd oldX;
+    Eigen::VectorXd oldX, lastUpdate;
 
     std::cerr << " Start Newton ..." << std::endl;
 
@@ -89,8 +89,8 @@ void newtonMethod(
           diffLastResidual = lastResidual-f.norm();
 
           //dismiss newton step
-//          if(f.norm() > lastResidual)
-          if(functor.get_lop().found_negative && omega/2 > 1e-4)
+          if(f.norm() > lastResidual && omega/2 > 0.1)
+//          if(functor.get_lop().found_negative && omega/2 > 0.1)
           {
             if (i == 0)
             {
@@ -114,16 +114,42 @@ void newtonMethod(
               continue;
             }
           }
-          if (f.norm() < lastResidual/(1+omega))
+          //increase omega
+          if (f.norm() < lastResidual && omega < 1.0)
           {
+            Config::VectorType xNew = xBoundary-omega*lastUpdate;
+            auto tempfNorm = f.norm();
+            Config::VectorType tempf(n);
+            Eigen::SparseMatrix<double> tempDf(n,n);
 
-            omega*= 2;
-            omega = std::min(omega, 1.0);
-            if (!silentmode)
+            functor.evaluate(xNew,tempf,tempDf, xBoundary, true);
+
+            if (tempf.norm() < f.norm())
             {
+              omega*= 2;
+              omega = std::min(omega, 1.0);
+
+              lastResidual = f.norm();
+              f = tempf;
+              Df = tempDf;
+
+              if (!silentmode)
+              {
                  std::cout << "   " << std::setw(6) << i;
                  std::cout << " increase damping to             ";
                  std::cout << std::scientific << std::setprecision(3) << omega << std::endl;
+                  std::cerr << "   change boundary-step     "
+                      << std::scientific << std::setprecision(3) << omega*s.norm()
+                      << std::scientific << std::setprecision(3) << "   omega   " << omega
+                      << std::endl << "       ";
+                  std::cout << "   " << std::setw(6) << i;
+                  std::cout << "change boundary-step   ";
+                  std::cout << std::scientific << std::setprecision(3) << omega*s.norm();
+                  std::cout << "   " << std::scientific << std::setprecision(3) << f.lpNorm<Eigen::Infinity>();
+                  std::cout << "   " << std::scientific << std::setprecision(3) << f.norm()/initialResidual;
+                  std::cout << "   " << std::scientific << std::setprecision(10) << f.norm();
+                  std::cout << std::endl;
+              }
             }
           }
 
@@ -174,6 +200,7 @@ void newtonMethod(
               break;
 
           lastResidual = f.norm();
+          lastUpdate = s;
       }
       // compute damped Newton step
 
