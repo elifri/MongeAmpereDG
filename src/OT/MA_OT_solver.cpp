@@ -456,15 +456,16 @@ void MA_OT_solver::plot(const std::string& name, int no) const
 void MA_OT_solver::one_Poisson_Step()
 {
 
-//  Config::SpaceType x0 = {0.0,0.0};
+  Config::SpaceType x0 = {0.0,0.0};
 //  Config::SpaceType x0 = {-0.5,-0.5};
-  Config::SpaceType x0 = {0.5,-0.9};
+//  Config::SpaceType x0 = {0.5,-0.9};
 //  Config::SpaceType x0 = {-0.25,-0.25};
 //  Config::SpaceType x0 = {-0.25,0.25};
   Config::ValueType a = 1.0;
 //  FieldMatrix<Config::ValueType, 2, 2> A = {{1.5,0},{0,1.5}};
-  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,1.5}};
+//  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,2.5}};
 //  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,1}};
+  FieldMatrix<Config::ValueType, 2, 2> A = {{.777817459100000,-.777817459100000},{.972271823875000,1.16672618865000}};
 
   Integrator<Config::GridType> integrator(grid_ptr);
   auto k = 1.0;
@@ -530,6 +531,8 @@ void MA_OT_solver::one_Poisson_Step()
   using C0Traits = LagrangeC0Traits<GridViewType, 2>;
 //  using C0Traits = SolverConfig::FETraits;
   FEBasisHandler<C0Traits::Type, C0Traits> lagrangeHandler(gridView());
+  std::cout << " number C0 dofs for Poisson problem " << lagrangeHandler.FEBasis().indexSet().size() << std::endl;
+
   Assembler<C0Traits> lagrangeAssembler(lagrangeHandler.FEBasis());
 
   Config::MatrixType m;
@@ -619,12 +622,27 @@ void MA_OT_solver::one_Poisson_Step()
     C0Traits::DiscreteSecondDerivativeGridFunction Hessian00 (globalSolution,std::array<int,2>({0,0}));
     C0Traits::DiscreteSecondDerivativeGridFunction Hessian11 (globalSolution,std::array<int,2>({1,1}));
 
+    Config::VectorType lagrangeDerivative00, lagrangeDerivative11;
+
+    lagrangeHandler.project(Hessian00, lagrangeDerivative00);
+    lagrangeHandler.project(Hessian11, lagrangeDerivative11);
+    C0Traits::DiscreteGridFunction globalProjectedDerivative00(lagrangeHandler.FEBasis(), lagrangeDerivative00);
+    C0Traits::DiscreteGridFunction globalProjectedDerivative11(lagrangeHandler.FEBasis(), lagrangeDerivative11);
+//    auto localProjectedGradientX = localFunction(globalProjectedGradientX);
+//    auto localProjectedGradientY = localFunction(globalProjectedGradientY);
+
+
     auto residualF = [&](Config::SpaceType x){
 //    std::cerr << " hess00(x) " << x <<
-        return std::pow(Hessian00(x),2)+std::pow(Hessian11(x),2)-k*std::sqrt(f(x)/g(globalGradient(x)));};
+        return sqr(Hessian00(x)+Hessian11(x)-k*std::sqrt(f(x)/g(globalGradient(x))));};
 //  auto residualF = [&](Config::SpaceType x){return Hessian00(x)*Hessian11(x)-k*std::sqrt(f(x)/1.0);};
 
-    std::cout << " C0residual " << integrator.assemble_integral(residualF) << std::endl;
+    auto residualF2 = [&](Config::SpaceType x){
+//    std::cerr << " hess00(x) " << x <<
+        return sqr(globalProjectedDerivative00(x)+globalProjectedDerivative11(x)-k*std::sqrt(f(x)/g(globalProjectedGradient(x))));};
+
+    std::cout << " C0residual " << std::sqrt(integrator.assemble_integral(residualF)) << std::endl;
+    std::cout << " C0residual recovered derivatives " << std::sqrt(integrator.assemble_integral(residualF)) << std::endl;
 
     auto residualBC = [&](Config::SpaceType x, Config::SpaceType normal){
 //      std::cerr << " sol x " << x << " sol y " << globalGradient(x) << " distance " << OTbc.H(globalGradient(x)) << std::endl;
@@ -661,10 +679,10 @@ void MA_OT_solver::one_Poisson_Step()
 
   auto residualF = [&](Config::SpaceType x){
 //    std::cerr << " hess00(x) " << x <<
-        return std::pow(Hessian00(x),2)+std::pow(Hessian11(x),2)-k*std::sqrt(f(x)/g(gradu(x)));};
+        return Hessian00(x)+Hessian11(x)-k*std::sqrt(f(x)/g(gradu(x)));};
 //  auto residualF = [&](Config::SpaceType x){return Hessian00(x)*Hessian11(x)-k*std::sqrt(f(x)/1.0);};
 
-  std::cout << " residual " << integrator.assemble_integral(residualF) << std::endl;
+  std::cout << " C1 residual " << integrator.assemble_integral(residualF) << std::endl;
 
   auto residualBC = [&](Config::SpaceType x, Config::SpaceType normal){return OTbc.H(gradu(x));};
   auto residualBC2 = [&](Config::SpaceType x, Config::SpaceType normal){
@@ -673,10 +691,8 @@ void MA_OT_solver::one_Poisson_Step()
     return (y-res)*normal;
   };
 
-  std::cout << " residual boundary 1" << integrator.assemble_boundary_integral(residualBC) << std::endl;
-  std::cout << " residual boundary 2" << integrator.assemble_boundary_integral(residualBC2) << std::endl;
-
-
+  std::cout << " C1 residual boundary 1 " << integrator.assemble_boundary_integral(residualBC) << std::endl;
+  std::cout << " C1 residual boundary 2 " << integrator.assemble_boundary_integral(residualBC2) << std::endl;
 
   /////---------------
 #endif
@@ -737,6 +753,7 @@ void MA_OT_solver::create_initial_guess()
   one_Poisson_Step();
 
   //convexify
+
 /*
   auto start = std::chrono::steady_clock::now();
   FETraits::DiscreteGridFunction numericalSolution(get_FEBasis_u(),solution.head(get_n_dofs_V_h()));
