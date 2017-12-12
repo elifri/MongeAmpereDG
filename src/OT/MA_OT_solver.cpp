@@ -691,16 +691,31 @@ void MA_OT_solver::create_initial_guess()
   }
   else
   {
+    Config::SpaceType x0 = {0.0,0.0};
+//    FieldMatrix<Config::ValueType, 2, 2> A = {{.848269204654016,.383089318230846},{.383089318230846,2.13435477300043}}; //exactsolution *1.1
+//    FieldMatrix<Config::ValueType, 2, 2> B = {{0.424134602327008,0.191544659115423},{0.191544659115423,1.067177386500215}}; //exactsolution *1.1/2
+
+    FieldMatrix<Config::ValueType, 2, 2> A = {{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}}; //exactsolution
+    FieldMatrix<Config::ValueType, 2, 2> B = {{.385576911206371,.174131508286748},{0.174131508286748,.970161260454739}}; //exactsolution
+
+    auto u0 = [&](Config::SpaceType x){
+      auto y=x0;B.umv(x,y);
+      return (x*y);};
+    auto y0 = [&](Config::SpaceType x){
+      auto y=x0;A.umv(x,y);
+      return y;};
+
 //    const double epsilon = 0.1;
-    project([](Config::SpaceType x){return x.two_norm2()/2.0;},
+//    project([](Config::SpaceType x){return x.two_norm2()/2.0;},
 //    project([](Config::SpaceType x){return 0.5*x[0]*x[0]+x[0]+0.25*x[1]*x[1];},
 //      project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
 //    project_labouriousC1([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
   //                        [](Config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},
   //                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
-
-        [](Config::SpaceType x){return Dune::FieldVector<double, Config::dim> ({x[0], x[1]});},
+      project(u0, y0,
         solution);
+
+//      this->test_projection(u0, y0, solution);
   }
 
 
@@ -710,7 +725,6 @@ void MA_OT_solver::create_initial_guess()
       exactsol_u);
 //  project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},exactsol_u);
 
-//  this->test_projection([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);}, solution);
 
   Config::ValueType res = 0;
 

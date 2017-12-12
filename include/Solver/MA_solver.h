@@ -270,8 +270,8 @@ public:
 
 
 protected:
-	template<class F>
-	void test_projection(const F f, VectorType& v) const;
+	template<class F, class DF>
+	void test_projection(const F f, const DF Df, VectorType& v) const;
 
 public:
   /**
@@ -655,8 +655,8 @@ void MA_solver::project_labouriousC1Local(LocalF f, LocalF_grad f_grad, VectorTy
 #endif
 }
 */
-template<class F>
-void MA_solver::test_projection(const F f, VectorType& v) const
+template<class F, class DF>
+void MA_solver::test_projection(const F f, const DF Df, VectorType& v) const
 {
   std::cerr << "v.size()" << v.size()-1 << std::endl;
   std::cerr << "projected on vector " << std::endl << v.transpose() << std::endl;
@@ -703,8 +703,8 @@ void MA_solver::test_projection(const F f, VectorType& v) const
            << geometry.corner(i)[1] << ")  approx = " << jacApprox << std::endl;
 
        auto x = geometry.corner(i);
-       std::cerr << " should be " << x[0]+4*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1])
-                 << ",  " << x[1]+4*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0]) << std::endl;
+       auto gradf = Df(geometry.corner(i));
+       std::cerr << " should be " << gradf << std::endl;
 
        std::vector<FieldMatrix<double, 2, 2>> HessianValues(lFE.size());
        Dune::FieldMatrix<double, 2, 2> HessApprox;
@@ -745,8 +745,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
       std::cerr << "f'( "
           << x << ") = ?? "
           <<  "  approx = " << jacApprox << std::endl;
-      std::cerr << " should be " << x[0]+4*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1])
-                << ",  " << x[1]+4*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0]) << std::endl;
+      std::cerr << " should be " << Df(x) << std::endl;
 
 
     }
