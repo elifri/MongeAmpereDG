@@ -70,7 +70,7 @@ public:
 #endif
 
 
-  MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView,
+  MA_OT_solver(GridHandler<GridType>& gridHandler,
       const shared_ptr<GridType>& gridTarget,
       const SolverConfig& config, GeometrySetting& setting);
 

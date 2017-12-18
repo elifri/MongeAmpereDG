@@ -78,10 +78,11 @@ namespace Config{
   typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > TriangularUnitCubeType;
 
   typedef UnitCubeType::GridType GridType;
+  typedef UnitCubeType::GridType DuneGridType;
   typedef TriangularUnitCubeType::GridType TriangularGridType;
-  typedef GridType::LevelGridView LevelGridView;
-  typedef GridType::LeafGridView GridView;
-  typedef GridType::Codim<0>::Entity ElementType;
+  typedef DuneGridType::LevelGridView LevelGridView;
+  typedef DuneGridType::LeafGridView GridView;
+  typedef DuneGridType::Codim<0>::Entity ElementType;
   typedef Dune::FieldVector<GridView::ctype, GridView::dimension> DomainType;
 
   typedef FieldVector<ValueType, dim> SpaceType;

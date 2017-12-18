@@ -83,7 +83,7 @@ public:
   MA_OT_Operator():solver_ptr(NULL), lop_ptr(), intermediateSolCounter(){}
 
   MA_OT_Operator(SolverType& solver):solver_ptr(&solver),
-      boundary_(new GenerealOTBoundary<Config::GridType>(solver.get_gridTarget_ptr())),
+      boundary_(new GenerealOTBoundary<Config::DuneGridType>(solver.get_gridTarget_ptr())),
       f_(),
       g_(),
       lop_ptr(new LocalOperatorType(

@@ -255,7 +255,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
     update_solution(solution);
     plot("numericalSolution");
 
-    Config::VectorType v = coarse_solution(1);
+/*    Config::VectorType v = coarse_solution(1);
     {
       //write current solution to file
       update_solution(solution);
@@ -264,7 +264,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
       ofstream file(filename2.str(),std::ios::out);
       file << v;
       file.close();
-    }
+    }*/
   }
   return solution;
 }
@@ -286,49 +286,19 @@ void MA_solver::update_solution(const Config::VectorType& newSolution) const
   solution = newSolution;
 }
 
-shared_ptr<MA_solver::GridType> MA_solver::adapt_grid(const int level)
-{
-
-  shared_ptr<GridType> oldGrid = grid_ptr;
-#ifndef BSPLINES
-  std::string gridInputFile;
-
-  switch (iterations)
-  {
-  case 2:  gridInputFile = "../inputData/grids/level2.msh"; break;
-  case 4:  gridInputFile = "../inputData/grids/level3.msh"; break;
-  case 6:  gridInputFile = "../inputData/grids/level4.msh"; break;
-  case 8:  gridInputFile = "../inputData/grids/level5.msh"; break;
-  case 10:  gridInputFile = "../inputData/grids/level6.msh"; break;
-  case 12:  gridInputFile = "../inputData/grids/level7.msh"; break;
-  case 14:  gridInputFile = "../inputData/grids/level8.msh"; break;
-  default: std::cerr << " Dont know which grid to use .. " << std::endl; assert(false); std::exit(-1); break;
-  }
-
-  grid_ptr = std::shared_ptr<GridType>(GmshReader<Config::GridType>::read(gridInputFile));
-  gridView_ = grid_ptr->leafGridView();
-  std::cout << " read grid vom file " << gridInputFile << std::endl;
-#else
-  assert(false); std::exit(-1);
-#endif
-
-//  gridView_ptr = &(grid_ptr->leafGridView());
-  return oldGrid;
-}
 
 void MA_solver::adapt_solution(const int level)
 {
-#ifndef BSPLINES
-  auto old_grid = adapt_grid(level);
+  assert(level == 1);
+
+  auto old_grid = gridHandler_.adapt();
+
+  FEBasisHandler_.adapt_after_grid_change(gridView());
 
   Config::VectorType u_solution = solution;
-  FEBasisHandler_.adapt(old_grid, gridView(), u_solution, solution);
+  solution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), u_solution);
   get_assembler().bind(FEBasisHandler_.FEBasis());
-#else
-  FEBasisHandler_.adapt(*this, level, solution);
-  gridView_ = grid_ptr->leafGridView();
-#endif
-  plotter.update_gridView(gridView_);
+  plotter.update_gridView(gridView());
 }
 
 

@@ -235,7 +235,7 @@ int main(int argc, char** argv) {
 //    std::shared_ptr<Config::GridType> grid_ptr(GmshReader<Config::GridType>::read(setting.gridinputFile));
     Config::UnitCubeType unitcube({0.,0.}, {1.,1.}, 0);
 
-    Config::GridType &grid = unitcube.grid();
+    Config::DuneGridType &grid = unitcube.grid();
     Config::GridView gridView = grid.leafGridView();
 
 

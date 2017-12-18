@@ -1100,7 +1100,7 @@ public:
     return EntititiesForUnifikationTerm_[element];
   }
 
-  void insert_descendant_entities(const Config::GridType& grid, const Config::Entity element)
+  void insert_descendant_entities(const Config::DuneGridType& grid, const Config::Entity element)
   {
     const auto& geometry = element.geometry();
 

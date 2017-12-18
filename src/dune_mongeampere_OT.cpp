@@ -96,22 +96,14 @@ try {
 //---initial domain grid---------
 
 #ifdef BSPLINES
-  Config::UnitCubeType unitcube(setting.lowerLeft, setting.upperRight, 1);
-  std::shared_ptr<Config::GridType> grid_ptr = unitcube.grid_ptr();
-  std::shared_ptr<Config::TriangularGridType> gridConvexifier_ptr(GmshReader<Config::GridType>::read("../inputData/grids/crisscrossed.msh"));
+  GridHandler<Config::GridType, true> gridHandler(setting,SolverConfig::startlevel);
 #else
-  std::cout << " read grid vom file " << setting.gridinputFile << std::endl;
-  std::shared_ptr<Config::GridType> grid_ptr(GmshReader<Config::GridType>::read(setting.gridinputFile));
-  std::shared_ptr<Config::TriangularGridType> gridConvexifier_ptr(GmshReader<Config::GridType>::read(setting.gridinputFile));
+  GridHandler<Config::GridType> gridHandler(setting,SolverConfig::startlevel);
 #endif
-//
-
-
-  Config::GridView gridView = grid_ptr->leafGridView();
 
   // Output grid
   {
-    VTKWriter<Config::GridView> vtkWriter(gridView);
+    VTKWriter<Config::GridView> vtkWriter(gridHandler.gridView());
     vtkWriter.write("grid");
   }
 
@@ -125,10 +117,8 @@ try {
   }
 #endif
 
-
-
   //solve
-  MA_OT_solver ma_solver(grid_ptr, gridView, gridTarget_ptr, config, setting);
+  MA_OT_solver ma_solver(gridHandler, gridTarget_ptr, config, setting);
 
   ma_solver.solve();
 

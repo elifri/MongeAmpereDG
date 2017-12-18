@@ -301,7 +301,7 @@ void MA_OT_image_solver::one_Poisson_Step()
   Config::SpaceType x0 = {0.0,0.0};
 //  Config::SpaceType x0 = {0.5,0.5};
 
-  Integrator<Config::GridType> integrator(grid_ptr);
+  Integrator<Config::DuneGridType> integrator(grid_ptr);
   auto k = 1.0;
   auto rhs = [&](Config::SpaceType x){return -k*std::sqrt(op_image.f_(x)/op_image.g_(x-x0));};
 #ifdef USE_ANALYTIC_JACOBIAN

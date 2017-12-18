@@ -61,516 +61,6 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
 
 
 template <>
-void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
- {
-  assert(level == 1);
-
-  auto localViewOld = FEBasis_->localView();
-
-  //mark elements for refinement
-  for (auto&& element : elements(solver.gridView()))
-  {
-//    localViewOld.bind(element);
-//    solution_u_old->bind(element);
-//    gradient_u_old->bind(element);
-//
-//
-//    for (int i = 0; i < element.geometry().corners(); i++) { //loop over nodes
-//      const auto x = element.geometry().local(element.geometry().corner(i));
-//      std::cout << "value " << (*solution_u_old)(x) << " at " << element.geometry().corner(i) << std::endl;
-//      std::cout << " gradient at the same " << (*gradient_u_old)(x) << std::endl;
-//    }
-
-    solver.solution_u_old->bind(element);
-    //mark element for refining
-    solver.grid_ptr->mark(1,element);
-  }
-
-  std::cout << "old element count " << solver.gridView().size(0) << std::endl;
-  std::cout << " grid febasis " << solver.solution_u_old_global->basis().nodeFactory().gridView().size(2) << std::endl;
-
-  //adapt grid
-  bool marked = solver.grid_ptr->preAdapt();
-  assert(marked == false);
-  _unused(marked);// mark the variable as unused in non-debug mode
-  solver.grid_ptr->adapt();
-  solver.count_refined += level;
-
-  //we need do store the old basis as the (father) finite element depends on the basis
-  using FEBasisCoarseType = Functions::PS12SSplineBasis<Config::LevelGridView, Config::SparseMatrixType>;
-  using CoarseTraits = FETraits<FEBasisCoarseType>;
-  using DiscreteGridFunctionCoarse = typename CoarseTraits::DiscreteGridFunction;
-  using DiscreteLocalGridFunctionCoarse = typename CoarseTraits::DiscreteLocalGridFunction;
-
-  std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1)));
-
-  DiscreteGridFunctionCoarse solution_u_Coarse_global (*FEBasisCoarse,solver.solution_u_old_global->dofs());
-  DiscreteLocalGridFunctionCoarse solution_u_Coarse(solution_u_Coarse_global);
-  DiscreteGridFunctionCoarse::GlobalFirstDerivative gradient_u_Coarse_global (solution_u_Coarse_global);
-
-  //update member
-  std::cout << " grid febasis " << solution_u_Coarse_global.basis().nodeFactory().gridView().size(2) << std::endl;
-
-  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(solver.gridView()));
-  solver.get_assembler().bind(*FEBasis_);
-
-  project(solution_u_Coarse_global, gradient_u_Coarse_global, v);
-
-/*
-#ifdef DEBUG
-  solver.test_projection(solution_u_Coarse_global, v);
-#endif
-*/
-
-
-  //reset adaption flags
-  solver.grid_ptr->postAdapt();
-}
-
-template <>
-void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(std::shared_ptr<Config::GridType> oldGrid, Config::GridView gridView, const Config::VectorType& v_old, Config::VectorType& v)
- {
-
-  //we need do store the old basis as the (father) finite element depends on the basis
-  std::shared_ptr<FEBasisType> FEBasisOld = std::shared_ptr<FEBasisType> (new FEBasisType(oldGrid->leafGridView()));
-  FiniteElementTraits::DiscreteGridFunction solution_u_Coarse_global (*FEBasisOld,v_old);
-  FiniteElementTraits::DiscreteLocalGridFunction solution_u_Coarse(solution_u_Coarse_global);
-  typename FiniteElementTraits::DiscreteGridFunction::GlobalFirstDerivative gradient_u_Coarse_global (solution_u_Coarse_global);
-
-//  FEBasisNew_ = std::shared_ptr<FEBasisType> (new FEBasisType(gridView));
-
-  //update member
-  std::cout << " grid febasis " << solution_u_Coarse_global.basis().nodeFactory().gridView().size(2) << std::endl;
-  std::cout << " new grid febasis " << gridView.size(2) << std::endl;
-
-  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(gridView));
-//  solver.get_assembler().bind(*FEBasis_);
-
-  project(solution_u_Coarse_global, gradient_u_Coarse_global, v);
-}
-
-template <>
-void FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, SolverConfig::degree>>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
-{
-  assert(solver.initialised);
-  assert(level == 1);
-
-  //mark elements for refinement
-  for (auto&& element : elements(solver.gridView()))
-  {
-    //mark element for refining
-    solver.grid_ptr->mark(1,element);
-  }
-
-  std::cout << "old element count " << solver.gridView().size(0) << std::endl;
-
-  //adapt grid
-  bool marked = solver.grid_ptr->preAdapt();
-  assert(marked == false);
-  solver.grid_ptr->adapt();
-  solver.count_refined += level;
-
-  std::cout << "new element count " << solver.gridView().size(0) << std::endl;
-
-  //update member
-  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(solver.gridView()));
-  solver.get_assembler().bind(*FEBasis_);
-
-  typedef LagrangeC0Traits<Config::LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
-  FEBasisCoarseType FEBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
-
-  using CoarseTraits = FETraits<FEBasisCoarseType>;
-  CoarseTraits::DiscreteGridFunction solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
-
-  v.resize(FEBasis_->indexSet().size());
-  Config::VectorType v_u;
-  interpolate(*FEBasis_, v, solution_u_Coarse_global);
-  solver.grid_ptr->postAdapt();
-}
-template <>
-void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degree>>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
-{
-  assert(solver.initialised);
-  assert(level == 1);
-
-  //mark elements for refinement
-  for (auto&& element : elements(solver.gridView()))
-  {
-    //mark element for refining
-    solver.grid_ptr->mark(1,element);
-  }
-
-  std::cout << "old element count " << solver.gridView().size(0) << std::endl;
-
-  //adapt grid
-  bool marked = solver.grid_ptr->preAdapt();
-  assert(marked == false);
-  solver.grid_ptr->adapt();
-  solver.count_refined += level;
-
-  std::cout << "new element count " << solver.gridView().size(0) << std::endl;
-
-  //update memberDEBUG
-  std::array<unsigned int,FEBasisType::GridView::dimension> elementsSplines;
-  std::fill(elementsSplines.begin(), elementsSplines.end(), std::sqrt(solver.gridView().size(0)));
-
-  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(solver.gridView(),
-      solver.get_setting().lowerLeft, solver.get_setting().upperRight,
-      elementsSplines, SolverConfig::degree));
-
-  solver.get_assembler().bind(*FEBasis_);
-
-  const auto levelGridView = solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1);
-
-  typedef decltype(levelGridView) ConstReflevelGridView;
-  using ConstlevelGridView = typename std::remove_reference<ConstReflevelGridView>::type;
-  using LevelGridView = typename std::remove_const<ConstlevelGridView>::type;
-
-  std::array<unsigned int,LevelGridView::dimension> elementsSplinesCoarse;
-  std::fill(elementsSplinesCoarse.begin(), elementsSplinesCoarse.end(), std::sqrt(levelGridView.size(0)));
-
-
-
-  typedef BSplineTraits<LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
-  FEBasisCoarseType FEBasisCoarse (levelGridView,
-      solver.get_setting().lowerLeft, solver.get_setting().upperRight,
-      elementsSplinesCoarse, SolverConfig::degree
-  );
-
-  using CoarseTraits = FETraits<FEBasisCoarseType>;
-  CoarseTraits::DiscreteGridFunction solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
-
-  project(solution_u_Coarse_global, v);
-
-#ifdef DEBUG
-  solver.test_projection(solution_u_Coarse_global, v);
-#endif
-
-/*
-  v.resize(FEBasis_->indexSet().size() + 1);
-  Config::VectorType v_u;
-  interpolate(*FEBasis_, v_u, solution_u_Coarse_global);
-  v.segment(0, v_u.size()) = v_u;
-*/
-  solver.grid_ptr->postAdapt();
-}
-/*template <>
-void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig::degree>>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
-{
-  assert(solver.initialised);
-  assert(level == 1);
-
-  //mark elements for refinement
-  for (auto&& element : elements(solver.gridView()))
-  {
-    //mark element for refining
-    solver.grid_ptr->mark(1,element);
-  }
-
-  std::cout << "old element count " << solver.gridView().size(0) << std::endl;
-
-  //adapt grid
-  bool marked = solver.grid_ptr->preAdapt();
-  assert(marked == false);
-  solver.grid_ptr->adapt();
-  solver.count_refined += level;
-
-  std::cout << "new element count " << solver.gridView().size(0) << std::endl;
-
-  //update member
-  std::array<unsigned int,FEBasisType::GridView::dimension> elementsSplines;
-  std::fill(elementsSplines.begin(), elementsSplines.end(), std::sqrt(solver.gridView().size(0)));
-
-  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(solver.gridView(),
-      solver.get_setting().lowerLeft, solver.get_setting().upperRight,
-      elementsSplines, SolverConfig::degree));
-
-  solver.get_assembler().bind(*FEBasis_);
-
-  const auto levelGridView = solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1);
-
-  typedef decltype(levelGridView) ConstReflevelGridView;
-  using ConstlevelGridView = typename std::remove_reference<ConstReflevelGridView>::type;
-  using LevelGridView = typename std::remove_const<ConstlevelGridView>::type;
-
-  std::array<unsigned int,LevelGridView::dimension> elementsSplinesCoarse;
-  std::fill(elementsSplinesCoarse.begin(), elementsSplinesCoarse.end(), std::sqrt(levelGridView.size(0)));
-
-
-
-  typedef BSplineTraits<LevelGridView, SolverConfig::degree>::FEBasis FEBasisCoarseType;
-  FEBasisCoarseType FEBasisCoarse (levelGridView,
-      solver.get_setting().lowerLeft, solver.get_setting().upperRight,
-      elementsSplinesCoarse, SolverConfig::degree
-  );
-
-  using CoarseTraits = FETraits<FEBasisCoarseType>;
-  CoarseTraits::DiscreteGridFunction solution_u_Coarse_global (FEBasisCoarse,solver.solution_u_old_global->dofs());
-
-  project(solution_u_Coarse_global, solver.solution);
-  solver.grid_ptr->postAdapt();
-}
-*/
-
-template <>
-void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::adapt(MA_solver& solver, const int level, Config::VectorType& v)
-{
-  assert(solver.initialised);
-  assert(level == 1);
-
-  const auto v_old = v;
-
-  //gives any element a unique id (preserved by refinement),
-  const MA_solver::GridType::Traits::GlobalIdSet&  idSet = solver.grid_ptr->globalIdSet();
-
-  auto localView = FEBasis_->localView();
-  auto localIndexSet = FEBasis_->indexSet().localIndexSet();
-
-  typedef MA_solver::GridType::Traits::GlobalIdSet::IdType IdType;
-
-  //map to store grid attached data during the refinement process
-  std::map<IdType, Config::VectorType>  preserveSolution;
-
-  //mark elements for refinement
-  for (auto&& element : elements(solver.gridView()))
-  {
-    // Bind the local FE basis view to the current element
-    localView.bind(element);
-    localIndexSet.bind(localView);
-
-    //mark element for refining
-    solver.grid_ptr->mark(1,element);
-
-    //store local dofs
-    preserveSolution[idSet.id(element)]  = Assembler<FiniteElementTraits>::calculate_local_coefficients(localIndexSet, v);
-  }
-
-  std::cout << "old element count " << solver.gridView().size(0) << std::endl;
-
-  //adapt grid
-  bool marked = solver.grid_ptr->preAdapt();
-  assert(marked == false);
-  solver.grid_ptr->adapt();
-  solver.count_refined += level;
-
-  std::cout << "new element count " << solver.gridView().size(0) << std::endl;
-
-  //update member
-  FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(solver.gridView()));
-  uBasis_ = std::shared_ptr<FEuBasisType> (new FEuBasisType(solver.gridView()));
-  uDHBasis_ = std::shared_ptr<FEuDHBasisType> (new FEuDHBasisType(solver.gridView()));
-  solver.get_assembler().bind(*FEBasis_);
-
-  //we need do store the old basis as the (father) finite element depends on the basis
-
-  using FEBasisCoarseTraits = MixedTraits<Config::LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>;
-  FEBasisCoarseTraits::FEBasis FEBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
-
-  //for u
-  using FEuBasisCoarseTraits = FETraits<FEBasisCoarseTraits::FEuBasis>;
-  FEuBasisCoarseTraits::FEBasis FEuBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
-  using DiscreteGridFunctionuCoarse = FEuBasisCoarseTraits::DiscreteGridFunction;
-  DiscreteGridFunctionuCoarse solution_u_Coarse_global (FEuBasisCoarse,solver.solution_u_old_global->dofs());
-
-  v.resize(FEBasis_->indexSet().size());
-  Config::VectorType v_u;
-  interpolate(*uBasis_, v_u, solution_u_Coarse_global);
-  v.segment(0, v_u.size()) = v_u;
-
-  //adapt discrete hessians
-  using FEuDHBasisCoarseTraits = FETraits<FEBasisCoarseTraits::FEuDHBasis>;
-  FEuDHBasisCoarseTraits::FEBasis FEuDHBasisCoarse (solver.grid_ptr->levelGridView(solver.grid_ptr->maxLevel()-1));
-  using DiscreteGridFunctionuDHCoarse = typename FEuDHBasisCoarseTraits::DiscreteGridFunction;
-
-
-  for (int row = 0; row < Config::dim; row++)
-    for (int col = 0; col < Config::dim; col++)
-    {
-      std::cerr << " row " << row << " col " << col << std::endl;
-      //calculate second derivative of gridviewfunction
-      Config::VectorType v_uDH_entry_old(FEuDHBasisCoarse.indexSet().size());
-
-      //extract local dofs for first entry :TODO move to assembler
-      {
-        auto localView = FEBasisCoarse.localView();
-        auto localIndexSet = FEBasisCoarse.indexSet().localIndexSet();
-
-        auto localViewu = FEuBasisCoarse.localView();
-
-        auto localViewuDH = FEuDHBasisCoarse.localView();
-        auto localIndexSetuDH = FEuDHBasisCoarse.indexSet().localIndexSet();
-
-        //copy corresponding dofs
-        for (auto&& element: elements(FEBasisCoarse.gridView()))
-        {
-          localView.bind(element);
-          localIndexSet.bind(localView);
-
-          localViewu.bind(element);
-
-          localViewuDH.bind(element);
-          localIndexSetuDH.bind(localViewuDH);
-
-          for (unsigned int i = 0; i < localViewuDH.size(); i++)
-          {
-            typedef decltype(localView) LocalView;
-
-            const int localIndex = Dune::Functions::flat_local_index<typename LocalView::GridView, typename LocalView::size_type>(localViewu.size(), i, row, col);
-            v_uDH_entry_old[localIndexSetuDH.index(i)[0]] = v_old[FiniteElementTraits::get_index(localIndexSet, localIndex)];
-          }
-        }
-      }
-
-      Config::VectorType v_uDH_entry;
-
-      DiscreteGridFunctionuDHCoarse solution_uDH_Coarse_global (FEuDHBasisCoarse,v_uDH_entry_old);
-      interpolate(*uDHBasis_, v_uDH_entry, solution_uDH_Coarse_global);
-
-      //copy into new vector
-      {
-        auto localView = FEBasis_->localView();
-        auto localIndexSet = FEBasis_->indexSet().localIndexSet();
-
-        auto localViewu = uBasis_->localView();
-
-        auto localViewuDH = uDHBasis_->localView();
-        auto localIndexSetuDH = uDHBasis_->indexSet().localIndexSet();
-
-        //copy corresponding dofs :TODO move to assembler
-        for (auto&& element: elements(FEBasis_->gridView()))
-        {
-          localView.bind(element);
-          localIndexSet.bind(localView);
-
-          localViewu.bind(element);
-
-          localViewuDH.bind(element);
-          localIndexSetuDH.bind(localViewuDH);
-
-          for (unsigned int i = 0; i < localViewuDH.size(); i++)
-          {
-            typedef decltype(localView) LocalView;
-
-            const int localIndex = Dune::Functions::flat_local_index<typename LocalView::GridView, typename LocalView::size_type>(localViewu.size(), i, row, col);
-            v[FiniteElementTraits::get_index(localIndexSet, localIndex)] = v_uDH_entry[localIndexSetuDH.index(i)[0]];
-//            std::cout << " v(" << FiniteElementTraits::get_index(localIndexSet, localIndex) << ")=" << v_uDH_entry[localIndexSetuDH.index(i)[0]] << std::endl;
-          }
-        }
-      }
-    }
-
-
-/*  auto localViewRef = FEBasis_->localView();
-  auto localIndexSetRef = FEBasis_->indexSet().localIndexSet();
-
-  //init vector v
-  v.resize(solver.get_n_dofs());
-
-  SolverConfig::LocalFiniteElementuType localFiniteElementu;
-  SolverConfig::LocalFiniteElementHessianSingleType localFiniteElementuDH;
-
-  //calculate refinement matrices
-
-  //local refined mass matrix m_ij = \int mu_child_i * mu_j
-  std::vector<MA_solver::DenseMatrixType> localrefinementMatrices(SolverConfig::childdim);
-  solver.get_assembler().calculate_refined_local_mass_matrix_ansatz(localFiniteElementu, localrefinementMatrices);
-  //local mass matrix m_ij = \int mu_i * mu_j
-  MA_solver::DenseMatrixType localMassMatrix;
-  solver.get_assembler().calculate_local_mass_matrix_ansatz(localFiniteElementu, localMassMatrix);
-
-  //everything for the hessian ansatz function as well
-  //local refined mass matrix m_ij = \int mu_child_i * mu_j
-  std::vector<MA_solver::DenseMatrixType> localrefinementMatrices_DH(SolverConfig::childdim);
-  solver.get_assembler().calculate_refined_local_mass_matrix_ansatz(localFiniteElementuDH, localrefinementMatrices_DH);
-  //local mass matrix m_ij = \int mu_i * mu_j
-  MA_solver::DenseMatrixType localMassMatrix_DH;
-  solver.get_assembler().calculate_local_mass_matrix_ansatz(localFiniteElementuDH, localMassMatrix_DH);
-
-  const int nDH = Config::dim*Config::dim;
-  const int size_u = localFiniteElementu.size();
-  const int size_u_DH = localFiniteElementuDH.size();
-  const int size = size_u +  nDH*size_u_DH;
-
-  //since we are going to calculate the refinement for all children when encountering one of them
-  // we need to store wich data already is refined
-  Dune::LeafMultipleCodimMultipleGeomTypeMapper <MA_solver::GridType,Dune::MCMGElementLayout > mapper(*solver.grid_ptr);
-  std::vector<bool> already_refined (mapper.size());
-  std::fill(already_refined.begin(), already_refined.end(), false);
-
-  //calculate new dof vector
-  for (auto&& element : elements(solver.gridView()))
-  {
-    if (element.isNew())
-    {
-      //check if data was already calculated
-      if (already_refined[mapper.index(element)]) continue;
-
-      //get old dof vector
-      const auto& father = element.father();
-
-      Config::VectorType x_local = preserveSolution[idSet.id(father)];
-
-      //calculate new dof vector for every child
-      int i = 0;
-      for (auto&& child : descendantElements(father, solver.count_refined))
-      {
-          //bind to child
-        localViewRef.bind(child);
-        localIndexSetRef.bind(localViewRef);
-
-        Config::VectorType x_adapt(size);
-
-        //local rhs = \int v_adapt*test = refinementmatrix*v
-        Config::VectorType localVector = localrefinementMatrices[i]*x_local.segment(0,size_u);
-        x_adapt.segment(0,size_u) =  localMassMatrix.ldlt().solve(localVector);
-
-        //same for hessian (now done seperately for every entry)
-        std::vector<Config::VectorType> localVectorDH(nDH);
-        for (int j = 0; j < nDH; j++)
-        {
-          //extract dofs for one hessian entry
-          Config::VectorType xlocalDH(size_u_DH);
-          for (int k = 0; k < size_u_DH; k++)
-            xlocalDH(k) = x_local(size_u+j +nDH*k);
-
-          localVectorDH[j] = localrefinementMatrices_DH[i]*xlocalDH;
-
-          xlocalDH =  localMassMatrix_DH.ldlt().solve(localVectorDH[j]);
-
-          //write dofs to combined hessian
-          for (int k = 0; k < size_u_DH; k++)
-            x_adapt(size_u+j +nDH*k) = xlocalDH(k);
-        }
-
-        //set new dof vectors
-        Assembler::set_local_coefficients(localIndexSetRef, x_adapt, v);
-
-        //mark element as refined
-        already_refined[mapper.index(child)] = true;
-
-        i++;
-      }
-    }
-    else //element was not refined
-    {
-      //bind to child
-      localViewRef.bind(element);
-      localIndexSetRef.bind(localViewRef);
-
-      IdType id = idSet.id(element);
-      Assembler::set_local_coefficients(localIndexSetRef, preserveSolution[id], v);
-    }
-
-  }*/
-  //reset adaption flags
-  solver.grid_ptr->postAdapt();
-
-//  solver.test_projection(solution_u_Coarse_global, v);
-
-}
-
-
-template <>
 template <>
 Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>>::adapt_after_grid_change(const typename FEBasisType::GridView& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v)
 {
@@ -609,27 +99,13 @@ Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::Gri
   return vNew;
 }
 
-template <>
-template <>
-Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt_function_after_grid_change(const typename Config::LevelGridView& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
-{
-  using CoarseTraits = PS12SplitTraits<Config::LevelGridView>;
-
-  CoarseTraits::FEBasis FEBasisCoarse (gridOld);
-  using DiscreteGridFunctionCoarse = CoarseTraits::DiscreteGridFunction;
-  DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
-  DiscreteGridFunctionCoarse::GlobalFirstDerivative gradient_u_Coarse_global (solution_u_Coarse_global);
-
-  Config::VectorType vNew;
-  vNew.resize(FEBasis_->indexSet().size());
-  project(solution_u_Coarse_global, gradient_u_Coarse_global, vNew);
-  return vNew;
-}
-
 
 template <>
 Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::coarse_solution(MA_solver& solver, const int level)
 {
+  assert(false);
+/*
+
   assert(solver.initialised);
   Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
 
@@ -640,7 +116,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 
 
   //we need do generate the coarse basis
-  const auto& levelGridView = solver.grid_ptr->levelGridView(level);
+  const auto& levelGridView = solver.grid().levelGridView(level);
 
   typedef Functions::PS12SSplineBasis<Config::LevelGridView, Config::SparseMatrixType> FEBasisCoarseType;
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(levelGridView));
@@ -740,11 +216,14 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 
 
   return v;
+*/
 }
 
 template<>
 Config::VectorType FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, SolverConfig::degree>>::coarse_solution(MA_solver& solver, const int level)
 {
+  assert(false);
+/*
   assert(solver.initialised);
 
   Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
@@ -798,12 +277,15 @@ Config::VectorType FEBasisHandler<Standard, BSplineTraits<Config::GridView, Solv
   HandlerCoarse.project(numericalSolution, v);
 
   return v;
+  */
 }
 
 
 template<>
 Config::VectorType FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::coarse_solution(MA_solver& solver, const int level)
 {
+  assert(false);
+  /*
   assert(solver.initialised);
 
   Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
@@ -827,5 +309,5 @@ Config::VectorType FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverCon
   //project
   HandlerCoarse.project(numericalSolution, v);
 
-  return v;
+  return v;*/
 }

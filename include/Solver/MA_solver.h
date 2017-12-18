@@ -15,8 +15,9 @@
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 
-//#define COLLOCATION
 #include "MAconfig.h"
+
+#include "Solver/GridHandler.hpp"
 
 #include "Solver/Assembler.h"
 #include "problem_data.h"
@@ -50,7 +51,7 @@ class MA_solver {
 public:
 
 	//-----typedefs---------
-	typedef Config::GridType GridType;
+	typedef Config::DuneGridType GridType;
 	typedef Config::GridView GridViewType;
 	typedef Config::LevelGridView LevelGridViewType;
 	typedef GridViewType::IntersectionIterator IntersectionIterator;
@@ -71,8 +72,7 @@ public:
 	typedef FETraits::DiscreteLocalGridFunction DiscreteLocalGridFunction;
   typedef FETraits::DiscreteLocalGradientGridFunction DiscreteLocalGradientGridFunction;
 
-	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView,
-	    SolverConfig config):
+	MA_solver(GridHandler<GridType>& gridHandler, SolverConfig config):
 	    initialised(true),
 			epsDivide_(config.epsDivide),
 			epsEnd_(config.epsEnd),
@@ -87,10 +87,10 @@ public:
       writeVTK_(config.writeVTK),
       outputDirectory_(config.outputDirectory), plotOutputDirectory_(config.plotOutputDirectory), outputPrefix_(config.outputPrefix),
       plotterRefinement_(config.refinement),
-      grid_ptr(grid), gridView_(gridView),
-      FEBasisHandler_(*this, gridView),
+      gridHandler_(gridHandler),
+      FEBasisHandler_(*this, gridHandler.gridView()),
       assembler_(FEBasisHandler_.FEBasis()),
-      plotter(gridView),
+      plotter(gridHandler.gridView()),
       op(*this),
       solution_u_old(), gradient_u_old()
 	{
@@ -102,10 +102,9 @@ public:
 	  plotter.set_refinement(plotterRefinement_);
 	  plotter.set_geometrySetting(get_setting());
 
-	  grid_ptr->globalRefine(SolverConfig::startlevel);
     std::cout << "refined grid to startlevel " << SolverConfig::startlevel << " constructor n dofs " << get_n_dofs() << std::endl;
 
-    FEBasisHandler_.bind(*this, gridView);
+    FEBasisHandler_.bind(*this, gridView());
 
 	  assembler_.bind(FEBasisHandler_.FEBasis());
 
@@ -121,9 +120,8 @@ public:
 
 	}
 
-  MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView,
-      SolverConfig config, const GeometrySetting& geometrySetting)
-      :MA_solver(grid, gridView, config)
+  MA_solver(GridHandler<GridType>& gridHandler, SolverConfig config, const GeometrySetting& geometrySetting)
+      :MA_solver(gridHandler, config)
   {
     setting_ = geometrySetting;
   }
@@ -218,8 +216,10 @@ public:
   const auto get_FEBasis() const {return FEBasisHandler_.FEBasis();}
   const auto get_FEBasis_u() const {return FEBasisHandler_.uBasis();}
 
-  const GridType& grid() const {return *grid_ptr;}
-  const GridViewType& gridView() const {return gridView_;}
+  const GridType& grid() const {return gridHandler_.grid();}
+  std::shared_ptr<GridType>& get_grid_ptr() {return gridHandler_.get_grid_ptr();}
+  const GridViewType& gridView() const {return gridHandler_.gridView();}
+  GridViewType& gridView() {return gridHandler_.gridView();}
 
 public:
 
@@ -385,9 +385,7 @@ protected:
 	std::string outputDirectory_, plotOutputDirectory_, outputPrefix_; ///outputdirectories
   int plotterRefinement_; ///number of (virtual) grid refinements for output generation
 
-	shared_ptr<GridType> grid_ptr; ///Pointer to grid
-  GridViewType gridView_; /// Pointer to gridView
-//	shared_ptr<GridViewType> gridView_ptr; /// Pointer to gridView
+	GridHandler<GridType>& gridHandler_; ///handles grid
 
 	FEBasisHandler<FETraits::Type, FETraits> FEBasisHandler_;
 

@@ -30,12 +30,12 @@ class MA_solver;
 
 #ifndef BSPLINES
 typedef StaticRefinement<GenericGeometry::SimplexTopology<2>::type::id,
-        Config::GridType::ctype,
+        Config::DuneGridType::ctype,
         GenericGeometry::SimplexTopology<2>::type::id,
         2> PlotRefinementType;
 #else
 typedef StaticRefinement<GenericGeometry::CubeTopology<2>::type::id,
-        Config::GridType::ctype,
+        Config::DuneGridType::ctype,
         GenericGeometry::CubeTopology<2>::type::id,
         2> PlotRefinementType;
 #endif
@@ -76,7 +76,7 @@ public:
 	    delete stream.second;
 	}
 
-	void update_gridView(Config::GridView& gridView) {grid = gridView;}
+	void update_gridView(const Config::GridView& gridView) {grid = gridView;}
 
 	//helper for vtk parts
 
@@ -788,7 +788,7 @@ template<typename Functiontype>
 void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Config::SpaceType& upperRight,
                                     Functiontype &f, std::ofstream &of) const
 {
-  static_assert(std::is_same<Config::GridType,Dune::YaspGrid<2, EquidistantOffsetCoordinates<double,2> > >::value, "saving in rectangular mesh format works only for yaspgrids so far!");
+  static_assert(std::is_same<Config::DuneGridType,Dune::YaspGrid<2, EquidistantOffsetCoordinates<double,2> > >::value, "saving in rectangular mesh format works only for yaspgrids so far!");
 
   //get information
   const double l_x = upperRight[0] - lowerLeft[0];
@@ -845,7 +845,7 @@ void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Co
 template<typename BSplineNodeFactoryType>
 void Plotter::save_BSplineCoeffs(const BSplineNodeFactoryType &bSplineNodeFactory, const Config::VectorType& coeffs, std::ofstream &of) const
 {
-  static_assert(std::is_same<Config::GridType,Dune::YaspGrid<2, EquidistantOffsetCoordinates<double,2> > >::value, "saving Bspline coefficients works only for yaspgrids so far!");
+  static_assert(std::is_same<Config::DuneGridType,Dune::YaspGrid<2, EquidistantOffsetCoordinates<double,2> > >::value, "saving Bspline coefficients works only for yaspgrids so far!");
   assert(bSplineNodeFactory.order_[0]==bSplineNodeFactory.order_[1]);
 
   of << "#Bpline of order " << bSplineNodeFactory.order_[0];

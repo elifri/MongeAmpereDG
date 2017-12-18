@@ -497,7 +497,7 @@ public:
   }
 
   int insert_entitity_for_unifikation_term(const Config::Entity element, int size){ assert(false); return 0;}
-  void insert_descendant_entities(const Config::GridType& grid, const Config::Entity element){assert(false);}
+  void insert_descendant_entities(const Config::DuneGridType& grid, const Config::Entity element){assert(false);}
   const Config::EntityMap EntititiesForUnifikationTerm() const{assert(false); std::exit(-1);}
   int get_offset_of_entity_for_unifikation_term(Config::Entity element) const{assert(false); return 0;}
   int get_number_of_entities_for_unifikation_term() const{assert(false); return 0;}

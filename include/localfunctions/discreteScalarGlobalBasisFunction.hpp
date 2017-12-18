@@ -345,9 +345,10 @@ public:
 
     FieldVector<Range, Basis::GridView::dimension> operator() (const Domain& x) const
     {
-      const auto& element = globalFunction_->findEntity(x);
+      Domain localX;
+      const auto& element = globalFunction_->findEntityAndLocalCoordinate(x, localX);
       localFunction_.bind(element);
-      return localFunction_(element.geometry().local(x));
+      return localFunction_(localX);
     }
     LocalFirstDerivative& localFunction() {return localFunction_;}
 
@@ -635,11 +636,11 @@ private:
 
     Range operator() (const Domain& x) const
     {
-      const auto& element = globalFunction_->findEntity(x);
+      Domain localX;
+      const auto& element = globalFunction_->findEntityAndLocalCoordinate(x, localX);
 
       localFunction_.bind(element);
-      auto localCoordinate = element.geometry().local(x);
-      auto res = localFunction_(localCoordinate);
+      auto res = localFunction_(localX);
 
 //      assert(element.geometry().type().isTriangle());
 //      const bool xAtBoundary = localCoordinate[0] < 1e-12 || localCoordinate[1] < 1e-12 || (localCoordinate.one_norm() > (1-1e-12));
@@ -754,27 +755,68 @@ private:
     return *dofs_;
   }
 
-  auto findEntity(Domain x) const
+  template<typename GridView>
+  static double searchRadius(GridView& gridView)
   {
-    const double eps=1e-4;
+//    typename GridView::template Codim<0>::Iterator element = gridView.begin();
+    auto element = gridView.template begin<0>();
+    auto geo = element->geometry();
+    return (geo.center()-geo.corner(0)).two_norm()/2.;
+  }
+
+  static void moveLocalCoordinateToBoundary(Domain& localCoordinate)
+  {
+    if (localCoordinate[0] < 0)
+    {
+      localCoordinate[0] = 0;
+    }
+    if (localCoordinate[0] > 1)
+    {
+      localCoordinate[0] = 1;
+    }
+    if (localCoordinate[1] < 0)
+    {
+      localCoordinate[1] = 0;
+    }
+    if (localCoordinate[1] > 1)
+    {
+      localCoordinate[1] = 1;
+    }
+    if (localCoordinate[0]+localCoordinate[1] >1)
+    {
+      localCoordinate[1] = 1.0-localCoordinate[0];
+    }
+  }
+
+  auto findEntityAndLocalCoordinate(Domain x, Domain& localCoordinate) const
+  {
 
 //    auto x = x2;
     HierarchicSearch<typename GridView::Grid, typename GridView::IndexSet> hs(basis_->gridView().grid(), basis_->gridView().indexSet());
 
     try{
       auto element = hs.findEntity(x);
+      localCoordinate = element.geometry().local(x);
       return std::move( element );
     }
     catch(Dune::GridError e)
     {
+      const double eps=searchRadius(basis_->gridView());
+
+      auto xPertubed = x;
+
       bool notFound = true;
       int direction = 0;
 
-      x[0]+=eps;
+      xPertubed[0]+=eps;
       while(notFound)
       {
         try{
-          const auto& element = hs.findEntity(x);
+          const auto& element = hs.findEntity(xPertubed);
+
+          localCoordinate = element.geometry().local(x);
+          moveLocalCoordinateToBoundary(localCoordinate);
+
           return std::move( element );
           notFound = false;
           }
@@ -782,9 +824,9 @@ private:
         {
           switch(direction)
           {
-          case 0: x[0] -=2*eps; break;
-          case 1: x[0]+=eps; x[1] +=eps; break;
-          case 2: x[1]-=2*eps; break;
+          case 0: xPertubed[0] -=2*eps; break;
+          case 1: xPertubed[0]+=eps; xPertubed[1] +=eps; break;
+          case 2: xPertubed[1]-=2*eps; break;
           default: std::cerr << " did not found any grid point near "<< x << " Error " << e.what() << std::endl; assert(false);
           }
           direction++;
@@ -797,10 +839,13 @@ private:
   // TODO: Implement this using hierarchic search
   Range operator() (const Domain& x) const
   {
-    const auto& element = findEntity(x);
+    bool outside = false;
+
+    Domain localCoordinate;
+    const auto& element = findEntityAndLocalCoordinate(x, localCoordinate);
     localFunction_.bind(element);
 
-    return localFunction_(element.geometry().local(x));
+    return localFunction_(localCoordinate);
   }
 
   friend typename Traits::DerivativeInterface derivative(const MyDiscreteScalarGlobalBasisFunction& t)

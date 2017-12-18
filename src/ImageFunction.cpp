@@ -182,7 +182,7 @@ void ImageFunction::omega_normalize(const unsigned int n)
   factor_ = 1.0;
 
   Config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, n);
-  Integrator<Config::GridType> integrator(unitcube_quadrature.grid_ptr());
+  Integrator<Config::DuneGridType> integrator(unitcube_quadrature.grid_ptr());
   const double integral = integrator.assemble_integral([this](const Config::DomainType &x) {return operator()(x)/omega(x);});
 
   factor_ = 1.0/integral;
@@ -195,7 +195,7 @@ double ImageFunction::integrate2(const unsigned int n) const
   const unsigned int order = std::min(5u,n);
 
   Config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, order);
-  Integrator<Config::GridType> integrator(unitcube_quadrature.grid_ptr());
+  Integrator<Config::DuneGridType> integrator(unitcube_quadrature.grid_ptr());
   double integral = integrator.assemble_integral(*this);
   std::cout << "calculated integral " << integral << std::endl;
   return integral;
@@ -207,7 +207,7 @@ double ImageFunction::omega_integrate(const unsigned int n) const
 {
   const unsigned int order = std::min(5u,n);
   Config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, order);
-  Integrator<Config::GridType> integrator(unitcube_quadrature.grid_ptr());
+  Integrator<Config::DuneGridType> integrator(unitcube_quadrature.grid_ptr());
   double integral = integrator.assemble_integral([this](const Config::DomainType &x) {return operator()(x)/omega(x);});
   std::cout << "calculated omega integral " << integral << std::endl;
 

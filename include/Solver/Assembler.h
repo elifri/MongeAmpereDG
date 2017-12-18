@@ -274,7 +274,6 @@ template<typename FETraits = SolverConfig::FETraitsSolver>
 class Assembler{
 public:
   //-----typedefs---------
-  typedef Config::GridType GridType;
   typedef Config::GridView GridViewType;
   typedef GridViewType::IntersectionIterator IntersectionIterator;
   typedef IntersectionIterator::Intersection Intersection;

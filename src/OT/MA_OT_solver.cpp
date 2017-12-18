@@ -22,15 +22,15 @@ namespace po = boost::program_options;
 
 #include "Operator/linear_system_operator_poisson_NeumannBC.h"
 
-MA_OT_solver::MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView,
+MA_OT_solver::MA_OT_solver(GridHandler<GridType>& gridHandler,
     const shared_ptr<GridType>& gridTarget,
     const SolverConfig& config, GeometrySetting& setting)
-:MA_solver(grid, gridView, config),
+:MA_solver(gridHandler, config),
  setting_(setting), gridTarget_ptr(gridTarget),
 #ifdef USE_COARSE_Q_H
- FEBasisHandlerQ_(*this, this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1)),
+ FEBasisHandlerQ_(*this, gridHandler.grid().levelGridView(gridHandler.grid().maxLevel()-1)),
 #else
- FEBasisHandlerQ_(*this, gridView),
+ FEBasisHandlerQ_(*this, gridHandler.gridView()),
 #endif
  assemblerLM1D_(FEBasisHandler_.FEBasis()),
  assemblerLMBoundary_(FEBasisHandler_.FEBasis(),FEBasisHandlerQ_.FEBasis()),
@@ -438,6 +438,7 @@ void MA_OT_solver::plot(const std::string& name, int no) const
   }
 
   //write to file
+
   std::string fname(plotter.get_output_directory());
   fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + "outputGrid.vtu";
 
@@ -466,7 +467,7 @@ void MA_OT_solver::one_Poisson_Step()
 //  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,1}};
 //  FieldMatrix<Config::ValueType, 2, 2> A = {{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}};
 
-  Integrator<Config::GridType> integrator(grid_ptr);
+  Integrator<Config::GridType> integrator(get_grid_ptr());
   auto k = 1.0;
   const auto& f = get_operator().get_f();
   const auto& g = get_operator().get_g();
@@ -727,6 +728,7 @@ void MA_OT_solver::create_initial_guess()
 //    project_labouriousC1([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
   //                        [](Config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},
   //                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
+//       [](Config::SpaceType x){return Dune::FieldVector<double, Config::dim> ({x[0],x[1]});},
       project(u0, y0,
         solution);
 
@@ -858,15 +860,19 @@ void MA_OT_solver::adapt_solution(const int level)
 {
   Config::VectorType p = get_assembler_lagrangian_boundary().boundaryHandler().blow_up_boundary_vector(solution.tail(get_n_dofs_Q_h()));
 
-  //adapt input grid, febasis and solution
-  FEBasisHandler_.adapt(*this, level, solution);
+  //adapt input grid
 
-  //adapt target grid
-  gridTarget_ptr->globalRefine(level);
+  assert(level==1);
+  auto old_grid = gridHandler_.adapt();
 
-  //bind assembler to new context
+  //bind handler and assembler to new context
+  FEBasisHandler_.adapt_after_grid_change(gridView());
   assembler_.bind(FEBasisHandler_.uBasis());
   assemblerLM1D_.bind(FEBasisHandler_.uBasis());
+
+  //project old solution to new grid
+  auto newSolution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), solution);
+  solution = newSolution;
 
   //adapt boundary febasis and bind to assembler
   std::cerr << " going to adapt lagrangian multiplier " << std::endl;
@@ -874,16 +880,17 @@ void MA_OT_solver::adapt_solution(const int level)
   Config::VectorType p_adapted;
 
   {
-    auto gridViewOld = this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1);
-
 //    FEBasisHandlerQ_.adapt_after_grid_change(this->gridView());
 //    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change();
+
 #ifdef USE_COARSE_Q_H
-    auto p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-2),
-        this->grid_ptr->levelGridView(this->grid_ptr->maxLevel()-1), p);
+    auto p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(this->grid().levelGridView(this->grid().maxLevel()-2),
+        this->grid().levelGridView(this->grid().maxLevel()-1), p);
 #else
-    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(gridViewOld, this->gridView(), p);
+//    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(old_grid.gridViewOld, this->gridView(), p);
+    FEBasisHandlerQ_.adapt_after_grid_change(this->gridView());
 #endif
+
   }
   auto& assembler = get_assembler_lagrangian_boundary();
   assembler.bind(FEBasisHandler_.uBasis(), FEBasisHandlerQ_.FEBasis());
