@@ -337,27 +337,6 @@ public:
     mutable std::vector<LocalBasisJacobian> shapeFunctionValues_;
   };
 
-  class GlobalFirstDerivative
-  {
-  public:
-    GlobalFirstDerivative(const MyDiscreteScalarGlobalBasisFunction& globalFunction)
-    : globalFunction_(&globalFunction), localFunction_(globalFunction) {}
-
-    FieldVector<Range, Basis::GridView::dimension> operator() (const Domain& x) const
-    {
-      Domain localX;
-      const auto& element = globalFunction_->findEntityAndLocalCoordinate(x, localX);
-      localFunction_.bind(element);
-      return localFunction_(localX);
-    }
-    LocalFirstDerivative& localFunction() {return localFunction_;}
-
-private:
-    const MyDiscreteScalarGlobalBasisFunction* globalFunction_;
-    mutable LocalFirstDerivative localFunction_;
-
-  };
-
   class LocalSecondDerivative
   {
     using LocalBasisView = typename Basis::LocalView;
@@ -374,7 +353,7 @@ private:
 
     using Geometry = typename GlobalFunction::Element::Geometry;
 
-    LocalSecondDerivative(const MyDiscreteScalarGlobalBasisFunction& globalFunction, const std::array<int,2> directions)
+    LocalSecondDerivative(const MyDiscreteScalarGlobalBasisFunction& globalFunction, const std::array<int,2>& directions=std::array<int,2>({0,0}))
       : globalFunction_(&globalFunction)
       , localBasisView_(globalFunction.basis().localView())
       , localIndexSet_(globalFunction.indexSet_.localIndexSet())
@@ -431,11 +410,16 @@ private:
       return y;
     }
 
-
     void evaluate(const Domain& x, Range& y) const
     {
-#ifdef C0Element
+      if (MyDiscreteScalarGlobalBasisFunction::is_C1)
+        evaluateC1(x,y);
+      else
+        evaluateC0(x,y);
+    }
 
+    void evaluateC0(const Domain& x, Range& y) const
+    {
       Hessian yHess (0);
 //      std::cout<< " y " << y << std::endl;
 //      std::cout << " local dofs ";
@@ -497,7 +481,10 @@ private:
         yHess.axpy(localDoFs_[i], hessians[i]);
       }
       y = yHess[directions_[0]][directions_[1]];
-#else
+    }
+
+    void evaluateC1(const Domain& x, Range& y) const
+    {
       Hessian yHess (0);
 
       y = 0;
@@ -519,12 +506,19 @@ private:
         // Maybe we want do adopt the framework of dune-fufem.
         y += localDoFs_[i] * out[i][0];
       }
-#endif
     }
 
     void evaluateHess(const Domain& x, Hessian& yHess) const
     {
-#ifdef C0Element
+      if (MyDiscreteScalarGlobalBasisFunction::is_C1)
+        evaluateHessC1(x,yHess);
+      else
+        evaluateHessC0(x,yHess);
+    }
+
+
+    void evaluateHessC0(const Domain& x, Hessian& yHess) const
+    {
       yHess=0;
       const auto& lfe  = localBasisView_.tree().finiteElement();
       const auto& basis = lfe.localBasis();
@@ -574,7 +568,9 @@ private:
 //        y += localDoFs_[i] * out[i][0];
         yHess.axpy(localDoFs_[i], hessians[i]);
       }
-#else
+    }
+    void evaluateHessC1(const Domain& x, Hessian& yHess) const
+    {
       yHess=0;
       auto& basis = localBasisView_.tree().finiteElement().localBasis();
 
@@ -589,7 +585,6 @@ private:
           for (size_t i = 0; i < localDoFs_.size(); i++)
             yHess[row][col] += localDoFs_[i]*out[i][0];
         }
-#endif
     }
 
 
@@ -616,6 +611,30 @@ private:
   };
 
 
+  class GlobalFirstDerivative
+  {
+  public:
+    GlobalFirstDerivative(const MyDiscreteScalarGlobalBasisFunction& globalFunction)
+    : globalFunction_(&globalFunction), localFunction_(globalFunction), localDerivative_(globalFunction) {}
+
+    FieldVector<Range, Basis::GridView::dimension> operator() (const Domain& x) const
+    {
+      bool outside = false;
+      Domain localX;
+      const auto& element = globalFunction_->findEntityAndLocalCoordinate(x, localX, outside);
+      localFunction_.bind(element);
+      if (!outside)
+        return localFunction_(localX);
+      return globalFunction_->TaylorExpansionDerivative(element, x, localX);
+    }
+    LocalFirstDerivative& localFunction() {return localFunction_;}
+
+private:
+    const MyDiscreteScalarGlobalBasisFunction* globalFunction_;
+    mutable LocalFirstDerivative localFunction_;
+    mutable LocalSecondDerivative localDerivative_;
+  };
+
   class GlobalSecondDerivative
   {
   public:
@@ -636,8 +655,9 @@ private:
 
     Range operator() (const Domain& x) const
     {
+      bool outside = false;
       Domain localX;
-      const auto& element = globalFunction_->findEntityAndLocalCoordinate(x, localX);
+      const auto& element = globalFunction_->findEntityAndLocalCoordinate(x, localX, outside);
 
       localFunction_.bind(element);
       auto res = localFunction_(localX);
@@ -670,8 +690,6 @@ private:
         }
       }*/
       return res;
-
-
     }
 
     void evaluateHess(const Domain& x, Hessian& yHess) const
@@ -735,6 +753,8 @@ private:
     , dofs_(stackobject_to_shared_ptr(dofs))
     , indexSet_(basis.indexSet())
     , localFunction_(*this)
+    , localDerivative_(*this)
+    , localSecondDerivative_(*this)
   {}
 
   MyDiscreteScalarGlobalBasisFunction(std::shared_ptr<Basis> basis, std::shared_ptr<V> dofs)
@@ -743,6 +763,8 @@ private:
     , dofs_(dofs)
     , indexSet_(basis.indexSet())
     , localFunction_(*this)
+    , localDerivative_(*this)
+    , localSecondDerivative_(*this)
   {}
 
   const Basis& basis() const
@@ -758,14 +780,13 @@ private:
   template<typename GridView>
   static double searchRadius(GridView& gridView)
   {
-//    typename GridView::template Codim<0>::Iterator element = gridView.begin();
     auto element = gridView.template begin<0>();
     auto geo = element->geometry();
     return (geo.center()-geo.corner(0)).two_norm()/2.;
   }
 
   static void moveLocalCoordinateToBoundary(Domain& localCoordinate)
-  {
+    {
     if (localCoordinate[0] < 0)
     {
       localCoordinate[0] = 0;
@@ -786,12 +807,13 @@ private:
     {
       localCoordinate[1] = 1.0-localCoordinate[0];
     }
-  }
+    }
 
-  auto findEntityAndLocalCoordinate(Domain x, Domain& localCoordinate) const
+  auto findEntityAndLocalCoordinate(Domain x, Domain& localCoordinate, bool& outside) const
   {
 
 //    auto x = x2;
+    outside = false;
     HierarchicSearch<typename GridView::Grid, typename GridView::IndexSet> hs(basis_->gridView().grid(), basis_->gridView().indexSet());
 
     try{
@@ -801,6 +823,7 @@ private:
     }
     catch(Dune::GridError e)
     {
+      outside = true;
       const double eps=searchRadius(basis_->gridView());
 
       auto xPertubed = x;
@@ -836,16 +859,111 @@ private:
     return hs.findEntity(x);
   }
 
-  // TODO: Implement this using hierarchic search
+/*
+  template<int k>
+  auto TaylorExpansion(const Element& element, const Domain& x, const Domain& localCoordinate) const{
+    if (k == 0)
+      return localFunction_(localCoordinate);
+
+    //evaluate Taylorpolynomial of first or second order
+    auto x0 = element.geometry().global(localCoordinate);
+    auto fx0 = localFunction_(localCoordinate);
+
+    localDerivative_.bind(element);
+    auto Dfx0 = localDerivative_(localCoordinate);
+
+    auto h = x-x0;
+
+    if (k == 1)
+      return fx0+(h*Dfx0);
+    static_assert(k <= 2, " Don't know any other taylor polynomial");
+
+    //evaluate Taylorpolynomial of second order
+    localSecondDerivative_.bind(element);
+    typename LocalSecondDerivative::Hessian D2fx0;
+    localSecondDerivative_.evaluateHess(localCoordinate, D2fx0);
+
+    Domain D2fx0TimesH;
+    D2fx0.mv(h,D2fx0TimesH);
+    return fx0+(h*Dfx0)+0.5*(h*D2fx0TimesH);
+  }
+*/
+
+  template<int l>
+  struct identity { enum{k=l}; };
+
+  template<int k>
+  auto TaylorExpansion(const Element& element, const Domain& x, const Domain& localCoordinate) const{
+    return TaylorExpansion(element, x, localCoordinate, identity<k>());
+  }
+
+  auto TaylorExpansion(const Element& element, const Domain& x, const Domain& localCoordinate, identity<0>) const{
+      return localFunction_(localCoordinate);
+  }
+  auto TaylorExpansion(const Element& element, const Domain& x, const Domain& localCoordinate, identity<1>) const{
+
+    //evaluate Taylorpolynomial of first or second order
+    auto x0 = element.geometry().global(localCoordinate);
+    auto fx0 = localFunction_(localCoordinate);
+
+    localDerivative_.bind(element);
+    auto Dfx0 = localDerivative_(localCoordinate);
+
+    auto h = x-x0;
+
+    return fx0+(h*Dfx0);
+  }
+  auto TaylorExpansion(const Element& element, const Domain& x, const Domain& localCoordinate, identity<2>) const{
+    //evaluate Taylorpolynomial of first or second order
+    auto x0 = element.geometry().global(localCoordinate);
+    auto fx0 = localFunction_(localCoordinate);
+
+    localDerivative_.bind(element);
+    auto Dfx0 = localDerivative_(localCoordinate);
+
+    auto h = x-x0;
+    //evaluate Taylorpolynomial of second order
+    localSecondDerivative_.bind(element);
+    typename LocalSecondDerivative::Hessian D2fx0;
+    localSecondDerivative_.evaluateHess(localCoordinate, D2fx0);
+
+    Domain D2fx0TimesH;
+    D2fx0.mv(h,D2fx0TimesH);
+    return fx0+(h*Dfx0)+0.5*(h*D2fx0TimesH);
+  }
+
+  auto TaylorExpansionDerivative(const Element& element, const Domain& x, const Domain& localCoordinate) const
+  {
+        //evaluate Taylorpolynomial of second order
+    auto x0 = element.geometry().global(localCoordinate);
+
+    localDerivative_.bind(element);
+    auto Dfx0 = localDerivative_(localCoordinate);
+
+    localSecondDerivative_.bind(element);
+    typename LocalSecondDerivative::Hessian D2fx0;
+    localSecondDerivative_.evaluateHess(localCoordinate, D2fx0);
+
+    auto h = x-x0;
+    Domain D2fx0TimesH;
+    D2fx0.mv(h,D2fx0TimesH);
+    return Dfx0+D2fx0TimesH;
+  }
+
+
   Range operator() (const Domain& x) const
   {
     bool outside = false;
 
     Domain localCoordinate;
-    const auto& element = findEntityAndLocalCoordinate(x, localCoordinate);
+    const auto& element = findEntityAndLocalCoordinate(x, localCoordinate, outside);
     localFunction_.bind(element);
 
-    return localFunction_(localCoordinate);
+    if (!outside)
+      return localFunction_(localCoordinate);
+
+    const int TaylorOrder = Basis::LocalView::Tree::FiniteElement::Traits::LocalBasisType::Traits::diffOrder;
+    return TaylorExpansion<TaylorOrder>(element, x, localCoordinate);
   }
 
   friend typename Traits::DerivativeInterface derivative(const MyDiscreteScalarGlobalBasisFunction& t)
@@ -885,6 +1003,8 @@ private:
   typename Basis::GlobalIndexSet indexSet_;
 
   mutable LocalFunction localFunction_;
+  mutable LocalFirstDerivative localDerivative_;
+  mutable LocalSecondDerivative localSecondDerivative_;
 };
 
 } // namespace Functions
