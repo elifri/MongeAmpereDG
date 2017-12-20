@@ -41,8 +41,13 @@ public:
   typedef FETraitsQ::FEBasis FEBasisQType;
 
   template<typename LOP>
-//  using Problem_MA_OT_Operator = MA_OT_Operator<ProblemSquareToSquareOperatorTraits<MA_OT_solver,LOP>>;
-  using Problem_MA_OT_Operator = MA_OT_Operator<ConstOneOperatorTraits<MA_OT_solver,LOP>>;
+#ifdef USE_ANALYTIC_JACOBIAN
+  using Problem_MA_OT_Operator = MA_OT_Operator_with_Linearisation<ConstOneOperatorTraits<MA_OT_solver,LOP>, Local_Operator_MA_OT_Linearisation>;
+#else
+  //  using Problem_MA_OT_Operator = MA_OT_Operator<ProblemSquareToSquareOperatorTraits<MA_OT_solver,LOP>>;
+//  using Problem_MA_OT_Operator = MA_OT_Operator<ConstOneOperatorTraits<MA_OT_solver,LOP>>;
+#endif
+
 
   //find correct operator
 #ifdef USE_C0_PENALTY

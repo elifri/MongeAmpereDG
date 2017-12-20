@@ -224,10 +224,11 @@ const typename MA_solver::VectorType& MA_solver::solve()
     iterations++;
     std::cerr << " solved nonlinear system" << std::endl;
 
+    /*
     update_solution(solution);
     plot("numericalSolution");
 
-/*    update_Operator();
+    update_Operator();
 
     solve_nonlinear_system();
     iterations++;

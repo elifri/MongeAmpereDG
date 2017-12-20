@@ -36,13 +36,14 @@ MA_OT_solver::MA_OT_solver(GridHandler<GridType>& gridHandler,
  assemblerLMBoundary_(FEBasisHandler_.FEBasis(),FEBasisHandlerQ_.FEBasis()),
  op(*this)
 {
+#ifdef DEBUG
   {
     std::stringstream filename;
     filename << get_output_directory() << "/"<< get_output_prefix() << "isBoundaryDof"<< iterations <<".m";
     std::ofstream file(filename.str(),std::ios::out);
     MATLAB_export(file, get_assembler().get_boundaryHandler().isBoundaryDoF(),"boundaryDofs");
   }
-
+#endif
   gridTarget_ptr->globalRefine(SolverConfig::startlevel);
 }
 
@@ -461,7 +462,6 @@ void MA_OT_solver::one_Poisson_Step()
 //  Config::SpaceType x0 = {0.5,-0.9};
 //  Config::SpaceType x0 = {-0.25,-0.25};
 //  Config::SpaceType x0 = {-0.25,0.25};
-  Config::ValueType a = 1.0;
 //  FieldMatrix<Config::ValueType, 2, 2> A = {{1.5,0},{0,1.5}};
   FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,2.5}};
 //  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,1}};
@@ -617,7 +617,7 @@ void MA_OT_solver::one_Poisson_Step()
     plotter.writeOTVTK(fname, localGradient);
   }
 
-#ifndef DEBUG
+#ifdef DEBUG
   {
     C0Traits::DiscreteSecondDerivativeGridFunction Hessian00 (globalSolution,std::array<int,2>({0,0}));
     C0Traits::DiscreteSecondDerivativeGridFunction Hessian11 (globalSolution,std::array<int,2>({1,1}));

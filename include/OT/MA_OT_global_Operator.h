@@ -64,9 +64,8 @@ struct ConstOneOperatorTraits{
 
 template<typename OperatorTraits>
 class MA_OT_Operator {
-  using GridView = typename OperatorTraits::SolverType::GridViewType;
-
 public:
+  using GridView = typename OperatorTraits::SolverType::GridViewType;
   using SolverType = typename OperatorTraits::SolverType;
   using LocalOperatorType = typename OperatorTraits::LocalOperatorType;
 
@@ -214,10 +213,7 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
 //    MA_OT_Operator(MA_OT_solver& solver):solver_ptr(&solver), lop_ptr(new Local_Operator_MA_OT(new BoundarySquare(solver.gradient_u_old, solver.get_setting()), new rhoXSquareToSquare(), new rhoYSquareToSquare())){}
     // lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
   MA_OT_Operator_with_Linearisation(SolverType& solver):MA_OT_Operator<OperatorTraits>(solver),
-        lopLinear_ptr(new LOPLinear
-            (new BoundarySquare(solver.gradient_u_old,solver.get_setting()),
-                new rhoXSquareToSquare(), new rhoYSquareToSquare(),
-                solver.gridView()))
+        lopLinear_ptr(new LOPLinear(*(this->boundary_), this->f_, this->g_))
     {
     this->init();
     }
@@ -236,34 +232,28 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
     }
 
 
-  void assemble(const Config::VectorType& x, Config::VectorType& v) const
+  void assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const
   {
-    (this->solver_ptr)->assembler_.assemble_DG_Only(*lopLinear_ptr, x,v);
+    assert(x.size()==this->solver_ptr->get_n_dofs_V_h());
+    assert(v.size()==this->solver_ptr->get_n_dofs_V_h());
+    assert(false);
+    std::exit(-1);
+
+//    (this->solver_ptr)->assembler_.assemble_DG_Only(*lopLinear_ptr, x,v);
   }
-  void assemble_with_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+  void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
   {
+    assert(x.size()==this->solver_ptr->get_n_dofs_V_h());
+    assert(v.size()==this->solver_ptr->get_n_dofs_V_h());
+    assert(m.rows()==this->solver_ptr->get_n_dofs_V_h());
+    assert(m.cols()==this->solver_ptr->get_n_dofs_V_h());
+
     (this->solver_ptr)->assembler_.assemble_DG_Jacobian(*(this->lop_ptr), *lopLinear_ptr, x,v, m);
   }
-  void assemble_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
+  void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
   {
     assert(false);
 //    this->solver_ptr->assemble_Jacobian_DG(*(this->lop_ptr), *lopLinear_ptr, x,m);
-  }
-
-  const auto& get_bc() const
-  {
-    return lopLinear_ptr->bc;
-  }
-
-
-  void clear_local_entity_data()
-  {
-    lopLinear_ptr->clear_entitities_for_unifikation_term();
-  }
-
-  void insert_entities_for_unification_term_to_local_operator(Config::Entity fixingElement, int n)
-  {
-    lopLinear_ptr->insert_entitity_for_unifikation_term(fixingElement, n);
   }
 
     std::shared_ptr<LocalOperatorType> lopLinear_ptr;
@@ -447,6 +437,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(Config::
   //copy SparseMatrix todo move to EigenUtility
   std::vector< Eigen::Triplet<double> > tripletList;
   copy_to_new_sparse_matrix(tempM, m);
+#ifdef DEBUG
   {
     std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "BF" << intermediateSolCounter << ".m";      \
     std::ofstream file(filename.str(),std::ios::out);
@@ -462,6 +453,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(Config::
     std::ofstream file(filename.str(),std::ios::out);
     MATLAB_export(file, tempV, "l_v");
   }
+#endif
   std::cerr << "  l(v) with norm " << std::scientific << std::setprecision(3) << tempV.norm() << std::endl;//<< "  : " << tempV.transpose() << std::endl;
 
   //assemble part of first lagrangian multiplier for fixing midvalue
@@ -489,11 +481,13 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(Config::
   std::cerr << " u_0 - u = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation) << " = " << assembler.u0AtX0() << '-'  <<assembler.uAtX0() << std::endl;
   v(indexFixingGridEquation) += lagrangianFixingPointDiscreteOperator.dot(w);
 
+#ifdef DEBUG
   {
     std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "Bm" << intermediateSolCounter << ".m";
     std::ofstream file(filename.str(),std::ios::out);
     MATLAB_export(file, lagrangianFixingPointDiscreteOperator, "Bm");
   }
+#endif
 
   //assemble part of second lagrangian multiplier for fixing boundary
   tempM.resize(Q_h_size, V_h_size);
@@ -520,6 +514,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(Config::
   copy_sparse_to_sparse_matrix(tempM.transpose(), m, 0, V_h_size+1);
   assert(V_h_size+1+Q_h_size==m.rows());
   v.tail(Q_h_size) = tempV;
+#ifdef DEBUG
   {
     std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "Bboundary" << intermediateSolCounter << ".m";
     std::ofstream file(filename.str(),std::ios::out);
@@ -532,6 +527,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(Config::
     MATLAB_export(file, tempV, "Lboundary");
     std::cerr << " matlab file written to " << filename.str() << std::endl;
   }
+#endif
   std::cerr << " l_H(q) with norm " << std::scientific << std::setprecision(3)<< tempV.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
 
   std::cerr << " l with norm " << std::scientific << std::setprecision(3)<< v.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
@@ -549,7 +545,7 @@ void MA_OT_Operator<OperatorTraits>::evaluate(Config::VectorType& x, Config::Vec
   assemble_with_langrangian_Jacobian(xBoundary,x,v, m);
 
   for (int i = 0; i < v.size(); i++)  assert ( ! (v(i) != v(i)));
-
+#ifdef DEBUG
   {
     std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "BF" << intermediateSolCounter << ".m";      \
     std::ofstream file(filename.str(),std::ios::out);
@@ -559,7 +555,7 @@ void MA_OT_Operator<OperatorTraits>::evaluate(Config::VectorType& x, Config::Vec
     std::ofstream file2(filename2.str(),std::ios::out);
     MATLAB_export(file2, v, "v");
   }
-
+#endif
   //output
   auto end = std::chrono::steady_clock::now();
   std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
