@@ -78,6 +78,10 @@ void newtonMethod(
       //      make_FD_Jacobian(functor, x, J);
           }
 
+          std::cerr << "  newton residual is " << std::scientific << std::setprecision(3) << f.norm()
+                    << std::scientific << std::setprecision(3) << "   omega   " << omega
+                    << std::endl;
+          //init data
           if (i == 0 && j == 0)
           {
             lu_of_Df.analyzePattern(Df);
@@ -110,6 +114,9 @@ void newtonMethod(
                  std::cout << " dissmiss Newton-step ";
                  std::cout << std::scientific << std::setprecision(3) << "   ||F||2 was "  << f.norm() <<
                  " decreased omega to " << omega << std::endl;
+                 std::cerr  << " dissmissed Newton step   newton residual was " << f.norm()
+                    << "  would have been     boundary-step     "
+                    << std::scientific << std::setprecision(3) << omega*s.norm()<< std::endl;
               }
               continue;
             }
@@ -118,12 +125,17 @@ void newtonMethod(
           if (f.norm() < lastResidual && omega < 1.0)
           {
             Config::VectorType xNew = xBoundary-omega*lastUpdate;
-            auto tempfNorm = f.norm();
+//            auto tempfNorm = f.norm();
             Config::VectorType tempf(n);
             Eigen::SparseMatrix<double> tempDf(n,n);
 
             functor.evaluate(xNew,tempf,tempDf, xBoundary, true);
 
+            std::cerr << " tried to increase omega "
+                   << "  newton residual was " << tempf.norm()
+                   << "  would have been     boundary-step     "
+                   << std::scientific << std::setprecision(3) << 2*omega*lastUpdate.norm()
+                    << std::scientific << std::setprecision(3) << "   omega   " << 2*omega << std::endl;
             if (tempf.norm() < f.norm())
             {
               omega*= 2;
@@ -176,7 +188,6 @@ void newtonMethod(
           //perform newton step
           xBoundary-=omega*s;
 
-          std::cerr << "  newton residual is " << std::scientific << std::setprecision(3) << f.norm();
 
           std::cerr << std::endl << std::endl;
 
@@ -184,7 +195,6 @@ void newtonMethod(
           {
             std::cerr << "     boundary-step     "
                 << std::scientific << std::setprecision(3) << omega*s.norm()
-                << std::scientific << std::setprecision(3) << "   omega   " << omega
                 << std::endl << "       ";
             std::cout << "   " << std::setw(6) << i;
             std::cout << "     boundary-step     ";
