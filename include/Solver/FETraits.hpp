@@ -230,8 +230,8 @@ struct isC1<PS12SplitTraits<GridView>>{
   static const bool value = true;
 };
 
-template <typename GridView, int degree>
-struct isC1<BSplineTraits<GridView, degree>>{
+template <typename GridView>
+struct isC1<BSplineTraits<GridView, 0>>{
   static const bool value = true;
 };
 
