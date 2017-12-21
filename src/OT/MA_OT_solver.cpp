@@ -903,6 +903,26 @@ void MA_OT_solver::adapt_solution(const int level)
   std::cerr << " going to adapt operator " << std::endl;
 
   adapt_operator();
+
+
+  {
+    Config::SpaceType x0 = {0.0,0.0};
+
+    FieldMatrix<Config::ValueType, 2, 2> A = {{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}}; //exactsolution
+//    FieldMatrix<Config::ValueType, 2, 2> B = {{.385576911206371,.174131508286748},{0.174131508286748,.970161260454739}}; //exactsolution
+
+//    auto u0 = [&](Config::SpaceType x){
+//      auto y=x0;B.umv(x,y);
+//      return (x*y);};
+    auto y0 = [&](Config::SpaceType x){
+      auto y=x0;A.umv(x,y);
+      return y;};
+
+    std::string fname(plotter.get_output_directory());
+    fname += "/"+ plotter.get_output_prefix()+ "exactSol.vtu";
+    plotter.writeOTVTKGlobal(fname, y0);
+  }
+
 }
 
 
