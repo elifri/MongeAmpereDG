@@ -22,3 +22,4 @@ target_link_dune_default_libraries("testlocalBezier")
 add_executable("testFunctionPlot" testFunctionPlot.cpp)
 target_link_libraries(testFunctionPlot ${SolverLibs} ${SNES_LIBRARY} Solver_Config utils)
 target_link_dune_default_libraries("testFunctionPlot")
+
