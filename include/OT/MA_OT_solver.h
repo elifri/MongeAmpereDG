@@ -12,8 +12,11 @@
 #include "Solver/MA_solver.h"
 
 #include "Solver/AssemblerLagrangian1d.h"
-#include "Solver/AssemblerLagrangian.h"
-#include "Solver/AssemblerLagrangianBoundary.h"
+#ifdef USE_COARSE_Q_H
+  #include "Solver/AssemblerLagrangian.h"
+#else
+  #include "Solver/AssemblerLagrangianBoundary.h"
+#endif
 
 #include "MA_OT_global_Operator.h"
 #include "Operator/GlobalOperatorManufactorSolution.h"
@@ -25,6 +28,7 @@
     #include "operator_MA_OT_Neilan.h"
   #else
     #include "operator_MA_OT.h"
+    #include "operator_MA_OT_Linearisation.hpp"
   #endif
 #endif
 
@@ -36,14 +40,23 @@ public:
   typedef SolverConfig::FETraitsSolverQ FETraitsQ;
   typedef FETraitsQ::FEBasis FEBasisQType;
 
+  template<typename LOP>
+#ifdef USE_ANALYTIC_JACOBIAN
+  using Problem_MA_OT_Operator = MA_OT_Operator_with_Linearisation<ConstOneOperatorTraits<MA_OT_solver,LOP>, Local_Operator_MA_OT_Linearisation>;
+#else
+  //  using Problem_MA_OT_Operator = MA_OT_Operator<ProblemSquareToSquareOperatorTraits<MA_OT_solver,LOP>>;
+//  using Problem_MA_OT_Operator = MA_OT_Operator<ConstOneOperatorTraits<MA_OT_solver,LOP>>;
+#endif
+
+
   //find correct operator
 #ifdef USE_C0_PENALTY
-  using GlobalMA_OT_Operator =  MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Brenner>;
+  using GlobalMA_OT_Operator =  Problem_MA_OT_Operator<Local_Operator_MA_OT_Brenner>;
 #else
   #ifdef USE_MIXED_ELEMENT
-  using GlobalMA_OT_Operator = MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT_Neilan>;
+  using GlobalMA_OT_Operator = Problem_MA_OT_Operator<Local_Operator_MA_OT_Neilan>;
   #else
-    using GlobalMA_OT_Operator = MA_OT_Operator<MA_OT_solver, Local_Operator_MA_OT>;
+    using GlobalMA_OT_Operator = Problem_MA_OT_Operator<Local_Operator_MA_OT>;
 //todo C1 is not for nonimage
     //    typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
   #endif
@@ -55,9 +68,20 @@ public:
     using OperatorType = GlobalMA_OT_Operator;
 #endif
 
+#ifdef USE_COARSE_Q_H
+  using AssemblerLagrangianMultiplierBoundaryType = AssemblerLagrangianMultiplierCoarse;
+#else
+  using AssemblerLagrangianMultiplierBoundaryType = AssemblerLagrangianMultiplierBoundary;
+#endif
 
-  MA_OT_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, GeometrySetting& setting);
+
+  MA_OT_solver(GridHandler<GridType>& gridHandler,
+      const shared_ptr<GridType>& gridTarget,
+      const SolverConfig& config, GeometrySetting& setting);
+
 private:
+  ///performs one step of the semi-implicit method mentioned in "Two numerical methods for ..." by Benamou, Froese and Oberman
+  void one_Poisson_Step();
   ///creates the initial guess
   virtual void create_initial_guess();
 //  void update_Operator();
@@ -67,6 +91,10 @@ private:
   void init_lagrangian_values(VectorType& v) const;
 
 public:
+#ifdef USE_MIXED_ELEMENT
+  virtual int get_n_dofs_u() const{return FEBasisHandler_.uBasis().indexSet().size();}
+  virtual int get_n_dofs_u_DH() const{return Config::dim*Config::dim*FEBasisHandler_.uDHBasis().indexSet().size();}
+#endif
   virtual int get_n_dofs_V_h() const{return FEBasisHandler_.FEBasis().indexSet().size();}
   virtual int get_n_dofs_Q_h() const{return get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();}
   virtual int get_n_dofs() const{return get_n_dofs_V_h() + 1 + get_n_dofs_Q_h();}
@@ -83,17 +111,22 @@ public:
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
   virtual void plot(const std::string& filename) const;
   virtual void plot(const std::string& filename, int no) const;
+
 public:
 
   using MA_solver::adapt;
+  using MA_solver::adapt_solution;
 
   GeometrySetting& get_setting() {return setting_;}
   const GeometrySetting& get_setting() const {return setting_;}
 
-  const AssemblerLagrangianMultiplier1D& get_assembler_lagrangian_midvalue() const { return assemblerLM1D_;}
+  const auto& get_gridTarget() const {return *gridTarget_ptr;}
+  const auto& get_gridTarget_ptr() const {return gridTarget_ptr;}
+
+  const AssemblerLagrangianMultiplier1D<>& get_assembler_lagrangian_midvalue() const { return assemblerLM1D_;}
 //  const AssemblerLagrangianMultiplierCoarse& get_assembler_lagrangian_boundary() const { return assemblerLMCoarse_;}
-  AssemblerLagrangianMultiplierBoundary& get_assembler_lagrangian_boundary() { return assemblerLMBoundary_;}
-  const AssemblerLagrangianMultiplierBoundary& get_assembler_lagrangian_boundary() const { return assemblerLMBoundary_;}
+  AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() { return assemblerLMBoundary_;}
+  const AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() const { return assemblerLMBoundary_;}
 
   template<typename FGrad>
   Config::ValueType calculate_L2_errorOT(const FGrad &f) const;
@@ -105,13 +138,14 @@ public:
 protected:
   GeometrySetting& setting_;
 
+  const shared_ptr<GridType> gridTarget_ptr;
+
   ///FEBasis for Lagrangian Multiplier for Boundary
   FEBasisHandler<FETraitsQ::Type, FETraitsQ> FEBasisHandlerQ_;
 
   //assembler for lagrangian multiplier
-  AssemblerLagrangianMultiplier1D assemblerLM1D_;
-//  AssemblerLagrangianMultiplierCoarse assemblerLMCoarse_;
-  AssemblerLagrangianMultiplierBoundary assemblerLMBoundary_;
+  AssemblerLagrangianMultiplier1D<> assemblerLM1D_;
+  AssemblerLagrangianMultiplierBoundaryType assemblerLMBoundary_;
 
   OperatorType op;
 
@@ -148,7 +182,7 @@ Config::ValueType MA_OT_solver::calculate_L2_error(const F &f) const
 {
   Config::ValueType res = 0, max_error = 0;
 
-  for(auto&& e: elements(*gridView_ptr))
+  for(auto&& e: elements(gridView()))
   {
     auto geometry = e.geometry();
 
@@ -193,7 +227,7 @@ Config::ValueType MA_OT_solver::calculate_L2_errorOT(const FGrad &f) const
 {
   Config::ValueType res = 0, max_error = 0;
 
-  for(auto&& e: elements(*gridView_ptr))
+  for(auto&& e: elements(gridView()))
   {
     auto geometry = e.geometry();
 

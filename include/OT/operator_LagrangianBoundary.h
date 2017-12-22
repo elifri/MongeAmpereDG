@@ -9,7 +9,7 @@
 #define INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARY_H_
 
 #include "OT/problem_data_OT.h"
-#include "OT/operator_utils.h"
+#include "Operator/operator_utils.h"
 
 class Local_Operator_LagrangianBoundary{
 public:
@@ -94,8 +94,8 @@ public:
 //      std::cerr << " normal old " << normalOld << std::endl;
 
       //-------calculate integral--------
-      auto signedDistance = bc.H(gradu, normal);
-      auto signedDistanceDerivative = bc.derivativeH(gradu,normal);
+      auto signedDistance = bc.H(gradu);
+      auto signedDistanceDerivative = bc.derivativeH(gradu);
 //      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
 
       const auto integrationElement =

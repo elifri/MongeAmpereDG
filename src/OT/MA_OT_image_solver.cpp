@@ -16,10 +16,10 @@
 
 
 #include "IO/imageOT.hpp"
-#include "IO/hdf5Export.hpp"
+//#include "IO/hdf5Export.hpp"
 
 #include "Operator/linear_system_operator_poisson_NeumannBC.h"
-#include "OT/operator_utils.h"
+#include "Operator/operator_utils.h"
 #include "OT/SmoothingKernel.h"
 
 using namespace std;
@@ -301,7 +301,7 @@ void MA_OT_image_solver::one_Poisson_Step()
   Config::SpaceType x0 = {0.0,0.0};
 //  Config::SpaceType x0 = {0.5,0.5};
 
-  Integrator<Config::GridType> integrator(grid_ptr);
+  Integrator<Config::DuneGridType> integrator(grid_ptr);
   auto k = 1.0;
   auto rhs = [&](Config::SpaceType x){return -k*std::sqrt(op_image.f_(x)/op_image.g_(x-x0));};
 #ifdef USE_ANALYTIC_JACOBIAN
@@ -390,10 +390,10 @@ void MA_OT_image_solver::plot(const std::string& name) const
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
      //build gridviewfunction
-    Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(),solution_u);
+    FETraitsSolver::DiscreteGridFunction numericalSolution(FEBasisHandler_.uBasis(),solution_u);
     decltype(numericalSolution)::LocalFunction localnumericalSolution(numericalSolution);
      //build writer
-     SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
+     SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
 
      //add solution data
      vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
@@ -430,14 +430,16 @@ void MA_OT_image_solver::plot(const std::string& name) const
 
   plotter.writeOTVTK(fname, *gradient_u_old);
 
+
   std::string fnameOT(plotter.get_output_directory());
   fnameOT += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "transported.bmp";
 
   DiscreteGridFunction::GlobalFirstDerivative numericalTransportFunction(*solution_u_old_global);
   Dune::array<int,2> direction = {0,0};
   DiscreteGridFunction::GlobalSecondDerivative numericalTransportJacobianFunction(*solution_u_old_global, direction);
+
   /*
-  print_image_OT(numericalTransportFunction, numericalTransportJacobianFunction,
+      print_image_OT(numericalTransportFunction, numericalTransportJacobianFunction,
       op.f_, op.g_,
       fnameOT, op.g_.getOriginalImage().width(), op.g_.getOriginalImage().height());
 */
@@ -446,16 +448,16 @@ void MA_OT_image_solver::plot(const std::string& name) const
   std::string fnamehdf5(plotter.get_output_directory());
   fnamehdf5 += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations);
 
-  savehdf5Outputgrid(*gridView_ptr, setting_.lowerLeft, setting_.upperRight, plotterRefinement_, fnamehdf5, numericalTransportFunction.localFunction());
+  savehdf5Outputgrid(gridView(), setting_.lowerLeft, setting_.upperRight, plotterRefinement_, fnamehdf5, numericalTransportFunction.localFunction());
 
   std::cout << " saved hdf5 file to " << fnamehdf5 << std::endl;
 
 /*
   //write exact solution
   project([](Config::SpaceType x){return x[0]*x[1]+std::sin(M_PI*x[0])*std::sin(M_PI*x[1]);}, exactsol);
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalExactSolution(FEBasisHandler_.uBasis(),exactsol);
+  FETraitsSolver::DiscreteGridFunction numericalExactSolution(FEBasisHandler_.uBasis(),exactsol);
   decltype(numericalExactSolution)::LocalFunction localnumericalSolution(numericalExactSolution);
-  SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
+  SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
   vtkWriter.addVertexData(numericalExactSolution, VTK::FieldInfo("exact solution", VTK::FieldInfo::Type::scalar, 1));
   //write to file
   std::string fnameExact(plotter.get_output_directory());
@@ -469,7 +471,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
   std::string fnameConvection(plotter.get_output_directory());
   fnameConvection += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "Convection.vtu";
 
-  SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,1);
+  SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),1);
   vtkWriter.addVertexData(convectionNorm, VTK::FieldInfo("ConvectionNorm", VTK::FieldInfo::Type::scalar, 1));
 
   TargetFunction interpolatedTargetFunction(gradient_u_old, op);
@@ -498,7 +500,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
   std::string fnameGradient(plotter.get_output_directory());
   fnameGradient += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "Gradient.vtu";
   convectionNorm.variant_ = ConvectionFunction::OnlyGradientNorm;
-  SubsamplingVTKWriter<GridViewType> vtkWriter3(*gridView_ptr,1);
+  SubsamplingVTKWriter<GridViewType> vtkWriter3(gridView(),1);
   vtkWriter3.addVertexData(convectionNorm, VTK::FieldInfo("GradientNorm", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter3.write(fnameGradient);
   std::cout << " wrote Gradient Norm to " << fnameGradient << std::endl;
@@ -511,7 +513,7 @@ void MA_OT_image_solver::plot(const std::string& name) const
   interpolatedTargetFunction.target_old = true;
   convectionNorm.variant_ = ConvectionFunction::Averaged;
 
-  SubsamplingVTKWriter<GridViewType> vtkWriter2(*gridView_ptr,3);
+  SubsamplingVTKWriter<GridViewType> vtkWriter2(gridView(),3);
   vtkWriter2.addVertexData(convectionNorm, VTK::FieldInfo("ConvectionNorm", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter2.addVertexData(interpolatedTargetFunction, VTK::FieldInfo("interpolTarget", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter2.write(fnameConvectionOld);
@@ -520,12 +522,19 @@ void MA_OT_image_solver::plot(const std::string& name) const
 */
 
 /*
-  SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
+  SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),2);
   vtkWriter.addVertexData(interpolatedTargetFunction, VTK::FieldInfo("interpolTarget", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter.write(fnameTarget);
 */
 
 
+}
+
+void MA_OT_image_solver::adapt_solution(const int level)
+{
+  MA_OT_solver::adapt_solution(level);
+  std::cerr << " adapting operator " << std::endl;
+  op.adapt();
 }
 
 void MA_OT_image_solver::update_Operator()

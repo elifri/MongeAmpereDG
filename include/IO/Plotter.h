@@ -30,12 +30,12 @@ class MA_solver;
 
 #ifndef BSPLINES
 typedef StaticRefinement<GenericGeometry::SimplexTopology<2>::type::id,
-        Config::GridType::ctype,
+        Config::DuneGridType::ctype,
         GenericGeometry::SimplexTopology<2>::type::id,
         2> PlotRefinementType;
 #else
 typedef StaticRefinement<GenericGeometry::CubeTopology<2>::type::id,
-        Config::GridType::ctype,
+        Config::DuneGridType::ctype,
         GenericGeometry::CubeTopology<2>::type::id,
         2> PlotRefinementType;
 #endif
@@ -43,7 +43,7 @@ typedef StaticRefinement<GenericGeometry::CubeTopology<2>::type::id,
 
 class Plotter{
 private:
-	const Config::GridView* grid;
+	Config::GridView& grid;
 	PlotRefinementType refined_grid;
 
 	int refinement; ///choose the refinement level before plotting
@@ -56,15 +56,15 @@ private:
 	int Nnodes() const
 	{
 	  if (refinement == 0)
-	    return grid->size(Config::dim);
-	  return grid->size(0)*PlotRefinementType::nVertices(refinement);
+	    return grid.size(Config::dim);
+	  return grid.size(0)*PlotRefinementType::nVertices(refinement);
 	}
 
 
 public:
 	typedef Eigen::Matrix<SolverConfig::RangeType, Eigen::Dynamic, 1> PointdataVectorType;
 
-	Plotter(const Config::GridView& gridView):grid(&gridView) {};
+	Plotter(Config::GridView& gridView):grid(gridView) {}
 
 	std::string output_directory, output_prefix;
 
@@ -75,6 +75,8 @@ public:
 	  for (auto& stream : plot_streams)
 	    delete stream.second;
 	}
+
+	void update_gridView(const Config::GridView& gridView) {grid = gridView;}
 
 	//helper for vtk parts
 
@@ -95,7 +97,11 @@ public:
   template <class Function>
   void write_points_refractor(std::ofstream &file, Function &f) const;
 
-	///writes the transported point array to file (transport is given by gradient)
+  ///writes the transported point array to file (transport is given by global gradient fg)
+  template <class Function>
+  void write_points_OT_global(std::ofstream &file, Function &fg) const;
+
+	///writes the transported point array to file (transport is given by local gradient fg)
 	template <class LocalFunction>
 	void write_points_OT(std::ofstream &file, LocalFunction &fg) const;
 
@@ -146,6 +152,9 @@ public:
 	template <class LocalFunction, class Function>
 	void writeReflectorVTK(std::string filename, LocalFunction &f, Function& exact_solution) const;
 
+	template <class GlobalFunction>
+	void writeOTVTKGlobal(std::string filename, GlobalFunction &f) const;
+
   template <class LocalFunction>
   void writeOTVTK(std::string filename, LocalFunction &f) const;
 
@@ -160,7 +169,6 @@ public:
   void save_BSplineCoeffs(const BSplineNodeFactoryType &bSplineNodeFactory, const Config::VectorType& coeffs, std::ofstream &of) const;
 
 
-	void set_grid(Config::GridView* grid){	this->grid = grid;}
 	void set_refinement(const int refinement){	this->refinement = refinement;}
 	void set_output_directory(std::string outputdir) {this->output_directory = outputdir;}
 	void set_output_prefix(std::string prefix) {this->output_prefix = prefix;}
@@ -276,6 +284,27 @@ void Plotter::writeReflectorVTK(std::string filename, LocalFunction &f, Function
   }
 }
 
+template <class GlobalFunction>
+void Plotter::writeOTVTKGlobal(std::string filename, GlobalFunction &f) const {
+  //--------------------------------------
+  // open file
+    check_file_extension(filename, ".vtu");
+    std::ofstream file(filename.c_str(), std::ios::out);
+    if (file.rdstate()) {
+      std::cerr << "Error: Couldn't open '" << filename << "'!\n";
+      return;
+    }
+
+    //write file
+    write_vtk_header(file);
+
+    write_points_OT_global(file, f);
+    write_cells(file);
+
+    write_vtk_end(file);
+
+}
+
 template <class LocalFunction>
 void Plotter::writeOTVTK(std::string filename, LocalFunction &f) const {
   //--------------------------------------
@@ -344,7 +373,7 @@ void Plotter::write_points_reflector(std::ofstream &file, Function &f) const{
     {
       // collect points
 /*
-      for (auto&& vertex: vertices(*grid)) {
+      for (auto&& vertex: vertices(grid)) {
         auto x_2d = vertex.geometry().center();
         auto rho = 1.0/solution_vertex[vertex_no];
         file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  Local_Operator_MA_refl_Neilan::omega(x_2d)*rho << endl;
@@ -353,7 +382,7 @@ void Plotter::write_points_reflector(std::ofstream &file, Function &f) const{
 */
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(*grid))
+      for (auto&& element: elements(grid))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -384,7 +413,7 @@ void Plotter::write_points_refractor(std::ofstream &file, Function &f) const{
     {
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(*grid))
+      for (auto&& element: elements(grid))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -404,6 +433,31 @@ void Plotter::write_points_refractor(std::ofstream &file, Function &f) const{
 void evaluateRhoX (const Config::DomainType &x, Config::ValueType &u);
 
 template <class Function>
+void Plotter::write_points_OT_global(std::ofstream &file, Function &fg) const{
+  // write points
+    file << "\t\t\t<Points>\n"
+      << "\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\""
+      << "ascii" << "\">\n";
+
+    int vertex_no = 0;
+
+    {   // save points in file after refinement
+      for (auto&& element: elements(grid))
+      {
+        for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
+          auto transportedX = fg(element.geometry().global(it.coords()));
+          file << std::setprecision(12) << std::scientific;
+          file << "\t\t\t\t\t" << transportedX[0] << " " << transportedX[1] << " 0" << std::endl;
+          vertex_no++;
+//          std::cerr << " transported " << element.geometry().global(it.coords()) << " to " << transportedX << std::endl;
+        }
+      }
+    }
+  file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
+}
+
+
+template <class Function>
 void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
   // write points
     file << "\t\t\t<Points>\n"
@@ -413,7 +467,7 @@ void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
     int vertex_no = 0;
 
     {   // save points in file after refinement
-      for (auto&& element: elements(*grid))
+      for (auto&& element: elements(grid))
       {
         fg.bind(element);
         for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
@@ -443,7 +497,7 @@ void Plotter::write_error(std::ofstream &file, LocalFunction &f, Function &exact
       // collect points
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(*grid))
+      for (auto&& element: elements(grid))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -473,7 +527,7 @@ void Plotter::write_error_OT(std::ofstream &file, LocalFunction &f, const Functi
       // collect points
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(*grid))
+      for (auto&& element: elements(grid))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -489,6 +543,7 @@ void Plotter::write_error_OT(std::ofstream &file, LocalFunction &f, const Functi
   file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
 }
 
+
 template <class LocalFunction>
 void Plotter::write_transport_OT(std::ofstream &file, LocalFunction &f) const{
   // write points
@@ -497,7 +552,7 @@ void Plotter::write_transport_OT(std::ofstream &file, LocalFunction &f) const{
       << "ascii" << "\">\n";
 
     {   // save points in file after refinement
-      for (auto&& element: elements(*grid))
+      for (auto&& element: elements(grid))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -527,7 +582,7 @@ void Plotter::write_points_reflector_pov(std::ofstream &file, Function & f) cons
     if (refinement == 0)
     {
       // collect points
-      /*for (auto&& vertex: vertices(*grid)) {
+      /*for (auto&& vertex: vertices(grid)) {
         auto x_2d = vertex.geometry().center();
         f.bind(vertex. );
         auto rho = 1.0/f(x_2d);
@@ -536,7 +591,7 @@ void Plotter::write_points_reflector_pov(std::ofstream &file, Function & f) cons
       }*/
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(*grid))
+      for (auto&& element: elements(grid))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -565,7 +620,7 @@ void Plotter::write_points_refractor_pov(std::ofstream &file, Function & f) cons
     if (refinement == 0)
     {
       // collect points
-      /*for (auto&& vertex: vertices(*grid)) {
+      /*for (auto&& vertex: vertices(grid)) {
         auto x_2d = vertex.geometry().center();
         f.bind(vertex. );
         auto rho = 1.0/f(x_2d);
@@ -574,7 +629,7 @@ void Plotter::write_points_refractor_pov(std::ofstream &file, Function & f) cons
       }*/
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(*grid))
+      for (auto&& element: elements(grid))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -733,14 +788,14 @@ template<typename Functiontype>
 void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Config::SpaceType& upperRight,
                                     Functiontype &f, std::ofstream &of) const
 {
-  static_assert(std::is_same<Config::GridType,Dune::YaspGrid<2, EquidistantOffsetCoordinates<double,2> > >::value, "saving in rectangular mesh format works only for yaspgrids so far!");
+  static_assert(std::is_same<Config::DuneGridType,Dune::YaspGrid<2, EquidistantOffsetCoordinates<double,2> > >::value, "saving in rectangular mesh format works only for yaspgrids so far!");
 
   //get information
   const double l_x = upperRight[0] - lowerLeft[0];
   const double l_y = upperRight[1] - lowerLeft[1];
 
-  int n_x = std::sqrt(grid->size(0)*l_x/l_y);
-  int n_y = grid->size(0)/n_x;
+  int n_x = std::sqrt(grid.size(0)*l_x/l_y);
+  int n_y = grid.size(0)/n_x;
 
   n_x <<= refinement;
   n_y <<= refinement;
@@ -753,7 +808,7 @@ void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Co
   //evaluate at mesh points and save to matrix
   Eigen::MatrixXd solution_values(n_x,n_y);
 
-  for (auto&& element: elements(*grid))
+  for (auto&& element: elements(grid))
   {
     f.bind(element);
     for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++){
@@ -790,7 +845,7 @@ void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Co
 template<typename BSplineNodeFactoryType>
 void Plotter::save_BSplineCoeffs(const BSplineNodeFactoryType &bSplineNodeFactory, const Config::VectorType& coeffs, std::ofstream &of) const
 {
-  static_assert(std::is_same<Config::GridType,Dune::YaspGrid<2, EquidistantOffsetCoordinates<double,2> > >::value, "saving Bspline coefficients works only for yaspgrids so far!");
+  static_assert(std::is_same<Config::DuneGridType,Dune::YaspGrid<2, EquidistantOffsetCoordinates<double,2> > >::value, "saving Bspline coefficients works only for yaspgrids so far!");
   assert(bSplineNodeFactory.order_[0]==bSplineNodeFactory.order_[1]);
 
   of << "#Bpline of order " << bSplineNodeFactory.order_[0];

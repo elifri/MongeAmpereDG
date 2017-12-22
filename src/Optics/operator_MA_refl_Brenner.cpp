@@ -5,7 +5,7 @@
  *      Author: friebel
  */
 
-#include "operator_MA_refl_Brenner.h"
+#include "Optics/operator_MA_refl_Brenner.h"
 
 constexpr int Local_Operator_MA_refl_Brenner::collocationNo[3][3];
 

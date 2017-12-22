@@ -9,8 +9,8 @@
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
 #include <dune/localfunctions/c1/PowellSabin/PowellSabin12quadraturerule.hh>
 
-#include "PowellSabin12SSplinenodalbasis.hh"
-#include "PS12SSplineFiniteElementCache.hh"
+#include "localfunctions/PowellSabin12Split/PowellSabin12SSplinenodalbasis.hh"
+#include "localfunctions/PowellSabin12Split/PS12SSplineFiniteElementCache.hh"
 
 #include <Eigen/Sparse>
 

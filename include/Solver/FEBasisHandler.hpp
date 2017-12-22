@@ -59,6 +59,9 @@ struct FEBasisHandler{
   void adapt(MA_solver& ma_solver, const int level, Config::VectorType& v)
   {assert(false && " Error, dont know FE basis"); exit(-1);}
 
+  void adapt(std::shared_ptr<Config::DuneGridType> oldGrid, Config::GridView gridView, const Config::VectorType& v_old, Config::VectorType& v)
+  {assert(false && " Error, dont know FE basis"); exit(-1);}
+
   Config::VectorType coarse_solution(MA_solver& solver, const int level)
   {assert(false && " Error, dont know FE basis"); exit(-1);}
 
@@ -138,6 +141,7 @@ struct FEBasisHandler<Mixed, FT>{
 
   const FEBasisType& FEBasis() const{ return *FEBasis_;}
   const FEuBasisType& uBasis() const{ return *uBasis_;}
+  const FEuDHBasisType& uDHBasis() const{ return *uDHBasis_;}
 };
 
 template<>
@@ -152,26 +156,8 @@ template<>
 void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degree>>::bind(const MA_solver& solver, const Config::GridView& gridView);
 
 template <>
-void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
-
-template <>
-void FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, SolverConfig::degree>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
-template <>
-void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degree>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
-template <>
-void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig::degree>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
-
-template <>
-void FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::adapt(MA_solver& solver, const int level, Config::VectorType& v);
-
-template <>
 template <>
 Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>>::adapt_after_grid_change(const typename FEBasisType::GridView& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v);
-
-
-template <>
-template <>
-Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt_function_after_grid_change(const typename Config::LevelGridView& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const;
 
 template <>
 template <>
@@ -252,7 +238,7 @@ void FEBasisHandler<Standard, BSplineTraits<Config::GridView, SolverConfig::degr
       }
     }
 
-    Assembler::set_local_coefficients<FiniteElementTraits>(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
+    Assembler<FiniteElementTraits>::set_local_coefficients(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
   }
 }
 
@@ -309,7 +295,7 @@ void FEBasisHandler<Standard, BSplineTraits<Config::LevelGridView, SolverConfig:
       }
     }
 
-//    Assembler::set_local_coefficients<FiniteElementTraits>(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
+//    Assembler<FiniteElementTraits>::set_local_coefficients<FiniteElementTraits>(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
     const Config::VectorType v_local = localMassMatrix.ldlt().solve(localVector);
     for (size_t i = 0; i < localIndexSet.size(); i++)
     {
@@ -551,10 +537,10 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F f, 
 #endif
     }
 
-    Assembler::add_local_coefficients(localIndexSet,localDofs, v);
+    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localDofs, v);
 //    assembler.add_local_coefficients(localIndexSet,VectorType::Ones(localDofs.size()), countMultipleDof);
     Config::VectorType localmultiples = Config::VectorType::Ones(localDofs.size());
-    Assembler::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
+    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
   }
   for (int i = 0; i < v.size(); i++) assert ( ! (v(i) != v(i)));
   v = v.cwiseQuotient(countMultipleDof);
@@ -657,13 +643,31 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F &f,
 #endif
     }
 
-    Assembler::add_local_coefficients(localIndexSet,localDofs, v);
+    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localDofs, v);
 //    assembler.add_local_coefficients(localIndexSet,VectorType::Ones(localDofs.size()), countMultipleDof);
     Config::VectorType localmultiples = Config::VectorType::Ones(localDofs.size());
-    Assembler::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
+    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
   }
 
   v = v.cwiseQuotient(countMultipleDof);
+}
+
+template <>
+template <typename GridTypeOld>
+Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt_function_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
+{
+  using CoarseTraits = PS12SplitTraits<GridTypeOld>;
+
+  typename CoarseTraits::FEBasis FEBasisCoarse (gridOld);
+  using DiscreteGridFunctionCoarse = typename CoarseTraits::DiscreteGridFunction;
+  DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
+  typename DiscreteGridFunctionCoarse::GlobalFirstDerivative gradient_u_Coarse_global (solution_u_Coarse_global);
+
+  Config::VectorType vNew;
+  vNew.resize(FEBasis_->indexSet().size());
+  project(solution_u_Coarse_global, gradient_u_Coarse_global, vNew);
+//  project(solution_u_Coarse_global, vNew);
+  return vNew;
 }
 
 

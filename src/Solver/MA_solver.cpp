@@ -13,6 +13,7 @@
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
+#include <dune/grid/io/file/gmshreader.hh>
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk/common.hh>
@@ -29,7 +30,7 @@ double MA_solver::calculate_L2_error(const MA_function_type &f) const
 
   double res = 0;
 
-  for(auto&& e: elements(*gridView_ptr))
+  for(auto&& e: elements(gridView()))
   {
     assert(localFiniteElement.type() == e.type());
 
@@ -78,7 +79,7 @@ void MA_solver::plot(const std::string& name, int no) const
 {
   VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(),solution_u);
+  FETraits::DiscreteGridFunction numericalSolution(FEBasisHandler_.uBasis(),solution_u);
   auto localnumericalSolution = localFunction(numericalSolution);
 
   //extract hessian
@@ -106,14 +107,14 @@ void MA_solver::plot(const std::string& name, int no) const
      }
 
    //build gridview function
-   Dune::Functions::DiscreteScalarGlobalBasisFunction<FEuDHBasisType,DerivativeVectorType> numericalSolutionHessian(*uDHBasis,derivativeSolution);
+   FETraits::DiscreteSecondDerivativeGridFunction numericalSolutionHessian(*uDHBasis,derivativeSolution);
    auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
 
 */
    std::string fname(plotter.get_output_directory());
    fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + ".vtu";
 
-   SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
+   SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),2);
    vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
 //   vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
    vtkWriter.write(fname);
@@ -121,13 +122,13 @@ void MA_solver::plot(const std::string& name, int no) const
 
 void MA_solver::plot(const VectorType& u, const std::string& filename) const
 {
-  Dune::Functions::DiscreteScalarGlobalBasisFunction<FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(), u);
+  FETraits::DiscreteGridFunction numericalSolution(FEBasisHandler_.uBasis(), u);
   auto localnumericalSolution = localFunction(numericalSolution);
 
   std::string fname(plotter.get_output_directory());
   fname += "/"+ plotter.get_output_prefix()+ filename + NumberToString(iterations) + ".vtu";
 
-  SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,2);
+  SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),2);
   vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
   vtkWriter.write(fname);
 }
@@ -176,7 +177,7 @@ void MA_solver::create_initial_guess()
   else
   {
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
-    project([](Config::SpaceType x){return 1.12;}, solution);
+    project([](Config::SpaceType x){return x.two_norm2()/2.0;},solution);
   }
 }
 
@@ -223,10 +224,11 @@ const typename MA_solver::VectorType& MA_solver::solve()
     iterations++;
     std::cerr << " solved nonlinear system" << std::endl;
 
+    /*
     update_solution(solution);
     plot("numericalSolution");
 
-/*    update_Operator();
+    update_Operator();
 
     solve_nonlinear_system();
     iterations++;
@@ -254,7 +256,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
     update_solution(solution);
     plot("numericalSolution");
 
-    Config::VectorType v = coarse_solution(1);
+/*    Config::VectorType v = coarse_solution(1);
     {
       //write current solution to file
       update_solution(solution);
@@ -263,7 +265,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
       ofstream file(filename2.str(),std::ios::out);
       file << v;
       file.close();
-    }
+    }*/
   }
   return solution;
 }
@@ -285,9 +287,19 @@ void MA_solver::update_solution(const Config::VectorType& newSolution) const
   solution = newSolution;
 }
 
+
 void MA_solver::adapt_solution(const int level)
 {
-  FEBasisHandler_.adapt(*this, level, solution);
+  assert(level == 1);
+
+  auto old_grid = gridHandler_.adapt();
+
+  FEBasisHandler_.adapt_after_grid_change(gridView());
+
+  Config::VectorType u_solution = solution;
+  solution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), u_solution);
+  get_assembler().bind(FEBasisHandler_.FEBasis());
+  plotter.update_gridView(gridView());
 }
 
 

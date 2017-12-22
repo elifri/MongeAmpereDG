@@ -5,8 +5,8 @@
  *      Author: friebel
  */
 
-#ifndef REFL_OPERATOR_HH_
-#define REFL_OPERATOR_HH_
+#ifndef OPERATOR_NEILAN_MA_OT_HH_
+#define OPERATOR_NEILAN_MA_OT_HH_
 
 #include <dune/common/function.hh>
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
@@ -17,7 +17,7 @@
 #include "ImageFunction.hpp"
 
 #include "localfunctions/MAmixed/MAmixedbasisC0.hh"
-#include "operator_utils.h"
+#include "Operator/operator_utils.h"
 //automatic differtiation
 #include <adolc/adouble.h>
 #include <adolc/adolc.h>
@@ -36,14 +36,6 @@ public:
   {
     std::cout << " created Local Operator" << std::endl;
   }
-
-//  ~Local_Operator_MA_OT()
-//  {
-//    delete &rhoX;
-//    delete &rhoY;
-//    delete &bc;
-//  }
-
 
   /**
    * implements the local volume integral
@@ -72,6 +64,7 @@ public:
 
     assert((unsigned int) x.size() == localView.size());
     assert((unsigned int) v.size() == localView.size());
+
 
     // Get set of shape functions for this element
     const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
@@ -232,7 +225,10 @@ public:
 
 
     for (int i = 0; i < size; i++)
+    {
       v_adolc[i] >>= v[i]; // select dependent variables
+//      std::cerr << " v[i]is now " << v[i] << std::endl;
+    }
 
     trace_off();
 
@@ -429,6 +425,7 @@ public:
     for (int i = 0; i < size; i++) {
       vn_adolc[i] >>= vn[i];
     }
+
     trace_off();
 
   }
@@ -470,6 +467,7 @@ public:
       v_adolc[i] <<= v[i];
 
     trace_on(tag);
+
     //init independent variables
     for (size_t i = 0; i < localView.size(); i++)
       x_adolc[i] <<= x[i];
@@ -540,7 +538,7 @@ public:
 //        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 2 || localFiniteElementu.localCoefficients().localKey(j).subEntity() == j);
 //        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 1 || localFiniteElementu.localCoefficients().localKey(j).subEntity() == boundaryFaceId);
         assert(!SolverConfig::Dirichlet);
-        v_adolc(i) += penalty_weight * signedDistance * (referenceFunctionValues[i]+(gradients[i]*normal)) * factor;
+//        v_adolc(i) += penalty_weight * signedDistance * (referenceFunctionValues[i]+(gradients[i]*normal)) * factor;
 
 //        std::cerr << " test function has value " << (referenceFunctionValues[j]) << " at " << quadPos << std::endl;
 //        std::cerr << " test function values ";
@@ -561,6 +559,9 @@ public:
 
 
   static bool use_adouble_determinant;
+
+  const Function& get_input_distribution() const {return rhoX;}
+  const Function& get_target_distribution() const {return rhoY;}
 
   const Function& get_right_handside() const {return rhoY;}
 

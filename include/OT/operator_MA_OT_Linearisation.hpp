@@ -13,7 +13,7 @@
 #include "Solver/solver_config.h"
 #include "utils.hpp"
 #include "SmoothingKernel.h"
-#include "operator_utils.h"
+#include "Operator/operator_utils.h"
 
 using namespace Dune;
 
@@ -26,12 +26,13 @@ value_type FrobeniusProduct(const FieldMatrix<value_type, 2, 2>& A, const FieldM
 
 
 class Local_Operator_MA_OT_Linearisation {
+  using Function = DensityFunction;
 
 public:
-  typedef DensityFunction Function;
+  using FunctionType = Function;///interface typedef
 
-  Local_Operator_MA_OT_Linearisation(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
-  delta_K(10), rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), sign(1.0), found_negative(false)
+  Local_Operator_MA_OT_Linearisation(const OTBoundary& bc, const Function& rhoX, const Function& rhoY):
+  delta_K(10), rhoX(rhoX), rhoY(rhoY),bc(bc), int_f(0), sign(1.0), found_negative(false)
   {
   }
 
@@ -155,7 +156,6 @@ public:
       std::cerr << " dg " << gradg << " finite diff g " << DxFEx << std::endl;
       std::cerr << " g1 " << Dx1PlusF_value << " g2 " << Dx2PlusF_value << std::endl;
 #endif
-
 
       auto h_T = std::sqrt(integrationElement);
 
@@ -403,7 +403,12 @@ public:
       const LocalView &localView,
       const VectorType &x, VectorType& v, MatrixType& m) const {}
 
-    mutable double delta_K;
+  const Function& get_input_distribution() const {return rhoX;}
+  const Function& get_target_distribution() const {return rhoY;}
+
+  const OTBoundary& get_bc() {return bc;}
+
+  mutable double delta_K;
 
   static constexpr int collocationNo[3][3] = {{0,3,4},{0,11,8},{4,7,8}};
   static SmoothingKernel smoothingKernel_;

@@ -15,13 +15,15 @@
 
 #include <dune/functions/functionspacebases/interpolate.hh>
 
-//#define COLLOCATION
 #include "MAconfig.h"
+
+#include "Solver/GridHandler.hpp"
 
 #include "Solver/Assembler.h"
 #include "problem_data.h"
 //#include "Operator/linear_system_operator_poisson_DG.hh"
 #include "Operator/operator_MA_Neilan_DG.h"
+#include "Operator/operator_MA_Brenner.h"
 //#include "../Operator/operator_discrete_Hessian.h"
 #include "IO/Plotter.h"
 #include "matlab_export.hpp"
@@ -49,7 +51,7 @@ class MA_solver {
 public:
 
 	//-----typedefs---------
-	typedef Config::GridType GridType;
+	typedef Config::DuneGridType GridType;
 	typedef Config::GridView GridViewType;
 	typedef Config::LevelGridView LevelGridViewType;
 	typedef GridViewType::IntersectionIterator IntersectionIterator;
@@ -70,7 +72,7 @@ public:
 	typedef FETraits::DiscreteLocalGridFunction DiscreteLocalGridFunction;
   typedef FETraits::DiscreteLocalGradientGridFunction DiscreteLocalGradientGridFunction;
 
-	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, SolverConfig config):
+	MA_solver(GridHandler<GridType>& gridHandler, SolverConfig config):
 	    initialised(true),
 			epsDivide_(config.epsDivide),
 			epsEnd_(config.epsEnd),
@@ -85,10 +87,10 @@ public:
       writeVTK_(config.writeVTK),
       outputDirectory_(config.outputDirectory), plotOutputDirectory_(config.plotOutputDirectory), outputPrefix_(config.outputPrefix),
       plotterRefinement_(config.refinement),
-      grid_ptr(grid), gridView_ptr(&gridView),
-      FEBasisHandler_(*this, *gridView_ptr),
+      gridHandler_(gridHandler),
+      FEBasisHandler_(*this, gridHandler.gridView()),
       assembler_(FEBasisHandler_.FEBasis()),
-      plotter(gridView),
+      plotter(gridHandler.gridView()),
       op(*this),
       solution_u_old(), gradient_u_old()
 	{
@@ -100,10 +102,10 @@ public:
 	  plotter.set_refinement(plotterRefinement_);
 	  plotter.set_geometrySetting(get_setting());
 
-	  grid_ptr->globalRefine(SolverConfig::startlevel);
     std::cout << "refined grid to startlevel " << SolverConfig::startlevel << " constructor n dofs " << get_n_dofs() << std::endl;
 
-    FEBasisHandler_.bind(*this, *gridView_ptr);
+    FEBasisHandler_.bind(*this, gridView());
+
 	  assembler_.bind(FEBasisHandler_.FEBasis());
 
 	  plotter.set_output_directory(plotOutputDirectory_);
@@ -118,8 +120,8 @@ public:
 
 	}
 
-  MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, SolverConfig config, const GeometrySetting& geometrySetting)
-      :MA_solver(grid, gridView, config)
+  MA_solver(GridHandler<GridType>& gridHandler, SolverConfig config, const GeometrySetting& geometrySetting)
+      :MA_solver(gridHandler, config)
   {
     setting_ = geometrySetting;
   }
@@ -132,8 +134,12 @@ public:
 */
 
   struct MA_Operator {
-    MA_Operator():solver_ptr(NULL){}
-    MA_Operator(MA_solver &solver):solver_ptr(&solver){}
+//    MA_Operator():solver_ptr(NULL){}
+    MA_Operator(MA_solver &solver):solver_ptr(&solver),
+        lop(new RightHandSide(),
+//            Dirichletdata([](Config::SpaceType x){return 0.0;}))
+            make_Dirichletdata())
+    {}
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v,  Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
     {
@@ -179,7 +185,16 @@ public:
 
     mutable MA_solver* solver_ptr;
 
-    Local_Operator_MA_mixed_Neilan lop;
+
+    //find correct operator
+  #ifdef USE_MIXED_ELEMENT
+    using OperatorType = Local_Operator_MA_mixed_Neilan;
+  #else
+    using OperatorType = Local_Operator_MA_Brenner;
+  #endif
+
+
+    OperatorType lop;
     const FieldVector<double, 2> get_fixingPoint(){return fixingPoint;}
 
     const FieldVector<double, 2> fixingPoint;
@@ -196,10 +211,15 @@ public:
 
 
 	virtual int get_n_dofs() const{return FEBasisHandler_.FEBasis().indexSet().size();}
-  int get_n_dofs_u() const{return FEBasisHandler_.FEBasis().indexSet().size();}
+  virtual int get_n_dofs_u() const{return FEBasisHandler_.FEBasis().indexSet().size();}
 
-  const GridType& grid() const {return *grid_ptr;}
-  const GridViewType& gridView() const {return *gridView_ptr;}
+  const auto get_FEBasis() const {return FEBasisHandler_.FEBasis();}
+  const auto get_FEBasis_u() const {return FEBasisHandler_.uBasis();}
+
+  const GridType& grid() const {return gridHandler_.grid();}
+  std::shared_ptr<GridType>& get_grid_ptr() {return gridHandler_.get_grid_ptr();}
+  const GridViewType& gridView() const {return gridHandler_.gridView();}
+  GridViewType& gridView() {return gridHandler_.gridView();}
 
 public:
 
@@ -215,6 +235,7 @@ public:
 	template<typename LocalOperatorType>
 	void assemble_DG_Jacobian_only(const LocalOperatorType &LOP, const VectorType& x, MatrixType& m) const {
 		assert (initialised);
+
 		assembler_.assemble_DG_Jacobian_only(LOP, x, m);
 	}
 
@@ -244,8 +265,8 @@ public:
 
 
 protected:
-	template<class F>
-	void test_projection(const F f, VectorType& v) const;
+	template<class F, class DF>
+	void test_projection(const F f, const DF Df, VectorType& v) const;
 
 public:
   /**
@@ -261,6 +282,8 @@ public:
 	 */
 	void update_solution(const Config::VectorType& newSolution) const;
 
+
+	shared_ptr<GridType> adapt_grid(const int level);
 	/**
 	 * adapts the solver into the global refined space (refines grid, and transforms solution & exact solution data)
 	 * @param level
@@ -323,13 +346,14 @@ public:
 	virtual GeometrySetting& get_setting() {return setting_;}
   virtual const GeometrySetting& get_setting() const {return setting_;}
 
-  const Assembler& get_assembler() const { return assembler_;}
-  Assembler& get_assembler() { return assembler_;}
+  const Assembler<>& get_assembler() const { return assembler_;}
+  Assembler<>& get_assembler() { return assembler_;}
 
   const std::string& get_output_directory() const{ return outputDirectory_;}
   const std::string& get_plot_output_directory() const{ return plotOutputDirectory_;}
   const std::string& get_output_prefix() const{ return outputPrefix_;}
 
+  shared_ptr<DiscreteLocalGridFunction>& get_u_old_ptr() {return solution_u_old;}
   shared_ptr<DiscreteLocalGradientGridFunction>& get_gradient_u_old_ptr() {return gradient_u_old;}
 
   int get_plotRefinement() {return plotterRefinement_;}
@@ -361,12 +385,11 @@ protected:
 	std::string outputDirectory_, plotOutputDirectory_, outputPrefix_; ///outputdirectories
   int plotterRefinement_; ///number of (virtual) grid refinements for output generation
 
-	const shared_ptr<GridType> grid_ptr; ///Pointer to grid
-	const GridViewType* gridView_ptr; /// Pointer to gridView
+	GridHandler<GridType>& gridHandler_; ///handles grid
 
 	FEBasisHandler<FETraits::Type, FETraits> FEBasisHandler_;
 
-	Assembler assembler_; ///handles all (integral) assembly processes
+	Assembler<> assembler_; ///handles all (integral) assembly processes
 	Plotter plotter; ///handles all output generation
 
   double G; /// fixes the reflector size
@@ -469,7 +492,7 @@ void project_labourious(const FEBasis& febasis, const F f, Config::VectorType& v
       }
     }
 
-    Assembler::set_local_coefficients(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
+    Assembler<>::set_local_coefficients(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
     }
 
   //set scaling factor (last dof) to ensure mass conservation
@@ -537,7 +560,7 @@ void MA_solver::project_labouriousC1(const F f, const F_derX f_derX, const F_der
       localDofs(3*geometry.corners()+i) = i %2 == 0? -(GradientF*normal): GradientF*normal;
       //      std::cout << " aprox normal derivative " << GradientF*normal << " = " << GradientF << " * " << normal << std::endl ;
     }
-    assembler.set_local_coefficients(localIndexSet,localDofs, v);
+    assembler_.set_local_coefficients(localIndexSet,localDofs, v);
   }
 
   //set scaling factor (last dof) to ensure mass conservation
@@ -613,7 +636,7 @@ void MA_solver::project_labouriousC1Local(LocalF f, LocalF_grad f_grad, VectorTy
     }
 
     //    std::cerr << "vertex 0 = " << geometry.corner(0) << std::endl;
-    assembler.set_local_coefficients(localIndexSet, localDofs, v);
+    assembler_.set_local_coefficients(localIndexSet, localDofs, v);
   }
 
   //set scaling factor (last dof) to ensure mass conservation
@@ -624,8 +647,8 @@ void MA_solver::project_labouriousC1Local(LocalF f, LocalF_grad f_grad, VectorTy
 #endif
 }
 */
-template<class F>
-void MA_solver::test_projection(const F f, VectorType& v) const
+template<class F, class DF>
+void MA_solver::test_projection(const F f, const DF Df, VectorType& v) const
 {
   std::cerr << "v.size()" << v.size()-1 << std::endl;
   std::cerr << "projected on vector " << std::endl << v.transpose() << std::endl;
@@ -634,7 +657,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
   auto localIndexSet = FEBasisHandler_.FEBasis().indexSet().localIndexSet();
 
 
-  for (auto&& element : elements(*gridView_ptr)) {
+  for (auto&& element : elements(gridView())) {
 
     localView.bind(element);
     localIndexSet.bind(localView);
@@ -672,8 +695,8 @@ void MA_solver::test_projection(const F f, VectorType& v) const
            << geometry.corner(i)[1] << ")  approx = " << jacApprox << std::endl;
 
        auto x = geometry.corner(i);
-       std::cerr << " should be " << x[0]+4*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1])
-                 << ",  " << x[1]+4*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0]) << std::endl;
+       auto gradf = Df(geometry.corner(i));
+       std::cerr << " should be " << gradf << std::endl;
 
        std::vector<FieldMatrix<double, 2, 2>> HessianValues(lFE.size());
        Dune::FieldMatrix<double, 2, 2> HessApprox;
@@ -714,8 +737,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
       std::cerr << "f'( "
           << x << ") = ?? "
           <<  "  approx = " << jacApprox << std::endl;
-      std::cerr << " should be " << x[0]+4*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1])
-                << ",  " << x[1]+4*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0]) << std::endl;
+      std::cerr << " should be " << Df(x) << std::endl;
 
 
     }
@@ -723,7 +745,7 @@ void MA_solver::test_projection(const F f, VectorType& v) const
     auto localViewn = FEBasisHandler_.FEBasis().localView();
     auto localIndexSetn = FEBasisHandler_.FEBasis().indexSet().localIndexSet();
 
-    for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
+    for (auto&& is : intersections(gridView(), element)) //loop over edges
     {
       if (is.neighbor()) {
 

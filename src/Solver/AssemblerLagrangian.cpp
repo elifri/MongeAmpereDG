@@ -5,10 +5,10 @@
  *      Author: friebel
  */
 
-#include "Solver/AssemblerLagrangianBoundary.h"
+#include "Solver/AssemblerLagrangian.h"
 
 template<>
-void AssemblerLagrangianMultiplierBoundary::bind(const Assembler::FEBasisType& basis, const FEBasisQType& basisQ)
+void AssemblerLagrangianMultiplierCoarse::bind(const Assembler::FEBasisType& basis, const FEBasisQType& basisQ)
 {
   this->basis_ = &basis;
   this->boundaryHandler_.init_boundary_dofs(basis);

@@ -94,9 +94,10 @@ public:
  * B(u,q) for u \in V_h and q \in Q_h where Q_h is a space defined one a grid one level coarser than the grid of V_h
  *
  */
-class AssemblerLagrangianMultiplier1D:public Assembler{
+template<typename FETraits = SolverConfig::FETraitsSolver>
+class AssemblerLagrangianMultiplier1D:public Assembler<FETraits>{
 public:
-  using Assembler::Assembler;
+  using Assembler<FETraits>::Assembler;
   /**
    * assembles the matrix (col dimension =1), note that this matrix does not depend on the last step u
    * @param lop     the local operator
@@ -109,8 +110,9 @@ public:
   void assembleRhs(const LocalOperatorType &lop, const Config::VectorType& x, Config::ValueType& v) const;
 };
 
+template<typename FETraits>
 template<typename LocalOperatorType>
-void AssemblerLagrangianMultiplier1D::assemble_u_independent_matrix(const LocalOperatorType &lop, Config::VectorType& v) const{
+void AssemblerLagrangianMultiplier1D<FETraits>::assemble_u_independent_matrix(const LocalOperatorType &lop, Config::VectorType& v) const{
   const auto& basis_ = *(this->basis_);
   v = Config::VectorType::Zero(basis_.size());
   Config::ValueType volume = 0;
@@ -127,13 +129,14 @@ void AssemblerLagrangianMultiplier1D::assemble_u_independent_matrix(const LocalO
 
     lop.assemble_u_independent_cell_term_(localView, local_vector, volume);
 
-    add_local_coefficients(localIndexSet,local_vector, v);
+    this->add_local_coefficients(localIndexSet,local_vector, v);
   }
   v/=volume;
 }
 
+template<typename FETraits>
 template<typename LocalOperatorType>
-void AssemblerLagrangianMultiplier1D::assembleRhs(const LocalOperatorType &lop,const Config::VectorType& x, Config::ValueType& v) const{
+void AssemblerLagrangianMultiplier1D<FETraits>::assembleRhs(const LocalOperatorType &lop,const Config::VectorType& x, Config::ValueType& v) const{
   const auto& basis_ = *(this->basis_);
 
   auto localView = basis_.localView();
@@ -148,7 +151,7 @@ void AssemblerLagrangianMultiplier1D::assembleRhs(const LocalOperatorType &lop,c
     localView.bind(e);
     localIndexSet.bind(localView);
 
-    Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
+    Config::VectorType xLocal = this->calculate_local_coefficients(localIndexSet, x);
 
     lop.assemble_cell_term(localView, xLocal, v, volume);
   }

@@ -17,6 +17,7 @@
 using namespace Dune;
 
 ///provides all numerical integration methods for the variational form of -laplace u = f
+///                                                                          nabla u = g
 template< typename Rhs, typename BC>
 class Linear_System_Local_Operator_Poisson_NeumannBC{
 

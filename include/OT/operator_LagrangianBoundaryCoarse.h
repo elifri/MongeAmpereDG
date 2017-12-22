@@ -9,7 +9,7 @@
 #define INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARYCOARSE_H_
 
 #include "OT/problem_data_OT.h"
-#include "OT/operator_utils.h"
+#include "Operator/operator_utils.h"
 
 class Local_Operator_LagrangianBoundaryCoarse {
 public:
@@ -104,7 +104,7 @@ public:
       auto estimatedDertivate = normalOld;
       estimatedDertivate /= 1./normalOld.two_norm();
 //      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
-          std::cerr << " signedDistance derivative " << signedDistanceDerivative << " estimated " << estimatedDertivate << std::endl;
+//          std::cerr << " signedDistance derivative " << signedDistanceDerivative << " estimated " << estimatedDertivate << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());

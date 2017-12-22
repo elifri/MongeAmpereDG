@@ -18,7 +18,7 @@ namespace po = boost::program_options;
 using namespace Dune;
 using namespace std;
 
-ProblemType SolverConfig::problem;
+ProblemType SolverConfig::problem = MA_SMOOTH;
 
 int SolverConfig::startlevel = 0;
 int SolverConfig::nonlinear_steps = 1;
@@ -128,7 +128,7 @@ std::string GeometrySetting::gridinputFile = "";
 Config::SpaceType GeometrySetting::lowerLeftTarget = {0,0};
 Config::SpaceType GeometrySetting::upperRightTarget= {1,1};
 
-std::string GeometrySetting::gridinputTargetFile = "";
+std::string GeometrySetting::gridTargetFile = "";
 
 double GeometrySetting::z_3 = 0;
 
@@ -149,6 +149,7 @@ void GeometrySetting::read_configfile(std::string &configFile)
         ("geometry.target.yMin",     po::value<double>(&GeometrySetting::lowerLeftTarget[1]), "")
         ("geometry.target.yMax",     po::value<double>(&GeometrySetting::upperRightTarget[1]), "")
         ("geometry.target.z",        po::value<double>(&GeometrySetting::z_3),    "")
+        ("geometry.target.gridfile",  po::value<string>(&GeometrySetting::gridTargetFile), "")
   ;
 
 
@@ -192,7 +193,7 @@ void OpticalSetting::read_configfile(std::string &configFile)
         ("geometry.target.xMax",     po::value<double>(&OpticalSetting::upperRightTarget[0]), "")
         ("geometry.target.yMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[1]), "")
         ("geometry.target.yMax",     po::value<double>(&OpticalSetting::upperRightTarget[1]), "")
-        ("geometry.target.gridfile",  po::value<string>(&OpticalSetting::gridinputTargetFile), "")
+        ("geometry.target.gridfile",  po::value<string>(&OpticalSetting::gridTargetFile), "")
         ("geometry.target.z",        po::value<double>(&OpticalSetting::z_3),    "")
         ("light.in.imageName",       po::value<string>(&OpticalSetting::LightinputImageName), "path to image")
         ("light.out.targetImageName",     po::value<string>(&OpticalSetting::TargetImageName), "")

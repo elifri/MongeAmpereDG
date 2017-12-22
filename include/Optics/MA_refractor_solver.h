@@ -12,6 +12,7 @@
 #include "OT/MA_OT_global_Operator.h"
 #include "Optics/operator_MA_refr_Brenner.h"
 
+//TODO revise with new MA_OT_operator
 
 template<typename Solver, typename LOP>
 struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
@@ -126,17 +127,27 @@ private:
 public:
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
   void plot(const std::string& filename) const;
+  void plot(const std::string& filename, int no) const;
 
   GeometrySetting& get_setting() {return setting_;}
   const GeometrySetting& get_setting() const {return setting_;}
 
+  OpticalSetting& get_optical_setting() {return setting_;}
+  const OpticalSetting& get_optical_setting() const {return setting_;}
+
+
 private:
   OpticalSetting& setting_;
 
-  typedef MA_refr_Operator<MA_refractor_solver, Local_Operator_MA_refr_Brenner> Operatortype;
-  Operatortype op;
+#ifndef USE_ANALYTIC_DERIVATION
+  typedef MA_OT_Optic_Operator<MA_refractor_solver, Local_Operator_MA_refr_Brenner> OperatorType;
+#else
+  typedef MA_OT_Optic_Operator_with_Linearisation<MA_refractor_solver, Local_Operator_MA_refr_Brenner, Local_Operator_MA_refr_Linearisation> OperatorType;
+#endif
 
-  friend Operatortype;
+  OperatorType op;
+
+  friend OperatorType;
   friend MA_OT_Operator<MA_refractor_solver, Local_Operator_MA_refr_Brenner>;
 };
 

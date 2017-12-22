@@ -9,6 +9,39 @@
 
 #include "Solver/MA_solver.h"
 
+Dirichletdata* make_Dirichletdata()
+{
+  switch (SolverConfig::problem)
+  {
+  case SIMPLE_MA:
+    return new Dirichletdata([](Config::SpaceType x){return x.two_norm2()/2.0;});
+    break;
+  case CONST_RHS:
+    return new Dirichletdata([](Config::SpaceType x){return x.two_norm2()/2.0;});
+    break;
+  case MA_SMOOTH:
+    return new Dirichletdata([](Config::SpaceType x){return std::exp(x.two_norm2()/2.);});
+    break;
+  case MA_C1:
+    {
+/*
+      return new Dirichletdata([](Config::SpaceType x){
+        return sqr(std::abs(x.two_norm2()-x_0 -2) < 1e-6? 1e19 : -std::sqrt(2 - x.two_norm2());});
+*/
+    }
+    break;
+  case MA_SQRT:
+    return new Dirichletdata([](Config::SpaceType x){
+      return std::abs(x.two_norm2() -2) < 1e-6? 1e19 : -std::sqrt(2 - x.two_norm2());});
+    break;
+  default:
+    std::cerr << "Unknown problem ... " << std::endl;
+    exit(-1);
+  }
+
+  return new Dirichletdata();
+}
+
 void PDE_functions::f(const Config::SpaceType2d& x, Config::ValueType &out){
 	out = 1;
 }
