@@ -919,7 +919,7 @@ void MA_OT_solver::adapt_solution(const int level)
       return y;};
 
     std::string fname(plotter.get_output_directory());
-    fname += "/"+ plotter.get_output_prefix()+ "exactSol.vtu";
+    fname += "/"+ plotter.get_output_prefix()+ "exactSol"+NumberToString(iterations)+".vtu";
     plotter.writeOTVTKGlobal(fname, y0);
   }
 

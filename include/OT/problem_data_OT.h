@@ -224,12 +224,11 @@ public:
   GeometrySetting& geometrySetting;
 };
 
-template<typename GT>
+
 class GenerealOTBoundary : public OTBoundary{
-  using GridType = GT;
-  using GridView = typename GridType::LeafGridView;
-  using IndexSet = typename GridView::IndexSet;
-  void init()
+
+  template<typename GT>
+  void init_by_grid(const GT& grid)
   {
     Hvalues_.resize(N_Y+1);
     std::fill (Hvalues_.begin(), Hvalues_.end(), -100);
@@ -237,8 +236,8 @@ class GenerealOTBoundary : public OTBoundary{
     using BoundaryIterator = Dune::VTK::BoundaryIterator<GridView>;
 
     //find for all normals sup_{y in boundary} y*n, see Benamou et alt. /Journal of Compu.Phys 260(2014) p. 110-111
-    BoundaryIterator itBoundary(grid_ptr->leafGridView());
-    while (itBoundary != BoundaryIterator(grid_ptr->leafGridView(),true)) //loop over boundary edges
+    BoundaryIterator itBoundary(grid.leafGridView());
+    while (itBoundary != BoundaryIterator(grid.leafGridView(),true)) //loop over boundary edges
     {
       for(int i = 0; i < boundaryPointPerEdge_; i++)//loop over boundary point in edge
       {
@@ -267,9 +266,10 @@ class GenerealOTBoundary : public OTBoundary{
 public:
   using OTBoundary::OTBoundary;
 
-  GenerealOTBoundary(const std::shared_ptr<GridType> grid_ptr): grid_ptr(grid_ptr){
-  init();
-}
+  template<typename GT>
+  GenerealOTBoundary(const GT&  grid) {
+    init_by_grid(grid);
+  }
 
 
 
@@ -297,7 +297,6 @@ void adapt()
   const int boundaryPointPerEdge_=5;
 
   std::vector<Config::ValueType> Hvalues_;
-  const std::shared_ptr<GridType> grid_ptr;
 };
 
 

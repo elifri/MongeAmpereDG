@@ -89,7 +89,7 @@ public:
 //          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
           *boundary_, f_, g_)),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(lop_ptr->get_bc())),
+      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),
       fixingPoint{0.3,0},
       intermediateSolCounter()
   {
@@ -100,7 +100,7 @@ public:
 
   MA_OT_Operator(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(lop_ptr->get_bc())),
+      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),
       fixingPoint{0.3,0},
       intermediateSolCounter()
       {
@@ -109,7 +109,7 @@ public:
 
   MA_OT_Operator(SolverType& solver, LocalOperatorType* lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(lop_ptr->get_bc())),
+      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),
       fixingPoint{0.3,0},
       intermediateSolCounter()
   {
