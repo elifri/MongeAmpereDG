@@ -41,6 +41,8 @@ void newtonMethod(
     double lastResidual, diffLastResidual;
     Eigen::VectorXd oldX, lastUpdate;
 
+    bool useSimgaH = true;
+
     std::cerr << " Start Newton ..." << std::endl;
 
     const unsigned int n=x.size();
@@ -66,14 +68,17 @@ void newtonMethod(
       const unsigned int maxIterBoundaryConditions = 1;
       for (unsigned int j = 0; j < maxIterBoundaryConditions; j++)
       {
+          if (j > 2)
+            useSimgaH = false;
+
         // solve Df*s = +f using UmfPack:
           if (useCombinedFunctor)
           {
-            functor.evaluate(x,f,Df, xBoundary, true);
+            functor.evaluate(x,f,Df, xBoundary, useSimgaH);
           }
           else
           {
-            functor.evaluate(x,f,xBoundary, true);
+            functor.evaluate(x,f,xBoundary, useSimgaH);
             functor.derivative(x,Df);
       //      make_FD_Jacobian(functor, x, J);
           }
@@ -129,7 +134,7 @@ void newtonMethod(
             Config::VectorType tempf(n);
             Eigen::SparseMatrix<double> tempDf(n,n);
 
-            functor.evaluate(xNew,tempf,tempDf, xBoundary, true);
+            functor.evaluate(xNew,tempf,tempDf, xBoundary, useSimgaH);
 
             std::cerr << " tried to increase omega "
                    << "  newton residual was " << tempf.norm()

@@ -265,7 +265,50 @@ class GenerealOTBoundary : public OTBoundary{
     }
   }
 
+
 public:
+  template<typename LocalF, typename GT>
+  void init_by_distortion_of_grid(LocalF& f, const GT& grid)
+  {
+    using GridView = typename GT::LeafGridView;
+
+    HvaluesDistorted_.resize(N_Y+1);
+    std::fill (HvaluesDistorted_.begin(), HvaluesDistorted_.end(), -100);
+
+    using BoundaryIterator = Dune::VTK::BoundaryIterator<GridView>;
+
+    //find for all normals sup_{y in boundary} y*n, see Benamou et alt. /Journal of Compu.Phys 260(2014) p. 110-111
+    BoundaryIterator itBoundary(grid.leafGridView());
+    while (itBoundary != BoundaryIterator(grid.leafGridView(),true)) //loop over boundary edges
+    {
+      for(int i = 0; i < boundaryPointPerEdge_; i++)//loop over boundary point in edge
+      {
+        //calculate global coordinates of boundary point
+        Config::SpaceType1d localBoundaryPosScale ({((Config::ValueType) i) /  (boundaryPointPerEdge_-1)});
+        Config::SpaceType2d localBoundaryPos = itBoundary->geometryInInside().global(localBoundaryPosScale);
+
+        f.bind(itBoundary->inside());
+
+//        Config::SpaceType2d globalBoundaryPos = itBoundary->inside().geometry().global(localBoundaryPos);
+
+        for (int j = 0; j <= N_Y; j++)
+        {
+          //calculate normal
+          Config::SpaceType2d currentNormal ({std::cos(2*M_PI*j/N_Y), std::sin(2*M_PI*j/N_Y)});
+
+          //update supremum
+          Config::ValueType temp = f(localBoundaryPos)*currentNormal;
+          if (temp > HvaluesDistorted_[j])
+          {
+            HvaluesDistorted_[j] = temp;
+          }
+        }
+      }
+      itBoundary++;
+    }
+  }
+
+
   using OTBoundary::OTBoundary;
 
   template<typename GT>
@@ -287,7 +330,10 @@ Config::ValueType LegrendeFenchelTrafo(const Config::SpaceType &normal) const
     assert( std::abs(normal[0]-std::cos(2*M_PI*j/N_Y)) < 1e-10 );
     assert( std::abs(normal[1]-std::sin(2*M_PI*j/N_Y)) < 1e-10 );
 
-    return Hvalues_[j];
+    if (evaluationProcedure_==EvaluateSigmaH)
+      return Hvalues_[j];
+    else
+      return HvaluesDistorted_[j];
   }
 
   template<typename GT>
@@ -296,10 +342,18 @@ Config::ValueType LegrendeFenchelTrafo(const Config::SpaceType &normal) const
     init_by_grid(grid);
   }
 
+  void change_evaluation_to_SigmaH(){evaluationProcedure_ = EvaluateSigmaH;}
+  void change_evaluation_to_UOmegaH(){evaluationProcedure_ = EvaluateUOmegaH;}
+
   const int N_Y = N_;
   const int boundaryPointPerEdge_=5;
 
+  enum BoundaryEvaluation {EvaluateSigmaH, EvaluateUOmegaH};
+
+  BoundaryEvaluation evaluationProcedure_;
+
   std::vector<Config::ValueType> Hvalues_;
+  std::vector<Config::ValueType> HvaluesDistorted_;
 };
 
 

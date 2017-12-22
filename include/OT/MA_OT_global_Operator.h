@@ -27,6 +27,8 @@ struct GeneralOperatorTraits{
 
   using LocalOperatorType = LOP;
 
+  using BoundaryType = GenerealOTBoundary;
+
   using FunctionTypeX = DensityFunction;
   using FunctionTypeY = DensityFunction;
 };
@@ -37,6 +39,8 @@ struct ProblemSquareToSquareOperatorTraits{
 
   using LocalOperatorType = LOP;
 
+  using BoundaryType = BoundarySquare;
+
   using FunctionTypeX = rhoXSquareToSquare;
   using FunctionTypeY = rhoYSquareToSquare;
 };
@@ -46,6 +50,8 @@ struct GaussianOperatorTraits{
   using SolverType = Solver;
 
   using LocalOperatorType = LOP;
+
+  using BoundaryType = BoundarySquare;
 
   using FunctionTypeX = rhoXGaussianSquare;
   using FunctionTypeY = rhoYSquareToSquare;
@@ -58,6 +64,8 @@ struct ConstOneOperatorTraits{
 
   using LocalOperatorType = LOP;
 
+  using BoundaryType = GenerealOTBoundary;
+
   using FunctionTypeX = ConstOneFunction;
   using FunctionTypeY = ConstOneFunction;
 };
@@ -68,6 +76,8 @@ public:
   using GridView = typename OperatorTraits::SolverType::GridViewType;
   using SolverType = typename OperatorTraits::SolverType;
   using LocalOperatorType = typename OperatorTraits::LocalOperatorType;
+
+  using BoundaryType = typename OperatorTraits::BoundaryType;
 
   using FunctionTypeX = typename OperatorTraits::FunctionTypeX;
   using FunctionTypeY = typename OperatorTraits::FunctionTypeY;
@@ -151,9 +161,9 @@ private:
 
 public:
   ///assembles the system of combination of the MA PDE and the lagrangian multiplier for fixing the mean value and boundary condition
-  void evaluate(Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, Config::VectorType& xBoundary, const bool new_solution=true) const;
+  void evaluate(Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, Config::VectorType& xBoundary, const bool useSigmaH=true) const;
   ///assembles the rhs of the system of combination of the MA PDE and the lagrangian multiplier for fixing the mean value and boundary condition
-  void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::VectorType& xNew, const bool new_solution=true) const;
+  void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::VectorType& xNew, const bool useSigmaH=true) const;
 
   ///assembles the lhs of the system of combination of the MA PDE and the lagrangian multiplier for fixing the mean value and boundary condition
   void Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
@@ -177,7 +187,7 @@ public:
 
   const SolverType* solver_ptr;
 
-  std::shared_ptr<OTBoundary> boundary_;
+  std::shared_ptr<BoundaryType> boundary_;
 
   FunctionTypeX f_;
   FunctionTypeY g_;
@@ -264,149 +274,6 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
 template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>::init()
 {
-  //-------------------select cell for mid value-------------------------
-  /*      lopLinear_ptr->clear_entitities_for_unifikation_term();
-        HierarchicSearch<typename GridView::Grid, typename GridView::IndexSet> hs(solver.grid(), solver.gridView().indexSet());
-
-        const FieldVector<double, 2> findCell = {0.5,0.15};
-  //      const FieldVector<double, 2> findCell = {0.,0.};
-        fixingElement = hs.findEntity(findCell);
-
-        auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
-        localView.bind(fixingElement);
-        lopLinear_ptr->insert_entitity_for_unifikation_term(fixingElement, localView.size());
-        assert(lopLinear_ptr->insert_entitity_for_unifikation_term(fixingElement, localView.size()) == 0);
-
-<<<<<<< HEAD
-    //copy SparseMatrix todo move to EigenUtility
-    std::vector< Eigen::Triplet<double> > tripletList;
-    copy_to_new_sparse_matrix(tempM, m);
-    {
-      std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "BF" << intermediateSolCounter << ".m";      \
-      std::ofstream file(filename.str(),std::ios::out);
-      MATLAB_export(file, tempM, "BF");
-    }
-    {
-      std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "x" << intermediateSolCounter << ".m";
-      std::ofstream file(filename.str(),std::ios::out);
-      MATLAB_export(file, x, "x");
-    }
-    {
-      std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "lF" << intermediateSolCounter << ".m";
-      std::ofstream file(filename.str(),std::ios::out);
-      MATLAB_export(file, tempV, "l_v");
-      std::cerr << "written lv to file " << filename.str() << std::endl;
-    }
-    std::cerr << "  l(v) with norm " << std::scientific << std::setprecision(3) << tempV.norm() << std::endl;//<< "  : " << tempV.transpose() << std::endl;
-=======
-        std::vector<Config::ValueType> entryWx0(localView.size());
-        for (unsigned int i = 0; i < localView.size(); i++)
-          entryWx0[i] = 0;
->>>>>>> gridAdaption
-
-        const auto& lfu = localView.tree().finiteElement();
-
-        //collect quadrature rule
-        int order = std::max(0, 3 * ((int) lfu.localBasis().order()));;
-        const QuadratureRule<double, Config::dim>& quadRule = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(fixingElement, order);
-
-        //assemble quadrature
-        for (const auto& quad : quadRule) {
-          auto quadPos = quad.position();
-
-          int noDof_fixingElement = 0;
-          std::vector<FieldVector<Config::ValueType,1>> values(localView.size());
-          lfu.localBasis().evaluateFunction(quadPos, values);
-
-          for (unsigned int i = 0; i < localView.size(); i++)
-          {
-            entryWx0[noDof_fixingElement] += values[i][0]* quad.weight()*fixingElement.geometry().integrationElement(quadPos);
-            noDof_fixingElement++;
-          }
-        }
-        for (unsigned int i = 0; i < entryWx0.size(); i++)
-          entryWx0[i]/=fixingElement.geometry().volume();
-        solver_ptr->assembler.set_entryWx0(entryWx0);*/
-
-
-  //-------------------select fixing point-------------------------
-/*    HierarchicSearch<typename GridView::Grid, typename GridView::IndexSet> hs(solver_ptr->grid(), solver_ptr->gridView().indexSet());
-
-  //      const FieldVector<double, 2> findCell = {0.,0.};
-  Config::Entity fixingElement = hs.findEntity(fixingPoint);
-
-  auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
-  localView.bind(fixingElement);
-
-  this->insert_entities_for_unification_term_to_local_operator(fixingElement, localView.size());
-
-<<<<<<< HEAD
-    m.conservativeResize(this->solver_ptr->get_n_dofs(), this->solver_ptr->get_n_dofs());
-=======
-  std::vector<Config::ValueType> entryWx0(localView.size());
-  for (unsigned int i = 0; i < localView.size(); i++)
-    entryWx0[i] = 0;
-
-  const auto& lfu = localView.tree().finiteElement();
->>>>>>> gridAdaption
-
-  //assemble values at fixing point
-  int noDof_fixingElement = 0;
-  std::vector<FieldVector<Config::ValueType,1>> values(localView.size());
-  lfu.localBasis().evaluateFunction(fixingElement.geometry().local(fixingPoint), values);
-
-  for (unsigned int i = 0; i < lfu.localBasis().size(); i++)
-  {
-    entryWx0[noDof_fixingElement] += values[i][0];
-    noDof_fixingElement++;
-  }
-  std::cout << " entryWx0 with size " << entryWx0.size() << std::endl;
-  for (const auto& e: entryWx0)
-    std::cout << e << " ";
-  std::cout << std::endl;
-  solver_ptr->assembler.set_entryWx0(entryWx0);*/
-
-  //-------------------select  mid value-------------------------
-/*    auto localView = solver_ptr->FEBasisHandler_.uBasis().localView();
-  auto localIndexSet = solver_ptr->FEBasisHandler_.uBasis().indexSet().localIndexSet();
-
-  lagrangianFixingPointOperator = Config::VectorType::Zero(solver_ptr->FEBasisHandler_.uBasis().indexSet().size());
-
-  for (auto&& e : elements(solver_ptr->gridView())) {
-    localView.bind(e);
-    localIndexSet.bind(localView);
-
-    const auto& lfu = localView.tree().finiteElement();
-
-    Config::VectorType localMidvalue (localView.size());
-    for (unsigned int i = 0; i < localMidvalue.size(); i++)
-      localMidvalue[i] = 0;
-
-    //get a quadratureRule
-    int order = std::max(0,
-        3 * ((int) lfu.localBasis().order()));
-    const QuadratureRule<double, Config::dim>& quadRule = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(e, order);\
-
-    for (const auto& quad : quadRule)
-    {
-      //assemble values
-      std::vector<FieldVector<Config::ValueType,1>> values(localView.size());
-      lfu.localBasis().evaluateFunction(quad.position(), values);
-      const auto integrationElement = e.geometry().integrationElement(quad.position());
-
-      for (unsigned int i = 0; i < lfu.localBasis().size(); i++)
-      {
-        localMidvalue[i] += values[i][0]*quad.weight()*integrationElement;
-      }
-    }
-    //divide by element volume
-    for (unsigned int i = 0; i < lfu.localBasis().size(); i++)
-    {
-      localMidvalue[i] /= e.geometry().volume();
-    }
-    Assembler::add_local_coefficients(localIndexSet,localMidvalue, lagrangianFixingPointOperator);
-  }
-  std::cout << " midvalues " << lagrangianFixingPointOperator.transpose() << std::endl;*/
   solver_ptr->get_assembler_lagrangian_midvalue().assemble_u_independent_matrix(*lopLMMidvalue, lagrangianFixingPointDiscreteOperator);
   std::cerr << " adapted operator and now lagrangian " << lagrangianFixingPointDiscreteOperator.size() << " and ndofsV_H " << this->solver_ptr->get_n_dofs_V_h() << std::endl;
 }
@@ -561,12 +428,32 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(Config::
 }
 
 template<typename OperatorTraits>
-void MA_OT_Operator<OperatorTraits>::evaluate(Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, Config::VectorType& xBoundary, const bool new_solution) const
+void MA_OT_Operator<OperatorTraits>::evaluate(Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, Config::VectorType& xBoundary, const bool useSigmaH) const
 {
   assert(solver_ptr != NULL);
 
   //prepare clock to time computations
   auto start = std::chrono::steady_clock::now();
+
+  if(useSigmaH)
+  {
+    boundary_->change_evaluation_to_SigmaH();
+    std::cerr << " use gradOmega 0" << std::endl;
+  }
+  else
+  {
+    if (solver_ptr->just_refined())
+    {
+      boundary_->change_evaluation_to_SigmaH();
+      std::cerr << " use gradOmega 0 since just refined" << std::endl;
+    }
+    else
+    {
+      boundary_->change_evaluation_to_UOmegaH();
+      boundary_->init_by_distortion_of_grid(solver_ptr->get_gradient_u_old(), solver_ptr->grid());
+      std::cerr << " use gradOmega 1" << std::endl;
+    }
+  }
 
   prepare_fixing_point_term(x);
   assemble_with_langrangian_Jacobian(xBoundary,x,v, m);
@@ -587,7 +474,7 @@ void MA_OT_Operator<OperatorTraits>::evaluate(Config::VectorType& x, Config::Vec
   auto end = std::chrono::steady_clock::now();
   std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
 
-  if (new_solution)
+//  if (new_solution)
   {
     intermediateSolCounter++;
     solver_ptr->update_solution(x);

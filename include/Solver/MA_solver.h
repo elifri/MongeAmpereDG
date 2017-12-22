@@ -353,11 +353,15 @@ public:
   const std::string& get_plot_output_directory() const{ return plotOutputDirectory_;}
   const std::string& get_output_prefix() const{ return outputPrefix_;}
 
-  shared_ptr<DiscreteLocalGridFunction>& get_u_old_ptr() {return solution_u_old;}
-  shared_ptr<DiscreteLocalGradientGridFunction>& get_gradient_u_old_ptr() {return gradient_u_old;}
+  DiscreteLocalGridFunction& get_u_old() const {return *solution_u_old;}
+  shared_ptr<DiscreteLocalGridFunction>& get_u_old_ptr() const {return solution_u_old;}
+  DiscreteLocalGradientGridFunction& get_gradient_u_old() const {return *gradient_u_old;}
+  shared_ptr<DiscreteLocalGradientGridFunction>& get_gradient_u_old_ptr() const {return gradient_u_old;}
 
   int get_plotRefinement() {return plotterRefinement_;}
 
+  ///indicates whether the grid was just refined (so old solution uses another grid)
+  bool just_refined() const {return (solution_u.size() != get_n_dofs_u());}
 
 	//--------Attributes--
 protected:
