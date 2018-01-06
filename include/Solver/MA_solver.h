@@ -360,9 +360,6 @@ public:
 
   int get_plotRefinement() {return plotterRefinement_;}
 
-  ///indicates whether the grid was just refined (so old solution uses another grid)
-  bool just_refined() const {return (solution_u.size() != get_n_dofs_u());}
-
 	//--------Attributes--
 protected:
 	bool initialised; ///asserts the important member, such as the dof_handler, assembler ... are initialised

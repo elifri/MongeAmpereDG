@@ -76,7 +76,7 @@ public:
 //        std::cerr << " found normal "  << normal <<  "and temp dist " << tempdistanceFunction << std::endl;
       }
     }
-//    std::cerr << " returned H " << max << std::endl;
+    std::cerr << " returned H " << max << " for x " << transportedX << std::endl;
     return max;
   }
 

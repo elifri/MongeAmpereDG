@@ -442,17 +442,9 @@ void MA_OT_Operator<OperatorTraits>::evaluate(Config::VectorType& x, Config::Vec
   }
   else
   {
-    if (solver_ptr->just_refined())
-    {
-      boundary_->change_evaluation_to_SigmaH();
-      std::cerr << " use gradOmega 0 since just refined" << std::endl;
-    }
-    else
-    {
-      boundary_->change_evaluation_to_UOmegaH();
-      boundary_->init_by_distortion_of_grid(solver_ptr->get_gradient_u_old(), solver_ptr->grid());
-      std::cerr << " use gradOmega 1" << std::endl;
-    }
+    boundary_->change_evaluation_to_UOmegaH();
+    boundary_->init_by_distortion_of_grid(solver_ptr->get_gradient_u_old(), solver_ptr->grid());
+    std::cerr << " use gradOmega 1" << std::endl;
   }
 
   prepare_fixing_point_term(x);

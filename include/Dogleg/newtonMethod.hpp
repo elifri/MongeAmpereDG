@@ -68,7 +68,7 @@ void newtonMethod(
       const unsigned int maxIterBoundaryConditions = 1;
       for (unsigned int j = 0; j < maxIterBoundaryConditions; j++)
       {
-          if (j > 2)
+          if (i > 2)
             useSimgaH = false;
 
         // solve Df*s = +f using UmfPack:
