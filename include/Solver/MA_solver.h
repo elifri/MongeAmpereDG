@@ -213,8 +213,8 @@ public:
 	virtual int get_n_dofs() const{return FEBasisHandler_.FEBasis().indexSet().size();}
   virtual int get_n_dofs_u() const{return FEBasisHandler_.FEBasis().indexSet().size();}
 
-  const auto get_FEBasis() const {return FEBasisHandler_.FEBasis();}
-  const auto get_FEBasis_u() const {return FEBasisHandler_.uBasis();}
+  const auto& get_FEBasis() const {return FEBasisHandler_.FEBasis();}
+  const auto& get_FEBasis_u() const {return FEBasisHandler_.uBasis();}
 
   const GridType& grid() const {return gridHandler_.grid();}
   std::shared_ptr<GridType>& get_grid_ptr() {return gridHandler_.get_grid_ptr();}
@@ -352,6 +352,8 @@ public:
   const std::string& get_output_directory() const{ return outputDirectory_;}
   const std::string& get_plot_output_directory() const{ return plotOutputDirectory_;}
   const std::string& get_output_prefix() const{ return outputPrefix_;}
+
+  const VectorType& get_exact_solution() const {return exactsol_u;}
 
   DiscreteLocalGridFunction& get_u_old() const {return *solution_u_old;}
   shared_ptr<DiscreteLocalGridFunction>& get_u_old_ptr() const {return solution_u_old;}
