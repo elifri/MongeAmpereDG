@@ -421,6 +421,11 @@ public:
     c_ = c;
   }
 
+  void divide_by_constant(Config::ValueType c)
+  {
+    c_ /= c;
+  }
+
   void evaluate (const Config::DomainType &x, Config::ValueType &u) const
   {
     u = c_;
