@@ -218,6 +218,7 @@ public:
 
   const GridType& grid() const {return gridHandler_.grid();}
   std::shared_ptr<GridType>& get_grid_ptr() {return gridHandler_.get_grid_ptr();}
+  const std::shared_ptr<GridType>& get_grid_ptr() const {return gridHandler_.get_grid_ptr();}
   const GridViewType& gridView() const {return gridHandler_.gridView();}
   GridViewType& gridView() {return gridHandler_.gridView();}
 

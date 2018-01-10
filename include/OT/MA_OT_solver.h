@@ -42,7 +42,7 @@ public:
 
   template<typename LOP>
 #ifdef USE_ANALYTIC_JACOBIAN
-  using Problem_MA_OT_Operator = MA_OT_Operator_with_Linearisation<ConstOneOperatorTraits<MA_OT_solver,LOP>, Local_Operator_MA_OT_Linearisation>;
+  using Problem_MA_OT_Operator = MA_OT_Operator_with_Linearisation<ConstantOperatorTraits<MA_OT_solver,LOP>, Local_Operator_MA_OT_Linearisation>;
 #else
   //  using Problem_MA_OT_Operator = MA_OT_Operator<ProblemSquareToSquareOperatorTraits<MA_OT_solver,LOP>>;
 //  using Problem_MA_OT_Operator = MA_OT_Operator<ConstOneOperatorTraits<MA_OT_solver,LOP>>;
