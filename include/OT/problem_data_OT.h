@@ -410,14 +410,20 @@ public :
 };
 
 
-class ConstOneFunction : public DensityFunction
+class ConstantFunction : public DensityFunction
 {
 public:
-  ~ConstOneFunction() {}
+  ConstantFunction(Config::ValueType c=1.0): c_(c){}
+  ~ConstantFunction() {}
+
+  void change_constant(Config::ValueType c)
+  {
+    c_ = c;
+  }
 
   void evaluate (const Config::DomainType &x, Config::ValueType &u) const
   {
-    u = 1;
+    u = c_;
   }
   void evaluateDerivative(const FieldVector<double, Config::dim> &x, FieldVector<double, Config::dim> &gradu) const
   {
@@ -429,12 +435,15 @@ public:
 #ifdef HAVE_ADOLC
   void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
   {
-    u = 1;
+    u = c_;
   }
 #endif
+
+private:
+  Config::ValueType c_;
 };
 
-using rhoYSquareToSquare = ConstOneFunction;
+using rhoYSquareToSquare = ConstantFunction;
 
 class rhoXGaussianSquare : public DensityFunction
 {
