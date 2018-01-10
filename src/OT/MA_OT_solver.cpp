@@ -762,8 +762,11 @@ void MA_OT_solver::create_initial_guess()
 
   Config::ValueType res = 0;
 
+#define U_MID_EXACT
+
 //  assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), solution, res);
   assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), exactsol_u, res);
+  //take care that the adapted exact solution also updates the
   assembler_.set_u0AtX0(res);
   std::cerr << " set u_0^mid to " << res << std::endl;
 
@@ -853,6 +856,15 @@ void MA_OT_solver::adapt_operator()
   std::cerr <<" init new rhs Bar " << std::endl;
   op.init(uBar_adapted);
 #endif
+
+  //update u mean value
+#ifdef U_MID_EXACT
+  Config::ValueType res = 0;
+
+  assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), exactsol_u, res);
+  assembler_.set_u0AtX0(res);
+  std::cerr << " set u_0^mid to " << res << std::endl;
+#endif
 }
 
 void MA_OT_solver::adapt_solution(const int level)
@@ -899,11 +911,7 @@ void MA_OT_solver::adapt_solution(const int level)
   solution(get_n_dofs_V_h()) = 0;
 //  solution.tail(get_n_dofs_Q_h()) = get_assembler_lagrangian_boundary().boundaryHandler().shrink_to_boundary_vector(p_adapted);
 
-  std::cerr << " going to adapt operator " << std::endl;
-
-  adapt_operator();
-
-
+  //add better projection of exact solution
   {
     Config::SpaceType x0 = {0.0,0.0};
 
@@ -921,6 +929,10 @@ void MA_OT_solver::adapt_solution(const int level)
     fname += "/"+ plotter.get_output_prefix()+ "exactSol"+NumberToString(iterations)+".vtu";
     plotter.writeOTVTKGlobal(fname, y0);
   }
+
+  std::cerr << " going to adapt operator " << std::endl;
+  adapt_operator();
+
 
 }
 
