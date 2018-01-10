@@ -106,10 +106,6 @@ public:
     std::cout << " solver n_dofs "<< solver.get_n_dofs() << std::endl;
 
     init();
-
-    assert_integrability_condition();
-    assert(check_integrability_condition());
-
   }
 
   MA_OT_Operator(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
@@ -293,6 +289,9 @@ void MA_OT_Operator<OperatorTraits>::init()
 {
   solver_ptr->get_assembler_lagrangian_midvalue().assemble_u_independent_matrix(*lopLMMidvalue, lagrangianFixingPointDiscreteOperator);
   std::cerr << " adapted operator and now lagrangian " << lagrangianFixingPointDiscreteOperator.size() << " and ndofsV_H " << this->solver_ptr->get_n_dofs_V_h() << std::endl;
+
+  assert_integrability_condition();
+  assert(check_integrability_condition());
 }
 
 template<typename OperatorTraits>
