@@ -229,22 +229,16 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
     // lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
   MA_OT_Operator_with_Linearisation(SolverType& solver):MA_OT_Operator<OperatorTraits>(solver),
         lopLinear_ptr(new LOPLinear(*(this->boundary_), this->f_, this->g_))
-    {
-    this->init();
-    }
+    {}
 
   MA_OT_Operator_with_Linearisation(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lopLinear):MA_OT_Operator<OperatorTraits>(solver),
         lopLinear_ptr(lopLinear)
-    {
-    this->init();
-    }
+    {}
 
   MA_OT_Operator_with_Linearisation(SolverType& solver, const std::shared_ptr<LocalOperatorTypeNotLinear> lop, const std::shared_ptr<LocalOperatorType>& lopLinear):
     MA_OT_Operator<OperatorTraits>(solver, lop),
         lopLinear_ptr(lopLinear)
-    {
-    this->init();
-    }
+    {}
 
 
   void assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const
@@ -596,12 +590,12 @@ void MA_OT_Operator<OperatorTraits>
   Integrator<Config::DuneGridType> integratorF(solver_ptr->get_grid_ptr());
   const double integralF = integratorF.assemble_integral(f_);
 
-  f_.change_constant(1./integralF);
+  f_.divide_by_constant(integralF);
 
   Integrator<Config::DuneGridType> integratorG(solver_ptr->get_gridTarget_ptr());
   const double integralG = integratorG.assemble_integral(g_);
 
-  g_.change_constant(1./integralG);
+  g_.divide_by_constant(integralG);
 }
 
 
