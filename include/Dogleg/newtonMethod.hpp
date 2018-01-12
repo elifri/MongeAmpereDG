@@ -129,6 +129,8 @@ void newtonMethod(
           //increase omega
           if (f.norm() < lastResidual && omega < 1.0)
           {
+            std::cerr << " try   omega   " << omega*2 << std::endl;
+
             Config::VectorType xNew = xBoundary-omega*lastUpdate;
 //            auto tempfNorm = f.norm();
             Config::VectorType tempf(n);
@@ -140,7 +142,7 @@ void newtonMethod(
                    << "  newton residual was " << tempf.norm()
                    << "  would have been     boundary-step     "
                    << std::scientific << std::setprecision(3) << 2*omega*lastUpdate.norm()
-                    << std::scientific << std::setprecision(3) << "   omega   " << 2*omega << std::endl;
+                    << std::scientific << std::setprecision(3) << "   NewOmeg a  " << 2*omega << std::endl;
             if (tempf.norm() < f.norm())
             {
               omega*= 2;
@@ -157,7 +159,6 @@ void newtonMethod(
                  std::cout << std::scientific << std::setprecision(3) << omega << std::endl;
                   std::cerr << "   change boundary-step     "
                       << std::scientific << std::setprecision(3) << omega*s.norm()
-                      << std::scientific << std::setprecision(3) << "   omega   " << omega
                       << std::endl << "       ";
                   std::cout << "   " << std::setw(6) << i;
                   std::cout << "change boundary-step   ";
