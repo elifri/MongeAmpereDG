@@ -206,11 +206,12 @@ public:
       auto detHessu = determinant(Hessu); //note that determinant of Hessu and cofHessu is the same
       rhoY.evaluate(gradu, g_value);
 
-      if (detHessu < 0)
+      if (detHessu < 0 && !found_negative)
       {
         std::cerr << "found negative determinant " << detHessu << " at " << x_value << std::endl;
         std::cerr << " rhs was  " << f_value/g_value << std::endl;
         std::cerr << "gradg " << gradg << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
+        found_negative = true;
       }
 
 //      std::cerr << " det -f/g " << -detHessu+f_value/g_value << std::endl;
