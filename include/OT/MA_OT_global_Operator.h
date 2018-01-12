@@ -298,6 +298,14 @@ bool MA_OT_Operator<OperatorTraits>::check_integrability_condition() const
   const double integralG = integratorG.assemble_integral(g_);
 
   std::cout << " calculated the the integrals: int_Omega f dx = " << integralF << " and int_Sigma g dy = " << integralG << std::endl;
+
+  if (std::fabs(integralF-integralG)>1e-6)
+  {
+    std::cout << " the calculated integrals were not equal ... difference was " << std::fabs(integralF-integralG) << std::endl;
+    assert(false);
+    std::exit(-1);
+  }
+
   return (std::fabs(integralF-integralG)<1e-6);
 }
 
@@ -465,17 +473,18 @@ void MA_OT_Operator<OperatorTraits>::evaluate(Config::VectorType& x, Config::Vec
   else
   {
     boundary_->change_evaluation_to_UOmegaH();
-//      boundary_->init_by_distortion_of_grid(solver_ptr->get_gradient_u_old(), solver_ptr->grid());
+    boundary_->init_by_distortion_of_grid(solver_ptr->get_gradient_u_old(), solver_ptr->grid());
 
-    using DiscreteGridFunction = typename SolverType::DiscreteGridFunction;
+
+/*    using DiscreteGridFunction = typename SolverType::DiscreteGridFunction;
     using DiscreteLocalGradientGridFunction = typename SolverType::DiscreteLocalGradientGridFunction;
-//
-//      FETraits::DiscreteGridFunction numericalSolution(FEBasisHandler_.uBasis(),solution_u);
 
     DiscreteGridFunction solution_global (solver_ptr->get_FEBasis_u(),solver_ptr->get_exact_solution());
     auto gradient_local = localFirstDerivative(solution_global);
 //
-    boundary_->init_by_distortion_of_grid(gradient_local, solver_ptr->grid());
+    boundary_->init_by_distortion_of_grid(gradient_local, solver_ptr->grid());*/
+
+
     std::cerr << " use gradOmega 1" << std::endl;
   }
 
