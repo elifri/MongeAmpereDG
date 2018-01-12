@@ -76,7 +76,8 @@ public:
 //        std::cerr << " found normal "  << normal <<  "and temp dist " << tempdistanceFunction << std::endl;
       }
     }
-//    std::cerr << " returned H " << max << std::endl;
+//    std::cerr << " returned H " << max << " for x " << transportedX << std::endl;
+
     return max;
   }
 
@@ -509,4 +510,58 @@ public:
   }
 #endif
 };
+
+/*struct ExactSolutionRotatedUnitSquare{
+
+  ExactSolutionRotatedUnitSquare():
+    A ({{.5257311120,-.8506508084},{.8506508084,.5257311120}}),
+    B ({{.262865556,.174131508286748},{0.174131508286748,.262865556}}),
+  {}
+
+  auto exact_solution() const
+  {
+    return [&](Config::SpaceType x){
+                  auto y=x0;B.umv(x,y);
+                  return (x*y);};
+  }
+
+  auto exact_gradient() const
+  {
+    return [&](Config::SpaceType x){
+                auto y=x0;A.umv(x,y);
+                return y;};
+  }
+
+
+  FieldMatrix<Config::ValueType, 2, 2> A;
+  FieldMatrix<Config::ValueType, 2, 2> B;
+};*/
+
+struct ExactSolutionRotatedEllipse{
+
+  ExactSolutionRotatedEllipse():
+    A ({{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}}),
+    B ({{.385576911206371,.174131508286748},{0.174131508286748,.970161260454739}}),
+    x0({0.0,0.0})
+  {}
+
+  auto exact_solution() const
+  {
+    return [&](Config::SpaceType x){
+                  auto y=x0;B.umv(x,y);
+                  return (x*y);};
+  }
+
+  auto exact_gradient() const
+  {
+    return [&](Config::SpaceType x){
+                auto y=x0;A.umv(x,y);
+                return y;};
+  }
+
+  FieldMatrix<Config::ValueType, 2, 2> A;
+  FieldMatrix<Config::ValueType, 2, 2> B;
+  Config::SpaceType x0;
+};
+
 #endif /* SRC_PROBLEM_DATA_OT_H_ */
