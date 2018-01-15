@@ -34,36 +34,73 @@ struct FEBasisHandler{
   template<class F>
   void project(F f, Config::VectorType &v) const;
 
+  //use the elliptic (problem induced) projection
+  template <class F>
+  void elliptic_project(F f, Config::VectorType &v) const;
+
   template<class F, class F_Der>
   void project(F &f, F_Der &grad_f, Config::VectorType &v) const;
 
+  ///initialises the basis functions on the refined grid
   void adapt_after_grid_change(const typename FEBasisType::GridView& grid)
   {
     FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid));
   }
 
+  ///initialises the basis functions on the refined grid and calculates the coefficients of the new basis from the coefficients of the old basis
+  ///if the grids are not nested a the new function is a hermite interpolation of the old
+  /**
+   * @brief initialises the basis functions on the refined grid and calculates a new coefficient vector. if the grids are not nested a the new function is a hermite interpolation of the old
+   * @param gridOld   the old grid
+   * @param grid      the refined grid
+   * @param v         coeffcient vector of the old grid basis functions
+   * @return          coefficient vector of the new grid basis functions
+   */
   template <typename GridTypeOld>
   Config::VectorType adapt_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v)
   { assert(false && " Error, dont know FE basis and works only for levelGridViews");
     std::cerr <<  " Error, dont know FE basis and works only for levelGridViews" << std::endl;
     DUNE_THROW(Dune::NotImplemented, " Error, dont know FE basis and works only for levelGridViews"); exit(-1);}
 
-
+  ///initialises the basis functions on the refined grid and calculates the coefficients of the new basis from the coefficients of the old basis
+  ///if the grids are not nested a the new function is a hermite interpolation of the old
+  /**
+   * @brief initialises the basis functions on the refined grid and calculates a new coefficient vector. if the grids are not nested a the new function is a hermite interpolation of the old
+   * @param gridOld   the old grid
+   * @param grid      the refined grid
+   * @param v         coeffcient vector of the old grid basis functions
+   * @return          coefficient vector of the new grid basis functions
+   */
   template <typename GridTypeOld>
   Config::VectorType adapt_function_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
   {assert(false && " Error, dont know FE basis and works only for levelGridViews");
     std::cerr << " Error, dont know FE basis and works only for levelGridViews" << std::endl;
     DUNE_THROW(Dune::NotImplemented, " Error, dont know FE basis and works only for levelGridViews"); exit(-1);}
 
+  ///initialises the basis functions on the refined grid and calculates the coefficients of the new basis from the coefficients of the old basis
+  ///if the grids are not nested a the new function is an elliptic projection of the old
+  /**
+   * @brief initialises the basis functions on the refined grid and calculates a new coefficient vector. if the grids are not nested a the new function is an elliptic projection of the old
+   * @param gridOld   the old grid
+   * @param grid      the refined grid
+   * @param v         coeffcient vector of the old grid basis functions
+   * @return          coefficient vector of the new grid basis functions
+   */
+  template <typename GridTypeOld>
+  Config::VectorType adapt_function_elliptic_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
+  {assert(false && " Error, dont know how this works for this FE basis");
+    std::cerr << " Error, dont know how this works for this FE basis" << std::endl;
+    DUNE_THROW(Dune::NotImplemented, " Error, dont know how this works for this FE basis"); exit(-1);}
 
+  ///refines the grid of the solver and adapts the coefficient vector v
   void adapt(MA_solver& ma_solver, const int level, Config::VectorType& v)
-  {assert(false && " Error, dont know FE basis"); exit(-1);}
+  {assert(false && " Error, dont know how this works for this FE basis"); exit(-1);}
 
   void adapt(std::shared_ptr<Config::DuneGridType> oldGrid, Config::GridView gridView, const Config::VectorType& v_old, Config::VectorType& v)
-  {assert(false && " Error, dont know FE basis"); exit(-1);}
+  {assert(false && " Error, dont know how this works for this FE basis"); exit(-1);}
 
   Config::VectorType coarse_solution(MA_solver& solver, const int level)
-  {assert(false && " Error, dont know FE basis"); exit(-1);}
+  {assert(false && " Error, dont know how this works for this FE basis"); exit(-1);}
 
   void bind(const MA_solver& solver, const Config::GridView& gridView)
   {
@@ -652,6 +689,74 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F &f,
   v = v.cwiseQuotient(countMultipleDof);
 }
 
+template<int FETraitstype, typename FETraits>
+template <typename GOP, class F>
+void FEBasisHandler<FETraitstype, FETraits>::elliptic_project(const GOP& operatorMA,F f, Config::VectorType &v) const
+{
+  v.setZero(FEBasis_->indexSet().size());
+
+  operatorMA.set_evaluation_of_u_old_to_different_grid();
+
+  const int dim = FEBasisType::GridView::dimension;
+
+  ///assemble linear equation system A_F(w_h, v_h) = A_F(u_h,v_h)
+
+  //assemble for left hand side
+
+  Config::MatriType m;
+  operatorMA.Jacobian(v, m);
+
+  Config::DenseMatrixType localMassMatrix;
+
+  auto localView = FEBasis_->localView();
+  auto localIndexSet = FEBasis_->indexSet().localIndexSet();
+
+  for (auto&& element : elements(FEBasis_->gridView()))
+  {
+    localView.bind(element);
+    localIndexSet.bind(localView);
+
+    const auto & lFE = localView.tree().finiteElement();
+    const auto& geometry = element.geometry();
+
+    // ----assemble mass matrix and integrate f*test to solve LES --------
+    localMassMatrix.setZero(localView.size(), localView.size());
+    Config::VectorType localVector = Config::VectorType::Zero(localView.size());
+
+    // Get a quadrature rule
+    const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
+    const QuadratureRule<double, dim>& quad =
+        QuadratureRules<double, dim>::rule(geometry.type(), order);
+
+    for (const auto& quadpoint : quad)
+    {
+      const FieldVector<Config::ValueType, dim> &quadPos = quadpoint.position();
+
+      //evaluate test function
+      std::vector<Dune::FieldVector<Config::ValueType, 1>> functionValues(localView.size());
+      lFE.localBasis().evaluateFunction(quadPos, functionValues);
+
+      const double integrationElement = geometry.integrationElement(quadPos);
+
+      for (int j = 0; j < localVector.size(); j++)
+      {
+        localVector(j) += f(geometry.global(quadPos))*functionValues[j]* quadpoint.weight() * integrationElement;
+
+        //int v_i*v_j, as mass matrix is symmetric only fill lower part
+        for (int i = 0; i <= j; i++)
+          localMassMatrix(j, i) += cwiseProduct(functionValues[i],
+                    functionValues[j]) * quadpoint.weight()*integrationElement;
+
+      }
+    }
+
+    Assembler<FiniteElementTraits>::set_local_coefficients(localIndexSet,localMassMatrix.ldlt().solve(localVector), v);
+  }
+  OperatorMA.set_evaluation_of_u_old_to_same_grid();
+
+}
+
+
 template <>
 template <typename GridTypeOld>
 Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt_function_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
@@ -667,6 +772,22 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   vNew.resize(FEBasis_->indexSet().size());
   project(solution_u_Coarse_global, gradient_u_Coarse_global, vNew);
 //  project(solution_u_Coarse_global, vNew);
+  return vNew;
+}
+
+template <>
+template <typename GridTypeOld>
+Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt_function_elliptic_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
+{
+  using CoarseTraits = PS12SplitTraits<GridTypeOld>;
+
+  typename CoarseTraits::FEBasis FEBasisCoarse (gridOld);
+  using DiscreteGridFunctionCoarse = typename CoarseTraits::DiscreteGridFunction;
+  DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
+
+  Config::VectorType vNew;
+  vNew.resize(FEBasis_->indexSet().size());
+  elliptic_project(solution_u_Coarse_global, vNew);
   return vNew;
 }
 

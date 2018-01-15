@@ -24,17 +24,133 @@ value_type FrobeniusProduct(const FieldMatrix<value_type, 2, 2>& A, const FieldM
   return A[0][0]*B[0][0]+A[0][1]*B[0][1]+A[1][0]*B[1][0]+A[1][1]*B[1][1];
 }
 
-
 class Local_Operator_MA_OT_Linearisation {
   using Function = DensityFunction;
 
 public:
   using FunctionType = Function;///interface typedef
 
-  Local_Operator_MA_OT_Linearisation(const OTBoundary& bc, const Function& rhoX, const Function& rhoY):
-  delta_K(10), rhoX(rhoX), rhoY(rhoY),bc(bc), int_f(0), sign(1.0), found_negative(false)
+  Local_Operator_MA_OT_Linearisation(const OTBoundary& bc, const Function& rhoX, const Function& rhoY,
+      SolverConfig::FETraitsSolver::DiscreteGridFunction &u_old):
+  delta_K(10), rhoX(rhoX), rhoY(rhoY),bc(bc),
+  int_f(0), sign(1.0), found_negative(false), last_step_on_a_different_grid(false),
+  oldSolution_(u_old)
   {
   }
+
+/*  template<typename RangeType, typename JacobianType, typename FEHessianType, int size>
+  struct CelltermData{
+    std::vector<RangeType> referenceFunctionValues;
+    std::vector<JacobianType> gradients;
+    std::vector<FEHessianType> Hessians;
+
+    Config::ValueType u_value;
+    FieldVector<double, Config::dim> gradu;
+    FieldMatrix<double, Config::dim, Config::dim> Hessu;
+
+    double integrationElement;
+
+    template<typename GeometryType, typename LocalFiniteElement, typename VectorType, int dim>
+    CelltermData(const GeometryType& geometry, const LocalFiniteElement& lfu, const FieldVector<double, dim>& quadPos,  const VectorType &x):
+      referenceFunctionValues(size), gradients(size), Hessians(size),
+      u_value(0.),
+      integrationElement(geometry.integrationElement(quadPos))
+    {
+      const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
+
+      assemble_functionValues_u(lfu, quadPos,
+          referenceFunctionValues, x, u_value);
+
+      assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
+          gradients, x, gradu);
+
+      assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
+          x, Hessu);
+    }
+      };
+
+*/
+
+template<int dim>
+    FieldVector<double,dim> smooth_convection_term(const FieldVector<double, dim>& gradu,
+        const double& f_value, double& avg_g_value, const double& integrationElement) const
+    {
+      double g_value;
+      FieldVector<double, dim> gradg;
+
+#ifdef DEBUG
+      //calculate derivatives of g
+      const double delta = std::sqrt(1e-15);
+
+      //calculate derivative of F in x by finite difference
+      auto temp = gradu;
+      temp[0]+=delta;
+      std::cerr << " gradu " << gradu <<  " temp x Plus " << temp << std::endl;
+      double Dx1PlusF_value;
+      rhoY.evaluate(temp, Dx1PlusF_value);
+      temp = gradu;
+      temp[1]+=delta;
+      double Dx2PlusF_value;
+      rhoY.evaluate(temp, Dx2PlusF_value);
+
+      FieldVector<double, dim> DxFEx =
+        {
+          (Dx1PlusF_value-g_value)/delta,
+          (Dx2PlusF_value-g_value)/delta
+        };
+
+      std::cerr << std::setprecision(15);
+      std::cerr << " dg " << gradg << " finite diff g " << DxFEx << std::endl;
+      std::cerr << " g1 " << Dx1PlusF_value << " g2 " << Dx2PlusF_value << std::endl;
+#endif
+
+      auto h_T = std::sqrt(integrationElement);
+
+      //velocity vector for convection
+      FieldVector<double,dim> b(0);
+
+      //calculate average convection term
+      const double h = rhoY.gridWidth()/2.;
+//      const double h = h_T/2.;
+      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> convectionTerm(2*n_+1,2*n_+1);
+      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> transportedXs(2*n_+1,2*n_+1);
+      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> gradGs(2*n_+1,2*n_+1);
+
+      for (int i = -n_ ; i <= n_; i++)
+        for (int j = -n_ ; j <= n_; j++)
+      {
+        transportedXs(i+n_,j+n_) = gradu;
+        transportedXs(i+n_,j+n_)[0] += i*h;
+        transportedXs(i+n_,j+n_)[1] += j*h;
+
+        rhoY.evaluate(transportedXs(i+n_,j+n_), g_value);
+        rhoY.evaluateDerivative(transportedXs(i+n_,j+n_), gradg);
+
+        gradGs(i+n_,j+n_) = gradg;
+
+        //ATTENTION: ASUMMING F is constant!!!!!!!!!!!!!!
+        convectionTerm(i+n_,j+n_) = gradg;
+        convectionTerm(i+n_,j+n_) *= -f_value/g_value/g_value;
+
+        b.axpy(smoothingKernel_(i+n_,j+n_),convectionTerm(i+n_,j+n_));
+        avg_g_value += smoothingKernel_(i+n_,j+n_)*g_value;
+      }
+
+      /*
+      auto P_T = b.two_norm() * h_T/2./minEVcofHessu;
+        if (std::abs(dP_T) > 1.)
+        {
+          for (int i = -n_ ; i <= n_; i++)
+            for (int j = -n_ ; j <= n_; j++)
+              std::cerr << " at " << transportedXs(i+n_,j+n_) << " grad g " << i << " " << j << ": " << gradGs(i+n_,j+n_) << " convectionTerm " << i << " " << j << ": "<< " " << convectionTerm(i+n_,j+n_) << std::endl;
+          std::cerr << std::setprecision(16);
+          std::cerr << " difference averaged and not, avg: " << b << " not avg: " << convectionTerm(0,0) << " -> difference " << (b-convectionTerm(0,0))<< std::endl;
+          std::cerr << "gradg " << gradg << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
+        }
+*/
+      return b;
+    }
+
 
   /**
    * implements the local volume integral
@@ -83,28 +199,28 @@ public:
       //--------get data------------------------
       // Position of the current quadrature point in the reference element
       const FieldVector<double, dim> &quadPos = quad[pt].position();
-      // The transposed inverse Jacobian of the map from the reference element to the element
-      const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
+
+      //global grid position of current quadrature point
+      auto x_value = geometry.global(quad[pt].position());
+
       // The multiplicative factor in the integral transformation formula
       const double integrationElement = geometry.integrationElement(quadPos);
 
       //the shape function values
       std::vector<RangeType> referenceFunctionValues(size);
-      double u_value = 0;
-      assemble_functionValues_u(localFiniteElement, quadPos,
-          referenceFunctionValues, x, u_value);
-
-      // The gradients
       std::vector<JacobianType> gradients(size);
-      FieldVector<double, Config::dim> gradu;
-      assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
-          gradients, x, gradu);
-
-      // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size);
+
+      double u_value = 0;
+      FieldVector<double, Config::dim> gradu;
       FieldMatrix<double, Config::dim, Config::dim> Hessu;
-      assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
-          x, Hessu);
+
+      if (last_step_on_a_different_grid)
+        assemble_cellTermFEData(geometry, localFiniteElement, quadPos, oldSolution_, x_value,
+          referenceFunctionValues, gradients, Hessians, u_value, gradu, Hessu);
+      else
+        assemble_cellTermFEData(geometry, localFiniteElement, quadPos, x,
+          referenceFunctionValues, gradients, Hessians, u_value, gradu, Hessu);
 
       //--------assemble cell integrals in variational form--------
 
@@ -119,8 +235,6 @@ public:
       auto minEVcofHessu = ev0;
       assert(std::abs(minEVcofHessu - std::min(std::abs(ev0), std::abs(ev1))) < 1e-10);
 
-      auto x_value = geometry.global(quad[pt].position());
-
       //calculate illumination at \Omega
       double f_value;
       rhoX.evaluate(x_value, f_value);
@@ -128,97 +242,25 @@ public:
       int_f += f_value* quad[pt].weight() * integrationElement;
 
       //calculate illumination at target plane
-      double g_value;
-      FieldVector<double, dim> gradg;
-
-#ifdef DEBUG
-      //calculate derivatives of g
-      const double delta = std::sqrt(1e-15);
-
-      //calculate derivative of F in x by finite difference
-      auto temp = gradu;
-      temp[0]+=delta;
-      std::cerr << " gradu " << gradu <<  " temp x Plus " << temp << std::endl;
-      double Dx1PlusF_value;
-      rhoY.evaluate(temp, Dx1PlusF_value);
-      temp = gradu;
-      temp[1]+=delta;
-      double Dx2PlusF_value;
-      rhoY.evaluate(temp, Dx2PlusF_value);
-
-      FieldVector<double, dim> DxFEx =
-        {
-          (Dx1PlusF_value-g_value)/delta,
-          (Dx2PlusF_value-g_value)/delta
-        };
-
-      std::cerr << std::setprecision(15);
-      std::cerr << " dg " << gradg << " finite diff g " << DxFEx << std::endl;
-      std::cerr << " g1 " << Dx1PlusF_value << " g2 " << Dx2PlusF_value << std::endl;
-#endif
-
-      auto h_T = std::sqrt(integrationElement);
-
-      //velocity vector for convection
-      FieldVector<double,dim> b(0);
       double avg_g_value = 0;
-
-      //calculate average convection term
-      const double h = rhoY.gridWidth()/2.;
-//      const double h = h_T/2.;
-      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> convectionTerm(2*n_+1,2*n_+1);
-      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> transportedXs(2*n_+1,2*n_+1);
-      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> gradGs(2*n_+1,2*n_+1);
-
-      for (int i = -n_ ; i <= n_; i++)
-        for (int j = -n_ ; j <= n_; j++)
-      {
-        transportedXs(i+n_,j+n_) = gradu;
-        transportedXs(i+n_,j+n_)[0] += i*h;
-        transportedXs(i+n_,j+n_)[1] += j*h;
-
-        rhoY.evaluate(transportedXs(i+n_,j+n_), g_value);
-        rhoY.evaluateDerivative(transportedXs(i+n_,j+n_), gradg);
-
-        gradGs(i+n_,j+n_) = gradg;
-
-        //ATTENTION: ASUMMING F is constant!!!!!!!!!!!!!!
-        convectionTerm(i+n_,j+n_) = gradg;
-        convectionTerm(i+n_,j+n_) *= -f_value/g_value/g_value;
-
-        b.axpy(smoothingKernel_(i+n_,j+n_),convectionTerm(i+n_,j+n_));
-        avg_g_value += smoothingKernel_(i+n_,j+n_)*g_value;
-      }
-
-      auto P_T = b.two_norm() * h_T/2./minEVcofHessu;
-/*
-        if (std::abs(dP_T) > 1.)
-        {
-          for (int i = -n_ ; i <= n_; i++)
-            for (int j = -n_ ; j <= n_; j++)
-              std::cerr << " at " << transportedXs(i+n_,j+n_) << " grad g " << i << " " << j << ": " << gradGs(i+n_,j+n_) << " convectionTerm " << i << " " << j << ": "<< " " << convectionTerm(i+n_,j+n_) << std::endl;
-          std::cerr << std::setprecision(16);
-          std::cerr << " difference averaged and not, avg: " << b << " not avg: " << convectionTerm(0,0) << " -> difference " << (b-convectionTerm(0,0))<< std::endl;
-          std::cerr << "gradg " << gradg << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
-        }
-*/
+      FieldVector<double,dim> b = smooth_convection_term(gradu, f_value, avg_g_value, integrationElement);
 
       auto detHessu = determinant(Hessu); //note that determinant of Hessu and cofHessu is the same
-      rhoY.evaluate(gradu, g_value);
+//      double g_value;
+//      rhoY.evaluate(gradu, g_value);
 
+      //check if determinant is negative, i.e. u is not convex
       if (detHessu < 0 && !found_negative)
       {
         std::cerr << "found negative determinant " << detHessu << " at " << x_value << std::endl;
-        std::cerr << " rhs was  " << f_value/g_value << std::endl;
-        std::cerr << "gradg " << gradg << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
+        std::cerr << " rhs was  " << f_value/avg_g_value << std::endl;
+        std::cerr << "-detHessu+f_value/g_value" << -detHessu+f_value/avg_g_value << std::endl;
+
+        //        std::cerr << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
         found_negative = true;
       }
 
-//      std::cerr << " det -f/g " << -detHessu+f_value/g_value << std::endl;
-
-
-      //write calculated distribution
-
+      //write into system matrix
       for (int j = 0; j < size; j++) // loop over test fcts
       {
         for (int i = 0; i < size; i++) //loop over ansatz fcts
@@ -233,12 +275,8 @@ public:
         }
 
         //-f(u_k) [rhs of Newton]
-        v(j) += (-detHessu+f_value/g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        v(j) += (-detHessu+f_value/avg_g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 //        v(j) += (-detHessu)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-        if (detHessu < 0)
-        {
-          std::cerr << "-detHessu+f_value/g_value" << -detHessu+f_value/g_value << std::endl;
-        }
         assert(! (v(j)!=v(j)));
 
       }
@@ -404,6 +442,11 @@ public:
       const LocalView &localView,
       const VectorType &x, VectorType& v, MatrixType& m) const {}
 
+  ///use given global function (probably living on a coarser grid) to evaluate last step
+  void set_evaluation_of_u_old_to_different_grid(){  last_step_on_a_different_grid = true;}
+  ///use coefficients of old function living on the same grid to evaluate last step
+  void set_evaluation_of_u_old_to_same_grid(){  last_step_on_a_different_grid = false;}
+
   const Function& get_input_distribution() const {return rhoX;}
   const Function& get_target_distribution() const {return rhoY;}
 
@@ -420,10 +463,14 @@ public:
   const Function& rhoY;
   const OTBoundary& bc;
 
+
   mutable double int_f;
   mutable double sign;
 
   mutable bool found_negative;
+
+  mutable bool last_step_on_a_different_grid;
+  SolverConfig::FETraitsSolver::DiscreteGridFunction& oldSolution_;
 };
 
 #endif /* SRC_OT_OPERATOR_MA_OT_LINEARISATION_HPP_ */

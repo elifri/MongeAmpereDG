@@ -787,6 +787,11 @@ void MA_OT_solver::solve_nonlinear_system()
 {
   assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
 
+#ifdef USE_ANALYTIC_JACOBIAN
+  assert(!op.lopLinear_ptr->last_step_on_a_different_grid);
+#else
+  assert(op.get_lop().last_step_on_a_different_grid == false);
+#endif
   std::cout << "n dofs" << get_n_dofs() << " V_h_dofs " << get_n_dofs_V_h() << " Q_h_dofs " << get_n_dofs_Q_h() << std::endl;
 
   if (iterations == 0)

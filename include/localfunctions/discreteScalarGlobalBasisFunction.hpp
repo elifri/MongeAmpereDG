@@ -181,7 +181,7 @@ public:
     using Domain = LocalDomain;
     using Range = GlobalFunction::Range;
     using Element = GlobalFunction::Element;
-    typedef FieldVector<Range, Basis::GridView::dimension> Jacobian;
+    using Jacobian = FieldVector<Range, Basis::GridView::dimension>;
 
     using Geometry = typename GlobalFunction::Element::Geometry;
 //    using LocalFE = typename LocalBasisView::Tree::FiniteElement::LocalBasisType;
@@ -391,7 +391,7 @@ public:
       localBasisView_.unbind();
     }
 
-    typedef FieldMatrix<Range, Element::dimension, Element::dimension> Hessian;
+    using Hessian = FieldMatrix<Range, Element::dimension, Element::dimension>;
 
 
     /**
@@ -965,6 +965,55 @@ private:
     const int TaylorOrder = Basis::LocalView::Tree::FiniteElement::Traits::LocalBasisType::Traits::diffOrder;
     return TaylorExpansion<TaylorOrder>(element, x, localCoordinate);
   }
+
+  void evaluateAll(const Domain& x, Range& u, typename LocalFirstDerivative::Jacobian& gradu,
+      typename LocalSecondDerivative::Hessian& hessu) const
+  {
+    bool outside = false;
+
+    Domain localCoordinate;
+    const auto& element = findEntityAndLocalCoordinate(x, localCoordinate, outside);
+    localFunction_.bind(element);
+    localDerivative_.bind(element);
+    localSecondDerivative_.bind(element);
+
+    if (!outside)
+    {
+      u = localFunction_(localCoordinate);
+      gradu = localDerivative_(localCoordinate);
+    }
+    else
+    {
+      const int TaylorOrder = Basis::LocalView::Tree::FiniteElement::Traits::LocalBasisType::Traits::diffOrder;
+      u = TaylorExpansion<TaylorOrder>(element, x, localCoordinate);
+      gradu  = TaylorExpansionDerivative(element, x, localCoordinate);
+    }
+    hessu = localSecondDerivative_(localCoordinate);
+  }
+
+
+  void evaluateDerivatives(const Domain& x, typename LocalFirstDerivative::Jacobian& gradu,
+      typename LocalSecondDerivative::Hessian& hessu) const
+  {
+    bool outside = false;
+
+    Domain localCoordinate;
+    const auto& element = findEntityAndLocalCoordinate(x, localCoordinate, outside);
+    localDerivative_.bind(element);
+    localSecondDerivative_.bind(element);
+
+    if (!outside)
+    {
+      gradu = localDerivative_(localCoordinate);
+    }
+    else
+    {
+      const int TaylorOrder = Basis::LocalView::Tree::FiniteElement::Traits::LocalBasisType::Traits::diffOrder;
+      gradu  = TaylorExpansionDerivative(element, x, localCoordinate);
+    }
+    hessu = localSecondDerivative_(localCoordinate);
+  }
+
 
   friend typename Traits::DerivativeInterface derivative(const MyDiscreteScalarGlobalBasisFunction& t)
   {

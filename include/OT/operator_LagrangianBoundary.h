@@ -13,7 +13,8 @@
 
 class Local_Operator_LagrangianBoundary{
 public:
-  Local_Operator_LagrangianBoundary(const OTBoundary& bc): bc(bc){}
+  Local_Operator_LagrangianBoundary(const OTBoundary& bc, SolverConfig::FETraitsSolver::DiscreteGridFunction &u_old)
+    : bc(bc), oldSolution_(u_old){}
 
   template<class Intersection, class LocalViewV, class LocalViewQ, class DenseMatrixType, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
@@ -23,6 +24,9 @@ public:
     const int dim = Intersection::dimension;
     const int dimw = Intersection::dimensionworld;
 
+    auto geometry = intersection.inside().geometry();
+
+    //get local finite elements
     const auto& localFiniteElementV = localViewV.tree().finiteElement();
     const unsigned int size_u = localFiniteElementV.size();
 
@@ -58,32 +62,27 @@ public:
       const FieldVector<double, dim> &quadPos =
           intersection.geometryInInside().global(quad[pt].position());
 
-
-      // The transposed inverse Jacobian of the map from the reference element to the element
-      const auto& jacobianV =
-          intersection.inside().geometry().jacobianInverseTransposed(quadPos);
+      auto x_value = geometry.global(quadPos);
 
       //the shape function values
-      std::vector<RangeType> referenceFunctionValuesV(size_u);
-      Config::ValueType u_value = 0;
-      assemble_functionValues_u(localFiniteElementV, quadPos,
-          referenceFunctionValuesV, x.segment(0, size_u), u_value);
+      std::vector<JacobianType> gradientsV(size_u);
+      std::vector<FEHessianType> HessiansV(size_u);
+
+      double u_value = 0;
+      FieldVector<double, Config::dim> gradu;
+      FieldMatrix<double, Config::dim, Config::dim> Hessu;
+
+      if (last_step_on_a_different_grid)
+        assemble_cellTermFEData_only_derivatives(geometry, localFiniteElementV, quadPos, oldSolution_, x_value,
+        	gradientsV, HessiansV, gradu, Hessu);
+      else
+        assemble_cellTermFEData_only_derivatives(geometry, localFiniteElementV, quadPos, x,
+          gradientsV, HessiansV, gradu, Hessu);
 
       std::vector<RangeType> referenceFunctionValuesQ(size_q);
       assemble_functionValues(localFiniteElementQ, quadPos,
           referenceFunctionValuesQ);
 
-      // The gradients
-      std::vector<JacobianType> gradientsV(size_u);
-      JacobianType gradu;
-      assemble_gradients_gradu(localFiniteElementV, jacobianV, quadPos,
-          gradientsV, x, gradu);
-
-      // The hessian of the shape functions
-      std::vector<FEHessianType> Hessians(size_u);
-      FEHessianType Hessu;
-      assemble_hessians_hessu(localFiniteElementV, jacobianV, quadPos, Hessians,
-          x, Hessu);
 
       //calculate \nabla H(\nabla u) = n_y
       const auto cofHessu = convexified_penalty_cofactor(Hessu);
@@ -119,7 +118,15 @@ public:
     }
   }
 
+  void set_evaluation_of_u_old_to_different_grid(){  last_step_on_a_different_grid = true;}
+  void set_evaluation_of_u_old_to_same_grid(){  last_step_on_a_different_grid = false;}
+
+private:
   const OTBoundary& bc;
+
+  mutable bool last_step_on_a_different_grid;
+  SolverConfig::FETraitsSolver::DiscreteGridFunction& oldSolution_;
+
 };
 
 

@@ -273,6 +273,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
 void MA_solver::update_solution(const Config::VectorType& newSolution) const
 {
+  std::cerr << " updated solution to a vector with norm " << newSolution.norm() << std::endl;
   solution_u = solution.segment(0, get_n_dofs_u());
 //  std::cout << "solution " << solution_u.transpose() << std::endl;
 
