@@ -8,13 +8,16 @@
 #ifndef INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARY_H_
 #define INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARY_H_
 
+#include <functional>
+
 #include "OT/problem_data_OT.h"
 #include "Operator/operator_utils.h"
 
 class Local_Operator_LagrangianBoundary{
 public:
-  Local_Operator_LagrangianBoundary(const OTBoundary& bc, SolverConfig::FETraitsSolver::DiscreteGridFunction &u_old)
-    : bc(bc), oldSolution_(u_old){}
+  template<typename F>
+  Local_Operator_LagrangianBoundary(const OTBoundary& bc, F&& uOld)
+    : bc(bc), oldSolutionCaller_(std::forward<F>(uOld)){}
 
   template<class Intersection, class LocalViewV, class LocalViewQ, class DenseMatrixType, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
@@ -35,9 +38,9 @@ public:
 
     //find type of Jacobian
     typedef decltype(localFiniteElementV) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    typedef typename std::decay_t<ConstElementRefType> ElementType;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
+    typedef typename ElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
     typedef typename Dune::FieldVector<Config::ValueType, dimw> JacobianType;
     typedef typename Dune::FieldMatrix<Config::ValueType, dimw, dimw> FEHessianType;
 
@@ -68,12 +71,11 @@ public:
       std::vector<JacobianType> gradientsV(size_u);
       std::vector<FEHessianType> HessiansV(size_u);
 
-      double u_value = 0;
       FieldVector<double, Config::dim> gradu;
       FieldMatrix<double, Config::dim, Config::dim> Hessu;
 
       if (last_step_on_a_different_grid)
-        assemble_cellTermFEData_only_derivatives(geometry, localFiniteElementV, quadPos, oldSolution_, x_value,
+        assemble_cellTermFEData_only_derivatives(geometry, localFiniteElementV, quadPos, oldSolutionCaller_(), x_value,
         	gradientsV, HessiansV, gradu, Hessu);
       else
         assemble_cellTermFEData_only_derivatives(geometry, localFiniteElementV, quadPos, x,
@@ -94,7 +96,7 @@ public:
 
       //-------calculate integral--------
       auto signedDistance = bc.H(gradu);
-      auto signedDistanceDerivative = bc.derivativeH(gradu);
+//      auto signedDistanceDerivative = bc.derivativeH(gradu);
 //      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
 
       const auto integrationElement =
@@ -102,8 +104,6 @@ public:
       const double factor = quad[pt].weight() * integrationElement;
       for (size_t j = 0; j < size_q; j++)
       {
-        v(j) += signedDistance * (referenceFunctionValuesQ[j]) * factor;
-
         for (unsigned int i = 0; i < size_u; i++)
         {
           //(\nabla H(\nabla u)*\nabla w)q
@@ -113,6 +113,17 @@ public:
 //              << "=" << 1./normalOld.two_norm() << "*" << (normalOld*gradientsV[i]) << " * " << referenceFunctionValuesQ[j] << " * " << factor
 //              << " to m(" << j << "," << i <<")" << std::endl;
         }
+
+        if (last_step_on_a_different_grid)
+        {
+          v(j) += 1./normalOld.two_norm()*(normalOld*gradu)*referenceFunctionValuesQ[j]*factor;
+        }
+        else
+        {
+          v(j) += signedDistance * (referenceFunctionValuesQ[j]) * factor;
+        }
+
+
       }
 
     }
@@ -125,7 +136,7 @@ private:
   const OTBoundary& bc;
 
   mutable bool last_step_on_a_different_grid;
-  SolverConfig::FETraitsSolver::DiscreteGridFunction& oldSolution_;
+  std::function<const SolverConfig::FETraitsSolver::DiscreteGridFunction&()> oldSolutionCaller_;
 
 };
 

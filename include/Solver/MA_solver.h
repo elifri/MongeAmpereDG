@@ -91,8 +91,8 @@ public:
       FEBasisHandler_(*this, gridHandler.gridView()),
       assembler_(FEBasisHandler_.FEBasis()),
       plotter(gridHandler.gridView()),
-      op(*this),
-      solution_u_old(), gradient_u_old()
+      solution_u_old(), gradient_u_old(),
+      op(*this)
 	{
     std::cout << "constructor n dofs " << get_n_dofs() << std::endl;
 #ifdef USE_DOGLEG
@@ -399,8 +399,6 @@ protected:
 
   double G; /// fixes the reflector size
 
-  MA_Operator op; ///functional operator
-
   //store old solutions and coefficients
 	mutable VectorType solution; /// stores the current solution vector
 	mutable VectorType solution_u;
@@ -416,6 +414,8 @@ protected:
 //  mutable shared_ptr<DiscreteLocalGridFunction> exact_solution_projection;
 //
   mutable shared_ptr<Rectangular_mesh_interpolator> exact_solution;
+
+  MA_Operator op; ///functional operator
 
 	friend MA_Operator;
 	template <int T, typename T2>

@@ -8,6 +8,8 @@
 #ifndef SRC_OT_OPERATOR_MA_OT_LINEARISATION_HPP_
 #define SRC_OT_OPERATOR_MA_OT_LINEARISATION_HPP_
 
+#include <functional>
+
 //#include "OT/operator_MA_OT.h"
 #include "OT/problem_data_OT.h"
 #include "Solver/solver_config.h"
@@ -30,11 +32,12 @@ class Local_Operator_MA_OT_Linearisation {
 public:
   using FunctionType = Function;///interface typedef
 
+  template<typename F>
   Local_Operator_MA_OT_Linearisation(const OTBoundary& bc, const Function& rhoX, const Function& rhoY,
-      SolverConfig::FETraitsSolver::DiscreteGridFunction &u_old):
+      F&& uOld):
   delta_K(10), rhoX(rhoX), rhoY(rhoY),bc(bc),
   int_f(0), sign(1.0), found_negative(false), last_step_on_a_different_grid(false),
-  oldSolution_(u_old)
+  oldSolutionCaller_(std::forward<F>(uOld))
   {
   }
 
@@ -216,7 +219,7 @@ template<int dim>
       FieldMatrix<double, Config::dim, Config::dim> Hessu;
 
       if (last_step_on_a_different_grid)
-        assemble_cellTermFEData(geometry, localFiniteElement, quadPos, oldSolution_, x_value,
+        assemble_cellTermFEData(geometry, localFiniteElement, quadPos, oldSolutionCaller_(), x_value,
           referenceFunctionValues, gradients, Hessians, u_value, gradu, Hessu);
       else
         assemble_cellTermFEData(geometry, localFiniteElement, quadPos, x,
@@ -275,8 +278,17 @@ template<int dim>
         }
 
         //-f(u_k) [rhs of Newton]
-        v(j) += (-detHessu+f_value/avg_g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        if (last_step_on_a_different_grid)
+        {
+          v(j) += (-detHessu+f_value/avg_g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 //        v(j) += (-detHessu)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        }
+        else
+        {
+          FieldVector<double,dim> cofTimesGradu;
+          cofHessu.mv(gradu,cofTimesGradu);
+          v(j) += (cofTimesGradu*gradients[j] + (b*gradu)*referenceFunctionValues[j] )*quad[pt].weight()*integrationElement;
+        }
         assert(! (v(j)!=v(j)));
 
       }
@@ -337,14 +349,6 @@ template<int dim>
         dim - 1>::general(intersection.geometry().type()).position(0, 0);
     const FieldVector<double, dim> normal = intersection.unitOuterNormal(
         face_center);
-
-    // penalty weight for NIPG / SIPG
-//    double penalty_weight = SolverConfig::sigma
-//        * (SolverConfig::degree * SolverConfig::degree)
-//        / std::pow(intersection.geometry().volume(), SolverConfig::beta);
-    double penalty_weight_gradient = SolverConfig::sigmaGrad
-        * (SolverConfig::degree * SolverConfig::degree)
-        * std::pow(intersection.geometry().volume(), SolverConfig::beta);
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -443,9 +447,9 @@ template<int dim>
       const VectorType &x, VectorType& v, MatrixType& m) const {}
 
   ///use given global function (probably living on a coarser grid) to evaluate last step
-  void set_evaluation_of_u_old_to_different_grid(){  last_step_on_a_different_grid = true;}
+  void set_evaluation_of_u_old_to_different_grid() const{  last_step_on_a_different_grid = true;}
   ///use coefficients of old function living on the same grid to evaluate last step
-  void set_evaluation_of_u_old_to_same_grid(){  last_step_on_a_different_grid = false;}
+  void set_evaluation_of_u_old_to_same_grid() const{  last_step_on_a_different_grid = false;}
 
   const Function& get_input_distribution() const {return rhoX;}
   const Function& get_target_distribution() const {return rhoY;}
@@ -470,7 +474,7 @@ public:
   mutable bool found_negative;
 
   mutable bool last_step_on_a_different_grid;
-  SolverConfig::FETraitsSolver::DiscreteGridFunction& oldSolution_;
+  std::function<const SolverConfig::FETraitsSolver::DiscreteGridFunction&()> oldSolutionCaller_;
 };
 
 #endif /* SRC_OT_OPERATOR_MA_OT_LINEARISATION_HPP_ */

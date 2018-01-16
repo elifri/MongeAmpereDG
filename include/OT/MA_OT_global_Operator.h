@@ -91,7 +91,7 @@ public:
 //          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
           *boundary_, f_, g_)),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc(), solver.get_u_old())),
+      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc(), [&solver](){return solver.get_u_old();})),
       fixingPoint{0.3,0},
       intermediateSolCounter()
   {
@@ -189,13 +189,13 @@ public:
   }
 
   ///use given global function (probably living on a coarser grid) to evaluate last step
-  virtual void set_evaluation_of_u_old_to_different_grid(){
-    lop_ptr->set_evaluation_of_u_old_to_different_grid();
+  virtual void set_evaluation_of_u_old_to_different_grid() const{
+//    lop_ptr->set_evaluation_of_u_old_to_different_grid();
     lopLMBoundary->set_evaluation_of_u_old_to_different_grid();
   }
   ///use coefficients of old function living on the same grid to evaluate last step
-  virtual void set_evaluation_of_u_old_to_same_grid(){
-    lop_ptr->set_evaluation_of_u_old_to_same_grid();
+  virtual void set_evaluation_of_u_old_to_same_grid() const{
+//    lop_ptr->set_evaluation_of_u_old_to_same_grid();
     lopLMBoundary->set_evaluation_of_u_old_to_same_grid();
   }
 
@@ -239,7 +239,7 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
 //    MA_OT_Operator(MA_OT_solver& solver):solver_ptr(&solver), lop_ptr(new Local_Operator_MA_OT(new BoundarySquare(solver.gradient_u_old, solver.get_setting()), new rhoXSquareToSquare(), new rhoYSquareToSquare())){}
     // lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
   MA_OT_Operator_with_Linearisation(SolverType& solver):MA_OT_Operator<OperatorTraits>(solver),
-        lopLinear_ptr(new LOPLinear(*(this->boundary_), this->f_, this->g_, solver.get_u_old()))
+        lopLinear_ptr(new LOPLinear(*(this->boundary_), this->f_, this->g_, [&solver](){return solver.get_u_old();}))
     {}
 
   MA_OT_Operator_with_Linearisation(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lopLinear):MA_OT_Operator<OperatorTraits>(solver),
@@ -251,6 +251,18 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
         lopLinear_ptr(lopLinear)
     {}
 
+
+  const LocalOperatorType& get_lopLinear() const
+  {
+    assert(lopLinear_ptr);
+    return *lopLinear_ptr;
+  }
+
+  LocalOperatorType& get_lopLinear()
+  {
+    assert(lopLinear_ptr);
+    return *lopLinear_ptr;
+  }
 
   void assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const
   {
@@ -277,13 +289,13 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
   }
 
   ///use given global function (probably living on a coarser grid) to evaluate last step
-  void set_evaluation_of_u_old_to_different_grid(){
+  void set_evaluation_of_u_old_to_different_grid() const{
     this->set_evaluation_of_u_old_to_different_grid();
     lopLinear_ptr->set_evaluation_of_u_old_to_different_grid();
   }
 
   ///use coefficients of old function living on the same grid to evaluate last step
-  void set_evaluation_of_u_old_to_same_grid(){
+  void set_evaluation_of_u_old_to_same_grid() const{
     this->set_evaluation_of_u_old_to_same_grid();
     lopLinear_ptr->set_evaluation_of_u_old_to_same_grid();
   }
@@ -469,6 +481,8 @@ template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>::evaluate(Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, Config::VectorType& xBoundary, const bool new_solution) const
 {
   assert(solver_ptr != NULL);
+  assert(lagrangianFixingPointDiscreteOperator.size()==this->solver_ptr->get_n_dofs_V_h() && " the initialisiation of the MA operator does not fit to the solver's grid!");
+
 
   //prepare clock to time computations
   auto start = std::chrono::steady_clock::now();

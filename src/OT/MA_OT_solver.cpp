@@ -592,7 +592,7 @@ void MA_OT_solver::one_Poisson_Step()
   C0Traits::DiscreteGridFunction globalProjectedGradientY(lagrangeHandler.FEBasis(), lagrangeDerivativeYCoeffs);
   auto localProjectedGradientX = localFunction(globalProjectedGradientX);
   auto localProjectedGradientY = localFunction(globalProjectedGradientY);
-  auto localProjectedGradient = [&](Config::SpaceType x){return globalGradient(x)[0];};
+//  auto localProjectedGradient = [&](Config::SpaceType x){return globalGradient(x)[0];};
 
   auto globalProjectedGradient = [&](Config::SpaceType x){return Dune::FieldVector<double, Config::dim> ({globalProjectedGradientX(x),globalProjectedGradientY(x)});};
 
@@ -788,7 +788,7 @@ void MA_OT_solver::solve_nonlinear_system()
   assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
 
 #ifdef USE_ANALYTIC_JACOBIAN
-  assert(!op.lopLinear_ptr->last_step_on_a_different_grid);
+  assert(!op.get_lopLinear().last_step_on_a_different_grid);
 #else
   assert(op.get_lop().last_step_on_a_different_grid == false);
 #endif
@@ -886,8 +886,37 @@ void MA_OT_solver::adapt_solution(const int level)
   assembler_.bind(FEBasisHandler_.uBasis());
   assemblerLM1D_.bind(FEBasisHandler_.uBasis());
 
+
+
+  //add better projection of exact solution
+  {
+    Config::SpaceType x0 = {0.0,0.0};
+
+    FieldMatrix<Config::ValueType, 2, 2> A = {{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}}; //exactsolution
+    FieldMatrix<Config::ValueType, 2, 2> B = {{.385576911206371,.174131508286748},{0.174131508286748,.970161260454739}}; //exactsolution
+
+    auto u0 = [&](Config::SpaceType x){
+      auto y=x0;B.umv(x,y);
+      return (x*y);};
+    auto y0 = [&](Config::SpaceType x){
+      auto y=x0;A.umv(x,y);
+      return y;};
+
+    project(u0, y0, exactsol_u);
+
+    std::string fname(plotter.get_output_directory());
+    fname += "/"+ plotter.get_output_prefix()+ "exactSol"+NumberToString(iterations)+".vtu";
+    plotter.writeOTVTKGlobal(fname, y0);
+  }
+
+  //adapt operator
+  std::cerr << " going to adapt operator " << std::endl;
+  adapt_operator();
+
+
   //project old solution to new grid
-  auto newSolution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), solution);
+//  auto newSolution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), solution);
+  auto newSolution = FEBasisHandler_.adapt_function_elliptic_after_grid_change(old_grid.gridViewOld, gridView(), get_operator(), solution);
   solution = newSolution;
 
   //adapt boundary febasis and bind to assembler
@@ -915,30 +944,6 @@ void MA_OT_solver::adapt_solution(const int level)
   solution.conservativeResize(get_n_dofs());
   solution(get_n_dofs_V_h()) = 0;
 //  solution.tail(get_n_dofs_Q_h()) = get_assembler_lagrangian_boundary().boundaryHandler().shrink_to_boundary_vector(p_adapted);
-
-  //add better projection of exact solution
-  {
-    Config::SpaceType x0 = {0.0,0.0};
-
-    FieldMatrix<Config::ValueType, 2, 2> A = {{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}}; //exactsolution
-//    FieldMatrix<Config::ValueType, 2, 2> B = {{.385576911206371,.174131508286748},{0.174131508286748,.970161260454739}}; //exactsolution
-
-//    auto u0 = [&](Config::SpaceType x){
-//      auto y=x0;B.umv(x,y);
-//      return (x*y);};
-    auto y0 = [&](Config::SpaceType x){
-      auto y=x0;A.umv(x,y);
-      return y;};
-
-    std::string fname(plotter.get_output_directory());
-    fname += "/"+ plotter.get_output_prefix()+ "exactSol"+NumberToString(iterations)+".vtu";
-    plotter.writeOTVTKGlobal(fname, y0);
-  }
-
-  std::cerr << " going to adapt operator " << std::endl;
-  adapt_operator();
-
-
 }
 
 

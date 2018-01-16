@@ -8,6 +8,7 @@
 #ifndef SRC_MACONFIG_H_
 #define SRC_MACONFIG_H_
 
+#include <type_traits>
 
 #include<Eigen/Core>
 #include<Eigen/Sparse>

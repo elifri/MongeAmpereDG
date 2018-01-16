@@ -1008,7 +1008,6 @@ private:
     }
     else
     {
-      const int TaylorOrder = Basis::LocalView::Tree::FiniteElement::Traits::LocalBasisType::Traits::diffOrder;
       gradu  = TaylorExpansionDerivative(element, x, localCoordinate);
     }
     hessu = localSecondDerivative_(localCoordinate);
