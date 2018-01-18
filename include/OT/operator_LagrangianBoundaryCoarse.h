@@ -32,11 +32,11 @@ public:
 
     //find type of Jacobian
     typedef decltype(localFiniteElementV) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    using ConstElementType = typename std::remove_reference<ConstElementRefType>::type;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, dimw> JacobianType;
-    typedef typename Dune::FieldMatrix<Config::ValueType, dimw, dimw> FEHessianType;
+    using RangeType = typename ConstElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, dimw>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, dimw, dimw>;
 
     // ----start quadrature on fine grid(V_h)--------
 

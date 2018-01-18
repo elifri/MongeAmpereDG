@@ -25,12 +25,12 @@ class MA_OT_image_solver : public MA_OT_solver
 public:
 //#ifdef C1Element
   #ifdef USE_ANALYTIC_JACOBIAN
-    typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
+    using OperatorType = MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation>;
   #else
-    typedef MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT> OperatorType;
+    using OperatorType = MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT>;
   #endif
 //#else
-//    typedef MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT> OperatorType;
+//    using OperatorType = MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT>;
 //#endif
 
   MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const shared_ptr<GridType>& gridTarget,

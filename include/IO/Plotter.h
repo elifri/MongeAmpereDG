@@ -29,15 +29,13 @@
 class MA_solver;
 
 #ifndef BSPLINES
-typedef StaticRefinement<GenericGeometry::SimplexTopology<2>::type::id,
+using PlotRefinementType = StaticRefinement<GenericGeometry::SimplexTopology<2>::type::id,
         Config::DuneGridType::ctype,
-        GenericGeometry::SimplexTopology<2>::type::id,
-        2> PlotRefinementType;
+        GenericGeometry::SimplexTopology<2>::type::id, 2>;
 #else
-typedef StaticRefinement<GenericGeometry::CubeTopology<2>::type::id,
+using PlotRefinementType =  StaticRefinement<GenericGeometry::CubeTopology<2>::type::id,
         Config::DuneGridType::ctype,
-        GenericGeometry::CubeTopology<2>::type::id,
-        2> PlotRefinementType;
+        GenericGeometry::CubeTopology<2>::type::id,2>;
 #endif
 
 
@@ -62,7 +60,7 @@ private:
 
 
 public:
-	typedef Eigen::Matrix<SolverConfig::RangeType, Eigen::Dynamic, 1> PointdataVectorType;
+	using PointdataVectorType = Eigen::Matrix<SolverConfig::RangeType, Eigen::Dynamic, 1>;
 
 	Plotter(Config::GridView& gridView):grid(gridView) {}
 

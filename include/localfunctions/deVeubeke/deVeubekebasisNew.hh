@@ -35,7 +35,7 @@ public:
   struct Traits{
     typedef deVeubekeGlobalBasis<Geometry, D,R> Basis;
     typedef deVeubekeGlobalBasis<Geometry, D,R> LocalBasisType;
-    typedef deVeubekeGlobalCoefficients Coefficients;
+    using Coefficients = deVeubekeGlobalCoefficients;
     typedef deVeubekeInterpolation<deVeubekeGlobalBasis<Geometry, D,R> > Interpolation;
     typedef deVeubekeInterpolation<deVeubekeGlobalBasis<Geometry, D,R> > LocalInterpolationType;
   };
@@ -77,23 +77,23 @@ private:
    * \implements LocalBasisInterface::Traits*/
 
   struct Traits{
-    typedef D DomainField;
-    typedef D DomainFieldType;
+    using DomainField = D;
+    using DomainFieldType = D;
     static const std::size_t dimDomainLocal = 2;
     static const std::size_t dimDomainGlobal = 2;
     static const std::size_t dimDomain = dimDomainLocal;
-    typedef typename Dune::FieldVector<D,dimDomainLocal> DomainType;
-    typedef typename Dune::FieldVector<D,dimDomainLocal> DomainLocal;
-    typedef FieldVector<DomainField, dimDomainGlobal> DomainGlobal;
+    using DomainType = typename Dune::FieldVector<D,dimDomainLocal>;
+    using DomainLocal = typename Dune::FieldVector<D,dimDomainLocal>;
+    using DomainGlobal = FieldVector<DomainField, dimDomainGlobal>;
 
-    typedef R RangeField;
-    typedef R RangeFieldType;
+    using RangeField = R;
+    using RangeFieldType = R;
     static const std::size_t dimRange = 1;
-    typedef typename Dune::FieldVector<R,1> Range;
-    typedef Range RangeType;
+    using Range = typename Dune::FieldVector<R,1>;
+    using RangeType = Range;
 
-    typedef FieldMatrix<RangeField, dimRange, dimDomainGlobal> Jacobian;
-    typedef Jacobian JacobianType;
+    using Jacobian = FieldMatrix<RangeField, dimRange, dimDomainGlobal>;
+    using JacobianType = Jacobian;
 
     static const std::size_t diffOrder = 2;
   };
@@ -188,7 +188,7 @@ private:
     signPerm()[11][3] = -1;
   }
 
-  typedef std::array<std::array<int, 4>, N> PermutationMap;
+  using PermutationMap = std::array<std::array<int, 4>, N>;
 
   ///provide Permutation map (only once for every instance) storing the permutation needed for the raw evaluation
   static PermutationMap& subtrianglePerm()
@@ -204,7 +204,7 @@ private:
     return *subtrianglePerm;
   }
 
-  typedef std::array<std::array<int, 4>, N> SignMap;
+  using SignMap = std::array<std::array<int, 4>, N>;
   static SignMap& signPerm()
   {
     static SignMap* signMap = new SignMap();
@@ -739,7 +739,7 @@ private:
 
   }
 
-  typedef std::array<FieldMatrix<typename Traits::DomainFieldType, 2, 2>, 4> Matrixarray4;
+  using Matrixarray4 = std::array<FieldMatrix<typename Traits::DomainFieldType, 2, 2>, 4>;
 
   static Matrixarray4& inverseJacobianT_()
   {

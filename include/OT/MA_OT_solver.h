@@ -37,8 +37,8 @@ class MA_OT_solver: public MA_solver
 //  using MA_solver::MA_solver;
 public:
   //export types for langrangian multiplier boundary
-  typedef SolverConfig::FETraitsSolverQ FETraitsQ;
-  typedef FETraitsQ::FEBasis FEBasisQType;
+  using FETraitsQ = SolverConfig::FETraitsSolverQ;
+  using FEBasisQType = FETraitsQ::FEBasis;
 
   template<typename LOP>
 #ifdef USE_ANALYTIC_JACOBIAN
@@ -58,7 +58,7 @@ public:
   #else
     using GlobalMA_OT_Operator = Problem_MA_OT_Operator<Local_Operator_MA_OT>;
 //todo C1 is not for nonimage
-    //    typedef  MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation> OperatorType;
+    //    using OperatorType = MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation>;
   #endif
 #endif
 

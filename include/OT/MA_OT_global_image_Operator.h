@@ -20,7 +20,7 @@ class MA_OT_Operator;
 template<typename Solver, typename LOP>
 
 struct MA_OT_image_Operator: MA_OT_Operator<Solver,LOP> {
-  typedef typename Solver::GridViewType GridView;
+  using GridView = typename Solver::GridViewType;
 //  using MA_OT_Operator<Solver,LOP>::MA_OT_Operator();
 //    MA_OT_Operator(MA_OT_solver& solver):solver_ptr(&solver), lop_ptr(new Local_Operator_MA_OT(new BoundarySquare(solver.gradient_u_old, solver.get_setting()), new rhoXSquareToSquare(), new rhoYSquareToSquare())){}
     // lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
@@ -42,7 +42,7 @@ struct MA_OT_image_Operator: MA_OT_Operator<Solver,LOP> {
 
 template<typename Solver, typename LOP, typename LOPLinear>
 struct MA_OT_image_Operator_with_Linearisation:MA_OT_image_Operator<Solver,LOP>{
-  typedef typename Solver::GridViewType GridView;
+  using GridView = typename Solver::GridViewType;
 
   MA_OT_image_Operator_with_Linearisation():MA_OT_image_Operator<Solver,LOP>(), lopLinear_ptr(){}
 //  MA_OT_image_Operator_with_Linearisation():solver_ptr(NULL), lop_ptr(), lopLinear_ptr(), fixingPoint({0.5,0.15}){ }

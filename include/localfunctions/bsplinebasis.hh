@@ -49,10 +49,10 @@ class BSplineLocalIndexSet
   static const int dim = GV::dimension;
 public:
   /** \brief Type used for sizes and local indices */
-  typedef std::size_t size_type;
+  using size_type = std::size_t;
 
   /** \brief Type of the local view on the restriction of the basis to a single element */
-  typedef BSplineBasisLocalView<GV> LocalView;
+  using LocalView = BSplineBasisLocalView<GV>;
 
   /** \brief Type used for global numbering of the basis vectors */
   typedef std::array<size_type, 1> MultiIndex;
@@ -132,7 +132,7 @@ class BSplineIndexSet
 {
 public:
 
-  typedef BSplineLocalIndexSet<GV> LocalIndexSet;
+  using LocalIndexSet = BSplineLocalIndexSet<GV>;
 
   BSplineIndexSet(const BSplineBasis<GV>* globalBasis)
   : globalBasis_(globalBasis)
@@ -168,30 +168,30 @@ class BSplineBasisLocalView
 
 public:
   /** \brief The global FE basis that this is a view on */
-  typedef BSplineBasis<GV> GlobalBasis;
+  using GlobalBasis = BSplineBasis<GV>;
 
   /** \brief The grid view of the global basis */
-  typedef typename GlobalBasis::GridView GridView;
+  using GridView = typename GlobalBasis::GridView;
 
   /** \brief The type used for sizes */
-  typedef typename GlobalBasis::size_type size_type;
+  using size_type = typename GlobalBasis::size_type;
 
   /** \brief Type used to number the global basis vectors
    *
    * In the case of mixed finite elements this really can be a multi-index, but for a standard
    * B-spline space this is only a single-digit multi-index, i.e., it is an integer.
    */
-  typedef typename GlobalBasis::MultiIndex MultiIndex;
+  using MultiIndex = typename GlobalBasis::MultiIndex;
 
   /** \brief Type of the grid element we are bound to */
-  typedef typename GridView::template Codim<0>::Entity Element;
+  using Element = typename GridView::template Codim<0>::Entity;
 
   /** \brief Tree of local finite elements / local shape function sets
    *
    * In the case of a P2 space this tree consists of a single leaf only,
    * i.e., Tree is basically the type of the LocalFiniteElement
    */
-  typedef BSplineBasisLeafNode<GV> Tree;
+  using Tree = BSplineBasisLeafNode<GV>;
 
   /** \brief Construct local view for a given global finite element basis */
   BSplineBasisLocalView(const GlobalBasis* globalBasis) :
@@ -280,24 +280,24 @@ class BSplineBasisLeafNode :
     BSplineLocalFiniteElement<GV,double>,
     typename BSplineBasis<GV>::size_type>
 {
-  typedef BSplineBasis<GV> GlobalBasis;
+  using GlobalBasis = BSplineBasis<GV>;
   static const int dim = GV::dimension;
 
-  typedef typename GV::template Codim<0>::Entity E;
-  typedef BSplineLocalFiniteElement<GV,double> FE;
-  typedef typename GlobalBasis::size_type ST;
-  typedef typename GlobalBasis::MultiIndex MI;
+  using E = typename GV::template Codim<0>::Entity;
+  using FE = BSplineLocalFiniteElement<GV,double>;
+  using ST = typename GlobalBasis::size_type;
+  using MI = typename GlobalBasis::MultiIndex;
 
-  typedef typename GlobalBasis::LocalView LocalView;
+  using LocalView = typename GlobalBasis::LocalView;
 
   friend LocalView;
   friend class BSplineLocalIndexSet<GV>;
 
 public:
-  typedef GridFunctionSpaceBasisLeafNodeInterface<E,FE,ST> Interface;
-  typedef typename Interface::size_type size_type;
-  typedef typename Interface::Element Element;
-  typedef typename Interface::FiniteElement FiniteElement;
+  using Interface = GridFunctionSpaceBasisLeafNodeInterface<E,FE,ST>;
+  using size_type = typename Interface::size_type;
+  using Element = typename Interface::Element;
+  using FiniteElement = typename Interface::FiniteElement;
 
   /** \brief Construct a leaf node for a given global B-spline basis */
   BSplineBasisLeafNode(const GlobalBasis* globalBasis) :
@@ -375,13 +375,13 @@ class BSplineLocalBasis
 {
   friend class BSplineLocalFiniteElement<GV,R>;
 
-  typedef typename GV::ctype D;
+  using D = typename GV::ctype;
   enum {dim = GV::dimension};
 public:
 
   //! \brief export type traits for function signature
-  typedef LocalBasisTraits<D,dim,Dune::FieldVector<D,dim>,R,1,Dune::FieldVector<R,1>,
-  Dune::FieldMatrix<R,1,dim>, 2> Traits;
+  using Traits = LocalBasisTraits<D,dim,Dune::FieldVector<D,dim>,R,1,Dune::FieldVector<R,1>,
+  Dune::FieldMatrix<R,1,dim>, 2>;
 
   /** \brief Constructor with a given B-spline patch
    *
@@ -548,7 +548,7 @@ public:
 template<class GV, class R>
 class BSplineLocalFiniteElement
 {
-  typedef typename GV::ctype D;
+  using D = typename GV::ctype;
   enum {dim = GV::dimension};
   friend class BSplineLocalIndexSet<GV>;
   friend class BSplineLocalBasis<GV,R>;
@@ -556,9 +556,9 @@ public:
 
   /** \brief Export various types related to this LocalFiniteElement
    */
-  typedef LocalFiniteElementTraits<BSplineLocalBasis<GV,R>,
+  using Traits = LocalFiniteElementTraits<BSplineLocalBasis<GV,R>,
   BSplineLocalCoefficients<GV,R>,
-  BSplineLocalInterpolation<dim,BSplineLocalBasis<GV,R> > > Traits;
+  BSplineLocalInterpolation<dim,BSplineLocalBasis<GV,R> > >;
 
   /** \brief Constructor with a given B-spline basis
    */
@@ -685,7 +685,7 @@ class BSplineBasis
   friend class BSplineIndexSet<GV>;
 
   // Type used for basis function values
-  typedef double R;
+  using R = double;
 
   /** \brief Simple dim-dimensional multi-index class */
   class MultiDigitCounter
@@ -747,16 +747,16 @@ class BSplineBasis
 public:
 
   /** \brief The grid view that the FE space is defined on */
-  typedef GV GridView;
+  using GridView = GV;
 
   /** \todo Do we really have to export this here? */
-  typedef std::size_t size_type;
+  using size_type = std::size_t;
 
   /** \brief Type of the local view on the restriction of the basis to a single element */
-  typedef BSplineBasisLocalView<GV> LocalView;
+  using LocalView = BSplineBasisLocalView<GV>;
 
   /** \brief Type used for global numbering of the basis vectors */
-  typedef std::array<size_type, 1> MultiIndex;
+  using MultiIndex = std::array<size_type, 1>;
 
 private:
   /** \brief Order of the B-spline for each space dimension */

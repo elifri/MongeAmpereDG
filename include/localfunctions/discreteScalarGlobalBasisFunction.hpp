@@ -638,7 +638,7 @@ private:
   class GlobalSecondDerivative
   {
   public:
-    typedef typename LocalSecondDerivative::Hessian Hessian;
+    using Hessian = typename LocalSecondDerivative::Hessian;
 
     GlobalSecondDerivative(const MyDiscreteScalarGlobalBasisFunction& globalFunction, const std::array<int,2> directions)
     : globalFunction_(&globalFunction), localFunction_(globalFunction, directions) {}

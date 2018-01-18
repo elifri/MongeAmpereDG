@@ -24,9 +24,9 @@ namespace Dune
   public:
     /** \todo Please doc me !
      */
-    typedef LocalFiniteElementTraits<BernsteinBezier32DLocalBasis<D,R>,
+    using Traits = LocalFiniteElementTraits<BernsteinBezier32DLocalBasis<D,R>,
         BernsteinBezier32DLocalCoefficients,
-        BernsteinBezier32DLocalInterpolation<BernsteinBezier32DLocalBasis<D,R> > > Traits;
+        BernsteinBezier32DLocalInterpolation<BernsteinBezier32DLocalBasis<D,R> > >;
 
 
     /** \todo Please doc me !

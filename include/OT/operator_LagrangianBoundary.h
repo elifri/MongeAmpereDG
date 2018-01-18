@@ -37,12 +37,11 @@ public:
     const unsigned int size_q = localFiniteElementQ.size();
 
     //find type of Jacobian
-    typedef decltype(localFiniteElementV) ConstElementRefType;
-    typedef typename std::decay_t<ConstElementRefType> ElementType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElementV)>;
 
-    typedef typename ElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, dimw> JacobianType;
-    typedef typename Dune::FieldMatrix<Config::ValueType, dimw, dimw> FEHessianType;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, dimw>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, dimw, dimw>;
 
     // ----start quadrature on fine grid(V_h)--------
 

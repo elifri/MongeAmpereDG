@@ -24,13 +24,13 @@ namespace Dune
   public:
     /** \todo Please doc me !
      */
-    typedef LocalFiniteElementTraits<BernsteinBezierk2DLocalBasis<D,R,k>,
+    using Traits = LocalFiniteElementTraits<BernsteinBezierk2DLocalBasis<D,R,k>,
         BernsteinBezierk2DLocalCoefficients<k>,
-        BernsteinBezierk2DLocalInterpolation<BernsteinBezierk2DLocalBasis<D,R,k> > > Traits;
+        BernsteinBezierk2DLocalInterpolation<BernsteinBezierk2DLocalBasis<D,R,k> > >;
 
-    typedef typename Traits::LocalBasisType::Traits::DomainType DomainType;
-    typedef typename Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Traits::LocalBasisType::Traits::JacobianType JacobianType;
+    using DomainType = typename Traits::LocalBasisType::Traits::DomainType;
+    using RangeType = typename Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Traits::LocalBasisType::Traits::JacobianType;
 
 
     /** \todo Please doc me !

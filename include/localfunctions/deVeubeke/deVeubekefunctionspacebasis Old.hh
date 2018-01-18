@@ -35,13 +35,13 @@ class deVeubekeLocalIndexSet
 
 public:
 
-  typedef std::size_t size_type;
+  using size_type = std::size_t;
 
   /** \brief Type of the local view on the restriction of the basis to a single element */
-  typedef deVeubekeBasisLocalView<GV> LocalView;
+  using LocalView = deVeubekeBasisLocalView<GV>;
 
   /** \brief Type used for global numbering of the basis vectors */
-  typedef std::array<size_type, 1> MultiIndex;
+  using MultiIndex = std::array<size_type, 1>;
 
   deVeubekeLocalIndexSet(const deVeubekeIndexSet<GV> & indexSet)
   : indexSet_(indexSet)
@@ -125,7 +125,7 @@ class deVeubekeIndexSet
 
 public:
 
-  typedef deVeubekeLocalIndexSet<GV> LocalIndexSet;
+  using LocalIndexSet = deVeubekeLocalIndexSet<GV>;
 
   deVeubekeIndexSet(const GV& gridView)
   : vertexMapper_(gridView), edgeMapper_(gridView)
@@ -167,14 +167,14 @@ class deVeubekeBasis
 public:
 
   /** \brief The grid view that the FE space is defined on */
-  typedef GV GridView;
-  typedef std::size_t size_type;
+  using GridView = GV;
+  using size_type = std::size_t;
 
   /** \brief Type of the local view on the restriction of the basis to a single element */
-  typedef deVeubekeBasisLocalView<GV> LocalView;
+  using LocalView = deVeubekeBasisLocalView<GV>;
 
   /** \brief Type used for global numbering of the basis vectors */
-  typedef std::array<size_type, 1> MultiIndex;
+  using MultiIndex = std::array<size_type, 1>;
 
   /** \brief Constructor for a given grid view object */
   deVeubekeBasis(const GridView& gv) :
@@ -223,28 +223,28 @@ class deVeubekeBasisLocalView
 
 public:
   /** \brief The global FE basis that this is a view on */
-  typedef deVeubekeBasis<GV> GlobalBasis;
-  typedef typename GlobalBasis::GridView GridView;
+  using GlobalBasis = deVeubekeBasis<GV>;
+  using GridView = typename GlobalBasis::GridView;
 
   /** \brief The type used for sizes */
-  typedef typename GlobalBasis::size_type size_type;
+  using size_type = typename GlobalBasis::size_type;
 
   /** \brief Type used to number the degrees of freedom
    *
    * In the case of mixed finite elements this really can be a multi-index, but for a standard
    * P2 space this is only a single-digit multi-index, i.e., it is an integer.
    */
-  typedef typename GlobalBasis::MultiIndex MultiIndex;
+  using MultiIndex = typename GlobalBasis::MultiIndex;
 
   /** \brief Type of the grid element we are bound to */
-  typedef typename GridView::template Codim<0>::Entity Element;
+  using Element = typename GridView::template Codim<0>::Entity;
 
   /** \brief Tree of local finite elements / local shape function sets
    *
    * In the case of a P2 space this tree consists of a single leaf only,
    * i.e., Tree is basically the type of the LocalFiniteElement
    */
-  typedef deVeubekeBasisLeafNode<GV> Tree;
+  using Tree = deVeubekeBasisLeafNode<GV>;
 
   /** \brief Construct local view for a given global finite element basis */
   deVeubekeBasisLocalView(const GlobalBasis* globalBasis) :
@@ -344,27 +344,27 @@ class deVeubekeBasisLeafNode :
 //    typename deVeubekeFiniteElementCache<typename GV::template Codim<0>::Entity::Geometry, typename GV::ctype, double>,
 //    typename deVeubekeBasis<GV>::size_type>
 {
-  typedef deVeubekeBasis<GV> GlobalBasis;
+  using GlobalBasis = deVeubekeBasis<GV>;
   static const int dim = GV::dimension;
   int maxSize;
 
-  typedef typename GV::template Codim<0>::Entity E;
-  typedef typename Dune::deVeubekeFiniteElementCache<typename GV::template Codim<0>::Entity::Geometry, typename GV::ctype, double> FiniteElementCache;
-  typedef typename FiniteElementCache::FiniteElementType FE;
+  using E = typename GV::template Codim<0>::Entity;
+  using FiniteElementCache = typename Dune::deVeubekeFiniteElementCache<typename GV::template Codim<0>::Entity::Geometry, typename GV::ctype, double>;
+  using FE = typename FiniteElementCache::FiniteElementType;
 
-  typedef typename GlobalBasis::size_type ST;
-  typedef typename GlobalBasis::MultiIndex MI;
+  using ST = typename GlobalBasis::size_type;
+  using MI = typename GlobalBasis::MultiIndex;
 
-  typedef typename GlobalBasis::LocalView LocalView;
+  using LocalView = typename GlobalBasis::LocalView;
 
   friend LocalView;
   friend class deVeubekeLocalIndexSet<GV>;
 
 public:
-  typedef GridFunctionSpaceBasisLeafNodeInterface<E,FE,ST> Interface;
-  typedef typename Interface::size_type size_type;
-  typedef typename Interface::Element Element;
-  typedef typename Interface::FiniteElement FiniteElement;
+  using Interface = GridFunctionSpaceBasisLeafNodeInterface<E,FE,ST>;
+  using size_type = typename Interface::size_type;
+  using Element = typename Interface::Element;
+  using FiniteElement = typename Interface::FiniteElement;
 
   deVeubekeBasisLeafNode(const GV& gridview) :
     maxSize(gridview.size(0)),
