@@ -113,13 +113,13 @@ public:
 //              << " to m(" << j << "," << i <<")" << std::endl;
         }
 
-        if (last_step_on_a_different_grid)
+        if (!last_step_on_a_different_grid)
         {
-          v(j) += 1./normalOld.two_norm()*(normalOld*gradu)*referenceFunctionValuesQ[j]*factor;
+          v(j) += signedDistance * (referenceFunctionValuesQ[j]) * factor;
         }
         else
         {
-          v(j) += signedDistance * (referenceFunctionValuesQ[j]) * factor;
+          v(j) += 1./normalOld.two_norm()*(normalOld*gradu)*referenceFunctionValuesQ[j]*factor;
         }
 
 

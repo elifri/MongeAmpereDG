@@ -134,6 +134,8 @@ public:
   template<typename F>
   Config::ValueType calculate_L2_error(const F &f) const;
 
+  virtual OperatorType& get_operator(){ return op;}
+  virtual const OperatorType& get_operator() const{ return op;}
 
 protected:
   GeometrySetting& setting_;
@@ -150,7 +152,6 @@ protected:
   OperatorType op;
 
   friend OperatorType;
-  virtual OperatorType& get_operator(){ return op;}
 };
 
 

@@ -91,7 +91,7 @@ public:
 //          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
           *boundary_, f_, g_)),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc(), [&solver](){return solver.get_u_old();})),
+      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc(), [&solver]()-> const auto&{return solver.get_u_old();})),
       fixingPoint{0.3,0},
       intermediateSolCounter()
   {
@@ -239,7 +239,9 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
 //    MA_OT_Operator(MA_OT_solver& solver):solver_ptr(&solver), lop_ptr(new Local_Operator_MA_OT(new BoundarySquare(solver.gradient_u_old, solver.get_setting()), new rhoXSquareToSquare(), new rhoYSquareToSquare())){}
     // lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
   MA_OT_Operator_with_Linearisation(SolverType& solver):MA_OT_Operator<OperatorTraits>(solver),
-        lopLinear_ptr(new LOPLinear(*(this->boundary_), this->f_, this->g_, [&solver](){return solver.get_u_old();}))
+        lopLinear_ptr(new LOPLinear(*(this->boundary_), this->f_, this->g_,
+            [&solver]() -> const auto&{ //assert that the return value is a reference!
+              return solver.get_u_old();}))
     {}
 
   MA_OT_Operator_with_Linearisation(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lopLinear):MA_OT_Operator<OperatorTraits>(solver),
@@ -290,13 +292,13 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
 
   ///use given global function (probably living on a coarser grid) to evaluate last step
   void set_evaluation_of_u_old_to_different_grid() const{
-    this->set_evaluation_of_u_old_to_different_grid();
+    MA_OT_Operator<OperatorTraits>::set_evaluation_of_u_old_to_different_grid();
     lopLinear_ptr->set_evaluation_of_u_old_to_different_grid();
   }
 
   ///use coefficients of old function living on the same grid to evaluate last step
   void set_evaluation_of_u_old_to_same_grid() const{
-    this->set_evaluation_of_u_old_to_same_grid();
+    MA_OT_Operator<OperatorTraits>::set_evaluation_of_u_old_to_same_grid();
     lopLinear_ptr->set_evaluation_of_u_old_to_same_grid();
   }
 
@@ -326,6 +328,12 @@ bool MA_OT_Operator<OperatorTraits>::check_integrability_condition() const
   const double integralG = integratorG.assemble_integral(g_);
 
   std::cout << " calculated the the integrals: int_Omega f dx = " << integralF << " and int_Sigma g dy = " << integralG << std::endl;
+  /*if (std::fabs(integralF-integralG)>1e-6)
+  {
+    std::cout << " the calculated integrals were not equal ... difference was " << std::fabs(integralF-integralG) << std::endl;
+    assert(false);
+    std::exit(-1);
+  }*/
   return (std::fabs(integralF-integralG)<1e-6);
 }
 
@@ -359,10 +367,9 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(Config::
   int V_h_size = this->solver_ptr->get_n_dofs_V_h();
   int Q_h_size = this->solver_ptr->get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();
 
-  assert(x.size()==this->solver_ptr->get_n_dofs());
-  assert(v.size()==this->solver_ptr->get_n_dofs());
-  assert(m.rows()==this->solver_ptr->get_n_dofs());
-  assert(m.cols()==this->solver_ptr->get_n_dofs());
+  assert(x.size()>=V_h_size);
+  v.setZero(this->solver_ptr->get_n_dofs());
+  m.resize(this->solver_ptr->get_n_dofs(),this->solver_ptr->get_n_dofs());
 
   Config::VectorType w = xBoundary.head(V_h_size)-x.head(V_h_size);
 

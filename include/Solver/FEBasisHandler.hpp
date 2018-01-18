@@ -86,9 +86,9 @@ struct FEBasisHandler{
    * @param v         coeffcient vector of the old grid basis functions
    * @return          coefficient vector of the new grid basis functions
    */
-  template <typename GOP, typename GridTypeOld>
+  template <typename GridTypeOld, typename Solver>
   Config::VectorType adapt_function_elliptic_after_grid_change(const GridTypeOld& gridOld,
-      const typename FEBasisType::GridView& grid, const GOP& operatorMA, const Config::VectorType& v) const
+      const typename FEBasisType::GridView& grid, const Solver& ma_solver, const Config::VectorType& v) const
   {assert(false && " Error, dont know how this works for this FE basis");
     std::cerr << " Error, dont know how this works for this FE basis" << std::endl;
     DUNE_THROW(Dune::NotImplemented, " Error, dont know how this works for this FE basis"); exit(-1);}
@@ -694,8 +694,6 @@ template<int FETraitstype, typename FETraits>
 template <typename GOP, class F>
 void FEBasisHandler<FETraitstype, FETraits>::elliptic_project(const GOP& operatorMA, F f, Config::VectorType &v) const
 {
-  v.setZero(FEBasis_->indexSet().size());
-
   operatorMA.set_evaluation_of_u_old_to_different_grid();
 
   ///assemble linear equation system A_F(w_h, v_h) = A_F(u_h,v_h)
@@ -703,7 +701,8 @@ void FEBasisHandler<FETraitstype, FETraits>::elliptic_project(const GOP& operato
   Config::MatrixType A;
   Config::VectorType b;
 
-  operatorMA.evaluate(v, b, A, v);
+  operatorMA.evaluate(v, b, A, v, false);
+
 
   //solve system
   Eigen::SparseLU<Config::MatrixType> lu_of_A(A);
@@ -738,8 +737,9 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 }
 
 template <>
-template <typename GOP, typename GridTypeOld>
-Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt_function_elliptic_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const GOP& operatorMA, const Config::VectorType& v) const
+template <typename GridTypeOld, typename Solver>
+Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt_function_elliptic_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid,
+    const Solver& ma_solver, const Config::VectorType& v) const
 {
   using CoarseTraits = PS12SplitTraits<GridTypeOld>;
 
@@ -747,9 +747,11 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   using DiscreteGridFunctionCoarse = typename CoarseTraits::DiscreteGridFunction;
   DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
 
+  ma_solver.get_u_old_ptr() = std::shared_ptr<DiscreteGridFunctionCoarse> (new DiscreteGridFunctionCoarse(FEBasisCoarse,v));
+
   Config::VectorType vNew;
-  vNew.resize(FEBasis_->indexSet().size());
-  elliptic_project(operatorMA, solution_u_Coarse_global, vNew);
+  vNew.resize(ma_solver.get_n_dofs());
+  elliptic_project(ma_solver.get_operator(), solution_u_Coarse_global, vNew);
   return vNew;
 }
 

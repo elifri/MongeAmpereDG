@@ -278,7 +278,7 @@ template<int dim>
         }
 
         //-f(u_k) [rhs of Newton]
-        if (last_step_on_a_different_grid)
+        if (!last_step_on_a_different_grid)
         {
           v(j) += (-detHessu+f_value/avg_g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 //        v(j) += (-detHessu)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;

@@ -988,7 +988,7 @@ private:
       u = TaylorExpansion<TaylorOrder>(element, x, localCoordinate);
       gradu  = TaylorExpansionDerivative(element, x, localCoordinate);
     }
-    hessu = localSecondDerivative_(localCoordinate);
+    localSecondDerivative_.evaluateHess(localCoordinate, hessu);
   }
 
 
@@ -1010,7 +1010,7 @@ private:
     {
       gradu  = TaylorExpansionDerivative(element, x, localCoordinate);
     }
-    hessu = localSecondDerivative_(localCoordinate);
+    localSecondDerivative_.evaluateHess(localCoordinate, hessu);
   }
 
 

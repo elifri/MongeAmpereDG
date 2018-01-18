@@ -886,6 +886,19 @@ void MA_OT_solver::adapt_solution(const int level)
   assembler_.bind(FEBasisHandler_.uBasis());
   assemblerLM1D_.bind(FEBasisHandler_.uBasis());
 
+//combination of binding handler and assembler as well as adapting p
+
+#ifdef USE_COARSE_Q_H
+//    auto p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(this->grid().levelGridView(this->grid().maxLevel()-2),
+//        this->grid().levelGridView(this->grid().maxLevel()-1), p);
+#else
+//    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(old_grid.gridViewOld, this->gridView(), p);
+      FEBasisHandlerQ_.adapt_after_grid_change(this->gridView());
+#endif
+
+
+  auto& assemblerBoundary = get_assembler_lagrangian_boundary();
+  assemblerBoundary.bind(FEBasisHandler_.uBasis(), FEBasisHandlerQ_.FEBasis());
 
 
   //add better projection of exact solution
@@ -916,7 +929,7 @@ void MA_OT_solver::adapt_solution(const int level)
 
   //project old solution to new grid
 //  auto newSolution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), solution);
-  auto newSolution = FEBasisHandler_.adapt_function_elliptic_after_grid_change(old_grid.gridViewOld, gridView(), get_operator(), solution);
+  auto newSolution = FEBasisHandler_.adapt_function_elliptic_after_grid_change(old_grid.gridViewOld, gridView(), *this, solution);
   solution = newSolution;
 
   //adapt boundary febasis and bind to assembler
@@ -925,20 +938,10 @@ void MA_OT_solver::adapt_solution(const int level)
   Config::VectorType p_adapted;
 
   {
-//    FEBasisHandlerQ_.adapt_after_grid_change(this->gridView());
 //    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change();
 
-#ifdef USE_COARSE_Q_H
-    auto p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(this->grid().levelGridView(this->grid().maxLevel()-2),
-        this->grid().levelGridView(this->grid().maxLevel()-1), p);
-#else
-//    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(old_grid.gridViewOld, this->gridView(), p);
-    FEBasisHandlerQ_.adapt_after_grid_change(this->gridView());
-#endif
 
   }
-  auto& assembler = get_assembler_lagrangian_boundary();
-  assembler.bind(FEBasisHandler_.uBasis(), FEBasisHandlerQ_.FEBasis());
 
   //init lagrangian multiplier variables
   solution.conservativeResize(get_n_dofs());

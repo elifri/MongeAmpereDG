@@ -357,6 +357,7 @@ public:
   const VectorType& get_exact_solution() const {return exactsol_u;}
 
   DiscreteGridFunction& get_u_old() const {return *solution_u_old_global;}
+  shared_ptr<DiscreteGridFunction>& get_u_old_ptr() const {return solution_u_old_global;}
   DiscreteLocalGridFunction& get_u_old_local() const {return *solution_u_old;}
   shared_ptr<DiscreteLocalGridFunction>& get_u_old_local_ptr() const {return solution_u_old;}
   DiscreteLocalGradientGridFunction& get_gradient_u_old() const {return *gradient_u_old;}
