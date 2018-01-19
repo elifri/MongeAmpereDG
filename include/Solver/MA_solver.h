@@ -51,26 +51,26 @@ class MA_solver {
 public:
 
 	//-----typedefs---------
-	typedef Config::DuneGridType GridType;
-	typedef Config::GridView GridViewType;
-	typedef Config::LevelGridView LevelGridViewType;
-	typedef GridViewType::IntersectionIterator IntersectionIterator;
-	typedef IntersectionIterator::Intersection Intersection;
-	typedef GridViewType::IndexSet::IndexType IndexType;
+	using GridType = Config::DuneGridType;
+	using GridViewType = Config::GridView;
+	using LevelGridViewType = Config::LevelGridView;
+	using IntersectionIterator = GridViewType::IntersectionIterator;
+	using Intersection = IntersectionIterator::Intersection;
+	using IndexType = GridViewType::IndexSet::IndexType;
 
-	typedef Config::SpaceType SpaceType;
-	typedef SolverConfig::RangeType RangeType;
+	using SpaceType = Config::SpaceType;
+	using RangeType = SolverConfig::RangeType;
 
-	typedef typename Config::VectorType VectorType;
-	typedef typename Config::DenseMatrixType DenseMatrixType;
-	typedef typename Config::MatrixType MatrixType;
+	using VectorType = Config::VectorType;
+	using DenseMatrixType = Config::DenseMatrixType;
+	using MatrixType = Config::MatrixType;
 
-  typedef SolverConfig::FETraitsSolver FETraits;
-  typedef FETraits::FEBasis FEBasisType;
+  using FETraits = SolverConfig::FETraitsSolver;
+  using FEBasisType = FETraits::FEBasis;
 
-	typedef FETraits::DiscreteGridFunction DiscreteGridFunction;
-	typedef FETraits::DiscreteLocalGridFunction DiscreteLocalGridFunction;
-  typedef FETraits::DiscreteLocalGradientGridFunction DiscreteLocalGradientGridFunction;
+	using DiscreteGridFunction = FETraits::DiscreteGridFunction;
+	using DiscreteLocalGridFunction = FETraits::DiscreteLocalGridFunction;
+  using DiscreteLocalGradientGridFunction = FETraits::DiscreteLocalGradientGridFunction;
 
 	MA_solver(GridHandler<GridType>& gridHandler, SolverConfig config):
 	    initialised(true),

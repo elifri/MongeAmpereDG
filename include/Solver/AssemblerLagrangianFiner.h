@@ -17,10 +17,10 @@
 
 class AssemblerLagrangianMultiplierBoundary:public Assembler{
 
-  typedef FEBasisType FEBasisVType;
+  using FEBasisVType = FEBasisType;
 
-  typedef SolverConfig::FETraitsSolverQ FETraitsQ;
-  typedef FETraitsQ::FEBasis FEBasisQType;
+  using FETraitsQ = SolverConfig::FETraitsSolverQ;
+  using FEBasisQType = FETraitsQ::FEBasis;
 public:
   const int get_number_of_Boundary_dofs() const {return boundaryHandlerQ_.get_number_of_Boundary_dofs();}
   const int get_number_of_filtered_Boundary_dofs() const

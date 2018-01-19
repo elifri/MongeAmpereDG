@@ -32,7 +32,7 @@ using namespace Dune;
 class Local_Operator_MA_OT {
 
 public:
-  typedef DensityFunction Function;
+  using Function = DensityFunction;
 
   Local_Operator_MA_OT(const OTBoundary& bc, const Function& rhoX, const Function& rhoY):
   rhoX(rhoX), rhoY(rhoY),bc(bc), int_f(0), found_negative(false)
@@ -59,7 +59,7 @@ public:
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
       VectorType& v, const int tag) const  {
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     const int dim = Element::dimension;
@@ -73,12 +73,11 @@ public:
     // Get set of shape functions for this element
     const auto& localFiniteElement = localView.tree().finiteElement();
 
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension> FEHessianType;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension>;
 
     const int size = localView.size();
 
@@ -207,12 +206,10 @@ public:
     // Get set of shape functions for neighbour element
     const auto& localFiniteElementn = localViewn.tree().finiteElement();
 
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
-
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef FieldVector<Config::ValueType, Config::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<Config::ValueType, IntersectionType::dimensionworld, IntersectionType::dimensionworld> FEHessianType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = FieldVector<Config::ValueType, Config::dim>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, IntersectionType::dimensionworld, IntersectionType::dimensionworld>;
 
     assert((unsigned int) size == localFiniteElement.size());
     assert((unsigned int) size == localFiniteElementn.size());
@@ -399,7 +396,7 @@ public:
 #else
 class Local_Operator_MA_OT {
 public:
-  typedef DensityFunction Function;
+  using Function = DensityFunction;
   mutable bool found_negative;
 
   template<class LocalView, class VectorType>

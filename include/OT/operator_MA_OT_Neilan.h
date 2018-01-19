@@ -28,7 +28,7 @@ using namespace Dune;
 class Local_Operator_MA_OT_Neilan {
 
 public:
-  typedef DensityFunction Function;
+  using Function = DensityFunction;
 
   template<typename GridView>
   Local_Operator_MA_OT_Neilan(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
@@ -48,13 +48,13 @@ public:
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
       VectorType& v, const int tag) const {
 
-    typedef typename LocalView::GridView GridView;
-    typedef typename LocalView::size_type size_type;
+    using GridView = typename LocalView::GridView;
+    using size_type = typename LocalView::size_type;
 
     const int dim = GridView::dimension;
 
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     assert(dim == Element::dimension);
@@ -70,16 +70,14 @@ public:
     const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
     const auto& localFiniteElementuDH_entry = localView.tree().template child<1>().child(0).finiteElement();
 
-    typedef decltype(localFiniteElementu) ConstElementuRefType;
-    typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
+    using ElementuType = typename std::decay_t<decltype(localFiniteElementu)>;
 
-    typedef decltype(localFiniteElementuDH_entry) ConstElementuDHRefType;
-    typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
+    using ElementuDHType = typename std::decay_t<decltype(localFiniteElementuDH_entry)>;
 
-    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, dim> JacobianType;
-    typedef typename Dune::FieldMatrix<Config::ValueType, dim, dim> FEHessianType;
-    typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType HessianType;
+    using RangeType = typename ElementuType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, dim>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, dim, dim>;
+    using HessianType = typename ElementuDHType::Traits::LocalBasisType::Traits::RangeType;
 
     const int size_u = localFiniteElementu.size();
     const int size_u_DH = localFiniteElementuDH_entry.size();
@@ -239,8 +237,8 @@ public:
       const LocalView &localView, const VectorType &x,
       const LocalView &localViewn, const VectorType &xn, VectorType& v,
       VectorType& vn, int tag) const{
-    typedef typename LocalView::GridView GridView;
-    typedef typename LocalView::size_type size_type;
+    using GridView = typename LocalView::GridView;
+    using size_type = typename LocalView::size_type;
 
     const int dim = IntersectionType::dimension;
     const int dimw = IntersectionType::dimensionworld;
@@ -260,15 +258,12 @@ public:
     const auto& localFiniteElementun = localViewn.tree().template child<0>().finiteElement();
     const auto& localFiniteElementuDHn = localViewn.tree().template child<1>().child(0).finiteElement();
 
-    typedef decltype(localFiniteElementu) ConstElementuRefType;
-    typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
+    using ElementuType = typename std::decay_t<decltype(localFiniteElementu)>;
+    using ElementuDHType = typename std::decay_t<decltype(localFiniteElementuDH)>;
 
-    typedef decltype(localFiniteElementuDH) ConstElementuDHRefType;
-    typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
-
-    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef FieldVector<Config::ValueType, dim> JacobianType;
-    typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType RangeTypeDH;
+    using RangeType = typename ElementuType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = FieldVector<Config::ValueType, dim>;
+    using RangeTypeDH = typename ElementuDHType::Traits::LocalBasisType::Traits::RangeType;
 
     const unsigned int size_u = localFiniteElementu.size();
     const unsigned int size_u_DH = localFiniteElementuDH.size();
@@ -445,17 +440,16 @@ public:
     assert((unsigned int) v.size() == localView.size());
 
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
     const int size_u = localFiniteElementu.size();
 
-    typedef decltype(localFiniteElementu) ConstElementuRefType;
-    typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
+    using ElementuType = typename std::decay_t<decltype(localFiniteElementu)>;
 
-    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
+    using RangeType = typename ElementuType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
 
     //-----init variables for automatic differentiation
 

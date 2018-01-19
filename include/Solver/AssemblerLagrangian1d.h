@@ -18,17 +18,16 @@ public:
     assert((unsigned int) v.size() == localView.size());
 
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     // Get set of shape functions for this element
     const auto& localFiniteElement = localView.tree().finiteElement();
 
     //extract type
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
     // Get a quadrature rule
     int order = std::max(0,
         3 * ((int) localFiniteElement.localBasis().order()));
@@ -57,15 +56,14 @@ public:
     assert((unsigned int) x.size() == localView.size());
 
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     // Get set of shape functions for this element
     const auto& localFiniteElement = localView.tree().finiteElement();
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
 
     // Get a quadrature rule
     int order = std::max(0,

@@ -56,12 +56,11 @@ public:
     // Get set of shape functions for this element
     const auto& localFiniteElement = localView.tree().finiteElement();
 
-    using ConstElementRefType = decltype(localFiniteElement);
-    using ConstElementType = typename std::remove_reference<ConstElementRefType>::type;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
 
     using RangeType = typename ConstElementType::Traits::LocalBasisType::Traits::RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension> FEHessianType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension>;
 
     const int size = localView.size();
 

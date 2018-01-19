@@ -146,7 +146,7 @@ void assemble_gradients(const PS12SSplineFiniteElement<GeometryType, valueType, 
         std::vector<Dune::FieldVector<Config::ValueType, Config::dim>>& gradients) {
     assert(gradients.size() == lfu.size());
 
-    typedef PS12SSplineFiniteElement<GeometryType, valueType, valueType, SparseMatrixType> FiniteElement;
+    using FiniteElement = PS12SSplineFiniteElement<GeometryType, valueType, valueType, SparseMatrixType>;
 
     // The gradients of the shape functions on the reference element
     std::vector<typename FiniteElement::Traits::LocalBasisType::Traits::JacobianType> referenceGradients(
@@ -228,7 +228,7 @@ void assemble_hessians(const PS12SSplineFiniteElement<GeometryType, valueType, v
     const JacobianType &jacobian, const Config::SpaceType& x, std::vector<HessianType>& hessians) {
   assert(hessians.size() == lfu.size());
 
-  typedef PS12SSplineFiniteElement<GeometryType, valueType, valueType, SparseMatrixType> FiniteElement;
+  using FiniteElement = PS12SSplineFiniteElement<GeometryType, valueType, valueType, SparseMatrixType>;
 
   // The hessian of the shape functions on the reference element
   std::vector<HessianType> referenceHessians(lfu.size());
@@ -274,17 +274,17 @@ template<typename FETraits = SolverConfig::FETraitsSolver>
 class Assembler{
 public:
   //-----typedefs---------
-  typedef Config::GridView GridViewType;
-  typedef GridViewType::IntersectionIterator IntersectionIterator;
-  typedef IntersectionIterator::Intersection Intersection;
-  typedef GridViewType::IndexSet::IndexType IndexType;
+  using GridViewType = Config::GridView;
+  using IntersectionIterator = GridViewType::IntersectionIterator;
+  using Intersection = IntersectionIterator::Intersection;
+  using IndexType = GridViewType::IndexSet::IndexType;
 
-  typedef Config::SpaceType SpaceType;
-  typedef SolverConfig::RangeType RangeType;
+  using SpaceType = Config::SpaceType;
+  using RangeType = SolverConfig::RangeType;
 
-  typedef Eigen::Triplet<double> EntryType;
+  using EntryType = Eigen::Triplet<double>;
 
-  typedef typename FETraits::FEBasis FEBasisType;
+  using FEBasisType = typename FETraits::FEBasis;
 
   enum AssembleType{ ONLY_OBJECTIVE, ONLY_JACOBIAN, ALL};
 
@@ -737,9 +737,7 @@ void Assembler<FETraits>::calculate_local_mass_matrix_detailed(
 
     const auto& lfu = localView.tree().finiteElement();
 
-    typedef decltype(lfu) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
+    using RangeType = typename std::decay_t<decltype(lfu)>::Traits::LocalBasisType::Traits::RangeType;
 
     // Get a quadrature rule
     int order = std::max(1, 2 * ((int) lfu.localBasis().order()));
@@ -857,9 +855,7 @@ void Assembler<FETraits>::calculate_refined_local_mass_matrix_detailed(const Loc
   const auto& lfuFather = localViewFather.tree().finiteElement();
   const auto& lfuChild = localViewChild.tree().finiteElement();
 
-  typedef decltype(lfuChild) ConstElementRefType;
-  typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
-  typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
+  using RangeType = typename std::decay_t<decltype(lfuChild)>::Traits::LocalBasisType::Traits::RangeType;
 
   const int size = lfuChild.size();
 

@@ -58,43 +58,43 @@
 namespace Config{
 
   enum {dim =2};
-  typedef double ValueType;
+  using ValueType = double;
 
-  typedef Eigen::VectorXd VectorType;
-  typedef Eigen::MatrixXd DenseMatrixType;
-  typedef Eigen::SparseMatrix<ValueType> MatrixType;
+  using VectorType = Eigen::VectorXd;
+  using DenseMatrixType = Eigen::MatrixXd;
+  using MatrixType = Eigen::SparseMatrix<ValueType>;
 
-  typedef Eigen::SparseMatrix<ValueType> SparseMatrixType;
+  using SparseMatrixType = Eigen::SparseMatrix<ValueType>;
 
 
-//  typedef YaspGrid<dim> GridType;
+//  using GridType = YaspGrid<dim>;
 #ifndef BSPLINES
-  typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > UnitCubeType;
+  using UnitCubeType = UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> >;
 #else
-  typedef UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >> UnitCubeType;
+  using UnitCubeType = UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >>;
 #endif
-  typedef UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >> RectangularGridType;
-  typedef RectangularGridType::GridType::LeafGridView RectangularGridView;
+  using RectangularGridType = UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >>;
+  using RectangularGridView = RectangularGridType::GridType::LeafGridView;
 
-  typedef UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > TriangularUnitCubeType;
+  using TriangularUnitCubeType = UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> >;
 
-  typedef UnitCubeType::GridType GridType;
-  typedef UnitCubeType::GridType DuneGridType;
-  typedef TriangularUnitCubeType::GridType TriangularGridType;
-  typedef DuneGridType::LevelGridView LevelGridView;
-  typedef DuneGridType::LeafGridView GridView;
-  typedef DuneGridType::Codim<0>::Entity ElementType;
-  typedef Dune::FieldVector<GridView::ctype, GridView::dimension> DomainType;
+  using GridType = UnitCubeType::GridType;
+  using DuneGridType = UnitCubeType::GridType;
+  using TriangularGridType = TriangularUnitCubeType::GridType;
+  using LevelGridView = DuneGridType::LevelGridView;
+  using GridView = DuneGridType::LeafGridView;
+  using ElementType = DuneGridType::Codim<0>::Entity;
+  using DomainType = Dune::FieldVector<GridView::ctype, GridView::dimension>;
 
-  typedef FieldVector<ValueType, dim> SpaceType;
-  typedef FieldVector<ValueType, 1> SpaceType1d;
-  typedef FieldVector<ValueType, 2> SpaceType2d;
-  typedef FieldVector<ValueType, 3> SpaceType3d;
+  using SpaceType = FieldVector<ValueType, dim>;
+  using SpaceType1d = FieldVector<ValueType, 1>;
+  using SpaceType2d = FieldVector<ValueType, 2>;
+  using SpaceType3d = FieldVector<ValueType, 3>;
 
   static_assert(std::is_same<SpaceType, DomainType>::value, "Grid domain type must be equal to function type");
 
 
-  typedef typename GridView::template Codim<0>::Entity Entity;
+  using Entity = typename GridView::template Codim<0>::Entity;
 
   struct EntityCompare {
     EntityCompare(const GridView& gridView):indexSet(gridView.indexSet()) {}
@@ -108,8 +108,8 @@ namespace Config{
     const typename GridView::IndexSet& indexSet;
   };
 
-  typedef std::unordered_set<Entity> EntitySet;
-  typedef std::unordered_map<Entity,int, EntityCompare> EntityMap;
+  using EntitySet = std::unordered_set<Entity>;
+  using EntityMap = std::unordered_map<Entity,int, EntityCompare>;
 
 }
 

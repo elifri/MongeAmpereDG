@@ -13,7 +13,7 @@
 
 class BoundaryHandler{
 public:
-  typedef Eigen::Matrix<bool,Eigen::Dynamic, 1> BoolVectorType;
+  using BoolVectorType = Eigen::Matrix<bool,Eigen::Dynamic, 1>;
 
   BoundaryHandler(): initialised_(false){
   }

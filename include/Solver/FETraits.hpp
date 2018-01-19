@@ -40,19 +40,15 @@ template <typename T>
 struct FETraits
 {
   static const FEType Type = Standard;
-  typedef T FEBasis;
-  typedef T FEuBasis;
+  using FEBasis = T;
+  using FEuBasis = T;
 
-//  typedef Dune::TypeTree::HybridTreePath<> TreePath;
-//  typedef Dune::Functions::DefaultNodeToRangeMap<typename TypeTree::ChildForTreePath<typename FEBasis::LocalView::Tree, TreePath>> NodeToRangeMap;
-
-//  typedef typename Dune::Functions::DiscreteGlobalBasisFunction<FEBasis,Dune::TypeTree::HybridTreePath<>, Config::VectorType, NodeToRangeMap> DiscreteGridFunction;
-  typedef typename Dune::MongeAmpere::MyDiscreteScalarGlobalBasisFunction<FEBasis, Config::VectorType, false> DiscreteGridFunction;
-  typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
-  typedef typename DiscreteGridFunction::GlobalFirstDerivative DiscreteGradientGridFunction;
-  typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
-  typedef typename DiscreteGridFunction::LocalSecondDerivative DiscreteLocalSecondDerivativeGridFunction;
-  typedef typename DiscreteGridFunction::GlobalSecondDerivative DiscreteSecondDerivativeGridFunction;
+  using DiscreteGridFunction = typename Dune::MongeAmpere::MyDiscreteScalarGlobalBasisFunction<FEBasis, Config::VectorType, false>;
+  using DiscreteLocalGridFunction = typename DiscreteGridFunction::LocalFunction;
+  using DiscreteGradientGridFunction = typename DiscreteGridFunction::GlobalFirstDerivative;
+  using DiscreteLocalGradientGridFunction = typename DiscreteGridFunction::LocalFirstDerivative;
+  using DiscreteLocalSecondDerivativeGridFunction = typename DiscreteGridFunction::LocalSecondDerivative;
+  using DiscreteSecondDerivativeGridFunction = typename DiscreteGridFunction::GlobalSecondDerivative;
 
   template<int dim>
   static const QuadratureRule<Config::ValueType, dim>& get_Quadrature(const Config::ElementType & element, int order)
@@ -89,19 +85,15 @@ template<typename GridView>
 struct FETraits<Functions::PS12SSplineBasis<GridView, Config::SparseMatrixType>>
 {
   static const FEType Type = PS12Split;
-  typedef Functions::PS12SSplineBasis<GridView, Config::SparseMatrixType> FEBasis;
-  typedef FEBasis FEuBasis;
+  using FEBasis = Functions::PS12SSplineBasis<GridView, Config::SparseMatrixType>;
+  using FEuBasis = FEBasis;
 
-//  typedef Dune::TypeTree::HybridTreePath<> TreePath;
-//  typedef Dune::Functions::DefaultNodeToRangeMap<typename TypeTree::ChildForTreePath<FEBasis::LocalView::Tree, TreePath>> NodeToRangeMap;
-
-//  typedef typename Dune::Functions::DiscreteGlobalBasisFunction<FEBasis, TreePath,Config::VectorType, NodeToRangeMap> DiscreteGridFunction;
-  typedef typename Dune::MongeAmpere::MyDiscreteScalarGlobalBasisFunction<FEBasis,Config::VectorType, true> DiscreteGridFunction;
-  typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
-  typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
-  typedef typename DiscreteGridFunction::GlobalFirstDerivative DiscreteGradientGridFunction;
-  typedef typename DiscreteGridFunction::LocalSecondDerivative DiscreteLocalSecondDerivativeGridFunction;
-  typedef typename DiscreteGridFunction::GlobalSecondDerivative DiscreteSecondDerivativeGridFunction;
+  using DiscreteGridFunction = typename Dune::MongeAmpere::MyDiscreteScalarGlobalBasisFunction<FEBasis,Config::VectorType, true>;
+  using DiscreteLocalGridFunction = typename DiscreteGridFunction::LocalFunction;
+  using DiscreteLocalGradientGridFunction = typename DiscreteGridFunction::LocalFirstDerivative;
+  using DiscreteGradientGridFunction = typename DiscreteGridFunction::GlobalFirstDerivative;
+  using DiscreteLocalSecondDerivativeGridFunction = typename DiscreteGridFunction::LocalSecondDerivative;
+  using DiscreteSecondDerivativeGridFunction = typename DiscreteGridFunction::GlobalSecondDerivative;
 
   template<int dim>
   static const QuadratureRule<Config::ValueType, dim>& get_Quadrature(const Config::ElementType & element, int order)
@@ -141,25 +133,18 @@ template <typename GridView, int degree, int degreeHessian>
 struct FETraits<Functions::MAMixedBasis< GridView, degree, degreeHessian>>
 {
   static const FEType Type = Mixed;
-  typedef Functions::MAMixedBasis<GridView, degree, degreeHessian> FEBasis;
-  //  typedef FEBasis::Basisu FEuBasis;
-  typedef Functions::PQkNodalBasis<GridView, degree> FEuBasis;
-  //  typedef FEBasis::BasisuDH FEuDHBasis;
-//  typedef Functions::LagrangeDGBasis<GridView, degreeHessian> FEuDHBasis;
-  typedef Functions::PQkNodalBasis<GridView, degreeHessian> FEuDHBasis;
+  using FEBasis = Functions::MAMixedBasis<GridView, degree, degreeHessian>;
+  //  using FEuBasis = FEBasis::Basisu;
+  using  FEuBasis = Functions::PQkNodalBasis<GridView, degree>;
+  //  using FEuDHBasis = FEBasis::BasisuDH;
+//  using FEuDHBasis = Functions::LagrangeDGBasis<GridView, degreeHessian>;
+  using FEuDHBasis = Functions::PQkNodalBasis<GridView, degreeHessian>;
 
-//  typedef decltype(TypeTree::hybridTreePath(Dune::TypeTree::Indices::_0)) TreePath;
-//  typedef Dune::TypeTree::hybridTreePath<Dune::TypeTree::Indices::_0> TreePath;
-
-//  typedef Dune::Functions::DefaultNodeToRangeMap<Dune::TypeTree::ChildForTreePath<FEBasis::LocalView::Tree, TreePath>> NodeToRangeMap;
-
-//  typedef typename Dune::Functions::DiscreteGlobalBasisFunction<FEBasis,TreePath, Config::VectorType> DiscreteGridFunction;
-  typedef typename Dune::MongeAmpere::MyDiscreteScalarGlobalBasisFunction<FEuBasis, Config::VectorType, false> DiscreteGridFunction;
-  typedef typename DiscreteGridFunction::LocalFunction DiscreteLocalGridFunction;
-  typedef typename DiscreteGridFunction::LocalFirstDerivative DiscreteLocalGradientGridFunction;
-  typedef typename Dune::MongeAmpere::MyDiscreteScalarGlobalBasisFunction<FEuDHBasis, Config::VectorType, false> DiscreteSecondDerivativeGridFunction;
-  typedef typename DiscreteSecondDerivativeGridFunction::LocalFunction DiscreteLocalSecondDerivativeGridFunction;
-
+  using DiscreteGridFunction = typename Dune::MongeAmpere::MyDiscreteScalarGlobalBasisFunction<FEuBasis, Config::VectorType, false>;
+  using DiscreteLocalGridFunction = typename DiscreteGridFunction::LocalFunction;
+  using DiscreteLocalGradientGridFunction = typename DiscreteGridFunction::LocalFirstDerivative;
+  using DiscreteSecondDerivativeGridFunction = typename Dune::MongeAmpere::MyDiscreteScalarGlobalBasisFunction<FEuDHBasis, Config::VectorType, false>;
+  using DiscreteLocalSecondDerivativeGridFunction = typename DiscreteSecondDerivativeGridFunction::LocalFunction;
 
   template<int dim>
   static const QuadratureRule<Config::ValueType, dim>& get_Quadrature(const Config::ElementType & element, int order)

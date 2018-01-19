@@ -22,14 +22,15 @@ class MA_solver;
 
 template<int FETraitstype, typename FT>
 struct FEBasisHandler{
-  typedef FT FiniteElementTraits;
-  typedef typename FiniteElementTraits::FEBasis FEBasisType;
+  mutable int count;
+  using FiniteElementTraits = FT;
+  using FEBasisType = typename FiniteElementTraits::FEBasis;
 
-  typedef typename FiniteElementTraits::DiscreteGridFunction DiscreteGridFunction;
+  using DiscreteGridFunction = typename FiniteElementTraits::DiscreteGridFunction;
 
-  FEBasisHandler(const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)){}
-  FEBasisHandler(const MA_solver& solver, const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)){}
-  FEBasisHandler(const typename FEBasisType::GridView& grid, const Config::DomainType& lowerLeft, const Config::DomainType& upperRight): FEBasis_(new FEBasisType(grid)){}
+  FEBasisHandler(const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)), count(0){}
+  FEBasisHandler(const MA_solver& solver, const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)), count(0){}
+  FEBasisHandler(const typename FEBasisType::GridView& grid, const Config::DomainType& lowerLeft, const Config::DomainType& upperRight): FEBasis_(new FEBasisType(grid)), count(0){}
 
   template<class F>
   void project(F f, Config::VectorType &v) const;
@@ -123,12 +124,12 @@ struct FEBasisHandler{
 ///specialisation for mixed elements
 template<typename FT>
 struct FEBasisHandler<Mixed, FT>{
-  typedef FT FiniteElementTraits;
-  typedef typename FiniteElementTraits::FEBasis FEBasisType;
-  typedef typename FiniteElementTraits::FEuBasis FEuBasisType;
-  typedef typename FiniteElementTraits::FEuDHBasis FEuDHBasisType;
+  using FiniteElementTraits = FT;
+  using FEBasisType = typename FiniteElementTraits::FEBasis;
+  using FEuBasisType = typename FiniteElementTraits::FEuBasis;
+  using FEuDHBasisType = typename FiniteElementTraits::FEuDHBasis;
 
-  typedef typename FiniteElementTraits::DiscreteGridFunction DiscreteGridFunction;
+  using DiscreteGridFunction = typename FiniteElementTraits::DiscreteGridFunction;
 
   FEBasisHandler(const typename FEBasisType::GridView& grid): FEBasis_(new FEBasisType(grid)),
                                                 uBasis_(new FEuBasisType(grid)),
@@ -445,7 +446,7 @@ void FEBasisHandler<Mixed, FETraits>::project(F f, Config::VectorType &v) const
 
         for (unsigned int i = 0; i < localViewuDH.size(); i++)
         {
-          typedef decltype(localView) LocalView;
+          using LocalView = decltype(localView);
 
           const int localIndex = Dune::Functions::flat_local_index<typename LocalView::GridView, typename LocalView::size_type>(localViewu.size(), i, row, col);
           v[FETraits::get_index(localIndexSet, localIndex)] = v_uDH_entry[localIndexSetuDH.index(i)[0]];

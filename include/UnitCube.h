@@ -57,7 +57,7 @@ struct Class {
 template<typename T>
 class UnitCube {
 public:
-	typedef T GridType;
+	using GridType = T;
 
 	static const int dim = GridType::dimension;
 
@@ -84,8 +84,8 @@ private:
 template<int dim>
 class UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > {
 public:
-	typedef Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> GridType;
-	typedef Dune::FieldVector<typename GridType::ctype, dim> SpaceType;
+	using GridType = Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming>;
+	using SpaceType = Dune::FieldVector<typename GridType::ctype, dim>;
 private:
 	std::shared_ptr<GridType> grid_;
 
@@ -272,8 +272,8 @@ public:
 template<int dim>
 class UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >> {
 public:
-	typedef Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> > GridType;
-  typedef Dune::FieldVector<typename GridType::ctype, dim> SpaceType;
+	using GridType = Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> > ;
+  using SpaceType = Dune::FieldVector<typename GridType::ctype, dim>;
 
   UnitCube(int size) {
 		Dune::FieldVector<double, dim> length(1.0);

@@ -92,7 +92,7 @@ template<class SparseMatrixType>
 inline
 void copy_to_new_sparse_matrix(const SparseMatrixType &m_local, SparseMatrixType &m, int offset_row=0, int offset_col=0)
 {
-  typedef typename SparseMatrixType::Scalar Scalar;
+  using Scalar = typename SparseMatrixType::Scalar;
 
   std::vector< Eigen::Triplet<Scalar> > tripletList;
   tripletList.reserve(m_local.nonZeros());

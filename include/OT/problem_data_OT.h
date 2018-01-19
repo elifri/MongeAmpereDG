@@ -27,7 +27,7 @@ private:
   virtual Config::ValueType LegrendeFenchelTrafo(const Config::SpaceType &normal) const =0;
 
 public:
-  typedef std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGradientGridFunction> GradFunction_ptr;
+  using GradFunction_ptr = std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGradientGridFunction>;
 
 //  virtual ~OTBoundary() {delete (*GradFunction_ptr);}
 
