@@ -190,12 +190,12 @@ public:
 
   ///use given global function (probably living on a coarser grid) to evaluate last step
   virtual void set_evaluation_of_u_old_to_different_grid() const{
-//    lop_ptr->set_evaluation_of_u_old_to_different_grid();
+    lop_ptr->set_evaluation_of_u_old_to_different_grid();
     lopLMBoundary->set_evaluation_of_u_old_to_different_grid();
   }
   ///use coefficients of old function living on the same grid to evaluate last step
   virtual void set_evaluation_of_u_old_to_same_grid() const{
-//    lop_ptr->set_evaluation_of_u_old_to_same_grid();
+    lop_ptr->set_evaluation_of_u_old_to_same_grid();
     lopLMBoundary->set_evaluation_of_u_old_to_same_grid();
   }
 
@@ -428,7 +428,11 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(Config::
   }
   //set rhs of langrangian multipler
   std::cerr << " at v (" << indexFixingGridEquation << ") is " << v(indexFixingGridEquation) << " going to be " << assembler.u0AtX0()-assembler.uAtX0() << std::endl;
-  v(indexFixingGridEquation) = assembler.uAtX0() - assembler.u0AtX0();
+
+  if (!lop_ptr->last_step_on_a_different_grid)
+    v(indexFixingGridEquation) = assembler.uAtX0() - assembler.u0AtX0();
+  else
+    v(indexFixingGridEquation) = assembler.uAtX0();
   std::cerr << " u_0 - u = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation) << " = " << assembler.u0AtX0() << '-'  <<assembler.uAtX0() << std::endl;
   v(indexFixingGridEquation) += lagrangianFixingPointDiscreteOperator.dot(w);
 
@@ -494,7 +498,8 @@ void MA_OT_Operator<OperatorTraits>::evaluate(Config::VectorType& x, Config::Vec
   //prepare clock to time computations
   auto start = std::chrono::steady_clock::now();
 
-  prepare_fixing_point_term(x);
+  if (!lop_ptr->last_step_on_a_different_grid)
+    prepare_fixing_point_term(x);
   assemble_with_langrangian_Jacobian(xBoundary,x,v, m);
 
   for (int i = 0; i < v.size(); i++)  assert ( ! (v(i) != v(i)));

@@ -373,6 +373,11 @@ public:
 
   }
 
+  ///use given global function (probably living on a coarser grid) to evaluate last step
+  void set_evaluation_of_u_old_to_different_grid() const{  last_step_on_a_different_grid = true;}
+  ///use coefficients of old function living on the same grid to evaluate last step
+  void set_evaluation_of_u_old_to_same_grid() const{  last_step_on_a_different_grid = false;}
+
   const Function& get_input_distribution() const {return rhoX;}
   const Function& get_target_distribution() const {return rhoY;}
 
@@ -389,6 +394,7 @@ public:
   mutable double int_f;
   mutable bool found_negative;
 
+  mutable bool last_step_on_a_different_grid;
 };
 #else
 class Local_Operator_MA_OT {
