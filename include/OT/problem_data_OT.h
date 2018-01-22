@@ -34,13 +34,15 @@ public:
 
   OTBoundary(//GeometrySetting& geometrySetting,
       const int n = std::max(100000,1 << (2+SolverConfig::startlevel+SolverConfig::nonlinear_steps)))
-    : N_(n){}
+    : N_(n){
+	  std::cout << " N_Y = N " << n << std::endl;
+  }
 
 
   OTBoundary(GradFunction_ptr &gradUOld, //GeometrySetting& geometrySetting,
       const int n = std::max(100000,1 << (2+SolverConfig::startlevel+SolverConfig::nonlinear_steps)))
     : gradient_u_old(&gradUOld), //geometrySetting(geometrySetting),
-      N_(n){}
+      N_(n){std::cout << " N_Y = N " << n << std::endl;}
 
   ///return the projection of the last iteration's solution (onto the desired boundary)
 /*  template<class Element>

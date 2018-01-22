@@ -22,7 +22,6 @@ class MA_solver;
 
 template<int FETraitstype, typename FT>
 struct FEBasisHandler{
-  mutable int count;
   using FiniteElementTraits = FT;
   using FEBasisType = typename FiniteElementTraits::FEBasis;
 
@@ -118,6 +117,7 @@ struct FEBasisHandler{
 
   const FEBasisType& FEBasis() const{ return *FEBasis_;}
   const FEBasisType& uBasis() const{ return *FEBasis_;}
+  mutable int count;
 };
 
 

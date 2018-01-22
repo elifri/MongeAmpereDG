@@ -920,6 +920,15 @@ void MA_OT_solver::adapt_solution(const int level)
     std::string fname(plotter.get_output_directory());
     fname += "/"+ plotter.get_output_prefix()+ "exactSol"+NumberToString(iterations)+".vtu";
     plotter.writeOTVTKGlobal(fname, y0);
+
+    std::cerr << std::scientific << std::setprecision(5)
+        << "   current L2 error is " << calculate_L2_error(u0) << std::endl;
+    std::cerr << std::scientific << std::setprecision(3)
+        << "   current L2 grad error is " << calculate_L2_errorOT([](Config::SpaceType x)
+        {return Dune::FieldVector<double, Config::dim> ({
+          .771153822412742*x[0]+.348263016573496*x[1], .348263016573496*x[0]+1.94032252090948*x[1]});}) << std::endl;
+
+    std::cerr << "   omega   " << 0 << std::endl;
   }
 
   //adapt operator

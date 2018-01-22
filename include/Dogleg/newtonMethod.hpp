@@ -133,6 +133,8 @@ void newtonMethod(
 
             functor.evaluate(xNew,tempf,tempDf, xBoundary, true);
 
+            std::cout << " increase Newton-step ?";
+            std::cout << std::scientific << std::setprecision(3) << "   ||F||2 was "  << f.norm() << std::endl;
             std::cerr << " tried to increase omega "
                    << "  newton residual was " << tempf.norm()
                    << "  would have been     boundary-step     "
