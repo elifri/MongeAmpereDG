@@ -33,12 +33,12 @@ public:
 
 
   OTBoundary(//GeometrySetting& geometrySetting,
-      const int n = 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps))
+      const int n = std::max(100000,1 << (2+SolverConfig::startlevel+SolverConfig::nonlinear_steps)))
     : N_(n){}
 
 
   OTBoundary(GradFunction_ptr &gradUOld, //GeometrySetting& geometrySetting,
-      const int n = 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps))
+      const int n = std::max(100000,1 << (2+SolverConfig::startlevel+SolverConfig::nonlinear_steps)))
     : gradient_u_old(&gradUOld), //geometrySetting(geometrySetting),
       N_(n){}
 
