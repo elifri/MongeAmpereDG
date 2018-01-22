@@ -916,19 +916,6 @@ void MA_OT_solver::adapt_solution(const int level)
       return y;};
 
     project(u0, y0, exactsol_u);
-
-    std::string fname(plotter.get_output_directory());
-    fname += "/"+ plotter.get_output_prefix()+ "exactSol"+NumberToString(iterations)+".vtu";
-    plotter.writeOTVTKGlobal(fname, y0);
-
-    std::cerr << std::scientific << std::setprecision(5)
-        << "   current L2 error is " << calculate_L2_error(u0) << std::endl;
-    std::cerr << std::scientific << std::setprecision(3)
-        << "   current L2 grad error is " << calculate_L2_errorOT([](Config::SpaceType x)
-        {return Dune::FieldVector<double, Config::dim> ({
-          .771153822412742*x[0]+.348263016573496*x[1], .348263016573496*x[0]+1.94032252090948*x[1]});}) << std::endl;
-
-    std::cerr << "   omega   " << 0 << std::endl;
   }
 
   //adapt operator
@@ -956,6 +943,35 @@ void MA_OT_solver::adapt_solution(const int level)
   solution.conservativeResize(get_n_dofs());
   solution(get_n_dofs_V_h()) = 0;
 //  solution.tail(get_n_dofs_Q_h()) = get_assembler_lagrangian_boundary().boundaryHandler().shrink_to_boundary_vector(p_adapted);
+
+
+  {
+    update_solution(solution);
+
+     Config::SpaceType x0 = {0.0,0.0};
+
+     FieldMatrix<Config::ValueType, 2, 2> A = {{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}}; //exactsolution
+     FieldMatrix<Config::ValueType, 2, 2> B = {{.385576911206371,.174131508286748},{0.174131508286748,.970161260454739}}; //exactsolution
+
+     auto u0 = [&](Config::SpaceType x){
+       auto y=x0;B.umv(x,y);
+       return (x*y);};
+     auto y0 = [&](Config::SpaceType x){
+       auto y=x0;A.umv(x,y);
+       return y;};
+
+     project(u0, y0, exactsol_u);
+
+     std::cerr << std::scientific << std::setprecision(5)
+         << "   current L2 error is " << calculate_L2_error(u0) << std::endl;
+     std::cerr << std::scientific << std::setprecision(3)
+         << "   current L2 grad error is " << calculate_L2_errorOT([](Config::SpaceType x)
+         {return Dune::FieldVector<double, Config::dim> ({
+           .771153822412742*x[0]+.348263016573496*x[1], .348263016573496*x[0]+1.94032252090948*x[1]});}) << std::endl;
+
+     std::cerr << "   omega   " << 0 << std::endl;
+   }
+
 }
 
 
