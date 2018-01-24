@@ -966,6 +966,19 @@ private:
     return TaylorExpansion<TaylorOrder>(element, x, localCoordinate);
   }
 
+
+  void evaluateAllLocal(const Element& element, const Domain& xLocal, Range& u, typename LocalFirstDerivative::Jacobian& gradu,
+      typename LocalSecondDerivative::Hessian& hessu) const
+  {
+    localFunction_.bind(element);
+    localDerivative_.bind(element);
+    localSecondDerivative_.bind(element);
+
+    u = localFunction_(xLocal);
+    gradu = localDerivative_(xLocal);
+    localSecondDerivative_.evaluateHess(xLocal, hessu);
+  }
+
   void evaluateAll(const Domain& x, Range& u, typename LocalFirstDerivative::Jacobian& gradu,
       typename LocalSecondDerivative::Hessian& hessu) const
   {
@@ -987,8 +1000,18 @@ private:
       const int TaylorOrder = Basis::LocalView::Tree::FiniteElement::Traits::LocalBasisType::Traits::diffOrder;
       u = TaylorExpansion<TaylorOrder>(element, x, localCoordinate);
       gradu  = TaylorExpansionDerivative(element, x, localCoordinate);
+      localSecondDerivative_.evaluateHess(localCoordinate, hessu);
     }
-    localSecondDerivative_.evaluateHess(localCoordinate, hessu);
+  }
+
+  void evaluateDerivativesLocal(const Element& element, const Domain& xLocal, typename LocalFirstDerivative::Jacobian& gradu,
+      typename LocalSecondDerivative::Hessian& hessu) const
+  {
+    localDerivative_.bind(element);
+    localSecondDerivative_.bind(element);
+
+    gradu = localDerivative_(xLocal);
+    localSecondDerivative_.evaluateHess(xLocal, hessu);
   }
 
 
@@ -1041,6 +1064,11 @@ private:
   const EntitySet& entitySet() const
   {
     return entitySet_;
+  }
+
+  const GridView gridView() const
+  {
+    return basis_->gridView();
   }
 
 private:

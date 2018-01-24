@@ -91,7 +91,7 @@ public:
 //          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
           *boundary_, f_, g_)),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc(), [&solver]()-> const auto&{return solver.get_u_old();})),
+      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
       fixingPoint{0.3,0},
       intermediateSolCounter()
   {
@@ -102,7 +102,7 @@ public:
 
   MA_OT_Operator(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc(), solver.get_u_old())),
+      lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),//, solver.get_u_old())),
       fixingPoint{0.3,0},
       intermediateSolCounter()
       {
@@ -199,6 +199,12 @@ public:
     lopLMBoundary->set_evaluation_of_u_old_to_same_grid();
   }
 
+  template<typename F>
+  void change_oldFunction(F&& uOld)
+  {
+    lopLMBoundary->change_oldFunction(uOld);
+  }
+
   const FieldVector<double, 2> get_fixingPoint(){return fixingPoint;}
 
   const SolverType* solver_ptr;
@@ -239,9 +245,9 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
 //    MA_OT_Operator(MA_OT_solver& solver):solver_ptr(&solver), lop_ptr(new Local_Operator_MA_OT(new BoundarySquare(solver.gradient_u_old, solver.get_setting()), new rhoXSquareToSquare(), new rhoYSquareToSquare())){}
     // lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
   MA_OT_Operator_with_Linearisation(SolverType& solver):MA_OT_Operator<OperatorTraits>(solver),
-        lopLinear_ptr(new LOPLinear(*(this->boundary_), this->f_, this->g_,
-            [&solver]() -> const auto&{ //assert that the return value is a reference!
-              return solver.get_u_old();}))
+        lopLinear_ptr(new LOPLinear(*(this->boundary_), this->f_, this->g_))
+//            [&solver]() -> const auto&{ //assert that the return value is a reference!
+//              return solver.get_u_old();}))
     {}
 
   MA_OT_Operator_with_Linearisation(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lopLinear):MA_OT_Operator<OperatorTraits>(solver),
@@ -301,6 +307,14 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
     MA_OT_Operator<OperatorTraits>::set_evaluation_of_u_old_to_same_grid();
     lopLinear_ptr->set_evaluation_of_u_old_to_same_grid();
   }
+
+  template<typename F>
+  void change_oldFunction(F&& uOld)
+  {
+    MA_OT_Operator<OperatorTraits>::change_oldFunction(uOld);
+    lopLinear_ptr->change_oldFunction(uOld);
+  }
+
 
 private:
   std::shared_ptr<LocalOperatorType> lopLinear_ptr;
@@ -484,6 +498,8 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(Config::
   }
 #endif
   std::cerr << " l_H(q) with norm " << std::scientific << std::setprecision(3)<< tempV.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
+
+  assert(! (v.norm()!=v.norm()));
 
   std::cerr << " l with norm " << std::scientific << std::setprecision(3)<< v.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
 }

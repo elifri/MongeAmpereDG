@@ -30,6 +30,7 @@
 #include "solver_config.h"
 
 #include "FEBasisHandler.hpp"
+#include "localfunctions/TaylorBoundaryFunction.hpp"
 
 #ifdef USE_DOGLEG
 #include "../Dogleg/doglegMethod.hpp"
@@ -91,7 +92,8 @@ public:
       FEBasisHandler_(*this, gridHandler.gridView()),
       assembler_(FEBasisHandler_.FEBasis()),
       plotter(gridHandler.gridView()),
-      solution_u_old(), gradient_u_old(),
+      solution_u_old(),
+      gradient_u_old(),
       op(*this)
 	{
     std::cout << "constructor n dofs " << get_n_dofs() << std::endl;
@@ -355,6 +357,7 @@ public:
   const std::string& get_output_prefix() const{ return outputPrefix_;}
 
   const VectorType& get_exact_solution() const {return exactsol_u;}
+
 
   DiscreteGridFunction& get_u_old() const {return *solution_u_old_global;}
   shared_ptr<DiscreteGridFunction>& get_u_old_ptr() const {return solution_u_old_global;}

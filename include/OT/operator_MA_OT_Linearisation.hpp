@@ -17,6 +17,8 @@
 #include "SmoothingKernel.h"
 #include "Operator/operator_utils.h"
 
+#include "localfunctions/TaylorBoundaryFunction.hpp"
+
 using namespace Dune;
 
 template <class value_type>
@@ -32,12 +34,10 @@ class Local_Operator_MA_OT_Linearisation {
 public:
   using FunctionType = Function;///interface typedef
 
-  template<typename F>
-  Local_Operator_MA_OT_Linearisation(const OTBoundary& bc, const Function& rhoX, const Function& rhoY,
-      F&& uOld):
+  Local_Operator_MA_OT_Linearisation(const OTBoundary& bc, const Function& rhoX, const Function& rhoY):
   delta_K(10), rhoX(rhoX), rhoY(rhoY),bc(bc),
   int_f(0), sign(1.0), found_negative(false), last_step_on_a_different_grid(false),
-  oldSolutionCaller_(std::forward<F>(uOld))
+  oldSolutionCaller_()
   {
   }
 
@@ -450,6 +450,12 @@ template<int dim>
   ///use coefficients of old function living on the same grid to evaluate last step
   void set_evaluation_of_u_old_to_same_grid() const{  last_step_on_a_different_grid = false;}
 
+  template<typename F>
+  void change_oldFunction(F&& uOld)
+  {
+    oldSolutionCaller_ = std::forward<F>(uOld);
+  }
+
   const Function& get_input_distribution() const {return rhoX;}
   const Function& get_target_distribution() const {return rhoY;}
 
@@ -473,7 +479,7 @@ public:
   mutable bool found_negative;
 
   mutable bool last_step_on_a_different_grid;
-  std::function<const SolverConfig::FETraitsSolver::DiscreteGridFunction&()> oldSolutionCaller_;
+  std::function<const TaylorBoundaryFunction&()> oldSolutionCaller_;
 };
 
 #endif /* SRC_OT_OPERATOR_MA_OT_LINEARISATION_HPP_ */

@@ -12,6 +12,8 @@
 #include "Assembler.h"
 #include "solver_config.h"
 
+#include "localfunctions/TaylorBoundaryFunction.hpp"
+
 #include <dune/functions/functionspacebases/interpolate.hh>
 
 class MA_solver;
@@ -88,7 +90,7 @@ struct FEBasisHandler{
    */
   template <typename GridTypeOld, typename Solver>
   Config::VectorType adapt_function_elliptic_after_grid_change(const GridTypeOld& gridOld,
-      const typename FEBasisType::GridView& grid, const Solver& ma_solver, const Config::VectorType& v) const
+      const typename FEBasisType::GridView& grid, Solver& ma_solver, const Config::VectorType& v) const
   {assert(false && " Error, dont know how this works for this FE basis");
     std::cerr << " Error, dont know how this works for this FE basis" << std::endl;
     DUNE_THROW(Dune::NotImplemented, " Error, dont know how this works for this FE basis"); exit(-1);}
@@ -740,16 +742,28 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 template <>
 template <typename GridTypeOld, typename Solver>
 Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt_function_elliptic_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid,
-    const Solver& ma_solver, const Config::VectorType& v) const
+    Solver& ma_solver, const Config::VectorType& v) const
 {
+  //prepare evaluation procedure for the function on the old grid
+
+  // 1. global function on coarse grid
   using CoarseTraits = PS12SplitTraits<GridTypeOld>;
 
   typename CoarseTraits::FEBasis FEBasisCoarse (gridOld);
   using DiscreteGridFunctionCoarse = typename CoarseTraits::DiscreteGridFunction;
   DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
 
+  // 2. prepare a Taylor extension for values outside the old grid
+  GenerealOTBoundary bcSource(ma_solver.grid());
+  TaylorBoundaryFunction solution_u_old_extended_global(ma_solver.get_operator().get_bc(), solution_u_Coarse_global);
+
+  // pass information of evaluation procedure to the local operators
+  auto get_FEFunction = [&solution_u_old_extended_global]()-> const auto&{return solution_u_old_extended_global;};
+  ma_solver.get_operator().change_oldFunction(get_FEFunction);
+
   ma_solver.get_u_old_ptr() = std::shared_ptr<DiscreteGridFunctionCoarse> (new DiscreteGridFunctionCoarse(FEBasisCoarse,v));
 
+  //project to new grid
   Config::VectorType vNew;
   vNew.resize(ma_solver.get_n_dofs());
   elliptic_project(ma_solver.get_operator(), solution_u_Coarse_global, vNew);

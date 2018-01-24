@@ -15,9 +15,8 @@
 
 class Local_Operator_LagrangianBoundary{
 public:
-  template<typename F>
-  Local_Operator_LagrangianBoundary(const OTBoundary& bc, F&& uOld)
-    : bc(bc), oldSolutionCaller_(std::forward<F>(uOld)){}
+  Local_Operator_LagrangianBoundary(const OTBoundary& bc)
+    : bc(bc), oldSolutionCaller_(){}
 
   template<class Intersection, class LocalViewV, class LocalViewQ, class DenseMatrixType, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
@@ -131,11 +130,17 @@ public:
   void set_evaluation_of_u_old_to_different_grid(){  last_step_on_a_different_grid = true;}
   void set_evaluation_of_u_old_to_same_grid(){  last_step_on_a_different_grid = false;}
 
+  template<typename F>
+  void change_oldFunction(F&& uOld)
+  {
+    oldSolutionCaller_ = std::forward<F>(uOld);
+  }
+
 private:
   const OTBoundary& bc;
 
   mutable bool last_step_on_a_different_grid;
-  std::function<const SolverConfig::FETraitsSolver::DiscreteGridFunction&()> oldSolutionCaller_;
+  std::function<const TaylorBoundaryFunction&()> oldSolutionCaller_;
 
 };
 
