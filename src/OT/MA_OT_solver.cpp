@@ -480,6 +480,7 @@ void MA_OT_solver::one_Poisson_Step()
 //    std::cerr << " is mapped to " << y << std::endl;
     return y;};
 
+#ifdef DEBUG
   //write to file
   {
     std::string fname(plotter.get_output_directory());
@@ -504,7 +505,7 @@ void MA_OT_solver::one_Poisson_Step()
     fnameProj += "/"+ plotter.get_output_prefix()+ "y0Projection.vtu";
     vtkWriter.write(fnameProj);
   }
-
+#endif
 
 //  auto y0 = [&](Config::SpaceType x){return x+x0;};
 
@@ -535,26 +536,24 @@ void MA_OT_solver::one_Poisson_Step()
 
   Assembler<C0Traits> lagrangeAssembler(lagrangeHandler.FEBasis());
 
+  //start assembling system
   Config::MatrixType m;
   Config::VectorType v;
   lagrangeAssembler.assemble_DG_Jacobian(Poisson_op, Poisson_op, solution.head(lagrangeHandler.FEBasis().indexSet().size()), v, m);
 
+  //add lagrange multiplier for mean value
   Config::VectorType lagrangianFixingPointDiscreteOperator;
   AssemblerLagrangianMultiplier1D<C0Traits> lagrangeAssemblerMidvalue(gridView());
   lagrangeAssemblerMidvalue.assemble_u_independent_matrix(*get_operator().lopLMMidvalue, lagrangianFixingPointDiscreteOperator);
 
-//  Config::VectorType lagrangianFixingPointDiscreteOperator = get_operator().lagrangianFixingPointDiscreteOperator;
-
   m.makeCompressed();
 
-  //add lagrange multiplier for mean value
   const int V_h_size = lagrangeHandler.FEBasis().indexSet().size();//get_n_dofs_V_h();
   m.conservativeResize(V_h_size+1, V_h_size+1);
   v.conservativeResize(V_h_size+1);
 
   int indexFixingGridEquation = V_h_size;
 
-  //-------------------select  mid value-------------------------
   assert(lagrangianFixingPointDiscreteOperator.size() == V_h_size);
 
   v(indexFixingGridEquation) = assembler_.u0AtX0();
@@ -565,6 +564,8 @@ void MA_OT_solver::one_Poisson_Step()
     m.insert(indexFixingGridEquation,i)=lagrangianFixingPointDiscreteOperator(i);
     m.insert(i,indexFixingGridEquation)=lagrangianFixingPointDiscreteOperator(i);
   }
+  //... done assembling system
+
 
   //solve linear equation
   Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_m;
@@ -575,8 +576,9 @@ void MA_OT_solver::one_Poisson_Step()
       std::cout << "\nError: "<< lu_of_m.info() << " Could not compute LU decomposition for initialising poisson equation!\n";
       exit(-1);
   }
-
   Config::VectorType lagrangeCoeffs = lu_of_m.solve(v);
+
+  //gradient recovery (projection of gradient to c0 elements)
   C0Traits::DiscreteGridFunction globalSolution(lagrangeHandler.FEBasis(), lagrangeCoeffs);
   C0Traits::DiscreteGradientGridFunction globalGradient(globalSolution);
   auto localGradient = localFirstDerivative(globalSolution);
@@ -595,9 +597,6 @@ void MA_OT_solver::one_Poisson_Step()
 //  auto localProjectedGradient = [&](Config::SpaceType x){return globalGradient(x)[0];};
 
   auto globalProjectedGradient = [&](Config::SpaceType x){return Dune::FieldVector<double, Config::dim> ({globalProjectedGradientX(x),globalProjectedGradientY(x)});};
-
-
-//  Config::VectorType Coeffs = lu_of_m.solve(v);
 
   //write to file
   {
@@ -659,13 +658,13 @@ void MA_OT_solver::one_Poisson_Step()
   /////---------------
 #endif
 
-
+  //hermite interpolation to c1 elements
   project(globalSolution, globalProjectedGradient, solution);
 //  solution.head(get_n_dofs_V_h()+1) = Coeffs;
 
 
   /////test--------
-#ifndef DEBUG
+#ifdef DEBUG
   update_solution(solution);
 //  const auto& f = get_operator().get_f();
 //  const auto& g = get_operator().get_g();
@@ -797,7 +796,7 @@ void MA_OT_solver::solve_nonlinear_system()
   if (iterations == 0)
   {
 
-    std::cout << " L2 error is " << calculate_L2_errorOT([](Config::SpaceType x)
+    std::cout << " L2 error is " << calculate_L2_error_gradient([](Config::SpaceType x)
 //        {return Dune::FieldVector<double, Config::dim> ({
 //                                                        x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
 //                                                        x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
@@ -838,7 +837,7 @@ void MA_OT_solver::solve_nonlinear_system()
 #endif
   std::cout << " Lagrangian Parameter for fixing grid Point " << solution(get_n_dofs_V_h()) << std::endl;
 
-  std::cout << " L2 error is " << calculate_L2_errorOT([](Config::SpaceType x)
+  std::cout << " L2 error is " << calculate_L2_error_gradient([](Config::SpaceType x)
 //      {return Dune::FieldVector<double, Config::dim> ({
 //                                                      x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
 //                                                      x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
@@ -874,6 +873,7 @@ void MA_OT_solver::adapt_operator()
 
 void MA_OT_solver::adapt_solution(const int level)
 {
+
   Config::VectorType p = get_assembler_lagrangian_boundary().boundaryHandler().blow_up_boundary_vector(solution.tail(get_n_dofs_Q_h()));
 
   //adapt input grid
@@ -965,7 +965,7 @@ void MA_OT_solver::adapt_solution(const int level)
      std::cerr << std::scientific << std::setprecision(5)
          << "   current L2 error is " << calculate_L2_error(u0) << std::endl;
      std::cerr << std::scientific << std::setprecision(3)
-         << "   current L2 grad error is " << calculate_L2_errorOT([](Config::SpaceType x)
+         << "   current L2 grad error is " << calculate_L2_error_gradient([](Config::SpaceType x)
          {return Dune::FieldVector<double, Config::dim> ({
            .771153822412742*x[0]+.348263016573496*x[1], .348263016573496*x[0]+1.94032252090948*x[1]});}) << std::endl;
 
@@ -973,106 +973,3 @@ void MA_OT_solver::adapt_solution(const int level)
    }
 
 }
-
-
-/*
-void MA_OT_solver::newtonMethod(const unsigned int maxIter, const double eps, const double lambdaMin, Eigen::VectorXd &x, bool useCombinedFunctor = false, const bool silentmode=false){
-  assert(eps>0);
-  assert(lambdaMin>0);
-
-  const unsigned int n=x.size();
-
-  Eigen::VectorXd f(n);
-  Eigen::SparseMatrix<double> Df(n,n);
-
-  if (!silentmode)
-  {
-    std::cout << "\n\nSolve nonlinear system of equations using Newton's method...\n\n";
-    std::cout << "--------------------------------------------------------------------------------\n";
-    std::cout << "      k    Schritt              ||s||       ||F||inf    ||F'||inf     ||F||2 \n";
-    std::cout << "--------------------------------------------------------------------------------\n";
-  }
-
-  Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_Df;
-
-  for (unsigned int i=0; i<maxIter; i++) {
-  Eigen::VectorXd s;
-  Eigen::VectorXd xNew(x);
-  const unsigned int maxIterBoundaryConditions = 1;
-  for (unsigned int j = 0; j < maxIterBoundaryConditions; j++)
-  {
-    // solve Df*s = +f using UmfPack:
-      if (useCombinedFunctor)
-        evaluate(x,f,Df, xNew, false);
-      else
-      {
-        evaluate(x,f,xNew, false);
-        derivative(x,Df);
-  //      make_FD_Jacobian(functor, x, J);
-      }
-      if (i == 0)
-        lu_of_Df.analyzePattern(Df);
-
-
-      lu_of_Df.factorize(Df);
-      if (lu_of_Df.info()!=0) {
-          // decomposition failed
-          std::cerr << "\nError: Could not compute LU decomposition of Df(x)!\n";
-          MATLAB_export(Df,"J");
-          exit(1);
-      }
-
-      s = lu_of_Df.solve(f);
-      if(lu_of_Df.info()!=0) {
-          // solving failed
-          std::cerr << "\nError: Could solve the equation Df(x)*s=-f(x)!\n";
-          exit(1);
-      }
-
-      get_assembler_lagrangian_boundary().shrink_to_boundary_vector(xNew);
-
-      xNew-=lambdaMin*s;
-
-      if (!silentmode)
-      {
-        std::cerr << "     boundary-step     ";
-        std::cout << "   " << std::setw(6) << i;
-        std::cout << "     boundary-step     ";
-        std::cout << std::scientific << std::setprecision(3) << lambdaMin*s.norm();
-        if (s.norm() <= eps)
-          break;
-        std::cout << "   " << std::scientific << std::setprecision(3) << f.lpNorm<Eigen::Infinity>();
-        std::cout << "   " << std::scientific << std::setprecision(3) << "?????????";
-        std::cout << "   " << std::scientific << std::setprecision(3) << f.norm();
-        std::cout << std::endl;
-      }
-      if (s.norm() <= eps)
-          break;
-  }
-  // compute damped Newton step
-
-  x = xNew;
-
-  if (!silentmode)
-     {
-       std::cout << "   " << std::setw(6) << i;
-       std::cout << "  Newton-step          ";
-       std::cout << std::scientific << std::setprecision(3) << lambdaMin*s.norm();
-     }
-
-
-  //         if (!silentmode)
-     {
-  //            std::cout << "   " << std::scientific << std::setprecision(3) << f.lpNorm<Eigen::Infinity>();
-  //            std::cout << "   " << std::scientific << std::setprecision(3) << "?????????";
-  //            std::cout << "   " << std::scientific << std::setprecision(3) << f.norm();
-        std::cout << std::endl;
-     }
-
-    if (s.norm() <= eps)RELEASE
-        break;
-  }
-
-}
-*/
-

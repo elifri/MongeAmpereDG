@@ -8,6 +8,7 @@
 #ifndef SRC_MA_OT_SOLVER_H_
 #define SRC_MA_OT_SOLVER_H_
 
+#include <dune/grid/io/file/vtk/boundaryiterators.hh>
 
 #include "Solver/MA_solver.h"
 
@@ -128,9 +129,28 @@ public:
   AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() { return assemblerLMBoundary_;}
   const AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() const { return assemblerLMBoundary_;}
 
-  template<typename FGrad>
-  Config::ValueType calculate_L2_errorOT(const FGrad &f) const;
 
+  /**
+ * calculates the L2 error on Omega of the last step's gradient
+ * @param f     the exact gradient
+ * @return      the value of sqrt(\int_Omega ||\nabla u-f||_2^2 dx)
+ */
+  template<typename FGrad>
+  Config::ValueType calculate_L2_error_gradient(const FGrad &f) const;
+
+  /**
+ * calculates the L2 error on the domain boundary \partial Omega of the last step's gradient
+ * @param f     the exact gradient
+ * @return      the value of sqrt(\int_{\partial Omega} ||\nabla u-f||_2^2 dx)
+ */
+  template<typename FGrad>
+  Config::ValueType calculate_L2_error_gradient_boundary(const FGrad &f) const;
+
+  /**
+ * calculates the L2 error on Omega of the last step
+ * @param f     the exact solution
+ * @return      the value of sqrt(\int_{\partial Omega} (u-f)^2 dx)
+ */
   template<typename F>
   Config::ValueType calculate_L2_error(const F &f) const;
 
@@ -224,7 +244,7 @@ Config::ValueType MA_OT_solver::calculate_L2_error(const F &f) const
 
 
 template<typename FGrad>
-Config::ValueType MA_OT_solver::calculate_L2_errorOT(const FGrad &f) const
+Config::ValueType MA_OT_solver::calculate_L2_error_gradient(const FGrad &f) const
 {
   Config::ValueType res = 0, max_error = 0;
 
@@ -264,5 +284,56 @@ Config::ValueType MA_OT_solver::calculate_L2_errorOT(const FGrad &f) const
 
   return std::sqrt(res);
 }
+
+template<typename FGrad>
+Config::ValueType MA_OT_solver::calculate_L2_error_gradient_boundary(const FGrad &f) const
+{
+  Config::ValueType res = 0, max_error = 0;
+
+  using BoundaryIterator = Dune::VTK::BoundaryIterator<GridViewType>;
+
+  BoundaryIterator itBoundary(gridView());
+  while (itBoundary != BoundaryIterator(gridView(),true)) //loop over boundary edges
+  {
+    auto element = itBoundary->inside();
+    auto geometry = element.geometry();
+
+    gradient_u_old->bind(element);
+
+    // Get a quadrature rule
+    int order = std::max(1, 3 * gradient_u_old->localOrder());
+    GeometryType gtface = itBoundary->geometryInInside().type();
+    const QuadratureRule<Config::ValueType, Config::dim - 1>& quad = FETraits::get_Quadrature<Config::dim-1>(gtface, order);
+
+    // Loop over all quadrature points
+    for (const auto& pt : quad) {
+
+      // Position of the current quadrature point in the reference element
+      const FieldVector<double, Config::dim> &quadPos =
+          itBoundary->geometryInInside().global(pt.position());
+
+      auto u_value = (*gradient_u_old)(quadPos);
+
+      decltype(u_value) f_value;
+      f_value = f(geometry.global(quadPos));
+
+      auto factor = pt.weight()*itBoundary->geometry().integrationElement(pt.position());
+
+      res += (u_value - f_value).two_norm2()*factor;
+      if ((u_value-f_value).two_norm() > max_error)
+      {
+        max_error = (u_value-f_value).two_norm();
+//        std::cerr << "found greater error at " << geometry.global(pt.position()) << ", namely " << max_error << std::endl;
+      }
+//      cout << "res = " << res << "u_ value " << u_value << " f_value " << f_value << std::endl;
+    }
+    itBoundary++;
+  }
+  std::cerr << " Maximal L2error found in gradient on Boundary is " << max_error << std::endl;
+
+  return std::sqrt(res);
+}
+
+
 
 #endif
