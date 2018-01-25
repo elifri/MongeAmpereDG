@@ -754,8 +754,8 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
 
   // 2. prepare a Taylor extension for values outside the old grid
-  GenerealOTBoundary bcSource(ma_solver.grid());
-  TaylorBoundaryFunction solution_u_old_extended_global(ma_solver.get_operator().get_bc(), solution_u_Coarse_global);
+  GenerealOTBoundary bcSource(gridOld.grid());
+  TaylorBoundaryFunction solution_u_old_extended_global(bcSource, solution_u_Coarse_global);
 
   // pass information of evaluation procedure to the local operators
   auto get_FEFunction = [&solution_u_old_extended_global]()-> const auto&{return solution_u_old_extended_global;};
