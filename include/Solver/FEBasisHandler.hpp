@@ -765,7 +765,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 
   //project to new grid
   Config::VectorType vNew;
-  vNew.resize(ma_solver.get_n_dofs());
+  vNew = Config::VectorType::Zero(ma_solver.get_n_dofs());
   elliptic_project(ma_solver.get_operator(), solution_u_Coarse_global, vNew);
   return vNew;
 }
