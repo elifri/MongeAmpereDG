@@ -46,7 +46,7 @@ public:
 
       //determine the nearest point on the boundary
       auto x0(x);
-      x0.axpy(signedDistanceToBoundary, directionToBoundary);
+      x0.axpy(-signedDistanceToBoundary, directionToBoundary);
 
       Range fx0;
       Jacobian Dfx0;
