@@ -837,8 +837,9 @@ private:
         try{
           const auto& element = hs.findEntity(xPertubed);
 
-          localCoordinate = element.geometry().local(x);
-          moveLocalCoordinateToBoundary(localCoordinate);
+//          localCoordinate = element.geometry().local(x);
+//          moveLocalCoordinateToBoundary(localCoordinate);
+          localCoordinate = element.geometry().local(xPertubed);
 
           return std::move( element );
           notFound = false;
