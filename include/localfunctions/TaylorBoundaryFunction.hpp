@@ -20,17 +20,47 @@ class TaylorBoundaryFunction{
   using Jacobian = typename GlobalFunction::LocalFirstDerivative::Jacobian;
   using Hessian = typename GlobalFunction::LocalSecondDerivative::Hessian;
 
+  using GridType = typename GlobalFunction::GridView::Grid;
+  using IndexSetType = typename GlobalFunction::GridView::IndexSet;
+
+
 public:
   TaylorBoundaryFunction(const OTBoundary& bc, const GlobalFunction& FEFunction):
     bcSource_(bc), FEFunction_(FEFunction)//FEFunctionCaller_(std::forward<F>(uOld))
   {
   }
 
+  Domain project_to_boundary(const Domain& x) const
+  {
+    auto signedDistanceToBoundary = bcSource_.H(x);
+    auto directionToBoundary = bcSource_.derivativeH(x);
+
+    //determine the nearest point on the boundary
+    auto x0(x);
+    x0.axpy(-signedDistanceToBoundary, directionToBoundary);
+
+    return x0;
+  }
+
+  Range operator()(const Domain& x) const
+  {
+    HierarchicSearch<GridType, IndexSetType> hs(FEFunction_.gridView().grid(), FEFunction_.gridView().indexSet());
+
+    try{
+      auto element = hs.findEntity(x);
+      auto localCoordinate = element.geometry().local(x);
+      FEFunction_.localFunction_.bind(element);
+      return FEFunction_.localFunction_(localCoordinate);
+    }
+    catch(Dune::GridError e)
+    {
+      auto x0 = project_to_boundary(x);
+      return FEFunction_(x0);
+    }
+  }
 
   void evaluateAll(const Domain& x, Range& u, Jacobian & gradu, Hessian& hessu) const
   {
-    using GridType = typename GlobalFunction::GridView::Grid;
-    using IndexSetType = typename GlobalFunction::GridView::IndexSet;
 
     HierarchicSearch<GridType, IndexSetType> hs(FEFunction_.gridView().grid(), FEFunction_.gridView().indexSet());
 
@@ -41,12 +71,7 @@ public:
     }
     catch(Dune::GridError e)
     {
-      auto signedDistanceToBoundary = bcSource_.H(x);
-      auto directionToBoundary = bcSource_.derivativeH(x);
-
-      //determine the nearest point on the boundary
-      auto x0(x);
-      x0.axpy(-signedDistanceToBoundary, directionToBoundary);
+      auto x0 = project_to_boundary(x);
 
       Range fx0;
       Jacobian Dfx0;
@@ -71,9 +96,6 @@ public:
 
   void evaluateDerivatives(const Domain& x, Jacobian & gradu, Hessian& hessu) const
   {
-    using GridType = typename GlobalFunction::GridView::Grid;
-    using IndexSetType = typename GlobalFunction::GridView::IndexSet;
-
     HierarchicSearch<GridType, IndexSetType> hs(FEFunction_.gridView().grid(), FEFunction_.gridView().indexSet());
 
     try{
@@ -83,12 +105,7 @@ public:
     }
     catch(Dune::GridError e)
     {
-      auto signedDistanceToBoundary = bcSource_.H(x);
-      auto directionToBoundary = bcSource_.derivativeH(x);
-
-      //determine the nearest point on the boundary
-      auto x0(x);
-      x0.axpy(signedDistanceToBoundary, directionToBoundary);
+      auto x0 = project_to_boundary(x);
 
       Jacobian Dfx0;
       Hessian D2fx0;
@@ -111,6 +128,62 @@ protected:
 //  std::function<const GlobalFunction&()> FEFunctionCaller_;
   const OTBoundary& bcSource_;
   const GlobalFunction& FEFunction_;
+};
+
+
+class TaylorBoundaryDerivativeFunction{
+
+  using GlobalFunction = SolverConfig::FETraitsSolver::DiscreteGridFunction;
+  using GlobalFirstDerivative = GlobalFunction::GlobalFirstDerivative;
+  using Domain = GlobalFunction::Domain;
+  using Range = GlobalFunction::Range;
+  using Jacobian = typename GlobalFunction::LocalFirstDerivative::Jacobian;
+
+  using GridType = typename GlobalFunction::GridView::Grid;
+  using IndexSetType = typename GlobalFunction::GridView::IndexSet;
+
+
+public:
+  TaylorBoundaryDerivativeFunction(const OTBoundary& bc, const GlobalFunction& FEFunction):
+    bcSource_(bc), FEFunction_(FEFunction)//FEFunctionCaller_(std::forward<F>(uOld))
+  {
+  }
+
+  Domain project_to_boundary(const Domain& x) const
+  {
+    auto signedDistanceToBoundary = bcSource_.H(x);
+    auto directionToBoundary = bcSource_.derivativeH(x);
+
+    //determine the nearest point on the boundary
+    auto x0(x);
+    x0.axpy(-signedDistanceToBoundary, directionToBoundary);
+
+    return x0;
+  }
+
+  Jacobian operator()(const Domain& x) const
+  {
+    HierarchicSearch<GridType, IndexSetType> hs(FEFunction_.globalFunction_->gridView().grid(),
+        FEFunction_.globalFunction_->gridView().indexSet());
+
+    try{
+      auto element = hs.findEntity(x);
+      auto localCoordinate = element.geometry().local(x);
+      FEFunction_.localFunction_.bind(element);
+      return FEFunction_.localFunction_(localCoordinate);
+    }
+    catch(Dune::GridError e)
+    {
+      auto x0 = project_to_boundary(x);
+      return FEFunction_(x0);
+    }
+  }
+
+
+protected:
+//  std::function<const GlobalFunction&()> FEFunctionCaller_;
+  const OTBoundary& bcSource_;
+  const GlobalFirstDerivative& FEFunction_;
 };
 
 

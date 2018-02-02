@@ -14,6 +14,9 @@
 
 #include <dune/grid/utility/hierarchicsearch.hh>
 
+class TaylorBoundaryFunction;
+class TaylorBoundaryDerivativeFunction;
+
 namespace Dune {
 namespace MongeAmpere {
 
@@ -633,6 +636,7 @@ private:
     const MyDiscreteScalarGlobalBasisFunction* globalFunction_;
     mutable LocalFirstDerivative localFunction_;
     mutable LocalSecondDerivative localDerivative_;
+    friend TaylorBoundaryDerivativeFunction;
   };
 
   class GlobalSecondDerivative
@@ -1081,6 +1085,7 @@ private:
   mutable LocalFunction localFunction_;
   mutable LocalFirstDerivative localDerivative_;
   mutable LocalSecondDerivative localSecondDerivative_;
+  friend TaylorBoundaryFunction;
 };
 
 } // namespace Functions
