@@ -735,7 +735,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   // 2. prepare a Taylor extension for values outside the old grid
   GenerealOTBoundary bcSource(gridOld.grid());
   TaylorBoundaryFunction solution_u_old_extended_global(bcSource, solution_u_Coarse_global);
-  TaylorBoundaryDerivativeFunction gradient_u_old_extended_global(bcSource, solution_u_Coarse_global);
+  TaylorBoundaryDerivativeFunction gradient_u_old_extended_global(bcSource, gradient_u_Coarse_global);
 
   Config::VectorType vNew;
   vNew.resize(FEBasis_->indexSet().size());

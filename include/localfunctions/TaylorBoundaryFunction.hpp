@@ -144,7 +144,7 @@ class TaylorBoundaryDerivativeFunction{
 
 
 public:
-  TaylorBoundaryDerivativeFunction(const OTBoundary& bc, const GlobalFunction& FEFunction):
+  TaylorBoundaryDerivativeFunction(const OTBoundary& bc, const GlobalFirstDerivative& FEFunction):
     bcSource_(bc), FEFunction_(FEFunction)//FEFunctionCaller_(std::forward<F>(uOld))
   {
   }
