@@ -55,7 +55,20 @@ public:
     catch(Dune::GridError e)
     {
       auto x0 = project_to_boundary(x);
-      return FEFunction_(x0);
+
+      Range fx0;
+      Jacobian Dfx0;
+      Hessian D2fx0;
+
+      FEFunction_.evaluateAll(x0, fx0, Dfx0, D2fx0);
+
+      auto h = x-x0;
+
+      Domain D2fx0TimesH;
+      D2fx0.mv(h,D2fx0TimesH);
+
+      //evaluate Taylorpolynomial of second order
+      return fx0+(h*Dfx0)+0.5*(h*D2fx0TimesH);
     }
   }
 
@@ -138,6 +151,7 @@ class TaylorBoundaryDerivativeFunction{
   using Domain = GlobalFunction::Domain;
   using Range = GlobalFunction::Range;
   using Jacobian = typename GlobalFunction::LocalFirstDerivative::Jacobian;
+  using Hessian = typename GlobalFunction::LocalSecondDerivative::Hessian;
 
   using GridType = typename GlobalFunction::GridView::Grid;
   using IndexSetType = typename GlobalFunction::GridView::IndexSet;
@@ -174,8 +188,21 @@ public:
     }
     catch(Dune::GridError e)
     {
+
       auto x0 = project_to_boundary(x);
-      return FEFunction_(x0);
+
+      Jacobian Dfx0;
+      Hessian D2fx0;
+
+      FEFunction_.globalFunction_->evaluateDerivatives(x0, Dfx0, D2fx0);
+
+      auto h = x-x0;
+
+      Domain D2fx0TimesH;
+      D2fx0.mv(h,D2fx0TimesH);
+
+      //evaluate Taylorpolynomial of derivative of first order
+      return Dfx0+D2fx0TimesH;
     }
   }
 
