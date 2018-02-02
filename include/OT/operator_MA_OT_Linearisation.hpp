@@ -443,7 +443,94 @@ template<int dim>
   template<class Intersection, class LocalView, class VectorType, class MatrixType>
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalView &localView,
-      const VectorType &x, VectorType& v, MatrixType& m) const {}
+      const VectorType &x, VectorType& v, MatrixType& m) const {
+
+    const int dim = Intersection::dimension;
+    const int dimw = Intersection::dimensionworld;
+
+    auto geometry = intersection.inside().geometry();
+
+    //get local finite elements
+    const auto& localFiniteElement = localView.tree().finiteElement();
+    const unsigned int size_u = localFiniteElement.size();
+
+    //find type of Jacobian
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
+
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, dimw>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, dimw, dimw>;
+
+    // ----start quadrature on fine grid(V_h)--------
+
+    // Get a quadrature rule
+    const int order = std::max(0, 3 * ((int) localFiniteElement.localBasis().order()));
+    GeometryType gtface = intersection.geometryInInside().type();
+    const QuadratureRule<double, dim - 1>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim-1>(gtface, order);
+
+    // normal of center in face's reference element
+    const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
+        dim - 1>::general(intersection.geometry().type()).position(0, 0);
+    const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
+        face_center);
+
+    // Loop over all quadrature points
+    for (size_t pt = 0; pt < quad.size(); pt++) {
+
+      //------get data----------
+      // Position of the current quadrature point in the reference element
+      const FieldVector<double, dim> &quadPos =
+          intersection.geometryInInside().global(quad[pt].position());
+
+      auto x_value = geometry.global(quadPos);
+
+      //the shape function values
+      std::vector<JacobianType> gradients(size_u);
+      std::vector<FEHessianType> Hessians(size_u);
+
+      FieldVector<double, Config::dim> gradu;
+      FieldMatrix<double, Config::dim, Config::dim> Hessu;
+
+      std::vector<RangeType> referenceFunctionValues(size_u);
+      assemble_functionValues(localFiniteElement, quadPos,
+          referenceFunctionValues);
+
+      if (last_step_on_a_different_grid)
+        assemble_cellTermFEData_only_derivatives(geometry, localFiniteElement, quadPos, oldSolutionCaller_(), x_value,
+          gradients, Hessians, gradu, Hessu);
+      else
+        assemble_cellTermFEData_only_derivatives(geometry, localFiniteElement, quadPos, x,
+          gradients, Hessians, gradu, Hessu);
+
+      //calculate \nabla H(\nabla u) = n_y
+      const auto cofHessu = convexified_penalty_cofactor(Hessu);
+      //assume n_y of last step
+      FieldVector<double, dimw> cofHessuTimesgradw;
+      //-------calculate integral--------
+
+      const auto integrationElement =
+          intersection.geometry().integrationElement(quad[pt].position());
+      const double factor = quad[pt].weight() * integrationElement;
+      for (unsigned int i = 0; i < size_u; i++)
+      {
+        cofHessu.mv(gradients[i], cofHessuTimesgradw);
+        for (size_t j = 0; j < size_u; j++)
+        {
+          m(j,i) += (cofHessuTimesgradw*normal)*referenceFunctionValues[j]*factor;
+        }
+
+        if (last_step_on_a_different_grid)
+        {
+          cofHessu.mv(gradu, cofHessuTimesgradw);
+          v(i) += (cofHessuTimesgradw*normal)*referenceFunctionValues[i]*factor;
+        }
+      }
+
+    }
+
+
+
+  }
 
   ///use given global function (probably living on a coarser grid) to evaluate last step
   void set_evaluation_of_u_old_to_different_grid() const{  last_step_on_a_different_grid = true;}

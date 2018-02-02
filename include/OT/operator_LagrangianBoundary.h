@@ -94,7 +94,7 @@ public:
 
       //-------calculate integral--------
       auto signedDistance = bc.H(gradu);
-//      auto signedDistanceDerivative = bc.derivativeH(gradu);
+      auto signedDistanceDerivative = bc.derivativeH(gradu);
 //      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
 
       const auto integrationElement =
@@ -105,8 +105,8 @@ public:
         for (unsigned int i = 0; i < size_u; i++)
         {
           //(\nabla H(\nabla u)*\nabla w)q
-//          m(j,i) += (signedDistanceDerivative*gradientsV[i])*referenceFunctionValuesQ[j]*factor;
-          m(j,i) += 1./normalOld.two_norm()*(normalOld*gradientsV[i])*referenceFunctionValuesQ[j]*factor;
+          m(j,i) += (signedDistanceDerivative*gradientsV[i])*referenceFunctionValuesQ[j]*factor;
+//          m(j,i) += 1./normalOld.two_norm()*(normalOld*gradientsV[i])*referenceFunctionValuesQ[j]*factor;
 //          std::cerr << " add locally " << 1./normalOld.two_norm()*(normalOld*gradientsV[i])*referenceFunctionValuesQ[j]*factor
 //              << "=" << 1./normalOld.two_norm() << "*" << (normalOld*gradientsV[i]) << " * " << referenceFunctionValuesQ[j] << " * " << factor
 //              << " to m(" << j << "," << i <<")" << std::endl;
@@ -118,7 +118,7 @@ public:
         }
         else
         {
-          v(j) += 1./normalOld.two_norm()*(normalOld*gradu)*referenceFunctionValuesQ[j]*factor;
+          v(j) += (signedDistanceDerivative*gradu)*referenceFunctionValuesQ[j]*factor;
         }
 
 
