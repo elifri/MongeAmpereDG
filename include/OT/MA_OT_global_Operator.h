@@ -276,8 +276,13 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
   {
     assert(x.size()==this->solver_ptr->get_n_dofs_V_h());
     assert(v.size()==this->solver_ptr->get_n_dofs_V_h());
+/*
+ * TODO inefficient
     assert(false);
     std::exit(-1);
+*/
+    Config::MatrixType m(v.size(), x.size());
+    assemble_without_langrangian_Jacobian(x,v,m);
 
 //    (this->solver_ptr)->assembler_.assemble_DG_Only(*lopLinear_ptr, x,v);
   }
