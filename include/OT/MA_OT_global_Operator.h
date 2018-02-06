@@ -157,7 +157,7 @@ private:
   ///assembles the system of the MA PDE
   virtual void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
 
-  void assemble_with_langrangian_Jacobian(Config::VectorType& xBoundary, Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
+  void assemble_with_langrangian_Jacobian(const Config::VectorType& xBoundary, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
 
   virtual void assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const;
   void assemble_with_langrangian(const Config::VectorType& xNew, const Config::VectorType& x, Config::VectorType& v) const;
@@ -166,9 +166,9 @@ private:
 
 public:
   ///assembles the system of combination of the MA PDE and the lagrangian multiplier for fixing the mean value and boundary condition
-  void evaluate(Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, Config::VectorType& xBoundary, const bool new_solution=true) const;
+  void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& xBoundary, const bool new_solution=true) const;
   ///assembles the rhs of the system of combination of the MA PDE and the lagrangian multiplier for fixing the mean value and boundary condition
-  void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::VectorType& xNew, const bool new_solution=true) const;
+  void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& xNew, const bool new_solution=true) const;
 
   ///assembles the lhs of the system of combination of the MA PDE and the lagrangian multiplier for fixing the mean value and boundary condition
   void Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
@@ -374,7 +374,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_without_langrangian_Jacobian(const
 }
 
 template<typename OperatorTraits>
-void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(Config::VectorType& xBoundary, Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Config::VectorType& xBoundary, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {
   assert(lop_ptr);
 
@@ -481,6 +481,8 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(Config::
   //copy to system
   copy_to_sparse_matrix(tempM, m, V_h_size+1, 0);
   copy_sparse_to_sparse_matrix(tempM.transpose(), m, 0, V_h_size+1);
+
+
   assert(V_h_size+1+Q_h_size==m.rows());
   v.tail(Q_h_size) = tempV;
 #ifdef DEBUG
@@ -505,7 +507,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(Config::
 }
 
 template<typename OperatorTraits>
-void MA_OT_Operator<OperatorTraits>::evaluate(Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, Config::VectorType& xBoundary, const bool new_solution) const
+void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& xBoundary, const bool new_solution) const
 {
   assert(solver_ptr != NULL);
   assert(lagrangianFixingPointDiscreteOperator.size()==this->solver_ptr->get_n_dofs_V_h() && " the initialisiation of the MA operator does not fit to the solver's grid!");
@@ -622,7 +624,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian(const Config::Vec
 }
 
 template<typename OperatorTraits>
-void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Config::VectorType& v, Config::VectorType& xNew, const bool new_solution) const
+void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& xNew, const bool new_solution) const
   {
     assert(solver_ptr != NULL);
 
