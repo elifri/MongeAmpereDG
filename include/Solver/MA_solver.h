@@ -81,6 +81,7 @@ public:
 #ifdef USE_DOGLEG
       doglegOpts_(config.doglegOpts),
 #endif
+      newtonOpts_(config.newtonOpts),
       iterations(0),
       initValueFromFile_(config.initValueFromFile),
       initValue_(config.initValue),
@@ -100,6 +101,7 @@ public:
 #ifdef USE_DOGLEG
     doglegOpts_.maxsteps = maxSteps_;
 #endif
+    newtonOpts_.maxIter = maxSteps_;
 
 	  plotter.set_refinement(plotterRefinement_);
 	  plotter.set_geometrySetting(get_setting());
