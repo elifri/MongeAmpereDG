@@ -20,22 +20,45 @@
 #include<Eigen/SparseLU>
 #include <Eigen/UmfPackSupport>
 
-static const double epsRes = -4;
+#include "doglegMethod.hpp"
 
+
+struct NewtonOptionsType{
+
+ /* NewtonOptionsType(const unsigned int maxIter, ///maximum amount of stoptions.eps
+      const double eps [], ///stop criteria for residual
+      double omega, ///damping parameter
+      const bool silentmode=false,
+      const bool check_jacobi = false)
+   :maxIter(maxIter), eps(eps), omega(omega), silentmode(silentmode) {}
+*/
+
+  unsigned int maxIter; ///maximum amount of stoptions.eps
+  double eps [3]; ///stop criteria for residual
+  double omega; ///damping parameter
+
+  bool silentmode; ///plot output
+  bool check_Jacobian; ///compare jacobi matrix with finite difference derivatives
+  static constexpr double epsRes = -4; ///stopping criteria if the residual dropped by epsRes orders of magnitude
+
+  static const unsigned int maxIterBoundaryConditions = 1;
+};
 
 template<typename FunctorType>
 void newtonMethod(
           FunctorType &functor, ///the function whose root has to be found
-    const unsigned int maxIter, ///maximum amount of steps
-    const double eps [], ///stop criteria for residual
-    double omega, ///damping parameter
+          NewtonOptionsType options,
           Eigen::VectorXd &x, ///Initial guess and returns approximate solution
-    bool useCombinedFunctor = false, ///evaluate function and Jacobian at the same time
-    const bool silentmode=false ///plot output
+          bool useCombinedFunctor = false ///evaluate function and Jacobian at the same time
 ){
-    assert(eps[0]>0);
-    assert(eps[1]>0);
+    double omega = options.omega;
+
+    assert(options.eps[0]>0);
+    assert(options.eps[1]>0);
     assert(omega>0);
+
+    if (options.check_Jacobian)  checkJacobian(functor, x, true);
+
 
     double initialResidual;
     double lastResidual, diffLastResidual;
@@ -48,7 +71,7 @@ void newtonMethod(
     Eigen::VectorXd f(n);
     Eigen::SparseMatrix<double> Df(n,n);
 
-    if (!silentmode)
+    if (!options.silentmode)
     {
         std::cout << "\n\nSolve nonlinear system of equations using Newton's method...\n\n";
         std::cout << "--------------------------------------------------------------------------------\n";
@@ -61,10 +84,9 @@ void newtonMethod(
 
     Eigen::VectorXd s;
 
-    for (unsigned int i=0; i<maxIter; i++) {
+    for (unsigned int i=0; i<options.maxIter; i++) {
       Eigen::VectorXd xBoundary(x);
-      const unsigned int maxIterBoundaryConditions = 1;
-      for (unsigned int j = 0; j < maxIterBoundaryConditions; j++)
+      for (unsigned int j = 0; j < options.maxIterBoundaryConditions; j++)
       {
         // solve Df*s = +f using UmfPack:
           if (useCombinedFunctor)
@@ -108,7 +130,7 @@ void newtonMethod(
               x = xBoundary;
               j--;
 
-              if (!silentmode)
+              if (!options.silentmode)
               {
                  std::cout << "   " << std::setw(6) << i;
                  std::cout << " dissmiss Newton-step ";
@@ -149,7 +171,7 @@ void newtonMethod(
               f = tempf;
               Df = tempDf;
 
-              if (!silentmode)
+              if (!options.silentmode)
               {
                  std::cout << "   " << std::setw(6) << i;
                  std::cout << " increase damping to             ";
@@ -194,7 +216,7 @@ void newtonMethod(
 
           std::cerr << std::endl << std::endl;
 
-          if (!silentmode)
+          if (!options.silentmode)
           {
             std::cerr << "     boundary-step     "
                 << std::scientific << std::setprecision(3) << omega*s.norm()
@@ -207,9 +229,9 @@ void newtonMethod(
             std::cout << "   " << std::scientific << std::setprecision(10) << f.norm();
             std::cout << std::endl;
           }
-          if (   s.norm() <= eps[1]
-              || (std::abs(diffLastResidual) <= eps[0] && i > 0 && i <maxIter-1)
-              || f.norm() <= eps[2])
+          if (   s.norm() <= options.eps[1]
+              || (std::abs(diffLastResidual) <= options.eps[0] && i > 0 && i <options.maxIter-1)
+              || f.norm() <= options.eps[2])
               break;
 
           lastResidual = f.norm();
@@ -219,7 +241,7 @@ void newtonMethod(
 
       x = xBoundary;
 
-      if (!silentmode)
+      if (!options.silentmode)
          {
            std::cout << "   " << std::setw(6) << i;
            std::cout << "  Newton-step          ";
@@ -227,7 +249,7 @@ void newtonMethod(
          }
 
 
-         if (!silentmode)
+         if (!options.silentmode)
          {
 //            std::cout << "   " << std::scientific << std::setprecision(3) << f.lpNorm<Eigen::Infinity>();
 //            std::cout << "   " << std::scientific << std::setprecision(3) << "?????????";
@@ -237,27 +259,27 @@ void newtonMethod(
 
 //         if (i > 0)
          {
-           if (s.norm() <= eps[1])
+           if (s.norm() <= options.eps[1])
            {
-             if (!silentmode)
+             if (!options.silentmode)
                  std::cout << "||s||2 too small. Finished." << std::endl;
              break;
            }
-           if (std::log10(f.norm()/initialResidual) < epsRes)
+           if (std::log10(f.norm()/initialResidual) < options.epsRes)
            {
-             if (!silentmode)
+             if (!options.silentmode)
                  std::cout << "log(||f||2/inital) big enough. Finished." << std::endl;
              break;
            }
-           if (std::abs(diffLastResidual) <= eps[0] && i > 0)
+           if (std::abs(diffLastResidual) <= options.eps[0] && i > 0)
            {
-             if (!silentmode)
+             if (!options.silentmode)
                  std::cout << "||delta f||2 too small. Finished." << std::endl;
              break;
            }
-           if (f.norm() < eps[2])
+           if (f.norm() < options.eps[2])
            {
-             if (!silentmode)
+             if (!options.silentmode)
                  std::cout << "||f||2 small enough. Finished." << std::endl;
              break;
            }
@@ -266,7 +288,7 @@ void newtonMethod(
 
     }
 
-//    if (!silentmode)
+//    if (!options.silentmode)
 //        progress.stop();
 }
 

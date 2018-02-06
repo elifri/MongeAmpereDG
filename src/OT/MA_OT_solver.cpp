@@ -813,11 +813,11 @@ void MA_OT_solver::solve_nonlinear_system()
 
 #ifdef USE_DOGLEG
 
-  double omega = 1.0;
+  newtonOpts_.omega = 1.0;
 //  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
 //  if (iterations>1)
 //    omega = 0.5;
-  newtonMethod(op, doglegOpts_.maxsteps, doglegOpts_.stopcriteria, omega, solution, evaluateJacobianSimultaneously_);
+  newtonMethod(op, newtonOpts_, solution, evaluateJacobianSimultaneously_);
 
 #endif
 #ifdef USE_PETSC

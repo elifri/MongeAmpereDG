@@ -116,6 +116,12 @@ void SolverConfig::read_configfile(std::string &configFile)
     notify(vm);
   }
 
+  //copy criteria to newton options
+  newtonOpts.eps[0]= doglegOpts.stopcriteria[0];
+  newtonOpts.eps[1]= doglegOpts.stopcriteria[1];
+  newtonOpts.eps[2]= doglegOpts.stopcriteria[2];
+  newtonOpts.silentmode = doglegOpts.silentmode;
+  newtonOpts.check_Jacobian = doglegOpts.check_Jacobian;
 }
 
 

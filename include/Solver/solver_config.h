@@ -32,6 +32,7 @@
 #endif
 
 #include "Dogleg/doglegMethod.hpp"
+#include "Dogleg/newtonMethod.hpp"
 
 #ifdef HAVE_ADOLC
 namespace Dune{
@@ -118,6 +119,7 @@ struct SolverConfig{
 #ifdef USE_DOGLEG
   DogLeg_optionstype doglegOpts;
 #endif
+  NewtonOptionsType newtonOpts;
 
   bool writeVTK;
 

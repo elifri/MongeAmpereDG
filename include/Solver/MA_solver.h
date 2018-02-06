@@ -380,6 +380,7 @@ protected:
 #ifdef USE_DOGLEG
   DogLeg_optionstype doglegOpts_;
 #endif
+  NewtonOptionsType newtonOpts_;
 
   int count_refined; ///counts how often the original grid was refined
 public:
