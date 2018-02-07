@@ -611,7 +611,8 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian(const Config::Vec
   int indexFixingGridEquation = V_h_size;
 //    auto lambda = x(indexFixingGridEquation);
 
-  v(indexFixingGridEquation) = assembler.u0AtX0()-assembler.uAtX0();
+  assert(false);
+  v(indexFixingGridEquation) = -assembler.u0AtX0()+assembler.uAtX0();
   std::cerr << " u_0 - u = " << assembler.u0AtX0() << '-'  <<-assembler.uAtX0() << "="<< v(indexFixingGridEquation) << std::endl;
 
   //assemble part of second lagrangian multiplier for fixing boundary
