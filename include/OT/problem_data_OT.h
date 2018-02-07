@@ -566,4 +566,23 @@ struct ExactSolutionRotatedEllipse{
   Config::SpaceType x0;
 };
 
+struct ExactSolutionSquareToSquareOT{
+  static auto exact_solution()
+  {
+    return [](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);};
+  }
+
+  static auto exact_gradient()
+  {
+    return [](Config::SpaceType x){
+      return Dune::FieldVector<double, Config::dim> ({
+        x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
+            x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});};
+  };
+};
+
+//---exact solution of rhoXGaussianSquare-------
+//      {return Dune::FieldVector<double, Config::dim> ({ x[0]+1.,x[1]/2.});}) << std::endl;
+
+
 #endif /* SRC_PROBLEM_DATA_OT_H_ */

@@ -547,35 +547,15 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
     solver_ptr->update_solution(x);
     solver_ptr->plot("intermediate", intermediateSolCounter);
 
-/*
-    std::cerr << std::scientific << std::setprecision(5)
-        << "   current L2 error is " << solver_ptr->calculate_L2_error([](Config::SpaceType x)
-        {return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);}) << std::endl;
-    std::cerr << std::scientific << std::setprecision(3)
-        << "   current L2 grad error is " << solver_ptr->calculate_L2_errorOT([](Config::SpaceType x)
-        {return Dune::FieldVector<double, Config::dim> ({
-                                                                  x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
-                                                                  x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
-*/
-
-    Config::SpaceType x0 = {0.0,0.0};
-    FieldMatrix<Config::ValueType, 2, 2> B = {{.385576911206371,.174131508286748},{0.174131508286748,.970161260454739}}; //exactsolution
-    auto u0 = [&](Config::SpaceType x){
-      auto y=x0;B.umv(x,y);
-      return (x*y);};
+    typename SolverType::ExactData exactData;
 
     std::cerr << std::scientific << std::setprecision(5)
-        << "   current L2 error is " << solver_ptr->calculate_L2_error(u0) << std::endl;
+        << "   current L2 error is " << solver_ptr->calculate_L2_error(exactData.exact_solution()) << std::endl;
     std::cerr << std::scientific << std::setprecision(3)
-        << "   current L2 grad error is " << solver_ptr->calculate_L2_error_gradient([](Config::SpaceType x)
-        {return Dune::FieldVector<double, Config::dim> ({
-          .771153822412742*x[0]+.348263016573496*x[1], .348263016573496*x[0]+1.94032252090948*x[1]});}) << std::endl;
-
+        << "   current L2 grad error is " << solver_ptr->calculate_L2_error_gradient(exactData.exact_gradient()) << std::endl;
     std::cerr << std::scientific << std::setprecision(3)
-        << "   current L2 grad boundary error is " << solver_ptr->calculate_L2_error_gradient_boundary([](Config::SpaceType x)
-        {return Dune::FieldVector<double, Config::dim> ({
-          .771153822412742*x[0]+.348263016573496*x[1], .348263016573496*x[0]+1.94032252090948*x[1]});}) << std::endl;
-
+        << "   current L2 grad boundary error is "
+        << solver_ptr->calculate_L2_error_gradient_boundary(exactData.exact_gradient()) << std::endl;
   }
 }
 

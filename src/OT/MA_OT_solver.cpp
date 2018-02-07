@@ -706,6 +706,8 @@ void MA_OT_solver::create_initial_guess()
   }
   else
   {
+    solution.resize(get_n_dofs());
+/*
     Config::SpaceType x0 = {0.0,0.0};
 //    FieldMatrix<Config::ValueType, 2, 2> A = {{.848269204654016,.383089318230846},{.383089318230846,2.13435477300043}}; //exactsolution *1.1
 //    FieldMatrix<Config::ValueType, 2, 2> B = {{0.424134602327008,0.191544659115423},{0.191544659115423,1.067177386500215}}; //exactsolution *1.1/2
@@ -724,36 +726,18 @@ void MA_OT_solver::create_initial_guess()
 //    project([](Config::SpaceType x){return x.two_norm2()/2.0;},
 //    project([](Config::SpaceType x){return 0.5*x[0]*x[0]+x[0]+0.25*x[1]*x[1];},
 //      project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
-//    project_labouriousC1([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
-  //                        [](Config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},
-  //                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
 //       [](Config::SpaceType x){return Dune::FieldVector<double, Config::dim> ({x[0],x[1]});},
       project(u0, y0,
         solution);
 
 //      this->test_projection(u0, y0, solution);
+*/
   }
 
   {
-    Config::SpaceType x0 = {0.0,0.0};
-  FieldMatrix<Config::ValueType, 2, 2> A = {{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}}; //exactsolution
-  FieldMatrix<Config::ValueType, 2, 2> B = {{.385576911206371,.174131508286748},{0.174131508286748,.970161260454739}}; //exactsolution
+    ExactData exactData;
 
-  auto u0 = [&](Config::SpaceType x){
-    auto y=x0;B.umv(x,y);
-    return (x*y);};
-  auto y0 = [&](Config::SpaceType x){
-    auto y=x0;A.umv(x,y);
-    return y;};
-
-//    const double epsilon = 0.1;
-//    project([](Config::SpaceType x){return x.two_norm2()/2.0;},
-//    project([](Config::SpaceType x){return 0.5*x[0]*x[0]+x[0]+0.25*x[1]*x[1];},
-//      project([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
-//    project_labouriousC1([](Config::SpaceType x){return x.two_norm2()/2.0+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q(x[1]);},
-//                        [](Config::SpaceType x){return x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]);},
-//                        [](Config::SpaceType x){return x[1]+4.*rhoXSquareToSquare::q(x[0])*rhoXSquareToSquare::q_div(x[1]);},
-    project(u0, y0,
+    project(exactData.exact_solution(), exactData.exact_gradient(),
        exactsol_u);
 
 //      this->test_projection(u0, y0, solution);
@@ -786,6 +770,7 @@ void MA_OT_solver::solve_nonlinear_system()
 {
   assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
 
+
 #ifdef USE_ANALYTIC_JACOBIAN
   assert(!op.get_lopLinear().last_step_on_a_different_grid);
 #else
@@ -793,18 +778,12 @@ void MA_OT_solver::solve_nonlinear_system()
 #endif
   std::cout << "n dofs" << get_n_dofs() << " V_h_dofs " << get_n_dofs_V_h() << " Q_h_dofs " << get_n_dofs_Q_h() << std::endl;
 
+  //if the exact solution is known it can be accessed via exactdata
+  ExactData exactData;
+
   if (iterations == 0)
   {
-
-    std::cout << " L2 error is " << calculate_L2_error_gradient([](Config::SpaceType x)
-//        {return Dune::FieldVector<double, Config::dim> ({
-//                                                        x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
-//                                                        x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
-        {return Dune::FieldVector<double, Config::dim> ({x[0], x[1]});}) << std::endl;
-
-
-    //---exact solution of rhoXGaussianSquare-------
-//            {return Dune::FieldVector<double, Config::dim> ({ x[0]+1.,x[1]/2.});}) << std::endl;
+    std::cout << " L2 error is " << calculate_L2_error_gradient(exactData.exact_gradient()) << std::endl;
   }
 
   // /////////////////////////
@@ -837,15 +816,7 @@ void MA_OT_solver::solve_nonlinear_system()
 #endif
   std::cout << " Lagrangian Parameter for fixing grid Point " << solution(get_n_dofs_V_h()) << std::endl;
 
-  std::cout << " L2 error is " << calculate_L2_error_gradient([](Config::SpaceType x)
-//      {return Dune::FieldVector<double, Config::dim> ({
-//                                                      x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
-//                                                      x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});}) << std::endl;
-  {return Dune::FieldVector<double, Config::dim> ({x[0], x[1]});}) << std::endl;
-
-  //---exact solution of rhoXGaussianSquare-------
-//      {return Dune::FieldVector<double, Config::dim> ({ x[0]+1.,x[1]/2.});}) << std::endl;
-
+  std::cout << " L2 error is " << calculate_L2_error_gradient(exactData.exact_gradient()) << std::endl;
   }
 
 void MA_OT_solver::adapt_operator()
@@ -924,8 +895,8 @@ void MA_OT_solver::adapt_solution(const int level)
 
 
   //project old solution to new grid
-//  auto newSolution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), solution);
-  auto newSolution = FEBasisHandler_.adapt_function_elliptic_after_grid_change(old_grid.gridViewOld, gridView(), *this, solution);
+  auto newSolution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), solution);
+//  auto newSolution = FEBasisHandler_.adapt_function_elliptic_after_grid_change(old_grid.gridViewOld, gridView(), *this, solution);
   solution = newSolution;
 
   //adapt boundary febasis and bind to assembler
