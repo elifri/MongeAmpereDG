@@ -213,6 +213,7 @@ struct GeometrySetting{
   static Config::SpaceType upperRightTarget; ///upper left of target grid (target must be in x-y-plane)
 
   static std::string gridinputFile;
+  static std::string plotGridinputFile;
   static std::string gridTargetFile;
 
   static SolverConfig::ValueType z_3; /// third coordinate of target grid (target must be in x-y-plane)

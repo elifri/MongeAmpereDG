@@ -34,7 +34,8 @@ MA_OT_solver::MA_OT_solver(GridHandler<GridType>& gridHandler,
 #endif
  assemblerLM1D_(FEBasisHandler_.FEBasis()),
  assemblerLMBoundary_(FEBasisHandler_.FEBasis(),FEBasisHandlerQ_.FEBasis()),
- op(*this)
+ op(*this),
+ transportPlotter_(setting,4)
 {
 #ifdef DEBUG
   {
@@ -443,15 +444,19 @@ void MA_OT_solver::plot(const std::string& name, int no) const
   std::string fname(plotter.get_output_directory());
   fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + "outputGrid.vtu";
 
-  plotter.writeOTVTK(fname, *gradient_u_old, [](Config::SpaceType x)
-//      {return Dune::FieldVector<double, Config::dim> ({
-//                                                      x[0]+4.*rhoXSquareToSquare::q_div(x[0])*rhoXSquareToSquare::q(x[1]),
-//                                                      x[1]+4.*rhoXSquareToSquare::q_div(x[1])*rhoXSquareToSquare::q(x[0])});});
-      {return Dune::FieldVector<double, Config::dim> ({x[0], x[1]});});
+
+  ExactData exactData;
+  plotter.writeOTVTK(fname, *gradient_u_old,exactData.exact_gradient());
 
       //  plotter.writeOTVTK(fname, *gradient_u_old);
 
+  std::string fnameCartesian(plotter.get_output_directory());
+  fnameCartesian += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + "outputCartesianGrid.vtu";
 
+
+  FETraits::DiscreteGridFunction::GlobalFirstDerivative globalGradU(get_u_old());
+
+  transportPlotter_.writeOTVTKGlobal(fnameCartesian, globalGradU);
 }
 
 void MA_OT_solver::one_Poisson_Step()

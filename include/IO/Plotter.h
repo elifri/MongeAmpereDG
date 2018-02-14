@@ -28,14 +28,17 @@
 
 class MA_solver;
 
-#ifndef BSPLINES
-using PlotRefinementType = StaticRefinement<GenericGeometry::SimplexTopology<2>::type::id,
+using SimplexRefinementType = StaticRefinement<GenericGeometry::SimplexTopology<2>::type::id,
         Config::DuneGridType::ctype,
         GenericGeometry::SimplexTopology<2>::type::id, 2>;
-#else
-using PlotRefinementType =  StaticRefinement<GenericGeometry::CubeTopology<2>::type::id,
+using QuadRefinementType =  StaticRefinement<GenericGeometry::CubeTopology<2>::type::id,
         Config::DuneGridType::ctype,
         GenericGeometry::CubeTopology<2>::type::id,2>;
+
+#ifndef BSPLINES
+using PlotRefinementType = SimplexRefinementType;
+#else
+using PlotRefinementType = QuadRefinementType;
 #endif
 
 
@@ -82,6 +85,8 @@ public:
 	void write_vtk_end(std::ofstream& file) const;
 	void read_vtk_header(std::ifstream& file, int &Nnodes, int &Nelements) const; ///reads vtk header
 
+	//--------helper to write vtk points
+
 	template <typename T>
 	void write_point_data(std::ofstream &file, const std::string name, Eigen::Matrix<T, Eigen::Dynamic, 1> celldata) const;
 	void write_points(std::ofstream &file) const;///writes the point coordinates into file
@@ -103,6 +108,9 @@ public:
 	template <class LocalFunction>
 	void write_points_OT(std::ofstream &file, LocalFunction &fg) const;
 
+
+	//--------helper to write vtk point data
+
 	template <class LocalFunction, class Function>
 	void write_error(std::ofstream &file, LocalFunction &f, Function &exact_solution) const;
 
@@ -111,6 +119,12 @@ public:
 
   template <class LocalFunction>
   void write_transport_OT(std::ofstream &file, LocalFunction &f) const;
+
+  //----------------------------//
+  //---helper for povray parts--//
+  //----------------------------//
+
+  //--------helper to write povray data
 
   void write_pov_setting(std::ofstream &file) const;///write the setting for photons, camera and light source
   void write_pov_setting_refractor(std::ofstream &file) const;///write the setting for photons, camera and light source

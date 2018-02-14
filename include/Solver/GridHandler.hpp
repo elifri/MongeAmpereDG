@@ -30,16 +30,19 @@ public:
       gridOld(gridOld), gridViewOld(gridViewOld){}
   };
 
-  GridHandler(GeometrySetting setting, int startlevel): gridPrefix_(setting.gridinputFile), gridRefinement_(startlevel),
-      gridView_(Config::GridType().leafGridView())
+  GridHandler(std::string gridinputFile, int startlevel): gridPrefix_(gridinputFile), gridRefinement_(startlevel),
+      gridView_(GridType().leafGridView())
   {
     std::stringstream gridFile;
     gridFile << gridPrefix_ << gridRefinement_ << ".msh";
 
     std::cout << " read grid vom file " << gridFile.str() << std::endl;
-    grid_ = std::shared_ptr<GridType>(GmshReader<Config::GridType>::read(gridFile.str()));
+    grid_ = std::shared_ptr<GridType>(GmshReader<GridType>::read(gridFile.str()));
     gridView_ = grid_->leafGridView();
   }
+
+  GridHandler(GeometrySetting setting, int startlevel): GridHandler(setting.gridinputFile,startlevel){}
+
 
   GridType& grid() {return *grid_;}
   std::shared_ptr<GridType>& get_grid_ptr(){return grid_;}
@@ -55,7 +58,7 @@ public:
     gridFile << gridPrefix_ << gridRefinement_ << ".msh";
 
     std::cout << " read grid vom file " << gridFile.str() << std::endl;
-    grid_ = std::shared_ptr<GridType>(GmshReader<Config::GridType>::read(gridFile.str()));
+    grid_ = std::shared_ptr<GridType>(GmshReader<GridType>::read(gridFile.str()));
     gridView_ = grid_->leafGridView();
 
     return OldGridInformation(oldGrid, oldGrid->leafGridView());
@@ -63,11 +66,10 @@ public:
 
 private:
   std::string gridPrefix_;
+  int gridRefinement_;
 
   std::shared_ptr<GridType> grid_;
   GridView gridView_;
-
-  int gridRefinement_;
 };
 
 //specialisation for rectangular grid
@@ -87,12 +89,10 @@ public:
       gridOld(gridOld), gridViewOld(gridViewOld){}
   };
 
-  GridHandler(GeometrySetting setting, int startlevel): gridPrefix_(setting.gridinputFile), gridRefinement_(startlevel)
-  {
-    Config::UnitCubeType unitcube(setting.lowerLeft, setting.upperRight, startlevel);
-    grid_ = unitcube.grid_ptr();
-    gridView = grid_->leafGridView();
-  }
+  GridHandler(GeometrySetting setting, int startlevel): gridPrefix_(setting.gridinputFile), gridRefinement_(startlevel),
+      grid_(UnitCube<GridType>(setting.lowerLeft, setting.upperRight, startlevel).grid_ptr()),
+      gridView_(grid_->leafGridView())
+  {}
 
   GridType& grid() {return *grid_;}
   std::shared_ptr<GridType>& get_grid_ptr(){return grid_;}
@@ -109,11 +109,11 @@ public:
 
 private:
   std::string gridPrefix_;
+  int gridRefinement_;
 
   std::shared_ptr<GridType> grid_;
   GridView gridView_;
 
-  int gridRefinement_;
 };
 
 

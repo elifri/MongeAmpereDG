@@ -130,6 +130,8 @@ Config::SpaceType GeometrySetting::lowerLeft = {0,0};
 Config::SpaceType GeometrySetting::upperRight = {1,1};
 
 std::string GeometrySetting::gridinputFile = "";
+std::string GeometrySetting::plotGridinputFile = "";
+
 
 Config::SpaceType GeometrySetting::lowerLeftTarget = {0,0};
 Config::SpaceType GeometrySetting::upperRightTarget= {1,1};
@@ -150,6 +152,7 @@ void GeometrySetting::read_configfile(std::string &configFile)
         ("geometry.input.yMin",  po::value<double>(&GeometrySetting::lowerLeft[1]), "")
         ("geometry.input.yMax",  po::value<double>(&GeometrySetting::upperRight[1]), "")
         ("geometry.input.gridfile",  po::value<string>(&GeometrySetting::gridinputFile), "")
+        ("geometry.input.plotgridfile",  po::value<string>(&GeometrySetting::plotGridinputFile), "")
         ("geometry.target.xMin",     po::value<double>(&GeometrySetting::lowerLeftTarget[0]), "")
         ("geometry.target.xMax",     po::value<double>(&GeometrySetting::upperRightTarget[0]), "")
         ("geometry.target.yMin",     po::value<double>(&GeometrySetting::lowerLeftTarget[1]), "")

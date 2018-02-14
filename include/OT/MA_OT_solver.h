@@ -33,6 +33,8 @@
   #endif
 #endif
 
+#include "IO/TransportPlotter.hpp"
+
 class MA_OT_solver: public MA_solver
 {
 //  using MA_solver::MA_solver;
@@ -178,6 +180,8 @@ protected:
   OperatorType op;
 
   friend OperatorType;
+
+  TransportPlotter transportPlotter_;
 };
 
 
