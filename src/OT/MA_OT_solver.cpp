@@ -35,7 +35,7 @@ MA_OT_solver::MA_OT_solver(GridHandler<GridType>& gridHandler,
  assemblerLM1D_(FEBasisHandler_.FEBasis()),
  assemblerLMBoundary_(FEBasisHandler_.FEBasis(),FEBasisHandlerQ_.FEBasis()),
  op(*this),
- transportPlotter_(setting,4)
+ transportPlotter_(setting,7)
 {
 #ifdef DEBUG
   {
