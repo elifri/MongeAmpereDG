@@ -58,7 +58,7 @@ public:
 
     using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
 
-    using RangeType = typename ConstElementType::Traits::LocalBasisType::Traits::RangeType;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
     using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
     using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension>;
 

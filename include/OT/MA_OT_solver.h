@@ -43,8 +43,6 @@ public:
   using FETraitsQ = SolverConfig::FETraitsSolverQ;
   using FEBasisQType = FETraitsQ::FEBasis;
 
-  template<typename LOP>
-  using ProblemTraits = ProblemSquareToSquareOperatorTraits<MA_OT_solver,LOP>;
 //  using ProblemTraits = ConstantOperatorTraits<MA_OT_solver,LOP>;
 
   using ExactData = ExactSolutionSquareToSquareOT;

@@ -12,6 +12,8 @@
 #include "MAconfig.h"
 #include "Solver/solver_config.h"
 
+#include "Solver/Assembler.h"
+
 template <class value_type>
 inline
 value_type determinant(const FieldMatrix<value_type, 2, 2>& A)

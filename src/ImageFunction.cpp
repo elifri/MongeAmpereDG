@@ -33,7 +33,7 @@ ImageFunction::ImageFunction(const std::string& filename,
   upperRight_[1] = lowerLeft_[1] + image_.height() * h_;
   minValue_ = std::max(0.0, minValue - image_.min());
 
-  std::cout << " min Value " << minValue_ << std::endl;
+  std::cout << "created Image function with min Value " << minValue_ << std::endl;
 
   image_ += minValue_;
   image_ *= 255.0 / (255.0 + minValue_);

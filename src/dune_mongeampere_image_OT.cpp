@@ -94,30 +94,27 @@ try {
   // Generate the grid
   // ////////////////////////////////
 #ifdef BSPLINES
-  Config::UnitCubeType unitcube(setting.lowerLeft, setting.upperRight, 1);
-  std::shared_ptr<Config::GridType> grid_ptr = unitcube.grid_ptr();
+  GridHandler<Config::GridType, true> gridHandler(setting,SolverConfig::startlevel);
 #else
-  std::shared_ptr<Config::GridType> grid_ptr(GmshReader<Config::GridType>::read(setting.gridinputFile));
-  std::cout << " read grid vom file " << setting.gridinputFile << std::endl;
-  std::shared_ptr<Config::GridType> gridTarget_ptr(GmshReader<Config::GridType>::read(setting.gridinputFile));
+  GridHandler<Config::GridType> gridHandler(setting,SolverConfig::startlevel);
 #endif
-  Config::GridView gridView = grid_ptr->leafGridView();
 
   // Output grid
-  VTKWriter<Config::GridView> vtkWriter(gridView);
+  VTKWriter<Config::GridView> vtkWriter(gridHandler.gridView());
   vtkWriter.write("grid");
 
-#ifndef BSPLINES
-  VTKWriter<Config::GridView> vtkWriterTarget(gridTarget_ptr->leafGridView());
-  vtkWriter.write("gridTarget");
-#endif
+  //-----target area grid--------
+  #ifndef BSPLINES
+    std::cout << " read target grid vom file " << setting.gridTargetFile << std::endl;
+    std::shared_ptr<Config::GridType> gridTarget_ptr(GmshReader<Config::GridType>::read(setting.gridTargetFile));
+    {
+      VTKWriter<Config::GridView> vtkWriterTarget(gridTarget_ptr->leafGridView());
+      vtkWriterTarget.write("gridTarget");
+    }
+  #endif
 
   //solve
-#ifndef BSPLINES
-  MA_OT_image_solver ma_solver(grid_ptr, gridView, gridTarget_ptr, config, setting);
-#else
-  MA_OT_image_solver ma_solver(grid_ptr, gridView, grid_ptr, config, setting);
-#endif
+  MA_OT_image_solver ma_solver(gridHandler, gridTarget_ptr, config, setting);
   ma_solver.solve();
 
   std::cout << "done" << std::endl;

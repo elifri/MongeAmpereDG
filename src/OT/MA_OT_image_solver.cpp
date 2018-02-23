@@ -24,8 +24,12 @@
 
 using namespace std;
 
-MA_OT_image_solver::MA_OT_image_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting)
- :MA_OT_solver(grid, gridView, config, opticalSetting), setting_(opticalSetting), op_image(*this)
+MA_OT_image_solver::MA_OT_image_solver(GridHandler<GridType>& gridHandler, const shared_ptr<GridType>& gridTarget,
+    const SolverConfig& config, OpticalSetting& opticalSetting)
+ :MA_OT_solver(gridHandler, gridTarget, config, opticalSetting), setting_(opticalSetting),
+//  op_image(*this)
+//      get_setting().LightinputImageName, get_setting().lowerLeft, get_setting().upperRight, get_setting().minPixelValue,
+//      get_setting().TargetImageName, get_setting().lowerLeftTarget, get_setting().upperRightTarget, get_setting().minPixelValue)
 {
    //adjust light intensity
 /*
@@ -52,8 +56,8 @@ struct ConvectionFunction{
     Smooth
   };
 
-  template<typename Solver, typename LOP, typename LOPLinear>
-  ConvectionFunction(std::shared_ptr<LocalGradFunction> &u, const MA_OT_image_Operator_with_Linearisation<Solver, LOP, LOPLinear>& op): localgradu_(u), rhoX(op.f_), rhoY(op.g_) {}
+  template<typename OperatorTraits, typename LOPLinear>
+  ConvectionFunction(std::shared_ptr<LocalGradFunction> &u, const MA_OT_image_Operator_with_Linearisation<OperatorTraits, LOPLinear>& op): localgradu_(u), rhoX(op.f_), rhoY(op.g_) {}
 
   /**
    * \brief Bind LocalFunction to grid element.
@@ -190,8 +194,8 @@ struct TargetFunction{
 
   typedef MA_OT_image_solver::DiscreteLocalGradientGridFunction LocalGradFunction;
 
-  template<typename Solver, typename LOP, typename LOPLinear>
-  TargetFunction(std::shared_ptr<LocalGradFunction> &u, const MA_OT_image_Operator_with_Linearisation<Solver, LOP, LOPLinear>& op): localgradu_(u), rhoY(op.g_) {}
+  template<typename OperatorTraits, typename LOPLinear>
+  TargetFunction(std::shared_ptr<LocalGradFunction> &u, const MA_OT_image_Operator_with_Linearisation<OperatorTraits, LOPLinear>& op): localgradu_(u), rhoY(op.get_g()) {}
 
   /**
    * \brief Bind LocalFunction to grid element.
@@ -295,7 +299,7 @@ struct EigenValueFunction{
 };
 
 
-void MA_OT_image_solver::one_Poisson_Step()
+/*void MA_OT_image_solver::one_Poisson_Step()
 {
 
   Config::SpaceType x0 = {0.0,0.0};
@@ -311,12 +315,6 @@ void MA_OT_image_solver::one_Poisson_Step()
 #endif
 
   ///---Code with known solution
-/*
-//  auto rhs = [&](Config::SpaceType x){return 2*M_PI*M_PI*std::sin(M_PI*x[0])*std::sin(M_PI*x[1]);};
-//  auto bc = [&](Config::SpaceType x, Config::SpaceType normal){return normal[0]*(x[1]+std::sin(M_PI*x[1])*M_PI*std::cos(M_PI*x[0]))
-//                                                                     +normal[1]*(x[0]+std::sin(M_PI*x[0])*M_PI*std::cos(M_PI*x[1]));};
-//  auto bc = [&](Config::SpaceType x){return (x[0]*x[1]+std::sin(M_PI*x[1])*std::sin(M_PI*x[0]));};
-*/
 
   std::cout << " before int sqrt(f/g) " << integrator.assemble_integral(rhs) << std::endl;
 
@@ -350,8 +348,9 @@ void MA_OT_image_solver::one_Poisson_Step()
   }
 
   solution = lu_of_m.solve(v);
-}
+}*/
 
+/*
 void MA_OT_image_solver::create_initial_guess()
 {
   if(initValueFromFile_)
@@ -376,63 +375,24 @@ void MA_OT_image_solver::create_initial_guess()
   assembler_.set_u0AtX0(res);
   std::cerr << " setting start midvalue " << res << std::endl;
 }
-
-
+*/
 
 
 void MA_OT_image_solver::plot(const std::string& name) const
 {
+  plot(name, iterations);
+}
+
+void MA_OT_image_solver::plot(const std::string& name, const int no) const
+{
   //write vtk files
   if (writeVTK_)
   {
-    std::cout << "plot written into ";
-
-    VectorType solution_u = solution.segment(0, get_n_dofs_u());
-
-     //build gridviewfunction
-    FETraitsSolver::DiscreteGridFunction numericalSolution(FEBasisHandler_.uBasis(),solution_u);
-    decltype(numericalSolution)::LocalFunction localnumericalSolution(numericalSolution);
-     //build writer
-     SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
-
-     //add solution data
-     vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
-
-     //extract hessian (3 entries (because symmetry))
-     Dune::array<int,2> direction = {0,0};
-
-     auto HessianEntry00= localSecondDerivative(numericalSolution, direction);
-     vtkWriter.addVertexData(HessianEntry00 , VTK::FieldInfo("Hessian00", VTK::FieldInfo::Type::scalar, 1));
-     direction[0] = 1;
-     auto HessianEntry10 = localSecondDerivative(numericalSolution, direction);
-     vtkWriter.addVertexData(HessianEntry10 , VTK::FieldInfo("Hessian10", VTK::FieldInfo::Type::scalar, 1));
-     direction[0] = 0; direction[1] = 1;
-     auto HessianEntry01 = localSecondDerivative(numericalSolution, direction);
-     vtkWriter.addVertexData(HessianEntry01 , VTK::FieldInfo("Hessian01", VTK::FieldInfo::Type::scalar, 1));
-     direction[0] = 1;
-     auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
-     vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
-
-     EigenValueFunction eigenvalue(HessianEntry00, HessianEntry01, HessianEntry10, HessianEntry11);
-     vtkWriter.addVertexData(eigenvalue, VTK::FieldInfo("SmallestEigenvalue", VTK::FieldInfo::Type::scalar, 1));
-
-     //write to file
-     std::string fname(plotter.get_output_directory());
-     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
-     vtkWriter.write(fname);
-
-     std::cout << fname  << std::endl;
+    MA_OT_solver::plot(name, no);
   }
 
-  //write to file
-  std::string fname(plotter.get_output_directory());
-  fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "outputGrid.vtu";
-
-  plotter.writeOTVTK(fname, *gradient_u_old);
-
-
   std::string fnameOT(plotter.get_output_directory());
-  fnameOT += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + "transported.bmp";
+  fnameOT += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + "transported.bmp";
 
   DiscreteGridFunction::GlobalFirstDerivative numericalTransportFunction(*solution_u_old_global);
   Dune::array<int,2> direction = {0,0};
@@ -445,12 +405,12 @@ void MA_OT_image_solver::plot(const std::string& name) const
 */
 
 
-  std::string fnamehdf5(plotter.get_output_directory());
+/*  std::string fnamehdf5(plotter.get_output_directory());
   fnamehdf5 += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations);
 
   savehdf5Outputgrid(gridView(), setting_.lowerLeft, setting_.upperRight, plotterRefinement_, fnamehdf5, numericalTransportFunction.localFunction());
 
-  std::cout << " saved hdf5 file to " << fnamehdf5 << std::endl;
+  std::cout << " saved hdf5 file to " << fnamehdf5 << std::endl;*/
 
 /*
   //write exact solution
@@ -530,36 +490,39 @@ void MA_OT_image_solver::plot(const std::string& name) const
 
 }
 
+/*
 void MA_OT_image_solver::adapt_solution(const int level)
 {
   MA_OT_solver::adapt_solution(level);
   std::cerr << " adapting operator " << std::endl;
   op.adapt();
 }
+*/
 
 void MA_OT_image_solver::update_Operator()
 {
   if (iterations== 0)
   {
-    op_image.f_.normalize();
-    op_image.g_.normalize();
+    op.get_f().normalize();
+    op.get_g().normalize();
   }
 
   //blurr target distributation
   std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
-  op_image.g_.convolveOriginal(epsMollifier_);
-  op_image.g_.normalize();
+  op.get_g().convolveOriginal(epsMollifier_);
+  op.get_g().normalize();
 
   //print blurred target distribution
   if (true) {
       ostringstream filename2; filename2 << plotOutputDirectory_+"/lightOut" << iterations << ".bmp";
       std::cout << "saved image to " << filename2.str() << std::endl;
-      op_image.g_.saveImage (filename2.str());
+      op.get_g().saveImage (filename2.str());
       assert(std::abs(op_image.g_.integrate2()) - 1 < 1e-10);
   }
   epsMollifier_ /= epsDivide_;
 }
 
+/*
 void MA_OT_image_solver::solve_nonlinear_system()
 {
   assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
@@ -574,7 +537,7 @@ void MA_OT_image_solver::solve_nonlinear_system()
 #ifdef USE_DOGLEG
 
 //  doglegMethod(op_image, doglegOpts_, solution, evaluateJacobianSimultaneously_);
-  newtonMethod(op_image, doglegOpts_.maxsteps, doglegOpts_.stopcriteria[0], 0.5, solution, evaluateJacobianSimultaneously_);
+  newtonMethod(op_image, newtonOpts_, solution, evaluateJacobianSimultaneously_);
 
 #endif
 #ifdef USE_PETSC
@@ -594,8 +557,11 @@ void MA_OT_image_solver::solve_nonlinear_system()
 #endif
 
   }
+*/
 
+/*
 void MA_OT_image_solver::adapt_operator()
 {
   op_image.adapt();
 }
+*/

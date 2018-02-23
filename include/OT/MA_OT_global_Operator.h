@@ -17,11 +17,13 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <tuple>
 
 #include "Solver/AssemblerLagrangian1d.h"
+#include "Integrator.hpp"
 #include "utils.hpp"
 
-template<typename Solver, typename LOP>
+/*template<typename Solver, typename LOP>
 struct GeneralOperatorTraits{
   using SolverType = Solver;
 
@@ -29,7 +31,12 @@ struct GeneralOperatorTraits{
 
   using FunctionTypeX = DensityFunction;
   using FunctionTypeY = DensityFunction;
-};
+
+  static FunctionTypeX construct_f(const Solver& solver)
+  {
+    return std::move(FunctionTypeX());
+  }
+};*/
 
 template<typename Solver, typename LOP>
 struct ProblemSquareToSquareOperatorTraits{
@@ -39,6 +46,16 @@ struct ProblemSquareToSquareOperatorTraits{
 
   using FunctionTypeX = rhoXSquareToSquare;
   using FunctionTypeY = rhoYSquareToSquare;
+
+  static FunctionTypeX construct_f(const Solver& solver)
+  {
+    return std::move(FunctionTypeX());
+  }
+  static FunctionTypeY construct_g(const Solver& solver)
+  {
+    return std::move(FunctionTypeY());
+  }
+
 };
 
 template<typename Solver, typename LOP>
@@ -50,6 +67,16 @@ struct GaussianOperatorTraits{
   using FunctionTypeX = rhoXGaussianSquare;
   using FunctionTypeY = rhoYSquareToSquare;
   //          new rhoXGaussians(), new rhoYGaussians()
+
+  static FunctionTypeX construct_f(const Solver& solver)
+  {
+    return std::move(FunctionTypeX());
+  }
+  static FunctionTypeY construct_g(const Solver& solver)
+  {
+    return std::move(FunctionTypeY());
+  }
+
 };
 
 template<typename Solver, typename LOP>
@@ -62,6 +89,42 @@ struct ConstantOperatorTraits{
 
   using FunctionTypeX = ConstantFunction;
   using FunctionTypeY = ConstantFunction;
+
+  static FunctionTypeX construct_f(const Solver& solver)
+  {
+    return std::move(FunctionTypeX());
+  }
+  static FunctionTypeY construct_g(const Solver& solver)
+  {
+    return std::move(FunctionTypeY());
+  }
+};
+
+template<typename Solver, typename LOP>
+struct ImageOperatorTraits{
+  using SolverType = Solver;
+
+  using LocalOperatorType = LOP;
+
+  using BoundaryType = GenerealOTBoundary;
+
+  using FunctionTypeX = ImageFunction;
+  using FunctionTypeY = ImageFunction;
+
+  static FunctionTypeX construct_f(const Solver& solver)
+  {
+    return std::move(FunctionTypeX(
+        solver.get_setting().LightinputImageName,
+        solver.get_setting().lowerLeft, solver.get_setting().upperRight,
+        solver.get_setting().minPixelValue));
+  }
+  static FunctionTypeY construct_g(const Solver& solver)
+  {
+    return std::move(FunctionTypeY(
+        solver.get_setting().TargetImageName,
+        solver.get_setting().lowerLeftTarget, solver.get_setting().upperRightTarget,
+        solver.get_setting().minPixelValue));
+  }
 };
 
 template<typename OperatorTraits>
@@ -85,8 +148,8 @@ public:
 
   MA_OT_Operator(SolverType& solver):solver_ptr(&solver),
       boundary_(new GenerealOTBoundary(solver.get_gridTarget())),
-      f_(),
-      g_(),
+      f_(OperatorTraits::construct_f(solver)),
+      g_(OperatorTraits::construct_g(solver)),
       lop_ptr(new LocalOperatorType(
 //          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
           *boundary_, f_, g_)),
@@ -133,8 +196,11 @@ public:
     return *lop_ptr;
   }
 
-  const FunctionTypeX& get_f(){ return f_;}
-  const FunctionTypeY& get_g(){ return g_;}
+  const FunctionTypeX& get_f() const{ return f_;}
+  const FunctionTypeY& get_g() const{ return g_;}
+
+  FunctionTypeX& get_f(){ return f_;}
+  FunctionTypeY& get_g(){ return g_;}
 
   const auto& get_bc(){return *boundary_;}
 
@@ -240,15 +306,21 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
   using LocalOperatorType = LOPLinear;
   using LocalOperatorTypeNotLinear = typename OperatorTraits::LocalOperatorType;
 
+  using FunctionTypeX = typename OperatorTraits::FunctionTypeX;
+  using FunctionTypeY = typename OperatorTraits::FunctionTypeY;
+
   MA_OT_Operator_with_Linearisation():MA_OT_Operator<OperatorTraits>(), lopLinear_ptr(){}
 //  MA_OT_image_Operator_with_Linearisation():solver_ptr(NULL), lop_ptr(), lopLinear_ptr(), fixingPoint({0.5,0.15}){ }
 //    MA_OT_Operator(MA_OT_solver& solver):solver_ptr(&solver), lop_ptr(new Local_Operator_MA_OT(new BoundarySquare(solver.gradient_u_old, solver.get_setting()), new rhoXSquareToSquare(), new rhoYSquareToSquare())){}
     // lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
-  MA_OT_Operator_with_Linearisation(SolverType& solver):MA_OT_Operator<OperatorTraits>(solver),
-        lopLinear_ptr(new LOPLinear(*(this->boundary_), this->f_, this->g_))
+
+  MA_OT_Operator_with_Linearisation(SolverType& solver, const FunctionTypeX& f, const FunctionTypeY& g):MA_OT_Operator<OperatorTraits>(solver),
+        lopLinear_ptr(new LOPLinear(*(this->boundary_), f, g))
 //            [&solver]() -> const auto&{ //assert that the return value is a reference!
 //              return solver.get_u_old();}))
     {}
+
+
 
   MA_OT_Operator_with_Linearisation(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lopLinear):MA_OT_Operator<OperatorTraits>(solver),
         lopLinear_ptr(lopLinear)
@@ -281,10 +353,11 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
     assert(false);
     std::exit(-1);
 */
-    Config::MatrixType m(v.size(), x.size());
-    assemble_without_langrangian_Jacobian(x,v,m);
 
-//    (this->solver_ptr)->assembler_.assemble_DG_Only(*lopLinear_ptr, x,v);
+    Config::MatrixType m(v.size(), x.size());
+    (this->solver_ptr)->assembler_.assemble_DG_Jacobian(*(this->lop_ptr), *lopLinear_ptr, x,v, m);
+
+//    (this->solver_ptr)->assembler_.assemble_DG_Only(this->get_lop(), x,v);
   }
   void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
   {
@@ -626,7 +699,12 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
 //      lop.found_negative = false;
 
     prepare_fixing_point_term(x);
-    assemble_with_langrangian(xNew, x,v);
+
+    //TODO inefficient
+    Config::MatrixType m(v.size(), x.size());
+    assemble_with_langrangian_Jacobian(xNew, x,v, m);
+//    assemble_with_langrangian(xNew, x,v);
+
 
     //output
     auto end = std::chrono::steady_clock::now();
