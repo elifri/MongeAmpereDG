@@ -733,7 +733,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   typename DiscreteGridFunctionCoarse::GlobalFirstDerivative gradient_u_Coarse_global (solution_u_Coarse_global);
 
   // 2. prepare a Taylor extension for values outside the old grid
-  GenerealOTBoundary bcSource(gridOld.grid());
+  GenerealOTBoundary bcSource(gridOld.grid(), SolverConfig::quadratureN);
   TaylorBoundaryFunction solution_u_old_extended_global(bcSource, solution_u_Coarse_global);
   TaylorBoundaryDerivativeFunction gradient_u_old_extended_global(bcSource, gradient_u_Coarse_global);
 

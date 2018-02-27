@@ -9,6 +9,8 @@
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 
+#define MA_OT_IMAGE
+
 #include "MAconfig.h"
 #include "OT/MA_OT_image_solver.h"
 #include "IO/Plotter.h"

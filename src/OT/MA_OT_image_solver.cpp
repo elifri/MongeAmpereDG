@@ -26,15 +26,15 @@ using namespace std;
 
 MA_OT_image_solver::MA_OT_image_solver(GridHandler<GridType>& gridHandler, const shared_ptr<GridType>& gridTarget,
     const SolverConfig& config, OpticalSetting& opticalSetting)
- :MA_OT_solver(gridHandler, gridTarget, config, opticalSetting), setting_(opticalSetting),
+ :MA_OT_solver(gridHandler, gridTarget, config, opticalSetting, false), setting_(opticalSetting)
 //  op_image(*this)
 //      get_setting().LightinputImageName, get_setting().lowerLeft, get_setting().upperRight, get_setting().minPixelValue,
 //      get_setting().TargetImageName, get_setting().lowerLeftTarget, get_setting().upperRightTarget, get_setting().minPixelValue)
 {
    //adjust light intensity
 /*
-   const auto integralLightOut = op.lop_ptr->get_target_distribution().integrateOriginal();
-   const auto integralLightIn = op.lop_ptr->get_input_distribution().integrateOriginal();
+   const auto integralLightOut = get_image_operator().lop_ptr->get_target_distribution().integrateOriginal();
+   const auto integralLightIn = get_image_operator().lop_ptr->get_input_distribution().integrateOriginal();
    setting_.povRayOpts.lightSourceColor = Eigen::Vector3d::Constant(integralLightOut/integralLightIn*setting_.lightSourceIntensity);
 */
   assembler_.set_X0(opticalSetting.lowerLeft);
@@ -43,6 +43,7 @@ MA_OT_image_solver::MA_OT_image_solver(GridHandler<GridType>& gridHandler, const
    plotter.set_PovRayOptions(setting_.povRayOpts);
 
    epsMollifier_ = pow((double) epsDivide_, (int) SolverConfig::nonlinear_steps) * epsEnd_;
+   this->op = std::make_shared<OperatorType>(*this, opticalSetting);
 }
 
 struct ConvectionFunction{
@@ -57,7 +58,7 @@ struct ConvectionFunction{
   };
 
   template<typename OperatorTraits, typename LOPLinear>
-  ConvectionFunction(std::shared_ptr<LocalGradFunction> &u, const MA_OT_image_Operator_with_Linearisation<OperatorTraits, LOPLinear>& op): localgradu_(u), rhoX(op.f_), rhoY(op.g_) {}
+  ConvectionFunction(std::shared_ptr<LocalGradFunction> &u, const MA_OT_Operator_with_Linearisation<OperatorTraits, LOPLinear>& op): localgradu_(u), rhoX(op.f_), rhoY(op.g_) {}
 
   /**
    * \brief Bind LocalFunction to grid element.
@@ -195,7 +196,7 @@ struct TargetFunction{
   typedef MA_OT_image_solver::DiscreteLocalGradientGridFunction LocalGradFunction;
 
   template<typename OperatorTraits, typename LOPLinear>
-  TargetFunction(std::shared_ptr<LocalGradFunction> &u, const MA_OT_image_Operator_with_Linearisation<OperatorTraits, LOPLinear>& op): localgradu_(u), rhoY(op.get_g()) {}
+  TargetFunction(std::shared_ptr<LocalGradFunction> &u, const MA_OT_Operator_with_Linearisation<OperatorTraits, LOPLinear>& op): localgradu_(u), rhoY(op.get_g()) {}
 
   /**
    * \brief Bind LocalFunction to grid element.
@@ -400,8 +401,8 @@ void MA_OT_image_solver::plot(const std::string& name, const int no) const
 
   /*
       print_image_OT(numericalTransportFunction, numericalTransportJacobianFunction,
-      op.f_, op.g_,
-      fnameOT, op.g_.getOriginalImage().width(), op.g_.getOriginalImage().height());
+      get_image_operator().f_, get_image_operator().g_,
+      fnameOT, get_image_operator().g_.getOriginalImage().width(), get_image_operator().g_.getOriginalImage().height());
 */
 
 
@@ -434,7 +435,7 @@ void MA_OT_image_solver::plot(const std::string& name, const int no) const
   SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),1);
   vtkWriter.addVertexData(convectionNorm, VTK::FieldInfo("ConvectionNorm", VTK::FieldInfo::Type::scalar, 1));
 
-  TargetFunction interpolatedTargetFunction(gradient_u_old, op);
+  TargetFunction interpolatedTargetFunction(gradient_u_old, get_image_operator());
   interpolatedTargetFunction.target_old = false;
 
   vtkWriter.addVertexData(interpolatedTargetFunction, VTK::FieldInfo("interpolTarget", VTK::FieldInfo::Type::scalar, 1));
@@ -495,7 +496,7 @@ void MA_OT_image_solver::adapt_solution(const int level)
 {
   MA_OT_solver::adapt_solution(level);
   std::cerr << " adapting operator " << std::endl;
-  op.adapt();
+  get_image_operator().adapt();
 }
 */
 
@@ -503,21 +504,21 @@ void MA_OT_image_solver::update_Operator()
 {
   if (iterations== 0)
   {
-    op.get_f().normalize();
-    op.get_g().normalize();
+    get_image_operator().get_f().normalize();
+    get_image_operator().get_g().normalize();
   }
 
   //blurr target distributation
   std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
-  op.get_g().convolveOriginal(epsMollifier_);
-  op.get_g().normalize();
+  get_image_operator().get_g().convolveOriginal(epsMollifier_);
+  get_image_operator().get_g().normalize();
 
   //print blurred target distribution
   if (true) {
       ostringstream filename2; filename2 << plotOutputDirectory_+"/lightOut" << iterations << ".bmp";
       std::cout << "saved image to " << filename2.str() << std::endl;
-      op.get_g().saveImage (filename2.str());
-      assert(std::abs(op_image.g_.integrate2()) - 1 < 1e-10);
+      get_image_operator().get_g().saveImage (filename2.str());
+      assert(std::abs(get_image_operator().g_.integrate2()) - 1 < 1e-10);
   }
   epsMollifier_ /= epsDivide_;
 }

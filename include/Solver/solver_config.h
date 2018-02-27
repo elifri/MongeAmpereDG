@@ -18,6 +18,8 @@
 
 
 #define HAVE_ADOLC 1
+#define USE_AUTOMATIC_DIFFERENTIATION 0
+
 
 #ifndef C1Element
   #ifndef HAVE_ADOLC
@@ -60,6 +62,7 @@ enum ProblemType
 };
 
 std::ostream& operator <<(std::ostream &output, const ProblemType &p);
+
 
 struct PovRayOpts
 {
@@ -134,6 +137,8 @@ struct SolverConfig{
 	static int startlevel;
 	static int nonlinear_steps;
 
+	static int quadratureN;
+
   //////////////////////////////////////////////////////////
   ///---------------select Finite Element----------------///
   //////////////////////////////////////////////////////////
@@ -200,6 +205,7 @@ struct SolverConfig{
     static double sigmaBoundary;
     static constexpr double beta = 2.0 - 0.5*Config::dim;  // 2D => 1, 3D => 0.5
 #endif
+
 
 };
 

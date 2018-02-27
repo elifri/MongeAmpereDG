@@ -272,7 +272,7 @@ public:
   using OTBoundary::OTBoundary;
 
   template<typename GT>
-  GenerealOTBoundary(const GT&  grid) {
+  GenerealOTBoundary(const GT&  grid, const int n): OTBoundary(n) {
     init_by_grid(grid);
   }
 

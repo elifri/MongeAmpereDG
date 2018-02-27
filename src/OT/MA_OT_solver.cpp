@@ -24,8 +24,8 @@ namespace po = boost::program_options;
 
 MA_OT_solver::MA_OT_solver(GridHandler<GridType>& gridHandler,
     const shared_ptr<GridType>& gridTarget,
-    const SolverConfig& config, GeometrySetting& setting)
-:MA_solver(gridHandler, config),
+    const SolverConfig& config, GeometrySetting& setting, bool create_operator)
+:MA_solver(gridHandler, config, false),
  setting_(setting), gridTarget_ptr(gridTarget),
 #ifdef USE_COARSE_Q_H
  FEBasisHandlerQ_(*this, gridHandler.grid().levelGridView(gridHandler.grid().maxLevel()-1)),
@@ -34,7 +34,6 @@ MA_OT_solver::MA_OT_solver(GridHandler<GridType>& gridHandler,
 #endif
  assemblerLM1D_(FEBasisHandler_.FEBasis()),
  assemblerLMBoundary_(FEBasisHandler_.FEBasis(),FEBasisHandlerQ_.FEBasis()),
- op(*this),
  transportPlotter_(setting,7)
 {
 #ifdef DEBUG
@@ -46,6 +45,12 @@ MA_OT_solver::MA_OT_solver(GridHandler<GridType>& gridHandler,
   }
 #endif
   gridTarget_ptr->globalRefine(SolverConfig::startlevel);
+
+  if (create_operator)
+  {
+    std::cerr << "create OT Operator ... " << std::endl;
+    this->op = std::make_shared<OperatorType>(*this);
+  }
 }
 
 void MA_OT_solver::init_lagrangian_values(Config::VectorType& v) const
@@ -408,10 +413,10 @@ void MA_OT_solver::plot(const std::string& name, int no) const
 
 
 #ifndef USE_MIXED_ELEMENT
-     ResidualFunction residual(gradient_u_old,this->op,HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
+     ResidualFunction residual(gradient_u_old,this->get_OT_operator(),HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
      DetFunction detFunction(HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
 #else
-     ResidualFunction residual(gradient_u_old,op,
+     ResidualFunction residual(gradient_u_old,this->get_OT_operator(),
          *localnumericalSolutionHessians[0],
          *localnumericalSolutionHessians[1],
          *localnumericalSolutionHessians[2],
@@ -474,9 +479,9 @@ void MA_OT_solver::one_Poisson_Step()
 
   Integrator<Config::GridType> integrator(get_grid_ptr());
   auto k = 1.0;
-  const auto& f = get_operator().get_f();
-  const auto& g = get_operator().get_g();
-  const auto& OTbc = get_operator().get_bc();
+  const auto& f = this->get_OT_operator().get_f();
+  const auto& g = this->get_OT_operator().get_g();
+  const auto& OTbc = this->get_OT_operator().get_bc();
 
 
   auto y0 = [&](Config::SpaceType x){
@@ -549,7 +554,7 @@ void MA_OT_solver::one_Poisson_Step()
   //add lagrange multiplier for mean value
   Config::VectorType lagrangianFixingPointDiscreteOperator;
   AssemblerLagrangianMultiplier1D<C0Traits> lagrangeAssemblerMidvalue(gridView());
-  lagrangeAssemblerMidvalue.assemble_u_independent_matrix(*get_operator().lopLMMidvalue, lagrangianFixingPointDiscreteOperator);
+  lagrangeAssemblerMidvalue.assemble_u_independent_matrix(*this->get_OT_operator().lopLMMidvalue, lagrangianFixingPointDiscreteOperator);
 
   m.makeCompressed();
 
@@ -671,8 +676,8 @@ void MA_OT_solver::one_Poisson_Step()
   /////test--------
 #ifdef DEBUG
   update_solution(solution);
-//  const auto& f = get_operator().get_f();
-//  const auto& g = get_operator().get_g();
+//  const auto& f = this->get_OT_operator().get_f();
+//  const auto& g = this->get_OT_operator().get_g();
   const auto& u = *solution_u_old_global;
 
   FETraits::DiscreteSecondDerivativeGridFunction Hessian00 (u,std::array<int,2>({0,0}));
@@ -753,7 +758,7 @@ void MA_OT_solver::create_initial_guess()
 #define U_MID_EXACT
 
 //  assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), solution, res);
-  assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), exactsol_u, res);
+  assemblerLM1D_.assembleRhs(*(this->get_OT_operator().lopLMMidvalue), exactsol_u, res);
   //take care that the adapted exact solution also updates the
   assembler_.set_u0AtX0(res);
   std::cerr << " set u_0^mid to " << res << std::endl;
@@ -765,7 +770,7 @@ void MA_OT_solver::create_initial_guess()
 
 #ifdef MANUFACTOR_SOLUTION
   std::cerr << " init bar u ... " << std::endl;
-  op.init(exactsol_u);
+  get_OT_operator().init(exactsol_u);
   std::cerr << "  ... done init bar u" << std::endl;
   #endif
 }
@@ -777,10 +782,11 @@ void MA_OT_solver::solve_nonlinear_system()
 
 
 #ifdef USE_ANALYTIC_JACOBIAN
-  assert(!op.get_lopLinear().last_step_on_a_different_grid);
+  assert(!this->get_OT_operator().get_lopLinear().last_step_on_a_different_grid);
 #else
-  assert(op.get_lop().last_step_on_a_different_grid == false);
+  assert(this->get_OT_operator().get_lop().last_step_on_a_different_grid == false);
 #endif
+  assert(this->get_OT_operator().lopLMBoundary->last_step_on_a_different_grid == false);
   std::cout << "n dofs" << get_n_dofs() << " V_h_dofs " << get_n_dofs_V_h() << " Q_h_dofs " << get_n_dofs_Q_h() << std::endl;
 
   //if the exact solution is known it can be accessed via exactdata
@@ -801,7 +807,7 @@ void MA_OT_solver::solve_nonlinear_system()
 //  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
 //  if (iterations>1)
 //    omega = 0.5;
-  newtonMethod(op, newtonOpts_, solution, evaluateJacobianSimultaneously_);
+  newtonMethod(get_operator(), newtonOpts_, solution, evaluateJacobianSimultaneously_);
 
 #endif
 #ifdef USE_PETSC
@@ -826,7 +832,7 @@ void MA_OT_solver::solve_nonlinear_system()
 
 void MA_OT_solver::adapt_operator()
 {
-  op.adapt();
+  get_operator().adapt();
 
 #ifdef MANUFACTOR_SOLUTION
   std::cerr << " adapt uBar " << std::endl;
@@ -841,7 +847,7 @@ void MA_OT_solver::adapt_operator()
 #ifdef U_MID_EXACT
   Config::ValueType res = 0;
 
-  assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), exactsol_u, res);
+  assemblerLM1D_.assembleRhs(*(this->get_OT_operator().lopLMMidvalue), exactsol_u, res);
   assembler_.set_u0AtX0(res);
   std::cerr << " set u_0^mid to " << res << std::endl;
 #endif

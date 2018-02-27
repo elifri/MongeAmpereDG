@@ -132,6 +132,55 @@ void AssemblerLagrangianMultiplierBoundary::assemble_Boundarymatrix(const LocalO
 }
 
 
+/*
+template<typename LocalOperatorType, typename Function>
+void AssemblerLagrangianMultiplierBoundary::assemble_Functional_with_Function(const LocalOperatorType &lop,
+    const Function& f, Config::VectorType &v) const{
+
+  const auto& basisV_ = *(this->basis_);
+  const auto& basisQ_ = *(basisLM_);
+
+  int V_h_size = basisV_.indexSet().size();
+  int Q_h_full_size = boundaryHandlerQ_.get_number_of_Boundary_dofs();
+
+  //assuming Galerkin
+  v = Config::VectorType::Zero(V_h_size);
+
+  auto localViewV = basisV_.localView();
+  auto localIndexSetV = basisV_.indexSet().localIndexSet();
+
+  auto localViewQ = basisQ_.localView();
+  auto localIndexSetQ = basisQ_.indexSet().localIndexSet();
+
+  using BoundaryIterator = Dune::VTK::BoundaryIterator<GridView>;
+
+  BoundaryIterator itBoundary(basisV_.gridView());
+  while (itBoundary != BoundaryIterator(basisV_.gridView(),true)) //loop over boundary edges
+  {
+    auto element = itBoundary->inside();
+    // Bind the local FE basis view to the current element
+    localViewV.bind(element);
+    localIndexSetV.bind(localViewV);
+
+    // Bind the LM FE basis view to its current element
+    localViewQ.bind(element);
+    localIndexSetQ.bind(localViewQ);
+
+    //get zero vector to store local function values
+    Config::VectorType local_vector;
+    local_vector.setZero(localViewQ.size());    // Set all entries to zero
+    // Traverse intersections
+    lop.assemble_boundary_face_term(*itBoundary, localViewV, localViewQ, f, local_vector);
+
+    //add to rhs
+    add_local_coefficients(localIndexSetV, local_vector, v);
+    it++;
+  }
+//  std::cerr << " boundary term " << v.norm()<< " whole norm " << v.norm() << std::endl;
+}
+*/
+
+
 
 
 #endif /* ASSEMBLERLAGRANGIAN_H_ */

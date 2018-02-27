@@ -22,18 +22,10 @@
 #include "MA_OT_global_Operator.h"
 #include "Operator/GlobalOperatorManufactorSolution.h"
 
-#ifdef USE_C0_PENALTY
-  #include "operator_MA_OT_Brenner.h"
-#else
-  #ifdef USE_MIXED_ELEMENT
-    #include "operator_MA_OT_Neilan.h"
-  #else
-    #include "operator_MA_OT.h"
-    #include "operator_MA_OT_Linearisation.hpp"
-  #endif
-#endif
+#include "Solver/problem_config.h"
 
 #include "IO/TransportPlotter.hpp"
+
 
 class MA_OT_solver: public MA_solver
 {
@@ -43,37 +35,17 @@ public:
   using FETraitsQ = SolverConfig::FETraitsSolverQ;
   using FEBasisQType = FETraitsQ::FEBasis;
 
-//  using ProblemTraits = ConstantOperatorTraits<MA_OT_solver,LOP>;
+  //define problem
+  //using ProblemTraits = ProblemSquareToSquareOperatorTraits<SolverType,LOP>;
+//  using ProblemTraits = ConstantOperatorTraits<MA_OT_solver,Local_MA_OT_Operator>;
+  using ProblemTraits = ImageOperatorTraits<MA_OT_solver, Local_MA_OT_Operator>;
 
+  //define exact solution
   using ExactData = ExactSolutionSquareToSquareOT;
-//  using ExactData = ExactSolutionRotatedEllipse;
-
-  template<typename LOP>
-#ifdef USE_ANALYTIC_JACOBIAN
-  using Problem_MA_OT_Operator = MA_OT_Operator_with_Linearisation<ProblemTraits<LOP>, Local_Operator_MA_OT_Linearisation>;
-#else
-  using Problem_MA_OT_Operator = MA_OT_Operator<ProblemTraits<LOP>>;
-#endif
+  //  using ExactData = ExactSolutionRotatedEllipse;
 
 
-  //find correct operator
-#ifdef USE_C0_PENALTY
-  using GlobalMA_OT_Operator =  Problem_MA_OT_Operator<Local_Operator_MA_OT_Brenner>;
-#else
-  #ifdef USE_MIXED_ELEMENT
-  using GlobalMA_OT_Operator = Problem_MA_OT_Operator<Local_Operator_MA_OT_Neilan>;
-  #else
-    using GlobalMA_OT_Operator = Problem_MA_OT_Operator<Local_Operator_MA_OT>;
-//todo C1 is not for nonimage
-    //    using OperatorType = MA_OT_image_Operator_with_Linearisation<MA_OT_image_solver, Local_Operator_MA_OT, Local_Operator_MA_OT_Linearisation>;
-  #endif
-#endif
-
-#ifdef MANUFACTOR_SOLUTION
-    using OperatorType = OperatorManufactorSolution<GlobalMA_OT_Operator>;
-#else
-    using OperatorType = GlobalMA_OT_Operator;
-#endif
+  using OperatorType = Operator_OT_Type<ProblemTraits>;
 
 #ifdef USE_COARSE_Q_H
   using AssemblerLagrangianMultiplierBoundaryType = AssemblerLagrangianMultiplierCoarse;
@@ -81,10 +53,9 @@ public:
   using AssemblerLagrangianMultiplierBoundaryType = AssemblerLagrangianMultiplierBoundary;
 #endif
 
-
   MA_OT_solver(GridHandler<GridType>& gridHandler,
       const shared_ptr<GridType>& gridTarget,
-      const SolverConfig& config, GeometrySetting& setting);
+      const SolverConfig& config, GeometrySetting& setting, bool create_operator = true);
 
 private:
   ///performs one step of the semi-implicit method mentioned in "Two numerical methods for ..." by Benamou, Froese and Oberman
@@ -105,6 +76,10 @@ public:
   virtual int get_n_dofs_V_h() const{return FEBasisHandler_.FEBasis().indexSet().size();}
   virtual int get_n_dofs_Q_h() const{return get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();}
   virtual int get_n_dofs() const{return get_n_dofs_V_h() + 1 + get_n_dofs_Q_h();}
+
+  using MA_solver::get_operator;
+  OperatorType& get_OT_operator(){return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
+  const OperatorType& get_OT_operator() const {return  *(std::dynamic_pointer_cast<OperatorType>(this->op));}
 
   template<class F>
   void project(const F f, VectorType& v) const;
@@ -160,9 +135,6 @@ public:
   template<typename F>
   Config::ValueType calculate_L2_error(const F &f) const;
 
-  virtual OperatorType& get_operator(){ return op;}
-  virtual const OperatorType& get_operator() const{ return op;}
-
 protected:
   GeometrySetting& setting_;
 
@@ -175,7 +147,7 @@ protected:
   AssemblerLagrangianMultiplier1D<> assemblerLM1D_;
   AssemblerLagrangianMultiplierBoundaryType assemblerLMBoundary_;
 
-  OperatorType op;
+//  OperatorType op;
 
   friend OperatorType;
 

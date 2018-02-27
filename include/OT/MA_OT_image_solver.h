@@ -8,7 +8,6 @@
 #ifndef SRC_MA_OT_IMAGE_SOLVER_H_
 #define SRC_MA_OT_IMAGE_SOLVER_H_
 
-#include "OT/MA_OT_global_image_Operator.h"
 #include "ImageFunction.hpp"
 
 #include "OT/MA_OT_solver.h"
@@ -31,18 +30,14 @@
 class MA_OT_image_solver : public MA_OT_solver
 {
 public:
-  using OperatorTraits = ImageOperatorTraits<MA_OT_image_solver, Local_Operator_MA_OT>;
+  //define problem
+  using ProblemTraits = ImageOperatorTraits<MA_OT_solver, Local_MA_OT_Operator>;
 
-//#ifdef C1Element
-  #ifdef USE_ANALYTIC_JACOBIAN
-    using OperatorType = MA_OT_image_Operator_with_Linearisation<OperatorTraits, Local_Operator_MA_OT_Linearisation>;
-  #else
-//    using OperatorType = MA_OT_image_Operator<OperatorTraits>;
-    using OperatorType = MA_OT_Operator<OperatorTraits>;
-  #endif
-//#else
-//    using OperatorType = MA_OT_image_Operator<MA_OT_image_solver, Local_Operator_MA_OT>;
-//#endif
+  //define exact solution
+  using ExactData = ExactSolutionSquareToSquareOT;
+  //  using ExactData = ExactSolutionRotatedEllipse;
+
+  using OperatorType = Operator_OT_Type<ProblemTraits>;
 
   MA_OT_image_solver(GridHandler<GridType>& gridHandler, const shared_ptr<GridType>& gridTarget,
        const SolverConfig& config, OpticalSetting& opticalSetting);
@@ -50,29 +45,39 @@ public:
   OpticalSetting& get_setting() {return setting_;}
   const OpticalSetting& get_setting() const {return setting_;}
 
+  OperatorType& get_image_operator(){return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
+  OperatorType& get_OT_operator(){return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
+  const OperatorType& get_OT_operator() const {return  *(std::dynamic_pointer_cast<OperatorType>(this->op));}
+
 private:
   ///performs one step of the semi-implicit method mentioned in "Two numerical methods for ..." by Benamou, Froese and Oberman
-  void one_Poisson_Step();
+//  void one_Poisson_Step();
+//  using MA_OT_solver::one_Poisson_Step;
+
   ///creates the initial guess
-  void create_initial_guess();
+//  void create_initial_guess();
+//  using MA_OT_solver::create_initial_guess;
+
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
   void plot(const std::string& filename, const int no) const;
   void plot(const std::string& filename) const;
 //  using MA_OT_solver::plot;
 
-  void adapt_operator();
-  virtual void adapt_solution(const int level);
-  using MA_OT_solver::adapt_solution;
+//  void adapt_operator();
+//  using MA_OT_solver::adapt_operator;
+//  virtual void adapt_solution(const int level);
+//  using MA_OT_solver::adapt_solution;
 
   void update_Operator();
-  void solve_nonlinear_system();
+//  void solve_nonlinear_system();
+//  using MA_OT_solver::solve_nonlinear_system;
 
   OpticalSetting& setting_;
 //  OperatorType op_image;
 
   friend OperatorType;
   //todo befriend when linearise?
-  friend MA_OT_Operator<OperatorTraits>;
+//  friend MA_OT_Operator<OperatorTraits>;
 
 };
 

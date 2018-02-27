@@ -8,6 +8,8 @@
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 
+#define MA_OT
+
 #include "MAconfig.h"
 #include "OT/MA_OT_solver.h"
 #include "IO/Plotter.h"

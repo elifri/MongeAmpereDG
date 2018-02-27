@@ -213,7 +213,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
 //  Config::VectorType f;
 //  SolverConfig::MatrixType J;
-//  op.evaluate(solution, f, solution, false);
+//  get_operator().evaluate(solution, f, solution, false);
 //  std::cout << "initial f_u(x) norm " << f.segment(0,get_n_dofs_u()).norm() <<" and f(x) norm " << f.norm() << endl;
 
 
@@ -352,7 +352,7 @@ void MA_solver::solve_nonlinear_system()
 
   }  while (!converged && steps < maxSteps_);
 */
-  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
+  doglegMethod(get_operator(), doglegOpts_, solution, evaluateJacobianSimultaneously_);
 #endif
 #ifdef USE_PETSC
   igpm::processtimer timer;
@@ -380,7 +380,7 @@ void MA_solver::solve_nonlinear_system()
 //
 //    std::cout << " needed " << k << " steps to adapt boundary conditions " << std::endl;
 
-//  op.evaluate(solution, f, solution, false);
+//  get_operator().evaluate(solution, f, solution, false);
 //
 //  std::cout << "f_u norm " << f.segment(0,get_n_dofs_u()).norm() << " f(x) norm " << f.norm() << endl;
 //  std::cout << "l2 error " << calculate_L2_error(MEMBER_FUNCTION(&Dirichletdata::evaluate, &exact_sol)) << std::endl;

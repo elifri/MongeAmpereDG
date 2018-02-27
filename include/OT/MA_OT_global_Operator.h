@@ -8,127 +8,31 @@
 #ifndef INCLUDE_OT_MA_OT_GLOBAL_OPERATOR_H_
 #define INCLUDE_OT_MA_OT_GLOBAL_OPERATOR_H_
 
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <tuple>
+
+
+#include "Solver/AssemblerLagrangian1d.h"
+#include "Integrator.hpp"
+#include "utils.hpp"
+
+#include "Solver/Operator.h"
+#include "Solver/problem_config.h"
+
 #ifdef USE_COARSE_Q_H
   #include <OT/operator_LagrangianBoundaryCoarse.h>
 #else
   #include <OT/operator_LagrangianBoundary.h>
 #endif
 
-#include <iostream>
-#include <string>
-#include <fstream>
-#include <tuple>
 
-#include "Solver/AssemblerLagrangian1d.h"
-#include "Integrator.hpp"
-#include "utils.hpp"
-
-/*template<typename Solver, typename LOP>
-struct GeneralOperatorTraits{
-  using SolverType = Solver;
-
-  using LocalOperatorType = LOP;
-
-  using FunctionTypeX = DensityFunction;
-  using FunctionTypeY = DensityFunction;
-
-  static FunctionTypeX construct_f(const Solver& solver)
-  {
-    return std::move(FunctionTypeX());
-  }
-};*/
-
-template<typename Solver, typename LOP>
-struct ProblemSquareToSquareOperatorTraits{
-  using SolverType = Solver;
-
-  using LocalOperatorType = LOP;
-
-  using FunctionTypeX = rhoXSquareToSquare;
-  using FunctionTypeY = rhoYSquareToSquare;
-
-  static FunctionTypeX construct_f(const Solver& solver)
-  {
-    return std::move(FunctionTypeX());
-  }
-  static FunctionTypeY construct_g(const Solver& solver)
-  {
-    return std::move(FunctionTypeY());
-  }
-
-};
-
-template<typename Solver, typename LOP>
-struct GaussianOperatorTraits{
-  using SolverType = Solver;
-
-  using LocalOperatorType = LOP;
-
-  using FunctionTypeX = rhoXGaussianSquare;
-  using FunctionTypeY = rhoYSquareToSquare;
-  //          new rhoXGaussians(), new rhoYGaussians()
-
-  static FunctionTypeX construct_f(const Solver& solver)
-  {
-    return std::move(FunctionTypeX());
-  }
-  static FunctionTypeY construct_g(const Solver& solver)
-  {
-    return std::move(FunctionTypeY());
-  }
-
-};
-
-template<typename Solver, typename LOP>
-struct ConstantOperatorTraits{
-  using SolverType = Solver;
-
-  using LocalOperatorType = LOP;
-
-  using BoundaryType = GenerealOTBoundary;
-
-  using FunctionTypeX = ConstantFunction;
-  using FunctionTypeY = ConstantFunction;
-
-  static FunctionTypeX construct_f(const Solver& solver)
-  {
-    return std::move(FunctionTypeX());
-  }
-  static FunctionTypeY construct_g(const Solver& solver)
-  {
-    return std::move(FunctionTypeY());
-  }
-};
-
-template<typename Solver, typename LOP>
-struct ImageOperatorTraits{
-  using SolverType = Solver;
-
-  using LocalOperatorType = LOP;
-
-  using BoundaryType = GenerealOTBoundary;
-
-  using FunctionTypeX = ImageFunction;
-  using FunctionTypeY = ImageFunction;
-
-  static FunctionTypeX construct_f(const Solver& solver)
-  {
-    return std::move(FunctionTypeX(
-        solver.get_setting().LightinputImageName,
-        solver.get_setting().lowerLeft, solver.get_setting().upperRight,
-        solver.get_setting().minPixelValue));
-  }
-  static FunctionTypeY construct_g(const Solver& solver)
-  {
-    return std::move(FunctionTypeY(
-        solver.get_setting().TargetImageName,
-        solver.get_setting().lowerLeftTarget, solver.get_setting().upperRightTarget,
-        solver.get_setting().minPixelValue));
-  }
-};
+//forward declaration for image solver
+class MA_OT_image_solver;
 
 template<typename OperatorTraits>
-class MA_OT_Operator {
+class MA_OT_Operator:public Operator {
 public:
   using GridView = typename OperatorTraits::SolverType::GridViewType;
   using SolverType = typename OperatorTraits::SolverType;
@@ -147,7 +51,7 @@ public:
   MA_OT_Operator():solver_ptr(NULL), lop_ptr(), intermediateSolCounter(){}
 
   MA_OT_Operator(SolverType& solver):solver_ptr(&solver),
-      boundary_(new GenerealOTBoundary(solver.get_gridTarget())),
+      boundary_(new GenerealOTBoundary(solver.get_gridTarget(), SolverConfig::quadratureN)),
       f_(OperatorTraits::construct_f(solver)),
       g_(OperatorTraits::construct_g(solver)),
       lop_ptr(new LocalOperatorType(
@@ -162,6 +66,24 @@ public:
 
     init();
   }
+
+    template<typename GeometrySetting>
+    MA_OT_Operator(SolverType& solver, GeometrySetting& setting):solver_ptr(&solver),
+        boundary_(new GenerealOTBoundary(solver.get_gridTarget(), SolverConfig::quadratureN)),
+        f_(OperatorTraits::construct_f(solver, setting)),
+        g_(OperatorTraits::construct_g(solver, setting)),
+        lop_ptr(new LocalOperatorType(
+  //          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
+            *boundary_, f_, g_)),
+        lopLMMidvalue(new Local_operator_LangrangianMidValue()),
+        lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
+        fixingPoint{0.3,0},
+        intermediateSolCounter()
+    {
+      std::cout << " solver n_dofs "<< solver.get_n_dofs() << std::endl;
+
+      init();
+    }
 
   MA_OT_Operator(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
@@ -321,6 +243,9 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
     {}
 
 
+  MA_OT_Operator_with_Linearisation(SolverType& solver):MA_OT_Operator_with_Linearisation(solver, this->f_, this->g_)
+    {}
+
 
   MA_OT_Operator_with_Linearisation(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lopLinear):MA_OT_Operator<OperatorTraits>(solver),
         lopLinear_ptr(lopLinear)
@@ -426,7 +351,7 @@ bool MA_OT_Operator<OperatorTraits>::check_integrability_condition() const
     assert(false);
     std::exit(-1);
   }*/
-  return (std::fabs(integralF-integralG)<1e-6);
+  return (std::fabs(integralF-integralG)<1e-1);
 }
 
 template<typename OperatorTraits>
@@ -517,6 +442,11 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
     //indexLagrangianParameter = indexFixingGridEquation
     m.insert(indexFixingGridEquation,i)=lagrangianFixingPointDiscreteOperator(i);
     m.insert(i,indexFixingGridEquation)=lagrangianFixingPointDiscreteOperator(i);
+
+    if (lop_ptr->last_step_on_a_different_grid)
+    {
+      v(i)+= lambda*lagrangianFixingPointDiscreteOperator(i);
+    }
   }
   //set rhs of langrangian multipler
   std::cerr << " at v (" << indexFixingGridEquation << ") is " << v(indexFixingGridEquation) << " going to be " << assembler.u0AtX0()-assembler.uAtX0() << std::endl;
@@ -543,6 +473,10 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
 
   //assemble boundary terms
   solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xBoundary.head(V_h_size), tempV);
+  if(lop_ptr->last_step_on_a_different_grid)
+  {
+    solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xBoundary.head(V_h_size), tempV);
+  }
 
   Q_h_size = tempM.rows();
 

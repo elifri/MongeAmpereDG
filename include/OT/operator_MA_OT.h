@@ -48,7 +48,7 @@ public:
   using Function = DensityFunction;
 
   Local_Operator_MA_OT(const OTBoundary& bc, const Function& rhoX, const Function& rhoY):
-  rhoX(rhoX), rhoY(rhoY),bc(bc), int_f(0), found_negative(false)
+  rhoX(rhoX), rhoY(rhoY),bc(bc), int_f(0), found_negative(false), last_step_on_a_different_grid(false)
   {
     std::cout << " created Local Operator" << std::endl;
   }

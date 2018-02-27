@@ -17,6 +17,7 @@
 
 #include "MAconfig.h"
 
+#include "Solver/Operator.h"
 #include "Solver/GridHandler.hpp"
 
 #include "Solver/Assembler.h"
@@ -73,80 +74,20 @@ public:
 	using DiscreteLocalGridFunction = FETraits::DiscreteLocalGridFunction;
   using DiscreteLocalGradientGridFunction = FETraits::DiscreteLocalGradientGridFunction;
 
-	MA_solver(GridHandler<GridType>& gridHandler, SolverConfig config):
-	    initialised(true),
-			epsDivide_(config.epsDivide),
-			epsEnd_(config.epsEnd),
-      maxSteps_(config.maxSteps),
-#ifdef USE_DOGLEG
-      doglegOpts_(config.doglegOpts),
-#endif
-      newtonOpts_(config.newtonOpts),
-      iterations(0),
-      initValueFromFile_(config.initValueFromFile),
-      initValue_(config.initValue),
-      evaluateJacobianSimultaneously_(config.evalJacSimultaneously),
-      writeVTK_(config.writeVTK),
-      outputDirectory_(config.outputDirectory), plotOutputDirectory_(config.plotOutputDirectory), outputPrefix_(config.outputPrefix),
-      plotterRefinement_(config.refinement),
-      gridHandler_(gridHandler),
-      FEBasisHandler_(*this, gridHandler.gridView()),
-      assembler_(FEBasisHandler_.FEBasis()),
-      plotter(gridHandler.gridView()),
-      solution_u_old(),
-      gradient_u_old(),
-      op(*this)
-	{
-    std::cout << "constructor n dofs " << get_n_dofs() << std::endl;
-#ifdef USE_DOGLEG
-    doglegOpts_.maxsteps = maxSteps_;
-#endif
-    newtonOpts_.maxIter = maxSteps_;
 
-	  plotter.set_refinement(plotterRefinement_);
-	  plotter.set_geometrySetting(get_setting());
-
-    std::cout << "refined grid to startlevel " << SolverConfig::startlevel << " constructor n dofs " << get_n_dofs() << std::endl;
-
-    FEBasisHandler_.bind(*this, gridView());
-
-	  assembler_.bind(FEBasisHandler_.FEBasis());
-
-	  plotter.set_output_directory(plotOutputDirectory_);
-	  plotter.set_output_prefix(outputPrefix_);
-
-	  plotter.add_plot_stream("resU", plotOutputDirectory_+"/Data/"+outputPrefix_+"resU"); //write residual in u test functions in this file
-	  plotter.add_plot_stream("res", plotOutputDirectory_+"/Data/"+outputPrefix_+"res"); //write residual in this file
-    plotter.add_plot_stream("l2projError", plotOutputDirectory_+"/Data/"+outputPrefix_+"l2projError"); //write L2 error to projection in this file
-	  count_refined = SolverConfig::startlevel;
-
-    std::cout << "adapted basis to refined grid: constructor n dofs " << get_n_dofs() << std::endl;
-
-	}
-
-  MA_solver(GridHandler<GridType>& gridHandler, SolverConfig config, const GeometrySetting& geometrySetting)
-      :MA_solver(gridHandler, config)
-  {
-    setting_ = geometrySetting;
-  }
-
-/*
-	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const string& name0, const string &name1) :
-			initialised(true), grid_ptr(grid), gridView_ptr(&gridView), localFiniteElement(name0, name1), localFiniteElementu(localFiniteElement.operator()(u())) {
-		initialise_dofs();
-	}
-*/
-
-  struct MA_Operator {
+  struct MA_Operator:public Operator{
 //    MA_Operator():solver_ptr(NULL){}
     MA_Operator(MA_solver &solver):solver_ptr(&solver),
         lop(new RightHandSide(),
 //            Dirichletdata([](Config::SpaceType x){return 0.0;}))
             make_Dirichletdata())
-    {}
+    {
+      std::cerr << "created MA_operator ... " << std::endl;
+    }
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v,  Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
     {
+      assert(false);
       if (new_solution)
       {
         solver_ptr->update_solution(x_old);
@@ -163,6 +104,8 @@ public:
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const
     {
+      assert(false);
+
       if (new_solution)
       {
         solver_ptr->update_solution(x_old);
@@ -177,18 +120,19 @@ public:
     }
     void Jacobian(const Config::VectorType& x,  Config::MatrixType& m) const
     {
+      assert(false);
+
       assert(solver_ptr != NULL);
       solver_ptr->assemble_DG_Jacobian_only(lop, x,m);
     }
     void derivative(const Config::VectorType& x,  Config::MatrixType& m) const
     {
+      assert(false);
+
       Jacobian(x,m);
     }
 
-    void adapt() const{}
-
     mutable MA_solver* solver_ptr;
-
 
     //find correct operator
   #ifdef USE_MIXED_ELEMENT
@@ -197,12 +141,79 @@ public:
     using OperatorType = Local_Operator_MA_Brenner;
   #endif
 
-
     OperatorType lop;
-    const FieldVector<double, 2> get_fixingPoint(){return fixingPoint;}
+    const FieldVector<double, 2> get_fixingPoint(){ assert(false); return fixingPoint;}
 
     const FieldVector<double, 2> fixingPoint;
   };
+
+  MA_solver(GridHandler<GridType>& gridHandler, SolverConfig config, bool create_operator = true):
+    initialised(true),
+    epsDivide_(config.epsDivide),
+    epsEnd_(config.epsEnd),
+    maxSteps_(config.maxSteps),
+  #ifdef USE_DOGLEG
+    doglegOpts_(config.doglegOpts),
+  #endif
+    newtonOpts_(config.newtonOpts),
+    iterations(0),
+    initValueFromFile_(config.initValueFromFile),
+    initValue_(config.initValue),
+    evaluateJacobianSimultaneously_(config.evalJacSimultaneously),
+    writeVTK_(config.writeVTK),
+    outputDirectory_(config.outputDirectory), plotOutputDirectory_(config.plotOutputDirectory), outputPrefix_(config.outputPrefix),
+    plotterRefinement_(config.refinement),
+    gridHandler_(gridHandler),
+    FEBasisHandler_(*this, gridHandler.gridView()),
+    assembler_(FEBasisHandler_.FEBasis()),
+    plotter(gridHandler.gridView()),
+    solution_u_old(),
+    gradient_u_old()
+  {
+    std::cout << "constructor n dofs " << get_n_dofs() << std::endl;
+    #ifdef USE_DOGLEG
+    doglegOpts_.maxsteps = maxSteps_;
+    #endif
+    newtonOpts_.maxIter = maxSteps_;
+
+    plotter.set_refinement(plotterRefinement_);
+    plotter.set_geometrySetting(get_setting());
+
+    std::cout << "refined grid to startlevel " << SolverConfig::startlevel << " constructor n dofs " << get_n_dofs() << std::endl;
+
+    FEBasisHandler_.bind(*this, gridView());
+
+    assembler_.bind(FEBasisHandler_.FEBasis());
+
+    plotter.set_output_directory(plotOutputDirectory_);
+    plotter.set_output_prefix(outputPrefix_);
+
+    plotter.add_plot_stream("resU", plotOutputDirectory_+"/Data/"+outputPrefix_+"resU"); //write residual in u test functions in this file
+    plotter.add_plot_stream("res", plotOutputDirectory_+"/Data/"+outputPrefix_+"res"); //write residual in this file
+    plotter.add_plot_stream("l2projError", plotOutputDirectory_+"/Data/"+outputPrefix_+"l2projError"); //write L2 error to projection in this file
+    count_refined = SolverConfig::startlevel;
+
+    std::cout << "adapted basis to refined grid: constructor n dofs " << get_n_dofs() << std::endl;
+
+    if (create_operator)
+    {
+      std::cerr << "create MA Operator ... " << std::endl;
+      op = std::make_shared<MA_Operator>(*this);
+    }
+  }
+  MA_solver(GridHandler<GridType>& gridHandler, SolverConfig config, const GeometrySetting& geometrySetting)
+      :MA_solver(gridHandler, config)
+  {
+    setting_ = geometrySetting;
+  }
+
+/*
+	MA_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const string& name0, const string &name1) :
+			initialised(true), grid_ptr(grid), gridView_ptr(&gridView), localFiniteElement(name0, name1), localFiniteElementu(localFiniteElement.operator()(u())) {
+		initialise_dofs();
+	}
+*/
+
 
 	//-----functions--------
 public:
@@ -348,6 +359,12 @@ public:
 	 */
 	VectorType return_vertex_vector(const VectorType &x) const;
 
+	Operator& get_operator(){return *op;}
+  const Operator& get_operator()const {return *op;}
+
+  MA_Operator& get_MA_operator(){return dynamic_cast<MA_Operator&>(get_operator());}
+
+
 	virtual GeometrySetting& get_setting() {return setting_;}
   virtual const GeometrySetting& get_setting() const {return setting_;}
 
@@ -422,7 +439,7 @@ protected:
 //
   mutable shared_ptr<Rectangular_mesh_interpolator> exact_solution;
 
-  MA_Operator op; ///functional operator
+  shared_ptr<Operator> op; ///functional operator
 
 	friend MA_Operator;
 	template <int T, typename T2>

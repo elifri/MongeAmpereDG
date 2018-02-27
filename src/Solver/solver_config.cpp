@@ -22,6 +22,7 @@ ProblemType SolverConfig::problem = MA_SMOOTH;
 
 int SolverConfig::startlevel = 0;
 int SolverConfig::nonlinear_steps = 1;
+int SolverConfig::quadratureN = std::max(100000,1 << (2+SolverConfig::startlevel+SolverConfig::nonlinear_steps));
 
 double SolverConfig::epsDivide = 1;
 double SolverConfig::epsEnd = 1;

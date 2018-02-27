@@ -16,7 +16,7 @@
 class Local_Operator_LagrangianBoundary{
 public:
   Local_Operator_LagrangianBoundary(const OTBoundary& bc)
-    : bc(bc), oldSolutionCaller_(){}
+    : bc(bc), oldSolutionCaller_(), last_step_on_a_different_grid(false){}
 
   template<class Intersection, class LocalViewV, class LocalViewQ, class DenseMatrixType, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
