@@ -784,9 +784,9 @@ void MA_OT_solver::solve_nonlinear_system()
 #ifdef USE_ANALYTIC_JACOBIAN
   assert(!this->get_OT_operator().get_lopLinear().last_step_on_a_different_grid);
 #else
-  assert(this->get_OT_operator().get_lop().last_step_on_a_different_grid == false);
+  assert(this->get_OT_operator().get_lop().is_evaluation_of_u_old_on_different_grid() == false);
 #endif
-  assert(this->get_OT_operator().lopLMBoundary->last_step_on_a_different_grid == false);
+  assert(this->get_OT_operator().lopLMBoundary->is_evaluation_of_u_old_on_different_grid() == false);
   std::cout << "n dofs" << get_n_dofs() << " V_h_dofs " << get_n_dofs_V_h() << " Q_h_dofs " << get_n_dofs_Q_h() << std::endl;
 
   //if the exact solution is known it can be accessed via exactdata

@@ -408,6 +408,8 @@ public:
   void set_evaluation_of_u_old_to_different_grid() const{  last_step_on_a_different_grid = true;}
   ///use coefficients of old function living on the same grid to evaluate last step
   void set_evaluation_of_u_old_to_same_grid() const{  last_step_on_a_different_grid = false;}
+  bool is_evaluation_of_u_old_on_different_grid() const {return last_step_on_a_different_grid;}
+
 
   const Function& get_input_distribution() const {return rhoX;}
   const Function& get_target_distribution() const {return rhoY;}
