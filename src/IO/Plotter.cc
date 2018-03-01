@@ -74,7 +74,6 @@ void check_file_extension(std::string &name, std::string extension) {
 
 
 //==========================================================================================
-inline
 int Plotter::Nelements() const
 {
 	int Nelements = get_gridView().size(0);
