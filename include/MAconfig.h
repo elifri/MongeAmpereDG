@@ -22,7 +22,7 @@
 //for definition of ADOLC see solver_config #define HAVE_ADOLC
 
 //use analytic derivation (if implemented)
-#define USE_ANALYTIC_JACOBIAN
+//#define USE_ANALYTIC_JACOBIAN
 
 //#define MANUFACTOR_SOLUTION
 
