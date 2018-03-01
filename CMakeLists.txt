@@ -81,9 +81,7 @@ find_package(CImg)
 find_package(HDF5)
 find_package(libffo_core)
 
-
-
-include_directories(${IPOPT_INCLUDE_DIR} ${METHOD_OF_ELLIPSOIDS_INCLUDES} ${CIMG_INCLUDES} ${IPOPT_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${Boost_INCLUDE_DIRS})
+include_directories(SYSTEM ${IPOPT_INCLUDE_DIR} ${METHOD_OF_ELLIPSOIDS_INCLUDES} ${CIMG_INCLUDES} ${IPOPT_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${Boost_INCLUDE_DIRS})
 
 message("include: ${IPOPT_INCLUDE_DIR} and using Boost ${BoostPO_LIBRARIES}")
 
