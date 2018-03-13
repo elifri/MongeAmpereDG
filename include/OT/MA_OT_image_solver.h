@@ -31,7 +31,7 @@ class MA_OT_image_solver : public MA_OT_solver
 {
 public:
   //define problem
-  using ProblemTraits = ImageOperatorTraits<MA_OT_solver, Local_MA_OT_Operator>;
+  using ProblemTraits = ImageOperatorOTTraits<MA_OT_solver, Local_MA_OT_Operator>;
 
   //define exact solution
   using ExactData = ExactSolutionSquareToSquareOT;

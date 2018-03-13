@@ -90,21 +90,32 @@ try {
   // Generate the grid
   // ////////////////////////////////
 
-	Config::UnitCubeType unitcube(opticalSetting.lowerLeft, opticalSetting.upperRight, 0);
+	std::cout << " init grid handler from file " << opticalSetting.gridinputFile << std::endl;
+#ifdef BSPLINES
+  GridHandler<Config::GridType, true> gridHandler(opticalSetting,SolverConfig::startlevel);
+#else
+  GridHandler<Config::GridType> gridHandler(opticalSetting,SolverConfig::startlevel);
+#endif
 
-	Config::GridType &grid = unitcube.grid();
-	Config::GridView gridView = grid.leafGridView();
+  // Output grid
+  VTKWriter<Config::GridView> vtkWriter(gridHandler.gridView());
+  vtkWriter.write("grid");
 
-	// Output resulting grid
-	VTKWriter<Config::GridView> vtkWriter(gridView);
-	vtkWriter.write("grid");
+  //-----target area grid--------
+  #ifndef BSPLINES
+    std::cout << " read target grid vom file " << opticalSetting.gridTargetFile << std::endl;
+    std::shared_ptr<Config::GridType> gridTarget_ptr(GmshReader<Config::GridType>::read(opticalSetting.gridTargetFile));
+    {
+      VTKWriter<Config::GridView> vtkWriterTarget(gridTarget_ptr->leafGridView());
+      vtkWriterTarget.write("gridTarget");
+    }
+  #endif
 
 	// ///////////////////////////////////////////////
 	// Solve PDE
 	// ///////////////////////////////////////////////
 
-	MA_refractor_solver ma_solver(unitcube.grid_ptr(), gridView, config, opticalSetting);
-
+	MA_refractor_solver ma_solver(gridHandler, gridTarget_ptr, config, opticalSetting);
 	ma_solver.solve();
 
 	std::cout << "done" << std::endl;

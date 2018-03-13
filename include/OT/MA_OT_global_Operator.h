@@ -38,6 +38,7 @@ public:
   using SolverType = typename OperatorTraits::SolverType;
   using LocalOperatorType = typename OperatorTraits::LocalOperatorType;
 
+  using BoundaryType = typename OperatorTraits::BoundaryType;
   using FunctionTypeX = typename OperatorTraits::FunctionTypeX;
   using FunctionTypeY = typename OperatorTraits::FunctionTypeY;
 
@@ -72,9 +73,7 @@ public:
         boundary_(new GenerealOTBoundary(solver.get_gridTarget(), SolverConfig::quadratureN)),
         f_(OperatorTraits::construct_f(solver, setting)),
         g_(OperatorTraits::construct_g(solver, setting)),
-        lop_ptr(new LocalOperatorType(
-  //          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
-            *boundary_, f_, g_)),
+        lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
         lopLMMidvalue(new Local_operator_LangrangianMidValue()),
         lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
         fixingPoint{0.3,0},
@@ -332,7 +331,7 @@ void MA_OT_Operator<OperatorTraits>::init()
   std::cerr << " adapted operator and now lagrangian " << lagrangianFixingPointDiscreteOperator.size() << " and ndofsV_H " << this->solver_ptr->get_n_dofs_V_h() << std::endl;
 
   assert_integrability_condition();
-  assert(check_integrability_condition());
+//  assert(check_integrability_condition());
 }
 
 template<typename OperatorTraits>

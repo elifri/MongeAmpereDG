@@ -115,7 +115,9 @@ try {
     }
   #endif
 
-  //solve
+  // ///////////////////////////////////////////////
+  // Solve PDE
+  // ///////////////////////////////////////////////
   MA_OT_image_solver ma_solver(gridHandler, gridTarget_ptr, config, setting);
   ma_solver.solve();
 

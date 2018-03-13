@@ -30,7 +30,7 @@ public:
       gridOld(gridOld), gridViewOld(gridViewOld){}
   };
 
-  GridHandler(std::string gridinputFile, int startlevel): gridPrefix_(gridinputFile), gridRefinement_(startlevel),
+  GridHandler(const std::string &gridinputFile, int startlevel): gridPrefix_(gridinputFile), gridRefinement_(startlevel),
       gridView_(GridType().leafGridView())
   {
     std::stringstream gridFile;
@@ -41,7 +41,7 @@ public:
     gridView_ = grid_->leafGridView();
   }
 
-  GridHandler(GeometrySetting setting, int startlevel): GridHandler(setting.gridinputFile,startlevel){}
+  GridHandler(GeometrySetting &setting, int startlevel): GridHandler(setting.gridinputFile,startlevel){}
 
 
   GridType& grid() {return *grid_;}

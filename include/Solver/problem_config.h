@@ -141,23 +141,6 @@ struct ImageOperatorTraits{
   using FunctionTypeX = ImageFunction;
   using FunctionTypeY = ImageFunction;
 
-  using FunctionTypeXConstructorTypes =
-      std::tuple<const std::string &,
-                 const Config::SpaceType2d,
-                 const Config::SpaceType2d,
-                 const double>;
-
-  static FunctionTypeXConstructorTypes get_constructor_data(const Solver& solver)
-  {
-    return make_tuple(
-        solver.get_setting().LightinputImageName,
-        solver.get_setting().lowerLeft, solver.get_setting().upperRight,
-        solver.get_setting().minPixelValue);
-  }
-
-  static constexpr int N = std::tuple_size<FunctionTypeXConstructorTypes>::value;
-
-
   static FunctionTypeX construct_f(const Solver& solver)
   {
     return FunctionTypeX();
@@ -182,7 +165,32 @@ struct ImageOperatorTraits{
         setting.lowerLeftTarget, setting.upperRightTarget,
         setting.minPixelValue);
   }
+
+
 };
+
+template<typename Solver, typename LOP>
+struct ImageOperatorOTTraits:ImageOperatorTraits<Solver, LOP>{
+  using FunctionTypeX = typename ImageOperatorTraits<Solver, LOP>::FunctionTypeX;
+  using FunctionTypeY = typename ImageOperatorTraits<Solver, LOP>::FunctionTypeY;
+  template<typename OpticalSetting>
+  static LOP* construct_lop(const OpticalSetting& setting, const OTBoundary& bc, const FunctionTypeX& f, const FunctionTypeY& g)
+  {
+    return new LOP(bc, f, g);
+  }
+};
+
+template<typename Solver, typename LOP>
+struct RefractorOperatorTraits:ImageOperatorTraits<Solver, LOP>{
+  using FunctionTypeX = typename ImageOperatorTraits<Solver, LOP>::FunctionTypeX;
+  using FunctionTypeY = typename ImageOperatorTraits<Solver, LOP>::FunctionTypeY;
+  template<typename OpticalSetting>
+  static LOP* construct_lop(const OpticalSetting& setting, const OTBoundary& bc, const FunctionTypeX& f, const FunctionTypeY& g)
+  {
+    return new LOP(setting, bc, f, g);
+  }
+};
+
 
 //find correct local operator
 #ifdef USE_C0_PENALTY

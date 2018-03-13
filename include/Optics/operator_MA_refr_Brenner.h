@@ -12,6 +12,7 @@
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
 #include "utils.hpp"
 #include "problem_data.h"
+#include "OT/problem_data_OT.h"
 
 #include "Solver/solver_config.h"
 
@@ -22,39 +23,28 @@ using namespace Dune;
 class Local_Operator_MA_refr_Brenner {
 
 public:
-/*
-  Local_Operator_MA_refr_Brenner():
-    opticalSetting(NULL), rhs(*opticalSetting), bc(*opticalSetting, 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps)), sign(1.0) {
-    int_f = 0;
-  }
-*/
-
-  template<typename GridView>
-  Local_Operator_MA_refr_Brenner(OpticalSetting &opticalSetting, const GridView& gridView,
-      const RightHandSideReflector& rhs, const HamiltonJacobiBC &bc):
-    hash(gridView), EntititiesForUnifikationTerm_(10,hash),
-    opticalSetting(&opticalSetting),
-    rhs(rhs),
-    bc(bc){
-    int_f = 0;
-  }
+  Local_Operator_MA_refr_Brenner(const OTBoundary& bc,
+      const ImageFunction& f, const ImageFunction& g):
+    opticalSetting(OpticalSetting()),
+    bc(bc),
+    f(f), g(g),
+    int_f(0),
+    last_step_on_a_different_grid(false)
+    {
+    assert(false&& "this constructor should never be used!!");
+    std::exit(-1);
+    }
 
 
-/*
-  template<typename GridView>
-  Local_Operator_MA_refr_Brenner(OpticalSetting &opticalSetting, const GridView& gridView, RightHandSideReflector::Function_ptr &solUOld, RightHandSideReflector::GradFunction_ptr &gradUOld,
-      std::shared_ptr<Rectangular_mesh_interpolator> &exactSolU):
-    hash(gridView), EntititiesForUnifikationTerm_(10,hash),
-    opticalSetting(&opticalSetting),
-    rhs(solUOld, gradUOld, opticalSetting),
-    bc(opticalSetting, 1 << (SolverConfig::startlevel+SolverConfig::nonlinear_steps)),
-    bcDirichlet(exactSolU), sign(1.0){
 
-    std::cout << " created Local Operator" << std::endl;
-
-    int_f = 0;
-  }
-*/
+  Local_Operator_MA_refr_Brenner(const OpticalSetting &opticalSetting, const OTBoundary& bc,
+      const ImageFunction& f, const ImageFunction& g):
+    opticalSetting(opticalSetting),
+    bc(bc),
+    f(f), g(g),
+    int_f(0),
+    last_step_on_a_different_grid(false)
+    {}
 
   ///helper function that checks wether the calculated reflection is consistent with the vector calculated by direct application of the reflection law
   bool check_refraction(const Config::SpaceType& x_value, const FieldVector<adouble, 3>& X,
@@ -77,7 +67,7 @@ public:
     lightvector *= -1;
     lightvector [0] += z[0];
     lightvector [1] += z[1];
-    lightvector [2] += opticalSetting->z_3;
+    lightvector [2] += opticalSetting.z_3;
 
     //calculated direction after refraction by Snell's law (Y)
     FieldVector<adouble, 3> Y = X;
@@ -107,7 +97,7 @@ public:
         lightvector *= -1;
         lightvector[0] += z[0];
         lightvector[1] += z[1];
-        lightvector[2] += opticalSetting->z_3;
+        lightvector[2] += opticalSetting.z_3;
 
         if ((D_Psi_value * lightvector).value() < 0)
           std::cout << " value is not positiv? "<< (D_Psi_value * lightvector).value() << std::endl;
@@ -221,10 +211,7 @@ public:
    */
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag, double &integralU, const double dummy,
-      LocalView& localViewDummy, const std::vector<double>& vectorDummy, std::vector<VectorType>& derUnificationterm) const {
-
-    assert(opticalSetting);
+      VectorType& v, const int tag=0) const {
 
     // Get the grid element from the local FE basis view
     typedef typename LocalView::Element Element;
@@ -241,10 +228,9 @@ public:
     // Get set of shape functions for this element
     const auto& localFiniteElement = localView.tree().finiteElement();
 
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
+    typedef typename ElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
     typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
     typedef typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension> FEHessianType;
 
@@ -370,7 +356,7 @@ public:
 
       //calculate Z = X/u +t(Z_0-X/u) = point on reflector + reflected vector
       //calculate t: distance between refractor and target plane (refracted vector)
-      adouble t = rho_value*omega_value-opticalSetting->z_3;
+      adouble t = rho_value*omega_value-opticalSetting.z_3;
       t /= rho_value*omega_value;
 
       FieldVector<adouble, 3> grad_hat = { gradrho[0], gradrho[1], 0 };
@@ -401,7 +387,7 @@ public:
       }*/
 
 
-      assert(std::abs(((omega_value*rho_value) - t*rho_value*omega_value - opticalSetting->z_3).value()) < 1e-8 && "something with t is not as expected!");
+      assert(std::abs(((omega_value*rho_value) - t*rho_value*omega_value - opticalSetting.z_3).value()) < 1e-8 && "something with t is not as expected!");
 
       assert(check_refraction(x_value, X, rho_value.value(), gradrho, z));
 
@@ -444,13 +430,13 @@ public:
 
       //calculate illumination at \Omega
       double f_value;
-      rhs.f.evaluate(x_value, f_value);
+      f.evaluate(x_value, f_value);
 
       int_f += f_value* quad[pt].weight() * integrationElement;
 
       //calculate illumination at target plane
       adouble g_value;
-      rhs.g.evaluate(z, g_value);
+      g.evaluate(z, g_value);
 
       double D_psi_norm = sqrt(sqr(D_Psi_value[0])+sqr(D_Psi_value[1])+sqr(D_Psi_value[2]));
       adouble H_value = (1.-(x_value*x_value))*D_psi_norm *4. *t*t*rho_value*rho_value*rho_value*(-beta)*F_value*(F_value+(gradrho*DpF));
@@ -526,8 +512,7 @@ public:
   void assemble_inner_face_term(const IntersectionType& intersection,
       const LocalView &localView, const VectorType &x,
       const LocalView &localViewn, const VectorType &xn, VectorType& v,
-      VectorType& vn, int tag) const {
-    assert(opticalSetting);
+      VectorType& vn, int tag=0) const {
 
     const int dim = IntersectionType::dimension;
     const int dimw = IntersectionType::dimensionworld;
@@ -718,9 +703,7 @@ public:
   template<class Intersection, class LocalView, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalView &localView,
-      const VectorType &x, VectorType& v, int tag) const {
-
-    assert(opticalSetting);
+      const VectorType &x, VectorType& v, int tag=0) const {
 
     const int dim = Intersection::dimension;
     const int dimw = Intersection::dimensionworld;
@@ -821,7 +804,7 @@ public:
       //-------calculate integral--------
       Config::ValueType omega_value = omega(x_value);
 
-      adouble t = rho_value*omega_value-opticalSetting->z_3;
+      adouble t = rho_value*omega_value-opticalSetting.z_3;
       t /= rho_value*omega_value;
 
       adouble F_value = F(x_value, rho_value, gradrho);
@@ -865,72 +848,31 @@ public:
     trace_off();
   }
 
-  int insert_entitity_for_unifikation_term(const Config::Entity element, int size)
-  {
-    auto search = EntititiesForUnifikationTerm_.find(element);
-    if (search == EntititiesForUnifikationTerm_.end())
-    {
-      const int newOffset = size*EntititiesForUnifikationTerm_.size();
-      EntititiesForUnifikationTerm_[element] = newOffset;
+  ///use given global function (probably living on a coarser grid) to evaluate last step
+  void set_evaluation_of_u_old_to_different_grid() const{  last_step_on_a_different_grid = true;}
+  ///use coefficients of old function living on the same grid to evaluate last step
+  void set_evaluation_of_u_old_to_same_grid() const{  last_step_on_a_different_grid = false;}
+  bool is_evaluation_of_u_old_on_different_grid() const {return last_step_on_a_different_grid;}
 
-      const auto& geometry = element.geometry();
+  const DensityFunction& get_input_distribution() const {return f;}
+  const DensityFunction& get_target_distribution() const {return g;}
 
-      return newOffset;
-    }
-    return EntititiesForUnifikationTerm_[element];
-  }
+  const OTBoundary& get_bc() {return bc;}
+private:
+  const OpticalSetting& opticalSetting;
 
-  void insert_descendant_entities(const Config::DuneGridType& grid, const Config::Entity element)
-  {
-    const auto& geometry = element.geometry();
+  const OTBoundary & bc;
 
-    auto search = EntititiesForUnifikationTerm_.find(element);
-    int size = search->second;
-    assert(search != EntititiesForUnifikationTerm_.end());
-    for (const auto& e : descendantElements(element,grid.maxLevel() ))
-    {
-      insert_entitity_for_unifikation_term(e, size);
-    }
-    EntititiesForUnifikationTerm_.erase(search);
+  const ImageFunction& f;
+  const ImageFunction& g;
 
-  }
-
-  const Config::EntityMap& EntititiesForUnifikationTerm() const
-  {
-    return EntititiesForUnifikationTerm_;
-  }
-
-
-  int get_offset_of_entity_for_unifikation_term(Config::Entity element) const
-  {
-    return EntititiesForUnifikationTerm_.at(element);
-  }
-  int get_number_of_entities_for_unifikation_term() const
-  {
-    return EntititiesForUnifikationTerm_.size();
-  }
-
-  void clear_entitities_for_unifikation_term()
-  {
-    EntititiesForUnifikationTerm_.clear();
-  }
-
-  Config::EntityCompare hash;
-  Config::EntityMap EntititiesForUnifikationTerm_;
-
-
-  OpticalSetting* opticalSetting;
-
-  const RightHandSideReflector& get_right_handside() const {return rhs;}
-
-  const RightHandSideReflector & rhs;
-  const HamiltonJacobiBC & bc;
 
   static constexpr double& kappa_ = OpticalSetting::kappa;
 public:
   mutable double int_f;
 
   mutable bool found_negative;
+  mutable bool last_step_on_a_different_grid;
 };
 
 #endif /* SRC_OPERATOR_HH_ */

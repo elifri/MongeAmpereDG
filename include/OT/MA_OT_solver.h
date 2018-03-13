@@ -26,6 +26,7 @@
 
 #include "IO/TransportPlotter.hpp"
 
+#include "Optics/operator_MA_refr_Brenner.h"
 
 class MA_OT_solver: public MA_solver
 {
@@ -38,7 +39,8 @@ public:
   //define problem
   //using ProblemTraits = ProblemSquareToSquareOperatorTraits<SolverType,LOP>;
 //  using ProblemTraits = ConstantOperatorTraits<MA_OT_solver,Local_MA_OT_Operator>;
-  using ProblemTraits = ImageOperatorTraits<MA_OT_solver, Local_MA_OT_Operator>;
+//  using ProblemTraits = ImageOperatorOTTraits<MA_OT_solver, Local_MA_OT_Operator>;
+  using ProblemTraits = RefractorOperatorTraits<MA_OT_solver, Local_Operator_MA_refr_Brenner>;
 
   //define exact solution
   using ExactData = ExactSolutionSquareToSquareOT;
