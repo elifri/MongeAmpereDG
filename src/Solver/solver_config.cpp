@@ -96,6 +96,7 @@ void SolverConfig::read_configfile(std::string &configFile)
         ("output.plotdirectory", po::value<string>(&plotOutputDirectory), "")
         ("output.prefix", po::value<string>(&outputPrefix), "")
         ("output.refinement", po::value<int>(&refinement), "")
+        ("output.cartesianGridN", po::value<int>(&cartesianGridN), "")
         ("output.write_vtk", po::value<bool>(&writeVTK), "")
   ;
 

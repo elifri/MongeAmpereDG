@@ -224,7 +224,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
     iterations++;
     std::cerr << " solved nonlinear system" << std::endl;
 
-    /*
+
     update_solution(solution);
     plot("numericalSolution");
 
@@ -232,7 +232,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
     solve_nonlinear_system();
     iterations++;
-    std::cerr << " solved nonlinear system" << std::endl;*/
+    std::cerr << " solved nonlinear system" << std::endl;
 
     {
       //write current solution to file
@@ -244,7 +244,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //      plotter.save_rectangular_mesh(*solution_u_old, file);
       file.close();
     }
-    plot("numericalSolutionBeforeRef");
+//    plot("numericalSolutionBeforeRef");
 
     std::cerr << "Adapting solution" << std::endl;
     std::cout << " adapting ...";

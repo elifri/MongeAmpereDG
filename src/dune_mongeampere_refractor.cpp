@@ -76,15 +76,17 @@ try {
 
   std::cout << " Start solving Lens problem " << std::endl;
 
-	std::string configFileMASolver, configFileOpticalSetting;
+  std::string configFileMASolver, configFileOpticalSetting;
 
-	read_parameters(argc, argv, configFileMASolver, configFileOpticalSetting);
+  read_parameters(argc, argv, configFileMASolver, configFileOpticalSetting);
 
-	SolverConfig config;
-	config.read_configfile(configFileMASolver);
+  SolverConfig config;
+  config.read_configfile(configFileMASolver);
 
-	OpticalSetting opticalSetting;
-	opticalSetting.read_configfile(configFileOpticalSetting);
+  OpticalSetting opticalSetting;
+  opticalSetting.read_configfile(configFileOpticalSetting);
+
+  std::cout << " Output files in folder " << config.plotOutputDirectory << "/" << config.outputPrefix <<"..." << std::endl;
 
   // ////////////////////////////////
   // Generate the grid
@@ -103,26 +105,27 @@ try {
 
   //-----target area grid--------
   #ifndef BSPLINES
-    std::cout << " read target grid vom file " << opticalSetting.gridTargetFile << std::endl;
-    std::shared_ptr<Config::GridType> gridTarget_ptr(GmshReader<Config::GridType>::read(opticalSetting.gridTargetFile));
-    {
-      VTKWriter<Config::GridView> vtkWriterTarget(gridTarget_ptr->leafGridView());
-      vtkWriterTarget.write("gridTarget");
-    }
+  std::cout << " read target grid vom file " << opticalSetting.gridTargetFile << std::endl;
+  std::shared_ptr<Config::GridType> gridTarget_ptr(GmshReader<Config::GridType>::read(opticalSetting.gridTargetFile));
+  {
+    VTKWriter<Config::GridView> vtkWriterTarget(gridTarget_ptr->leafGridView());
+    vtkWriterTarget.write("gridTarget");
+  }
   #endif
 
-	// ///////////////////////////////////////////////
-	// Solve PDE
-	// ///////////////////////////////////////////////
 
-	MA_refractor_solver ma_solver(gridHandler, gridTarget_ptr, config, opticalSetting);
-	ma_solver.solve();
+  // ///////////////////////////////////////////////
+  // Solve PDE
+  // ///////////////////////////////////////////////
 
-	std::cout << "done" << std::endl;
+  MA_refractor_solver ma_solver(gridHandler, gridTarget_ptr, config, opticalSetting);
+  ma_solver.solve();
+
+  std::cout << "done" << std::endl;
 
 #ifdef USE_PETSC
-	int ierr = PetscFinalize();
-	std::cout <<"Petsc ended with " << ierr << std::endl;
+  int ierr = PetscFinalize();
+  std::cout <<"Petsc ended with " << ierr << std::endl;
 #endif
 }
 // Error handling
