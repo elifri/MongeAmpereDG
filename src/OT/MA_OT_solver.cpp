@@ -34,7 +34,7 @@ MA_OT_solver::MA_OT_solver(GridHandler<GridType>& gridHandler,
 #endif
  assemblerLM1D_(FEBasisHandler_.FEBasis()),
  assemblerLMBoundary_(FEBasisHandler_.FEBasis(),FEBasisHandlerQ_.FEBasis()),
- transportPlotter_(setting,14)
+ transportPlotter_(setting,config.cartesianGridN)
 {
 #ifdef DEBUG
   {

@@ -129,15 +129,16 @@ struct SolverConfig{
   bool evalJacSimultaneously;
 
   int refinement;
+  int cartesianGridN;
 
   static bool Dirichlet;
 
-	enum{childdim = 4, degree = 2, degreeHessian = 1};
+  enum{childdim = 4, degree = 2, degreeHessian = 1};
 
-	static int startlevel;
-	static int nonlinear_steps;
+  static int startlevel;
+  static int nonlinear_steps;
 
-	static int quadratureN;
+  static int quadratureN;
 
   //////////////////////////////////////////////////////////
   ///---------------select Finite Element----------------///
