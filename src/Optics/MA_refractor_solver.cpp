@@ -119,7 +119,15 @@ void MA_refractor_solver::plot(const std::string& name, int no) const
      std::string fname(plotter.get_output_directory());
      fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + ".vtu";
      vtkWriter.write(fname);
+
+     //write refractor
+     std::string refrName(plotter.get_output_directory());
+     refrName += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(no) + ".vtu";
+     plotter.writeRefractorVTK(refrName, *solution_u_old);
+     std::cerr << " wrote refractor in file " << refrName << std::endl;
   }
+
+
 
   //write povray output
    std::string refrPovname(plotter.get_output_directory());
