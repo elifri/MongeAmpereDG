@@ -173,16 +173,24 @@ void read_quadratic_grid(const std::string &filename,  int &n_x, int &n_y,
  * @param solution  a matrix of the function values
  */
 
-void bilinear_interpolate(const Config::SpaceType x, Config::ValueType &u, int &n_x, int &n_y,
-    Config::ValueType &h_x, Config::ValueType &h_y,
-    Config::ValueType &x0, Config::ValueType &y0,
-            Eigen::MatrixXd &solution);
+void bilinear_interpolate(const Config::SpaceType x, Config::ValueType &u, const int &n_x, const int &n_y,
+    const Config::ValueType &h_x, const Config::ValueType &h_y,
+    const Config::ValueType &x0, const Config::ValueType &y0,
+    const Eigen::MatrixXd &solution);
+
+void bilinear_interpolate_derivative(const Config::SpaceType x, Config::SpaceType2d &du, const int &n_x, const int &n_y,
+    const Config::ValueType &h_x, const Config::ValueType &h_y,
+    const Config::ValueType &x0, const Config::ValueType &y0,
+    const Eigen::MatrixXd &solution);
 
 struct Rectangular_mesh_interpolator{
 
   Rectangular_mesh_interpolator(const std::string &filename);
-  Config::ValueType evaluate (const Config::SpaceType2d& x);
-  Config::ValueType evaluate_inverse(const Config::SpaceType2d& x);
+  Config::ValueType evaluate (const Config::SpaceType2d& x) const;
+  Config::SpaceType2d evaluate_derivative(const Config::SpaceType2d& x) const;
+
+  Config::ValueType evaluate_inverse(const Config::SpaceType2d& x) const;
+  Config::SpaceType2d evaluate_inverse_derivative(const Config::SpaceType2d& x) const;
 
   int n_x, n_y;
   double h_x, h_y;
