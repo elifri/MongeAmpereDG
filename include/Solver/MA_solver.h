@@ -326,7 +326,7 @@ public:
 
 protected:
 	///reads the fe coefficients from file
-	void init_from_file(const std::string& filename);
+	virtual void init_from_file(const std::string& filename);
 	///creates the initial guess
 	virtual void create_initial_guess();
 

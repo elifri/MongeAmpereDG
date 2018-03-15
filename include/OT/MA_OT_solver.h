@@ -83,6 +83,9 @@ public:
   OperatorType& get_OT_operator(){return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
   const OperatorType& get_OT_operator() const {return  *(std::dynamic_pointer_cast<OperatorType>(this->op));}
 
+  ///reads the fe coefficients from file
+  void init_from_file(const std::string& filename);
+
   template<class F>
   void project(const F f, VectorType& v) const;
 

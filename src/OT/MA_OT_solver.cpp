@@ -326,6 +326,68 @@ struct DetFunction{
   std::array<std::shared_ptr<LocalHessScalarFunction>,4> localHessu_;
 };
 
+void MA_OT_solver::init_from_file(const std::string& filename)
+{
+  solution.resize(get_n_dofs());
+  std::ifstream fileInitial (filename);
+
+  if(fileInitial.fail())
+  {
+    std::cerr << "Error opening " << filename << ", exited with error " << strerror(errno) << std::endl;
+    exit(-1);
+  }
+
+  for (int i=0; i<get_n_dofs_V_h(); ++i) {
+    if (fileInitial.eof())
+    {
+      std::cerr << "The inserted coefficient file is too short";
+      assert(false);
+      exit(-1);
+    }
+    fileInitial >> solution(i);
+  }
+  fileInitial >> std::ws;
+
+  //test if there are further coefficients (for the lagrangian parameters)
+  if (!fileInitial.eof())
+  {
+    for (int i=0; i<get_n_dofs_Q_h()+1; ++i)
+    {
+      if (fileInitial.eof())
+      {
+        //old format with scaling parameter
+        if (i==1)
+        {
+          double scaling_coefficient;
+          fileInitial >> scaling_coefficient;
+          break;
+        }
+        else
+        {
+          std::cerr << "The inserted coefficient file (including lagrangianparameters) is too short";
+          assert(false);
+          exit(-1);
+        }
+      }
+      fileInitial >> solution(get_n_dofs_V_h()+i);
+    }
+  }
+  else //no further coefficients -> init lagrangian parameters with 0
+  {
+    solution.tail(get_n_dofs_Q_h()+1) = VectorType::Zero(get_n_dofs_Q_h()+1);
+  }
+  fileInitial >> std::ws;
+
+  if (!fileInitial.eof())
+  {
+    std::cerr << "Coefficient initialisation is too long for the specified setting!";
+    assert(false);
+    std::exit(-1);
+  }
+  fileInitial.close();
+}
+
+
 
 void MA_OT_solver::plot(const std::string& name) const
 {
