@@ -22,7 +22,7 @@ struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
           ))
 */
 
-MA_refractor_solver::MA_refractor_solver(GridHandler<GridType>& gridHandler, const shared_ptr<GridType>& gridTarget,
+MA_refractor_solver::MA_refractor_solver(GridHandlerType& gridHandler, const shared_ptr<GridType>& gridTarget,
     const SolverConfig& config, OpticalSetting& opticalSetting)
  :MA_OT_solver(gridHandler, gridTarget, config, opticalSetting, false), setting_(opticalSetting)
 {

@@ -43,6 +43,7 @@ public:
 
   GridHandler(GeometrySetting &setting, int startlevel): GridHandler(setting.gridinputFile,startlevel){}
 
+  bool is_rectangular(){return rectangular;}
 
   GridType& grid() {return *grid_;}
   std::shared_ptr<GridType>& get_grid_ptr(){return grid_;}
@@ -85,7 +86,7 @@ public:
     std::shared_ptr<GridType> gridOld;
     GridViewOld gridViewOld;
 
-    OldGridInformation(std::shared_ptr<GridType>& gridOld, GridViewOld& gridViewOld):
+    OldGridInformation(std::shared_ptr<GridType>& gridOld, GridViewOld gridViewOld):
       gridOld(gridOld), gridViewOld(gridViewOld){}
   };
 
@@ -93,6 +94,8 @@ public:
       grid_(UnitCube<GridType>(setting.lowerLeft, setting.upperRight, startlevel).grid_ptr()),
       gridView_(grid_->leafGridView())
   {}
+
+  bool is_rectangular(){return true;}
 
   GridType& grid() {return *grid_;}
   std::shared_ptr<GridType>& get_grid_ptr(){return grid_;}
@@ -102,7 +105,7 @@ public:
 
   OldGridInformation adapt(){
     gridRefinement_++;
-    grid_->globalRefine();
+    grid_->globalRefine(1);
     return OldGridInformation(grid_,grid_->levelGridView(grid_->maxLevel()-1));
   }
 

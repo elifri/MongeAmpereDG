@@ -301,7 +301,10 @@ void MA_solver::adapt_solution(const int level)
   FEBasisHandler_.adapt_after_grid_change(gridView());
 
   Config::VectorType u_solution = solution;
-  solution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), u_solution);
+  if (gridHandler_.is_rectangular())
+    solution = FEBasisHandler_.adapt_function_after_rectangular_grid_change(old_grid.gridViewOld, gridView(), u_solution);
+  else
+    solution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), u_solution);
   get_assembler().bind(FEBasisHandler_.FEBasis());
   plotter.update_gridView(gridView());
 }

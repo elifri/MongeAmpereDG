@@ -54,6 +54,7 @@ public:
 
 	//-----typedefs---------
 	using GridType = Config::DuneGridType;
+  using GridHandlerType = GridHandler<GridType, true>;
 	using GridViewType = Config::GridView;
 	using LevelGridViewType = Config::LevelGridView;
 	using IntersectionIterator = GridViewType::IntersectionIterator;
@@ -147,7 +148,7 @@ public:
     const FieldVector<double, 2> fixingPoint;
   };
 
-  MA_solver(GridHandler<GridType>& gridHandler, SolverConfig config, bool create_operator = true):
+  MA_solver(GridHandlerType& gridHandler, SolverConfig config, bool create_operator = true):
     initialised(true),
     epsDivide_(config.epsDivide),
     epsEnd_(config.epsEnd),
@@ -201,7 +202,7 @@ public:
       op = std::make_shared<MA_Operator>(*this);
     }
   }
-  MA_solver(GridHandler<GridType>& gridHandler, SolverConfig config, const GeometrySetting& geometrySetting)
+  MA_solver(GridHandlerType& gridHandler, SolverConfig config, const GeometrySetting& geometrySetting)
       :MA_solver(gridHandler, config)
   {
     setting_ = geometrySetting;
@@ -414,7 +415,7 @@ protected:
 	std::string outputDirectory_, plotOutputDirectory_, outputPrefix_; ///outputdirectories
   int plotterRefinement_; ///number of (virtual) grid refinements for output generation
 
-	GridHandler<GridType>& gridHandler_; ///handles grid
+	GridHandlerType& gridHandler_; ///handles grid
 
 	FEBasisHandler<FETraits::Type, FETraits> FEBasisHandler_;
 

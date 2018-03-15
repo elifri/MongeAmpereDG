@@ -31,7 +31,7 @@ public:
 
 //  using MA_solver::MA_solver;
 public:
-  MA_refractor_solver(GridHandler<GridType>& gridHandler,
+  MA_refractor_solver(GridHandlerType& gridHandler,
       const shared_ptr<GridType>& gridTarget,
       const SolverConfig& config, OpticalSetting& opticalSetting);
 

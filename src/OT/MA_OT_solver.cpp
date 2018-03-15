@@ -22,7 +22,7 @@ namespace po = boost::program_options;
 
 #include "Operator/linear_system_operator_poisson_NeumannBC.h"
 
-MA_OT_solver::MA_OT_solver(GridHandler<GridType>& gridHandler,
+MA_OT_solver::MA_OT_solver(GridHandlerType& gridHandler,
     const shared_ptr<GridType>& gridTarget,
     const SolverConfig& config, GeometrySetting& setting, bool create_operator)
 :MA_solver(gridHandler, config, false),

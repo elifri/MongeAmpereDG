@@ -55,7 +55,7 @@ public:
   using AssemblerLagrangianMultiplierBoundaryType = AssemblerLagrangianMultiplierBoundary;
 #endif
 
-  MA_OT_solver(GridHandler<GridType>& gridHandler,
+  MA_OT_solver(GridHandlerType& gridHandler,
       const shared_ptr<GridType>& gridTarget,
       const SolverConfig& config, GeometrySetting& setting, bool create_operator = true);
 
