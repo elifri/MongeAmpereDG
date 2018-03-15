@@ -14,7 +14,9 @@
 
 #include <dune/grid/utility/hierarchicsearch.hh>
 
+template<typename GlobalFunction>
 class TaylorBoundaryFunction;
+template<typename GlobalFunctionDerivative>
 class TaylorBoundaryDerivativeFunction;
 
 namespace Dune {
@@ -617,6 +619,8 @@ public:
   class GlobalFirstDerivative
   {
   public:
+    using GlobalFunctionType = MyDiscreteScalarGlobalBasisFunction;
+
     GlobalFirstDerivative(const MyDiscreteScalarGlobalBasisFunction& globalFunction)
     : globalFunction_(&globalFunction), localFunction_(globalFunction), localDerivative_(globalFunction) {}
 
@@ -636,7 +640,7 @@ private:
     const MyDiscreteScalarGlobalBasisFunction* globalFunction_;
     mutable LocalFirstDerivative localFunction_;
     mutable LocalSecondDerivative localDerivative_;
-    friend TaylorBoundaryDerivativeFunction;
+    friend TaylorBoundaryDerivativeFunction<GlobalFirstDerivative>;
   };
 
   class GlobalSecondDerivative
@@ -1085,7 +1089,7 @@ private:
   mutable LocalFunction localFunction_;
   mutable LocalFirstDerivative localDerivative_;
   mutable LocalSecondDerivative localSecondDerivative_;
-  friend TaylorBoundaryFunction;
+  friend TaylorBoundaryFunction<MyDiscreteScalarGlobalBasisFunction<Basis, V, isC1>>;
 };
 
 } // namespace Functions

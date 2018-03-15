@@ -12,11 +12,12 @@
 #include "OT/problem_data_OT.h"
 #include "localfunctions/discreteScalarGlobalBasisFunction.hpp"
 
+template<typename GlobalFunction>
 class TaylorBoundaryFunction{
 
-  using GlobalFunction = SolverConfig::FETraitsSolver::DiscreteGridFunction;
-  using Domain = GlobalFunction::Domain;
-  using Range = GlobalFunction::Range;
+//  using GlobalFunction = SolverConfig::FETraitsSolver::DiscreteGridFunction;
+  using Domain = typename GlobalFunction::Domain;
+  using Range = typename GlobalFunction::Range;
   using Jacobian = typename GlobalFunction::LocalFirstDerivative::Jacobian;
   using Hessian = typename GlobalFunction::LocalSecondDerivative::Hessian;
 
@@ -143,13 +144,14 @@ protected:
   const GlobalFunction& FEFunction_;
 };
 
-
+template<typename GlobalFirstDerivative>
 class TaylorBoundaryDerivativeFunction{
 
-  using GlobalFunction = SolverConfig::FETraitsSolver::DiscreteGridFunction;
-  using GlobalFirstDerivative = GlobalFunction::GlobalFirstDerivative;
-  using Domain = GlobalFunction::Domain;
-  using Range = GlobalFunction::Range;
+//  using GlobalFunction = SolverConfig::FETraitsSolver::DiscreteGridFunction;
+  using GlobalFunction = typename GlobalFirstDerivative::GlobalFunctionType;
+  //  using GlobalFirstDerivative = GlobalFunction::GlobalFirstDerivative;
+  using Domain = typename GlobalFunction::Domain;
+  using Range = typename GlobalFunction::Range;
   using Jacobian = typename GlobalFunction::LocalFirstDerivative::Jacobian;
   using Hessian = typename GlobalFunction::LocalSecondDerivative::Hessian;
 

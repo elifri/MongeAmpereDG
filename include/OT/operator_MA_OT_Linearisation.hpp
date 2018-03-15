@@ -30,6 +30,8 @@ value_type FrobeniusProduct(const FieldMatrix<value_type, 2, 2>& A, const FieldM
 
 class Local_Operator_MA_OT_Linearisation {
   using Function = DensityFunction;
+  using TaylorFunction = TaylorBoundaryFunction<SolverConfig::FETraitsSolver::DiscreteGridFunction>;
+
 
 public:
   using FunctionType = Function;///interface typedef
@@ -566,7 +568,7 @@ public:
   mutable bool found_negative;
 
   mutable bool last_step_on_a_different_grid;
-  std::function<const TaylorBoundaryFunction&()> oldSolutionCaller_;
+  std::function<const TaylorFunction&()> oldSolutionCaller_;
 };
 
 #endif /* SRC_OT_OPERATOR_MA_OT_LINEARISATION_HPP_ */

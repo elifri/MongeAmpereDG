@@ -74,6 +74,22 @@ struct FEBasisHandler{
    * @return          coefficient vector of the new grid basis functions
    */
   template <typename GridTypeOld>
+  Config::VectorType adapt_function_after_rectangular_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
+  {assert(false && " Error, dont know FE basis and works only for levelGridViews");
+    std::cerr << " Error, dont know FE basis and works only for levelGridViews" << std::endl;
+    DUNE_THROW(Dune::NotImplemented, " Error, dont know FE basis and works only for levelGridViews"); exit(-1);}
+
+
+  ///initialises the basis functions on the refined grid and calculates the coefficients of the new basis from the coefficients of the old basis
+  ///if the grids are not nested a the new function is a hermite interpolation of the old
+  /**
+   * @brief initialises the basis functions on the refined grid and calculates a new coefficient vector. if the grids are not nested a the new function is a hermite interpolation of the old
+   * @param gridOld   the old grid
+   * @param grid      the refined grid
+   * @param v         coeffcient vector of the old grid basis functions
+   * @return          coefficient vector of the new grid basis functions
+   */
+  template <typename GridTypeOld>
   Config::VectorType adapt_function_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
   {assert(false && " Error, dont know FE basis and works only for levelGridViews");
     std::cerr << " Error, dont know FE basis and works only for levelGridViews" << std::endl;
@@ -730,16 +746,35 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   typename CoarseTraits::FEBasis FEBasisCoarse (gridOld);
   using DiscreteGridFunctionCoarse = typename CoarseTraits::DiscreteGridFunction;
   DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
-  typename DiscreteGridFunctionCoarse::GlobalFirstDerivative gradient_u_Coarse_global (solution_u_Coarse_global);
+  using DiscreteDerivativeCoarse = typename DiscreteGridFunctionCoarse::GlobalFirstDerivative;
+  DiscreteDerivativeCoarse gradient_u_Coarse_global (solution_u_Coarse_global);
 
   // 2. prepare a Taylor extension for values outside the old grid
   GenerealOTBoundary bcSource(gridOld.grid(), SolverConfig::quadratureN);
-  TaylorBoundaryFunction solution_u_old_extended_global(bcSource, solution_u_Coarse_global);
-  TaylorBoundaryDerivativeFunction gradient_u_old_extended_global(bcSource, gradient_u_Coarse_global);
+  TaylorBoundaryFunction<DiscreteGridFunctionCoarse> solution_u_old_extended_global(bcSource, solution_u_Coarse_global);
+  TaylorBoundaryDerivativeFunction<DiscreteDerivativeCoarse> gradient_u_old_extended_global(bcSource, gradient_u_Coarse_global);
 
   Config::VectorType vNew;
   vNew.resize(FEBasis_->indexSet().size());
   project(solution_u_old_extended_global, gradient_u_old_extended_global, vNew);
+//  project(solution_u_Coarse_global, vNew);
+  return vNew;
+}
+
+template <>
+template <typename GridTypeOld>
+Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt_function_after_rectangular_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
+{
+  using CoarseTraits = PS12SplitTraits<GridTypeOld>;
+
+  typename CoarseTraits::FEBasis FEBasisCoarse (gridOld);
+  using DiscreteGridFunctionCoarse = typename CoarseTraits::DiscreteGridFunction;
+  DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
+  typename DiscreteGridFunctionCoarse::GlobalFirstDerivative gradient_u_Coarse_global (solution_u_Coarse_global);
+
+  Config::VectorType vNew;
+  vNew.resize(FEBasis_->indexSet().size());
+  project(solution_u_Coarse_global, gradient_u_Coarse_global, vNew);
 //  project(solution_u_Coarse_global, vNew);
   return vNew;
 }
@@ -760,7 +795,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 
   // 2. prepare a Taylor extension for values outside the old grid
   GenerealOTBoundary bcSource(gridOld.grid());
-  TaylorBoundaryFunction solution_u_old_extended_global(bcSource, solution_u_Coarse_global);
+  TaylorBoundaryFunction<DiscreteGridFunctionCoarse> solution_u_old_extended_global(bcSource, solution_u_Coarse_global);
 
   // pass information of evaluation procedure to the local operators
   auto get_FEFunction = [&solution_u_old_extended_global]()-> const auto&{return solution_u_old_extended_global;};

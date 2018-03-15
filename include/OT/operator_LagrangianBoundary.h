@@ -15,6 +15,8 @@
 
 class Local_Operator_LagrangianBoundary{
 public:
+  using TaylorFunction = TaylorBoundaryFunction<SolverConfig::FETraitsSolver::DiscreteGridFunction>;
+
   Local_Operator_LagrangianBoundary(const OTBoundary& bc)
     : bc(bc), last_step_on_a_different_grid(false), oldSolutionCaller_(){}
 
@@ -141,7 +143,7 @@ private:
   const OTBoundary& bc;
 
   mutable bool last_step_on_a_different_grid;
-  std::function<const TaylorBoundaryFunction&()> oldSolutionCaller_;
+  std::function<const TaylorFunction&()> oldSolutionCaller_;
 
 };
 
