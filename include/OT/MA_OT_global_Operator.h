@@ -454,7 +454,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
     v(indexFixingGridEquation) = assembler.uAtX0() - assembler.u0AtX0();
   else
     v(indexFixingGridEquation) = assembler.uAtX0();
-  std::cerr << " u_0 - u = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation) << " = " << assembler.u0AtX0() << '-'  <<assembler.uAtX0() << std::endl;
+  std::cerr << " u - u_0 = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation) << " = " << assembler.u0AtX0() << '-'  <<assembler.uAtX0() << std::endl;
   v(indexFixingGridEquation) += lagrangianFixingPointDiscreteOperator.dot(w);
 
 #ifdef DEBUG
@@ -472,10 +472,6 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
 
   //assemble boundary terms
   solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xBoundary.head(V_h_size), tempV);
-  if(lop_ptr->last_step_on_a_different_grid)
-  {
-    solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xBoundary.head(V_h_size), tempV);
-  }
 
   Q_h_size = tempM.rows();
 
@@ -524,6 +520,24 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
   assert(lagrangianFixingPointDiscreteOperator.size()==this->solver_ptr->get_n_dofs_V_h() && " the initialisiation of the MA operator does not fit to the solver's grid!");
 
 
+  if (new_solution)
+  {
+    intermediateSolCounter++;
+    solver_ptr->update_solution(x);
+    solver_ptr->plot("intermediate", intermediateSolCounter);
+
+    typename SolverType::ExactData exactData;
+
+    std::cerr << std::scientific << std::setprecision(5)
+        << "   current L2 error is " << solver_ptr->calculate_L2_error(exactData.exact_solution()) << std::endl;
+    std::cerr << std::scientific << std::setprecision(3)
+        << "   current L2 grad error is " << solver_ptr->calculate_L2_error_gradient(exactData.exact_gradient()) << std::endl;
+    std::cerr << std::scientific << std::setprecision(3)
+        << "   current L2 grad boundary error is "
+        << solver_ptr->calculate_L2_error_gradient_boundary(exactData.exact_gradient()) << std::endl;
+  }
+
+
   //prepare clock to time computations
   auto start = std::chrono::steady_clock::now();
 
@@ -547,22 +561,6 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
   auto end = std::chrono::steady_clock::now();
   std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
 
-  if (new_solution)
-  {
-    intermediateSolCounter++;
-    solver_ptr->update_solution(x);
-    solver_ptr->plot("intermediate", intermediateSolCounter);
-
-    typename SolverType::ExactData exactData;
-
-    std::cerr << std::scientific << std::setprecision(5)
-        << "   current L2 error is " << solver_ptr->calculate_L2_error(exactData.exact_solution()) << std::endl;
-    std::cerr << std::scientific << std::setprecision(3)
-        << "   current L2 grad error is " << solver_ptr->calculate_L2_error_gradient(exactData.exact_gradient()) << std::endl;
-    std::cerr << std::scientific << std::setprecision(3)
-        << "   current L2 grad boundary error is "
-        << solver_ptr->calculate_L2_error_gradient_boundary(exactData.exact_gradient()) << std::endl;
-  }
 }
 
 

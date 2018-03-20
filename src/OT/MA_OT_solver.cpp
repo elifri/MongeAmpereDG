@@ -817,7 +817,7 @@ void MA_OT_solver::create_initial_guess()
 
   Config::ValueType res = 0;
 
-#define U_MID_EXACT
+//#define U_MID_EXACT
 
 //  assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), solution, res);
   assemblerLM1D_.assembleRhs(*(this->get_OT_operator().lopLMMidvalue), exactsol_u, res);
@@ -865,7 +865,7 @@ void MA_OT_solver::solve_nonlinear_system()
 
 #ifdef USE_DOGLEG
 
-  newtonOpts_.omega = 1.0;
+  newtonOpts_.omega = 0.25;
 //  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
 //  if (iterations>1)
 //    omega = 0.5;

@@ -12,6 +12,7 @@
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk/common.hh>
 
+#include "Optics/problem_data_optics.h"
 
 /*
 struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
@@ -43,7 +44,7 @@ MA_refractor_solver::MA_refractor_solver(GridHandlerType& gridHandler, const sha
 
 void MA_refractor_solver::create_initial_guess()
 {
-  if(initValueFromFile_)
+/*  if(initValueFromFile_)
   {
     init_from_file(initValue_);
   }
@@ -51,7 +52,11 @@ void MA_refractor_solver::create_initial_guess()
   {
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
     project([](Config::SpaceType x){return 1.12;}, solution);
-  }
+  }*/
+
+  ExactSolutionSimpleLens refLens("../Testing/oneParis.grid");
+  project(refLens.exact_solution(), solution);
+//  project(refLens.exact_solution(), refLens.exact_gradient(), solution);
 
   //set fixing size for refractor (fix distance to light source)
   Config::ValueType res = 0;
@@ -62,12 +67,7 @@ void MA_refractor_solver::create_initial_guess()
 
 void MA_refractor_solver::plot(const std::string& name) const
 {
-  std::cout << "write? " << writeVTK_ << " ";
-  std::cout << "plot written into ";
   plot(name, iterations);
-  std::string refrPovname(plotter.get_output_directory());
-  refrPovname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".pov";
-  std::cout << refrPovname << std::endl;
 }
 
 void MA_refractor_solver::plot(const std::string& name, int no) const

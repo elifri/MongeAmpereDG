@@ -181,7 +181,7 @@ struct ImageOperatorOTTraits:ImageOperatorTraits<Solver, LOP>{
 };
 
 template<typename Solver, typename LOP>
-struct RefractorOperatorTraits:ImageOperatorTraits<Solver, LOP>{
+struct OpticOperatorTraits:ImageOperatorTraits<Solver, LOP>{
   using FunctionTypeX = typename ImageOperatorTraits<Solver, LOP>::FunctionTypeX;
   using FunctionTypeY = typename ImageOperatorTraits<Solver, LOP>::FunctionTypeY;
   template<typename OpticalSetting>

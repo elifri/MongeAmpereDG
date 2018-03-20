@@ -16,9 +16,9 @@ set(PureSolverLibs ${PureSolverLibs} ${IOLibs})
 #target_link_libraries(dune_mongeampere ${PureSolverLibs} ${SNES_LIBRARY} problemData Solver_Config ImageFunction utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
 #target_link_dune_default_libraries("dune_mongeampere")
 
-#add_executable("dune_mongeampere_reflector" dune_mongeampere_reflector.cpp)
-#target_link_libraries(dune_mongeampere_reflector MA_reflector_solver ${PureSolverLibs} ${SNES_LIBRARY} EllipsoidMethod ${MirrorProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
-#target_link_dune_default_libraries("dune_mongeampere_reflector")
+add_executable("dune_mongeampere_reflector" dune_mongeampere_reflector.cpp)
+target_link_libraries(dune_mongeampere_reflector MA_reflector_solver MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} EllipsoidMethod ${MirrorProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
+target_link_dune_default_libraries("dune_mongeampere_reflector")
 
 add_executable("dune_mongeampere_refractor" dune_mongeampere_refractor.cpp)
 target_link_libraries(dune_mongeampere_refractor MA_refractor_solver MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${LensProblemLibs} Solver_Config utils ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})

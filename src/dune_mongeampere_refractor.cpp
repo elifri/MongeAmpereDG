@@ -92,12 +92,12 @@ try {
   // Generate the grid
   // ////////////////////////////////
 
-	std::cout << " init grid handler from file " << opticalSetting.gridinputFile << std::endl;
-#ifdef BSPLINES
+//	std::cout << " init grid handler from file " << opticalSetting.gridinputFile << std::endl;
+//#ifdef BSPLINES
   GridHandler<Config::GridType, true> gridHandler(opticalSetting,SolverConfig::startlevel);
-#else
-  GridHandler<Config::GridType> gridHandler(opticalSetting,SolverConfig::startlevel);
-#endif
+//#else
+//  GridHandler<Config::GridType> gridHandler(opticalSetting,SolverConfig::startlevel);
+//#endif
 
   // Output grid
   VTKWriter<Config::GridView> vtkWriter(gridHandler.gridView());
