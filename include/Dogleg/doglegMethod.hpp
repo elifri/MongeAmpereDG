@@ -24,6 +24,8 @@
 #include "Dogleg/utils.hpp"
 #include "matlab_export.hpp"
 
+#include "progressbar.hpp"
+
 //for timer
 #include <ctime>
 #include <ratio>
@@ -119,8 +121,12 @@ void make_FD_Jacobian(
 	estimated_J.resize(n,n);
 	estimated_J.setZero();
 
+	ProgressBar progressbar;
+	progressbar.start();
+
 	for (int j = 0; j < n; j++)
 	{
+    progressbar.status(j,n);
 		Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(n, j);
 		f.evaluate(x-h*unit_j, f_minus, x-h*unit_j, false);
 		f.evaluate(x+h*unit_j, f_plus, x+h*unit_j, false);
@@ -137,6 +143,7 @@ void make_FD_Jacobian(
 			}
 		}
 	}
+	std::cout << " needed " << progressbar.stop()<< " to set up Jacobian" << std::endl;
 }
 
 
