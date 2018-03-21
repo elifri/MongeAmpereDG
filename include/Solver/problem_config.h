@@ -9,7 +9,6 @@
 #define INCLUDE_OT_PROBLEM_CONFIG_H_
 
 #include "MAconfig.h"
-#include "OT/problem_data_OT.h"
 
 #ifdef USE_C0_PENALTY
   #include "operator_MA_OT_Brenner.h"
@@ -21,6 +20,9 @@
     #include "OT/operator_MA_OT_Linearisation.hpp"
   #endif
 #endif
+
+#include "OT/operator_LagrangianBoundary.h"
+#include "Optics/operator_LagrangianBoundary_refl.h"
 
 class MA_solver;
 class MA_OT_solver;
@@ -137,6 +139,7 @@ struct ImageOperatorTraits{
   using LocalOperatorType = LOP;
 
   using BoundaryType = GenerealOTBoundary;
+  using LocalBoundaryOperatorType = Local_Operator_LagrangianBoundary;
 
   using FunctionTypeX = ImageFunction;
   using FunctionTypeY = ImageFunction;
@@ -180,8 +183,10 @@ struct ImageOperatorOTTraits:ImageOperatorTraits<Solver, LOP>{
   }
 };
 
-template<typename Solver, typename LOP>
+template<typename Solver, typename LOP, typename LOPLagrangianBoundary>
 struct OpticOperatorTraits:ImageOperatorTraits<Solver, LOP>{
+  using LocalBoundaryOperatorType = LOPLagrangianBoundary;
+
   using FunctionTypeX = typename ImageOperatorTraits<Solver, LOP>::FunctionTypeX;
   using FunctionTypeY = typename ImageOperatorTraits<Solver, LOP>::FunctionTypeY;
   template<typename OpticalSetting>
@@ -189,6 +194,12 @@ struct OpticOperatorTraits:ImageOperatorTraits<Solver, LOP>{
   {
     return new LOP(setting, bc, f, g);
   }
+
+  static LOPLagrangianBoundary* construct_lop_LBoundary(const OpticalSetting& setting, const OTBoundary& bc)
+  {
+    return new LOPLagrangianBoundary(setting, bc);
+  }
+
 };
 
 

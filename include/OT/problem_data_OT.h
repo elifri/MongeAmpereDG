@@ -44,22 +44,6 @@ public:
     : gradient_u_old(&gradUOld), //geometrySetting(geometrySetting),
       N_(n){std::cout << " N_Y = N " << n << std::endl;}
 
-  ///return the projection of the last iteration's solution (onto the desired boundary)
-/*  template<class Element>
-  Config::ValueType phi(const Element& element, const Config::DomainType& xLocal, const FieldVector<double, Config::dim> &normal) const
-  {
-    //get last step's gradient
-    assert(gradient_u_old != NULL);
-    (*gradient_u_old)->bind(element);
-
-    Config::SpaceType2d gradu = (**gradient_u_old)(xLocal);
-
-    //find projection
-    Config::ValueType phi_value;
-    phi(gradu, normal, phi_value);
-    return phi_value;
-  }*/
-
   Config::ValueType H(const Config::SpaceType2d& transportedX) const
   {
 

@@ -39,14 +39,18 @@ public:
   using LocalOperatorType = typename OperatorTraits::LocalOperatorType;
 
   using BoundaryType = typename OperatorTraits::BoundaryType;
+  using LocalOperatorLagrangianBoundaryType = typename OperatorTraits::LocalBoundaryOperatorType;
+
   using FunctionTypeX = typename OperatorTraits::FunctionTypeX;
   using FunctionTypeY = typename OperatorTraits::FunctionTypeY;
 
+/*
 #ifdef USE_COARSE_Q_H
   using LocalOperatorLagrangianBoundaryType = Local_Operator_LagrangianBoundaryCoarse;
 #else
   using LocalOperatorLagrangianBoundaryType = Local_Operator_LagrangianBoundary;
 #endif
+*/
 
 
   MA_OT_Operator():solver_ptr(NULL), lop_ptr(), intermediateSolCounter(){}
@@ -75,7 +79,7 @@ public:
         g_(OperatorTraits::construct_g(solver, setting)),
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
         lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-        lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
+        lopLMBoundary(OperatorTraits::construct_lop_LBoundary(setting,get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
         fixingPoint{0.3,0},
         intermediateSolCounter()
     {
