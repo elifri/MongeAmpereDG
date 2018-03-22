@@ -31,10 +31,10 @@ public:
   Local_Operator_LagrangianBoundary_refl(const OpticalSetting &opticalSetting, const OTBoundary& bc)
     : opticalSetting(opticalSetting), bc(bc), last_step_on_a_different_grid(false), oldSolutionCaller_(){}
 
-  template<class Intersection, class LocalViewV, class LocalViewQ, class DenseMatrixType, class VectorType>
+  template<class Intersection, class LocalViewV, class LocalViewQ, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalViewV &localViewV, const LocalViewQ &localViewQ,
-      DenseMatrixType& m, const VectorType& x, VectorType& v, int tag=0) const {
+      const VectorType& x, VectorType& v, int tag=2) const {
 
     const int dim = Intersection::dimension;
     const int dimw = Intersection::dimensionworld;
@@ -142,6 +142,18 @@ public:
 //          std::cerr << " add to v_adolc(" << j << ") " << (penalty_weight * ((T_value * normal) - phi_value)* referenceFunctionValues[j] * factor).value() << " -> " << v_adolc(j).value() << std::endl;
       }
     }
+
+    // select dependent variables
+    for (size_t i = 0; i < size_q; i++)
+      v_adolc[i] >>= v[i];
+    trace_off();
+/*    std::size_t stats[11];
+    tapestats(tag, stats);
+    std::cerr << "numer of independents " << stats[0] << std::endl
+      << "numer of deptendes " << stats[1] << std::endl
+      << "numer of live activ var " << stats[2] << std::endl
+      << "numer of size of value stack " << stats[3] << std::endl
+      << "numer of buffer size " << stats[4] << std::endl;*/
   }
 
   void set_evaluation_of_u_old_to_different_grid(){  last_step_on_a_different_grid = true;}

@@ -88,6 +88,8 @@ try {
 
   std::cout << " Output files in folder " << config.plotOutputDirectory << "/" << config.outputPrefix <<"..." << std::endl;
 
+  std::cout << " Output files in folder " << config.plotOutputDirectory << "/" << config.outputPrefix <<"..." << std::endl;
+
   // ////////////////////////////////
   // Generate the grid
   // ////////////////////////////////

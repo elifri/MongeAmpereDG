@@ -521,24 +521,26 @@ public:
   }
 
 
-private:
+protected:
   //helper to assemble jacobians via automatic differentiation
 
   /*
  * implements a local integral via the evaluation from an adolc tape
- * @param localView     localView bound to the current context
+ * @param localViewV    localView bound to the current context
+ * @param localViewQ    localView bound to the test function context
  * @param x             local solution coefficients
  * @param v             local residual (to be returned)
  * @param tag           the tag of the adolc tape
  */
-  template<class LocalView, class VectorType>
+  template<class LocalViewV, class LocalViewQ, class VectorType>
   inline
-  static bool assemble_boundary_integral_term(const LocalView& localView,
+  static bool assemble_boundary_integral_term(const LocalViewV& localViewV, const LocalViewQ& localViewQ,
       const VectorType &x, VectorType& v, int tag);
 
   template<typename LocalOperatorType, typename IntersectionType, class LocalView, class VectorType, class MatrixType>
   inline
-  void assemble_jacobianFD_boundary_term(const LocalOperatorType lop, const IntersectionType& is, const LocalView& localView,
+  void assemble_jacobianFD_boundary_term(const LocalOperatorType lop, const IntersectionType& is,
+      const LocalView& localView,
       const VectorType &x, MatrixType& m, int tag) const;
 
   /*
@@ -555,13 +557,14 @@ private:
 
   /*
  * implements a local integral
- * @param localView     localView bound to the current context
+ * @param localViewV    localView bound to the current context
+ * @param localViewQ    localView bound to the test function context
  * @param x              local solution coefficients
  * @param v          local residual (to be returned)
  * @param tag           the tag of the adolc tape
  */
-  template<class LocalView, class VectorType, class MatrixType>
-  static bool assemble_jacobian_integral(const LocalView& localView,
+  template<class LocalViewV, class LocalViewQ, class VectorType, class MatrixType>
+  static bool assemble_jacobian_integral(const LocalViewV& localViewV, const LocalViewQ& localViewQ,
       const VectorType &x, MatrixType& m, int tag);
 
   /*
@@ -1059,14 +1062,14 @@ void Assembler<FETraits>::add_local_coefficients_matrix(const LocalIndexSetRow &
 #ifdef HAVE_ADOLC
 
 template<typename FETraits>
-template<class LocalView, class VectorType>
+template<class LocalViewV, class LocalViewQ, class VectorType>
 inline
-bool Assembler<FETraits>::assemble_boundary_integral_term(const LocalView& localView,
+bool Assembler<FETraits>::assemble_boundary_integral_term(const LocalViewV& localViewV, const LocalViewQ& localViewQ,
     const VectorType &x, VectorType& v, int tag) {
   //assuming galerkin ansatz = test space
 
-  assert((unsigned int) x.size() == localView.size());
-  assert((unsigned int) v.size() == localView.size());
+  assert((unsigned int) x.size() == localViewV.size());
+  assert((unsigned int) v.size() == localViewQ.size());
 
   assert(reuseAdolCTape);
 
@@ -1090,33 +1093,33 @@ bool Assembler<FETraits>::assemble_boundary_integral_term(const LocalView& local
 }
 
 template<typename FETraits>
-template<class LocalView, class VectorType, class MatrixType>
+template<class LocalViewV, class LocalViewQ, class VectorType, class MatrixType>
 inline
-bool Assembler<FETraits>::assemble_jacobian_integral(const LocalView& localView,
+bool Assembler<FETraits>::assemble_jacobian_integral(const LocalViewV& localViewV, const LocalViewQ& localViewQ,
     const VectorType &x, MatrixType& m, int tag) {
   //assuming galerkin ansatz = test space
 
-  assert((unsigned int) x.size() == localView.size());
-  assert((unsigned int) m.rows() == localView.size());
-  assert((unsigned int) m.cols() == localView.size());
+  assert((unsigned int) x.size() == localViewV.size());
+  assert((unsigned int) m.rows() == localViewQ.size());
+  assert((unsigned int) m.cols() == localViewV.size());
 
-  double** out = new double*[x.size()];
-  for (int i = 0; i < x.size(); i++)
-    out[i] = new double[x.size()];
-  int ierr = jacobian(tag, x.size(), x.size(), x.data(), out);
+  double** out = new double*[m.rows()];
+  for (int i = 0; i < m.rows(); i++)
+    out[i] = new double[m.cols()];
+  int ierr = jacobian(tag, m.rows(), m.cols(), x.data(), out);
 
 //  std::cerr << "jacobian ierr was " << ierr << std::endl;
   if(ierr <3)
     return false;
 
 //TODO any better way to initialise matrix?
-  for (int i = 0; i < x.size(); i++)
+  for (int i = 0; i < m.rows(); i++)
   {
-    for (int j = 0; j < x.size(); j++)
+    for (int j = 0; j < m.cols(); j++)
       m(i, j) += out[i][j];
   }
 
-  for (int i = 0; i < x.size(); i++)
+  for (int i = 0; i < m.rows(); i++)
     delete[] out[i];
 
   delete[] out;
@@ -1343,9 +1346,6 @@ void Assembler<FETraits>::assemble_jacobianFD_boundary_term(const LocalOperatorT
     const VectorType &x, MatrixType& m, int tag) const{
   //assuming galerkin ansatz = test space
 
-  auto localIndexSet = basis_->indexSet().localIndexSet();
-  localIndexSet.bind(localView);
-
   assert((unsigned int) x.size() == localView.size());
   assert((unsigned int) m.rows() == localView.size());
   assert((unsigned int) m.cols() == localView.size());
@@ -1508,13 +1508,13 @@ void Assembler<FETraits>::assemble_boundary_termHelper(const LocalOperatorType &
   if (!tape2initialised || !reuseAdolCTape || true) //check if tape has record
   {
     lop.assemble_boundary_face_term(is,localView, xLocal, vLocal, 2);
-    tape1initialised = true;
+    tape2initialised = true;
   }
   else
   {
     //try to construct function with last tape
     Config::VectorType currentBoundaryVector =  Config::VectorType::Zero(vLocal.size());
-    bool tapeReconstrutionSuccessfull = assemble_boundary_integral_term(localView, xLocal, currentBoundaryVector, 2);
+    bool tapeReconstrutionSuccessfull = assemble_boundary_integral_term(localView, localView, xLocal, currentBoundaryVector, 2);
 //              std::cerr << "Tape Reconstruction was successfull ? " << tapeReconstrutionSuccessfull << std::endl;
     if (!tapeReconstrutionSuccessfull)
     {
@@ -1536,13 +1536,13 @@ void Assembler<FETraits>::assemble_boundary_termHelper(const LocalOperatorType &
   }
 
   //tryp to recover derivation from last tape
-  bool derivationSuccessful = assemble_jacobian_integral(localView, xLocal, mLocal, 2);
+  bool derivationSuccessful = assemble_jacobian_integral(localView, localView, xLocal, mLocal, 2);
 //            std::cerr << "Boundary Derivation was successfull ? " << derivationSuccessful << std::endl;
   if (!derivationSuccessful)
   {
     Config::VectorType currentBoundaryVector =  Config::VectorType::Zero(vLocal.size());
     lop.assemble_boundary_face_term(is,localView, xLocal, currentBoundaryVector, 2);
-    derivationSuccessful = assemble_jacobian_integral(localView, xLocal, mLocal, 2);
+    derivationSuccessful = assemble_jacobian_integral(localView, localView, xLocal, mLocal, 2);
 //              assert(derivationSuccessful);
     if (!derivationSuccessful)
     {
@@ -1585,7 +1585,7 @@ void Assembler<FETraits>::assemble_cell_termHelper(const LocalOperatorType &lop,
   }
 
   //tryp to recover derivation from last tape
-  bool derivationSuccessful = assemble_jacobian_integral(localView, xLocal, mLocal, 0);
+  bool derivationSuccessful = assemble_jacobian_integral(localView, localView, xLocal, mLocal, 0);
 //        std::cerr << "Cell Derivation was successfull ? " << derivationSuccessful << std::endl;
   if (!derivationSuccessful )
   {
@@ -1595,7 +1595,7 @@ void Assembler<FETraits>::assemble_cell_termHelper(const LocalOperatorType &lop,
 
     //make sure unification term is not added twice
     lop.assemble_cell_term(localView, xLocal, vLocal, 0);
-    derivationSuccessful = assemble_jacobian_integral(localView, xLocal, mLocal, 0);
+    derivationSuccessful = assemble_jacobian_integral(localView, localView, xLocal, mLocal, 0);
     ImageFunction::use_adouble_image_evaluation = true;
 //    std::cerr << "Cell Derivation was successfull ? " << derivationSuccessful << std::endl;
 

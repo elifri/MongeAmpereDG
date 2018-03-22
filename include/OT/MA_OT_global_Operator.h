@@ -475,7 +475,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
   tempV.setZero(Q_h_size);
 
   //assemble boundary terms
-  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xBoundary.head(V_h_size), tempV);
+  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix_with_automatic_differentiation(*lopLMBoundary, tempM, xBoundary.head(V_h_size), tempV);
 
   Q_h_size = tempM.rows();
 

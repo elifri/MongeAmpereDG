@@ -89,6 +89,8 @@ try {
   OpticalSetting opticalSetting;
   opticalSetting.read_configfile(configFileOpticalSetting);
 
+  std::cout << " Output files in folder " << config.plotOutputDirectory << "/" << config.outputPrefix <<"..." << std::endl;
+
   // ////////////////////////////////
 // Generate the grid
 // ////////////////////////////////
