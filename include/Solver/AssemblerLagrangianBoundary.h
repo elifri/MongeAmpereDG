@@ -245,7 +245,7 @@ void AssemblerLagrangianMultiplierBoundary::assemble_boundary_termHelper(const L
 
   //tryp to recover derivation from last tape
   bool derivationSuccessful = assemble_jacobian_integral(localViewV, localViewQ, xLocal, mLocal, 2);
-            std::cerr << "Boundary Derivation was successfull ? " << derivationSuccessful << std::endl;
+//            std::cerr << "Boundary Derivation was successfull ? " << derivationSuccessful << std::endl;
   if (!derivationSuccessful)
   {
     Config::VectorType currentBoundaryVector =  Config::VectorType::Zero(vLocal.size());

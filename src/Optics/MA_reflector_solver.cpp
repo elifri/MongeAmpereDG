@@ -44,10 +44,10 @@ void MA_reflector_solver::create_initial_guess()
 //  project_labouriousC1([&ellipsoidMethod](Config::SpaceType x){return ellipsoidMethod.evaluate(x);}, solution);
 //  ellipsoidMethod.write_output();
 
-//    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exact_reflector_projection_small.grid");
-  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimple.grid");
-//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRoentgen.grid");
-//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/exactReflectorProjectionSimpleRose.grid");
+//    Rectangular_mesh_interpolator rectangular_interpolator("../inputData/Optic/exact_reflector_projection_small.grid");
+  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/Optic/exactReflectorProjectionSimple.grid");
+//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/Optic/exactReflectorProjectionSimpleRoentgen.grid");
+//  Rectangular_mesh_interpolator rectangular_interpolator("../inputData/Optic/exactReflectorProjectionSimpleRose.grid");
 //
   assert(is_close(rectangular_interpolator.x_min, setting_.lowerLeft[0], 1e-12));
   assert(is_close(rectangular_interpolator.y_min, setting_.lowerLeft[1], 1e-12));

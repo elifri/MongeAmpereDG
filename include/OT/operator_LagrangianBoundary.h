@@ -25,6 +25,10 @@ public:
       const LocalViewV &localViewV, const LocalViewQ &localViewQ,
       DenseMatrixType& m, const VectorType& x, VectorType& v) const {
 
+    assert((unsigned int) x.size() == localViewV.size());
+    assert((unsigned int) v.size() == localViewQ.size());
+
+
     const int dim = Intersection::dimension;
     const int dimw = Intersection::dimensionworld;
 
@@ -97,7 +101,7 @@ public:
       //-------calculate integral--------
       auto signedDistance = bc.H(gradu);
       auto signedDistanceDerivative = bc.derivativeH(gradu);
-//      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
+      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
