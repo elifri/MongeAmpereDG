@@ -44,7 +44,7 @@ MA_refractor_solver::MA_refractor_solver(GridHandlerType& gridHandler, const sha
 
 void MA_refractor_solver::create_initial_guess()
 {
-/*  if(initValueFromFile_)
+  if(initValueFromFile_)
   {
     init_from_file(initValue_);
   }
@@ -52,10 +52,10 @@ void MA_refractor_solver::create_initial_guess()
   {
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
     project([](Config::SpaceType x){return 1.12;}, solution);
-  }*/
+  }
 
-  ExactSolutionSimpleLens refLens("../Testing/oneParis.grid");
-  project(refLens.exact_solution(), solution);
+//  ExactSolutionSimpleLens refLens("../Testing/oneParis.grid");
+//  project(refLens.exact_solution(), solution);
 //  project(refLens.exact_solution(), refLens.exact_gradient(), solution);
 
   //set fixing size for refractor (fix distance to light source)

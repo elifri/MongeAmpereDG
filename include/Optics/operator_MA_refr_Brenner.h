@@ -109,24 +109,24 @@ public:
       }
 
   template<class value_type>
-  inline
-  adouble Phi(const value_type& s) const
+  static
+  adouble Phi(const value_type& s)
   {
     if (kappa_*kappa_ + s*s -1 < 0) return s;
     return s - sqrt(kappa_*kappa_ + s*s -1);
   }
 
   template<class value_type>
-  inline
-  adouble DPhi(const value_type& s) const
+  static
+  adouble DPhi(const value_type& s)
   {
 //    std::cerr  << " 1/kappa ? "<< s/sqrt(kappa_*kappa_ + s*s -1) << " 1/kappa " << 1./kappa_ << endl;
     if (kappa_*kappa_ + s*s -1 < 0) return 1;
     return 1. - s/sqrt(kappa_*kappa_ + s*s -1);
   }
   template<class value_type>
-  inline
-  value_type F(const Config::SpaceType &x, const value_type &u, const FieldVector<value_type,2> &p) const
+  static
+  value_type F(const Config::SpaceType &x, const value_type &u, const FieldVector<value_type,2> &p)
   {
     value_type G = sqrt(sqr(u) + (p*p) - sqr((p * x)));
 //    std::cout << " G " << G.value();
@@ -135,9 +135,9 @@ public:
   }
 
   template<class value_type>
-  inline
+  static
   void calc_F_and_derivatives(const Config::SpaceType &x, const value_type &u, const FieldVector<value_type,2> &p,
-                              value_type& F, FieldVector<value_type,2>& DxF, value_type& DuF, FieldVector<value_type,2>& DpF) const
+                              value_type& F, FieldVector<value_type,2>& DxF, value_type& DuF, FieldVector<value_type,2>& DpF)
   {
     value_type G = sqrt(sqr(u) + (p*p) - sqr((p * x)));
 

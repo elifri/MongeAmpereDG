@@ -19,6 +19,7 @@
   #include "Solver/AssemblerLagrangianBoundary.h"
 #endif
 #include "Optics/operator_LagrangianBoundary_refl.h"
+#include "Optics/operator_LagrangianBoundary_refr.h"
 
 #include "MA_OT_global_Operator.h"
 #include "Operator/GlobalOperatorManufactorSolution.h"
@@ -42,8 +43,8 @@ public:
   //using ProblemTraits = ProblemSquareToSquareOperatorTraits<SolverType,LOP>;
 //  using ProblemTraits = ConstantOperatorTraits<MA_OT_solver,Local_MA_OT_Operator>;
 //  using ProblemTraits = ImageOperatorOTTraits<MA_OT_solver, Local_MA_OT_Operator>;
-//  using ProblemTraits = OpticOperatorTraits<MA_OT_solver, Local_Operator_MA_refr_Brenner, Local_Operator_LagrangianBoundary_refr>;
-  using ProblemTraits = OpticOperatorTraits<MA_OT_solver, Local_Operator_MA_refl_Brenner, Local_Operator_LagrangianBoundary_refl>;
+  using ProblemTraits = OpticOperatorTraits<MA_OT_solver, Local_Operator_MA_refr_Brenner, Local_Operator_LagrangianBoundary_refr>;
+//  using ProblemTraits = OpticOperatorTraits<MA_OT_solver, Local_Operator_MA_refl_Brenner, Local_Operator_LagrangianBoundary_refl>;
 
   //define exact solution
   using ExactData = ExactSolutionSquareToSquareOT;

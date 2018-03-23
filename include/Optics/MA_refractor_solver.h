@@ -20,7 +20,7 @@ public:
   //select local operator
   using Local_Refractor_OperatorType = Local_Operator_MA_refr_Brenner;
 
-  using ProblemTraits = OpticOperatorTraits<MA_OT_solver, Local_Refractor_OperatorType>;
+  using ProblemTraits = OpticOperatorTraits<MA_OT_solver, Local_Refractor_OperatorType, Local_Operator_LagrangianBoundary_refr>;
 
 #ifndef USE_ANALYTIC_DERIVATION
   using OperatorType = MA_OT_Operator<ProblemTraits>;
