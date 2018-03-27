@@ -524,7 +524,7 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
   assert(lagrangianFixingPointDiscreteOperator.size()==this->solver_ptr->get_n_dofs_V_h() && " the initialisiation of the MA operator does not fit to the solver's grid!");
 
 
-  if (new_solution)
+  if (new_solution && false)
   {
     intermediateSolCounter++;
     solver_ptr->update_solution(x);

@@ -110,8 +110,6 @@ public:
           referenceFunctionValuesQ);
 
       //-------calculate integral--------
-//      auto phi_value = rhs.phi(element, quadPos, x_value, normal, opticalSetting->z_3);
-
       adouble a_tilde_value = a_tilde(u_value, gradu, x_value);
       FieldVector<adouble, 3> grad_hat = { gradu[0], gradu[1], 0 };
 
@@ -119,17 +117,6 @@ public:
       z_0 *= (2.0 / a_tilde_value);
 
       FieldVector<adouble, Config::dim> T_value = T(x_value, u_value, z_0, opticalSetting.z_3);
-//      std::cerr << "x local "<< x.transpose() << std::endl;
-//      std::cerr << "gradients "; for (const auto& grad : gradients) std::cerr << grad << "   "; std::cerr << std::endl;
-
-
-//          std::cerr << "T " << (T_value*normal) << " thought it -> " << phi_value_initial << " T " << T_value[0].value() << " " << T_value[1].value() << " normal " << normal[0] << " " << normal[1]<< std::endl;
-//      std::cerr << "x " << x_value
-//                << " gradu " << gradu[0].value() << " " << gradu[1].value()
-//                << " T " << T_value[0].value() << " " << T_value[1].value()
-//                << " T*n " << (T_value * normal).value()
-//                << " phi " << phi_value << endl;
-//      std::cerr  << T_value[0].value() << " " << T_value[1].value()  << std::endl;
 
       auto signedDistance = bc.H(T_value);
 
@@ -139,7 +126,6 @@ public:
       for (size_t j = 0; j < size_q; j++)
       {
           v_adolc(j) += signedDistance * (referenceFunctionValuesQ[j]) * factor;
-//          std::cerr << " add to v_adolc(" << j << ") " << (penalty_weight * ((T_value * normal) - phi_value)* referenceFunctionValues[j] * factor).value() << " -> " << v_adolc(j).value() << std::endl;
       }
     }
 

@@ -865,10 +865,9 @@ void MA_OT_solver::solve_nonlinear_system()
 
 #ifdef USE_DOGLEG
 
-  newtonOpts_.omega = 0.25;
-//  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
-//  if (iterations>1)
-//    omega = 0.5;
+  newtonOpts_.omega = 1.0;
+
+  //  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
   newtonMethod(get_operator(), newtonOpts_, solution, evaluateJacobianSimultaneously_);
 
 #endif
