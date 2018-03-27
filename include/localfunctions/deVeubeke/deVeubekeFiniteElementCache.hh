@@ -56,12 +56,12 @@ bool operator<(const Dune::FieldVector<value_type, 2> & v, const Dune::FieldVect
   {
   protected:
 //    typedef typename FixedOrderLocalBasisTraits<typename P0LocalFiniteElement<D,R,dim>::Traits::LocalBasisType::Traits,diffOrder>::Traits T;
-    typedef deVeubekeFiniteElement<Geometry, D, R> FE;
-    typedef typename std::map<Geometry,FE*, GeometryCompare<Geometry>> FEMap;
+    using  FE = deVeubekeFiniteElement<Geometry, D, R>;
+    using FEMap = typename std::map<Geometry,FE*, GeometryCompare<Geometry>>;
 
   public:
     /** \brief Type of the finite elements stored in this cache */
-    typedef FE FiniteElementType;
+    using FiniteElementType = FE;
 
     /** \brief Default constructor */
     deVeubekeFiniteElementCache() {}

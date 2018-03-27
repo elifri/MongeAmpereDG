@@ -18,10 +18,10 @@
 
 
 #define HAVE_ADOLC 1
+#define USE_AUTOMATIC_DIFFERENTIATION 0
 
-#define USE_ANALYTIC_DERIVATION
 
-#if defined(C0Element) || !defined(USE_ANALYTIC_DERIVATION)
+#ifndef C1Element
   #ifndef HAVE_ADOLC
    static_assert(false,"C0 Elements work only with automatic differentiation via ADOLC");
   #endif
@@ -34,11 +34,12 @@
 #endif
 
 #include "Dogleg/doglegMethod.hpp"
+#include "Dogleg/newtonMethod.hpp"
 
 #ifdef HAVE_ADOLC
 namespace Dune{
-template<> struct PromotionTraits<adouble, double> {typedef adouble PromotedType; };
-//template<> struct PromotionTraits<int,int>   { typedef int PromotedType; };
+template<> struct PromotionTraits<adouble, double> {using PromotedType = adouble; };
+//template<> struct PromotionTraits<int,int>   { using PromotedType = int; };
 
 template<>
 template<typename Func>
@@ -61,6 +62,7 @@ enum ProblemType
 };
 
 std::ostream& operator <<(std::ostream &output, const ProblemType &p);
+
 
 struct PovRayOpts
 {
@@ -103,7 +105,7 @@ struct PovRayOpts
 
 struct SolverConfig{
 
-  typedef Config::ValueType ValueType;
+  using ValueType = Config::ValueType;
 
   void read_configfile(std::string &configFile);
 
@@ -120,19 +122,21 @@ struct SolverConfig{
 #ifdef USE_DOGLEG
   DogLeg_optionstype doglegOpts;
 #endif
+  NewtonOptionsType newtonOpts;
 
   bool writeVTK;
 
   bool evalJacSimultaneously;
 
   int refinement;
+  int cartesianGridN;
 
   static bool Dirichlet;
 
-	enum{childdim = 4, degree = 2, degreeHessian = 1};
+  enum{childdim = 4, degree = 2, degreeHessian = 1};
 
-	static int startlevel;
-	static int nonlinear_steps;
+  static int startlevel;
+  static int nonlinear_steps;
 
   //////////////////////////////////////////////////////////
   ///---------------select Finite Element----------------///
@@ -141,30 +145,41 @@ struct SolverConfig{
 
   //-------select lagrangian element----------
 #ifdef	USE_C0_PENALTY
-	typedef LagrangeC0Traits<Config::GridView, SolverConfig::degree> FETraitsSolver;
+	using FETraitsSolver = LagrangeC0Traits<Config::GridView, SolverConfig::degree>;
 #endif
   //-------select DeVeubeke-------------
-	//  typedef deVeubekeTraits FETraitsSolver;
+	//  using FETraitsSolver = deVeubekeTraits;
 
 	//-------select PS12 S-Splines
 #ifdef USE_PS12
-  typedef PS12SplitTraits<Config::GridView> FETraitsSolver;
+  using FETraitsSolver = PS12SplitTraits<Config::GridView>;
 #endif
 
 	//-------select BSplines------------------
 #ifdef BSPLINES
-	typedef BSplineTraits<Config::GridView, SolverConfig::degree> FETraitsSolver;
+	using FETraitsSolver = BSplineTraits<Config::GridView, SolverConfig::degree>;
 #endif
   //------select Mixed element-----------------
 #ifdef USE_MIXED_ELEMENT
-	typedef Pk2DLocalFiniteElement<ValueType, ValueType, degree> LocalFiniteElementuType;
-  typedef Pk2DLocalFiniteElement<ValueType, ValueType, degreeHessian> LocalFiniteElementHessianSingleType;
-////  #define C0Element
-  typedef MixedTraits<Config::GridView, degree, degreeHessian> FETraitsSolver;
+	using LocalFiniteElementuType = Pk2DLocalFiniteElement<ValueType, ValueType, degree>;
+  using LocalFiniteElementHessianSingleType = Pk2DLocalFiniteElement<ValueType, ValueType, degreeHessian>;
+  using FETraitsSolver = MixedTraits<Config::GridView, degree, degreeHessian>;
 #endif
 
-	typedef FieldVector<ValueType,1> RangeType;
-  typedef FieldMatrix<ValueType,2,2> HessianRangeType;
+
+  /////-------select langrangian boundary element ----------------
+//#define USE_COARSE_Q_H
+
+#ifdef USE_COARSE_Q_H
+  using FETraitsSolverQ = LagrangeC0BoundaryTraits<Config::LevelGridView, SolverConfig::degree>;
+#else
+  using FETraitsSolverQ = LagrangeC0BoundaryTraits<Config::GridView, SolverConfig::degree>;
+#endif
+//  using FETraitsSolverQ = LagrangeC0FineBoundaryTraits<Config::GridView, SolverConfig::degree>;
+
+
+	using RangeType = FieldVector<ValueType,1>;
+  using HessianRangeType = FieldMatrix<ValueType,2,2>;
 
 	static const bool require_skeleton_two_sided = false; ///if enabled every face is assembled twice
 
@@ -190,6 +205,7 @@ struct SolverConfig{
     static constexpr double beta = 2.0 - 0.5*Config::dim;  // 2D => 1, 3D => 0.5
 #endif
 
+
 };
 
 struct GeometrySetting{
@@ -201,10 +217,13 @@ struct GeometrySetting{
   static Config::SpaceType lowerLeftTarget; ///lower left of target grid (target must be in x-y-plane)
   static Config::SpaceType upperRightTarget; ///upper left of target grid (target must be in x-y-plane)
 
-  static std::string gridinputFile;
-  static std::string gridinputTargetFile;
-
   static SolverConfig::ValueType z_3; /// third coordinate of target grid (target must be in x-y-plane)
+
+  static std::string gridinputFile; ///location of the grid file specifying the grid for the input area $\Omega$
+  static std::string plotGridinputFile; ///location of the grid file specifying a grid which is translated under the solution
+  static std::string gridTargetFile; ///location of the grid file specifying the grid for the target area $\Sigma$
+  static int boundaryN; ///number of directions to simulate boundary
+
 };
 
 struct OpticalSetting : GeometrySetting{

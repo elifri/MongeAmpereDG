@@ -47,7 +47,7 @@ FieldMatrix<value_type, 2, 2> cofactor(const FieldMatrix<value_type, 2, 2>& A)
 class Local_Operator_MA_OT {
 
 public:
-  typedef DensityFunction Function;
+  using Function = DensityFunction;
 
   Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
     rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false), sign(1.0) {
@@ -62,12 +62,12 @@ public:
    */
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag, const double &scaling_factor, double &last_equation) const {
+      VectorType& v, const int tag) const {
 
     assert(opticalSetting);
 
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     const int dim = Element::dimension;
@@ -81,12 +81,11 @@ public:
     // Get set of shape functions for this element
     const auto& localFiniteElement = localView.tree().finiteElement();
 
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension> FEHessianType;
+    using RangeType = typename ConstElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension>;
 
     const int size = localView.size();
 
@@ -99,18 +98,15 @@ public:
     //init variables for automatic differentiation
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(size);
-    adouble scaling_factor_adolc, last_equation_adolc;
 
     for (int i = 0; i < size; i++)
       v_adolc[i] <<= v[i];
-    last_equation_adolc <<= last_equation;
 
     trace_on(tag);
 
     //init independent variables
     for (int i = 0; i < size; i++)
       x_adolc[i] <<= x[i];
-    scaling_factor_adolc <<= scaling_factor;
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -177,7 +173,7 @@ public:
 
       for (int j = 0; j < size; j++) // loop over test fcts
       {
-        v_adolc(j) += (scaling_factor_adolc*PDE_rhs-uDH_det)*
+        v_adolc(j) += (PDE_rhs-uDH_det)*
             (referenceFunctionValues[j])
 //            (referenceFunctionValues[j]+gradients[j][0]+gradients[j][1])
             *quad[pt].weight() * integrationElement;
@@ -192,14 +188,12 @@ public:
 */
       }
 
-      last_equation_adolc += u_value* quad[pt].weight() * integrationElement;
     }
 
 
     for (int i = 0; i < size; i++)
       v_adolc[i] >>= v[i]; // select dependent variables
 
-    last_equation_adolc >>= last_equation;
     trace_off();
     /*std::size_t stats[11];
     tapestats(tag, stats);
@@ -244,12 +238,11 @@ public:
     // Get set of shape functions for neighbour element
     const auto& localFiniteElementn = localViewn.tree().finiteElement();
 
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef FieldVector<Config::ValueType, Config::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<Config::ValueType, IntersectionType::dimensionworld, IntersectionType::dimensionworld> FEHessianType;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = FieldVector<Config::ValueType, Config::dim>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, IntersectionType::dimensionworld, IntersectionType::dimensionworld>;
 
     assert((unsigned int) size == localFiniteElement.size());
     assert((unsigned int) size == localFiniteElementn.size());
@@ -426,17 +419,15 @@ public:
     assert((unsigned int) v.size() == localView.size());
 
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     const auto& localFiniteElement = localView.tree().finiteElement();
     const int size_u = localFiniteElement.size();
 
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
-
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
 
     //-----init variables for automatic differentiation
 
@@ -570,17 +561,16 @@ public:
     assert((unsigned int) v.size() == localView.size());
 
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     const auto& localFiniteElement = localView.tree().finiteElement();
     const int size_u = localFiniteElement.size();
 
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
 
     //-----init variables for automatic differentiation
 

@@ -147,7 +147,7 @@ public:
 class Dirichletdata:public VirtualFunction<Config::SpaceType, Config::ValueType>
 {
 public:
-  typedef std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGridFunction> Function_ptr;
+  using Function_ptr = std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGridFunction>;
   using ExactFunctionType = std::function<Config::ValueType(const Config::SpaceType&)>;
 
 //  Dirichletdata(Function_ptr &exactSolU) : exact_solution(&exactSolU) {}
@@ -203,8 +203,8 @@ Dirichletdata* make_Dirichletdata();
 
 class RightHandSideReflector{
 public:
-  typedef std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGridFunction> Function_ptr;
-  typedef std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGradientGridFunction> GradFunction_ptr;
+  using Function_ptr = std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGridFunction>;
+  using GradFunction_ptr = std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGradientGridFunction>;
 
 
   RightHandSideReflector(OpticalSetting& opticalsetting):

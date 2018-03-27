@@ -8,25 +8,38 @@
 #ifndef SRC_MA_REFRACTOR_SOLVER_H_
 #define SRC_MA_REFRACTOR_SOLVER_H_
 
-#include "Solver/MA_solver.h"
-
-#include "Optics/MA_OT_global_optic_Operator.h"
+#include "OT/MA_OT_solver.h"
+#include "OT/MA_OT_global_Operator.h"
 #include "Optics/operator_MA_refr_Brenner.h"
-#include "Optics/operator_MA_refr_Linearisation.hpp"
 
+//TODO revise with new MA_OT_operator
 
-class MA_refractor_solver: public MA_solver
+class MA_refractor_solver: public MA_OT_solver
 {
+public:
+  //select local operator
+  using Local_Refractor_OperatorType = Local_Operator_MA_refr_Brenner;
+
+  using ProblemTraits = OpticOperatorTraits<MA_OT_solver, Local_Refractor_OperatorType, Local_Operator_LagrangianBoundary_refr>;
+
+#ifndef USE_ANALYTIC_DERIVATION
+  using OperatorType = MA_OT_Operator<ProblemTraits>;
+#else
+  using OperatorType = MA_OT_Operator_with_Linearisation<ProblemTraits, Local_Operator_MA_refr_Linearisation>;
+#endif
+
+
 //  using MA_solver::MA_solver;
 public:
-  MA_refractor_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting);
+  MA_refractor_solver(GridHandlerType& gridHandler,
+      const shared_ptr<GridType>& gridTarget,
+      const SolverConfig& config, OpticalSetting& opticalSetting);
 
 private:
   ///creates the initial guess
   void create_initial_guess();
   void update_Operator();
-  void adapt_solution(const int level);
-  void solve_nonlinear_system();
+//  void adapt_solution(const int level);
 
 public:
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
@@ -39,20 +52,17 @@ public:
   OpticalSetting& get_optical_setting() {return setting_;}
   const OpticalSetting& get_optical_setting() const {return setting_;}
 
+  OperatorType& get_refr_operator(){return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
+  OperatorType& get_OT_operator(){return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
+  const OperatorType& get_OT_operator() const {return  *(std::dynamic_pointer_cast<OperatorType>(this->op));}
+
 
 private:
   OpticalSetting& setting_;
 
-#ifndef USE_ANALYTIC_DERIVATION
-  typedef MA_OT_Optic_Operator<MA_refractor_solver, Local_Operator_MA_refr_Brenner> OperatorType;
-#else
-  typedef MA_OT_Optic_Operator_with_Linearisation<MA_refractor_solver, Local_Operator_MA_refr_Brenner, Local_Operator_MA_refr_Linearisation> OperatorType;
-#endif
-
-  OperatorType op;
-
   friend OperatorType;
-  friend MA_OT_Operator<MA_refractor_solver, Local_Operator_MA_refr_Brenner>;
+  //todo befriend when linearise?
+//  friend MA_OT_Operator<ProblemTraits>;
 };
 
 

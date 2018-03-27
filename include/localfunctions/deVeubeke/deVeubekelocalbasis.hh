@@ -52,8 +52,8 @@ public:
     R factor;
   };
 
-  typedef LocalBasisTraits<D,2,Dune::FieldVector<D,2>,R,1,Dune::FieldVector<R,1>,
-      Dune::FieldMatrix<R,1,2>, 2 > Traits;
+  using Traits = LocalBasisTraits<D,2,Dune::FieldVector<D,2>,R,1,Dune::FieldVector<R,1>,
+      Dune::FieldMatrix<R,1,2>, 2 >;
 
 private:
   void insert_conversion_coefficient(int basis, int bezierordinate, R coefficient)

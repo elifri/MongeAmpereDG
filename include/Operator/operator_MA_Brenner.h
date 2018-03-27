@@ -46,8 +46,7 @@ public:
    */
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag, const double u_atX0, const double u0_atX0,
-      LocalView& localViewTemp, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const {
+      VectorType& v, const int tag) const {
   }
 
   /*
@@ -78,13 +77,13 @@ public:
       const VectorType &x, VectorType& v, int tag) const {
   }
 
+
   int insert_entitity_for_unifikation_term(const Config::Entity element, int size){ assert(false); return 0;}
-  void insert_descendant_entities(const Config::GridType& grid, const Config::Entity element){assert(false);}
+  void insert_descendant_entities(const Config::DuneGridType& grid, const Config::Entity element){assert(false);}
   const Config::EntityMap EntititiesForUnifikationTerm() const{assert(false); std::exit(-1);}
   int get_offset_of_entity_for_unifikation_term(Config::Entity element) const{assert(false); return 0;}
   int get_number_of_entities_for_unifikation_term() const{assert(false); return 0;}
   void clear_entitities_for_unifikation_term(){assert(false);}
-
 
   const Function& rhs;
   const Function& bc;

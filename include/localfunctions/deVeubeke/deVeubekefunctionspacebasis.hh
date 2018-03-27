@@ -216,20 +216,20 @@ class deVeubekeBasisLeafNode :
 //    typename deVeubekeFiniteElementCache<typename GV::template Codim<0>::Entity::Geometry, typename GV::ctype, double>,
 //    typename deVeubekeBasis<GV>::size_type>
 {
-//  typedef deVeubekeBasis<GV> GlobalBasis;
+//  using GlobalBasis = deVeubekeBasis<GV>;
   static const int dim = GV::dimension;
   int maxSize;
 
-  typedef typename GV::template Codim<0>::Entity E;
-  typedef typename Dune::deVeubekeFiniteElementCache<typename GV::template Codim<0>::Entity::Geometry, typename GV::ctype, double> FiniteElementCache;
-  typedef typename FiniteElementCache::FiniteElementType FE;
+  using E = typename GV::template Codim<0>::Entity;
+  using FiniteElementCache = typename Dune::deVeubekeFiniteElementCache<typename GV::template Codim<0>::Entity::Geometry, typename GV::ctype, double>;
+  using FE = typename FiniteElementCache::FiniteElementType;
 
 public:
-  typedef GridFunctionSpaceBasisLeafNodeInterface<E,FE,ST, TP> Interface;
-  typedef typename Interface::size_type size_type;
-  typedef typename Interface::Element Element;
-  typedef typename Interface::FiniteElement FiniteElement;
-  typedef typename Interface::TreePath TreePath;
+  using Interface = GridFunctionSpaceBasisLeafNodeInterface<E,FE,ST, TP>;
+  using size_type = typename Interface::size_type;
+  using Element = typename Interface::Element;
+  using FiniteElement = typename Interface::FiniteElement;
+  using TreePath = typename Interface::TreePath;
 
   deVeubekeBasisLeafNode(const TreePath& treePath) :
     Interface(treePath),

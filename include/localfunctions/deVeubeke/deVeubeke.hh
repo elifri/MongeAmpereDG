@@ -25,10 +25,10 @@ namespace Dune
     /** \todo Please doc me !
      */
     struct Traits{
-      typedef deVeubekeGlobalBasis<Geometry, D,R> Basis;
-      typedef deVeubekeGlobalBasis<Geometry, D,R> LocalBasisType;
-      typedef deVeubekeGlobalCoefficients Coefficients;
-      typedef deVeubekeInterpolation<deVeubekeGlobalBasis<Geometry, D,R> > Interpolation;
+      using Basis = deVeubekeGlobalBasis<Geometry,D,R>;
+      using LocalBasisType = deVeubekeGlobalBasis<Geometry,D,R>;
+      using Coefficients = deVeubekeGlobalCoefficients;
+      using Interpolation = deVeubekeInterpolation<deVeubekeGlobalBasis<Geometry,D,R> >;
     };
 
 

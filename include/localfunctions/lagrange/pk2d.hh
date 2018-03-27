@@ -24,14 +24,14 @@ namespace Dune
   public:
     /** \todo Please doc me !
      */
-    typedef LocalFiniteElementTraits<Pk2DLocalBasis<D,R,k>,
+    using Traits = LocalFiniteElementTraits<Pk2DLocalBasis<D,R,k>,
         Pk2DLocalCoefficients<k>,
-        Pk2DLocalInterpolation<Pk2DLocalBasis<D,R,k> > > Traits;
+        Pk2DLocalInterpolation<Pk2DLocalBasis<D,R,k> > >;
 
-    typedef typename Traits::LocalBasisType::Traits::DomainType DomainType;
-    typedef typename Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Traits::LocalBasisType::Traits::JacobianType JacobianType;
-    typedef typename Traits::LocalBasisType::Traits::HessianType HessianType;
+    using DomainType = typename Traits::LocalBasisType::Traits::DomainType;
+    using RangeType = typename Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Traits::LocalBasisType::Traits::JacobianType;
+    using HessianType = typename Traits::LocalBasisType::Traits::HessianType;
 
 
     /** \todo Please doc me !
@@ -115,21 +115,20 @@ namespace Dune
    */
   template<class Geometry, class RF, std::size_t k>
   class Pk2DFiniteElement {
-    typedef typename Geometry::ctype DF;
-    typedef Pk2DLocalBasis<DF,RF,k> LocalBasis;
-    typedef Pk2DLocalInterpolation<LocalBasis> LocalInterpolation;
+    using DF = typename Geometry::ctype;
+    using LocalBasis = Pk2DLocalBasis<DF,RF,k>;
+    using LocalInterpolation = Pk2DLocalInterpolation<LocalBasis>;
 
   public:
     /**
      * \implements FiniteElementInterface::Traits
      */
     struct Traits {
-      typedef ScalarLocalToGlobalBasisAdaptor<LocalBasis, Geometry> Basis;
-      typedef LocalToGlobalInterpolationAdaptor<
+      using Basis = ScalarLocalToGlobalBasisAdaptor<LocalBasis, Geometry>;
+      using Interpolation = LocalToGlobalInterpolationAdaptor<
           LocalInterpolation,
-          typename Basis::Traits
-          > Interpolation;
-      typedef Pk2DLocalCoefficients<k> Coefficients;
+          typename Basis::Traits>;
+      using Coefficients = Pk2DLocalCoefficients<k>;
     };
 
   private:

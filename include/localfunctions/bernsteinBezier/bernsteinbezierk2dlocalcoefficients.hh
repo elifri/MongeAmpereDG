@@ -87,6 +87,7 @@ namespace Dune
         return;
       }
       int n=0;
+      int c=0;
       for (unsigned int lambda3=0; lambda3<=k; lambda3++)
         for (unsigned int lambda2=0; lambda2<=k-lambda3; lambda2++)
         {
@@ -103,7 +104,7 @@ namespace Dune
             li[n++] = LocalKey(1,2,0);
             continue;
           }
-          if (lambda2 == k)
+          if (lambda3 == k)
           {
             li[n++] = LocalKey(2,2,0);
             continue;
@@ -112,19 +113,20 @@ namespace Dune
           //edge dofs
           if (lambda1 == 0) //and no other lambda == k
           {
-            li[n++] = LocalKey(2,1,lambda3);
+            li[n++] = LocalKey(2,1,lambda3-1);
             continue;
           }
           if (lambda2 == 0) //and no other lambda == k
           {
-            li[n++] = LocalKey(1,1,lambda1);
+            li[n++] = LocalKey(1,1,lambda1-1);
             continue;
           }
           if (lambda3 == 0) //and no other lambda == k
           {
-            li[n++] = LocalKey(0,1,lambda2);
+            li[n++] = LocalKey(0,1,lambda2-1);
             continue;
           }
+
 
           //inner dofs
           li[n++] = LocalKey(0,0,c++);

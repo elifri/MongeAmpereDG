@@ -12,6 +12,7 @@
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 #include <dune/grid/io/file/vtk/common.hh>
 
+#include "Optics/problem_data_optics.h"
 
 /*
 struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
@@ -22,15 +23,18 @@ struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
           ))
 */
 
-MA_refractor_solver::MA_refractor_solver(const shared_ptr<GridType>& grid, GridViewType& gridView, const SolverConfig& config, OpticalSetting& opticalSetting)
- :MA_solver(grid, gridView, config), setting_(opticalSetting),
-  op(*this)
+MA_refractor_solver::MA_refractor_solver(GridHandlerType& gridHandler, const shared_ptr<GridType>& gridTarget,
+    const SolverConfig& config, OpticalSetting& opticalSetting)
+ :MA_OT_solver(gridHandler, gridTarget, config, opticalSetting, false), setting_(opticalSetting)
 {
+   this->op = std::make_shared<OperatorType>(*this, setting_);
 
    //adjust light intensity
-   const auto integralLightOut = op.rhs_.get_target_distribution().integrateOriginal();
-   const auto integralLightIn = op.rhs_.get_input_distribution().integrateOriginal();
+   const auto integralLightOut = get_refr_operator().get_g().integrateOriginal();
+   const auto integralLightIn = get_refr_operator().get_f().integrateOriginal();
    setting_.povRayOpts.lightSourceColor = Eigen::Vector3d::Constant(integralLightOut/integralLightIn*setting_.lightSourceIntensity);
+
+   assembler_.set_X0(opticalSetting.lowerLeft);
 
    plotter.set_PovRayOptions(setting_.povRayOpts);
 
@@ -50,21 +54,20 @@ void MA_refractor_solver::create_initial_guess()
     project([](Config::SpaceType x){return 1.12;}, solution);
   }
 
-  //set fixing grid point for refractor (fix distance to light source)
-  DiscreteGridFunction solution_u_global(FEBasisHandler_.uBasis(),solution);
-  auto res = solution_u_global(op.fixingPoint);
+//  ExactSolutionSimpleLens refLens("../Testing/oneParis.grid");
+//  project(refLens.exact_solution(), solution);
+//  project(refLens.exact_solution(), refLens.exact_gradient(), solution);
 
+  //set fixing size for refractor (fix distance to light source)
+  Config::ValueType res = 0;
+  assemblerLM1D_.assembleRhs(*(get_OT_operator().lopLMMidvalue), solution, res);
   assembler_.set_u0AtX0(res);
+  std::cerr << " set u_0^mid to " << res << std::endl;
 }
 
 void MA_refractor_solver::plot(const std::string& name) const
 {
-  std::cout << "write? " << writeVTK_ << " ";
-  std::cout << "plot written into ";
   plot(name, iterations);
-  std::string refrPovname(plotter.get_output_directory());
-  refrPovname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".pov";
-  std::cout << refrPovname << std::endl;
 }
 
 void MA_refractor_solver::plot(const std::string& name, int no) const
@@ -73,20 +76,25 @@ void MA_refractor_solver::plot(const std::string& name, int no) const
   //write vtk files
   if (writeVTK_)
   {
+    std::cerr << "plot written into ";
 
     VectorType solution_u = solution.segment(0, get_n_dofs_u());
 
-    //build gridviewfunction
-     Dune::Functions::DiscreteScalarGlobalBasisFunction<MA_solver::FETraits::FEuBasis,VectorType> numericalSolution(FEBasisHandler_.uBasis(),solution_u);
-     auto localnumericalSolution = localFunction(numericalSolution);
+     //build gridviewfunction
+    FETraits::DiscreteGridFunction numericalSolution(FEBasisHandler_.uBasis(),solution_u);
+    decltype(numericalSolution)::LocalFunction localnumericalSolution(numericalSolution);
 
-     //build writer
-     SubsamplingVTKWriter<GridViewType> vtkWriter(*gridView_ptr,plotter.get_refinement());
+    //build writer
+     SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
 
      //add solution data
      vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
 
-     //extract hessian (3 entries (because symmetry))
+     //add gradient data
+     auto gradu= localFirstDerivative(numericalSolution);
+     vtkWriter.addVertexData(gradu , VTK::FieldInfo("gradx", VTK::FieldInfo::Type::scalar, 2));
+
+     //add hessian
      Dune::array<int,2> direction = {0,0};
 
      auto HessianEntry00= localSecondDerivative(numericalSolution, direction);
@@ -101,83 +109,53 @@ void MA_refractor_solver::plot(const std::string& name, int no) const
      auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
      vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
 
-
-//     std::cout << "solution " << solution_u.transpose() << std::endl;
+     //add eigenvalues of hessian
+//     EV1Function ev1(HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
+//     EV2Function ev2(HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
+//     vtkWriter.addVertexData(ev1, VTK::FieldInfo("EV1", VTK::FieldInfo::Type::scalar, 1));
+//     vtkWriter.addVertexData(ev2, VTK::FieldInfo("EV2", VTK::FieldInfo::Type::scalar, 1));
 
      //write to file
      std::string fname(plotter.get_output_directory());
-     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(iterations) + ".vtu";
+     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + ".vtu";
      vtkWriter.write(fname);
 
-
-     std::string reflname(plotter.get_output_directory());
-     reflname += "/"+ plotter.get_output_prefix()+ name + "refractor"+NumberToString(iterations) + ".vtu";
-
-//     plotter.writeReflectorVTK(reflname, localnumericalSolution, *exact_solution);
-     plotter.writeRefractorVTK(reflname, localnumericalSolution);
-
-//     std::cout << fname  << " " << reflname << " and ";
+     //write refractor
+     std::string refrName(plotter.get_output_directory());
+     refrName += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(no) + ".vtu";
+     plotter.writeRefractorVTK(refrName, *solution_u_old);
+     std::cerr << " wrote refractor in file " << refrName << std::endl;
   }
+
+
 
   //write povray output
    std::string refrPovname(plotter.get_output_directory());
    refrPovname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".pov";
 
    plotter.writeRefractorPOV(refrPovname, *solution_u_old);
-
-}
-
-void MA_refractor_solver::adapt_solution(const int level)
-{
-  FEBasisHandler_.adapt(*this, level, solution);
-  std::cerr << " adapting operator " << std::endl;
-  op.adapt();
 }
 
 void MA_refractor_solver::update_Operator()
 {
+  if (iterations== 0)
+  {
+    get_refr_operator().get_f().normalize();
+    get_refr_operator().get_g().normalize();
+  }
+
   //blurr target distributation
   std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
-  op.rhs_.convolveTargetDistributionAndNormalise(epsMollifier_);
+  get_refr_operator().get_g().convolveOriginal(epsMollifier_);
+  get_refr_operator().get_g().normalize();
 
   //print blurred target distribution
   if (true) {
       std::ostringstream filename2; filename2 << plotOutputDirectory_+"/lightOut" << iterations << ".bmp";
       std::cout << "saved image to " << filename2.str() << std::endl;
-      op.get_lop().get_right_handside().get_target_distribution().saveImage (filename2.str());
-      assert(std::abs(op.get_lop().get_right_handside().get_target_distribution().integrate2()) - 1 < 1e-10);
+      get_refr_operator().get_g().saveImage (filename2.str());
+      assert(std::abs(get_refr_operator().get_g().integrate2()) - 1 < 1e-10);
   }
   epsMollifier_ /= epsDivide_;
 }
-
-void MA_refractor_solver::solve_nonlinear_system()
-{
-  assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
-  std::cout << "n dofs" << get_n_dofs() << std::endl;
-  // /////////////////////////
-  // Compute solution
-  // /////////////////////////
-
-  Config::VectorType newSolution = solution;
-
-#ifdef USE_DOGLEG
-  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
-#endif
-#ifdef USE_PETSC
-  igpm::processtimer timer;
-  timer.start();
-
-  PETSC_SNES_Wrapper<MA_solver::Operator>::op = op;
-
-  PETSC_SNES_Wrapper<MA_solver::Operator> snes;
-
-  Eigen::VectorXi est_nnz = assembler.estimate_nnz_Jacobian();
-  snes.init(get_n_dofs(), est_nnz);
-  std::cout << " n_dofs " << get_n_dofs() << std::endl;
-  int error = snes.solve(solution);
-  timer.stop();
-  std::cout << "needed " << timer << " seconds for nonlinear step, ended with error code " << error << std::endl;
-#endif
-}
-
 

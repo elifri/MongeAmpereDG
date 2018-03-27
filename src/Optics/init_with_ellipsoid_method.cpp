@@ -6,13 +6,12 @@
  */
 
 
-#include "init_with_ellipsoid_method.hpp"
+#include "Optics/init_with_ellipsoid_method.hpp"
 #include <boost/program_options.hpp>
 
 #include <Functions/Reflectorproblem/LightInImage.hpp>
 #include <boost/program_options.hpp>
 
-using std::cout;
 using namespace Eigen;
 namespace po = boost::program_options;
 using namespace mirror_problem;
@@ -21,7 +20,7 @@ std::string InitEllipsoidMethod::outputFolder_ = "";
 
 InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(const OpticalSetting& opticalSetting, const std::string& configFile){
 
-    string outputFolder, inputImageName, lightInImageName;
+    std::string outputFolder, inputImageName, lightInImageName;
 
     double xMin, xMax, yMin, yMax;
     double xMinOut, xMaxOut, yMinOut, yMaxOut, zOut;
@@ -39,7 +38,7 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(const OpticalSett
     // config file
     po::options_description config("Configuration for the method of ellipsoids of revolution");
     config.add_options()
-        ("output.folder" ,        po::value<string>(&outputFolder),         "folder for the output data")
+        ("output.folder" ,        po::value<std::string>(&outputFolder),         "folder for the output data")
         ("ellipsoids.nDirectionsX", po::value<unsigned int>(&nDirectionsX), "number of directions in x direction")
         ("ellipsoids.nDirectionsY", po::value<unsigned int>(&nDirectionsY), "number of directions in y direction")
         ("ellipsoids.maxIter",      po::value<unsigned int>(&maxIter),      "maximal number of iterations")
@@ -50,7 +49,7 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(const OpticalSett
 
     {
         // open config file for the image
-        ifstream ifs(configFile.c_str());
+        std::ifstream ifs(configFile.c_str());
         if (!ifs)
         {
             if (configFile=="")
@@ -86,7 +85,7 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(const OpticalSett
 
     povRayOpts.cameraLocation(0) = (xMaxOut+xMinOut)/2.0;
     povRayOpts.cameraLocation(1) = (yMaxOut+yMinOut)/2.0;
-    povRayOpts.cameraLocation(2) = zOut + max(xMaxOut-xMinOut,yMaxOut-yMinOut)*0.5;
+    povRayOpts.cameraLocation(2) = zOut + std::max(xMaxOut-xMinOut,yMaxOut-yMinOut)*0.5;
     povRayOpts.cameraLookAt(0)   = (xMaxOut+xMinOut)/2.0;
     povRayOpts.cameraLookAt(1)   = (yMaxOut+yMinOut)/2.0;
     povRayOpts.cameraLookAt(2)   = zOut;
@@ -95,10 +94,10 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(const OpticalSett
 
     //LightIn lightIn;
     LightInImage lightIn(lightInImageName,xMin,xMax,yMin,yMax);
-    cout << "opening " << inputImageName.c_str() << endl;
+    std::cout << "opening " << inputImageName.c_str() << std::endl;
 
     EllipsoidContainer::Directions directionsOut;
-    vector<double> valuesLightOut;
+    std::vector<double> valuesLightOut;
     cimg_library::CImg<double> imageCimg(inputImageName.c_str());
     const unsigned int nX = imageCimg.width();
     const unsigned int nY = imageCimg.height();
@@ -110,7 +109,7 @@ InitEllipsoidMethod InitEllipsoidMethod::init_from_config_data(const OpticalSett
     }
 
     // snake-like numbering
-    const int nRings = min(image.rows(),image.cols())/2;
+    const int nRings = std::min(image.rows(),image.cols())/2;
     int i=0,j=0;
     if (image.rows()%2 == 1) {
         i=nRings;

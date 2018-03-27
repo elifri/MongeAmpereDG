@@ -24,17 +24,17 @@ namespace po = boost::program_options;
 
 void read_parameters(int argc, char *argv[], std::string& configFileMASolver, std::string& configFileOpticalSetting, std::string& configFileEllipsoid)
 {
-  string configFileGeometry, petscConfig;
+  std::string configFileGeometry, petscConfig;
 
   po::options_description cmdline("Generic options");
   cmdline.add_options()
       ("version,v",   "print version string")
       ("help,h",      "produce help message")
       ("help-all,a",  "produce help message (including config file options)")
-      ("solver,c", po::value<string>(&configFileMASolver),  "config file for the MA finite element method")
-      ("ellipsoids,e", po::value<string>(&configFileEllipsoid), "config file for method of ellipsoids of revolution")
-      ("geometry,g",   po::value<string>(&configFileOpticalSetting),  "config file for optical setting")
-      ("Petsoptionsfile,o", po::value<string>(&petscConfig), "config file for petsc")
+      ("solver,c", po::value<std::string>(&configFileMASolver),  "config file for the MA finite element method")
+      ("ellipsoids,e", po::value<std::string>(&configFileEllipsoid), "config file for method of ellipsoids of revolution")
+      ("geometry,g",   po::value<std::string>(&configFileOpticalSetting),  "config file for optical setting")
+      ("Petsoptionsfile,o", po::value<std::string>(&petscConfig), "config file for petsc")
       ;
 
   po::options_description cmdline_options;
@@ -89,24 +89,38 @@ try {
   OpticalSetting opticalSetting;
   opticalSetting.read_configfile(configFileOpticalSetting);
 
+  std::cout << " Output files in folder " << config.plotOutputDirectory << "/" << config.outputPrefix <<"..." << std::endl;
+
   // ////////////////////////////////
 // Generate the grid
 // ////////////////////////////////
 
-  Config::UnitCubeType unitcube(opticalSetting.lowerLeft, opticalSetting.upperRight, 0);
+//  std::cout << " init grid handler from file " << opticalSetting.gridinputFile << std::endl;
+//#ifdef BSPLINES
+  GridHandler<Config::GridType, true> gridHandler(opticalSetting,SolverConfig::startlevel);
+//#else
+//  GridHandler<Config::GridType> gridHandler(opticalSetting,SolverConfig::startlevel);
+//#endif
 
-  Config::GridType &grid = unitcube.grid();
-  Config::GridView gridView = grid.leafGridView();
-
-  // Output result
-  VTKWriter<Config::GridView> vtkWriter(gridView);
+  // Output grid
+  VTKWriter<Config::GridView> vtkWriter(gridHandler.gridView());
   vtkWriter.write("grid");
+
+  //-----target area grid--------
+#ifndef BSPLINES
+  std::cout << " read target grid vom file " << opticalSetting.gridTargetFile << std::endl;
+  std::shared_ptr<Config::GridType> gridTarget_ptr(GmshReader<Config::GridType>::read(opticalSetting.gridTargetFile));
+  {
+    VTKWriter<Config::GridView> vtkWriterTarget(gridTarget_ptr->leafGridView());
+    vtkWriterTarget.write("gridTarget");
+  }
+#endif
 
 
   // ///////////////////////////////////////////////
   // Solve PDE
   // ///////////////////////////////////////////////
-  MA_reflector_solver ma_solver(unitcube.grid_ptr(), gridView, config, opticalSetting, configFileEllipsoid);
+  MA_reflector_solver ma_solver(gridHandler, gridTarget_ptr, config, opticalSetting,configFileEllipsoid);
 
 	ma_solver.solve();
 

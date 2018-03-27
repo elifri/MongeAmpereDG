@@ -28,11 +28,11 @@ using namespace Dune;
 class Local_Operator_MA_OT_Neilan {
 
 public:
-  typedef DensityFunction Function;
+  using Function = DensityFunction;
 
   template<typename GridView>
-  Local_Operator_MA_OT_Neilan(const OTBoundary* bc, const Function* rhoX, const Function* rhoY, const GridView& gridView):
-    hash(gridView), EntititiesForUnifikationTerm_(10,hash), rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
+  Local_Operator_MA_OT_Neilan(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
+    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
   {
     std::cout << " created Local Operator" << std::endl;
   }
@@ -46,16 +46,15 @@ public:
    */
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag, const double u_atX0, const double u0_atX0,
-      LocalView& localViewTemp, std::vector<double>& entryWx0, std::vector<VectorType>& entryWx0timesBgradV) const {
+      VectorType& v, const int tag) const {
 
-    typedef typename LocalView::GridView GridView;
-    typedef typename LocalView::size_type size_type;
+    using GridView = typename LocalView::GridView;
+    using size_type = typename LocalView::size_type;
 
     const int dim = GridView::dimension;
 
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     assert(dim == Element::dimension);
@@ -71,16 +70,14 @@ public:
     const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
     const auto& localFiniteElementuDH_entry = localView.tree().template child<1>().child(0).finiteElement();
 
-    typedef decltype(localFiniteElementu) ConstElementuRefType;
-    typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
+    using ElementuType = typename std::decay_t<decltype(localFiniteElementu)>;
 
-    typedef decltype(localFiniteElementuDH_entry) ConstElementuDHRefType;
-    typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
+    using ElementuDHType = typename std::decay_t<decltype(localFiniteElementuDH_entry)>;
 
-    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, dim> JacobianType;
-    typedef typename Dune::FieldMatrix<Config::ValueType, dim, dim> FEHessianType;
-    typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType HessianType;
+    using RangeType = typename ElementuType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, dim>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, dim, dim>;
+    using HessianType = typename ElementuDHType::Traits::LocalBasisType::Traits::RangeType;
 
     const int size_u = localFiniteElementu.size();
     const int size_u_DH = localFiniteElementuDH_entry.size();
@@ -199,33 +196,13 @@ public:
 
       for (int j = 0; j < size_u; j++) // loop over test fcts
       {
-        v_adolc(j) += (PDE_rhs-uDH_det)*referenceFunctionValues[j]* quad[pt].weight() * integrationElement;
-
-        //unification term
-//already added above
-        v_adolc(j) += u_atX0*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-
-        //derivative unification term
-        for (const auto& fixingElementAndOffset : EntititiesForUnifikationTerm_)
-        {
-          const auto& fixingElement = fixingElementAndOffset.first;
-          int noDof_fixingElement = fixingElementAndOffset.second;
-
-          assert(noDof_fixingElement==0);
-
-          localViewTemp.bind(fixingElement);
-
-          for (unsigned int k = 0; k < localViewTemp.size(); k++)
-          {
-            entryWx0timesBgradV[noDof_fixingElement](j) += entryWx0[noDof_fixingElement]*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-            noDof_fixingElement++;
-          }
-        }
-      }
-
-
+//        v_adolc(j) += (PDE_rhs-uDH_det+u_atX0)*referenceFunctionValues[j]
+        assert(false);
+//        v_adolc(j) += (u_atX0)*referenceFunctionValues[j]
+//	          	* quad[pt].weight() * integrationElement;
 
       //calculate system for second tensor functions
+      }
 
       for (int j = 0; j < size_u_DH; j++) // loop over test fcts
       {
@@ -260,8 +237,8 @@ public:
       const LocalView &localView, const VectorType &x,
       const LocalView &localViewn, const VectorType &xn, VectorType& v,
       VectorType& vn, int tag) const{
-    typedef typename LocalView::GridView GridView;
-    typedef typename LocalView::size_type size_type;
+    using GridView = typename LocalView::GridView;
+    using size_type = typename LocalView::size_type;
 
     const int dim = IntersectionType::dimension;
     const int dimw = IntersectionType::dimensionworld;
@@ -281,15 +258,12 @@ public:
     const auto& localFiniteElementun = localViewn.tree().template child<0>().finiteElement();
     const auto& localFiniteElementuDHn = localViewn.tree().template child<1>().child(0).finiteElement();
 
-    typedef decltype(localFiniteElementu) ConstElementuRefType;
-    typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
+    using ElementuType = typename std::decay_t<decltype(localFiniteElementu)>;
+    using ElementuDHType = typename std::decay_t<decltype(localFiniteElementuDH)>;
 
-    typedef decltype(localFiniteElementuDH) ConstElementuDHRefType;
-    typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
-
-    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef FieldVector<Config::ValueType, dim> JacobianType;
-    typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType RangeTypeDH;
+    using RangeType = typename ElementuType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = FieldVector<Config::ValueType, dim>;
+    using RangeTypeDH = typename ElementuDHType::Traits::LocalBasisType::Traits::RangeType;
 
     const unsigned int size_u = localFiniteElementu.size();
     const unsigned int size_u_DH = localFiniteElementuDH.size();
@@ -466,17 +440,16 @@ public:
     assert((unsigned int) v.size() == localView.size());
 
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
     const int size_u = localFiniteElementu.size();
 
-    typedef decltype(localFiniteElementu) ConstElementuRefType;
-    typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
+    using ElementuType = typename std::decay_t<decltype(localFiniteElementu)>;
 
-    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
+    using RangeType = typename ElementuType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
 
     //-----init variables for automatic differentiation
 
@@ -578,58 +551,6 @@ public:
   static_assert(false, "blub");
 #endif
 
-  int insert_entitity_for_unifikation_term(const Config::Entity element, int size)
-  {
-    auto search = EntititiesForUnifikationTerm_.find(element);
-    if (search == EntititiesForUnifikationTerm_.end())
-    {
-      const int newOffset = size*EntititiesForUnifikationTerm_.size();
-      EntititiesForUnifikationTerm_[element] = newOffset;
-
-      const auto& geometry = element.geometry();
-
-      return newOffset;
-    }
-    return EntititiesForUnifikationTerm_[element];
-  }
-
-  void insert_descendant_entities(const Config::GridType& grid, const Config::Entity element)
-  {
-    const auto& geometry = element.geometry();
-
-    auto search = EntititiesForUnifikationTerm_.find(element);
-    int size = search->second;
-    assert(search != EntititiesForUnifikationTerm_.end());
-    for (const auto& e : descendantElements(element,grid.maxLevel() ))
-    {
-      insert_entitity_for_unifikation_term(e, size);
-    }
-    EntititiesForUnifikationTerm_.erase(search);
-
-  }
-
-  const Config::EntityMap EntititiesForUnifikationTerm() const
-  {
-    return EntititiesForUnifikationTerm_;
-  }
-
-
-  int get_offset_of_entity_for_unifikation_term(Config::Entity element) const
-  {
-    return EntititiesForUnifikationTerm_.at(element);
-  }
-  int get_number_of_entities_for_unifikation_term() const
-  {
-    return EntititiesForUnifikationTerm_.size();
-  }
-
-  void clear_entitities_for_unifikation_term()
-  {
-    EntititiesForUnifikationTerm_.clear();
-  }
-
-  Config::EntityCompare hash;
-  Config::EntityMap EntititiesForUnifikationTerm_;
 
   static bool use_adouble_determinant;
 
