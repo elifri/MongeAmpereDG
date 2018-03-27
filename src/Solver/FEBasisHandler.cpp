@@ -132,7 +132,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   //loop over elements (in coarse grid)
   for (auto&& elementCoarse : elements(levelGridView)) {
 
-    HierarchicSearch<Config::GridType, Config::GridView::IndexSet> hs(*solver.grid_ptr, solver.gridView().indexSet());
+    HierarchicSearch<Config::GridType, Config::GridView::IndexSet> hs(FEBasis_->gridView().grid(), FEBasis_->gridView().indexSet());
 
     localViewCoarse.bind(elementCoarse);
     localIndexSetCoarse.bind(localViewCoarse);

@@ -281,7 +281,7 @@ void AssemblerLagrangianMultiplierBoundary::assemble_Boundarymatrix_with_automat
   assert(x.size() == V_h_size);
 
   //add a offset for the adolc tape number (every cell and every face may have a tape)
-  int tag_count = basisV_.gridView().size(0)+basisV_.gridView().size(1);
+//  int tag_count = basisV_.gridView().size(0)+basisV_.gridView().size(1);
 
 
   //assuming Galerkin

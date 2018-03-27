@@ -74,12 +74,6 @@ public:
     GeometryType gtfaceV = intersection.geometryInInside().type();
     const QuadratureRule<double, dim - 1>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim-1>(gtfaceV, order);
 
-    // normal of center in face's reference element
-    const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
-        dim - 1>::general(intersection.geometry().type()).position(0, 0);
-    const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
-        face_center);
-
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
 
