@@ -284,7 +284,7 @@ public:
 				> (new GridType(length, elements));
 	}
 
-  UnitCube(SpaceType lowerLeft, SpaceType upperRight, int n)
+  UnitCube(const SpaceType &lowerLeft, const SpaceType &upperRight, int n)
   {
     std::array<int, dim> elements;
     std::fill(elements.begin(), elements.end(), n);

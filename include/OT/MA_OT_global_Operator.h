@@ -56,7 +56,7 @@ public:
   MA_OT_Operator():solver_ptr(NULL), lop_ptr(), intermediateSolCounter(){}
 
   MA_OT_Operator(SolverType& solver):solver_ptr(&solver),
-      boundary_(new GenerealOTBoundary(solver.get_gridTarget(), SolverConfig::quadratureN)),
+      boundary_(new GenerealOTBoundary(solver.get_gridTarget(), GeometrySetting::boundaryN)),
       f_(OperatorTraits::construct_f(solver)),
       g_(OperatorTraits::construct_g(solver)),
       lop_ptr(new LocalOperatorType(
@@ -74,7 +74,7 @@ public:
 
     template<typename GeometrySetting>
     MA_OT_Operator(SolverType& solver, GeometrySetting& setting):solver_ptr(&solver),
-        boundary_(new GenerealOTBoundary(solver.get_gridTarget(), SolverConfig::quadratureN)),
+        boundary_(new GenerealOTBoundary(solver.get_gridTarget(), setting.boundaryN)),
         f_(OperatorTraits::construct_f(solver, setting)),
         g_(OperatorTraits::construct_g(solver, setting)),
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),

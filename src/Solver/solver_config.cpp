@@ -22,7 +22,6 @@ ProblemType SolverConfig::problem = MA_SMOOTH;
 
 int SolverConfig::startlevel = 0;
 int SolverConfig::nonlinear_steps = 1;
-int SolverConfig::quadratureN = std::max(100000,1 << (2+SolverConfig::startlevel+SolverConfig::nonlinear_steps));
 
 double SolverConfig::epsDivide = 1;
 double SolverConfig::epsEnd = 1;
@@ -130,13 +129,12 @@ void SolverConfig::read_configfile(std::string &configFile)
 ////------fallback values for geometry setting---------
 Config::SpaceType GeometrySetting::lowerLeft = {0,0};
 Config::SpaceType GeometrySetting::upperRight = {1,1};
+Config::SpaceType GeometrySetting::lowerLeftTarget = {0,0};
+Config::SpaceType GeometrySetting::upperRightTarget= {1,1};
 
 std::string GeometrySetting::gridinputFile = "";
 std::string GeometrySetting::plotGridinputFile = "";
-
-
-Config::SpaceType GeometrySetting::lowerLeftTarget = {0,0};
-Config::SpaceType GeometrySetting::upperRightTarget= {1,1};
+int GeometrySetting::boundaryN = std::max(100000,1 << (2+SolverConfig::startlevel+SolverConfig::nonlinear_steps));
 
 std::string GeometrySetting::gridTargetFile = "";
 
@@ -161,6 +159,7 @@ void GeometrySetting::read_configfile(std::string &configFile)
         ("geometry.target.yMax",     po::value<double>(&GeometrySetting::upperRightTarget[1]), "")
         ("geometry.target.z",        po::value<double>(&GeometrySetting::z_3),    "")
         ("geometry.target.gridfile",  po::value<string>(&GeometrySetting::gridTargetFile), "")
+        ("geometry.target.boundaryN",  po::value<int>(&GeometrySetting::boundaryN), "")
   ;
 
 

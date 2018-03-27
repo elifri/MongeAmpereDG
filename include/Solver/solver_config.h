@@ -138,8 +138,6 @@ struct SolverConfig{
   static int startlevel;
   static int nonlinear_steps;
 
-  static int quadratureN;
-
   //////////////////////////////////////////////////////////
   ///---------------select Finite Element----------------///
   //////////////////////////////////////////////////////////
@@ -219,11 +217,13 @@ struct GeometrySetting{
   static Config::SpaceType lowerLeftTarget; ///lower left of target grid (target must be in x-y-plane)
   static Config::SpaceType upperRightTarget; ///upper left of target grid (target must be in x-y-plane)
 
-  static std::string gridinputFile;
-  static std::string plotGridinputFile;
-  static std::string gridTargetFile;
-
   static SolverConfig::ValueType z_3; /// third coordinate of target grid (target must be in x-y-plane)
+
+  static std::string gridinputFile; ///location of the grid file specifying the grid for the input area $\Omega$
+  static std::string plotGridinputFile; ///location of the grid file specifying a grid which is translated under the solution
+  static std::string gridTargetFile; ///location of the grid file specifying the grid for the target area $\Sigma$
+  static int boundaryN; ///number of directions to simulate boundary
+
 };
 
 struct OpticalSetting : GeometrySetting{
