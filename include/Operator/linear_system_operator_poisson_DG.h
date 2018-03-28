@@ -42,7 +42,7 @@ void assemble_cell_term(const Element& element, const LocalElement &localFiniteE
 	assert(m.cols() == localFiniteElement.size());
 	assert(v.size() == localFiniteElement.size());
 
-	typedef typename LocalElement::Traits::LocalBasisType::Traits::RangeType RangeType;
+	using RangeType = typename LocalElement::Traits::LocalBasisType::Traits::RangeType;
 
 	// Get a quadrature rule
 	int order = std::max( 0, 2 * ( (int)localFiniteElement.localBasis().order()));
@@ -110,7 +110,7 @@ void assemble_inner_face_term(const Intersection& intersection,
 								VectorType& rhs, VectorType& rhsn) const {
 	const int dim = Intersection::dimension;
 	const int dimw = Intersection::dimensionworld;
-	typedef typename LocalElement::Traits::LocalBasisType::Traits::RangeType RangeType;
+	using RangeType = typename LocalElement::Traits::LocalBasisType::Traits::RangeType;
 
 	//assuming galerkin
 	assert(m_m.rows() == localFiniteElement.size());
@@ -218,7 +218,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
 	assert(rhs.size() == localFiniteElement.size());
 	assert(m.rows() == localFiniteElement.size());
 	assert(m.cols() == localFiniteElement.size());
-	typedef typename LocalElement::Traits::LocalBasisType::Traits::RangeType RangeType;
+	using RangeType = typename LocalElement::Traits::LocalBasisType::Traits::RangeType;
 
 	// Get a quadrature rule
     const int order = std::max( 0, 2 * ( (int)localFiniteElement.localBasis().order() ));

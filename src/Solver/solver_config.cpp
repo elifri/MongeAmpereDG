@@ -18,7 +18,7 @@ namespace po = boost::program_options;
 using namespace Dune;
 using namespace std;
 
-ProblemType SolverConfig::problem;
+ProblemType SolverConfig::problem = MA_SMOOTH;
 
 int SolverConfig::startlevel = 0;
 int SolverConfig::nonlinear_steps = 1;
@@ -95,6 +95,7 @@ void SolverConfig::read_configfile(std::string &configFile)
         ("output.plotdirectory", po::value<string>(&plotOutputDirectory), "")
         ("output.prefix", po::value<string>(&outputPrefix), "")
         ("output.refinement", po::value<int>(&refinement), "")
+        ("output.cartesianGridN", po::value<int>(&cartesianGridN), "")
         ("output.write_vtk", po::value<bool>(&writeVTK), "")
   ;
 
@@ -116,19 +117,26 @@ void SolverConfig::read_configfile(std::string &configFile)
     notify(vm);
   }
 
+  //copy criteria to newton options
+  newtonOpts.eps[0]= doglegOpts.stopcriteria[0];
+  newtonOpts.eps[1]= doglegOpts.stopcriteria[1];
+  newtonOpts.eps[2]= doglegOpts.stopcriteria[2];
+  newtonOpts.silentmode = doglegOpts.silentmode;
+  newtonOpts.check_Jacobian = doglegOpts.check_Jacobian;
 }
 
 
 ////------fallback values for geometry setting---------
 Config::SpaceType GeometrySetting::lowerLeft = {0,0};
 Config::SpaceType GeometrySetting::upperRight = {1,1};
-
-std::string GeometrySetting::gridinputFile = "";
-
 Config::SpaceType GeometrySetting::lowerLeftTarget = {0,0};
 Config::SpaceType GeometrySetting::upperRightTarget= {1,1};
 
-std::string GeometrySetting::gridinputTargetFile = "";
+std::string GeometrySetting::gridinputFile = "";
+std::string GeometrySetting::plotGridinputFile = "";
+int GeometrySetting::boundaryN = std::max(100000,1 << (2+SolverConfig::startlevel+SolverConfig::nonlinear_steps));
+
+std::string GeometrySetting::gridTargetFile = "";
 
 double GeometrySetting::z_3 = 0;
 
@@ -144,11 +152,14 @@ void GeometrySetting::read_configfile(std::string &configFile)
         ("geometry.input.yMin",  po::value<double>(&GeometrySetting::lowerLeft[1]), "")
         ("geometry.input.yMax",  po::value<double>(&GeometrySetting::upperRight[1]), "")
         ("geometry.input.gridfile",  po::value<string>(&GeometrySetting::gridinputFile), "")
+        ("geometry.input.plotgridfile",  po::value<string>(&GeometrySetting::plotGridinputFile), "")
         ("geometry.target.xMin",     po::value<double>(&GeometrySetting::lowerLeftTarget[0]), "")
         ("geometry.target.xMax",     po::value<double>(&GeometrySetting::upperRightTarget[0]), "")
         ("geometry.target.yMin",     po::value<double>(&GeometrySetting::lowerLeftTarget[1]), "")
         ("geometry.target.yMax",     po::value<double>(&GeometrySetting::upperRightTarget[1]), "")
         ("geometry.target.z",        po::value<double>(&GeometrySetting::z_3),    "")
+        ("geometry.target.gridfile",  po::value<string>(&GeometrySetting::gridTargetFile), "")
+        ("geometry.target.boundaryN",  po::value<int>(&GeometrySetting::boundaryN), "")
   ;
 
 
@@ -188,12 +199,14 @@ void OpticalSetting::read_configfile(std::string &configFile)
         ("geometry.optic.yMin",  po::value<double>(&OpticalSetting::lowerLeft[1]), "")
         ("geometry.optic.yMax",  po::value<double>(&OpticalSetting::upperRight[1]), "")
         ("geometry.optic.gridfile",  po::value<string>(&OpticalSetting::gridinputFile), "")
+        ("geometry.optic.plotgridfile",  po::value<string>(&OpticalSetting::plotGridinputFile), "")
         ("geometry.target.xMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[0]), "")
         ("geometry.target.xMax",     po::value<double>(&OpticalSetting::upperRightTarget[0]), "")
         ("geometry.target.yMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[1]), "")
         ("geometry.target.yMax",     po::value<double>(&OpticalSetting::upperRightTarget[1]), "")
-        ("geometry.target.gridfile",  po::value<string>(&OpticalSetting::gridinputTargetFile), "")
+        ("geometry.target.gridfile",  po::value<string>(&OpticalSetting::gridTargetFile), "")
         ("geometry.target.z",        po::value<double>(&OpticalSetting::z_3),    "")
+        ("geometry.target.boundaryN",  po::value<int>(&OpticalSetting::boundaryN), "")
         ("light.in.imageName",       po::value<string>(&OpticalSetting::LightinputImageName), "path to image")
         ("light.out.targetImageName",     po::value<string>(&OpticalSetting::TargetImageName), "")
         ("solver.epsDivide",  po::value<double>(&SolverConfig::epsDivide), "")

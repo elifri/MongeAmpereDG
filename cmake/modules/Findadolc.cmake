@@ -23,12 +23,14 @@ IF( ADOLC_FOUND )
 ELSE( ADOLC_FOUND )
   FIND_PATH(ADOLC_INCLUDE_DIRS NAMES adolc/adouble.h
             HINTS  $ENV{ADOLC_HOME}
-                   "/usr/include/adolc" "${ADOLC_PATH}/include")
+                   "/usr/include/adolc" "${ADOLC_PATH}/include"
+		"$ENV{HOME}/workspace/ADOL-C-2.6.3/build/include")
   message("searching on ${ADOLC_PATH}/include")
   FIND_LIBRARY(ADOLC_LIBRARY 
                 adolc
                 HINTS "$ENV{ADOLC_HOME}/lib"
-                      "/usr/lib" "${ADOLC_PATH}/lib64")
+                      "/usr/lib" "${ADOLC_PATH}/lib64"
+		      "$ENV{HOME}/workspace/ADOL-C-2.6.3/build/lib64")
   #CHECK_SYMBOL_EXISTS(function ADOLC_LIBRARY FUNCTION_FOUND)
    
   SET(ADOLC_INCLUDE_DIRS ${ADOLC_INCLUDE_DIR})
