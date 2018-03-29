@@ -77,9 +77,11 @@ struct PovRayOpts
     Eigen::Vector3d lightSourceLocation;
     Eigen::Vector3d lightSourceTarget;
     Eigen::Vector3d lightSourceColor;
-    double lightSourceRadius;
-    double lightSourceFalloff;
-    double lightSourceTightness;
+    double lightSourceRadius; /// radius of spot light cone
+    double lightSourceFalloff; ///outer radius of spot light cone (to softening spot light edges)
+    double lightSourceTightness; ///makes the spot light shadows softer
+
+    bool writeAperture;///if \Omega is a box, limit light source with a box
 
     Eigen::Vector3d planeColor;
     double planeCoordZ;
@@ -95,6 +97,7 @@ struct PovRayOpts
        lightSourceRadius(80),
        lightSourceFalloff(80),
        lightSourceTightness(0),
+       writeAperture(true),
        planeColor(1.0, 1.0, 1.0),
        planeCoordZ(0.0)
     {}

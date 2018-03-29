@@ -15,7 +15,6 @@
 #include "IO/nurbsWriter.h"
 
 
-//TODO revise with new MA_OT_operator
 class MA_refractor_solver: public MA_OT_solver
 {
 public:

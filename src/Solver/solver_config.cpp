@@ -219,6 +219,7 @@ void OpticalSetting::read_configfile(std::string &configFile)
         ("povray.lightSourceFalloff",   po::value<double>(&(povRayOpts.lightSourceFalloff)), "")
         ("povray.lightSourceTightness", po::value<double>(&(povRayOpts.lightSourceTightness)), "")
         ("povray.lightSourceIntensity", po::value<double>(&OpticalSetting::lightSourceIntensity), "")
+        ("povray.writeAperture", po::value<bool>(&povRayOpts.writeAperture), "")
   ;
 
 
