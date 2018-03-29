@@ -42,8 +42,8 @@ class ImageFunction : public DensityFunction
     ImageFunction(){}
     ImageFunction (
         const std::string &filename,
-        const Config::SpaceType2d lowerLeft,
-        const Config::SpaceType2d upperRight,
+        const Config::SpaceType2d &lowerLeft,
+        const Config::SpaceType2d &upperRight,
         const double minValue=0.0
     );
 

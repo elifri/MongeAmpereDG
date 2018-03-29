@@ -17,8 +17,8 @@
 bool ImageFunction::use_adouble_image_evaluation = true;
 
 ImageFunction::ImageFunction(const std::string& filename,
-    const Config::SpaceType2d lowerLeft,
-    const Config::SpaceType2d upperRight, const double minValue) :
+    const Config::SpaceType2d &lowerLeft,
+    const Config::SpaceType2d &upperRight, const double minValue) :
     image_(filename.c_str()), blurCoeff_(1.0), factor_(1.0) {
   assert(lowerLeft[0] < upperRight[0]);
   assert(lowerLeft[1] < upperRight[1]);

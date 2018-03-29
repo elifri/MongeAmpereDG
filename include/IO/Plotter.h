@@ -1028,7 +1028,8 @@ void Plotter::writeRefractorPOV(std::string filename, Function &f) const {
 
   write_pov_setting_refractor(file);
   write_target_plane(file);
-  write_aperture(file);
+  if (povRayOpts_.writeAperture)
+    write_aperture(file);
   write_lens(file, f);
 }
 
