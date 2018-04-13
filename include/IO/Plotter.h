@@ -257,6 +257,41 @@ public:
   template <class LocalFunction, class Function>
   void writeOTVTK(std::string filename, LocalFunction &fg, const Function& f) const;
 
+  /**
+   * evaluates and saves the solution on ; works only for rectangular grids
+   * @param n_y         number of points in y -direction
+   * @param f           the function to evaluate
+   * @param filename    the path to the file where the values are written in ASCII format
+   */
+  template<typename LocalFunctiontype>
+  void save_refractor_points(std::string &filename, LocalFunctiontype &f) const;
+
+  /**
+   * evaluates and saves the solution on a rectangular, uniform mesh; works only for rectangular grids
+   * @param lowerLeft   position of the lower left corner of the grid
+   * @param upperRight  position of the upper right corner of the grid
+   * @param n_x         number of points in x -direction
+   * @param n_y         number of points in y -direction
+   * @param f           the function to evaluate
+   * @param filename    the path to the file where the values are written in ASCII format
+   */
+  template<typename GlobalFunctiontype>
+  void save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Config::SpaceType& upperRight,
+      const int n_x, const int n_y, GlobalFunctiontype &f, std::string &filename) const;
+
+  /**
+   * evaluates and saves the solution on a rectangular, uniform mesh; works only for rectangular grids
+   * @param lowerLeft   position of the lower left corner of the grid
+   * @param upperRight  position of the upper right corner of the grid
+   * @param n_x         number of points in x -direction
+   * @param n_y         number of points in y -direction
+   * @param f           the function to evaluate
+   * @param of          the stream where the values are written in ASCII format
+   */
+  template<typename Functiontype>
+  void save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Config::SpaceType& upperRight,
+      const int n_x, const int n_y, Functiontype &f, std::ofstream &of) const;
+
   template<typename Functiontype>
   void save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Config::SpaceType& upperRight, Functiontype &f, std::ofstream &of) const;
 
@@ -650,6 +685,7 @@ void Plotter::write_points_refractor(std::ofstream &file, Function &f) const{
         for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++){
           auto x_2d = geometry.global(it.coords());
           auto rho = f(it.coords());
+          assert( !(rho != rho));
           file << std::setprecision(12) << std::scientific;
           file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  omega(x_2d)*rho << std::endl;
           vertex_no++;
@@ -1045,10 +1081,10 @@ void Plotter::write_surface(std::ofstream &file, LocalFunction &f) const
 //
 //   // The code between the comment bands has nothing to do with I/O.
 //   // It is simply an easy way to get a NURBS surface to write.
-//   const int bIsRational = false;
-//   const int dim = 3;
-//   const int u_degree = 2;
-//   const int v_degree = 3;
+   const int bIsRational = false;
+   const int dim = 3;
+   const int u_degree = 2;
+   const int v_degree = 2;
 //   const int u_cv_count = 3;
 //   const int v_cv_count = 5;
 //
@@ -1086,24 +1122,26 @@ void Plotter::write_surface(std::ofstream &file, LocalFunction &f) const
 //   ON_NurbsSurface nurbs_surface( dim, bIsRational,
 //                         u_degree+1, v_degree+1,
 //                         u_cv_count, v_cv_count );
-//
+
+   ON_BezierSurface bezier_surface(dim, bIsRational, u_degree+1, v_degree+1);
+
 //   for ( i = 0; i < nurbs_surface.KnotCount(0); i++ )
 //     nurbs_surface.SetKnot( 0, i, u_knot[i] );
 //
 //   for ( j = 0; j < nurbs_surface.KnotCount(1); j++ )
 //     nurbs_surface.SetKnot( 1, j, v_knot[j] );
 //
-//   for ( i = 0; i < nurbs_surface.CVCount(0); i++ ) {
-//     for ( j = 0; j < nurbs_surface.CVCount(1); j++ ) {
-//       nurbs_surface.SetCV( i, j, CV[i][j] );
+//   for (int i = 0; i < bezier_surface.CVCount(0); i++ ) {
+//     for (int j = 0; j < bezier_surface.CVCount(1); j++ ) {
+//       bezier_surface.SetCV( i, j, 0.5);
 //     }
 //   }
 //
 //   bool ok = false;
-//   if ( nurbs_surface.IsValid() )
+//   if ( bezier_surface.IsValid() )
 //   {
 //     ON_BinaryFile archive( ON::write3dm, fp );
-//     ok = ON_WriteOneObjectArchive( archive, version, nurbs_surface );
+//     ok = ON_WriteOneObjectArchive(archive, RhinoVersion_, bezier_surface);
 //   }
 
 }
@@ -1180,6 +1218,26 @@ void Plotter::write_refractor_mesh(std::string &filename, LocalFunction &f) cons
 }
 
 
+template<typename LocalFunctiontype>
+void Plotter::save_refractor_points(std::string &filename, LocalFunctiontype &f) const
+{
+  std::ofstream of(filename.c_str(), std::ios::out);
+
+  //get information
+  for (auto&& element: elements(get_gridView()))
+  {
+    f.bind(element);
+    const auto geometry = element.geometry();
+    for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++){
+      auto x_2d = geometry.global(it.coords());
+      auto rho = f(it.coords());
+      assert( !(rho != rho));
+      of << std::setprecision(12) << std::scientific;
+      of  << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  omega(x_2d)*rho << std::endl;
+    }
+  }
+}
+
 
 
 #ifdef BSPLINES
@@ -1240,7 +1298,56 @@ void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Co
 
 
 }
+#else
 
+template<typename GlobalFunctiontype>
+void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Config::SpaceType& upperRight,
+    const int n_x, const int n_y,
+    GlobalFunctiontype &f, std::string &filename) const
+{
+  std::ofstream file(filename.c_str(), std::ios::out);
+  save_rectangular_mesh(lowerLeft, upperRight, n_x, n_y, f, file);
+}
+
+template<typename GlobalFunctiontype>
+void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Config::SpaceType& upperRight,
+    const int n_x, const int n_y,
+    GlobalFunctiontype &f, std::ofstream &of) const
+{
+  //get information
+  const double l_x = upperRight[0] - lowerLeft[0];
+  const double l_y = upperRight[1] - lowerLeft[1];
+
+  of << std::setprecision(12) << std::scientific;
+
+  const double h_x = ((double)l_x)/(n_x-1);
+  const double h_y = ((double)l_y)/(n_y-1);
+
+  //write to file
+
+  of << n_x << " " << n_y << " "
+     << h_x << " " << h_y << " "
+     << lowerLeft[0] << " " << lowerLeft[1] << std::endl;
+
+  Config::SpaceType currentPoint = lowerLeft;
+  for (int j = 0; j < n_y; j++)
+  {
+    for (int i = 0; i < n_x; i++)
+    {
+      of << f(currentPoint) << std::endl;
+      //update current point
+      currentPoint[1]+=h_y;
+    }
+    assert(std::abs(currentPoint[1]-h_y-upperRight[1]) < 1e-10);
+    currentPoint[1]=lowerLeft[1];
+    currentPoint[0]+=h_x;
+  }
+  assert(std::abs(currentPoint[0]-h_x-upperRight[0]) < 1e-10);
+}
+
+#endif
+
+#ifdef BSPLINES
 template<typename BSplineNodeFactoryType>
 void Plotter::save_BSplineCoeffs(const BSplineNodeFactoryType &bSplineNodeFactory, const Config::VectorType& coeffs, std::ofstream &of) const
 {
