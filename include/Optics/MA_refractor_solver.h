@@ -12,8 +12,6 @@
 #include "OT/MA_OT_global_Operator.h"
 #include "Optics/operator_MA_refr_Brenner.h"
 
-#include "IO/nurbsWriter.h"
-
 
 class MA_refractor_solver: public MA_OT_solver
 {
@@ -61,7 +59,6 @@ public:
 
 private:
   OpticalSetting& setting_;
-  NurbsWriter nurbsWriter_;
 
   friend OperatorType;
   //todo befriend when linearise?

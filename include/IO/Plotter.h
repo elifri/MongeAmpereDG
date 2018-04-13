@@ -232,6 +232,41 @@ public:
   template <class LocalFunction, class Function>
   void writeOTVTK(std::string filename, LocalFunction &fg, const Function& f) const;
 
+  /**
+   * evaluates and saves the solution on ; works only for rectangular grids
+   * @param n_y         number of points in y -direction
+   * @param f           the function to evaluate
+   * @param filename    the path to the file where the values are written in ASCII format
+   */
+  template<typename LocalFunctiontype>
+  void save_refractor_points(std::string &filename, LocalFunctiontype &f) const;
+
+  /**
+   * evaluates and saves the solution on a rectangular, uniform mesh; works only for rectangular grids
+   * @param lowerLeft   position of the lower left corner of the grid
+   * @param upperRight  position of the upper right corner of the grid
+   * @param n_x         number of points in x -direction
+   * @param n_y         number of points in y -direction
+   * @param f           the function to evaluate
+   * @param filename    the path to the file where the values are written in ASCII format
+   */
+  template<typename GlobalFunctiontype>
+  void save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Config::SpaceType& upperRight,
+      const int n_x, const int n_y, GlobalFunctiontype &f, std::string &filename) const;
+
+  /**
+   * evaluates and saves the solution on a rectangular, uniform mesh; works only for rectangular grids
+   * @param lowerLeft   position of the lower left corner of the grid
+   * @param upperRight  position of the upper right corner of the grid
+   * @param n_x         number of points in x -direction
+   * @param n_y         number of points in y -direction
+   * @param f           the function to evaluate
+   * @param of          the stream where the values are written in ASCII format
+   */
+  template<typename Functiontype>
+  void save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Config::SpaceType& upperRight,
+      const int n_x, const int n_y, Functiontype &f, std::ofstream &of) const;
+
   template<typename Functiontype>
   void save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Config::SpaceType& upperRight, Functiontype &f, std::ofstream &of) const;
 
@@ -625,6 +660,7 @@ void Plotter::write_points_refractor(std::ofstream &file, Function &f) const{
         for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++){
           auto x_2d = geometry.global(it.coords());
           auto rho = f(it.coords());
+          assert( !(rho != rho));
           file << std::setprecision(12) << std::scientific;
           file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  omega(x_2d)*rho << std::endl;
           vertex_no++;
@@ -1008,6 +1044,99 @@ void Plotter::writeRefractorPOV(std::string filename, Function &f) const {
   write_lens(file, f);
 }
 
+template <class LocalFunction>
+void Plotter::write_refractor_vertices(ON_Mesh &mesh, LocalFunction &f) const
+{
+  bool successful = true;
+  int vertexNo = 0;
+
+  //write points
+  if (refinement_ == 0)
+  {
+    assert(false);
+  }
+  else
+  {   // save points in file after refinement
+    for (auto&& element: elements(get_gridView()))
+    {
+      f.bind(element);
+      const auto geometry = element.geometry();
+      for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++)
+      {
+        auto x_2d = geometry.global(it.coords());
+        auto rho = f(it.coords());
+        successful = mesh.SetVertex( vertexNo++, ON_3dPoint(x_2d[0]*rho,  x_2d[1]*rho,  omega(x_2d)*rho) );
+        assert(successful);
+      }
+    }
+  }
+}
+
+
+template <class LocalFunction>
+void Plotter::write_refractor_mesh(std::string &filename, LocalFunction &f) const
+{
+
+  FILE* fp = ON::OpenFile( filename.c_str(), "wb" );
+
+
+  bool bHasVertexNormals = false; // we will specify vertex normals
+  bool bHasTexCoords = false;    // we will not specify texture coordinates
+  const int vertex_count = Nnodes();  // 4 duplicates for different base normals
+  const int face_count = Nelements(); // 4 triangle sides and a quad base
+  ON_Mesh mesh( face_count, vertex_count, bHasVertexNormals, bHasTexCoords);
+
+  write_refractor_vertices(mesh, f);
+  write_faces(mesh);
+
+  bool ok = false;
+  if ( mesh.IsValid() )
+  {
+    // Most applications expect vertex normals.
+    // If they are not present, ComputeVertexNormals sets
+    // them by averaging face normals.
+    if ( !mesh.HasVertexNormals() )
+      mesh.ComputeVertexNormals();
+    ON_BinaryFile archive( ON::write3dm, fp );
+    ok = ON_WriteOneObjectArchive( archive, RhinoVersion_, mesh );
+  }
+
+  if (!ok)
+  {
+    assert(false);
+    std::cerr << "Error, Could not create mesh " << std::endl;
+    std::exit(-1);
+  }
+
+  ON::CloseFile( fp );
+  if (ok)
+    std::cout << "Successfully wrote rhino mesh to " << filename << std::endl;
+
+}
+
+
+template<typename LocalFunctiontype>
+void Plotter::save_refractor_points(std::string &filename, LocalFunctiontype &f) const
+{
+  std::ofstream of(filename.c_str(), std::ios::out);
+
+  //get information
+  for (auto&& element: elements(get_gridView()))
+  {
+    f.bind(element);
+    const auto geometry = element.geometry();
+    for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++){
+      auto x_2d = geometry.global(it.coords());
+      auto rho = f(it.coords());
+      assert( !(rho != rho));
+      of << std::setprecision(12) << std::scientific;
+      of  << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  omega(x_2d)*rho << std::endl;
+    }
+  }
+}
+
+
+
 #ifdef BSPLINES
 template<typename Functiontype>
 void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Config::SpaceType& upperRight,
@@ -1066,7 +1195,56 @@ void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Co
 
 
 }
+#else
 
+template<typename GlobalFunctiontype>
+void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Config::SpaceType& upperRight,
+    const int n_x, const int n_y,
+    GlobalFunctiontype &f, std::string &filename) const
+{
+  std::ofstream file(filename.c_str(), std::ios::out);
+  save_rectangular_mesh(lowerLeft, upperRight, n_x, n_y, f, file);
+}
+
+template<typename GlobalFunctiontype>
+void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Config::SpaceType& upperRight,
+    const int n_x, const int n_y,
+    GlobalFunctiontype &f, std::ofstream &of) const
+{
+  //get information
+  const double l_x = upperRight[0] - lowerLeft[0];
+  const double l_y = upperRight[1] - lowerLeft[1];
+
+  of << std::setprecision(12) << std::scientific;
+
+  const double h_x = ((double)l_x)/(n_x-1);
+  const double h_y = ((double)l_y)/(n_y-1);
+
+  //write to file
+
+  of << n_x << " " << n_y << " "
+     << h_x << " " << h_y << " "
+     << lowerLeft[0] << " " << lowerLeft[1] << std::endl;
+
+  Config::SpaceType currentPoint = lowerLeft;
+  for (int j = 0; j < n_y; j++)
+  {
+    for (int i = 0; i < n_x; i++)
+    {
+      of << f(currentPoint) << std::endl;
+      //update current point
+      currentPoint[1]+=h_y;
+    }
+    assert(std::abs(currentPoint[1]-h_y-upperRight[1]) < 1e-10);
+    currentPoint[1]=lowerLeft[1];
+    currentPoint[0]+=h_x;
+  }
+  assert(std::abs(currentPoint[0]-h_x-upperRight[0]) < 1e-10);
+}
+
+#endif
+
+#ifdef BSPLINES
 template<typename BSplineNodeFactoryType>
 void Plotter::save_BSplineCoeffs(const BSplineNodeFactoryType &bSplineNodeFactory, const Config::VectorType& coeffs, std::ofstream &of) const
 {

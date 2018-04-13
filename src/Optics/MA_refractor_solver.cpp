@@ -25,10 +25,9 @@ struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
 
 MA_refractor_solver::MA_refractor_solver(GridHandlerType& gridHandler, const shared_ptr<GridType>& gridTarget,
     const SolverConfig& config, OpticalSetting& opticalSetting)
- :MA_OT_solver(gridHandler, gridTarget, config, opticalSetting, false), setting_(opticalSetting), nurbsWriter_(gridView)
+ :MA_OT_solver(gridHandler, gridTarget, config, opticalSetting, false), setting_(opticalSetting)
 {
    this->op = std::make_shared<OperatorType>(*this, setting_);
-   nurbsWriter_.set_refinement(this->plotterRefinement_);
 
    //adjust light intensity
    const auto integralLightOut = get_refr_operator().get_actual_g().integrateOriginal();
@@ -140,8 +139,11 @@ void MA_refractor_solver::plot(const std::string& name, int no) const
 
    std::string refrNurbsname(plotter.get_output_directory());
    refrNurbsname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".3dm";
-   nurbsWriter_.write_refractor_mesh(refrNurbsname, *solution_u_old);
+   plotter.write_refractor_mesh(refrNurbsname, *solution_u_old);
 
+   std::string refrMeshname(plotter.get_output_directory());
+   refrMeshname += "/"+ plotter.get_output_prefix() + name + "refractorPoints" + NumberToString(iterations) + ".txt";
+   plotter.save_refractor_points(refrMeshname, *solution_u_old);
 }
 
 void MA_refractor_solver::update_Operator()
