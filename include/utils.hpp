@@ -8,16 +8,75 @@
 #ifndef UTILS_HPP_
 #define UTILS_HPP_
 
+#include <iostream>
 
-#include <config.h>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/diagonalmatrix.hh>
 #include <Eigen/Core>
 
 #include "Dogleg/utils.hpp"
 
-#include "MAconfig.h"
 
+constexpr double eps=1e-15;
+
+inline
+bool compareLexicographic(const Eigen::Vector3d& x, const Eigen::Vector3d& y)
+{
+  if (x[0] < y[0] - eps) return true;
+  if (x[0] > y[0] + eps) return false;
+
+  if (x[1] < y[1] - eps) return true;
+  if (x[1] > y[1] + eps) return false;
+
+  if (x[2] < y[2] - eps) return true;
+  if (x[2] > y[2] + eps) return false;
+  return false;
+}
+
+struct CompareFloats{
+  constexpr bool operator()(const double& x, const double& y)
+  {
+    if (std::abs(x - y) < eps) return true;
+    return false;
+  }
+
+  constexpr bool operator()(const Dune::FieldVector<double,2>& x, const Dune::FieldVector<double,2>& y)
+  {
+    return (operator()(x[0],y[0]) && operator()(x[1],y[1]) ) ;
+  }
+
+  constexpr bool operator()(const Eigen::Vector3d& x, const Eigen::Vector3d& y)
+  {
+    return (operator()(x[0],y[0]) && operator()(x[1],y[1]) && operator()(x[2],y[2])) ;
+  }
+};
+
+struct LessFloats{
+  constexpr bool operator()(const double& x, const double& y)
+  {
+    return (x < y - eps);
+  }
+
+  bool operator()(const Dune::FieldVector<double,2>& x, const Dune::FieldVector<double,2>& y)
+  {
+    if (CompareFloats().operator()(x[0],y[0]))
+      return operator()(x[1],y[1]);
+    return  operator()(x[0],y[0]);
+  }
+
+  bool operator()(const Eigen::Vector3d& x, const Eigen::Vector3d& y)
+  {
+    if (CompareFloats().operator()(x[0],y[0]))
+    {
+      if (CompareFloats().operator()(x[1],y[1]))
+      {
+        return operator()(x[2],y[2]);
+      }
+      return operator()(x[1],y[1]);
+    }
+    return  operator()(x[0],y[0]);
+  }
+};
 
 template <class R, class R2>
 inline
@@ -99,7 +158,7 @@ void copy_to_new_sparse_matrix(const SparseMatrixType &m_local, SparseMatrixType
   for (int k=0; k<m_local.outerSize(); ++k)
     for (typename SparseMatrixType::InnerIterator it(m_local,k); it; ++it)
     {
-      tripletList.push_back(Eigen::Triplet<Config::ValueType>(it.row(), it.col(), it.value()));
+      tripletList.push_back(Eigen::Triplet<double>(it.row(), it.col(), it.value()));
     }
   m.setFromTriplets(tripletList.begin(), tripletList.end());
 }
@@ -145,59 +204,5 @@ std::string NumberToString(const T number)
 
   return s;
 }
-
-
-/*! reads an quadratic equidistant rectangle grid from file
- *
- *\param filename   file containing solution in the format "n ## h ## \n u(0,0) u(h,0) ... \n u(h,h) ..."
- *\param n_x    number of nodes in x direction
- *\param n_y    number of nodes in y direction
- *\param h_x    distance between two nodes in x direction
- *\param h_x    distance between two nodes in y direction
- */
-void read_quadratic_grid(const std::string &filename,  int &n_x, int &n_y,
-                        double &h_x, double &h_y,
-                        double &x0, double &y0,
-                        Eigen::MatrixXd &solution);
-
-/*!helper function that bilinear interpolates on a rectangular, equidistant grid
- *
- * @param x   the coordinates of the point the function is interpolated on
- * @param u   returns the interpolated function value
- * @param n_x number of function values in x-direction
- * @param n_y nubmer of function values in y-direction
- * @param h_x distance in x-direction (between two grid points)
- * @param h_y distance in y -direction (between two grid points)
- * @param x0  min x-value of grid
- * @param y0  min y-value of grid
- * @param solution  a matrix of the function values
- */
-
-void bilinear_interpolate(const Config::SpaceType x, Config::ValueType &u, const int &n_x, const int &n_y,
-    const Config::ValueType &h_x, const Config::ValueType &h_y,
-    const Config::ValueType &x0, const Config::ValueType &y0,
-    const Eigen::MatrixXd &solution);
-
-void bilinear_interpolate_derivative(const Config::SpaceType x, Config::SpaceType2d &du, const int &n_x, const int &n_y,
-    const Config::ValueType &h_x, const Config::ValueType &h_y,
-    const Config::ValueType &x0, const Config::ValueType &y0,
-    const Eigen::MatrixXd &solution);
-
-struct Rectangular_mesh_interpolator{
-
-  Rectangular_mesh_interpolator(const std::string &filename);
-  Config::ValueType evaluate (const Config::SpaceType2d& x) const;
-  Config::SpaceType2d evaluate_derivative(const Config::SpaceType2d& x) const;
-
-  Config::ValueType evaluate_inverse(const Config::SpaceType2d& x) const;
-  Config::SpaceType2d evaluate_inverse_derivative(const Config::SpaceType2d& x) const;
-
-  int n_x, n_y;
-  double h_x, h_y;
-  double x_min, y_min;
-
-  Eigen::MatrixXd solution;
-
-};
 
 #endif
