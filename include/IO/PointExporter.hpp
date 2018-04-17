@@ -29,9 +29,12 @@ void PointExporter::save_refractor_points(std::string &filename, GlobalFunctiont
 {
   std::ofstream of(filename.c_str(), std::ios::out);
 
+  //add header
+  of << "x y with n_x " << gridHandler_.grid().globalSize(0)+1 << " n_y " << gridHandler_.grid().globalSize(1)+1;
+  of << " #refractor points in a cartesian manner" << std::endl;
+  //collect all 2d grids point in a sorted set
   std::set<Config::DomainType, LessFloats> points;
 
-  //collect all 2d grids point in a sorted set
   for (auto&& element: elements(get_quad_grid()))
   {
     const auto geometry = element.geometry();
@@ -40,11 +43,6 @@ void PointExporter::save_refractor_points(std::string &filename, GlobalFunctiont
       points.insert(geometry.corner(i));
     }
   }
-
-  std::cerr << " points ";
-  for (auto e : points)
-    std::cerr << e << ", ";
-  std::cerr << std::endl;
 
   //export the refractor points sorted
   for (auto&& point: points)
