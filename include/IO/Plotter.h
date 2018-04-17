@@ -48,6 +48,8 @@ using PlotRefinementType = QuadRefinementType;
 class Plotter{
 private:
 	Config::GridView& grid_;
+
+protected:
 	PlotRefinementType refined_grid;
 
 	int refinement_; ///choose the refinement level before plotting
