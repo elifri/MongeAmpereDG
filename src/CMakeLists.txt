@@ -31,6 +31,10 @@ message("ipopt libraries ${IPOPT_LIBRARIES}")
 #target_link_libraries(dune_mongeampere_OT MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} problemData Solver_Config ImageFunction ${IPOPT_LIBRARIES} ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
 #target_link_dune_default_libraries("dune_mongeampere_OT")
 
+add_executable(export_refractor_points export_refractor_points.cpp)
+target_link_libraries(export_refractor_points ${IOLibs} Solver_Config ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES}  ${BoostPO_LIBRARIES})
+target_link_dune_default_libraries("export_refractor_points")
+
 if(LIBFFO_CORE_FOUND)
 set(BsplineHdf5Libraries ${LIBFFO_CORE_LIBRARIES} ${HDF5_LIBRARIES})
 else (LIBFFO_CORE_FOUND)
