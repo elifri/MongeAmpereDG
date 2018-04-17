@@ -43,6 +43,13 @@ public:
     return gridHandler_.grid().size(0)*QuadRefinementType::nVertices(refinement);
   }
 
+  const auto get_quad_grid() const
+  {
+    VTKWriter<Config::RectangularGridView> vtkWriter(gridHandler_.gridView());
+    vtkWriter.write("Plotgrid");
+    return gridHandler_.gridView();
+  }
+
   template <class GlobalFunction>
   void writeOTVTKGlobal(std::string filename, GlobalFunction &f) const;
 
