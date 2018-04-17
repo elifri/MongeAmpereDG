@@ -53,7 +53,7 @@ public:
   template <class GlobalFunction>
   void writeOTVTKGlobal(std::string filename, GlobalFunction &f) const;
 
-private:
+protected:
   const int refinement = 1;
   GridHandlerType gridHandler_;
 };
