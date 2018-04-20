@@ -20,7 +20,12 @@ inline T sqr (const T& x)
  return x*x;
 }
 
-bool is_close(const double a, const double b, const double tolerance=1e-10);
+inline
+bool is_close(const double a, const double b, const double tolerance=1e-10)
+{
+  bool B=( std::abs(b-a) < tolerance);
+  return B;
+}
 
 template<typename Ta, typename Tb>
 bool is_equal(const Ta a, const Tb b) { return (a==b); }

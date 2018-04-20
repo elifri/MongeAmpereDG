@@ -1,4 +1,9 @@
 
+
+add_executable(test_nurbs_fit test_nurbs_fit.cpp)
+target_link_libraries(test_nurbs_fit Dogleg ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES})
+
+
 if(ADOLC_FOUND)
 add_executable("testAdolc" testAdolc.cpp)
 target_link_libraries(testAdolc ${ADOLC_LIBRARIES})
