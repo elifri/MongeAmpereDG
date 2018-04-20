@@ -67,6 +67,101 @@ std::vector<Eigen::Vector3d> read_points_from_file(std::string& filename, int& n
   return points;
 }
 
+
+/*
+Returns:
+  True if .3dm file was successfully read into an ONX_Model class.
+*/
+static bool read_model(const char* sFileName, ONX_Model& model)
+{
+  std::cout << "\nOpenNURBS Archive File:  " <<  sFileName << std::endl;
+
+  ON_TextLog dump;
+
+  // open file containing opennurbs archive
+  FILE* archive_fp = ON::OpenFile( sFileName, "rb");
+  if ( !archive_fp )
+  {
+    std::cout << "  Unable to open file.\n";
+    return false;
+  }
+
+  // create achive object from file pointer
+  ON_BinaryFile archive( ON::read3dm, archive_fp );
+
+  // read the contents of the file into "model"
+  bool rc = model.Read( archive, &dump);
+
+  // close the file
+  ON::CloseFile( archive_fp );
+
+  // print diagnostic
+  if ( rc )
+    std::cout << "Successfully read.\n";
+  else
+    std::cout << "Errors during reading.\n";
+
+  // see if everything is in good shape
+  if ( model.IsValid(&dump) )
+  {
+  }
+  else
+  {
+    std::cerr << "Model is not valid.\n";
+  }
+
+  return rc;
+}
+
+static void add_surface_to_model(ONX_Model& model, const ON_NurbsSurface& surf)
+{
+  ON_Layer layer;
+  int layer_no = 1;
+  layer.SetLayerName("nurbssurface");
+  layer.SetVisible(true);
+  layer.SetLocked(false);
+  layer.SetLayerIndex(layer_no);
+  layer.SetColor( ON_Color(0,0,255) );
+
+  model.m_layer_table.Append(layer);
+
+//  auto layer_no = model.AddLayer("nurbssurface",ON_Color(0,0,255));
+//  assert(layer_no != ON_UNSET_INT_INDEX);
+
+  {
+    ONX_Model_Object& mo = model.m_object_table.AppendNew();
+    mo.m_object = &surf;
+    mo.m_bDeleteObject = true; // ~ONX_Model will delete pointcloud.
+    mo.m_attributes.m_layer_index = layer_no;
+    mo.m_attributes.m_name = "refractor";
+  }
+
+}
+
+static bool write_model(ONX_Model& model, const std::string& filename)
+{
+
+
+  ON_BinaryFile archive( ON::write3dm, ON::OpenFile(filename.c_str(), "wb" ) );
+
+  // start section comment
+  const char* sStartSectionComment = __FILE__ "write_refractor" __DATE__;
+
+  // Set uuid's, indices, etc.
+  model.Polish();
+
+  // errors printed to stdout
+  ON_TextLog error_log;
+
+  // writes model to archive
+  bool ok = model.Write( archive, 5, sStartSectionComment, &error_log );
+  if (ok)
+    std::cout << " wrote model to " << filename std::endl;
+  return ok;
+}
+
+
+
 static bool export_curve_and_control_points(const SurfaceFitter& surf, const SurfaceFitter::Vector3dPoints& P)
 {
 
@@ -154,149 +249,17 @@ static bool export_curve_and_control_points(const SurfaceFitter& surf, const Sur
   return ok;
 }
 
-static bool export_Q_and_intermediate_curves(const SurfaceFitter& surf, const SurfaceFitter::CartesianWrapper& Q,
-    const std::vector<Eigen::Vector3d>& P)
-{
-
-  ON_PointCloud* pointcloud = new ON_PointCloud();
-  surf.add_points(pointcloud, P);
-
-  SurfaceFitter::Matrix3dPoints R(surf.get_n()+1,surf.get_m()+1);
-
-
-  for (int l = 0; l <= surf.get_m(); l++)
-    R.col(l) = SurfaceFitter::interpolate_curve(Q.col(l), surf.get_n(), surf.get_uDeg(), surf.get_uk(), surf.get_U());
-
-  for (unsigned int i = 0; i < R.rows(); i++)
-    for (unsigned int j = 0; j < R.cols(); j++)
-      std::cout << " R[" << i << ","<< j << "]= " << R(i,j).transpose() << std::endl;
-
-
-  SurfaceFitter::Matrix3dPoints ControlPoints(surf.get_n()+1,surf.get_m()+1);
-
-  std::cout << " m is " << surf.get_m() << std::endl;
-  for (int i = 0; i <= surf.get_m(); i++)
-  {
-    SurfaceFitter::Vector3dPoints rowR = R.row(i);
-    std::vector<Eigen::Vector3d> row (rowR.data(), rowR.data()+rowR.size());
-    ControlPoints.row(i) = SurfaceFitter::interpolate_curve(row, surf.get_m(), surf.get_vDeg(), surf.get_vl(), surf.get_V());
-
-    for (unsigned int j = 0; j < row.size(); j++)
-      std::cout << " RConv[" << i << ","<< j << "]= " << row[j].transpose() << std::endl;
-
-  }
-
-  //plot curve
-  // layer table
-  ONX_Model model;
-
-  // file properties (notes, preview image, revision history, ...)
-
-  // set revision history information
-  model.m_properties.m_RevisionHistory.NewRevision();
-
-  // set application information
-  model.m_properties.m_Application.m_application_name = "OpenNURBS write_curves_example() function";
-  model.m_properties.m_Application.m_application_URL = "http://www.opennurbs.org";
-  model.m_properties.m_Application.m_application_details = "Example program in OpenNURBS toolkit.";
-
-  // some notes
-  model.m_properties.m_Notes.m_notes = "This file was made with the OpenNURBS write_curves_example() function.";
-  model.m_properties.m_Notes.m_bVisible = true;
-
-
-  // file settings (units, tolerances, views, ...)
-  model.m_settings.m_ModelUnitsAndTolerances.m_unit_system = ON::meters;
-  model.m_settings.m_ModelUnitsAndTolerances.m_absolute_tolerance = 0.001;
-  model.m_settings.m_ModelUnitsAndTolerances.m_angle_tolerance = ON_PI/180.0; // radians
-  model.m_settings.m_ModelUnitsAndTolerances.m_relative_tolerance = 0.01; // 1%
-
-
-
-  {
-    // OPTIONAL - define some layers
-    ON_Layer layer[3];
-
-    layer[0].SetLayerName("Points");
-    layer[0].SetVisible(true);
-    layer[0].SetLocked(false);
-    layer[0].SetLayerIndex(0);
-    layer[0].SetColor( ON_Color(0,0,255) );
-    model.m_layer_table.Append(layer[0]);
-
-    layer[1].SetLayerName("R Curves");
-    layer[1].SetVisible(true);
-    layer[1].SetLocked(false);
-    layer[1].SetLayerIndex(1);
-    layer[1].SetColor( ON_Color(0,255,0) );
-
-    model.m_layer_table.Append(layer[1]);
-
-    layer[2].SetLayerName("P Curves");
-    layer[2].SetVisible(true);
-    layer[2].SetLocked(false);
-    layer[2].SetLayerIndex(2);
-    layer[2].SetColor( ON_Color(255,0,0) );
-
-    model.m_layer_table.Append(layer[2]);
-  }
-
-  {
-    ONX_Model_Object& mo = model.m_object_table.AppendNew();
-    mo.m_object = pointcloud;
-    mo.m_bDeleteObject = true; // ~ONX_Model will delete pointcloud.
-    mo.m_attributes.m_layer_index = 0;
-    mo.m_attributes.m_name = "interpolation points";
-  }
-
-  for (int l = 0; l <= surf.get_m(); l++)
-  {
-    auto curve = surf.construct_curve(surf.get_n(), surf.get_uDeg(), surf.get_U(), R.col(l));
-    {
-      ONX_Model_Object& mo = model.m_object_table.AppendNew();
-      mo.m_object = curve;
-      mo.m_bDeleteObject = true;
-      mo.m_attributes.m_layer_index = 1;
-      mo.m_attributes.m_name = "curve";
-    }
-  }
-
-  for (int k = 0; k <= surf.get_n(); k++)
-  {
-    auto curve = surf.construct_curve(surf.get_m(), surf.get_vDeg(), surf.get_V(), ControlPoints.row(k));
-    {
-      ONX_Model_Object& mo = model.m_object_table.AppendNew();
-      mo.m_object = curve;
-      mo.m_bDeleteObject = true;
-      mo.m_attributes.m_layer_index = 2;
-      mo.m_attributes.m_name = "curve";
-    }
-  }
-
-  ON_BinaryFile archive( ON::write3dm, ON::OpenFile( "interpolation_curves.3dm", "wb" ) );
-
-  // start section comment
-  const char* sStartSectionComment = __FILE__ "write_points_example()" __DATE__;
-
-  // Set uuid's, indices, etc.
-  model.Polish();
-
-  // errors printed to stdout
-  ON_TextLog error_log;
-
-  // writes model to archive
-  bool ok = model.Write( archive, 5, sStartSectionComment, &error_log );
-  if (ok)
-    std::cout << " wrote model to interpolation_curves.3dm" << std::endl;
-  return ok;
-}
-
-
-
 int main(int argc, char *argv[])
 {
   std::string pointsfilename = argv[1];
   std::string outputfilename = argv[2];
+
+  std::string meshFile = "";
+
+  if (argc == 4)
+  {
+    meshFile = argv[3];
+  }
 
   int n_x, n_y;
   auto points = read_points_from_file(pointsfilename, n_x, n_y);
@@ -319,9 +282,13 @@ int main(int argc, char *argv[])
 
   SurfaceFitter::CartesianWrapper Q(points, n_x, n_y);
 
-  export_Q_and_intermediate_curves(surfaceFitter, Q, points);
-
-
+  if (argc == 4)
+  {
+    ONX_Model model;
+    read_model(meshFile.c_str(), model);
+    add_surface_to_model(model, surface);
+    write_model(model, "testRefractor.3dm");
+  }
 
 }
 
