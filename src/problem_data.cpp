@@ -127,10 +127,6 @@ void RightHandSideReflector::init(const Integrator<SolverConfig::GridType>& inte
 
 using namespace std;
 
-bool is_close(const double a, const double b, const double tolerance) {
-  bool B=( std::abs(b-a) < tolerance);
-  return B;
-}
 
 
 void read_quadratic_grid(const string &filename,   int &n_x, int &n_y,
