@@ -16,10 +16,10 @@
 
 class SurfaceFitter{
 
+public:
+
   using Matrix3dPoints = Eigen::Matrix<Eigen::Vector3d, Eigen::Dynamic, Eigen::Dynamic>;
   using Vector3dPoints = Eigen::Matrix<Eigen::Vector3d, Eigen::Dynamic,1>;
-
-public:
 
   /**
    *
@@ -160,7 +160,7 @@ public:
     return P;
   }
 
-  ON_NurbsCurve* construct_curve(const int n, int deg, const Eigen::VectorXd& u, Vector3dPoints& P)
+  static ON_NurbsCurve* construct_curve(const int n, const int deg, const Eigen::VectorXd& u, const Vector3dPoints& P)
   {
 
     assert(u.size() == n+deg+2);
@@ -183,13 +183,6 @@ public:
     for (int i = 0; i < u.size()-2; i++ )
       curve->SetKnot( i, u[i+1] );
 
-    for (unsigned int i = 0; i < u.size(); i++)
-      std::cout << " knot U[" << i << "]= " << u[i] << std::endl;
-
-    for (unsigned int i = 0; i < P.size(); i++)
-        std::cout << " P[" << i <<  "]= " << P(i).transpose() << std::endl;
-
-
     if ( curve->IsValid() )
     {
 
@@ -204,7 +197,8 @@ public:
     return curve;
   }
 
-  void add_points(ON_PointCloud* pointcloud, Vector3dPoints& P)
+  template<typename PointVector>
+  static void add_points(ON_PointCloud* pointcloud, const PointVector& P)
   {
     for (int i = 0; i < P.size(); i++ )
       pointcloud->AppendPoint(ON_3dPoint( P[i][0], P[i][1], P[i][2]));
@@ -296,7 +290,8 @@ public:
 
     for (int i = 0; i <= n_; i++)
     {
-      std::vector<Eigen::Vector3d> row (R.row(i).data(), R.row(i).data()+R.row(i).size());
+      SurfaceFitter::Vector3dPoints rowR = R.row(i);
+      std::vector<Eigen::Vector3d> row (rowR.data(), rowR.data()+rowR.size());
       P_.row(i) = interpolate_curve(row, m_, vDeg_, vl_, v_);
     }
   }
@@ -376,6 +371,11 @@ public:
     ON_NurbsSurface surf;
     return surf;
   }
+
+  int get_n() const{return n_;}
+  int get_m() const{return m_;}
+  int get_uDeg() const{return uDeg_;}
+  int get_vDeg() const{return vDeg_;}
 
   void set_n(const int n_x){n_= n_x;};
   void set_m(const int n_y){m_= n_y;};
