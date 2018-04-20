@@ -1,89 +1,70 @@
 /*
- * test_nurbs_fit.cpp
+ * fit_surface.cpp
  *
- *  Created on: Apr 18, 2018
+ *  Created on: Apr 13, 2018
  *      Author: friebel
  */
 
 
+
+
+#include <iostream>
+#include <fstream>
+#include <vector>
+
+#include <string>
+
+#include <Eigen/Core>
+
+#include "utils.hpp"
+
 #include "NURBS/surfaceFitter.h"
 
-#include "opennurbs.h"
-#include "examples_linking_pragmas.h"
-
-#include "../src/NURBS/example_ud.h"
-
-#include "Eigen/Dense"
-using namespace Dune;
-
-
-bool test_findSpan(double u, int deg, const Eigen::VectorXd & U)
+std::vector<Eigen::Vector3d> read_points_from_file(std::string& filename, int& n_x, int& n_y)
 {
+  std::ifstream input (filename);
 
-
-  int i = SurfaceFitter::find_span(u, deg, U);
-
-  if (i != 4)
+  if(input.fail())
   {
-    std::cerr << " The wrong knot span was determined! " << std::endl;
-    assert(false);
-    return false;
-  }
-  return true;
-}
-
-bool test_BasisFuns(int i, double u, int deg, const Eigen::VectorXd & U)
-{
-
-
-  auto N = SurfaceFitter::evaluateBasis(i, u, deg, U);
-
-  if (N.size() != 3)
-  {
-    std::cerr << " the number of evaluated basis functions is wrong! " << std::endl;
-    return false;
+    std::cerr << "Error opening " << filename << ", exited with error " << strerror(errno) << std::endl;
+    exit(-1);
   }
 
+  std::string s;
 
-  if (!is_close(N[0], 1./8.))
+  input >> s; //read "n_x "
+  input >> n_x;
+  input >> s; //read "n_y "
+  input >> n_y;
+  std::getline(input,s);
+
+  int pointNo = 0;
+
+  std::vector<Eigen::Vector3d> points(n_x*n_y);
+  while(!input.eof())
   {
-    std::cerr << " the basis evaluation function is wrong! " << std::endl;
-    return false;
+    for (int i = 0; i < 3; i++)
+    {
+      if (input.eof())
+      {
+        std::cerr << "Some coordinate is not 3 dimensional";
+        assert(false);
+        exit(-1);
+      }
+
+      input >> points[pointNo][i] >> std::ws;
+    }
+
+    pointNo++;
   }
-  if (!is_close(N[1], 6./8.))
+  if (pointNo != n_x*n_y)
   {
-    std::cerr << " the basis evaluation function is wrong! " << std::endl;
-    return false;
+    assert(false&& " the number of points does not match n_x and n_y");
+    std::cerr << " the number of refractor points does not match the specified n_x and n_y ..." << std::endl;
+    std::exit(-1);
   }
 
-  if (!is_close(N[2], 1./8.))
-  {
-    std::cerr << " the basis evaluation function is wrong! " << std::endl;
-    return false;
-  }
-
-  return true;
-}
-
-bool test_knot_vectors(const Eigen::VectorXd& uk, const Eigen::VectorXd& U)
-{
-  bool success = true;
-
-
-  assert(uk.size() == 5);
-
-  Eigen::VectorXd ukRef(5);
-  ukRef << 0 , 5./17., 9./17., 14./17., 1.;
-  success = success && compare_matrices(std::cout, uk, ukRef, "uk", "ukRef", true, eps);
-
-
-  assert(U.size() == 9);
-
-  Eigen::VectorXd URef(9);
-  URef << 0 , 0, 0, 0, 28./51., 1., 1 , 1., 1;
-  success = success && compare_matrices(std::cout, U, URef, "U", "URef", true, eps);
-
-  return success;
+  return points;
 }
 
 static bool export_curve_and_control_points(const SurfaceFitter& surf, const SurfaceFitter::Vector3dPoints& P)
@@ -182,8 +163,28 @@ static bool export_Q_and_intermediate_curves(const SurfaceFitter& surf, const Su
 
   SurfaceFitter::Matrix3dPoints R(surf.get_n()+1,surf.get_m()+1);
 
+
   for (int l = 0; l <= surf.get_m(); l++)
     R.col(l) = SurfaceFitter::interpolate_curve(Q.col(l), surf.get_n(), surf.get_uDeg(), surf.get_uk(), surf.get_U());
+
+  for (unsigned int i = 0; i < R.rows(); i++)
+    for (unsigned int j = 0; j < R.cols(); j++)
+      std::cout << " R[" << i << ","<< j << "]= " << R(i,j).transpose() << std::endl;
+
+
+  SurfaceFitter::Matrix3dPoints ControlPoints(surf.get_n()+1,surf.get_m()+1);
+
+  std::cout << " m is " << surf.get_m() << std::endl;
+  for (int i = 0; i <= surf.get_m(); i++)
+  {
+    SurfaceFitter::Vector3dPoints rowR = R.row(i);
+    std::vector<Eigen::Vector3d> row (rowR.data(), rowR.data()+rowR.size());
+    ControlPoints.row(i) = SurfaceFitter::interpolate_curve(row, surf.get_m(), surf.get_vDeg(), surf.get_vl(), surf.get_V());
+
+    for (unsigned int j = 0; j < row.size(); j++)
+      std::cout << " RConv[" << i << ","<< j << "]= " << row[j].transpose() << std::endl;
+
+  }
 
   //plot curve
   // layer table
@@ -223,17 +224,21 @@ static bool export_Q_and_intermediate_curves(const SurfaceFitter& surf, const Su
     layer[0].SetColor( ON_Color(0,0,255) );
     model.m_layer_table.Append(layer[0]);
 
-    for (int l = 0; l <= surf.get_m(); l++)
-    {
-      layer[1].SetLayerName("Curve");
-      layer[1].SetVisible(true);
-      layer[1].SetLocked(false);
-      layer[1].SetLayerIndex(l);
-      layer[1].SetColor( ON_Color(0,255,0) );
+    layer[1].SetLayerName("R Curves");
+    layer[1].SetVisible(true);
+    layer[1].SetLocked(false);
+    layer[1].SetLayerIndex(1);
+    layer[1].SetColor( ON_Color(0,255,0) );
 
-      model.m_layer_table.Append(layer[1]);
-    }
+    model.m_layer_table.Append(layer[1]);
 
+    layer[2].SetLayerName("P Curves");
+    layer[2].SetVisible(true);
+    layer[2].SetLocked(false);
+    layer[2].SetLayerIndex(2);
+    layer[2].SetColor( ON_Color(255,0,0) );
+
+    model.m_layer_table.Append(layer[2]);
   }
 
   {
@@ -251,7 +256,19 @@ static bool export_Q_and_intermediate_curves(const SurfaceFitter& surf, const Su
       ONX_Model_Object& mo = model.m_object_table.AppendNew();
       mo.m_object = curve;
       mo.m_bDeleteObject = true;
-      mo.m_attributes.m_layer_index = l;
+      mo.m_attributes.m_layer_index = 1;
+      mo.m_attributes.m_name = "curve";
+    }
+  }
+
+  for (int k = 0; k <= surf.get_n(); k++)
+  {
+    auto curve = surf.construct_curve(surf.get_m(), surf.get_vDeg(), surf.get_V(), ControlPoints.row(k));
+    {
+      ONX_Model_Object& mo = model.m_object_table.AppendNew();
+      mo.m_object = curve;
+      mo.m_bDeleteObject = true;
+      mo.m_attributes.m_layer_index = 2;
       mo.m_attributes.m_name = "curve";
     }
   }
@@ -276,69 +293,35 @@ static bool export_Q_and_intermediate_curves(const SurfaceFitter& surf, const Su
 
 
 
-
-int main()
+int main(int argc, char *argv[])
 {
+  std::string pointsfilename = argv[1];
+  std::string outputfilename = argv[2];
 
-  //the NURBS book, Ex2.3 on p. 68
-  int deg = 2;
-  Eigen::VectorXd U(11);
-  U << 0, 0, 0, 1, 2, 3, 4, 4, 5, 5, 5;
-  double u = 5./2.;
+  int n_x, n_y;
+  auto points = read_points_from_file(pointsfilename, n_x, n_y);
 
-  bool success = true;
+  SurfaceFitter surfaceFitter(2,2);
+  auto surface = surfaceFitter.interpolate_surface(n_x, n_y, points);
 
-  success = success && test_findSpan(u, deg, U);
-
-  int i = 4;
-
-  success = success && test_BasisFuns(i, u, deg, U);
-
-  if (success)
-    std::cout << "nurbs evaluation passed the test cases!" << std::endl;
-  else
-    std::cerr << "nurbs evaluation failed the test cases!" << std::endl;
-
-  int n = 4;
-  std::vector<Eigen::Vector3d> points;
-  points.push_back( Eigen::Vector3d(0.,0.,0));
-  points.push_back( Eigen::Vector3d(3.,4.,0));
-  points.push_back( Eigen::Vector3d(-1.,4.,0));
-  points.push_back( Eigen::Vector3d(-4.,0.,0));
-  points.push_back( Eigen::Vector3d(-4.,-3.,0));
-
-  assert((int) points.size() == n+1);
-
-  deg = 3;
-
-  SurfaceFitter surf(deg, 0);
-
-  surf.set_n(n);
-  surf.set_m(0);
-  SurfaceFitter::CartesianWrapper Q(points, n+1, 1);
-  surf.construct_knot_vectors(Q);
-
-  success = success && test_knot_vectors(surf.get_uk(), surf.get_U());
-
-  std::cout << "passed  knot vector construction in direction u " << std::endl;
-
+  bool ok = false;
+  if ( surface.IsValid() )
   {
-    SurfaceFitter surfV(0, deg);
+    auto fp = ON::OpenFile( outputfilename.c_str(), "wb" );
 
-    surfV.set_n(0);
-    surfV.set_m(n);
-    SurfaceFitter::CartesianWrapper Q(points, 1, n+1);
-    surfV.construct_knot_vectors(Q);
-
-    success = success && test_knot_vectors(surfV.get_vl(), surfV.get_V());
+    ON_BinaryFile archive( ON::write3dm, fp );
+    ok = ON_WriteOneObjectArchive(archive, 4, surface);
+    ON::CloseFile( fp );
+    std::cout << " wrote nurbs in file " << outputfilename << std::endl;
   }
+  else
+    std::cerr << " Error, the surface was not valid!" << std::endl;
 
-  std::cout << "passed  knot vector construction in direction v " << std::endl;
+  SurfaceFitter::CartesianWrapper Q(points, n_x, n_y);
 
-  auto P = surf.interpolate_curve(points, n, deg, surf.get_uk(), surf.get_U());
+  export_Q_and_intermediate_curves(surfaceFitter, Q, points);
 
-  export_curve_and_control_points(surf, P);
 
-  export_Q_and_intermediate_curves(surf, Q, points);
 
 }
+
