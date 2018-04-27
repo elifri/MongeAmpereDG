@@ -1,0 +1,128 @@
+/*
+ * read_and_write_OT.cpp
+ *
+ *  Created on: Apr 27, 2018
+ *      Author: friebel
+ */
+
+
+#include <config.h>
+#include <vector>
+
+
+#include <dune/grid/io/file/vtk/vtkwriter.hh>
+#include <dune/grid/io/file/gmshreader.hh>
+
+#include <Eigen/Core>
+#include <Eigen/Sparse>
+
+#include "MAconfig.h"
+#include "OT/MA_OT_image_solver.h"
+#include "IO/Plotter.h"
+
+#include <boost/program_options.hpp>
+
+using namespace Dune;
+namespace po = boost::program_options;
+using namespace std;
+
+void read_parameters(int argc, char *argv[], std::string& configFileMASolver, std::string& configFileSetting)
+{
+  string petscConfig;
+
+  po::options_description cmdline("Generic options");
+  cmdline.add_options()
+      ("version,v",   "print version string")
+      ("help,h",      "produce help message")
+      ("help-all,a",  "produce help message (including config file options)")
+      ("solver,c", po::value<string>(&configFileMASolver),  "config file for the MA finite element method")
+      ("geometry,g",   po::value<string>(&configFileSetting),  "config file for geometry")
+      ;
+
+  po::options_description cmdline_options;
+  cmdline_options.add(cmdline);
+
+  po::variables_map vm;
+  po::store(po::parse_command_line(argc, argv, cmdline_options), vm);
+  notify(vm);
+
+  if (vm.count("help")) {
+      cout << cmdline << "\n";
+      exit(-1);
+  }
+
+  if (vm.count("help-all")) {
+      cout << cmdline_options << "\n";
+      exit(-1);
+  }
+
+  if (vm.count("version")) {
+      cout << cmdline << "\n";
+      exit(-1);
+  }
+}
+
+
+
+
+int main(int argc, char *argv[])
+try {
+
+  /////////////////////////////
+  // setup problem parameter //
+  /////////////////////////////
+  std::cout << " Start solving OT problem " << std::endl;
+
+  std::string configFileMASolver, configFileSetting;
+
+  read_parameters(argc, argv, configFileMASolver, configFileSetting);
+
+  SolverConfig config;
+  config.read_configfile(configFileMASolver);
+
+  OpticalSetting setting;
+  setting.read_configfile(configFileSetting);
+
+  std::cout << " Output files in folder " << config.plotOutputDirectory << "/" << config.outputPrefix <<"..." << std::endl;
+
+  // ////////////////////////////////
+  // Generate the grid
+  // ////////////////////////////////
+#ifdef BSPLINES
+  GridHandler<Config::GridType, true> gridHandler(setting,SolverConfig::startlevel);
+#else
+  GridHandler<Config::GridType> gridHandler(setting,SolverConfig::startlevel);
+#endif
+
+  // Output grid
+  VTKWriter<Config::GridView> vtkWriter(gridHandler.gridView());
+  vtkWriter.write("grid");
+
+  //-----target area grid--------
+#ifndef BSPLINES
+  std::cout << " read target grid vom file " << setting.gridTargetFile << std::endl;
+  std::shared_ptr<Config::GridType> gridTarget_ptr(GmshReader<Config::GridType>::read(setting.gridTargetFile));
+  {
+    VTKWriter<Config::GridView> vtkWriterTarget(gridTarget_ptr->leafGridView());
+    vtkWriterTarget.write("gridTarget");
+  }
+#endif
+
+  // ///////////////////////////////////////////////
+  // init solver data
+  // ///////////////////////////////////////////////
+  MA_OT_image_solver ma_solver(gridHandler, gridTarget_ptr, config, setting);
+  ma_solver.init_from_file(config.initValue);
+  ma_solver.plot("numericalSolution");
+
+  std::cout << "done" << std::endl;
+
+#ifdef USE_PETSC
+  int ierr = PetscFinalize();
+  std::cout <<"Petsc ended with " << ierr << std::endl;
+#endif
+}
+// Error handling
+catch (Exception e) {
+  std::cout << e << std::endl;
+}

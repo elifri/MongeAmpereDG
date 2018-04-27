@@ -49,7 +49,6 @@ public:
   OperatorType& get_OT_operator(){return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
   const OperatorType& get_OT_operator() const {return  *(std::dynamic_pointer_cast<OperatorType>(this->op));}
 
-private:
   ///performs one step of the semi-implicit method mentioned in "Two numerical methods for ..." by Benamou, Froese and Oberman
 //  void one_Poisson_Step();
 //  using MA_OT_solver::one_Poisson_Step;
