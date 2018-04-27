@@ -257,16 +257,16 @@ const typename MA_solver::VectorType& MA_solver::solve()
     update_solution(solution);
     plot("numericalSolution");
 
-/*    Config::VectorType v = coarse_solution(1);
+    ///interpolate to coarse grid
     {
-      //write current solution to file
-      update_solution(solution);
+      Config::VectorType v = coarse_solution(2);
 
       stringstream filename2; filename2 << outputDirectory_ << "/" << outputPrefix_ << iterations << "Coarse.fec";
       ofstream file(filename2.str(),std::ios::out);
       file << v;
       file.close();
-    }*/
+      std::cout << " written coarse FE coefficients to " << filename2.str() << std::endl;
+    }
   }
   return solution;
 }
