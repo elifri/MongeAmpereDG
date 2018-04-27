@@ -52,6 +52,7 @@ void MA_refractor_solver::create_initial_guess()
   {
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
     project([](Config::SpaceType x){return 1.12;}, solution);
+    update_solution(solution);
   }
 
 //  ExactSolutionSimpleLens refLens("../Testing/oneParis.grid");

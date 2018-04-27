@@ -165,6 +165,7 @@ void MA_solver::init_from_file(const std::string& filename)
     exit(-1);
   }
   fileInitial.close();
+  update_solution(solution);
 }
 
 void MA_solver::create_initial_guess()
@@ -178,6 +179,7 @@ void MA_solver::create_initial_guess()
   {
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
     project([](Config::SpaceType x){return x.two_norm2()/2.0;},solution);
+    update_solution(solution);
   }
 }
 
@@ -199,7 +201,6 @@ const typename MA_solver::VectorType& MA_solver::solve()
     file << solution;
     file.close();
   }
-  update_solution(solution);
   plot("initialguess");
 
 

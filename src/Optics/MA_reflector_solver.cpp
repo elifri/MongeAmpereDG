@@ -71,6 +71,8 @@ void MA_reflector_solver::create_initial_guess()
 //                       [](Config::SpaceType x){return x[1];},
 //                       solution);
 
+    update_solution(solution);
+
     Config::ValueType res = 0;
     assemblerLM1D_.assembleRhs(*(get_refl_operator().lopLMMidvalue), solution, res);
 //      assemblerLM1D_.assembleRhs(*(this->get_OT_operator().lopLMMidvalue), exactsol_u, res);

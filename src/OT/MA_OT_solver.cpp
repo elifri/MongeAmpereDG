@@ -81,10 +81,11 @@ struct ResidualFunction{
     localHessu_[3]=u11;
   }
 
-  ResidualFunction(std::shared_ptr<LocalGradFunction> &u, const MA_OT_solver::OperatorType& op, LocalHessScalarFunction &u00, LocalHessScalarFunction &u10,
+  ResidualFunction(LocalGradFunction &u, const MA_OT_solver::OperatorType& op, LocalHessScalarFunction &u00, LocalHessScalarFunction &u10,
       LocalHessScalarFunction &u01, LocalHessScalarFunction &u11):
-        localgradu_(u), rhoX(op.get_lop().get_input_distribution()), rhoY(op.get_lop().get_target_distribution())
+        rhoX(op.get_lop().get_input_distribution()), rhoY(op.get_lop().get_target_distribution())
   {
+    localgradu_ = std::make_shared<LocalGradFunction>(u);
     localHessu_[0]= std::make_shared<LocalHessScalarFunction>(u00);
     localHessu_[1] = std::make_shared<LocalHessScalarFunction>(u10);
     localHessu_[2] = std::make_shared<LocalHessScalarFunction>(u01);
@@ -387,6 +388,7 @@ void MA_OT_solver::init_from_file(const std::string& filename)
     std::exit(-1);
   }
   fileInitial.close();
+  update_solution(solution);
 }
 
 
@@ -475,9 +477,8 @@ void MA_OT_solver::plot(const std::string& name, int no) const
       }
 #endif
 
-
 #ifndef USE_MIXED_ELEMENT
-     ResidualFunction residual(gradient_u_old,this->get_OT_operator(),HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
+     ResidualFunction residual(gradu,this->get_OT_operator(),HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
      DetFunction detFunction(HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
 #else
      ResidualFunction residual(gradient_u_old,this->get_OT_operator(),
@@ -513,6 +514,7 @@ void MA_OT_solver::plot(const std::string& name, int no) const
   std::string fname(plotter.get_output_directory());
   fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + "outputGrid.vtu";
 
+  assert(gradient_u_old);
 
   ExactData exactData;
   plotter.writeOTVTK(fname, *gradient_u_old,exactData.exact_gradient());
