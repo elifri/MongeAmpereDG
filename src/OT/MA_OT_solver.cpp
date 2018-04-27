@@ -22,6 +22,8 @@ namespace po = boost::program_options;
 
 #include "Operator/linear_system_operator_poisson_NeumannBC.h"
 
+#include "IO/imageOT.hpp"
+
 MA_OT_solver::MA_OT_solver(GridHandlerType& gridHandler,
     const shared_ptr<GridType>& gridTarget,
     const SolverConfig& config, GeometrySetting& setting, bool create_operator)
@@ -516,6 +518,17 @@ void MA_OT_solver::plot(const std::string& name, int no) const
   plotter.writeOTVTK(fname, *gradient_u_old,exactData.exact_gradient());
 
       //  plotter.writeOTVTK(fname, *gradient_u_old);
+
+  std::string fnameTransportedPlot(plotter.get_output_directory());
+  fnameTransportedPlot += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + "transport.bmp";
+
+  const auto& g = this->get_OT_operator().get_g();
+  FETraits::DiscreteGridFunction::LocalSecondDerivative localHess(get_u_old());
+
+  print_image_OT(gridView(), get_gradient_u_old(), localHess,
+                 this->get_OT_operator().get_f(), g,
+                 fnameTransportedPlot, g.getOriginalImage().height(),g.getOriginalImage().width(),
+                 plotter.get_refinement());
 
   std::string fnameCartesian(plotter.get_output_directory());
   fnameCartesian += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + "outputCartesianGrid.vtu";
