@@ -916,8 +916,9 @@ void MA_OT_solver::adapt_operator()
 
 void MA_OT_solver::adapt_solution(const int level)
 {
+  //store Lagrangian Parameter
+  //  Config::VectorType p = get_assembler_lagrangian_boundary().boundaryHandler().blow_up_boundary_vector(solution.tail(get_n_dofs_Q_h()));
 
-  Config::VectorType p = get_assembler_lagrangian_boundary().boundaryHandler().blow_up_boundary_vector(solution.tail(get_n_dofs_Q_h()));
 
   //adapt input grid
 
@@ -936,9 +937,8 @@ void MA_OT_solver::adapt_solution(const int level)
 //        this->grid().levelGridView(this->grid().maxLevel()-1), p);
 #else
 //    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(old_grid.gridViewOld, this->gridView(), p);
-      FEBasisHandlerQ_.adapt_after_grid_change(this->gridView());
+  FEBasisHandlerQ_.adapt_after_grid_change(this->gridView());
 #endif
-
 
   auto& assemblerBoundary = get_assembler_lagrangian_boundary();
   assemblerBoundary.bind(FEBasisHandler_.uBasis(), FEBasisHandlerQ_.FEBasis());
@@ -978,15 +978,14 @@ void MA_OT_solver::adapt_solution(const int level)
 
   {
 //    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change();
-
-
+    p_adapted.setZero(get_n_dofs_Q_h());
+//    get_assembler_lagrangian_boundary().boundaryHandler().shrink_to_boundary_vector(p_adapted);
   }
 
   //init lagrangian multiplier variables
   solution.conservativeResize(get_n_dofs());
   solution(get_n_dofs_V_h()) = 0;
-//  solution.tail(get_n_dofs_Q_h()) = get_assembler_lagrangian_boundary().boundaryHandler().shrink_to_boundary_vector(p_adapted);
-
+  solution.tail(get_n_dofs_Q_h()) = p_adapted;
 
   {
     update_solution(solution);

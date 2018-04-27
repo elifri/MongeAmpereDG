@@ -101,7 +101,7 @@ public:
       //-------calculate integral--------
       auto signedDistance = bc.H(gradu);
       auto signedDistanceDerivative = bc.derivativeH(gradu);
-      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
+//      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());

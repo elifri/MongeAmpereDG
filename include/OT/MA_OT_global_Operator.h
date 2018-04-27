@@ -79,7 +79,8 @@ public:
         g_(OperatorTraits::construct_g(solver, setting)),
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
         lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-        lopLMBoundary(OperatorTraits::construct_lop_LBoundary(setting,get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
+        lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),
+//        lopLMBoundary(OperatorTraits::construct_lop_LBoundary(setting,get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
         fixingPoint{0.3,0},
         intermediateSolCounter()
     {
@@ -475,7 +476,8 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
   tempV.setZero(Q_h_size);
 
   //assemble boundary terms
-  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix_with_automatic_differentiation(*lopLMBoundary, tempM, xBoundary.head(V_h_size), tempV);
+//  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix_with_automatic_differentiation(*lopLMBoundary, tempM, xBoundary.head(V_h_size), tempV);
+  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xBoundary.head(V_h_size), tempV);
 
   Q_h_size = tempM.rows();
 
