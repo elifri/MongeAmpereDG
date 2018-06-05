@@ -17,6 +17,7 @@ class MA_refractor_solver: public MA_OT_solver
 {
 public:
   //select local operator
+//  using Local_Refractor_OperatorType = Local_Operator_MA_refr_parallel;
   using Local_Refractor_OperatorType = Local_Operator_MA_refr_Brenner;
 
   using ProblemTraits = OpticOperatorTraits<MA_OT_solver, Local_Refractor_OperatorType, Local_Operator_LagrangianBoundary_refr>;

@@ -99,6 +99,7 @@ inline FieldVector<valueType, 3> T(const FieldVector<Config::ValueType, 3>& x, c
 //forward declaration
 class Local_Operator_MA_refl_Neilan;
 class Local_Operator_MA_refl_Brenner;
+class Local_Operator_MA_refr_parallel;
 class Local_Operator_MA_refr_Brenner;
 class Local_Operator_MA_refr_Linearisation;
 
@@ -322,6 +323,7 @@ private:
 
   friend Local_Operator_MA_refl_Neilan;
   friend Local_Operator_MA_refl_Brenner;
+  friend Local_Operator_MA_refr_parallel;
   friend Local_Operator_MA_refr_Brenner;
   friend Local_Operator_MA_refr_Linearisation;
 };

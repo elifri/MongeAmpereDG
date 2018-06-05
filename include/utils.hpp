@@ -91,6 +91,15 @@ double cwiseProduct(const double& A, const double &B)
 	return A*B;
 }
 
+template<typename R>
+inline
+Dune::FieldMatrix<R, 2,2> dotTimes(const Dune::FieldVector<R,2>& u, const Dune::FieldVector<R,2>& v)
+{
+  return Dune::FieldMatrix<R, 2,2> ({ {u[0]*v[0], u[0]*v[1]},{u[1]*v[0],u[1]*v[1]} });
+}
+
+
+
 template<typename R, int dim>
 void leftmultiply (Dune::FieldMatrix<R,dim,dim>& A, const Dune::DiagonalMatrix<R, dim>& M)
 {
