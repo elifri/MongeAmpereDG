@@ -103,8 +103,6 @@ Config::VectorType FEBasisHandler<Standard, LagrangeC0BoundaryTraits<Config::Gri
 template <>
 Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::coarse_solution(MA_solver& solver, const int level)
 {
-  assert(false);
-/*
 
   assert(solver.initialised);
   Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
@@ -216,7 +214,6 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 
 
   return v;
-*/
 }
 
 template<>
