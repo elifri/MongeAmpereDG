@@ -27,7 +27,7 @@ void print_image_OT_backtrace(const Function& T, const DerivativeFunction& Jac_T
 
   for (int i = 0; i < pixel_height*scale; i++)
   {
-    for (int j = 0; j < pixel_height*scale; j++)
+    for (int j = 0; j < pixel_width*scale; j++)
     {
       const double i_original = (double)i/pixel_width/scale*originalWidth;
       const double j_original = (double)j/pixel_height/scale*originalHeight;
@@ -69,9 +69,9 @@ void print_image_OT(const GridView& gridView, LocalFunction& T, LocalDerivativeF
     const ImageFunction& inputImage, const ImageFunction& targetImage,
     const std::string& outputFile, int pixel_width, int pixel_height, int refinement = 3)
 {
-  const int originalHeight = inputImage.getOriginalImage().height();
-  const int originalWidth = inputImage.getOriginalImage().width();
   cimg_library::CImg<double> transported(pixel_width,pixel_height);
+
+  Eigen::MatrixXi count_match = Eigen::MatrixXi::Zero(pixel_height, pixel_width);
 
   transported.fill(0);
 
@@ -95,8 +95,16 @@ void print_image_OT(const GridView& gridView, LocalFunction& T, LocalDerivativeF
       int i_transported, j_transported;
       targetImage.getPixel(transportedX, i_transported, j_transported);
       transported(i_transported, j_transported) += transportedPixelvalue;
+      count_match(i_transported, j_transported)++;
     }
   }
+
+  for (int i = 0; i < pixel_height; i++)
+    for (int j = 0; j < pixel_width; i++)
+    {
+      if (count_match(i,j) > 0 )
+        transported(i,j)/=(Config::ValueType) count_match(i,j);
+    }
 
   transported /= targetImage.factor_;
   transported /= 255.0 / (255.0 + targetImage.minValue());
