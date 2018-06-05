@@ -189,21 +189,21 @@ public:
 
   void write_pov_setting(std::ofstream &file) const;///write the setting for photons, camera and light source
   void write_pov_setting_refractor(std::ofstream &file) const;///write the setting for photons, camera and light source
-	void write_target_plane(std::ofstream &file) const;
+  void write_target_plane(std::ofstream &file) const;
   void write_aperture(std::ofstream &file) const;
 
-	///writes pointarray in pov format for reflector
-	template <class Function>
-	void write_points_reflector_pov(std::ofstream &file, Function& f) const;
+  ///writes pointarray in pov format for reflector
+  template <class Function>
+  void write_points_reflector_pov(std::ofstream &file, Function& f) const;
 
   ///writes pointarray in pov format for reflector
-	template <class Function>
+  template <class Function>
   void write_points_refractor_pov(std::ofstream &file, Function& f) const;
 
-	void write_face_indices_pov(std::ofstream &file) const;
+  void write_face_indices_pov(std::ofstream &file) const;
 
   template <class Function>
-	void write_mirror(std::ofstream &file, Function &f) const;
+  void write_mirror(std::ofstream &file, Function &f) const;
 
   template <class Function>
   void write_lens(std::ofstream &file, Function &f) const;
@@ -211,22 +211,22 @@ public:
 public:
 
   template <class Function>
-	void writeReflectorPOV(std::string filename, Function &f) const;
+  void writeReflectorPOV(std::string filename, Function &f) const;
 
   template <class Function>
   void writeRefractorPOV(std::string filename, Function &f) const;
 
-	template <class Function>
-	void writeReflectorVTK(std::string filename, Function &f) const;
+  template <class Function>
+  void writeReflectorVTK(std::string filename, Function &f) const;
 
-	template <class Function>
+  template <class Function>
   void writeRefractorVTK(std::string filename, Function &f) const;
 
-	template <class LocalFunction, class Function>
-	void writeReflectorVTK(std::string filename, LocalFunction &f, Function& exact_solution) const;
+  template <class LocalFunction, class Function>
+  void writeReflectorVTK(std::string filename, LocalFunction &f, Function& exact_solution) const;
 
-	template <class GlobalFunction>
-	void writeOTVTKGlobal(std::string filename, GlobalFunction &f) const;
+  template <class GlobalFunction>
+  void writeOTVTKGlobal(std::string filename, GlobalFunction &f) const;
 
   template <class LocalFunction>
   void writeOTVTK(std::string filename, LocalFunction &f) const;
@@ -277,29 +277,29 @@ public:
   void save_BSplineCoeffs(const BSplineNodeFactoryType &bSplineNodeFactory, const Config::VectorType& coeffs, std::ofstream &of) const;
 
 
-	void set_refinement(const int refinement){	this->refinement_ = refinement;}
-	void set_output_directory(std::string outputdir) {this->output_directory = outputdir;}
-	void set_output_prefix(std::string prefix) {this->output_prefix = prefix;}
-	void set_PovRayOptions(const  PovRayOpts& opts) {this->povRayOpts_ = opts;}
+  void set_refinement(const int refinement){	this->refinement_ = refinement;}
+  void set_output_directory(std::string outputdir) {this->output_directory = outputdir;}
+  void set_output_prefix(std::string prefix) {this->output_prefix = prefix;}
+  void set_PovRayOptions(const  PovRayOpts& opts) {this->povRayOpts_ = opts;}
   void set_geometrySetting(const  GeometrySetting& opts) {this->geometrySetting_ = opts;}
 
 //	void set_rhs(vector_function_type get_rhs){ this->get_rhs = get_rhs;}
 //	void set_exact_sol(vector_function_type get_exact_sol){ this->get_exact_sol = get_exact_sol;}
 
-	std::string get_output_directory() const {return output_directory;}
-	std::string get_output_prefix() const {return output_prefix;}
-	int get_refinement() const {return refinement_;}
+  std::string get_output_directory() const {return output_directory;}
+  std::string get_output_prefix() const {return output_prefix;}
+  int get_refinement() const {return refinement_;}
 
-	void read_VTK(const std::string filename);
+  void read_VTK(const std::string filename);
 
 
-	void add_plot_stream(const std::string &name, const std::string &filepath);
-	std::ofstream& get_plot_stream(const std::string &name)
-	{
-		return *plot_streams.at(name);
-	}
+  void add_plot_stream(const std::string &name, const std::string &filepath);
+  std::ofstream& get_plot_stream(const std::string &name)
+  {
+    return *plot_streams.at(name);
+  }
 
-	friend TransportPlotter;
+  friend TransportPlotter;
 };
 
 void check_file_extension(std::string &name, std::string extension = ".vtu");

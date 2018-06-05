@@ -96,9 +96,9 @@ try {
 
 //	std::cout << " init grid handler from file " << opticalSetting.gridinputFile << std::endl;
 //#ifdef BSPLINES
-  GridHandler<Config::GridType, true> gridHandler(opticalSetting,SolverConfig::startlevel);
+//  GridHandler<Config::GridType, true> gridHandler(opticalSetting,SolverConfig::startlevel);
 //#else
-//  GridHandler<Config::GridType> gridHandler(opticalSetting,SolverConfig::startlevel);
+  GridHandler<Config::GridType> gridHandler(opticalSetting,SolverConfig::startlevel);
 //#endif
 
   // Output grid

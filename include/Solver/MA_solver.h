@@ -52,27 +52,28 @@ using namespace Dune;
 class MA_solver {
 public:
 
-	//-----typedefs---------
-	using GridType = Config::DuneGridType;
-  using GridHandlerType = GridHandler<GridType, true>;
-	using GridViewType = Config::GridView;
-	using LevelGridViewType = Config::LevelGridView;
-	using IntersectionIterator = GridViewType::IntersectionIterator;
-	using Intersection = IntersectionIterator::Intersection;
-	using IndexType = GridViewType::IndexSet::IndexType;
+  //-----typedefs---------
+  using GridType = Config::DuneGridType;
+//  using GridHandlerType = GridHandler<GridType, true>;
+  using GridHandlerType = GridHandler<GridType>;
+  using GridViewType = Config::GridView;
+  using LevelGridViewType = Config::LevelGridView;
+  using IntersectionIterator = GridViewType::IntersectionIterator;
+  using Intersection = IntersectionIterator::Intersection;
+  using IndexType = GridViewType::IndexSet::IndexType;
 
-	using SpaceType = Config::SpaceType;
-	using RangeType = SolverConfig::RangeType;
+  using SpaceType = Config::SpaceType;
+  using RangeType = SolverConfig::RangeType;
 
-	using VectorType = Config::VectorType;
-	using DenseMatrixType = Config::DenseMatrixType;
-	using MatrixType = Config::MatrixType;
+  using VectorType = Config::VectorType;
+  using DenseMatrixType = Config::DenseMatrixType;
+  using MatrixType = Config::MatrixType;
 
   using FETraits = SolverConfig::FETraitsSolver;
   using FEBasisType = FETraits::FEBasis;
 
-	using DiscreteGridFunction = FETraits::DiscreteGridFunction;
-	using DiscreteLocalGridFunction = FETraits::DiscreteLocalGridFunction;
+  using DiscreteGridFunction = FETraits::DiscreteGridFunction;
+  using DiscreteLocalGridFunction = FETraits::DiscreteLocalGridFunction;
   using DiscreteLocalGradientGridFunction = FETraits::DiscreteLocalGradientGridFunction;
 
 
@@ -240,21 +241,21 @@ public:
 
 public:
 
-	///assembles the (global) integrals (for every test function) specified by lop
-	template<typename LocalOperatorType>
-	void assemble_DG(const LocalOperatorType &lop, const VectorType& x,
-			VectorType& v) const {
-		assert (initialised);
-		assembler_.assemble_DG(lop, x, v);
-	}
+  ///assembles the (global) integrals (for every test function) specified by lop
+  template<typename LocalOperatorType>
+  void assemble_DG(const LocalOperatorType &lop, const VectorType& x,
+                   VectorType& v) const {
+    assert (initialised);
+    assembler_.assemble_DG(lop, x, v);
+  }
 
 	///assembles the (global) Jacobian of the FE function as specified in LOP
-	template<typename LocalOperatorType>
-	void assemble_DG_Jacobian_only(const LocalOperatorType &LOP, const VectorType& x, MatrixType& m) const {
-		assert (initialised);
+  template<typename LocalOperatorType>
+  void assemble_DG_Jacobian_only(const LocalOperatorType &LOP, const VectorType& x, MatrixType& m) const {
+    assert (initialised);
 
-		assembler_.assemble_DG_Jacobian_only(LOP, x, m);
-	}
+    assembler_.assemble_DG_Jacobian_only(LOP, x, m);
+  }
 
   ///assembles the (global) Jacobian of the FE function as specified in LOP
   template<typename LocalOperatorType>
@@ -263,13 +264,13 @@ public:
     assembler_.assemble_DG_Jacobian(LOP, x, v, m);
   }
 
-	/**
-	 * projects a function into the grid space, for the initialisation of the hessian dofs the piecewise hessian is interpolated
-	 * @param f	function representing the function
-	 * @param V	returns the coefficient vector of the projection of f
-	 */
-	template<class F>
-	void project(F f, VectorType &V) const;
+  /**
+   * projects a function into the grid space, for the initialisation of the hessian dofs the piecewise hessian is interpolated
+   * @param f	function representing the function
+   * @param V	returns the coefficient vector of the projection of f
+   */
+  template<class F>
+  void project(F f, VectorType &V) const;
 
   /**
    * projects a function into the grid space, for the initialisation of the hessian dofs the piecewise hessian is interpolated
@@ -282,8 +283,8 @@ public:
 
 
 protected:
-	template<class F, class DF>
-	void test_projection(const F f, const DF Df, VectorType& v) const;
+  template<class F, class DF>
+  void test_projection(const F f, const DF Df, VectorType& v) const;
 
 public:
   /**
@@ -294,18 +295,18 @@ public:
   template<class F, typename FEBasis=FEBasisType>
   void project_with_discrete_Hessian(F f, VectorType &V) const;
 
-	/**
-	 * updates all members to newSolution
-	 */
-	void update_solution(const Config::VectorType& newSolution) const;
+  /**
+   * updates all members to newSolution
+   */
+  void update_solution(const Config::VectorType& newSolution) const;
 
 
-	shared_ptr<GridType> adapt_grid(const int level);
-	/**
-	 * adapts the solver into the global refined space (refines grid, and transforms solution & exact solution data)
-	 * @param level
-	 */
-	virtual void adapt_solution(const int level=1);
+  shared_ptr<GridType> adapt_grid(const int level);
+  /**
+   * adapts the solver into the global refined space (refines grid, and transforms solution & exact solution data)
+   * @param level
+   */
+  virtual void adapt_solution(const int level=1);
 
   /**
    * adapts the solution into a coarser grid space
@@ -313,60 +314,60 @@ public:
    */
   Config::VectorType coarse_solution(const int level=1);
 
-	/**
-	 * refines the grid globally and sets up all necessary information for the next step
-	 * @param level	how often the grid is refined
-	 */
-	void adapt(const int level=1);
+  /**
+   * refines the grid globally and sets up all necessary information for the next step
+   * @param level	how often the grid is refined
+   */
+  void adapt(const int level=1);
 
-	///write the current numerical solution to vtk file
-	virtual void plot(const std::string& filename) const;
+  ///write the current numerical solution to vtk file
+  virtual void plot(const std::string& filename) const;
   virtual void plot(const std::string& filename, int no) const;
-	void plot(const VectorType& u, const std::string& filename) const;
+  void plot(const VectorType& u, const std::string& filename) const;
 
 protected:
-	///reads the fe coefficients from file
-	virtual void init_from_file(const std::string& filename);
-	///creates the initial guess
-	virtual void create_initial_guess();
+  ///reads the fe coefficients from file
+  virtual void init_from_file(const std::string& filename);
+  ///creates the initial guess
+  virtual void create_initial_guess();
 
-	virtual void update_Operator() {}
+  virtual void update_Operator() {}
 
-	/// solves own nonlinear system given initial point in solution
-	virtual void solve_nonlinear_system();
+  /// solves own nonlinear system given initial point in solution
+  virtual void solve_nonlinear_system();
 
 public:
-	/**
-	 * initialises the member solution with sol_u, the second derivatives are initialised with D^2_h sol_u
-	 */
-	void init_mixed_element_without_second_derivatives(const VectorType& coeff_u, VectorType &coeff_mixed) const;
+  /**
+   * initialises the member solution with sol_u, the second derivatives are initialised with D^2_h sol_u
+   */
+  void init_mixed_element_without_second_derivatives(const VectorType& coeff_u, VectorType &coeff_mixed) const;
 
-	/**
-	 * This function is the main function of the MA solver:
-	 * It starts with the initial value given by create_initial_guess
-	 * It calls the nonlinear solver to solve the nonlinear system given by op
-	 *
-	 * @brief calculates the solution of the MA equation
-	 * @return
-	 */
-	const VectorType& solve();
+  /**
+   * This function is the main function of the MA solver:
+   * It starts with the initial value given by create_initial_guess
+   * It calls the nonlinear solver to solve the nonlinear system given by op
+   *
+   * @brief calculates the solution of the MA equation
+   * @return
+   */
+  const VectorType& solve();
 
-	template <typename FunctionType>
-	double calculate_L2_error(const FunctionType &f) const;
+  template <typename FunctionType>
+  double calculate_L2_error(const FunctionType &f) const;
 
-	/**
-	 * returns a vector containing the function with coefficients x evaluated at the vertices
-	 * @return
-	 */
-	VectorType return_vertex_vector(const VectorType &x) const;
+  /**
+   * returns a vector containing the function with coefficients x evaluated at the vertices
+   * @return
+   */
+  VectorType return_vertex_vector(const VectorType &x) const;
 
-	Operator& get_operator(){return *op;}
+  Operator& get_operator(){return *op;}
   const Operator& get_operator()const {return *op;}
 
   MA_Operator& get_MA_operator(){return dynamic_cast<MA_Operator&>(get_operator());}
 
 
-	virtual GeometrySetting& get_setting() {return setting_;}
+  virtual GeometrySetting& get_setting() {return setting_;}
   virtual const GeometrySetting& get_setting() const {return setting_;}
 
   const Assembler<>& get_assembler() const { return assembler_;}
@@ -376,8 +377,8 @@ public:
   const std::string& get_plot_output_directory() const{ return plotOutputDirectory_;}
   const std::string& get_output_prefix() const{ return outputPrefix_;}
 
+  const VectorType& get_solution() const {return solution;}
   const VectorType& get_exact_solution() const {return exactsol_u;}
-
 
   DiscreteGridFunction& get_u_old() const {return *solution_u_old_global;}
   shared_ptr<DiscreteGridFunction>& get_u_old_ptr() const {return solution_u_old_global;}
@@ -388,11 +389,11 @@ public:
 
   int get_plotRefinement() {return plotterRefinement_;}
 
-	//--------Attributes--
+  //--------Attributes--
 protected:
-	bool initialised; ///asserts the important member, such as the dof_handler, assembler ... are initialised
+  bool initialised; ///asserts the important member, such as the dof_handler, assembler ... are initialised
 
-	GeometrySetting setting_;
+  GeometrySetting setting_;
 
   double epsMollifier_, epsDivide_, epsEnd_;
 
@@ -415,24 +416,24 @@ protected:
 	std::string outputDirectory_, plotOutputDirectory_, outputPrefix_; ///outputdirectories
   int plotterRefinement_; ///number of (virtual) grid refinements for output generation
 
-	GridHandlerType& gridHandler_; ///handles grid
+  GridHandlerType& gridHandler_; ///handles grid
 
-	FEBasisHandler<FETraits::Type, FETraits> FEBasisHandler_;
+  FEBasisHandler<FETraits::Type, FETraits> FEBasisHandler_;
 
-	Assembler<> assembler_; ///handles all (integral) assembly processes
-	Plotter plotter; ///handles all output generation
+  Assembler<> assembler_; ///handles all (integral) assembly processes
+  Plotter plotter; ///handles all output generation
 
   double G; /// fixes the reflector size
 
   //store old solutions and coefficients
-	mutable VectorType solution; /// stores the current solution vector
-	mutable VectorType solution_u;
+  mutable VectorType solution; /// stores the current solution vector
+  mutable VectorType solution_u;
 
-	mutable VectorType exactsol; /// if exact solution is known, stores a L2 projection to the current grid
-	mutable VectorType exactsol_u;
+  mutable VectorType exactsol; /// if exact solution is known, stores a L2 projection to the current grid
+  mutable VectorType exactsol_u;
 
-	mutable shared_ptr<DiscreteGridFunction> solution_u_old_global;
-	mutable shared_ptr<DiscreteLocalGridFunction> solution_u_old;
+  mutable shared_ptr<DiscreteGridFunction> solution_u_old_global;
+  mutable shared_ptr<DiscreteLocalGridFunction> solution_u_old;
   mutable shared_ptr<DiscreteLocalGradientGridFunction> gradient_u_old;
 
 //  mutable shared_ptr<DiscreteGridFunction> exact_solution_projection_global;
@@ -442,9 +443,9 @@ protected:
 
   shared_ptr<Operator> op; ///functional operator
 
-	friend MA_Operator;
-	template <int T, typename T2>
-	friend struct FEBasisHandler;
+  friend MA_Operator;
+  template <int T, typename T2>
+  friend struct FEBasisHandler;
 };
 
 template<class F>
