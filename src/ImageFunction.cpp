@@ -254,7 +254,7 @@ void ImageFunction::convolveOriginal (double width)
 
       int maxBlur = pow((double) SolverConfig::epsDivide, (int) SolverConfig::nonlinear_steps) * SolverConfig::epsEnd;
       std::cout << " maxBlur " << maxBlur << " ((double)(width-1)/(maxBlur-1)) " << ((double)(width-1)/(maxBlur-1))<< " maybe " <<((double)(width-1))/(maxBlur-1) << std::endl;
-      blurCoeff_ = 1+ ((double)(width-1))/(maxBlur-1)*29;
+      blurCoeff_ = 1+ ((double)(width-1))/(maxBlur-1)*40;
 
 
       std::cout << " blurring with " << blurCoeff_ << std::endl;
