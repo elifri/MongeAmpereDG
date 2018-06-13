@@ -73,7 +73,8 @@ public:
     init();
   }
 
-    template<typename GeometrySetting>
+    template<typename GeometrySetting,
+      typename std::enable_if<sizeof(GeometrySetting) && is_same<LocalOperatorLagrangianBoundaryType,Local_Operator_LagrangianBoundary>::value, int>::type = 0>
     MA_OT_Operator(SolverType& solver, GeometrySetting& setting):solver_ptr(&solver),
         boundary_(new GenerealOTBoundary(solver.get_gridTarget(), setting.boundaryN)),
         f_(OperatorTraits::construct_f(solver, setting)),
@@ -81,7 +82,6 @@ public:
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
         lopLMMidvalue(new Local_operator_LangrangianMidValue()),
         lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),
-//        lopLMBoundary(OperatorTraits::construct_lop_LBoundary(setting,get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
         fixingPoint{0.3,0},
         intermediateSolCounter()
     {
@@ -89,6 +89,24 @@ public:
 
       init();
     }
+
+    template<typename GeometrySetting,
+      typename std::enable_if<sizeof(GeometrySetting) && !is_same<LocalOperatorLagrangianBoundaryType,Local_Operator_LagrangianBoundary>::value, int>::type = 0>
+    MA_OT_Operator(SolverType& solver, GeometrySetting& setting):solver_ptr(&solver),
+        boundary_(new GenerealOTBoundary(solver.get_gridTarget(), setting.boundaryN)),
+        f_(OperatorTraits::construct_f(solver, setting)),
+        g_(OperatorTraits::construct_g(solver, setting)),
+        lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
+        lopLMMidvalue(new Local_operator_LangrangianMidValue()),
+        lopLMBoundary(OperatorTraits::construct_lop_LBoundary(setting,get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
+        fixingPoint{0.3,0},
+        intermediateSolCounter()
+    {
+      std::cout << " solver n_dofs "<< solver.get_n_dofs() << std::endl;
+
+      init();
+    }
+
 
   MA_OT_Operator(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
@@ -155,12 +173,11 @@ private:
   ///normalises the functions f and g such that the match the integrability condition int_Omega f dx = int_Sigma g dy
   template<typename OperatorTraitsDummy = OperatorTraits>
   void assert_integrability_condition(){assert_integrability_condition((OperatorTraitsDummy*)0);}
-
   /// use function overload to select correct implementation
   template<typename OperatorTraitsDummy = OperatorTraits>
   void assert_integrability_condition(OperatorTraitsDummy* dummy){}
-
   void assert_integrability_condition(ConstantOperatorTraits<SolverType, LocalOperatorType>* dummy);
+
 
   ///check whether the condition int_Omega f dx = int_Sigma g dy holds
   bool check_integrability_condition() const;
@@ -176,6 +193,25 @@ private:
   void assemble_with_langrangian(const Config::VectorType& xNew, const Config::VectorType& x, Config::VectorType& v) const;
 
   virtual void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const;
+
+
+  ///assembles the bilinear form used with the lagrangian multiplier for the boundary
+  template<typename OperatorTraitsDummy = OperatorTraits>
+  void assemble_Jacobian_boundary(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+  {
+    assert(x.size()==this->solver_ptr->get_n_dofs_V_h());
+    assert(v.size()==this->solver_ptr->get_n_dofs_Q_h());
+    assert(m.rows()==this->solver_ptr->get_n_dofs_Q_h());
+    assert(m.cols()==this->solver_ptr->get_n_dofs_V_h());
+
+    assemble_Jacobian_boundary((OperatorTraitsDummy*)0, x,v,m);
+  }
+  /// use function overload to select correct implementation
+  template<typename OperatorTraitsDummy = OperatorTraits>
+  void assemble_Jacobian_boundary(OperatorTraitsDummy* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
+  void assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, Local_Operator_LagrangianBoundary_refr>* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
+
+
 
 public:
   ///assembles the system of combination of the MA PDE and the lagrangian multiplier for fixing the mean value and boundary condition
@@ -412,6 +448,22 @@ void MA_OT_Operator<OperatorTraits>::assemble_without_langrangian_Jacobian(const
 }
 
 template<typename OperatorTraits>
+template<typename OperatorTraitsDummy>
+void MA_OT_Operator<OperatorTraits>::assemble_Jacobian_boundary(OperatorTraitsDummy* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+{
+  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, m, x, v);
+}
+
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>
+  ::assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, Local_Operator_LagrangianBoundary_refr>* dummy,
+                               const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+{
+  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix_with_automatic_differentiation(*lopLMBoundary, m, x, v);
+}
+
+
+template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Config::VectorType& xBoundary, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {
   assert(lop_ptr);
@@ -507,8 +559,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
   tempV.setZero(Q_h_size);
 
   //assemble boundary terms
-//  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix_with_automatic_differentiation(*lopLMBoundary, tempM, xBoundary.head(V_h_size), tempV);
-  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xBoundary.head(V_h_size), tempV);
+  assemble_Jacobian_boundary(xBoundary.head(V_h_size), tempV, tempM);
 
   Q_h_size = tempM.rows();
 

@@ -53,8 +53,9 @@ public:
   const OpticalSetting& get_optical_setting() const {return setting_;}
 
   OperatorType& get_refr_operator(){return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
-  OperatorType& get_OT_operator(){return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
-  const OperatorType& get_OT_operator() const {return  *(std::dynamic_pointer_cast<OperatorType>(this->op));}
+  const OperatorType& get_refr_operator() const{return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
+  Operator_OT& get_OT_operator(){return *(std::dynamic_pointer_cast<Operator_OT>(this->op));}
+  const Operator_OT& get_OT_operator() const {return  *(std::dynamic_pointer_cast<Operator_OT>(this->op));}
 
 
 private:

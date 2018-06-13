@@ -30,8 +30,8 @@ MA_refractor_solver::MA_refractor_solver(GridHandlerType& gridHandler, const sha
    this->op = std::make_shared<OperatorType>(*this, setting_);
 
    //adjust light intensity
-   const auto integralLightOut = get_refr_operator().get_g().integrateOriginal();
-   const auto integralLightIn = get_refr_operator().get_f().integrateOriginal();
+   const auto integralLightOut = get_refr_operator().get_actual_g().integrateOriginal();
+   const auto integralLightIn = get_refr_operator().get_actual_f().integrateOriginal();
    setting_.povRayOpts.lightSourceColor = Eigen::Vector3d::Constant(integralLightOut/integralLightIn*setting_.lightSourceIntensity);
 
    assembler_.set_X0(opticalSetting.lowerLeft);
@@ -61,7 +61,7 @@ void MA_refractor_solver::create_initial_guess()
 
   //set fixing size for refractor (fix distance to light source)
   Config::ValueType res = 0;
-  assemblerLM1D_.assembleRhs(*(get_OT_operator().lopLMMidvalue), solution, res);
+  assemblerLM1D_.assembleRhs((get_OT_operator().get_lopLMMidvalue()), solution, res);
   assembler_.set_u0AtX0(res);
   std::cerr << " set u_0^mid to " << res << std::endl;
 }
@@ -141,21 +141,21 @@ void MA_refractor_solver::update_Operator()
 {
   if (iterations== 0)
   {
-    get_refr_operator().get_f().normalize();
-    get_refr_operator().get_g().normalize();
+    get_refr_operator().get_actual_f().normalize();
+    get_refr_operator().get_actual_g().normalize();
   }
 
   //blurr target distributation
   std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
-  get_refr_operator().get_g().convolveOriginal(epsMollifier_);
-  get_refr_operator().get_g().normalize();
+  get_refr_operator().get_actual_g().convolveOriginal(epsMollifier_);
+  get_refr_operator().get_actual_g().normalize();
 
   //print blurred target distribution
   if (true) {
       std::ostringstream filename2; filename2 << plotOutputDirectory_+"/lightOut" << iterations << ".bmp";
       std::cout << "saved image to " << filename2.str() << std::endl;
-      get_refr_operator().get_g().saveImage (filename2.str());
-      assert(std::abs(get_refr_operator().get_g().integrate2()) - 1 < 1e-10);
+      get_refr_operator().get_actual_g().saveImage (filename2.str());
+      assert(std::abs(get_refr_operator().get_actual_g().integrate2()) - 1 < 1e-10);
   }
   epsMollifier_ /= epsDivide_;
 }
