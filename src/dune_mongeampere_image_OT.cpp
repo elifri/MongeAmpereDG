@@ -97,11 +97,11 @@ try {
   // ////////////////////////////////
   // Generate the grid
   // ////////////////////////////////
-#ifdef BSPLINES
+//#ifdef BSPLINES
   GridHandler<Config::GridType, true> gridHandler(setting,SolverConfig::startlevel);
-#else
-  GridHandler<Config::GridType> gridHandler(setting,SolverConfig::startlevel);
-#endif
+//#else
+//  GridHandler<Config::GridType> gridHandler(setting,SolverConfig::startlevel);
+//#endif
 
   // Output grid
   VTKWriter<Config::GridView> vtkWriter(gridHandler.gridView());

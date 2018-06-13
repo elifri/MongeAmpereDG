@@ -71,9 +71,9 @@ struct ResidualFunction{
   typedef MA_OT_solver::FETraits::DiscreteLocalSecondDerivativeGridFunction LocalHessScalarFunction;
   typedef MA_OT_solver::DiscreteLocalGradientGridFunction LocalGradFunction;
 
-  ResidualFunction(std::shared_ptr<LocalGradFunction> &u, const MA_OT_solver::OperatorType& op, std::shared_ptr<LocalHessScalarFunction> &u00, std::shared_ptr<LocalHessScalarFunction> &u10,
+  ResidualFunction(std::shared_ptr<LocalGradFunction> &u, const Operator_OT& op, std::shared_ptr<LocalHessScalarFunction> &u00, std::shared_ptr<LocalHessScalarFunction> &u10,
       std::shared_ptr<LocalHessScalarFunction> &u01,std::shared_ptr<LocalHessScalarFunction> &u11):
-        localgradu_(u), rhoX(op.get_lop().get_input_distribution()), rhoY(op.get_lop().get_target_distribution())
+        localgradu_(u), rhoX(op.get_f()), rhoY(op.get_g())
   {
     localHessu_[0]= u00;
     localHessu_[1] =u10;
@@ -81,9 +81,9 @@ struct ResidualFunction{
     localHessu_[3]=u11;
   }
 
-  ResidualFunction(LocalGradFunction &u, const MA_OT_solver::OperatorType& op, LocalHessScalarFunction &u00, LocalHessScalarFunction &u10,
+  ResidualFunction(LocalGradFunction &u, const Operator_OT& op, LocalHessScalarFunction &u00, LocalHessScalarFunction &u10,
       LocalHessScalarFunction &u01, LocalHessScalarFunction &u11):
-        rhoX(op.get_lop().get_input_distribution()), rhoY(op.get_lop().get_target_distribution())
+        rhoX(op.get_f()), rhoY(op.get_g())
   {
     localgradu_ = std::make_shared<LocalGradFunction>(u);
     localHessu_[0]= std::make_shared<LocalHessScalarFunction>(u00);
@@ -521,20 +521,9 @@ void MA_OT_solver::plot(const std::string& name, int no) const
 
       //  plotter.writeOTVTK(fname, *gradient_u_old);
 
-  std::string fnameTransportedPlot(plotter.get_output_directory());
-  fnameTransportedPlot += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + "transport.bmp";
-
-  const auto& g = this->get_OT_operator().get_g();
-  FETraits::DiscreteGridFunction::LocalSecondDerivative localHess(get_u_old());
-
-  print_image_OT(gridView(), get_gradient_u_old(), localHess,
-                 this->get_OT_operator().get_f(), g,
-                 fnameTransportedPlot, g.getOriginalImage().height(),g.getOriginalImage().width(),
-                 plotter.get_refinement());
 
   std::string fnameCartesian(plotter.get_output_directory());
   fnameCartesian += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + "outputCartesianGrid.vtu";
-
 
   FETraits::DiscreteGridFunction::GlobalFirstDerivative globalGradU(get_u_old());
 
@@ -631,7 +620,8 @@ void MA_OT_solver::one_Poisson_Step()
   //add lagrange multiplier for mean value
   Config::VectorType lagrangianFixingPointDiscreteOperator;
   AssemblerLagrangianMultiplier1D<C0Traits> lagrangeAssemblerMidvalue(gridView());
-  lagrangeAssemblerMidvalue.assemble_u_independent_matrix(*this->get_OT_operator().lopLMMidvalue, lagrangianFixingPointDiscreteOperator);
+//  lagrangeAssemblerMidvalue.assemble_u_independent_matrix(*this->get_OT_operator().lopLMMidvalue, lagrangianFixingPointDiscreteOperator);
+  lagrangeAssemblerMidvalue.assemble_u_independent_matrix((this->get_OT_operator().get_lopLMMidvalue()), lagrangianFixingPointDiscreteOperator);
 
   m.makeCompressed();
 
@@ -835,7 +825,8 @@ void MA_OT_solver::create_initial_guess()
 //#define U_MID_EXACT
 
 //  assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), solution, res);
-  assemblerLM1D_.assembleRhs(*(this->get_OT_operator().lopLMMidvalue), exactsol_u, res);
+//  assert(std::dynamic_pointer_cast<OperatorType>(this->op));
+  assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), exactsol_u, res);
   //take care that the adapted exact solution also updates the
   assembler_.set_u0AtX0(res);
   std::cerr << " set u_0^mid to " << res << std::endl;
@@ -858,12 +849,7 @@ void MA_OT_solver::solve_nonlinear_system()
   assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
 
 
-#ifdef USE_ANALYTIC_JACOBIAN
-  assert(!this->get_OT_operator().get_lopLinear().last_step_on_a_different_grid);
-#else
-  assert(this->get_OT_operator().get_lop().is_evaluation_of_u_old_on_different_grid() == false);
-#endif
-  assert(this->get_OT_operator().lopLMBoundary->is_evaluation_of_u_old_on_different_grid() == false);
+  assert(!this->get_OT_operator().is_evaluation_of_u_old_on_different_grid());
   std::cout << "n dofs" << get_n_dofs() << " V_h_dofs " << get_n_dofs_V_h() << " Q_h_dofs " << get_n_dofs_Q_h() << std::endl;
 
   //if the exact solution is known it can be accessed via exactdata
@@ -923,7 +909,7 @@ void MA_OT_solver::adapt_operator()
 #ifdef U_MID_EXACT
   Config::ValueType res = 0;
 
-  assemblerLM1D_.assembleRhs(*(this->get_OT_operator().lopLMMidvalue), exactsol_u, res);
+  assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), exactsol_u, res);
   assembler_.set_u0AtX0(res);
   std::cerr << " set u_0^mid to " << res << std::endl;
 #endif

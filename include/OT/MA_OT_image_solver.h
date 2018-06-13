@@ -39,15 +39,16 @@ public:
 
   using OperatorType = Operator_OT_Type<ProblemTraits>;
 
-  MA_OT_image_solver(GridHandler<GridType>& gridHandler, const shared_ptr<GridType>& gridTarget,
+  MA_OT_image_solver(GridHandlerType& gridHandler, const shared_ptr<GridType>& gridTarget,
        const SolverConfig& config, OpticalSetting& opticalSetting);
 
   OpticalSetting& get_setting() {return setting_;}
   const OpticalSetting& get_setting() const {return setting_;}
 
   OperatorType& get_image_operator(){return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
-  OperatorType& get_OT_operator(){return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
-  const OperatorType& get_OT_operator() const {return  *(std::dynamic_pointer_cast<OperatorType>(this->op));}
+  const OperatorType& get_image_operator() const{return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
+  Operator_OT& get_OT_operator(){return *(std::dynamic_pointer_cast<Operator_OT>(this->op));}
+  const Operator_OT& get_OT_operator() const {return  *(std::dynamic_pointer_cast<Operator_OT>(this->op));}
 
   ///performs one step of the semi-implicit method mentioned in "Two numerical methods for ..." by Benamou, Froese and Oberman
 //  void one_Poisson_Step();

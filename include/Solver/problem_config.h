@@ -31,96 +31,18 @@ class MA_OT_image_solver;
 template<typename OperatorTraits>
 class MA_OT_Operator;
 
-/*template<typename Solver, typename LOP>
+///interface for general OT operator, whose distributions constructors need not input
+template<typename Solver, typename LOP, typename FX, typename FY>
 struct GeneralOperatorTraits{
   using SolverType = Solver;
 
   using LocalOperatorType = LOP;
 
-  using FunctionTypeX = DensityFunction;
-  using FunctionTypeY = DensityFunction;
-
-  static std::tuple<> get_constructor_data(const Solver& solver)
-  {
-    return make_tuple<>();
-  }
-  static constexpr int N = 0;
-
-  static FunctionTypeX construct_f(const Solver& solver)
-  {
-    return FunctionTypeX();
-  }
-};*/
-
-template<typename Solver, typename LOP>
-struct ProblemSquareToSquareOperatorTraits{
-  using SolverType = Solver;
-
-  using LocalOperatorType = LOP;
-
-  using FunctionTypeX = rhoXSquareToSquare;
-  using FunctionTypeY = rhoYSquareToSquare;
-
-  static std::tuple<> get_constructor_data(const Solver& solver)
-  {
-    return make_tuple<>();
-  }
-  static constexpr int N = 0;
-
-  static FunctionTypeX construct_f(const Solver& solver)
-  {
-    return FunctionTypeX();
-  }
-  static FunctionTypeY construct_g(const Solver& solver)
-  {
-    return FunctionTypeY();
-  }
-
-};
-
-template<typename Solver, typename LOP>
-struct GaussianOperatorTraits{
-  using SolverType = Solver;
-
-  using LocalOperatorType = LOP;
-
-  using FunctionTypeX = rhoXGaussianSquare;
-  using FunctionTypeY = rhoYSquareToSquare;
-  //          new rhoXGaussians(), new rhoYGaussians()
-
-  static std::tuple<> get_constructor_data(const Solver& solver)
-  {
-    return make_tuple<>();
-  }
-  static constexpr int N = 0;
-
-  static FunctionTypeX construct_f(const Solver& solver)
-  {
-    return FunctionTypeX();
-  }
-  static FunctionTypeY construct_g(const Solver& solver)
-  {
-    return FunctionTypeY();
-  }
-
-};
-
-template<typename Solver, typename LOP>
-struct ConstantOperatorTraits{
-  using SolverType = Solver;
-
-  using LocalOperatorType = LOP;
-
   using BoundaryType = GenerealOTBoundary;
+  using LocalBoundaryOperatorType = Local_Operator_LagrangianBoundary;
 
-  using FunctionTypeX = ConstantFunction;
-  using FunctionTypeY = ConstantFunction;
-
-  static std::tuple<> get_constructor_data(const Solver& solver)
-  {
-    return make_tuple<>();
-  }
-  static constexpr int N = 0;
+  using FunctionTypeX = FX;
+  using FunctionTypeY = FY;
 
   static FunctionTypeX construct_f(const Solver& solver)
   {
@@ -132,6 +54,39 @@ struct ConstantOperatorTraits{
   }
 };
 
+template<typename Solver, typename LOP>
+using ProblemSquareToSquareOperatorTraits = GeneralOperatorTraits<Solver,LOP, rhoXSquareToSquare, rhoYSquareToSquare>;
+
+template<typename Solver, typename LOP>
+using GaussianOperatorTraits = GeneralOperatorTraits<Solver,LOP, rhoXGaussianSquare, rhoYSquareToSquare>;
+
+template<typename Solver, typename LOP>
+using ConstantOperatorTraits = GeneralOperatorTraits<Solver,LOP, ConstantFunction, ConstantFunction>;
+
+
+///interface for general OT operator, whose distributions constructors need Solver for initialisation
+template<typename Solver, typename LOP>
+struct ImageOperatorTraits: public GeneralOperatorTraits<Solver, LOP, ImageFunction, ImageFunction>{
+  using FunctionTypeX = typename GeneralOperatorTraits<Solver, LOP, ImageFunction, ImageFunction>::FunctionTypeX;
+  using FunctionTypeY = typename GeneralOperatorTraits<Solver, LOP, ImageFunction, ImageFunction>::FunctionTypeY;
+  template<typename OpticalSetting>
+  static FunctionTypeX construct_f(const Solver& solver, const OpticalSetting& setting)
+  {
+    return FunctionTypeX(
+        setting.LightinputImageName,
+        setting.lowerLeft, setting.upperRight,
+        setting.minPixelValue);
+  }
+  static FunctionTypeY construct_g(const Solver& solver, const OpticalSetting& setting)
+  {
+    return FunctionTypeY(
+        setting.TargetImageName,
+        setting.lowerLeftTarget, setting.upperRightTarget,
+        setting.minPixelValue);
+  }
+};
+
+/*
 template<typename Solver, typename LOP>
 struct ImageOperatorTraits{
   using SolverType = Solver;
@@ -171,7 +126,9 @@ struct ImageOperatorTraits{
 
 
 };
+*/
 
+///interface for general OT operator, whose distributions constructors need Solver for initialisation and lop needs setting
 template<typename Solver, typename LOP>
 struct ImageOperatorOTTraits:ImageOperatorTraits<Solver, LOP>{
   using FunctionTypeX = typename ImageOperatorTraits<Solver, LOP>::FunctionTypeX;
@@ -183,6 +140,7 @@ struct ImageOperatorOTTraits:ImageOperatorTraits<Solver, LOP>{
   }
 };
 
+///interface for general OT operator, whose distributions constructors need Solver for initialisation and lop needs setting, as well as boundary lop needs a setting
 template<typename Solver, typename LOP, typename LOPLagrangianBoundary>
 struct OpticOperatorTraits:ImageOperatorTraits<Solver, LOP>{
   using LocalBoundaryOperatorType = LOPLagrangianBoundary;

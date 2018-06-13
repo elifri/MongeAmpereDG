@@ -21,6 +21,7 @@
 #include "Optics/operator_LagrangianBoundary_refl.h"
 #include "Optics/operator_LagrangianBoundary_refr.h"
 
+#include "Operator_OT.h"
 #include "MA_OT_global_Operator.h"
 #include "Operator/GlobalOperatorManufactorSolution.h"
 
@@ -40,9 +41,9 @@ public:
   using FEBasisQType = FETraitsQ::FEBasis;
 
   //define problem
-  //using ProblemTraits = ProblemSquareToSquareOperatorTraits<SolverType,LOP>;
+  using ProblemTraits = ProblemSquareToSquareOperatorTraits<MA_OT_solver,Local_MA_OT_Operator>;
 //  using ProblemTraits = ConstantOperatorTraits<MA_OT_solver,Local_MA_OT_Operator>;
-  using ProblemTraits = ImageOperatorOTTraits<MA_OT_solver, Local_MA_OT_Operator>;
+//  using ProblemTraits = ImageOperatorOTTraits<MA_OT_solver, Local_MA_OT_Operator>;
 //  using ProblemTraits = OpticOperatorTraits<MA_OT_solver, Local_Operator_MA_refr_Brenner, Local_Operator_LagrangianBoundary_refr>;
 //  using ProblemTraits = OpticOperatorTraits<MA_OT_solver, Local_Operator_MA_refl_Brenner, Local_Operator_LagrangianBoundary_refl>;
 
@@ -84,8 +85,19 @@ public:
   virtual int get_n_dofs() const{return get_n_dofs_V_h() + 1 + get_n_dofs_Q_h();}
 
   using MA_solver::get_operator;
-  OperatorType& get_OT_operator(){return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
-  const OperatorType& get_OT_operator() const {return  *(std::dynamic_pointer_cast<OperatorType>(this->op));}
+  virtual Operator_OT& get_OT_operator(){return *(std::dynamic_pointer_cast<Operator_OT>(this->op));}
+  virtual const Operator_OT& get_OT_operator() const {return  *(std::dynamic_pointer_cast<Operator_OT>(this->op));}
+
+  //todo this is ugly
+  OperatorType& get_actual_OT_operator(){
+    assert(std::dynamic_pointer_cast<OperatorType>(this->op));
+    return *(std::dynamic_pointer_cast<OperatorType>(this->op));
+  }
+  const OperatorType& get_actual_OT_operator() const
+  {
+    assert(std::dynamic_pointer_cast<OperatorType>(this->op));
+    return  *(std::dynamic_pointer_cast<OperatorType>(this->op));
+  }
 
   ///reads the fe coefficients from file
   void init_from_file(const std::string& filename);

@@ -19,6 +19,7 @@
 #include "utils.hpp"
 
 #include "Solver/Operator.h"
+#include "Operator_OT.h"
 #include "Solver/problem_config.h"
 
 #ifdef USE_COARSE_Q_H
@@ -32,7 +33,7 @@
 class MA_OT_image_solver;
 
 template<typename OperatorTraits>
-class MA_OT_Operator:public Operator {
+class MA_OT_Operator:public Operator_OT {
 public:
   using GridView = typename OperatorTraits::SolverType::GridViewType;
   using SolverType = typename OperatorTraits::SolverType;
@@ -108,6 +109,7 @@ public:
   }
 
 
+  ///inits the operator and asserts the integrability condition is met
   void init();
 
   const LocalOperatorType& get_lop() const
@@ -122,13 +124,32 @@ public:
     return *lop_ptr;
   }
 
-  const FunctionTypeX& get_f() const{ return f_;}
-  const FunctionTypeY& get_g() const{ return g_;}
+  const Local_operator_LangrangianMidValue& get_lopLMMidvalue() const
+  {
+    assert(lopLMMidvalue);
+    return *lopLMMidvalue;
+  }
+  Local_operator_LangrangianMidValue& get_lopLMMidvalue()
+  {
+    assert(lopLMMidvalue);
+    return *lopLMMidvalue;
+  }
 
-  FunctionTypeX& get_f(){ return f_;}
-  FunctionTypeY& get_g(){ return g_;}
+  const DensityFunction& get_f() const{ return f_;}
+  const DensityFunction& get_g() const{ return g_;}
 
-  const auto& get_bc(){return *boundary_;}
+  DensityFunction& get_f(){ return f_;}
+  DensityFunction& get_g(){ return g_;}
+
+
+  const FunctionTypeX& get_actual_f() const{ return f_;}
+  const FunctionTypeY& get_actual_g() const{ return g_;}
+
+  FunctionTypeX& get_actual_f(){ return f_;}
+  FunctionTypeY& get_actual_g(){ return g_;}
+
+  const OTBoundary& get_bc() const{return *boundary_;}
+  const auto& get_actual_bc(){return *boundary_;}
 
 private:
   ///normalises the functions f and g such that the match the integrability condition int_Omega f dx = int_Sigma g dy
@@ -178,6 +199,16 @@ public:
   {
     //-------update data for assembling mid value--------
     init();
+  }
+
+  virtual bool is_evaluation_of_u_old_on_different_grid() const
+  {
+#ifdef USE_ANALYTIC_JACOBIAN
+    return get_lopLinear().last_step_on_a_different_grid
+#else
+    assert(lopLMBoundary->is_evaluation_of_u_old_on_different_grid()==get_lop().is_evaluation_of_u_old_on_different_grid());
+    return get_lop().is_evaluation_of_u_old_on_different_grid();
+#endif
   }
 
   ///use given global function (probably living on a coarser grid) to evaluate last step
