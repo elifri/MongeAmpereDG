@@ -39,7 +39,7 @@ void read_parameters(int argc, char *argv[], std::string& configFileOpticalSetti
       ("help,h",      "produce help message")
       ("help-all,a",  "produce help message (including config file options)")
       ("geometry,g",   po::value<std::string>(&configFileOpticalSetting),  "config file for optical setting")
-      ("coefficients,c",   po::value<std::string>(&coefficientFile),  "config file for optical setting")
+      ("coefficients,c",   po::value<std::string>(&coefficientFile),  "coefficient file")
       ("output,o",   po::value<std::string>(&outputFile),  "path to outputfile for points")
       ;
 
@@ -173,6 +173,7 @@ int main(int argc, char *argv[])
   using FEBasisPtrType = std::shared_ptr<FEBasis>;
   using FEQBasisPtrType = std::shared_ptr<FEQBasis>;
 
+  std::cout << " goint to test for a basis " << std::endl;
   //init FE bases
   FEBasisPtrType feBasis = make_shared<FEBasis>(gridHandler.gridView());
   FEQBasisPtrType feQBasis = make_shared<FEQBasis>(gridHandler.gridView());
@@ -193,6 +194,7 @@ int main(int argc, char *argv[])
     feQBasis = make_shared<FEQBasis>(gridHandler.gridView());
     boundaryHandlerQ.init_boundary_dofs(*feQBasis);
     itRefinement++;
+    std::cout << " tested " << itRefinement << " bases ..." << std::endl;
   }
 
   if(is_possibleBasis(*feBasis, boundaryHandlerQ, coeffs.size()) == UNDEFINED)
@@ -202,8 +204,10 @@ int main(int argc, char *argv[])
     std::exit(-1);
   }
 
+  std::cout << " created basis " << std::endl;
+
   //set up the plotter
-  PointExporter pointExporter(opticalSetting,16);
+  PointExporter pointExporter(opticalSetting,256);
 
 
   //set up the FE solution
