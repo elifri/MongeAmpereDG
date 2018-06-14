@@ -22,7 +22,9 @@
 
 std::vector<Eigen::Vector3d> read_points_from_file(std::string& filename, int& n_x, int& n_y)
 {
-  std::ifstream input (filename);
+  std::cout << " read from file " << filename << std::endl;
+
+  std::ifstream input (filename.c_str());
 
   if(input.fail())
   {
@@ -32,11 +34,15 @@ std::vector<Eigen::Vector3d> read_points_from_file(std::string& filename, int& n
 
   std::string s;
 
+  input >> s; //read "x "
+  input >> s; //read "y "
+  input >> s; //read "with "
   input >> s; //read "n_x "
   input >> n_x;
+
   input >> s; //read "n_y "
   input >> n_y;
-  std::getline(input,s);
+  std::getline(input,s); // read comment
 
   int pointNo = 0;
 
@@ -156,7 +162,7 @@ static bool write_model(ONX_Model& model, const std::string& filename)
   // writes model to archive
   bool ok = model.Write( archive, 5, sStartSectionComment, &error_log );
   if (ok)
-    std::cout << " wrote model to " << filename std::endl;
+    std::cout << " wrote model to " << filename << std::endl;
   return ok;
 }
 
@@ -251,6 +257,12 @@ static bool export_curve_and_control_points(const SurfaceFitter& surf, const Sur
 
 int main(int argc, char *argv[])
 {
+  if (argc < 3)
+  {
+    std::cerr << "Error, Expect at leat 2 inputs : point file, output file" << std::endl;
+    std::cerr << " Option for a 3rd parameter is a mesh file, where the surface is added " << std::endl;
+  }
+
   std::string pointsfilename = argv[1];
   std::string outputfilename = argv[2];
 
@@ -262,9 +274,11 @@ int main(int argc, char *argv[])
   }
 
   int n_x, n_y;
+  std::cout << " read points from file ... " << std::endl;
   auto points = read_points_from_file(pointsfilename, n_x, n_y);
 
-  SurfaceFitter surfaceFitter(2,2);
+  std::cout << " fit surface ..." << std::endl;
+  SurfaceFitter surfaceFitter(3,3);
   auto surface = surfaceFitter.interpolate_surface(n_x, n_y, points);
 
   bool ok = false;

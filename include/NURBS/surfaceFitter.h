@@ -310,8 +310,8 @@ public:
   {
     assert(n_x*n_y == (int) points.size());
 
-    for (unsigned int i = 0; i < points.size(); i++)
-      std::cout << " points[" << i << "]= " << points[i].transpose() << std::endl;
+//    for (unsigned int i = 0; i < points.size(); i++)
+//      std::cout << " points[" << i << "]= " << points[i].transpose() << std::endl;
 
 
     n_= n_x-1;
@@ -321,16 +321,16 @@ public:
     construct_knot_vectors(Q);
     construct_control_points(Q);
 
-    for (unsigned int i = 0; i < u_.size(); i++)
-      std::cout << " knot u_[" << i << "]= " << u_[i] << std::endl;
+//    for (unsigned int i = 0; i < u_.size(); i++)
+ //     std::cout << " knot u_[" << i << "]= " << u_[i] << std::endl;
 
-    for (unsigned int i = 0; i < v_.size(); i++)
-      std::cout << " knot v_[" << i << "]= " << v_[i] << std::endl;
+//    for (unsigned int i = 0; i < v_.size(); i++)
+//      std::cout << " knot v_[" << i << "]= " << v_[i] << std::endl;
 
 
-    for (unsigned int i = 0; i < P_.rows(); i++)
-      for (unsigned int j = 0; j < P_.cols(); j++)
-        std::cout << " P[" << i << ","<< j << "]= " << P_(i,j).transpose() << std::endl;
+//    for (unsigned int i = 0; i < P_.rows(); i++)
+//      for (unsigned int j = 0; j < P_.cols(); j++)
+//        std::cout << " P[" << i << ","<< j << "]= " << P_(i,j).transpose() << std::endl;
 
 
 
@@ -362,8 +362,8 @@ public:
     assert(n_x*n_y == (int)points.size());
 
 
-    for (unsigned int i = 0; i < points.size(); i++)
-      std::cout << " points[" << i << "]= " << points[i].transpose() << std::endl;
+ //   for (unsigned int i = 0; i < points.size(); i++)
+ //     std::cout << " points[" << i << "]= " << points[i].transpose() << std::endl;
 
     determine_cv_length(points);
     std::cout << " n " << n_ << " m " << m_ << std::endl;
