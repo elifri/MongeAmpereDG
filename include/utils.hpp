@@ -40,12 +40,12 @@ struct CompareFloats{
     return false;
   }
 
-  constexpr bool operator()(const Dune::FieldVector<double,2>& x, const Dune::FieldVector<double,2>& y)
+  bool operator()(const Dune::FieldVector<double,2>& x, const Dune::FieldVector<double,2>& y)
   {
     return (operator()(x[0],y[0]) && operator()(x[1],y[1]) ) ;
   }
 
-  constexpr bool operator()(const Eigen::Vector3d& x, const Eigen::Vector3d& y)
+  bool operator()(const Eigen::Vector3d& x, const Eigen::Vector3d& y)
   {
     return (operator()(x[0],y[0]) && operator()(x[1],y[1]) && operator()(x[2],y[2])) ;
   }

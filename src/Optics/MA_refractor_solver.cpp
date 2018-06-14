@@ -51,9 +51,11 @@ void MA_refractor_solver::create_initial_guess()
   else
   {
     const double p = 5;
+    const double distance = 1.12;
 
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
-    project([p](Config::SpaceType x){return 82*std::exp(x.two_norm2()/p);}, solution);
+//    project([p, distance](Config::SpaceType x){return distance*std::exp(x.two_norm2()/p);}, solution);
+    project([distance](Config::SpaceType x){return distance;}, solution);
 //    project([p](Config::SpaceType x){return 1./std::sqrt(1-x.two_norm2());}, solution);
     update_solution(solution);
   }

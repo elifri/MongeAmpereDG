@@ -165,15 +165,16 @@ public:
     write_element_points_OT_global(file, fg, get_gridView(), refinement_);
   }
 
-	///writes the transported point array to file (transport is given by local gradient fg)
-	template <class LocalFunction>
-	void write_points_OT(std::ofstream &file, LocalFunction &fg) const;
+  ///writes the transported point array to file (transport is given by local gradient fg)
+  template <class LocalFunction>
+  void write_points_OT(std::ofstream &file, LocalFunction &fg) const;
 
 
-	//--------helper to write vtk point data
+  //--------helper to write vtk point data
 
-	template <class LocalFunction, class Function>
-	void write_error(std::ofstream &file, LocalFunction &f, Function &exact_solution) const;
+  ///writes the error [point data] to file (error is the difference of the given local function and the global exact function)
+  template <class LocalFunction, class Function>
+  void write_error(std::ofstream &file, LocalFunction &f, Function &exact_solution) const;
 
   template <class LocalFunction, class Function>
   void write_error_OT(std::ofstream &file, LocalFunction &f, const Function &exact_solution) const;

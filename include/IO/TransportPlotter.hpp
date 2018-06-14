@@ -8,6 +8,9 @@
 #ifndef INCLUDE_IO_TRANSPORTPLOTTER_H_
 #define INCLUDE_IO_TRANSPORTPLOTTER_H_
 
+#include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
+
+
 #include "Solver/GridHandler.hpp"
 
 #include "IO/Plotter.h"
@@ -45,7 +48,7 @@ public:
 
   const auto get_quad_grid() const
   {
-    VTKWriter<Config::RectangularGridView> vtkWriter(gridHandler_.gridView());
+    Dune::VTKWriter<Config::RectangularGridView> vtkWriter(gridHandler_.gridView());
     vtkWriter.write("Plotgrid");
     return gridHandler_.gridView();
   }

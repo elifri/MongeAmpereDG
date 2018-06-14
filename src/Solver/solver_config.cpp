@@ -224,7 +224,7 @@ void OpticalSetting::read_configfile(std::string &configFile)
 
 
   // open config file for the image
-  ifstream ifs(configFile.c_str());
+  std::ifstream ifs(configFile.c_str());
   if (!ifs)
   {
     if (configFile=="")
