@@ -331,6 +331,7 @@ struct DetFunction{
 
 void MA_OT_solver::init_from_file(const std::string& filename)
 {
+  std::cout << " init solution from file " << filename << std::endl;
   solution.resize(get_n_dofs());
   std::ifstream fileInitial (filename);
 
