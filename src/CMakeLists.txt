@@ -9,27 +9,35 @@ add_library(Dogleg Dogleg/utils.cpp)
 
 set(PureSolverLibs ${PureSolverLibs} ${IOLibs})
 
+set(ThirdPartyLibs ${SNES_LIBRARY} ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES} ${BsplineHdf5Libraries} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
+
 #add_executable("dune_mongeampere" dune_mongeampere.cc)
 #message("ZLIB libraries ${ZLIB_LIBRARIES}")
 #message("Boost libraries ${Boost_LIBRARIES}")
-#target_link_libraries(dune_mongeampere ${PureSolverLibs} ${SNES_LIBRARY} problemData Solver_Config ImageFunction ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
+#target_link_libraries(dune_mongeampere ${PureSolverLibs} problemData Solver_Config ImageFunction ${ThirdPartyLibs})
 #target_link_dune_default_libraries("dune_mongeampere")
-
-add_executable("dune_mongeampere_reflector" dune_mongeampere_reflector.cpp)
-target_link_libraries(dune_mongeampere_reflector MA_reflector_solver MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} EllipsoidMethod ${MirrorProblemLibs} Solver_Config ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
-target_link_dune_default_libraries("dune_mongeampere_reflector")
-
-add_executable("dune_mongeampere_refractor" dune_mongeampere_refractor.cpp)
-target_link_libraries(dune_mongeampere_refractor MA_refractor_solver MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${LensProblemLibs} Solver_Config ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
-target_link_dune_default_libraries("dune_mongeampere_refractor")
-add_executable("read_and_write_OT" read_and_write_OT.cpp)
-target_link_libraries(read_and_write_OT MA_OT_image_solver MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} problemData Solver_Config ImageFunction utils ${IPOPT_LIBRARIES} ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
-target_link_dune_default_libraries("read_and_write_OT")
 
 message("ipopt libraries ${IPOPT_LIBRARIES}")
 #add_executable("dune_mongeampere_OT" dune_mongeampere_OT.cpp)
-#target_link_libraries(dune_mongeampere_OT MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} problemData Solver_Config ImageFunction ${IPOPT_LIBRARIES} ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
+#target_link_libraries(dune_mongeampere_OT MA_OT_solver ${PureSolverLibs} ${OTProblemLibs} problemData Solver_Config ImageFunction ${ThirdPartyLibs})
 #target_link_dune_default_libraries("dune_mongeampere_OT")
+
+message("linking poure solver libs ${IOLibs}")
+add_executable("dune_mongeampere_image_OT" dune_mongeampere_image_OT.cpp)
+target_link_libraries(dune_mongeampere_image_OT MA_OT_image_solver MA_OT_solver ${PureSolverLibs} ${OTProblemLibs} problemData Solver_Config ImageFunction ${ThirdPartyLibs})
+target_link_dune_default_libraries("dune_mongeampere_image_OT")
+
+add_executable("dune_mongeampere_reflector" dune_mongeampere_reflector.cpp)
+target_link_libraries(dune_mongeampere_reflector MA_reflector_solver MA_OT_solver ${PureSolverLibs} EllipsoidMethod ${MirrorProblemLibs} Solver_Config ${ThirdPartyLibs})
+target_link_dune_default_libraries("dune_mongeampere_reflector")
+
+add_executable("dune_mongeampere_refractor" dune_mongeampere_refractor.cpp)
+target_link_libraries(dune_mongeampere_refractor MA_refractor_solver MA_OT_solver ${PureSolverLibs}  ${LensProblemLibs} Solver_Config ${ThirdPartyLibs})
+target_link_dune_default_libraries("dune_mongeampere_refractor")
+
+add_executable("read_and_write_OT" read_and_write_OT.cpp)
+target_link_libraries(read_and_write_OT MA_OT_image_solver MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} problemData Solver_Config ImageFunction utils ${IPOPT_LIBRARIES} ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
+target_link_dune_default_libraries("read_and_write_OT")
 
 add_executable(export_refractor_points export_refractor_points.cpp)
 target_link_libraries(export_refractor_points ${IOLibs} Solver_Config ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES}  ${BoostPO_LIBRARIES})
@@ -40,12 +48,6 @@ set(BsplineHdf5Libraries ${LIBFFO_CORE_LIBRARIES} ${HDF5_LIBRARIES})
 else (LIBFFO_CORE_FOUND)
 set(BsplineHdf5Libraries )
 endif (LIBFFO_CORE_FOUND)
-
-
-message("linking poure solver libs ${IOLibs}")
-add_executable("dune_mongeampere_image_OT" dune_mongeampere_image_OT.cpp)
-target_link_libraries(dune_mongeampere_image_OT MA_OT_image_solver MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} problemData Solver_Config ImageFunction utils ${ZLIB_LIBRARIES} ${BsplineHdf5Libraries} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
-target_link_dune_default_libraries("dune_mongeampere_image_OT")
 
 if(LIBFFO_CORE_FOUND)
 ADD_LIBRARY(libcoreLibs STATIC IMPORTED)

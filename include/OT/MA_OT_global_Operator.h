@@ -74,15 +74,14 @@ public:
   }
 
     template<typename GeometrySetting,
-      typename std::enable_if<sizeof(GeometrySetting) && is_same<LocalOperatorLagrangianBoundaryType,Local_Operator_LagrangianBoundary>::value, int>::type = 0>
+      typename std::enable_if<sizeof(GeometrySetting) && std::is_same<LocalOperatorLagrangianBoundaryType,Local_Operator_LagrangianBoundary>::value, int>::type = 0>
     MA_OT_Operator(SolverType& solver, GeometrySetting& setting):solver_ptr(&solver),
         boundary_(new GenerealOTBoundary(solver.get_gridTarget(), setting.boundaryN)),
         f_(OperatorTraits::construct_f(solver, setting)),
         g_(OperatorTraits::construct_g(solver, setting)),
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
         lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-//        lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),
-        lopLMBoundary(OperatorTraits::construct_lop_LBoundary(setting,get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
+	lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),
         fixingPoint{0.3,0},
         intermediateSolCounter()
     {
@@ -92,7 +91,7 @@ public:
     }
 
     template<typename GeometrySetting,
-      typename std::enable_if<sizeof(GeometrySetting) && !is_same<LocalOperatorLagrangianBoundaryType,Local_Operator_LagrangianBoundary>::value, int>::type = 0>
+      typename std::enable_if<sizeof(GeometrySetting) && !std::is_same<LocalOperatorLagrangianBoundaryType,Local_Operator_LagrangianBoundary>::value, int>::type = 0>
     MA_OT_Operator(SolverType& solver, GeometrySetting& setting):solver_ptr(&solver),
         boundary_(new GenerealOTBoundary(solver.get_gridTarget(), setting.boundaryN)),
         f_(OperatorTraits::construct_f(solver, setting)),
@@ -560,12 +559,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
   tempV.setZero(Q_h_size);
 
   //assemble boundary terms
-<<<<<<< HEAD
   assemble_Jacobian_boundary(xBoundary.head(V_h_size), tempV, tempM);
-=======
-  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix_with_automatic_differentiation(*lopLMBoundary, tempM, xBoundary.head(V_h_size), tempV);
-//  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xBoundary.head(V_h_size), tempV);
->>>>>>> preset to lens problem
 
   Q_h_size = tempM.rows();
 

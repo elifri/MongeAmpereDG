@@ -30,10 +30,7 @@
 //#define USE_C0_PENALTY
 //#define USE_MIXED_ELEMENT
 #define USE_PS12
-<<<<<<< HEAD
 
-=======
->>>>>>> correct nurbs file name
 
 #ifdef USE_C0_PENALTY
   #define C0Element

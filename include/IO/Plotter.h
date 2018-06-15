@@ -11,22 +11,22 @@
 
 #include <string>
 #include <type_traits>
+#include <fstream>
+
+#include <dune/geometry/refinement.hh>
+
+#include "opennurbs.h"
+
 
 #include "MAconfig.h"
 //#include "Callback_utility.hpp"
 
 #include "problem_data.h"
 
-
 #ifdef USE_DOGLEG
 #include "Dogleg/doglegMethod.hpp"
 #endif
 
-#include "problem_data.h"
-
-#include <dune/geometry/refinement.hh>
-
-#include <fstream>
 
 class MA_solver;
 class TransportPlotter;
@@ -56,7 +56,7 @@ protected:
 
 	GeometrySetting geometrySetting_;
 	PovRayOpts povRayOpts_;
-
+  	const int RhinoVersion_ = 5;
 
 	int Nelements() const;
 	int Nnodes() const
@@ -190,8 +190,8 @@ public:
 
   void write_pov_setting(std::ofstream &file) const;///write the setting for photons, camera and light source
   void write_pov_setting_refractor(std::ofstream &file) const;///write the setting for photons, camera and light source
-  void write_target_plane(std::ofstream &file) const;
-  void write_aperture(std::ofstream &file) const;
+  void write_target_plane(std::ofstream &file) const; ///write the setting of the target plane
+  void write_aperture(std::ofstream &file) const;///write the limitation of the point source (to simulate the cutout U)
 
   ///writes pointarray in pov format for reflector
   template <class Function>
@@ -208,6 +208,25 @@ public:
 
   template <class Function>
   void write_lens(std::ofstream &file, Function &f) const;
+
+  //----------------------------//
+  //---helper for NURBS  parts--//
+  //----------------------------//
+
+  ///writes the refractor vertices in the opennurbs mesh
+  template <class LocalFunction>
+  void write_refractor_vertices(ON_Mesh &mesh, LocalFunction &f) const;
+
+  ///writes the the connection of vertices in the opennurbs mesh
+  void write_faces(ON_Mesh &mesh) const;
+
+  template <class LocalFunction>
+  void write_surface(std::ofstream &file, LocalFunction &f) const;
+
+///writes the LocalFunction to a 3dm file
+  template <class LocalFunction>
+  void write_refractor_mesh(std::string &filename, LocalFunction &f) const;
+
 
 public:
 
