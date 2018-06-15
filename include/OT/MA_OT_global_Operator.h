@@ -76,7 +76,7 @@ public:
     template<typename GeometrySetting,
       typename std::enable_if<sizeof(GeometrySetting) && std::is_same<LocalOperatorLagrangianBoundaryType,Local_Operator_LagrangianBoundary>::value, int>::type = 0>
     MA_OT_Operator(SolverType& solver, GeometrySetting& setting):solver_ptr(&solver),
-        boundary_(new GenerealOTBoundary(solver.get_gridTarget(), setting.boundaryN)),
+        boundary_(new GenerealOTBoundary((solver.get_gridTarget()), setting.boundaryN)),
         f_(OperatorTraits::construct_f(solver, setting)),
         g_(OperatorTraits::construct_g(solver, setting)),
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
@@ -184,7 +184,7 @@ private:
 public:
   ///check whether the condition int_Omega f dx = int_Sigma g dy holds
   template<typename OperatorTraitsDummy = OperatorTraits>
-  bool check_integrability_condition() const{check_integrability_condition((OperatorTraitsDummy*)0);}
+  bool check_integrability_condition() const{ return check_integrability_condition((OperatorTraitsDummy*)0);}
   /// use function overload to select correct implementation
   template<typename OperatorTraitsDummy = OperatorTraits>
   bool check_integrability_condition(OperatorTraitsDummy* dummy) const;

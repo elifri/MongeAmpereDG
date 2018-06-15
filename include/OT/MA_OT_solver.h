@@ -124,8 +124,10 @@ public:
   GeometrySetting& get_setting() {return setting_;}
   const GeometrySetting& get_setting() const {return setting_;}
 
-  const auto& get_gridTarget() const {return *gridTarget_ptr;}
-  const auto& get_gridTarget_ptr() const {return gridTarget_ptr;}
+  const auto& get_gridHandlerTarget() const{return gridTarget_;}
+
+  const auto& get_gridTarget() const {return gridTarget_.grid();}
+  const auto& get_gridTarget_ptr() const {return gridTarget_.get_grid_ptr();}
 
   const AssemblerLagrangianMultiplier1D<>& get_assembler_lagrangian_midvalue() const { return assemblerLM1D_;}
 //  const AssemblerLagrangianMultiplierCoarse& get_assembler_lagrangian_boundary() const { return assemblerLMCoarse_;}
@@ -160,7 +162,8 @@ public:
 protected:
   GeometrySetting& setting_;
 
-  const shared_ptr<GridType> gridTarget_ptr;
+  GridHandler<GridType> gridTarget_;
+//  const shared_ptr<GridType> gridTarget_ptr;
 
   ///FEBasis for Lagrangian Multiplier for Boundary
   FEBasisHandler<FETraitsQ::Type, FETraitsQ> FEBasisHandlerQ_;

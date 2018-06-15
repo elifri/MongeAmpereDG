@@ -28,7 +28,7 @@ MA_OT_solver::MA_OT_solver(GridHandlerType& gridHandler,
     const shared_ptr<GridType>& gridTarget,
     const SolverConfig& config, GeometrySetting& setting, bool create_operator)
 :MA_solver(gridHandler, config, false),
- setting_(setting), gridTarget_ptr(gridTarget),
+ setting_(setting), gridTarget_(gridTarget, SolverConfig::startlevel),
 #ifdef USE_COARSE_Q_H
  FEBasisHandlerQ_(*this, gridHandler.grid().levelGridView(gridHandler.grid().maxLevel()-1)),
 #else
@@ -46,7 +46,7 @@ MA_OT_solver::MA_OT_solver(GridHandlerType& gridHandler,
     MATLAB_export(file, get_assembler().get_boundaryHandler().isBoundaryDoF(),"boundaryDofs");
   }
 #endif
-  gridTarget_ptr->globalRefine(SolverConfig::startlevel);
+//  gridTarget_ptr->globalRefine(SolverConfig::startlevel);
 
   if (create_operator)
   {

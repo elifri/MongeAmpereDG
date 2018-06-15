@@ -31,6 +31,14 @@ public:
       gridOld(gridOld), gridViewOld(gridViewOld){}
   };
 
+  GridHandler(const std::shared_ptr<GridType>& grid_ptr, int startlevel): gridPrefix_(""), gridRefinement_(0),
+      grid_(grid_ptr), gridView_(grid_->leafGridView())
+  {
+    grid_->globalRefine(SolverConfig::startlevel);
+    gridView_ = grid_->leafGridView();
+  }
+
+
   GridHandler(const std::string &gridinputFile, int startlevel): gridPrefix_(gridinputFile), gridRefinement_(startlevel),
       gridView_(GridType().leafGridView())
   {
@@ -53,6 +61,8 @@ public:
   GridView& gridView() {return gridView_;}
 
   OldGridInformation adapt(){
+    assert(gridPrefix_!="");//TODO string comparison
+
     shared_ptr<GridOldType> oldGrid = grid_;
 
     gridRefinement_++;
