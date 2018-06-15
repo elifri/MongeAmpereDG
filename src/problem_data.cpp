@@ -90,58 +90,20 @@ adouble interpolate_cubic_atXY(cimg_library::CImg<double> image , const adouble 
 }
 #endif
 
-void RightHandSideReflector::phi(const Config::SpaceType2d& T, const FieldVector<double, Config::dim> &normal, Config::ValueType &phi) const
- {
-   if (false)
-   {
-     phi_initial(T);
-   }
-   else
-   {
-     Config::ValueType x_min = std::min(T[0]-opticalsetting.lowerLeftTarget[0], opticalsetting.upperRightTarget[0] - T[0]);
-     Config::ValueType y_min = std::min(T[1]-opticalsetting.lowerLeftTarget[1], opticalsetting.upperRightTarget[1] - T[1]);
 
-     Config::SpaceType2d T_proj = T;
-     if (x_min < y_min)
-       T_proj[0] = T[0]-opticalsetting.lowerLeftTarget[0] < opticalsetting.upperRightTarget[0] - T[0] ?  opticalsetting.lowerLeftTarget[0] : opticalsetting.upperRightTarget[0];
-     else
-       T_proj[1] = T[1]-opticalsetting.lowerLeftTarget[1] < opticalsetting.upperRightTarget[1] - T[1] ?  opticalsetting.lowerLeftTarget[1] : opticalsetting.upperRightTarget[1];
-     phi = T_proj * normal;
-   }
- }
-
-/*
-
-void RightHandSideReflector::init(){
-	SolverConfig::UnitCubeType unitcube_quadrature(SolverConfig::lowerLeft, SolverConfig::upperRight, SolverConfig::startlevel+SolverConfig::nonlinear_steps);
-  SolverConfig::UnitCubeType unitcube_quadrature_target(SolverConfig::lowerLeftTarget, SolverConfig::upperRightTarget, SolverConfig::startlevel+SolverConfig::nonlinear_steps);
-	init(Integrator<SolverConfig::GridType>(unitcube_quadrature.grid_ptr()), Integrator<SolverConfig::GridType>(unitcube_quadrature_target.grid_ptr()));
-}
-
-void RightHandSideReflector::init(const Integrator<SolverConfig::GridType>& integratorDomain, const Integrator<SolverConfig::GridType>& integratorTarget){
-	integral_f = integratorDomain.assemble_integral(f_callback);
-	integral_g = integratorTarget.assemble_integral(g_initial_callback);
-}
-*/
-
-
-using namespace std;
-
-
-
-void read_quadratic_grid(const string &filename,   int &n_x, int &n_y,
+void read_quadratic_grid(const std::string &filename,   int &n_x, int &n_y,
                         double &h_x, double &h_y,
                         double &x0, double &y0,
                         Eigen::MatrixXd &solution)
 {
   std::ifstream file(filename.c_str());   //format "n ## h ## \n u(0,0) u(h,0) ... \n u(h,h) ..."
   if(!file) { // file couldn't be opened
-        cerr << "Error: file "<< filename << " for reading rectangle grid could not be opened" << endl;
-        exit(1);
+        std::cerr << "Error: file "<< filename << " for reading rectangle grid could not be opened" << std::endl;
+        std::exit(1);
      }
-  cout << "Reading starting point from file " << filename << "... " << endl;
+  std::cout << "Reading starting point from file " << filename << "... " << std::endl;
 
-  stringstream ss;
+  std::stringstream ss;
   std::string s;
 
   assert (!file.eof() && "The inserted grid file is too short");
@@ -175,12 +137,12 @@ void read_quadratic_grid_vtk(std::string filename,   int &n_x, int &n_y,
 {
   std::ifstream file(filename.c_str());   //format "n ## h ## \n u(0,0) u(h,0) ... \n u(h,h) ..."
   if(!file) { // file couldn't be opened
-        cerr << "Error: file "<< filename << " for reading rectangle grid could not be opened" << endl;
+        cerr << "Error: file "<< filename << " for reading rectangle grid could not be opened" << std::endl;
         exit(1);
      }
-  cout << "Reading starting point from file " << filename << "... " << endl;
+  std::cout << "Reading starting point from file " << filename << "... " << std::endl;
 
-  stringstream ss;
+  std::stringstream ss;
   std::string s;
 
   assert (!file.eof() && "The inserted grid file is too short");

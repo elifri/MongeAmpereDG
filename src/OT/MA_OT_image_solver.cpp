@@ -61,10 +61,9 @@ void MA_OT_image_solver::plot(const std::string& name, const int no) const
 
 void MA_OT_image_solver::update_Operator()
 {
-  if (iterations== 0)
+  if (!gridHandler_.is_rectangular())
   {
     get_image_operator().get_actual_f().normalize();
-    get_image_operator().get_actual_g().normalize();
   }
 
   //blurr target distributation
@@ -80,4 +79,7 @@ void MA_OT_image_solver::update_Operator()
       assert(std::abs(get_image_operator().get_actual_g().integrate2()) - 1 < 1e-10);
   }
   epsMollifier_ /= epsDivide_;
+#ifdef DEBUG
+  assert(get_image_operator().check_integrability_condition());
+#endif
 }

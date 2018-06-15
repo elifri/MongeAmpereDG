@@ -177,11 +177,21 @@ private:
   template<typename OperatorTraitsDummy = OperatorTraits>
   void assert_integrability_condition(OperatorTraitsDummy* dummy){}
   void assert_integrability_condition(ConstantOperatorTraits<SolverType, LocalOperatorType>* dummy);
+  void assert_integrability_condition(ImageOperatorOTTraits<SolverType, LocalOperatorType>* dummy);
+  void assert_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, Local_operator_LangrangianMidValue>* dummy);
 
 
+public:
   ///check whether the condition int_Omega f dx = int_Sigma g dy holds
-  bool check_integrability_condition() const;
+  template<typename OperatorTraitsDummy = OperatorTraits>
+  bool check_integrability_condition() const{check_integrability_condition((OperatorTraitsDummy*)0);}
+  /// use function overload to select correct implementation
+  template<typename OperatorTraitsDummy = OperatorTraits>
+  bool check_integrability_condition(OperatorTraitsDummy* dummy) const;
+  bool check_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, Local_operator_LangrangianMidValue>* dummy) const;
 
+
+private:
   void prepare_fixing_point_term(const Config::VectorType& x) const;
 
   ///assembles the system of the MA PDE
@@ -403,27 +413,9 @@ void MA_OT_Operator<OperatorTraits>::init()
   std::cerr << " adapted operator and now lagrangian " << lagrangianFixingPointDiscreteOperator.size() << " and ndofsV_H " << this->solver_ptr->get_n_dofs_V_h() << std::endl;
 
   assert_integrability_condition();
-//  assert(check_integrability_condition());
+  assert(check_integrability_condition());
 }
 
-template<typename OperatorTraits>
-bool MA_OT_Operator<OperatorTraits>::check_integrability_condition() const
-{
-  Integrator<Config::DuneGridType> integratorF(solver_ptr->get_grid_ptr());
-  const double integralF = integratorF.assemble_integral(f_);
-
-  Integrator<Config::DuneGridType> integratorG(solver_ptr->get_gridTarget_ptr());
-  const double integralG = integratorG.assemble_integral(g_);
-
-  std::cout << " calculated the the integrals: int_Omega f dx = " << integralF << " and int_Sigma g dy = " << integralG << std::endl;
-  /*if (std::fabs(integralF-integralG)>1e-6)
-  {
-    std::cout << " the calculated integrals were not equal ... difference was " << std::fabs(integralF-integralG) << std::endl;
-    assert(false);
-    std::exit(-1);
-  }*/
-  return (std::fabs(integralF-integralG)<1e-1);
-}
 
 template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>::prepare_fixing_point_term(const Config::VectorType& x) const
@@ -751,6 +743,50 @@ void MA_OT_Operator<OperatorTraits>
   const double integralG = integratorG.assemble_integral(g_);
 
   g_.divide_by_constant(integralG);
+}
+
+
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>
+   ::assert_integrability_condition(ImageOperatorOTTraits<SolverType, LocalOperatorType>* dummy)
+{
+  f_.normalize();
+  g_.normalize();
+}
+
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>
+   ::assert_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, Local_operator_LangrangianMidValue>* dummy)
+{
+  f_.omega_normalize();
+  g_.normalize();
+}
+
+
+template<typename OperatorTraits>
+template<typename OperatorTraitsDummy>
+bool MA_OT_Operator<OperatorTraits>
+   ::check_integrability_condition(OperatorTraitsDummy* dummy) const
+{
+  Integrator<Config::DuneGridType> integratorF(solver_ptr->get_grid_ptr());
+  const double integralF = integratorF.assemble_integral(f_);
+
+  Integrator<Config::DuneGridType> integratorG(solver_ptr->get_gridTarget_ptr());
+  const double integralG = integratorG.assemble_integral(g_);
+
+  std::cout << " calculated the the integrals: int_Omega f dx = " << integralF << " and int_Sigma g dy = " << integralG << std::endl;
+  return (std::fabs(integralF-integralG)<1e-1);
+}
+
+template<typename OperatorTraits>
+bool MA_OT_Operator<OperatorTraits>
+   ::check_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, Local_operator_LangrangianMidValue>* dummy) const
+{
+  auto integralF = f_.integrate2Omega();
+  const double integralG = g_.integrate2();
+
+  std::cout << " calculated the the integrals: int_Omega f dx = " << integralF << " and int_Sigma g dy = " << integralG << std::endl;
+  return (std::fabs(integralF-integralG)<1e-1);
 }
 
 

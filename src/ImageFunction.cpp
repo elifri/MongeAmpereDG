@@ -9,6 +9,8 @@
 
 #include "Integrator.hpp"
 #include "problem_data.h"
+#include "Solver/GridHandler.hpp"
+
 
 #ifdef HAVE_ADOLC
 #include <adolc/adolc.h>
@@ -17,9 +19,10 @@
 bool ImageFunction::use_adouble_image_evaluation = true;
 
 ImageFunction::ImageFunction(const std::string& filename,
+    const SolverConfig::GridHandlerType& gridHandler,
     const Config::SpaceType2d &lowerLeft,
     const Config::SpaceType2d &upperRight, const double minValue) :
-    image_(filename.c_str()), blurCoeff_(1.0), factor_(1.0) {
+    image_(filename.c_str()), blurCoeff_(1.0), factor_(1.0), gridHandler_(gridHandler) {
   assert(lowerLeft[0] < upperRight[0]);
   assert(lowerLeft[1] < upperRight[1]);
 
@@ -181,21 +184,30 @@ void ImageFunction::omega_normalize(const unsigned int n)
 {
   factor_ = 1.0;
 
-  Config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, n);
-  Integrator<Config::DuneGridType> integrator(unitcube_quadrature.grid_ptr());
-  const double integral = integrator.assemble_integral([this](const Config::DomainType &x) {return operator()(x)/omega(x);});
+  const double integral = integrate2Omega(n);
 
   factor_ = 1.0/integral;
-  assert(fabs(integrator.assemble_integral([this](const Config::DomainType &x) {return operator()(x)/omega(x);}) - 1.0) < 1e-10);
+  assert(fabs(integrate2Omega(n)) < 1e-10);
 //      std::cout << "f factor " << factor_ << endl;
 }
+
+double ImageFunction::integrate2Omega(const unsigned int n) const
+{
+  const unsigned int order = std::min(5u,n);
+
+  Integrator<Config::DuneGridType> integrator(gridHandler_.get_grid_ptr());
+  double integral = integrator.assemble_integral([this](const Config::DomainType &x) {return operator()(x)/omega(x);});
+  std::cout << "calculated omega integral " << integral << std::endl;
+  return integral;
+//  return integrator.assemble_integral(*this);
+}
+
 
 double ImageFunction::integrate2(const unsigned int n) const
 {
   const unsigned int order = std::min(5u,n);
 
-  Config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, order);
-  Integrator<Config::DuneGridType> integrator(unitcube_quadrature.grid_ptr());
+  Integrator<Config::DuneGridType> integrator(gridHandler_.get_grid_ptr());
   double integral = integrator.assemble_integral(*this);
   std::cout << "calculated integral " << integral << std::endl;
   return integral;

@@ -73,60 +73,18 @@ struct ImageOperatorTraits: public GeneralOperatorTraits<Solver, LOP, ImageFunct
   static FunctionTypeX construct_f(const Solver& solver, const OpticalSetting& setting)
   {
     return FunctionTypeX(
-        setting.LightinputImageName,
+        setting.LightinputImageName, solver.get_gridHandler(),
         setting.lowerLeft, setting.upperRight,
         setting.minPixelValue);
   }
   static FunctionTypeY construct_g(const Solver& solver, const OpticalSetting& setting)
   {
     return FunctionTypeY(
-        setting.TargetImageName,
+        setting.TargetImageName, solver.get_gridHandler(),
         setting.lowerLeftTarget, setting.upperRightTarget,
         setting.minPixelValue);
   }
 };
-
-/*
-template<typename Solver, typename LOP>
-struct ImageOperatorTraits{
-  using SolverType = Solver;
-
-  using LocalOperatorType = LOP;
-
-  using BoundaryType = GenerealOTBoundary;
-  using LocalBoundaryOperatorType = Local_Operator_LagrangianBoundary;
-
-  using FunctionTypeX = ImageFunction;
-  using FunctionTypeY = ImageFunction;
-
-  static FunctionTypeX construct_f(const Solver& solver)
-  {
-    return FunctionTypeX();
-  }
-  static FunctionTypeY construct_g(const Solver& solver)
-  {
-    return FunctionTypeY();
-  }
-
-  template<typename OpticalSetting>
-  static FunctionTypeX construct_f(const Solver& solver, const OpticalSetting& setting)
-  {
-    return FunctionTypeX(
-        setting.LightinputImageName,
-        setting.lowerLeft, setting.upperRight,
-        setting.minPixelValue);
-  }
-  static FunctionTypeY construct_g(const Solver& solver, const OpticalSetting& setting)
-  {
-    return FunctionTypeY(
-        setting.TargetImageName,
-        setting.lowerLeftTarget, setting.upperRightTarget,
-        setting.minPixelValue);
-  }
-
-
-};
-*/
 
 ///interface for general OT operator, whose distributions constructors need Solver for initialisation and lop needs setting
 template<typename Solver, typename LOP>

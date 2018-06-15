@@ -106,7 +106,7 @@ void print_image_OT(const GridView& gridView, LocalFunction& T, LocalDerivativeF
         transported(i,j)/=(Config::ValueType) count_match(i,j);
     }
 
-  transported /= targetImage.factor_;
+  transported /= targetImage.get_factor();
   transported /= 255.0 / (255.0 + targetImage.minValue());
   transported -= targetImage.minValue();
 

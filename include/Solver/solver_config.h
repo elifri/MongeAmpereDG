@@ -33,6 +33,10 @@
 #include <adolc/adolc.h>
 #endif
 
+//forward declaration of Gridhandler
+template<typename T, bool rectangular>
+class GridHandler;
+
 #include "Dogleg/doglegMethod.hpp"
 #include "Dogleg/newtonMethod.hpp"
 
@@ -107,6 +111,9 @@ struct PovRayOpts
 
 
 struct SolverConfig{
+
+  //using GridHandlerType = GridHandler<GridType, true>;
+  using GridHandlerType = GridHandler<Config::DuneGridType, false>;
 
   using ValueType = Config::ValueType;
 

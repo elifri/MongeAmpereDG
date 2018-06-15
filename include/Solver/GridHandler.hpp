@@ -14,6 +14,7 @@
 
 #include "solver_config.h"
 
+
 template<typename T, bool rectangular = false>
 class GridHandler {
 public:
@@ -46,7 +47,7 @@ public:
   bool is_rectangular(){return rectangular;}
 
   GridType& grid() {return *grid_;}
-  std::shared_ptr<GridType>& get_grid_ptr(){return grid_;}
+  const std::shared_ptr<GridType>& get_grid_ptr() const{return grid_;}
   const GridType& grid() const {return *grid_;}
   const GridView& gridView() const {return gridView_;}
   GridView& gridView() {return gridView_;}
@@ -98,7 +99,7 @@ public:
   bool is_rectangular(){return true;}
 
   GridType& grid() {return *grid_;}
-  std::shared_ptr<GridType>& get_grid_ptr(){return grid_;}
+  const std::shared_ptr<GridType>& get_grid_ptr() const{return grid_;}
   const GridType& grid() const {return *grid_;}
   const GridView& gridView() const {return gridView_;}
   GridView& gridView() {return gridView_;}

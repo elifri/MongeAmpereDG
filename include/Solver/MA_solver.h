@@ -54,8 +54,8 @@ public:
 
   //-----typedefs---------
   using GridType = Config::DuneGridType;
-//  using GridHandlerType = GridHandler<GridType, true>;
-  using GridHandlerType = GridHandler<GridType>;
+  using GridHandlerType = SolverConfig::GridHandlerType;
+  static_assert(std::is_same<GridType, GridHandlerType::GridType>::value, "The specified Grid Types do not match");
   using GridViewType = Config::GridView;
   using LevelGridViewType = Config::LevelGridView;
   using IntersectionIterator = GridViewType::IntersectionIterator;
@@ -234,7 +234,7 @@ public:
   const auto& get_FEBasis_u() const {return FEBasisHandler_.uBasis();}
 
   const GridType& grid() const {return gridHandler_.grid();}
-  std::shared_ptr<GridType>& get_grid_ptr() {return gridHandler_.get_grid_ptr();}
+//  std::shared_ptr<GridType>& get_grid_ptr() {return gridHandler_.get_grid_ptr();}
   const std::shared_ptr<GridType>& get_grid_ptr() const {return gridHandler_.get_grid_ptr();}
   const GridViewType& gridView() const {return gridHandler_.gridView();}
   GridViewType& gridView() {return gridHandler_.gridView();}
@@ -376,6 +376,8 @@ public:
   const std::string& get_output_directory() const{ return outputDirectory_;}
   const std::string& get_plot_output_directory() const{ return plotOutputDirectory_;}
   const std::string& get_output_prefix() const{ return outputPrefix_;}
+
+  const GridHandlerType& get_gridHandler() const{ return gridHandler_;}
 
   const VectorType& get_solution() const {return solution;}
   const VectorType& get_exact_solution() const {return exactsol_u;}

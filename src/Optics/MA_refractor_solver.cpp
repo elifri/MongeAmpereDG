@@ -153,11 +153,9 @@ void MA_refractor_solver::plot(const std::string& name, int no) const
 
 void MA_refractor_solver::update_Operator()
 {
-  if (iterations== 0)
-  {
-    get_refr_operator().get_actual_f().normalize();
-    get_refr_operator().get_actual_g().normalize();
-  }
+
+  //since the grid \Omega could be changed TODO sometimes not necessary
+  get_refr_operator().get_actual_f().omega_normalize();
 
   //blurr target distributation
   std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
@@ -172,5 +170,9 @@ void MA_refractor_solver::update_Operator()
       assert(std::abs(get_refr_operator().get_actual_g().integrate2()) - 1 < 1e-10);
   }
   epsMollifier_ /= epsDivide_;
+
+#ifdef DEBUG
+  assert(get_refr_operator().check_integrability_condition());
+#endif
 }
 
