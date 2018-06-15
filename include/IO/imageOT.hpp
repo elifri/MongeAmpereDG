@@ -100,7 +100,7 @@ void print_image_OT(const GridView& gridView, LocalFunction& T, LocalDerivativeF
   }
 
   for (int i = 0; i < pixel_height; i++)
-    for (int j = 0; j < pixel_width; i++)
+    for (int j = 0; j < pixel_width; j++)
     {
       if (count_match(i,j) > 0 )
         transported(i,j)/=(Config::ValueType) count_match(i,j);
