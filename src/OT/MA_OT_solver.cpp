@@ -517,8 +517,12 @@ void MA_OT_solver::plot(const std::string& name, int no) const
 
   assert(gradient_u_old);
 
+#ifndef EXACT_DATA
+  plotter.writeOTVTK(fname, *gradient_u_old, this->get_OT_operator().get_f());
+#else
   ExactData exactData;
-  plotter.writeOTVTK(fname, *gradient_u_old,exactData.exact_gradient());
+  plotter.writeOTVTK_with_error(fname, *gradient_u_old,exactData.exact_gradient());
+#endif
 
       //  plotter.writeOTVTK(fname, *gradient_u_old);
 
@@ -691,7 +695,7 @@ void MA_OT_solver::one_Poisson_Step()
 
     std::string fname(plotter.get_output_directory());
     fname += "/"+ plotter.get_output_prefix()+ "C0outputGrid.vtu";
-    plotter.writeOTVTK(fname, localGradient);
+    plotter.writeOTVTK(fname, localGradient, this->get_OT_operator().get_f());
   }
 
 #ifdef DEBUG

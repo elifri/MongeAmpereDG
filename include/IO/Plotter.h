@@ -182,6 +182,9 @@ public:
   template <class LocalFunction>
   void write_transport_OT(std::ofstream &file, LocalFunction &f) const;
 
+  template <class LocalFunction>
+  void write_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &f, const DensityFunction& omegaF) const;
+
   //----------------------------//
   //---helper for povray parts--//
   //----------------------------//
@@ -248,11 +251,22 @@ public:
   template <class GlobalFunction>
   void writeOTVTKGlobal(std::string filename, GlobalFunction &f) const;
 
-  template <class LocalFunction>
-  void writeOTVTK(std::string filename, LocalFunction &f) const;
+  /**
+   * evaluates and saves the solution's transported grid
+   * @param filename    the path to the file where the grid is written in ASCII format
+   * @param fg          the numerical solution (gradient of the MA solution)
+   * @param omegaF      the density function f on the starting domain Omega
+   */  template <class LocalFunction>
+  void writeOTVTK(std::string filename, LocalFunction &f, const DensityFunction& omegaF) const;
 
+  /**
+   * evaluates and saves the solution's transported grid and an error given by the exact data
+   * @param filename    the path to the file where the grid is written in ASCII format
+   * @param fg          the numerical solution (gradient of the MA solution)
+   * @param f           the exact solution
+   */
   template <class LocalFunction, class Function>
-  void writeOTVTK(std::string filename, LocalFunction &fg, const Function& f) const;
+  void writeOTVTK_with_error(std::string filename, LocalFunction &fg, const Function& f) const;
 
   /**
    * evaluates and saves the solution on ; works only for rectangular grids
@@ -568,7 +582,7 @@ void Plotter::writeOTVTKGlobal(std::string filename, GlobalFunction &f) const {
 }
 
 template <class LocalFunction>
-void Plotter::writeOTVTK(std::string filename, LocalFunction &f) const {
+void Plotter::writeOTVTK(std::string filename, LocalFunction &f, const DensityFunction& omegaF) const {
   //--------------------------------------
   // open file
     check_file_extension(filename, ".vtu");
@@ -583,6 +597,7 @@ void Plotter::writeOTVTK(std::string filename, LocalFunction &f) const {
     write_vtk_header(file);
 
     write_transport_OT(file, f);
+    write_simple_estimate_integral_OT(file, f, omegaF);
     write_points_OT(file, f);
     write_cells(file);
 
@@ -591,7 +606,7 @@ void Plotter::writeOTVTK(std::string filename, LocalFunction &f) const {
 }
 
 template <class LocalFunction, class Function>
-void Plotter::writeOTVTK(std::string filename, LocalFunction &fg, const Function& f) const {
+void Plotter::writeOTVTK_with_error(std::string filename, LocalFunction &fg, const Function& f) const {
   //--------------------------------------
   if (refinement_ > 0)
   {
@@ -762,6 +777,57 @@ void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
       }
     }
   file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
+}
+
+template <class LocalFunction>
+void Plotter::write_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &fg, const DensityFunction& omegaF) const{
+  // write points
+    file << "\t\t\t<CellData Scalars=\"est. integral\">\n"
+        << "\t\t\t\t<DataArray type=\"Float32\" Name=\"est. integral\" NumberOfComponents=\"1\" format=\""
+        << "ascii" << "\">\n";
+
+    {   // save points in file after refinement
+      for (auto&& element: elements(get_gridView()))
+      {
+        const auto geometry = element.geometry();
+
+
+        fg.bind(element);
+
+        //create geometry for target triangle
+        Dune::GeometryType gt;
+        std::vector<Dune::FieldVector<Config::ValueType, Config::dim> > coords;
+
+        if(geometry.type().isCube())
+        {
+          gt.makeQuadrilateral();
+          coords.resize(4);
+        }
+        else
+        {
+          gt.makeTriangle();
+          coords.resize(3);
+        }
+
+        //estimate integral by averaging the corner values and dividing through the cell size
+        Config::ValueType estInt = 0;
+
+        for (int i =0; i < geometry.corners(); i++){
+          estInt += omegaF(geometry.corner(i));
+
+          coords[i] = fg(geometry.local(geometry.corner(i)));
+        }
+        auto targetGeometry = Dune::MultiLinearGeometry<Config::ValueType, Config::dim, Config::dim>(gt, coords);
+
+
+        estInt *= geometry.volume()/targetGeometry.volume();
+
+        for (int i = 0; i < PlotRefinementType::nElements(refinement_); i++)
+          file << "\t\t\t\t\t" << estInt << " ";
+        file << std::endl;
+      }
+    }
+    file << "\t\t\t\t</DataArray>\n" << "\t\t\t</CellData>\n";
 }
 
 
