@@ -65,7 +65,6 @@ public:
           *boundary_, f_, g_)),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
       lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
-      fixingPoint{0.3,0},
       intermediateSolCounter()
   {
     std::cout << " solver n_dofs "<< solver.get_n_dofs() << std::endl;
@@ -81,8 +80,7 @@ public:
         g_(OperatorTraits::construct_g(solver, setting)),
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
         lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-	lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),
-        fixingPoint{0.3,0},
+        lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),
         intermediateSolCounter()
     {
       std::cout << " solver n_dofs "<< solver.get_n_dofs() << std::endl;
@@ -99,7 +97,6 @@ public:
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
         lopLMMidvalue(new Local_operator_LangrangianMidValue()),
         lopLMBoundary(OperatorTraits::construct_lop_LBoundary(setting,get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
-        fixingPoint{0.3,0},
         intermediateSolCounter()
     {
       std::cout << " solver n_dofs "<< solver.get_n_dofs() << std::endl;
@@ -111,7 +108,6 @@ public:
   MA_OT_Operator(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
       lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),//, solver.get_u_old())),
-      fixingPoint{0.3,0},
       intermediateSolCounter()
       {
           init();
@@ -120,7 +116,6 @@ public:
   MA_OT_Operator(SolverType& solver, LocalOperatorType* lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
       lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),
-      fixingPoint{0.3,0},
       intermediateSolCounter()
   {
     init();
@@ -274,7 +269,6 @@ public:
     lopLMBoundary->change_oldFunction(uOld);
   }
 
-  const FieldVector<double, 2> get_fixingPoint(){return fixingPoint;}
 
   const SolverType* solver_ptr;
 
@@ -288,12 +282,7 @@ public:
   std::shared_ptr<Local_operator_LangrangianMidValue> lopLMMidvalue;
   std::shared_ptr<LocalOperatorLagrangianBoundaryType> lopLMBoundary;
 
-  //store a grid point, whose function value is fixed
-  const FieldVector<double, 2> fixingPoint;
-  //    Config::Entity fixingElement;
-
-
-  Config::VectorType lagrangianFixingPointDiscreteOperator;
+  Config::VectorType lagrangianMidvalueDiscreteOperator;
 
   mutable int intermediateSolCounter;
 
@@ -313,7 +302,6 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
   using FunctionTypeY = typename OperatorTraits::FunctionTypeY;
 
   MA_OT_Operator_with_Linearisation():MA_OT_Operator<OperatorTraits>(), lopLinear_ptr(){}
-//  MA_OT_image_Operator_with_Linearisation():solver_ptr(NULL), lop_ptr(), lopLinear_ptr(), fixingPoint({0.5,0.15}){ }
 //    MA_OT_Operator(MA_OT_solver& solver):solver_ptr(&solver), lop_ptr(new Local_Operator_MA_OT(new BoundarySquare(solver.gradient_u_old, solver.get_setting()), new rhoXSquareToSquare(), new rhoYSquareToSquare())){}
     // lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
 
@@ -409,8 +397,8 @@ private:
 template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>::init()
 {
-  solver_ptr->get_assembler_lagrangian_midvalue().assemble_u_independent_matrix(*lopLMMidvalue, lagrangianFixingPointDiscreteOperator);
-  std::cerr << " adapted operator and now lagrangian " << lagrangianFixingPointDiscreteOperator.size() << " and ndofsV_H " << this->solver_ptr->get_n_dofs_V_h() << std::endl;
+  solver_ptr->get_assembler_lagrangian_midvalue().assemble_u_independent_matrix(*lopLMMidvalue, lagrangianMidvalueDiscreteOperator);
+  std::cerr << " adapted operator and now lagrangian " << lagrangianMidvalueDiscreteOperator.size() << " and ndofsV_H " << this->solver_ptr->get_n_dofs_V_h() << std::endl;
 
   assert_integrability_condition();
   assert(check_integrability_condition());
@@ -510,21 +498,21 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
   //assemble lagrangian multiplier for grid fixing point
 
   //-------------------select  mid value-------------------------
-  assert(lagrangianFixingPointDiscreteOperator.size() == V_h_size);
+  assert(lagrangianMidvalueDiscreteOperator.size() == V_h_size);
 
   auto lambda = x(indexFixingGridEquation);
   std::cerr << "  lambda " << lambda << std::endl;
 
   //copy in system matrix
-  for (unsigned int i = 0; i < lagrangianFixingPointDiscreteOperator.size(); i++)
+  for (unsigned int i = 0; i < lagrangianMidvalueDiscreteOperator.size(); i++)
   {
     //indexLagrangianParameter = indexFixingGridEquation
-    m.insert(indexFixingGridEquation,i)=lagrangianFixingPointDiscreteOperator(i);
-    m.insert(i,indexFixingGridEquation)=lagrangianFixingPointDiscreteOperator(i);
+    m.insert(indexFixingGridEquation,i)=lagrangianMidvalueDiscreteOperator(i);
+    m.insert(i,indexFixingGridEquation)=lagrangianMidvalueDiscreteOperator(i);
 
     if (lop_ptr->last_step_on_a_different_grid)
     {
-      v(i)+= lambda*lagrangianFixingPointDiscreteOperator(i);
+      v(i)+= lambda*lagrangianMidvalueDiscreteOperator(i);
     }
   }
   //set rhs of langrangian multipler
@@ -535,13 +523,13 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
   else
     v(indexFixingGridEquation) = assembler.uAtX0();
   std::cerr << " u - u_0 = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation) << " = " << assembler.u0AtX0() << '-'  <<assembler.uAtX0() << std::endl;
-  v(indexFixingGridEquation) += lagrangianFixingPointDiscreteOperator.dot(w);
+  v(indexFixingGridEquation) += lagrangianMidvalueDiscreteOperator.dot(w);
 
 #ifdef DEBUG
   {
     std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "Bm" << intermediateSolCounter << ".m";
     std::ofstream file(filename.str(),std::ios::out);
-    MATLAB_export(file, lagrangianFixingPointDiscreteOperator, "Bm");
+    MATLAB_export(file, lagrangianMidvalueDiscreteOperator, "Bm");
   }
 #endif
 
@@ -597,7 +585,7 @@ template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& xBoundary, const bool new_solution) const
 {
   assert(solver_ptr != NULL);
-  assert(lagrangianFixingPointDiscreteOperator.size()==this->solver_ptr->get_n_dofs_V_h() && " the initialisiation of the MA operator does not fit to the solver's grid!");
+  assert(lagrangianMidvalueDiscreteOperator.size()==this->solver_ptr->get_n_dofs_V_h() && " the initialisiation of the MA operator does not fit to the solver's grid!");
 
 
   if (new_solution && false)
@@ -670,7 +658,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian(const Config::Vec
   const auto& assembler = solver_ptr->get_assembler();
 
   v.head(tempV.size()) = tempV;
-  assert(lagrangianFixingPointDiscreteOperator.size() == V_h_size);
+  assert(lagrangianMidvalueDiscreteOperator.size() == V_h_size);
 
   int indexFixingGridEquation = V_h_size;
 //    auto lambda = x(indexFixingGridEquation);
