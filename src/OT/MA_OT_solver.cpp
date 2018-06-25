@@ -522,13 +522,13 @@ void MA_OT_solver::plot(const std::string& name, int no) const
 
       //  plotter.writeOTVTK(fname, *gradient_u_old);
 
-
+/*
   std::string fnameCartesian(plotter.get_output_directory());
   fnameCartesian += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + "outputCartesianGrid.vtu";
 
   FETraits::DiscreteGridFunction::GlobalFirstDerivative globalGradU(get_u_old());
 
-  transportPlotter_.writeOTVTKGlobal(fnameCartesian, globalGradU);
+  transportPlotter_.writeOTVTKGlobal(fnameCartesian, globalGradU);*/
 }
 
 void MA_OT_solver::one_Poisson_Step()
