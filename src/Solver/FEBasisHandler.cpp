@@ -114,10 +114,13 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 
 
   //we need do generate the coarse basis
-  const auto& levelGridView = solver.grid().levelGridView(level);
+  const auto& oldGridInformation = solver.gridHandler().coarse(level);
+  const auto& coarseGridView =oldGridInformation.gridViewOld;
 
-  typedef Functions::PS12SSplineBasis<Config::LevelGridView, Config::SparseMatrixType> FEBasisCoarseType;
-  std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(levelGridView));
+  using CoarseGridView = std::decay_t<decltype<oldGridInformation>>::GridViewOld;
+
+  using FEBasisCoarseType = Functions::PS12SSplineBasis<CoarseGridView, Config::SparseMatrixType>;
+  std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(coarseGridView));
 
   //init vector
   Config::VectorType v = Config::VectorType::Zero(FEBasisCoarse->indexSet().size());
@@ -128,7 +131,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   auto localView = FEBasis_->localView();
 
   //loop over elements (in coarse grid)
-  for (auto&& elementCoarse : elements(levelGridView)) {
+  for (auto&& elementCoarse : elements(coarseGridView)) {
 
     HierarchicSearch<Config::GridType, Config::GridView::IndexSet> hs(FEBasis_->gridView().grid(), FEBasis_->gridView().indexSet());
 
@@ -170,7 +173,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
       k++;
     }
 
-    for (auto&& is : intersections(levelGridView, elementCoarse)) //loop over edges
+    for (auto&& is : intersections(coarseGridView, elementCoarse)) //loop over edges
     {
       const int i = is.indexInInside();
 

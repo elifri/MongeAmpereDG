@@ -76,6 +76,17 @@ public:
     return OldGridInformation(oldGrid, oldGrid->leafGridView());
   }
 
+  OldGridInformation coarse(const int level){
+    assert(gridPrefix_!="");//TODO string comparison
+
+    shared_ptr<GridOldType> oldGrid = grid_;
+
+    std::stringstream gridFile;
+    gridFile << gridPrefix_ << level << ".msh";
+
+    return OldGridInformation(oldGrid, oldGrid->leafGridView());
+  }
+
 private:
   std::string gridPrefix_;
   int gridRefinement_;
@@ -118,6 +129,10 @@ public:
     gridRefinement_++;
     grid_->globalRefine(1);
     return OldGridInformation(grid_,grid_->levelGridView(grid_->maxLevel()-1));
+  }
+
+  OldGridInformation coarse(const int level){
+    return OldGridInformation(grid_,grid_->levelGridView(level));
   }
 
 
