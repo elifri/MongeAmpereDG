@@ -76,7 +76,7 @@ public:
     return OldGridInformation(oldGrid, oldGrid->leafGridView());
   }
 
-  OldGridInformation coarse(const int level){
+  OldGridInformation coarse(const int level) const{
     assert(gridPrefix_!="");//TODO string comparison
 
     shared_ptr<GridOldType> oldGrid = grid_;
@@ -131,7 +131,7 @@ public:
     return OldGridInformation(grid_,grid_->levelGridView(grid_->maxLevel()-1));
   }
 
-  OldGridInformation coarse(const int level){
+  OldGridInformation coarse(const int level)const{
     return OldGridInformation(grid_,grid_->levelGridView(level));
   }
 

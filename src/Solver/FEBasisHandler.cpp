@@ -114,10 +114,10 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 
 
   //we need do generate the coarse basis
-  const auto& oldGridInformation = solver.gridHandler().coarse(level);
+  const auto& oldGridInformation = solver.get_gridHandler().coarse(level);
   const auto& coarseGridView =oldGridInformation.gridViewOld;
 
-  using CoarseGridView = std::decay_t<decltype<oldGridInformation>>::GridViewOld;
+  using CoarseGridView = typename std::decay_t<decltype(oldGridInformation)>::OldGridView;
 
   using FEBasisCoarseType = Functions::PS12SSplineBasis<CoarseGridView, Config::SparseMatrixType>;
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(coarseGridView));
