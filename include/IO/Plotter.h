@@ -119,37 +119,38 @@ public:
   //--------------------------//
 
 
-	static void write_vtk_header(std::ofstream& file, const int Nnodes, const int Nelements); ///writes vtk header
+  static void write_vtk_header(std::ofstream& file, const int Nnodes, const int Nelements); ///writes vtk header
   void write_vtk_header(std::ofstream& file) const{ write_vtk_header(file, Nnodes(), Nelements());} ///writes vtk header
-	static void write_vtk_end(std::ofstream& file);
-	void read_vtk_header(std::ifstream& file, int &Nnodes, int &Nelements) const; ///reads vtk header
+  static void write_vtk_end(std::ofstream& file);
+  void read_vtk_header(std::ifstream& file, int &Nnodes, int &Nelements) const; ///reads vtk header
 
-	//--------helper to write vtk points
+  //--------helper to write vtk points
 
-	template <typename T>
-	void write_point_data(std::ofstream &file, const std::string name, Eigen::Matrix<T, Eigen::Dynamic, 1> celldata) const;
-	void write_points(std::ofstream &file) const;///writes the point coordinates into file
+  template <typename T>
+  void write_point_data(std::ofstream &file, const std::string name, Eigen::Matrix<T, Eigen::Dynamic, 1> celldata) const;
+  void write_points(std::ofstream &file) const;///writes the point coordinates into file
 
 	///writes the connectivity between vertices in one element
   template<typename RefinementType>
   static void write_element_cells(std::ofstream &file, int &offset, int refinement);
 
-	template<typename GridView, bool isSimplex = true>
-	static void write_cells_same_shape(std::ofstream &file, const GridView &gridView, const int Nelements, int refinement); ///write cellSets into file
+  template<typename GridView, bool isSimplex = true>
+  static void write_cells_same_shape(std::ofstream &file, const GridView &gridView, const int Nelements, int refinement); ///write cellSets into file
 
-	template<typename GridView>
-	static void write_cells(std::ofstream &file, const GridView &gridView, int refinement);
+  template<typename GridView>
+  static void write_cells(std::ofstream &file, const GridView &gridView, int refinement);
 
-	///write cellSets into file
-	void write_cells(std::ofstream &file) const
-	{ write_cells_same_shape<Config::GridView, std::is_same<SimplexRefinementType, PlotRefinementType>::value>(file, get_gridView(), Nelements(), refinement_);
-	}
+  ///write cellSets into file
+  void write_cells(std::ofstream &file) const
+  {
+    write_cells_same_shape<Config::GridView, std::is_same<SimplexRefinementType, PlotRefinementType>::value>(file, get_gridView(), Nelements(), refinement_);
+  }
 
-	///writes the point array of the reflector (implicitly given by 1/f) into file
-	template <class Function>
-	void write_points_reflector(std::ofstream &file, Function &f) const;
+  ///writes the point array of the reflector (implicitly given by 1/f) into file
+  template <class Function>
+  void write_points_reflector(std::ofstream &file, Function &f) const;
 
-	///writes the point array of the reflector (implicitly given by f) into file
+  ///writes the point array of the reflector (implicitly given by f) into file
   template <class Function>
   void write_points_refractor(std::ofstream &file, Function &f) const;
 
@@ -791,7 +792,6 @@ void Plotter::write_simple_estimate_integral_OT(std::ofstream &file, LocalFuncti
       {
         const auto geometry = element.geometry();
 
-
         fg.bind(element);
 
         //create geometry for target triangle
@@ -820,8 +820,10 @@ void Plotter::write_simple_estimate_integral_OT(std::ofstream &file, LocalFuncti
         auto targetGeometry = Dune::MultiLinearGeometry<Config::ValueType, Config::dim, Config::dim>(gt, coords);
 
 
-        estInt *= geometry.volume()/targetGeometry.volume();
+        estInt /= 3.0; //averaging
+        estInt *= geometry.volume()/targetGeometry.volume(); //geometry scaling
 
+        //write to file
         for (int i = 0; i < PlotRefinementType::nElements(refinement_); i++)
           file << "\t\t\t\t\t" << estInt << " ";
         file << std::endl;
