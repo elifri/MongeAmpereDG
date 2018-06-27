@@ -785,41 +785,51 @@ void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
 }
 
 template <class LocalFunction>
-void Plotter::write_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &fg, const DensityFunction& omegaF) const{
-  // write points
-    file << "\t\t\t<CellData Scalars=\"est. integral\">\n"
-        << "\t\t\t\t<DataArray type=\"Float32\" Name=\"est. integral\" NumberOfComponents=\"1\" format=\""
-        << "ascii" << "\">\n";
+void Plotter::write_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &fg, const DensityFunction& omegaF) const{  // write points
+  file << "\t\t\t<CellData Scalars=\"est. integral\">\n"
+      << "\t\t\t\t<DataArray type=\"Float32\" Name=\"est. integral\" NumberOfComponents=\"1\" format=\""
+      << "ascii" << "\">\n";
 
-    {   // save points in file after refinement
-      for (auto&& element: elements(get_gridView()))
+  {   // save points in file after refinement
+    for (auto&& element: elements(get_gridView()))
+    {
+      const auto geometry = element.geometry();
+
+      fg.bind(element);
+
+      //create geometry for target triangle
+      Dune::GeometryType gt;
+      std::vector<Dune::FieldVector<Config::ValueType, Config::dim> > coords;
+
+      if(geometry.type().isCube())
       {
-        const auto geometry = element.geometry();
+        gt.makeQuadrilateral();
+        coords.resize(4);
+      }
+      else
+      {
+        gt.makeTriangle();
+        coords.resize(3);
+      }
 
-        fg.bind(element);
-
-        //create geometry for target triangle
-        Dune::GeometryType gt;
-        std::vector<Dune::FieldVector<Config::ValueType, Config::dim> > coords;
-
-        if(geometry.type().isCube())
-        {
-          gt.makeQuadrilateral();
-          coords.resize(4);
-        }
-        else
-        {
-          gt.makeTriangle();
-          coords.resize(3);
-        }
+      std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> points(PlotRefinementType::nVertices(refinement_));
+      std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> transported_points(PlotRefinementType::nVertices(refinement_));
+      for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++) //loop over vertices
+      {
+        points[it.index()] = geometry.global(it.coords());
+        transported_points[it.index()] = fg(it.coords()); //put vertices and transported refined vertices, respectively., in vector
+      }
+      //loop over subentitites
+      for (auto it = PlotRefinementType::eBegin(refinement_); it != PlotRefinementType::eEnd(refinement_); it++){
 
         //estimate integral by averaging the corner values and dividing through the cell size
         Config::ValueType estInt = 0;
 
-        for (int i =0; i < geometry.corners(); i++){
-          estInt += omegaF(geometry.corner(i));
+        int coords_i = 0;
+        for (const auto& corner : it.vertexIndices()){
+          estInt += omegaF(points[corner]);
 
-          coords[i] = fg(geometry.local(geometry.corner(i)));
+          coords[coords_i++] = transported_points[corner];
         }
         auto targetGeometry = Dune::MultiLinearGeometry<Config::ValueType, Config::dim, Config::dim>(gt, coords);
 
@@ -828,11 +838,12 @@ void Plotter::write_simple_estimate_integral_OT(std::ofstream &file, LocalFuncti
         estInt *= geometry.volume()/targetGeometry.volume(); //geometry scaling
 
         //write to file
-        for (int i = 0; i < PlotRefinementType::nElements(refinement_); i++)
-          file << "\t\t\t\t\t" << estInt << " ";
+        file << "\t\t\t\t\t" << estInt << " ";
         file << std::endl;
       }
     }
+  }
+
     file << "\t\t\t\t</DataArray>\n" << "\t\t\t</CellData>\n";
 }
 
@@ -865,12 +876,12 @@ void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, Loc
           coords.resize(3);
         }
 
-        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> points;//(PlotRefinementType::nVertices(refinement_));
-        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> transported_points;//(PlotRefinementType::nVertices(refinement_));
-        for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++){ //loop over vertices
+        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> points(PlotRefinementType::nVertices(refinement_));
+        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> transported_points(PlotRefinementType::nVertices(refinement_));
+        for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++) //loop over vertices
         {
-          points.push_back(geometry.global(it.coords()));
-          transported_points.push_back(fg(it.coords()));} //put vertices and transported refined vertices, respectively., in vector
+            points[it.index()] = geometry.global(it.coords());
+            transported_points[it.index()] = fg(it.coords()); //put vertices and transported refined vertices, respectively., in vector
         }
         //loop over subentitites
         for (auto it = PlotRefinementType::eBegin(refinement_); it != PlotRefinementType::eEnd(refinement_); it++){

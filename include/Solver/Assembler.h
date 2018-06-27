@@ -1929,7 +1929,7 @@ void Assembler<FETraits>::assemble_DG_Jacobian_(const LocalOperatorType &lop, co
     std::vector<EntryType> JacobianEntries;
 
     // The index set gives you indices for each element , edge , face , vertex , etc .
-    const GridViewType::IndexSet& indexSet = gridView.indexSet();
+//    const GridViewType::IndexSet& indexSet = gridView.indexSet();
     auto localView = basis_->localView();
     auto localViewFixingElement = basis_->localView();
     auto localViewn = basis_->localView();
