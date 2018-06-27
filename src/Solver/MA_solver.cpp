@@ -261,8 +261,6 @@ const typename MA_solver::VectorType& MA_solver::solve()
     {
       Config::VectorType v = coarse_solution(SolverConfig::startlevel);
 
-      std::cout << " the coarse vector has " << v.size() << " entries " << std::endl;
-
       stringstream filename2; filename2 << outputDirectory_ << "/" << outputPrefix_ << iterations << "Coarse.fec";
       ofstream file(filename2.str(),std::ios::out);
       file << v;

@@ -83,7 +83,6 @@ public:
     std::stringstream gridFile;
     gridFile << gridPrefix_ << level << ".msh";
 
-    std::cout << " read coarse grid vom file " << gridFile.str() << std::endl;
     shared_ptr<GridOldType> oldGrid = std::shared_ptr<GridOldType>(GmshReader<GridOldType>::read(gridFile.str()));
 
     return OldGridInformation(oldGrid, oldGrid->leafGridView());

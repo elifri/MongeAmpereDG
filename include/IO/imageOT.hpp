@@ -69,6 +69,12 @@ void print_image_OT(const GridView& gridView, LocalFunction& T, LocalDerivativeF
     const ImageFunction& inputImage, const ImageFunction& targetImage,
     const std::string& outputFile, int pixel_width, int pixel_height, int refinement = 3)
 {
+
+  auto ratio = pixel_width/pixel_height;
+  int length = std::sqrt(gridView.size(2))*PlotRefinementType::nElements(refinement);
+  pixel_height = length/(1.+ratio);
+  pixel_width = pixel_height/ratio;
+
   cimg_library::CImg<double> transported(pixel_width,pixel_height);
 
   Eigen::MatrixXi count_match = Eigen::MatrixXi::Zero(pixel_height, pixel_width);

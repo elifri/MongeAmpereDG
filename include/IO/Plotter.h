@@ -186,6 +186,10 @@ public:
   template <class LocalFunction>
   void write_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &f, const DensityFunction& omegaF) const;
 
+  template <class LocalFunction>
+  void write_refined_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &fg, const DensityFunction& omegaF) const;
+
+
   //----------------------------//
   //---helper for povray parts--//
   //----------------------------//
@@ -598,7 +602,7 @@ void Plotter::writeOTVTK(std::string filename, LocalFunction &f, const DensityFu
     write_vtk_header(file);
 
     write_transport_OT(file, f);
-    write_simple_estimate_integral_OT(file, f, omegaF);
+    write_refined_simple_estimate_integral_OT(file, f, omegaF);
     write_points_OT(file, f);
     write_cells(file);
 
@@ -831,6 +835,70 @@ void Plotter::write_simple_estimate_integral_OT(std::ofstream &file, LocalFuncti
     }
     file << "\t\t\t\t</DataArray>\n" << "\t\t\t</CellData>\n";
 }
+
+template <class LocalFunction>
+void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &fg, const DensityFunction& omegaF) const{
+  // write points
+    file << "\t\t\t<CellData Scalars=\"est. integral\">\n"
+        << "\t\t\t\t<DataArray type=\"Float32\" Name=\"est. integral\" NumberOfComponents=\"1\" format=\""
+        << "ascii" << "\">\n";
+
+    {   // save points in file after refinement
+      for (auto&& element: elements(get_gridView()))
+      {
+        const auto geometry = element.geometry();
+
+        fg.bind(element);
+
+        //create geometry for target triangle
+        Dune::GeometryType gt;
+        std::vector<Dune::FieldVector<Config::ValueType, Config::dim> > coords;
+
+        if(geometry.type().isCube())
+        {
+          gt.makeQuadrilateral();
+          coords.resize(4);
+        }
+        else
+        {
+          gt.makeTriangle();
+          coords.resize(3);
+        }
+
+        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> points;//(PlotRefinementType::nVertices(refinement_));
+        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> transported_points;//(PlotRefinementType::nVertices(refinement_));
+        for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++){ //loop over vertices
+        {
+          points.push_back(geometry.global(it.coords()));
+          transported_points.push_back(fg(it.coords()));} //put vertices and transported refined vertices, respectively., in vector
+        }
+        //loop over subentitites
+        for (auto it = PlotRefinementType::eBegin(refinement_); it != PlotRefinementType::eEnd(refinement_); it++){
+
+          //estimate integral by averaging the corner values and dividing through the cell size
+          Config::ValueType estInt = 0;
+
+          int coords_i = 0;
+          for (const auto& corner : it.vertexIndices()){
+            estInt += omegaF(points[corner]);
+
+            coords[coords_i++] = transported_points[corner];
+          }
+          auto targetGeometry = Dune::MultiLinearGeometry<Config::ValueType, Config::dim, Config::dim>(gt, coords);
+
+
+          estInt /= 3.0; //averaging
+          estInt *= geometry.volume()/targetGeometry.volume(); //geometry scaling
+
+          //write to file
+          file << "\t\t\t\t\t" << estInt << " ";
+          file << std::endl;
+        }
+      }
+    }
+    file << "\t\t\t\t</DataArray>\n" << "\t\t\t</CellData>\n";
+}
+
 
 
 template <class LocalFunction, class Function>
