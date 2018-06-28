@@ -64,22 +64,40 @@ void print_image_OT_backtrace(const Function& T, const DerivativeFunction& Jac_T
   transported.save(outputFile.c_str());
 }
 
+
+
+/**
+ * tries to reconstruct a picture of the transported measure
+ * @param gridView	gridView
+ * @param T		the transport map (gradient of MA equation solution u)
+ * @param Jac_T	 	the Jacobian of the transport map (Hessian of MA equation solution u)
+ * @param inputImage	the input measure f
+ * @param targetImage	the target measure g
+ * @param outputFile	the path where the picture is saved
+ * @param pixel_width	the pixel_width of the output picture
+ * @param pixel_height	the pixel_height of the output picture
+ * @param refinement	how many rays are traced compared to the vertices of the grid
+ */
 template<typename GridView, typename LocalFunction, typename LocalDerivativeFunction>
 void print_image_OT(const GridView& gridView, LocalFunction& T, LocalDerivativeFunction& Jac_T,
     const ImageFunction& inputImage, const ImageFunction& targetImage,
     const std::string& outputFile, int pixel_width, int pixel_height, int refinement = 3)
 {
 
+/*
   auto ratio = pixel_width/pixel_height;
   int length = std::sqrt(gridView.size(2))*PlotRefinementType::nElements(refinement);
   pixel_height = length/(1.+ratio);
   pixel_width = pixel_height/ratio;
+*/
 
   cimg_library::CImg<double> transported(pixel_width,pixel_height);
 
   Eigen::MatrixXi count_match = Eigen::MatrixXi::Zero(pixel_height, pixel_width);
 
   transported.fill(0);
+
+  int counter =0;
 
   for (auto&& element: elements(gridView))
   {
@@ -120,6 +138,53 @@ void print_image_OT(const GridView& gridView, LocalFunction& T, LocalDerivativeF
 }
 
 
+
+template<typename Function, typename DerivativeFunction>
+void print_image_OT(const Function& T, const DerivativeFunction& Jac_T,
+    const ImageFunction& inputImage, const ImageFunction& targetImage,
+    const std::string& outputFile, int pixel_width, int pixel_height)
+{
+  const int originalHeight = inputImage.getOriginalImage().height();
+  const int originalWidth = inputImage.getOriginalImage().width();
+  cimg_library::CImg<double> transported(pixel_width,pixel_height);
+
+  for (int i = 0; i < pixel_height; i++)
+    for (int j = 0; j < pixel_height; j++)
+      transported(i, j) = 0;
+
+  for (int i = 0; i < pixel_height; i++)
+  {
+    for (int j = 0; j < pixel_height; j++)
+    {
+      const double i_original = (double)i/pixel_width*originalWidth;
+      const double j_original = (double)j/pixel_height*originalHeight;
+      const auto x = inputImage.getCoordinate(i_original,j_original);
+      auto transportedPixel = T(x);
+
+//      std::cerr << " i,j = (" << i<< "," <<  j << " ) -> x " << x << ", is transported to " << transportedPixel << std::endl;
+
+
+      double transportedPixelvalue;
+      inputImage.evaluate(x,transportedPixelvalue);
+
+      typename DerivativeFunction::Hessian hessU;
+      Jac_T.evaluateHess(x, hessU);
+      transportedPixelvalue/=(hessU[0][0]*hessU[1][1]-hessU[1][0]*hessU[0][1]);
+
+      int i_transported, j_transported;
+      targetImage.getPixel(transportedPixel, i_transported, j_transported);
+//      std::cerr << " add to (" << i_transported << "," <<  j_transported << " ) the value " << transportedPixelvalue << ", dethess was " << hessU[0][0]*hessU[1][1]-hessU[1][0]*hessU[0][1];
+      transported(i_transported, j_transported) += transportedPixelvalue;
+//      std::cerr << " -> " << transported(i_transported, j_transported) << std::endl;
+    }
+  }
+
+  transported /= targetImage.factor_;
+  transported /= 255.0 / (255.0 + targetImage.minValue());
+  transported -= targetImage.minValue();
+
+  transported.save(outputFile.c_str());
+}
 
 
 #endif /* SRC_OT_IMAGEOT_HPP_ */

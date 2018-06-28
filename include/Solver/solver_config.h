@@ -231,8 +231,9 @@ struct GeometrySetting{
 
   static std::string gridinputFile; ///location of the grid file specifying the grid for the input area $\Omega$
   static std::string plotGridinputFile; ///location of the grid file specifying a grid which is translated under the solution
+  static int boundaryN; ///number of directions to simulate boundary of the starting domain $\Omega$
   static std::string gridTargetFile; ///location of the grid file specifying the grid for the target area $\Sigma$
-  static int boundaryN; ///number of directions to simulate boundary
+  static int boundaryNTarget; ///number of directions to simulate boundary of the target domain $\Sigma$
 
 };
 

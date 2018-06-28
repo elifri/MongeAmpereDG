@@ -135,6 +135,7 @@ Config::SpaceType GeometrySetting::upperRightTarget= {1,1};
 std::string GeometrySetting::gridinputFile = "";
 std::string GeometrySetting::plotGridinputFile = "";
 int GeometrySetting::boundaryN = std::max(100000,1 << (2+SolverConfig::startlevel+SolverConfig::nonlinear_steps));
+int GeometrySetting::boundaryNTarget = std::max(100000,1 << (2+SolverConfig::startlevel+SolverConfig::nonlinear_steps));
 
 std::string GeometrySetting::gridTargetFile = "";
 
@@ -153,13 +154,14 @@ void GeometrySetting::read_configfile(std::string &configFile)
         ("geometry.input.yMax",  po::value<double>(&GeometrySetting::upperRight[1]), "")
         ("geometry.input.gridfile",  po::value<string>(&GeometrySetting::gridinputFile), "")
         ("geometry.input.plotgridfile",  po::value<string>(&GeometrySetting::plotGridinputFile), "")
+        ("geometry.input.boundaryN",  po::value<int>(&GeometrySetting::boundaryN), "")
         ("geometry.target.xMin",     po::value<double>(&GeometrySetting::lowerLeftTarget[0]), "")
         ("geometry.target.xMax",     po::value<double>(&GeometrySetting::upperRightTarget[0]), "")
         ("geometry.target.yMin",     po::value<double>(&GeometrySetting::lowerLeftTarget[1]), "")
         ("geometry.target.yMax",     po::value<double>(&GeometrySetting::upperRightTarget[1]), "")
         ("geometry.target.z",        po::value<double>(&GeometrySetting::z_3),    "")
         ("geometry.target.gridfile",  po::value<string>(&GeometrySetting::gridTargetFile), "")
-        ("geometry.target.boundaryN",  po::value<int>(&GeometrySetting::boundaryN), "")
+        ("geometry.target.boundaryN",  po::value<int>(&GeometrySetting::boundaryNTarget), "")
   ;
 
 
@@ -200,13 +202,14 @@ void OpticalSetting::read_configfile(std::string &configFile)
         ("geometry.optic.yMax",  po::value<double>(&OpticalSetting::upperRight[1]), "")
         ("geometry.optic.gridfile",  po::value<string>(&OpticalSetting::gridinputFile), "")
         ("geometry.optic.plotgridfile",  po::value<string>(&OpticalSetting::plotGridinputFile), "")
+        ("geometry.optic.boundaryN",  po::value<int>(&GeometrySetting::boundaryN), "")
         ("geometry.target.xMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[0]), "")
         ("geometry.target.xMax",     po::value<double>(&OpticalSetting::upperRightTarget[0]), "")
         ("geometry.target.yMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[1]), "")
         ("geometry.target.yMax",     po::value<double>(&OpticalSetting::upperRightTarget[1]), "")
         ("geometry.target.gridfile",  po::value<string>(&OpticalSetting::gridTargetFile), "")
         ("geometry.target.z",        po::value<double>(&OpticalSetting::z_3),    "")
-        ("geometry.target.boundaryN",  po::value<int>(&OpticalSetting::boundaryN), "")
+        ("geometry.target.boundaryN",  po::value<int>(&GeometrySetting::boundaryNTarget), "")
         ("light.in.imageName",       po::value<string>(&OpticalSetting::LightinputImageName), "path to image")
         ("light.out.targetImageName",     po::value<string>(&OpticalSetting::TargetImageName), "")
         ("solver.epsDivide",  po::value<double>(&SolverConfig::epsDivide), "")
