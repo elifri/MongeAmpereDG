@@ -29,6 +29,7 @@ public:
     bc(bc),
     f(f), g(g),
     int_f(0),
+    found_negative(false),
     last_step_on_a_different_grid(false)
     {
     assert(false&& "this constructor should never be used!!");
@@ -43,6 +44,7 @@ public:
     bc(bc),
     f(f), g(g),
     int_f(0),
+    found_negative(false),
     last_step_on_a_different_grid(false)
     {}
 

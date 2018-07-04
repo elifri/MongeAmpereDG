@@ -106,10 +106,10 @@ public:
 
   struct OldGridInformation{
     using OldGridView = GridViewOld;
-    std::shared_ptr<GridType> gridOld;
+    const std::shared_ptr<GridType> gridOld;
     GridViewOld gridViewOld;
 
-    OldGridInformation(std::shared_ptr<GridType>& gridOld, GridViewOld gridViewOld):
+    OldGridInformation(const std::shared_ptr<GridType>& gridOld, GridViewOld gridViewOld):
       gridOld(gridOld), gridViewOld(gridViewOld){}
   };
 

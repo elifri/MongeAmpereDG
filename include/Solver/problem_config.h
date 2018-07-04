@@ -23,6 +23,7 @@
 
 #include "OT/operator_LagrangianBoundary.h"
 #include "Optics/operator_LagrangianBoundary_refl.h"
+#include "Optics/operator_LagrangianBoundary_refr_parallel.h"
 
 class MA_solver;
 class MA_OT_solver;
@@ -69,7 +70,7 @@ template<typename Solver, typename LOP>
 struct ImageOperatorTraits: public GeneralOperatorTraits<Solver, LOP, ImageFunction, ImageFunction>{
   using FunctionTypeX = typename GeneralOperatorTraits<Solver, LOP, ImageFunction, ImageFunction>::FunctionTypeX;
   using FunctionTypeY = typename GeneralOperatorTraits<Solver, LOP, ImageFunction, ImageFunction>::FunctionTypeY;
-  template<typename OpticalSetting>
+
   static FunctionTypeX construct_f(const Solver& solver, const OpticalSetting& setting)
   {
     return FunctionTypeX(
@@ -77,6 +78,8 @@ struct ImageOperatorTraits: public GeneralOperatorTraits<Solver, LOP, ImageFunct
         setting.lowerLeft, setting.upperRight,
         setting.minPixelValue);
   }
+
+  template<typename OpticalSetting, typename std::enable_if<sizeof(OpticalSetting) && std::is_same<SolverConfig::GridHandlerType, GridHandler<Config::DuneGridType, false>>::value,int>::type = 0>
   static FunctionTypeY construct_g(const Solver& solver, const OpticalSetting& setting)
   {
     return FunctionTypeY(
@@ -84,6 +87,16 @@ struct ImageOperatorTraits: public GeneralOperatorTraits<Solver, LOP, ImageFunct
         setting.lowerLeftTarget, setting.upperRightTarget,
         setting.minPixelValue);
   }
+
+  template<typename OpticalSetting, typename std::enable_if<sizeof(OpticalSetting) && std::is_same<SolverConfig::GridHandlerType, GridHandler<Config::DuneGridType, true>>::value,int>::type = 0>
+  static FunctionTypeY construct_g(const Solver& solver, const OpticalSetting& setting)
+  {
+    return FunctionTypeY(
+        setting.TargetImageName,
+        setting.lowerLeftTarget, setting.upperRightTarget,
+        setting.minPixelValue);
+  }
+
 };
 
 ///interface for general OT operator, whose distributions constructors need Solver for initialisation and lop needs setting

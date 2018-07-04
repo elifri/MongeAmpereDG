@@ -35,7 +35,7 @@ class ImageFunction : public DensityFunction
     double blurCoeff_;
     double factor_;  /// factor for normalization
 
-    const SolverConfig::GridHandlerType& gridHandler_;
+    const SolverConfig::GridHandlerType* gridHandler_;
 
 
   public:
@@ -45,6 +45,13 @@ class ImageFunction : public DensityFunction
     ImageFunction (
         const std::string &filename,
         const SolverConfig::GridHandlerType& gridHandler,
+        const Config::SpaceType2d &lowerLeft,
+        const Config::SpaceType2d &upperRight,
+        const double minValue=0.0
+    );
+
+    ImageFunction (
+        const std::string &filename,
         const Config::SpaceType2d &lowerLeft,
         const Config::SpaceType2d &upperRight,
         const double minValue=0.0
