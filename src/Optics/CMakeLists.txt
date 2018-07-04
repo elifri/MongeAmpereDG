@@ -8,4 +8,4 @@ add_library(MA_reflector_solver MA_reflector_solver.cpp)
 add_library(MA_refractor_solver MA_refractor_solver.cpp)
 
 Set(MirrorProblemLibs operator_MA_refl_Brenner problemData ImageFunction PARENT_SCOPE)
-Set(LensProblemLibs operator_MA_refr_Linearisation operator_MA_refr_Brenner problemData ImageFunction PARENT_SCOPE)
+Set(LensProblemLibs operator_MA_refr_Brenner problemData ImageFunction PARENT_SCOPE)

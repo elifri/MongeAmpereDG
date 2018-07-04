@@ -25,7 +25,8 @@ public:
 #ifndef USE_ANALYTIC_DERIVATION
   using OperatorType = MA_OT_Operator<ProblemTraits>;
 #else
-  using OperatorType = MA_OT_Operator_with_Linearisation<ProblemTraits, Local_Operator_MA_refr_Linearisation>;
+  static_assert(false, " no linearised operator");
+//  using OperatorType = MA_OT_Operator_with_Linearisation<ProblemTraits, Local_Operator_MA_refr_Linearisation>;
 #endif
 
 

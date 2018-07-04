@@ -187,7 +187,7 @@ void ImageFunction::omega_normalize(const unsigned int n)
   const double integral = integrate2Omega(n);
 
   factor_ = 1.0/integral;
-  assert(fabs(integrate2Omega(n)) < 1e-10);
+  assert(fabs(integrate2Omega(n)-1.) < 1e-10);
 //      std::cout << "f factor " << factor_ << endl;
 }
 
