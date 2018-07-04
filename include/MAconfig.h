@@ -50,6 +50,7 @@
 */
 #endif
 
+#define PARALLEL_LIGHT
 
 
 #include "UnitCube.h"

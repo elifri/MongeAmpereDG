@@ -20,6 +20,7 @@
 #endif
 #include "Optics/operator_LagrangianBoundary_refl.h"
 #include "Optics/operator_LagrangianBoundary_refr.h"
+#include "Optics/operator_LagrangianBoundary_refr_parallel.h"
 
 #include "Operator_OT.h"
 #include "MA_OT_global_Operator.h"

@@ -155,7 +155,9 @@ void MA_refractor_solver::update_Operator()
 {
 
   //since the grid \Omega could be changed TODO sometimes not necessary
+#ifndef PARALLEL_LIGHT
   get_refr_operator().get_actual_f().omega_normalize();
+#endif
 
   //blurr target distributation
   std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;

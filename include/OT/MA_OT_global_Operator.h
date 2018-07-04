@@ -28,6 +28,7 @@
   #include <OT/operator_LagrangianBoundary.h>
 #endif
 
+#include "Optics/operator_LagrangianBoundary_refr_parallel.h"
 
 //forward declaration for image solver
 class MA_OT_image_solver;
@@ -214,7 +215,8 @@ private:
   /// use function overload to select correct implementation
   template<typename OperatorTraitsDummy = OperatorTraits>
   void assemble_Jacobian_boundary(OperatorTraitsDummy* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
-  void assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, Local_Operator_LagrangianBoundary_refr>* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
+  void assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, Local_Operator_LagrangianBoundary_refr_parallel>* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
+  void assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, Local_Operator_LagrangianBoundary_refr >* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
 
 
 
@@ -436,11 +438,20 @@ void MA_OT_Operator<OperatorTraits>::assemble_Jacobian_boundary(OperatorTraitsDu
 
 template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>
+  ::assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, Local_Operator_LagrangianBoundary_refr_parallel>* dummy,
+                               const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+{
+  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix_with_automatic_differentiation(*lopLMBoundary, m, x, v);
+}
+
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>
   ::assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, Local_Operator_LagrangianBoundary_refr>* dummy,
                                const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {
   solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix_with_automatic_differentiation(*lopLMBoundary, m, x, v);
 }
+
 
 
 template<typename OperatorTraits>
@@ -468,6 +479,8 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
   //copy system
   v.head(tempV.size()) = tempV;
   v.head(V_h_size) += tempM*w;
+
+  std::cout << " tempM " << tempM << std::endl;
 
   //copy SparseMatrix todo move to EigenUtility
   std::vector< Eigen::Triplet<double> > tripletList;
@@ -746,7 +759,11 @@ template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>
    ::assert_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy)
 {
+#ifdef PARALLEL_LIGHT
+  f_.normalize();
+#else
   f_.omega_normalize();
+#endif
   g_.normalize();
 }
 
@@ -770,7 +787,11 @@ template<typename OperatorTraits>
 bool MA_OT_Operator<OperatorTraits>
    ::check_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy) const
 {
+#ifdef PARALLEL_LIGHT
+  auto integralF = f_.integrate2();
+#else
   auto integralF = f_.integrate2Omega();
+#endif
   const double integralG = g_.integrate2();
 
   std::cout << " calculated the the integrals: int_Omega f dx = " << integralF << " and int_Sigma g dy = " << integralG << std::endl;

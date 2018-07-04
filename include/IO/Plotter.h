@@ -672,7 +672,11 @@ void Plotter::write_points_reflector(std::ofstream &file, Function &f) const{
           auto x_2d = geometry.global(it.coords());
           auto rho = 1.0/f(it.coords());
           file << std::setprecision(12) << std::scientific;
+#ifndef PARALLEL_LIGHT
           file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  omega(x_2d)*rho << std::endl;
+#else
+          file << "\t\t\t\t\t" << x_2d[0] << " " << x_2d[1] << " " <<  rho << std::endl;
+#endif
           vertex_no++;
         }
       }
@@ -704,7 +708,11 @@ void Plotter::write_points_refractor(std::ofstream &file, Function &f) const{
           auto rho = f(it.coords());
           assert( !(rho != rho));
           file << std::setprecision(12) << std::scientific;
+#ifndef PARALLEL_LIGHT
           file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  omega(x_2d)*rho << std::endl;
+#else
+          file << "\t\t\t\t\t" << x_2d[0] << " " << x_2d[1] << " " <<  rho << std::endl;
+#endif
           vertex_no++;
         }
       }
@@ -1028,7 +1036,11 @@ void Plotter::write_points_reflector_pov(std::ofstream &file, Function & f) cons
           auto x_2d = geometry.global(it.coords());
           auto rho = 1.0/f(it.coords());
           file << std::setprecision(12) << std::scientific;
+#ifndef PARALLEL_LIGHT
           file << "\t\t <"  << x_2d[0]*rho << ", " << x_2d[1]*rho << ", " <<  omega(x_2d)*rho<< ">," << std::endl;
+#else
+          file << "\t\t <"  << x_2d[0] << ", " << x_2d[1] << ", " <<  rho<< ">," << std::endl;
+#endif
           vertex_no++;
         }
       }
@@ -1066,7 +1078,11 @@ void Plotter::write_points_refractor_pov(std::ofstream &file, Function & f) cons
           auto x_2d = geometry.global(it.coords());
           auto rho = f(it.coords());
           file << std::setprecision(12) << std::scientific;
+#ifndef PARALLEL_LIGHT
           file << "\t\t <"  << x_2d[0]*rho << ", " << x_2d[1]*rho << ", " <<  omega(x_2d)*rho<< ">," << std::endl;
+#else
+          file << "\t\t <"  << x_2d[0] << ", " << x_2d[1] << ", " <<  rho<< ">," << std::endl;
+#endif
           vertex_no++;
         }
       }
@@ -1234,7 +1250,11 @@ void Plotter::write_refractor_vertices(ON_Mesh &mesh, LocalFunction &f) const
       {
         auto x_2d = geometry.global(it.coords());
         auto rho = f(it.coords());
+#ifndef PARALLEL_LIGHT
         successful = mesh.SetVertex( vertexNo++, ON_3dPoint(x_2d[0]*rho,  x_2d[1]*rho,  omega(x_2d)*rho) );
+#else
+        successful = mesh.SetVertex( vertexNo++, ON_3dPoint(x_2d[0],  x_2d[1], rho) );
+#endif
         assert(successful);
       }
     }
@@ -1299,7 +1319,11 @@ void Plotter::save_refractor_points(std::string &filename, LocalFunctiontype &f)
       auto rho = f(it.coords());
       assert( !(rho != rho));
       of << std::setprecision(12) << std::scientific;
+#ifndef PARALLEL_LIGHT
       of  << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  omega(x_2d)*rho << std::endl;
+#else
+      of  << x_2d[0] << " " << x_2d[1] << " " <<  rho << std::endl;
+#endif
     }
   }
 }

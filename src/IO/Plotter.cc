@@ -204,7 +204,11 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
 //      "\t color rgb <1,1,1>" <<std::endl <<
       "\t color rgb <0.141496033, 0.141496033, 0.141496033>" <<std::endl <<
 //			"\t color rgb < " << povRayOpts_.lightSourceColor[0] << ", " << povRayOpts_.lightSourceColor[1] << ", " << povRayOpts_.lightSourceColor[2] << "> " << std::endl <<
-			"\t spotlight" <<std::endl <<
+#ifndef PARALLEL_LIGHT
+      "\t spotlight" <<std::endl <<
+#else
+      "\t parallel" <<std::endl <<
+#endif
 			"\t point_at <-0.0, 0, 1>" <<std::endl <<
 			"\t radius " << povRayOpts_.lightSourceRadius <<std::endl <<
 			"\t falloff " << povRayOpts_.lightSourceFalloff <<std::endl <<

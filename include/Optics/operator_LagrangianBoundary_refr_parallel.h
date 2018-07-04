@@ -5,8 +5,8 @@
  *      Author: friebel
  */
 
-#ifndef INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARY_REFR_H_
-#define INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARY_REFR_H_
+#ifndef INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARY_REFR_PARALLEL_H_
+#define INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARY_REFR_PARALLEL_H_
 
 #include <functional>
 
@@ -14,12 +14,13 @@
 #include "Operator/operator_utils.h"
 
 #include "Optics/operator_MA_refr_Brenner.h"
+#include "Optics/operator_MA_refr_parallel.h"
 
-class Local_Operator_LagrangianBoundary_refr{
+class Local_Operator_LagrangianBoundary_refr_parallel{
 public:
   using TaylorFunction = TaylorBoundaryFunction<SolverConfig::FETraitsSolver::DiscreteGridFunction>;
 
-  Local_Operator_LagrangianBoundary_refr(const OTBoundary& bc)
+  Local_Operator_LagrangianBoundary_refr_parallel(const OTBoundary& bc)
     : opticalSetting(OpticalSetting()),
     bc(bc),
     last_step_on_a_different_grid(false)
@@ -28,7 +29,7 @@ public:
     std::exit(-1);
   }
 
-  Local_Operator_LagrangianBoundary_refr(const OpticalSetting &opticalSetting, const OTBoundary& bc)
+  Local_Operator_LagrangianBoundary_refr_parallel(const OpticalSetting &opticalSetting, const OTBoundary& bc)
     : opticalSetting(opticalSetting), bc(bc), last_step_on_a_different_grid(false), oldSolutionCaller_(){}
 
   template<class Intersection, class LocalViewV, class LocalViewQ, class VectorType>
@@ -106,22 +107,20 @@ public:
           referenceFunctionValuesQ);
 
       //-------calculate integral--------
-      Config::ValueType omega_value = omega(x_value);
 
-      adouble t = rho_value*omega_value-opticalSetting.z_3;
-      t /= rho_value*omega_value;
+      //calculate factors
+      auto kappa = (sqr(kappa_)-1.)/sqr(kappa_);
+      adouble q = sqrt(1-kappa*(1+gradrho.two_norm2()));
 
-      adouble F_value = Local_Operator_MA_refr_parallel::F(x_value, rho_value, gradrho);
+      //distance to target screen
+      auto t = Local_Operator_MA_refr_parallel::calc_t(rho_value, kappa, q, opticalSetting.z_3, kappa_);
 
-      FieldVector<adouble, Config::dim> w = gradrho;
-      w *= 2*F_value*rho_value;
+      //calculate direction after refraction
+      auto Y_restricted = Local_Operator_MA_refr_parallel::refraction_direction_restricted(gradrho, kappa, q);
 
-      FieldVector<adouble, Config::dim> z = x_value;
-      z *= rho_value;
-      z.axpy(t,w);
-      z.axpy(-t*rho_value,x_value);
+      auto Z = Local_Operator_MA_refr_parallel::calc_target_hitting_point_2d(x_value,Y_restricted,t);
 
-      auto signedDistance = bc.H(z);
+      auto signedDistance = bc.H(Z);
 //      std::cerr << "      signedDistance " << signedDistance << " at " << z[0].value() << " "<< z[1].value()<< " from X "  << x_value << std::endl;
 
       const auto integrationElement =
@@ -160,6 +159,7 @@ public:
 
 private:
   const OpticalSetting& opticalSetting;
+  static constexpr double& kappa_ = OpticalSetting::kappa;
 
   const OTBoundary& bc;
 
