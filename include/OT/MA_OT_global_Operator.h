@@ -173,7 +173,7 @@ private:
   void assert_integrability_condition(OperatorTraitsDummy* dummy){}
   void assert_integrability_condition(ConstantOperatorTraits<SolverType, LocalOperatorType>* dummy);
   void assert_integrability_condition(ImageOperatorOTTraits<SolverType, LocalOperatorType>* dummy);
-  void assert_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, Local_operator_LangrangianMidValue>* dummy);
+  void assert_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy);
 
 
 public:
@@ -183,7 +183,7 @@ public:
   /// use function overload to select correct implementation
   template<typename OperatorTraitsDummy = OperatorTraits>
   bool check_integrability_condition(OperatorTraitsDummy* dummy) const;
-  bool check_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, Local_operator_LangrangianMidValue>* dummy) const;
+  bool check_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy) const;
 
 
 private:
@@ -744,7 +744,7 @@ void MA_OT_Operator<OperatorTraits>
 
 template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>
-   ::assert_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, Local_operator_LangrangianMidValue>* dummy)
+   ::assert_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy)
 {
   f_.omega_normalize();
   g_.normalize();
@@ -768,7 +768,7 @@ bool MA_OT_Operator<OperatorTraits>
 
 template<typename OperatorTraits>
 bool MA_OT_Operator<OperatorTraits>
-   ::check_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, Local_operator_LangrangianMidValue>* dummy) const
+   ::check_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy) const
 {
   auto integralF = f_.integrate2Omega();
   const double integralG = g_.integrate2();
