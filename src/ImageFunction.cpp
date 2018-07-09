@@ -236,7 +236,7 @@ double ImageFunction::integrate2Omega(const unsigned int n) const
   {
     Config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, n);
     Integrator<Config::DuneGridType> integrator(unitcube_quadrature.grid_ptr());
-    double integral = integrator.assemble_integral([this](const Config::DomainType &x) {return operator()(x)/omega(x);});
+    integral = integrator.assemble_integral([this](const Config::DomainType &x) {return operator()(x)/omega(x);});
   }
   std::cout << "calculated omega integral " << integral << std::endl;
   return integral;
@@ -259,7 +259,7 @@ double ImageFunction::integrate2(const unsigned int n) const
   {
     Config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, n);
     Integrator<Config::DuneGridType> integrator(unitcube_quadrature.grid_ptr());
-    double integral = integrator.assemble_integral(*this);
+    integral = integrator.assemble_integral(*this);
   }
   std::cout << "calculated integral " << integral << std::endl;
   return integral;

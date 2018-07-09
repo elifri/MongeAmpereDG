@@ -26,6 +26,7 @@ public:
   Local_Operator_MA_refr_parallel(const OTBoundary& bc,
       const ImageFunction& f, const ImageFunction& g):
     opticalSetting(OpticalSetting()),
+    epsilon_(1./OpticalSetting::kappa),
     bc_(bc),
     f_(f), g_(g),
     found_negative(false),
@@ -39,6 +40,7 @@ public:
   Local_Operator_MA_refr_parallel(const OpticalSetting &opticalSetting, const OTBoundary& bc,
       const ImageFunction& f, const ImageFunction& g):
     opticalSetting(opticalSetting),
+    epsilon_(1./OpticalSetting::kappa),
     bc_(bc),
     f_(f), g_(g),
     found_negative(false),
@@ -47,10 +49,10 @@ public:
 
   template<class value_type>
   static
-  adouble Phi(const value_type& s)
+  adouble Phi(const value_type& s, const double epsilon)
   {
-    if (kappa_*kappa_ + s*s -1 < 0) return s;
-    return s - sqrt(kappa_*kappa_ + s*s -1);
+    if (1./epsilon/epsilon + s*s -1 < 0) return s;
+    return s - sqrt(1./epsilon/epsilon + s*s -1);
   }
 
   ///helper function that checks whether the calculated reflection is consistent with the vector calculated by direct application of the reflection law
@@ -67,19 +69,20 @@ public:
 
     //calculated direction after refraction by Snell's law (lightvector)
     FieldVector<adouble, 3> lightvector ({0,0,1});
-    lightvector.axpy(-Phi((X*normal_refr)), normal_refr);
-    lightvector /= kappa_;
-//    std::cout << std::setprecision(15);
+    lightvector.axpy(-Phi((lightvector*normal_refr), epsilon_), normal_refr);
+    lightvector *= epsilon_;
+//    std::cerr << std::setprecision(15);
 //    std::cerr << "direction after refr " << Y[0].value() << " " << Y[1].value() << " " << Y[2].value() << std::endl;
-//    std::cout << "presumed lightvector " << lightvector[0].value() << " " << lightvector[1].value() << " " << lightvector[2].value() << std::endl;
+//    std::cerr << "presumed lightvector " << lightvector[0].value() << " " << lightvector[1].value() << " " << lightvector[2].value() << std::endl;
+//    std::cerr << " X*normal_refr " << (X*normal_refr).value() << " Phi " << (Phi((X*normal_refr))).value() << std::endl;
 
     //direction of lightvector and Y have to be the same
     assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[1].value()/Y[1].value()) < 1e-7
-        || (fabs(lightvector[0].value()) < 1e-12 &&  fabs(Y[0].value())< 1e-12)
-        || (fabs(lightvector[1].value()) < 1e-12 &&  fabs(Y[1].value())< 1e-12)  );
+        || (fabs(lightvector[0].value()) < 1e-7 &&  fabs(Y[0].value())< 1e-7)
+        || (fabs(lightvector[1].value()) < 1e-7 &&  fabs(Y[1].value())< 1e-7)  );
     assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[2].value()/Y[2].value()) < 1e-7
-        || (fabs(lightvector[0].value()) < 1e-12 &&  fabs(Y[0].value())< 1e-12)
-        || (fabs(lightvector[2].value()) < 1e-12 &&  fabs(Y[2].value())< 1e-12)  );
+        || (fabs(lightvector[0].value()) < 1e-7 &&  fabs(Y[0].value())< 1e-7)
+        || (fabs(lightvector[2].value()) < 1e-7 &&  fabs(Y[2].value())< 1e-7)  );
     return true;
   }
 
@@ -122,7 +125,7 @@ public:
   template<class value_type>
   static
   FieldVector<value_type,3>  refraction_direction(const FieldVector<value_type,2> &Du,
-      const double& kappa, const value_type &q)
+      const double& kappa, const value_type &q, const double epsilon)
   {
     adouble tempFrac = kappa/(1.+q);
 
@@ -131,7 +134,7 @@ public:
     Y[1] = tempFrac*Du[1];
     Y[2] = 1.-tempFrac;
 
-    Y *= kappa_;
+    Y *= epsilon;
     return Y;
   }
 
@@ -139,13 +142,13 @@ public:
   template<class value_type>
   static
   FieldVector<value_type,2>  refraction_direction_restricted(const FieldVector<value_type,2> &Du,
-      const double& kappa, const value_type &q)
+      const double& kappa, const value_type &q, const double epsilon)
   {
     adouble tempFrac = kappa/(1.+q);
 
     FieldVector<value_type,2> Y = Du;
 
-    Y *= tempFrac*kappa_;
+    Y *= tempFrac*epsilon;
     return Y;
   }
 
@@ -153,9 +156,9 @@ public:
   template<class value_type>
   static
   value_type calc_t(const value_type& rho_value, const double& kappa, const value_type &q,
-      const double z_3, const double kappa_)
+      const double z_3, const double epsilon)
   {
-    return (z_3-rho_value)*(q+1.)/kappa_/(1-kappa+q);
+    return (z_3-rho_value)*(q+1.)/epsilon/(1-kappa+q);
   }
 
   ///calculates where the ray hits the target (only the first two coordinates)
@@ -259,22 +262,22 @@ public:
       auto x_value = geometry.global(quad[pt].position());
 
       //calculate factors
-      auto kappa = (sqr(kappa_)-1.)/sqr(kappa_);
-      adouble q = sqrt(1-kappa*(1+gradrho.two_norm2()));
+      auto kappa = (sqr(epsilon_)-1.)/(sqr(epsilon_));
+      adouble q = sqrt(1.-kappa*(1.+gradrho.two_norm2()));
 
 #ifndef DEBUG
-      auto Y = refraction_direction(gradrho, kappa, q);
+      auto Y = refraction_direction(gradrho, kappa, q, epsilon_);
       FieldVector<Config::ValueType,3> X ({x_value[0], x_value[1], rho_value.value()});
       assert(check_refraction(X,gradrho, Y));
 #endif
 
       //calculate direction after refraction
-      auto Y_restricted = refraction_direction_restricted(gradrho, kappa, q);
+      auto Y_restricted = refraction_direction_restricted(gradrho, kappa, q, epsilon_);
 //      FieldVector<adouble, 2> Y_restricted (Y[0],Y[1]); //ray hits the refractor
 
 //      auto t = (opticalSetting.z_3-u_value)*(q+1.)/kappa_/(1-kappa+q);//stretch function (distance between lens and target screen)
       //distance to target screen
-      auto t = calc_t(rho_value, kappa, q, opticalSetting.z_3, kappa_);
+      auto t = calc_t(rho_value, kappa, q, opticalSetting.z_3, epsilon_);
 
 //      assert(check_Z_within_Sigma(x, rho_value, gradrho, Y, t));
       assert(std::abs((rho_value + t*Y[2] - opticalSetting.z_3).value()) < 1e-8 && "something with t is not as expected!");
@@ -284,13 +287,13 @@ public:
 
 
       //-----calculate term with determinant
-      adouble factorA = (q+1.)/t/kappa_/kappa;
+      adouble factorA = (q+1.)/t/epsilon_/kappa;
 
       FieldMatrix<adouble, dim, dim> A;
-      A[0][0] = 1.-kappa*sqr(kappa_)*gradrho[0]*gradrho[0];
-      A[0][1] = -kappa*sqr(kappa_)*gradrho[0]*gradrho[1];
-      A[1][0] = -kappa*sqr(kappa_)*gradrho[1]*gradrho[0];
-      A[1][1] = 1.-kappa*sqr(kappa_)*gradrho[1]*gradrho[1];
+      A[0][0] = 1.-kappa*sqr(epsilon_)*gradrho[0]*gradrho[0];
+      A[0][1] = -kappa*sqr(epsilon_)*gradrho[0]*gradrho[1];
+      A[1][0] = -kappa*sqr(epsilon_)*gradrho[1]*gradrho[0];
+      A[1][1] = 1.-kappa*sqr(epsilon_)*gradrho[1]*gradrho[1];
 
       A*=factorA;
 
@@ -312,9 +315,10 @@ public:
       adouble g_value;
       g_.evaluate(Z, g_value);
 
-      adouble H_value = -(kappa_*q)*(q+1.)*(q+1.)/t/kappa/kappa_*opticalSetting.z_3;    //   ..*(D_psi_value*Y)/D_Psi_value.two_norm();  in this case this term is equal to z_3
+      adouble H_value = -(epsilon_*q)*(q+1.)*(q+1.)/t/kappa/epsilon_*opticalSetting.z_3;    //   ..*(D_psi_value*Y)/D_Psi_value.two_norm();  in this case this term is equal to z_3
 
       adouble PDE_rhs = H_value*f_value/g_value;
+//      adouble PDE_rhs = H_value*f_value;
 
       //calculate system for first test functions
       if (uDH_pertubed_det.value() < 0 && !found_negative)
@@ -574,16 +578,13 @@ public:
   const OTBoundary& get_bc() {return bc_;}
 private:
   const OpticalSetting& opticalSetting;
+  double epsilon_;///=n_1/n_2 (refractive indices)
 
   const OTBoundary & bc_;
 
   const ImageFunction& f_;
   const ImageFunction& g_;
 
-
-  static constexpr double& kappa_ = OpticalSetting::kappa;
-  static constexpr double& kappa1_ = OpticalSetting::kappa;
-  static constexpr double& kappa2_ = OpticalSetting::kappa;
 public:
 
   mutable bool found_negative;

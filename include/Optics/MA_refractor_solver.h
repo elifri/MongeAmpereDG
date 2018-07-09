@@ -8,19 +8,28 @@
 #ifndef SRC_MA_REFRACTOR_SOLVER_H_
 #define SRC_MA_REFRACTOR_SOLVER_H_
 
+#include "MAconfig.h"
+
 #include "OT/MA_OT_solver.h"
 #include "OT/MA_OT_global_Operator.h"
 #include "Optics/operator_MA_refr_Brenner.h"
+#include "Optics/operator_MA_refr_parallel.h"
+#include "Optics/operator_LagrangianBoundary_refr_parallel.h"
 
 
 class MA_refractor_solver: public MA_OT_solver
 {
 public:
   //select local operator
-//  using Local_Refractor_OperatorType = Local_Operator_MA_refr_parallel;
+#ifdef PARALLEL_LIGHT
+  using Local_Refractor_OperatorType = Local_Operator_MA_refr_parallel;
+  using Local_Refractor_Boundary_Operator_Type = Local_Operator_LagrangianBoundary_refr;
+#else
   using Local_Refractor_OperatorType = Local_Operator_MA_refr_Brenner;
+  using Local_Refractor_Boundary_Operator_Type = Local_Operator_LagrangianBoundary_refr_parallel;
+#endif
 
-  using ProblemTraits = OpticOperatorTraits<MA_OT_solver, Local_Refractor_OperatorType, Local_Operator_LagrangianBoundary_refr>;
+  using ProblemTraits = OpticOperatorTraits<MA_OT_solver, Local_Refractor_OperatorType, Local_Refractor_Boundary_Operator_Type>;
 
 #ifndef USE_ANALYTIC_DERIVATION
   using OperatorType = MA_OT_Operator<ProblemTraits>;
