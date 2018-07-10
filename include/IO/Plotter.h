@@ -1156,7 +1156,9 @@ void Plotter::write_lens(std::ofstream &file, Function &f) const{
 
 
   file << "// Lens" <<std::endl <<
+#ifndef PARALLEL_LIGHT
       "intersection {" <<std::endl <<
+#endif
       "\t mesh2 {" <<std::endl;
 
   if (refinement_ > 0)
@@ -1169,12 +1171,13 @@ void Plotter::write_lens(std::ofstream &file, Function &f) const{
     // Output result
     assert(false);
   }
-  file << "\t inside_vector <0, 0, 1> " << std::endl
-       << "\t }" << std::endl;
+  file << "\t inside_vector <0, 0, 1> " << std::endl;
+#ifndef PARALLEL_LIGHT
+  file << "\t }" << std::endl;
+  file << "\t sphere{<0,0,0>,10} " <<std::endl;
+  #endif
 
-
-  file << "\t sphere{<0,0,0>,10} " <<std::endl
-       << "\t\t texture { myT_Glass }" << std::endl
+  file << "\t\t texture { myT_Glass }" << std::endl
        << "\t\t interior{ myI_Glass }" << std::endl<<std::endl;
 
   file << "\t photons {" << std::endl

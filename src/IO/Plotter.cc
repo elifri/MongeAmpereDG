@@ -253,11 +253,17 @@ void Plotter::write_pov_setting_refractor(std::ofstream &file) const{
       "\t <-0,0,0>" <<std::endl <<
 //      "\t color rgb <1,1,1>" <<std::endl <<
       "\t color rgb <0.141496033, 0.141496033, 0.141496033>" <<std::endl <<
+#ifndef PARALLEL_LIGHT
       "\t spotlight" <<std::endl <<
+#else
+      "\t parallel" <<std::endl <<
+#endif
       "\t point_at <-0.0, 0, 1>" <<std::endl <<
+#ifndef PARALLEL_LIGHT
       "\t radius " << povRayOpts_.lightSourceRadius <<std::endl <<
       "\t falloff " << povRayOpts_.lightSourceFalloff <<std::endl <<
       "\t tightness " << povRayOpts_.lightSourceTightness <<std::endl <<
+#endif
       "\t photons { refraction on}" <<std::endl <<
       "}" <<std::endl <<std::endl;
 
@@ -274,6 +280,7 @@ void Plotter::write_target_plane(std::ofstream &file) const{
 
 void Plotter::write_aperture(std::ofstream &file) const
 {
+#ifndef PARALLEL_LIGHT
   file << "// Aperture" <<std::endl <<
       "difference {" <<std::endl <<
       "\t   sphere{ <0,0,0> , 0.01 }" << std::endl <<
@@ -281,6 +288,15 @@ void Plotter::write_aperture(std::ofstream &file) const
       "\t <-0.003,0.003,1> }" <<std::endl <<
       "\t texture{ pigment{ color White } }" <<std::endl <<
       "}" <<std::endl <<std::endl;
+#else
+  file << "// Aperture" <<std::endl <<
+      "difference {" <<std::endl <<
+      "\t   box { <-20,-20,-0.2>, <20,20,0.2> }" << std::endl <<
+      "\t box { <" << geometrySetting_.lowerLeft[0] << ","<< geometrySetting_.lowerLeft[1]<<",-0.25>, <"
+      << geometrySetting_.upperRight[0] << ","<< geometrySetting_.upperRight[1]<<",0.25> }" <<std::endl <<
+      "\t texture{ pigment{ color White } }" <<std::endl <<
+      "}" <<std::endl <<std::endl;
+#endif
 }
 
 /*void Plotter::write_face_indices_pov(std::ofstream &file) const
