@@ -23,10 +23,10 @@ public:
   //select local operator
 #ifdef PARALLEL_LIGHT
   using Local_Refractor_OperatorType = Local_Operator_MA_refr_parallel;
-  using Local_Refractor_Boundary_Operator_Type = Local_Operator_LagrangianBoundary_refr;
+  using Local_Refractor_Boundary_Operator_Type = Local_Operator_LagrangianBoundary_refr_parallel;
 #else
   using Local_Refractor_OperatorType = Local_Operator_MA_refr_Brenner;
-  using Local_Refractor_Boundary_Operator_Type = Local_Operator_LagrangianBoundary_refr_parallel;
+  using Local_Refractor_Boundary_Operator_Type = Local_Operator_LagrangianBoundary_refr;
 #endif
 
   using ProblemTraits = OpticOperatorTraits<MA_OT_solver, Local_Refractor_OperatorType, Local_Refractor_Boundary_Operator_Type>;
