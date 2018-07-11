@@ -480,8 +480,6 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
   v.head(tempV.size()) = tempV;
   v.head(V_h_size) += tempM*w;
 
-  std::cout << " tempM " << tempM << std::endl;
-
   //copy SparseMatrix todo move to EigenUtility
   std::vector< Eigen::Triplet<double> > tripletList;
   copy_to_new_sparse_matrix(tempM, m);

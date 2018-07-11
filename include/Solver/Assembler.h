@@ -1629,7 +1629,6 @@ void Assembler<FETraits>::assemble_cell_termHelper(const LocalOperatorType &lop,
     assemble_jacobianFD_integral_cell_term(lop, localView, xLocal, m_mFD, 0);
     double tol = 1e-9;
     compare_matrices(std::cout, mLocal, m_mFD, "CellJacobian", "FD CellJacobian", true, tol);
-    std::cerr << " mLocalFD " << m_mFD << std::endl;
 #endif
     assert(derivationSuccessful);
 }

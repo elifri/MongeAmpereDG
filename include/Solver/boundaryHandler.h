@@ -124,7 +124,9 @@ void BoundaryHandler::add_local_coefficients_Only_Boundary_row(const LocalIndexS
     {
       int globalIndexRow = SolverConfig::FETraitsSolver::get_index(localIndexSetRow, i);
       if (isBoundaryDoF(globalIndexRow))
+      {
         je.push_back(EntryType(BoundaryNo(globalIndexRow),SolverConfig::FETraitsSolver::get_index(localIndexSetCol,j),m_local(i,j)));
+      }
     }
   }
 }

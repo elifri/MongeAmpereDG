@@ -185,7 +185,7 @@ void AssemblerLagrangianMultiplierBoundary::assemble_jacobianFD_boundary_term(co
 
   for (int j = 0; j < n; j++)
   {
-    Config::VectorType f_minus = Config::VectorType::Zero(n), f_plus= Config::VectorType::Zero(n);
+    Config::VectorType f_minus = Config::VectorType::Zero(localViewQ.size()), f_plus= Config::VectorType::Zero(localViewQ.size());
     Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(n, j);
 
     Config::VectorType temp = x-h*unit_j;
@@ -195,7 +195,7 @@ void AssemblerLagrangianMultiplierBoundary::assemble_jacobianFD_boundary_term(co
 
     Eigen::VectorXd estimated_derivative = (f_plus - f_minus)/2./h;
 
-    for (int i = 0; i < n; i++)
+    for (unsigned int i = 0; i < localViewQ.size(); i++)
     {
       if (std::abs(estimated_derivative(i)) > 1e-10)
       {
@@ -230,14 +230,14 @@ void AssemblerLagrangianMultiplierBoundary::assemble_boundary_termHelper(const L
     }
     else
     {
-#ifdef NDEBUG
-/*
+#ifdef DEBUG
+
       Config::VectorType currentBoundaryVectorExact =  Config::VectorType::Zero(vLocal.size());
       lop.assemble_boundary_face_term(is,localView, xLocal, currentBoundaryVectorExact, 2);
       double tol = 1e-7;
       igpm::testblock b(std::cerr);
       compare_matrices(b, currentBoundaryVector, currentBoundaryVectorExact, "AdolcReconstruction", "exactvalue", true, tol);
-*/
+
 #endif
       vLocal+= currentBoundaryVector;
     }
@@ -261,8 +261,8 @@ void AssemblerLagrangianMultiplierBoundary::assemble_boundary_termHelper(const L
 
 #ifdef DEBUG
   Config::DenseMatrixType m_mFD;
-  m_mFD.setZero(localView.size(), localView.size());
-  assemble_jacobianFD_boundary_term(lop, is, localView, xLocal, m_mFD, 2);
+  m_mFD.setZero(localViewQ.size(), localViewV.size());
+  assemble_jacobianFD_boundary_term(lop, is, localViewV, localViewQ, xLocal, m_mFD, 2);
   double tol = 1e-7;
   compare_matrices(std::cout, mLocal, m_mFD, "JacobianBoundary", "JacobianBoundaryFD", true, tol);
 #endif
