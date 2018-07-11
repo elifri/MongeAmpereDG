@@ -265,15 +265,17 @@ public:
       auto kappa = (sqr(epsilon_)-1.)/(sqr(epsilon_));
       adouble q = sqrt(1.-kappa*(1.+gradrho.two_norm2()));
 
-#ifndef DEBUG
       auto Y = refraction_direction(gradrho, kappa, q, epsilon_);
+#ifndef DEBUG
       FieldVector<Config::ValueType,3> X ({x_value[0], x_value[1], rho_value.value()});
       assert(check_refraction(X,gradrho, Y));
 #endif
 
       //calculate direction after refraction
-      auto Y_restricted = refraction_direction_restricted(gradrho, kappa, q, epsilon_);
-//      FieldVector<adouble, 2> Y_restricted (Y[0],Y[1]); //ray hits the refractor
+//      auto Y_restricted = refraction_direction_restricted(gradrho, kappa, q, epsilon_);
+      FieldVector<adouble, 2> Y_restricted;
+      Y_restricted[0]= Y[0];
+      Y_restricted[1]=Y[1]; //ray hits the refractor
 
 //      auto t = (opticalSetting.z_3-u_value)*(q+1.)/kappa_/(1-kappa+q);//stretch function (distance between lens and target screen)
       //distance to target screen
@@ -315,7 +317,8 @@ public:
       adouble g_value;
       g_.evaluate(Z, g_value);
 
-      adouble H_value = -(epsilon_*q)*(q+1.)*(q+1.)/t/kappa/epsilon_*opticalSetting.z_3;    //   ..*(D_psi_value*Y)/D_Psi_value.two_norm();  in this case this term is equal to z_3
+//      adouble H_value = -(epsilon_*q)*(q+1.)*(q+1.)/t/kappa/epsilon_*Y[2];    //   ..*(D_psi_value*Y)/D_Psi_value.two_norm();  in this case this term is equal to Y_3
+      adouble H_value = (epsilon_*q)*((q+1.)*(q+1.)/t/t/kappa/kappa/epsilon_/epsilon_)*Y[2];    //   ..*(D_psi_value*Y)/D_Psi_value.two_norm();  in this case this term is equal to Y3
 
       adouble PDE_rhs = H_value*f_value/g_value;
 //      adouble PDE_rhs = H_value*f_value;
