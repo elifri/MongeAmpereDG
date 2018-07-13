@@ -26,7 +26,7 @@ public:
   Local_Operator_MA_refr_parallel(const OTBoundary& bc,
       const ImageFunction& f, const ImageFunction& g):
     opticalSetting(OpticalSetting()),
-    epsilon_(1./OpticalSetting::kappa),
+    epsilon_(OpticalSetting::kappa),
     bc_(bc),
     f_(f), g_(g),
     found_negative(false),
@@ -40,7 +40,7 @@ public:
   Local_Operator_MA_refr_parallel(const OpticalSetting &opticalSetting, const OTBoundary& bc,
       const ImageFunction& f, const ImageFunction& g):
     opticalSetting(opticalSetting),
-    epsilon_(1./OpticalSetting::kappa),
+    epsilon_(OpticalSetting::kappa),
     bc_(bc),
     f_(f), g_(g),
     found_negative(false),
@@ -51,8 +51,8 @@ public:
   static
   adouble Phi(const value_type& s, const double epsilon)
   {
-    if (1./epsilon/epsilon + s*s -1 < 0) return s;
-    return s - sqrt(1./epsilon/epsilon + s*s -1);
+    if (epsilon*epsilon + s*s -1 < 0) return s;
+    return s - sqrt(epsilon*epsilon + s*s -1);
   }
 
   ///helper function that checks whether the calculated reflection is consistent with the vector calculated by direct application of the reflection law
@@ -70,7 +70,7 @@ public:
     //calculated direction after refraction by Snell's law (lightvector)
     FieldVector<adouble, 3> lightvector ({0,0,1});
     lightvector.axpy(-Phi((lightvector*normal_refr), epsilon_), normal_refr);
-    lightvector *= epsilon_;
+    lightvector /= epsilon_;
 //    std::cerr << std::setprecision(15);
 //    std::cerr << "direction after refr " << Y[0].value() << " " << Y[1].value() << " " << Y[2].value() << std::endl;
 //    std::cerr << "presumed lightvector " << lightvector[0].value() << " " << lightvector[1].value() << " " << lightvector[2].value() << std::endl;
@@ -301,6 +301,11 @@ public:
 
       FieldMatrix<adouble, dim, dim> uDH_pertubed = Hessrho;
       uDH_pertubed+=A;
+
+      if (epsilon_ < 1)
+	{
+	  uDH_pertubed *= -1;
+	}
 
       adouble uDH_pertubed_det = determinant(uDH_pertubed);
 

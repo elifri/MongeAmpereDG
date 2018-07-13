@@ -22,7 +22,7 @@ public:
 
   Local_Operator_LagrangianBoundary_refr_parallel(const OTBoundary& bc)
     : opticalSetting(OpticalSetting()),
-    epsilon_(1./OpticalSetting::kappa),
+    epsilon_(OpticalSetting::kappa),
     bc(bc),
     last_step_on_a_different_grid(false)
   {
@@ -31,7 +31,7 @@ public:
   }
 
   Local_Operator_LagrangianBoundary_refr_parallel(const OpticalSetting &opticalSetting, const OTBoundary& bc)
-    : opticalSetting(opticalSetting), epsilon_(1./OpticalSetting::kappa), bc(bc), last_step_on_a_different_grid(false), oldSolutionCaller_(){}
+    : opticalSetting(opticalSetting), epsilon_(OpticalSetting::kappa), bc(bc), last_step_on_a_different_grid(false), oldSolutionCaller_(){}
 
   template<class Intersection, class LocalViewV, class LocalViewQ, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
