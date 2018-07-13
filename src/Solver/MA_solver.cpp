@@ -185,6 +185,8 @@ void MA_solver::create_initial_guess()
 
 const typename MA_solver::VectorType& MA_solver::solve()
 {
+  start_ = std::chrono::steady_clock::now();
+
   assert (initialised);
   iterations = 0;
 
@@ -223,7 +225,8 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
     solve_nonlinear_system();
     iterations++;
-    std::cerr << " solved nonlinear system" << std::endl;
+    auto end = std::chrono::steady_clock::now();
+    std::cerr << " solved nonlinear system, current time is " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start_).count()/60. << " min " << std::endl;
 
 
     update_solution(solution);
@@ -233,7 +236,8 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
     solve_nonlinear_system();
     iterations++;
-    std::cerr << " solved nonlinear system" << std::endl;
+    end = std::chrono::steady_clock::now();
+    std::cerr << " solved nonlinear system, current time is " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start_).count()/60. << " min " << std::endl;
 
     {
       //write current solution to file

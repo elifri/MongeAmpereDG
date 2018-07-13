@@ -445,6 +445,9 @@ protected:
 
   shared_ptr<Operator> op; ///functional operator
 
+
+  std::chrono::time_point<std::chrono::steady_clock> start_; //to store the starting point of the calculation
+
   friend MA_Operator;
   template <int T, typename T2>
   friend struct FEBasisHandler;
