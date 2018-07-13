@@ -860,7 +860,7 @@ void MA_OT_solver::solve_nonlinear_system()
   //if the exact solution is known it can be accessed via exactdata
   ExactData exactData;
 
-  if (iterations == 0)
+  if (iterations == 0 && compare_with_exact_solution_)
   {
     std::cout << " L2 error is " << calculate_L2_error_gradient(exactData.exact_gradient()) << std::endl;
   }
@@ -894,7 +894,8 @@ void MA_OT_solver::solve_nonlinear_system()
 #endif
   std::cout << " Lagrangian Parameter for fixing grid Point " << solution(get_n_dofs_V_h()) << std::endl;
 
-  std::cout << " L2 error is " << calculate_L2_error_gradient(exactData.exact_gradient()) << std::endl;
+  if (compare_with_exact_solution_)
+    std::cout << " L2 error is " << calculate_L2_error_gradient(exactData.exact_gradient()) << std::endl;
   }
 
 void MA_OT_solver::adapt_operator()
@@ -1009,15 +1010,6 @@ void MA_OT_solver::adapt_solution(const int level)
        return y;};
 
      project(u0, y0, exactsol_u);
-
-/*     std::cerr << std::scientific << std::setprecision(5)
-         << "   current L2 error is " << calculate_L2_error(u0) << std::endl;
-     std::cerr << std::scientific << std::setprecision(3)
-         << "   current L2 grad error is " << calculate_L2_error_gradient([](Config::SpaceType x)
-         {return Dune::FieldVector<double, Config::dim> ({
-           .771153822412742*x[0]+.348263016573496*x[1], .348263016573496*x[0]+1.94032252090948*x[1]});}) << std::endl;
-
-     std::cerr << "   omega   " << 0 << std::endl;*/
    }
 
 }

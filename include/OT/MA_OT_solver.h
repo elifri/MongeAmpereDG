@@ -163,6 +163,8 @@ public:
 protected:
   GeometrySetting& setting_;
 
+  const bool compare_with_exact_solution_ = false;
+
   GridHandler<GridType> gridTarget_;
 //  const shared_ptr<GridType> gridTarget_ptr;
 
