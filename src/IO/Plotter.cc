@@ -278,6 +278,12 @@ void Plotter::write_target_plane(std::ofstream &file) const{
 			"}" <<std::endl <<std::endl;
 }
 
+enum LightSourceLimiter {
+  RECTANGULAR, CIRCULAR
+};
+
+
+
 void Plotter::write_aperture(std::ofstream &file) const
 {
 #ifndef PARALLEL_LIGHT
@@ -291,10 +297,26 @@ void Plotter::write_aperture(std::ofstream &file) const
 #else
   file << "// Aperture" <<std::endl <<
       "difference {" <<std::endl <<
-      "\t   box { <-20,-20,-0.2>, <20,20,0.2> }" << std::endl <<
-      "\t box { <" << geometrySetting_.lowerLeft[0] << ","<< geometrySetting_.lowerLeft[1]<<",-0.25>, <"
-      << geometrySetting_.upperRight[0] << ","<< geometrySetting_.upperRight[1]<<",0.25> }" <<std::endl <<
-      "\t texture{ pigment{ color White } }" <<std::endl <<
+      "\t   box { <-20,-20,-0.2>, <20,20,0.2> }" << std::endl;
+
+  const LightSourceLimiter lightsourcelimiter = CIRCULAR;
+
+  if (lightsourcelimiter == RECTANGULAR)
+    file << "\t box { <" << geometrySetting_.lowerLeft[0] << ","<< geometrySetting_.lowerLeft[1]<<",-0.25>, <"
+      << geometrySetting_.upperRight[0] << ","<< geometrySetting_.upperRight[1]<<",0.25> }" <<std::endl;
+  else
+  {
+    auto middlepoint = (geometrySetting_.lowerLeft+geometrySetting_.upperRight);
+    middlepoint /= 2.;
+    auto radius = (geometrySetting_.upperRight[1]-geometrySetting_.lowerLeft[1])/2.;
+    assert (std::abs(radius - (geometrySetting_.upperRight[0]-geometrySetting_.lowerLeft[0])/2.) < 1e-10
+	      && " The given corners are not rectangular, this does not match to a bounding box for a circle!");
+
+    file << "\t cylinder { <" << middlepoint[0] << ","<< middlepoint[1]<<",-0.25>, <"
+    << middlepoint[0] << ","<< middlepoint[1]<<",0.25>, "<< radius << "}" <<std::endl;
+  }
+
+  file << "\t texture{ pigment{ color White } }" <<std::endl <<
       "}" <<std::endl <<std::endl;
 #endif
 }
