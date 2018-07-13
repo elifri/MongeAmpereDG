@@ -70,9 +70,9 @@ void read_parameters(int argc, char *argv[], std::string& configFileMASolver, st
 int main(int argc, char *argv[])
 try {
 
-	/////////////////////////////
-	// setup problem parameter //
-	/////////////////////////////
+  /////////////////////////////
+  // setup problem parameter //
+  /////////////////////////////
 
   std::cout << " Start solving Lens problem " << std::endl;
 
@@ -85,8 +85,6 @@ try {
 
   OpticalSetting opticalSetting;
   opticalSetting.read_configfile(configFileOpticalSetting);
-
-  std::cout << " Output files in folder " << config.plotOutputDirectory << "/" << config.outputPrefix <<"..." << std::endl;
 
   std::cout << " Output files in folder " << config.plotOutputDirectory << "/" << config.outputPrefix <<"..." << std::endl;
 
