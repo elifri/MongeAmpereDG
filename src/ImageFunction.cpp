@@ -246,7 +246,7 @@ double ImageFunction::integrate2Omega(const unsigned int n) const
 
 double ImageFunction::integrate2(const unsigned int n) const
 {
-  const unsigned int order = std::min(5u,n);
+  const unsigned int order = std::min(3u,n);
 
   double integral;
 
@@ -257,7 +257,7 @@ double ImageFunction::integrate2(const unsigned int n) const
   }
   else
   {
-    Config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, n);
+    Config::UnitCubeType unitcube_quadrature(lowerLeft_, upperRight_, order);
     Integrator<Config::DuneGridType> integrator(unitcube_quadrature.grid_ptr());
     integral = integrator.assemble_integral(*this);
   }
