@@ -73,6 +73,7 @@ private:
   virtual void create_initial_guess();
 //  void update_Operator();
   virtual void solve_nonlinear_system();
+protected:
   virtual void adapt_operator();
 
   void init_lagrangian_values(VectorType& v) const;

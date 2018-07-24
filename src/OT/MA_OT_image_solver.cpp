@@ -83,3 +83,60 @@ void MA_OT_image_solver::update_Operator()
   assert(get_image_operator().check_integrability_condition());
 #endif
 }
+
+void MA_OT_image_solver::adapt_solution(const int level)
+{
+  //store Lagrangian Parameter
+  //  Config::VectorType p = get_assembler_lagrangian_boundary().boundaryHandler().blow_up_boundary_vector(solution.tail(get_n_dofs_Q_h()));
+
+
+  //adapt input grid
+
+  assert(level==1);
+  auto old_grid = gridHandler_.adapt();
+
+  //bind handler and assembler to new context
+  FEBasisHandler_.adapt_after_grid_change(gridView());
+  assembler_.bind(FEBasisHandler_.uBasis());
+  assemblerLM1D_.bind(FEBasisHandler_.uBasis());
+
+//combination of binding handler and assembler as well as adapting p
+
+#ifdef USE_COARSE_Q_H
+//    auto p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(this->grid().levelGridView(this->grid().maxLevel()-2),
+//        this->grid().levelGridView(this->grid().maxLevel()-1), p);
+#else
+//    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(old_grid.gridViewOld, this->gridView(), p);
+  FEBasisHandlerQ_.adapt_after_grid_change(this->gridView());
+#endif
+
+  auto& assemblerBoundary = get_assembler_lagrangian_boundary();
+  assemblerBoundary.bind(FEBasisHandler_.uBasis(), FEBasisHandlerQ_.FEBasis());
+
+  //adapt operator
+  std::cerr << " going to adapt operator " << std::endl;
+  adapt_operator();
+
+
+  //project old solution to new grid
+//  auto newSolution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), solution);
+  auto newSolution = FEBasisHandler_.adapt_function_elliptic_after_grid_change(old_grid.gridViewOld, gridView(), *this, solution);
+  solution = newSolution;
+
+  //adapt boundary febasis and bind to assembler
+  std::cerr << " going to adapt lagrangian multiplier " << std::endl;
+
+  Config::VectorType p_adapted;
+
+  {
+//    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change();
+    p_adapted.setZero(get_n_dofs_Q_h());
+//    get_assembler_lagrangian_boundary().boundaryHandler().shrink_to_boundary_vector(p_adapted);
+  }
+
+  //init lagrangian multiplier variables
+  solution.conservativeResize(get_n_dofs());
+  solution(get_n_dofs_V_h()) = 0;
+  solution.tail(get_n_dofs_Q_h()) = p_adapted;
+
+}

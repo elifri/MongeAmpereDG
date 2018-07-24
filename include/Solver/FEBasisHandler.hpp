@@ -723,8 +723,24 @@ void FEBasisHandler<FETraitstype, FETraits>::elliptic_project(const GOP& operato
   operatorMA.evaluate(v, b, A, v, false);
 
 
+/*
+  Eigen::JacobiSVD<Config::MatrixType> svd(A);
+  double cond = svd.singularValues()(0)
+      / svd.singularValues()(svd.singularValues().size()-1);
+
+  std::cout << " condition number is " << cond << std::endl;
+*/
+
   //solve system
   Eigen::SparseLU<Config::MatrixType> lu_of_A(A);
+
+  if (lu_of_A.info()!= Eigen::EigenSuccess) {
+      // decomposition failed
+      std::cout << "\nError: "<< lu_of_A.info() << " Could not compute LU decomposition!\n";
+      MATLAB_export(A,"A");
+//          std::cout << J << std::endl;
+  }
+
 
   v = lu_of_A.solve(b);
   if(lu_of_A.info()!=0) {
@@ -799,14 +815,14 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 
   // pass information of evaluation procedure to the local operators
   auto get_FEFunction = [&solution_u_old_extended_global]()-> const auto&{return solution_u_old_extended_global;};
-  ma_solver.get_actual_OT_operator().change_oldFunction(get_FEFunction);
+  ma_solver.get_image_operator().change_oldFunction(get_FEFunction);
 
   ma_solver.get_u_old_ptr() = std::shared_ptr<DiscreteGridFunctionCoarse> (new DiscreteGridFunctionCoarse(FEBasisCoarse,v));
 
   //project to new grid
   Config::VectorType vNew;
   vNew = Config::VectorType::Zero(ma_solver.get_n_dofs());
-  elliptic_project(ma_solver.get_actual_OT_operator(), solution_u_Coarse_global, vNew);
+  elliptic_project(ma_solver.get_image_operator(), solution_u_Coarse_global, vNew);
   return vNew;
 }
 
