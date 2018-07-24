@@ -58,7 +58,7 @@ public:
   MA_OT_Operator():solver_ptr(NULL), lop_ptr(), intermediateSolCounter(){}
 
   MA_OT_Operator(SolverType& solver):solver_ptr(&solver),
-      boundary_(new GenerealOTBoundary(solver.get_gridTarget(), GeometrySetting::boundaryN)),
+      boundary_(new GenerealOTBoundary(solver.get_gridTarget(), GeometrySetting::boundaryNTarget)),
       f_(OperatorTraits::construct_f(solver)),
       g_(OperatorTraits::construct_g(solver)),
       lop_ptr(new LocalOperatorType(
@@ -76,7 +76,7 @@ public:
     template<typename GeometrySetting,
       typename std::enable_if<sizeof(GeometrySetting) && std::is_same<LocalOperatorLagrangianBoundaryType,Local_Operator_LagrangianBoundary>::value, int>::type = 0>
     MA_OT_Operator(SolverType& solver, GeometrySetting& setting):solver_ptr(&solver),
-        boundary_(new GenerealOTBoundary((solver.get_gridTarget()), setting.boundaryN)),
+        boundary_(new GenerealOTBoundary((solver.get_gridTarget()), setting.boundaryNTarget)),
         f_(OperatorTraits::construct_f(solver, setting)),
         g_(OperatorTraits::construct_g(solver, setting)),
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
@@ -92,7 +92,7 @@ public:
     template<typename GeometrySetting,
       typename std::enable_if<sizeof(GeometrySetting) && !std::is_same<LocalOperatorLagrangianBoundaryType,Local_Operator_LagrangianBoundary>::value, int>::type = 0>
     MA_OT_Operator(SolverType& solver, GeometrySetting& setting):solver_ptr(&solver),
-        boundary_(new GenerealOTBoundary(solver.get_gridTarget(), setting.boundaryN)),
+        boundary_(new GenerealOTBoundary(solver.get_gridTarget(), setting.boundaryNTarget)),
         f_(OperatorTraits::construct_f(solver, setting)),
         g_(OperatorTraits::construct_g(solver, setting)),
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),

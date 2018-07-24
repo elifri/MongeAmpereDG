@@ -112,7 +112,7 @@ struct PovRayOpts
 
 struct SolverConfig{
 
-//  using GridHandlerType = GridHandler<Config::DuneGridType, true>;
+//  using GridHandlerType = GridHandler<Config::DuneGridType, true>; //rectangular grid type
   using GridHandlerType = GridHandler<Config::DuneGridType, false>;
 
   using ValueType = Config::ValueType;

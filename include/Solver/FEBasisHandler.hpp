@@ -794,19 +794,19 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
 
   // 2. prepare a Taylor extension for values outside the old grid
-  GenerealOTBoundary bcSource(gridOld.grid());
+  GenerealOTBoundary bcSource(gridOld.grid(), GeometrySetting::boundaryN);
   TaylorBoundaryFunction<DiscreteGridFunctionCoarse> solution_u_old_extended_global(bcSource, solution_u_Coarse_global);
 
   // pass information of evaluation procedure to the local operators
   auto get_FEFunction = [&solution_u_old_extended_global]()-> const auto&{return solution_u_old_extended_global;};
-  ma_solver.get_operator().change_oldFunction(get_FEFunction);
+  ma_solver.get_actual_OT_operator().change_oldFunction(get_FEFunction);
 
   ma_solver.get_u_old_ptr() = std::shared_ptr<DiscreteGridFunctionCoarse> (new DiscreteGridFunctionCoarse(FEBasisCoarse,v));
 
   //project to new grid
   Config::VectorType vNew;
   vNew = Config::VectorType::Zero(ma_solver.get_n_dofs());
-  elliptic_project(ma_solver.get_operator(), solution_u_Coarse_global, vNew);
+  elliptic_project(ma_solver.get_actual_OT_operator(), solution_u_Coarse_global, vNew);
   return vNew;
 }
 
