@@ -43,6 +43,9 @@ add_executable(export_refractor_points export_refractor_points.cpp)
 target_link_libraries(export_refractor_points ${IOLibs} Solver_Config Dogleg ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES}  ${BoostPO_LIBRARIES} ${UMFPACK_LIBRARIES})
 target_link_dune_default_libraries("export_refractor_points")
 
+add_executable(fit_surface fit_surface.cpp)
+target_link_libraries(fit_surface ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES})
+
 add_executable(convert_dat_to_bmp convert_dat_to_bmp.cpp)
 target_link_libraries(convert_dat_to_bmp  -lX11)
 

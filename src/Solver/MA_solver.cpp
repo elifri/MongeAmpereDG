@@ -226,7 +226,8 @@ const typename MA_solver::VectorType& MA_solver::solve()
     solve_nonlinear_system();
     iterations++;
     auto end = std::chrono::steady_clock::now();
-    std::cerr << " solved nonlinear system, current time is " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start_).count()/60. << " min " << std::endl;
+    std::cerr << " solved nonlinear system" << std::endl;
+    std::cout << " current time is " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start_).count()/60. << " min " << std::endl;
 
 
     update_solution(solution);
@@ -237,7 +238,8 @@ const typename MA_solver::VectorType& MA_solver::solve()
     solve_nonlinear_system();
     iterations++;
     end = std::chrono::steady_clock::now();
-    std::cerr << " solved nonlinear system, current time is " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start_).count()/60. << " min " << std::endl;
+    std::cerr << " solved nonlinear system" << std::endl;
+    std::cout << " current time is " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start_).count()/60. << " min " << std::endl;
 
     {
       //write current solution to file
