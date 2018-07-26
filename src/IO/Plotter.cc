@@ -134,7 +134,7 @@ void Plotter::write_point_data(std::ofstream &file, const string name, Eigen::Ma
 void Plotter::write_points(std::ofstream &file) const{
 	// write points
   file << std::setprecision(12) << std::scientific;
-  file << "\t\t\t<Point>\n"
+  file << "\t\t\t<Points>\n"
 			<< "\t\t\t\t<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\""
 			<< "ascii" << "\">\n";
 
@@ -452,3 +452,46 @@ void Plotter::add_plot_stream(const std::string &name, const std::string &filepa
 
 	plot_streams[name] = new std::ofstream(filepath.c_str());
 }
+
+
+void Plotter::write_refined_simple_estimate_integral_OT_Omega(std::ofstream &file, const DensityFunction& omegaF) const
+{
+  // write points
+    file << "\t\t\t<CellData Scalars=\"est. integral\">\n"
+        << "\t\t\t\t<DataArray type=\"Float32\" Name=\"est. integral\" NumberOfComponents=\"1\" format=\""
+        << "ascii" << "\">\n";
+
+    {   // save points in file after refinement
+      for (auto&& element: elements(get_gridView()))
+      {
+        const auto geometry = element.geometry();
+
+        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> points(PlotRefinementType::nVertices(refinement_));
+
+        for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++) //loop over vertices
+        {
+            points[it.index()] = geometry.global(it.coords());
+        }
+        //loop over subentitites
+        for (auto it = PlotRefinementType::eBegin(refinement_); it != PlotRefinementType::eEnd(refinement_); it++){
+
+          //estimate integral by averaging the corner values and dividing through the cell size
+          Config::ValueType estInt = 0;
+
+          int coords_i = 0;
+          for (const auto& corner : it.vertexIndices()){
+            estInt += omegaF(points[corner]);
+          }
+
+          estInt /= 3.0; //averaging
+          estInt *= geometry.volume(); //geometry scaling
+
+          //write to file
+          file << "\t\t\t\t\t" << estInt << " ";
+          file << std::endl;
+        }
+      }
+    }
+    file << "\t\t\t\t</DataArray>\n" << "\t\t\t</CellData>\n";
+}
+

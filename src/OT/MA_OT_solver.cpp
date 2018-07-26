@@ -510,6 +510,14 @@ void MA_OT_solver::plot(const std::string& name, int no) const
      std::cerr << fname  << std::endl;
   }
 
+  {
+    std::string fname(plotter.get_output_directory());
+    fname += "/"+ plotter.get_output_prefix()+ name +"estInt"+ NumberToString(no) + ".vtu";
+    plotter.writeVTK(fname, *solution_u_old, this->get_OT_operator().get_f());
+    std::cout << " write initial grid to " << fname << std::endl;
+
+  }
+
   //write to file
 
   std::string fname(plotter.get_output_directory());

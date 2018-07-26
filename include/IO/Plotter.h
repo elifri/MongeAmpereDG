@@ -173,6 +173,10 @@ public:
 
   //--------helper to write vtk point data
 
+  ///writes the point data given by the local function f to file
+  template <class LocalFunction>
+  void write_pointData(std::ofstream &file, LocalFunction &f) const;
+
   ///writes the error [point data] to file (error is the difference of the given local function and the global exact function)
   template <class LocalFunction, class Function>
   void write_error(std::ofstream &file, LocalFunction &f, Function &exact_solution) const;
@@ -188,6 +192,8 @@ public:
 
   template <class LocalFunction>
   void write_refined_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &fg, const DensityFunction& omegaF) const;
+
+  void write_refined_simple_estimate_integral_OT_Omega(std::ofstream &file, const DensityFunction& omegaF) const;
 
 
   //----------------------------//
@@ -255,6 +261,15 @@ public:
 
   template <class GlobalFunction>
   void writeOTVTKGlobal(std::string filename, GlobalFunction &f) const;
+
+  /**
+   * evaluates and saves the solution's transported grid
+   * @param filename    the path to the file where the grid is written in ASCII format
+   * @param fg          the numerical solution (gradient of the MA solution)
+   * @param omegaF      the density function f on the starting domain Omega
+   */  template <class LocalFunction>
+  void writeVTK(std::string filename, LocalFunction &f, const DensityFunction& omegaF) const;
+
 
   /**
    * evaluates and saves the solution's transported grid
@@ -585,6 +600,30 @@ void Plotter::writeOTVTKGlobal(std::string filename, GlobalFunction &f) const {
     write_vtk_end(file);
 
 }
+
+template <class LocalFunction>
+void Plotter::writeVTK(std::string filename, LocalFunction &f, const DensityFunction& omegaF) const {
+  //--------------------------------------
+  // open file
+    check_file_extension(filename, ".vtu");
+    std::ofstream file(filename.c_str(), std::ios::out);
+    if (file.rdstate()) {
+      std::cerr << "Error: Couldn't open '" << filename << "'!\n";
+      return;
+    }
+
+    //write file
+
+    write_vtk_header(file);
+    write_pointData(file, f);
+    write_refined_simple_estimate_integral_OT_Omega(file, omegaF);
+    write_points(file);
+    write_cells(file);
+
+    write_vtk_end(file);
+
+}
+
 
 template <class LocalFunction>
 void Plotter::writeOTVTK(std::string filename, LocalFunction &f, const DensityFunction& omegaF) const {
@@ -918,6 +957,36 @@ void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, Loc
     file << "\t\t\t\t</DataArray>\n" << "\t\t\t</CellData>\n";
 }
 
+
+template <class LocalFunction>
+void Plotter::write_pointData(std::ofstream &file, LocalFunction &f) const
+{
+  // write points
+    file << "\t\t\t<PointData Scalars=\"error\">\n"
+      << "\t\t\t\t<DataArray type=\"Float32\" Name=\"data\" NumberOfComponents=\"1\" format=\""
+      << "ascii" << "\">\n";
+
+    //the reflector is given by X*rho, where rho is the PDE solution. X is calculated from the 2d mesh by adding the third coordiante omega(x)
+
+    if (refinement_ == 0)
+    {
+      // collect points
+      assert(false);
+    }else {   // save points in file after refinement
+      for (auto&& element: elements(get_gridView()))
+      {
+        f.bind(element);
+        const auto geometry = element.geometry();
+        file << "\t\t\t\t\t";
+        for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++){
+          file << std::setprecision(12) << std::scientific;
+          file << f(it.coords()) << " ";
+        }
+        file << std::endl;
+      }
+    }
+  file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
+}
 
 
 template <class LocalFunction, class Function>
