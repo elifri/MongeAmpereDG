@@ -1012,6 +1012,29 @@ private:
     }
   }
 
+  void evaluateWithFirstDerivative(const Domain& x, Range& u, typename LocalFirstDerivative::Jacobian& gradu) const
+  {
+    bool outside = false;
+
+    Domain localCoordinate;
+    const auto& element = findEntityAndLocalCoordinate(x, localCoordinate, outside);
+    localFunction_.bind(element);
+    localDerivative_.bind(element);
+
+    if (!outside)
+    {
+      u = localFunction_(localCoordinate);
+      gradu = localDerivative_(localCoordinate);
+    }
+    else
+    {
+      const int TaylorOrder = Basis::LocalView::Tree::FiniteElement::Traits::LocalBasisType::Traits::diffOrder;
+      u = TaylorExpansion<TaylorOrder>(element, x, localCoordinate);
+      gradu  = TaylorExpansionDerivative(element, x, localCoordinate);
+    }
+  }
+
+
   void evaluateDerivativesLocal(const Element& element, const Domain& xLocal, typename LocalFirstDerivative::Jacobian& gradu,
       typename LocalSecondDerivative::Hessian& hessu) const
   {

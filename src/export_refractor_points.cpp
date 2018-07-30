@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
   std::cout << " created basis " << std::endl;
 
   //set up the plotter
-  PointExporter pointExporter(opticalSetting,256);
+  PointExporter pointExporter(opticalSetting,50);
 
 
   //set up the FE solution
@@ -219,6 +219,7 @@ int main(int argc, char *argv[])
 
   //export solution points
   std::cout << " write output to " << outputFile <<"..." << std::endl;
-  pointExporter.save_refractor_points(outputFile, numericalSolution);
+//  pointExporter.save_refractor_points(outputFile, numericalSolution);
+  pointExporter.save_refractor_points_fixed_grid(outputFile, numericalSolution, opticalSetting.z_3);
 }
 
