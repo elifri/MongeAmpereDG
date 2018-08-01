@@ -709,11 +709,12 @@ void Plotter::write_points_reflector(std::ofstream &file, Function &f) const{
         const auto geometry = element.geometry();
         for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++){
           auto x_2d = geometry.global(it.coords());
-          auto rho = 1.0/f(it.coords());
           file << std::setprecision(12) << std::scientific;
 #ifndef PARALLEL_LIGHT
+          auto rho = 1.0/f(it.coords());
           file << "\t\t\t\t\t" << x_2d[0]*rho << " " << x_2d[1]*rho << " " <<  omega(x_2d)*rho << std::endl;
 #else
+          auto rho = f(it.coords());
           file << "\t\t\t\t\t" << x_2d[0] << " " << x_2d[1] << " " <<  rho << std::endl;
 #endif
           vertex_no++;
@@ -1103,11 +1104,12 @@ void Plotter::write_points_reflector_pov(std::ofstream &file, Function & f) cons
         const auto geometry = element.geometry();
         for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++){
           auto x_2d = geometry.global(it.coords());
-          auto rho = 1.0/f(it.coords());
           file << std::setprecision(12) << std::scientific;
 #ifndef PARALLEL_LIGHT
+          auto rho = 1.0/f(it.coords());
           file << "\t\t <"  << x_2d[0]*rho << ", " << x_2d[1]*rho << ", " <<  omega(x_2d)*rho<< ">," << std::endl;
 #else
+          auto rho = f(it.coords());
           file << "\t\t <"  << x_2d[0] << ", " << x_2d[1] << ", " <<  rho<< ">," << std::endl;
 #endif
           vertex_no++;
@@ -1275,6 +1277,8 @@ void Plotter::writeReflectorPOV(std::string filename, Function &f) const {
 
   write_pov_setting(file);
   write_target_plane(file);
+  if (povRayOpts_.writeAperture)
+    write_aperture(file);
   write_mirror(file, f);
 }
 

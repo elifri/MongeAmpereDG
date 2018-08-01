@@ -29,6 +29,7 @@
 #endif
 
 #include "Optics/operator_LagrangianBoundary_refr_parallel.h"
+#include "Optics/operator_LagrangianBoundary_refl_parallel.h"
 
 //forward declaration for image solver
 class MA_OT_image_solver;
@@ -215,9 +216,7 @@ private:
   /// use function overload to select correct implementation
   template<typename OperatorTraitsDummy = OperatorTraits>
   void assemble_Jacobian_boundary(OperatorTraitsDummy* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
-  void assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, Local_Operator_LagrangianBoundary_refr_parallel>* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
-  void assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, Local_Operator_LagrangianBoundary_refr >* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
-
+  void assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
 
 
 public:
@@ -438,20 +437,11 @@ void MA_OT_Operator<OperatorTraits>::assemble_Jacobian_boundary(OperatorTraitsDu
 
 template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>
-  ::assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, Local_Operator_LagrangianBoundary_refr_parallel>* dummy,
+  ::assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy,
                                const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {
   solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix_with_automatic_differentiation(*lopLMBoundary, m, x, v);
 }
-
-template<typename OperatorTraits>
-void MA_OT_Operator<OperatorTraits>
-  ::assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, Local_Operator_LagrangianBoundary_refr>* dummy,
-                               const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
-{
-  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix_with_automatic_differentiation(*lopLMBoundary, m, x, v);
-}
-
 
 
 template<typename OperatorTraits>

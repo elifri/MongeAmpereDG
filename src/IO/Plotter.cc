@@ -188,13 +188,27 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
 
 	file << "// Camera" <<std::endl <<
 			"camera {" <<std::endl <<
+#ifndef PARALLEL_LIGHT
 			"\t location <" << (xMinOut+xMaxOut)/2.0
 			                   <<"," << (yMinOut+yMaxOut)/2.0 << ","
 			                   <<  geometrySetting_.z_3 + max(xMaxOut-xMinOut,yMaxOut-yMinOut)*0.5   <<">" <<std::endl <<
+#else
+      "\t location <" << (xMinOut+xMaxOut)/2.0
+                         <<"," << geometrySetting_.z_3 - max(xMaxOut-xMinOut,yMaxOut-yMinOut)*0.5 << ","
+                         <<   (yMinOut+yMaxOut)/2.0  <<">" <<std::endl <<
+      "\t sky <0,0,1>" << std::endl <<
+#endif
 			"\t angle " << povRayOpts_.cameraAngle <<std::endl <<
+#ifndef PARALLEL_LIGHT
 			"\t look_at <" << (xMinOut+xMaxOut)/2.0
                     <<"," << (yMinOut+yMaxOut)/2.0
                     << "," << geometrySetting_.z_3 << ">" << std::endl <<
+#else
+      "\t look_at <" << (xMinOut+xMaxOut)/2.0
+                    <<"," << geometrySetting_.z_3
+                    << "," << (yMinOut+yMaxOut)/2.0 << ">" << std::endl <<
+
+#endif
 			"\t right	x*image_width/image_height" <<std::endl <<
 			"}" <<std::endl <<std::endl;
 
@@ -210,9 +224,11 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
       "\t parallel" <<std::endl <<
 #endif
 			"\t point_at <-0.0, 0, 1>" <<std::endl <<
+#ifndef PARALLEL_LIGHT
 			"\t radius " << povRayOpts_.lightSourceRadius <<std::endl <<
 			"\t falloff " << povRayOpts_.lightSourceFalloff <<std::endl <<
 			"\t tightness " << povRayOpts_.lightSourceTightness <<std::endl <<
+#endif
 			"\t photons { reflection on}" <<std::endl <<
 			"}" <<std::endl <<std::endl;
 
@@ -272,7 +288,11 @@ void Plotter::write_pov_setting_refractor(std::ofstream &file) const{
 void Plotter::write_target_plane(std::ofstream &file) const{
 	file << "// The floor" <<std::endl <<
 			"plane {" <<std::endl <<
+#ifndef PARALLEL_LIGHT
 			"\t z, " << geometrySetting_.z_3 << std::endl <<
+#else
+      "\t y, " << geometrySetting_.z_3 << std::endl <<
+#endif
 			"\t texture {pigment {color rgb <1,1,1>} }" <<std::endl <<
 			"\t hollow" <<std::endl <<
 			"}" <<std::endl <<std::endl;
@@ -299,7 +319,8 @@ void Plotter::write_aperture(std::ofstream &file) const
       "difference {" <<std::endl <<
       "\t   box { <-20,-20,-0.2>, <20,20,0.2> }" << std::endl;
 
-  const LightSourceLimiter lightsourcelimiter = CIRCULAR;
+  const LightSourceLimiter lightsourcelimiter = RECTANGULAR;
+  std::cout << " assuming a rectangular light source" << std::endl;
 
   if (lightsourcelimiter == RECTANGULAR)
     file << "\t box { <" << geometrySetting_.lowerLeft[0] << ","<< geometrySetting_.lowerLeft[1]<<",-0.25>, <"
