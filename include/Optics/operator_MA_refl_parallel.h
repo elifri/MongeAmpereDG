@@ -296,8 +296,7 @@ public:
       adouble g_value;
       g_.evaluate(Z, g_value);
 
-//      adouble H_value = -(epsilon_*q)*(q+1.)*(q+1.)/t/kappa/epsilon_*Y[2];    //   ..*(D_psi_value*Y)/D_Psi_value.two_norm();  in this case this term is equal to Y_3
-      adouble H_value = q*q*(-Y[1])/2./t;    //   ..*(D_psi_value*Y)/D_Psi_value.two_norm();  in this case this term is equal to Y2
+      adouble H_value = q*q*(-Y[1])/2./2./t/t;    //   ..*(D_psi_value*Y)/D_Psi_value.two_norm();  in this case this term is equal to Y2
 
       adouble PDE_rhs = H_value*f_value/g_value;
 //      adouble PDE_rhs = H_value*f_value;
