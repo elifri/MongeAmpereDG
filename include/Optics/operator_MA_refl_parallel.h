@@ -273,13 +273,13 @@ public:
       //-----calculate term with determinant
 
       FieldMatrix<adouble, dim, dim> A;
-      A[0][0] = -q/2./t;
+      A[0][0] = q/2./t;
       A[0][1] = 0;
       A[1][0] = 0;
-      A[1][1] = -q/2./t;
+      A[1][1] = q/2./t;
 
       FieldMatrix<adouble, dim, dim> uDH_pertubed = A;
-      uDH_pertubed-=Hessrho;
+      uDH_pertubed+=Hessrho;
 
       adouble uDH_pertubed_det = determinant(uDH_pertubed);
 
@@ -296,7 +296,7 @@ public:
       adouble g_value;
       g_.evaluate(Z, g_value);
 
-      adouble H_value = q*q*(-Y[1])/2./2./t/t;    //   ..*(D_psi_value*Y)/D_Psi_value.two_norm();  in this case this term is equal to Y2
+      adouble H_value = q*q*(Y[1])/2./2./t/t;    //   ..*(D_psi_value*Y)/D_Psi_value.two_norm();  in this case this term is equal to Y2
 
       adouble PDE_rhs = H_value*f_value/g_value;
 //      adouble PDE_rhs = H_value*f_value;
