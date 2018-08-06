@@ -51,7 +51,7 @@ void MA_refractor_solver::create_initial_guess()
   else
   {
     const double p = 5;
-    const double distance = 1.12;
+    const double distance = setting_.initialOpticDistance;
 
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
 //    project([p, distance](Config::SpaceType x){return distance*std::exp(x.two_norm2()/p);}, solution);
