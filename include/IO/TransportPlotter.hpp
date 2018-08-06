@@ -48,7 +48,7 @@ public:
 
   const auto get_quad_grid() const
   {
-    Dune::VTKWriter<Config::RectangularGridView> vtkWriter(gridHandler_.gridView());
+    Dune::VTKWriter<GridHandlerType::GridView> vtkWriter(gridHandler_.gridView());
     vtkWriter.write("Plotgrid");
     return gridHandler_.gridView();
   }
