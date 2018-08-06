@@ -81,6 +81,7 @@ find_package(CImg)
 find_package(HDF5)
 find_package(libffo_core)
 find_package(libnurbs REQUIRED)
+find_package(IPOPT)
 
 message("include: ${IPOPT_INCLUDE_DIR} and using Boost ${BoostPO_LIBRARIES}")
 message("libnurbs includes ${LIBNURBS_INCLUDES}")

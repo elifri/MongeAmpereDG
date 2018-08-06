@@ -254,6 +254,7 @@ struct OpticalSetting : GeometryOTSetting{
   double minPixelValue;
 
   double initialOpticDistance;
+
   ///pov ray options for output
   PovRayOpts povRayOpts;
   static SolverConfig::ValueType lightSourceIntensity;
