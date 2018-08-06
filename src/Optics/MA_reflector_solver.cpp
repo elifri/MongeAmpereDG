@@ -70,7 +70,7 @@ void MA_reflector_solver::create_initial_guess()
   //
       project([&rectangular_interpolator](Config::SpaceType x){return 1.0/rectangular_interpolator.evaluate(x);},solution);
 #else
-      const double distance = 5;
+      const double distance = setting_.initialOpticDistance;
       project([distance](Config::SpaceType x){return distance+x[1];}, solution);
 #endif
   }
