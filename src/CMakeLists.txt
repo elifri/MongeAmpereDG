@@ -11,6 +11,11 @@ set(PureSolverLibs ${PureSolverLibs} ${IOLibs})
 
 set(ThirdPartyLibs ${SNES_LIBRARY} ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES} ${BsplineHdf5Libraries} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
 
+if(IPOPT_FOUND)
+set(ThirdPartyLibs ${IPOPT_LIBRARIES} ${ThirdPartyLibs})
+endif(IPOPT_FOUND)
+
+
 #add_executable("dune_mongeampere" dune_mongeampere.cc)
 #message("ZLIB libraries ${ZLIB_LIBRARIES}")
 #message("Boost libraries ${Boost_LIBRARIES}")

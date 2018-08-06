@@ -24,6 +24,8 @@ namespace po = boost::program_options;
 
 #include "IO/imageOT.hpp"
 
+#include "Solver/Convexifier.h"
+
 MA_OT_solver::MA_OT_solver(GridHandlerType& gridHandler,
     const shared_ptr<GridType>& gridTarget,
     const SolverConfig& config, GeometrySetting& setting, bool create_operator)
@@ -344,7 +346,7 @@ void MA_OT_solver::init_from_file(const std::string& filename)
   for (int i=0; i<get_n_dofs_V_h(); ++i) {
     if (fileInitial.eof())
     {
-      std::cerr << "The inserted coefficient file is too short";
+      std::cerr << "The inserted coefficient file is too short, exptected " << get_n_dofs_V_h() << " dofs ...";
       assert(false);
       exit(-1);
     }
@@ -368,7 +370,7 @@ void MA_OT_solver::init_from_file(const std::string& filename)
         }
         else
         {
-          std::cerr << "The inserted coefficient file (including lagrangianparameters) is too short";
+          std::cerr << "The inserted coefficient file (including lagrangian parameters) is too short";
           assert(false);
           exit(-1);
         }
@@ -552,9 +554,10 @@ void MA_OT_solver::one_Poisson_Step()
 //  Config::SpaceType x0 = {-0.25,-0.25};
 //  Config::SpaceType x0 = {-0.25,0.25};
 //  FieldMatrix<Config::ValueType, 2, 2> A = {{1.5,0},{0,1.5}};
-  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,2.5}};
+//  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,2.5}};
 //  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,1}};
 //  FieldMatrix<Config::ValueType, 2, 2> A = {{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}};
+  FieldMatrix<Config::ValueType, 2, 2> A = {{0.05,0},{0,0.05}};
 
   Integrator<Config::GridType> integrator(get_grid_ptr());
   auto k = 1.0;
@@ -848,6 +851,31 @@ void MA_OT_solver::create_initial_guess()
   one_Poisson_Step();
 
   update_solution(solution);
+
+  std::stringstream gridFile;
+  gridFile << setting_.gridinputFile << gridHandler_.get_gridRefinement()+2 << ".msh";
+  std::shared_ptr<Config::TriangularGridType> gridConvexifier_ptr(GmshReader<Config::GridType>::read(gridFile.str()));
+  Convexifier<2> convexifier(gridConvexifier_ptr);
+
+
+  //convexify
+  auto start = std::chrono::steady_clock::now();
+  SolverConfig::FETraitsSolver::DiscreteGridFunction numericalSolution(get_FEBasis_u(),solution);
+  auto localnumericalSolution = localFunction(numericalSolution);
+  auto x_convexify = convexifier.convexify(numericalSolution);
+
+  auto end = std::chrono::steady_clock::now();
+
+  std::cerr << "total time for convexification= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
+  auto gobalConvexifiedsolution = convexifier.globalSolution(x_convexify);
+  project(gobalConvexifiedsolution, solution);
+  update_solution(solution);
+  plot("Convexified", iterations);
+
+  end = std::chrono::steady_clock::now();
+  std::cerr << "total time for convexification and projection= "
+  << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
+
 
 #ifdef MANUFACTOR_SOLUTION
   std::cerr << " init bar u ... " << std::endl;

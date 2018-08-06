@@ -634,7 +634,7 @@ void Convexifier<k>::init(const Dune::Functions::BernsteinBezierk2dNodalBasis<Gr
   C_.setFromTriplets(tripletList.begin(), tripletList.end());
 
   {
-    std::stringstream filename; filename << "../plots/test/bezierCondition.m";
+    std::stringstream filename; filename << "/home/terra/friebel/workspace/dune/build/dune-mongeampere/plots/test/bezierCondition.m";
     std::ofstream file(filename.str(),std::ios::out);
     MATLAB_export(file, C_, "C");
   }
@@ -679,8 +679,8 @@ auto Convexifier<k>::convexify(F f) const
     SubsamplingVTKWriter<GridType::LeafGridView> vtkWriter(bezierBasisHandler_.FEBasis().gridView(),2);
     auto function = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(bezierBasisHandler_.FEBasis(),v);
     vtkWriter.addVertexData(function, VTK::FieldInfo("BezierInterpol", VTK::FieldInfo::Type::scalar, 1));
-    vtkWriter.write("../plots/test/bezier.vtu");
-    std::cerr << " written bezierinterpolant in ../plots/test/bezier.vtu" << std::endl;
+    vtkWriter.write("/home/terra/friebel/workspace/dune/build/dune-mongeampere/plots/test/bezier.vtu");
+    std::cerr << " written bezierinterpolant in /home/terra/friebel/workspace/dune/build/dune-mongeampere/plots/test/bezier.vtu" << std::endl;
   }
 
   convexify(v);
@@ -690,8 +690,8 @@ auto Convexifier<k>::convexify(F f) const
     SubsamplingVTKWriter<GridType::LeafGridView> vtkWriter(bezierBasisHandler_.FEBasis().gridView(),2);
     auto function = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(bezierBasisHandler_.FEBasis(),v);
     vtkWriter.addVertexData(function, VTK::FieldInfo("BezierConvexified", VTK::FieldInfo::Type::scalar, 1));
-    vtkWriter.write("../plots/test/bezierConvexified.vtu");
-    std::cerr << " written Convexified in ../plots/test/bezierConvexified.vtu" << std::endl;
+    vtkWriter.write("/home/terra/friebel/workspace/dune/build/dune-mongeampere/plots/test/bezierConvexified.vtu");
+    std::cerr << " written Convexified in /home/terra/friebel/workspace/dune/build/dune-mongeampere/plots/test/bezierConvexified.vtu" << std::endl;
   }
 
 
@@ -711,7 +711,7 @@ void Convexifier<k>::convexify(Config::VectorType& v) const
   Config::VectorType f = -A_.transpose() * v;
 
   {
-    std::stringstream filename; filename << "../plots/test/CTimesV.m";
+    std::stringstream filename; filename << "/home/terra/friebel/workspace/dune/build/dune-mongeampere/plots/test/CTimesV.m";
     std::ofstream file(filename.str(),std::ios::out);
     MATLAB_export(file, C_ * v, "Cv");
   }
