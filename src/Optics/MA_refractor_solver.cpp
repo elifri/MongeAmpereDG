@@ -164,6 +164,14 @@ void MA_refractor_solver::update_Operator()
   get_refr_operator().get_actual_g().convolveOriginal(epsMollifier_);
   get_refr_operator().get_actual_g().normalize();
 
+  //since the grid \Omega could be changed TODO sometimes not necessary
+#ifndef PARALLEL_LIGHT
+  get_refr_operator().get_actual_f().omega_normalize();
+#else
+  get_refr_operator().get_actual_f().normalize();
+#endif
+
+
   //print blurred target distribution
   if (true) {
       std::ostringstream filename2; filename2 << plotOutputDirectory_+"/lightOut" << iterations << ".bmp";
