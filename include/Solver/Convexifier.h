@@ -8,7 +8,7 @@
 #ifndef INCLUDE_SOLVER_CONVEXIFIER_H_
 #define INCLUDE_SOLVER_CONVEXIFIER_H_
 
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
+#include "localfunctions/discreteScalarGlobalBasisFunction.hpp"
 
 #include <dune/grid/io/file/vtk/subsamplingvtkwriter.hh>
 
@@ -148,6 +148,10 @@ public:
   auto globalSolution(const Config::VectorType &v) const{
 //    return Dune::Functions::makeDiscreteGlobalBasisFunction<double>(bezierBasisHandler_.FEBasis(),v);
     return typename FETraitsBezier::DiscreteGridFunction(bezierBasisHandler_.FEBasis(),v);
+  }
+
+  auto globalSolutionDerivative(typename FETraitsBezier::DiscreteGridFunction &f) const{
+    return typename FETraitsBezier::DiscreteGridFunction::GlobalFirstDerivative(f);
   }
 
 private:
@@ -677,7 +681,7 @@ auto Convexifier<k>::convexify(F f) const
   {
     //init writer
     SubsamplingVTKWriter<GridType::LeafGridView> vtkWriter(bezierBasisHandler_.FEBasis().gridView(),2);
-    auto function = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(bezierBasisHandler_.FEBasis(),v);
+    auto function = globalSolution(v);
     vtkWriter.addVertexData(function, VTK::FieldInfo("BezierInterpol", VTK::FieldInfo::Type::scalar, 1));
     vtkWriter.write("../plots/test/bezier.vtu");
     std::cerr << " written bezierinterpolant in ../plots/test/bezier.vtu" << std::endl;
@@ -688,10 +692,14 @@ auto Convexifier<k>::convexify(F f) const
   {
     //init writer
     SubsamplingVTKWriter<GridType::LeafGridView> vtkWriter(bezierBasisHandler_.FEBasis().gridView(),2);
-    auto function = Dune::Functions::makeDiscreteGlobalBasisFunction<double>(bezierBasisHandler_.FEBasis(),v);
+    auto function = globalSolution(v);
     vtkWriter.addVertexData(function, VTK::FieldInfo("BezierConvexified", VTK::FieldInfo::Type::scalar, 1));
-    vtkWriter.write("../plots/test/bezierConvexified.vtu");
-    std::cerr << " written Convexified in ../plots/test/bezierConvexified.vtu" << std::endl;
+
+    auto gradu= localFirstDerivative(function);
+    vtkWriter.addVertexData(gradu , VTK::FieldInfo("grad", VTK::FieldInfo::Type::scalar, 2));
+
+    vtkWriter.write("/home/disk/friebel/workspace/dune/build/dune-mongeampere/plots/EllipsoidData/bezierConvexified.vtu");
+    std::cerr << " written Convexified in /home/disk/friebel/workspace/dune/build/dune-mongeampere/plots/EllipsoidData/bezierConvexified.vtu" << std::endl;
   }
 
 
@@ -721,7 +729,7 @@ void Convexifier<k>::convexify(Config::VectorType& v) const
   int *minCoeffRow = &coeffRow;
 
   std::cout << "minimum constr violating coefficient is " << (C_ * v - ci0).minCoeff(minCoeffRow)
-      << " at entry " << *minCoeffRow  << std::endl;
+      << " at entry " << coeffRow  << std::endl;
 
   v = solve_quad_prog_with_ie_constraints(G2, f, C_, ci0, v);
 
