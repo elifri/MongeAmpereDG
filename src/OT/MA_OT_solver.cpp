@@ -370,7 +370,7 @@ void MA_OT_solver::init_from_file(const std::string& filename)
         }
         else
         {
-          std::cerr << "The inserted coefficient file (including lagrangian parameters) is too short";
+          std::cerr << "The inserted coefficient file (including lagrangianparameters) is too short";
           assert(false);
           exit(-1);
         }
@@ -868,7 +868,34 @@ void MA_OT_solver::create_initial_guess()
 
   std::cerr << "total time for convexification= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
   auto gobalConvexifiedsolution = convexifier.globalSolution(x_convexify);
+  plotter.writeGlobalVTK("/home/terra/friebel/workspace/dune/build/dune-mongeampere/plots/test/bezierTest2.vtu",gobalConvexifiedsolution);
+
+  const double h = 1e-8;
+
+  auto FD_derivative_x = [gobalConvexifiedsolution,h](Config::SpaceType x)
+      {
+        Config::SpaceType xh ({x[0] + h, x[1]});
+        return (gobalConvexifiedsolution(x)+gobalConvexifiedsolution(xh))/h;
+      };
+
+  auto FD_derivative_y = [gobalConvexifiedsolution,h](Config::SpaceType x)
+      {
+        Config::SpaceType xh ({x[0], x[1] + h});
+        return (gobalConvexifiedsolution(x)+gobalConvexifiedsolution(xh))/h;
+      };
+
+
+  plotter.writeGlobalVTK("/home/terra/friebel/workspace/dune/build/dune-mongeampere/plots/test/bezierTest2X.vtu",FD_derivative_x);
+  plotter.writeGlobalVTK("/home/terra/friebel/workspace/dune/build/dune-mongeampere/plots/test/bezierTest2Y.vtu",FD_derivative_y);
+  auto globalConvexifiedDerivative = convexifier.globalSolutionDerivative(gobalConvexifiedsolution);
+
   project(gobalConvexifiedsolution, solution);
+  update_solution(solution);
+  plot("ConvexifiedWithoutGradient", iterations);
+
+
+
+  project(gobalConvexifiedsolution, globalConvexifiedDerivative, solution);
   update_solution(solution);
   plot("Convexified", iterations);
 
