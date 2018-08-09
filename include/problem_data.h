@@ -17,6 +17,7 @@
 #include "ImageFunction.hpp"
 
 #include <CImg.h>
+#undef Success
 #include <algorithm>
 #include <functional>
 #include <memory>
