@@ -24,18 +24,31 @@
 #include <cmath>
 
 #include "Solver/boundaryHandler.h"
-#include "operator_utils.h"
+#include "Operator/operator_utils.h"
 
 using namespace Dune;
 
-#ifdef HAVE_ADOLC
+#ifndef HAVE_ADOLC
+#define USE_AUTOMATIC_DIFFERENTIATION 0
+#endif
+
 class Local_Operator_MA_OT {
 
-public:
-  typedef DensityFunction Function;
 
-  Local_Operator_MA_OT(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
-    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
+#ifdef USE_AUTOMATIC_DIFFERENTIATION
+  using ValueType = adouble;
+#else
+  using ValueType = Config::ValueType;
+#endif
+
+
+
+
+public:
+  using Function = DensityFunction;
+
+  Local_Operator_MA_OT(const OTBoundary& bc, const Function& rhoX, const Function& rhoY):
+  rhoX(rhoX), rhoY(rhoY),bc(bc), int_f(0), found_negative(false), last_step_on_a_different_grid(false)
   {
     std::cout << " created Local Operator" << std::endl;
   }
@@ -57,10 +70,9 @@ public:
    */
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag) const  {
-
+      VectorType& v, const int tag=0) const  {
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     const int dim = Element::dimension;
@@ -74,12 +86,11 @@ public:
     // Get set of shape functions for this element
     const auto& localFiniteElement = localView.tree().finiteElement();
 
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension> FEHessianType;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension>;
 
     const int size = localView.size();
 
@@ -89,6 +100,7 @@ public:
         3 * ((int) localFiniteElement.localBasis().order()));
     const QuadratureRule<double, dim>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(element, order);
 
+#ifdef USE_AUTOMATIC_DIFFERENTIATION
     //init variables for automatic differentiation
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
     Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(size);
@@ -101,6 +113,11 @@ public:
     //init independent variables
     for (int i = 0; i < size; i++)
       x_adolc[i] <<= x[i];
+#else
+    auto& x_adolc = x;
+    auto& v_adolc = v;
+#endif
+
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -115,19 +132,19 @@ public:
 
       //the shape function values
       std::vector<RangeType> referenceFunctionValues(size);
-      adouble u_value = 0;
+      ValueType u_value = 0;
       assemble_functionValues_u(localFiniteElement, quadPos,
           referenceFunctionValues, x_adolc, u_value);
 
       // The gradients
       std::vector<JacobianType> gradients(size);
-      FieldVector<adouble, Config::dim> gradu;
+      FieldVector<ValueType, Config::dim> gradu;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradu);
 
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size);
-      FieldMatrix<adouble, Config::dim, Config::dim> Hessu;
+      FieldMatrix<ValueType, Config::dim, Config::dim> Hessu;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
           x_adolc, Hessu);
 
@@ -143,10 +160,10 @@ public:
 
       int_f += f_value* quad[pt].weight() * integrationElement;
 
-      adouble uDH_det = determinant(Hessu);
+      ValueType uDH_det = determinant(Hessu);
 
       //calculate value at transported point
-      adouble g_value;
+      ValueType g_value;
       rhoY.evaluate(gradu, g_value);
 
 
@@ -160,12 +177,13 @@ public:
 
 //      std::cerr << "hessian [[" << Hessu[0][0].value() << ", " << Hessu[1][0].value() << "], [" << Hessu[0][1].value() << ", " << Hessu[1][1].value() << "]]" <<  std::endl;
 
-      adouble PDE_rhs = f_value / g_value ;
+      ValueType PDE_rhs = f_value / g_value ;
 
       //calculate system for first test functions
       if (uDH_det.value() < 0 && !found_negative)
       {
         std::cerr << "found negative determinant !!!!! " << uDH_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
+        std::cerr << " x was " << x.transpose() << " at triangle " << geometry.corner(0) << "," << geometry.corner(1) << " and " << geometry.corner(2) << std::endl;
         found_negative = true;
       }
 //      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
@@ -178,36 +196,21 @@ public:
 
         v_adolc(j) += (PDE_rhs-uDH_det)*referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
-
-//        adouble temp = 0;
-//        v_adolc(j)+= (-log(uDH_det)+(-log(g_value)+log(scaling_factor_adolc*f_value)))*referenceFunctionValues[j]* quad[pt].weight() * integrationElement;
-//        v_adolc(j)+= max(temp,temp2);
-//        std::cerr << " max is " << std::max(temp.value(),temp2.value()) << " from " << temp.value() << " and " << temp2.value() << std::endl;
-
-//        if (((PDE_rhs-uDH_pertubed_det)*referenceFunctionValues[j]* quad[pt].weight() * integrationElement).value() > 1e-6)
-//        {
-//          std:: cerr << "v_adolc(" << j << ")+=" << (-log(uDH_det)) << " " << (-log(g_value)+log(f_value))
-//                              * quad[pt].weight() * integrationElement).value()
-//                     << " -> " << v_adolc(j).value() << std::endl;
-//          std::cerr << "at " << x_value << " T " << z[0].value() << " " << z[1].value() << " u " << u_value.value() << " det() " << uDH_pertubed_det.value() << " rhs " << PDE_rhs.value() << endl;
-//        }
       }
-
     }
-
-
+#ifdef USE_AUTOMATIC_DIFFERENTIATION
     for (int i = 0; i < size; i++)
       v_adolc[i] >>= v[i]; // select dependent variables
 
     trace_off();
-
+#endif
   }
 
   template<class IntersectionType, class LocalView, class VectorType>
   void assemble_inner_face_term(const IntersectionType& intersection,
       const LocalView &localView, const VectorType &x,
       const LocalView &localViewn, const VectorType &xn, VectorType& v,
-      VectorType& vn, int tag) const{
+      VectorType& vn, int tag=0) const{
     //assuming galerkin
     assert((unsigned int) x.size() == localView.size());
     assert((unsigned int) xn.size() == localViewn.size());
@@ -223,12 +226,10 @@ public:
     // Get set of shape functions for neighbour element
     const auto& localFiniteElementn = localViewn.tree().finiteElement();
 
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
-
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef FieldVector<Config::ValueType, Config::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<Config::ValueType, IntersectionType::dimensionworld, IntersectionType::dimensionworld> FEHessianType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = FieldVector<Config::ValueType, Config::dim>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, IntersectionType::dimensionworld, IntersectionType::dimensionworld>;
 
     assert((unsigned int) size == localFiniteElement.size());
     assert((unsigned int) size == localFiniteElementn.size());
@@ -254,10 +255,11 @@ public:
         * (SolverConfig::degree * SolverConfig::degree)
         * std::pow(intersection.geometry().volume(), SolverConfig::beta);
 
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(size);
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> xn_adolc(size);
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(size);
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> vn_adolc(size);
+#ifdef USE_AUTOMATIC_DIFFERENTIATION
+    Eigen::Matrix<ValueType, Eigen::Dynamic, 1> x_adolc(size);
+    Eigen::Matrix<ValueType, Eigen::Dynamic, 1> xn_adolc(size);
+    Eigen::Matrix<ValueType, Eigen::Dynamic, 1> v_adolc(size);
+    Eigen::Matrix<ValueType, Eigen::Dynamic, 1> vn_adolc(size);
     for (int i = 0; i < size; i++) {
       v_adolc[i] <<= v[i];
       vn_adolc[i] <<= vn[i];
@@ -271,6 +273,12 @@ public:
     for (int i = 0; i < size; i++) {
       xn_adolc[i] <<= xn[i];
     }
+#else
+    auto& x_adolc = x;
+    auto& xn_adolc = xn;
+    auto& v_adolc = v;
+    auto& vn_adolc = vn;
+#endif
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -290,50 +298,50 @@ public:
       // The shape functions on the reference elements
       // The shape functions
       std::vector<RangeType> referenceFunctionValues(size);
-      adouble u_value = 0;
+      ValueType u_value = 0;
       assemble_functionValues_u(localFiniteElement, quadPos,
           referenceFunctionValues, x_adolc, u_value);
       std::vector<RangeType> referenceFunctionValuesn(size);
-      adouble un_value = 0;
+      ValueType un_value = 0;
       assemble_functionValues_u(localFiniteElementn, quadPosn,
           referenceFunctionValuesn, xn_adolc, un_value);
 
       // The gradients of the shape functions on the reference element
       std::vector<JacobianType> gradients(size);
-      FieldVector<adouble, Config::dim> gradu(0);
+      FieldVector<ValueType, Config::dim> gradu(0);
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradu);
       std::vector<JacobianType> gradientsn(size);
-      FieldVector<adouble, Config::dim> gradun(0);
+      FieldVector<ValueType, Config::dim> gradun(0);
       assemble_gradients_gradu(localFiniteElementn, jacobiann, quadPosn,
           gradientsn, xn_adolc, gradun);
 
       //the shape function values of hessian ansatz functions
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size);
-      FieldMatrix<adouble, Config::dim, Config::dim> Hessu;
+      FieldMatrix<ValueType, Config::dim, Config::dim> Hessu;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
           x_adolc, Hessu);
       std::vector<FEHessianType> Hessiansn(size);
-      FieldMatrix<adouble, Config::dim, Config::dim> Hessun;
+      FieldMatrix<ValueType, Config::dim, Config::dim> Hessun;
       assemble_hessians_hessu(localFiniteElementn, jacobian, quadPos, Hessiansn,
           x_adolc, Hessun);
 
 
 
       //assemble jump and averages
-      adouble u_jump = u_value - un_value;
+      ValueType u_jump = u_value - un_value;
 
 //      std::cerr << " u_jump " << u_jump.value() << std::endl;
 
       assert(std::abs(u_jump.value()) < 1e-8);
 
-      adouble grad_u_normaljump = (gradu - gradun) * normal;
+      ValueType grad_u_normaljump = (gradu - gradun) * normal;
 
 //      std::cerr << " gradu u_jump " << grad_u_normaljump.value() << std::endl;
 
       //      Hess_avg = 0.5*(Hessu+Hessun);
-      FieldMatrix<adouble, Config::dim, Config::dim> Hess_avg = cofactor(Hessu);
+      FieldMatrix<ValueType, Config::dim, Config::dim> Hess_avg = cofactor(Hessu);
       Hess_avg += cofactor(Hessu);
       Hess_avg *= 0.5;
 
@@ -343,9 +351,9 @@ public:
       double factor = quad[pt].weight() * integrationElement;
 
       for (int j = 0; j < size; j++) {
-        FieldVector<adouble, Config::dim> temp;
+        FieldVector<ValueType, Config::dim> temp;
         Hess_avg.mv(gradu, temp);
-        adouble jump = (temp*normal);
+        ValueType jump = (temp*normal);
         Hess_avg.mv(gradun, temp);
         jump -= (temp*normal);
 //        //parts from self
@@ -371,6 +379,7 @@ public:
       }
     }
 
+#ifdef USE_AUTOMATIC_DIFFERENTIATION
     // select dependent variables
     for (int i = 0; i < size; i++) {
       v_adolc[i] >>= v[i];
@@ -386,16 +395,20 @@ public:
 //      << "numer of live activ var " << stats[2] << std::endl
 //      << "numer of size of value stack " << stats[3] << std::endl
 //      << "numer of buffer size " << stats[4] << std::endl;
-
+#endif
   }
-
 
   template<class Intersection, class LocalView, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalView &localView,
-      const VectorType &x, VectorType& v, int tag=0) const {
+      const VectorType &x, VectorType& v, int tag = 0) const {}
 
-  }
+
+  ///use given global function (probably living on a coarser grid) to evaluate last step
+  void set_evaluation_of_u_old_to_different_grid() const{  last_step_on_a_different_grid = true;}
+  ///use coefficients of old function living on the same grid to evaluate last step
+  void set_evaluation_of_u_old_to_same_grid() const{  last_step_on_a_different_grid = false;}
+  bool is_evaluation_of_u_old_on_different_grid() const {return last_step_on_a_different_grid;}
 
   const Function& get_input_distribution() const {return rhoX;}
   const Function& get_target_distribution() const {return rhoY;}
@@ -413,27 +426,7 @@ public:
   mutable double int_f;
   mutable bool found_negative;
 
+  mutable bool last_step_on_a_different_grid;
 };
-#else
-class Local_Operator_MA_OT {
-public:
-  typedef DensityFunction Function;
-  mutable bool found_negative;
-
-  template<class LocalView, class VectorType>
-  void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag) const { std::cerr << "did not found adolc"<< std::endl; std::exit(-1); }
-  template<class IntersectionType, class LocalView, class VectorType>
-  void assemble_inner_face_term(const IntersectionType& intersection,
-      const LocalView &localView, const VectorType &x,
-      const LocalView &localViewn, const VectorType &xn, VectorType& v,
-      VectorType& vn, int tag) const{ std::cerr << "did not found adolc"<< std::endl; std::exit(-1);}
-
-  template<class Intersection, class LocalView, class VectorType>
-  void assemble_boundary_face_term(const Intersection& intersection,
-      const LocalView &localView,
-      const VectorType &x, VectorType& v, int tag) const { std::cerr << "did not found adolc"<< std::endl; std::exit(-1);}
-};
-#endif
 
 #endif /* OPERATOR_MA_OT_HH_ */

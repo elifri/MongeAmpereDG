@@ -12,11 +12,14 @@
 #include <dune/common/function.hh>
 
 #include <cmath>
-#include <Eigen/Core>
 #include "CImg.h"
+#undef Success
+
+#include <Eigen/Core>
 
 #include "MAconfig.h"
 #include "utils.hpp"
+#include "Solver/solver_config.h"
 
 #include "OT/problem_data_OT.h"
 
@@ -32,18 +35,27 @@ class ImageFunction : public DensityFunction
     double h_;
     double minValue_;
     double blurCoeff_;
+    double factor_;  /// factor for normalization
+
+    const SolverConfig::GridHandlerType* gridHandler_;
 
 
   public:
-    double factor_;  /// factor for normalization
 
     static bool use_adouble_image_evaluation;
 
-    ImageFunction(){}
     ImageFunction (
         const std::string &filename,
-        const Config::SpaceType2d lowerLeft,
-        const Config::SpaceType2d upperRight,
+        const SolverConfig::GridHandlerType& gridHandler,
+        const Config::SpaceType2d &lowerLeft,
+        const Config::SpaceType2d &upperRight,
+        const double minValue=0.0
+    );
+
+    ImageFunction (
+        const std::string &filename,
+        const Config::SpaceType2d &lowerLeft,
+        const Config::SpaceType2d &upperRight,
         const double minValue=0.0
     );
 
@@ -52,6 +64,7 @@ class ImageFunction : public DensityFunction
 
     double minValue() const {return minValue_;}
     double gridWidth() const {return h_;}
+    double get_factor() const {return factor_;}
 
     cimg_library::CImg<double>& getOriginalImage () { return image_; }
     const cimg_library::CImg<double>& getOriginalImage () const { return image_; }
@@ -78,6 +91,7 @@ class ImageFunction : public DensityFunction
     }
 
     double integrate2(const unsigned int n = SolverConfig::startlevel+SolverConfig::nonlinear_steps+1) const;
+    double integrate2Omega(const unsigned int n = SolverConfig::startlevel+SolverConfig::nonlinear_steps+1) const;
 
     double omega_integrate(const unsigned int n = SolverConfig::startlevel+SolverConfig::nonlinear_steps+1) const;
 

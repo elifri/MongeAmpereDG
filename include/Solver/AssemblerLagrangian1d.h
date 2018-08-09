@@ -18,17 +18,16 @@ public:
     assert((unsigned int) v.size() == localView.size());
 
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     // Get set of shape functions for this element
     const auto& localFiniteElement = localView.tree().finiteElement();
 
     //extract type
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
     // Get a quadrature rule
     int order = std::max(0,
         3 * ((int) localFiniteElement.localBasis().order()));
@@ -57,15 +56,14 @@ public:
     assert((unsigned int) x.size() == localView.size());
 
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     // Get set of shape functions for this element
     const auto& localFiniteElement = localView.tree().finiteElement();
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
 
     // Get a quadrature rule
     int order = std::max(0,
@@ -94,16 +92,10 @@ public:
  * B(u,q) for u \in V_h and q \in Q_h where Q_h is a space defined one a grid one level coarser than the grid of V_h
  *
  */
-template<typename FETraits>
+template<typename FETraits = SolverConfig::FETraitsSolver>
 class AssemblerLagrangianMultiplier1D:public Assembler<FETraits>{
-
-
 public:
   using Assembler<FETraits>::Assembler;
-  //TODO: why is this necessary, shouldnt the compiler find it itself?
-  using Assembler<FETraits>::calculate_local_coefficients;
-  using Assembler<FETraits>::add_local_coefficients;
-
   /**
    * assembles the matrix (col dimension =1), note that this matrix does not depend on the last step u
    * @param lop     the local operator
@@ -135,7 +127,7 @@ void AssemblerLagrangianMultiplier1D<FETraits>::assemble_u_independent_matrix(co
 
     lop.assemble_u_independent_cell_term_(localView, local_vector, volume);
 
-    add_local_coefficients(localIndexSet,local_vector, v);
+    this->add_local_coefficients(localIndexSet,local_vector, v);
   }
   v/=volume;
 }
@@ -157,7 +149,7 @@ void AssemblerLagrangianMultiplier1D<FETraits>::assembleRhs(const LocalOperatorT
     localView.bind(e);
     localIndexSet.bind(localView);
 
-    Config::VectorType xLocal = calculate_local_coefficients(localIndexSet, x);
+    Config::VectorType xLocal = this->calculate_local_coefficients(localIndexSet, x);
 
     lop.assemble_cell_term(localView, xLocal, v, volume);
   }

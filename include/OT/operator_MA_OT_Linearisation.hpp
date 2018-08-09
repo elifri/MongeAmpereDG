@@ -8,12 +8,16 @@
 #ifndef SRC_OT_OPERATOR_MA_OT_LINEARISATION_HPP_
 #define SRC_OT_OPERATOR_MA_OT_LINEARISATION_HPP_
 
+#include <functional>
+
 //#include "OT/operator_MA_OT.h"
 #include "OT/problem_data_OT.h"
 #include "Solver/solver_config.h"
 #include "utils.hpp"
 #include "SmoothingKernel.h"
-#include "operator_utils.h"
+#include "Operator/operator_utils.h"
+
+#include "localfunctions/TaylorBoundaryFunction.hpp"
 
 using namespace Dune;
 
@@ -24,109 +28,58 @@ value_type FrobeniusProduct(const FieldMatrix<value_type, 2, 2>& A, const FieldM
   return A[0][0]*B[0][0]+A[0][1]*B[0][1]+A[1][0]*B[1][0]+A[1][1]*B[1][1];
 }
 
-
 class Local_Operator_MA_OT_Linearisation {
+  using Function = DensityFunction;
+  using TaylorFunction = TaylorBoundaryFunction<SolverConfig::FETraitsSolver::DiscreteGridFunction>;
+
 
 public:
-  typedef DensityFunction Function;
+  using FunctionType = Function;///interface typedef
 
-  Local_Operator_MA_OT_Linearisation(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
-  delta_K(10), rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), sign(1.0), found_negative(false)
+  Local_Operator_MA_OT_Linearisation(const OTBoundary& bc, const Function& rhoX, const Function& rhoY):
+  delta_K(10), rhoX(rhoX), rhoY(rhoY),bc(bc),
+  int_f(0), sign(1.0), found_negative(false), last_step_on_a_different_grid(false),
+  oldSolutionCaller_()
   {
   }
 
-  /**
-   * implements the local volume integral
-   * @param element        the element the integral is evaluated on
-   * @param localFiniteElement the local finite elemnt (on the reference element)
-   * @param x              local solution coefficients
-   * @param v          local residual (to be returned)
-   */
-  template<class LocalView, class VectorType, class DenseMatrixType>
-  void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, DenseMatrixType& m) const
-  {
+/*  template<typename RangeType, typename JacobianType, typename FEHessianType, int size>
+  struct CelltermData{
+    std::vector<RangeType> referenceFunctionValues;
+    std::vector<JacobianType> gradients;
+    std::vector<FEHessianType> Hessians;
 
-    // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
-    const Element& element = localView.element();
+    Config::ValueType u_value;
+    FieldVector<double, Config::dim> gradu;
+    FieldMatrix<double, Config::dim, Config::dim> Hessu;
 
-    const int dim = Element::dimension;
-    auto geometry = element.geometry();
+    double integrationElement;
 
-    //assuming galerkin ansatz = test space
-
-    assert((unsigned int) x.size() == localView.size());
-    assert((unsigned int) v.size() == localView.size());
-
-    // Get set of shape functions for this element
-    const auto& localFiniteElement = localView.tree().finiteElement();
-
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
-
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension> FEHessianType;
-
-    const int size = localView.size();
-
-    // Get a quadrature rule
-    int order = std::max(0,
-        3 * ((int) localFiniteElement.localBasis().order()));
-    const QuadratureRule<double, dim>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(element, order);
-
-    // Loop over all quadrature points
-    for (size_t pt = 0; pt < quad.size(); pt++) {
-
-      //--------get data------------------------
-      // Position of the current quadrature point in the reference element
-      const FieldVector<double, dim> &quadPos = quad[pt].position();
-      // The transposed inverse Jacobian of the map from the reference element to the element
+    template<typename GeometryType, typename LocalFiniteElement, typename VectorType, int dim>
+    CelltermData(const GeometryType& geometry, const LocalFiniteElement& lfu, const FieldVector<double, dim>& quadPos,  const VectorType &x):
+      referenceFunctionValues(size), gradients(size), Hessians(size),
+      u_value(0.),
+      integrationElement(geometry.integrationElement(quadPos))
+    {
       const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
-      // The multiplicative factor in the integral transformation formula
-      const double integrationElement = geometry.integrationElement(quadPos);
 
-      //the shape function values
-      std::vector<RangeType> referenceFunctionValues(size);
-      double u_value = 0;
-      assemble_functionValues_u(localFiniteElement, quadPos,
+      assemble_functionValues_u(lfu, quadPos,
           referenceFunctionValues, x, u_value);
 
-      // The gradients
-      std::vector<JacobianType> gradients(size);
-      FieldVector<double, Config::dim> gradu;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x, gradu);
 
-      // The hessian of the shape functions
-      std::vector<FEHessianType> Hessians(size);
-      FieldMatrix<double, Config::dim, Config::dim> Hessu;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
           x, Hessu);
+    }
+      };
 
-      //--------assemble cell integrals in variational form--------
+*/
 
-      assert(Config::dim == 2);
-
-      auto cofHessu = convexified_penalty_cofactor(Hessu);
-//      auto cofHessu = cofactor(Hessu);
-      double ev0, ev1;
-      calculate_eigenvalues(cofHessu, ev0, ev1);
-//      auto minEVcofHessu = std::min(std::abs(ev0), std::abs(ev1));
-      //if the matrix is convexified both eigenvalues are positiv and ev0 is always smaller
-      auto minEVcofHessu = ev0;
-      assert(std::abs(minEVcofHessu - std::min(std::abs(ev0), std::abs(ev1))) < 1e-10);
-
-      auto x_value = geometry.global(quad[pt].position());
-
-      //calculate illumination at \Omega
-      double f_value;
-      rhoX.evaluate(x_value, f_value);
-
-      int_f += f_value* quad[pt].weight() * integrationElement;
-
-      //calculate illumination at target plane
+template<int dim>
+    FieldVector<double,dim> smooth_convection_term(const FieldVector<double, dim>& gradu,
+        const double& f_value, double& avg_g_value, const double& integrationElement) const
+    {
       double g_value;
       FieldVector<double, dim> gradg;
 
@@ -156,12 +109,10 @@ public:
       std::cerr << " g1 " << Dx1PlusF_value << " g2 " << Dx2PlusF_value << std::endl;
 #endif
 
-
       auto h_T = std::sqrt(integrationElement);
 
       //velocity vector for convection
       FieldVector<double,dim> b(0);
-      double avg_g_value = 0;
 
       //calculate average convection term
       const double h = rhoY.gridWidth()/2.;
@@ -190,8 +141,8 @@ public:
         avg_g_value += smoothingKernel_(i+n_,j+n_)*g_value;
       }
 
+      /*
       auto P_T = b.two_norm() * h_T/2./minEVcofHessu;
-/*
         if (std::abs(dP_T) > 1.)
         {
           for (int i = -n_ ; i <= n_; i++)
@@ -202,22 +153,118 @@ public:
           std::cerr << "gradg " << gradg << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
         }
 */
+      return b;
+    }
+
+
+  /**
+   * implements the local volume integral
+   * @param element        the element the integral is evaluated on
+   * @param localFiniteElement the local finite elemnt (on the reference element)
+   * @param x              local solution coefficients
+   * @param v          local residual (to be returned)
+   */
+  template<class LocalView, class VectorType, class DenseMatrixType>
+  void assemble_cell_term(const LocalView& localView, const VectorType &x,
+      VectorType& v, DenseMatrixType& m) const
+  {
+
+    // Get the grid element from the local FE basis view
+    using Element = typename LocalView::Element;
+    const Element& element = localView.element();
+
+    const int dim = Element::dimension;
+    auto geometry = element.geometry();
+
+    //assuming galerkin ansatz = test space
+
+    assert((unsigned int) x.size() == localView.size());
+    assert((unsigned int) v.size() == localView.size());
+
+    // Get set of shape functions for this element
+    const auto& localFiniteElement = localView.tree().finiteElement();
+
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
+
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension>;
+
+    const int size = localView.size();
+
+    // Get a quadrature rule
+    int order = std::max(0,
+        3 * ((int) localFiniteElement.localBasis().order()));
+    const QuadratureRule<double, dim>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(element, order);
+
+    // Loop over all quadrature points
+    for (size_t pt = 0; pt < quad.size(); pt++) {
+
+      //--------get data------------------------
+      // Position of the current quadrature point in the reference element
+      const FieldVector<double, dim> &quadPos = quad[pt].position();
+
+      //global grid position of current quadrature point
+      auto x_value = geometry.global(quad[pt].position());
+
+      // The multiplicative factor in the integral transformation formula
+      const double integrationElement = geometry.integrationElement(quadPos);
+
+      //the shape function values
+      std::vector<RangeType> referenceFunctionValues(size);
+      std::vector<JacobianType> gradients(size);
+      std::vector<FEHessianType> Hessians(size);
+
+      double u_value = 0;
+      FieldVector<double, Config::dim> gradu;
+      FieldMatrix<double, Config::dim, Config::dim> Hessu;
+
+      if (last_step_on_a_different_grid)
+        assemble_cellTermFEData(geometry, localFiniteElement, quadPos, oldSolutionCaller_(), x_value,
+          referenceFunctionValues, gradients, Hessians, u_value, gradu, Hessu);
+      else
+        assemble_cellTermFEData(geometry, localFiniteElement, quadPos, x,
+          referenceFunctionValues, gradients, Hessians, u_value, gradu, Hessu);
+
+      //--------assemble cell integrals in variational form--------
+
+      assert(Config::dim == 2);
+
+      auto cofHessu = convexified_penalty_cofactor(Hessu);
+//      auto cofHessu = cofactor(Hessu);
+      double ev0, ev1;
+      calculate_eigenvalues(cofHessu, ev0, ev1);
+//      auto minEVcofHessu = std::min(std::abs(ev0), std::abs(ev1));
+      //if the matrix is convexified both eigenvalues are positiv and ev0 is always smaller
+      auto minEVcofHessu = ev0;
+      assert(std::abs(minEVcofHessu - std::min(std::abs(ev0), std::abs(ev1))) < 1e-10);
+
+      //calculate illumination at \Omega
+      double f_value;
+      rhoX.evaluate(x_value, f_value);
+
+      int_f += f_value* quad[pt].weight() * integrationElement;
+
+      //calculate illumination at target plane
+      double avg_g_value = 0;
+      FieldVector<double,dim> b = smooth_convection_term(gradu, f_value, avg_g_value, integrationElement);
 
       auto detHessu = determinant(Hessu); //note that determinant of Hessu and cofHessu is the same
-      rhoY.evaluate(gradu, g_value);
+//      double g_value;
+//      rhoY.evaluate(gradu, g_value);
 
-      if (detHessu < 0)
+      //check if determinant is negative, i.e. u is not convex
+      if (detHessu < 0 && !found_negative)
       {
         std::cerr << "found negative determinant " << detHessu << " at " << x_value << std::endl;
-        std::cerr << " rhs was  " << f_value/g_value << std::endl;
-        std::cerr << "gradg " << gradg << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
+        std::cerr << " rhs was  " << f_value/avg_g_value << std::endl;
+        std::cerr << "-detHessu+f_value/g_value" << -detHessu+f_value/avg_g_value << std::endl;
+
+        //        std::cerr << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
+        found_negative = true;
       }
 
-//      std::cerr << " det -f/g " << -detHessu+f_value/g_value << std::endl;
-
-
-      //write calculated distribution
-
+      //write into system matrix
       for (int j = 0; j < size; j++) // loop over test fcts
       {
         for (int i = 0; i < size; i++) //loop over ansatz fcts
@@ -232,11 +279,17 @@ public:
         }
 
         //-f(u_k) [rhs of Newton]
-        v(j) += (-detHessu+f_value/g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-//        v(j) += (-detHessu)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-        if (detHessu < 0)
+        if (!last_step_on_a_different_grid)
         {
-          std::cerr << "-detHessu+f_value/g_value" << -detHessu+f_value/g_value << std::endl;
+          v(j) += (-detHessu+f_value/avg_g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+//        v(j) += (-detHessu)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+          assert(! (v(j)!=v(j)));
+        }
+        else
+        {
+          FieldVector<double,dim> cofTimesGradu;
+          cofHessu.mv(gradu,cofTimesGradu);
+          v(j) += (cofTimesGradu*gradients[j] + (b*gradu)*referenceFunctionValues[j] )*quad[pt].weight()*integrationElement;
         }
         assert(! (v(j)!=v(j)));
 
@@ -276,12 +329,11 @@ public:
     // Get set of shape functions for neighbour element
     const auto& localFiniteElementn = localViewn.tree().finiteElement();
 
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef FieldVector<Config::ValueType, Config::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<Config::ValueType, IntersectionType::dimensionworld, IntersectionType::dimensionworld> FEHessianType;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = FieldVector<Config::ValueType, Config::dim>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, IntersectionType::dimensionworld, IntersectionType::dimensionworld>;
 
     assert((unsigned int) size == localFiniteElement.size());
     assert((unsigned int) size == localFiniteElementn.size());
@@ -298,14 +350,6 @@ public:
         dim - 1>::general(intersection.geometry().type()).position(0, 0);
     const FieldVector<double, dim> normal = intersection.unitOuterNormal(
         face_center);
-
-    // penalty weight for NIPG / SIPG
-//    double penalty_weight = SolverConfig::sigma
-//        * (SolverConfig::degree * SolverConfig::degree)
-//        / std::pow(intersection.geometry().volume(), SolverConfig::beta);
-    double penalty_weight_gradient = SolverConfig::sigmaGrad
-        * (SolverConfig::degree * SolverConfig::degree)
-        * std::pow(intersection.geometry().volume(), SolverConfig::beta);
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -401,9 +445,112 @@ public:
   template<class Intersection, class LocalView, class VectorType, class MatrixType>
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalView &localView,
-      const VectorType &x, VectorType& v, MatrixType& m) const {}
+      const VectorType &x, VectorType& v, MatrixType& m) const {
 
-    mutable double delta_K;
+    const int dim = Intersection::dimension;
+    const int dimw = Intersection::dimensionworld;
+
+    auto geometry = intersection.inside().geometry();
+
+    //get local finite elements
+    const auto& localFiniteElement = localView.tree().finiteElement();
+    const unsigned int size_u = localFiniteElement.size();
+
+    //find type of Jacobian
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
+
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, dimw>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, dimw, dimw>;
+
+    // ----start quadrature on fine grid(V_h)--------
+
+    // Get a quadrature rule
+    const int order = std::max(0, 3 * ((int) localFiniteElement.localBasis().order()));
+    GeometryType gtface = intersection.geometryInInside().type();
+    const QuadratureRule<double, dim - 1>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim-1>(gtface, order);
+
+    // normal of center in face's reference element
+    const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
+        dim - 1>::general(intersection.geometry().type()).position(0, 0);
+    const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
+        face_center);
+
+    // Loop over all quadrature points
+    for (size_t pt = 0; pt < quad.size(); pt++) {
+
+      //------get data----------
+      // Position of the current quadrature point in the reference element
+      const FieldVector<double, dim> &quadPos =
+          intersection.geometryInInside().global(quad[pt].position());
+
+      auto x_value = geometry.global(quadPos);
+
+      //the shape function values
+      std::vector<JacobianType> gradients(size_u);
+      std::vector<FEHessianType> Hessians(size_u);
+
+      FieldVector<double, Config::dim> gradu;
+      FieldMatrix<double, Config::dim, Config::dim> Hessu;
+
+      std::vector<RangeType> referenceFunctionValues(size_u);
+      assemble_functionValues(localFiniteElement, quadPos,
+          referenceFunctionValues);
+
+      if (last_step_on_a_different_grid)
+        assemble_cellTermFEData_only_derivatives(geometry, localFiniteElement, quadPos, oldSolutionCaller_(), x_value,
+          gradients, Hessians, gradu, Hessu);
+      else
+        assemble_cellTermFEData_only_derivatives(geometry, localFiniteElement, quadPos, x,
+          gradients, Hessians, gradu, Hessu);
+
+      //calculate \nabla H(\nabla u) = n_y
+      const auto cofHessu = convexified_penalty_cofactor(Hessu);
+      //assume n_y of last step
+      FieldVector<double, dimw> cofHessuTimesgradw;
+      //-------calculate integral--------
+
+      const auto integrationElement =
+          intersection.geometry().integrationElement(quad[pt].position());
+      const double factor = quad[pt].weight() * integrationElement;
+      for (unsigned int i = 0; i < size_u; i++)
+      {
+        cofHessu.mv(gradients[i], cofHessuTimesgradw);
+        for (size_t j = 0; j < size_u; j++)
+        {
+          m(j,i) += (cofHessuTimesgradw*normal)*referenceFunctionValues[j]*factor;
+        }
+
+        if (last_step_on_a_different_grid)
+        {
+          cofHessu.mv(gradu, cofHessuTimesgradw);
+          v(i) += (cofHessuTimesgradw*normal)*referenceFunctionValues[i]*factor;
+        }
+      }
+
+    }
+
+
+
+  }
+
+  ///use given global function (probably living on a coarser grid) to evaluate last step
+  void set_evaluation_of_u_old_to_different_grid() const{  last_step_on_a_different_grid = true;}
+  ///use coefficients of old function living on the same grid to evaluate last step
+  void set_evaluation_of_u_old_to_same_grid() const{  last_step_on_a_different_grid = false;}
+
+  template<typename F>
+  void change_oldFunction(F&& uOld)
+  {
+    oldSolutionCaller_ = std::forward<F>(uOld);
+  }
+
+  const Function& get_input_distribution() const {return rhoX;}
+  const Function& get_target_distribution() const {return rhoY;}
+
+  const OTBoundary& get_bc() {return bc;}
+
+  mutable double delta_K;
 
   static constexpr int collocationNo[3][3] = {{0,3,4},{0,11,8},{4,7,8}};
   static SmoothingKernel smoothingKernel_;
@@ -414,10 +561,14 @@ public:
   const Function& rhoY;
   const OTBoundary& bc;
 
+
   mutable double int_f;
   mutable double sign;
 
   mutable bool found_negative;
+
+  mutable bool last_step_on_a_different_grid;
+  std::function<const TaylorFunction&()> oldSolutionCaller_;
 };
 
 #endif /* SRC_OT_OPERATOR_MA_OT_LINEARISATION_HPP_ */

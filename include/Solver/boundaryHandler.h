@@ -13,7 +13,7 @@
 
 class BoundaryHandler{
 public:
-  typedef Eigen::Matrix<bool,Eigen::Dynamic, 1> BoolVectorType;
+  using BoolVectorType = Eigen::Matrix<bool,Eigen::Dynamic, 1>;
 
   BoundaryHandler(): initialised_(false){
   }
@@ -105,7 +105,7 @@ void BoundaryHandler::add_local_coefficients_Only_Boundary(const LocalIndexSet &
   for (size_t i = 0; i < localIndexSet.size(); i++)
   {
     assert(! (v_local[i]!=v_local[i]));
-    int global_index = FETraitsUtil::get_index(localIndexSet, i);
+    int global_index = SolverConfig::FETraitsSolver::get_index(localIndexSet, i);
     if (isBoundaryDoF(global_index))
       v(BoundaryNo(global_index)) += v_local[i] ;
   }
@@ -122,9 +122,11 @@ void BoundaryHandler::add_local_coefficients_Only_Boundary_row(const LocalIndexS
   {
     for (int j = 0; j < m_local.cols(); j++)
     {
-      int globalIndexRow = FETraitsUtil::get_index(localIndexSetRow, i);
+      int globalIndexRow = SolverConfig::FETraitsSolver::get_index(localIndexSetRow, i);
       if (isBoundaryDoF(globalIndexRow))
-        je.push_back(EntryType(BoundaryNo(globalIndexRow),FETraitsUtil::get_index(localIndexSetCol,j),m_local(i,j)));
+      {
+        je.push_back(EntryType(BoundaryNo(globalIndexRow),SolverConfig::FETraitsSolver::get_index(localIndexSetCol,j),m_local(i,j)));
+      }
     }
   }
 }
@@ -152,7 +154,7 @@ void BoundaryHandler::init_boundary_dofs(const FEBasis& feBasis)
     localView.bind(element);
     localIndexSet.bind(localView);
 
-    const auto& lFE = FETraits<FEBasis>::get_finiteElementu(localView);
+    const auto& lFE = SolverConfig::FETraitsSolver::get_finiteElementu(localView);
 
     //store local boundary information
     BoolVectorType localIsBoundary = BoolVectorType::Constant(lFE.size(),false);
@@ -269,7 +271,7 @@ void BoundaryHandler::init_boundary_dofs(const FEBasis& feBasis)
 
     for (size_t i = 0; i < lFE.size(); i++)
     {
-      const auto globalIndex = FETraits<FEBasis>::get_index(localIndexSet,i);
+      const auto globalIndex = SolverConfig::FETraitsSolver::get_index(localIndexSet,i);
 
       //check if boundary dof
 

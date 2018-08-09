@@ -11,7 +11,7 @@
 #include <dune/common/function.hh>
 #include "utils.hpp"
 #include "OT/problem_data_OT.h"
-#include "OT/operator_utils.h"
+#include "Operator/operator_utils.h"
 
 #include "Solver/solver_config.h"
 
@@ -20,7 +20,7 @@ using namespace Dune;
 class Local_Operator_MA_OT_Brenner {
 
 public:
-  typedef DensityFunction Function;
+  using Function = DensityFunction;
 
   template<typename GridView>
   Local_Operator_MA_OT_Brenner(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
@@ -42,7 +42,7 @@ public:
     assert(false); // not up to date code?
 
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     const int dim = Element::dimension;
@@ -56,12 +56,11 @@ public:
     // Get set of shape functions for this element
     const auto& localFiniteElement = localView.tree().finiteElement();
 
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
-    typedef typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension> FEHessianType;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension>;
 
     const int size = localView.size();
 
@@ -207,10 +206,10 @@ public:
     // Get set of shape functions for neighbour element
     const auto& localFiniteElementn = localViewn.tree().finiteElement();
 
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    using ConstElementRefType = decltype(localFiniteElement);
+    using ConstElementType = typename std::remove_reference<ConstElementRefType>::type;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
+    using RangeType = typename ConstElementType::Traits::LocalBasisType::Traits::RangeType;
     typedef FieldVector<Config::ValueType, Config::dim> JacobianType;
     typedef typename Dune::FieldMatrix<Config::ValueType, IntersectionType::dimensionworld, IntersectionType::dimensionworld> FEHessianType;
 
@@ -390,11 +389,11 @@ public:
     const auto& localFiniteElement = localView.tree().finiteElement();
     const unsigned int size_u = localFiniteElement.size();
 
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    using ConstElementRefType = decltype(localFiniteElement);
+    using ConstElementType = typename std::remove_reference<ConstElementRefType>::type;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
+    using RangeType = typename ConstElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
 
     //-----init variables for automatic differentiation
 

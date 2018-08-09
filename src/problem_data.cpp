@@ -9,6 +9,39 @@
 
 #include "Solver/MA_solver.h"
 
+Dirichletdata* make_Dirichletdata()
+{
+  switch (SolverConfig::problem)
+  {
+  case SIMPLE_MA:
+    return new Dirichletdata([](Config::SpaceType x){return x.two_norm2()/2.0;});
+    break;
+  case CONST_RHS:
+    return new Dirichletdata([](Config::SpaceType x){return x.two_norm2()/2.0;});
+    break;
+  case MA_SMOOTH:
+    return new Dirichletdata([](Config::SpaceType x){return std::exp(x.two_norm2()/2.);});
+    break;
+  case MA_C1:
+    {
+/*
+      return new Dirichletdata([](Config::SpaceType x){
+        return sqr(std::abs(x.two_norm2()-x_0 -2) < 1e-6? 1e19 : -std::sqrt(2 - x.two_norm2());});
+*/
+    }
+    break;
+  case MA_SQRT:
+    return new Dirichletdata([](Config::SpaceType x){
+      return std::abs(x.two_norm2() -2) < 1e-6? 1e19 : -std::sqrt(2 - x.two_norm2());});
+    break;
+  default:
+    std::cerr << "Unknown problem ... " << std::endl;
+    exit(-1);
+  }
+
+  return new Dirichletdata();
+}
+
 void PDE_functions::f(const Config::SpaceType2d& x, Config::ValueType &out){
 	out = 1;
 }
@@ -57,39 +90,171 @@ adouble interpolate_cubic_atXY(cimg_library::CImg<double> image , const adouble 
 }
 #endif
 
-void RightHandSideReflector::phi(const Config::SpaceType2d& T, const FieldVector<double, Config::dim> &normal, Config::ValueType &phi) const
- {
-   if (false)
-   {
-     phi_initial(T);
-   }
-   else
-   {
-     Config::ValueType x_min = std::min(T[0]-opticalsetting.lowerLeftTarget[0], opticalsetting.upperRightTarget[0] - T[0]);
-     Config::ValueType y_min = std::min(T[1]-opticalsetting.lowerLeftTarget[1], opticalsetting.upperRightTarget[1] - T[1]);
 
-     Config::SpaceType2d T_proj = T;
-     if (x_min < y_min)
-       T_proj[0] = T[0]-opticalsetting.lowerLeftTarget[0] < opticalsetting.upperRightTarget[0] - T[0] ?  opticalsetting.lowerLeftTarget[0] : opticalsetting.upperRightTarget[0];
-     else
-       T_proj[1] = T[1]-opticalsetting.lowerLeftTarget[1] < opticalsetting.upperRightTarget[1] - T[1] ?  opticalsetting.lowerLeftTarget[1] : opticalsetting.upperRightTarget[1];
-     phi = T_proj * normal;
-   }
- }
+void read_quadratic_grid(const std::string &filename,   int &n_x, int &n_y,
+                        double &h_x, double &h_y,
+                        double &x0, double &y0,
+                        Eigen::MatrixXd &solution)
+{
+  std::ifstream file(filename.c_str());   //format "n ## h ## \n u(0,0) u(h,0) ... \n u(h,h) ..."
+  if(!file) { // file couldn't be opened
+        std::cerr << "Error: file "<< filename << " for reading rectangle grid could not be opened" << std::endl;
+        std::exit(1);
+     }
+  std::cout << "Reading starting point from file " << filename << "... " << std::endl;
 
-/*
+  std::stringstream ss;
+  std::string s;
 
-void RightHandSideReflector::init(){
-	SolverConfig::UnitCubeType unitcube_quadrature(SolverConfig::lowerLeft, SolverConfig::upperRight, SolverConfig::startlevel+SolverConfig::nonlinear_steps);
-  SolverConfig::UnitCubeType unitcube_quadrature_target(SolverConfig::lowerLeftTarget, SolverConfig::upperRightTarget, SolverConfig::startlevel+SolverConfig::nonlinear_steps);
-	init(Integrator<SolverConfig::GridType>(unitcube_quadrature.grid_ptr()), Integrator<SolverConfig::GridType>(unitcube_quadrature_target.grid_ptr()));
+  assert (!file.eof() && "The inserted grid file is too short");
+  file >> n_x; //read n_x
+
+  file >> n_y; //read n_y
+
+  file >> h_x; //read h_x
+
+  file >> h_y; //read h_y
+
+  file >> x0;
+  file >> y0;
+
+  solution.resize(n_x,n_y);
+
+  for (int y=0; y < n_y; y++)
+  {
+    for (int x=0; x < n_x; x++)
+    {
+      assert(!file.eof() && "The inserted grid file is too short");
+      file >> solution(x,y);
+    }
+  }
 }
 
-void RightHandSideReflector::init(const Integrator<SolverConfig::GridType>& integratorDomain, const Integrator<SolverConfig::GridType>& integratorTarget){
-	integral_f = integratorDomain.assemble_integral(f_callback);
-	integral_g = integratorTarget.assemble_integral(g_initial_callback);
-}
-*/
+void read_quadratic_grid_vtk(std::string filename,   int &n_x, int &n_y,
+                        double &h_x, double &h_y,
+                        double &x0, double &y0,
+                        Eigen::MatrixXd &solution)
+{
+  std::ifstream file(filename.c_str());   //format "n ## h ## \n u(0,0) u(h,0) ... \n u(h,h) ..."
+  if(!file) { // file couldn't be opened
+        cerr << "Error: file "<< filename << " for reading rectangle grid could not be opened" << std::endl;
+        exit(1);
+     }
+  std::cout << "Reading starting point from file " << filename << "... " << std::endl;
 
+  std::stringstream ss;
+  std::string s;
+
+  assert (!file.eof() && "The inserted grid file is too short");
+  file >> s; file >> n_x; //read n_x
+
+  file >> s; file >> n_y; //read n_y
+
+  file >> s; file >> h_x; //read h_x
+
+  file >> s;  file >> h_y; //read h_y
+
+  file >> s;  file >> x0;
+  file >> s;  file >> y0;
+
+  solution.resize(n_x,n_y);
+
+  for (int y=0; y < n_y; y++)
+  {
+    for (int x=0; x < n_x; x++)
+    {
+      double temp;
+      file >> temp; file >> temp;
+      assert(!file.eof());
+      file >> solution(x,y);
+    }
+  }
+}
+
+
+void bilinear_interpolate(const Config::SpaceType x, Config::ValueType &u, const int &n_x, const int &n_y,
+    const Config::ValueType &h_x, const Config::ValueType &h_y,
+    const Config::ValueType &x0, const Config::ValueType &y0,
+    const Eigen::MatrixXd &solution)
+{
+  int index_x = (x[0]-x0)/h_x, index_y = (x[1]-y0)/h_y; //index of the bottom left corner of the rectangle where x lies in
+  assert(index_x >= 0); assert(index_x < solution.rows());
+  assert(index_y >= 0); assert(index_y < solution.cols());
+
+  //special case at right boundary
+  if (index_x == solution.rows()-1) index_x--;
+  if (index_y == solution.cols()-1) index_y--;
+
+  Config::ValueType x1 = x0 + h_x*index_x, x2 = x1+h_x; //coordinates of rectangle
+  Config::ValueType y1 = y0 + h_y*index_y, y2 = y1+h_y;
+
+  //interpolate parallel to x-axis
+  Config::ValueType f1 = (x2-x[0])/h_x * solution(index_x, index_y) + (x[0]-x1)/h_x * solution(index_x+1, index_y);
+  Config::ValueType f2 = (x2-x[0])/h_x * solution(index_x, index_y+1) + (x[0]-x1)/h_x * solution(index_x+1, index_y+1);
+
+  //interpolate parallel to y-axis
+  u = (y2-x[1])/h_y * f1  +  (x[1]-y1)/h_y * f2;
+}
+
+void bilinear_interpolate_derivative(const Config::SpaceType x, Config::SpaceType2d &du, const int &n_x, const int &n_y,
+    const Config::ValueType &h_x, const Config::ValueType &h_y,
+    const Config::ValueType &x0, const Config::ValueType &y0,
+    const Eigen::MatrixXd &solution)
+{
+  int index_x = (x[0]-x0)/h_x, index_y = (x[1]-y0)/h_y; //index of the bottom left corner of the rectangle where x lies in
+  assert(index_x >= 0); assert(index_x < solution.rows());
+  assert(index_y >= 0); assert(index_y < solution.cols());
+
+  //special case at right boundary
+  if (index_x == solution.rows()-1) index_x--;
+  if (index_y == solution.cols()-1) index_y--;
+
+  Config::ValueType x1 = x0 + h_x*index_x, x2 = x1+h_x; //coordinates of rectangle
+  Config::ValueType y1 = y0 + h_y*index_y, y2 = y1+h_y;
+
+  //interpolate parallel to x-axis
+  Config::ValueType f1 = (x2-x[0])/h_x * solution(index_x, index_y) + (x[0]-x1)/h_x * solution(index_x+1, index_y);
+  Config::ValueType f2 = (x2-x[0])/h_x * solution(index_x, index_y+1) + (x[0]-x1)/h_x * solution(index_x+1, index_y+1);
+  Config::ValueType dxf1 = (-1.)/h_x * solution(index_x, index_y) + 1./h_x * solution(index_x+1, index_y);
+  Config::ValueType dxf2 = (-1.)/h_x * solution(index_x, index_y+1) + 1./h_x * solution(index_x+1, index_y+1);
+
+  //interpolate parallel to y-axis
+  du[0] = (y2-x[1])/h_y * dxf1  +  (x[1]-y1)/h_y * dxf2;
+  du[1] = (-1.)/h_y * f1  +  1./h_y * f2;
+}
+
+
+
+Rectangular_mesh_interpolator::Rectangular_mesh_interpolator(const std::string &filename){
+  read_quadratic_grid(filename, n_x,  n_y, h_x, h_y, x_min, y_min, solution);
+}
+
+Config::ValueType Rectangular_mesh_interpolator::evaluate(const Config::SpaceType2d& x) const
+{
+  Config::ValueType val;
+  bilinear_interpolate(x, val , n_x, n_y, h_x, h_y, x_min, y_min, solution); //interpolate bilinear
+  return val;
+}
+
+Config::SpaceType2d Rectangular_mesh_interpolator::evaluate_derivative(const Config::SpaceType2d& x) const
+{
+  Config::SpaceType2d val;
+  bilinear_interpolate_derivative(x, val , n_x, n_y, h_x, h_y, x_min, y_min, solution); //interpolate bilinear
+  return val;
+}
+Config::ValueType Rectangular_mesh_interpolator::evaluate_inverse(const Config::SpaceType2d& x) const
+{
+  return 1.0/evaluate(x);
+}
+
+Config::SpaceType2d Rectangular_mesh_interpolator::evaluate_inverse_derivative(const Config::SpaceType2d& x) const
+{
+  Config::ValueType val = 1.0/evaluate(x);
+  Config::SpaceType2d val_dev = evaluate_derivative(x);
+
+  val_dev[0] = -val_dev[0]/sqr(val);
+  val_dev[1] = -val_dev[1]/sqr(val);
+  return val_dev;
+}
 
 

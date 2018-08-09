@@ -33,8 +33,8 @@ public:
 	 */
 	enum {O = 3};
 
-  typedef LocalBasisTraits<D,2,Dune::FieldVector<D,2>,R,1,Dune::FieldVector<R,1>,
-      Dune::FieldMatrix<R,1,2>, 2 > Traits;
+  using Traits = LocalBasisTraits<D,2,Dune::FieldVector<D,2>,R,1,Dune::FieldVector<R,1>,
+      Dune::FieldMatrix<R,1,2>, 2 >;
 
 	//! \brief Standard constructor
 	BernsteinBezier32DBasis (const Geometry& gt) : gt_(gt)

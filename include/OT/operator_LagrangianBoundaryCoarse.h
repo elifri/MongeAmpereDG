@@ -9,7 +9,7 @@
 #define INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARYCOARSE_H_
 
 #include "OT/problem_data_OT.h"
-#include "OT/operator_utils.h"
+#include "Operator/operator_utils.h"
 
 class Local_Operator_LagrangianBoundaryCoarse {
 public:
@@ -31,12 +31,11 @@ public:
     const unsigned int size_q = localFiniteElementQ.size();
 
     //find type of Jacobian
-    typedef decltype(localFiniteElementV) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, dimw> JacobianType;
-    typedef typename Dune::FieldMatrix<Config::ValueType, dimw, dimw> FEHessianType;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, dimw>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, dimw, dimw>;
 
     // ----start quadrature on fine grid(V_h)--------
 
@@ -104,7 +103,7 @@ public:
       auto estimatedDertivate = normalOld;
       estimatedDertivate /= 1./normalOld.two_norm();
 //      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
-          std::cerr << " signedDistance derivative " << signedDistanceDerivative << " estimated " << estimatedDertivate << std::endl;
+//          std::cerr << " signedDistance derivative " << signedDistanceDerivative << " estimated " << estimatedDertivate << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());

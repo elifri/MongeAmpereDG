@@ -5,8 +5,8 @@
  *      Author: friebel
  */
 
-#ifndef REFL_OPERATOR_HH_
-#define REFL_OPERATOR_HH_
+#ifndef OPERATOR_NEILAN_MA_OT_HH_
+#define OPERATOR_NEILAN_MA_OT_HH_
 
 #include <dune/common/function.hh>
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
@@ -17,7 +17,7 @@
 #include "ImageFunction.hpp"
 
 #include "localfunctions/MAmixed/MAmixedbasisC0.hh"
-#include "operator_utils.h"
+#include "Operator/operator_utils.h"
 //automatic differtiation
 #include <adolc/adouble.h>
 #include <adolc/adolc.h>
@@ -28,21 +28,13 @@ using namespace Dune;
 class Local_Operator_MA_OT_Neilan {
 
 public:
-  typedef DensityFunction Function;
+  using Function = DensityFunction;
 
   Local_Operator_MA_OT_Neilan(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
     rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
   {
     std::cout << " created Local Operator" << std::endl;
   }
-
-//  ~Local_Operator_MA_OT()
-//  {
-//    delete &rhoX;
-//    delete &rhoY;
-//    delete &bc;
-//  }
-
 
   /**
    * implements the local volume integral
@@ -55,13 +47,13 @@ public:
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
       VectorType& v, const int tag) const {
 
-    typedef typename LocalView::GridView GridView;
-    typedef typename LocalView::size_type size_type;
+    using GridView = typename LocalView::GridView;
+    using size_type = typename LocalView::size_type;
 
     const int dim = GridView::dimension;
 
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     assert(dim == Element::dimension);
@@ -72,20 +64,19 @@ public:
     assert((unsigned int) x.size() == localView.size());
     assert((unsigned int) v.size() == localView.size());
 
+
     // Get set of shape functions for this element
     const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
     const auto& localFiniteElementuDH_entry = localView.tree().template child<1>().child(0).finiteElement();
 
-    typedef decltype(localFiniteElementu) ConstElementuRefType;
-    typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
+    using ElementuType = typename std::decay_t<decltype(localFiniteElementu)>;
 
-    typedef decltype(localFiniteElementuDH_entry) ConstElementuDHRefType;
-    typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
+    using ElementuDHType = typename std::decay_t<decltype(localFiniteElementuDH_entry)>;
 
-    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, dim> JacobianType;
-    typedef typename Dune::FieldMatrix<Config::ValueType, dim, dim> FEHessianType;
-    typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType HessianType;
+    using RangeType = typename ElementuType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, dim>;
+    using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, dim, dim>;
+    using HessianType = typename ElementuDHType::Traits::LocalBasisType::Traits::RangeType;
 
     const int size_u = localFiniteElementu.size();
     const int size_u_DH = localFiniteElementuDH_entry.size();
@@ -231,7 +222,10 @@ public:
 
 
     for (int i = 0; i < size; i++)
+    {
       v_adolc[i] >>= v[i]; // select dependent variables
+//      std::cerr << " v[i]is now " << v[i] << std::endl;
+    }
 
     trace_off();
 
@@ -242,8 +236,8 @@ public:
       const LocalView &localView, const VectorType &x,
       const LocalView &localViewn, const VectorType &xn, VectorType& v,
       VectorType& vn, int tag) const{
-    typedef typename LocalView::GridView GridView;
-    typedef typename LocalView::size_type size_type;
+    using GridView = typename LocalView::GridView;
+    using size_type = typename LocalView::size_type;
 
     const int dim = IntersectionType::dimension;
     const int dimw = IntersectionType::dimensionworld;
@@ -263,15 +257,12 @@ public:
     const auto& localFiniteElementun = localViewn.tree().template child<0>().finiteElement();
     const auto& localFiniteElementuDHn = localViewn.tree().template child<1>().child(0).finiteElement();
 
-    typedef decltype(localFiniteElementu) ConstElementuRefType;
-    typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
+    using ElementuType = typename std::decay_t<decltype(localFiniteElementu)>;
+    using ElementuDHType = typename std::decay_t<decltype(localFiniteElementuDH)>;
 
-    typedef decltype(localFiniteElementuDH) ConstElementuDHRefType;
-    typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
-
-    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef FieldVector<Config::ValueType, dim> JacobianType;
-    typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType RangeTypeDH;
+    using RangeType = typename ElementuType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = FieldVector<Config::ValueType, dim>;
+    using RangeTypeDH = typename ElementuDHType::Traits::LocalBasisType::Traits::RangeType;
 
     const unsigned int size_u = localFiniteElementu.size();
     const unsigned int size_u_DH = localFiniteElementuDH.size();
@@ -428,6 +419,7 @@ public:
     for (int i = 0; i < size; i++) {
       vn_adolc[i] >>= vn[i];
     }
+
     trace_off();
 
   }
@@ -447,17 +439,16 @@ public:
     assert((unsigned int) v.size() == localView.size());
 
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
     const int size_u = localFiniteElementu.size();
 
-    typedef decltype(localFiniteElementu) ConstElementuRefType;
-    typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
+    using ElementuType = typename std::decay_t<decltype(localFiniteElementu)>;
 
-    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
+    using RangeType = typename ElementuType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
 
     //-----init variables for automatic differentiation
 
@@ -469,6 +460,7 @@ public:
       v_adolc[i] <<= v[i];
 
     trace_on(tag);
+
     //init independent variables
     for (size_t i = 0; i < localView.size(); i++)
       x_adolc[i] <<= x[i];
@@ -539,7 +531,7 @@ public:
 //        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 2 || localFiniteElementu.localCoefficients().localKey(j).subEntity() == j);
 //        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 1 || localFiniteElementu.localCoefficients().localKey(j).subEntity() == boundaryFaceId);
         assert(!SolverConfig::Dirichlet);
-        v_adolc(i) += penalty_weight * signedDistance * (referenceFunctionValues[i]+(gradients[i]*normal)) * factor;
+//        v_adolc(i) += penalty_weight * signedDistance * (referenceFunctionValues[i]+(gradients[i]*normal)) * factor;
 
 //        std::cerr << " test function has value " << (referenceFunctionValues[j]) << " at " << quadPos << std::endl;
 //        std::cerr << " test function values ";

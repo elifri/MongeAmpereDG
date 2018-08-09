@@ -24,6 +24,8 @@
 #include "Dogleg/utils.hpp"
 #include "matlab_export.hpp"
 
+#include "progressbar.hpp"
+
 //for timer
 #include <ctime>
 #include <ratio>
@@ -85,7 +87,7 @@ bool checkJacobian(
 
 	bool compared = compare_matrices(std::cout, J, estimated_J, "Jacobian", "FD Jacobian", true, tol);
 
-  if ((!compared && exportFDJacobianifFalse) || true)
+  if (!compared && exportFDJacobianifFalse)
   {
     MATLAB_export(x, "x");
     MATLAB_export(temp, "f");
@@ -119,8 +121,12 @@ void make_FD_Jacobian(
 	estimated_J.resize(n,n);
 	estimated_J.setZero();
 
+	ProgressBar progressbar;
+	progressbar.start();
+
 	for (int j = 0; j < n; j++)
 	{
+    progressbar.status(j,n);
 		Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(n, j);
 		f.evaluate(x-h*unit_j, f_minus, x-h*unit_j, false);
 		f.evaluate(x+h*unit_j, f_plus, x+h*unit_j, false);
@@ -137,6 +143,7 @@ void make_FD_Jacobian(
 			}
 		}
 	}
+	std::cout << " needed " << progressbar.stop()<< " to set up Jacobian" << std::endl;
 }
 
 
@@ -450,9 +457,11 @@ bool doglegMethod (
             }
 
             if (!opts.silentmode)
-                std::cout << std::endl;
+            {
+              std::cout << std::endl;
+              std::cerr << "new dogleg step " << std::endl;
+            }
             k++;
-            std::cerr << "new dogleg step " << std::endl;
             if (k > opts.maxsteps)
             {
                 stop = 4;
@@ -463,8 +472,8 @@ bool doglegMethod (
     }
 
     auto end = std::chrono::steady_clock::now();
-//    if (!opts.silentmode)
-//    {
+    if (!opts.silentmode)
+    {
         std::cout << "||f(x)||2   = " << sqrt(2*F) << "\n";
         std::cout << "||f(x)||inf = " << nf << "\n";
         std::cout << "||F'||inf   = " << ng << "\n";
@@ -472,7 +481,7 @@ bool doglegMethod (
         std::cout << "delta       = " << delta << std::endl;
         std::cout << k-1 << " steps needed." << std::endl;
         std::cout << "total time = " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
-//    }
+    }
     return (stop<3);
 }
 

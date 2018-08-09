@@ -4,6 +4,7 @@ add_library(Assembler AssemblerLagrangianBoundary.cpp AssemblerLagrangian.cpp As
 add_library(FEBasisFilter FEBasisFilter.cpp)
 add_library(MA_solver MA_solver.cpp)
 add_library(FEBasisHandler FEBasisHandler.cpp)
+add_library(ConvexifyNLP ConvexifyNLP.cpp) 
 add_library(operator_MA_Neilan_DG ../Operator/operator_MA_Neilan_DG.cpp)
 
-Set(PureSolverLibs MA_solver FEBasisHandler Assembler FEBasisFilter operator_MA_Neilan_DG BoundaryHandler PARENT_SCOPE)
+Set(PureSolverLibs MA_solver FEBasisHandler Assembler operator_MA_Neilan_DG FEBasisFilter operator_MA_Neilan_DG BoundaryHandler PARENT_SCOPE)

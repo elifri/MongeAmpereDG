@@ -10,6 +10,9 @@
 
 #include "utils.hpp"
 #include "MAconfig.h"
+#include "Solver/solver_config.h"
+
+#include "Solver/Assembler.h"
 
 template <class value_type>
 inline
@@ -191,6 +194,77 @@ FieldMatrix<value_type, 2, 2> convexified_penalty_cofactor(const FieldMatrix<val
 }
 
 
+template<typename GeometryType, typename LocalFiniteElement, typename VectorType, int dim,
+         typename RangeVectorType, typename JacobianVectorType, typename FEHEssianVectorType,
+         typename RangeType, typename JacobianType, typename FEHEssianType>
+void assemble_cellTermFEData(const GeometryType& geometry, const LocalFiniteElement& lfu, const FieldVector<double, dim>& quadPos,  const VectorType &x,
+    RangeVectorType& referenceFunctionValues, JacobianVectorType& gradients, FEHEssianVectorType& Hessians,
+    RangeType& u_value, JacobianType& gradu, FEHEssianType& Hessu)
+{
+  const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
+
+  assemble_functionValues_u(lfu, quadPos,
+      referenceFunctionValues, x, u_value);
+
+  assemble_gradients_gradu(lfu, jacobian, quadPos,
+      gradients, x, gradu);
+
+  assemble_hessians_hessu(lfu, jacobian, quadPos, Hessians,
+      x, Hessu);
+}
+
+template<typename GeometryType, typename LocalFiniteElement, typename VectorType, int dim,
+         typename JacobianVectorType, typename FEHEssianVectorType,
+         typename JacobianType, typename FEHEssianType>
+void assemble_cellTermFEData_only_derivatives(const GeometryType& geometry, const LocalFiniteElement& lfu,
+    const FieldVector<double, dim>& quadPos,  const VectorType &x,
+    JacobianVectorType& gradients, FEHEssianVectorType& Hessians,
+    JacobianType& gradu, FEHEssianType& Hessu)
+{
+  const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
+
+  assemble_gradients_gradu(lfu, jacobian, quadPos,
+      gradients, x, gradu);
+
+  assemble_hessians_hessu(lfu, jacobian, quadPos, Hessians,
+      x, Hessu);
+}
+
+template<typename GeometryType, typename LocalFiniteElement, int dim, typename F_old, typename DomainType,
+         typename RangeVectorType, typename JacobianVectorType, typename FEHEssianVectorType,
+         typename RangeType, typename JacobianType, typename FEHEssianType>
+void assemble_cellTermFEData(const GeometryType& geometry, const LocalFiniteElement& lfu, const FieldVector<double, dim>& quadPos,
+    F_old& oldUFunction, const DomainType& x_value,
+    RangeVectorType& referenceFunctionValues, JacobianVectorType& gradients, FEHEssianVectorType& Hessians,
+    RangeType& u_value, JacobianType& gradu, FEHEssianType& Hessu)
+{
+  const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
+
+  assemble_functionValues(lfu, quadPos, referenceFunctionValues);
+
+  assemble_gradients(lfu, jacobian, quadPos, gradients);
+
+  assemble_hessians(lfu, jacobian, quadPos, Hessians);
+
+  oldUFunction.evaluateAll(x_value, u_value, gradu, Hessu);
+}
+
+template<typename GeometryType, typename LocalFiniteElement, int dim, typename F_old, typename DomainType,
+         typename JacobianVectorType, typename FEHEssianVectorType,
+         typename JacobianType, typename FEHEssianType>
+void assemble_cellTermFEData_only_derivatives(const GeometryType& geometry, const LocalFiniteElement& lfu, const FieldVector<double, dim>& quadPos,
+    F_old& oldUFunction, const DomainType& x_value,
+    JacobianVectorType& gradients, FEHEssianVectorType& Hessians,
+    JacobianType& gradu, FEHEssianType& Hessu)
+{
+  const auto& jacobian = geometry.jacobianInverseTransposed(quadPos);
+
+  assemble_gradients(lfu, jacobian, quadPos, gradients);
+
+  assemble_hessians(lfu, jacobian, quadPos, Hessians);
+
+  oldUFunction.evaluateDerivatives(x_value, gradu, Hessu);
+}
 
 
 #endif /* INCLUDE_OT_OPERATOR_UTILS_H_ */

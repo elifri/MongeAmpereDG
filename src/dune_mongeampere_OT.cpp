@@ -4,9 +4,11 @@
 
 
 #include <dune/grid/io/file/vtk/vtkwriter.hh>
-
+#include <dune/grid/io/file/gmshreader.hh>
 #include <Eigen/Core>
 #include <Eigen/Sparse>
+
+#define MA_OT
 
 #include "MAconfig.h"
 #include "OT/MA_OT_solver.h"
@@ -89,21 +91,39 @@ try {
   GeometrySetting setting;
   setting.read_configfile(configFileSetting);
 
-  // ////////////////////////////////
-  // Generate the grid
-  // ////////////////////////////////
-  Config::UnitCubeType unitcube(setting.lowerLeft, setting.upperRight, 1);
+  std::cout << " Output files in folder " << config.plotOutputDirectory << "/" << config.outputPrefix <<"..." << std::endl;
 
-  Config::GridType &grid = unitcube.grid();
-  Config::GridView gridView = grid.leafGridView();
+  // ////////////////////////////////
+  // Generate the grids
+  // ////////////////////////////////
+
+//---initial domain grid---------
+
+#ifdef BSPLINES
+  GridHandler<Config::GridType, true> gridHandler(setting,SolverConfig::startlevel);
+#else
+  GridHandler<Config::GridType> gridHandler(setting,SolverConfig::startlevel);
+#endif
 
   // Output grid
-  VTKWriter<Config::GridView> vtkWriter(gridView);
-  vtkWriter.write("grid");
+  {
+    VTKWriter<Config::GridView> vtkWriter(gridHandler.gridView());
+    vtkWriter.write("grid");
+  }
 
+//-----target area grid--------
+#ifndef BSPLINES
+  std::cout << " read target grid vom file " << setting.gridTargetFile << std::endl;
+  std::shared_ptr<Config::GridType> gridTarget_ptr(GmshReader<Config::GridType>::read(setting.gridTargetFile));
+  {
+    VTKWriter<Config::GridView> vtkWriterTarget(gridTarget_ptr->leafGridView());
+    vtkWriterTarget.write("gridTarget");
+  }
+#endif
 
   //solve
-  MA_OT_solver ma_solver(unitcube.grid_ptr(), gridView, config, setting);
+  MA_OT_solver ma_solver(gridHandler, gridTarget_ptr, config, setting);
+
   ma_solver.solve();
 
   std::cout << "done" << std::endl;

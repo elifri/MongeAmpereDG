@@ -33,8 +33,8 @@ public:
 	 */
 	enum {O = k};
 
-  typedef LocalBasisTraits<D,2,Dune::FieldVector<D,2>,R,1,Dune::FieldVector<R,1>,
-      Dune::FieldMatrix<R,1,2>, 2 > Traits;
+  using Traits = LocalBasisTraits<D,2,Dune::FieldVector<D,2>,R,1,Dune::FieldVector<R,1>,
+      Dune::FieldMatrix<R,1,2>, 2 >;
 
 	//! \brief Standard constructor
 	BernsteinBezierk2DLocalBasis ()
@@ -57,6 +57,53 @@ public:
 		return N;
 	}
 
+/*  void get_baryc_coord_bezier(const int no, baryc_type &b) const ///< calculates the barycentric coordinates of the control point
+  {
+    static_assert(k==2);
+    switch (no)
+    {
+    case 0: b(0) = 1; b(1) = 0; b(2) = 0; break;
+    case 1: b(0) = 0.5; b(1) = 0.5; b(2) = 0; break;
+    case 2: b(0) = 0.5; b(1) = 0; b(2) = 0.5; break;
+    case 3: b(0) = 0; b(1) = 1; b(2) = 0; break;
+    case 4: b(0) = 0; b(1) = 0.5; b(2) = 0.5; break;
+    case 5: b(0) = 0; b(1) = 0; b(2) = 1; break;
+    default: assert(false && "I do not know this bezier control point number!");
+    }
+  }*/
+
+  static int get_local_bezier_no(const int i, const int j, const int l)
+  {
+    assert (i >= 0 && j >= 0 && l >= 0 && "Coefficient indices must be positive! ");
+    assert (i <= (int) k && j <= (int) k && l <= (int) k && "Coefficient indices must be smaller or equal than 2! ");
+    assert ( i+ j + l == (int) k && "Sum of indices must be equal degree ");
+
+    assert ( k == 2 && "Degrees other than two are not support yet");
+
+    return -l*(l-1)/2+l*(k+1)+j;
+  }
+
+  static int get_local_bezier_no(const Eigen::Vector3i &indeces)
+  {
+    return get_local_bezier_no(indeces(0), indeces(1), indeces(2));
+  }
+
+  ///return the local no of the function belonging to the control point at node n
+  static int get_local_bezier_no_from_node(int n)
+  {
+    assert (n >= 0 && n < 3 && "Ther is no node with No "+n);
+
+    assert ( k == 2 && "Degrees other than two are not support yet");
+
+    switch (n)
+    {
+    case 0: return 0;
+    case 1: return 3;
+    case 2: return 5;
+    default:  std::cerr << "Error: Could not find node " << n << std::endl; std::exit(1);
+    }
+  }
+
 	//! \brief Evaluate all shape functions
 	inline void evaluateFunction (const typename Traits::DomainType& x,
 			std::vector<typename Traits::RangeType>& out) const
@@ -75,7 +122,7 @@ public:
 	    {
 	      unsigned int lambda1 = k - lambda3 - lambda2;
 	      out[n] = factorial[k]/factorial[lambda1]/factorial[lambda2]/factorial[lambda3]
-	                *std::pow(x[0],lambda1)*std::pow(x[1],lambda2)*std::pow(1-x[0]-x[1],lambda3);
+	                *std::pow(1-x[0]-x[1],lambda1)*std::pow(x[0],lambda2)*std::pow(x[1],lambda3);
 	      n++;
 	    }
 	}
@@ -106,22 +153,68 @@ public:
         //use product rule, determine the factors' derivatives
         if (lambda1 > 0)
         {
-          out[n][0][0] += lambda1*std::pow(x[0],lambda1-1)*std::pow(1-x[0]-x[1],lambda3);
+          out[n][0][0] -= lambda1*std::pow(1-x[0]-x[1],lambda1-1)*std::pow(x[0],lambda2);
+          out[n][0][1] -= lambda1*std::pow(1-x[0]-x[1],lambda1-1)*std::pow(x[1],lambda3);
         }
         if (lambda2 > 0)
-          out[n][0][1] += lambda2*std::pow(x[1],lambda2-1)*std::pow(1-x[0]-x[1],lambda3);
+          out[n][0][0] += lambda2*std::pow(x[0],lambda2-1)*std::pow(1-x[0]-x[1],lambda1);
         if (lambda3 > 0)
         {
-          out[n][0][0] -= lambda3*std::pow(1-x[0]-x[1],lambda3-1)*std::pow(x[0],lambda1);
-          out[n][0][1] -= lambda3*std::pow(1-x[0]-x[1],lambda3-1)*std::pow(x[1],lambda2);
+          out[n][0][1] += lambda3*std::pow(x[1],lambda3-1)*std::pow(1-x[0]-x[1],lambda1);
+
         }
 
         //multiply constant factor
-        out[n][0][0] *= factor*std::pow(x[1],lambda2);
-        out[n][0][1] *= factor*std::pow(x[0],lambda1);
+        out[n][0][0] *= factor*std::pow(x[1],lambda3);
+        out[n][0][1] *= factor*std::pow(x[0],lambda2);
         n++;
       }
 	}
+
+  /** \brief Evaluate partial derivatives of any order of all shape functions
+   * \param order Order of the partial derivatives, in the classic multi-index notation
+   * \param in Position where to evaluate the derivatives
+   * \param[out] out Return value: the desired partial derivatives
+   */
+  void partial(const std::array<unsigned int,2>& order,
+               const typename Traits::DomainType& in,
+               std::vector<typename Traits::RangeType>& out) const
+  {
+    auto totalOrder = std::accumulate(order.begin(), order.end(), 0);
+
+    switch (totalOrder)
+    {
+      case 0:
+        evaluateFunction(in,out);
+        break;
+      case 1:
+      {
+        std::array<int,1> directions;
+        directions[0] = std::find(order.begin(), order.end(), 1)-order.begin();
+        evaluate<1>(directions, in, out);
+        break;
+      }
+      case 2:
+      {
+        std::array<int,2> directions;
+        unsigned int counter = 0;
+        auto nonconstOrder = order;  // need a copy that I can modify
+        for (int i=0; i<2; i++)
+        {
+          while (nonconstOrder[i])
+          {
+            directions[counter++] = i;
+            nonconstOrder[i]--;
+          }
+        }
+
+        evaluate<2>(directions, in, out);
+        break;
+      }
+      default:
+        DUNE_THROW(NotImplemented, "Desired derivative order is not implemented");
+    }
+  }
 
   //! \brief Evaluate higher derivatives of all shape functions
    template<unsigned int dOrder> //order of derivative
@@ -147,21 +240,21 @@ public:
            R factor = factorial[k]/factorial[lambda1]/factorial[lambda2]/factorial[lambda3];
 
            //use product rule, determine the factors' derivatives
-           if (directions[0] == 0 && lambda1 > 0)
+           if (lambda1 > 0)
            {
-             out[n][0] += lambda1*std::pow(x[0],lambda1-1)*std::pow(1-x[0]-x[1],lambda3);
+             out[n][0] -= directions[0] == 0? lambda1*std::pow(1-x[0]-x[1],lambda1-1)*std::pow(x[0],lambda2)
+                                             :lambda1*std::pow(1-x[0]-x[1],lambda1-1)*std::pow(x[1],lambda3);
            }
-           else if (directions[0] == 1 && lambda2 > 0)
-             out[n][0] += lambda2*std::pow(x[1],lambda2-1)*std::pow(1-x[0]-x[1],lambda3);
-           if (lambda3 > 0)
+           if (directions[0] == 0 && lambda2 > 0)
            {
-             out[n][0] -= directions[0] == 0? lambda3*std::pow(1-x[0]-x[1],lambda3-1)*std::pow(x[0],lambda1)
-                                             :lambda3*std::pow(1-x[0]-x[1],lambda3-1)*std::pow(x[1],lambda2);
+             out[n][0] += lambda2*std::pow(x[0],lambda2-1)*std::pow(1-x[0]-x[1],lambda1);
            }
+           else if (directions[0] == 1 && lambda3 > 0)
+             out[n][0] += lambda3*std::pow(x[1],lambda3-1)*std::pow(1-x[0]-x[1],lambda1);
 
            //multiply constant factor
-           out[n][0] *= directions[0] == 0? factor*std::pow(x[1],lambda2) :
-                                               factor*std::pow(x[0],lambda1);
+           out[n][0] *= directions[0] == 0? factor*std::pow(x[1],lambda3) :
+                                               factor*std::pow(x[0],lambda2);
            n++;
          }
      }
@@ -228,10 +321,10 @@ private:
   typename Traits::RangeType bernsteinFactor(const int no, const int lambda, const typename Traits::DomainType& x) const
   {
     if (no == 0)
-      return std::pow(x[0], lambda);
+      return std::pow(1-x[0]-x[1], lambda);
     if (no ==1)
-      return std::pow(x[1], lambda);
-    return std::pow(1-x[0]-x[1], lambda);
+      return std::pow(x[0], lambda);
+    return std::pow(x[1], lambda);
   }
 
   /** \brief Returns the derivative of a single Lagrangian factor of l_ij evaluated at x
@@ -241,11 +334,11 @@ private:
   {
     if (lambda == 0)  return R(0);
     if (no == 0)
-      return (direction == 0) ? lambda*std::pow(x[0],lambda-1) : R(0);
-    if (no == 1)
-      return (direction == 1) ? lambda*std::pow(x[1],lambda-1) : R(0);
-    if (no == 2)
       return -lambda*std::pow(1-x[0]-x[1],lambda-1);
+    if (no == 1)
+      return (direction == 0) ? lambda*std::pow(x[0],lambda-1) : R(0);
+    if (no == 2)
+      return (direction == 1) ? lambda*std::pow(x[1],lambda-1) : R(0);
   }
 
   template<unsigned int directionSize=2u>
@@ -254,11 +347,12 @@ private:
 //    static_assert(directionSize == 2);
     if (lambda < 2)  return R(0);
     if (no == 0)
-      return (directions[0] == 0 && directions[1] == 0) ? lambda*(lambda-1)*std::pow(x[0],lambda-2) : R(0);
+      return lambda*(lambda-1)*std::pow(1-x[0]-x[1],lambda-2);
     if (no == 1)
-      return (directions[0] == 1 && directions[1] == 1) ? lambda*(lambda-1)*std::pow(x[1],lambda-2) : R(0);
+      return (directions[0] == 0 && directions[1] == 0) ? lambda*(lambda-1)*std::pow(x[0],lambda-2) : R(0);
+
+    return (directions[0] == 1 && directions[1] == 1) ? lambda*(lambda-1)*std::pow(x[1],lambda-2) : R(0);
     //else
-    return lambda*(lambda-1)*std::pow(1-x[0]-x[1],lambda-2);
   }
 
 R factorial[k+1];

@@ -87,11 +87,10 @@ double Integrator<GT>::assemble_boundary_integral(const function_type &f, const 
 
       if(is.boundary())
       {
-        typedef decltype(is) ConstIntersectionRefType;
-        typedef typename std::remove_reference<ConstIntersectionRefType>::type ConstIntersectionType;
+        using IntersectionType = typename std::decay_t<decltype(is)>;
 
-        const int dim = ConstIntersectionType::dimension;
-        const int dimw = ConstIntersectionType::dimensionworld;
+        const int dim = IntersectionType::dimension;
+        const int dimw = IntersectionType::dimensionworld;
 
         // Get a quadrature rule
         GeometryType gtface = is.geometryInInside().type();

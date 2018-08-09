@@ -16,7 +16,7 @@
 class SmoothImageFunction : public ImageFunction //, virtual public DensityFunction
 {
 public:
-  typedef BSplineTraits<Config::RectangularGridView, 3> FEBSplineTraits;
+  using FEBSplineTraits = BSplineTraits<Config::RectangularGridView, 3>;
 
   SmoothImageFunction(        const std::string &filename,
       const Config::SpaceType2d lowerLeft,

@@ -41,7 +41,7 @@ template<typename ct, int dim>
 class MacroQuadratureRules
 {
   /** \brief Internal short-hand notation for the type of quadrature rules this container contains */
-  typedef Dune::QuadratureRule<ct, dim> QuadratureRule;
+  using QuadratureRule = Dune::QuadratureRule<ct, dim>;
 
   //! \brief a quadrature rule (for each quadrature order, geometry type,
   //!        and quadrature type)
@@ -51,8 +51,7 @@ class MacroQuadratureRules
     *qr = MacroQuadratureRuleFactory<ct,dim>::rule(t,p,qt);
   }
 
-  typedef NoCopyVector<std::pair<std::once_flag, QuadratureRule> >
-    QuadratureOrderVector; // indexed by quadrature order
+  using QuadratureOrderVector = NoCopyVector<std::pair<std::once_flag, QuadratureRule> >; // indexed by quadrature order
   //! \brief initialize the vector indexed by the quadrature order (for each
   //!        geometry type and quadrature type)
   static void initQuadratureOrderVector(QuadratureOrderVector *qov,
@@ -66,8 +65,7 @@ class MacroQuadratureRules
       qov->resize(MacroQuadratureRuleFactory<ct,dim>::maxOrder(t,qt)+1);
   }
 
-  typedef NoCopyVector<std::pair<std::once_flag, QuadratureOrderVector> >
-    GeometryTypeVector; // indexed by geometry type
+  using GeometryTypeVector = NoCopyVector<std::pair<std::once_flag, QuadratureOrderVector> >; // indexed by geometry type
   //! \brief initialize the vector indexed by the geometry type (for each
   //!        quadrature type)
   static void initGeometryTypeVector(GeometryTypeVector *gtv)

@@ -17,7 +17,10 @@
 #include "ImageFunction.hpp"
 
 #include <CImg.h>
+#undef Success
 #include <algorithm>
+#include <functional>
+#include <memory>
 
 using namespace Dune;
 
@@ -97,7 +100,9 @@ inline FieldVector<valueType, 3> T(const FieldVector<Config::ValueType, 3>& x, c
 //forward declaration
 class Local_Operator_MA_refl_Neilan;
 class Local_Operator_MA_refl_Brenner;
+class Local_Operator_MA_refr_parallel;
 class Local_Operator_MA_refr_Brenner;
+class Local_Operator_MA_refr_Linearisation;
 
 // A class implementing the analytical right hand side
 class RightHandSide: public VirtualFunction<Config::SpaceType, Config::ValueType> {
@@ -141,19 +146,18 @@ public:
 };
 
 // A class implementing the analytical dirichlet boundary
-template
-<class ExactFunctionType>
-class Dirichletdata//: public VirtualFunction<FieldVector<double, Config::dim>, double>
+class Dirichletdata:public VirtualFunction<Config::SpaceType, Config::ValueType>
 {
 public:
-  typedef std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGridFunction> Function_ptr;
+  using Function_ptr = std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGridFunction>;
+  using ExactFunctionType = std::function<Config::ValueType(const Config::SpaceType&)>;
 
-  Dirichletdata(){}
 //  Dirichletdata(Function_ptr &exactSolU) : exact_solution(&exactSolU) {}
-  Dirichletdata(ExactFunctionType &exactSolU) : exact_solution(&exactSolU) {}
+  Dirichletdata() : exact_solution() {}
+  Dirichletdata(const ExactFunctionType &exactSolU) : exact_solution(exactSolU) {}
 
-	void evaluate(const Config::SpaceType& in, Config::ValueType& out){
-	  out = (*exact_solution)->evaluate_inverse(in);
+	void evaluate(const Config::SpaceType& in, Config::ValueType& out) const{
+	  out = exact_solution(in);
 	}
 
 	void derivative(const Config::SpaceType& in, SolverConfig::HessianRangeType& out)
@@ -163,15 +167,15 @@ public:
 
 	void evaluate_exact_sol(const Config::SpaceType& x, Config::ValueType& out) const
 	{
-	  assert(exact_solution != NULL);
-	  out = (*exact_solution)->evaluate_inverse(x);
+//	  out = exact_solution(x);
 	}
 
 private:
-  mutable ExactFunctionType* exact_solution;
+  ExactFunctionType exact_solution;
 
   friend Local_Operator_MA_refl_Neilan;
 };
+
 
 class RightHandSideInitial: public VirtualFunction<Config::SpaceType, Config::ValueType> {
 public:
@@ -196,132 +200,7 @@ namespace PDE_functions{
 	void Dg_initial(const Config::SpaceType2d& z, Config::SpaceType2d &out); /// derivative of g_initial
 }
 
-
-
-
-class RightHandSideReflector{
-public:
-  typedef std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGridFunction> Function_ptr;
-  typedef std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGradientGridFunction> GradFunction_ptr;
-
-
-  RightHandSideReflector(OpticalSetting& opticalsetting):
-    opticalsetting(opticalsetting),
-    f(),
-    g(){}
-  RightHandSideReflector(Function_ptr &solUOld, GradFunction_ptr &gradUOld, OpticalSetting& opticalsetting):
-                            opticalsetting(opticalsetting),
-                            f(opticalsetting.LightinputImageName, opticalsetting.lowerLeft, opticalsetting.upperRight),
-                            g(opticalsetting.TargetImageName, opticalsetting.lowerLeftTarget, opticalsetting.upperRightTarget, opticalsetting.minPixelValue),
-                            solution_u_old(&solUOld), gradient_u_old(&gradUOld)
-  {
-//a normalisation seems to destroy the solution proces ...
-    f.omega_normalize();
-    g.normalize();
-
-    opticalsetting.lowerLeftTarget = g.lowerLeft();
-    opticalsetting.upperRightTarget = g.upperRight();
-    std::cout << "Corrected target area to domain (" <<opticalsetting.lowerLeftTarget << ") , (" << opticalsetting.upperRightTarget << ")" << std::endl;
-  }
-
-  void convolveTargetDistribution(unsigned int width){  g.convolveOriginal(width);}
-  void convolveTargetDistributionAndNormalise(unsigned int width)
-  {
-    g.convolveOriginal(width);
-    g.normalize();
-  }
-
-  static double phi_initial(const Config::SpaceType& x);
-
-  ///define implicit the target plane
-  template <class valueType>
-  void psi(const FieldVector<valueType, 2 >& z, valueType& psi_value) const
-  {
-    valueType x_min = fmin(z[0]-opticalsetting.lowerLeftTarget[0], opticalsetting.upperRightTarget[0] - z[0]);
-    valueType y_min = fmin(z[1]-opticalsetting.lowerLeftTarget[1], opticalsetting.upperRightTarget[1] - z[1]);
-
-    //if psi_value is positive, z is inside, otherwise psi_value gives the negative of the distance to the target boundary
-    psi_value = fmin(0, x_min) + fmin(0, y_min);
-
-    psi_value *= -1;
-  }
-
-  template <class valueType>
-  void D_psi(const FieldVector<valueType, 2 >& z, FieldVector<valueType, 2 >& psi_value) const
-  {
-//    valueType x_min;
-//    x_min = fmin(z[0]-SolverConfig::lowerLeftTarget[0], SolverConfig::upperRightTarget[0] - z[0]);
-//    //if x-min is positive, the x-value of z is inside , otherwise x_min gives the negative of the distance to the nearest boundary point in x-direction
-//
-//    //    std::cout << "x min " << x_min.value() << " = " << (z[0]-SolverConfig::lowerLeftTarget[0]).value() << "," << (SolverConfig::upperRightTarget[0] - z[0]).value() << " ";
-//    valueType x_der;
-//    adouble zero = 0;
-//    adouble one = 1;
-////    x_der = x_min > 0 ? zero.value() : one.value();
-//    condassign(x_der, x_min, zero, one);
-//
-//    valueType y_min = fmin(z[1]-SolverConfig::lowerLeftTarget[1], SolverConfig::upperRightTarget[1] - z[1]);
-//    //if y-min is positive, the y-value of z is inside , otherwise y_min gives the negative of the distance to the nearest boundary point in y-direction
-////    std::cout << "y min " << y_min.value() << std::endl;
-//
-//    valueType y_der;
-////    x_der = y_min > 0 ? zero.value() : one.value();
-//    condassign(y_der, y_min, zero, one);
-////
-////    std::cout << "x_der" << x_der << " "<< "y_der" << y_der << std::endl;
-//
-//    psi_value[0] = x_der;
-//    psi_value[1] = y_der;
-
-    psi_value[0] = 0;
-    psi_value[1] = 0;
-
-//    condassign(psi_value[0], y_min- x_min, x_der, zero);
-//    condassign(psi_value[1], y_min- x_min, zero, y_der);
-  }
-
-  void phi(const Config::SpaceType2d& T, const FieldVector<double, Config::dim> &normal, Config::ValueType &phi) const;
-
-public:
-  template<class Element>
-  Config::ValueType phi(const Element& element, const Config::DomainType& xLocal, const Config::DomainType& xGlobal
-      , const FieldVector<double, Config::dim> &normal, const double z_3) const
-  {
-    assert(solution_u_old != NULL);
-    assert(gradient_u_old != NULL);
-
-    (*solution_u_old)->bind(element);
-    (*gradient_u_old)->bind(element);
-    Config::ValueType u = (**solution_u_old)(xLocal);
-    Config::SpaceType2d gradu = (**gradient_u_old)(xLocal);
-
-    Config::SpaceType2d x = element.geometry().global(xLocal);
-
-    Config::ValueType phi_value;
-
-    FieldVector<double, Config::dim> z_0 = gradu;
-    z_0 *= (2.0 / a_tilde(u, gradu, x));
-
-    phi(T(x, u, z_0, z_3),
-        normal, phi_value);
-    return phi_value;
-  }
-
-  const ImageFunction& get_input_distribution() const {return f;}
-  const ImageFunction& get_target_distribution() const {return g;}
-
-private:
-  OpticalSetting& opticalsetting;
-
-  ImageFunction f, g;
-
-  mutable Function_ptr* solution_u_old;
-  mutable GradFunction_ptr* gradient_u_old;
-
-  friend Local_Operator_MA_refl_Neilan;
-  friend Local_Operator_MA_refl_Brenner;
-  friend Local_Operator_MA_refr_Brenner;
-};
+Dirichletdata* make_Dirichletdata();
 
 
 class HamiltonJacobiBC{
@@ -389,5 +268,59 @@ private:
   const OpticalSetting& opticalsetting;
   int N_;
 };
+
+/*! reads an quadratic equidistant rectangle grid from file
+ *
+ *\param filename   file containing solution in the format "n ## h ## \n u(0,0) u(h,0) ... \n u(h,h) ..."
+ *\param n_x    number of nodes in x direction
+ *\param n_y    number of nodes in y direction
+ *\param h_x    distance between two nodes in x direction
+ *\param h_x    distance between two nodes in y direction
+ */
+void read_quadratic_grid(const std::string &filename,  int &n_x, int &n_y,
+                        double &h_x, double &h_y,
+                        double &x0, double &y0,
+                        Eigen::MatrixXd &solution);
+
+/*!helper function that bilinear interpolates on a rectangular, equidistant grid
+ *
+ * @param x   the coordinates of the point the function is interpolated on
+ * @param u   returns the interpolated function value
+ * @param n_x number of function values in x-direction
+ * @param n_y nubmer of function values in y-direction
+ * @param h_x distance in x-direction (between two grid points)
+ * @param h_y distance in y -direction (between two grid points)
+ * @param x0  min x-value of grid
+ * @param y0  min y-value of grid
+ * @param solution  a matrix of the function values
+ */
+
+void bilinear_interpolate(const Config::SpaceType x, Config::ValueType &u, const int &n_x, const int &n_y,
+    const Config::ValueType &h_x, const Config::ValueType &h_y,
+    const Config::ValueType &x0, const Config::ValueType &y0,
+    const Eigen::MatrixXd &solution);
+
+void bilinear_interpolate_derivative(const Config::SpaceType x, Config::SpaceType2d &du, const int &n_x, const int &n_y,
+    const Config::ValueType &h_x, const Config::ValueType &h_y,
+    const Config::ValueType &x0, const Config::ValueType &y0,
+    const Eigen::MatrixXd &solution);
+
+struct Rectangular_mesh_interpolator{
+
+  Rectangular_mesh_interpolator(const std::string &filename);
+  Config::ValueType evaluate (const Config::SpaceType2d& x) const;
+  Config::SpaceType2d evaluate_derivative(const Config::SpaceType2d& x) const;
+
+  Config::ValueType evaluate_inverse(const Config::SpaceType2d& x) const;
+  Config::SpaceType2d evaluate_inverse_derivative(const Config::SpaceType2d& x) const;
+
+  int n_x, n_y;
+  double h_x, h_y;
+  double x_min, y_min;
+
+  Eigen::MatrixXd solution;
+
+};
+
 
 #endif /* SRC_PROBLEM_DATA_HH_ */

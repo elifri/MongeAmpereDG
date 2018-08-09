@@ -17,6 +17,7 @@
 using namespace Dune;
 
 ///provides all numerical integration methods for the variational form of -laplace u = f
+///                                                                          nabla u = g
 template< typename Rhs, typename BC>
 class Linear_System_Local_Operator_Poisson_NeumannBC{
 
@@ -36,7 +37,7 @@ public:
   {
 
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     const int dim = Element::dimension;
@@ -52,11 +53,11 @@ public:
     const auto& localFiniteElement = localView.tree().finiteElement();
 
     //extract types
-    typedef decltype(localFiniteElement) ConstElementRefType;
-    typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+    using ConstElementRefType = decltype(localFiniteElement);
+    using ConstElementType = typename std::remove_reference<ConstElementRefType>::type;
 
-    typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
+    using RangeType = typename ConstElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
 
     // Get a quadrature rule
     int order = std::max(0,
@@ -136,10 +137,10 @@ public:
   const auto& localFiniteElementn = localViewn.tree().finiteElement();
 
   //extract types
-  typedef decltype(localFiniteElement) ConstElementRefType;
-  typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+  using ConstElementRefType = decltype(localFiniteElement);
+  using ConstElementType = typename std::remove_reference<ConstElementRefType>::type;
 
-  typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
+  using RangeType = typename ConstElementType::Traits::LocalBasisType::Traits::RangeType;
   typedef FieldVector<Config::ValueType, Config::dim> JacobianType;
 
 	//assuming galerkin
@@ -239,7 +240,7 @@ void assemble_boundary_face_term(const Intersection& intersection,
 	const int dimw = Intersection::dimensionworld;
 
   // Get the grid element from the local FE basis view
-//  typedef typename LocalView::Element Element;
+//  using Element = typename LocalView::Element;
 
   const auto& localFiniteElement = localView.tree().finiteElement();
 
@@ -249,11 +250,10 @@ void assemble_boundary_face_term(const Intersection& intersection,
 	assert(m.cols() == (int) localView.size());
 
 	//extract types
-  typedef decltype(localFiniteElement) ConstElementRefType;
-  typedef typename std::remove_reference<ConstElementRefType>::type ConstElementType;
+  using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
 
-  typedef typename ConstElementType::Traits::LocalBasisType::Traits::RangeType RangeType;
-	typedef typename Dune::FieldVector<Config::ValueType, Config::dim> JacobianType;
+  using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+	using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
 
 	// Get a quadrature rule
   const int order = std::max(0, 3 * ((int) localFiniteElement.localBasis().order()));
