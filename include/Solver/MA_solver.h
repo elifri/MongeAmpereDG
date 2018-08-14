@@ -98,10 +98,17 @@ public:
         solver_ptr->plot("intermediate", intermediateSolCounter);
       }
 
+#ifdef HAVE_EXACT_SOLUTION
+      {
+        ExactData exactData;
 
             std::cerr << std::scientific << std::setprecision(5)
+                << "   current L2 error is " << solver_ptr->calculate_L2_error(exactData.exact_solution()) << std::endl;
+            std::cerr << std::scientific << std::setprecision(5)
+                << "   current L2 error is " << solver_ptr->calculate_L2_error_Hessian(exactData.exact_Hessian()) << std::endl;
 
       }
+#endif
 
       assert(solver_ptr != NULL);
       auto start = std::chrono::steady_clock::now();
@@ -335,7 +342,7 @@ public:
   ///write the current numerical solution to vtk file
   virtual void plot(const std::string& filename) const;
   virtual void plot(const std::string& filename, int no) const;
-  void plot(const VectorType& u, const std::string& filename) const;
+  void plot(const VectorType& u, const std::string& filename, int no) const;
 
 protected:
   ///reads the fe coefficients from file
@@ -364,8 +371,22 @@ public:
    */
   const VectorType& solve();
 
+  /**
+ * calculates the L2 error on Omega of the last step
+ * @param f     the exact solution
+ * @return      the value of sqrt(\int_{\partial Omega} (u-f)^2 dx)
+ */
   template <typename FunctionType>
   double calculate_L2_error(const FunctionType &f) const;
+
+  /**
+ * calculates the L2 error on Omega in every entry of the Hessian of the last step
+ * @param hessF     the Hessian of the exact solution
+ * @return          the value of sqrt(\int_{\partial Omega} (D^2u_ij-hessF_ij)^2 dx)
+ */
+  template<typename HessFEntry>
+  Eigen::Matrix4d calculate_L2_error_Hessian(const Eigen::Matrix<HessFEntry, Config::dim, Config::dim>& hessF) const;
+
 
   /**
    * returns a vector containing the function with coefficients x evaluated at the vertices
@@ -547,153 +568,111 @@ void project_labourious(const FEBasis& febasis, const F f, Config::VectorType& v
   std::cout << "v.size()" << v.size()-1 << std::endl;
   std::cout << "projected on vector " << std::endl << v.transpose() << std::endl;
 }
-/*
-//project by L2-projection
-template<class F, class F_derX, class F_derY>
-void MA_solver::project_labouriousC1(const F f, const F_derX f_derX, const F_derY f_derY, VectorType& v) const
+
+template<typename F>
+Config::ValueType MA_solver::calculate_L2_error(const F &f) const
 {
-  v.setZero(get_n_dofs());
+  Config::ValueType res = 0, max_error = 0;
 
-  DenseMatrixType localMassMatrix;
-
-  auto localView = FEBasis->localView();
-  auto localIndexSet = FEBasis->indexSet().localIndexSet();
-
-  for (auto&& element : elements(*gridView_ptr))
+  for(auto&& e: elements(gridView()))
   {
-    localView.bind(element);
-    localIndexSet.bind(localView);
+    auto geometry = e.geometry();
 
-    const auto & lFE = localView.tree().finiteElement();
-    const auto& geometry = element.geometry();
+    solution_u_old->bind(e);
 
-    VectorType localDofs = VectorType::Zero (lFE.size());
+    // Get a quadrature rule
+    int order = std::max(1, 3);
+    const QuadratureRule<Config::ValueType, Config::dim>& quad = FETraits::get_Quadrature<Config::dim>(e, order);
 
-    for (int i = 0; i < geometry.corners(); i++)
-    {
-      const auto x = geometry.corner(i);
+    // Loop over all quadrature points
+    for (const auto& pt : quad) {
 
-      auto value = f(x);
+      // Position of the current quadrature point in the reference element
+      const Config::DomainType &quadPos = pt.position();
 
-      //set dofs associated with values at vertices
-      assert(lFE.localCoefficients().localKey(i).subEntity() == i);
-      localDofs(i) = value;
+      auto u_value = (*solution_u_old)(quadPos);
 
-      //set dofs associated with gradient values at vertices
-      assert(lFE.localCoefficients().localKey(geometry.corners()+2*i).subEntity() == i);
-      localDofs(geometry.corners()+2*i) = f_derX(x);
+      decltype(u_value) f_value;
+      f_value = f(geometry.global(pt.position()));
 
-      assert(lFE.localCoefficients().localKey(geometry.corners()+2*i+1).subEntity() == i);
-      localDofs(geometry.corners()+2*i+1) = f_derY(x);
+      auto factor = pt.weight()*geometry.integrationElement(pt.position());
 
-//      std::cout << std::setprecision(16);
-//      std::cout << " gradient at " << i;
-//      std::cout << localDofs(geometry.corners()+2*i) << " " << localDofs(geometry.corners()+2*i+1) << std::endl ;
+      res += (u_value - f_value)*(u_value - f_value)*factor;
+//      std::cerr << " u_value - f_value " << (u_value - f_value) << " = "  << u_value << "-" << f_value << std::endl;
+
+      if (std::abs(u_value-f_value) > max_error)
+      {
+        max_error = std::abs(u_value-f_value);
+//        std::cerr << "found greater error at " << geometry.global(pt.position()) << ", namely " << max_error << std::endl;
+      }
+//      cout << "res = " << res << "u_ value " << u_value << " f_value " << f_value << std::endl;
     }
-
-    for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
-    {
-      const int i = is.indexInInside();
-
-      // normal of center in face's reference element
-      const FieldVector<double, Config::dim> normal = is.centerUnitOuterNormal();
-
-      const auto face_center = is.geometry().center();
-//      std::cout << "face center " << face_center << std::endl;
-
-      FieldVector<double, 2> GradientF = {f_derX(face_center), f_derY(face_center)};
-
-      assert(lFE.localCoefficients().localKey(3*geometry.corners()+i).subEntity() == i);
-      localDofs(3*geometry.corners()+i) = i %2 == 0? -(GradientF*normal): GradientF*normal;
-      //      std::cout << " aprox normal derivative " << GradientF*normal << " = " << GradientF << " * " << normal << std::endl ;
-    }
-    assembler_.set_local_coefficients(localIndexSet,localDofs, v);
   }
+  std::cerr << " Maximal L2error found is " << max_error << std::endl;
 
-  //set scaling factor (last dof) to ensure mass conservation
-  v(v.size()-1) = 1;
-
-#ifdef DEBUG
-  test_projection(f,v);
-#endif
+  return std::sqrt(res);
 }
 
+template<typename HessFEntry>
+Eigen::Matrix4d MA_solver::calculate_L2_error_Hessian(const Eigen::Matrix<HessFEntry, Config::dim, Config::dim>& hessF) const
+{
+  Eigen::Matrix4d res = Eigen::Matrix4d::Zero();
 
-template<class LocalF, class LocalF_grad>
-void MA_solver::project_labouriousC1Local(LocalF f, LocalF_grad f_grad, VectorType& v) const {
-  v.setZero(get_n_dofs());
+#ifdef USE_MIXED_ELEMENT
+  auto HessianDofs = FEBasisHandler_.get_hess_dofs_from_global_dofs(solution);
+#endif
+  Eigen::Matrix<FETraits::DiscreteSecondDerivativeGridFunction*, Config::dim, Config::dim> globalnumericalHessian_entries;
+  Eigen::Matrix<FETraits::DiscreteLocalSecondDerivativeGridFunction*, Config::dim, Config::dim> localnumericalHessian_entries;
 
-  DenseMatrixType localMassMatrix;
 
-  auto localView = FEBasis->localView();
-  auto localIndexSet = FEBasis->indexSet().localIndexSet();
-
-  for (auto&& element : elements(*gridView_ptr)) {
-    localView.bind(element);
-    localIndexSet.bind(localView);
-
-    f.bind(element);
-    f_grad.bind(element);
-
-    const auto & lFE = localView.tree().finiteElement();
-    const auto& geometry = element.geometry();
-
-    VectorType localDofs = VectorType::Zero(lFE.size());
-
-    for (int i = 0; i < geometry.corners(); i++) {
-      const auto x = geometry.corner(i);
-
-      auto value = f(x);
-
-      //set dofs associated with values at vertices
-      assert(lFE.localCoefficients().localKey(i).subEntity() == i);
-      localDofs(i) = value;
-
-      const auto gradient = f_grad(x);
-
-      //set dofs associated with gradient values at vertices
-      assert(
-          lFE.localCoefficients().localKey(geometry.corners() + 2 * i).subEntity()
-              == i);
-      localDofs(geometry.corners() + 2 * i) = gradient[0];
-
-      assert(
-          lFE.localCoefficients().localKey(geometry.corners() + 2 * i + 1).subEntity()
-              == i);
-      localDofs(geometry.corners() + 2 * i + 1) = gradient[1];
-    }
-
-    for (auto&& is : intersections(*gridView_ptr, element)) //loop over edges
+  for (int row = 0; row < Config::dim; row++)
+    for (int col = 0; col < Config::dim; col++)
     {
-      const int i = is.indexInInside();
-
-      // normal of center in face's reference element
-      const FieldVector<double, Config::dim> normal =
-          is.centerUnitOuterNormal();
-
-      const auto face_center = is.geometry().center();
-      //      std::cout << "face center " << face_center << std::endl;
-
-      assert(
-          lFE.localCoefficients().localKey(3 * geometry.corners() + i).subEntity()
-              == i);
-      //dofs are oriented (normal must be positiv in sclara with (1,1)
-      localDofs(3 * geometry.corners() + i) = i%2 == 0 ? -(f_grad(face_center) * normal) : f_grad(face_center) * normal;
-      //      std::cout << " aprox normal derivative " << GradientF*normal << " = " << GradientF << " * " << normal << std::endl ;
+#ifdef USE_MIXED_ELEMENT
+      globalnumericalHessian_entries.coeffRef(row,col) = new FETraits::DiscreteSecondDerivativeGridFunction(FEBasisHandler_.uDHBasis(), HessianDofs.coeff(row,col));
+      localnumericalHessian_entries.coeffRef(row,col) = new FETraits::DiscreteLocalSecondDerivativeGridFunction(*globalnumericalHessian_entries.coeff(row,col));
+#else
+      localnumericalHessian_entries.coeffRef(row,col) = new FETraits::DiscreteLocalSecondDerivativeGridFunction(solution_u_old, {row,col});
+#endif
     }
 
-    //    std::cerr << "vertex 0 = " << geometry.corner(0) << std::endl;
-    assembler_.set_local_coefficients(localIndexSet, localDofs, v);
+
+  for(auto&& e: elements(gridView()))
+  {
+    auto geometry = e.geometry();
+
+    for (int row = 0; row < Config::dim; row++)
+      for (int col = 0; col < Config::dim; col++)
+        localnumericalHessian_entries.coeffRef(row,col)->bind(e);
+
+
+    // Get a quadrature rule
+    int order = std::max(1, 3 );
+    const QuadratureRule<Config::ValueType, Config::dim>& quad = FETraits::get_Quadrature<Config::dim>(e, order);
+
+    // Loop over all quadrature points
+    for (const auto& pt : quad) {
+
+      // Position of the current quadrature point in the reference element
+      const Config::DomainType &quadPos = pt.position();
+
+
+      for (int row = 0; row < Config::dim; row++)
+        for (int col = 0; col < Config::dim; col++)
+        {
+          Config::ValueType hessian_entry = (*localnumericalHessian_entries.coeffRef(row,col))(quadPos);
+          Config::ValueType exact_hessianentry = hessF.coeff(row,col)(geometry.global(quadPos));
+
+          auto factor = pt.weight()*geometry.integrationElement(pt.position());
+
+          res.coeffRef(row,col) += (hessian_entry - exact_hessianentry)*factor;
+        }
+    }
   }
 
-  //set scaling factor (last dof) to ensure mass conservation
-  v(v.size() - 1) = 1;
-
-#ifdef DEBUG
-  test_projection(f,v);
-#endif
+  return res.array().abs().sqrt();
 }
-*/
+
 template<class F, class DF>
 void MA_solver::test_projection(const F f, const DF Df, VectorType& v) const
 {

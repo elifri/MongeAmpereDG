@@ -77,59 +77,70 @@ void MA_solver::plot(const std::string& name) const
 
 void MA_solver::plot(const std::string& name, int no) const
 {
-  VectorType solution_u = solution.segment(0, get_n_dofs_u());
-
-  FETraits::DiscreteGridFunction numericalSolution(FEBasisHandler_.uBasis(),solution_u);
-  auto localnumericalSolution = localFunction(numericalSolution);
-
-  //extract hessian
-  /*  const int nDH = Config::dim*Config::dim;
-     for (int row = 0; row < Config::dim; row++)
-    for (int col = 0; col < Config::dim; col++)
-    {
-      //calculate second derivative of gridviewfunction
-      VectorType v_uDH_entry;
-      auto localnumericalHessian_entry = localSecondDerivative(numericalSolution, {row,col});
-   }
-
-
-   //extract hessian (3 entries (because symmetry))
-   typedef Eigen::Matrix<Dune::FieldVector<double, 3>, Eigen::Dynamic, 1> DerivativeVectorType;
-   DerivativeVectorType derivativeSolution(uDHBasis->indexSet().size());
-
-   //extract dofs
-   for (int i=0; i<derivativeSolution.size(); i++)
-     for (int j=0; j< nDH; j++)
-     {
-       if (j == 2) continue;
-       int index_j = j > 2? 2 : j;
-       derivativeSolution[i][index_j] = solution[get_n_dofs_u()+ nDH*i+j];
-     }
-
-   //build gridview function
-   FETraits::DiscreteSecondDerivativeGridFunction numericalSolutionHessian(*uDHBasis,derivativeSolution);
-   auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
-
-*/
-   std::string fname(plotter.get_output_directory());
-   fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + ".vtu";
-
-   SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),2);
-   vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
-//   vtkWriter.addVertexData(localnumericalSolutionHessian, VTK::FieldInfo("Hessian", VTK::FieldInfo::Type::vector, 3));
-   vtkWriter.write(fname);
+  plot(solution, name, no);
 }
 
-void MA_solver::plot(const VectorType& u, const std::string& filename) const
+void MA_solver::plot(const VectorType& u, const std::string& filename, int no) const
 {
   FETraits::DiscreteGridFunction numericalSolution(FEBasisHandler_.uBasis(), u);
   auto localnumericalSolution = localFunction(numericalSolution);
 
   std::string fname(plotter.get_output_directory());
-  fname += "/"+ plotter.get_output_prefix()+ filename + NumberToString(iterations) + ".vtu";
+  fname += "/"+ plotter.get_output_prefix()+ filename + NumberToString(no) + ".vtu";
 
   SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),2);
   vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
+
+  //extract hessian (3 entries (because symmetry))
+  Dune::array<int,2> direction = {0,0};
+
+  auto HessianEntry00= localSecondDerivative(numericalSolution, direction);
+  vtkWriter.addVertexData(HessianEntry00 , VTK::FieldInfo("Hessian00", VTK::FieldInfo::Type::scalar, 1));
+  direction[0] = 1;
+  auto HessianEntry10 = localSecondDerivative(numericalSolution, direction);
+  vtkWriter.addVertexData(HessianEntry10 , VTK::FieldInfo("Hessian10", VTK::FieldInfo::Type::scalar, 1));
+  direction[0] = 0; direction[1] = 1;
+  auto HessianEntry01 = localSecondDerivative(numericalSolution, direction);
+  vtkWriter.addVertexData(HessianEntry01 , VTK::FieldInfo("Hessian01", VTK::FieldInfo::Type::scalar, 1));
+  direction[0] = 1;
+  auto HessianEntry11 = localSecondDerivative(numericalSolution, direction);
+  vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
+
+
+#ifdef USE_MIXED_ELEMENT
+  using GlobalHessScalarFunction = typename FETraits::DiscreteSecondDerivativeGridFunction;
+  using LocalHessScalarFunction = typename FETraits::DiscreteLocalSecondDerivativeGridFunction;
+
+  std::array<Config::VectorType,Config::dim*Config::dim> derivativeSolution;
+  std::vector<std::unique_ptr<GlobalHessScalarFunction>> numericalSolutionHessians;
+  std::vector<std::unique_ptr<LocalHessScalarFunction>> localnumericalSolutionHessians;
+
+  for (int i = 0; i < Config::dim*Config::dim; i++)
+    derivativeSolution[i] = Config::VectorType::Zero(get_n_dofs_u_DH()/Config::dim/Config::dim);
+
+  //extract dofs
+  for (int i=0; i<derivativeSolution[0].size(); i++)
+    for (int row=0; row< Config::dim; row++)
+      for (int col=0; col< Config::dim; col++)
+      {
+        derivativeSolution[row*Config::dim+col](i) = solution[get_n_dofs_u()+ i*4+row*Config::dim+col];
+      }
+
+   for (int i = 0; i < Config::dim*Config::dim; i++)
+   {
+     //build gridview function
+     numericalSolutionHessians.push_back(std::make_unique<GlobalHessScalarFunction>(FEBasisHandler_.uDHBasis(),derivativeSolution[i]));
+     localnumericalSolutionHessians.push_back(std::make_unique<LocalHessScalarFunction>(*numericalSolutionHessians[i]));
+     std::string hessianEntryName = "DiscreteHessian" + NumberToString(i);
+     vtkWriter.addVertexData(*localnumericalSolutionHessians[i], VTK::FieldInfo(hessianEntryName, VTK::FieldInfo::Type::scalar, 1));
+   }
+#endif
+
+//#ifdef HAVE_EXACT_SOLUTION
+//   ExactData exactData;
+//   vtkWriter.addVertexData(exactData.exact_solution() , VTK::FieldInfo("exactSol", VTK::FieldInfo::Type::scalar, 1));
+//#endif
+
   vtkWriter.write(fname);
 }
 
@@ -178,7 +189,9 @@ void MA_solver::create_initial_guess()
   else
   {
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
-    project([](Config::SpaceType x){return x.two_norm2()/2.0;},solution);
+//    project([](Config::SpaceType x){return x.two_norm2()/2.0;},solution);
+    ExactData exactData;
+    project(exactData.exact_solution(), solution);
     update_solution(solution);
   }
 }
@@ -251,7 +264,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 //      plotter.save_rectangular_mesh(*solution_u_old, file);
       file.close();
     }
-//    plot("numericalSolutionBeforeRef");
+    plot("numericalSolutionBeforeRef");
 
     std::cerr << "Adapting solution" << std::endl;
     std::cout << " adapting ...";

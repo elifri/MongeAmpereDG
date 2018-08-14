@@ -841,6 +841,7 @@ void MA_OT_solver::create_initial_guess()
 */
   }
 
+#ifdef HAVE_EXACT_SOLUTION
   {
     ExactData exactData;
 
@@ -849,6 +850,7 @@ void MA_OT_solver::create_initial_guess()
 
 //      this->test_projection(u0, y0, solution);
   }
+#endif
 
   Config::ValueType res = 0;
 
@@ -975,7 +977,7 @@ void MA_OT_solver::adapt_solution(const int level)
   auto& assemblerBoundary = get_assembler_lagrangian_boundary();
   assemblerBoundary.bind(FEBasisHandler_.uBasis(), FEBasisHandlerQ_.FEBasis());
 
-
+#ifdef HAVE_EXACT_SOLUTION
   //add better projection of exact solution
   {
     Config::SpaceType x0 = {0.0,0.0};
@@ -992,6 +994,7 @@ void MA_OT_solver::adapt_solution(const int level)
 
     project(u0, y0, exactsol_u);
   }
+#endif
 
   //adapt operator
   std::cerr << " going to adapt operator " << std::endl;
@@ -1019,12 +1022,11 @@ void MA_OT_solver::adapt_solution(const int level)
   solution(get_n_dofs_V_h()) = 0;
   solution.tail(get_n_dofs_Q_h()) = p_adapted;
 
+  update_solution(solution);
+
+#ifdef HAVE_EXACT_SOLUTION
   {
-    update_solution(solution);
-
      Config::SpaceType x0 = {0.0,0.0};
-
-     FieldMatrix<Config::ValueType, 2, 2> A = {{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}}; //exactsolution
      FieldMatrix<Config::ValueType, 2, 2> B = {{.385576911206371,.174131508286748},{0.174131508286748,.970161260454739}}; //exactsolution
 
      auto u0 = [&](Config::SpaceType x){
@@ -1043,5 +1045,5 @@ void MA_OT_solver::adapt_solution(const int level)
      project(u0, exactsol_u);
 #endif
    }
-
+#endif //HAVE_EXACT_SOLUTION
 }
