@@ -77,25 +77,30 @@ public:
   using DiscreteLocalGridFunction = FETraits::DiscreteLocalGridFunction;
   using DiscreteLocalGradientGridFunction = FETraits::DiscreteLocalGradientGridFunction;
 
-
+  template<typename FunctionTypeDirichletBoundary, typename FunctionTypeRhs>
   struct MA_Operator:public Operator{
 //    MA_Operator():solver_ptr(NULL){}
     MA_Operator(MA_solver &solver):solver_ptr(&solver),
-        lop(new RightHandSide(),
-//            Dirichletdata([](Config::SpaceType x){return 0.0;}))
-            make_Dirichletdata())
+        f_(),
+        dirichletBoundary_(choose_Dirichlet_data()),
+        lop(f_, dirichletBoundary_),
+        intermediateSolCounter()
     {
       std::cerr << "created MA_operator ... " << std::endl;
     }
 
-    void evaluate(const Config::VectorType& x, Config::VectorType& v,  Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
+    void evaluate(const Config::VectorType& x, Config::VectorType& v,  Config::MatrixType& m, const Config::VectorType& xBoundary, const bool new_solution=true) const
     {
-      assert(false);
       if (new_solution)
       {
-        solver_ptr->update_solution(x_old);
-//        solver_ptr->iterations++;
-//        solver_ptr->plot_with_mirror("intermediateStep");
+        intermediateSolCounter++;
+        solver_ptr->update_solution(x);
+        solver_ptr->plot("intermediate", intermediateSolCounter);
+      }
+
+
+            std::cerr << std::scientific << std::setprecision(5)
+
       }
 
       assert(solver_ptr != NULL);
@@ -107,19 +112,9 @@ public:
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const
     {
-      assert(false);
-
-      if (new_solution)
-      {
-        solver_ptr->update_solution(x_old);
-      }
-
-      assert(solver_ptr != NULL);
-      auto start = std::chrono::steady_clock::now();
-      solver_ptr->assemble_DG(lop, x,v);
-      auto end = std::chrono::steady_clock::now();
-      std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
-
+      //TODO inefficient
+      Config::MatrixType m(v.size(), x.size());
+      evaluate(x,v,m, x_old, new_solution);
     }
     void Jacobian(const Config::VectorType& x,  Config::MatrixType& m) const
     {
@@ -144,11 +139,24 @@ public:
     using OperatorType = Local_Operator_MA_Brenner;
   #endif
 
-    OperatorType lop;
-    const FieldVector<double, 2> get_fixingPoint(){ assert(false); return fixingPoint;}
+    FunctionTypeRhs f_;
+    FunctionTypeDirichletBoundary dirichletBoundary_;
 
-    const FieldVector<double, 2> fixingPoint;
+    OperatorType lop;
+
+    mutable int intermediateSolCounter;
   };
+
+
+
+  //define the problem configuration and if known the exact solution
+  using FunctionTypeDirichletBoundary = DirichletData;
+  using FunctionTypeRhs = RightHandSide;
+  using OperatorType = MA_Operator<FunctionTypeDirichletBoundary, FunctionTypeRhs>;
+
+  //define exact solution
+  using ExactData = ExactSolutionStandardMA;
+
 
   MA_solver(GridHandlerType& gridHandler, SolverConfig config, bool create_operator = true):
     initialised(true),
@@ -368,7 +376,7 @@ public:
   Operator& get_operator(){return *op;}
   const Operator& get_operator()const {return *op;}
 
-  MA_Operator& get_MA_operator(){return dynamic_cast<MA_Operator&>(get_operator());}
+  OperatorType& get_MA_operator(){return dynamic_cast<OperatorType&>(get_operator());}
 
 
   virtual GeometryOTSetting& get_setting() {return setting_;}
@@ -447,12 +455,11 @@ protected:
 //
   mutable shared_ptr<Rectangular_mesh_interpolator> exact_solution;
 
-  shared_ptr<Operator> op; ///functional operator
+  shared_ptr<OperatorType> op; ///functional operator
 
 
   std::chrono::time_point<std::chrono::steady_clock> start_; //to store the starting point of the calculation
 
-  friend MA_Operator;
   template <int T, typename T2>
   friend struct FEBasisHandler;
 };
