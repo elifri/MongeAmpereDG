@@ -54,7 +54,7 @@ protected:
 
 	int refinement_; ///choose the refinement level before plotting
 
-	GeometrySetting geometrySetting_;
+	GeometryOTSetting geometrySetting_;
 	PovRayOpts povRayOpts_;
   	const int RhinoVersion_ = 5;
 
@@ -335,7 +335,7 @@ public:
   void set_output_directory(std::string outputdir) {this->output_directory = outputdir;}
   void set_output_prefix(std::string prefix) {this->output_prefix = prefix;}
   void set_PovRayOptions(const  PovRayOpts& opts) {this->povRayOpts_ = opts;}
-  void set_geometrySetting(const  GeometrySetting& opts) {this->geometrySetting_ = opts;}
+  void set_geometrySetting(const  GeometryOTSetting& opts) {this->geometrySetting_ = opts;}
 
 //	void set_rhs(vector_function_type get_rhs){ this->get_rhs = get_rhs;}
 //	void set_exact_sol(vector_function_type get_exact_sol){ this->get_exact_sol = get_exact_sol;}

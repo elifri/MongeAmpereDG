@@ -205,10 +205,10 @@ class BoundarySquare : public OTBoundary
 
 
 public:
-  BoundarySquare(OTBoundary::GradFunction_ptr &gradUOld, GeometrySetting& geometrySetting): OTBoundary(gradUOld), geometrySetting(geometrySetting){}
+  BoundarySquare(OTBoundary::GradFunction_ptr &gradUOld, GeometryOTSetting& geometrySetting): OTBoundary(gradUOld), geometrySetting(geometrySetting){}
   ~BoundarySquare() {}
 
-  GeometrySetting& geometrySetting;
+  GeometryOTSetting& geometrySetting;
 };
 
 

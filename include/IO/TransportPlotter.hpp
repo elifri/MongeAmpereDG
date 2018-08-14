@@ -30,7 +30,7 @@ public:
 //  TransportPlotter(const std::string& gridFile, const int startlevel):
 //    gridHandler_(gridFile, startlevel){}
 
-  TransportPlotter(const GeometrySetting& setting, const int startlevel):
+  TransportPlotter(const GeometryOTSetting& setting, const int startlevel):
     gridHandler_(setting, startlevel){}
 
   int Nelements() const{

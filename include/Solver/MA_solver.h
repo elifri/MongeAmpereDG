@@ -200,10 +200,10 @@ public:
     if (create_operator)
     {
       std::cerr << "create MA Operator ... " << std::endl;
-      op = std::make_shared<MA_Operator>(*this);
+      op = std::make_shared<OperatorType>(*this);
     }
   }
-  MA_solver(GridHandlerType& gridHandler, SolverConfig config, const GeometrySetting& geometrySetting)
+  MA_solver(GridHandlerType& gridHandler, SolverConfig config, const GeometryOTSetting& geometrySetting)
       :MA_solver(gridHandler, config)
   {
     setting_ = geometrySetting;
@@ -367,8 +367,8 @@ public:
   MA_Operator& get_MA_operator(){return dynamic_cast<MA_Operator&>(get_operator());}
 
 
-  virtual GeometrySetting& get_setting() {return setting_;}
-  virtual const GeometrySetting& get_setting() const {return setting_;}
+  virtual GeometryOTSetting& get_setting() {return setting_;}
+  virtual const GeometryOTSetting& get_setting() const {return setting_;}
 
   const Assembler<>& get_assembler() const { return assembler_;}
   Assembler<>& get_assembler() { return assembler_;}
@@ -395,7 +395,7 @@ public:
 protected:
   bool initialised; ///asserts the important member, such as the dof_handler, assembler ... are initialised
 
-  GeometrySetting setting_;
+  GeometryOTSetting setting_;
 
   double epsMollifier_, epsDivide_, epsEnd_;
 

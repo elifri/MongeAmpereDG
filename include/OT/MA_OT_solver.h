@@ -64,7 +64,7 @@ public:
 
   MA_OT_solver(GridHandlerType& gridHandler,
       const shared_ptr<GridType>& gridTarget,
-      const SolverConfig& config, GeometrySetting& setting, bool create_operator = true);
+      const SolverConfig& config, GeometryOTSetting& setting, bool create_operator = true);
 
 private:
   ///performs one step of the semi-implicit method mentioned in "Two numerical methods for ..." by Benamou, Froese and Oberman
@@ -122,8 +122,8 @@ public:
   using MA_solver::adapt;
   using MA_solver::adapt_solution;
 
-  GeometrySetting& get_setting() {return setting_;}
-  const GeometrySetting& get_setting() const {return setting_;}
+  GeometryOTSetting& get_setting() {return setting_;}
+  const GeometryOTSetting& get_setting() const {return setting_;}
 
   const auto& get_gridHandlerTarget() const{return gridTarget_;}
 
@@ -161,7 +161,7 @@ public:
   Config::ValueType calculate_L2_error(const F &f) const;
 
 protected:
-  GeometrySetting& setting_;
+  GeometryOTSetting& setting_;
 
   const bool compare_with_exact_solution_ = false;
 
