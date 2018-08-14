@@ -142,10 +142,13 @@ struct FEBasisHandler{
 ///specialisation for mixed elements
 template<typename FT>
 struct FEBasisHandler<Mixed, FT>{
+
   using FiniteElementTraits = FT;
   using FEBasisType = typename FiniteElementTraits::FEBasis;
   using FEuBasisType = typename FiniteElementTraits::FEuBasis;
   using FEuDHBasisType = typename FiniteElementTraits::FEuDHBasis;
+
+  static const int dim = FiniteElementTraits::dim;
 
   using DiscreteGridFunction = typename FiniteElementTraits::DiscreteGridFunction;
 
@@ -157,15 +160,55 @@ struct FEBasisHandler<Mixed, FT>{
       uBasis_(new FEuBasisType(grid)),
       uDHBasis_(new FEuDHBasisType(grid)){}
 
+  void write_hess_dofs_into_global_dofs(Config::VectorType &v, Config::VectorType &hess_entry, int row, int col) const;
+  Eigen::Matrix<Config::VectorType, dim, dim> get_hess_dofs_from_global_dofs(const Config::VectorType &v) const;
+
+
+
   template<class F>
   void project(F f, Config::VectorType &V) const;
+
+  template<class F, class HessFEntry>
+  void project(F f, Eigen::Matrix<HessFEntry*, dim, dim> hess_f, Config::VectorType &V) const;
+
 
   void adapt_after_grid_change(const typename FEBasisType::GridView& grid)
   {
     FEBasis_ = std::shared_ptr<FEBasisType> (new FEBasisType(grid));
-    uBasis_ = std::shared_ptr<FEBasisType> (new FEuBasisType(grid));
-    uDHBasis_ = std::shared_ptr<FEBasisType> (new FEuDHBasisType(grid));
+    uBasis_ = std::shared_ptr<FEuBasisType> (new FEuBasisType(grid));
+    uDHBasis_ = std::shared_ptr<FEuDHBasisType> (new FEuDHBasisType(grid));
   }
+
+  ///initialises the basis functions on the refined grid and calculates the coefficients of the new basis from the coefficients of the old basis
+  ///if the grids are not nested a the new function is a hermite interpolation of the old
+  /**
+   * @brief initialises the basis functions on the refined grid and calculates a new coefficient vector. if the grids are not nested a the new function is a hermite interpolation of the old
+   * @param gridOld   the old grid
+   * @param grid      the refined grid
+   * @param v         coeffcient vector of the old grid basis functions
+   * @return          coefficient vector of the new grid basis functions
+   */
+  template <typename GridTypeOld>
+  Config::VectorType adapt_function_after_rectangular_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
+  {assert(false && " Error, dont know adaption for this FE basis"); exit(-1);}
+
+  ///initialises the basis functions on the refined grid and calculates the coefficients of the new basis from the coefficients of the old basis
+  ///if the grids are not nested a the new function is a hermite interpolation of the old
+  /**
+   * @brief initialises the basis functions on the refined grid and calculates a new coefficient vector. if the grids are not nested a the new function is a hermite interpolation of the old
+   * @param gridOld   the old grid
+   * @param grid      the refined grid
+   * @param v         coeffcient vector of the old grid basis functions
+   * @return          coefficient vector of the new grid basis functions
+   */
+  template <typename GridTypeOld>
+  Config::VectorType adapt_function_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
+  {
+    assert(false && " Error, dont know FE basis and works only for levelGridViews");
+    std::cerr << " Error, dont know FE basis and works only for levelGridViews" << std::endl;
+    exit(-1);
+  }
+
 
   void adapt_after_grid_change(const typename FEBasisType::GridView& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v)
   {assert(false && " Error, dont know FE basis and works only for levelGridViews"); exit(-1);}
@@ -416,6 +459,82 @@ void interpolateSecondDerivative(const B& basis, C& coeff, F&& f, BV&& bv)
   }
 }
 
+template<typename FETraits>
+void FEBasisHandler<Mixed, FETraits>::write_hess_dofs_into_global_dofs(Config::VectorType &v, Config::VectorType &v_uDH_entry, int row, int col) const
+{
+  auto localView = FEBasis_->localView();
+  auto localIndexSet = FEBasis_->indexSet().localIndexSet();
+
+  auto localViewu = uBasis_->localView();
+
+  auto localViewuDH = uDHBasis_->localView();
+  auto localIndexSetuDH = uDHBasis_->indexSet().localIndexSet();
+
+  //copy corresponding dofs
+//      const int nDH = Config::dim * Config::dim;
+  for (auto&& element: elements(FEBasis_->gridView()))
+  {
+    localView.bind(element);
+    localIndexSet.bind(localView);
+
+    localViewu.bind(element);
+
+    localViewuDH.bind(element);
+    localIndexSetuDH.bind(localViewuDH);
+
+    for (unsigned int i = 0; i < localViewuDH.size(); i++)
+    {
+      const int localIndex = FETraits::flat_local_index(localViewu.size(), i, row, col);
+      v[FETraits::get_index(localIndexSet, localIndex)] = v_uDH_entry[localIndexSetuDH.index(i)[0]];
+//          std::cout << " v(" << FETraits::get_index(localIndexSet, localIndex) << ")=" << v_uDH_entry[localIndexSetuDH.index(i)[0]] << std::endl;
+    }
+  }
+}
+
+template<typename FETraits>
+Eigen::Matrix<Config::VectorType, FEBasisHandler<Mixed, FETraits>::dim, FEBasisHandler<Mixed, FETraits>::dim>
+  FEBasisHandler<Mixed, FETraits>::get_hess_dofs_from_global_dofs(const Config::VectorType &v) const
+{
+  Eigen::Matrix<Config::VectorType, dim, dim> vDH_entries = Eigen::Matrix<Config::VectorType, dim, dim>::Constant(Config::VectorType(uDHBasis_->indexSet().size()));
+//  auto vDH_entries = Eigen::Matrix<Config::VectorType, dim, dim>::Constant(Config::VectorType(uDHBasis_->indexSet().size()));
+
+  auto localView = FEBasis_->localView();
+  auto localIndexSet = FEBasis_->indexSet().localIndexSet();
+
+  auto localViewu = uBasis_->localView();
+
+  auto localViewuDH = uDHBasis_->localView();
+  auto localIndexSetuDH = uDHBasis_->indexSet().localIndexSet();
+
+  for (int row = 0; row < dim; row++)
+    for (int col = 0; col < dim; col++)
+    {
+      //copy corresponding dofs
+      for (auto&& element: elements(FEBasis_->gridView()))
+      {
+        //bind everything to local context
+        localView.bind(element);
+        localIndexSet.bind(localView);
+
+        localViewu.bind(element);
+
+        localViewuDH.bind(element);
+        localIndexSetuDH.bind(localViewuDH);
+
+        //extract desired local dofs
+        for (unsigned int i = 0; i < localViewuDH.size(); i++)
+        {
+          const int localIndex = FETraits::flat_local_index(localViewu.size(), i, row, col);
+          auto localIndexDH = localIndexSetuDH.index(i)[0];
+          vDH_entries.coeffRef(row,col)[localIndexDH] = v[FETraits::get_index(localIndexSet, localIndex)];
+  //          std::cout << " v(" << FETraits::get_index(localIndexSet, localIndex) << ")=" << v_uDH_entry[localIndexSetuDH.index(i)[0]] << std::endl;
+        }
+      }
+    }
+  return vDH_entries;
+}
+
+//template<typename FETraits>template<typename FETraits>
 
 template<typename FETraits>
 template <class F>
@@ -442,37 +561,41 @@ void FEBasisHandler<Mixed, FETraits>::project(F f, Config::VectorType &v) const
       auto localnumericalHessian_entry = localSecondDerivative(numericalSolution, {row,col});
       interpolateSecondDerivative(*uDHBasis_, v_uDH_entry, localnumericalHessian_entry, Functions::Imp::AllTrueBitSetVector());
 
-      auto localView = FEBasis_->localView();
-      auto localIndexSet = FEBasis_->indexSet().localIndexSet();
-
-      auto localViewu = uBasis_->localView();
-
-      auto localViewuDH = uDHBasis_->localView();
-      auto localIndexSetuDH = uDHBasis_->indexSet().localIndexSet();
-
-      //copy corresponding dofs
-//      const int nDH = Config::dim * Config::dim;
-      for (auto&& element: elements(FEBasis_->gridView()))
-      {
-        localView.bind(element);
-        localIndexSet.bind(localView);
-
-        localViewu.bind(element);
-
-        localViewuDH.bind(element);
-        localIndexSetuDH.bind(localViewuDH);
-
-        for (unsigned int i = 0; i < localViewuDH.size(); i++)
-        {
-          using LocalView = decltype(localView);
-
-          const int localIndex = Dune::Functions::flat_local_index<typename LocalView::GridView, typename LocalView::size_type>(localViewu.size(), i, row, col);
-          v[FETraits::get_index(localIndexSet, localIndex)] = v_uDH_entry[localIndexSetuDH.index(i)[0]];
-//          std::cout << " v(" << FETraits::get_index(localIndexSet, localIndex) << ")=" << v_uDH_entry[localIndexSetuDH.index(i)[0]] << std::endl;
-        }
-      }
+      write_hess_dofs_into_global_dofs(v, v_uDH_entry, row, col);
     }
 }
+
+template<typename FETraits>
+template <class F, class HessFEntry>
+void FEBasisHandler<Mixed, FETraits>::project(F f, Eigen::Matrix<HessFEntry*, dim, dim> hess_f, Config::VectorType &v) const
+{
+  assert(hess_f.rows() == FETraits::dim);
+  assert(hess_f.cols() == FETraits::dim);
+
+  v.setZero(FEBasis_->indexSet().size());
+  Config::VectorType v_u;
+  interpolate(*uBasis_, v_u, f);
+  v.segment(0, v_u.size()) = v_u;
+
+  //init second derivatives
+
+
+  for (int row = 0; row < Config::dim; row++)
+    for (int col = 0; col < Config::dim; col++)
+    {
+
+      std::cerr << " row " << row << " col " << col << std::endl;
+      //interpolate given second derivative
+      Config::VectorType v_uDH_entry;
+      assert(SolverConfig::degree > 1);
+
+      interpolate(*uDHBasis_, v_uDH_entry, *(hess_f.coeffRef(row,col)));
+
+      //write into global dof vector in the correct order
+      write_hess_dofs_into_global_dofs(v, v_uDH_entry, row, col);
+    }
+}
+
 
 template <>
 template<class F>
@@ -761,6 +884,45 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   return vNew;
 }
 
+//TODO unify by coarseTraits in FETraitsUtil
+
+template <>
+template <typename GridTypeOld>
+Config::VectorType FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::adapt_function_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
+{
+  using CoarseTraits = MixedTraits<GridTypeOld, SolverConfig::degree, SolverConfig::degreeHessian>;
+
+  //1.init old global solution
+  typename CoarseTraits::FEuBasis FEuBasisCoarse (gridOld);
+  using DiscreteGridFunctionCoarseU = typename CoarseTraits::DiscreteGridFunction;
+  DiscreteGridFunctionCoarseU solution_u_Coarse_global (FEuBasisCoarse,v);
+
+  // 2. prepare a Taylor extension for values outside the old grid
+  GenerealOTBoundary bcSource(gridOld.grid(), GeometrySetting::boundaryN);
+  TaylorBoundaryFunction<DiscreteGridFunctionCoarseU> solution_u_old_extended_global(bcSource, solution_u_Coarse_global);
+
+
+  //3.init old global hessians and its taylor extension
+  Eigen::Matrix<Config::VectorType, dim, dim> vDH_entries = get_hess_dofs_from_global_dofs(v);
+
+  typename CoarseTraits::FEuDHBasis FEuDHBasisCoarse (gridOld);
+  using DiscreteGridFunctionCoarseUDH = typename CoarseTraits::DiscreteSecondDerivativeGridFunction;
+  Eigen::Matrix<DiscreteGridFunctionCoarseUDH*, dim, dim> solution_uDH_Coarse_global;
+  Eigen::Matrix<TaylorBoundaryFunction<DiscreteGridFunctionCoarseUDH>*, dim, dim> solution_uDH_Coarse_extended_global;
+  for (int i = 0; i < dim; i++)
+    for (int j = 0; j < dim; j++)
+    {
+      solution_uDH_Coarse_global.coeffRef(i,j) = new DiscreteGridFunctionCoarseUDH (FEuDHBasisCoarse,vDH_entries.coeff(i,j));
+      solution_uDH_Coarse_extended_global.coeffRef(i,j) = new TaylorBoundaryFunction<DiscreteGridFunctionCoarseUDH> (bcSource, *solution_uDH_Coarse_global.coeff(i,j));
+    }
+
+  Config::VectorType vNew;
+  vNew.resize(FEBasis_->indexSet().size());
+  project(solution_u_old_extended_global, solution_uDH_Coarse_extended_global, vNew);
+//  project(solution_u_Coarse_global, vNew);
+  return vNew;
+}
+
 template <>
 template <typename GridTypeOld>
 Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt_function_after_rectangular_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
@@ -778,6 +940,35 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 //  project(solution_u_Coarse_global, vNew);
   return vNew;
 }
+
+template <>
+template <typename GridTypeOld>
+Config::VectorType FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::adapt_function_after_rectangular_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
+{
+  using CoarseTraits = MixedTraits<GridTypeOld, SolverConfig::degree, SolverConfig::degreeHessian>;
+
+  FEBasisHandler<Mixed, CoarseTraits> FEBasisHandlerCoarse(gridOld);
+
+  typename CoarseTraits::FEuBasis FEuBasisCoarse (gridOld);
+  using DiscreteGridFunctionCoarseU = typename CoarseTraits::DiscreteGridFunction;
+  DiscreteGridFunctionCoarseU solution_u_Coarse_global (FEBasisHandlerCoarse.uBasis(),v);
+
+
+  Eigen::Matrix<Config::VectorType, dim, dim> vDH_entries = FEBasisHandlerCoarse.get_hess_dofs_from_global_dofs(v);
+
+  using DiscreteGridFunctionCoarseUDH = typename CoarseTraits::DiscreteSecondDerivativeGridFunction;
+  Eigen::Matrix<DiscreteGridFunctionCoarseUDH*, dim, dim> solution_uDH_Coarse_global;
+  for (int i = 0; i < dim; i++)
+    for (int j = 0; j < dim; j++)
+      solution_uDH_Coarse_global.coeffRef(i,j) = new DiscreteGridFunctionCoarseUDH (FEBasisHandlerCoarse.uDHBasis(),vDH_entries.coeff(i,j));
+
+  Config::VectorType vNew;
+  vNew.resize(FEBasis_->indexSet().size());
+  project(solution_u_Coarse_global, solution_uDH_Coarse_global, vNew);
+//  project(solution_u_Coarse_global, vNew);
+  return vNew;
+}
+
 
 template <>
 template <typename GridTypeOld, typename Solver>

@@ -48,8 +48,8 @@ struct FETraits
   using DiscreteLocalGridFunction = typename DiscreteGridFunction::LocalFunction;
   using DiscreteGradientGridFunction = typename DiscreteGridFunction::GlobalFirstDerivative;
   using DiscreteLocalGradientGridFunction = typename DiscreteGridFunction::LocalFirstDerivative;
-  using DiscreteLocalSecondDerivativeGridFunction = typename DiscreteGridFunction::LocalSecondDerivative;
   using DiscreteSecondDerivativeGridFunction = typename DiscreteGridFunction::GlobalSecondDerivative;
+  using DiscreteLocalSecondDerivativeGridFunction = typename DiscreteGridFunction::LocalSecondDerivative;
 
   template<int dim>
   static const QuadratureRule<Config::ValueType, dim>& get_Quadrature(const Config::ElementType & element, int order)
@@ -132,6 +132,8 @@ struct FETraits<Functions::MAMixedBasis< GridView, degree, degreeHessian>>
 {
   static const FEType Type = Mixed;
 
+  static const int dim = GridView::dimension;
+
   using FEBasis = Functions::MAMixedBasis<GridView, degree, degreeHessian>;
   //  using FEuBasis = FEBasis::Basisu;
   using  FEuBasis = Functions::PQkNodalBasis<GridView, degree>;
@@ -152,22 +154,25 @@ struct FETraits<Functions::MAMixedBasis< GridView, degree, degreeHessian>>
   static const QuadratureRule<Config::ValueType, dim>& get_Quadrature(const Config::ElementType & element, int order)
   {
     static_assert(dim==2, " not implemented for this dimension");
-    return QuadratureRules<Config::ValueType, Config::dim>::rule(element.geometry().type(), order);
+    return QuadratureRules<Config::ValueType, dim>::rule(element.geometry().type(), order);
   }
 
   template<int dim>
   static const QuadratureRule<Config::ValueType, dim>& get_Quadrature(const GeometryType & geo, int order)
-  { return QuadratureRules<Config::ValueType, Config::dim-1>::rule(geo, order);}
+  {
+    static_assert(dim==1, "not implemented for this dimension");
+    return QuadratureRules<Config::ValueType, 1>::rule(geo, order);
+  }
 
   static size_t get_index(const typename FEBasis::LocalIndexSet& localIndexSet, size_t localIndex)
   {
     return localIndexSet.flat_index(localIndex);
   }
 
-/*  static size_t get_index(const typename FEBasis::LocalIndexSet& localIndexSet, size_t localIndex)
+  static size_t get_index(const typename FEuBasis::LocalIndexSet& localIndexSet, size_t localIndex)
   {
-    return localIndexSet.flat_index(localIndex);
-  }*/
+    return localIndexSet.index(localIndex)[0];
+  }
 
 
 
@@ -176,6 +181,18 @@ struct FETraits<Functions::MAMixedBasis< GridView, degree, degreeHessian>>
   {
     return localView.tree().template child<0>().finiteElement().size();
   }
+
+  template<typename LocalView>
+  static auto flat_local_index(const LocalView& localView, const int j, const int row, const int col)
+  {
+    return get_localSize_finiteElementu(localView)+dim*(dim*j+row)+col;
+  }
+
+  static auto flat_local_index(const size_t& size_u, const int j, const int row, const int col)
+  {
+    return size_u+dim*(dim*j+row)+col;
+  }
+
 
   template<typename LocalView>
   static const auto& get_finiteElementu(const LocalView& localView)
