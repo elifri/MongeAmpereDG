@@ -50,13 +50,13 @@ class MAMixedLocalIndexSet {
     static const int nDH = dim*dim;
 
 public:
-    typedef std::size_t size_type;
+    using size_type = std::size_t;
 
     /** \brief Type of the local view on the restriction of the basis to a single element */
-    typedef MAMixedBasisLocalView<GV, deg, degHess> LocalView;
+    using LocalView = MAMixedBasisLocalView<GV, deg, degHess>;
 
     /** \brief Type used for global numbering of the basis vectors */
-    typedef std::array<size_type, 2> MultiIndex;
+    using MultiIndex = std::array<size_type, 2>;
 
     MAMixedLocalIndexSet(const MAMixedIndexSet<GV, deg, degHess> & indexSet) :
             indexSet_(indexSet), uLocalIndexSet_(
@@ -150,7 +150,7 @@ class MAMixedIndexSet {
     static const int nDH = dim*dim;
 
     /** \brief The global FE basis that this is a view on */
-    typedef MAMixedBasis<GV, deg, degHess> GlobalBasis;
+    using GlobalBasis = MAMixedBasis<GV, deg, degHess>;
 
     MAMixedIndexSet(const GlobalBasis & basis) :
             uIndexSet_(basis.unodalbasis_.indexSet()), uDHIndexSet_(
@@ -159,15 +159,15 @@ class MAMixedIndexSet {
 
 public:
 
-    typedef MAMixedLocalIndexSet<GV, deg, degHess> LocalIndexSet;
+    using LocalIndexSet = MAMixedLocalIndexSet<GV, deg, degHess>;
 
-    typedef std::size_t size_type;
+    using size_type = std::size_t;
 
     /** \todo This enum has been added to the interface without prior discussion. */
     enum {
         multiIndexMaxSize = 2
     };
-    typedef std::array<size_type, 1> MultiIndex;
+    using MultiIndex = std::array<size_type, 1>;
 
     /** \todo This method has been added to the interface without prior discussion. */
     size_type dimension() const {
@@ -223,21 +223,21 @@ template<typename GV, int deg, int degHess>
 class MAMixedBasis: public GridViewFunctionSpaceBasis<GV,
         MAMixedBasisLocalView<GV, deg, degHess>,
         MAMixedIndexSet<GV, deg, degHess>, std::array<std::size_t, 2> > {
+
+public:
     static const int dim = GV::dimension;
     static const int nDH = dim*dim;
 
-public:
-
     /** \brief The grid view that the FE space is defined on */
-    typedef GV GridView;
-    typedef std::size_t size_type;
+    using GridView = GV;
+    using size_type = std::size_t;
 
     /** \brief export the bases of the child elements*/
-    typedef LagrangeDGBasis<GV, deg> Basisu;
-    typedef LagrangeDGBasis<GV, degHess> BasisuDH;
+    using Basisu = LagrangeDGBasis<GV, deg>;
+    using BasisuDH = LagrangeDGBasis<GV, degHess>;
 
     /** \brief Type of the local view on the restriction of the basis to a single element */
-    typedef MAMixedBasisLocalView<GV, deg, degHess> LocalView;
+    using LocalView = MAMixedBasisLocalView<GV, deg, degHess>;
 
     /** \brief Constructor for a given grid view object */
     MAMixedBasis(const GridView& gv) :
@@ -274,33 +274,33 @@ private:
 /** \brief The restriction of a finite element basis to a single element */
 template<typename GV, int deg, int degHess>
 class MAMixedBasisLocalView {
+public:
     static const int dim = GV::dimension;
     static const int nDH = dim*dim;
 
-public:
     /** \brief The global FE basis that this is a view on */
-    typedef MAMixedBasis<GV, deg, degHess> GlobalBasis;
-    typedef typename GlobalBasis::GridView GridView;
+    using GlobalBasis = MAMixedBasis<GV, deg, degHess>;
+    using GridView = typename GlobalBasis::GridView;
 
     /** \brief The type used for sizes */
-    typedef typename GlobalBasis::size_type size_type;
+    using size_type = typename GlobalBasis::size_type;
 
     /** \brief Type used to number the degrees of freedom
      *
      * In the case of mixed finite elements this really can be a multi-index, but for a standard
      * P2 space this is only a single-digit multi-index, i.e., it is an integer.
      */
-    typedef typename GlobalBasis::MultiIndex MultiIndex;
+    using MultiIndex = typename GlobalBasis::MultiIndex;
 
     /** \brief Type of the grid element we are bound to */
-    typedef typename GridView::template Codim<0>::Entity Element;
+    using Element = typename GridView::template Codim<0>::Entity;
 
     /** \brief Tree of local finite elements / local shape function sets
      *
      * In the case of a P2 space this tree consists of a single leaf only,
      * i.e., Tree is basically the type of the LocalFiniteElement
      */
-    typedef MAMixedBasisTree<GV, deg, degHess> Tree;
+    using Tree = MAMixedBasisTree<GV, deg, degHess>;
 
     /** \brief Construct local view for a given global finite element basis */
     MAMixedBasisLocalView(const GlobalBasis* globalBasis) :
@@ -398,7 +398,7 @@ template<typename GV, int deg, int degHess>
 class MAMixedBasisTree: public TypeTree::CompositeNode<LagrangeDGBasisLeafNode<GV, deg>,MAMixedHessianTree<GV, deg, degHess>> {
     friend MAMixedBasisLocalView<GV, deg, degHess> ;
 
-    typedef TypeTree::CompositeNode<LagrangeDGBasisLeafNode<GV, deg>,MAMixedHessianTree<GV, deg, degHess> > Base;
+    using Base = TypeTree::CompositeNode<LagrangeDGBasisLeafNode<GV, deg>,MAMixedHessianTree<GV, deg, degHess> >;
     MAMixedBasisTree(LagrangeDGBasisLeafNode<GV, deg> & uleafNode, const MAMixedHessianTree<GV, deg, degHess> & hessianTree) :
             Base(uleafNode, hessianTree) {
     }
