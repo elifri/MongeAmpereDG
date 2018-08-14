@@ -146,15 +146,15 @@ public:
 };
 
 // A class implementing the analytical dirichlet boundary
-class Dirichletdata:public VirtualFunction<Config::SpaceType, Config::ValueType>
+class DirichletData:public VirtualFunction<Config::SpaceType, Config::ValueType>
 {
 public:
   using Function_ptr = std::shared_ptr<SolverConfig::FETraitsSolver::DiscreteLocalGridFunction>;
   using ExactFunctionType = std::function<Config::ValueType(const Config::SpaceType&)>;
 
 //  Dirichletdata(Function_ptr &exactSolU) : exact_solution(&exactSolU) {}
-  Dirichletdata() : exact_solution() {}
-  Dirichletdata(const ExactFunctionType &exactSolU) : exact_solution(exactSolU) {}
+  DirichletData() : exact_solution() {}
+  DirichletData(const ExactFunctionType &exactSolU) : exact_solution(exactSolU) {}
 
 	void evaluate(const Config::SpaceType& in, Config::ValueType& out) const{
 	  out = exact_solution(in);
@@ -200,7 +200,40 @@ namespace PDE_functions{
 	void Dg_initial(const Config::SpaceType2d& z, Config::SpaceType2d &out); /// derivative of g_initial
 }
 
-Dirichletdata* make_Dirichletdata();
+DirichletData* make_Dirichletdata();
+DirichletData::ExactFunctionType choose_Dirichlet_data();
+
+struct ExactSolutionStandardMA{
+  static auto exact_solution()
+  {
+    return choose_Dirichlet_data();
+  }
+
+  static Eigen::Matrix<DirichletData::ExactFunctionType, Config::dim, Config::dim> exact_Hessian()
+    {
+      Eigen::Matrix<DirichletData::ExactFunctionType, Config::dim, Config::dim> Hessian_fcts;
+      switch (SolverConfig::problem)
+      {
+      case SIMPLE_MA:
+        Hessian_fcts.coeffRef(0,0) = [](const Config::SpaceType& x){return 1;};
+        Hessian_fcts.coeffRef(1,0) = [](const Config::SpaceType& x){return 0;};
+        Hessian_fcts.coeffRef(0,1) = [](const Config::SpaceType& x){return 0;};
+        Hessian_fcts.coeffRef(1,1) = [](const Config::SpaceType& x){return 1;};
+        break;
+      case MA_SMOOTH:
+        Hessian_fcts.coeffRef(0,0) = [](const Config::SpaceType& x){return std::exp(x.two_norm2())/2.*(1.+x[0]*x[0]);};
+        Hessian_fcts.coeffRef(1,0) = [](const Config::SpaceType& x){return std::exp(x.two_norm2())/2.*x[0]*x[1];};
+        Hessian_fcts.coeffRef(0,1) = [](const Config::SpaceType& x){return std::exp(x.two_norm2())/2.*x[0]*x[1];};
+        Hessian_fcts.coeffRef(1,1) = [](const Config::SpaceType& x){return std::exp(x.two_norm2())/2.*(1.+x[1]*x[1]);};
+        break;
+      default:
+        std::cerr << "Unknown problem ... " << std::endl;
+        std::exit(-1);
+      }
+      return Hessian_fcts;
+    }
+
+};
 
 
 class HamiltonJacobiBC{
