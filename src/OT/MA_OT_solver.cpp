@@ -26,7 +26,7 @@ namespace po = boost::program_options;
 
 MA_OT_solver::MA_OT_solver(GridHandlerType& gridHandler,
     const shared_ptr<GridType>& gridTarget,
-    const SolverConfig& config, GeometrySetting& setting, bool create_operator)
+    const SolverConfig& config, GeometryOTSetting& setting, bool create_operator)
 :MA_solver(gridHandler, config, false),
  setting_(setting), gridTarget_(gridTarget, SolverConfig::startlevel),
 #ifdef USE_COARSE_Q_H
@@ -661,7 +661,7 @@ void MA_OT_solver::one_Poisson_Step()
   Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_m;
   lu_of_m.compute(m);
 
-  if (lu_of_m.info()!= Eigen::EigenSuccess) {
+  if (lu_of_m.info()!= Eigen::Success) {
       // decomposition failed
       std::cout << "\nError: "<< lu_of_m.info() << " Could not compute LU decomposition for initialising poisson equation!\n";
       exit(-1);
