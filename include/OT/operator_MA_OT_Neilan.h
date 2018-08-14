@@ -30,8 +30,8 @@ class Local_Operator_MA_OT_Neilan {
 public:
   using Function = DensityFunction;
 
-  Local_Operator_MA_OT_Neilan(const OTBoundary* bc, const Function* rhoX, const Function* rhoY):
-    rhoX(*rhoX), rhoY(*rhoY),bc(*bc), int_f(0), found_negative(false)
+  Local_Operator_MA_OT_Neilan(const OTBoundary& bc, const Function& rhoX, const Function& rhoY):
+  rhoX(rhoX), rhoY(rhoY),bc(bc), int_f(0), found_negative(false), last_step_on_a_different_grid(false)
   {
     std::cout << " created Local Operator" << std::endl;
   }
@@ -425,133 +425,135 @@ public:
   }
 
 
-#ifndef COLLOCATION
-  template<class Intersection, class LocalView, class VectorType>
-  void assemble_boundary_face_term(const Intersection& intersection,
-      const LocalView &localView,
-      const VectorType &x, VectorType& v, int tag) const {
+template<class Intersection, class LocalView, class VectorType>
+void assemble_boundary_face_term(const Intersection& intersection,
+    const LocalView &localView,
+    const VectorType &x, VectorType& v, int tag) const {
 
-    const int dim = Intersection::dimension;
-    const int dimw = Intersection::dimensionworld;
+  const int dim = Intersection::dimension;
+  const int dimw = Intersection::dimensionworld;
 
-    //assuming galerkin
-    assert((unsigned int) x.size() == localView.size());
-    assert((unsigned int) v.size() == localView.size());
+  //assuming galerkin
+  assert((unsigned int) x.size() == localView.size());
+  assert((unsigned int) v.size() == localView.size());
 
-    // Get the grid element from the local FE basis view
-    using Element = typename LocalView::Element;
-    const Element& element = localView.element();
+  // Get the grid element from the local FE basis view
+  using Element = typename LocalView::Element;
+  const Element& element = localView.element();
 
-    const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
-    const int size_u = localFiniteElementu.size();
+  const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
+  const int size_u = localFiniteElementu.size();
 
-    using ElementuType = typename std::decay_t<decltype(localFiniteElementu)>;
+  using ElementuType = typename std::decay_t<decltype(localFiniteElementu)>;
 
-    using RangeType = typename ElementuType::Traits::LocalBasisType::Traits::RangeType;
-    using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
+  using RangeType = typename ElementuType::Traits::LocalBasisType::Traits::RangeType;
+  using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
 
-    //-----init variables for automatic differentiation
+  //-----init variables for automatic differentiation
 
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(
-        localView.size());
-    Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(
-        localView.size());
-    for (size_t i = 0; i < localView.size(); i++)
-      v_adolc[i] <<= v[i];
+  Eigen::Matrix<adouble, Eigen::Dynamic, 1> x_adolc(
+      localView.size());
+  Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(
+      localView.size());
+  for (size_t i = 0; i < localView.size(); i++)
+    v_adolc[i] <<= v[i];
 
-    trace_on(tag);
+  trace_on(tag);
 
-    //init independent variables
-    for (size_t i = 0; i < localView.size(); i++)
-      x_adolc[i] <<= x[i];
+  //init independent variables
+  for (size_t i = 0; i < localView.size(); i++)
+    x_adolc[i] <<= x[i];
 
-    // ----start quadrature--------
+  // ----start quadrature--------
 
-    // Get a quadrature rule
-    const int order = std::max(0, 3 * ((int) localFiniteElementu.localBasis().order()));
-    GeometryType gtface = intersection.geometryInInside().type();
-    const QuadratureRule<double, dim - 1>& quad = QuadratureRules<double,
-        dim - 1>::rule(gtface, order);
+  // Get a quadrature rule
+  const int order = std::max(0, 3 * ((int) localFiniteElementu.localBasis().order()));
+  GeometryType gtface = intersection.geometryInInside().type();
+  const QuadratureRule<double, dim - 1>& quad = QuadratureRules<double,
+      dim - 1>::rule(gtface, order);
 
-    // normal of center in face's reference element
-    const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
-        dim - 1>::general(intersection.geometry().type()).position(0, 0);
-    const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
-        face_center);
+  // normal of center in face's reference element
+  const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
+      dim - 1>::general(intersection.geometry().type()).position(0, 0);
+  const FieldVector<double, dimw> normal = intersection.unitOuterNormal(
+      face_center);
 
-    // penalty weight for NIPG / SIPG
-    //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
-    double penalty_weight;
-    if (SolverConfig::Dirichlet)
-      penalty_weight = SolverConfig::sigmaBoundary
-                      * (SolverConfig::degree * SolverConfig::degree)
-                      / std::pow(intersection.geometry().volume(), SolverConfig::beta);
-    else
-      penalty_weight = SolverConfig::sigmaBoundary
-                      * (SolverConfig::degree * SolverConfig::degree);
+  // penalty weight for NIPG / SIPG
+  //note we want to divide by the length of the face, i.e. the volume of the 2dimensional intersection geometry
+  double penalty_weight;
+  if (SolverConfig::Dirichlet)
+    penalty_weight = SolverConfig::sigmaBoundary
+                    * (SolverConfig::degree * SolverConfig::degree)
+                    / std::pow(intersection.geometry().volume(), SolverConfig::beta);
+  else
+    penalty_weight = SolverConfig::sigmaBoundary
+                    * (SolverConfig::degree * SolverConfig::degree);
 //                     * std::pow(intersection.geometry().volume(), SolverConfig::beta);
 
-    // Loop over all quadrature points
-    for (size_t pt = 0; pt < quad.size(); pt++) {
+  // Loop over all quadrature points
+  for (size_t pt = 0; pt < quad.size(); pt++) {
 
-      //------get data----------
+    //------get data----------
 
-      // Position of the current quadrature point in the reference element
-      const FieldVector<double, dim> &quadPos =
-          intersection.geometryInInside().global(quad[pt].position());
-      //global position
-      auto x_value = intersection.inside().geometry().global(quadPos);
+    // Position of the current quadrature point in the reference element
+    const FieldVector<double, dim> &quadPos =
+        intersection.geometryInInside().global(quad[pt].position());
+    //global position
+    auto x_value = intersection.inside().geometry().global(quadPos);
 
-      // The transposed inverse Jacobian of the map from the reference element to the element
-      const auto& jacobian =
-          intersection.inside().geometry().jacobianInverseTransposed(quadPos);
+    // The transposed inverse Jacobian of the map from the reference element to the element
+    const auto& jacobian =
+        intersection.inside().geometry().jacobianInverseTransposed(quadPos);
 
-      //the shape function values
-      std::vector<RangeType> referenceFunctionValues(size_u);
-      adouble u_value = 0;
-      assemble_functionValues_u(localFiniteElementu, quadPos,
-          referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
+    //the shape function values
+    std::vector<RangeType> referenceFunctionValues(size_u);
+    adouble u_value = 0;
+    assemble_functionValues_u(localFiniteElementu, quadPos,
+        referenceFunctionValues, x_adolc.segment(0, size_u), u_value);
 
-      // The gradients
-      std::vector<JacobianType> gradients(size_u);
-      FieldVector<adouble, Config::dim> gradu;
-      assemble_gradients_gradu(localFiniteElementu, jacobian, quadPos,
-          gradients, x_adolc.segment(0,size_u), gradu);
+    // The gradients
+    std::vector<JacobianType> gradients(size_u);
+    FieldVector<adouble, Config::dim> gradu;
+    assemble_gradients_gradu(localFiniteElementu, jacobian, quadPos,
+        gradients, x_adolc.segment(0,size_u), gradu);
 
-      //-------calculate integral--------
-      auto signedDistance = bc.H(gradu, normal);
+    //-------calculate integral--------
+    auto signedDistance = bc.H(gradu, normal);
 //      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0].value() << " "<< gradu[1].value()<< " from X "  << x_value << std::endl;
 
-      const auto integrationElement =
-          intersection.geometry().integrationElement(quad[pt].position());
-      const double factor = quad[pt].weight() * integrationElement;
-      for (int i = 0; i < size_u; i++) //parts from self
-      {
+    const auto integrationElement =
+        intersection.geometry().integrationElement(quad[pt].position());
+    const double factor = quad[pt].weight() * integrationElement;
+    for (int i = 0; i < size_u; i++) //parts from self
+    {
 //        std::cerr << " add to local " << j << std::endl;
 //        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 2 || localFiniteElementu.localCoefficients().localKey(j).subEntity() == j);
 //        assert(localFiniteElementu.localCoefficients().localKey(j).codim() != 1 || localFiniteElementu.localCoefficients().localKey(j).subEntity() == boundaryFaceId);
-        assert(!SolverConfig::Dirichlet);
+      assert(!SolverConfig::Dirichlet);
 //        v_adolc(i) += penalty_weight * signedDistance * (referenceFunctionValues[i]+(gradients[i]*normal)) * factor;
 
 //        std::cerr << " test function has value " << (referenceFunctionValues[j]) << " at " << quadPos << std::endl;
 //        std::cerr << " test function values ";
 //        for (auto e: referenceFunctionValues) std::cerr << e << " ";
 //        std::cerr << std::endl;
-      }
-
     }
 
-    // select dependent variables
-    for (size_t i = 0; i < localView.size(); i++)
-      v_adolc[i] >>= v[i];
-    trace_off();
   }
-#else
-  static_assert(false, "blub");
-#endif
 
+  // select dependent variables
+  for (size_t i = 0; i < localView.size(); i++)
+    v_adolc[i] >>= v[i];
+  trace_off();
+}
 
   static bool use_adouble_determinant;
+
+  ///use given global function (probably living on a coarser grid) to evaluate last step
+  void set_evaluation_of_u_old_to_different_grid() const{  last_step_on_a_different_grid = true;}
+  ///use coefficients of old function living on the same grid to evaluate last step
+  void set_evaluation_of_u_old_to_same_grid() const{  last_step_on_a_different_grid = false;}
+  bool is_evaluation_of_u_old_on_different_grid() const {return last_step_on_a_different_grid;}
+
 
   const Function& get_input_distribution() const {return rhoX;}
   const Function& get_target_distribution() const {return rhoY;}
@@ -568,6 +570,8 @@ public:
 public:
   mutable double int_f;
   mutable bool found_negative;
+
+  mutable bool last_step_on_a_different_grid;
 };
 
 #endif /* SRC_OPERATOR_HH_ */
