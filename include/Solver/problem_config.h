@@ -14,7 +14,7 @@
   #include "operator_MA_OT_Brenner.h"
 #else
   #ifdef USE_MIXED_ELEMENT
-    #include "operator_MA_OT_Neilan.h"
+    #include "OT/operator_MA_OT_Neilan.h"
   #else
     #include "OT/operator_MA_OT.h"
     #include "OT/operator_MA_OT_Linearisation.hpp"
