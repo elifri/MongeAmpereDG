@@ -60,8 +60,8 @@ void newtonMethod(
     if (options.check_Jacobian)  checkJacobian(functor, x, true);
 
 
-    double initialResidual;
-    double lastResidual, diffLastResidual;
+    double initialResidual=1e10;
+    double lastResidual=1e10, diffLastResidual;
     Eigen::VectorXd oldX, lastUpdate;
 
     std::cerr << " Start Newton ..." << std::endl;
