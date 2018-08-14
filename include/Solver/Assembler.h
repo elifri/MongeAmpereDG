@@ -1765,7 +1765,6 @@ void Assembler<FETraits>::assemble_DG_Jacobian_(const LocalOperatorType &lop, co
                 m_mn.setZero(localView.size(), localViewn.size());
                 mn_mn.setZero(localViewn.size(), localViewn.size());
 
-                assert(false);//error isBoundaryLocal is not initialized
                 assemble_inner_face_termHelper(lop, is, localView, localViewn,
                     xLocal, xLocaln,
                     local_vector, local_vectorn, m_m, mn_m, m_mn, mn_mn);
@@ -1785,10 +1784,15 @@ void Assembler<FETraits>::assemble_DG_Jacobian_(const LocalOperatorType &lop, co
               }
             }
           }
-          else if (is.boundary()) {
-            } else {
-                std::cerr << " I do not know how to handle this intersection"
-                        << std::endl;
+          else
+            if (is.boundary())
+            {
+              assert(assembleType_ == ALL);
+              assemble_boundary_termHelper(lop, is, localView, xLocal, local_vector, m_m);
+            }
+            else
+            {
+              std::cerr << " I do not know how to handle this intersection" << std::endl;
                 exit(-1);
             }
         }
@@ -1941,7 +1945,7 @@ void Assembler<FETraits>::assemble_DG_Jacobian_(const LocalOperatorType &lop, co
 
     // A loop over all elements of the grid
     for (auto&& e : elements(gridView)) {
-        bool elementHasBoundary = false;
+        bool elementHasBoundary = false; _unused(elementHasBoundary);
 
         // Bind the local FE basis view to the current element
         localView.bind(e);
