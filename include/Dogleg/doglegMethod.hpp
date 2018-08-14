@@ -229,7 +229,7 @@ bool doglegMethod (
     lu_of_J.analyzePattern(J);
     lu_of_J.compute(J);
 
-    if (lu_of_J.info()!= Eigen::EigenSuccess) {
+    if (lu_of_J.info()!= Eigen::Success) {
         // decomposition failed
         std::cout << "\nError: "<< lu_of_J.info() << " Could not compute LU decomposition!\n";
         if (opts.exportJacobianIfSingular) {
@@ -296,7 +296,7 @@ bool doglegMethod (
 
 //            std::cout << "#iterations:     " << lu_of_J.iterations() << std::endl;
 //            std::cout << "#estimated error: " << lu_of_J.error()      << std::endl;
-            if(lu_of_J.info()!= Eigen::EigenSuccess) {
+            if(lu_of_J.info()!= Eigen::Success) {
                 // solving failed
                 std::cerr << "\nError "<< lu_of_J.info() << ": Could not solve the linear system of equations!\n";
                 if (opts.exportJacobianIfSingular) {
