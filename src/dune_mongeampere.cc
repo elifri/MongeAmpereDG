@@ -21,7 +21,7 @@
 using namespace Dune;
 namespace po = boost::program_options;
 
-void read_parameters(int argc, char *argv[], std::string& configFileMASolver)
+void read_parameters(int argc, char *argv[], std::string& configFileMASolver, std::string& configFileSetting)
 {
   std::string configFileGeometry, petscConfig;
 
@@ -31,6 +31,7 @@ void read_parameters(int argc, char *argv[], std::string& configFileMASolver)
       ("help,h",      "produce help message")
       ("help-all,a",  "produce help message (including config file options)")
       ("solver,c", po::value<std::string>(&configFileMASolver),  "config file for the MA finite element method")
+      ("geometry,g",   po::value<std::string>(&configFileSetting),  "config file for geometry")
       ("Petsoptionsfile,o", po::value<std::string>(&petscConfig), "config file for petsc")
       ;
 
@@ -74,38 +75,29 @@ try {
 	/////////////////////////////
 	// setup problem parameter //
 	/////////////////////////////
+  std::cout << " Start solving standard MA problem " << std::endl;
 
+  std::string configFileMASolver, configFileSetting;
+
+  read_parameters(argc, argv, configFileMASolver, configFileSetting);
+
+  SolverConfig config;
+  config.read_configfile(configFileMASolver);
+
+  GeometrySetting setting;
+  setting.read_configfile(configFileSetting);
 
 	// ////////////////////////////////
 // Generate the grid
 // ////////////////////////////////
-//	FieldVector<double, dim> l(1);
-//	std::array<int, dim> elements = { 10, 10 };
 
-  std::assert(false); //revise chossing operator
+  SolverConfig::GridHandlerType gridHandler(setting,SolverConfig::startlevel);
 
-	std::string configFileMASolver;
+  // Output grid
+  VTKWriter<Config::GridView> vtkWriter(gridHandler.gridView());
+  vtkWriter.write("grid");
 
-	read_parameters(argc, argv, configFileMASolver);
-
-#ifdef BSPLINES
-  Config::UnitCubeType unitcube(setting.lowerLeft, setting.upperRight, 1);
-  std::shared_ptr<Config::GridType> grid_ptr = unitcube.grid_ptr();
-#else
-  Config::UnitCubeType unitcube({0,0}, {1,1}, 0);
-  std::shared_ptr<Config::GridType> grid_ptr = unitcube.grid_ptr();
-//  std::shared_ptr<Config::GridType> grid_ptr(GmshReader<Config::GridType>::read(setting.gridinputFile));
-#endif
-  Config::GridView gridView = grid_ptr->leafGridView();
-
-	// Output result
-	VTKWriter<Config::GridView> vtkWriter(gridView);
-	vtkWriter.write("grid");
-
-	SolverConfig config;
-	config.read_configfile(configFileMASolver);
-
-	MA_solver ma_solver(unitcube.grid_ptr(), gridView, config);
+	MA_solver ma_solver(gridHandler, config);
 	ma_solver.solve();
 
 	std::cout << "done" << std::endl;

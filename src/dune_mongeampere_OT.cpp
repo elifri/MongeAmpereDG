@@ -88,7 +88,7 @@ try {
   SolverConfig config;
   config.read_configfile(configFileMASolver);
 
-  GeometrySetting setting;
+  GeometryOTSetting setting;
   setting.read_configfile(configFileSetting);
 
   std::cout << " Output files in folder " << config.plotOutputDirectory << "/" << config.outputPrefix <<"..." << std::endl;

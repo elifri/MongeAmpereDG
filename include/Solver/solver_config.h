@@ -229,20 +229,26 @@ struct GeometrySetting{
   static Config::SpaceType lowerLeft;  ///lower left of input grid
   static Config::SpaceType upperRight;   ///upper right of input grid
 
+  static std::string gridinputFile; ///location of the grid file specifying the grid for the input area $\Omega$
+  static int boundaryN; ///number of directions to simulate boundary of the starting domain $\Omega$
+};
+
+struct GeometryOTSetting:GeometrySetting {
+  virtual void read_configfile(std::string &configFile);
+
   static Config::SpaceType lowerLeftTarget; ///lower left of target grid (target must be in x-y-plane)
   static Config::SpaceType upperRightTarget; ///upper left of target grid (target must be in x-y-plane)
 
   static SolverConfig::ValueType z_3; /// third coordinate of target grid (target must be in x-y-plane)
 
-  static std::string gridinputFile; ///location of the grid file specifying the grid for the input area $\Omega$
   static std::string plotGridinputFile; ///location of the grid file specifying a grid which is translated under the solution
-  static int boundaryN; ///number of directions to simulate boundary of the starting domain $\Omega$
+
   static std::string gridTargetFile; ///location of the grid file specifying the grid for the target area $\Sigma$
   static int boundaryNTarget; ///number of directions to simulate boundary of the target domain $\Sigma$
 
 };
 
-struct OpticalSetting : GeometrySetting{
+struct OpticalSetting : GeometryOTSetting{
   void read_configfile(std::string &configFile);
   ///file for light source input
   static std::string LightinputImageName;
