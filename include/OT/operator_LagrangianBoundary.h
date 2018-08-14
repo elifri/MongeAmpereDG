@@ -35,7 +35,7 @@ public:
     auto geometry = intersection.inside().geometry();
 
     //get local finite elements
-    const auto& localFiniteElementV = localViewV.tree().finiteElement();
+    const auto& localFiniteElementV = SolverConfig::FETraitsSolver::get_finiteElementu(localViewV);
     const unsigned int size_u = localFiniteElementV.size();
 
     const auto& localFiniteElementQ = localViewQ.tree().finiteElement();

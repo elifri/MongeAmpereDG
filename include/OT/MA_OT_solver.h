@@ -80,9 +80,9 @@ private:
 public:
 #ifdef USE_MIXED_ELEMENT
   ///export number of degree of freedoms for ansatz space for the unknown function u
-  virtual int get_n_dofs_u() const{return FEBasisHandler_.uBasis().indexSet().size();}
+  using MA_solver::get_n_dofs_u;
   ///export number of degree of freedoms for ansatz space for the hessian of the unknown function u
-  virtual int get_n_dofs_u_DH() const{return Config::dim*Config::dim*FEBasisHandler_.uDHBasis().indexSet().size();}
+  using MA_solver::get_n_dofs_u_DH;
 #endif
   virtual int get_n_dofs_V_h() const{return FEBasisHandler_.FEBasis().indexSet().size();}
   virtual int get_n_dofs_Q_h() const{return get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();}
@@ -109,9 +109,10 @@ public:
   template<class F>
   void project(const F f, VectorType& v) const;
 
+#ifdef USE_PS12
   template<class F, class GradF>
   void project(const F f, GradF gradf, VectorType& v) const;
-
+#endif
   virtual void adapt_solution(const int level);
 
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name
@@ -159,8 +160,9 @@ public:
  * @param f     the exact solution
  * @return      the value of sqrt(\int_{\partial Omega} (u-f)^2 dx)
  */
-  template<typename F>
-  Config::ValueType calculate_L2_error(const F &f) const;
+//  template<typename F>
+//  Config::ValueType calculate_L2_error(const F &f) const;
+  using MA_solver::calculate_L2_error;
 
 protected:
   GeometryOTSetting& setting_;
@@ -197,6 +199,7 @@ void MA_OT_solver::project(const F f, VectorType& v) const
 #endif
 }
 
+#ifdef USE_PS12
 template<class F, class GradF>
 void MA_OT_solver::project(const F f, GradF gradf, VectorType& v) const
 {
@@ -207,50 +210,7 @@ void MA_OT_solver::project(const F f, GradF gradf, VectorType& v) const
   test_projection(f,v.head(get_n_dofs_V()));
 #endif
 }
-
-template<typename F>
-Config::ValueType MA_OT_solver::calculate_L2_error(const F &f) const
-{
-  Config::ValueType res = 0, max_error = 0;
-
-  for(auto&& e: elements(gridView()))
-  {
-    auto geometry = e.geometry();
-
-    solution_u_old->bind(e);
-
-    // Get a quadrature rule
-    int order = std::max(1, 3);
-    const QuadratureRule<Config::ValueType, Config::dim>& quad = FETraits::get_Quadrature<Config::dim>(e, order);
-
-    // Loop over all quadrature points
-    for (const auto& pt : quad) {
-
-      // Position of the current quadrature point in the reference element
-      const Config::DomainType &quadPos = pt.position();
-
-      auto u_value = (*solution_u_old)(quadPos);
-
-      decltype(u_value) f_value;
-      f_value = f(geometry.global(pt.position()));
-
-      auto factor = pt.weight()*geometry.integrationElement(pt.position());
-
-      res += (u_value - f_value)*(u_value - f_value)*factor;
-//      std::cerr << " u_value - f_value " << (u_value - f_value) << " = "  << u_value << "-" << f_value << std::endl;
-
-      if (std::abs(u_value-f_value) > max_error)
-      {
-        max_error = std::abs(u_value-f_value);
-//        std::cerr << "found greater error at " << geometry.global(pt.position()) << ", namely " << max_error << std::endl;
-      }
-//      cout << "res = " << res << "u_ value " << u_value << " f_value " << f_value << std::endl;
-    }
-  }
-  std::cerr << " Maximal L2error found is " << max_error << std::endl;
-
-  return std::sqrt(res);
-}
+#endif//USE_PS12
 
 
 template<typename FGrad>

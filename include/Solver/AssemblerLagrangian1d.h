@@ -17,12 +17,14 @@ public:
   {
     assert((unsigned int) v.size() == localView.size());
 
+    using LocalFETraits = FETraits<typename LocalView::GlobalBasis>;
+
     // Get the grid element from the local FE basis view
     using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
     // Get set of shape functions for this element
-    const auto& localFiniteElement = localView.tree().finiteElement();
+    const auto& localFiniteElement = LocalFETraits::get_finiteElementu(localView);
 
     //extract type
     using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
@@ -31,7 +33,9 @@ public:
     // Get a quadrature rule
     int order = std::max(0,
         3 * ((int) localFiniteElement.localBasis().order()));
+//    const QuadratureRule<double, Config::dim>& quadRule = LocalFETraits::get_Quadrature<Config::dim>(element, order);
     const QuadratureRule<double, Config::dim>& quadRule = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(element, order);
+
 
     for (const auto& quad : quadRule)
     {
@@ -60,10 +64,10 @@ public:
     const Element& element = localView.element();
 
     // Get set of shape functions for this element
-    const auto& localFiniteElement = localView.tree().finiteElement();
+    const auto& localFiniteElement = SolverConfig::FETraitsSolver::get_finiteElementu(localView);
 
-    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
-    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+    using FEType = typename std::decay_t<decltype(localFiniteElement)>;
+    using RangeType = typename FEType::Traits::LocalBasisType::Traits::RangeType;
 
     // Get a quadrature rule
     int order = std::max(0,

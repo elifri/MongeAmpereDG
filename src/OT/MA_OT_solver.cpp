@@ -481,8 +481,10 @@ void MA_OT_solver::plot(const std::string& name, int no) const
 #ifndef USE_MIXED_ELEMENT
      ResidualFunction residual(gradu,this->get_OT_operator(),HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
      DetFunction detFunction(HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
+     EV1Function ev1(HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
+     EV2Function ev2(HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
 #else
-     ResidualFunction residual(gradient_u_old,this->get_OT_operator(),
+     ResidualFunction residual(gradu,this->get_OT_operator(),
          *localnumericalSolutionHessians[0],
          *localnumericalSolutionHessians[1],
          *localnumericalSolutionHessians[2],
@@ -492,13 +494,21 @@ void MA_OT_solver::plot(const std::string& name, int no) const
          *localnumericalSolutionHessians[1],
          *localnumericalSolutionHessians[2],
          *localnumericalSolutionHessians[3]);
+     EV1Function ev1(
+         *localnumericalSolutionHessians[0],
+         *localnumericalSolutionHessians[1],
+         *localnumericalSolutionHessians[2],
+         *localnumericalSolutionHessians[3]);
+     EV2Function ev2(
+         *localnumericalSolutionHessians[0],
+         *localnumericalSolutionHessians[1],
+         *localnumericalSolutionHessians[2],
+         *localnumericalSolutionHessians[3]);
 #endif
 
      vtkWriter.addVertexData(residual, VTK::FieldInfo("Residual", VTK::FieldInfo::Type::scalar, 1));
      vtkWriter.addVertexData(detFunction, VTK::FieldInfo("HessianDeterminant", VTK::FieldInfo::Type::scalar, 1));
 
-     EV1Function ev1(HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
-     EV2Function ev2(HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
      vtkWriter.addVertexData(ev1, VTK::FieldInfo("EV1", VTK::FieldInfo::Type::scalar, 1));
      vtkWriter.addVertexData(ev2, VTK::FieldInfo("EV2", VTK::FieldInfo::Type::scalar, 1));
 
@@ -670,6 +680,8 @@ void MA_OT_solver::one_Poisson_Step()
 
   //gradient recovery (projection of gradient to c0 elements)
   C0Traits::DiscreteGridFunction globalSolution(lagrangeHandler.FEBasis(), lagrangeCoeffs);
+
+#ifdef USE_PS12
   C0Traits::DiscreteGradientGridFunction globalGradient(globalSolution);
   auto localGradient = localFirstDerivative(globalSolution);
 
@@ -705,6 +717,7 @@ void MA_OT_solver::one_Poisson_Step()
     fname += "/"+ plotter.get_output_prefix()+ "C0outputGrid.vtu";
     plotter.writeOTVTK(fname, localGradient, this->get_OT_operator().get_f());
   }
+#endif
 
 #ifdef DEBUG
   {
@@ -748,8 +761,12 @@ void MA_OT_solver::one_Poisson_Step()
   /////---------------
 #endif
 
+#ifdef USE_PS12
   //hermite interpolation to c1 elements
   project(globalSolution, globalProjectedGradient, solution);
+#else
+  project(globalSolution, solution);
+#endif
 //  solution.head(get_n_dofs_V_h()+1) = Coeffs;
 
 
@@ -1013,11 +1030,18 @@ void MA_OT_solver::adapt_solution(const int level)
      auto u0 = [&](Config::SpaceType x){
        auto y=x0;B.umv(x,y);
        return (x*y);};
+
+#ifdef USE_PS12
+     FieldMatrix<Config::ValueType, 2, 2> A = {{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}}; //exactsolution
+
      auto y0 = [&](Config::SpaceType x){
        auto y=x0;A.umv(x,y);
        return y;};
 
      project(u0, y0, exactsol_u);
+#else
+     project(u0, exactsol_u);
+#endif
    }
 
 }

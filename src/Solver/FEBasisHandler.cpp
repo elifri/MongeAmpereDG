@@ -138,7 +138,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
     localViewCoarse.bind(elementCoarse);
     localIndexSetCoarse.bind(localViewCoarse);
 
-    const auto & lFE = localViewCoarse.tree().finiteElement();
+    const auto & lFE = localViewCoarse.tree().finiteElement(); _unused(lFE);
     const auto& geometry = elementCoarse.geometry();
 
 //    std::cout << " father dofs ";
@@ -222,8 +222,6 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 template<>
 Config::VectorType FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, SolverConfig::degree>>::coarse_solution(MA_solver& solver, const int level)
 {
-  assert(false);
-/*
   assert(solver.initialised);
 
   Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
@@ -232,21 +230,19 @@ Config::VectorType FEBasisHandler<Standard, LagrangeC0Traits<Config::GridView, S
   FiniteElementTraits::DiscreteGridFunction numericalSolution(*FEBasis_,solution_u);
 
   //we need do generate the coarse basis
-  const auto& levelGridView = solver.grid_ptr->levelGridView(level);
+  const auto& oldGridInformation = solver.get_gridHandler().coarse(level);
+  const auto& coarseGridView =oldGridInformation.gridViewOld;
 
-  typedef decltype(levelGridView) ConstReflevelGridView;
-  using ConstlevelGridView = typename std::remove_reference<ConstReflevelGridView>::type;
-  using LevelGridView = typename std::remove_const<ConstlevelGridView>::type;
+  using CoarseGridView = typename std::decay_t<decltype(oldGridInformation)>::OldGridView;
 
   //create handler for coarse basis
-  FEBasisHandler<Standard, LagrangeC0Traits<LevelGridView, SolverConfig::degree>> HandlerCoarse(solver, levelGridView);
+  FEBasisHandler<Standard, LagrangeC0Traits<CoarseGridView, SolverConfig::degree>> HandlerCoarse(coarseGridView);
 
   //init vector
-  Config::VectorType v = Config::VectorType::Zero(HandlerCoarse.FEBasis().indexSet().size() + 1);
+  Config::VectorType v = Config::VectorType::Zero(HandlerCoarse.FEBasis().indexSet().size());
 
   //project
   HandlerCoarse.project(numericalSolution, v);
-
 
   return v;
 }
@@ -261,14 +257,13 @@ Config::VectorType FEBasisHandler<Standard, BSplineTraits<Config::GridView, Solv
   FiniteElementTraits::DiscreteGridFunction numericalSolution(*FEBasis_,solution_u);
 
   //we need do generate the coarse basis
-  const auto& levelGridView = solver.grid_ptr->levelGridView(level);
+  const auto& oldGridInformation = solver.get_gridHandler().coarse(level);
+  const auto& coarseGridView =oldGridInformation.gridViewOld;
 
-  typedef decltype(levelGridView) ConstReflevelGridView;
-  using ConstlevelGridView = typename std::remove_reference<ConstReflevelGridView>::type;
-  using LevelGridView = typename std::remove_const<ConstlevelGridView>::type;
+  using CoarseGridView = typename std::decay_t<decltype(oldGridInformation)>::OldGridView;
 
   //create handler for coarse basis
-  FEBasisHandler<Standard, BSplineTraits<LevelGridView, SolverConfig::degree>> HandlerCoarse(solver,levelGridView);
+  FEBasisHandler<Standard, BSplineTraits<CoarseGridView, SolverConfig::degree>> HandlerCoarse(solver,coarseGridView);
 
   //init vector
   Config::VectorType v = Config::VectorType::Zero(HandlerCoarse.FEBasis().indexSet().size() + 1);
@@ -277,15 +272,12 @@ Config::VectorType FEBasisHandler<Standard, BSplineTraits<Config::GridView, Solv
   HandlerCoarse.project(numericalSolution, v);
 
   return v;
-  */
 }
 
 
 template<>
 Config::VectorType FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverConfig::degree, SolverConfig::degreeHessian>>::coarse_solution(MA_solver& solver, const int level)
 {
-  assert(false);
-  /*
   assert(solver.initialised);
 
   Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
@@ -294,14 +286,13 @@ Config::VectorType FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverCon
   FiniteElementTraits::DiscreteGridFunction numericalSolution(*uBasis_,solution_u);
 
   //we need do generate the coarse basis
-  const auto& levelGridView = solver.grid_ptr->levelGridView(level);
+  const auto& oldGridInformation = solver.get_gridHandler().coarse(level);
+  const auto& coarseGridView =oldGridInformation.gridViewOld;
 
-  typedef decltype(levelGridView) ConstReflevelGridView;
-  using ConstlevelGridView = typename std::remove_reference<ConstReflevelGridView>::type;
-  using LevelGridView = typename std::remove_const<ConstlevelGridView>::type;
+  using CoarseGridView = typename std::decay_t<decltype(oldGridInformation)>::OldGridView;
 
   //create handler for coarse basis
-  FEBasisHandler<Mixed, MixedTraits<LevelGridView, SolverConfig::degree, SolverConfig::degreeHessian>> HandlerCoarse(levelGridView);
+  FEBasisHandler<Mixed, MixedTraits<CoarseGridView, SolverConfig::degree, SolverConfig::degreeHessian>> HandlerCoarse(coarseGridView);
 
   //init vector
   Config::VectorType v = Config::VectorType::Zero(HandlerCoarse.FEBasis().indexSet().size());
@@ -309,5 +300,5 @@ Config::VectorType FEBasisHandler<Mixed, MixedTraits<Config::GridView, SolverCon
   //project
   HandlerCoarse.project(numericalSolution, v);
 
-  return v;*/
+  return v;
 }

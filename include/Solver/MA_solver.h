@@ -229,7 +229,10 @@ public:
 
 
 	virtual int get_n_dofs() const{return FEBasisHandler_.FEBasis().indexSet().size();}
-  virtual int get_n_dofs_u() const{return FEBasisHandler_.FEBasis().indexSet().size();}
+  virtual int get_n_dofs_u() const{return FEBasisHandler_.uBasis().indexSet().size();}
+#ifdef USE_MIXED_ELEMENT
+  virtual int get_n_dofs_u_DH() const{return Config::dim*Config::dim*FEBasisHandler_.uDHBasis().indexSet().size();}
+#endif
 
   const auto& get_FEBasis() const {return FEBasisHandler_.FEBasis();}
   const auto& get_FEBasis_u() const {return FEBasisHandler_.uBasis();}
