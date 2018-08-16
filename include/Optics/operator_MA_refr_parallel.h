@@ -8,6 +8,7 @@
 #ifndef OPERATOR_MA_REFR_PARALLEL_HH_
 #define OPERATOR_MA_REFR_PARALLEL_HH_
 
+
 #include <dune/common/function.hh>
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
 #include "utils.hpp"
@@ -110,8 +111,7 @@ public:
 
 //    assert(Z[0] > g_.lowerLeft[0] && Z[0] < g_.upperRight[0]);
 //    assert(Z[1] > g_.lowerLeft[1] && Z[1] < g_.upperRight[1]);
-    assert(std::abs(Z[2].value()-opticalSetting.z_3) < 1e-8 && " The calculated hitting point does not lie in the target plane");
-
+    return (std::abs(Z[2].value()-opticalSetting.z_3) < 1e-8);
   }
   ///calculates the gradient of the function describing the target plane implicitly
   static

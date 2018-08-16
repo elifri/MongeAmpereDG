@@ -115,6 +115,10 @@ public:
       solver_ptr->assemble_DG_Jacobian(lop, x,v, m);
       auto end = std::chrono::steady_clock::now();
       std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
+
+
+      solver_ptr->plot(v, "intermediateV", intermediateSolCounter);
+
     }
 
     void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& x_old, const bool new_solution=true) const

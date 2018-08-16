@@ -111,29 +111,22 @@ void MA_solver::plot(const VectorType& u, const std::string& filename, int no) c
   using GlobalHessScalarFunction = typename FETraits::DiscreteSecondDerivativeGridFunction;
   using LocalHessScalarFunction = typename FETraits::DiscreteLocalSecondDerivativeGridFunction;
 
-  std::array<Config::VectorType,Config::dim*Config::dim> derivativeSolution;
-  std::vector<std::unique_ptr<GlobalHessScalarFunction>> numericalSolutionHessians;
-  std::vector<std::unique_ptr<LocalHessScalarFunction>> localnumericalSolutionHessians;
-
-  for (int i = 0; i < Config::dim*Config::dim; i++)
-    derivativeSolution[i] = Config::VectorType::Zero(get_n_dofs_u_DH()/Config::dim/Config::dim);
+  Eigen::Matrix<std::unique_ptr<GlobalHessScalarFunction>, Config::dim, Config::dim> numericalSolutionHessians;
+  Eigen::Matrix<std::unique_ptr<LocalHessScalarFunction>, Config::dim, Config::dim> localnumericalSolutionHessians;
 
   //extract dofs
-  for (int i=0; i<derivativeSolution[0].size(); i++)
-    for (int row=0; row< Config::dim; row++)
-      for (int col=0; col< Config::dim; col++)
-      {
-        derivativeSolution[row*Config::dim+col](i) = solution[get_n_dofs_u()+ i*4+row*Config::dim+col];
-      }
+  Eigen::Matrix<Config::VectorType,Config::dim,Config::dim> derivativeSolution
+      = FEBasisHandler_.get_hess_dofs_from_global_dofs(u);
 
-   for (int i = 0; i < Config::dim*Config::dim; i++)
-   {
-     //build gridview function
-     numericalSolutionHessians.push_back(std::make_unique<GlobalHessScalarFunction>(FEBasisHandler_.uDHBasis(),derivativeSolution[i]));
-     localnumericalSolutionHessians.push_back(std::make_unique<LocalHessScalarFunction>(*numericalSolutionHessians[i]));
-     std::string hessianEntryName = "DiscreteHessian" + NumberToString(i);
-     vtkWriter.addVertexData(*localnumericalSolutionHessians[i], VTK::FieldInfo(hessianEntryName, VTK::FieldInfo::Type::scalar, 1));
-   }
+   for (int i = 0; i < Config::dim; i++)
+     for (int j = 0; j < Config::dim; j++)
+     {
+       //build gridview function
+       numericalSolutionHessians.coeffRef(i,j)  = std::make_unique<GlobalHessScalarFunction>(FEBasisHandler_.uDHBasis(),derivativeSolution.coeff(i,j));
+       localnumericalSolutionHessians.coeffRef(i,j) = std::make_unique<LocalHessScalarFunction>(*numericalSolutionHessians.coeff(i,j));
+       std::string hessianEntryName = "DiscreteHessian" + NumberToString(i)+NumberToString(j);
+       vtkWriter.addVertexData(*localnumericalSolutionHessians.coeff(i,j), VTK::FieldInfo(hessianEntryName, VTK::FieldInfo::Type::scalar, 1));
+     }
 #endif
 
 //#ifdef HAVE_EXACT_SOLUTION

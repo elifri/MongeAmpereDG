@@ -138,19 +138,19 @@ public:
 
       // The gradients
       std::vector<JacobianType> gradients(size);
-      FieldVector<ValueType, Config::dim> gradu;
+      FieldVector<ValueType, dim> gradu;
       assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
           gradients, x_adolc, gradu);
 
       // The hessian of the shape functions
       std::vector<FEHessianType> Hessians(size);
-      FieldMatrix<ValueType, Config::dim, Config::dim> Hessu;
+      FieldMatrix<ValueType, dim, dim> Hessu;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
           x_adolc, Hessu);
 
       //--------assemble cell integrals in variational form--------
 
-      assert(Config::dim == 2);
+      assert(dim == 2);
 
       Config::DomainType x_value = geometry.global(quad[pt].position());
 

@@ -112,8 +112,8 @@ struct PovRayOpts
 
 struct SolverConfig{
 
-//  using GridHandlerType = GridHandler<Config::DuneGridType, true>;
-  using GridHandlerType = GridHandler<Config::DuneGridType, false>;
+  using GridHandlerType = GridHandler<Config::DuneGridType, true>;
+//  using GridHandlerType = GridHandler<Config::DuneGridType, false>;
 
   using ValueType = Config::ValueType;
 
@@ -259,6 +259,7 @@ struct OpticalSetting : GeometryOTSetting{
   double minPixelValue;
 
   double initialOpticDistance;
+
   ///pov ray options for output
   PovRayOpts povRayOpts;
   static SolverConfig::ValueType lightSourceIntensity;

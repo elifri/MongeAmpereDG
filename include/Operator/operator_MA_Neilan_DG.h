@@ -53,16 +53,14 @@ public:
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
       VectorType& v, const int tag=0) const {
-    typedef typename LocalView::size_type size_type;
+    using size_type = typename LocalView::size_type;
 
 
     // Get the grid element from the local FE basis view
-    typedef typename LocalView::Element Element;
+    using Element = typename LocalView::Element;
     const Element& element = localView.element();
 
-    const int dim = Config::dim;
-
-    assert(dim == Element::dimension);
+    const int dim = Element::dimension;
     auto geometry = element.geometry();
 
     //assuming galerkin ansatz = test space
@@ -75,16 +73,14 @@ public:
     const auto& localFiniteElementu = localView.tree().template child<0>().finiteElement();
     const auto& localFiniteElementuDH_entry = localView.tree().template child<1>().child(0).finiteElement();
 
-    typedef decltype(localFiniteElementu) ConstElementuRefType;
-    typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
+    using ElementuType = typename std::decay_t<decltype(localFiniteElementu)>;
+    using ElementuDHType = typename std::decay_t<decltype(localFiniteElementuDH_entry)>;
 
-    typedef decltype(localFiniteElementuDH_entry) ConstElementuDHRefType;
-    typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
 
-    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
+    typedef typename ElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
     typedef typename Dune::FieldVector<Config::ValueType, dim> JacobianType;
     typedef typename Dune::FieldMatrix<Config::ValueType, dim, dim> FEHessianType;
-    typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType HessianType;
+    typedef typename ElementuDHType::Traits::LocalBasisType::Traits::RangeType HessianType;
 
     const size_t size_u = localFiniteElementu.size();
     const int size_u_DH = localFiniteElementuDH_entry.size();
@@ -172,7 +168,7 @@ public:
       //calculate system for second tensor functions
       for (int j = 0; j < size_u_DH; j++) // loop over test fcts
       {
-        for (int row=0; row < dim; row++)
+        for (int row = 0; row < dim; row++)
           for (int col = 0 ; col < dim; col++){
             const size_type localIndex = SolverConfig::FETraitsSolver::flat_local_index(size_u,j, row, col);
 
@@ -230,15 +226,12 @@ public:
     const auto& localFiniteElementun = localViewn.tree().template child<0>().finiteElement();
     const auto& localFiniteElementuDHn = localViewn.tree().template child<1>().child(0).finiteElement();
 
-    typedef decltype(localFiniteElementu) ConstElementuRefType;
-    typedef typename std::remove_reference<ConstElementuRefType>::type ConstElementuType;
+    using ElementuType = typename std::decay_t<decltype(localFiniteElementu)>;
+    using ElementuDHType = typename std::decay_t<decltype(localFiniteElementuDH)>;
 
-    typedef decltype(localFiniteElementuDH) ConstElementuDHRefType;
-    typedef typename std::remove_reference<ConstElementuDHRefType>::type ConstElementuDHType;
-
-    typedef typename ConstElementuType::Traits::LocalBasisType::Traits::RangeType RangeType;
-    typedef FieldVector<Config::ValueType, dim> JacobianType;
-    typedef typename ConstElementuDHType::Traits::LocalBasisType::Traits::RangeType RangeTypeDH;
+    using RangeType = typename ElementuType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = FieldVector<Config::ValueType, dim>;
+    using RangeTypeDH = typename ElementuDHType::Traits::LocalBasisType::Traits::RangeType;
 
     const unsigned int size_u = localFiniteElementu.size();
     const unsigned int size_u_DH = localFiniteElementuDH.size();
@@ -251,8 +244,7 @@ public:
         std::max(3 * ((int) localFiniteElementu.localBasis().order()),
             3 * ((int) localFiniteElementun.localBasis().order())));
     GeometryType gtface = intersection.geometryInInside().type();
-    const QuadratureRule<double, dim - 1>& quad = QuadratureRules<double,
-        dim - 1>::rule(gtface, order);
+    const QuadratureRule<double, dim - 1>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim-1>(gtface, order);
 
     // normal of center in face's reference element
     const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,

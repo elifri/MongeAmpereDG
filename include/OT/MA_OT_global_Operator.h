@@ -273,9 +273,7 @@ public:
 
   const SolverType* solver_ptr;
 
-  int V_h_mixed_size = this->solver_ptr->get_n_dofs_V_h();
-  int V_h_size = this->solver_ptr->get_n_dofs_u();
-  int Q_h_size = this->solver_ptr->get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();
+  std::shared_ptr<OTBoundary> boundary_;
 
   FunctionTypeX f_;
   FunctionTypeY g_;
