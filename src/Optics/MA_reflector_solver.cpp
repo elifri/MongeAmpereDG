@@ -142,6 +142,15 @@ void MA_reflector_solver::plot(const std::string& name, int no) const
    std::string reflPovname(plotter.get_output_directory());
    reflPovname += "/"+ plotter.get_output_prefix() + name + "reflector" + NumberToString(no) + ".pov";
 
+   std::string reflNurbsname(plotter.get_output_directory());
+   reflNurbsname += "/"+ plotter.get_output_prefix() + name + "reflector" + NumberToString(iterations) + ".3dm";
+   plotter.write_refractor_mesh(reflNurbsname, *solution_u_old);
+   
+   std::string reflMeshname(plotter.get_output_directory());
+   reflMeshname += "/"+ plotter.get_output_prefix() + name + "reflectorPoints" + NumberToString(iterations) + ".txt";
+   plotter.save_refractor_points(reflMeshname, *solution_u_old);
+
+
    plotter.writeReflectorPOV(reflPovname, *solution_u_old);
    std::cerr << reflPovname << std::endl;
 }

@@ -200,7 +200,7 @@ public:
     if (create_operator)
     {
       std::cerr << "create MA Operator ... " << std::endl;
-      op = std::make_shared<OperatorType>(*this);
+      op = std::make_shared<MA_Operator>(*this);
     }
   }
   MA_solver(GridHandlerType& gridHandler, SolverConfig config, const GeometryOTSetting& geometrySetting)
@@ -410,12 +410,12 @@ public:
   mutable int iterations; ///counts overall iterations (how often the nonlinear system was solved)
 protected:
   bool initValueFromFile_; ///decide if initial guess iFEBasisHandlers initiated from file
-  std::string initValue_; ///file the initial guess is initiiated from
+  std::string initValue_; ///file the initial guess is initiated from
 
   bool evaluateJacobianSimultaneously_; ///evaluate the jacobian simultaneously to the objective function (in Newton solver)
 
   bool writeVTK_; ///write vtk files output
-	std::string outputDirectory_, plotOutputDirectory_, outputPrefix_; ///outputdirectories
+  std::string outputDirectory_, plotOutputDirectory_, outputPrefix_; ///outputdirectories
   int plotterRefinement_; ///number of (virtual) grid refinements for output generation
 
   GridHandlerType& gridHandler_; ///handles grid
