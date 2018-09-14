@@ -54,6 +54,8 @@ public:
 
   bool is_rectangular(){return rectangular;}
 
+  int get_gridRefinement() const{return gridRefinement_;}
+
   GridType& grid() {return *grid_;}
   const std::shared_ptr<GridType>& get_grid_ptr() const{return grid_;}
   const GridType& grid() const {return *grid_;}
@@ -119,6 +121,8 @@ public:
   {}
 
   bool is_rectangular(){return true;}
+  int get_gridRefinement() const{return gridRefinement_;}
+
 
   GridType& grid() {return *grid_;}
   const std::shared_ptr<GridType>& get_grid_ptr() const{return grid_;}
