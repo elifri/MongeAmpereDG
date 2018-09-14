@@ -221,24 +221,24 @@ struct SolverConfig{
 struct GeometrySetting{
   virtual void read_configfile(std::string &configFile);
 
-  static Config::SpaceType lowerLeft;  ///lower left of input grid
-  static Config::SpaceType upperRight;   ///upper right of input grid
+  Config::SpaceType lowerLeft;  ///lower left of input grid
+  Config::SpaceType upperRight;   ///upper right of input grid
 
-  static std::string gridinputFile; ///location of the grid file specifying the grid for the input area $\Omega$
+  std::string gridinputFile; ///location of the grid file specifying the grid for the input area $\Omega$
   static int boundaryN; ///number of directions to simulate boundary of the starting domain $\Omega$
 };
 
 struct GeometryOTSetting:GeometrySetting {
   virtual void read_configfile(std::string &configFile);
 
-  static Config::SpaceType lowerLeftTarget; ///lower left of target grid (target must be in x-y-plane)
-  static Config::SpaceType upperRightTarget; ///upper left of target grid (target must be in x-y-plane)
+  Config::SpaceType lowerLeftTarget; ///lower left of target grid (target must be in x-y-plane)
+  Config::SpaceType upperRightTarget; ///upper left of target grid (target must be in x-y-plane)
 
-  static SolverConfig::ValueType z_3; /// third coordinate of target grid (target must be in x-y-plane)
+  SolverConfig::ValueType z_3; /// third coordinate of target grid (target must be in x-y-plane)
 
-  static std::string plotGridinputFile; ///location of the grid file specifying a grid which is translated under the solution
+  std::string plotGridinputFile; ///location of the grid file specifying a grid which is translated under the solution
 
-  static std::string gridTargetFile; ///location of the grid file specifying the grid for the target area $\Sigma$
+  std::string gridTargetFile; ///location of the grid file specifying the grid for the target area $\Sigma$
   static int boundaryNTarget; ///number of directions to simulate boundary of the target domain $\Sigma$
 
 };

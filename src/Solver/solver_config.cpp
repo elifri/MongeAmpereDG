@@ -126,10 +126,7 @@ void SolverConfig::read_configfile(std::string &configFile)
 }
 
 ////------fallback values for GeometryStandardSetting setting---------
-Config::SpaceType GeometrySetting::lowerLeft = {0,0};
-Config::SpaceType GeometrySetting::upperRight = {1,1};
 
-std::string GeometrySetting::gridinputFile = "";
 int GeometrySetting::boundaryN = std::max(100000,1 << (2+SolverConfig::startlevel+SolverConfig::nonlinear_steps));
 
 void GeometrySetting::read_configfile(std::string &configFile)
@@ -139,11 +136,11 @@ void GeometrySetting::read_configfile(std::string &configFile)
 
   po::options_description config("Configuration of the geometry setting");
   config.add_options()
-        ("geometry.input.xMin",  po::value<double>(&GeometrySetting::lowerLeft[0]), "")
-        ("geometry.input.xMax",  po::value<double>(&GeometrySetting::upperRight[0]), "")
-        ("geometry.input.yMin",  po::value<double>(&GeometrySetting::lowerLeft[1]), "")
-        ("geometry.input.yMax",  po::value<double>(&GeometrySetting::upperRight[1]), "")
-        ("geometry.input.gridfile",  po::value<string>(&GeometrySetting::gridinputFile), "")
+        ("geometry.input.xMin",  po::value<double>(&lowerLeft[0]), "")
+        ("geometry.input.xMax",  po::value<double>(&upperRight[0]), "")
+        ("geometry.input.yMin",  po::value<double>(&lowerLeft[1]), "")
+        ("geometry.input.yMax",  po::value<double>(&upperRight[1]), "")
+        ("geometry.input.gridfile",  po::value<string>(&gridinputFile), "")
         ("geometry.input.boundaryN",  po::value<int>(&GeometrySetting::boundaryN), "")
   ;
 
@@ -169,15 +166,8 @@ void GeometrySetting::read_configfile(std::string &configFile)
 
 
 ////------fallback values for geometry setting---------
-Config::SpaceType GeometryOTSetting::lowerLeftTarget = {0,0};
-Config::SpaceType GeometryOTSetting::upperRightTarget= {1,1};
-
-std::string GeometryOTSetting::plotGridinputFile = "";
 int GeometryOTSetting::boundaryNTarget = std::max(100000,1 << (2+SolverConfig::startlevel+SolverConfig::nonlinear_steps));
 
-std::string GeometryOTSetting::gridTargetFile = "";
-
-double GeometryOTSetting::z_3 = 0;
 
 void GeometryOTSetting::read_configfile(std::string &configFile)
 {
@@ -186,19 +176,19 @@ void GeometryOTSetting::read_configfile(std::string &configFile)
 
   po::options_description config("Configuration of the geometry setting");
   config.add_options()
-        ("geometry.input.xMin",  po::value<double>(&GeometryOTSetting::lowerLeft[0]), "")
-        ("geometry.input.xMax",  po::value<double>(&GeometryOTSetting::upperRight[0]), "")
-        ("geometry.input.yMin",  po::value<double>(&GeometryOTSetting::lowerLeft[1]), "")
-        ("geometry.input.yMax",  po::value<double>(&GeometryOTSetting::upperRight[1]), "")
-        ("geometry.input.gridfile",  po::value<string>(&GeometryOTSetting::gridinputFile), "")
-        ("geometry.input.plotgridfile",  po::value<string>(&GeometryOTSetting::plotGridinputFile), "")
+        ("geometry.input.xMin",  po::value<double>(&lowerLeft[0]), "")
+        ("geometry.input.xMax",  po::value<double>(&upperRight[0]), "")
+        ("geometry.input.yMin",  po::value<double>(&lowerLeft[1]), "")
+        ("geometry.input.yMax",  po::value<double>(&upperRight[1]), "")
+        ("geometry.input.gridfile",  po::value<string>(&gridinputFile), "")
+        ("geometry.input.plotgridfile",  po::value<string>(&plotGridinputFile), "")
         ("geometry.input.boundaryN",  po::value<int>(&GeometryOTSetting::boundaryN), "")
-        ("geometry.target.xMin",     po::value<double>(&GeometryOTSetting::lowerLeftTarget[0]), "")
-        ("geometry.target.xMax",     po::value<double>(&GeometryOTSetting::upperRightTarget[0]), "")
-        ("geometry.target.yMin",     po::value<double>(&GeometryOTSetting::lowerLeftTarget[1]), "")
-        ("geometry.target.yMax",     po::value<double>(&GeometryOTSetting::upperRightTarget[1]), "")
-        ("geometry.target.z",        po::value<double>(&GeometryOTSetting::z_3),    "")
-        ("geometry.target.gridfile",  po::value<string>(&GeometryOTSetting::gridTargetFile), "")
+        ("geometry.target.xMin",     po::value<double>(&lowerLeftTarget[0]), "")
+        ("geometry.target.xMax",     po::value<double>(&upperRightTarget[0]), "")
+        ("geometry.target.yMin",     po::value<double>(&lowerLeftTarget[1]), "")
+        ("geometry.target.yMax",     po::value<double>(&upperRightTarget[1]), "")
+        ("geometry.target.z",        po::value<double>(&z_3),    "")
+        ("geometry.target.gridfile",  po::value<string>(&gridTargetFile), "")
         ("geometry.target.boundaryN",  po::value<int>(&GeometryOTSetting::boundaryNTarget), "")
   ;
 
@@ -234,22 +224,22 @@ void OpticalSetting::read_configfile(std::string &configFile)
 
   po::options_description config("Configuration of the optical setting");
   config.add_options()
-        ("geometry.optic.xMin",  po::value<double>(&OpticalSetting::lowerLeft[0]), "")
-        ("geometry.optic.xMax",  po::value<double>(&OpticalSetting::upperRight[0]), "")
-        ("geometry.optic.yMin",  po::value<double>(&OpticalSetting::lowerLeft[1]), "")
-        ("geometry.optic.yMax",  po::value<double>(&OpticalSetting::upperRight[1]), "")
-        ("geometry.optic.gridfile",  po::value<string>(&OpticalSetting::gridinputFile), "")
-        ("geometry.optic.plotgridfile",  po::value<string>(&OpticalSetting::plotGridinputFile), "")
-        ("geometry.optic.boundaryN",  po::value<int>(&OpticalSetting::boundaryN), "")
+        ("geometry.optic.xMin",  po::value<double>(&lowerLeft[0]), "")
+        ("geometry.optic.xMax",  po::value<double>(&upperRight[0]), "")
+        ("geometry.optic.yMin",  po::value<double>(&lowerLeft[1]), "")
+        ("geometry.optic.yMax",  po::value<double>(&upperRight[1]), "")
+        ("geometry.optic.gridfile",  po::value<string>(&gridinputFile), "")
+        ("geometry.optic.plotgridfile",  po::value<string>(&plotGridinputFile), "")
+        ("geometry.optic.boundaryN",  po::value<int>(&GeometryOTSetting::boundaryN), "")
         ("geometry.optic.initialOpticDistance",  po::value<double>(&initialOpticDistance), "")
-        ("geometry.target.xMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[0]), "")
-        ("geometry.target.xMax",     po::value<double>(&OpticalSetting::upperRightTarget[0]), "")
-        ("geometry.target.yMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[1]), "")
-        ("geometry.target.yMax",     po::value<double>(&OpticalSetting::upperRightTarget[1]), "")
-        ("geometry.target.gridfile",  po::value<string>(&OpticalSetting::gridTargetFile), "")
-        ("geometry.target.z",        po::value<double>(&OpticalSetting::z_3),    "")
+        ("geometry.target.xMin",     po::value<double>(&lowerLeftTarget[0]), "")
+        ("geometry.target.xMax",     po::value<double>(&upperRightTarget[0]), "")
+        ("geometry.target.yMin",     po::value<double>(&lowerLeftTarget[1]), "")
+        ("geometry.target.yMax",     po::value<double>(&upperRightTarget[1]), "")
+        ("geometry.target.gridfile",  po::value<string>(&gridTargetFile), "")
+        ("geometry.target.z",        po::value<double>(&z_3),    "")
         ("geometry.target.boundaryN",  po::value<int>(&GeometryOTSetting::boundaryNTarget), "")
-        ("light.in.imageName",       po::value<string>(&OpticalSetting::LightinputImageName), "path to image")
+        ("light.in.imageName",       po::value<string>(&LightinputImageName), "path to image")
         ("light.out.targetImageName",     po::value<string>(&OpticalSetting::TargetImageName), "")
         ("solver.epsDivide",  po::value<double>(&SolverConfig::epsDivide), "")
         ("solver.epsEnd",  po::value<double>(&SolverConfig::epsEnd), "")

@@ -206,8 +206,14 @@ int main(int argc, char *argv[])
 
   std::cout << " created basis " << std::endl;
 
+  GeometryOTSetting plotSetting = opticalSetting;
+  plotSetting.lowerLeft[0] = -1.4;
+  plotSetting.lowerLeft[1] = -1.4;
+  plotSetting.upperRight[0] = 1.4;
+  plotSetting.upperRight[1] = 1.4;
+
   //set up the plotter
-  PointExporter pointExporter(opticalSetting,50);
+  PointExporter pointExporter(plotSetting,35);
 
 
   //set up the FE solution
@@ -220,6 +226,7 @@ int main(int argc, char *argv[])
   //export solution points
   std::cout << " write output to " << outputFile <<"..." << std::endl;
 //  pointExporter.save_refractor_points(outputFile, numericalSolution);
-  pointExporter.save_refractor_points_fixed_grid(outputFile, numericalSolution, opticalSetting.z_3);
+  pointExporter.save_refractor_points_fixed_grid(outputFile, opticalSetting, numericalSolution, opticalSetting.z_3);
+  std::cout << " ... done ";
 }
 
