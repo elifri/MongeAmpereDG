@@ -31,7 +31,7 @@ public:
 //    gridHandler_(gridFile, startlevel){}
 
   TransportPlotter(const GeometryOTSetting& setting, const int startlevel):
-    gridHandler_(setting, startlevel){}
+    gridHandler_(setting, startlevel), setting_(setting){}
 
   int Nelements() const{
     int Nelements = gridHandler_.grid().size(0);
@@ -48,8 +48,6 @@ public:
 
   const auto get_quad_grid() const
   {
-    Dune::VTKWriter<GridHandlerType::GridView> vtkWriter(gridHandler_.gridView());
-    vtkWriter.write("Plotgrid");
     return gridHandler_.gridView();
   }
 
@@ -59,6 +57,7 @@ public:
 protected:
   const int refinement = 1;
   GridHandlerType gridHandler_;
+  GeometryOTSetting setting_;
 };
 
 template <class GlobalFunction>

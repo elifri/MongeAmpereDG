@@ -7,6 +7,11 @@
 
 #include "IO/TransportPlotter.hpp"
 
+#include "problem_data.h"
+#include "OT/problem_data_OT.h"
+
+#include "Dogleg/domainRestrictedDogleg.hpp"
+
 #include <set>
 
 class PointExporter:public TransportPlotter
@@ -19,7 +24,9 @@ public:
   void save_refractor_points(std::string &filename, LocalFunctiontype &f) const;
 
   template<typename GlobalFunctiontype>
-  void save_refractor_points_fixed_grid(std::string &filename, GlobalFunctiontype &f, const double &d) const;
+  void save_refractor_points_fixed_grid(std::string &filename, const OpticalSetting &opticalSetting, GlobalFunctiontype &f, const double &d) const;
+
+  void save_refractor_points_fixed_grid_by_interpolation(std::string &filenameIn, std::string &filenameOut ) const;
 
 };
 
@@ -59,27 +66,29 @@ template<typename GlobalFunctiontype>
 class Newton_intersection_operator
 {
 public:
-  Newton_intersection_operator(GlobalFunctiontype& rho, const Config::ValueType& d): rho_(rho), d_(d)
+  Newton_intersection_operator(const GeometryOTSetting& setting, GlobalFunctiontype& rho, const Config::ValueType& d)
+    :setting_(setting), rho_(rho), d_(d), boundaryOmega_(setting), doglegSolver_(boundaryOmega_, *this, DogLeg_optionstype(), true)
+//    :setting_(setting), rho_(rho), d_(d), boundaryOmega_(setting), doglegSolver_(*this, DogLeg_optionstype(), true)
   {
-    init_dogleg_opts();
+    init_dogleg_opts(doglegSolver_.get_options());
   }
 
 private:
-  void init_dogleg_opts()
+  void init_dogleg_opts(DogLeg_optionstype& doglegOpts)
   {
-    doglegOpts_.iradius = 1e-2;
-    doglegOpts_.stopcriteria[0] = 1e-12;
-    doglegOpts_.stopcriteria[0] = 1e-15;
-    doglegOpts_.stopcriteria[0] = 1e-11;
+    doglegOpts.iradius = 1e-2;
+    doglegOpts.stopcriteria[0] = 1e-12;
+    doglegOpts.stopcriteria[1] = 1e-15;
+    doglegOpts.stopcriteria[2] = 1e-11;
 
-    doglegOpts_.maxsteps = 10;
+    doglegOpts.maxsteps = 10;
 
-    doglegOpts_.silentmode = true;
+    doglegOpts.silentmode = true;
 
-    doglegOpts_.check_Jacobian = false;
+    doglegOpts.check_Jacobian = false;
 
-    doglegOpts_.exportFDJacobianifFalse = true;
-    doglegOpts_.exportJacobianIfSingular = true;
+    doglegOpts.exportFDJacobianifFalse = true;
+    doglegOpts.exportJacobianIfSingular = true;
   }
 
   Config::VectorType create_initial_guess()
@@ -144,12 +153,23 @@ public:
   }
 
 
-  Config::ValueType z_Coordinate(const Config::VectorType cart_x)
+  Config::ValueType z_Coordinate(const Config::VectorType& cart_x)
   {
     cart_x_ = cart_x;
     auto x = create_initial_guess();
 
-    doglegMethod(*this, doglegOpts_, x, true);
+    //old version
+//    doglegMethodOld(*this, doglegSolver_.get_options(), x, true);
+//
+//    x = create_initial_guess();
+    //new version
+    doglegSolver_.set_x(x);
+    doglegSolver_.solve();
+
+    x = doglegSolver_.get_solution();
+
+
+
 
     const Config::SpaceType2d x_Dune({x[0], x[1]});
 
@@ -157,24 +177,28 @@ public:
   }
 
 private:
+  GeometryOTSetting setting_;
+
   GlobalFunctiontype& rho_; ///implicit represenation of the surface (distance to origin)
   Config::VectorType cart_x_; ///the x-y-coordinates of the point we search on the refractor surface
   Config::ValueType d_; ///approximate distance from surface to lightsource
 
-  DogLeg_optionstype doglegOpts_;
+  BoundarySquareOmega boundaryOmega_;
+  DomainRestrictedDoglegSolver<Newton_intersection_operator<GlobalFunctiontype>, BoundarySquareOmega> doglegSolver_;
+//  DoglegSolver<Newton_intersection_operator<GlobalFunctiontype>> doglegSolver_;
 };
 
 
 template<typename GlobalFunctiontype>
-void PointExporter::save_refractor_points_fixed_grid(std::string &filename, GlobalFunctiontype &f, const double &d) const
+void PointExporter::save_refractor_points_fixed_grid(std::string &filename, const OpticalSetting &opticalSetting, GlobalFunctiontype &f, const double &d) const
 {
   std::ofstream of(filename.c_str(), std::ios::out);
 
   //add header
-  of << "x y with n_x " << gridHandler_.grid().globalSize(0)+1 << " n_y " << gridHandler_.grid().globalSize(1)+1;
-  of << " #refractor points in a cartesian manner" << std::endl;
+//  of << "x y with n_x " << gridHandler_.grid().globalSize(0)+1 << " n_y " << gridHandler_.grid().globalSize(1)+1;
+//  of << " #refractor points in a cartesian manner" << std::endl;
 
-  Newton_intersection_operator<GlobalFunctiontype> intersectionCalculator(f, d);
+  Newton_intersection_operator<GlobalFunctiontype> intersectionCalculator(opticalSetting,f, d);
 
   ProgressBar progressbar;
   progressbar.start();
@@ -197,4 +221,37 @@ void PointExporter::save_refractor_points_fixed_grid(std::string &filename, Glob
   }
 
 }
+
+void PointExporter::save_refractor_points_fixed_grid_by_interpolation(std::string &filenameIn, std::string &filenameOut ) const
+{
+  std::ofstream of(filenameOut.c_str(), std::ios::out);
+
+  //add header
+//  of << "x y with n_x " << gridHandler_.grid().globalSize(0)+1 << " n_y " << gridHandler_.grid().globalSize(1)+1;
+//  of << " #refractor points in a cartesian manner" << std::endl;
+
+  Mesh_interpolator ReflectorData(filenameIn);
+
+  ProgressBar progressbar;
+  progressbar.start();
+
+  int counter = 0;
+  for (auto&& element: elements(get_quad_grid()))
+  {
+    const auto geometry = element.geometry();
+    for (int i = 0; i < geometry.corners(); i++)
+    {
+      auto corner = geometry.corner(i);
+      Eigen::Vector2d xy(2);
+      xy << corner[0] , corner[1];
+
+      auto z = ReflectorData.interpolate_third_coordinate(xy);
+      of << std::setprecision(12) << std::scientific;
+      of  << xy[0] << " " << xy[1] << " " <<  z << std::endl;
+    }
+    progressbar.status(counter++, get_quad_grid().size(2));
+  }
+
+}
+
 

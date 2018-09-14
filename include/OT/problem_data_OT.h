@@ -205,10 +205,81 @@ class BoundarySquare : public OTBoundary
 
 
 public:
-  BoundarySquare(OTBoundary::GradFunction_ptr &gradUOld, GeometryOTSetting& geometrySetting): OTBoundary(gradUOld), geometrySetting(geometrySetting){}
+  BoundarySquare(GeometryOTSetting& geometrySetting): geometrySetting(geometrySetting){}
   ~BoundarySquare() {}
 
   GeometryOTSetting& geometrySetting;
+};
+
+class BoundarySquareOmega : public OTBoundary
+{
+public:
+  Config::ValueType H(const Config::SpaceType2d& T) const
+  {
+    std::vector<Config::ValueType> distances = {
+        geometrySetting.lowerLeft[0]-T[0],
+        T[0] - geometrySetting.upperRight[0],
+        geometrySetting.lowerLeft[1]-T[1],
+        T[1]-geometrySetting.upperRight[1]};
+
+    //T is inside -> return highest
+    auto iterator_maximal = std::max_element(std::begin(distances), std::end(distances));
+    auto index = iterator_maximal - distances.begin();
+    if (distances[index] < 0)
+      return distances[index];
+
+    //case T is left of square
+    if(distances[0] > 0)
+    {
+      if(distances[2] > 0)
+        return (T-geometrySetting.lowerLeft).two_norm();
+      if(distances[3] > 0)
+        return std::sqrt(sqr(distances[0])*sqr(distances[3]));
+      return distances[0];
+    }
+
+    //case T is right of square
+    if(distances[1] > 0)
+    {
+      if(distances[2] > 0)
+        return std::sqrt(sqr(distances[1])*sqr(distances[2]));
+      if(distances[3] > 0)
+        return (T-geometrySetting.upperRight).two_norm();
+      return distances[1];
+    }
+
+    //case T is below square
+    if(distances[2] > 0)
+      return distances[2];
+
+    //case T is above square
+    if(distances[3] > 0)
+      return distances[3];
+  }
+
+  Config::ValueType LegrendeFenchelTrafo(const Config::SpaceType &normal) const
+  {
+    if (normal[0] < 0)
+    {
+      if (normal[1] < 0)
+        return geometrySetting.lowerLeft[0]*normal[0] + geometrySetting.lowerLeft[1]*normal[1];
+      else
+        return geometrySetting.lowerLeft[0]*normal[0] + geometrySetting.upperRight[1]*normal[1];
+    }
+    else
+    {
+      if (normal[1] < 0)
+        return geometrySetting.upperRight[0]*normal[0] + geometrySetting.lowerLeft[1]*normal[1];
+      else
+        return geometrySetting.upperRight[0]*normal[0] + geometrySetting.upperRight[1]*normal[1];
+    }
+  }
+
+
+public:
+  BoundarySquareOmega(const GeometryOTSetting& geometrySetting): geometrySetting(geometrySetting){}
+
+  const GeometryOTSetting& geometrySetting;
 };
 
 
