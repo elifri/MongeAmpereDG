@@ -48,6 +48,8 @@ MA_OT_solver::MA_OT_solver(GridHandlerType& gridHandler,
 #endif
 //  gridTarget_ptr->globalRefine(SolverConfig::startlevel);
 
+  plotter.set_geometrySetting(get_setting());
+
   if (create_operator)
   {
     std::cerr << "create OT Operator ... " << std::endl;

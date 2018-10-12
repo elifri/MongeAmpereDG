@@ -150,7 +150,7 @@ public:
   FieldVector<value_type,2>  calc_target_hitting_point_2d(const Config::SpaceType& x, const value_type& rho,
       const FieldVector<value_type,2> &Y_restricted, const value_type &t)
   {
-    FieldVector<adouble, 2> Z ({x[0], rho}); //ray hits the refractor
+    FieldVector<value_type, 2> Z ({x[0], rho}); //ray hits the refractor
     Z.axpy(t,Y_restricted);//ray should hit the target
     return Z;
   }
