@@ -69,12 +69,13 @@ public:
 
     //calculated direction after refraction by Snell's law (lightvector)
     FieldVector<adouble, 3> lightvector ({0,0,1});
-    lightvector.axpy(-Phi((lightvector*normal_refr), epsilon_), normal_refr);
-    lightvector /= epsilon_;
+    lightvector.axpy(-Phi((lightvector*normal_refr), 1./epsilon_), normal_refr);
+    lightvector *= epsilon_;
 //    std::cerr << std::setprecision(15);
 //    std::cerr << "direction after refr " << Y[0].value() << " " << Y[1].value() << " " << Y[2].value() << std::endl;
+//    std::cerr << "norm direction after refr " << Y[0].value()/Y.two_norm().value() << " " << Y[1].value()/Y.two_norm().value() << " " << Y[2].value()/Y.two_norm().value() << std::endl;
 //    std::cerr << "presumed lightvector " << lightvector[0].value() << " " << lightvector[1].value() << " " << lightvector[2].value() << std::endl;
-//    std::cerr << " X*normal_refr " << (X*normal_refr).value() << " Phi " << (Phi((X*normal_refr))).value() << std::endl;
+//    std::cerr << "norm. presumed lightvector " << lightvector[0].value()/lightvector.two_norm().value() << " " << lightvector[1].value()/lightvector.two_norm().value() << " " << lightvector[2].value()/lightvector.two_norm().value() << std::endl;
 
     //direction of lightvector and Y have to be the same
     assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[1].value()/Y[1].value()) < 1e-7
