@@ -140,7 +140,7 @@ void MA_refractor_solver::plot(const std::string& name, int no) const
    refrPovname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".pov";
 
    plotter.writeRefractorPOV(refrPovname, *solution_u_old);
-   std::cout << refrPovname << std::endl;
+   std::cerr << refrPovname << std::endl;
 
    std::string refrNurbsname(plotter.get_output_directory());
    refrNurbsname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".3dm";
