@@ -31,6 +31,11 @@ class DomainRestrictedDoglegSolver: public DoglegSolver<FunctorType>{
       x_newDune.axpy(-damping_factor, hDune);
       this->nh_/=2.;
       distance = domainBoundary_.H(x_newDune);
+      if (damping_factor <= 1e-10)
+      {
+        this->stop_ = 5;
+        break;
+      }
     }
     x_new[0] = x_newDune[0];
     x_new[1] = x_newDune[1];

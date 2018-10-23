@@ -59,13 +59,13 @@ class UnitCube {
 public:
 	using GridType = T;
 
-	static const int dim = GridType::dimension;
+	static const int dimension = GridType::dimension;
 
 	// constructor throwing exception
 	UnitCube() {
-		Dune::FieldVector<typename GridType::ctype, dim> lowerLeft(0);
-		Dune::FieldVector<typename GridType::ctype, dim> upperRight(1);
-		std::array<unsigned int, dim> elements;
+		Dune::FieldVector<typename GridType::ctype, dimension> lowerLeft(0);
+		Dune::FieldVector<typename GridType::ctype, dimension> upperRight(1);
+		std::array<unsigned int, dimension> elements;
 		std::fill(elements.begin(), elements.end(), 1);
 		grid_ = Dune::StructuredGridFactory<GridType>::createSimplexGrid(
 				lowerLeft, upperRight, elements);
@@ -86,6 +86,7 @@ class UnitCube<Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming> > {
 public:
 	using GridType = Dune::ALUGrid<dim, dim, Dune::simplex, Dune::nonconforming>;
 	using SpaceType = Dune::FieldVector<typename GridType::ctype, dim>;
+  static const int dimension = GridType::dimension;
 private:
 	std::shared_ptr<GridType> grid_;
 
@@ -274,6 +275,7 @@ class UnitCube<Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> >> {
 public:
 	using GridType = Dune::YaspGrid<dim, EquidistantOffsetCoordinates<double,dim> > ;
   using SpaceType = Dune::FieldVector<typename GridType::ctype, dim>;
+  static const int dimension = GridType::dimension;
 
   UnitCube(int size) {
 		Dune::FieldVector<double, dim> length(1.0);
@@ -293,6 +295,14 @@ public:
         > (new GridType(lowerLeft, upperRight, elements));
 
   }
+
+  UnitCube(const SpaceType &lowerLeft, const SpaceType &upperRight, std::array<int, dim> n)
+  {
+    grid_ = std::unique_ptr < GridType
+        > (new GridType(lowerLeft, upperRight, n));
+
+  }
+
 
   const std::shared_ptr<GridType>& grid_ptr() const{
     return grid_;

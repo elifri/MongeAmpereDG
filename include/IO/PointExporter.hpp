@@ -93,7 +93,18 @@ private:
 
   Config::VectorType create_initial_guess()
   {
-    return cart_x_/sqrt(cart_x_.squaredNorm()+d_);
+    Config::VectorType initialGuess_eigen = cart_x_/sqrt(cart_x_.squaredNorm()+d_);
+    Config::SpaceType2d initialGuess({initialGuess_eigen[0], initialGuess_eigen[1]});
+    auto signedDistanceToBoundary = boundaryOmega_.H(initialGuess);
+    if (signedDistanceToBoundary > 0)
+    {
+      auto directionToBoundary = boundaryOmega_.derivativeH(initialGuess);
+      //determine the nearest point on the boundary
+      initialGuess.axpy(-signedDistanceToBoundary, directionToBoundary);
+    }
+    initialGuess_eigen[0] = initialGuess[0];
+    initialGuess_eigen[1] = initialGuess[1];
+    return initialGuess_eigen;
   }
 
 public:
@@ -121,7 +132,7 @@ public:
 
     const Config::SpaceType2d x_Dune({x[0], x[1]});
     Config::ValueType rho_value;
-    typename GlobalFunctiontype::LocalFirstDerivative::Jacobian Drho_value;
+    typename GlobalFunctiontype::Jacobian Drho_value;
 
     rho_.evaluateWithFirstDerivative(x_Dune, rho_value, Drho_value);
 
@@ -142,7 +153,7 @@ public:
 
     const Config::SpaceType2d x_Dune({x[0], x[1]});
     Config::ValueType rho_value;
-    typename GlobalFunctiontype::LocalFirstDerivative::Jacobian Drho_value;
+    typename GlobalFunctiontype::Jacobian Drho_value;
 
     rho_.evaluateWithFirstDerivative(x_Dune, rho_value, Drho_value);
 
@@ -168,7 +179,8 @@ public:
 
     x = doglegSolver_.get_solution();
 
-
+    if (doglegSolver_.get_residual_norm() > 1e-2)
+      return -1;
 
 
     const Config::SpaceType2d x_Dune({x[0], x[1]});
@@ -203,6 +215,9 @@ void PointExporter::save_refractor_points_fixed_grid(std::string &filename, cons
   ProgressBar progressbar;
   progressbar.start();
 
+  //todo exclude points outside ...
+//  BoundarySquareOmega plotBoundary
+
   int counter = 0;
   for (auto&& element: elements(get_quad_grid()))
   {
@@ -212,6 +227,9 @@ void PointExporter::save_refractor_points_fixed_grid(std::string &filename, cons
       auto corner = geometry.corner(i);
       Eigen::VectorXd xy(2);
       xy << corner[0] , corner[1];
+
+
+
 
       auto z = intersectionCalculator.z_Coordinate(xy);
       of << std::setprecision(12) << std::scientific;

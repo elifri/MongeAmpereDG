@@ -33,6 +33,9 @@ public:
   TransportPlotter(const GeometryOTSetting& setting, const int startlevel):
     gridHandler_(setting, startlevel), setting_(setting){}
 
+  TransportPlotter(const GeometryOTSetting& setting, std::array<int,Config::RectangularGridType::GridType::dimension> startlevel):
+    gridHandler_(setting, startlevel), setting_(setting){}
+
   int Nelements() const{
     int Nelements = gridHandler_.grid().size(0);
     if (refinement != 0)

@@ -178,6 +178,7 @@ public:
   void set_x(const Eigen::VectorXd& x){x_ = x;}
   Eigen::VectorXd& get_solution(){return x_;}
   const Eigen::VectorXd& get_solution() const{return x_;}
+  const double& get_residual_norm() const{return F_;}
 
   bool solve();
 
