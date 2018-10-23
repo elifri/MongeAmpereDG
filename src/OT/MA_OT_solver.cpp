@@ -798,7 +798,7 @@ void MA_OT_solver::create_initial_guess()
   }
   else
   {
-    solution.resize(get_n_dofs());
+    solution.resize(get_n_dofs_V_h());
 /*
     Config::SpaceType x0 = {0.0,0.0};
 //    FieldMatrix<Config::ValueType, 2, 2> A = {{.848269204654016,.383089318230846},{.383089318230846,2.13435477300043}}; //exactsolution *1.1
@@ -861,8 +861,11 @@ void MA_OT_solver::create_initial_guess()
 
 void MA_OT_solver::solve_nonlinear_system()
 {
+#ifdef USE_LAGRANGIAN
   assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
-
+#else
+  assert(solution.size() == get_n_dofs_V_h() && "Error: start solution is not initialised");
+#endif
 
   assert(!this->get_OT_operator().is_evaluation_of_u_old_on_different_grid());
   std::cout << "n dofs" << get_n_dofs() << " V_h_dofs " << get_n_dofs_V_h() << " Q_h_dofs " << get_n_dofs_Q_h() << std::endl;
@@ -880,12 +883,11 @@ void MA_OT_solver::solve_nonlinear_system()
   // /////////////////////////
 
 #ifdef USE_DOGLEG
-
+  doglegMethod<Operator>(get_operator(), doglegOpts_, solution, evaluateJacobianSimultaneously_);
+//  doglegMethod<Operator, false>(get_operator(), doglegOpts_, solution, evaluateJacobianSimultaneously_);
+#else
   newtonOpts_.omega = 1.0;
-
-  //  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
   newtonMethod(get_operator(), newtonOpts_, solution, evaluateJacobianSimultaneously_);
-
 #endif
 #ifdef USE_PETSC
   igpm::processtimer timer;
@@ -902,7 +904,7 @@ void MA_OT_solver::solve_nonlinear_system()
   timer.stop();
   std::cout << "needed " << timer << " seconds for nonlinear step, ended with error code " << error << std::endl;
 #endif
-  std::cout << " Lagrangian Parameter for fixing grid Point " << solution(get_n_dofs_V_h()) << std::endl;
+//  std::cout << " Lagrangian Parameter for fixing grid Point " << solution(get_n_dofs_V_h()) << std::endl;
 
   if (compare_with_exact_solution_)
     std::cout << " L2 error is " << calculate_L2_error_gradient(exactData.exact_gradient()) << std::endl;
@@ -988,6 +990,7 @@ void MA_OT_solver::adapt_solution(const int level)
 //  auto newSolution = FEBasisHandler_.adapt_function_elliptic_after_grid_change(old_grid.gridViewOld, gridView(), *this, solution);
   solution = newSolution;
 
+#ifdef USE_LAGRANGIAN
   //adapt boundary febasis and bind to assembler
   std::cerr << " going to adapt lagrangian multiplier " << std::endl;
 
@@ -1003,6 +1006,7 @@ void MA_OT_solver::adapt_solution(const int level)
   solution.conservativeResize(get_n_dofs());
   solution(get_n_dofs_V_h()) = 0;
   solution.tail(get_n_dofs_Q_h()) = p_adapted;
+#endif
 
   {
     update_solution(solution);

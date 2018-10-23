@@ -20,6 +20,10 @@
 #define HAVE_ADOLC 1
 #define USE_AUTOMATIC_DIFFERENTIATION 1
 
+#define USE_LAGRANGIAN 1
+#define USE_DOGLEG 1
+//#undef USE_DOGLEG
+
 #undef TARGET_IS_XZ_PLANE
 
 #ifndef C1Element
@@ -132,8 +136,9 @@ struct SolverConfig{
   int maxSteps;
 #ifdef USE_DOGLEG
   DogLeg_optionstype doglegOpts;
-#endif
+#else
   NewtonOptionsType newtonOpts;
+#endif
 
   bool writeVTK;
 

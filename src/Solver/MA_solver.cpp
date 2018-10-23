@@ -363,6 +363,8 @@ void MA_solver::solve_nonlinear_system()
   }  while (!converged && steps < maxSteps_);
 */
   doglegMethod(get_operator(), doglegOpts_, solution, evaluateJacobianSimultaneously_);
+#else
+  newtonMethod(get_operator(), newtonOpts_, solution, evaluateJacobianSimultaneously_);
 #endif
 #ifdef USE_PETSC
   igpm::processtimer timer;

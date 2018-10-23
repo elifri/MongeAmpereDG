@@ -68,6 +68,9 @@ void SolverConfig::read_configfile(std::string &configFile)
 
   std::cout << "read information from file " << configFile << std::endl;
 
+  double dummy;
+  bool dummyBool;
+
   po::options_description config("Configuration of the MA FE solver");
   config.add_options()
         ("solver.initValueFromFile",     po::value<bool>(&initValueFromFile), "")
@@ -90,6 +93,15 @@ void SolverConfig::read_configfile(std::string &configFile)
         ("dogleg.exportJacobianIfSingular" ,    po::value<bool>  (&(doglegOpts.exportJacobianIfSingular)),   "")
         ("dogleg.exportFDJacobianifFalse" ,    po::value<bool>  (&(doglegOpts.exportFDJacobianifFalse)),   "")
         ("dogleg.check_Jacobian" ,    po::value<bool>  (&(doglegOpts.check_Jacobian)),   "")
+#else
+        ("dogleg.iradius",     po::value<double>(&dummy), "")
+        ("dogleg.stopcriteria0" , po::value<double>(&(newtonOpts.eps[0])), "")
+        ("dogleg.stopcriteria1" , po::value<double>(&(newtonOpts.eps[1])), "")
+        ("dogleg.stopcriteria2" , po::value<double>(&(newtonOpts.eps[2])), "")
+        ("dogleg.silentmode" ,    po::value<bool>  (&(newtonOpts.silentmode)),   "")
+        ("dogleg.exportJacobianIfSingular" ,    po::value<bool>  (&(dummyBool)),   "")
+        ("dogleg.exportFDJacobianifFalse" ,    po::value<bool>  (&(dummyBool)),   "")
+        ("dogleg.check_Jacobian" ,    po::value<bool>  (&(newtonOpts.check_Jacobian)),   "")
 #endif
         ("output.directory", po::value<string>(&outputDirectory), "")
         ("output.plotdirectory", po::value<string>(&plotOutputDirectory), "")
@@ -116,13 +128,6 @@ void SolverConfig::read_configfile(std::string &configFile)
     po::store(po::parse_config_file(ifs, config), vm);
     notify(vm);
   }
-
-  //copy criteria to newton options
-  newtonOpts.eps[0]= doglegOpts.stopcriteria[0];
-  newtonOpts.eps[1]= doglegOpts.stopcriteria[1];
-  newtonOpts.eps[2]= doglegOpts.stopcriteria[2];
-  newtonOpts.silentmode = doglegOpts.silentmode;
-  newtonOpts.check_Jacobian = doglegOpts.check_Jacobian;
 }
 
 ////------fallback values for GeometryStandardSetting setting---------
@@ -180,21 +185,21 @@ void GeometryOTSetting::read_configfile(std::string &configFile)
         ("geometry.input.xMax",  po::value<double>(&upperRight[0]), "")
         ("geometry.input.yMin",  po::value<double>(&lowerLeft[1]), "")
         ("geometry.input.yMax",  po::value<double>(&upperRight[1]), "")
-        ("geometry.input.gridfile",  po::value<string>(&gridinputFile), "")
-        ("geometry.input.plotgridfile",  po::value<string>(&plotGridinputFile), "")
+        ("geometry.input.gridfile",  po::value<std::string>(&gridinputFile), "")
+        ("geometry.input.plotgridfile",  po::value<std::string>(&plotGridinputFile), "")
         ("geometry.input.boundaryN",  po::value<int>(&GeometryOTSetting::boundaryN), "")
         ("geometry.target.xMin",     po::value<double>(&lowerLeftTarget[0]), "")
         ("geometry.target.xMax",     po::value<double>(&upperRightTarget[0]), "")
         ("geometry.target.yMin",     po::value<double>(&lowerLeftTarget[1]), "")
         ("geometry.target.yMax",     po::value<double>(&upperRightTarget[1]), "")
         ("geometry.target.z",        po::value<double>(&z_3),    "")
-        ("geometry.target.gridfile",  po::value<string>(&gridTargetFile), "")
+        ("geometry.target.gridfile",  po::value<std::string>(&gridTargetFile), "")
         ("geometry.target.boundaryN",  po::value<int>(&GeometryOTSetting::boundaryNTarget), "")
   ;
 
 
   // open config file for the image
-  ifstream ifs(configFile.c_str());
+  std::ifstream ifs(configFile.c_str());
   if (!ifs)
   {
     if (configFile=="")

@@ -23,9 +23,7 @@
 
 #include "problem_data.h"
 
-#ifdef USE_DOGLEG
 #include "Dogleg/doglegMethod.hpp"
-#endif
 
 
 class MA_solver;

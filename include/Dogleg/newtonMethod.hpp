@@ -84,34 +84,31 @@ void newtonMethod(
 
     Eigen::VectorXd s;
 
+    // solve Df*s = +f using UmfPack:
+      if (useCombinedFunctor)
+      {
+        functor.evaluate(x,f,Df, x, true);
+      }
+      else
+      {
+        functor.evaluate(x,f,x, true);
+        functor.derivative(x,Df);
+  //      make_FD_Jacobian(functor, x, J);
+      }
+
+      std::cerr << "  newton residual is " << std::scientific << std::setprecision(3) << f.norm()
+                << std::scientific << std::setprecision(3) << "   omega   " << omega
+                << std::endl;
+      //init data
+      lu_of_Df.analyzePattern(Df);
+      initialResidual = f.norm();
+      lastResidual = initialResidual;
+      oldX = x;
+
     for (unsigned int i=0; i<options.maxIter; i++) {
       Eigen::VectorXd xBoundary(x);
       for (unsigned int j = 0; j < options.maxIterBoundaryConditions; j++)
       {
-        // solve Df*s = +f using UmfPack:
-          if (useCombinedFunctor)
-          {
-            functor.evaluate(x,f,Df, xBoundary, true);
-          }
-          else
-          {
-            functor.evaluate(x,f,xBoundary, true);
-            functor.derivative(x,Df);
-      //      make_FD_Jacobian(functor, x, J);
-          }
-
-          std::cerr << "  newton residual is " << std::scientific << std::setprecision(3) << f.norm()
-                    << std::scientific << std::setprecision(3) << "   omega   " << omega
-                    << std::endl;
-          //init data
-          if (i == 0 && j == 0)
-          {
-            lu_of_Df.analyzePattern(Df);
-            initialResidual = f.norm();
-            lastResidual = initialResidual;
-            oldX = xBoundary;
-          }
-
           diffLastResidual = lastResidual-f.norm();
 
           //dismiss newton step
@@ -191,7 +188,6 @@ void newtonMethod(
           }
 
 
-
           lu_of_Df.factorize(Df);
           if (lu_of_Df.info()!=0) {
               // decomposition failed
@@ -213,7 +209,6 @@ void newtonMethod(
           //perform newton step
           xBoundary-=omega*s;
 
-
           std::cerr << std::endl << std::endl;
 
           if (!options.silentmode)
@@ -221,12 +216,12 @@ void newtonMethod(
             std::cerr << "     boundary-step     "
                 << std::scientific << std::setprecision(3) << omega*s.norm()
                 << std::endl << "       ";
-            std::cout << "   " << std::setw(6) << i;
+            std::cout << "   " << std::setw(6) << j;
             std::cout << "     boundary-step     ";
-            std::cout << std::scientific << std::setprecision(3) << omega*s.norm();
-            std::cout << "   " << std::scientific << std::setprecision(3) << f.lpNorm<Eigen::Infinity>();
-            std::cout << "   " << std::scientific << std::setprecision(3) << f.norm()/initialResidual;
-            std::cout << "   " << std::scientific << std::setprecision(10) << f.norm();
+//            std::cout << std::scientific << std::setprecision(3) << omega*s.norm();
+//            std::cout << "   " << std::scientific << std::setprecision(3) << f.lpNorm<Eigen::Infinity>();
+//            std::cout << "   " << std::scientific << std::setprecision(3) << f.norm()/initialResidual;
+//            std::cout << "   " << std::scientific << std::setprecision(10) << f.norm();
             std::cout << std::endl;
           }
           if (   s.norm() <= options.eps[1]
@@ -241,11 +236,31 @@ void newtonMethod(
 
       x = xBoundary;
 
+      // solve Df*s = +f using UmfPack:
+      if (useCombinedFunctor)
+      {
+        functor.evaluate(x,f,Df, xBoundary, true);
+      }
+      else
+      {
+        functor.evaluate(x,f,xBoundary, true);
+        functor.derivative(x,Df);
+        //      make_FD_Jacobian(functor, x, J);
+      }
+
+      std::cerr << "  newton residual is " << std::scientific << std::setprecision(3) << f.norm()
+                << std::scientific << std::setprecision(3) << "   omega   " << omega
+                << std::endl;
+
+
       if (!options.silentmode)
          {
-           std::cout << "   " << std::setw(6) << i;
+           std::cout << "   " << std::setw(4) << i;
            std::cout << "  Newton-step          ";
            std::cout << std::scientific << std::setprecision(3) << omega*s.norm();
+           std::cout << "   " << std::scientific << std::setprecision(3) << f.lpNorm<Eigen::Infinity>();
+           std::cout << "   " << std::scientific << std::setprecision(3) << f.norm()/initialResidual;
+           std::cout << "   " << std::scientific << std::setprecision(10) << f.norm();
          }
 
 

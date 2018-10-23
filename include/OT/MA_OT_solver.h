@@ -75,6 +75,9 @@ private:
   virtual void solve_nonlinear_system();
   virtual void adapt_operator();
 
+  using MA_solver::adapt;
+  using MA_solver::adapt_solution;
+
   void init_lagrangian_values(VectorType& v) const;
 
 public:
@@ -118,9 +121,6 @@ public:
   virtual void plot(const std::string& filename, int no) const;
 
 public:
-
-  using MA_solver::adapt;
-  using MA_solver::adapt_solution;
 
   GeometryOTSetting& get_setting() {return setting_;}
   const GeometryOTSetting& get_setting() const {return setting_;}
@@ -188,7 +188,9 @@ template<class F>
 void MA_OT_solver::project(const F f, VectorType& v) const
 {
   this->FEBasisHandler_.project(f, v);
+#ifdef USE_LAGRANGIAN
   init_lagrangian_values(v);
+#endif
 
 #ifdef DEBUG
   test_projection(f,v.head(get_n_dofs_V()));
@@ -199,7 +201,9 @@ template<class F, class GradF>
 void MA_OT_solver::project(const F f, GradF gradf, VectorType& v) const
 {
   this->FEBasisHandler_.project(f, gradf, v);
+#ifdef USE_LAGRANGIAN
   init_lagrangian_values(v);
+#endif
 
 #ifdef DEBUG
   test_projection(f,v.head(get_n_dofs_V()));
