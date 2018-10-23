@@ -40,7 +40,7 @@ target_link_libraries(read_and_write_OT MA_OT_image_solver MA_OT_solver ${PureSo
 target_link_dune_default_libraries("read_and_write_OT")
 
 add_executable(export_refractor_points export_refractor_points.cpp)
-target_link_libraries(export_refractor_points ${IOLibs} Solver_Config Dogleg ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES}  ${BoostPO_LIBRARIES} ${UMFPACK_LIBRARIES})
+target_link_libraries(export_refractor_points ${IOLibs} problemData Solver_Config Dogleg ${ADOLC_LIBRARIES} ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES}  ${BoostPO_LIBRARIES} ${UMFPACK_LIBRARIES})
 target_link_dune_default_libraries("export_refractor_points")
 
 add_executable(fit_surface fit_surface.cpp)

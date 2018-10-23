@@ -864,6 +864,41 @@ private:
         }
       }
     }
+    catch(Dune::Exception e)
+    {
+      outside = true;
+      const double eps=searchRadius(basis_->gridView());
+
+      auto xPertubed = x;
+
+      bool notFound = true;
+      int direction = 0;
+
+      xPertubed[0]+=eps;
+      while(notFound)
+      {
+        try{
+          const auto& element = hs.findEntity(xPertubed);
+
+          localCoordinate = element.geometry().local(x);
+          moveLocalCoordinateToBoundary(localCoordinate);
+
+          return std::move( element );
+          notFound = false;
+          }
+        catch(Dune::GridError)
+        {
+          switch(direction)
+          {
+          case 0: xPertubed[0] -=2*eps; break;
+          case 1: xPertubed[0]+=eps; xPertubed[1] +=eps; break;
+          case 2: xPertubed[1]-=2*eps; break;
+          default: std::cerr << " did not found any grid point near "<< x << " Error " << e.what() << std::endl; assert(false);
+          }
+          direction++;
+        }
+      }
+    }
     return hs.findEntity(x);
   }
 
@@ -1010,6 +1045,15 @@ private:
       gradu  = TaylorExpansionDerivative(element, x, localCoordinate);
       localSecondDerivative_.evaluateHess(localCoordinate, hessu);
     }
+  }
+
+  void evaluateWithFirstDerivativeLocal(const Element& element, const Domain& xLocal, Range& u, typename LocalFirstDerivative::Jacobian& gradu) const
+  {
+    localFunction_.bind(element);
+    localDerivative_.bind(element);
+
+    u = localFunction_(xLocal);
+    gradu = localDerivative_(xLocal);
   }
 
   void evaluateWithFirstDerivative(const Domain& x, Range& u, typename LocalFirstDerivative::Jacobian& gradu) const

@@ -214,7 +214,8 @@ public:
 class BoundarySquareOmega : public OTBoundary
 {
 public:
-  Config::ValueType H(const Config::SpaceType2d& T) const
+  template<typename Vector2dType>
+  Config::ValueType H(const Vector2dType& T) const
   {
     std::vector<Config::ValueType> distances = {
         geometrySetting.lowerLeft[0]-T[0],
@@ -253,8 +254,8 @@ public:
       return distances[2];
 
     //case T is above square
-    if(distances[3] > 0)
-      return distances[3];
+    assert(distances[3] > 0);
+    return distances[3];
   }
 
   Config::ValueType LegrendeFenchelTrafo(const Config::SpaceType &normal) const
