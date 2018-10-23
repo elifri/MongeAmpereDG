@@ -1375,7 +1375,7 @@ void Plotter::write_refractor_mesh(std::string &filename, LocalFunction &f) cons
 
   ON::CloseFile( fp );
   if (ok)
-    std::cout << "Successfully wrote rhino mesh to " << filename << std::endl;
+    std::cerr << "Successfully wrote rhino mesh to " << filename << std::endl;
 
 }
 

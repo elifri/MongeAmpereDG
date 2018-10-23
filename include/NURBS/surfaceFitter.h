@@ -60,14 +60,21 @@ public:
     {
       if (transposed)
       {
+        assert(l < dim_n);
+        assert(k < dim_m);
         return points_[dim_n*k+l];
       }
+
+      assert(k < dim_n);
+      assert(l < dim_m);
       return points_[dim_n*l+k];
     }
 
     std::vector<Eigen::Vector3d> col(int l) const
     {
-      return std::vector<Eigen::Vector3d>(points_.begin()+dim_n*l, points_.begin()+dim_n*l+dim_m);
+      assert(l < dim_m);
+      assert(!transposed);
+      return std::vector<Eigen::Vector3d>(points_.begin()+dim_n*l, points_.begin()+dim_n*l+dim_n);
     }
 
     void transpose()
@@ -75,6 +82,8 @@ public:
       transposed = !transposed;
     }
 
+    int get_dim_n() const {return transposed? dim_m: dim_n;}
+    int get_dim_m() const{return transposed? dim_n: dim_m;}
     const std::vector<Eigen::Vector3d>& points_;
     int dim_n;
     int dim_m;
@@ -82,10 +91,149 @@ public:
     bool transposed;
   };
 
+  friend std::ostream& operator<<(std::ostream& os, const SurfaceFitter::CartesianWrapper& Q)
+  {
+    os << "dim_m " << Q.dim_m << " dim_n " << Q.dim_n << std::endl;
+    for (int i = 0; i < Q.dim_n; i++)
+    {
+      for (int j = 0; j < Q.dim_m; j++)
+        os << "(" << Q(i,j).transpose() << ") ";
+      os << std::endl;
+    }
+    return os;
+  }
+
+  static bool export_Q_and_intermediate_curves(const SurfaceFitter& surf, const SurfaceFitter::CartesianWrapper& Q,
+      const std::vector<Eigen::Vector3d>& P)
+  {
+
+    ON_PointCloud* pointcloud = new ON_PointCloud();
+    surf.add_points(pointcloud, P);
+
+    SurfaceFitter::Matrix3dPoints R(surf.get_n()+1,surf.get_m()+1);
+
+    for (int l = 0; l <= surf.get_m(); l++)
+      R.col(l) = SurfaceFitter::interpolate_curve(Q.col(l), surf.get_n(), surf.get_uDeg(), surf.get_uk(), surf.get_U());
+
+    //plot curve
+    // layer table
+    ONX_Model model;
+
+    // file properties (notes, preview image, revision history, ...)
+
+    // set revision history information
+    model.m_properties.m_RevisionHistory.NewRevision();
+
+    // set application information
+    model.m_properties.m_Application.m_application_name = "OpenNURBS write_curves_example() function";
+    model.m_properties.m_Application.m_application_URL = "http://www.opennurbs.org";
+    model.m_properties.m_Application.m_application_details = "Example program in OpenNURBS toolkit.";
+
+    // some notes
+    model.m_properties.m_Notes.m_notes = "This file was made with the OpenNURBS write_curves_example() function.";
+    model.m_properties.m_Notes.m_bVisible = true;
+
+
+    // file settings (units, tolerances, views, ...)
+    model.m_settings.m_ModelUnitsAndTolerances.m_unit_system = ON::meters;
+    model.m_settings.m_ModelUnitsAndTolerances.m_absolute_tolerance = 0.001;
+    model.m_settings.m_ModelUnitsAndTolerances.m_angle_tolerance = ON_PI/180.0; // radians
+    model.m_settings.m_ModelUnitsAndTolerances.m_relative_tolerance = 0.01; // 1%
+
+
+
+    {
+      // OPTIONAL - define some layers
+      ON_Layer layer[surf.get_m()+2];
+
+      layer[0].SetLayerName("Points");
+      layer[0].SetVisible(true);
+      layer[0].SetLocked(false);
+      layer[0].SetLayerIndex(0);
+      layer[0].SetColor( ON_Color(0,0,255) );
+      model.m_layer_table.Append(layer[0]);
+
+      layer[1].SetLayerName("ControlPoints");
+      layer[1].SetVisible(true);
+      layer[1].SetLocked(false);
+      layer[1].SetLayerIndex(0);
+      layer[1].SetColor( ON_Color(0,255,0) );
+      model.m_layer_table.Append(layer[1]);
+
+      for (int l = 2; l <= surf.get_m()+1; l++)
+      {
+        layer[l].SetLayerName("Curve");
+        layer[l].SetVisible(true);
+        layer[l].SetLocked(false);
+        layer[l].SetLayerIndex(l);
+        layer[l].SetColor( ON_Color(0,255,0) );
+
+        model.m_layer_table.Append(layer[l]);
+      }
+
+    }
+
+    {
+      ONX_Model_Object& mo = model.m_object_table.AppendNew();
+      mo.m_object = pointcloud;
+      mo.m_bDeleteObject = true; // ~ONX_Model will delete pointcloud.
+      mo.m_attributes.m_layer_index = 0;
+      mo.m_attributes.m_name = "interpolation points";
+    }
+
+/*
+    {
+      ONX_Model_Object& mo = model.m_object_table.AppendNew();
+      mo.m_object = pointcloud;
+      mo.m_bDeleteObject = true; // ~ONX_Model will delete pointcloud.
+      mo.m_attributes.m_layer_index = 1;
+      mo.m_attributes.m_name = "control points";
+    }
+*/
+
+    for (int l = 0; l <= surf.get_m(); l++)
+    {
+      auto curve = surf.construct_curve(surf.get_n(), surf.get_uDeg(), surf.get_U(), R.col(l));
+      {
+        ONX_Model_Object& mo = model.m_object_table.AppendNew();
+        mo.m_object = curve;
+        mo.m_bDeleteObject = true;
+        mo.m_attributes.m_layer_index = l;
+        mo.m_attributes.m_name = "curve";
+      }
+    }
+    std::stringstream ss;
+    ss << "interpolation_curvesNx"<<(surf.get_n()+1)<<"Ny"<<(surf.get_m()+1)<<".3dm";
+    std::string filename = ss.str();
+
+    ON_BinaryFile archive( ON::write3dm, ON::OpenFile( filename.c_str(), "wb" ) );
+
+    // start section comment
+    const char* sStartSectionComment = __FILE__ "write_points_example()" __DATE__;
+
+    // Set uuid's, indices, etc.
+    model.Polish();
+
+    // errors printed to stdout
+    ON_TextLog error_log;
+
+    // writes model to archive
+    bool ok = model.Write( archive, 5, sStartSectionComment, &error_log );
+    if (ok)
+      std::cout << " wrote model to interpolation_curves.3dm" << std::endl;
+    return ok;
+  }
+
+
+
   //Algorithm A2.1. FinSpan
   static int find_span(int deg, const double u, const Eigen::VectorXd& U)
   {
     int n= U.size()-deg-2;
+
+    assert(u > U[0] - eps && " u is to small!");
+    assert(u < U[n+1] + eps && " u is to large!");
+
     //special case
     if (std::abs(u - U[n+1]) < eps)  return n;
 
@@ -128,9 +276,13 @@ public:
     return N;
   }
 
+  ///performs A9.1 on p. 369 (the NURBS book)
   static Vector3dPoints interpolate_curve(const std::vector<Eigen::Vector3d>& points,
       const int n, int deg, const Eigen::VectorXd& uk, const Eigen::VectorXd& u)
   {
+    assert(points.size() == n+1);
+    assert(uk.size() == n+1);
+
     Vector3dPoints P (n+1);
     Eigen::MatrixXd A = Eigen::MatrixXd::Zero(n+1,n+1);
 
@@ -200,15 +352,18 @@ public:
   template<typename PointVector>
   static void add_points(ON_PointCloud* pointcloud, const PointVector& P)
   {
-    for (int i = 0; i < P.size(); i++ )
+    for (unsigned int i = 0; i < P.size(); i++ )
       pointcloud->AppendPoint(ON_3dPoint( P[i][0], P[i][1], P[i][2]));
   }
 
 
-
+  ///performs (9.5) on p. 365 (The NURBS book)
   static void construct_knot_parameter_surf(const int n, const int m, Eigen::VectorXd& uk, const CartesianWrapper& Q)
   {
-    auto num = m+1; //number of nondegnereate rows
+    assert(Q.get_dim_n() == n+1);
+    assert(Q.get_dim_m() == m+1);
+
+    auto num = m+1; //number of nondegenerate rows
     uk.resize(n+1); //parameter values in x-direction
 
     Eigen::VectorXd cds(n+1);//store chordial distances
@@ -268,7 +423,7 @@ public:
     Q.transpose();
     construct_knot_parameter_surf(m_, n_, vl_, Q);
     Q.transpose();
-    v_.resize(m_+vDeg_+2); //knot vector in x-direction
+    v_.resize(m_+vDeg_+2); //knot vector in y-direction
 
     //calculate knot vector by (9.8)
     v_.head(vDeg_+1) = Eigen::VectorXd::Zero(vDeg_+1);
@@ -285,8 +440,11 @@ public:
     Matrix3dPoints R(n_+1,m_+1);
     P_.resize(n_+1,m_+1);
 
+
     for (int l = 0; l <= m_; l++)
+    {
       R.col(l) = interpolate_curve(Q.col(l), n_, uDeg_, uk_, u_);
+    }
 
     for (int i = 0; i <= n_; i++)
     {
@@ -296,14 +454,13 @@ public:
     }
   }
 
-
   /*
  **calculate the interpolated nurbssurface via the Section 9.2.5 given in
  *  the NURBS book by Les Piegl and Wayne Tiller p. 376 (2nd Edition)
  *
  *@param  n_x     number of points in x-direction
  *@param  n_y     number of points in y-direction
- *@param  point   points to interpolate
+ *@param  points   points to interpolate in a format (x0 y0), (x1 y0), ... (xn yn)
  *@return returns the interpolated nurbssurface
  */
   ON_NurbsSurface interpolate_surface(const int n_x, const int n_y, const std::vector<Eigen::Vector3d>& points)
@@ -316,11 +473,16 @@ public:
 
     n_= n_x-1;
     m_ = n_y-1;
+    assert(n_ > uDeg_ && " The desired degree in u-direction is not possible with the given points!");
+    assert(m_ > vDeg_ && " The desired degree in v-direction is not possible with the given points!");
+
+
     CartesianWrapper Q(points, n_x, n_y);
 
     construct_knot_vectors(Q);
     construct_control_points(Q);
 
+    export_Q_and_intermediate_curves(*this, Q, points);
 //    for (unsigned int i = 0; i < u_.size(); i++)
  //     std::cout << " knot u_[" << i << "]= " << u_[i] << std::endl;
 
