@@ -36,12 +36,16 @@ target_link_libraries(dune_mongeampere_refractor MA_refractor_solver MA_OT_solve
 target_link_dune_default_libraries("dune_mongeampere_refractor")
 
 add_executable("read_and_write_OT" read_and_write_OT.cpp)
-target_link_libraries(read_and_write_OT MA_OT_image_solver MA_OT_solver ${PureSolverLibs} ${SNES_LIBRARY} ${OTProblemLibs} problemData Solver_Config ImageFunction utils ${IPOPT_LIBRARIES} ${ZLIB_LIBRARIES} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
+target_link_libraries(read_and_write_OT MA_reflector_solver MA_OT_solver ${PureSolverLibs} ${MirrorProblemLibs} ${SNES_LIBRARY} ${OTProblemLibs} problemData Solver_Config ImageFunction ${ThirdPartyLibs})
 target_link_dune_default_libraries("read_and_write_OT")
 
 add_executable(export_refractor_points export_refractor_points.cpp)
 target_link_libraries(export_refractor_points ${IOLibs} problemData Solver_Config Dogleg ${ADOLC_LIBRARIES} ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES}  ${BoostPO_LIBRARIES} ${UMFPACK_LIBRARIES})
 target_link_dune_default_libraries("export_refractor_points")
+
+add_executable(interpolate_refractor_points interpolate_refractor_points.cpp)
+target_link_libraries(interpolate_refractor_points ${IOLibs} Solver_Config problemData ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES})
+target_link_dune_default_libraries("interpolate_refractor_points")
 
 add_executable(fit_surface fit_surface.cpp)
 target_link_libraries(fit_surface ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES})
