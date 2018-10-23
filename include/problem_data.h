@@ -308,6 +308,12 @@ void bilinear_interpolate_derivative(const Config::SpaceType x, Config::SpaceTyp
 struct Rectangular_mesh_interpolator{
 
   Rectangular_mesh_interpolator(const std::string &filename);
+
+  Rectangular_mesh_interpolator(const std::string &filename,
+      const int n_x, const int n_y,
+      const double h_x, const double h_y,
+      const double x0, const double y0);
+
   Config::ValueType evaluate (const Config::SpaceType2d& x) const;
   Config::SpaceType2d evaluate_derivative(const Config::SpaceType2d& x) const;
 
@@ -319,6 +325,25 @@ struct Rectangular_mesh_interpolator{
   double x_min, y_min;
 
   Eigen::MatrixXd solution;
+
+};
+
+struct Mesh_interpolator{
+
+  Mesh_interpolator(const std::string &filename);
+
+  std::array<Eigen::Vector3d,4> closestPoints(const Eigen::Vector2d& point) const;
+  std::array<Eigen::Vector3d,4> closestPointsQuadrant(const Eigen::Vector2d& point) const;
+
+
+  Config::ValueType interpolate_third_coordinate(const Eigen::Vector2d& x) const;
+
+  Config::ValueType evaluate (const Config::SpaceType2d& x) const;
+  Config::SpaceType2d evaluate_derivative(const Config::SpaceType2d& x) const;
+
+  int n_;
+
+  std::vector<Eigen::Vector3d> points_;
 
 };
 

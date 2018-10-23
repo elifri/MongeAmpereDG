@@ -229,6 +229,33 @@ Rectangular_mesh_interpolator::Rectangular_mesh_interpolator(const std::string &
   read_quadratic_grid(filename, n_x,  n_y, h_x, h_y, x_min, y_min, solution);
 }
 
+Rectangular_mesh_interpolator::Rectangular_mesh_interpolator(const std::string &filename,
+    const int n_x, const int n_y,
+    const double h_x, const double h_y,
+    const double x0, const double y0):
+        n_x(n_x), n_y(n_y), h_x(h_x), h_y(h_y), x_min(x0), y_min(y0)
+{
+
+  std::ifstream file(filename.c_str());
+  if(!file) { // file couldn't be opened
+        cerr << "Error: file "<< filename << " for reading rectangle grid could not be opened" << std::endl;
+        exit(1);
+     }
+
+  solution.resize(n_x,n_y);
+
+  for (int y=0; y < n_y; y++)
+  {
+    for (int x=0; x < n_x; x++)
+    {
+      double temp;
+      file >> temp; file >> temp;
+      assert(!file.eof());
+      file >> solution(x,y);
+    }
+  }
+}
+
 Config::ValueType Rectangular_mesh_interpolator::evaluate(const Config::SpaceType2d& x) const
 {
   Config::ValueType val;
@@ -257,4 +284,119 @@ Config::SpaceType2d Rectangular_mesh_interpolator::evaluate_inverse_derivative(c
   return val_dev;
 }
 
+Mesh_interpolator::Mesh_interpolator(const std::string &filename)
+{
+  std::cout << " read from file " << filename << std::endl;
+  std::ifstream file(filename.c_str());
+  if(!file) { // file couldn't be opened
+        cerr << "Error: file "<< filename << " for reading rectangle grid could not be opened" << std::endl;
+        exit(1);
+     }
+
+  while (!file.eof())
+  {
+    Eigen::Vector3d point;
+      file >> point[0];
+      assert(!file.eof());
+      file >> point[1];
+      assert(!file.eof());
+      file >> point[2];
+      points_.push_back(point);
+      file >> std::ws;
+  }
+}
+
+std::array<Eigen::Vector3d,4> Mesh_interpolator::closestPoints(const Eigen::Vector2d& point) const
+{
+  std::array<Eigen::Vector3d,4> closestPoints;
+  closestPoints.fill(points_[0]);
+  std::array<double,4> closestDistances;
+  closestDistances.fill((points_[0].head(2)-point).norm());
+
+  for (const auto &refPoint : points_)
+  {
+    double distance = (point-refPoint.head(2)).norm();
+    if (distance < closestDistances[3])//smaller than the four values already found
+    {
+      int i = 3;
+      while(distance < closestDistances[i] && i >= 0) //check whether the new point is smaller than the current closest points
+      {
+        if ( i < 3)//these values are greater than the new one
+        {
+          closestPoints[i+1] = closestPoints[i];
+          closestDistances[i+1] = closestDistances[i];
+        }
+        //sort new point into points
+        closestPoints[i] = refPoint;
+        closestDistances[i] = distance;
+        i--;
+      }
+    }
+  }
+  return closestPoints;
+}
+
+inline double quadrant(const Eigen::Vector2d& quadpoint, const Eigen::Vector3d& point)
+{
+  if (quadpoint[0] - point[0] > 0 ) //point left of quadpoint
+  {
+    if (quadpoint[1] - point[1] > 0 ) //point below of of quadpoint
+      return 2;
+    return 0;
+  }
+  //point is right of quadpoint
+  if (quadpoint[1] - point[1] > 0 ) //point below of of quadpoint
+    return 3;
+  return 1;
+}
+
+std::array<Eigen::Vector3d,4> Mesh_interpolator::closestPointsQuadrant(const Eigen::Vector2d& point) const
+{
+  //find closes points in every quadrant implicitly defined by the point
+  //quadrant numbering
+  // 0|1
+  // 2|3
+
+  std::array<Eigen::Vector3d,4> closestPoints;
+  closestPoints.fill(points_[0]);
+  std::array<double,4> closestDistances;
+  closestDistances.fill((points_[0].head(2)-point).norm());
+
+  for (const auto &refPoint : points_)
+  {
+    double distance = (point-refPoint.head(2)).norm();
+
+    int quadrantIndex = quadrant(point, refPoint);
+
+    if (distance < closestDistances[quadrantIndex])
+    {
+      closestDistances[quadrantIndex] = distance;
+      closestPoints[quadrantIndex] = refPoint;
+    }
+  }
+  return closestPoints;
+}
+
+inline
+double interpolate_linear(const Eigen::Vector2d& x, const Eigen::Vector3d& u0, const Eigen::Vector3d& u1, const int direction)
+{
+  double weight = (x[direction]-u0[direction])/(u1[direction]-u0[direction]);
+  return weight*u0[2]+(1-weight)*u1[2];
+}
+
+Config::ValueType Mesh_interpolator::interpolate_third_coordinate(const Eigen::Vector2d& x) const
+{
+  Eigen::Vector3d temp; temp << x[0] ,x[1], 0;
+  auto closestPoints = closestPointsQuadrant(x);
+
+  //calculate interpolation between neighbour points
+  double value_y_interpolated_left = interpolate_linear(x,closestPoints[2], closestPoints[0], 1);
+  double value_y_interpolated_right = interpolate_linear(x,closestPoints[3], closestPoints[1], 1);
+  double value_x_interpolated_upper = interpolate_linear(x,closestPoints[0], closestPoints[1], 0);
+  double value_x_interpolated_below = interpolate_linear(x,closestPoints[2], closestPoints[3], 0);
+
+  auto val = 1./4.*(value_y_interpolated_left+value_y_interpolated_right+value_x_interpolated_upper+value_x_interpolated_below);
+
+  return val;
+}
 
