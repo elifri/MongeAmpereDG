@@ -24,6 +24,8 @@
 
 #include "Solver/solver_config.h"
 #include "Solver/boundaryHandler.h"
+
+#include "IO/read_utils.h"
 #include "IO/PointExporter.hpp"
 
 #include <boost/program_options.hpp>
@@ -85,16 +87,7 @@ istream& operator>>(istream& in, Eigen::Vector3d& v)
 }
 }
 
-Eigen::Vector3d vec_from_stream(std::string& vs)
-{
-  Eigen::Vector3d point;
-  std::stringstream ss(vs);
-  for( int i = 0; i < 3; i++)
-  {
-    ss >> point[i] >> std::ws;
-  }
-  return point;
-}
+
 
 void init_options(const std::string& optionsFile,
     std::string& coefficientFile, std::string& pointFile1, std::string& pointFile2,
@@ -139,67 +132,13 @@ void init_options(const std::string& optionsFile,
   for (const auto e: translationStr2) std::cout<< e << "; ";
   std::cout << std::endl;
 
-  translationV1 = vec_from_stream(translationStr1);
-  translationV2 = vec_from_stream(translationStr2);
+  translationV1 = IO::vec_from_stream(translationStr1);
+  translationV2 = IO::vec_from_stream(translationStr2);
 
 
 }
 
-std::vector<Eigen::Vector3d> read_points_from_file(const std::string& filename)
-{
-  std::ifstream input (filename);
 
-  if(input.fail())
-  {
-    std::cerr << "Error opening " << filename << ", exited with error " << strerror(errno) << std::endl;
-    std::exit(-1);
-  }
-
-  std::vector<Eigen::Vector3d> points;
-  while(!input.eof())
-  {
-    Eigen::Vector3d point;
-
-    for (int i = 0; i < 3; i++)
-    {
-      if (input.eof())
-      {
-        std::cerr << "Some coordinate is not 3 dimensional";
-        assert(false);
-        exit(-1);
-      }
-
-      input >> point[i] >> std::ws;
-    }
-
-    points.push_back(point);
-  }
-  return points;
-}
-
-Config::VectorType read_coefficients(const std::string& filename)
-{
-  std::vector<Config::ValueType> v;
-  std::ifstream fileInitial (filename);
-
-  if(fileInitial.fail())
-  {
-    std::cerr << "Error opening " << filename << ", exited with error " << strerror(errno) << std::endl;
-    exit(-1);
-  }
-
-  Config::ValueType temp;
-
-  while(!fileInitial.eof())
-  {
-    fileInitial >> temp >> std::ws;
-    v.push_back(temp);
-  }
-  fileInitial.close();
-
-  Config::VectorType coeffs = Config::VectorType::Map(v.data(), v.size());
-  return coeffs;
-}
 
 struct CompareFirstComponent
 {
@@ -221,10 +160,10 @@ void determine_plot_size_by_pointfile(const std::string& filename1, const std::s
     const Eigen::Vector3d translationV1, const Eigen::Vector3d translationV2,
     GeometryOTSetting& plotSetting)
 {
-  std::vector<Eigen::Vector3d> v1 = read_points_from_file(filename1);
+  std::vector<Eigen::Vector3d> v1 = IO::read_points_from_file(filename1);
   std::vector<Eigen::Vector3d> v2;
   if (filename2 != "")
-    v2 = read_points_from_file(filename2);
+    v2 = IO::read_points_from_file(filename2);
 
   auto minMaxElementsX = std::minmax_element(v1.begin(), v1.end(), CompareFirstComponent());
   auto minMaxElementsY = std::minmax_element(v1.begin(), v1.end(), CompareSecondComponent());
@@ -252,32 +191,6 @@ void determine_plot_size_by_pointfile(const std::string& filename1, const std::s
 
 
 
-enum BasisCombination {//what coefficients are stored in a file
-  ONLY_FE, //only coefficients of the finite elements are stored
-  FE_WITH_LAGRANGIAN_PARAMETERS, // the coefficients of the finite elements and the lagrangian parameter FEs are stored
-  FE_WITH_SCALING_COEFFICIENT, // the coefficients and an additional scaling parameter is stored (deprecated, initially done by Froese and Andreas Platen)
-  UNDEFINED // no sensible combination could be determined
-};
-
-
-BasisCombination is_possibleBasis(const SolverConfig::FETraitsSolver::FEBasis& feBasis,
-    const BoundaryHandler& boundaryQBasis, int nDof)
-{
-  const int size_u = feBasis.indexSet().size();
-  const int size_q = boundaryQBasis.get_number_of_Boundary_dofs();
-
-  std::cout << " nDof " << nDof << " size_u " << size_u << " size_q " << size_q << std::endl;
-
-  if (nDof == size_u)
-    return ONLY_FE;
-  if (nDof == size_u+size_q+1)
-    return FE_WITH_LAGRANGIAN_PARAMETERS;
-  if (nDof == size_u+1)
-    return FE_WITH_SCALING_COEFFICIENT;
-  return UNDEFINED;
-}
-
-
 int main(int argc, char *argv[])
 {
   std::cout << " Start exporting refractor points" << std::endl;
@@ -295,51 +208,21 @@ int main(int argc, char *argv[])
       outputFile);
 
   std::cout << " read coefficients from " << coefficientFile << std::endl;
-  auto coeffs = read_coefficients(coefficientFile);
+  auto coeffs = IO::read_coefficients(coefficientFile);
 
 
   std::cout << " read input from " << configFileOpticalSetting << "..." << std::endl;
   OpticalSetting opticalSetting;
   opticalSetting.read_configfile(configFileOpticalSetting);
 
+  using GridHandlerType = GridHandler<Config::GridType, true>;
+//  using GridHandlerType = GridHandler<Config::GridType>;
+
   GridHandler<Config::GridType, true> gridHandler(opticalSetting,0);
 
-  //define FEBasis types
-  using FEBasis = SolverConfig::FETraitsSolver::FEBasis;
-  using FEQBasis =SolverConfig::FETraitsSolverQ::FEBasis;
-  using FEBasisPtrType = std::shared_ptr<FEBasis>;
-  using FEQBasisPtrType = std::shared_ptr<FEQBasis>;
-
-  std::cout << " goint to test for a basis " << std::endl;
-  //init FE bases
-  FEBasisPtrType feBasis = make_shared<FEBasis>(gridHandler.gridView());
-  FEQBasisPtrType feQBasis = make_shared<FEQBasis>(gridHandler.gridView());
-
-  BoundaryHandler boundaryHandlerQ;
-  boundaryHandlerQ.init_boundary_dofs(*feQBasis);
-
-
-  //count grid refinements
-  int itRefinement = 0;
-  const int maxIt = 8;
-
-  //determine how coeffients were stored and how often the grid was adapted
-  while(is_possibleBasis(*feBasis, boundaryHandlerQ, coeffs.size()) == UNDEFINED && itRefinement < maxIt)
-  {
-    gridHandler.adapt();
-    feBasis = make_shared<FEBasis>(gridHandler.gridView());
-    feQBasis = make_shared<FEQBasis>(gridHandler.gridView());
-    boundaryHandlerQ.init_boundary_dofs(*feQBasis);
-    itRefinement++;
-    std::cout << " tested " << itRefinement << " bases ..." << std::endl;
-  }
-
-  if(is_possibleBasis(*feBasis, boundaryHandlerQ, coeffs.size()) == UNDEFINED)
-  {
-    std::cerr << " Could not determine any FEBasis matching to the coefficient file " << std::endl;
-    assert(false && " Could not determine any FEBasis matching to the coefficient file");
-    std::exit(-1);
-  }
+  auto basisCombo = IO::find_basis(gridHandler, coeffs);
+  auto& feBasis = *(basisCombo.first);
+  auto& feQBasis = *(basisCombo.second);
 
   std::cout << " created basis " << std::endl;
 
@@ -356,6 +239,8 @@ int main(int argc, char *argv[])
   {
     std::cout << " determine plot axis by file " << pointFile1 << " " << pointFile2 << std::endl;
     determine_plot_size_by_pointfile(pointFile1, pointFile2, translationV1, translationV2, plotSetting);
+    std::cout << " plot on (" << plotSetting.lowerLeft[0] << "," << plotSetting.upperRight[0] << ") x ("
+        << plotSetting.lowerLeft[1] << "," << plotSetting.upperRight[0] << std::endl;
   }
 
   //set up the plotter
@@ -364,12 +249,12 @@ int main(int argc, char *argv[])
 
 
   //set up the FE solution
-  const int size_u = feBasis->indexSet().size();
+  const int size_u = feBasis.indexSet().size();
   Config::VectorType coeffs_u = coeffs.head(size_u);
 
   using DiscreteGridFunction = SolverConfig::FETraitsSolver::DiscreteGridFunction;
 
-  DiscreteGridFunction numericalSolution (*feBasis, coeffs_u);
+  DiscreteGridFunction numericalSolution (feBasis, coeffs_u);
   GenerealOTBoundary bcSource(gridHandler.grid(), GeometrySetting::boundaryN);
   TaylorBoundaryFunction<DiscreteGridFunction> solution_extended_global(bcSource, numericalSolution);
 
