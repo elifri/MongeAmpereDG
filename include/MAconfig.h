@@ -26,6 +26,7 @@
 
 //#define MANUFACTOR_SOLUTION
 
+//----choose finite element-----
 //#define BSPLINES
 //#define USE_C0_PENALTY
 //#define USE_MIXED_ELEMENT
@@ -50,7 +51,7 @@
 */
 #endif
 
-#define PARALLEL_LIGHT
+//#define PARALLEL_LIGHT
 
 
 #include "UnitCube.h"

@@ -20,6 +20,7 @@
 #define HAVE_ADOLC 1
 #define USE_AUTOMATIC_DIFFERENTIATION 1
 
+//#define RECTANGULAR_GRID
 
 #ifndef C1Element
   #ifndef HAVE_ADOLC
@@ -112,8 +113,11 @@ struct PovRayOpts
 
 struct SolverConfig{
 
-//  using GridHandlerType = GridHandler<Config::DuneGridType, true>;
+#ifdef RECTANGULAR_GRID
+  using GridHandlerType = GridHandler<Config::DuneGridType, true>;
+#else
   using GridHandlerType = GridHandler<Config::DuneGridType, false>;
+#endif
 
   using ValueType = Config::ValueType;
 
@@ -129,9 +133,7 @@ struct SolverConfig{
   static double epsEnd;
 
   int maxSteps;
-#ifdef USE_DOGLEG
   DogLeg_optionstype doglegOpts;
-#endif
   NewtonOptionsType newtonOpts;
 
   bool writeVTK;
@@ -244,6 +246,7 @@ struct GeometryOTSetting:GeometrySetting {
 };
 
 struct OpticalSetting : GeometryOTSetting{
+
   void read_configfile(std::string &configFile);
   ///file for light source input
   static std::string LightinputImageName;
