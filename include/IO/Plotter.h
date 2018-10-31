@@ -48,6 +48,7 @@ using PlotRefinementType = QuadRefinementType;
 class Plotter{
 private:
 	Config::GridView& gridView_;
+	bool target_is_xy_plane_; ///indicates whether the target plane is parallel to xy-plane; if false the target is assumed to be parallel to xz-plane
 
 protected:
 	PlotRefinementType refined_grid;
@@ -68,6 +69,7 @@ protected:
 
 
 public:
+  void set_target_xz_plane(){ target_is_xy_plane_= false;}
 
   using PointdataVectorType = Eigen::Matrix<SolverConfig::RangeType, Eigen::Dynamic, 1>;
 

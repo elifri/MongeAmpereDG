@@ -20,7 +20,6 @@
 #define HAVE_ADOLC 1
 #define USE_AUTOMATIC_DIFFERENTIATION 1
 
-#undef TARGET_IS_XZ_PLANE
 
 #ifndef C1Element
   #ifndef HAVE_ADOLC
@@ -250,6 +249,8 @@ struct OpticalSetting : GeometryOTSetting{
   static std::string LightinputImageName;
   ///file for target distribution
   static std::string TargetImageName;
+
+  bool target_is_xy_plane;
 
   ///minimal Pixelvalue in outputimage
   double minPixelValue;

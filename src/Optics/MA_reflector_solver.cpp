@@ -33,6 +33,10 @@ MA_reflector_solver::MA_reflector_solver(GridHandlerType& gridHandler, const sha
    plotter.set_PovRayOptions(setting_.povRayOpts);
 
    epsMollifier_ = pow((double) epsDivide_, (int) SolverConfig::nonlinear_steps) * epsEnd_;
+#ifdef PARALLEL_LIGHT
+   assert(!opticalSetting.target_is_xy_plane);
+   plotter.set_target_xz_plane();
+#endif
 }
 
 

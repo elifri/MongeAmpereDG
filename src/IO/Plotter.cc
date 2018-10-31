@@ -287,13 +287,12 @@ void Plotter::write_pov_setting_refractor(std::ofstream &file) const{
 
 void Plotter::write_target_plane(std::ofstream &file) const{
 	file << "// The floor" <<std::endl <<
-			"plane {" <<std::endl <<
-#ifndef TARGET_IS_XZ_PLANE
-			"\t z, " << geometrySetting_.z_3 << std::endl <<
-#else
-      "\t y, " << geometrySetting_.z_3 << std::endl <<
-#endif
-			"\t texture {pigment {color rgb <1,1,1>} }" <<std::endl <<
+			"plane {" <<std::endl;
+	if (target_is_xy_plane_)
+			file << "\t z, " << geometrySetting_.z_3 << std::endl;
+	else
+	    file << "\t y, " << geometrySetting_.z_3 << std::endl;
+	file << "\t texture {pigment {color rgb <1,1,1>} }" <<std::endl <<
 			"\t hollow" <<std::endl <<
 			"}" <<std::endl <<std::endl;
 }
