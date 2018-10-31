@@ -47,30 +47,31 @@ using PlotRefinementType = QuadRefinementType;
 
 class Plotter{
 private:
-	Config::GridView& grid_;
+	Config::GridView& gridView_;
 
 protected:
 	PlotRefinementType refined_grid;
 
 	int refinement_; ///choose the refinement level before plotting
 
-	GeometryOTSetting geometrySetting_;
-	PovRayOpts povRayOpts_;
-  	const int RhinoVersion_ = 5;
+	GeometryOTSetting geometrySetting_; ///stores information of the geometry
+	PovRayOpts povRayOpts_; ///stores configuration of povRay raytracer
+  const int RhinoVersion_ = 5; ///stores in which version rhino is saved
 
 	int Nelements() const;
 	int Nnodes() const
 	{
 	  if (refinement_ == 0)
-	    return get_gridView().size(Config::dim);
-	  return get_gridView().size(0)*PlotRefinementType::nVertices(refinement_);
+	    return gridView().size(Config::dim);
+	  return gridView().size(0)*PlotRefinementType::nVertices(refinement_);
 	}
 
 
 public:
-	using PointdataVectorType = Eigen::Matrix<SolverConfig::RangeType, Eigen::Dynamic, 1>;
 
-	Plotter(Config::GridView& gridView):grid_(gridView) {}
+  using PointdataVectorType = Eigen::Matrix<SolverConfig::RangeType, Eigen::Dynamic, 1>;
+
+	Plotter(Config::GridView& gridView):gridView_(gridView), target_is_xy_plane_(true) {}
 
 	std::string output_directory, output_prefix;
 
@@ -82,9 +83,9 @@ public:
 	    delete stream.second;
 	}
 
-	void update_gridView(const Config::GridView& gridView) {grid_ = gridView;}
+	void update_gridView(const Config::GridView& gridView) {gridView_ = gridView;}
 
-	const Config::GridView& get_gridView() const {return grid_;}
+	const Config::GridView& gridView() const {return gridView_;}
 
 /*	template<class Element>
 	QuadRefinementType::VertexIterator get_refined_vertex_begin(const Element &element) const
@@ -143,7 +144,7 @@ public:
   ///write cellSets into file
   void write_cells(std::ofstream &file) const
   {
-    write_cells_same_shape<Config::GridView, std::is_same<SimplexRefinementType, PlotRefinementType>::value>(file, get_gridView(), Nelements(), refinement_);
+    write_cells_same_shape<Config::GridView, std::is_same<SimplexRefinementType, PlotRefinementType>::value>(file, gridView(), Nelements(), refinement_);
   }
 
   ///writes the point array of the reflector (implicitly given by 1/f) into file
@@ -163,7 +164,7 @@ public:
   template <class Function>
   void write_points_OT_global(std::ofstream &file, Function &fg)
   {
-    write_element_points_OT_global(file, fg, get_gridView(), refinement_);
+    write_element_points_OT_global(file, fg, gridView(), refinement_);
   }
 
   ///writes the transported point array to file (transport is given by local gradient fg)
@@ -703,7 +704,7 @@ void Plotter::write_points_reflector(std::ofstream &file, Function &f) const{
 */
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(get_gridView()))
+      for (auto&& element: elements(gridView()))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -739,7 +740,7 @@ void Plotter::write_points_refractor(std::ofstream &file, Function &f) const{
     {
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(get_gridView()))
+      for (auto&& element: elements(gridView()))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -817,7 +818,7 @@ void Plotter::write_points_OT(std::ofstream &file, Function &fg) const{
     int vertex_no = 0;
 
     {   // save points in file after refinement
-      for (auto&& element: elements(get_gridView()))
+      for (auto&& element: elements(gridView()))
       {
         fg.bind(element);
         for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++){
@@ -839,7 +840,7 @@ void Plotter::write_simple_estimate_integral_OT(std::ofstream &file, LocalFuncti
       << "ascii" << "\">\n";
 
   {   // save points in file after refinement
-    for (auto&& element: elements(get_gridView()))
+    for (auto&& element: elements(gridView()))
     {
       const auto geometry = element.geometry();
 
@@ -903,7 +904,7 @@ void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, Loc
         << "ascii" << "\">\n";
 
     {   // save points in file after refinement
-      for (auto&& element: elements(get_gridView()))
+      for (auto&& element: elements(gridView()))
       {
         const auto geometry = element.geometry();
 
@@ -974,7 +975,7 @@ void Plotter::write_pointData(std::ofstream &file, LocalFunction &f) const
       // collect points
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(get_gridView()))
+      for (auto&& element: elements(gridView()))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -1004,7 +1005,7 @@ void Plotter::write_error(std::ofstream &file, LocalFunction &f, Function &exact
       // collect points
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(get_gridView()))
+      for (auto&& element: elements(gridView()))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -1034,7 +1035,7 @@ void Plotter::write_error_OT(std::ofstream &file, LocalFunction &f, const Functi
       // collect points
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(get_gridView()))
+      for (auto&& element: elements(gridView()))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -1059,7 +1060,7 @@ void Plotter::write_transport_OT(std::ofstream &file, LocalFunction &f) const{
       << "ascii" << "\">\n";
 
     {   // save points in file after refinement
-      for (auto&& element: elements(get_gridView()))
+      for (auto&& element: elements(gridView()))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -1098,7 +1099,7 @@ void Plotter::write_points_reflector_pov(std::ofstream &file, Function & f) cons
       }*/
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(get_gridView()))
+      for (auto&& element: elements(gridView()))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -1141,7 +1142,7 @@ void Plotter::write_points_refractor_pov(std::ofstream &file, Function & f) cons
       }*/
       assert(false);
     }else {   // save points in file after refinement
-      for (auto&& element: elements(get_gridView()))
+      for (auto&& element: elements(gridView()))
       {
         f.bind(element);
         const auto geometry = element.geometry();
@@ -1318,7 +1319,7 @@ void Plotter::write_refractor_vertices(ON_Mesh &mesh, LocalFunction &f) const
   }
   else
   {   // save points in file after refinement
-    for (auto&& element: elements(get_gridView()))
+    for (auto&& element: elements(gridView()))
     {
       f.bind(element);
       const auto geometry = element.geometry();
@@ -1386,7 +1387,7 @@ void Plotter::save_refractor_points(std::string &filename, LocalFunctiontype &f)
   std::ofstream of(filename.c_str(), std::ios::out);
 
   //get information
-  for (auto&& element: elements(get_gridView()))
+  for (auto&& element: elements(gridView()))
   {
     f.bind(element);
     const auto geometry = element.geometry();
@@ -1417,8 +1418,8 @@ void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Co
   const double l_x = upperRight[0] - lowerLeft[0];
   const double l_y = upperRight[1] - lowerLeft[1];
 
-  int n_x = std::sqrt(get_gridView().size(0)*l_x/l_y);
-  int n_y = get_gridView().size(0)/n_x;
+  int n_x = std::sqrt(gridView().size(0)*l_x/l_y);
+  int n_y = gridView().size(0)/n_x;
 
   n_x <<= refinement_;
   n_y <<= refinement_;
@@ -1431,7 +1432,7 @@ void Plotter::save_rectangular_mesh(const Config::SpaceType& lowerLeft, const Co
   //evaluate at mesh points and save to matrix
   Eigen::MatrixXd solution_values(n_x,n_y);
 
-  for (auto&& element: elements(get_gridView()))
+  for (auto&& element: elements(gridView()))
   {
     f.bind(element);
     for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++){
