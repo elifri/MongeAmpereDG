@@ -26,7 +26,7 @@ namespace po = boost::program_options;
 
 MA_OT_solver::MA_OT_solver(GridHandlerType& gridHandler,
     const shared_ptr<GridType>& gridTarget,
-    const SolverConfig& config, GeometryOTSetting& setting, bool create_operator)
+    const SolverConfig& config, const GeometryOTSetting& setting, bool create_operator)
 :MA_solver(gridHandler, config, false),
  setting_(setting), gridTarget_(gridTarget, SolverConfig::startlevel),
 #ifdef USE_COARSE_Q_H

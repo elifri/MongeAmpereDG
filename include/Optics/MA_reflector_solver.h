@@ -49,7 +49,7 @@ public:
   void plot(const std::string& filename) const;
   void plot(const std::string& filename, int no) const;
 
-  GeometryOTSetting& get_setting() {return setting_;}
+//  GeometryOTSetting& get_setting() {return setting_;}
   const GeometryOTSetting& get_setting() const {return setting_;}
 
   OpticalSetting& get_optical_setting() {return setting_;}
