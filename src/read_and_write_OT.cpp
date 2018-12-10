@@ -101,7 +101,7 @@ void replot_on_PS_12_grid(SolverConfig::GridHandlerType& gridHandler, std::share
   
   std::cout << " project to new grid " << std::endl;
 //  feBasisPS12Handler.project(global_u_orig, coeffsPS12);
-  feBasisPS12Handler.adapt_function_after_grid_change(gridHandler.gridView(), gridHandlerPS12.gridView(), coeffsPS12);
+  coeffsPS12 = feBasisPS12Handler.adapt_function_after_grid_change(gridHandler.gridView(), gridHandlerPS12.gridView(), coeffs);
 
   std::cout << "create new grid function "<< std::endl;
   SolverConfig::FETraitsSolver::DiscreteGridFunction global_u(feBasisPS12Handler.uBasis(),coeffsPS12); 
@@ -142,19 +142,19 @@ void replot_on_PS_12_grid(SolverConfig::GridHandlerType& gridHandler, std::share
    plotterPS12.set_target_xz_plane();
 #endif
 
-  std::string reflname(config.outputDirectory);
+  std::string reflname(config.plotOutputDirectory);
   reflname += "/"+ config.outputPrefix+ "reflectorPS12export.vtu";
 //     plotter.writeReflectorVTK(reflname, localnumericalSolution, *exact_solution);
   plotterPS12.writeReflectorVTK(reflname, *local_u);
   std::cout << " written to " << reflname  << ", " << reflname << " and ";
 
    //write rhino mesh
-   std::string reflMeshname(config.outputDirectory);
+   std::string reflMeshname(config.plotOutputDirectory);
    reflMeshname += "/"+ config.outputPrefix + "reflectorPS12export.3dm";
    plotterPS12.write_refractor_mesh(reflMeshname, *local_u);
 
    //write point cloud
-   std::string reflPointCloudname(config.outputDirectory);
+   std::string reflPointCloudname(config.plotOutputDirectory);
    reflPointCloudname += "/"+ config.outputPrefix +"reflectorPointsPS12export.txt";
    plotterPS12.save_refractor_points(reflPointCloudname, *local_u);
 
