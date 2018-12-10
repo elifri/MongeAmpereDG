@@ -490,6 +490,8 @@ bool DoglegSolver<FunctorType>::solve(){
         // Perform step
         // new function evaluation
         const Eigen::VectorXd xnew = this->update_x(s);
+        if (stop_)
+          break;
         if (useCombinedFunctor)
           functor_.evaluate(xnew,fn,Jn, x_);
         else

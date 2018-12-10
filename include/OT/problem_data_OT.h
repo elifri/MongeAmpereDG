@@ -230,31 +230,31 @@ public:
       return distances[index];
 
     //case T is left of square
-    if(distances[0] > 0)
+    if(distances[0] >= 0)
     {
-      if(distances[2] > 0)
+      if(distances[2] >= 0)
         return (T-geometrySetting.lowerLeft).two_norm();
-      if(distances[3] > 0)
+      if(distances[3] >= 0)
         return std::sqrt(sqr(distances[0])*sqr(distances[3]));
       return distances[0];
     }
 
     //case T is right of square
-    if(distances[1] > 0)
+    if(distances[1] >= 0)
     {
-      if(distances[2] > 0)
+      if(distances[2] >= 0)
         return std::sqrt(sqr(distances[1])*sqr(distances[2]));
-      if(distances[3] > 0)
+      if(distances[3] >= 0)
         return (T-geometrySetting.upperRight).two_norm();
       return distances[1];
     }
 
     //case T is below square
-    if(distances[2] > 0)
+    if(distances[2] >= 0)
       return distances[2];
 
     //case T is above square
-    assert(distances[3] > 0);
+    assert(distances[3] >= 0);
     return distances[3];
   }
 
