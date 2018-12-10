@@ -962,7 +962,7 @@ void MA_OT_solver::adapt_solution(const int level)
 
 
   //add better projection of exact solution
-  {
+/*  {
     Config::SpaceType x0 = {0.0,0.0};
 
     FieldMatrix<Config::ValueType, 2, 2> A = {{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}}; //exactsolution
@@ -976,7 +976,7 @@ void MA_OT_solver::adapt_solution(const int level)
       return y;};
 
     project(u0, y0, exactsol_u);
-  }
+  }*/
 
   //adapt operator
   std::cerr << " going to adapt operator " << std::endl;
@@ -1004,7 +1004,7 @@ void MA_OT_solver::adapt_solution(const int level)
   solution(get_n_dofs_V_h()) = 0;
   solution.tail(get_n_dofs_Q_h()) = p_adapted;
 
-  {
+/*  {
     update_solution(solution);
 
      Config::SpaceType x0 = {0.0,0.0};
@@ -1020,6 +1020,6 @@ void MA_OT_solver::adapt_solution(const int level)
        return y;};
 
      project(u0, y0, exactsol_u);
-   }
+   }*/
 
 }
