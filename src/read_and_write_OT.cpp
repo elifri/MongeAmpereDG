@@ -18,6 +18,7 @@
 #include "MAconfig.h"
 #include "OT/MA_OT_image_solver.h"
 #include "Optics/MA_reflector_solver.h"
+#include "Optics/MA_refractor_solver.h"
 #include "Optics/plot_functions_optics.hpp"
 #include "IO/Plotter.h"
 #include "IO/read_utils.h"
@@ -29,6 +30,20 @@
 using namespace Dune;
 namespace po = boost::program_options;
 using namespace std;
+
+//#define MIRROR
+#define LENS
+//#define OT
+
+#ifdef MIRROR
+using SolverType = MA_reflector_solver;
+#endif
+#ifdef OT
+using SolverType = MA_OT_image_solver;
+#endif
+#ifdef LENS
+using SolverType = MA_refractor_solver;
+#endif
 
 void read_parameters(int argc, char *argv[], std::string& configFileMASolver, std::string& configFileSetting)
 {
@@ -73,8 +88,7 @@ void replot_solver_plot(SolverConfig::GridHandlerType& gridHandler, std::shared_
   // ///////////////////////////////////////////////
   // init solver data
   // ///////////////////////////////////////////////
-  using Solver = MA_reflector_solver;
-  Solver ma_solver(gridHandler, gridTarget_ptr, config, setting);
+  SolverType ma_solver(gridHandler, gridTarget_ptr, config, setting);
   ma_solver.init_from_file(config.initValue);
   ma_solver.plot("numericalSolution");
 }
@@ -91,7 +105,10 @@ void replot_on_PS_12_grid(SolverConfig::GridHandlerType& gridHandler, std::share
   SolverConfig::FETraitsSolver::DiscreteGridFunction global_u_orig(feBasis, coeffs);
   {
     VTKWriter<GridPS12Converter<Config::GridType>::GridView> vtkWriter(gridHandlerPS12.gridView());
-    vtkWriter.write("gridPS12");
+    std::string gridName(config.plotOutputDirectory);
+    gridName += "/"+ config.outputPrefix + "gridPS12";
+    vtkWriter.write(gridName);
+    std::cout << " written grid to file " << gridName << std::endl;
    }
 
   std::cout << " create basis ... " << std::endl;
@@ -132,8 +149,16 @@ void replot_on_PS_12_grid(SolverConfig::GridHandlerType& gridHandler, std::share
 
 //to be continued ..
 
+#ifdef MIRROR
+  std::string optic_string = "reflector";
+#endif
+#ifdef LENS
+  std::string optic_string = "refractor";
+#endif
+
   //init plotter
   Plotter plotterPS12(gridHandlerPS12.gridView());
+  plotterPS12.set_geometrySetting(setting);
   plotterPS12.set_refinement(config.refinement);
   plotterPS12.set_PovRayOptions(setting.povRayOpts);
 
@@ -142,39 +167,57 @@ void replot_on_PS_12_grid(SolverConfig::GridHandlerType& gridHandler, std::share
    plotterPS12.set_target_xz_plane();
 #endif
 
-  std::string reflname(config.plotOutputDirectory);
-  reflname += "/"+ config.outputPrefix+ "reflectorPS12export.vtu";
+   std::string opticPOVname(config.plotOutputDirectory);
+   opticPOVname += "/"+ config.outputPrefix+ optic_string + "PS12export.pov";
+ #ifdef MIRROR
+   plotterPS12.writeReflectorPOV(opticPOVname, *local_u);
+ #endif
+ #ifdef LENS
+   plotterPS12.writeRefractorPOV(opticPOVname, *local_u);
+ #endif
+   std::cout << " written to " << opticPOVname  << std::endl;
+
+  std::string opticVTKname(config.plotOutputDirectory);
+  opticVTKname += "/"+ config.outputPrefix+ optic_string + "PS12export.vtu";
 //     plotter.writeReflectorVTK(reflname, localnumericalSolution, *exact_solution);
-  plotterPS12.writeReflectorVTK(reflname, *local_u);
-  std::cout << " written to " << reflname  << ", " << reflname << " and ";
+#ifdef MIRROR
+  plotterPS12.writeReflectorVTK(opticVTKname, *local_u);
+#endif
+#ifdef LENS
+  plotterPS12.writeRefractorVTK(opticVTKname, *local_u);
+#endif
+  std::cout << " written to " << opticVTKname  << std::endl;
 
    //write rhino mesh
-   std::string reflMeshname(config.plotOutputDirectory);
-   reflMeshname += "/"+ config.outputPrefix + "reflectorPS12export.3dm";
-   plotterPS12.write_refractor_mesh(reflMeshname, *local_u);
+   std::string opticMeshname(config.plotOutputDirectory);
+   opticMeshname += "/"+ config.outputPrefix+ optic_string + "PS12export.3dm";
+   plotterPS12.write_refractor_mesh(opticMeshname, *local_u);
+   std::cout << " written to " << opticMeshname  << std::endl;
 
    //write point cloud
-   std::string reflPointCloudname(config.plotOutputDirectory);
-   reflPointCloudname += "/"+ config.outputPrefix +"reflectorPointsPS12export.txt";
-   plotterPS12.save_refractor_points(reflPointCloudname, *local_u);
+   std::string opticPointCloudname(config.plotOutputDirectory);
+   opticPointCloudname += "/"+ config.outputPrefix+ optic_string +"PointsPS12export.txt";
+   plotterPS12.save_refractor_points(opticPointCloudname, *local_u);
+   std::cout << " written to " << opticPointCloudname  << std::endl;
 
 
 //continue ..
 
    //init operator for residual
-   using Solver = MA_reflector_solver;
-   Solver ma_solver(gridHandler, gridTarget_ptr, config, setting);
+   SolverType ma_solver(gridHandler, gridTarget_ptr, config, setting);
+#ifdef MIRROR
    IO::ResidualMirrorFunction residual(setting,ma_solver.get_OT_operator(),
        local_u, gradient_u,
        HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
    vtkWriter.addVertexData(residual, VTK::FieldInfo("Residual", VTK::FieldInfo::Type::scalar, 1));
+#endif
 
    IO::GaussCurvatureFunction curvature(gradient_u,
        HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
    vtkWriter.addVertexData(curvature, VTK::FieldInfo("Curvature", VTK::FieldInfo::Type::scalar, 1));
 
    //write to file
-   std::string fname(ma_solver.get_output_directory());
+   std::string fname(config.plotOutputDirectory);
    fname += "/"+ ma_solver.get_output_prefix()+ "PS12export.vtu";
    vtkWriter.write(fname);
 
@@ -223,8 +266,7 @@ try {
 #endif
 
 /*
-  using Solver = MA_reflector_solver;
-  Solver ma_solver(gridHandler, gridTarget_ptr, config, setting);
+  SolverType ma_solver(gridHandler, gridTarget_ptr, config, setting);
   std::cout << " ndofs " << ma_solver.get_n_dofs() << " sizeVh " << ma_solver.get_n_dofs_V_h() << " sizeQh " << ma_solver.get_n_dofs_Q_h() << std::endl;
   ma_solver.init_from_file(config.initValue);
   std::cout << " successfully initiated data" << std::endl;
