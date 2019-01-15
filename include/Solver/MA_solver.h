@@ -203,7 +203,7 @@ public:
       op = std::make_shared<MA_Operator>(*this);
     }
   }
-  MA_solver(GridHandlerType& gridHandler, SolverConfig config, const GeometrySetting& geometrySetting)
+  MA_solver(GridHandlerType& gridHandler, SolverConfig config, const GeometryOTSetting& geometrySetting)
       :MA_solver(gridHandler, config)
   {
     setting_ = geometrySetting;
@@ -367,8 +367,8 @@ public:
   MA_Operator& get_MA_operator(){return dynamic_cast<MA_Operator&>(get_operator());}
 
 
-  virtual GeometrySetting& get_setting() {return setting_;}
-  virtual const GeometrySetting& get_setting() const {return setting_;}
+  virtual GeometryOTSetting& get_setting() {return setting_;}
+  virtual const GeometryOTSetting& get_setting() const {return setting_;}
 
   const Assembler<>& get_assembler() const { return assembler_;}
   Assembler<>& get_assembler() { return assembler_;}
@@ -395,7 +395,7 @@ public:
 protected:
   bool initialised; ///asserts the important member, such as the dof_handler, assembler ... are initialised
 
-  GeometrySetting setting_;
+  GeometryOTSetting setting_;
 
   double epsMollifier_, epsDivide_, epsEnd_;
 
@@ -410,12 +410,12 @@ public:
   mutable int iterations; ///counts overall iterations (how often the nonlinear system was solved)
 protected:
   bool initValueFromFile_; ///decide if initial guess iFEBasisHandlers initiated from file
-  std::string initValue_; ///file the initial guess is initiiated from
+  std::string initValue_; ///file the initial guess is initiated from
 
   bool evaluateJacobianSimultaneously_; ///evaluate the jacobian simultaneously to the objective function (in Newton solver)
 
   bool writeVTK_; ///write vtk files output
-	std::string outputDirectory_, plotOutputDirectory_, outputPrefix_; ///outputdirectories
+  std::string outputDirectory_, plotOutputDirectory_, outputPrefix_; ///outputdirectories
   int plotterRefinement_; ///number of (virtual) grid refinements for output generation
 
   GridHandlerType& gridHandler_; ///handles grid

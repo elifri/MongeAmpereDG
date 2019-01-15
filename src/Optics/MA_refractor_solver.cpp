@@ -51,7 +51,7 @@ void MA_refractor_solver::create_initial_guess()
   else
   {
     const double p = 5;
-    const double distance = 1.12;
+    const double distance = setting_.initialOpticDistance;
 
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
 //    project([p, distance](Config::SpaceType x){return distance*std::exp(x.two_norm2()/p);}, solution);
@@ -140,7 +140,7 @@ void MA_refractor_solver::plot(const std::string& name, int no) const
    refrPovname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".pov";
 
    plotter.writeRefractorPOV(refrPovname, *solution_u_old);
-   std::cout << refrPovname << std::endl;
+   std::cerr << refrPovname << std::endl;
 
    std::string refrNurbsname(plotter.get_output_directory());
    refrNurbsname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".3dm";

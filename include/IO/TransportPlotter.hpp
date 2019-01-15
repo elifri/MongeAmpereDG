@@ -30,8 +30,11 @@ public:
 //  TransportPlotter(const std::string& gridFile, const int startlevel):
 //    gridHandler_(gridFile, startlevel){}
 
-  TransportPlotter(const GeometrySetting& setting, const int startlevel):
-    gridHandler_(setting, startlevel){}
+  TransportPlotter(const GeometryOTSetting& setting, const int startlevel):
+    gridHandler_(setting, startlevel), setting_(setting){}
+
+  TransportPlotter(const GeometryOTSetting& setting, std::array<int,Config::RectangularGridType::GridType::dimension> startlevel):
+    gridHandler_(setting, startlevel), setting_(setting){}
 
   int Nelements() const{
     int Nelements = gridHandler_.grid().size(0);
@@ -48,8 +51,6 @@ public:
 
   const auto get_quad_grid() const
   {
-    Dune::VTKWriter<Config::RectangularGridView> vtkWriter(gridHandler_.gridView());
-    vtkWriter.write("Plotgrid");
     return gridHandler_.gridView();
   }
 
@@ -59,6 +60,7 @@ public:
 protected:
   const int refinement = 1;
   GridHandlerType gridHandler_;
+  GeometryOTSetting setting_;
 };
 
 template <class GlobalFunction>

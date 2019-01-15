@@ -14,7 +14,7 @@
 
 template<typename GlobalFunction>
 class TaylorBoundaryFunction{
-
+public:
 //  using GlobalFunction = SolverConfig::FETraitsSolver::DiscreteGridFunction;
   using Domain = typename GlobalFunction::Domain;
   using Range = typename GlobalFunction::Range;
@@ -25,7 +25,6 @@ class TaylorBoundaryFunction{
   using IndexSetType = typename GlobalFunction::GridView::IndexSet;
 
 
-public:
   TaylorBoundaryFunction(const OTBoundary& bc, const GlobalFunction& FEFunction):
     bcSource_(bc), FEFunction_(FEFunction)//FEFunctionCaller_(std::forward<F>(uOld))
   {
@@ -105,6 +104,34 @@ public:
       gradu  = Dfx0+D2fx0TimesH;
 
       hessu = D2fx0;
+    }
+  }
+
+  void evaluateWithFirstDerivative(const Domain& x, Range& u, Jacobian& gradu) const
+  {
+    HierarchicSearch<GridType, IndexSetType> hs(FEFunction_.gridView().grid(), FEFunction_.gridView().indexSet());
+
+    try{
+      auto element = hs.findEntity(x);
+      auto localCoordinate = element.geometry().local(x);
+      FEFunction_.evaluateWithFirstDerivativeLocal(element, localCoordinate, u, gradu);
+    }
+    catch(Dune::GridError e)
+    {
+      auto x0 = project_to_boundary(x);
+
+      Jacobian Dfx0;
+      Hessian D2fx0;
+
+      FEFunction_.evaluateAll(x0, u, Dfx0, D2fx0);
+
+      auto h = x-x0;
+
+      Domain D2fx0TimesH;
+      D2fx0.mv(h,D2fx0TimesH);
+
+      //evaluate Taylorpolynomial of derivative of first order
+      gradu  = Dfx0+D2fx0TimesH;
     }
   }
 

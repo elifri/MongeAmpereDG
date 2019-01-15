@@ -9,7 +9,7 @@
 
 void NurbsWriter::write_faces(ON_Mesh &mesh) const
 {
-  bool successful = true;
+  bool successful = true;_unused(successful);
 
   int elementNo = 0;
   if (refinement_ == 0){

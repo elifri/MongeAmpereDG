@@ -17,10 +17,6 @@
 #include "utils.hpp"
 #include "localfunctions/bernsteinBezier/bernsteinbezierk2d.hh"
 
-// tolerance for floating-point comparisons
-static const double eps = 1e-9;
-// stepsize for numerical differentiation
-static const double delta = 1e-5;
 
 template <int k>
 bool test_Bezier_lFE()

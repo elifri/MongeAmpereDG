@@ -70,33 +70,31 @@ void SolverConfig::read_configfile(std::string &configFile)
 
   po::options_description config("Configuration of the MA FE solver");
   config.add_options()
-        ("solver.initValueFromFile",     po::value<bool>(&initValueFromFile), "")
-        ("solver.initValue",     po::value<std::string>(&initValue), "")
-        ("solver.startlevel",  po::value<int>(&SolverConfig::startlevel), "")
-        ("solver.nonlinearSteps",  po::value<int>(&SolverConfig::nonlinear_steps), "")
-        ("solver.maxSteps",     po::value<int>(&maxSteps), "")
-        ("solver.Dirichlet",     po::value<bool>(&SolverConfig::Dirichlet), "")
-        ("solver.JacSimultaneously",     po::value<bool>(&evalJacSimultaneously), "")
-        ("solver.lambda",     po::value<double>(&SolverConfig::lambda), "")
-        ("solver.sigma",     po::value<double>(&SolverConfig::sigma), "")
-        ("solver.sigmaGrad",     po::value<double>(&SolverConfig::sigmaGrad), "")
-        ("solver.sigmaBoundary",     po::value<double>(&SolverConfig::sigmaBoundary), "")
-#ifdef USE_DOGLEG
-        ("dogleg.iradius",     po::value<double>(&doglegOpts.iradius), "")
-        ("dogleg.stopcriteria0" , po::value<double>(&(doglegOpts.stopcriteria[0])), "")
-        ("dogleg.stopcriteria1" , po::value<double>(&(doglegOpts.stopcriteria[1])), "")
-        ("dogleg.stopcriteria2" , po::value<double>(&(doglegOpts.stopcriteria[2])), "")
-        ("dogleg.silentmode" ,    po::value<bool>  (&(doglegOpts.silentmode)),   "")
-        ("dogleg.exportJacobianIfSingular" ,    po::value<bool>  (&(doglegOpts.exportJacobianIfSingular)),   "")
-        ("dogleg.exportFDJacobianifFalse" ,    po::value<bool>  (&(doglegOpts.exportFDJacobianifFalse)),   "")
-        ("dogleg.check_Jacobian" ,    po::value<bool>  (&(doglegOpts.check_Jacobian)),   "")
-#endif
-        ("output.directory", po::value<string>(&outputDirectory), "")
-        ("output.plotdirectory", po::value<string>(&plotOutputDirectory), "")
-        ("output.prefix", po::value<string>(&outputPrefix), "")
-        ("output.refinement", po::value<int>(&refinement), "")
-        ("output.cartesianGridN", po::value<int>(&cartesianGridN), "")
-        ("output.write_vtk", po::value<bool>(&writeVTK), "")
+        ("solver.initValueFromFile",     po::value<bool>(&initValueFromFile), "indicates if the initialguess is read from file")
+        ("solver.initValue",     po::value<std::string>(&initValue), "path to initialguess (given in ASCII coefficient values)")
+        ("solver.startlevel",  po::value<int>(&SolverConfig::startlevel), "start refinement of initial grid")
+        ("solver.nonlinearSteps",  po::value<int>(&SolverConfig::nonlinear_steps), "steps of refinement")
+        ("solver.maxSteps",     po::value<int>(&maxSteps), "maximum number of steps in a nonlinear step")
+        ("solver.Dirichlet",     po::value<bool>(&SolverConfig::Dirichlet), "indicate Dirichlet boundary conditions (deprecated)")
+        ("solver.JacSimultaneously",     po::value<bool>(&evalJacSimultaneously), "indicate combined evaluation of function and Jacobian")
+        ("solver.lambda",     po::value<double>(&SolverConfig::lambda), "penalisation value for determinant")
+        ("solver.sigma",     po::value<double>(&SolverConfig::sigma), "penalisation value for jumps in DG method (deprecated)")
+        ("solver.sigmaGrad",     po::value<double>(&SolverConfig::sigmaGrad), "penalisation value for gradient jumps in ansatz (deprecated)")
+        ("solver.sigmaBoundary",     po::value<double>(&SolverConfig::sigmaBoundary), "penalisation value for weakly forced boundary conditions (deprecated)")
+        ("dogleg.iradius",     po::value<double>(&doglegOpts.iradius), "initial trust region radius")
+        ("dogleg.stopcriteria0" , po::value<double>(&(doglegOpts.stopcriteria[0])), "||F'||inf <= stopcriteria(1)")
+        ("dogleg.stopcriteria1" , po::value<double>(&(doglegOpts.stopcriteria[1])), "||dx||2   <= stopcriteria(2)*(stopcriteria(2)+ ||x||2)")
+        ("dogleg.stopcriteria2" , po::value<double>(&(doglegOpts.stopcriteria[2])), "||f||inf  <= stopcriteria(3)")
+        ("dogleg.silentmode" ,    po::value<bool>  (&(doglegOpts.silentmode)),   "suppress output of dogleg solver")
+        ("dogleg.exportJacobianIfSingular" ,    po::value<bool>  (&(doglegOpts.exportJacobianIfSingular)),   "activate matlab export to std::cout in case of singular Jacobian")
+        ("dogleg.check_Jacobian" ,    po::value<bool>  (&(doglegOpts.check_Jacobian)),   "activate a check of the Jacobian with Finite Differences (computationally expensive)")
+        ("dogleg.exportFDJacobianifFalse" ,    po::value<bool>  (&(doglegOpts.exportFDJacobianifFalse)),   "activate matlab export to std::cout in case of wrong Jacobian")
+        ("output.directory", po::value<string>(&outputDirectory), "output folder for data as coefficients")
+        ("output.plotdirectory", po::value<string>(&plotOutputDirectory), "output folder for output data as vtks, rayTracer files, 3dm files ...")
+        ("output.prefix", po::value<string>(&outputPrefix), "output prefix")
+        ("output.refinement", po::value<int>(&refinement), "specify additional grid refinement for plots")
+        ("output.cartesianGridN", po::value<int>(&cartesianGridN), "specify the elements for a cartesian export grid")
+        ("output.write_vtk", po::value<bool>(&writeVTK), "write solution to vtk-ASCII files")
   ;
 
 
@@ -125,21 +123,9 @@ void SolverConfig::read_configfile(std::string &configFile)
   newtonOpts.check_Jacobian = doglegOpts.check_Jacobian;
 }
 
+////------fallback values for GeometryStandardSetting setting---------
 
-////------fallback values for geometry setting---------
-Config::SpaceType GeometrySetting::lowerLeft = {0,0};
-Config::SpaceType GeometrySetting::upperRight = {1,1};
-Config::SpaceType GeometrySetting::lowerLeftTarget = {0,0};
-Config::SpaceType GeometrySetting::upperRightTarget= {1,1};
-
-std::string GeometrySetting::gridinputFile = "";
-std::string GeometrySetting::plotGridinputFile = "";
 int GeometrySetting::boundaryN = std::max(100000,1 << (2+SolverConfig::startlevel+SolverConfig::nonlinear_steps));
-int GeometrySetting::boundaryNTarget = std::max(100000,1 << (2+SolverConfig::startlevel+SolverConfig::nonlinear_steps));
-
-std::string GeometrySetting::gridTargetFile = "";
-
-double GeometrySetting::z_3 = 0;
 
 void GeometrySetting::read_configfile(std::string &configFile)
 {
@@ -148,20 +134,60 @@ void GeometrySetting::read_configfile(std::string &configFile)
 
   po::options_description config("Configuration of the geometry setting");
   config.add_options()
-        ("geometry.input.xMin",  po::value<double>(&GeometrySetting::lowerLeft[0]), "")
-        ("geometry.input.xMax",  po::value<double>(&GeometrySetting::upperRight[0]), "")
-        ("geometry.input.yMin",  po::value<double>(&GeometrySetting::lowerLeft[1]), "")
-        ("geometry.input.yMax",  po::value<double>(&GeometrySetting::upperRight[1]), "")
-        ("geometry.input.gridfile",  po::value<string>(&GeometrySetting::gridinputFile), "")
-        ("geometry.input.plotgridfile",  po::value<string>(&GeometrySetting::plotGridinputFile), "")
-        ("geometry.input.boundaryN",  po::value<int>(&GeometrySetting::boundaryN), "")
-        ("geometry.target.xMin",     po::value<double>(&GeometrySetting::lowerLeftTarget[0]), "")
-        ("geometry.target.xMax",     po::value<double>(&GeometrySetting::upperRightTarget[0]), "")
-        ("geometry.target.yMin",     po::value<double>(&GeometrySetting::lowerLeftTarget[1]), "")
-        ("geometry.target.yMax",     po::value<double>(&GeometrySetting::upperRightTarget[1]), "")
-        ("geometry.target.z",        po::value<double>(&GeometrySetting::z_3),    "")
-        ("geometry.target.gridfile",  po::value<string>(&GeometrySetting::gridTargetFile), "")
-        ("geometry.target.boundaryN",  po::value<int>(&GeometrySetting::boundaryNTarget), "")
+        ("geometry.input.xMin",  po::value<double>(&lowerLeft[0]), "lower left x value of source")
+        ("geometry.input.xMax",  po::value<double>(&upperRight[0]), "upper right x value of source")
+        ("geometry.input.yMin",  po::value<double>(&lowerLeft[1]), "lower left y value of source")
+        ("geometry.input.yMax",  po::value<double>(&upperRight[1]), "upper right x value of source")
+        ("geometry.input.gridfile",  po::value<string>(&gridinputFile), "path to initial grid file (.msh format)")
+        ("geometry.input.boundaryN",  po::value<int>(&GeometrySetting::boundaryN), "number of direction in approximation of source boundary")
+  ;
+
+
+  // open config file for the image
+  ifstream ifs(configFile.c_str());
+  if (!ifs)
+  {
+    if (configFile=="")
+      cerr << "\nError: Path to a geometry config file is missing!\n";
+    else
+      cerr << "\nError: Can not open config file: " << configFile << "\n";
+    exit(1);
+  }
+  else
+  {
+    po::variables_map vm;
+    po::store(po::parse_config_file(ifs, config), vm);
+    notify(vm);
+  }
+
+}
+
+
+////------fallback values for geometry setting---------
+int GeometryOTSetting::boundaryNTarget = std::max(100000,1 << (2+SolverConfig::startlevel+SolverConfig::nonlinear_steps));
+
+
+void GeometryOTSetting::read_configfile(std::string &configFile)
+{
+
+  std::cout << "read information from file " << configFile << std::endl;
+
+  po::options_description config("Configuration of the geometry setting");
+  config.add_options()
+        ("geometry.input.xMin",  po::value<double>(&lowerLeft[0]), "lower left x value of source")
+        ("geometry.input.xMax",  po::value<double>(&upperRight[0]), "upper right x value of source")
+        ("geometry.input.yMin",  po::value<double>(&lowerLeft[1]), "lower left y value of source")
+        ("geometry.input.yMax",  po::value<double>(&upperRight[1]), "upper right x value of source")
+        ("geometry.input.gridfile",  po::value<string>(&gridinputFile), "path to initial grid file (.msh format)")
+        ("geometry.input.plotgridfile",  po::value<string>(&plotGridinputFile), "path to an additional plotgrid file (.msh format)")
+        ("geometry.input.boundaryN",  po::value<int>(&GeometryOTSetting::boundaryN), "number of direction in approximation of source boundary")
+        ("geometry.target.xMin",     po::value<double>(&lowerLeftTarget[0]), "lower left x value of target")
+        ("geometry.target.xMax",     po::value<double>(&upperRightTarget[0]), "upper right x value of target")
+        ("geometry.target.yMin",     po::value<double>(&lowerLeftTarget[1]), "lower left y value of target")
+        ("geometry.target.yMax",     po::value<double>(&upperRightTarget[1]), "upper right x value of target")
+        ("geometry.target.z",        po::value<double>(&z_3),    "z value of the target")
+        ("geometry.target.gridfile",  po::value<string>(&gridTargetFile), "path to grid of the target (.msh format)")
+        ("geometry.target.boundaryN",  po::value<int>(&GeometryOTSetting::boundaryNTarget), "number of direction in approximation of target boundary")
   ;
 
 
@@ -196,33 +222,35 @@ void OpticalSetting::read_configfile(std::string &configFile)
 
   po::options_description config("Configuration of the optical setting");
   config.add_options()
-        ("geometry.optic.xMin",  po::value<double>(&OpticalSetting::lowerLeft[0]), "")
-        ("geometry.optic.xMax",  po::value<double>(&OpticalSetting::upperRight[0]), "")
-        ("geometry.optic.yMin",  po::value<double>(&OpticalSetting::lowerLeft[1]), "")
-        ("geometry.optic.yMax",  po::value<double>(&OpticalSetting::upperRight[1]), "")
-        ("geometry.optic.gridfile",  po::value<string>(&OpticalSetting::gridinputFile), "")
-        ("geometry.optic.plotgridfile",  po::value<string>(&OpticalSetting::plotGridinputFile), "")
-        ("geometry.optic.boundaryN",  po::value<int>(&GeometrySetting::boundaryN), "")
-        ("geometry.target.xMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[0]), "")
-        ("geometry.target.xMax",     po::value<double>(&OpticalSetting::upperRightTarget[0]), "")
-        ("geometry.target.yMin",     po::value<double>(&OpticalSetting::lowerLeftTarget[1]), "")
-        ("geometry.target.yMax",     po::value<double>(&OpticalSetting::upperRightTarget[1]), "")
-        ("geometry.target.gridfile",  po::value<string>(&OpticalSetting::gridTargetFile), "")
-        ("geometry.target.z",        po::value<double>(&OpticalSetting::z_3),    "")
-        ("geometry.target.boundaryN",  po::value<int>(&GeometrySetting::boundaryNTarget), "")
-        ("light.in.imageName",       po::value<string>(&OpticalSetting::LightinputImageName), "path to image")
-        ("light.out.targetImageName",     po::value<string>(&OpticalSetting::TargetImageName), "")
-        ("solver.epsDivide",  po::value<double>(&SolverConfig::epsDivide), "")
-        ("solver.epsEnd",  po::value<double>(&SolverConfig::epsEnd), "")
-        ("solver.minPixelValue",     po::value<double>(&minPixelValue), "")
-        ("povray.cameraAngle",       po::value<double>(&(povRayOpts.cameraAngle)),       "")
-        ("povray.jitter",            po::value<bool>  (&(povRayOpts.jitter)),            "")
-        ("povray.nPhotons",          po::value<unsigned int>(&(povRayOpts.nPhotons)),    "")
-        ("povray.lightSourceRadius",    po::value<double>(&(povRayOpts.lightSourceRadius)), "")
-        ("povray.lightSourceFalloff",   po::value<double>(&(povRayOpts.lightSourceFalloff)), "")
-        ("povray.lightSourceTightness", po::value<double>(&(povRayOpts.lightSourceTightness)), "")
-        ("povray.lightSourceIntensity", po::value<double>(&OpticalSetting::lightSourceIntensity), "")
-        ("povray.writeAperture", po::value<bool>(&povRayOpts.writeAperture), "")
+        ("geometry.optic.xMin",  po::value<double>(&lowerLeft[0]), "lower left x value of optical surface")
+        ("geometry.optic.xMax",  po::value<double>(&upperRight[0]), "upper right x value of optical surface")
+        ("geometry.optic.yMin",  po::value<double>(&lowerLeft[1]), "lower left y value of optical surface")
+        ("geometry.optic.yMax",  po::value<double>(&upperRight[1]), "upper right y value of optical surface")
+        ("geometry.optic.gridfile",  po::value<string>(&gridinputFile), "path to initial grid file (.msh format)")
+        ("geometry.optic.plotgridfile",  po::value<string>(&plotGridinputFile), "path to an additional plotgrid file (.msh format)")
+        ("geometry.optic.boundaryN",  po::value<int>(&GeometryOTSetting::boundaryN), "number of direction in approximation of source boundary")
+        ("geometry.optic.initialOpticDistance",  po::value<double>(&initialOpticDistance), "distance between source and opt. surface for the initial guess ")
+        ("geometry.target.xMin",     po::value<double>(&lowerLeftTarget[0]), "lower left x value of target")
+        ("geometry.target.xMax",     po::value<double>(&upperRightTarget[0]), "upper right x value of target")
+        ("geometry.target.yMin",     po::value<double>(&lowerLeftTarget[1]), "lower left y value of target")
+        ("geometry.target.yMax",     po::value<double>(&upperRightTarget[1]), "upper right x value of target")
+        ("geometry.target.gridfile",  po::value<string>(&gridTargetFile), "path to grid of the target (.msh format)")
+        ("geometry.target.target_is_xy_plane", po::value<bool>(&target_is_xy_plane)->default_value(true),"indicates if target is parallel to xy plane (otherwise parallel to xz is assumed)")
+        ("geometry.target.z",        po::value<double>(&z_3),    "z value of the target")
+        ("geometry.target.boundaryN",  po::value<int>(&GeometryOTSetting::boundaryNTarget), "number of direction in approximation of target boundary")
+        ("light.in.imageName",       po::value<string>(&LightinputImageName), "path to image of source distribution")
+        ("light.out.targetImageName",     po::value<string>(&OpticalSetting::TargetImageName), "path to image of target distribution")
+        ("solver.epsDivide",  po::value<double>(&SolverConfig::epsDivide), "controls blurring between steps")
+        ("solver.epsEnd",  po::value<double>(&SolverConfig::epsEnd), "controls blurring in the final step")
+        ("solver.minPixelValue",     po::value<double>(&minPixelValue), "mininmal pixel value the target is brightened up to")
+        ("povray.cameraAngle",       po::value<double>(&(povRayOpts.cameraAngle)), "camera angle for ray tracer config file")
+        ("povray.jitter",            po::value<bool>  (&(povRayOpts.jitter)),            "jitter for ray tracer config file")
+        ("povray.nPhotons",          po::value<unsigned int>(&(povRayOpts.nPhotons)),    "number of photons for ray tracer config file")
+        ("povray.lightSourceRadius",    po::value<double>(&(povRayOpts.lightSourceRadius)), "light source radius for ray tracer config file")
+        ("povray.lightSourceFalloff",   po::value<double>(&(povRayOpts.lightSourceFalloff)), "fall of of light ray for ray tracer config file")
+        ("povray.lightSourceTightness", po::value<double>(&(povRayOpts.lightSourceTightness)), "light source tightness for ray tracer config file")
+        ("povray.lightSourceIntensity", po::value<double>(&OpticalSetting::lightSourceIntensity), "light source intensity for ray tracer config file")
+        ("povray.writeAperture", po::value<bool>(&povRayOpts.writeAperture), "indicate whether light source is additionally cropped in ray tracer config file")
   ;
 
 
@@ -242,6 +270,7 @@ void OpticalSetting::read_configfile(std::string &configFile)
     po::store(po::parse_config_file(ifs, config), vm);
     notify(vm);
   }
+
 
 }
 

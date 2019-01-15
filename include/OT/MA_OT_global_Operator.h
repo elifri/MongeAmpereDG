@@ -29,6 +29,7 @@
 #endif
 
 #include "Optics/operator_LagrangianBoundary_refr_parallel.h"
+#include "Optics/operator_LagrangianBoundary_refl_parallel.h"
 
 //forward declaration for image solver
 class MA_OT_image_solver;
@@ -58,7 +59,7 @@ public:
   MA_OT_Operator():solver_ptr(NULL), lop_ptr(), intermediateSolCounter(){}
 
   MA_OT_Operator(SolverType& solver):solver_ptr(&solver),
-      boundary_(new GenerealOTBoundary(solver.get_gridTarget(), GeometrySetting::boundaryNTarget)),
+      boundary_(new GenerealOTBoundary(solver.get_gridTarget(), GeometryOTSetting::boundaryNTarget)),
       f_(OperatorTraits::construct_f(solver)),
       g_(OperatorTraits::construct_g(solver)),
       lop_ptr(new LocalOperatorType(
@@ -73,9 +74,9 @@ public:
     init();
   }
 
-    template<typename GeometrySetting,
-      typename std::enable_if<sizeof(GeometrySetting) && std::is_same<LocalOperatorLagrangianBoundaryType,Local_Operator_LagrangianBoundary>::value, int>::type = 0>
-    MA_OT_Operator(SolverType& solver, GeometrySetting& setting):solver_ptr(&solver),
+    template<typename GeometryOTSetting,
+      typename std::enable_if<sizeof(GeometryOTSetting) && std::is_same<LocalOperatorLagrangianBoundaryType,Local_Operator_LagrangianBoundary>::value, int>::type = 0>
+    MA_OT_Operator(SolverType& solver, GeometryOTSetting& setting):solver_ptr(&solver),
         boundary_(new GenerealOTBoundary((solver.get_gridTarget()), setting.boundaryNTarget)),
         f_(OperatorTraits::construct_f(solver, setting)),
         g_(OperatorTraits::construct_g(solver, setting)),
@@ -89,9 +90,9 @@ public:
       init();
     }
 
-    template<typename GeometrySetting,
-      typename std::enable_if<sizeof(GeometrySetting) && !std::is_same<LocalOperatorLagrangianBoundaryType,Local_Operator_LagrangianBoundary>::value, int>::type = 0>
-    MA_OT_Operator(SolverType& solver, GeometrySetting& setting):solver_ptr(&solver),
+    template<typename GeometryOTSetting,
+      typename std::enable_if<sizeof(GeometryOTSetting) && !std::is_same<LocalOperatorLagrangianBoundaryType,Local_Operator_LagrangianBoundary>::value, int>::type = 0>
+    MA_OT_Operator(SolverType& solver, GeometryOTSetting& setting):solver_ptr(&solver),
         boundary_(new GenerealOTBoundary(solver.get_gridTarget(), setting.boundaryNTarget)),
         f_(OperatorTraits::construct_f(solver, setting)),
         g_(OperatorTraits::construct_g(solver, setting)),
@@ -215,9 +216,7 @@ private:
   /// use function overload to select correct implementation
   template<typename OperatorTraitsDummy = OperatorTraits>
   void assemble_Jacobian_boundary(OperatorTraitsDummy* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
-  void assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, Local_Operator_LagrangianBoundary_refr_parallel>* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
-  void assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, Local_Operator_LagrangianBoundary_refr >* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
-
+  void assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
 
 
 public:
@@ -438,20 +437,11 @@ void MA_OT_Operator<OperatorTraits>::assemble_Jacobian_boundary(OperatorTraitsDu
 
 template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>
-  ::assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, Local_Operator_LagrangianBoundary_refr_parallel>* dummy,
+  ::assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy,
                                const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {
   solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix_with_automatic_differentiation(*lopLMBoundary, m, x, v);
 }
-
-template<typename OperatorTraits>
-void MA_OT_Operator<OperatorTraits>
-  ::assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, Local_Operator_LagrangianBoundary_refr>* dummy,
-                               const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
-{
-  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix_with_automatic_differentiation(*lopLMBoundary, m, x, v);
-}
-
 
 
 template<typename OperatorTraits>

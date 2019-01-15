@@ -12,8 +12,10 @@
 #include <dune/common/function.hh>
 
 #include <cmath>
-#include <Eigen/Core>
 #include "CImg.h"
+#undef Success
+
+#include <Eigen/Core>
 
 #include "MAconfig.h"
 #include "utils.hpp"

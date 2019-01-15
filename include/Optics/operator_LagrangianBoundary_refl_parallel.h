@@ -5,8 +5,8 @@
  *      Author: friebel
  */
 
-#ifndef INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARY_REFL_H_
-#define INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARY_REFL_H_
+#ifndef INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARY_REFL_PARALLEL_H_
+#define INCLUDE_OT_OPERATOR_LAGRANGIANBOUNDARY_REFL_PARALLEL_H_
 
 #include <functional>
 
@@ -14,13 +14,15 @@
 #include "Operator/operator_utils.h"
 
 #include "Optics/operator_MA_refl_Brenner.h"
+#include "Optics/operator_MA_refl_parallel.h"
 
-class Local_Operator_LagrangianBoundary_refl{
+class Local_Operator_LagrangianBoundary_refl_parallel{
 public:
   using TaylorFunction = TaylorBoundaryFunction<SolverConfig::FETraitsSolver::DiscreteGridFunction>;
 
-  Local_Operator_LagrangianBoundary_refl(const OTBoundary& bc)
+  Local_Operator_LagrangianBoundary_refl_parallel(const OTBoundary& bc)
     : opticalSetting(OpticalSetting()),
+    epsilon_(OpticalSetting::kappa),
     bc(bc),
     last_step_on_a_different_grid(false)
   {
@@ -28,17 +30,17 @@ public:
     std::exit(-1);
   }
 
-  Local_Operator_LagrangianBoundary_refl(const OpticalSetting &opticalSetting, const OTBoundary& bc)
-    : opticalSetting(opticalSetting), bc(bc), last_step_on_a_different_grid(false), oldSolutionCaller_(){}
+  Local_Operator_LagrangianBoundary_refl_parallel(const OpticalSetting &opticalSetting, const OTBoundary& bc)
+    : opticalSetting(opticalSetting), epsilon_(OpticalSetting::kappa), bc(bc), last_step_on_a_different_grid(false), oldSolutionCaller_(){}
 
   template<class Intersection, class LocalViewV, class LocalViewQ, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
       const LocalViewV &localViewV, const LocalViewQ &localViewQ,
       const VectorType& x, VectorType& v, int tag=2) const {
-
     const int dim = Intersection::dimension;
     const int dimw = Intersection::dimensionworld;
 
+    //assuming galerkin
     assert((unsigned int) x.size() == localViewV.size());
     assert((unsigned int) v.size() == localViewQ.size());
 
@@ -49,7 +51,7 @@ public:
     const auto& localFiniteElementQ = localViewQ.tree().finiteElement();
     const unsigned int size_q = localFiniteElementQ.size();
 
-    //find type of Jacobian
+    //find type of derivatives
     using ElementType = typename std::decay_t<decltype(localFiniteElementV)>;
 
     using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
@@ -74,10 +76,6 @@ public:
     GeometryType gtfaceV = intersection.geometryInInside().type();
     const QuadratureRule<double, dim - 1>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim-1>(gtfaceV, order);
 
-    // normal of center in face's reference element
-//    const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
-//        dim - 1>::general(intersection.geometry().type()).position(0, 0);
-
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
 
@@ -94,15 +92,15 @@ public:
 
       //the shape function values
       std::vector<RangeType> referenceFunctionValuesV(size_u);
-      adouble u_value = 0;
+      adouble rho_value = 0;
       assemble_functionValues_u(localFiniteElementV, quadPos,
-          referenceFunctionValuesV, x_adolc.segment(0, size_u), u_value);
+          referenceFunctionValuesV, x_adolc.segment(0, size_u), rho_value);
 
       // The gradients
       std::vector<JacobianType> gradientsV(size_u);
-      FieldVector<adouble, Config::dim> gradu;
+      FieldVector<adouble, Config::dim> gradrho;
       assemble_gradients_gradu(localFiniteElementV, jacobian, quadPos,
-          gradientsV, x_adolc, gradu);
+          gradientsV, x_adolc, gradrho);
 
       //the test function values
       std::vector<RangeType> referenceFunctionValuesQ(size_q);
@@ -110,30 +108,42 @@ public:
           referenceFunctionValuesQ);
 
       //-------calculate integral--------
-      adouble a_tilde_value = a_tilde(u_value, gradu, x_value);
-      FieldVector<adouble, 3> grad_hat = { gradu[0], gradu[1], 0 };
 
-      FieldVector<adouble, 2> z_0 = gradu;
-      z_0 *= (2.0 / a_tilde_value);
+      //calculate factors
+      adouble q = (1+gradrho.two_norm2());
 
-      FieldVector<adouble, Config::dim> T_value = T(x_value, u_value, z_0, opticalSetting.z_3);
+      //distance to target screen
+      auto t = Local_Operator_MA_refl_parallel::calc_t(x_value[1], rho_value, gradrho, q, opticalSetting.z_3);
 
-      auto signedDistance = bc.H(T_value);
+      //calculate direction after refraction
+      auto Y_restricted = Local_Operator_MA_refl_parallel::reflection_direction_restricted(gradrho, q);
+#ifndef DEBUG
+      auto Y = Local_Operator_MA_refl_parallel::reflection_direction(gradrho, q);
+      assert(std::abs(Y[0].value() - Y_restricted[0].value()) < 1e-8);
+      assert(std::abs(Y[2].value() - Y_restricted[1].value()) < 1e-8);
+#endif
+
+      auto Z = Local_Operator_MA_refl_parallel::calc_target_hitting_point_2d(x_value, rho_value, Y_restricted,t);
+
+      auto signedDistance = bc.H(Z);
+//      std::cerr << "      signedDistance " << signedDistance << " at " << z[0].value() << " "<< z[1].value()<< " from X "  << x_value << std::endl;
 
       const auto integrationElement =
           intersection.geometry().integrationElement(quad[pt].position());
       const double factor = quad[pt].weight() * integrationElement;
       for (size_t j = 0; j < size_q; j++)
       {
-          v_adolc(j) += signedDistance * (referenceFunctionValuesQ[j]) * factor;
+        v_adolc(j) += signedDistance * (referenceFunctionValuesQ[j]) * factor;
+//          std::cerr << " add to v_adolc(" << j << ") " << signedDistance.value()
+//              * (referenceFunctionValuesQ[j])* factor << " -> " << v_adolc(j).value() << std::endl;
       }
+
     }
 
     // select dependent variables
     for (size_t i = 0; i < size_q; i++)
       v_adolc[i] >>= v[i];
-    trace_off();
-/*    std::size_t stats[11];
+    trace_off();/*    std::size_t stats[11];
     tapestats(tag, stats);
     std::cerr << "numer of independents " << stats[0] << std::endl
       << "numer of deptendes " << stats[1] << std::endl
@@ -154,6 +164,7 @@ public:
 
 private:
   const OpticalSetting& opticalSetting;
+  double epsilon_; ///=n_1/n_2 (refractive indices)
 
   const OTBoundary& bc;
 

@@ -54,6 +54,8 @@ public:
 
   bool is_rectangular(){return rectangular;}
 
+  int get_gridRefinement() const{return gridRefinement_;}
+
   GridType& grid() {return *grid_;}
   const std::shared_ptr<GridType>& get_grid_ptr() const{return grid_;}
   const GridType& grid() const {return *grid_;}
@@ -118,7 +120,13 @@ public:
       gridView_(grid_->leafGridView())
   {}
 
+  GridHandler(GeometrySetting setting, std::array<int, GridType::dimension> startlevel): gridPrefix_(setting.gridinputFile), gridRefinement_(startlevel[0]),
+      grid_(UnitCube<GridType>(setting.lowerLeft, setting.upperRight, startlevel).grid_ptr()), gridView_(grid_->leafGridView()){}
+
+
   bool is_rectangular(){return true;}
+  int get_gridRefinement() const{return gridRefinement_;}
+
 
   GridType& grid() {return *grid_;}
   const std::shared_ptr<GridType>& get_grid_ptr() const{return grid_;}

@@ -20,7 +20,7 @@
 
 #include "NURBS/surfaceFitter.h"
 
-std::vector<Eigen::Vector3d> read_points_from_file(std::string& filename, int& n_x, int& n_y)
+std::vector<Eigen::Vector3d> read_points_from_file(std::string& filename, int& n_x, int& n_y, bool have_header = true)
 {
   std::cout << " read from file " << filename << std::endl;
 
@@ -32,20 +32,26 @@ std::vector<Eigen::Vector3d> read_points_from_file(std::string& filename, int& n
     exit(-1);
   }
 
-  std::string s;
+  if (have_header)
+  {
+    std::string s;
 
-  input >> s; //read "x "
-  input >> s; //read "y "
-  input >> s; //read "with "
-  input >> s; //read "n_x "
-  input >> n_x;
+    input >> s; //read "x "
+    input >> s; //read "y "
+    input >> s; //read "with "
+    input >> s; //read "n_x "
+    input >> n_x;
 
-  input >> s; //read "n_y "
-  input >> n_y;
-  std::getline(input,s); // read comment
+    input >> s; //read "n_y "
+    input >> n_y;
+    std::getline(input,s); // read comment
+  }
+  else{
+    n_x=2;
+    n_y=1;
+  }
 
   int pointNo = 0;
-
   std::vector<Eigen::Vector3d> points(n_x*n_y);
   while(!input.eof())
   {
@@ -57,12 +63,35 @@ std::vector<Eigen::Vector3d> read_points_from_file(std::string& filename, int& n
         assert(false);
         exit(-1);
       }
+      if (points.size() <= (unsigned int) pointNo)
+      {
+        points.resize((pointNo *3)/2);
+      }
 
       input >> points[pointNo][i] >> std::ws;
     }
 
     pointNo++;
   }
+
+  if (!have_header)
+  {
+    //find out number of points in x and y direction (assuming sorted lexicographically by y coordinate)
+    points.resize(pointNo);
+
+    //get number in x direction
+    n_x = 0;
+    while(points[n_x+1][0] > points[n_x][0])
+    {
+      n_x++;
+    }
+    n_x++;
+    //calculate number in y direction
+    n_y = pointNo/n_x;
+
+    std::cout << "found " << n_x << " points in x-direction and " << n_y << " points in y-direction " << std::endl;
+  }
+
   if (pointNo != n_x*n_y)
   {
     assert(false&& " the number of points does not match n_x and n_y");
@@ -260,7 +289,8 @@ int main(int argc, char *argv[])
   if (argc < 3)
   {
     std::cerr << "Error, Expect at leat 2 inputs : point file, output file" << std::endl;
-    std::cerr << " Option for a 3rd parameter is a mesh file, where the surface is added " << std::endl;
+    std::cerr << "The point file format is expected to be (x0 y0), (x1 y0) ... (xn yn)." << std::endl;
+    std::cerr << "Optional 3rd parameter is a mesh file, where the surface is added " << std::endl;
   }
 
   std::string pointsfilename = argv[1];
@@ -275,10 +305,10 @@ int main(int argc, char *argv[])
 
   int n_x, n_y;
   std::cout << " read points from file ... " << std::endl;
-  auto points = read_points_from_file(pointsfilename, n_x, n_y);
+  auto points = read_points_from_file(pointsfilename, n_x, n_y, true);
 
   std::cout << " fit surface ..." << std::endl;
-  SurfaceFitter surfaceFitter(3,3);
+  SurfaceFitter surfaceFitter(2,2);
   auto surface = surfaceFitter.interpolate_surface(n_x, n_y, points);
 
   bool ok = false;

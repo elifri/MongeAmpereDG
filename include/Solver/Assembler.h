@@ -19,6 +19,8 @@
 #endif
 
 #include <CImg.h>
+#undef Success
+
 #include "Dogleg/utils.hpp"
 
 #include "Solver/boundaryHandler.h"

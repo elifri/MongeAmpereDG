@@ -28,7 +28,6 @@ void read_parameters(int argc, char *argv[], std::string& configFileMASolver, st
   cmdline.add_options()
       ("version,v",   "print version string")
       ("help,h",      "produce help message")
-      ("help-all,a",  "produce help message (including config file options)")
       ("solver,c", po::value<std::string>(&configFileMASolver),  "config file for the MA finite element method")
       ("geometry,g",   po::value<std::string>(&configFileOpticalSetting),  "config file for optical setting")
       ("Petsoptionsfile,o", po::value<std::string>(&petscConfig), "config file for petsc")
@@ -43,11 +42,6 @@ void read_parameters(int argc, char *argv[], std::string& configFileMASolver, st
 
   if (vm.count("help")) {
       cout << cmdline << "\n";
-      exit(-1);
-  }
-
-  if (vm.count("help-all")) {
-      cout << cmdline_options << "\n";
       exit(-1);
   }
 
@@ -93,11 +87,7 @@ try {
   // ////////////////////////////////
 
 //	std::cout << " init grid handler from file " << opticalSetting.gridinputFile << std::endl;
-//#ifdef BSPLINES
-//  GridHandler<Config::GridType, true> gridHandler(opticalSetting,SolverConfig::startlevel);
-//#else
-  GridHandler<Config::GridType> gridHandler(opticalSetting,SolverConfig::startlevel);
-//#endif
+  SolverConfig::GridHandlerType gridHandler(opticalSetting,SolverConfig::startlevel);
 
   // Output grid
   VTKWriter<Config::GridView> vtkWriter(gridHandler.gridView());

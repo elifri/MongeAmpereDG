@@ -26,7 +26,7 @@ namespace po = boost::program_options;
 
 MA_OT_solver::MA_OT_solver(GridHandlerType& gridHandler,
     const shared_ptr<GridType>& gridTarget,
-    const SolverConfig& config, GeometrySetting& setting, bool create_operator)
+    const SolverConfig& config, const GeometryOTSetting& setting, bool create_operator)
 :MA_solver(gridHandler, config, false),
  setting_(setting), gridTarget_(gridTarget, SolverConfig::startlevel),
 #ifdef USE_COARSE_Q_H
@@ -47,6 +47,8 @@ MA_OT_solver::MA_OT_solver(GridHandlerType& gridHandler,
   }
 #endif
 //  gridTarget_ptr->globalRefine(SolverConfig::startlevel);
+
+  plotter.set_geometrySetting(get_setting());
 
   if (create_operator)
   {
@@ -510,6 +512,14 @@ void MA_OT_solver::plot(const std::string& name, int no) const
      std::cerr << fname  << std::endl;
   }
 
+  {
+    std::string fname(plotter.get_output_directory());
+    fname += "/"+ plotter.get_output_prefix()+ name +"estInt"+ NumberToString(no) + ".vtu";
+    plotter.writeVTK(fname, *solution_u_old, this->get_OT_operator().get_f());
+    std::cout << " write initial grid to " << fname << std::endl;
+
+  }
+
   //write to file
 
   std::string fname(plotter.get_output_directory());
@@ -653,7 +663,7 @@ void MA_OT_solver::one_Poisson_Step()
   Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_m;
   lu_of_m.compute(m);
 
-  if (lu_of_m.info()!= Eigen::EigenSuccess) {
+  if (lu_of_m.info()!= Eigen::Success) {
       // decomposition failed
       std::cout << "\nError: "<< lu_of_m.info() << " Could not compute LU decomposition for initialising poisson equation!\n";
       exit(-1);
@@ -952,7 +962,7 @@ void MA_OT_solver::adapt_solution(const int level)
 
 
   //add better projection of exact solution
-  {
+/*  {
     Config::SpaceType x0 = {0.0,0.0};
 
     FieldMatrix<Config::ValueType, 2, 2> A = {{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}}; //exactsolution
@@ -966,7 +976,7 @@ void MA_OT_solver::adapt_solution(const int level)
       return y;};
 
     project(u0, y0, exactsol_u);
-  }
+  }*/
 
   //adapt operator
   std::cerr << " going to adapt operator " << std::endl;
@@ -994,7 +1004,7 @@ void MA_OT_solver::adapt_solution(const int level)
   solution(get_n_dofs_V_h()) = 0;
   solution.tail(get_n_dofs_Q_h()) = p_adapted;
 
-  {
+/*  {
     update_solution(solution);
 
      Config::SpaceType x0 = {0.0,0.0};
@@ -1010,6 +1020,6 @@ void MA_OT_solver::adapt_solution(const int level)
        return y;};
 
      project(u0, y0, exactsol_u);
-   }
+   }*/
 
 }

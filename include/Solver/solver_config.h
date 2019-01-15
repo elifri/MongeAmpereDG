@@ -18,8 +18,9 @@
 
 
 #define HAVE_ADOLC 1
-#define USE_AUTOMATIC_DIFFERENTIATION 0
+#define USE_AUTOMATIC_DIFFERENTIATION 1
 
+//#define RECTANGULAR_GRID
 
 #ifndef C1Element
   #ifndef HAVE_ADOLC
@@ -112,8 +113,11 @@ struct PovRayOpts
 
 struct SolverConfig{
 
-//  using GridHandlerType = GridHandler<Config::DuneGridType, true>; //rectangular grid type
+#ifdef RECTANGULAR_GRID
+  using GridHandlerType = GridHandler<Config::DuneGridType, true>;
+#else
   using GridHandlerType = GridHandler<Config::DuneGridType, false>;
+#endif
 
   using ValueType = Config::ValueType;
 
@@ -129,9 +133,7 @@ struct SolverConfig{
   static double epsEnd;
 
   int maxSteps;
-#ifdef USE_DOGLEG
   DogLeg_optionstype doglegOpts;
-#endif
   NewtonOptionsType newtonOpts;
 
   bool writeVTK;
@@ -221,31 +223,42 @@ struct SolverConfig{
 struct GeometrySetting{
   virtual void read_configfile(std::string &configFile);
 
-  static Config::SpaceType lowerLeft;  ///lower left of input grid
-  static Config::SpaceType upperRight;   ///upper right of input grid
+  Config::SpaceType lowerLeft;  ///lower left of input grid
+  Config::SpaceType upperRight;   ///upper right of input grid
 
-  static Config::SpaceType lowerLeftTarget; ///lower left of target grid (target must be in x-y-plane)
-  static Config::SpaceType upperRightTarget; ///upper left of target grid (target must be in x-y-plane)
-
-  static SolverConfig::ValueType z_3; /// third coordinate of target grid (target must be in x-y-plane)
-
-  static std::string gridinputFile; ///location of the grid file specifying the grid for the input area $\Omega$
-  static std::string plotGridinputFile; ///location of the grid file specifying a grid which is translated under the solution
+  std::string gridinputFile; ///location of the grid file specifying the grid for the input area $\Omega$
   static int boundaryN; ///number of directions to simulate boundary of the starting domain $\Omega$
-  static std::string gridTargetFile; ///location of the grid file specifying the grid for the target area $\Sigma$
+};
+
+struct GeometryOTSetting:GeometrySetting {
+  virtual void read_configfile(std::string &configFile);
+
+  Config::SpaceType lowerLeftTarget; ///lower left of target grid (target must be in x-y-plane)
+  Config::SpaceType upperRightTarget; ///upper left of target grid (target must be in x-y-plane)
+
+  SolverConfig::ValueType z_3; /// third coordinate of target grid (target must be in x-y-plane)
+
+  std::string plotGridinputFile; ///location of the grid file specifying a grid which is translated under the solution
+
+  std::string gridTargetFile; ///location of the grid file specifying the grid for the target area $\Sigma$
   static int boundaryNTarget; ///number of directions to simulate boundary of the target domain $\Sigma$
 
 };
 
-struct OpticalSetting : GeometrySetting{
+struct OpticalSetting : GeometryOTSetting{
+
   void read_configfile(std::string &configFile);
   ///file for light source input
   static std::string LightinputImageName;
   ///file for target distribution
   static std::string TargetImageName;
 
+  bool target_is_xy_plane;
+
   ///minimal Pixelvalue in outputimage
   double minPixelValue;
+
+  double initialOpticDistance;
 
   ///pov ray options for output
   PovRayOpts povRayOpts;

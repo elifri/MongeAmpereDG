@@ -88,7 +88,7 @@ try {
   SolverConfig config;
   config.read_configfile(configFileMASolver);
 
-  GeometrySetting setting;
+  GeometryOTSetting setting;
   setting.read_configfile(configFileSetting);
 
   std::cout << " Output files in folder " << config.plotOutputDirectory << "/" << config.outputPrefix <<"..." << std::endl;
@@ -98,12 +98,7 @@ try {
   // ////////////////////////////////
 
 //---initial domain grid---------
-
-#ifdef BSPLINES
-  GridHandler<Config::GridType, true> gridHandler(setting,SolverConfig::startlevel);
-#else
-  GridHandler<Config::GridType> gridHandler(setting,SolverConfig::startlevel);
-#endif
+  SolverConfig::GridHandlerType gridHandler(setting,SolverConfig::startlevel);
 
   // Output grid
   {

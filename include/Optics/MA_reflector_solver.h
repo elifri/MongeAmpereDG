@@ -11,14 +11,22 @@
 #include "OT/MA_OT_solver.h"
 #include "OT/MA_OT_global_Operator.h"
 #include "operator_MA_refl_Brenner.h"
+#include "operator_MA_refl_parallel.h"
 
 class MA_reflector_solver: public MA_OT_solver
 {
 public:
   //select local operator
+#ifdef PARALLEL_LIGHT
+  using Local_Reflector_OperatorType = Local_Operator_MA_refl_parallel;
+  using Local_Reflector_Boundary_Operator_Type = Local_Operator_LagrangianBoundary_refl_parallel;
+#else
   using Local_Reflector_OperatorType = Local_Operator_MA_refl_Brenner;
+  using Local_Reflector_Boundary_Operator_Type = Local_Operator_LagrangianBoundary_refl;
+#endif
 
-  using ProblemTraits = OpticOperatorTraits<MA_OT_solver, Local_Reflector_OperatorType, Local_Operator_LagrangianBoundary_refl>;
+
+  using ProblemTraits = OpticOperatorTraits<MA_OT_solver, Local_Reflector_OperatorType, Local_Reflector_Boundary_Operator_Type>;
 
 #ifndef USE_ANALYTIC_DERIVATION
   using OperatorType = MA_OT_Operator<ProblemTraits>;
@@ -41,13 +49,14 @@ public:
   void plot(const std::string& filename) const;
   void plot(const std::string& filename, int no) const;
 
-  GeometrySetting& get_setting() {return setting_;}
-  const GeometrySetting& get_setting() const {return setting_;}
+//  GeometryOTSetting& get_setting() {return setting_;}
+  const GeometryOTSetting& get_setting() const {return setting_;}
 
   OpticalSetting& get_optical_setting() {return setting_;}
   const OpticalSetting& get_optical_setting() const {return setting_;}
 
   OperatorType& get_refl_operator(){return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
+  const OperatorType& get_refl_operator() const{return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
   OperatorType& get_OT_operator(){return *(std::dynamic_pointer_cast<OperatorType>(this->op));}
   const OperatorType& get_OT_operator() const {return  *(std::dynamic_pointer_cast<OperatorType>(this->op));}
 

@@ -24,6 +24,7 @@
 #include "OT/operator_LagrangianBoundary.h"
 #include "Optics/operator_LagrangianBoundary_refl.h"
 #include "Optics/operator_LagrangianBoundary_refr_parallel.h"
+#include "Optics/operator_LagrangianBoundary_refl_parallel.h"
 
 class MA_solver;
 class MA_OT_solver;

@@ -5,8 +5,8 @@
  *      Author: friebel
  */
 
-#ifndef OPERATOR_MA_REFR_PARALLEL_HH_
-#define OPERATOR_MA_REFR_PARALLEL_HH_
+#ifndef OPERATOR_MA_REFL_PARALLEL_HH_
+#define OPERATOR_MA_REFL_PARALLEL_HH_
 
 #include <dune/common/function.hh>
 #include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
@@ -20,10 +20,10 @@
 
 using namespace Dune;
 
-class Local_Operator_MA_refr_parallel {
+class Local_Operator_MA_refl_parallel {
 
 public:
-  Local_Operator_MA_refr_parallel(const OTBoundary& bc,
+  Local_Operator_MA_refl_parallel(const OTBoundary& bc,
       const ImageFunction& f, const ImageFunction& g):
     opticalSetting(OpticalSetting()),
     epsilon_(OpticalSetting::kappa),
@@ -37,7 +37,7 @@ public:
     }
 
 
-  Local_Operator_MA_refr_parallel(const OpticalSetting &opticalSetting, const OTBoundary& bc,
+  Local_Operator_MA_refl_parallel(const OpticalSetting &opticalSetting, const OTBoundary& bc,
       const ImageFunction& f, const ImageFunction& g):
     opticalSetting(opticalSetting),
     epsilon_(OpticalSetting::kappa),
@@ -47,45 +47,38 @@ public:
     last_step_on_a_different_grid(false)
     {}
 
-  template<class value_type>
-  static
-  adouble Phi(const value_type& s, const double epsilon)
+
+  ///helper function that checks wether the calculated reflection is consistent with the vector calculated by direct application of the reflection law
+  bool check_reflection(const Config::SpaceType& x_value, const FieldVector<adouble, 3>& X,
+      const FieldVector<adouble, 3>& Y) const
   {
-    if (epsilon*epsilon + s*s -1 < 0) return s;
-    return s - sqrt(epsilon*epsilon + s*s -1);
-  }
+/*
+    //calculate normal of the reflector
+    FieldVector<adouble, 3> normal_refl = gradu;
+    normal_refl *= -1.0/sqr(u_value);
+    normal_refl.axpy(-1./u_value+1.0/sqr(u_value)*(gradu*x_value) ,X);
 
-  ///helper function that checks whether the calculated reflection is consistent with the vector calculated by direct application of the reflection law
-  bool check_refraction(const FieldVector<adouble, 3>& X,
-                        const FieldVector<adouble, Config::dim>& gradu,
-                        const FieldVector<adouble, 3>& Y
-                        ) const
-  {
-    //calculate normal of the refractor
-    FieldVector<adouble, 3> normal_refr = {-gradu[0],-gradu[1],1};
-    normal_refr /= std::sqrt(sqr(normal_refr[0].value())+sqr(normal_refr[1].value())+sqr(normal_refr[2].value()));
+    FieldVector<adouble, 3> lightvector = X;
+    lightvector /= u_value;
+    lightvector *= -1;
+    lightvector += Z_0;
 
-//    std::cout << " normal refr " << normal_refr[0].value() << " " << normal_refr[1].value() << ' ' << normal_refr[2].value() << std::endl;
-
-    //calculated direction after refraction by Snell's law (lightvector)
-    FieldVector<adouble, 3> lightvector ({0,0,1});
-    lightvector.axpy(-Phi((lightvector*normal_refr), epsilon_), normal_refr);
-    lightvector /= epsilon_;
-//    std::cerr << std::setprecision(15);
-//    std::cerr << "direction after refr " << Y[0].value() << " " << Y[1].value() << " " << Y[2].value() << std::endl;
-//    std::cerr << "presumed lightvector " << lightvector[0].value() << " " << lightvector[1].value() << " " << lightvector[2].value() << std::endl;
-//    std::cerr << " X*normal_refr " << (X*normal_refr).value() << " Phi " << (Phi((X*normal_refr))).value() << std::endl;
+    //calculated direction after reflection (Y)
+    FieldVector<adouble, 3> Y = X;
+    Y *= a_tilde_value/b_tilde_value;
+    Y.axpy(-2*u_value/b_tilde_value, grad_hat);
+    //      std::cerr << "direction after refl " << Y[0].value() << " " << Y[1].value() << " " << Y[2].value() << std::endl;
 
     //direction of lightvector and Y have to be the same
-    assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[1].value()/Y[1].value()) < 1e-7
-        || (fabs(lightvector[0].value()) < 1e-7 &&  fabs(Y[0].value())< 1e-7)
-        || (fabs(lightvector[1].value()) < 1e-7 &&  fabs(Y[1].value())< 1e-7)  );
-    assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[2].value()/Y[2].value()) < 1e-7
-        || (fabs(lightvector[0].value()) < 1e-7 &&  fabs(Y[0].value())< 1e-7)
-        || (fabs(lightvector[2].value()) < 1e-7 &&  fabs(Y[2].value())< 1e-7)  );
+    assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[1].value()/Y[1].value()) < 1e-10
+        || (fabs(lightvector[0].value()) < 1e-12 &&  fabs(Y[0].value())< 1e-12)
+        || (fabs(lightvector[1].value()) < 1e-12 &&  fabs(Y[1].value())< 1e-12)  );
+    assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[2].value()/Y[2].value()) < 1e-10
+        || (fabs(lightvector[0].value()) < 1e-12 &&  fabs(Y[0].value())< 1e-12)
+        || (fabs(lightvector[2].value()) < 1e-12 &&  fabs(Y[2].value())< 1e-12)  );
+*/
     return true;
   }
-
 
   ///helper function to check if the target plane normal points away from the reflector
   inline
@@ -100,74 +93,64 @@ public:
     return true;
   }
 
-  inline
-  bool check_Z_within_Sigma(const Config::SpaceType& x, const adouble u_value,
-                        const FieldVector<adouble, 3>& Y, const adouble t
-                        ) const
-  {
-    FieldVector<adouble, 3> Z ({x[0],x[1], u_value.value()}); //ray hits the refractor
-    Z.axpy(t,Y);//ray should hit the target
-
-//    assert(Z[0] > g_.lowerLeft[0] && Z[0] < g_.upperRight[0]);
-//    assert(Z[1] > g_.lowerLeft[1] && Z[1] < g_.upperRight[1]);
-    assert(std::abs(Z[2].value()-opticalSetting.z_3) < 1e-8 && " The calculated hitting point does not lie in the target plane");
-
-  }
   ///calculates the gradient of the function describing the target plane implicitly
   static
   const FieldVector<Config::ValueType,3> D_psi(const Config::SpaceType3d &x)
   {
-    return FieldVector<Config::ValueType,3>({0,0,1});
+    return FieldVector<Config::ValueType,3>({0,1,0});
   }
 
 
-  ///calculates the unit direction of the refracted ray
+  ///calculates the unit direction of the reflected ray
   template<class value_type>
   static
-  FieldVector<value_type,3>  refraction_direction(const FieldVector<value_type,2> &Du,
-      const double& kappa, const value_type &q, const double epsilon)
+  FieldVector<value_type,3>  reflection_direction(const FieldVector<value_type,2> &Du, const value_type &q)
   {
-    adouble tempFrac = kappa/(1.+q);
+    //calculate normal gamma (normal of reflector)
+    FieldVector<value_type,3> gamma({Du[0], Du[1],-1.});
+    gamma /= sqrt(q);
 
-    FieldVector<value_type,3> Y;
-    Y[0] = tempFrac*Du[0];
-    Y[1] = tempFrac*Du[1];
-    Y[2] = 1.-tempFrac;
+    value_type factor = gamma[2];
 
-    Y *= epsilon;
+    FieldVector<value_type,3> Y ({0,0,1.});
+
+    Y.axpy(-2.*factor,gamma);
     return Y;
   }
 
   ///calculates the unit direction of the refracted ray
   template<class value_type>
   static
-  FieldVector<value_type,2>  refraction_direction_restricted(const FieldVector<value_type,2> &Du,
-      const double& kappa, const value_type &q, const double epsilon)
+  FieldVector<value_type,2>  reflection_direction_restricted(const FieldVector<value_type,2> &Du, const value_type &q)
   {
-    adouble tempFrac = kappa/(1.+q);
+    //calculate normal gamma (normal of reflector)
+    FieldVector<value_type,2> gamma({Du[0],-1.});
+    gamma /= sqrt(q);
 
-    FieldVector<value_type,2> Y = Du;
+    value_type factor = gamma[1];
 
-    Y *= tempFrac*epsilon;
+    FieldVector<value_type,2> Y ({0,1.});
+
+    Y.axpy(-2.*factor,gamma);
     return Y;
   }
 
   //stretch function (distance between lens and target screen)
   template<class value_type>
   static
-  value_type calc_t(const value_type& rho_value, const double& kappa, const value_type &q,
-      const double z_3, const double epsilon)
+  value_type calc_t(const double& x_2, const value_type& rho_value, const FieldVector<value_type,2> &Drho, const value_type &q,
+      const double z_2)
   {
-    return (z_3-rho_value)*(q+1.)/epsilon/(1-kappa+q);
+    return (-x_2+z_2)*q/2./(Drho[1]);
   }
 
   ///calculates where the ray hits the target (only the first two coordinates)
   template<class value_type>
   static
-  FieldVector<value_type,2>  calc_target_hitting_point_2d(const Config::SpaceType& x,
+  FieldVector<value_type,2>  calc_target_hitting_point_2d(const Config::SpaceType& x, const value_type& rho,
       const FieldVector<value_type,2> &Y_restricted, const value_type &t)
   {
-    FieldVector<adouble, 2> Z = x; //ray hits the refractor
+    FieldVector<value_type, 2> Z ({x[0], rho}); //ray hits the refractor
     Z.axpy(t,Y_restricted);//ray should hit the target
     return Z;
   }
@@ -262,50 +245,41 @@ public:
       auto x_value = geometry.global(quad[pt].position());
 
       //calculate factors
-      auto kappa = (sqr(epsilon_)-1.)/(sqr(epsilon_));
-      adouble q = sqrt(1.-kappa*(1.+gradrho.two_norm2()));
+      adouble q = 1.+gradrho.two_norm2();
 
-      auto Y = refraction_direction(gradrho, kappa, q, epsilon_);
+      auto Y = reflection_direction(gradrho, q);
 #ifndef DEBUG
       FieldVector<Config::ValueType,3> X ({x_value[0], x_value[1], rho_value.value()});
-      assert(check_refraction(X,gradrho, Y));
+//      assert(check_reflection(X,gradrho, Y));
 #endif
 
       //calculate direction after refraction
 //      auto Y_restricted = refraction_direction_restricted(gradrho, kappa, q, epsilon_);
       FieldVector<adouble, 2> Y_restricted;
       Y_restricted[0]= Y[0];
-      Y_restricted[1]=Y[1]; //ray hits the refractor
+      Y_restricted[1]=Y[2]; //ray hits the refractor
 
 //      auto t = (opticalSetting.z_3-u_value)*(q+1.)/kappa_/(1-kappa+q);//stretch function (distance between lens and target screen)
       //distance to target screen
-      auto t = calc_t(rho_value, kappa, q, opticalSetting.z_3, epsilon_);
+      auto t = calc_t(X[1], rho_value, gradrho, q, opticalSetting.z_3);
 
 //      assert(check_Z_within_Sigma(x, rho_value, gradrho, Y, t));
-      assert(std::abs((rho_value + t*Y[2] - opticalSetting.z_3).value()) < 1e-8 && "something with t is not as expected!");
+      assert(std::abs((x_value[1] + t*Y[1] - opticalSetting.z_3).value()) < 1e-8 && "something with t is not as expected!");
 
       //calculate the hitting point on the taret
-      auto Z = calc_target_hitting_point_2d(x_value,Y_restricted,t);
+      auto Z = calc_target_hitting_point_2d(x_value, rho_value ,Y_restricted,t);
 
 
       //-----calculate term with determinant
-      adouble factorA = (q+1.)/t/epsilon_/kappa;
 
       FieldMatrix<adouble, dim, dim> A;
-      A[0][0] = 1.-kappa*sqr(epsilon_)*gradrho[0]*gradrho[0];
-      A[0][1] = -kappa*sqr(epsilon_)*gradrho[0]*gradrho[1];
-      A[1][0] = -kappa*sqr(epsilon_)*gradrho[1]*gradrho[0];
-      A[1][1] = 1.-kappa*sqr(epsilon_)*gradrho[1]*gradrho[1];
+      A[0][0] = q/2./t;
+      A[0][1] = 0;
+      A[1][0] = 0;
+      A[1][1] = q/2./t;
 
-      A*=factorA;
-
-      FieldMatrix<adouble, dim, dim> uDH_pertubed = Hessrho;
-      uDH_pertubed+=A;
-
-      if (epsilon_ < 1)
-      {
-        uDH_pertubed *= -1;
-      }
+      FieldMatrix<adouble, dim, dim> uDH_pertubed = A;
+      uDH_pertubed+=Hessrho;
 
       adouble uDH_pertubed_det = determinant(uDH_pertubed);
 
@@ -322,8 +296,7 @@ public:
       adouble g_value;
       g_.evaluate(Z, g_value);
 
-//      adouble H_value = -(epsilon_*q)*(q+1.)*(q+1.)/t/kappa/epsilon_*Y[2];    //   ..*(D_psi_value*Y)/D_Psi_value.two_norm();  in this case this term is equal to Y_3
-      adouble H_value = (epsilon_*q)*((q+1.)*(q+1.)/t/t/kappa/kappa/epsilon_/epsilon_)*Y[2];    //   ..*(D_psi_value*Y)/D_Psi_value.two_norm();  in this case this term is equal to Y3
+      adouble H_value = q*q*(Y[1])/2./2./t/t;    //   ..*(D_psi_value*Y)/D_Psi_value.two_norm();  in this case this term is equal to Y2
 
       adouble PDE_rhs = H_value*f_value/g_value;
 //      adouble PDE_rhs = H_value*f_value;

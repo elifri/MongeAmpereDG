@@ -10,6 +10,7 @@
 
 
 #include <CImg.h>
+#undef Success
 
 #include "config.h"
 #include "ImageFunction.hpp"
