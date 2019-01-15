@@ -247,6 +247,11 @@ public:
 
 public:
 
+  //----------------------------//
+  //---  write optic files    --//
+  //----------------------------//
+
+
   template <class Function>
   void writeReflectorPOV(std::string filename, Function &f) const;
 
@@ -333,6 +338,11 @@ public:
   template<typename BSplineNodeFactoryType>
   void save_BSplineCoeffs(const BSplineNodeFactoryType &bSplineNodeFactory, const Config::VectorType& coeffs, std::ofstream &of) const;
 
+
+
+  //----------------------------//
+  //---  getter and setter    --//
+  //----------------------------//
 
   void set_refinement(const int refinement){	this->refinement_ = refinement;}
   void set_output_directory(std::string outputdir) {this->output_directory = outputdir;}
