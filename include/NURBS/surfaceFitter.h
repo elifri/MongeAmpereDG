@@ -133,16 +133,7 @@ public:
     model.m_properties.m_Notes.m_notes = "This file was made with the OpenNURBS write_curves_example() function.";
     model.m_properties.m_Notes.m_bVisible = true;
 
-
-    // file settings (units, tolerances, views, ...)
-    model.m_settings.m_ModelUnitsAndTolerances.m_unit_system = ON::meters;
-    model.m_settings.m_ModelUnitsAndTolerances.m_absolute_tolerance = 0.001;
-    model.m_settings.m_ModelUnitsAndTolerances.m_angle_tolerance = ON_PI/180.0; // radians
-    model.m_settings.m_ModelUnitsAndTolerances.m_relative_tolerance = 0.01; // 1%
-
-
-
-    {
+/*     {
       // OPTIONAL - define some layers
       ON_Layer layer[surf.get_m()+2];
 
@@ -171,16 +162,16 @@ public:
         model.m_layer_table.Append(layer[l]);
       }
 
-    }
+    } */
 
-    {
+/*     {
       ONX_Model_Object& mo = model.m_object_table.AppendNew();
       mo.m_object = pointcloud;
       mo.m_bDeleteObject = true; // ~ONX_Model will delete pointcloud.
       mo.m_attributes.m_layer_index = 0;
       mo.m_attributes.m_name = "interpolation points";
     }
-
+ */
 /*
     {
       ONX_Model_Object& mo = model.m_object_table.AppendNew();
@@ -195,24 +186,24 @@ public:
     {
       auto curve = surf.construct_curve(surf.get_n(), surf.get_uDeg(), surf.get_U(), R.col(l));
       {
-        ONX_Model_Object& mo = model.m_object_table.AppendNew();
-        mo.m_object = curve;
+//TODO        model.AddModelGeometryComponent(&curve, nullptr);
+/*         mo.m_object = curve;
         mo.m_bDeleteObject = true;
         mo.m_attributes.m_layer_index = l;
         mo.m_attributes.m_name = "curve";
-      }
+ */      }
     }
     std::stringstream ss;
     ss << "interpolation_curvesNx"<<(surf.get_n()+1)<<"Ny"<<(surf.get_m()+1)<<".3dm";
     std::string filename = ss.str();
 
-    ON_BinaryFile archive( ON::write3dm, ON::OpenFile( filename.c_str(), "wb" ) );
+    model.Write(filename.c_str(),5);
 
     // start section comment
     const char* sStartSectionComment = __FILE__ "write_points_example()" __DATE__;
 
     // Set uuid's, indices, etc.
-    model.Polish();
+    //model.Polish();
 
     // errors printed to stdout
     ON_TextLog error_log;

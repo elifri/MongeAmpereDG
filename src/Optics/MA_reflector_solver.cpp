@@ -11,7 +11,9 @@
 
 
 #include "Optics/MA_reflector_solver.h"
+#ifdef USE_ELLIPSOID_METHOD
 #include "Optics/init_with_ellipsoid_method.hpp"
+#endif
 #include "Optics/plot_functions_optics.hpp"
 
 #include "utils.hpp"

@@ -380,13 +380,13 @@ public:
 //                << " z " << z[0].value() << " " << z[1].value() << std::endl
 //                << std::endl;
 
-/*      if (z[0] < rhs.g.lowerLeft()[0] || z[0] > rhs.g.upperRight()[0] ||
-          z[1] < rhs.g.lowerLeft()[1] || z[1] > rhs.g.upperRight()[1])
+      if (z[0] < g.lowerLeft()[0] || z[0] > g.upperRight()[0] ||
+          z[1] < g.lowerLeft()[1] || z[1] > g.upperRight()[1])
       {
         std::cerr << "       rho_value " << rho_value.value()
                     << " X " << X << std::endl
                     << "        z " << z[0].value() << " " << z[1].value() << std::endl;
-      }*/
+      }
 
 
       assert(std::abs(((omega_value*rho_value) - t*rho_value*omega_value - opticalSetting.z_3).value()) < 1e-8 && "something with t is not as expected!");

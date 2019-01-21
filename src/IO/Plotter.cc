@@ -333,7 +333,7 @@ void Plotter::write_aperture(std::ofstream &file) const
     middlepoint /= 2.;
     auto radius = (geometrySetting_.upperRight[1]-geometrySetting_.lowerLeft[1])/2.;
     assert (std::abs(radius - (geometrySetting_.upperRight[0]-geometrySetting_.lowerLeft[0])/2.) < 1e-10
-	      && " The given corners are not rectangular, this does not match to a bounding box for a circle!");
+	      && " The given corners are not quadratic, this does not match to a bounding box for a circle!");
 
     file << "\t cylinder { <" << middlepoint[0] << ","<< middlepoint[1]<<",-0.25>, <"
     << middlepoint[0] << ","<< middlepoint[1]<<",0.25>, "<< radius << "}" <<std::endl;

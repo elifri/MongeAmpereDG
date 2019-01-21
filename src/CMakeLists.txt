@@ -9,7 +9,7 @@ add_library(Dogleg Dogleg/utils.cpp)
 
 set(PureSolverLibs ${PureSolverLibs})
 
-set(ThirdPartyLibs ${SNES_LIBRARY} ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES} ${BsplineHdf5Libraries} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
+set(ThirdPartyLibs ${SNES_LIBRARY} ${LIBNURBS_LIBRARIES} -luuid ${ZLIB_LIBRARIES} ${BsplineHdf5Libraries} ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
 
 #add_executable("dune_mongeampere" dune_mongeampere.cc)
 #message("ZLIB libraries ${ZLIB_LIBRARIES}")
@@ -72,15 +72,15 @@ target_link_dune_default_libraries("read_and_write_OT_parallel")
 
 
 add_executable(export_refractor_points export_refractor_points.cpp)
-target_link_libraries(export_refractor_points ${IOLibs} problemData Solver_Config Dogleg ${ADOLC_LIBRARIES} ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES}  ${BoostPO_LIBRARIES} ${UMFPACK_LIBRARIES})
+target_link_libraries(export_refractor_points ${IOLibs} problemData Solver_Config Dogleg ${ADOLC_LIBRARIES} ${LIBNURBS_LIBRARIES} -luuid ${ZLIB_LIBRARIES}  ${BoostPO_LIBRARIES} ${UMFPACK_LIBRARIES})
 target_link_dune_default_libraries("export_refractor_points")
 
 add_executable(interpolate_refractor_points interpolate_refractor_points.cpp)
 target_link_libraries(interpolate_refractor_points ${IOLibs} Solver_Config problemData ${ADOLC_LIBRARIES} ${BoostPO_LIBRARIES})
 target_link_dune_default_libraries("interpolate_refractor_points")
 
-add_executable(fit_surface fit_surface.cpp)
-target_link_libraries(fit_surface ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES})
+#add_executable(fit_surface fit_surface.cpp)
+#target_link_libraries(fit_surface ${LIBNURBS_LIBRARIES} -luuid ${ZLIB_LIBRARIES})
 
 add_executable(convert_dat_to_bmp convert_dat_to_bmp.cpp)
 target_link_libraries(convert_dat_to_bmp  -lX11)
@@ -118,6 +118,6 @@ target_link_dune_default_libraries("testPS12Split")
 message("linking opennurbs ${OPENNURBS_LINKLIBRARIES}")
 
 add_executable("example_write_NURBS" NURBS/example_ud.cpp NURBS/example_write.cpp)
-target_link_libraries(example_write_NURBS ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES})
+target_link_libraries(example_write_NURBS ${LIBNURBS_LIBRARIES} -luuid ${ZLIB_LIBRARIES})
 #target_link_dune_default_libraries("testdeVeubekeNew")
 

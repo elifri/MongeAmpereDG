@@ -12,6 +12,7 @@ ELSE (CIMG_FOUND)
     ${INCLUDE_INSTALL_DIR}
     $ENV{HOME}/workspace/CImg-1.6.0/
     ${CIMG_PATH}
+    ../CImg-1.6.0
   )
   
   message("searching for $ENV{HOME}/workspace/Cimg-1.6.0/CImg.hpp and ${CIMG_PATH}/CImg.hpp"  )
