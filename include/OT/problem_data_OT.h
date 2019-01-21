@@ -297,8 +297,9 @@ class GenerealOTBoundary : public OTBoundary{
     using BoundaryIterator = Dune::VTK::BoundaryIterator<GridView>;
 
     //find for all normals sup_{y in boundary} y*n, see Benamou et alt. /Journal of Compu.Phys 260(2014) p. 110-111
-    BoundaryIterator itBoundary(grid.leafGridView());
-    while (itBoundary != BoundaryIterator(grid.leafGridView(),true)) //loop over boundary edges
+    auto gridView = grid.leafGridView();
+    BoundaryIterator itBoundary(gridView);
+    while (itBoundary != BoundaryIterator(gridView,true)) //loop over boundary edges
     {
       for(int i = 0; i < boundaryPointPerEdge_; i++)//loop over boundary point in edge
       {

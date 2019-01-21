@@ -14,6 +14,8 @@
 #include <cmath>
 #include "CImg.h"
 #undef Success
+#undef Status
+#undef DisplayString 
 
 #include <Eigen/Core>
 
