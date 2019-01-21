@@ -36,8 +36,6 @@ public:
   virtual const Local_operator_LangrangianMidValue& get_lopLMMidvalue() const=0;
   virtual Local_operator_LangrangianMidValue& get_lopLMMidvalue()=0;
 
-  virtual bool is_evaluation_of_u_old_on_different_grid() const=0;
-
 //  virtual T get_lopLMMidvalue() const=0;
 
 //  template<typename F>

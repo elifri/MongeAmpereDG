@@ -243,34 +243,6 @@ public:
     init();
   }
 
-  virtual bool is_evaluation_of_u_old_on_different_grid() const
-  {
-#ifdef USE_ANALYTIC_JACOBIAN
-    return get_lopLinear().last_step_on_a_different_grid
-#else
-    assert(lopLMBoundary->is_evaluation_of_u_old_on_different_grid()==get_lop().is_evaluation_of_u_old_on_different_grid());
-    return get_lop().is_evaluation_of_u_old_on_different_grid();
-#endif
-  }
-
-  ///use given global function (probably living on a coarser grid) to evaluate last step
-  virtual void set_evaluation_of_u_old_to_different_grid() const{
-    lop_ptr->set_evaluation_of_u_old_to_different_grid();
-    lopLMBoundary->set_evaluation_of_u_old_to_different_grid();
-  }
-  ///use coefficients of old function living on the same grid to evaluate last step
-  virtual void set_evaluation_of_u_old_to_same_grid() const{
-    lop_ptr->set_evaluation_of_u_old_to_same_grid();
-    lopLMBoundary->set_evaluation_of_u_old_to_same_grid();
-  }
-
-  template<typename F>
-  void change_oldFunction(F&& uOld)
-  {
-    lopLMBoundary->change_oldFunction(uOld);
-  }
-
-
   const SolverType* solver_ptr;
 
   std::shared_ptr<OTBoundary> boundary_;
@@ -368,26 +340,6 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
     assert(false);
 //    this->solver_ptr->assemble_Jacobian_DG(*(this->lop_ptr), *lopLinear_ptr, x,m);
   }
-
-  ///use given global function (probably living on a coarser grid) to evaluate last step
-  void set_evaluation_of_u_old_to_different_grid() const{
-    MA_OT_Operator<OperatorTraits>::set_evaluation_of_u_old_to_different_grid();
-    lopLinear_ptr->set_evaluation_of_u_old_to_different_grid();
-  }
-
-  ///use coefficients of old function living on the same grid to evaluate last step
-  void set_evaluation_of_u_old_to_same_grid() const{
-    MA_OT_Operator<OperatorTraits>::set_evaluation_of_u_old_to_same_grid();
-    lopLinear_ptr->set_evaluation_of_u_old_to_same_grid();
-  }
-
-  template<typename F>
-  void change_oldFunction(F&& uOld)
-  {
-    MA_OT_Operator<OperatorTraits>::change_oldFunction(uOld);
-    lopLinear_ptr->change_oldFunction(uOld);
-  }
-
 
 private:
   std::shared_ptr<LocalOperatorType> lopLinear_ptr;
@@ -511,18 +463,13 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
     m.insert(indexFixingGridEquation,i)=lagrangianMidvalueDiscreteOperator(i);
     m.insert(i,indexFixingGridEquation)=lagrangianMidvalueDiscreteOperator(i);
 
-    if (lop_ptr->last_step_on_a_different_grid)
-    {
-      v(i)+= lambda*lagrangianMidvalueDiscreteOperator(i);
-    }
+    v(i)+= lambda*lagrangianMidvalueDiscreteOperator(i);
   }
   //set rhs of langrangian multipler
   std::cerr << " at v (" << indexFixingGridEquation << ") is " << v(indexFixingGridEquation) << " going to be " << assembler.u0AtX0()-assembler.uAtX0() << std::endl;
 
-  if (!lop_ptr->last_step_on_a_different_grid)
-    v(indexFixingGridEquation) = assembler.uAtX0() - assembler.u0AtX0();
-  else
-    v(indexFixingGridEquation) = assembler.uAtX0();
+  v(indexFixingGridEquation) = assembler.uAtX0() - assembler.u0AtX0();
+
   std::cerr << " u - u_0 = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation) << " = " << assembler.u0AtX0() << '-'  <<assembler.uAtX0() << std::endl;
   v(indexFixingGridEquation) += lagrangianMidvalueDiscreteOperator.dot(w);
 
@@ -610,8 +557,7 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
   //prepare clock to time computations
   auto start = std::chrono::steady_clock::now();
 
-  if (!lop_ptr->last_step_on_a_different_grid)
-    prepare_fixing_point_term(x);
+  prepare_fixing_point_term(x);
   assemble_with_langrangian_Jacobian(xBoundary,x,v, m);
 
   for (int i = 0; i < v.size(); i++)  assert ( ! (v(i) != v(i)));

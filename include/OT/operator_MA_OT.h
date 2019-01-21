@@ -48,7 +48,7 @@ public:
   using Function = DensityFunction;
 
   Local_Operator_MA_OT(const OTBoundary& bc, const Function& rhoX, const Function& rhoY):
-  rhoX(rhoX), rhoY(rhoY),bc(bc), int_f(0), found_negative(false), last_step_on_a_different_grid(false)
+  rhoX(rhoX), rhoY(rhoY),bc(bc), int_f(0), found_negative(false)
   {
     std::cout << " created Local Operator" << std::endl;
   }
@@ -147,6 +147,10 @@ public:
       FieldMatrix<ValueType, Config::dim, Config::dim> Hessu;
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
           x_adolc, Hessu);
+
+      //get the data depending on u_{k-1} is given by x or stored in the oldSolutionCaller
+      assemble_cellTermFEData_only_derivatives(geometry, localFiniteElement, quadPos, x,
+          gradients, Hessians, gradu, Hessu);
 
       //--------assemble cell integrals in variational form--------
 
@@ -405,10 +409,16 @@ public:
 
 
   ///use given global function (probably living on a coarser grid) to evaluate last step
-  void set_evaluation_of_u_old_to_different_grid() const{  last_step_on_a_different_grid = true;}
+  void set_evaluation_of_u_old_to_different_grid() const{}
   ///use coefficients of old function living on the same grid to evaluate last step
-  void set_evaluation_of_u_old_to_same_grid() const{  last_step_on_a_different_grid = false;}
-  bool is_evaluation_of_u_old_on_different_grid() const {return last_step_on_a_different_grid;}
+  void set_evaluation_of_u_old_to_same_grid() const{}
+  bool is_evaluation_of_u_old_on_different_grid() const {}
+
+  //update guess
+  template<typename F>
+  void change_oldFunction(F&& uOld)
+  {
+  }
 
   const Function& get_input_distribution() const {return rhoX;}
   const Function& get_target_distribution() const {return rhoY;}
@@ -425,8 +435,6 @@ public:
 public:
   mutable double int_f;
   mutable bool found_negative;
-
-  mutable bool last_step_on_a_different_grid;
 };
 
 #endif /* OPERATOR_MA_OT_HH_ */

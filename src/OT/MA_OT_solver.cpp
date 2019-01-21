@@ -20,6 +20,8 @@ namespace po = boost::program_options;
 
 #include "utils.hpp"
 
+#include "Solver/Elliptic_Projector.hpp"
+
 #include "Operator/linear_system_operator_poisson_NeumannBC.h"
 
 #include "IO/imageOT.hpp"
@@ -985,6 +987,8 @@ void MA_OT_solver::adapt_solution(const int level)
 
   //project old solution to new grid
   auto newSolution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), solution);
+  Elliptic_Projector proj;
+  proj.project(*solution_u_old);
 //  auto newSolution = FEBasisHandler_.adapt_function_elliptic_after_grid_change(old_grid.gridViewOld, gridView(), *this, solution);
   solution = newSolution;
 
