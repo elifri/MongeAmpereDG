@@ -13,16 +13,51 @@
 
 #include "OT/problem_data_OT.h"
 
+#include "OT/operator_MA_OT_Linearisation.hpp"
+
 class Elliptic_Projector{
 
   using FEBasisType = SolverConfig::FETraitsSolver::FEBasis;
+  using FiniteElementTraits = SolverConfig::FETraitsSolver;
   using GridView = Config::GridView;
+  using GridIndexSet = GridView::IndexSet;
+
+  template <class Element>
+  struct ElementCompare{
+//    ElementCompare(const GridIndexSet& indexSet): indexSet(indexSet){}
+    ElementCompare(const GridView& gridView): indexSet(std::forward(gridView.indexSet())){}
+
+    bool operator()(const Element& e0, const Element& e1)
+    {
+      return (indexSet.index(e0) < indexSet.index(e1));
+    }
+    GridIndexSet indexSet;
+  };
+
+  template<typename Element>
+  using ElementSet = std::set<Element, GridIndexSet>;
+  template<typename Element>
+  using ElementVectorMap = std::map<Element, Config::VectorType, ElementCompare<Element>>;
+  template<typename Element>
+  using ElementMatrixMap = std::map<Element, Config::DenseMatrixType, ElementCompare<Element>>;
+
+
+
+
 
   template<typename Element>
   struct LocalResults
   {
-    std::set<Element> fineElements;
-    std::map<Element, Config::VectorType> localVectorFineElements;
+    ElementSet<Element> fineElements;
+    ElementVectorMap<Element> localVectorFineElements;
+    ElementMatrixMap<Element> localMatrixFineElements;
+
+    LocalResults(ElementSet<Element> & fineElements,
+        ElementVectorMap<Element> localVectorFineElements,
+        ElementMatrixMap<Element> localMatrixFineElements)
+      :fineElements(fineElements), localVectorFineElements(localVectorFineElements),
+       localMatrixFineElements(localMatrixFineElements)
+    {}
   };
 
 private:
@@ -39,17 +74,17 @@ private:
       ValueType PDE_rhs, ValueType uDH_det) const;
 
 
-  template<typename LocalFunction, typename Element>
-  LocalResults<Element> local_operations(Element e, LocalFunction& old_u,
-      const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
+  template<typename DiscreteFunction, typename Element>
+  LocalResults<Element> local_operations(Element e, DiscreteFunction& old_u,
+      Config::VectorType& v, Config::MatrixType& m) const;
 
   template<typename Element>
   void write_local_data_to_global_system(const LocalResults<Element>& localResults, Config::VectorType &v ,
-      Config::VectorType& m) const;
+      Config::MatrixType& m) const;
 
-  template<typename LocalFunction>
-  void assemble_projection_system(LocalFunction& old_u,
-      const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
+  template<typename DiscreteFunction>
+  void assemble_projection_system(DiscreteFunction& old_u,
+      Config::VectorType& v, Config::MatrixType& m) const;
 
 
 public:
@@ -57,10 +92,11 @@ public:
   Elliptic_Projector(const GridView& oldGridView, const GridView& newGridView, const FEBasisType& febasis,
       const DensityFunction& rhoX, const DensityFunction& rhoY):
         oldGridView_(oldGridView), newGridView_(newGridView), newFEBasis_(febasis),
+        elementCompare_(newGridView_),
         rhoX(rhoX), rhoY(rhoY){}
 
-  template<typename LocalFunction>
-  Config::VectorType project(LocalFunction& old_u) const;
+  template<typename DiscreteFunction>
+  Config::VectorType project(DiscreteFunction& old_u) const;
 
 
 private:
@@ -68,6 +104,7 @@ private:
   GridView newGridView_;
   FEBasisType newFEBasis_;
 
+  ElementCompare<Config::ElementType> elementCompare_;
 
   const DensityFunction& rhoX;
   const DensityFunction& rhoY;
@@ -105,18 +142,18 @@ void Elliptic_Projector::evaluate_variational_form(Config::DomainType& x_value,
 
 
 
-template<typename LocalFunction, typename Element>
-Elliptic_Projector::LocalResults<Element> Elliptic_Projector::local_operations(Element element, LocalFunction& old_u,
-    const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+template<typename DiscreteFunction, typename Element>
+Elliptic_Projector::LocalResults<Element> Elliptic_Projector::local_operations(Element element, DiscreteFunction& old_u,
+    Config::VectorType& v, Config::MatrixType& m) const
 {
   auto geometry = element.geometry();
   auto newlocalView = newFEBasis_.localView();
   auto newlocalIndexSet = newFEBasis_.indexSet().localIndexSet();
 
   //init set to store all relevant fine elements
-  std::set<Element> fineElements;
-  std::map<Element, Config::VectorType> fineLocalVectors; //store all local vectors
-  std::map<Element, Config::DenseMatrixType> fineLocalMatrices; //store all local matrices
+  ElementSet<Element> fineElements(elementCompare_);
+  ElementVectorMap<Element> fineLocalVectors(elementCompare_); //store all local vectors
+  ElementMatrixMap<Element> fineLocalMatrices(elementCompare_); //store all local matrices
 
   // Get a quadrature rule
   int order = 6;
@@ -149,20 +186,15 @@ Elliptic_Projector::LocalResults<Element> Elliptic_Projector::local_operations(E
     using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
     using FEHessianType = typename Dune::FieldMatrix<Config::ValueType, Element::dimension, Element::dimension>;
 
-    //look up if element was already used for this integration
-    auto it_lb = fineLocalVectors.lower_bound(eFine);
-    if(it_lb != fineLocalVectors.end() && !(fineLocalVectors.key_comp()(eFine, it_lb->first)) )
-    {
-    }
-    else
-    {
-      fineElements.insert(eFine);
-      fineLocalVectors.insert(it_lb, Config::VectorType::Zero(newlocalView.size()));
-      fineLocalMatrices.insert(it_lb, Config::VectorType::Zero(newlocalView.size(), newlocalView.size()));
-    }
+    fineElements.insert(eFine);
+    auto localVectorInsert = fineLocalVectors.insert(std::pair<Element, Config::VectorType>(eFine,
+                                Config::VectorType::Zero(newlocalView.size())));
+    auto localMatrixInsert = fineLocalMatrices.insert(std::pair<Element, Config::DenseMatrixType>(eFine,
+              Config::VectorType::Zero(newlocalView.size(), newlocalView.size())));
 
     //bind localVector to current context
-    auto& localVector = fineLocalVectors[eFine];
+    auto& localVector = (localVectorInsert.first)->second;
+    auto& localMatrix = (localMatrixInsert.first)->second;
 
     ///calculate the local coordinates with respect to the fine element
     auto quadPosFine = eFine.geometry().local(x_value);
@@ -184,7 +216,7 @@ Elliptic_Projector::LocalResults<Element> Elliptic_Projector::local_operations(E
 
     FieldVector<Config::ValueType, Config::dim> gradu;
     FieldMatrix<Config::ValueType, Config::dim, Config::dim> Hessu;
-    old_u.evaluateDerivatives(quadPosFine, gradu, Hessu);
+    old_u.evaluateDerivativesLocal(element, quadPos, gradu, Hessu);
 
     //--------assemble cell integrals in variational form--------
 
@@ -194,12 +226,12 @@ Elliptic_Projector::LocalResults<Element> Elliptic_Projector::local_operations(E
     rhoX.evaluate(x_value, f_value);
 
     //calculate value at transported point
-    Config::ValueType  g_value;
-    FieldVector<double, dim> gradg;
-    rhoY.evaluate(gradu, g_value);
-    rhoY.evaluateDerivative(gradu, gradg);
+    //calculate illumination at target plane
+    double avg_g_value = 0;
+    auto b = Local_Operator_MA_OT_Linearisation::smooth_convection_term(rhoY, gradu, f_value, avg_g_value, integrationElement);
 
-    Config::ValueType PDE_rhs = f_value / g_value ;
+
+    Config::ValueType PDE_rhs = f_value / avg_g_value ;
 
     Config::ValueType uDH_det = determinant(Hessu);
 
@@ -208,27 +240,25 @@ Elliptic_Projector::LocalResults<Element> Elliptic_Projector::local_operations(E
 
 
     //calculate system for first test functions
-    if (uDH_det.value() < 0)
+    if (uDH_det < 0)
     {
-      std::cerr << "found negative determinant !!!!! " << uDH_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
+      std::cerr << "found negative determinant !!!!! " << uDH_det << " at " << x_value  << "matrix is " << Hessu << std::endl;
   //    std::cerr << " x was " << x.transpose() << " at triangle " << geometry.corner(0) << "," << geometry.corner(1) << " and " << geometry.corner(2) << std::endl;
     }
   //      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
   //      std::cerr << "-log(u)-f=" << (-log(uDH_det)+(-log(scaling_factor_adolc*g_value)+log(scaling_factor_adolc*f_value))).value()<< std::endl;
 
-    assert(PDE_rhs.value() > 0);
+    assert(PDE_rhs > 0);
 
     for (int j = 0; j < localVector.size(); j++) // loop over test fcts
     {
       localVector(j) += (PDE_rhs-uDH_det)*referenceFunctionValues[j]
             * quad[pt].weight() * integrationElement;
-      localVectorV_adolc(j) += (PDE_rhs_adolc-uDH_det_adolc)*referenceFunctionValues[j]
-            * quad[pt].weight() * integrationElement;
 
       for (int i = 0; i < size; i++)
       {
     	  //diffusion term
-          FieldVector<double,dim> cofTimesW;
+          FieldVector<double,Config::dim> cofTimesW;
           cofHessu.mv(gradients[i],cofTimesW);
           localMatrix(j,i) += (cofTimesW*gradients[j]) *quad[pt].weight()*integrationElement;
           //the same as
@@ -241,16 +271,19 @@ Elliptic_Projector::LocalResults<Element> Elliptic_Projector::local_operations(E
 
     }
   }
-  return LocalResults<Element>(fineElements, fineLocalVectors);
+  return LocalResults<Element>(fineElements, fineLocalVectors, fineLocalMatrices);
 }
 
 template<typename Element>
 void Elliptic_Projector::write_local_data_to_global_system(const LocalResults<Element>& localResults, Config::VectorType &v ,
-    Config::VectorType& m) const
+    Config::MatrixType& m) const
 {
-  int dof_counter = 0;
   auto localView = newFEBasis_.localView();
   auto localIndexSet = newFEBasis_.indexSet().localIndexSet();
+
+  //reserve space for jacobian entries
+  using EntryType = Eigen::Triplet<double>;
+  std::vector<EntryType> JacobianEntries;
 
   for (auto& element: localResults.fineElements)
   {
@@ -258,41 +291,55 @@ void Elliptic_Projector::write_local_data_to_global_system(const LocalResults<El
     localView.bind(element);
     localIndexSet.bind(localView);
 
-    auto& vec = localResults.localVectorFineElements[element];
+    const auto& vec = localResults.localVectorFineElements.at(element);
+    const auto& mLocal = localResults.localMatrixFineElements.at(element);
 
-    add_local_coefficients(localIndexSet, vec, v);
-
-
+    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet, vec, v);
+    Assembler<FiniteElementTraits>::add_local_coefficients_Jacobian(localIndexSet, localIndexSet, mLocal, JacobianEntries);
   }
+
+  //init sparse matrix from entries
+  m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
 }
 
-template<typename LocalFunction>
-void Elliptic_Projector::assemble_projection_system(LocalFunction& old_u,
-    const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+template<typename DiscreteFunction>
+void Elliptic_Projector::assemble_projection_system(DiscreteFunction& old_u,
+    Config::VectorType& v, Config::MatrixType& m) const
 {
-  assert((unsigned int) x.size() == newFEBasis_.indexSet().size());
-
-  //assuming Galerkin
-  v = Config::VectorType::Zero(x.size());
-  m.resize(x.size(), x.size());
-
   // A loop over all elements of the grid
   for (auto&& e : elements(oldGridView_)) {
-    //bind u_H to current context
-    old_u.bind(e);
-
     //Perform Local Operations
-    auto localResults = local_operations(e, old_u, x, v, m);
+    auto localResults = local_operations(e, old_u, v, m);
 
-    write_local_data_to_global_system(localResults, x, v ,m);
+    write_local_data_to_global_system(localResults, v ,m);
   }
 }
 
-template<typename LocalFunction>
-Config::VectorType Elliptic_Projector::project(LocalFunction& old_u) const
+template<typename DiscreteFunction>
+Config::VectorType Elliptic_Projector::project(DiscreteFunction& old_u) const
 {
+  Config::MatrixType A;
+  Config::VectorType b;
 
-  assemble_projection_system(oldu_, x, v, m);
+  assemble_projection_system(old_u, b, A);
+
+  //solve system
+  Eigen::SparseLU<Config::MatrixType> lu_of_A(A);
+
+  if (lu_of_A.info()!= Eigen::Success) {
+      // decomposition failed
+      std::cout << "\nError: "<< lu_of_A.info() << " Could not compute LU decomposition of bilinear form A_F(w_h, v_h;u_H)!\n";
+      MATLAB_export(A,"A");
+  }
+
+  auto v = lu_of_A.solve(b);
+  if(lu_of_A.info()!=0) {
+      // solving failed
+      std::cerr << "\nError: Could not solve the equation A_F(w_h, v_h;u_H) = A_F(u_H,v_h;u_H)!\n";
+      std::exit(1);
+  }
+
+  return v;
 }
 
 
