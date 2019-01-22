@@ -407,19 +407,6 @@ public:
       const LocalView &localView,
       const VectorType &x, VectorType& v, int tag = 0) const {}
 
-
-  ///use given global function (probably living on a coarser grid) to evaluate last step
-  void set_evaluation_of_u_old_to_different_grid() const{}
-  ///use coefficients of old function living on the same grid to evaluate last step
-  void set_evaluation_of_u_old_to_same_grid() const{}
-  bool is_evaluation_of_u_old_on_different_grid() const {}
-
-  //update guess
-  template<typename F>
-  void change_oldFunction(F&& uOld)
-  {
-  }
-
   const Function& get_input_distribution() const {return rhoX;}
   const Function& get_target_distribution() const {return rhoY;}
 

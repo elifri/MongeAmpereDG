@@ -23,15 +23,14 @@ public:
   Local_Operator_LagrangianBoundary_refr_parallel(const OTBoundary& bc)
     : opticalSetting(OpticalSetting()),
     epsilon_(OpticalSetting::kappa),
-    bc(bc),
-    last_step_on_a_different_grid(false)
+    bc(bc)
   {
     assert(false&& "this constructor should never be used!!");
     std::exit(-1);
   }
 
   Local_Operator_LagrangianBoundary_refr_parallel(const OpticalSetting &opticalSetting, const OTBoundary& bc)
-    : opticalSetting(opticalSetting), epsilon_(OpticalSetting::kappa), bc(bc), last_step_on_a_different_grid(false), oldSolutionCaller_(){}
+    : opticalSetting(opticalSetting), epsilon_(OpticalSetting::kappa), bc(bc){}
 
   template<class Intersection, class LocalViewV, class LocalViewQ, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
@@ -148,25 +147,11 @@ public:
       << "numer of buffer size " << stats[4] << std::endl;*/
   }
 
-  void set_evaluation_of_u_old_to_different_grid(){  last_step_on_a_different_grid = true;}
-  void set_evaluation_of_u_old_to_same_grid(){  last_step_on_a_different_grid = false;}
-  bool is_evaluation_of_u_old_on_different_grid(){  return last_step_on_a_different_grid;}
-
-  template<typename F>
-  void change_oldFunction(F&& uOld)
-  {
-    oldSolutionCaller_ = std::forward<F>(uOld);
-  }
-
 private:
   const OpticalSetting& opticalSetting;
   double epsilon_; ///=n_1/n_2 (refractive indices)
 
   const OTBoundary& bc;
-
-  mutable bool last_step_on_a_different_grid;
-  std::function<const TaylorFunction&()> oldSolutionCaller_;
-
 };
 
 
