@@ -27,10 +27,10 @@ class Elliptic_Projector{
 
 private:
   ///finds the element in the new grid containing x
-  auto& find_element_in_fine_grid(Config::DomainType& x) const
+  auto find_element_in_fine_grid(Config::DomainType& x) const
   {
     HierarchicSearch<GridView::Grid, GridView::IndexSet> hs(newGridView_.grid(), newGridView_.indexSet());
-    return hs.findEntity(x);
+    return std::move(hs.findEntity(x));
   }
 
   template<typename ValueType>
@@ -115,17 +115,12 @@ Elliptic_Projector::LocalResults<Element> Elliptic_Projector::local_operations(E
 
   //init set to store all relevant fine elements
   std::set<Element> fineElements;
-  using AdoubleVector = Eigen::Matrix<adouble, Eigen::Dynamic, 1>;
-  std::map<Element, AdoubleVector> fineLocalVectorsX_adolc; //store all local vectors
   std::map<Element, Config::VectorType> fineLocalVectors; //store all local vectors
-  std::map<Element, AdoubleVector> fineLocalVectorsV_adolc; //store all local vectors
+  std::map<Element, Config::DenseMatrixType> fineLocalMatrices; //store all local matrices
 
   // Get a quadrature rule
   int order = 6;
   const QuadratureRule<double, Config::dim>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(element, order);
-
-  //init variables for automatic differentiation
-  Eigen::Matrix<adouble, Eigen::Dynamic, 1> v_adolc(size);
 
   trace_on(0);
 
@@ -163,19 +158,11 @@ Elliptic_Projector::LocalResults<Element> Elliptic_Projector::local_operations(E
     {
       fineElements.insert(eFine);
       fineLocalVectors.insert(it_lb, Config::VectorType::Zero(newlocalView.size()));
-      fineLocalVectorsX_adolc.insert(it_lb, AdoubleVector::Zero(newlocalView.size()));
-      fineLocalVectorsV_adolc.insert(it_lb, AdoubleVector::Zero(newlocalView.size()));
-
-      auto& localVectorX_adolc = fineLocalVectorsX_adolc[eFine];
-      //init independent variables
-      for (int i = 0; i < newlocalView.size(); i++)
-        localVectorX_adolc <<= x[i];
+      fineLocalMatrices.insert(it_lb, Config::VectorType::Zero(newlocalView.size(), newlocalView.size()));
     }
 
     //bind localVector to current context
     auto& localVector = fineLocalVectors[eFine];
-    auto& localVectorX_adolc = fineLocalVectorsX_adolc[eFine];
-    auto& localVectorV_adolc = fineLocalVectorsV_adolc[eFine];
 
     ///calculate the local coordinates with respect to the fine element
     auto quadPosFine = eFine.geometry().local(x_value);
@@ -188,13 +175,12 @@ Elliptic_Projector::LocalResults<Element> Elliptic_Projector::local_operations(E
     std::vector<JacobianType> gradients(size);
     FieldVector<adouble, Config::dim> gradu_adolc;
     auto jacobian = eFine.geometry().jacobianInverseTransposed(quadPosFine);
-    assemble_gradients_gradu(lfu, jacobian, quadPosFine,
-        gradients, localVectorX_adolc, gradu_adolc);
+    assemble_gradients(lfu, jacobian, quadPosFine,
+        gradients);
 
     // The hessian of the shape functions
     std::vector<FEHessianType> Hessians(size);
-    FieldMatrix<adouble, Config::dim, Config::dim> Hessu_adolc;
-    assemble_hessians_hessu_hessu(lfu, jacobian, quadPosFine, Hessians, localVectorX_adolc, Hessu_adolc);
+    assemble_hessians(lfu, jacobian, quadPosFine, Hessians);
 
     FieldVector<Config::ValueType, Config::dim> gradu;
     FieldMatrix<Config::ValueType, Config::dim, Config::dim> Hessu;
@@ -204,11 +190,33 @@ Elliptic_Projector::LocalResults<Element> Elliptic_Projector::local_operations(E
 
     assert(Config::dim == 2);
 
-    double PDE_rhs = 0, uDH_det = 0;
-    evaluate_variational_form(x_value, gradu, Hessu, PDE_rhs, uDH_det);
+    Config::ValueType  f_value;
+    rhoX.evaluate(x_value, f_value);
 
-    adouble PDE_rhs_adolc = 0, uDH_det_adolc = 0;
-    evaluate_variational_form(x_value, gradu_adolc, Hessu_adolc, PDE_rhs_adolc, uDH_det_adolc);
+    //calculate value at transported point
+    Config::ValueType  g_value;
+    FieldVector<double, dim> gradg;
+    rhoY.evaluate(gradu, g_value);
+    rhoY.evaluateDerivative(gradu, gradg);
+
+    Config::ValueType PDE_rhs = f_value / g_value ;
+
+    Config::ValueType uDH_det = determinant(Hessu);
+
+    auto cofHessu = convexified_penalty_cofactor(Hessu);
+
+
+
+    //calculate system for first test functions
+    if (uDH_det.value() < 0)
+    {
+      std::cerr << "found negative determinant !!!!! " << uDH_det.value() << " at " << x_value  << "matrix is " << Hessu << std::endl;
+  //    std::cerr << " x was " << x.transpose() << " at triangle " << geometry.corner(0) << "," << geometry.corner(1) << " and " << geometry.corner(2) << std::endl;
+    }
+  //      std::cerr << "det(u)-f=" << uDH_det.value()<<"-"<< PDE_rhs.value() <<"="<< (uDH_det-PDE_rhs).value()<< std::endl;
+  //      std::cerr << "-log(u)-f=" << (-log(uDH_det)+(-log(scaling_factor_adolc*g_value)+log(scaling_factor_adolc*f_value))).value()<< std::endl;
+
+    assert(PDE_rhs.value() > 0);
 
     for (int j = 0; j < localVector.size(); j++) // loop over test fcts
     {
@@ -216,23 +224,23 @@ Elliptic_Projector::LocalResults<Element> Elliptic_Projector::local_operations(E
             * quad[pt].weight() * integrationElement;
       localVectorV_adolc(j) += (PDE_rhs_adolc-uDH_det_adolc)*referenceFunctionValues[j]
             * quad[pt].weight() * integrationElement;
+
+      for (int i = 0; i < size; i++)
+      {
+    	  //diffusion term
+          FieldVector<double,dim> cofTimesW;
+          cofHessu.mv(gradients[i],cofTimesW);
+          localMatrix(j,i) += (cofTimesW*gradients[j]) *quad[pt].weight()*integrationElement;
+          //the same as
+//          m(j,i) += (-FrobeniusProduct(cofHessu,Hessians[i]))*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+
+
+          //convection term
+          localMatrix(j,i) += (b*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+      }
+
     }
   }
-
-  //write localvector to output
-#ifdef USE_AUTOMATIC_DIFFERENTIATION
-  for (auto& element: fineElements)
-  {
-    auto& vec = fineLocalVectorsV_adolc[element];
-    const int vOldSize = v.size();
-    v.conservativeResize(v.size()+vec.size());
-    for (int i = 0; i < vec.size(); i++)
-      vec[i] >>= v[vOldSize+i]; // select dependent variables
-  }
-
-    trace_off();
-#endif
-
   return LocalResults<Element>(fineElements, fineLocalVectors);
 }
 
