@@ -1375,8 +1375,15 @@ void Plotter::write_refractor_mesh(std::string &filename, LocalFunction &f) cons
     // them by averaging face normals.
     if ( !mesh.HasVertexNormals() )
       mesh.ComputeVertexNormals();
-    ON_BinaryFile archive( ON::write3dm, fp );
-    ok = ON_WriteOneObjectArchive( archive, RhinoVersion_, mesh );
+    // Avoid copying the mesh - useful technique for large objects
+    ONX_Model model;
+
+    model.AddDefaultLayer(L"mesh", ON_Color::Black);
+    model.AddModelGeometryComponentForExperts(false, &mesh, false, nullptr, true);
+
+    // errors printed to stdout
+    ON_TextLog error_log;
+    model.Write(filename.c_str(), 5, &error_log);
   }
 
   if (!ok)

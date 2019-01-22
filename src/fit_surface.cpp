@@ -277,8 +277,8 @@ static bool export_curve_and_control_points(const SurfaceFitter& surf, const Sur
   // errors printed to stdout
   ON_TextLog error_log;
 
-  // writes model to archive
-  bool ok = model.Write( archive, 5, sStartSectionComment, &error_log );
+  // writes model
+  bool ok = model.Write("testCurve.3dm", 5)
   if (ok)
     std::cout << " wrote model to testCurve.3dm" << std::endl;
   return ok;
