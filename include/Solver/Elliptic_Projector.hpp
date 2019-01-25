@@ -22,20 +22,22 @@ class Elliptic_Projector{
   using GridView = Config::GridView;
   using GridIndexSet = GridView::IndexSet;
 
+  using EntryType = Eigen::Triplet<double>;
+
   template <class Element>
   struct ElementCompare{
 //    ElementCompare(const GridIndexSet& indexSet): indexSet(indexSet){}
-    ElementCompare(const GridView& gridView): indexSet(std::forward(gridView.indexSet())){}
+    ElementCompare(const GridView& gridView): indexSet(gridView.indexSet()){}
 
-    bool operator()(const Element& e0, const Element& e1)
+    bool operator()(const Element& e0, const Element& e1) const
     {
       return (indexSet.index(e0) < indexSet.index(e1));
     }
-    GridIndexSet indexSet;
+    const GridIndexSet& indexSet;
   };
 
   template<typename Element>
-  using ElementSet = std::set<Element, GridIndexSet>;
+  using ElementSet = std::set<Element, ElementCompare<Element>>;
   template<typename Element>
   using ElementVectorMap = std::map<Element, Config::VectorType, ElementCompare<Element>>;
   template<typename Element>
@@ -75,12 +77,15 @@ private:
 
 
   template<typename DiscreteFunction, typename Element>
-  LocalResults<Element> local_operations(Element e, DiscreteFunction& old_u,
-      Config::VectorType& v, Config::MatrixType& m) const;
+  //LocalResults<Element>
+  auto local_operations(Element& e, DiscreteFunction& old_u) const;
+
+  template<typename DiscreteFunction, typename Intersection, typename LocalResultsTye>
+  void local_boundary_operations(Intersection& is, DiscreteFunction& old_u, LocalResultsTye& localResults) const;
 
   template<typename Element>
-  void write_local_data_to_global_system(const LocalResults<Element>& localResults, Config::VectorType &v ,
-      Config::MatrixType& m) const;
+  void write_local_data_to_global_system(const LocalResults<Element>& localResults, Config::VectorType &v,
+      std::vector<EntryType>& JacobianEntries) const;
 
   template<typename DiscreteFunction>
   void assemble_projection_system(DiscreteFunction& old_u,
@@ -143,23 +148,22 @@ void Elliptic_Projector::evaluate_variational_form(Config::DomainType& x_value,
 
 
 template<typename DiscreteFunction, typename Element>
-Elliptic_Projector::LocalResults<Element> Elliptic_Projector::local_operations(Element element, DiscreteFunction& old_u,
-    Config::VectorType& v, Config::MatrixType& m) const
+//Elliptic_Projector::LocalResults<typename std::decay_t<Element>>
+auto Elliptic_Projector::local_operations(Element& element, DiscreteFunction& old_u) const
 {
   auto geometry = element.geometry();
   auto newlocalView = newFEBasis_.localView();
   auto newlocalIndexSet = newFEBasis_.indexSet().localIndexSet();
 
+  using GridElement = typename std::decay_t<Element>;
   //init set to store all relevant fine elements
-  ElementSet<Element> fineElements(elementCompare_);
-  ElementVectorMap<Element> fineLocalVectors(elementCompare_); //store all local vectors
-  ElementMatrixMap<Element> fineLocalMatrices(elementCompare_); //store all local matrices
+  ElementSet<GridElement> fineElements(elementCompare_);
+  ElementVectorMap<GridElement> fineLocalVectors(elementCompare_); //store all local vectors
+  ElementMatrixMap<GridElement> fineLocalMatrices(elementCompare_); //store all local matrices
 
   // Get a quadrature rule
   int order = 6;
   const QuadratureRule<double, Config::dim>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(element, order);
-
-  trace_on(0);
 
   // Loop over all quadrature points
   for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -190,7 +194,7 @@ Elliptic_Projector::LocalResults<Element> Elliptic_Projector::local_operations(E
     auto localVectorInsert = fineLocalVectors.insert(std::pair<Element, Config::VectorType>(eFine,
                                 Config::VectorType::Zero(newlocalView.size())));
     auto localMatrixInsert = fineLocalMatrices.insert(std::pair<Element, Config::DenseMatrixType>(eFine,
-              Config::VectorType::Zero(newlocalView.size(), newlocalView.size())));
+              Config::DenseMatrixType::Zero(newlocalView.size(), newlocalView.size())));
 
     //bind localVector to current context
     auto& localVector = (localVectorInsert.first)->second;
@@ -252,8 +256,11 @@ Elliptic_Projector::LocalResults<Element> Elliptic_Projector::local_operations(E
 
     for (int j = 0; j < localVector.size(); j++) // loop over test fcts
     {
-      localVector(j) += (PDE_rhs-uDH_det)*referenceFunctionValues[j]
-            * quad[pt].weight() * integrationElement;
+      //evaluate Linearisation at $u_H$
+      FieldVector<double,Config::dim> cofTimesGrad;
+      cofHessu.mv(gradu,cofTimesGrad);
+      localVector(j) += cofTimesGrad*gradients[j]* quad[pt].weight() * integrationElement;
+      localVector(j) += (b*gradu)*referenceFunctionValues[j]*quad[pt].weight() * integrationElement;
 
       for (int i = 0; i < size; i++)
       {
@@ -271,22 +278,117 @@ Elliptic_Projector::LocalResults<Element> Elliptic_Projector::local_operations(E
 
     }
   }
-  return LocalResults<Element>(fineElements, fineLocalVectors, fineLocalMatrices);
+  return LocalResults<GridElement>(fineElements, fineLocalVectors, fineLocalMatrices);
+}
+
+template<typename DiscreteFunction, typename Intersection, typename LocalResultsTye>
+void Elliptic_Projector::local_boundary_operations(Intersection& is, DiscreteFunction& old_u, LocalResultsTye& localResults) const
+{
+  const int dim = Intersection::dimension;
+  const int dimw = Intersection::dimensionworld;
+
+  auto geometry = is.inside().geometry();
+
+  auto newlocalView = newFEBasis_.localView();
+
+  const int order = 6;
+  GeometryType gtfaceV = is.geometryInInside().type();
+  const QuadratureRule<double, dim - 1>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim-1>(gtfaceV, order);
+
+  // normal of center in face's reference element
+  const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
+      dim - 1>::general(is.geometry().type()).position(0, 0);
+  const FieldVector<double, dimw> normal = is.unitOuterNormal(
+      face_center);
+
+  const Config::ValueType penalty = 50/is.geometry().volume();
+
+  // Loop over all quadrature points
+  for (size_t pt = 0; pt < quad.size(); pt++) {
+
+    //------get data----------
+    // Position of the current quadrature point in the reference element
+    const FieldVector<double, dim> &quadPos =
+        is.geometryInInside().global(quad[pt].position());
+    //and its global coordinates
+    auto x_value = geometry.global(quadPos);
+
+    // The multiplicative factor in the integral transformation formula
+    const double integrationElement = geometry.integrationElement(quadPos);
+
+    const auto eFine = find_element_in_fine_grid(x_value);
+
+    newlocalView.bind(eFine);
+
+    //get loccal vector and matrix
+    auto& vLocal = localResults.localVectorFineElements.at(eFine);
+/*    std::cout << " vLocal before ";
+    for (int i = 0; i < vLocal.size(); i++)
+    {
+      std::cout << vLocal[i] << " ";
+    }
+    std::cout << std::endl;*/
+
+    auto& mLocal = localResults.localMatrixFineElements.at(eFine);
+
+    ///calculate the local coordinates with respect to the fine element
+    auto quadPosFine = eFine.geometry().local(x_value);
+
+    //get local finite elements
+    const auto& lfu = newlocalView.tree().finiteElement();
+    const int size = newlocalView.size();
+    assert(vLocal.size() == size);
+    assert(mLocal.rows() == size);
+    assert(mLocal.cols() == size);
+    using ElementType = typename std::decay_t<decltype(lfu)>;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+
+    //evaluate fe basis
+    std::vector<RangeType> referenceFunctionValues(size);
+    lfu.localBasis().evaluateFunction(quadPosFine, referenceFunctionValues);
+
+    //and the old solution
+    Config::ValueType u_value;
+    old_u.evaluateLocal(is.inside(), quadPos, u_value);
+
+    for (int j = 0; j < size; j++)
+    {
+      //rhs evaluation
+      vLocal(j) += penalty*u_value*referenceFunctionValues[j]*quad[pt].weight()*integrationElement;
+
+      //lhs evaluation
+      for (int i = 0; i < size; i++)
+      {
+        mLocal(j, i) += penalty*referenceFunctionValues[i]*referenceFunctionValues[j]*quad[pt].weight()*integrationElement;
+      }
+    }
+ /*   std::cout << " vLocal after ";
+    for (int i = 0; i < vLocal.size(); i++)
+    {
+      std::cout << vLocal[i] << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << " in localResults after ";
+    for (int i = 0; i < vLocal.size(); i++)
+    {
+      std::cout << (localResults.localVectorFineElements[eFine])[i] << " ";
+    }
+    std::cout << std::endl;*/
+  }
 }
 
 template<typename Element>
 void Elliptic_Projector::write_local_data_to_global_system(const LocalResults<Element>& localResults, Config::VectorType &v ,
-    Config::MatrixType& m) const
+    std::vector<EntryType>& JacobianEntries) const
 {
   auto localView = newFEBasis_.localView();
   auto localIndexSet = newFEBasis_.indexSet().localIndexSet();
-
-  //reserve space for jacobian entries
-  using EntryType = Eigen::Triplet<double>;
-  std::vector<EntryType> JacobianEntries;
+  const auto& gridIndexSet = newFEBasis_.gridView().indexSet();
 
   for (auto& element: localResults.fineElements)
   {
+    std::cout << " element no " << gridIndexSet.index(element) << std::endl;
     //bind view to current element
     localView.bind(element);
     localIndexSet.bind(localView);
@@ -297,22 +399,35 @@ void Elliptic_Projector::write_local_data_to_global_system(const LocalResults<El
     Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet, vec, v);
     Assembler<FiniteElementTraits>::add_local_coefficients_Jacobian(localIndexSet, localIndexSet, mLocal, JacobianEntries);
   }
-
-  //init sparse matrix from entries
-  m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
 }
 
 template<typename DiscreteFunction>
 void Elliptic_Projector::assemble_projection_system(DiscreteFunction& old_u,
     Config::VectorType& v, Config::MatrixType& m) const
 {
+  v.setZero(newFEBasis_.indexSet().size());
+  m.resize(newFEBasis_.indexSet().size(), newFEBasis_.indexSet().size());
+
+  //reserve space for jacobian entries
+  std::vector<EntryType> JacobianEntries;
+
   // A loop over all elements of the grid
   for (auto&& e : elements(oldGridView_)) {
     //Perform Local Operations
-    auto localResults = local_operations(e, old_u, v, m);
+    auto localResults = local_operations(e, old_u);
 
-    write_local_data_to_global_system(localResults, v ,m);
+    // Traverse intersections
+    for (auto&& is : intersections(oldGridView_, e)) {
+      if (is.boundary())
+        local_boundary_operations(is, old_u, localResults);
+    }
+
+
+    write_local_data_to_global_system(localResults, v , JacobianEntries);
   }
+
+  //init sparse matrix from entries
+  m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());
 }
 
 template<typename DiscreteFunction>

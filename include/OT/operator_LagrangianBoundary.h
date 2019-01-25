@@ -69,8 +69,6 @@ public:
       const FieldVector<double, dim> &quadPos =
           intersection.geometryInInside().global(quad[pt].position());
 
-      auto x_value = geometry.global(quadPos);
-
       //the shape function values
       std::vector<JacobianType> gradientsV(size_u);
       std::vector<FEHessianType> HessiansV(size_u);

@@ -15,6 +15,7 @@
 #include "localfunctions/TaylorBoundaryFunction.hpp"
 
 #include <dune/functions/functionspacebases/interpolate.hh>
+#include "Solver/Elliptic_Projector.hpp"
 
 class MA_solver;
 
@@ -800,12 +801,21 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 }
 
 template <>
-template <typename GridTypeOld, typename Solver>
+template <typename GridTypeOld, typename MA_OT_Operator>
 Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt_function_elliptic_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid,
-    Solver& ma_solver, const Config::VectorType& v) const
+    MA_OT_Operator& MAoperator, const Config::VectorType& v) const
 {
-  assert(false);
-  std::exit(-1);
+  using CoarseTraits = PS12SplitTraits<GridTypeOld>;
+
+  typename CoarseTraits::FEBasis FEBasisCoarse (gridOld);
+  using DiscreteGridFunctionCoarse = typename CoarseTraits::DiscreteGridFunction;
+  DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
+
+  Elliptic_Projector proj(gridOld, FEBasis_->gridView(), *FEBasis_,
+      MAoperator.get_f(), MAoperator.get_g());
+
+  return proj.project(solution_u_Coarse_global);
+
 }
 
 

@@ -65,8 +65,8 @@ public:
 
 //  void adapt_operator();
 //  using MA_OT_solver::adapt_operator;
-  virtual void adapt_solution(const int level);
-//  using MA_OT_solver::adapt_solution;
+//  virtual void adapt_solution(const int level);
+  using MA_OT_solver::adapt_solution;
 
   void update_Operator();
 //  void solve_nonlinear_system();
