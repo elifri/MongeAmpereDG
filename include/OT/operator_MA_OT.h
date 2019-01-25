@@ -148,10 +148,6 @@ public:
       assemble_hessians_hessu(localFiniteElement, jacobian, quadPos, Hessians,
           x_adolc, Hessu);
 
-      //get the data depending on u_{k-1} is given by x or stored in the oldSolutionCaller
-      assemble_cellTermFEData_only_derivatives(geometry, localFiniteElement, quadPos, x,
-          gradients, Hessians, gradu, Hessu);
-
       //--------assemble cell integrals in variational form--------
 
       assert(Config::dim == 2);
