@@ -94,7 +94,7 @@ public:
 
       //-------calculate integral--------
       auto signedDistanceDerivative = bc.derivativeH(gradu);
-//      auto signedDistance = bc.H(gradu);
+      auto signedDistance = bc.H(gradu);
 //      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
 
       const auto integrationElement =
@@ -112,7 +112,7 @@ public:
 //              << " to m(" << j << "," << i <<")" << std::endl;
         }
 
-        v(j) += (signedDistanceDerivative*gradu)*referenceFunctionValuesQ[j]*factor;
+        v(j) += signedDistance * (referenceFunctionValuesQ[j]) * factor;
       }
 
     }
