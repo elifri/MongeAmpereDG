@@ -7,7 +7,7 @@ IF(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
    SET(CMAKE_BUILD_TYPE DEBUG)
 ENDIF(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
 
-SET(CMAKE_BUILD_TYPE RELEASE)
+SET(CMAKE_BUILD_TYPE DEBUG)
 
 #  Selectflags.
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fmax-errors=3  -ftemplate-backtrace-limit=0 -fopenmp -Wno-error=strict-overflow -Wno-deprecated")
@@ -35,7 +35,8 @@ IF(MY_SITE STREQUAL "indigo7")
    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_DOGLEG")
    SET(ADOLC_PATH $ENV{HOME}/lib/adolc)
    #unset(Boost_FOUND CACHE)
-   SET(Boost_LIBRARIES /usr/local/gcc-5.2.0/lib/libboost_program_options.so)
+#   SET(Boost_LIBRARIES /usr/lib64/libboost_program_options.so)
+   SET(Boost_LIBRARIES -lboost_program_options)
    SET(BoostPO_LIBRARIES ${Boost_LIBRARIES})
 ELSE()
 #   message( "We are on ${MY_SITE}, use petsc snes." )
