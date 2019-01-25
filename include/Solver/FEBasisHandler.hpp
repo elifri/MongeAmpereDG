@@ -37,10 +37,6 @@ struct FEBasisHandler{
   template<class F>
   void project(F f, Config::VectorType &v) const;
 
-  //use the elliptic (problem induced) projection
-  template <typename GOP, class F>
-  void elliptic_project(const GOP& operatorMA, F f, Config::VectorType &v) const;
-
   template<class F, class F_Der>
   void project(F &f, F_Der &grad_f, Config::VectorType &v) const;
 
@@ -714,50 +710,6 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F &f,
   v = v.cwiseQuotient(countMultipleDof);
 }
 
-template<int FETraitstype, typename FETraits>
-template <typename GOP, class F>
-void FEBasisHandler<FETraitstype, FETraits>::elliptic_project(const GOP& operatorMA, F f, Config::VectorType &v) const
-{
-  operatorMA.set_evaluation_of_u_old_to_different_grid();
-
-  ///assemble linear equation system A_F(w_h, v_h) = A_F(u_h,v_h)
-
-  Config::MatrixType A;
-  Config::VectorType b;
-
-  operatorMA.assemble_without_langrangian_Jacobian(v, b, A, v, false);
-
-
-/*
-  Eigen::JacobiSVD<Config::MatrixType> svd(A);
-  double cond = svd.singularValues()(0)
-      / svd.singularValues()(svd.singularValues().size()-1);
-
-  std::cout << " condition number is " << cond << std::endl;
-*/
-
-  //solve system
-  Eigen::SparseLU<Config::MatrixType> lu_of_A(A);
-
-  if (lu_of_A.info()!= Eigen::Success) {
-      // decomposition failed
-      std::cout << "\nError: "<< lu_of_A.info() << " Could not compute LU decomposition!\n";
-      MATLAB_export(A,"A");
-//          std::cout << J << std::endl;
-  }
-
-
-  v = lu_of_A.solve(b);
-  if(lu_of_A.info()!=0) {
-      // solving failed
-      std::cerr << "\nError: Could solve the equation A_F(w_h, v_h;u_H) = A_F(u_H,v_h;u_H)!\n";
-      std::exit(1);
-  }
-
-  operatorMA.set_evaluation_of_u_old_to_same_grid();
-}
-
-
 template <>
 template <typename GridTypeOld>
 Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt_function_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid, const Config::VectorType& v) const
@@ -815,7 +767,6 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
       MAoperator.get_f(), MAoperator.get_g());
 
   return proj.project(solution_u_Coarse_global);
-
 }
 
 
