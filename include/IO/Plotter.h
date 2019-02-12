@@ -193,8 +193,13 @@ public:
   template <class LocalFunction>
   void write_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &f, const DensityFunction& omegaF) const;
 
+  template <class LocalFunction, typename GridView>
+  void write_refined_simple_estimate_integral_OT(std::ofstream &file, const GridView& gridView, LocalFunction &fg, const DensityFunction& omegaF) const;
   template <class LocalFunction>
-  void write_refined_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &fg, const DensityFunction& omegaF) const;
+  void write_refined_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &fg, const DensityFunction& omegaF) const
+  {
+    write_refined_simple_estimate_integral_OT(file, gridView(), fg, omegaF);
+  }
 
   void write_refined_simple_estimate_integral_OT_Omega(std::ofstream &file, const DensityFunction& omegaF) const;
 
@@ -908,15 +913,15 @@ void Plotter::write_simple_estimate_integral_OT(std::ofstream &file, LocalFuncti
     file << "\t\t\t\t</DataArray>\n" << "\t\t\t</CellData>\n";
 }
 
-template <class LocalFunction>
-void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &fg, const DensityFunction& omegaF) const{
+template <class LocalFunction, typename GridView>
+void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, const GridView& gridView, LocalFunction &fg, const DensityFunction& omegaF) const{
   // write points
     file << "\t\t\t<CellData Scalars=\"est. integral\">\n"
         << "\t\t\t\t<DataArray type=\"Float32\" Name=\"est. integral\" NumberOfComponents=\"1\" format=\""
         << "ascii" << "\">\n";
 
     {   // save points in file after refinement
-      for (auto&& element: elements(gridView()))
+      for (auto&& element: elements(gridView))
       {
         const auto geometry = element.geometry();
 
@@ -1218,7 +1223,11 @@ void Plotter::write_lens(std::ofstream &file, Function &f) const{
   file << "// Glass interior" <<std::endl <<
       "#declare myI_Glass =" <<std::endl <<
       "interior { "<< std::endl <<
+#ifdef PARALLEL_LIGHT
       "\t ior " << OpticalSetting::kappa <<
+#else
+      "\t ior " << 1./OpticalSetting::kappa <<
+#endif
       "}" <<std::endl <<std::endl;
 
   file << "// Glass Finishes" <<std::endl <<
