@@ -136,6 +136,8 @@ public:
   AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() { return assemblerLMBoundary_;}
   const AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() const { return assemblerLMBoundary_;}
 
+  const TransportPlotter& get_transportPlotter() const{ return transportPlotter_;}
+
 
   /**
  * calculates the L2 error on Omega of the last step's gradient

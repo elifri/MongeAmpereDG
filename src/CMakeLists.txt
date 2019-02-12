@@ -62,7 +62,7 @@ target_link_dune_default_libraries("dune_mongeampere_refractor_parallel")
 #----------helper-------------
 
 add_executable("read_and_write_OT" read_and_write_OT.cpp)
-target_link_libraries(read_and_write_OT MA_refractor_solver MA_reflector_solver MA_OT_solver ${PureSolverLibs} ${IOLibs} ${MirrorProblemLibs} ${SNES_LIBRARY} ${OTProblemLibs} problemData Solver_Config ImageFunction ${ThirdPartyLibs})
+target_link_libraries(read_and_write_OT MA_refractor_solver MA_reflector_solver MA_OT_image_solver MA_OT_solver ${PureSolverLibs} ${IOLibs} ${MirrorProblemLibs} ${SNES_LIBRARY} ${OTProblemLibs} problemData Solver_Config ImageFunction ${ThirdPartyLibs})
 target_link_dune_default_libraries("read_and_write_OT")
 
 add_executable("read_and_write_OT_parallel" read_and_write_OT.cpp)
