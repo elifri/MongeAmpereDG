@@ -988,6 +988,42 @@ void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, con
     std::cout << " needed " << progressbar.stop()<< " to set up estimate integral data" << std::endl;
 }
 
+///helper to calc and write locally the estimated integrals in a virtually refined element
+template<class GlobalFunction, typename Geometry, typename RefinementType>
+void write_refined_simple_estimate_integral_OT_global_in_element(const Geometry& geometry, const Dune::GeometryType& gt, std::vector<Dune::FieldVector<Config::ValueType, Config::dim> > coords,
+    std::ofstream &file, GlobalFunction &fg, const DensityFunction& omegaF, int refinement)
+{
+  std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> points(RefinementType::nVertices(refinement));
+  std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> transported_points(RefinementType::nVertices(refinement));
+  for (auto it = RefinementType::vBegin(refinement); it != RefinementType::vEnd(refinement); it++) //loop over vertices
+  {
+      points[it.index()] = geometry.global(it.coords());
+      transported_points[it.index()] = fg(points[it.index()]); //put vertices and transported refined vertices, respectively., in vector
+  }
+  //loop over subentitites
+  for (auto it = RefinementType::eBegin(refinement); it != RefinementType::eEnd(refinement); it++){
+
+    //estimate integral by averaging the corner values and dividing through the cell size
+    Config::ValueType estInt = 0;
+
+    int coords_i = 0;
+    for (const auto& corner : it.vertexIndices()){
+      estInt += omegaF(points[corner]);
+
+      coords[coords_i++] = transported_points[corner];
+    }
+    auto targetGeometry = Dune::MultiLinearGeometry<Config::ValueType, Config::dim, Config::dim>(gt, coords);
+
+
+    estInt /= geometry.corners(); //averaging
+    estInt *= geometry.volume()/targetGeometry.volume(); //geometry scaling
+
+    //write to file
+    file << "\t\t\t\t\t" << estInt << " ";
+    file << std::endl;
+  }
+}
+
 template <class GlobalFunction, typename GridView>
 void Plotter::write_refined_simple_estimate_integral_OT_global(std::ofstream &file, const GridView& gridView, GlobalFunction &fg, const DensityFunction& omegaF, int refinement){
   // write points
@@ -1016,42 +1052,15 @@ void Plotter::write_refined_simple_estimate_integral_OT_global(std::ofstream &fi
         {
           gt.makeQuadrilateral();
           coords.resize(4);
+          write_refined_simple_estimate_integral_OT_global_in_element<GlobalFunction, decltype(geometry), QuadRefinementType>(geometry, gt, coords, file, fg, omegaF, refinement);
         }
         else
         {
           gt.makeTriangle();
           coords.resize(3);
+          write_refined_simple_estimate_integral_OT_global_in_element<GlobalFunction, decltype(geometry), SimplexRefinementType>(geometry, gt, coords, file, fg, omegaF, refinement);
         }
 
-        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> points(PlotRefinementType::nVertices(refinement));
-        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> transported_points(PlotRefinementType::nVertices(refinement));
-        for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++) //loop over vertices
-        {
-            points[it.index()] = geometry.global(it.coords());
-            transported_points[it.index()] = fg(points[it.index()]); //put vertices and transported refined vertices, respectively., in vector
-        }
-        //loop over subentitites
-        for (auto it = PlotRefinementType::eBegin(refinement); it != PlotRefinementType::eEnd(refinement); it++){
-
-          //estimate integral by averaging the corner values and dividing through the cell size
-          Config::ValueType estInt = 0;
-
-          int coords_i = 0;
-          for (const auto& corner : it.vertexIndices()){
-            estInt += omegaF(points[corner]);
-
-            coords[coords_i++] = transported_points[corner];
-          }
-          auto targetGeometry = Dune::MultiLinearGeometry<Config::ValueType, Config::dim, Config::dim>(gt, coords);
-
-
-          estInt /= geometry.corners(); //averaging
-          estInt *= geometry.volume()/targetGeometry.volume(); //geometry scaling
-
-          //write to file
-          file << "\t\t\t\t\t" << estInt << " ";
-          file << std::endl;
-        }
         numberProcessedElements++;
       }
     }
