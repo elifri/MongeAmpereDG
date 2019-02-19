@@ -194,11 +194,13 @@ public:
   void write_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &f, const DensityFunction& omegaF) const;
 
   template <class LocalFunction, typename GridView>
-  void write_refined_simple_estimate_integral_OT(std::ofstream &file, const GridView& gridView, LocalFunction &fg, const DensityFunction& omegaF) const;
+  static void write_refined_simple_estimate_integral_OT(std::ofstream &file, const GridView& gridView, LocalFunction &fg, const DensityFunction& omegaF, int refinement);
+  template <class GlobalFunction, typename GridView>
+  static void write_refined_simple_estimate_integral_OT_global(std::ofstream &file, const GridView& gridView, GlobalFunction &fg, const DensityFunction& omegaF, int refinement);
   template <class LocalFunction>
   void write_refined_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &fg, const DensityFunction& omegaF) const
   {
-    write_refined_simple_estimate_integral_OT(file, gridView(), fg, omegaF);
+    write_refined_simple_estimate_integral_OT(file, gridView(), fg, omegaF, refinement_);
   }
 
   void write_refined_simple_estimate_integral_OT_Omega(std::ofstream &file, const DensityFunction& omegaF) const;
@@ -914,15 +916,23 @@ void Plotter::write_simple_estimate_integral_OT(std::ofstream &file, LocalFuncti
 }
 
 template <class LocalFunction, typename GridView>
-void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, const GridView& gridView, LocalFunction &fg, const DensityFunction& omegaF) const{
+void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, const GridView& gridView, LocalFunction &fg, const DensityFunction& omegaF, int refinement){
   // write points
     file << "\t\t\t<CellData Scalars=\"est. integral\">\n"
         << "\t\t\t\t<DataArray type=\"Float32\" Name=\"est. integral\" NumberOfComponents=\"1\" format=\""
         << "ascii" << "\">\n";
 
+    int numberOfElement = gridView.size(0);
+    int numberProcessedElements = 0;
+
+    ProgressBar progressbar;
+    progressbar.start();
+
     {   // save points in file after refinement
       for (auto&& element: elements(gridView))
       {
+	progressbar.status(numberProcessedElements,numberOfElement);
+
         const auto geometry = element.geometry();
 
         fg.bind(element);
@@ -942,15 +952,15 @@ void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, con
           coords.resize(3);
         }
 
-        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> points(PlotRefinementType::nVertices(refinement_));
-        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> transported_points(PlotRefinementType::nVertices(refinement_));
-        for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++) //loop over vertices
+        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> points(PlotRefinementType::nVertices(refinement));
+        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> transported_points(PlotRefinementType::nVertices(refinement));
+        for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++) //loop over vertices
         {
             points[it.index()] = geometry.global(it.coords());
             transported_points[it.index()] = fg(it.coords()); //put vertices and transported refined vertices, respectively., in vector
         }
         //loop over subentitites
-        for (auto it = PlotRefinementType::eBegin(refinement_); it != PlotRefinementType::eEnd(refinement_); it++){
+        for (auto it = PlotRefinementType::eBegin(refinement); it != PlotRefinementType::eEnd(refinement); it++){
 
           //estimate integral by averaging the corner values and dividing through the cell size
           Config::ValueType estInt = 0;
@@ -971,9 +981,82 @@ void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, con
           file << "\t\t\t\t\t" << estInt << " ";
           file << std::endl;
         }
+        numberProcessedElements++;
       }
     }
     file << "\t\t\t\t</DataArray>\n" << "\t\t\t</CellData>\n";
+    std::cout << " needed " << progressbar.stop()<< " to set up estimate integral data" << std::endl;
+}
+
+template <class GlobalFunction, typename GridView>
+void Plotter::write_refined_simple_estimate_integral_OT_global(std::ofstream &file, const GridView& gridView, GlobalFunction &fg, const DensityFunction& omegaF, int refinement){
+  // write points
+    file << "\t\t\t<CellData Scalars=\"est. integral\">\n"
+        << "\t\t\t\t<DataArray type=\"Float32\" Name=\"est. integral\" NumberOfComponents=\"1\" format=\""
+        << "ascii" << "\">\n";
+
+    int numberOfElement = gridView.size(0);
+    int numberProcessedElements = 0;
+
+    ProgressBar progressbar;
+    progressbar.start();
+
+    {   // save points in file after refinement
+      for (auto&& element: elements(gridView))
+      {
+	progressbar.status(numberProcessedElements,numberOfElement);
+
+        const auto geometry = element.geometry();
+
+        //create geometry for target triangle
+        Dune::GeometryType gt;
+        std::vector<Dune::FieldVector<Config::ValueType, Config::dim> > coords;
+
+        if(geometry.type().isCube())
+        {
+          gt.makeQuadrilateral();
+          coords.resize(4);
+        }
+        else
+        {
+          gt.makeTriangle();
+          coords.resize(3);
+        }
+
+        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> points(PlotRefinementType::nVertices(refinement));
+        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> transported_points(PlotRefinementType::nVertices(refinement));
+        for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++) //loop over vertices
+        {
+            points[it.index()] = geometry.global(it.coords());
+            transported_points[it.index()] = fg(points[it.index()]); //put vertices and transported refined vertices, respectively., in vector
+        }
+        //loop over subentitites
+        for (auto it = PlotRefinementType::eBegin(refinement); it != PlotRefinementType::eEnd(refinement); it++){
+
+          //estimate integral by averaging the corner values and dividing through the cell size
+          Config::ValueType estInt = 0;
+
+          int coords_i = 0;
+          for (const auto& corner : it.vertexIndices()){
+            estInt += omegaF(points[corner]);
+
+            coords[coords_i++] = transported_points[corner];
+          }
+          auto targetGeometry = Dune::MultiLinearGeometry<Config::ValueType, Config::dim, Config::dim>(gt, coords);
+
+
+          estInt /= geometry.corners(); //averaging
+          estInt *= geometry.volume()/targetGeometry.volume(); //geometry scaling
+
+          //write to file
+          file << "\t\t\t\t\t" << estInt << " ";
+          file << std::endl;
+        }
+        numberProcessedElements++;
+      }
+    }
+    file << "\t\t\t\t</DataArray>\n" << "\t\t\t</CellData>\n";
+    std::cout << " needed " << progressbar.stop()<< " to set up estimate integral data" << std::endl;
 }
 
 

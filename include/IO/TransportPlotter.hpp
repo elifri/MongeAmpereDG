@@ -102,7 +102,7 @@ void TransportPlotter::writeOTVTKGlobal(std::string filename, GlobalFunction &f,
     Plotter::write_vtk_header(file, Nnodes(), Nelements());
 
     Plotter::write_points_OT_global(file, f, gridHandler_.gridView(), refinement);
-    Plotter::write_refined_simple_estimate_integral_OT(file, f, omegaF);
+    Plotter::write_refined_simple_estimate_integral_OT_global(file, gridHandler_.gridView(), f, omegaF, refinement);
     Plotter::write_cells_same_shape<GridHandlerType::GridView, false>(file, gridHandler_.gridView(), Nelements(), refinement);
 
     Plotter::write_vtk_end(file);

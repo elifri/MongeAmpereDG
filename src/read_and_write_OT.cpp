@@ -234,7 +234,8 @@ void replot_on_PS_12_grid(SolverConfig::GridHandlerType& gridHandler, std::share
 
    SolverConfig::FETraitsSolver::DiscreteGridFunction::GlobalFirstDerivative globalGradU(global_u);
 
-   ma_solver.get_transportPlotter().writeOTVTKGlobal(fnameCartesian, globalGradU);
+   ma_solver.get_transportPlotter().writeOTVTKGlobal(fnameCartesian, globalGradU, ma_solver.get_OT_operator().get_f());
+   std::cout << " written cartesian grid to file " << fnameCartesian << std::endl;
 
 #endif
 
