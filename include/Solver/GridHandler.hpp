@@ -34,7 +34,7 @@ public:
   GridHandler(const std::shared_ptr<GridType>& grid_ptr, int startlevel): gridPrefix_(""), gridRefinement_(0),
       grid_(grid_ptr), gridView_(grid_->leafGridView())
   {
-    grid_->globalRefine(SolverConfig::startlevel);
+    grid_->globalRefine(startlevel);
     gridView_ = grid_->leafGridView();
   }
 
