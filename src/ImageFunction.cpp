@@ -291,7 +291,7 @@ double ImageFunction::omega_integrate(const unsigned int n) const
 
 void ImageFunction::convolveOriginal (double width)
 {
-    if (width == 1)
+    if (width < 1.00000001)
     {
         setToOriginal();
     }
@@ -324,12 +324,14 @@ void ImageFunction::convolveOriginal (double width)
         imageSmooth_.convolve(mollifier, 1, false);
 */
 
-      //TODO adapt width when calling function not here
-
-      int maxBlur = pow((double) SolverConfig::epsDivide, (int) SolverConfig::nonlinear_steps) * SolverConfig::epsEnd;
+/*
+      double maxBlur = pow((double) SolverConfig::epsDivide, (int) SolverConfig::nonlinear_steps) * SolverConfig::epsEnd;
+      std::cout << " eps_div " << SolverConfig::epsDivide << " eps_end " << SolverConfig::epsEnd << " nonlinear s" << SolverConfig::nonlinear_steps << std::endl;
+      std::cout << " pow((double) SolverConfig::epsDivide, (int) SolverConfig::nonlinear_steps) " << pow((double) SolverConfig::epsDivide, (int) SolverConfig::nonlinear_steps) << std::endl;
       std::cout << " maxBlur " << maxBlur << " ((double)(width-1)/(maxBlur-1)) " << ((double)(width-1)/(maxBlur-1))<< " maybe " <<((double)(width-1))/(maxBlur-1) << std::endl;
-      blurCoeff_ = 1+ ((double)(width-1))/(maxBlur-1)*40;
-
+      blurCoeff_ = 1+ ((double)(width-1))/(maxBlur-1)*maxBlur;
+*/
+      blurCoeff_ = width;
 
       std::cout << " blurring with " << blurCoeff_ << std::endl;
       imageSmooth_ = image_.get_blur(blurCoeff_);
