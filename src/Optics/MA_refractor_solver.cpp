@@ -31,8 +31,9 @@ MA_refractor_solver::MA_refractor_solver(GridHandlerType& gridHandler, const sha
 
    //adjust light intensity
    const auto integralLightOut = get_refr_operator().get_actual_g().integrateOriginal();
-   const auto integralLightIn = get_refr_operator().get_actual_f().integrateOriginal();
-   setting_.povRayOpts.lightSourceColor = Eigen::Vector3d::Constant(integralLightOut/integralLightIn*setting_.lightSourceIntensity);
+   //const auto integralLightIn = get_refr_operator().get_actual_f().integrateOriginal();
+//   setting_.povRayOpts.lightSourceColor = Eigen::Vector3d::Constant(integralLightOut/integralLightIn*setting_.lightSourceIntensity);
+   setting_.povRayOpts.lightSourceColor = Eigen::Vector3d::Constant(setting_.lightSourceIntensity);
 
    assembler_.set_X0(opticalSetting.lowerLeft);
 

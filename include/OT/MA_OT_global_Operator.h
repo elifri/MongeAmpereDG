@@ -172,10 +172,13 @@ private:
   void assert_integrability_condition(){assert_integrability_condition((OperatorTraitsDummy*)0);}
   /// use function overload to select correct implementation
   template<typename OperatorTraitsDummy = OperatorTraits>
-  void assert_integrability_condition(OperatorTraitsDummy* dummy){}
+  void assert_integrability_condition(OperatorTraitsDummy* dummy){
+    std::cout << "Assuming the integrability condition is met!" << std::endl;
+  }
   void assert_integrability_condition(ConstantOperatorTraits<SolverType, LocalOperatorType>* dummy);
   void assert_integrability_condition(ImageOperatorOTTraits<SolverType, LocalOperatorType>* dummy);
   void assert_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy);
+  void assert_integrability_condition(OpticLambertianOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy);
 
 
 public:
@@ -217,6 +220,7 @@ private:
   template<typename OperatorTraitsDummy = OperatorTraits>
   void assemble_Jacobian_boundary(OperatorTraitsDummy* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
   void assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
+  void assemble_Jacobian_boundary(OpticLambertianOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
 
 
 public:
@@ -394,6 +398,15 @@ void MA_OT_Operator<OperatorTraits>
 {
   solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix_with_automatic_differentiation(*lopLMBoundary, m, x, v);
 }
+//todo change as seen in problem_config imageOTTraits ...
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>
+  ::assemble_Jacobian_boundary(OpticLambertianOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy,
+                               const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+{
+  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix_with_automatic_differentiation(*lopLMBoundary, m, x, v);
+}
+
 
 
 template<typename OperatorTraits>
@@ -693,6 +706,22 @@ template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>
    ::assert_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy)
 {
+  std::cout << " normalise light intensities to match integrable condition" << std::endl;
+
+#ifdef PARALLEL_LIGHT
+  f_.normalize();
+#else
+  f_.omega_normalize();
+#endif
+  g_.normalize();
+}
+
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>
+   ::assert_integrability_condition(OpticLambertianOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy)
+{
+  std::cout << " normalise light intensities to match integrable condition" << std::endl;
+
 #ifdef PARALLEL_LIGHT
   f_.normalize();
 #else

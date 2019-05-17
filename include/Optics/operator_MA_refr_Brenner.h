@@ -24,7 +24,7 @@ class Local_Operator_MA_refr_Brenner {
 
 public:
   Local_Operator_MA_refr_Brenner(const OTBoundary& bc,
-      const ImageFunction& f, const ImageFunction& g):
+      const DensityFunction& f, const ImageFunction& g):
     opticalSetting(OpticalSetting()),
     bc(bc),
     f(f), g(g),
@@ -38,7 +38,7 @@ public:
 
 
   Local_Operator_MA_refr_Brenner(const OpticalSetting &opticalSetting, const OTBoundary& bc,
-      const ImageFunction& f, const ImageFunction& g):
+      const DensityFunction& f, const ImageFunction& g):
     opticalSetting(opticalSetting),
     bc(bc),
     f(f), g(g),
@@ -712,7 +712,7 @@ private:
 
   const OTBoundary & bc;
 
-  const ImageFunction& f;
+  const DensityFunction& f;
   const ImageFunction& g;
 
 
