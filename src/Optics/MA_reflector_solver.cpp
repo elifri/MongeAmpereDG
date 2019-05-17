@@ -198,7 +198,7 @@ void MA_reflector_solver::update_Operator()
 
   //print blurred target distribution
   if (true) {
-      std::ostringstream filename2; filename2 << plotOutputDirectory_+"/lightOut" << iterations << ".bmp";
+      std::ostringstream filename2; filename2 << plotOutputDirectory_+"/"+plotter.get_output_prefix()+"lightOut" << iterations << ".bmp";
       std::cout << "saved image to " << filename2.str() << std::endl;
       get_refl_operator().get_actual_g().saveImage (filename2.str());
       assert(std::abs(get_refl_operator().get_actual_g().integrate2()) - 1 < 1e-10);
