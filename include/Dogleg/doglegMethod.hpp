@@ -126,22 +126,22 @@ void make_FD_Jacobian(
 
 	for (int j = 0; j < n; j++)
 	{
-    progressbar.status(j,n);
-		Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(n, j);
-		f.evaluate(x-h*unit_j, f_minus, x-h*unit_j, false);
-		f.evaluate(x+h*unit_j, f_plus, x+h*unit_j, false);
+	    progressbar.status(j,n);
+	    Eigen::VectorXd unit_j = Eigen::VectorXd::Unit(n, j);
+	    f.evaluate(x-h*unit_j, f_minus, x-h*unit_j, false);
+	    f.evaluate(x+h*unit_j, f_plus, x+h*unit_j, false);
 
-		Eigen::VectorXd estimated_derivative = (f_plus - f_minus)/2./h;
+	    Eigen::VectorXd estimated_derivative = (f_plus - f_minus)/2./h;
 
 
-		for (int i = 0; i < n; i++)
+	    for (int i = 0; i < n; i++)
+	    {
+
+		if (std::abs(estimated_derivative(i)) > 1e-10)
 		{
-
-			if (std::abs(estimated_derivative(i)) > 1e-10)
-			{
-				estimated_J.insert(i,j) = estimated_derivative(i);
-			}
+		    estimated_J.insert(i,j) = estimated_derivative(i);
 		}
+	    }
 	}
 	std::cout << " needed " << progressbar.stop()<< " to set up Jacobian" << std::endl;
 }
