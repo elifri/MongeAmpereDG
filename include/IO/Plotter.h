@@ -1386,7 +1386,8 @@ void Plotter::writeReflectorPOV(std::string filename, Function &f) const {
   }
 
   //include header
-  file << "//Simulation of a mirror" << std::endl
+  file << "#version 3.6;" << std::endl
+      << "//Simulation of a mirror" << std::endl
      << "#include \"colors.inc\" " << std::endl << std::endl;
 
   write_pov_setting(file);
@@ -1407,7 +1408,8 @@ void Plotter::writeRefractorPOV(std::string filename, Function &f) const {
   }
 
   //include header
-  file << "//Simulation of a lens" << std::endl
+  file << "#version 3.6;" <<
+      "//Simulation of a lens" << std::endl
      << "#include \"colors.inc\" " << std::endl
      << "#include \"textures.inc\" " << std::endl
      << "#include \"glass.inc\" " << std::endl << std::endl;
