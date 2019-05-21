@@ -51,12 +51,17 @@ void MA_refractor_solver::create_initial_guess()
   }
   else
   {
-    const double p = 5;
+    const double p = setting_.smoothingInitialOptic;
     const double distance = setting_.initialOpticDistance;
+    std::cout << " distance is " << distance << std::endl;
 
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
-//    project([p, distance](Config::SpaceType x){return distance*std::exp(x.two_norm2()/p);}, solution);
+    //in case of a point source the lens has to be flattened
+#ifndef PARALLEL_LIGHT
+    project([p, distance](Config::SpaceType x){return distance*std::exp(x.two_norm2()/p);}, solution);
+#else
     project([distance](Config::SpaceType x){return distance;}, solution);
+#endif
 //    project([p](Config::SpaceType x){return 1./std::sqrt(1-x.two_norm2());}, solution);
     update_solution(solution);
   }
@@ -138,18 +143,18 @@ void MA_refractor_solver::plot(const std::string& name, int no) const
 
   //write povray output
    std::string refrPovname(plotter.get_output_directory());
-   refrPovname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".pov";
+   refrPovname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(no) + ".pov";
 
    plotter.writeRefractorPOV(refrPovname, *solution_u_old);
    std::cerr << refrPovname << std::endl;
 
-   std::string refrNurbsname(plotter.get_output_directory());
-   refrNurbsname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(iterations) + ".3dm";
-   plotter.write_refractor_mesh(refrNurbsname, *solution_u_old);
+//   std::string refrNurbsname(plotter.get_output_directory());
+//   refrNurbsname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(no) + ".3dm";
+//   plotter.write_refractor_mesh(refrNurbsname, *solution_u_old);
 
-   std::string refrMeshname(plotter.get_output_directory());
-   refrMeshname += "/"+ plotter.get_output_prefix() + name + "refractorPoints" + NumberToString(iterations) + ".txt";
-   plotter.save_refractor_points(refrMeshname, *solution_u_old);
+//   std::string refrMeshname(plotter.get_output_directory());
+//   refrMeshname += "/"+ plotter.get_output_prefix() + name + "refractorPoints" + NumberToString(no) + ".txt";
+//   plotter.save_refractor_points(refrMeshname, *solution_u_old);
 }
 
 void MA_refractor_solver::update_Operator()
@@ -177,5 +182,64 @@ void MA_refractor_solver::update_Operator()
 #ifdef DEBUG
   assert(get_refr_operator().check_integrability_condition());
 #endif
+}
+
+
+void MA_refractor_solver::adapt_solution(const int level)
+{
+  //store Lagrangian Parameter
+  //  Config::VectorType p = get_assembler_lagrangian_boundary().boundaryHandler().blow_up_boundary_vector(solution.tail(get_n_dofs_Q_h()));
+
+
+  //adapt input grid
+
+  assert(level==1);
+  auto old_grid = gridHandler_.adapt();
+
+  //bind handler and assembler to new context
+  FEBasisHandler_.adapt_after_grid_change(gridView());
+  assembler_.bind(FEBasisHandler_.uBasis());
+  assemblerLM1D_.bind(FEBasisHandler_.uBasis());
+
+//combination of binding handler and assembler as well as adapting p
+
+#ifdef USE_COARSE_Q_H
+//    auto p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(this->grid().levelGridView(this->grid().maxLevel()-2),
+//        this->grid().levelGridView(this->grid().maxLevel()-1), p);
+#else
+//    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change(old_grid.gridViewOld, this->gridView(), p);
+  FEBasisHandlerQ_.adapt_after_grid_change(this->gridView());
+#endif
+
+  auto& assemblerBoundary = get_assembler_lagrangian_boundary();
+  assemblerBoundary.bind(FEBasisHandler_.uBasis(), FEBasisHandlerQ_.FEBasis());
+
+  //adapt operator
+  std::cerr << " going to adapt refractor operator " << std::endl;
+  adapt_operator();
+
+
+  //project old solution to new grid
+  auto newSolution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), solution);
+//  auto newSolution = FEBasisHandler_.adapt_function_elliptic_after_grid_change(old_grid.gridViewOld, gridView(), *this, solution);
+  solution = newSolution;
+
+  //adapt boundary febasis and bind to assembler
+  std::cerr << " going to adapt refractor lagrangian multiplier " << std::endl;
+
+  Config::VectorType p_adapted;
+
+  {
+//    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change();
+    p_adapted.setZero(get_n_dofs_Q_h());
+//    get_assembler_lagrangian_boundary().boundaryHandler().shrink_to_boundary_vector(p_adapted);
+  }
+
+  //init lagrangian multiplier variables
+  solution.conservativeResize(get_n_dofs());
+  solution(get_n_dofs_V_h()) = 0;
+  solution.tail(get_n_dofs_Q_h()) = p_adapted;
+
+
 }
 

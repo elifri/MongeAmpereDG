@@ -95,6 +95,15 @@ void MA_reflector_solver::create_initial_guess()
 	    [&rectangular_interpolatorDerX, &rectangular_interpolatorDerY](Config::SpaceType x){return FieldVector<double, 2>({rectangular_interpolatorDerX.evaluate(x),rectangular_interpolatorDerY.evaluate(x)});},
 	    solution);
 
+/*    std::string fnameCartesian(plotter.get_output_directory());
+    fnameCartesian += "/"+ plotter.get_output_prefix()+ "outputCartesianGridInterpolator.pov";
+
+ //   FETraits::DiscreteGridFunction globalGradU(get_u_old());
+
+    CartesianOpticExporter coExp(gridHandler_.gridView(), setting_, 50);
+    coExp.writeReflectorPOV(fnameCartesian, [&rectangular_interpolator](Config::SpaceType x){return rectangular_interpolator.evaluate(x);});
+//    coExp.writeReflectorPOV(fnameCartesian, rectangular_interpolator);
+    std::cout << " wrote Cartesian grid of interpolator" << std::endl;*/
 
 
 #else
@@ -115,6 +124,23 @@ void MA_reflector_solver::create_initial_guess()
 
 void MA_reflector_solver::plot(const std::string& name) const
 {
+  {
+    //build writer
+/*
+    std::cout << " gridTarget size " << gridTarget_.gridView().size(0) << std::endl;
+    std::cout << " get_refinement " << plotter.get_refinement() << std::endl;
+    SubsamplingVTKWriter<GridViewType> vtkWriter(gridTarget_.gridView(),6);
+    std::stringstream filename2; filename2 << plotter.get_output_directory() <<  "/" << outputPrefix_ << "tempG" << iterations << ".vtu";
+
+    auto gf = Dune::Functions::makeGridViewFunction(get_refl_operator().get_actual_g(), gridTarget_.gridView());
+
+    vtkWriter.addVertexData(gf, VTK::FieldInfo("G", VTK::FieldInfo::Type::scalar, 1));
+//    plotter.writeVTK(filename2.str(), get_refl_operator().get_actual_g(), this->get_refl_operator().get_actual_g());
+    vtkWriter.write(filename2.str());
+    std::cout << " wrote g to file " << filename2.str() << std::endl;
+*/
+  }
+
   plot(name, iterations);
 }
 
@@ -204,6 +230,9 @@ void MA_reflector_solver::plot(const std::string& name, int no) const
 
   //   FETraits::DiscreteGridFunction globalGradU(get_u_old());
 
+     CartesianOpticExporter coExp(gridHandler_.gridView(), setting_, 500);
+     coExp.writeReflectorPOV(fnameCartesian, numericalSolution);
+     std::cout << " wrote Cartesian grid" << std::endl;*/
    }
 
 }
@@ -222,6 +251,7 @@ void MA_reflector_solver::update_Operator()
   //blurr target distributation
   std::cout << "convolve with mollifier " << epsMollifier_ << std::endl;
   get_refl_operator().get_actual_g().convolveOriginal(epsMollifier_);
+  std::cout << "going to nomarise g " << std::endl;
   get_refl_operator().get_actual_g().normalize();
 
   //print blurred target distribution
