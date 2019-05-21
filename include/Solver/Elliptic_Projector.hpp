@@ -384,11 +384,9 @@ void Elliptic_Projector::write_local_data_to_global_system(const LocalResults<El
 {
   auto localView = newFEBasis_.localView();
   auto localIndexSet = newFEBasis_.indexSet().localIndexSet();
-  const auto& gridIndexSet = newFEBasis_.gridView().indexSet();
 
   for (auto& element: localResults.fineElements)
   {
-    std::cout << " element no " << gridIndexSet.index(element) << std::endl;
     //bind view to current element
     localView.bind(element);
     localIndexSet.bind(localView);
