@@ -165,6 +165,8 @@ struct SolverConfig{
 	//-------select PS12 S-Splines
 #ifdef USE_PS12
   using FETraitsSolver = PS12SplitTraits<Config::GridView>;
+  template<typename GridView>
+  using FETraitsSolverWithGridView = PS12SplitTraits<GridView>;
 #endif
 
 	//-------select BSplines------------------
@@ -259,6 +261,7 @@ struct OpticalSetting : GeometryOTSetting{
   double minPixelValue;
 
   double initialOpticDistance;
+  double smoothingInitialOptic;
 
   ///pov ray options for output
   PovRayOpts povRayOpts;
