@@ -682,6 +682,7 @@ template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>
    ::assert_integrability_condition(ConstantOperatorTraits<SolverType, LocalOperatorType>* dummy)
 {
+  std::cout << "having constant densities ";
   Integrator<Config::DuneGridType> integratorF(solver_ptr->get_grid_ptr());
   const double integralF = integratorF.assemble_integral(f_);
 
@@ -691,6 +692,7 @@ void MA_OT_Operator<OperatorTraits>
   const double integralG = integratorG.assemble_integral(g_);
 
   g_.divide_by_constant(integralG);
+  std::cout << " adapted f and g to integrable condition" << std::endl;
 }
 
 
@@ -698,6 +700,7 @@ template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>
    ::assert_integrability_condition(ImageOperatorOTTraits<SolverType, LocalOperatorType>* dummy)
 {
+  std::cout << " normalise image densities to match integrable condition" << std::endl;
   f_.normalize();
   g_.normalize();
 }
