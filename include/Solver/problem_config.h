@@ -147,8 +147,8 @@ struct OpticLambertianOperatorTraits:ImageOperatorTraits<Solver, LOP>{
   static FunctionTypeX construct_f(const Solver& solver, const OpticalSetting& setting)
   {
     return FunctionTypeX(
-        solver.get_gridHandlerTarget(),
-        setting.lowerLeftTarget, setting.upperRightTarget,
+        solver.get_gridHandler(),
+        setting.lowerLeft, setting.upperRight,
 	0.436332); //~25°
   }
 
@@ -157,7 +157,7 @@ struct OpticLambertianOperatorTraits:ImageOperatorTraits<Solver, LOP>{
   static FunctionTypeX construct_f(const Solver& solver, const OpticalSetting& setting)
   {
     return FunctionTypeX(
-        setting.lowerLeftTarget, setting.upperRightTarget,
+        setting.lowerLeft, setting.upperRight,
 	0.436332); //~25°
   }
 
