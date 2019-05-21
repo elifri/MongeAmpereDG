@@ -80,8 +80,8 @@ public:
     if(thetaX >= thetaMax_ || thetaY >= thetaMax_)
       u = 0;
     else
-      u = factor_*cos(20.0/3.*thetaX)*cos(20.0/3.*thetaY);
-    std::cerr << "x  " << x[0] << " y  " << x[1] << " u " << u << " thetaX  " << thetaX << " thetaY  " << thetaY << std::endl;
+      u = factor_*cos(thetaX)*cos(thetaY);
+    //std::cerr << "x  " << x[0] << " y  " << x[1] << " u " << u << " thetaX  " << thetaX << " thetaY  " << thetaY << std::endl;
   }
 #ifdef HAVE_ADOLC
   void evaluate (const FieldVector<adouble, Config::dim> &x, adouble &u) const
@@ -91,7 +91,7 @@ public:
     if(thetaX >= thetaMax_ || thetaY >= thetaMax_)
       u = 0;
     else
-      u = factor_*cos(20.0/3.*thetaX)*cos(20.0/3.*thetaY);
+      u = factor_*cos(thetaX)*cos(thetaY);
   }
 #endif
 
