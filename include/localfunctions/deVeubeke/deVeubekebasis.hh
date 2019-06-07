@@ -370,21 +370,21 @@ private:
           case 0:
             for (int i = 0; i < N; i++)
               out[i] = signPerm()[i][subtriangle] * valuesXX[(subtrianglePerm()[i][subtriangle])];
-              break;
-            case 1:
-              for (int i = 0; i < N; i++)
-              out[i] = signPerm()[i][subtriangle] * valuesYY[subtrianglePerm()[i][subtriangle]];
-              break;
-            default:
-              DUNE_THROW(RangeError, "Direction is invalid!");
-            }
-          else
-          {
+            break;
+          case 1:
             for (int i = 0; i < N; i++)
-            out[i] = signPerm()[i][subtriangle] * valuesXY[subtrianglePerm()[i][subtriangle]];
+              out[i] = signPerm()[i][subtriangle] * valuesYY[subtrianglePerm()[i][subtriangle]];
+            break;
+          default:
+            DUNE_THROW(RangeError, "Direction is invalid!");
           }
-          break;
-           break;
+        else
+        {
+          for (int i = 0; i < N; i++)
+            out[i] = signPerm()[i][subtriangle] * valuesXY[subtrianglePerm()[i][subtriangle]];
+        }
+        break;
+      break;
     }
   }
 

@@ -9,7 +9,7 @@
 #define REFL_OPERATOR_HH_
 
 #include <dune/common/function.hh>
-#include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
+#include <localfunctions/macroquadraturerules.hh>
 
 #include "config.h"
 #include "Operator/operator_utils.h"

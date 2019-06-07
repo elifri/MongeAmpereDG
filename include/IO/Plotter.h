@@ -164,9 +164,9 @@ public:
   template <class Function, typename GridView>
   static void write_points_OT_global(std::ofstream &file, Function &fg, const GridView& gridView, const int refinement);
   template <class Function>
-  void write_points_OT_global(std::ofstream &file, Function &fg)
+  void write_points_OT_global(std::ofstream &file, Function &fg) const
   {
-    write_element_points_OT_global(file, fg, gridView(), refinement_);
+    write_points_OT_global(file, fg, gridView(), refinement_);
   }
 
   ///writes the transported point array to file (transport is given by local gradient fg)

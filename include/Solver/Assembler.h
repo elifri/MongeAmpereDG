@@ -141,14 +141,14 @@ void assemble_gradients(const FiniteElement &lfu, const JacobianType &jacobian,
     for (size_t i = 0; i < gradients.size(); i++)
         jacobian.mv(referenceGradients[i][0], gradients[i]);
 }
-template<class GeometryType, typename valueType, class SparseMatrixType, class JacobianType>
+template<class GeometryType, typename valueType, class JacobianType>
 inline
-void assemble_gradients(const PS12SSplineFiniteElement<GeometryType, valueType, valueType, SparseMatrixType> &lfu, const JacobianType &jacobian,
+void assemble_gradients(const PS12SSplineFiniteElement<GeometryType, valueType, valueType> &lfu, const JacobianType &jacobian,
         const Config::SpaceType& x,
         std::vector<Dune::FieldVector<Config::ValueType, Config::dim>>& gradients) {
     assert(gradients.size() == lfu.size());
 
-    using FiniteElement = PS12SSplineFiniteElement<GeometryType, valueType, valueType, SparseMatrixType>;
+    using FiniteElement = PS12SSplineFiniteElement<GeometryType, valueType, valueType>;
 
     // The gradients of the shape functions on the reference element
     std::vector<typename FiniteElement::Traits::LocalBasisType::Traits::JacobianType> referenceGradients(
@@ -224,13 +224,13 @@ void assemble_hessians(const FiniteElement &lfu, const JacobianType &jacobian,
   }
 }
 
-template<class GeometryType, typename valueType, class SparseMatrixType, class JacobianType, class HessianType>
+template<class GeometryType, typename valueType, class JacobianType, class HessianType>
 inline
-void assemble_hessians(const PS12SSplineFiniteElement<GeometryType, valueType, valueType, SparseMatrixType> &lfu,
+void assemble_hessians(const PS12SSplineFiniteElement<GeometryType, valueType, valueType> &lfu,
     const JacobianType &jacobian, const Config::SpaceType& x, std::vector<HessianType>& hessians) {
   assert(hessians.size() == lfu.size());
 
-  using FiniteElement = PS12SSplineFiniteElement<GeometryType, valueType, valueType, SparseMatrixType>;
+  using FiniteElement = PS12SSplineFiniteElement<GeometryType, valueType, valueType>;
 
   // The hessian of the shape functions on the reference element
   std::vector<HessianType> referenceHessians(lfu.size());

@@ -13,7 +13,7 @@
 # include <memory>
 
 #include <dune/geometry/quadraturerules.hh>
-#include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
+#include <localfunctions/macroquadraturerules.hh>
 
 template<class GridType>
 class Integrator{

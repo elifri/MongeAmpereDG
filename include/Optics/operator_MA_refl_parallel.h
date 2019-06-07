@@ -9,7 +9,7 @@
 #define OPERATOR_MA_REFL_PARALLEL_HH_
 
 #include <dune/common/function.hh>
-#include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
+#include <localfunctions/macroquadraturerules.hh>
 #include "utils.hpp"
 #include "problem_data.h"
 #include "OT/problem_data_OT.h"

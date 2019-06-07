@@ -16,14 +16,18 @@
 #include <dune/common/exceptions.hh>
 #include <dune/common/fvector.hh>
 
+#include <dune/geometry/multilineargeometry.hh>
 #include <dune/geometry/type.hh>
 #include <dune/geometry/referenceelements.hh>
 
-#include <dune/localfunctions/c1/deVeubeke/deVeubeke.hh>
-#include <dune/localfunctions/c1/deVeubeke/deveubekequadraturerule.hh>
+#include <localfunctions/deVeubeke/deVeubeke.hh>
+#include <localfunctions/deVeubeke/deveubekequadraturerule.hh>
 
+#include <dune/localfunctions/test/test-localfe.hh>
 
 using namespace Dune;
+
+typedef Dune::MultiLinearGeometry<double, 2, 2> Geometry;
 
 ///helper function copied of dune/geometry/test/test-quadrature
 template <class ctype, int dim>
@@ -184,19 +188,19 @@ template<>
 struct TestMacroEvaluate<2>
 {
   template <class FE, Dune::MacroQuadratureType::Enum FEQuadratureType>
-  static bool test(const FE& fe,
+  static bool test(const FE& fe, const Geometry& geo,
                    double eps,
                    double delta,
                    std::size_t order = 4)
   {
     typedef typename FE::Traits::Basis Basis;
-    typedef typename Basis::Traits::DomainField DF;
-    typedef typename Basis::Traits::DomainLocal Domain;
-    static const int dimDomain = Basis::Traits::dimDomainLocal;
+    typedef typename Basis::Traits::DomainFieldType DF;
+    typedef typename Basis::Traits::DomainType Domain;
+    static const int dimDomain = Basis::Traits::dimDomain;
 
     static const std::size_t dimR = Basis::Traits::dimRange;
-    typedef typename Basis::Traits::Range Range;
-    typedef typename Basis::Traits::RangeField RangeField;
+    typedef typename Basis::Traits::RangeType Range;
+    typedef typename Basis::Traits::RangeFieldType RangeField;
 
     bool success = true;
 
@@ -235,7 +239,7 @@ struct TestMacroEvaluate<2>
                       << Dune::className<FE>() << ":" << std::endl;
             std::cout << "    return vector has size " << secondDerivative.size()
                       << std::endl;
-            std::cout << "    Basis has size " << fe.basis().size()
+            std::cout << "    Basis has size " << fe.localBasis().size()
                       << std::endl;
             std::cout << std::endl;
             return false;
@@ -243,7 +247,7 @@ struct TestMacroEvaluate<2>
 
           //combine to Hesse matrices
           for (size_t k = 0; k < dimR; k++)
-            for (std::size_t j = 0; j < fe.basis().size(); ++j)
+            for (std::size_t j = 0; j < fe.localBasis().size(); ++j)
               hessians[k][j][dir0][dir1] = secondDerivative[j][k];
         }
       }  //loop over all directions
@@ -258,7 +262,7 @@ struct TestMacroEvaluate<2>
           {
             // Compute an approximation to the derivative by finite differences
             std::vector<Domain> neighbourPos(4);
-            std::fill(neighbourPos.begin(), neighbourPos.end(), testPoint);
+            std::fill(neighbourPos.begin(), neighbourPos.end(), geo.global(testPoint));
 
             neighbourPos[0][dir0] += delta;
             neighbourPos[0][dir1] += delta;
@@ -274,7 +278,7 @@ struct TestMacroEvaluate<2>
 //            std::cout << "neighbour values ";
             for (int i = 0; i < 4; i++)
               {
-              fe.basis().evaluateFunction(neighbourPos[i],
+              fe.localBasis().evaluateFunction(geo.local(neighbourPos[i]),
                                                neighbourValues[i]);
 //              std::cout << neighbourValues[i][j] << " ";
               }
@@ -300,7 +304,7 @@ struct TestMacroEvaluate<2>
                 std::cout << "    Second shape function derivative does not agree with "
                           << "FD approximation" << std::endl;
                 std::cout << "    Shape function " << j << " component " << k
-                          << " at position " << testPoint << ": derivative in "
+                          << " at position " << fe.geo_.global(testPoint) << ": derivative in "
                           << "local direction (" << dir0 << ", " << dir1 << ") is "
                           << derivative << ", but " << finiteDiff
                           << " is expected." << std::endl;

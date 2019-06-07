@@ -18,9 +18,9 @@ set(ThirdPartyLibs ${SNES_LIBRARY} ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES} ${Bsp
 #target_link_dune_default_libraries("dune_mongeampere")
 
 message("ipopt libraries ${IPOPT_LIBRARIES}")
-#add_executable("dune_mongeampere_OT" dune_mongeampere_OT.cpp)
-#target_link_libraries(dune_mongeampere_OT MA_OT_solver ${PureSolverLibs} ${IOLibs} ${OTProblemLibs} problemData Solver_Config ImageFunction ${ThirdPartyLibs})
-#target_link_dune_default_libraries("dune_mongeampere_OT")
+add_executable("dune_mongeampere_OT" dune_mongeampere_OT.cpp)
+target_link_libraries(dune_mongeampere_OT MA_OT_solver ${PureSolverLibs} ${IOLibs} ${OTProblemLibs} problemData Solver_Config ImageFunction ${ThirdPartyLibs})
+target_link_dune_default_libraries("dune_mongeampere_OT")
 
 set(ImageSolverLibs MA_OT_image_solver MA_OT_solver ${PureSolverLibs} ${IOLibs} ${OTProblemLibs} problemData Solver_Config ImageFunction ${ThirdPartyLibs})
 
@@ -33,7 +33,7 @@ target_link_dune_default_libraries("dune_mongeampere_image_OT")
 #---optical executables-----------
 
 #mirror
-set(MirrorSolverLibs MA_OT_solver ${PureSolverLibs} EllipsoidMethod ${MirrorProblemLibs} Solver_Config ${ThirdPartyLibs})
+set(MirrorSolverLibs MA_OT_solver ${OTProblemLibs} ${PureSolverLibs} EllipsoidMethod ${MirrorProblemLibs} Solver_Config ${ThirdPartyLibs})
 
 add_executable("dune_mongeampere_reflector" dune_mongeampere_reflector.cpp)
 target_link_libraries(dune_mongeampere_reflector MA_reflector_solver ${MirrorSolverLibs} ${IOLibs} )
@@ -46,7 +46,7 @@ target_link_dune_default_libraries("dune_mongeampere_reflector_parallel")
 
 
 #lens
-set(LensSolverLibs  MA_OT_solver ${PureSolverLibs}  ${LensProblemLibs} Solver_Config ${ThirdPartyLibs})
+set(LensSolverLibs  MA_OT_solver ${OTProblemLibs} ${PureSolverLibs}  ${LensProblemLibs} Solver_Config ${ThirdPartyLibs})
 
 add_executable("dune_mongeampere_refractor" dune_mongeampere_refractor.cpp)
 target_link_libraries(dune_mongeampere_refractor MA_refractor_solver ${LensSolverLibs} ${IOLibs} )
