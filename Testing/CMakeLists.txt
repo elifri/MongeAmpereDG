@@ -3,6 +3,9 @@
 add_executable(test_nurbs_fit test_nurbs_fit.cpp)
 target_link_libraries(test_nurbs_fit Dogleg ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES})
 
+add_executable("test_PS12" test_PS12.cpp)
+target_link_dune_default_libraries("test_PS12")
+
 
 if(ADOLC_FOUND)
 add_executable("testAdolc" testAdolc.cpp)
