@@ -200,8 +200,7 @@ public:
 
   PS12SSplineNodeIndexSet(const NodeFactory& nodeFactory)
   :nodeFactory_(&nodeFactory)
-  {
-  }
+  {}
 
   /** \brief Bind the view to a grid element
    *
