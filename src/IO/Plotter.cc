@@ -423,6 +423,10 @@ void Plotter::write_face_indices_pov(std::ofstream &file) const
 
 void Plotter::write_faces(ON_Mesh &mesh) const
 {
+  assert(false);
+  std::cerr << " error linking with open nurbs has a problem";
+  exit(-1);
+  /*
   bool successful = false;  _unused(successful);
   int elementNo = 0;
   if (refinement_ == 0){
@@ -462,7 +466,7 @@ void Plotter::write_faces(ON_Mesh &mesh) const
       offset += PlotRefinementType::nVertices(refinement_);
     }
   }
-
+*/
 }
 
 

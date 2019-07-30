@@ -180,6 +180,11 @@ public:
   template <class LocalFunction>
   void write_pointData(std::ofstream &file, LocalFunction &f) const;
 
+  ///writes the point data given by the global function f to file
+  template <class GlobalFunction>
+  void write_pointData_global(std::ofstream &file, const GlobalFunction &f) const;
+
+
   ///writes the error [point data] to file (error is the difference of the given local function and the global exact function)
   template <class LocalFunction, class Function>
   void write_error(std::ofstream &file, LocalFunction &f, Function &exact_solution) const;
@@ -284,6 +289,14 @@ public:
    * @param omegaF      the density function f on the starting domain Omega
    */  template <class LocalFunction>
   void writeVTK(std::string filename, LocalFunction &f, const DensityFunction& omegaF) const;
+
+   /**
+    * evaluates and saves the solution's transported grid
+    * @param filename    the path to the file where the grid is written in ASCII format
+    * @param fg          the numerical solution (gradient of the MA solution)
+    * @param omegaF      the density function f on the starting domain Omega
+    */  template <class GlobalFunction>
+   void writeVTK_global(std::string filename, const GlobalFunction &f) const;
 
 
   /**
@@ -643,6 +656,29 @@ void Plotter::writeVTK(std::string filename, LocalFunction &f, const DensityFunc
     write_vtk_end(file);
 
 }
+
+template <class GlobalFunction>
+void Plotter::writeVTK_global(std::string filename, const GlobalFunction &f) const{
+  //--------------------------------------
+  // open file
+    check_file_extension(filename, ".vtu");
+    std::ofstream file(filename.c_str(), std::ios::out);
+    if (file.rdstate()) {
+      std::cerr << "Error: Couldn't open '" << filename << "'!\n";
+      return;
+    }
+
+    //write file
+
+    write_vtk_header(file);
+    write_pointData_global(file, f);
+    write_points(file);
+    write_cells(file);
+
+    write_vtk_end(file);
+
+}
+
 
 
 template <class LocalFunction>
@@ -1107,6 +1143,37 @@ void Plotter::write_pointData(std::ofstream &file, LocalFunction &f) const
   file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
 }
 
+
+template <class GlobalFunction>
+void Plotter::write_pointData_global(std::ofstream &file, const GlobalFunction &f) const
+{
+  // write points
+    file << "\t\t\t<PointData Scalars=\"error\">\n"
+      << "\t\t\t\t<DataArray type=\"Float32\" Name=\"data\" NumberOfComponents=\"1\" format=\""
+      << "ascii" << "\">\n";
+
+    //the reflector is given by X*rho, where rho is the PDE solution. X is calculated from the 2d mesh by adding the third coordiante omega(x)
+
+    if (refinement_ == 0)
+    {
+      // collect points
+      assert(false);
+    }else {   // save points in file after refinement
+      for (auto&& element: elements(gridView()))
+      {
+        const auto geometry = element.geometry();
+        file << "\t\t\t\t\t";
+        for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++){
+          file << std::setprecision(12) << std::scientific;
+          double value;
+          f.evaluate(geometry.global(it.coords()), value);
+          file << value << " ";
+        }
+        file << std::endl;
+      }
+    }
+  file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
+}
 
 template <class LocalFunction, class Function>
 void Plotter::write_error(std::ofstream &file, LocalFunction &f, Function &exact_solution) const{
