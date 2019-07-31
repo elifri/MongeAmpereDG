@@ -25,7 +25,7 @@
 #include "localfunctions/lagrange/pqktracenodalbasis.hh"
 #include "localfunctions/lagrange/RefinedLagrange/pk2dRefinednodalbasis.hpp"
 
-#include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
+#include <localfunctions/macroquadraturerules.hh>
 
 #include "localfunctions/discreteScalarGlobalBasisFunction.hpp"
 
