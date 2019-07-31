@@ -423,7 +423,7 @@ void Plotter::write_face_indices_pov(std::ofstream &file) const
 
 void Plotter::write_faces(ON_Mesh &mesh) const
 {
-  bool successful = false;  _unused(successful);
+/*  bool successful = false;  _unused(successful);
   int elementNo = 0;
   if (refinement_ == 0){
     const Config::GridView::IndexSet& indexSet = gridView().indexSet();
@@ -462,7 +462,7 @@ void Plotter::write_faces(ON_Mesh &mesh) const
       offset += PlotRefinementType::nVertices(refinement_);
     }
   }
-
+*/
 }
 
 
