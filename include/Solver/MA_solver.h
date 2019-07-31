@@ -286,6 +286,8 @@ protected:
   template<class F, class DF>
   void test_projection(const F f, const DF Df, VectorType& v) const;
 
+  template<class F>
+  void test_projection(const F f, const VectorType& v) const;
 public:
   /**
    * projects a function into the grid space, for the initialisation of the hessian dofs the discrete hessian is calculated
@@ -777,6 +779,248 @@ void MA_solver::test_projection(const F f, const DF Df, VectorType& v) const
 
 
     }
+
+    auto localViewn = FEBasisHandler_.FEBasis().localView();
+    auto localIndexSetn = FEBasisHandler_.FEBasis().indexSet().localIndexSet();
+
+    for (auto&& is : intersections(gridView(), element)) //loop over edges
+    {
+      if (is.neighbor()) {
+
+        //bind to local neighbour context
+        localViewn.bind(is.outside());
+        localIndexSetn.bind(localViewn);
+        const auto & lFEn = FETraits::get_finiteElementu(localViewn);
+
+        VectorType localDofsn = assembler_.calculate_local_coefficients(localIndexSetn, v);
+
+        std::cerr << "->local dofs   " << localDofs.transpose() << std::endl << "local dofs n " << localDofsn.transpose() << std::endl;
+
+        //calculate normal derivative
+        const FieldVector<double, Config::dim> normal =
+            is.centerUnitOuterNormal();
+
+        const auto face_center = is.geometry().center();
+        const FieldVector<double, 2> faceCentern = is.outside().geometry().local(face_center);
+
+        //get local context
+        const auto& jacobian =
+               element.geometry().jacobianInverseTransposed(face_center);
+
+        // assemble the gradients
+        std::vector<Dune::FieldVector<double, 2>> gradients(lFE.size());
+        FieldVector<double, Config::dim> gradu;
+        assemble_gradients_gradu(lFE, jacobian, geometry.local(face_center),
+            gradients, localDofs.segment(0,lFE.size()), gradu);
+
+        std::vector<FieldVector<double, 2>> gradientsn(lFE.size());
+        FieldVector<double, Config::dim> gradun(0);
+        assemble_gradients_gradu(lFEn, jacobian, faceCentern,
+            gradientsn, localDofsn.segment(0,lFEn.size()), gradun);
+
+        std::cerr << "normal gradient at " << face_center << " " << (normal*gradu)  << " and " << (normal*gradun) << ", with gradients " << gradu  << " and " << gradun << std::endl;
+
+        // Get a quadrature rule
+        const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
+        GeometryType gtface = is.geometryInInside().type();
+        const QuadratureRule<double, 1>& quad = QuadratureRules<double,1>::rule(gtface, order);
+
+        // Loop over all quadrature points
+        for (size_t pt = 0; pt < quad.size(); pt++) {
+
+          // Position of the current quadrature point in the reference element
+          const FieldVector<double, 2> &quadPos =
+              is.geometryInInside().global(quad[pt].position());
+          const FieldVector<double, 2> &quadPosn =
+              is.geometryInOutside().global(quad[pt].position());
+          auto x_value = is.inside().geometry().global(quadPos);
+
+          // The gradients
+          std::vector<Dune::FieldVector<double, 2>> gradients(lFE.size());
+          FieldVector<double, Config::dim> gradu;
+          assemble_gradients_gradu(lFE, jacobian, quadPos,
+              gradients, localDofs.segment(0,lFE.size()), gradu);
+
+          std::vector<FieldVector<double, 2>> gradientsn(lFE.size());
+          FieldVector<double, Config::dim> gradun(0);
+          assemble_gradients_gradu(lFEn, jacobian, quadPosn,
+              gradientsn, localDofsn.segment(0,lFEn.size()), gradun);
+
+//          assert(std::abs((gradu-gradun).two_norm() < 1e-10));
+          if (std::abs((gradu-gradun).two_norm() > 1e-10))
+            std::cerr << "found two gradient not matching at " << x_value << ", namely " << gradu  << " and " << gradun << std::endl;
+          else
+            std::cerr << "checked matching gradients at quad point " << std::endl;
+        }
+
+      }
+    }
+
+  }
+
+}
+
+template<class F>
+void MA_solver::test_projection(const F f, const VectorType& v) const
+{
+  const double h = 1e-5;
+
+  std::cerr << "v.size()" << v.size()-1 << std::endl;
+  std::cerr << "projected on vector " << std::endl << v.transpose() << std::endl;
+
+  auto localView = FEBasisHandler_.FEBasis().localView();
+  auto localIndexSet = FEBasisHandler_.FEBasis().indexSet().localIndexSet();
+
+
+  for (auto&& element : elements(gridView())) {
+
+    localView.bind(element);
+    localIndexSet.bind(localView);
+
+    const auto & lFE = FETraits::get_finiteElementu(localView);
+
+    const auto& geometry = element.geometry();
+
+    VectorType localDofs = assembler_.calculate_local_coefficients(localIndexSet, v);
+
+//    std::cerr << "local dofs " << localDofs.transpose() << std::endl;
+
+    for (int i = 0; i < geometry.corners(); i++) {
+       //evaluate test function
+       std::vector<Dune::FieldVector<double, 1>> functionValues(
+           localView.size());
+       lFE.localBasis().evaluateFunction(geometry.local(geometry.corner(i)),
+           functionValues);
+
+       double res = 0;
+       for (int j = 0; j < localDofs.size(); j++) {
+         res += localDofs(j) * functionValues[j];
+       }
+       auto value = f(geometry.corner(i));
+
+       std::cerr << "f(corner " << i << ")=" << value
+           << "  approx = " << res << std::endl;
+
+       const auto& xLocal = geometry.local(geometry.corner(i));
+
+       std::vector<FieldVector<double, 2>> JacobianValues(lFE.size());
+       Dune::FieldVector<double, 2> jacApprox;
+       assemble_gradients_gradu(lFE, geometry.jacobianInverseTransposed(xLocal), xLocal,JacobianValues, localDofs.segment(0,lFE.size()), jacApprox);
+
+       std::cerr << "f'(corner " << i << "=" << geometry.corner(i)[0] << " "
+           << geometry.corner(i)[1] << ")  approx = " << jacApprox << std::endl;
+
+       auto x = geometry.corner(i);
+       auto xValuePlus = geometry.corner(i);
+       xValuePlus[0] += i % 2 == 0 ? h : - h;
+       auto gradfX = i % 2 == 0 ? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
+       xValuePlus = geometry.corner(i);
+       xValuePlus[1] += i < 2 ? h : - h;
+       auto gradfY = i < 2 ? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
+
+       std::cerr << " should be " << gradfX << " " << gradfY << std::endl;
+
+       std::vector<FieldMatrix<double, 2, 2>> HessianValues(lFE.size());
+       Dune::FieldMatrix<double, 2, 2> HessApprox;
+       assemble_hessians_hessu(lFE, geometry.jacobianInverseTransposed(xLocal), xLocal,HessianValues, localDofs.segment(0,lFE.size()), HessApprox);
+
+       std::cerr << "f''(corner " << i << "=" << geometry.corner(i)[0] << " "
+           << geometry.corner(i)[1] << ")  approx = " << HessApprox << std::endl;
+
+     }
+
+    // Get a quadrature rule
+    const int order = std::max(0, 3 * ((int) lFE.localBasis().order()));
+    const QuadratureRule<Config::ValueType, Config::dim>& quad = FETraits::get_Quadrature<Config::dim>(element, order);
+
+    std::vector<Config::DomainType> domainPositions(12);
+    domainPositions[0] = {0,0};
+    domainPositions[1] = {1./4.,0};
+    domainPositions[2] = {5./12.,1./6.};
+    domainPositions[3] = {3./4.,0};
+    domainPositions[4] = {1,0};
+    domainPositions[5] = {0.75,0.25};
+    domainPositions[6] = {5./12.,5./12.};
+    domainPositions[7] = {0.25,0.75};
+    domainPositions[8] = {0,1};
+    domainPositions[9] = {0,0.75};
+    domainPositions[10] = {1./6,5./12.};
+    domainPositions[11] = {0,0.25};
+
+    std::cerr << "Gauss quadrature points" << std::endl;
+
+    for (const auto& quadpoint : quad) {
+      const FieldVector<Config::ValueType, Config::dim> &quadPos =
+          quadpoint.position();
+
+      //evaluate test function
+      std::vector<Dune::FieldVector<double, 1>> functionValues(
+          lFE.size());
+      lFE.localBasis().evaluateFunction(quadPos,
+          functionValues);
+
+      double res = 0;
+      for (unsigned int j = 0; j < lFE.size(); j++) {
+        res += localDofs(j) * functionValues[j];
+      }
+      auto x = geometry.global(quadPos);
+
+      std::cerr << "f( " << x << ")=" << f(x)
+          << "  approx = " << res << std::endl;
+
+      std::vector<FieldVector<double, 2>> JacobianValues(lFE.size());
+      Dune::FieldVector<double, 2> jacApprox;
+      assemble_gradients_gradu(lFE, geometry.jacobianInverseTransposed(quadPos), quadPos,JacobianValues, localDofs.segment(0,lFE.size()), jacApprox);
+
+      std::cerr << "f'( "
+          << x << ") = ?? "
+          <<  "  approx = " << jacApprox << std::endl;
+
+      auto xValuePlus = x;
+      xValuePlus[0] += h;
+      auto gradfX = (f(xValuePlus)-res) / h;
+      xValuePlus = x;
+      xValuePlus[1] += h;
+      auto gradfY =(f(xValuePlus)-res) / h;
+      std::cerr << " should be " << gradfX << " " << gradfY << std::endl;
+
+    }
+
+    std::cerr << "PS12 domain points" << std::endl;
+    for (const auto& quadPos : domainPositions) {
+      //evaluate test function
+      std::vector<Dune::FieldVector<double, 1>> functionValues(
+          lFE.size());
+      lFE.localBasis().evaluateFunction(quadPos,
+          functionValues);
+
+      double res = 0;
+      for (unsigned int j = 0; j < lFE.size(); j++) {
+        res += localDofs(j) * functionValues[j];
+      }
+      auto x = geometry.global(quadPos);
+
+      std::cerr << "f( " << x << ", local " << quadPos << ")=" << f(x)
+          << "  approx = " << res << std::endl;
+
+      std::vector<FieldVector<double, 2>> JacobianValues(lFE.size());
+      Dune::FieldVector<double, 2> jacApprox;
+      assemble_gradients_gradu(lFE, geometry.jacobianInverseTransposed(quadPos), quadPos,JacobianValues, localDofs.segment(0,lFE.size()), jacApprox);
+
+      std::cerr << "f'( "
+          << x << ") = ?? "
+          <<  "  approx = " << jacApprox << std::endl;
+
+      auto xValuePlus = x;
+      xValuePlus[0] += h;
+      auto gradfX = (f(xValuePlus)-res) / h;
+      xValuePlus = x;
+      xValuePlus[1] += h;
+      auto gradfY =(f(xValuePlus)-res) / h;
+      std::cerr << " should be " << gradfX << " " << gradfY << std::endl;
+
+    }
+
 
     auto localViewn = FEBasisHandler_.FEBasis().localView();
     auto localIndexSetn = FEBasisHandler_.FEBasis().indexSet().localIndexSet();
