@@ -493,6 +493,11 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F f, 
     const auto & lFE = localView.tree().finiteElement();
     const auto& geometry = element.geometry();
 
+#ifndef NODALBASIS
+    Config::MatrixType A;
+    create_hermite_interpolation_matrix(FEBasis_->gridView(), element, A);
+#endif
+
     Config::VectorType localDofs = Config::VectorType::Zero (lFE.size());
 
     int k = 0;
@@ -501,39 +506,46 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F f, 
       auto value = f(geometry.corner(i));
 
       //set dofs associated with values at vertices
-      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
       localDofs(k++) = value;
 
+#ifndef NDEBUG
+#ifdef NODALBASIS
       //test if this was the right basis function
       {
+        assert(lFE.localCoefficients().localKey(k-1).subEntity() == (unsigned int) i);
+
         std::vector<FieldVector<double, 1> > functionValues(lFE.size());
         lFE.localBasis().evaluateFunction(geometry.local(geometry.corner(i)), functionValues);
         assert(std::abs(functionValues[k-1][0]-1) < 1e-10);
       }
-
+#endif
+#endif
 
       //set dofs associated with gradient values at vertices
       auto xValuePlus = geometry.corner(i);
       xValuePlus[0] += i % 2 == 0 ? h : - h;
-
-      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
-
 
       localDofs(k++) = i % 2 == 0 ? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
 
       xValuePlus = geometry.corner(i);
       xValuePlus[1] += i < 2 ? h : - h;
 
-      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
       localDofs(k++) = i < 2 ? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
 
+#ifndef NDEBUG
+#ifdef NODALBASIS
       //test if this were the right basis function
       {
+        assert(lFE.localCoefficients().localKey(k-2).subEntity() == (unsigned int) i);
+        assert(lFE.localCoefficients().localKey(k-1).subEntity() == (unsigned int) i);
+
         std::vector<FieldMatrix<double, 1, 2> > jacobianValues(lFE.size());
         lFE.localBasis().evaluateJacobian(geometry.local(geometry.corner(i)), jacobianValues);
         assert(std::abs(jacobianValues[k-2][0][0]-1) < 1e-10);
         assert(std::abs(jacobianValues[k-1][0][1]-1) < 1e-10);
       }
+#endif
+#endif
 
       k++;
     }
@@ -577,21 +589,28 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F f, 
         else
           k = 7;
 
-      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
       localDofs(k++) = unit_pointUpwards ? (approxGradientF*normal) : -(approxGradientF*normal);
 //      std::cout << " aprox normal derivative " << approxGradientF*normal << " = " << approxGradientF << " * " << normal << std::endl ;
 
       //test if this were the right basis function
 #ifndef NDEBUG
+#ifdef NODALBASIS
       {
+        assert(lFE.localCoefficients().localKey(k-1).subEntity() == (unsigned int) i);
+
         std::vector<FieldMatrix<double, 1, 2> > jacobianValues(lFE.size());
         lFE.localBasis().evaluateJacobian(geometry.local(face_center), jacobianValues);
         assert(std::abs( std::abs(jacobianValues[k-1][0]*normal)-1) < 1e-10);
       }
 #endif
+#endif
     }
 
+#ifdef NODALBASIS
     Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localDofs, v);
+#else
+    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,A*localDofs, v);
+#endif
 //    assembler.add_local_coefficients(localIndexSet,VectorType::Ones(localDofs.size()), countMultipleDof);
     Config::VectorType localmultiples = Config::VectorType::Ones(localDofs.size());
     Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
@@ -624,6 +643,11 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F &f,
     const auto & lFE = localView.tree().finiteElement();
     const auto& geometry = element.geometry();
 
+#ifndef NODALBASIS
+    Config::MatrixType A;
+    create_hermite_interpolation_matrix(FEBasis_->gridView(), element, A);
+#endif
+
     Config::VectorType localDofs = Config::VectorType::Zero (lFE.size());
 
     int k = 0;
@@ -645,12 +669,15 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F &f,
 #endif
 
       //set dofs associated with gradient values at vertices
+#ifdef NODALBASIS
       assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
+#endif
       auto u_grad = grad_f(geometry.corner(i));
       localDofs(k++) = u_grad[0];
       localDofs(k++) = u_grad[1];
 
 #ifndef NDEBUG
+#ifdef NODALBASIS
       //test if this were the right basis function
       {
         std::vector<FieldMatrix<double, 1, 2> > jacobianValues(lFE.size());
@@ -658,6 +685,7 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F &f,
         assert(std::abs(jacobianValues[k-2][0][0]-1) < 1e-10);
         assert(std::abs(jacobianValues[k-1][0][1]-1) < 1e-10);
       }
+#endif
 #endif
       k++;
     }
@@ -688,20 +716,16 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F &f,
         else
           k = 7;
 
+#ifdef NODALBASIS
       assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
-      localDofs(k++) = unit_pointUpwards ? (gradientF*normal) : -(gradientF*normal);
-
-      //test if this were the right basis function
-#ifndef NDEBUG
-      {
-        std::vector<FieldMatrix<double, 1, 2> > jacobianValues(lFE.size());
-        lFE.localBasis().evaluateJacobian(geometry.local(face_center), jacobianValues);
-        assert(std::abs( std::abs(jacobianValues[k-1][0]*normal)-1) < 1e-10);
-      }
 #endif
+      localDofs(k++) = unit_pointUpwards ? (gradientF*normal) : -(gradientF*normal);
     }
-
-    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localDofs, v);
+#ifdef NODALBASIS
+    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet, localDofs, v);
+#else
+    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,A*localDofs, v);
+#endif
 //    assembler.add_local_coefficients(localIndexSet,VectorType::Ones(localDofs.size()), countMultipleDof);
     Config::VectorType localmultiples = Config::VectorType::Ones(localDofs.size());
     Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
