@@ -79,10 +79,10 @@ void MA_reflector_solver::create_initial_guess()
     Rectangular_mesh_interpolator rectangular_interpolatorDerX("/home/disk/friebel/temp/initial_guess/OneParametrisedDx.data");
     Rectangular_mesh_interpolator rectangular_interpolatorDerY("/home/disk/friebel/temp/initial_guess/OneParametrisedDy.data");
 
-    assert(is_close(rectangular_interpolatorDerX.x_min, SolverConfig::lowerLeft[0], 1e-12));
-    assert(is_close(rectangular_interpolatorDerX.y_min, SolverConfig::lowerLeft[1], 1e-12));
-    assert(is_close(rectangular_interpolatorDerY.x_min, SolverConfig::lowerLeft[0], 1e-12));
-    assert(is_close(rectangular_interpolatorDerY.y_min, SolverConfig::lowerLeft[1], 1e-12));
+    assert(is_close(rectangular_interpolatorDerX.x_min, setting_.lowerLeft[0], 1e-12));
+    assert(is_close(rectangular_interpolatorDerX.y_min, setting_.lowerLeft[1], 1e-12));
+    assert(is_close(rectangular_interpolatorDerY.x_min, setting_.lowerLeft[0], 1e-12));
+    assert(is_close(rectangular_interpolatorDerY.y_min, setting_.lowerLeft[1], 1e-12));
 
 
 //    project([&rectangular_interpolator](Config::SpaceType x){return 1./rectangular_interpolator.evaluate(x);},solution);
