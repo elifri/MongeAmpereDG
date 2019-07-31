@@ -8,6 +8,8 @@
 #ifndef SRC_MACONFIG_H_
 #define SRC_MACONFIG_H_
 
+#define HAVE_ADOLC 1
+
 #include <type_traits>
 
 #include<Eigen/Core>

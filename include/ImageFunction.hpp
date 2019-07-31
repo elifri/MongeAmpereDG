@@ -11,13 +11,14 @@
 
 #include <dune/common/function.hh>
 
+#include "MAconfig.h"
+
 #include <cmath>
 #include "CImg.h"
 #undef Success
 
 #include <Eigen/Core>
 
-#include "MAconfig.h"
 #include "utils.hpp"
 #include "Solver/solver_config.h"
 
