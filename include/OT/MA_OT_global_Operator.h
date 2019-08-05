@@ -225,7 +225,7 @@ private:
 
 public:
   ///assembles the system of combination of the MA PDE and the lagrangian multiplier for fixing the mean value and boundary condition
-  void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& xBoundary, const bool new_solution=true) const;
+  virtual void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& xBoundary, const bool new_solution=true) const;
   ///assembles the rhs of the system of combination of the MA PDE and the lagrangian multiplier for fixing the mean value and boundary condition
   void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& xNew, const bool new_solution=true) const;
 
@@ -519,8 +519,8 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
   copy_sparse_to_sparse_matrix(tempM.transpose(), m, 0, V_h_size+1);
 
 
-  assert(V_h_size+1+Q_h_size==m.rows());
-  v.tail(Q_h_size) = tempV;
+  assert(V_h_size+1+Q_h_size<=m.rows());
+  v.segment(V_h_size+1,Q_h_size) = tempV;
 #ifdef DEBUG
   {
     std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "Bboundary" << intermediateSolCounter << ".m";
@@ -548,10 +548,10 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
   assert(solver_ptr != NULL);
   assert(lagrangianMidvalueDiscreteOperator.size()==this->solver_ptr->get_n_dofs_V_h() && " the initialisiation of the MA operator does not fit to the solver's grid!");
 
+  intermediateSolCounter++;
 
   if (new_solution && false)
   {
-    intermediateSolCounter++;
     solver_ptr->update_solution(x);
     solver_ptr->plot("intermediate", intermediateSolCounter);
 
@@ -636,7 +636,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian(const Config::Vec
   assert(Q_h_size == tempV.size());
 
   //copy to system
-  v.tail(Q_h_size) = tempV;
+  v.segment(V_h_size+2,Q_h_size) = tempV;
   std::cerr << " l_H(q) with norm " << tempV.norm() << std::endl;//" : " << tempV.transpose() << std::endl;
 
 }

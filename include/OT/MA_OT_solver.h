@@ -18,12 +18,14 @@
 #else
   #include "Solver/AssemblerLagrangianBoundary.h"
 #endif
+#include "Solver/AssemblerLagrangianMultiplierEdges.h"
 #include "Optics/operator_LagrangianBoundary_refl.h"
 #include "Optics/operator_LagrangianBoundary_refr.h"
 #include "Optics/operator_LagrangianBoundary_refr_parallel.h"
 
 #include "Operator_OT.h"
 #include "MA_OT_global_Operator.h"
+#include "MA_OT_global_Operator_SSplines.h"
 #include "Operator/GlobalOperatorManufactorSolution.h"
 
 #include "Solver/problem_config.h"
@@ -85,7 +87,7 @@ public:
 #endif
   virtual int get_n_dofs_V_h() const{return FEBasisHandler_.FEBasis().indexSet().size();}
   virtual int get_n_dofs_Q_h() const{return get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();}
-  virtual int get_n_dofs() const{return get_n_dofs_V_h() + 1 + get_n_dofs_Q_h();}
+  virtual int get_n_dofs() const{return get_n_dofs_V_h() + 1 + get_n_dofs_Q_h()+get_assembler_lagrangian_edges().get_noOfConditions();}
 
   using MA_solver::get_operator;
   virtual Operator_OT& get_OT_operator(){return *(std::dynamic_pointer_cast<Operator_OT>(this->op));}
@@ -135,6 +137,8 @@ public:
 //  const AssemblerLagrangianMultiplierCoarse& get_assembler_lagrangian_boundary() const { return assemblerLMCoarse_;}
   AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() { return assemblerLMBoundary_;}
   const AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() const { return assemblerLMBoundary_;}
+  AssemblerLagrangianMultiplierEdges<>& get_assembler_lagrangian_edges() { return assemblerLMEdges_;}
+  const AssemblerLagrangianMultiplierEdges<>& get_assembler_lagrangian_edges() const { return assemblerLMEdges_;}
 
   const TransportPlotter& get_transportPlotter() const{ return transportPlotter_;}
 
@@ -177,6 +181,7 @@ protected:
   //assembler for lagrangian multiplier
   AssemblerLagrangianMultiplier1D<> assemblerLM1D_;
   AssemblerLagrangianMultiplierBoundaryType assemblerLMBoundary_;
+  AssemblerLagrangianMultiplierEdges<> assemblerLMEdges_;
 
 //  OperatorType op;
 
@@ -194,7 +199,7 @@ void MA_OT_solver::project(const F f, VectorType& v) const
   init_lagrangian_values(v);
 
 #ifdef DEBUG
-  test_projection(f,v.head(get_n_dofs_V()));
+  test_projection(f,v.head(get_n_dofs_V_h()));
 #endif
 }
 
@@ -205,7 +210,8 @@ void MA_OT_solver::project(const F f, GradF gradf, VectorType& v) const
   init_lagrangian_values(v);
 
 #ifdef DEBUG
-  test_projection(f,v.head(get_n_dofs_V()));
+  Eigen::VectorXd coeffs = v.head(get_n_dofs_V_h());
+  test_projection(f, gradf, coeffs);
 #endif
 }
 

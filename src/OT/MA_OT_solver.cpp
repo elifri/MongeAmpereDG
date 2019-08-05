@@ -38,6 +38,7 @@ MA_OT_solver::MA_OT_solver(GridHandlerType& gridHandler,
 #endif
  assemblerLM1D_(FEBasisHandler_.FEBasis()),
  assemblerLMBoundary_(FEBasisHandler_.FEBasis(),FEBasisHandlerQ_.FEBasis()),
+ assemblerLMEdges_(FEBasisHandler_.FEBasis()),
  transportPlotter_(setting,config.cartesianGridN)
 {
 #ifdef DEBUG
@@ -518,7 +519,7 @@ void MA_OT_solver::plot(const std::string& name, int no) const
     std::string fname(plotter.get_output_directory());
     fname += "/"+ plotter.get_output_prefix()+ name +"estInt"+ NumberToString(no) + ".vtu";
     plotter.writeVTK(fname, *solution_u_old, this->get_OT_operator().get_f());
-    std::cout << " write initial grid to " << fname << std::endl;
+    std::cerr << " write initial grid to " << fname << std::endl;
 
   }
 
@@ -800,8 +801,11 @@ void MA_OT_solver::create_initial_guess()
     init_from_file(initValue_);
   }
   else
-  {
-    project([](Config::SpaceType x){return x.two_norm2()/2.0;},solution);
+  {    ExactData exactData;
+
+//	project(exactData.exact_solution(), exactData.exact_gradient(), solution);
+//    project([](Config::SpaceType x){return x.two_norm2()/2.0;},solution);
+    project([](Config::SpaceType x){return x.two_norm2()/2.0;},[](Config::SpaceType x){return x;},solution);
     update_solution(solution);
 
 /*
@@ -890,7 +894,7 @@ void MA_OT_solver::solve_nonlinear_system()
 
 #ifdef USE_DOGLEG
 
-  newtonOpts_.omega = 1.0;
+  newtonOpts_.omega = 1;
 
   //  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
   newtonMethod(get_operator(), newtonOpts_, solution, evaluateJacobianSimultaneously_);
@@ -955,6 +959,7 @@ void MA_OT_solver::adapt_solution(const int level)
   FEBasisHandler_.adapt_after_grid_change(gridView());
   assembler_.bind(FEBasisHandler_.uBasis());
   assemblerLM1D_.bind(FEBasisHandler_.uBasis());
+  assemblerLMEdges_.bind(FEBasisHandler_.uBasis());
 
 //combination of binding handler and assembler as well as adapting p
 

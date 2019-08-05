@@ -122,7 +122,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 
   using CoarseGridView = typename std::decay_t<decltype(oldGridInformation)>::OldGridView;
 
-  using FEBasisCoarseType = Functions::PS12SSplineBasis<CoarseGridView, Config::SparseMatrixType>;
+  using FEBasisCoarseType = Functions::PS12SSplineBasis<CoarseGridView>;
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(coarseGridView));
 
   //init vector
@@ -144,6 +144,10 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
     const auto & lFE = localViewCoarse.tree().finiteElement();
     const auto& geometry = elementCoarse.geometry();
 
+#ifndef NODALBASIS
+    Config::MatrixType A;
+    create_hermite_interpolation_matrix(coarseGridView, elementCoarse, A);
+#endif
 //    std::cout << " father dofs ";
 //    for (const auto& tempEl : gradient_u_Coarse->localDoFs_ ) std::cout << tempEl << " ";
 //    std::cout << std::endl;
@@ -202,6 +206,10 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 //      std::cout << "grad at " << face_center << " is " << localGradient(element.geometry().local(face_center)) << " normal " << normal << " -> " << (localGradient(element.geometry().local(face_center)) * normal) << " signNormal " << signNormal << std::endl;
       assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
       }
+
+#ifndef NODALBASIS
+    localDofs = A*localDofs;
+#endif
 
 //      std::cout << " set local dofs " << localDofs.transpose() << std::endl;
 
