@@ -1009,6 +1009,11 @@ private:
     return TaylorExpansion<TaylorOrder>(element, x, localCoordinate);
   }
 
+  void evaluateLocal(const Element& element, const Domain& xLocal, Range& u) const
+  {
+    localFunction_.bind(element);
+    u = localFunction_(xLocal);
+  }
 
   void evaluateAllLocal(const Element& element, const Domain& xLocal, Range& u, typename LocalFirstDerivative::Jacobian& gradu,
       typename LocalSecondDerivative::Hessian& hessu) const

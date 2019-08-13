@@ -12,7 +12,7 @@ find_path(METHOD_OF_ELLIPSOIDS_INCLUDES
   ${METHOD_OF_ELLIPSOIDS_PATH}/src
 )
 
-message("searching for $ENV{HOME}/workspace/Method\ of\ Ellipsoids/src/SupportingEllipsoids/MethodOfEllipsoids.hpp")
+message("searching for ${METHOD_OF_ELLIPSOIDS_PATH}/src/SupportingEllipsoids/MethodOfEllipsoids.hpp")
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(METHOD_OF_ELLIPSOIDS DEFAULT_MSG

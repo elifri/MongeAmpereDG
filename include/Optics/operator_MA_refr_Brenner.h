@@ -24,13 +24,12 @@ class Local_Operator_MA_refr_Brenner {
 
 public:
   Local_Operator_MA_refr_Brenner(const OTBoundary& bc,
-      const ImageFunction& f, const ImageFunction& g):
+      const DensityFunction& f, const ImageFunction& g):
     opticalSetting(OpticalSetting()),
     bc(bc),
     f(f), g(g),
     int_f(0),
-    found_negative(false),
-    last_step_on_a_different_grid(false)
+    found_negative(false)
     {
     assert(false&& "this constructor should never be used!!");
     std::exit(-1);
@@ -39,13 +38,12 @@ public:
 
 
   Local_Operator_MA_refr_Brenner(const OpticalSetting &opticalSetting, const OTBoundary& bc,
-      const ImageFunction& f, const ImageFunction& g):
+      const DensityFunction& f, const ImageFunction& g):
     opticalSetting(opticalSetting),
     bc(bc),
     f(f), g(g),
     int_f(0),
-    found_negative(false),
-    last_step_on_a_different_grid(false)
+    found_negative(false)
     {}
 
   ///helper function that checks wether the calculated reflection is consistent with the vector calculated by direct application of the reflection law
@@ -705,12 +703,6 @@ public:
       const VectorType &x, VectorType& v, int tag=0) const {
   }
 
-  ///use given global function (probably living on a coarser grid) to evaluate last step
-  void set_evaluation_of_u_old_to_different_grid() const{  last_step_on_a_different_grid = true;}
-  ///use coefficients of old function living on the same grid to evaluate last step
-  void set_evaluation_of_u_old_to_same_grid() const{  last_step_on_a_different_grid = false;}
-  bool is_evaluation_of_u_old_on_different_grid() const {return last_step_on_a_different_grid;}
-
   const DensityFunction& get_input_distribution() const {return f;}
   const DensityFunction& get_target_distribution() const {return g;}
 
@@ -720,7 +712,7 @@ private:
 
   const OTBoundary & bc;
 
-  const ImageFunction& f;
+  const DensityFunction& f;
   const ImageFunction& g;
 
 
@@ -729,7 +721,6 @@ public:
   mutable double int_f;
 
   mutable bool found_negative;
-  mutable bool last_step_on_a_different_grid;
 };
 
 #endif /* SRC_OPERATOR_HH_ */

@@ -108,9 +108,12 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
   Config::VectorType solution_u = solver.solution.segment(0, solver.get_n_dofs_u());
 
    //build gridviewfunction
-  FiniteElementTraits::DiscreteGridFunction numericalSolution(*FEBasis_,solution_u);
-  auto localnumericalSolution = localFunction(numericalSolution);
-  FiniteElementTraits::DiscreteLocalGradientGridFunction localGradient (numericalSolution);
+  FiniteElementTraits::DiscreteGridFunction solution_u_global(*FEBasis_, solution_u);
+  FiniteElementTraits::DiscreteGridFunction::GlobalFirstDerivative gradient_u_global(solution_u_global);
+  //extend over boundary
+  GenerealOTBoundary bcSource(FEBasis_->gridView().grid(), GeometrySetting::boundaryN);
+  TaylorBoundaryFunction<FiniteElementTraits::DiscreteGridFunction> solution_u_old_extended_global(bcSource, solution_u_global);
+  TaylorBoundaryDerivativeFunction<FiniteElementTraits::DiscreteGradientGridFunction> gradient_u_old_extended_global(bcSource, gradient_u_global);
 
 
   //we need do generate the coarse basis
@@ -119,7 +122,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 
   using CoarseGridView = typename std::decay_t<decltype(oldGridInformation)>::OldGridView;
 
-  using FEBasisCoarseType = Functions::PS12SSplineBasis<CoarseGridView, Config::SparseMatrixType>;
+  using FEBasisCoarseType = Functions::PS12SSplineBasis<CoarseGridView>;
   std::shared_ptr<FEBasisCoarseType> FEBasisCoarse (new FEBasisCoarseType(coarseGridView));
 
   //init vector
@@ -141,6 +144,8 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
     const auto & lFE = localViewCoarse.tree().finiteElement();
     const auto& geometry = elementCoarse.geometry();
 
+    Config::MatrixType A;
+    create_hermite_interpolation_matrix(coarseGridView, elementCoarse, A);
 //    std::cout << " father dofs ";
 //    for (const auto& tempEl : gradient_u_Coarse->localDoFs_ ) std::cout << tempEl << " ";
 //    std::cout << std::endl;
@@ -153,19 +158,12 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
       const auto x = geometry.corner(i);
 //      std::cout << "local coordinate " << x << std::endl;
 
-      //find element containing corner
-      const auto& element = hs.findEntity(x);
-      localnumericalSolution.bind(element);
-      localGradient.bind(element);
-
-      const auto localx = element.geometry().local(x);;
-
-      auto value = localnumericalSolution(localx);
+      auto value = solution_u_old_extended_global(x);
 //      std::cout << "value " << value << " at " << geometry.corner(i) << std::endl;
       //set dofs associated with values at vertices
       localDofs(k++) = value;
 
-      const auto gradient = localGradient(localx);
+      const auto gradient = gradient_u_old_extended_global(x);
 //      std::cout << " gradient at the same " << gradient << std::endl;
       localDofs(k++) = gradient[0];
 
@@ -193,8 +191,6 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
       const auto face_center = is.geometry().center();
 
       //find element containing face center
-      const auto& element = hs.findEntity(face_center);
-      localGradient.bind(element);
 
       //set dofs according to global normal direction
       int signNormal;
@@ -204,10 +200,11 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
       else
         signNormal = normal[0]+normal[1] > 0 ? 1 : -1;
 
-      localDofs(k) = signNormal * (localGradient(element.geometry().local(face_center)) * normal);
+      localDofs(k) = signNormal * (gradient_u_old_extended_global(face_center) * normal);
 //      std::cout << "grad at " << face_center << " is " << localGradient(element.geometry().local(face_center)) << " normal " << normal << " -> " << (localGradient(element.geometry().local(face_center)) * normal) << " signNormal " << signNormal << std::endl;
-      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
       }
+
+    localDofs = A*localDofs;
 
 //      std::cout << " set local dofs " << localDofs.transpose() << std::endl;
 

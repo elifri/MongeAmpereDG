@@ -76,7 +76,7 @@ void check_file_extension(std::string &name, std::string extension) {
 //==========================================================================================
 int Plotter::Nelements() const
 {
-	int Nelements = get_gridView().size(0);
+	int Nelements = gridView().size(0);
 	if (refinement_ != 0)
 		Nelements *= PlotRefinementType::nElements(refinement_);
 	return Nelements;
@@ -141,11 +141,11 @@ void Plotter::write_points(std::ofstream &file) const{
 		if (refinement_ == 0)
 		{
 			// collect points
-			for (auto&& vertex: vertices(get_gridView())) {
+			for (auto&& vertex: vertices(gridView())) {
 				file << "\t\t\t\t\t" << vertex.geometry().center() << " 0" << endl;
 			}
 		}else {		// save points in file after refinement_
-			for (auto&& element: elements(get_gridView()))
+			for (auto&& element: elements(gridView()))
 			{
 				const auto geometry = element.geometry();
 				for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++){
@@ -287,13 +287,12 @@ void Plotter::write_pov_setting_refractor(std::ofstream &file) const{
 
 void Plotter::write_target_plane(std::ofstream &file) const{
 	file << "// The floor" <<std::endl <<
-			"plane {" <<std::endl <<
-#ifndef TARGET_IS_XZ_PLANE
-			"\t z, " << geometrySetting_.z_3 << std::endl <<
-#else
-      "\t y, " << geometrySetting_.z_3 << std::endl <<
-#endif
-			"\t texture {pigment {color rgb <1,1,1>} }" <<std::endl <<
+			"plane {" <<std::endl;
+	if (target_is_xy_plane_)
+			file << "\t z, " << geometrySetting_.z_3 << std::endl;
+	else
+	    file << "\t y, " << geometrySetting_.z_3 << std::endl;
+	file << "\t texture {pigment {color rgb <1,1,1>} }" <<std::endl <<
 			"\t hollow" <<std::endl <<
 			"}" <<std::endl <<std::endl;
 }
@@ -319,12 +318,15 @@ void Plotter::write_aperture(std::ofstream &file) const
       "difference {" <<std::endl <<
       "\t   box { <-20,-20,-0.2>, <20,20,0.2> }" << std::endl;
 
-  const LightSourceLimiter lightsourcelimiter = RECTANGULAR;
-  std::cout << " assuming a rectangular light source" << std::endl;
+  const LightSourceLimiter lightsourcelimiter = CIRCULAR;
 
   if (lightsourcelimiter == RECTANGULAR)
+  {
+    std::cout << " assuming a rectangular light source" << std::endl;
+
     file << "\t box { <" << geometrySetting_.lowerLeft[0] << ","<< geometrySetting_.lowerLeft[1]<<",-0.25>, <"
       << geometrySetting_.upperRight[0] << ","<< geometrySetting_.upperRight[1]<<",0.25> }" <<std::endl;
+  }
   else
   {
     auto middlepoint = (geometrySetting_.lowerLeft+geometrySetting_.upperRight);
@@ -386,9 +388,9 @@ void Plotter::write_face_indices_pov(std::ofstream &file) const
       << "\t\t\t" << this->Nelements() << std::endl;
   // make connectivity
   if (refinement_ == 0){
-    const Config::GridView::IndexSet& indexSet = get_gridView().indexSet();
+    const Config::GridView::IndexSet& indexSet = gridView().indexSet();
 
-    for (auto&& e : elements(get_gridView())) {
+    for (auto&& e : elements(gridView())) {
       for (unsigned int i = 0; i < e.subEntities(Config::dim); i++) //loop over corners
         {file << "\t\t\t";
 //        for (const auto& vertex : geometry.corners()) {
@@ -401,7 +403,7 @@ void Plotter::write_face_indices_pov(std::ofstream &file) const
   else{ //refined
     int offset = 0;
 //    for (auto&& element : elements(get_gridView())) {
-    for (int i = 0; i < get_gridView().size(0); i++){
+    for (int i = 0; i < gridView().size(0); i++){
       for (auto it = PlotRefinementType::eBegin(refinement_); it != PlotRefinementType::eEnd(refinement_); it++)
       {
         auto vertexIndices = it.vertexIndices();
@@ -421,12 +423,16 @@ void Plotter::write_face_indices_pov(std::ofstream &file) const
 
 void Plotter::write_faces(ON_Mesh &mesh) const
 {
+  assert(false);
+  std::cerr << " error linking with open nurbs has a problem";
+  exit(-1);
+  /*
   bool successful = false;  _unused(successful);
   int elementNo = 0;
   if (refinement_ == 0){
-    const Config::GridView::IndexSet& indexSet = get_gridView().indexSet();
+    const Config::GridView::IndexSet& indexSet = gridView().indexSet();
 
-    for (auto&& e : elements(get_gridView()))
+    for (auto&& e : elements(gridView()))
     {
       mesh.SetTriangle(elementNo,
                        indexSet.index(e.subEntity<Config::dim>(0)),
@@ -436,7 +442,7 @@ void Plotter::write_faces(ON_Mesh &mesh) const
   }
   else{ //refined
     int offset = 0;
-    for (int i = 0; i < get_gridView().size(0); i++)
+    for (int i = 0; i < gridView().size(0); i++)
     {
       for (auto it = PlotRefinementType::eBegin(refinement_); it != PlotRefinementType::eEnd(refinement_); it++)
       {
@@ -460,7 +466,7 @@ void Plotter::write_faces(ON_Mesh &mesh) const
       offset += PlotRefinementType::nVertices(refinement_);
     }
   }
-
+*/
 }
 
 
@@ -483,7 +489,7 @@ void Plotter::write_refined_simple_estimate_integral_OT_Omega(std::ofstream &fil
         << "ascii" << "\">\n";
 
     {   // save points in file after refinement
-      for (auto&& element: elements(get_gridView()))
+      for (auto&& element: elements(gridView()))
       {
         const auto geometry = element.geometry();
 
@@ -499,7 +505,6 @@ void Plotter::write_refined_simple_estimate_integral_OT_Omega(std::ofstream &fil
           //estimate integral by averaging the corner values and dividing through the cell size
           Config::ValueType estInt = 0;
 
-          int coords_i = 0;
           for (const auto& corner : it.vertexIndices()){
             estInt += omegaF(points[corner]);
           }

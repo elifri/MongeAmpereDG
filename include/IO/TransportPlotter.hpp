@@ -56,6 +56,9 @@ public:
 
   template <class GlobalFunction>
   void writeOTVTKGlobal(std::string filename, GlobalFunction &f) const;
+  template <class GlobalFunction>
+  void writeOTVTKGlobal(std::string filename, GlobalFunction &f, const DensityFunction& omegaF) const;
+
 
 protected:
   const int refinement = 1;
@@ -78,6 +81,28 @@ void TransportPlotter::writeOTVTKGlobal(std::string filename, GlobalFunction &f)
     Plotter::write_vtk_header(file, Nnodes(), Nelements());
 
     Plotter::write_points_OT_global(file, f, gridHandler_.gridView(), refinement);
+    Plotter::write_cells_same_shape<GridHandlerType::GridView, false>(file, gridHandler_.gridView(), Nelements(), refinement);
+
+    Plotter::write_vtk_end(file);
+
+}
+
+template <class GlobalFunction>
+void TransportPlotter::writeOTVTKGlobal(std::string filename, GlobalFunction &f, const DensityFunction& omegaF) const {
+  //--------------------------------------
+  // open file
+    check_file_extension(filename, ".vtu");
+    std::ofstream file(filename.c_str(), std::ios::out);
+    if (file.rdstate()) {
+      std::cerr << "Error: Couldn't open '" << filename << "'!\n";
+      return;
+    }
+
+    //write file
+    Plotter::write_vtk_header(file, Nnodes(), Nelements());
+
+    Plotter::write_points_OT_global(file, f, gridHandler_.gridView(), refinement);
+    Plotter::write_refined_simple_estimate_integral_OT_global(file, gridHandler_.gridView(), f, omegaF, refinement);
     Plotter::write_cells_same_shape<GridHandlerType::GridView, false>(file, gridHandler_.gridView(), Nelements(), refinement);
 
     Plotter::write_vtk_end(file);

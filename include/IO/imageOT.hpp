@@ -98,8 +98,6 @@ void print_image_OT(const GridView& gridView, LocalFunction& T, LocalDerivativeF
 
   transported.fill(0);
 
-  int counter =0;
-
   for (auto&& element: elements(gridView))
   {
     T.bind(element);

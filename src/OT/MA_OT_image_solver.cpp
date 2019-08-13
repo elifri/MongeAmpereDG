@@ -83,3 +83,5 @@ void MA_OT_image_solver::update_Operator()
   assert(get_image_operator().check_integrability_condition());
 #endif
 }
+
+

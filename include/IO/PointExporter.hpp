@@ -179,7 +179,7 @@ public:
 
     x = doglegSolver_.get_solution();
 
-    if (doglegSolver_.get_residual_norm() > 1e-2)
+    if (doglegSolver_.get_residual_norm() > 1e-1)
       return -1;
 
 

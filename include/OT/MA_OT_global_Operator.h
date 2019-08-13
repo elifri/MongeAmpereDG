@@ -172,10 +172,13 @@ private:
   void assert_integrability_condition(){assert_integrability_condition((OperatorTraitsDummy*)0);}
   /// use function overload to select correct implementation
   template<typename OperatorTraitsDummy = OperatorTraits>
-  void assert_integrability_condition(OperatorTraitsDummy* dummy){}
+  void assert_integrability_condition(OperatorTraitsDummy* dummy){
+    std::cout << "Assuming the integrability condition is met!" << std::endl;
+  }
   void assert_integrability_condition(ConstantOperatorTraits<SolverType, LocalOperatorType>* dummy);
   void assert_integrability_condition(ImageOperatorOTTraits<SolverType, LocalOperatorType>* dummy);
   void assert_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy);
+  void assert_integrability_condition(OpticLambertianOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy);
 
 
 public:
@@ -218,6 +221,7 @@ private:
   template<typename OperatorTraitsDummy = OperatorTraits>
   void assemble_Jacobian_boundary(OperatorTraitsDummy* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
   void assemble_Jacobian_boundary(OpticOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
+  void assemble_Jacobian_boundary(OpticLambertianOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy,const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
 
 
 public:
@@ -243,34 +247,6 @@ public:
     //-------update data for assembling mid value--------
     init();
   }
-
-  virtual bool is_evaluation_of_u_old_on_different_grid() const
-  {
-#ifdef USE_ANALYTIC_JACOBIAN
-    return get_lopLinear().last_step_on_a_different_grid
-#else
-    assert(lopLMBoundary->is_evaluation_of_u_old_on_different_grid()==get_lop().is_evaluation_of_u_old_on_different_grid());
-    return get_lop().is_evaluation_of_u_old_on_different_grid();
-#endif
-  }
-
-  ///use given global function (probably living on a coarser grid) to evaluate last step
-  virtual void set_evaluation_of_u_old_to_different_grid() const{
-    lop_ptr->set_evaluation_of_u_old_to_different_grid();
-    lopLMBoundary->set_evaluation_of_u_old_to_different_grid();
-  }
-  ///use coefficients of old function living on the same grid to evaluate last step
-  virtual void set_evaluation_of_u_old_to_same_grid() const{
-    lop_ptr->set_evaluation_of_u_old_to_same_grid();
-    lopLMBoundary->set_evaluation_of_u_old_to_same_grid();
-  }
-
-  template<typename F>
-  void change_oldFunction(F&& uOld)
-  {
-    lopLMBoundary->change_oldFunction(uOld);
-  }
-
 
   const SolverType* solver_ptr;
 
@@ -370,26 +346,6 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
 //    this->solver_ptr->assemble_Jacobian_DG(*(this->lop_ptr), *lopLinear_ptr, x,m);
   }
 
-  ///use given global function (probably living on a coarser grid) to evaluate last step
-  void set_evaluation_of_u_old_to_different_grid() const{
-    MA_OT_Operator<OperatorTraits>::set_evaluation_of_u_old_to_different_grid();
-    lopLinear_ptr->set_evaluation_of_u_old_to_different_grid();
-  }
-
-  ///use coefficients of old function living on the same grid to evaluate last step
-  void set_evaluation_of_u_old_to_same_grid() const{
-    MA_OT_Operator<OperatorTraits>::set_evaluation_of_u_old_to_same_grid();
-    lopLinear_ptr->set_evaluation_of_u_old_to_same_grid();
-  }
-
-  template<typename F>
-  void change_oldFunction(F&& uOld)
-  {
-    MA_OT_Operator<OperatorTraits>::change_oldFunction(uOld);
-    lopLinear_ptr->change_oldFunction(uOld);
-  }
-
-
 private:
   std::shared_ptr<LocalOperatorType> lopLinear_ptr;
 };
@@ -443,6 +399,15 @@ void MA_OT_Operator<OperatorTraits>
 {
   solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix_with_automatic_differentiation(*lopLMBoundary, m, x, v);
 }
+//todo change as seen in problem_config imageOTTraits ...
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>
+  ::assemble_Jacobian_boundary(OpticLambertianOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy,
+                               const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+{
+  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix_with_automatic_differentiation(*lopLMBoundary, m, x, v);
+}
+
 
 
 template<typename OperatorTraits>
@@ -512,18 +477,13 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
     m.insert(indexFixingGridEquation,i)=lagrangianMidvalueDiscreteOperator(i);
     m.insert(i,indexFixingGridEquation)=lagrangianMidvalueDiscreteOperator(i);
 
-    if (lop_ptr->last_step_on_a_different_grid)
-    {
-      v(i)+= lambda*lagrangianMidvalueDiscreteOperator(i);
-    }
+    v(i)+= lambda*lagrangianMidvalueDiscreteOperator(i);
   }
   //set rhs of langrangian multipler
   std::cerr << " at v (" << indexFixingGridEquation << ") is " << v(indexFixingGridEquation) << " going to be " << assembler.u0AtX0()-assembler.uAtX0() << std::endl;
 
-  if (!lop_ptr->last_step_on_a_different_grid)
-    v(indexFixingGridEquation) = assembler.uAtX0() - assembler.u0AtX0();
-  else
-    v(indexFixingGridEquation) = assembler.uAtX0();
+  v(indexFixingGridEquation) = assembler.uAtX0() - assembler.u0AtX0();
+
   std::cerr << " u - u_0 = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation) << " = " << assembler.u0AtX0() << '-'  <<assembler.uAtX0() << std::endl;
   v(indexFixingGridEquation) += lagrangianMidvalueDiscreteOperator.dot(w);
 
@@ -742,9 +702,7 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
   //prepare clock to time computations
   auto start = std::chrono::steady_clock::now();
 
-  if (!lop_ptr->last_step_on_a_different_grid)
-    prepare_fixing_point_term(x);
-#ifdef USE_LAGRANGIAN
+  prepare_fixing_point_term(x);
   assemble_with_langrangian_Jacobian(xBoundary,x,v, m);
 #else
   assemble_everything(xBoundary,x,v, m);
@@ -863,6 +821,7 @@ template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>
    ::assert_integrability_condition(ConstantOperatorTraits<SolverType, LocalOperatorType>* dummy)
 {
+  std::cout << "having constant densities ";
   Integrator<Config::DuneGridType> integratorF(solver_ptr->get_grid_ptr());
   const double integralF = integratorF.assemble_integral(f_);
 
@@ -872,6 +831,7 @@ void MA_OT_Operator<OperatorTraits>
   const double integralG = integratorG.assemble_integral(g_);
 
   g_.divide_by_constant(integralG);
+  std::cout << " adapted f and g to integrable condition" << std::endl;
 }
 
 
@@ -879,6 +839,7 @@ template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>
    ::assert_integrability_condition(ImageOperatorOTTraits<SolverType, LocalOperatorType>* dummy)
 {
+  std::cout << " normalise image densities to match integrable condition" << std::endl;
   f_.normalize();
   g_.normalize();
 }
@@ -887,6 +848,22 @@ template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>
    ::assert_integrability_condition(OpticOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy)
 {
+  std::cout << " normalise light intensities to match integrable condition" << std::endl;
+
+#ifdef PARALLEL_LIGHT
+  f_.normalize();
+#else
+  f_.omega_normalize();
+#endif
+  g_.normalize();
+}
+
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>
+   ::assert_integrability_condition(OpticLambertianOperatorTraits<SolverType, LocalOperatorType, LocalOperatorLagrangianBoundaryType>* dummy)
+{
+  std::cout << " normalise light intensities to match integrable condition" << std::endl;
+
 #ifdef PARALLEL_LIGHT
   f_.normalize();
 #else

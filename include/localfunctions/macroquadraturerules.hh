@@ -145,8 +145,8 @@ template<typename ct, int dim>
 class DeVeubekeQuadratureRule;
 
 }
-#include "deveubekequadraturerule.hh"
-#include "../PowellSabin/PowellSabin12quadraturerule.hh"
+#include "localfunctions/deVeubeke/deveubekequadraturerule.hh"
+#include "localfunctions/PowellSabin12Split/PowellSabin12quadraturerule.hh"
 
 namespace Dune{
 

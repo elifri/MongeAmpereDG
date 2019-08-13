@@ -26,6 +26,8 @@
 #include "Optics/operator_LagrangianBoundary_refr_parallel.h"
 #include "Optics/operator_LagrangianBoundary_refl_parallel.h"
 
+#include "Optics/LambertianRadiator.h"
+
 class MA_solver;
 class MA_OT_solver;
 class MA_OT_image_solver;
@@ -131,6 +133,47 @@ struct OpticOperatorTraits:ImageOperatorTraits<Solver, LOP>{
   }
 
 };
+
+///interface for general OT operator, whose distributions constructors need Solver for initialisation and lop needs setting, as well as boundary lop needs a setting
+template<typename Solver, typename LOP, typename LOPLagrangianBoundary>
+struct OpticLambertianOperatorTraits:ImageOperatorTraits<Solver, LOP>{
+  using LocalBoundaryOperatorType = LOPLagrangianBoundary;
+
+  using FunctionTypeX = LambertianRadiator;
+  using FunctionTypeY = typename ImageOperatorTraits<Solver, LOP>::FunctionTypeY;
+
+  //in case of non-retangular grid, give function pointer to grid
+  template<typename OpticalSetting, typename std::enable_if<sizeof(OpticalSetting) && std::is_same<SolverConfig::GridHandlerType, GridHandler<Config::DuneGridType, false>>::value,int>::type = 0>
+  static FunctionTypeX construct_f(const Solver& solver, const OpticalSetting& setting)
+  {
+    return FunctionTypeX(
+        solver.get_gridHandler(),
+        setting.lowerLeft, setting.upperRight,
+	0.436332); //~25°
+  }
+
+  //in case of rectangular grid, give function only corners
+  template<typename OpticalSetting, typename std::enable_if<sizeof(OpticalSetting) && std::is_same<SolverConfig::GridHandlerType, GridHandler<Config::DuneGridType, true>>::value,int>::type = 0>
+  static FunctionTypeX construct_f(const Solver& solver, const OpticalSetting& setting)
+  {
+    return FunctionTypeX(
+        setting.lowerLeft, setting.upperRight,
+	0.436332); //~25°
+  }
+
+  template<typename OpticalSetting>
+  static LOP* construct_lop(const OpticalSetting& setting, const OTBoundary& bc, const FunctionTypeX& f, const FunctionTypeY& g)
+  {
+    return new LOP(setting, bc, f, g);
+  }
+
+  static LOPLagrangianBoundary* construct_lop_LBoundary(const OpticalSetting& setting, const OTBoundary& bc)
+  {
+    return new LOPLagrangianBoundary(setting, bc);
+  }
+
+};
+
 
 
 //find correct local operator

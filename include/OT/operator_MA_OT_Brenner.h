@@ -48,6 +48,8 @@ public:
     const int dim = Element::dimension;
     auto geometry = element.geometry();
 
+    //TODO change geometry restrict it for the elliptic projection
+
     //assuming galerkin ansatz = test space
 
     assert((unsigned int) x.size() == localView.size());

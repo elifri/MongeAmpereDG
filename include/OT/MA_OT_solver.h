@@ -64,7 +64,7 @@ public:
 
   MA_OT_solver(GridHandlerType& gridHandler,
       const shared_ptr<GridType>& gridTarget,
-      const SolverConfig& config, GeometryOTSetting& setting, bool create_operator = true);
+      const SolverConfig& config, const GeometryOTSetting& setting, bool create_operator = true);
 
 private:
   ///performs one step of the semi-implicit method mentioned in "Two numerical methods for ..." by Benamou, Froese and Oberman
@@ -73,6 +73,7 @@ private:
   virtual void create_initial_guess();
 //  void update_Operator();
   virtual void solve_nonlinear_system();
+protected:
   virtual void adapt_operator();
 
   using MA_solver::adapt;
@@ -122,7 +123,10 @@ public:
 
 public:
 
-  GeometryOTSetting& get_setting() {return setting_;}
+  using MA_solver::adapt;
+  using MA_solver::adapt_solution;
+
+//  GeometryOTSetting& get_setting() {return setting_;}
   const GeometryOTSetting& get_setting() const {return setting_;}
 
   const auto& get_gridHandlerTarget() const{return gridTarget_;}
@@ -134,6 +138,8 @@ public:
 //  const AssemblerLagrangianMultiplierCoarse& get_assembler_lagrangian_boundary() const { return assemblerLMCoarse_;}
   AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() { return assemblerLMBoundary_;}
   const AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() const { return assemblerLMBoundary_;}
+
+  const TransportPlotter& get_transportPlotter() const{ return transportPlotter_;}
 
 
   /**
@@ -161,7 +167,7 @@ public:
   Config::ValueType calculate_L2_error(const F &f) const;
 
 protected:
-  GeometryOTSetting& setting_;
+  const GeometryOTSetting& setting_;
 
   const bool compare_with_exact_solution_ = false;
 

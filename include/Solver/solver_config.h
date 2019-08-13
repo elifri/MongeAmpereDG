@@ -24,6 +24,8 @@
 #define USE_DOGLEG 1
 //#undef USE_DOGLEG
 
+#define RECTANGULAR_GRID
+
 #undef TARGET_IS_XZ_PLANE
 
 #ifndef C1Element
@@ -117,8 +119,11 @@ struct PovRayOpts
 
 struct SolverConfig{
 
-//  using GridHandlerType = GridHandler<Config::DuneGridType, true>;
+#ifdef RECTANGULAR_GRID
+  using GridHandlerType = GridHandler<Config::DuneGridType, true>;
+#else
   using GridHandlerType = GridHandler<Config::DuneGridType, false>;
+#endif
 
   using ValueType = Config::ValueType;
 
@@ -169,6 +174,8 @@ struct SolverConfig{
 	//-------select PS12 S-Splines
 #ifdef USE_PS12
   using FETraitsSolver = PS12SplitTraits<Config::GridView>;
+  template<typename GridView>
+  using FETraitsSolverWithGridView = PS12SplitTraits<GridView>;
 #endif
 
 	//-------select BSplines------------------
@@ -250,16 +257,20 @@ struct GeometryOTSetting:GeometrySetting {
 };
 
 struct OpticalSetting : GeometryOTSetting{
+
   void read_configfile(std::string &configFile);
   ///file for light source input
   static std::string LightinputImageName;
   ///file for target distribution
   static std::string TargetImageName;
 
+  bool target_is_xy_plane;
+
   ///minimal Pixelvalue in outputimage
   double minPixelValue;
 
   double initialOpticDistance;
+  double smoothingInitialOptic;
 
   ///pov ray options for output
   PovRayOpts povRayOpts;

@@ -21,15 +21,14 @@ public:
 
   Local_Operator_LagrangianBoundary_refl(const OTBoundary& bc)
     : opticalSetting(OpticalSetting()),
-    bc(bc),
-    last_step_on_a_different_grid(false)
+    bc(bc)
   {
     assert(false&& "this constructor should never be used!!");
     std::exit(-1);
   }
 
   Local_Operator_LagrangianBoundary_refl(const OpticalSetting &opticalSetting, const OTBoundary& bc)
-    : opticalSetting(opticalSetting), bc(bc), last_step_on_a_different_grid(false), oldSolutionCaller_(){}
+    : opticalSetting(opticalSetting), bc(bc){}
 
   template<class Intersection, class LocalViewV, class LocalViewQ, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
@@ -75,8 +74,8 @@ public:
     const QuadratureRule<double, dim - 1>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim-1>(gtfaceV, order);
 
     // normal of center in face's reference element
-    const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
-        dim - 1>::general(intersection.geometry().type()).position(0, 0);
+//    const FieldVector<double, dim - 1>& face_center = ReferenceElements<double,
+//        dim - 1>::general(intersection.geometry().type()).position(0, 0);
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -142,24 +141,10 @@ public:
       << "numer of buffer size " << stats[4] << std::endl;*/
   }
 
-  void set_evaluation_of_u_old_to_different_grid(){  last_step_on_a_different_grid = true;}
-  void set_evaluation_of_u_old_to_same_grid(){  last_step_on_a_different_grid = false;}
-  bool is_evaluation_of_u_old_on_different_grid(){  return last_step_on_a_different_grid;}
-
-  template<typename F>
-  void change_oldFunction(F&& uOld)
-  {
-    oldSolutionCaller_ = std::forward<F>(uOld);
-  }
-
 private:
   const OpticalSetting& opticalSetting;
 
   const OTBoundary& bc;
-
-  mutable bool last_step_on_a_different_grid;
-  std::function<const TaylorFunction&()> oldSolutionCaller_;
-
 };
 
 

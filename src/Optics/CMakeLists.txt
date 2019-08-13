@@ -5,7 +5,12 @@ set_source_files_properties(init_with_ellipsoid_method.cpp PROPERTIES COMPILE_FL
 add_library(EllipsoidMethod init_with_ellipsoid_method.cpp)
 
 add_library(MA_reflector_solver MA_reflector_solver.cpp)
+add_library(MA_reflector_solver_parallel MA_reflector_solver.cpp)
+target_compile_definitions(MA_reflector_solver_parallel PUBLIC PARALLEL_LIGHT)
+
 add_library(MA_refractor_solver MA_refractor_solver.cpp)
+add_library(MA_refractor_solver_parallel MA_refractor_solver.cpp)
+target_compile_definitions(MA_refractor_solver_parallel PUBLIC PARALLEL_LIGHT)
 
 Set(MirrorProblemLibs operator_MA_refl_Brenner problemData ImageFunction PARENT_SCOPE)
 #Set(LensProblemLibs operator_MA_refr_Linearisation operator_MA_refr_Brenner problemData ImageFunction PARENT_SCOPE)

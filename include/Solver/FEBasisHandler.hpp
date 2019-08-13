@@ -15,6 +15,7 @@
 #include "localfunctions/TaylorBoundaryFunction.hpp"
 
 #include <dune/functions/functionspacebases/interpolate.hh>
+#include "Solver/Elliptic_Projector.hpp"
 
 class MA_solver;
 
@@ -35,10 +36,6 @@ struct FEBasisHandler{
 
   template<class F>
   void project(F f, Config::VectorType &v) const;
-
-  //use the elliptic (problem induced) projection
-  template <typename GOP, class F>
-  void elliptic_project(const GOP& operatorMA, F f, Config::VectorType &v) const;
 
   template<class F, class F_Der>
   void project(F &f, F_Der &grad_f, Config::VectorType &v) const;
@@ -496,6 +493,9 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F f, 
     const auto & lFE = localView.tree().finiteElement();
     const auto& geometry = element.geometry();
 
+    Config::MatrixType A;
+    create_hermite_interpolation_matrix(FEBasis_->gridView(), element, A);
+
     Config::VectorType localDofs = Config::VectorType::Zero (lFE.size());
 
     int k = 0;
@@ -504,39 +504,18 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F f, 
       auto value = f(geometry.corner(i));
 
       //set dofs associated with values at vertices
-      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
       localDofs(k++) = value;
-
-      //test if this was the right basis function
-      {
-        std::vector<FieldVector<double, 1> > functionValues(lFE.size());
-        lFE.localBasis().evaluateFunction(geometry.local(geometry.corner(i)), functionValues);
-        assert(std::abs(functionValues[k-1][0]-1) < 1e-10);
-      }
-
 
       //set dofs associated with gradient values at vertices
       auto xValuePlus = geometry.corner(i);
       xValuePlus[0] += i % 2 == 0 ? h : - h;
-
-      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
-
 
       localDofs(k++) = i % 2 == 0 ? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
 
       xValuePlus = geometry.corner(i);
       xValuePlus[1] += i < 2 ? h : - h;
 
-      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
       localDofs(k++) = i < 2 ? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
-
-      //test if this were the right basis function
-      {
-        std::vector<FieldMatrix<double, 1, 2> > jacobianValues(lFE.size());
-        lFE.localBasis().evaluateJacobian(geometry.local(geometry.corner(i)), jacobianValues);
-        assert(std::abs(jacobianValues[k-2][0][0]-1) < 1e-10);
-        assert(std::abs(jacobianValues[k-1][0][1]-1) < 1e-10);
-      }
 
       k++;
     }
@@ -580,21 +559,11 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F f, 
         else
           k = 7;
 
-      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
       localDofs(k++) = unit_pointUpwards ? (approxGradientF*normal) : -(approxGradientF*normal);
 //      std::cout << " aprox normal derivative " << approxGradientF*normal << " = " << approxGradientF << " * " << normal << std::endl ;
-
-      //test if this were the right basis function
-#ifndef NDEBUG
-      {
-        std::vector<FieldMatrix<double, 1, 2> > jacobianValues(lFE.size());
-        lFE.localBasis().evaluateJacobian(geometry.local(face_center), jacobianValues);
-        assert(std::abs( std::abs(jacobianValues[k-1][0]*normal)-1) < 1e-10);
-      }
-#endif
     }
 
-    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localDofs, v);
+    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,A*localDofs, v);
 //    assembler.add_local_coefficients(localIndexSet,VectorType::Ones(localDofs.size()), countMultipleDof);
     Config::VectorType localmultiples = Config::VectorType::Ones(localDofs.size());
     Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
@@ -615,13 +584,20 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F &f,
   auto localView = FEBasis_->localView();
   auto localIndexSet = FEBasis_->indexSet().localIndexSet();
 
+//  std::cout << " need to process " << FEBasis_->gridView().size(0) << " elements " << std::endl;
+
   for (auto&& element : elements(FEBasis_->gridView()))
   {
+//    std::cout << " element " << counter++ << std::endl;
+
     localView.bind(element);
     localIndexSet.bind(localView);
 
     const auto & lFE = localView.tree().finiteElement();
     const auto& geometry = element.geometry();
+
+    Config::MatrixType A;
+    create_hermite_interpolation_matrix(FEBasis_->gridView(), element, A);
 
     Config::VectorType localDofs = Config::VectorType::Zero (lFE.size());
 
@@ -630,34 +606,13 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F &f,
     {
       auto value = f(geometry.corner(i));
 
-      //set dofs associated with values at vertices
-      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
       localDofs(k++) = value;
 
-#ifndef NDEBUG
-      //test if this was the right basis function
-      {
-        std::vector<FieldVector<double, 1> > functionValues(lFE.size());
-        lFE.localBasis().evaluateFunction(geometry.local(geometry.corner(i)), functionValues);
-        assert(std::abs(functionValues[k-1][0]-1) < 1e-10);
-      }
-#endif
-
       //set dofs associated with gradient values at vertices
-      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
       auto u_grad = grad_f(geometry.corner(i));
       localDofs(k++) = u_grad[0];
       localDofs(k++) = u_grad[1];
 
-#ifndef NDEBUG
-      //test if this were the right basis function
-      {
-        std::vector<FieldMatrix<double, 1, 2> > jacobianValues(lFE.size());
-        lFE.localBasis().evaluateJacobian(geometry.local(geometry.corner(i)), jacobianValues);
-        assert(std::abs(jacobianValues[k-2][0][0]-1) < 1e-10);
-        assert(std::abs(jacobianValues[k-1][0][1]-1) < 1e-10);
-      }
-#endif
       k++;
     }
     assert(k == 12);
@@ -687,20 +642,10 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F &f,
         else
           k = 7;
 
-      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
       localDofs(k++) = unit_pointUpwards ? (gradientF*normal) : -(gradientF*normal);
-
-      //test if this were the right basis function
-#ifndef NDEBUG
-      {
-        std::vector<FieldMatrix<double, 1, 2> > jacobianValues(lFE.size());
-        lFE.localBasis().evaluateJacobian(geometry.local(face_center), jacobianValues);
-        assert(std::abs( std::abs(jacobianValues[k-1][0]*normal)-1) < 1e-10);
-      }
-#endif
     }
 
-    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localDofs, v);
+    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet, A*localDofs, v);
 //    assembler.add_local_coefficients(localIndexSet,VectorType::Ones(localDofs.size()), countMultipleDof);
     Config::VectorType localmultiples = Config::VectorType::Ones(localDofs.size());
     Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
@@ -708,34 +653,6 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F &f,
 
   v = v.cwiseQuotient(countMultipleDof);
 }
-
-template<int FETraitstype, typename FETraits>
-template <typename GOP, class F>
-void FEBasisHandler<FETraitstype, FETraits>::elliptic_project(const GOP& operatorMA, F f, Config::VectorType &v) const
-{
-  operatorMA.set_evaluation_of_u_old_to_different_grid();
-
-  ///assemble linear equation system A_F(w_h, v_h) = A_F(u_h,v_h)
-
-  Config::MatrixType A;
-  Config::VectorType b;
-
-  operatorMA.evaluate(v, b, A, v, false);
-
-
-  //solve system
-  Eigen::SparseLU<Config::MatrixType> lu_of_A(A);
-
-  v = lu_of_A.solve(b);
-  if(lu_of_A.info()!=0) {
-      // solving failed
-      std::cerr << "\nError: Could solve the equation A_F(w_h, v_h;u_H) = A_F(u_H,v_h;u_H)!\n";
-      std::exit(1);
-  }
-
-  operatorMA.set_evaluation_of_u_old_to_same_grid();
-}
-
 
 template <>
 template <typename GridTypeOld>
@@ -780,34 +697,20 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 }
 
 template <>
-template <typename GridTypeOld, typename Solver>
+template <typename GridTypeOld, typename MA_OT_Operator>
 Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::adapt_function_elliptic_after_grid_change(const GridTypeOld& gridOld, const typename FEBasisType::GridView& grid,
-    Solver& ma_solver, const Config::VectorType& v) const
+    MA_OT_Operator& MAoperator, const Config::VectorType& v) const
 {
-  //prepare evaluation procedure for the function on the old grid
-
-  // 1. global function on coarse grid
   using CoarseTraits = PS12SplitTraits<GridTypeOld>;
 
   typename CoarseTraits::FEBasis FEBasisCoarse (gridOld);
   using DiscreteGridFunctionCoarse = typename CoarseTraits::DiscreteGridFunction;
   DiscreteGridFunctionCoarse solution_u_Coarse_global (FEBasisCoarse,v);
 
-  // 2. prepare a Taylor extension for values outside the old grid
-  GenerealOTBoundary bcSource(gridOld.grid());
-  TaylorBoundaryFunction<DiscreteGridFunctionCoarse> solution_u_old_extended_global(bcSource, solution_u_Coarse_global);
+  Elliptic_Projector proj(gridOld, FEBasis_->gridView(), *FEBasis_,
+      MAoperator.get_f(), MAoperator.get_g());
 
-  // pass information of evaluation procedure to the local operators
-  auto get_FEFunction = [&solution_u_old_extended_global]()-> const auto&{return solution_u_old_extended_global;};
-  ma_solver.get_operator().change_oldFunction(get_FEFunction);
-
-  ma_solver.get_u_old_ptr() = std::shared_ptr<DiscreteGridFunctionCoarse> (new DiscreteGridFunctionCoarse(FEBasisCoarse,v));
-
-  //project to new grid
-  Config::VectorType vNew;
-  vNew = Config::VectorType::Zero(ma_solver.get_n_dofs());
-  elliptic_project(ma_solver.get_operator(), solution_u_Coarse_global, vNew);
-  return vNew;
+  return proj.project(solution_u_Coarse_global);
 }
 
 

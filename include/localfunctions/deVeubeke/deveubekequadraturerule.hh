@@ -3,6 +3,10 @@
 #ifndef DUNE_QUADRATURE_DEVEUBEKE_HH
 #define DUNE_QUADRATURE_DEVEUBEKE_HH
 
+#include <dune/geometry/quadraturerules.hh>
+#include <localfunctions/macroquadraturerules.hh>
+
+
 namespace Dune {
 
   /************************************************
