@@ -19,7 +19,9 @@
 //to mark variables as unused (used for checking of return values in Petsc etc. in Debug Mode)
 #define _unused(x) ((void)x)
 
-//for definition of ADOLC see solver_config #define HAVE_ADOLC
+//for definition of ADOLC
+#define HAVE_ADOLC 1
+
 
 //use analytic derivation (if implemented)
 //#define USE_ANALYTIC_JACOBIAN
