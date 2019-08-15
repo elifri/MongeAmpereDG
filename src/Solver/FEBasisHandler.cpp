@@ -144,8 +144,6 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
     const auto & lFE = localViewCoarse.tree().finiteElement();
     const auto& geometry = elementCoarse.geometry();
 
-    Config::MatrixType A;
-    create_hermite_interpolation_matrix(coarseGridView, elementCoarse, A);
 //    std::cout << " father dofs ";
 //    for (const auto& tempEl : gradient_u_Coarse->localDoFs_ ) std::cout << tempEl << " ";
 //    std::cout << std::endl;
@@ -202,9 +200,8 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
 
       localDofs(k) = signNormal * (gradient_u_old_extended_global(face_center) * normal);
 //      std::cout << "grad at " << face_center << " is " << localGradient(element.geometry().local(face_center)) << " normal " << normal << " -> " << (localGradient(element.geometry().local(face_center)) * normal) << " signNormal " << signNormal << std::endl;
+      assert(lFE.localCoefficients().localKey(k).subEntity() == (unsigned int) i);
       }
-
-    localDofs = A*localDofs;
 
 //      std::cout << " set local dofs " << localDofs.transpose() << std::endl;
 
