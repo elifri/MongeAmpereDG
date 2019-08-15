@@ -54,8 +54,6 @@ namespace Dune
        /* edge and vertex numbering0
         */
 
-      int n=0;
-
       li[0] = LocalKey(0,2,0);//vertex 0
       li[2] = LocalKey(0,0,0);//inner dof
       li[4] = LocalKey(1,2,0); //vertex 1

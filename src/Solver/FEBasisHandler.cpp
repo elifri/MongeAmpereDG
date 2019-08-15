@@ -141,7 +141,7 @@ Config::VectorType FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>:
     localViewCoarse.bind(elementCoarse);
     localIndexSetCoarse.bind(localViewCoarse);
 
-    const auto & lFE = localViewCoarse.tree().finiteElement();
+//    const auto & lFE = localViewCoarse.tree().finiteElement();
     const auto& geometry = elementCoarse.geometry();
 
     Config::MatrixType A;

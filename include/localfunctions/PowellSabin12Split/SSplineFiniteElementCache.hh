@@ -210,8 +210,8 @@ bool operator<(const Dune::FieldVector<value_type, 2> & v, const Dune::FieldVect
 
     ~PS12SSplineFiniteElementCache()
     {
-      typename FEMap::iterator it = cache_.begin();
-      typename FEMap::iterator end = cache_.end();
+//      typename FEMap::iterator it = cache_.begin();
+//      typename FEMap::iterator end = cache_.end();
 //      for(; it!=end; ++it)
 //        delete it->second;
     }
