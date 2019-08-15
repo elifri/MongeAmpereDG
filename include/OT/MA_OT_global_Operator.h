@@ -702,6 +702,7 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
   //prepare clock to time computations
   auto start = std::chrono::steady_clock::now();
 
+#ifdef USE_LAGRANGIAN
   prepare_fixing_point_term(x);
   assemble_with_langrangian_Jacobian(xBoundary,x,v, m);
 #else

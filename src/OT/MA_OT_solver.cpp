@@ -514,13 +514,13 @@ void MA_OT_solver::plot(const std::string& name, int no) const
      std::cerr << fname  << std::endl;
   }
 
-  {
+/*  {
     std::string fname(plotter.get_output_directory());
     fname += "/"+ plotter.get_output_prefix()+ name +"estInt"+ NumberToString(no) + ".vtu";
     plotter.writeVTK(fname, *solution_u_old, this->get_OT_operator().get_f());
     std::cout << " write initial grid to " << fname << std::endl;
 
-  }
+  }*/
 
   //write to file
 
@@ -878,7 +878,6 @@ void MA_OT_solver::solve_nonlinear_system()
   assert(solution.size() == get_n_dofs_V_h() && "Error: start solution is not initialised");
 #endif
 
-  assert(!this->get_OT_operator().is_evaluation_of_u_old_on_different_grid());
   std::cout << "n dofs" << get_n_dofs() << " V_h_dofs " << get_n_dofs_V_h() << " Q_h_dofs " << get_n_dofs_Q_h() << std::endl;
 
   //if the exact solution is known it can be accessed via exactdata
@@ -999,12 +998,6 @@ void MA_OT_solver::adapt_solution(const int level)
   //adapt operator
   std::cerr << " going to adapt operator " << std::endl;
   adapt_operator();
-
-
-  //project old solution to new grid
-  auto newSolution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), solution);
-//  auto newSolution = FEBasisHandler_.adapt_function_elliptic_after_grid_change(old_grid.gridViewOld, gridView(), *this, solution);
-  solution = newSolution;
 
 #ifdef USE_LAGRANGIAN
   //adapt boundary febasis and bind to assembler

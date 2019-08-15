@@ -76,6 +76,7 @@ private:
 protected:
   virtual void adapt_operator();
 
+public:
   using MA_solver::adapt;
   using MA_solver::adapt_solution;
 
@@ -122,9 +123,6 @@ public:
   virtual void plot(const std::string& filename, int no) const;
 
 public:
-
-  using MA_solver::adapt;
-  using MA_solver::adapt_solution;
 
 //  GeometryOTSetting& get_setting() {return setting_;}
   const GeometryOTSetting& get_setting() const {return setting_;}

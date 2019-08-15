@@ -840,15 +840,15 @@ void Plotter::write_points_OT_global(std::ofstream &file, Function &fg, const Gr
 
     int vertex_no = 0;
 
-    int numberOfElement = gridView.size(0);
-    int numberProcessedElements = 0;
-    ProgressBar progressbar;
-    progressbar.start();
+//    int numberOfElement = gridView.size(0);
+//    int numberProcessedElements = 0;
+//    ProgressBar progressbar;
+//    progressbar.start();
 
     {   // save points in file after refinement
       for (auto&& element: elements(gridView))
       {
-	progressbar.status(numberProcessedElements,numberOfElement);
+//        progressbar.status(numberProcessedElements,numberOfElement);
         using ElementType = std::decay_t<decltype(element)>;
         const bool isCube = element.geometry().type().isCube();
 
@@ -861,11 +861,11 @@ void Plotter::write_points_OT_global(std::ofstream &file, Function &fg, const Gr
         {
           write_element_points_OT_global<Function, ElementType, SimplexRefinementType>(element, file, fg, vertex_no, refinement);
         }
-        numberProcessedElements++;
+//        numberProcessedElements++;
       }
     }
   file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
-  std::cout << " needed " << progressbar.stop()<< " to set up estimate integral data" << std::endl;
+//  std::cout << " needed " << progressbar.stop()<< " to set up estimate integral data" << std::endl;
 }
 
 
@@ -964,16 +964,16 @@ void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, con
         << "\t\t\t\t<DataArray type=\"Float32\" Name=\"est. integral\" NumberOfComponents=\"1\" format=\""
         << "ascii" << "\">\n";
 
-    int numberOfElement = gridView.size(0);
-    int numberProcessedElements = 0;
+//    int numberOfElement = gridView.size(0);
+//    int numberProcessedElements = 0;
 
-    ProgressBar progressbar;
-    progressbar.start();
+//    ProgressBar progressbar;
+//    progressbar.start();
 
     {   // save points in file after refinement
       for (auto&& element: elements(gridView))
       {
-	progressbar.status(numberProcessedElements,numberOfElement);
+//        progressbar.status(numberProcessedElements,numberOfElement);
 
         const auto geometry = element.geometry();
 
@@ -1023,11 +1023,11 @@ void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, con
           file << "\t\t\t\t\t" << estInt << " ";
           file << std::endl;
         }
-        numberProcessedElements++;
+//        numberProcessedElements++;
       }
     }
     file << "\t\t\t\t</DataArray>\n" << "\t\t\t</CellData>\n";
-    std::cout << " needed " << progressbar.stop()<< " to set up estimate integral data" << std::endl;
+//    std::cout << " needed " << progressbar.stop()<< " to set up estimate integral data" << std::endl;
 }
 
 ///helper to calc and write locally the estimated integrals in a virtually refined element
@@ -1082,7 +1082,7 @@ void Plotter::write_refined_simple_estimate_integral_OT_global(std::ofstream &fi
     {   // save points in file after refinement
       for (auto&& element: elements(gridView))
       {
-	progressbar.status(numberProcessedElements,numberOfElement);
+        progressbar.status(numberProcessedElements,numberOfElement);
 
         const auto geometry = element.geometry();
 
