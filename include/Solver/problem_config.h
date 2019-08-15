@@ -197,8 +197,11 @@ template<typename ProblemTraits>
 #ifdef USE_ANALYTIC_JACOBIAN
   using GlobalMA_OT_Operator = MA_OT_Operator_with_Linearisation<ProblemTraits, Local_Operator_MA_OT_Linearisation>;
 #else
-//  using GlobalMA_OT_Operator = MA_OT_Operator<ProblemTraits>;
-  using GlobalMA_OT_Operator = MA_OT_Operator_SSplines<ProblemTraits>;
+  #ifdef NODALBASIS
+    using GlobalMA_OT_Operator = MA_OT_Operator<ProblemTraits>;
+  #else
+    using GlobalMA_OT_Operator = MA_OT_Operator_SSplines<ProblemTraits>;
+  #endif
 #endif
 
 template<typename ProblemTraits>

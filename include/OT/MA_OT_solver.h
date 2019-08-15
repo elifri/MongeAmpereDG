@@ -87,8 +87,11 @@ public:
 #endif
   virtual int get_n_dofs_V_h() const{return FEBasisHandler_.FEBasis().indexSet().size();}
   virtual int get_n_dofs_Q_h() const{return get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();}
+#ifdef NODALBASIS
+  virtual int get_n_dofs() const{return get_n_dofs_V_h() + 1 + get_n_dofs_Q_h();}
+#else
   virtual int get_n_dofs() const{return get_n_dofs_V_h() + 1 + get_n_dofs_Q_h()+get_assembler_lagrangian_edges().get_noOfConditions();}
-
+#endif
   using MA_solver::get_operator;
   virtual Operator_OT& get_OT_operator(){return *(std::dynamic_pointer_cast<Operator_OT>(this->op));}
   virtual const Operator_OT& get_OT_operator() const {return  *(std::dynamic_pointer_cast<Operator_OT>(this->op));}
