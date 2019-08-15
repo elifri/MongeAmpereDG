@@ -17,8 +17,9 @@
 #include "Solver/FETraits.hpp"
 
 
-#define HAVE_ADOLC 1
 #define USE_AUTOMATIC_DIFFERENTIATION 1
+//for definition of ADOLC see MAconfig #define HAVE_ADOLC
+
 
 #define USE_LAGRANGIAN 1
 #define USE_DOGLEG 1
