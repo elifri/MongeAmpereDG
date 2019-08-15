@@ -17,6 +17,8 @@
 #include <dune/localfunctions/c1/PowellSabin/PowellSabin12SSpline.hh>
 #include "PS12SSplineFiniteElementCache.hh"
 
+#include<Eigen/Sparse>
+
 namespace Dune{
 namespace Functions {
 
@@ -265,7 +267,7 @@ protected:
  *
  * \tparam GV The GridView that the space is defined on
  */
-template<typename GV, class SparseMatrixType, class ST = std::size_t>
+template<typename GV, class SparseMatrixType=Eigen::SparseMatrix<double>, class ST = std::size_t>
 using PS12SSplineBasis = DefaultGlobalBasis<PS12SSplineNodeFactory<GV, FlatMultiIndex<ST>, ST, SparseMatrixType> >;
 
 

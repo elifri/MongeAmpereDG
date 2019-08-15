@@ -18,7 +18,7 @@
 #include "localfunctions/MAmixed/MAmixedbasisC0.hh"
 //#include "localfunctions/MAmixed/MAmixedbasisC0C0.hh"
 //#include "localfunctions/deVeubekefunctionspacebasis.hh"
-#include "localfunctions/PowellSabin12Split/SSplinenodalbasis.hh"
+#include "localfunctions/PowellSabin12Split/PowellSabin12SSplinenodalbasis.hh"
 #include <dune/functions/functionspacebases/bsplinebasis.hh>
 #include "localfunctions/bernsteinBezier/bernsteinbezierk2dnodalbasis.h"
 
