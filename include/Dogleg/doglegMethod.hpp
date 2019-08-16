@@ -396,7 +396,7 @@ Eigen::VectorXd DoglegSolver<FunctorType, rectangular>::choose_update_method(con
   const double eta   = 0.8*gamma+0.2;
 
   //perform (3.20) in http://orbit.dtu.dk/en/publications/methods-for-nonlinear-least-squares-problems-2nd-ed(f08ec0a8-7588-4262-b963-838202c420a8).html
-  if (nb <= delta_ || true)
+  if (nb <= delta_)
   {
       // perform Newton-step
       h.noalias() = -b;
