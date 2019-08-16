@@ -858,7 +858,7 @@ void MA_OT_solver::create_initial_guess()
   assembler_.set_u0AtX0(res);
   std::cerr << " set u_0^mid to " << res << std::endl;
 
-//  one_Poisson_Step();
+  one_Poisson_Step();
 
   update_solution(solution);
 
@@ -893,8 +893,11 @@ void MA_OT_solver::solve_nonlinear_system()
   // /////////////////////////
 
 #ifdef USE_DOGLEG
-  doglegMethod<Operator>(get_operator(), doglegOpts_, solution, evaluateJacobianSimultaneously_);
-//  doglegMethod<Operator, false>(get_operator(), doglegOpts_, solution, evaluateJacobianSimultaneously_);
+  #ifdef USE_LAGRANGIAN
+    doglegMethod<Operator>(get_operator(), doglegOpts_, solution, evaluateJacobianSimultaneously_);
+  #else
+    doglegMethod<Operator, false>(get_operator(), doglegOpts_, solution, evaluateJacobianSimultaneously_);
+  #endif
 #else
   newtonOpts_.omega = 1.0;
   newtonMethod(get_operator(), newtonOpts_, solution, evaluateJacobianSimultaneously_);

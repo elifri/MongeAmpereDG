@@ -575,9 +575,9 @@ bool DoglegSolver<FunctorType, rectangular>::solve(){
         if (stop_)
           break;
         if (useCombinedFunctor)
-          functor_.evaluate(xnew,fn,Jn, x_, true);
+          functor_.evaluate(xnew,fn,Jn, xnew, true);
         else
-          functor_.evaluate(xnew,fn,x_, true);
+          functor_.evaluate(xnew,fn,xnew, true);
         const double Fn = fn.squaredNorm() / 2.0;
 //            std::cerr << "f " << fn.transpose() << std::endl;
 //            std::cerr << " function norm 2 /2" << Fn << std::endl;

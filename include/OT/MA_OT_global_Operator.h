@@ -609,10 +609,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_everything(const Config::VectorTyp
   //set rhs of langrangian multipler
   std::cerr << " at v (" << indexFixingGridEquation << ") is " << v(indexFixingGridEquation) << " going to be " << assembler.u0AtX0()-assembler.uAtX0() << std::endl;
 
-  if (!lop_ptr->last_step_on_a_different_grid)
-    v(indexFixingGridEquation) = assembler.uAtX0() - assembler.u0AtX0();
-  else
-    v(indexFixingGridEquation) = assembler.uAtX0();
+  v(indexFixingGridEquation) = assembler.uAtX0();
   std::cerr << " u - u_0 = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation) << " = " << assembler.u0AtX0() << '-'  <<assembler.uAtX0() << std::endl;
   v(indexFixingGridEquation) += lagrangianMidvalueDiscreteOperator.dot(w);
 
@@ -686,8 +683,8 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
 
     typename SolverType::ExactData exactData;
 
-    std::cerr << std::scientific << std::setprecision(5)
-        << "   current L2 error is " << solver_ptr->calculate_L2_error(exactData.exact_solution()) << std::endl;
+//    std::cerr << std::scientific << std::setprecision(5)
+//        << "   current L2 error is " << solver_ptr->calculate_L2_error(exactData.exact_solution()) << std::endl;
 /*
     std::cerr << std::scientific << std::setprecision(3)
         << "   current L2 grad error is " << solver_ptr->calculate_L2_error_gradient(exactData.exact_gradient()) << std::endl;
@@ -695,7 +692,7 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
         << "   current L2 grad boundary error is "
         << solver_ptr->calculate_L2_error_gradient_boundary(exactData.exact_gradient()) << std::endl;
 */
-    std::cerr << " x norm " << x.norm() << " x: " << x.transpose() << std::endl;
+//    std::cerr << " x norm " << x.norm() << " x: " << x.transpose() << std::endl;
   }
 
 
@@ -709,8 +706,8 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
   assemble_everything(xBoundary,x,v, m);
 #endif
 
-  for (int i = 0; i < v.size(); i++)  assert ( ! (v(i) != v(i)));
-#ifdef DEBUG
+//  for (int i = 0; i < v.size(); i++)  assert ( ! (v(i) != v(i)));
+//#ifdef DEBUG
   {
     std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "BF" << intermediateSolCounter << ".m";      \
     std::ofstream file(filename.str(),std::ios::out);
@@ -720,7 +717,7 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
     std::ofstream file2(filename2.str(),std::ios::out);
     MATLAB_export(file2, v, "v");
   }
-#endif
+//#endif
   //output
   auto end = std::chrono::steady_clock::now();
   std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
