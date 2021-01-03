@@ -383,6 +383,7 @@ public:
   const GridHandlerType& get_gridHandler() const{ return gridHandler_;}
 
   const VectorType& get_solution() const {return solution;}
+  const VectorType get_solution_u() const {return solution.head(get_n_dofs_u());}
   const VectorType& get_exact_solution() const {return exactsol_u;}
 
   DiscreteGridFunction& get_u_old() const {return *solution_u_old_global;}

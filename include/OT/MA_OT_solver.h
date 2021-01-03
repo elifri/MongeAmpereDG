@@ -61,6 +61,7 @@ public:
 #else
   using AssemblerLagrangianMultiplierBoundaryType = AssemblerLagrangianMultiplierBoundary;
 #endif
+  using AssemblerLagrangianVhType = AssemblerLagrangianVh;
 
   MA_OT_solver(GridHandlerType& gridHandler,
       const shared_ptr<GridType>& gridTarget,
@@ -89,7 +90,7 @@ public:
 #endif
   virtual int get_n_dofs_V_h() const{return FEBasisHandler_.FEBasis().indexSet().size();}
   virtual int get_n_dofs_Q_h() const{return get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();}
-  virtual int get_n_dofs() const{return get_n_dofs_V_h() + 1 + get_n_dofs_Q_h();}
+  virtual int get_n_dofs() const{return 2*get_n_dofs_V_h() + get_n_dofs_Q_h();}
 
   using MA_solver::get_operator;
   virtual Operator_OT& get_OT_operator(){return *(std::dynamic_pointer_cast<Operator_OT>(this->op));}
@@ -136,6 +137,8 @@ public:
 //  const AssemblerLagrangianMultiplierCoarse& get_assembler_lagrangian_boundary() const { return assemblerLMCoarse_;}
   AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() { return assemblerLMBoundary_;}
   const AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() const { return assemblerLMBoundary_;}
+  AssemblerLagrangianVhType& get_assembler_lagrangian_Vh() { return assemblerLMDual_;}
+  const AssemblerLagrangianVhType& get_assembler_lagrangian_Vh() const { return assemblerLMDual_;}
 
   const TransportPlotter& get_transportPlotter() const{ return transportPlotter_;}
 
@@ -178,6 +181,7 @@ protected:
   //assembler for lagrangian multiplier
   AssemblerLagrangianMultiplier1D<> assemblerLM1D_;
   AssemblerLagrangianMultiplierBoundaryType assemblerLMBoundary_;
+  AssemblerLagrangianVh assemblerLMDual_;
 
 //  OperatorType op;
 

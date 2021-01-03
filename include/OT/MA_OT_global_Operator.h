@@ -15,6 +15,7 @@
 
 
 #include "Solver/AssemblerLagrangian1d.h"
+#include "Solver/AssemblerLagrangianVh.h"
 #include "Integrator.hpp"
 #include "utils.hpp"
 
@@ -65,7 +66,7 @@ public:
       lop_ptr(new LocalOperatorType(
 //          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
           *boundary_, f_, g_)),
-      lopLMMidvalue(new Local_operator_LangrangianMidValue()),
+      lopLMDual(new Local_operator_Lagrangian_Dual()),
       lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
       intermediateSolCounter()
   {
@@ -81,7 +82,7 @@ public:
         f_(OperatorTraits::construct_f(solver, setting)),
         g_(OperatorTraits::construct_g(solver, setting)),
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
-        lopLMMidvalue(new Local_operator_LangrangianMidValue()),
+        lopLMDual(new Local_operator_Lagrangian_Dual()),
         lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),
         intermediateSolCounter()
     {
@@ -97,7 +98,7 @@ public:
         f_(OperatorTraits::construct_f(solver, setting)),
         g_(OperatorTraits::construct_g(solver, setting)),
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
-        lopLMMidvalue(new Local_operator_LangrangianMidValue()),
+        lopLMDual(new Local_operator_Lagrangian_Dual()),
         lopLMBoundary(OperatorTraits::construct_lop_LBoundary(setting,get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
         intermediateSolCounter()
     {
@@ -108,7 +109,7 @@ public:
 
 
   MA_OT_Operator(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
-      lopLMMidvalue(new Local_operator_LangrangianMidValue()),
+      lopLMDual(new Local_operator_Lagrangian_Dual()),
       lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),//, solver.get_u_old())),
       intermediateSolCounter()
       {
@@ -116,7 +117,7 @@ public:
       }
 
   MA_OT_Operator(SolverType& solver, LocalOperatorType* lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
-      lopLMMidvalue(new Local_operator_LangrangianMidValue()),
+      lopLMDual(new Local_operator_Lagrangian_Dual()),
       lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),
       intermediateSolCounter()
   {
@@ -139,15 +140,15 @@ public:
     return *lop_ptr;
   }
 
-  const Local_operator_LangrangianMidValue& get_lopLMMidvalue() const
+  const Local_operator_Lagrangian_Dual& get_lopLMDual() const
   {
-    assert(lopLMMidvalue);
-    return *lopLMMidvalue;
+    assert(lopLMDual);
+    return *lopLMDual;
   }
-  Local_operator_LangrangianMidValue& get_lopLMMidvalue()
+  Local_operator_Lagrangian_Dual& get_lopLMDual()
   {
-    assert(lopLMMidvalue);
-    return *lopLMMidvalue;
+    assert(lopLMDual);
+    return *lopLMDual;
   }
 
   const DensityFunction& get_f() const{ return f_;}
@@ -195,16 +196,15 @@ private:
   void prepare_fixing_point_term(const Config::VectorType& x) const;
 
   ///assembles the system of the MA PDE
-  virtual void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
+  virtual void assemble_without_lagrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
 
-  void assemble_with_langrangian_Jacobian(const Config::VectorType& xBoundary, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
-  void assemble_everything(const Config::VectorType& xBoundary, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
+  void assemble_with_lagrangians_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
+  //void assemble_everything(const Config::VectorType& xBoundary, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
 
-  virtual void assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const;
-  void assemble_with_langrangian(const Config::VectorType& xNew, const Config::VectorType& x, Config::VectorType& v) const;
+  virtual void assemble_without_lagrangian(const Config::VectorType& x, Config::VectorType& v) const;
+  void assemble_with_lagrangians(const Config::VectorType& x, Config::VectorType& v) const;
 
-  virtual void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const;
-
+  virtual void assemble_without_lagrangian_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const;
 
   ///assembles the bilinear form used with the lagrangian multiplier for the boundary
   template<typename OperatorTraitsDummy = OperatorTraits>
@@ -257,7 +257,7 @@ public:
 
   std::shared_ptr<LocalOperatorType> lop_ptr;
 
-  std::shared_ptr<Local_operator_LangrangianMidValue> lopLMMidvalue;
+  std::shared_ptr<Local_operator_Lagrangian_Dual> lopLMDual;
   std::shared_ptr<LocalOperatorLagrangianBoundaryType> lopLMBoundary;
 
   Config::VectorType lagrangianMidvalueDiscreteOperator;
@@ -316,7 +316,7 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
     return *lopLinear_ptr;
   }
 
-  void assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const
+  void assemble_without_lagrangian(const Config::VectorType& x, Config::VectorType& v) const
   {
     assert(x.size()==this->solver_ptr->get_n_dofs_V_h());
     assert(v.size()==this->solver_ptr->get_n_dofs_V_h());
@@ -331,7 +331,7 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
 
 //    (this->solver_ptr)->assembler_.assemble_DG_Only(this->get_lop(), x,v);
   }
-  void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+  void assemble_without_lagrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
   {
     assert(x.size()==this->solver_ptr->get_n_dofs_V_h());
     assert(v.size()==this->solver_ptr->get_n_dofs_V_h());
@@ -340,7 +340,7 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
 
     (this->solver_ptr)->assembler_.assemble_DG_Jacobian(*(this->lop_ptr), *lopLinear_ptr, x,v, m);
   }
-  void assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
+  void assemble_without_lagrangian_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
   {
     assert(false);
 //    this->solver_ptr->assemble_Jacobian_DG(*(this->lop_ptr), *lopLinear_ptr, x,m);
@@ -355,9 +355,6 @@ private:
 template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>::init()
 {
-  solver_ptr->get_assembler_lagrangian_midvalue().assemble_u_independent_matrix(*lopLMMidvalue, lagrangianMidvalueDiscreteOperator);
-  std::cerr << " adapted operator and now lagrangian " << lagrangianMidvalueDiscreteOperator.size() << " and ndofsV_H " << this->solver_ptr->get_n_dofs_V_h() << std::endl;
-
   assert_integrability_condition();
   assert(check_integrability_condition());
 }
@@ -366,15 +363,10 @@ void MA_OT_Operator<OperatorTraits>::init()
 template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>::prepare_fixing_point_term(const Config::VectorType& x) const
 {
-  Config::ValueType res = 0;
-  solver_ptr->get_assembler_lagrangian_midvalue().assembleRhs(*lopLMMidvalue, x, res);
-  solver_ptr->get_assembler().set_uAtX0(res);
-
-  std::cerr << "current mid value " << res << std::endl;
 }
 
 template<typename OperatorTraits>
-void MA_OT_Operator<OperatorTraits>::assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+void MA_OT_Operator<OperatorTraits>::assemble_without_lagrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {
   assert(x.size()==this->solver_ptr->get_n_dofs_V_h());
   assert(v.size()==this->solver_ptr->get_n_dofs_V_h());
@@ -411,34 +403,31 @@ void MA_OT_Operator<OperatorTraits>
 
 
 template<typename OperatorTraits>
-void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Config::VectorType& xBoundary, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
 {
   assert(lop_ptr);
 
   int V_h_size = this->solver_ptr->get_n_dofs_V_h();
   int Q_h_size = this->solver_ptr->get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();
 
-  assert(x.size()>=V_h_size);
+  assert(x.size() == 2*V_h_size+Q_h_size);
   v.setZero(this->solver_ptr->get_n_dofs());
   m.resize(this->solver_ptr->get_n_dofs(),this->solver_ptr->get_n_dofs());
 
-  Config::VectorType w = xBoundary.head(V_h_size)-x.head(V_h_size);
 
   //assemble MA PDE in temporary variables
-
   //todo jede Menge copy paste
   Config::MatrixType tempM(V_h_size, V_h_size);
   Config::VectorType tempX = x.head(V_h_size);
   Config::VectorType tempV(V_h_size);
-  this->assemble_without_langrangian_Jacobian(tempX,tempV, tempM);
+  this->assemble_without_lagrangian_Jacobian(tempX,tempV, tempM);
 
   //copy system
   v.head(tempV.size()) = tempV;
-  v.head(V_h_size) += tempM*w;
-
   //copy SparseMatrix todo move to EigenUtility
   std::vector< Eigen::Triplet<double> > tripletList;
   copy_to_new_sparse_matrix(tempM, m);
+  copy_sparse_to_sparse_matrix(tempM.transpose(), m, V_h_size, V_h_size+Q_h_size);
 #ifdef DEBUG
   {
     std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "BF" << intermediateSolCounter << ".m";      \
@@ -458,35 +447,6 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
 #endif
   std::cerr << "  l(v) with norm " << std::scientific << std::setprecision(3) << tempV.norm() << std::endl;//<< "  : " << tempV.transpose() << std::endl;
 
-  //assemble part of first lagrangian multiplier for fixing midvalue
-  const auto& assembler = this->solver_ptr->get_assembler();
-
-  int indexFixingGridEquation = V_h_size;
-  //assemble lagrangian multiplier for grid fixing point
-
-  //-------------------select  mid value-------------------------
-  assert(lagrangianMidvalueDiscreteOperator.size() == V_h_size);
-
-  auto lambda = x(indexFixingGridEquation);
-  std::cerr << "  lambda " << lambda << std::endl;
-
-  //copy in system matrix
-  for (unsigned int i = 0; i < lagrangianMidvalueDiscreteOperator.size(); i++)
-  {
-    //indexLagrangianParameter = indexFixingGridEquation
-    m.insert(indexFixingGridEquation,i)=lagrangianMidvalueDiscreteOperator(i);
-    m.insert(i,indexFixingGridEquation)=lagrangianMidvalueDiscreteOperator(i);
-
-    v(i)+= lambda*lagrangianMidvalueDiscreteOperator(i);
-  }
-  //set rhs of langrangian multipler
-  std::cerr << " at v (" << indexFixingGridEquation << ") is " << v(indexFixingGridEquation) << " going to be " << assembler.u0AtX0()-assembler.uAtX0() << std::endl;
-
-  v(indexFixingGridEquation) = assembler.uAtX0() - assembler.u0AtX0();
-
-  std::cerr << " u - u_0 = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation) << " = " << assembler.u0AtX0() << '-'  <<assembler.uAtX0() << std::endl;
-  v(indexFixingGridEquation) += lagrangianMidvalueDiscreteOperator.dot(w);
-
 #ifdef DEBUG
   {
     std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "Bm" << intermediateSolCounter << ".m";
@@ -495,13 +455,17 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
   }
 #endif
 
+  tempM.setZero();
+  solver_ptr->get_assembler_lagrangian_Vh().assemble(*lopLMDual, tempM);
+  copy_to_sparse_matrix(tempM, m, 0, V_h_size+Q_h_size);
+
   //assemble part of second lagrangian multiplier for fixing boundary
   tempM.resize(Q_h_size, V_h_size);
   tempM.setZero();
   tempV.setZero(Q_h_size);
 
   //assemble boundary terms
-  assemble_Jacobian_boundary(xBoundary.head(V_h_size), tempV, tempM);
+  assemble_Jacobian_boundary(x.head(V_h_size), tempV, tempM);
 
   Q_h_size = tempM.rows();
 
@@ -516,11 +480,11 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
 //    MATLAB_export(tempM, "B_H");
 
   //copy to system
-  copy_to_sparse_matrix(tempM, m, V_h_size+1, 0);
-  copy_sparse_to_sparse_matrix(tempM.transpose(), m, 0, V_h_size+1);
+  copy_to_sparse_matrix(tempM, m, 2*V_h_size, 0);
+  copy_sparse_to_sparse_matrix(tempM.transpose(), m, V_h_size, V_h_size);
 
 
-  assert(V_h_size+1+Q_h_size==m.rows());
+  assert(2*V_h_size+Q_h_size==m.rows());
   v.tail(Q_h_size) = tempV;
 #ifdef DEBUG
   {
@@ -545,130 +509,6 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian_Jacobian(const Co
 
 
 template<typename OperatorTraits>
-void MA_OT_Operator<OperatorTraits>::assemble_everything(const Config::VectorType& xBoundary, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
-{
-  assert(lop_ptr);
-
-  int V_h_size = this->solver_ptr->get_n_dofs_V_h();
-  int Q_h_size = this->solver_ptr->get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();
-
-  assert(x.size()>=V_h_size);
-  v.setZero(this->solver_ptr->get_n_dofs());
-  m.resize(this->solver_ptr->get_n_dofs(),V_h_size);
-
-  Config::VectorType w = xBoundary.head(V_h_size)-x.head(V_h_size);
-
-  //assemble MA PDE in temporary variables
-
-  //todo jede Menge copy paste
-  Config::MatrixType tempM(V_h_size, V_h_size);
-  Config::VectorType tempX = x.head(V_h_size);
-  Config::VectorType tempV(V_h_size);
-  this->assemble_without_langrangian_Jacobian(tempX,tempV, tempM);
-
-  //copy system
-  v.head(tempV.size()) = tempV;
-  v.head(V_h_size) += tempM*w;
-
-  //copy SparseMatrix todo move to EigenUtility
-  std::vector< Eigen::Triplet<double> > tripletList;
-  copy_to_new_sparse_matrix(tempM, m);
-#ifdef DEBUG
-  {
-    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "BF" << intermediateSolCounter << ".m";      \
-    std::ofstream file(filename.str(),std::ios::out);
-    MATLAB_export(file, tempM, "BF");
-  }
-  {
-    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "x" << intermediateSolCounter << ".m";
-    std::ofstream file(filename.str(),std::ios::out);
-    MATLAB_export(file, x, "x");
-  }
-  {
-    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "lF" << intermediateSolCounter << ".m";
-    std::ofstream file(filename.str(),std::ios::out);
-    MATLAB_export(file, tempV, "l_v");
-  }
-#endif
-  std::cerr << "  l(v) with norm " << std::scientific << std::setprecision(3) << tempV.norm() << std::endl;//<< "  : " << tempV.transpose() << std::endl;
-
-  //assemble part of first lagrangian multiplier for fixing midvalue
-  const auto& assembler = this->solver_ptr->get_assembler();
-
-  int indexFixingGridEquation = V_h_size;
-  //assemble lagrangian multiplier for grid fixing point
-  //-------------------select  mid value-------------------------
-  assert(lagrangianMidvalueDiscreteOperator.size() == V_h_size);
-
-  //copy in system matrix
-  for (unsigned int i = 0; i < lagrangianMidvalueDiscreteOperator.size(); i++)
-  {
-    //indexLagrangianParameter = indexFixingGridEquation
-    m.insert(indexFixingGridEquation,i)=lagrangianMidvalueDiscreteOperator(i);
-  }
-  //set rhs of langrangian multipler
-  std::cerr << " at v (" << indexFixingGridEquation << ") is " << v(indexFixingGridEquation) << " going to be " << assembler.u0AtX0()-assembler.uAtX0() << std::endl;
-
-  v(indexFixingGridEquation) = assembler.uAtX0();
-  std::cerr << " u - u_0 = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation) << " = " << assembler.u0AtX0() << '-'  <<assembler.uAtX0() << std::endl;
-  v(indexFixingGridEquation) += lagrangianMidvalueDiscreteOperator.dot(w);
-
-#ifdef DEBUG
-  {
-    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "Bm" << intermediateSolCounter << ".m";
-    std::ofstream file(filename.str(),std::ios::out);
-    MATLAB_export(file, lagrangianMidvalueDiscreteOperator, "Bm");
-  }
-#endif
-
-  //assemble part of second lagrangian multiplier for fixing boundary
-  tempM.resize(Q_h_size, V_h_size);
-  tempM.setZero();
-  tempV.setZero(Q_h_size);
-
-  //assemble boundary terms
-  assemble_Jacobian_boundary(xBoundary.head(V_h_size), tempV, tempM);
-
-  Q_h_size = tempM.rows();
-
-  m.conservativeResize(this->solver_ptr->get_n_dofs(), V_h_size);
-  v.conservativeResize(this->solver_ptr->get_n_dofs());
-
-  //crop terms "far from boundary"
-
-  assert(Q_h_size == tempV.size());
-  assert(Q_h_size == tempM.rows());
-
-//    MATLAB_export(tempM, "B_H");
-
-  //copy to system
-  copy_to_sparse_matrix(tempM, m, V_h_size+1, 0);
-
-  assert(V_h_size+1+Q_h_size==m.rows());
-  v.tail(Q_h_size) = tempV;
-#ifdef DEBUG
-  {
-    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "Bboundary" << intermediateSolCounter << ".m";
-    std::ofstream file(filename.str(),std::ios::out);
-    MATLAB_export(file, tempM, "Bboundary");
-    std::cerr << " matlab file written to " << filename.str() << std::endl;
-  }
-  {
-    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "Lboundary" << intermediateSolCounter << ".m";
-    std::ofstream file(filename.str(),std::ios::out);
-    MATLAB_export(file, tempV, "Lboundary");
-    std::cerr << " matlab file written to " << filename.str() << std::endl;
-  }
-#endif
-  std::cerr << " l_H(q) with norm " << std::scientific << std::setprecision(12)<< tempV.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
-
-  assert(! (v.norm()!=v.norm()));
-
-  std::cerr << " l with norm " << std::scientific << std::setprecision(3)<< v.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
-}
-
-
-template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& xBoundary, const bool new_solution) const
 {
   assert(solver_ptr != NULL);
@@ -683,15 +523,15 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
 
     typename SolverType::ExactData exactData;
 
-//    std::cerr << std::scientific << std::setprecision(5)
-//        << "   current L2 error is " << solver_ptr->calculate_L2_error(exactData.exact_solution()) << std::endl;
-/*
+    std::cerr << std::scientific << std::setprecision(5)
+        << "   current L2 error is " << solver_ptr->calculate_L2_error(exactData.exact_solution()) << std::endl;
+
     std::cerr << std::scientific << std::setprecision(3)
         << "   current L2 grad error is " << solver_ptr->calculate_L2_error_gradient(exactData.exact_gradient()) << std::endl;
     std::cerr << std::scientific << std::setprecision(3)
         << "   current L2 grad boundary error is "
         << solver_ptr->calculate_L2_error_gradient_boundary(exactData.exact_gradient()) << std::endl;
-*/
+
 //    std::cerr << " x norm " << x.norm() << " x: " << x.transpose() << std::endl;
   }
 
@@ -701,9 +541,9 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
 
 #ifdef USE_LAGRANGIAN
   prepare_fixing_point_term(x);
-  assemble_with_langrangian_Jacobian(xBoundary,x,v, m);
+  assemble_with_lagrangians_Jacobian(x,v, m);
 #else
-  assemble_everything(xBoundary,x,v, m);
+  asssert(false && "unmaintained code")
 #endif
 
 //  for (int i = 0; i < v.size(); i++)  assert ( ! (v(i) != v(i)));
@@ -726,7 +566,7 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
 
 
 template<typename OperatorTraits>
-void MA_OT_Operator<OperatorTraits>::assemble_without_langrangian(const Config::VectorType& x, Config::VectorType& v) const
+void MA_OT_Operator<OperatorTraits>::assemble_without_lagrangian(const Config::VectorType& x, Config::VectorType& v) const
 {
   assert(x.size()==solver_ptr->get_n_dofs_V_h());
   assert(v.size()==solver_ptr->get_n_dofs_V_h());
@@ -736,7 +576,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_without_langrangian(const Config::
 
 
 template<typename OperatorTraits>
-void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian(const Config::VectorType& xNew, const Config::VectorType& x, Config::VectorType& v) const
+void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians(const Config::VectorType& x, Config::VectorType& v) const
 {
   assert(x.size()==solver_ptr->get_n_dofs());
   assert(v.size()==solver_ptr->get_n_dofs());
@@ -747,7 +587,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian(const Config::Vec
   auto tempX = x.head(V_h_size);
   Config::VectorType tempV(V_h_size);
 
-  assemble_without_langrangian(tempX,tempV);
+  assemble_without_lagrangian(tempX,tempV);
   const auto& assembler = solver_ptr->get_assembler();
 
   v.head(tempV.size()) = tempV;
@@ -757,14 +597,13 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_langrangian(const Config::Vec
 //    auto lambda = x(indexFixingGridEquation);
 
   assert(false);
-  v(indexFixingGridEquation) = -assembler.u0AtX0()+assembler.uAtX0();
-  std::cerr << " u_0 - u = " << assembler.u0AtX0() << '-'  <<-assembler.uAtX0() << "="<< v(indexFixingGridEquation) << std::endl;
+  v(indexFixingGridEquation) = assembler.u0AtX0();
 
   //assemble part of second lagrangian multiplier for fixing boundary
   Config::MatrixType tempM(Q_h_size, V_h_size);
   tempV.setZero(Q_h_size);
   //todo if used often write own assembler
-  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, xNew.head(V_h_size), tempV);
+  solver_ptr->get_assembler_lagrangian_boundary().assemble_Boundarymatrix(*lopLMBoundary, tempM, x.head(V_h_size), tempV);
 
   assert(Q_h_size == tempV.size());
 
@@ -795,11 +634,11 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
     //TODO inefficient
     Config::MatrixType m(v.size(), x.size());
 #ifdef USE_LAGRANGIAN
-    assemble_with_langrangian_Jacobian(xNew, x,v, m);
+    assemble_with_lagrangians_Jacobian(x,v, m);
 #else
     assemble_everything(xNew, x,v, m);
 #endif
-//    assemble_with_langrangian(xNew, x,v);
+//    assemble_with_lagrangian(xNew, x,v);
 
 
     //output
@@ -808,7 +647,7 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
   }
 
 template<typename OperatorTraits>
-void MA_OT_Operator<OperatorTraits>::assemble_without_langrangian_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
+void MA_OT_Operator<OperatorTraits>::assemble_without_lagrangian_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
 {
   assert(solver_ptr != NULL);
   solver_ptr->assemble_DG_Jacobian_only(this->get_lop(), x,m);

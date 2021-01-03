@@ -38,6 +38,7 @@ MA_OT_solver::MA_OT_solver(GridHandlerType& gridHandler,
 #endif
  assemblerLM1D_(FEBasisHandler_.FEBasis()),
  assemblerLMBoundary_(FEBasisHandler_.FEBasis(),FEBasisHandlerQ_.FEBasis()),
+ assemblerLMDual_(FEBasisHandler_.FEBasis()),
  transportPlotter_(setting,config.cartesianGridN)
 {
 #ifdef DEBUG
@@ -635,30 +636,9 @@ void MA_OT_solver::one_Poisson_Step()
   Config::VectorType v;
   lagrangeAssembler.assemble_DG_Jacobian(Poisson_op, Poisson_op, solution.head(lagrangeHandler.FEBasis().indexSet().size()), v, m);
 
-  //add lagrange multiplier for mean value
-  Config::VectorType lagrangianFixingPointDiscreteOperator;
-  AssemblerLagrangianMultiplier1D<C0Traits> lagrangeAssemblerMidvalue(gridView());
-//  lagrangeAssemblerMidvalue.assemble_u_independent_matrix(*this->get_OT_operator().lopLMMidvalue, lagrangianFixingPointDiscreteOperator);
-  lagrangeAssemblerMidvalue.assemble_u_independent_matrix((this->get_OT_operator().get_lopLMMidvalue()), lagrangianFixingPointDiscreteOperator);
-
   m.makeCompressed();
 
-  const int V_h_size = lagrangeHandler.FEBasis().indexSet().size();//get_n_dofs_V_h();
-  m.conservativeResize(V_h_size+1, V_h_size+1);
-  v.conservativeResize(V_h_size+1);
-
-  int indexFixingGridEquation = V_h_size;
-
-  assert(lagrangianFixingPointDiscreteOperator.size() == V_h_size);
-
-  v(indexFixingGridEquation) = assembler_.u0AtX0();
-  //copy in system matrix
-  for (unsigned int i = 0; i < lagrangianFixingPointDiscreteOperator.size(); i++)
-  {
-    //indexLagrangianParameter = indexFixingGridEquation
-    m.insert(indexFixingGridEquation,i)=lagrangianFixingPointDiscreteOperator(i);
-    m.insert(i,indexFixingGridEquation)=lagrangianFixingPointDiscreteOperator(i);
-  }
+  assert(false && "do something about condition u0");
   //... done assembling system
 
 
@@ -848,15 +828,13 @@ void MA_OT_solver::create_initial_guess()
 //#define U_MID_EXACT
 
 //  assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), solution, res);
-//  assert(std::dynamic_pointer_cast<OperatorType>(this->op));
-#ifdef U_MID_EXACT
-  assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), exactsol_u, res);
-#else
-  assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), solution, res);
-#endif
-  //take care that the adapted exact solution also updates the
-  assembler_.set_u0AtX0(res);
-  std::cerr << " set u_0^mid to " << res << std::endl;
+////  assert(std::dynamic_pointer_cast<OperatorType>(this->op));
+//#ifdef U_MID_EXACT
+//  assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), exactsol_u, res);
+//#else
+//  assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), solution, res);
+//#endif
+  assert(false && "init u0");
 
   one_Poisson_Step();
 
