@@ -29,8 +29,7 @@ public:
     epsilon_(OpticalSetting::kappa),
     bc_(bc),
     f_(f), g_(g),
-    found_negative(false),
-    last_step_on_a_different_grid(false)
+    found_negative(false)
     {
       assert(false&& "this constructor should never be used!!");
       std::exit(-1);
@@ -43,8 +42,7 @@ public:
     epsilon_(OpticalSetting::kappa),
     bc_(bc),
     f_(f), g_(g),
-    found_negative(false),
-    last_step_on_a_different_grid(false)
+    found_negative(false)
     {}
 
   template<class value_type>
@@ -69,12 +67,13 @@ public:
 
     //calculated direction after refraction by Snell's law (lightvector)
     FieldVector<adouble, 3> lightvector ({0,0,1});
-    lightvector.axpy(-Phi((lightvector*normal_refr), epsilon_), normal_refr);
-    lightvector /= epsilon_;
+    lightvector.axpy(-Phi((lightvector*normal_refr), 1./epsilon_), normal_refr);
+    lightvector *= epsilon_;
 //    std::cerr << std::setprecision(15);
 //    std::cerr << "direction after refr " << Y[0].value() << " " << Y[1].value() << " " << Y[2].value() << std::endl;
+//    std::cerr << "norm direction after refr " << Y[0].value()/Y.two_norm().value() << " " << Y[1].value()/Y.two_norm().value() << " " << Y[2].value()/Y.two_norm().value() << std::endl;
 //    std::cerr << "presumed lightvector " << lightvector[0].value() << " " << lightvector[1].value() << " " << lightvector[2].value() << std::endl;
-//    std::cerr << " X*normal_refr " << (X*normal_refr).value() << " Phi " << (Phi((X*normal_refr))).value() << std::endl;
+//    std::cerr << "norm. presumed lightvector " << lightvector[0].value()/lightvector.two_norm().value() << " " << lightvector[1].value()/lightvector.two_norm().value() << " " << lightvector[2].value()/lightvector.two_norm().value() << std::endl;
 
     //direction of lightvector and Y have to be the same
     assert(fabs(lightvector[0].value()/Y[0].value() - lightvector[1].value()/Y[1].value()) < 1e-7
@@ -574,12 +573,6 @@ public:
       const VectorType &x, VectorType& v, int tag=0) const {
   }
 
-  ///use given global function (probably living on a coarser grid) to evaluate last step
-  void set_evaluation_of_u_old_to_different_grid() const{  last_step_on_a_different_grid = true;}
-  ///use coefficients of old function living on the same grid to evaluate last step
-  void set_evaluation_of_u_old_to_same_grid() const{  last_step_on_a_different_grid = false;}
-  bool is_evaluation_of_u_old_on_different_grid() const {return last_step_on_a_different_grid;}
-
   const DensityFunction& get_input_distribution() const {return f_;}
   const DensityFunction& get_target_distribution() const {return g_;}
 
@@ -596,7 +589,6 @@ private:
 public:
 
   mutable bool found_negative;
-  mutable bool last_step_on_a_different_grid;
 };
 
 #endif /* SRC_OPERATOR_HH_ */

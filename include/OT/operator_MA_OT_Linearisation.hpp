@@ -38,8 +38,7 @@ public:
 
   Local_Operator_MA_OT_Linearisation(const OTBoundary& bc, const Function& rhoX, const Function& rhoY):
   delta_K(10), rhoX(rhoX), rhoY(rhoY),bc(bc),
-  int_f(0), sign(1.0), found_negative(false), last_step_on_a_different_grid(false),
-  oldSolutionCaller_()
+  int_f(0), sign(1.0), found_negative(false)
   {
   }
 
@@ -76,9 +75,9 @@ public:
 
 */
 
-template<int dim>
-    FieldVector<double,dim> smooth_convection_term(const FieldVector<double, dim>& gradu,
-        const double& f_value, double& avg_g_value, const double& integrationElement) const
+    template<int dim>
+    static FieldVector<double,dim> smooth_convection_term(const Function& rhoY, const FieldVector<double, dim>& gradu,
+        const double& f_value, double& avg_g_value, const double& integrationElement, const SmoothingKernel& smoothingKernel= smoothingKernel_)
     {
       double g_value;
       FieldVector<double, dim> gradg;
@@ -109,7 +108,8 @@ template<int dim>
       std::cerr << " g1 " << Dx1PlusF_value << " g2 " << Dx2PlusF_value << std::endl;
 #endif
 
-      auto h_T = std::sqrt(integrationElement);
+//      auto h_T = std::sqrt(integrationElement);
+      const int n = smoothingKernel.n_;
 
       //velocity vector for convection
       FieldVector<double,dim> b(0);
@@ -117,28 +117,28 @@ template<int dim>
       //calculate average convection term
       const double h = rhoY.gridWidth()/2.;
 //      const double h = h_T/2.;
-      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> convectionTerm(2*n_+1,2*n_+1);
-      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> transportedXs(2*n_+1,2*n_+1);
-      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> gradGs(2*n_+1,2*n_+1);
+      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> convectionTerm(2*n+1,2*n+1);
+      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> transportedXs(2*n+1,2*n+1);
+      Eigen::Matrix<FieldVector<double,dim>, Eigen::Dynamic, Eigen::Dynamic> gradGs(2*n+1,2*n+1);
 
-      for (int i = -n_ ; i <= n_; i++)
-        for (int j = -n_ ; j <= n_; j++)
+      for (int i = -n ; i <= n; i++)
+        for (int j = -n ; j <= n; j++)
       {
-        transportedXs(i+n_,j+n_) = gradu;
-        transportedXs(i+n_,j+n_)[0] += i*h;
-        transportedXs(i+n_,j+n_)[1] += j*h;
+        transportedXs(i+n,j+n) = gradu;
+        transportedXs(i+n,j+n)[0] += i*h;
+        transportedXs(i+n,j+n)[1] += j*h;
 
-        rhoY.evaluate(transportedXs(i+n_,j+n_), g_value);
-        rhoY.evaluateDerivative(transportedXs(i+n_,j+n_), gradg);
+        rhoY.evaluate(transportedXs(i+n,j+n), g_value);
+        rhoY.evaluateDerivative(transportedXs(i+n,j+n), gradg);
 
-        gradGs(i+n_,j+n_) = gradg;
+        gradGs(i+n,j+n) = gradg;
 
         //ATTENTION: ASUMMING F is constant!!!!!!!!!!!!!!
-        convectionTerm(i+n_,j+n_) = gradg;
-        convectionTerm(i+n_,j+n_) *= -f_value/g_value/g_value;
+        convectionTerm(i+n,j+n) = gradg;
+        convectionTerm(i+n,j+n) *= -f_value/g_value/g_value;
 
-        b.axpy(smoothingKernel_(i+n_,j+n_),convectionTerm(i+n_,j+n_));
-        avg_g_value += smoothingKernel_(i+n_,j+n_)*g_value;
+        b.axpy(smoothingKernel(i+n,j+n),convectionTerm(i+n,j+n));
+        avg_g_value += smoothingKernel(i+n,j+n)*g_value;
       }
 
       /*
@@ -219,11 +219,7 @@ template<int dim>
       FieldVector<double, Config::dim> gradu;
       FieldMatrix<double, Config::dim, Config::dim> Hessu;
 
-      if (last_step_on_a_different_grid)
-        assemble_cellTermFEData(geometry, localFiniteElement, quadPos, oldSolutionCaller_(), x_value,
-          referenceFunctionValues, gradients, Hessians, u_value, gradu, Hessu);
-      else
-        assemble_cellTermFEData(geometry, localFiniteElement, quadPos, x,
+      assemble_cellTermFEData(geometry, localFiniteElement, quadPos, x,
           referenceFunctionValues, gradients, Hessians, u_value, gradu, Hessu);
 
       //--------assemble cell integrals in variational form--------
@@ -247,7 +243,7 @@ template<int dim>
 
       //calculate illumination at target plane
       double avg_g_value = 0;
-      FieldVector<double,dim> b = smooth_convection_term(gradu, f_value, avg_g_value, integrationElement);
+      FieldVector<double,dim> b = smooth_convection_term(rhoY, gradu, f_value, avg_g_value, integrationElement);
 
       auto detHessu = determinant(Hessu); //note that determinant of Hessu and cofHessu is the same
 //      double g_value;
@@ -279,20 +275,9 @@ template<int dim>
         }
 
         //-f(u_k) [rhs of Newton]
-        if (!last_step_on_a_different_grid)
-        {
-          v(j) += (-detHessu+f_value/avg_g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        v(j) += (-detHessu+f_value/avg_g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 //        v(j) += (-detHessu)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
-          assert(! (v(j)!=v(j)));
-        }
-        else
-        {
-          FieldVector<double,dim> cofTimesGradu;
-          cofHessu.mv(gradu,cofTimesGradu);
-          v(j) += (cofTimesGradu*gradients[j] + (b*gradu)*referenceFunctionValues[j] )*quad[pt].weight()*integrationElement;
-        }
         assert(! (v(j)!=v(j)));
-
       }
     }
   }
@@ -497,11 +482,7 @@ template<int dim>
       assemble_functionValues(localFiniteElement, quadPos,
           referenceFunctionValues);
 
-      if (last_step_on_a_different_grid)
-        assemble_cellTermFEData_only_derivatives(geometry, localFiniteElement, quadPos, oldSolutionCaller_(), x_value,
-          gradients, Hessians, gradu, Hessu);
-      else
-        assemble_cellTermFEData_only_derivatives(geometry, localFiniteElement, quadPos, x,
+      assemble_cellTermFEData_only_derivatives(geometry, localFiniteElement, quadPos, x,
           gradients, Hessians, gradu, Hessu);
 
       //calculate \nabla H(\nabla u) = n_y
@@ -520,29 +501,8 @@ template<int dim>
         {
           m(j,i) += (cofHessuTimesgradw*normal)*referenceFunctionValues[j]*factor;
         }
-
-        if (last_step_on_a_different_grid)
-        {
-          cofHessu.mv(gradu, cofHessuTimesgradw);
-          v(i) += (cofHessuTimesgradw*normal)*referenceFunctionValues[i]*factor;
-        }
       }
-
     }
-
-
-
-  }
-
-  ///use given global function (probably living on a coarser grid) to evaluate last step
-  void set_evaluation_of_u_old_to_different_grid() const{  last_step_on_a_different_grid = true;}
-  ///use coefficients of old function living on the same grid to evaluate last step
-  void set_evaluation_of_u_old_to_same_grid() const{  last_step_on_a_different_grid = false;}
-
-  template<typename F>
-  void change_oldFunction(F&& uOld)
-  {
-    oldSolutionCaller_ = std::forward<F>(uOld);
   }
 
   const Function& get_input_distribution() const {return rhoX;}
@@ -566,9 +526,6 @@ public:
   mutable double sign;
 
   mutable bool found_negative;
-
-  mutable bool last_step_on_a_different_grid;
-  std::function<const TaylorFunction&()> oldSolutionCaller_;
 };
 
 #endif /* SRC_OT_OPERATOR_MA_OT_LINEARISATION_HPP_ */

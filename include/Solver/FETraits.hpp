@@ -25,7 +25,7 @@
 #include "localfunctions/lagrange/pqktracenodalbasis.hh"
 #include "localfunctions/lagrange/RefinedLagrange/pk2dRefinednodalbasis.hpp"
 
-#include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
+#include <localfunctions/macroquadraturerules.hh>
 
 #include "localfunctions/discreteScalarGlobalBasisFunction.hpp"
 
@@ -82,10 +82,10 @@ struct FETraits
 };
 
 template<typename GridView>
-struct FETraits<Functions::PS12SSplineBasis<GridView, Config::SparseMatrixType>>
+struct FETraits<Functions::PS12SSplineBasis<GridView>>
 {
   static const FEType Type = PS12Split;
-  using FEBasis = Functions::PS12SSplineBasis<GridView, Config::SparseMatrixType>;
+  using FEBasis = Functions::PS12SSplineBasis<GridView>;
   using FEuBasis = FEBasis;
 
   using DiscreteGridFunction = typename Dune::MongeAmpere::MyDiscreteScalarGlobalBasisFunction<FEBasis,Config::VectorType, true>;
@@ -180,7 +180,7 @@ struct FETraits<Functions::MAMixedBasis< GridView, degree, degreeHessian>>
 ///----------typedef for defined Traits--------------------
 
 template <typename GridView>
-using PS12SplitTraits = FETraits<Functions::PS12SSplineBasis<GridView, Config::SparseMatrixType>>;
+using PS12SplitTraits = FETraits<Functions::PS12SSplineBasis<GridView>>;
 
 template <typename GridView, int degree>
 using LagrangeC0Traits = FETraits<Functions::PQkNodalBasis<GridView, degree>>;

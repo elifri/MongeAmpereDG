@@ -68,6 +68,9 @@ void SolverConfig::read_configfile(std::string &configFile)
 
   std::cout << "read information from file " << configFile << std::endl;
 
+  double dummy;
+  bool dummyBool;
+
   po::options_description config("Configuration of the MA FE solver");
   config.add_options()
         ("solver.initValueFromFile",     po::value<bool>(&initValueFromFile), "indicates if the initialguess is read from file")
@@ -81,14 +84,25 @@ void SolverConfig::read_configfile(std::string &configFile)
         ("solver.sigma",     po::value<double>(&SolverConfig::sigma), "penalisation value for jumps in DG method (deprecated)")
         ("solver.sigmaGrad",     po::value<double>(&SolverConfig::sigmaGrad), "penalisation value for gradient jumps in ansatz (deprecated)")
         ("solver.sigmaBoundary",     po::value<double>(&SolverConfig::sigmaBoundary), "penalisation value for weakly forced boundary conditions (deprecated)")
+#ifdef USE_DOGLEG
         ("dogleg.iradius",     po::value<double>(&doglegOpts.iradius), "initial trust region radius")
         ("dogleg.stopcriteria0" , po::value<double>(&(doglegOpts.stopcriteria[0])), "||F'||inf <= stopcriteria(1)")
         ("dogleg.stopcriteria1" , po::value<double>(&(doglegOpts.stopcriteria[1])), "||dx||2   <= stopcriteria(2)*(stopcriteria(2)+ ||x||2)")
         ("dogleg.stopcriteria2" , po::value<double>(&(doglegOpts.stopcriteria[2])), "||f||inf  <= stopcriteria(3)")
         ("dogleg.silentmode" ,    po::value<bool>  (&(doglegOpts.silentmode)),   "suppress output of dogleg solver")
         ("dogleg.exportJacobianIfSingular" ,    po::value<bool>  (&(doglegOpts.exportJacobianIfSingular)),   "activate matlab export to std::cout in case of singular Jacobian")
+        ("dogleg.exportFDJacobianifFalse" ,    po::value<bool>  (&(doglegOpts.exportFDJacobianifFalse)),  "activate matlab export to std::cout in case of wrong Jacobian" )
         ("dogleg.check_Jacobian" ,    po::value<bool>  (&(doglegOpts.check_Jacobian)),   "activate a check of the Jacobian with Finite Differences (computationally expensive)")
-        ("dogleg.exportFDJacobianifFalse" ,    po::value<bool>  (&(doglegOpts.exportFDJacobianifFalse)),   "activate matlab export to std::cout in case of wrong Jacobian")
+#else
+        ("dogleg.iradius",     po::value<double>(&dummy), "initial trust region radius")
+        ("dogleg.stopcriteria0" , po::value<double>(&(newtonOpts.eps[0])), "||F'||inf <= stopcriteria(1)")
+        ("dogleg.stopcriteria1" , po::value<double>(&(newtonOpts.eps[1])), "||dx||2   <= stopcriteria(2)*(stopcriteria(2)+ ||x||2)")
+        ("dogleg.stopcriteria2" , po::value<double>(&(newtonOpts.eps[2])), "||f||inf  <= stopcriteria(3)")
+        ("dogleg.silentmode" ,    po::value<bool>  (&(newtonOpts.silentmode)),   "suppress output of Newton solver")
+        ("dogleg.exportJacobianIfSingular" ,    po::value<bool>  (&(dummyBool)),   "activate matlab export to std::cout in case of singular Jacobian")
+        ("dogleg.exportFDJacobianifFalse" ,    po::value<bool>  (&(dummyBool)),  "activate matlab export to std::cout in case of wrong Jacobian" )
+        ("dogleg.check_Jacobian" ,    po::value<bool>  (&(newtonOpts.check_Jacobian)),   "activate a check of the Jacobian with Finite Differences (computationally expensive)")
+#endif
         ("output.directory", po::value<string>(&outputDirectory), "output folder for data as coefficients")
         ("output.plotdirectory", po::value<string>(&plotOutputDirectory), "output folder for output data as vtks, rayTracer files, 3dm files ...")
         ("output.prefix", po::value<string>(&outputPrefix), "output prefix")
@@ -114,13 +128,6 @@ void SolverConfig::read_configfile(std::string &configFile)
     po::store(po::parse_config_file(ifs, config), vm);
     notify(vm);
   }
-
-  //copy criteria to newton options
-  newtonOpts.eps[0]= doglegOpts.stopcriteria[0];
-  newtonOpts.eps[1]= doglegOpts.stopcriteria[1];
-  newtonOpts.eps[2]= doglegOpts.stopcriteria[2];
-  newtonOpts.silentmode = doglegOpts.silentmode;
-  newtonOpts.check_Jacobian = doglegOpts.check_Jacobian;
 }
 
 ////------fallback values for GeometryStandardSetting setting---------
@@ -178,21 +185,21 @@ void GeometryOTSetting::read_configfile(std::string &configFile)
         ("geometry.input.xMax",  po::value<double>(&upperRight[0]), "upper right x value of source")
         ("geometry.input.yMin",  po::value<double>(&lowerLeft[1]), "lower left y value of source")
         ("geometry.input.yMax",  po::value<double>(&upperRight[1]), "upper right x value of source")
-        ("geometry.input.gridfile",  po::value<string>(&gridinputFile), "path to initial grid file (.msh format)")
-        ("geometry.input.plotgridfile",  po::value<string>(&plotGridinputFile), "path to an additional plotgrid file (.msh format)")
+        ("geometry.input.gridfile",  po::value<std::string>(&gridinputFile), "path to initial grid file (.msh format)")
+        ("geometry.input.plotgridfile",  po::value<std::string>(&plotGridinputFile), "path to an additional plotgrid file (.msh format)")
         ("geometry.input.boundaryN",  po::value<int>(&GeometryOTSetting::boundaryN), "number of direction in approximation of source boundary")
         ("geometry.target.xMin",     po::value<double>(&lowerLeftTarget[0]), "lower left x value of target")
         ("geometry.target.xMax",     po::value<double>(&upperRightTarget[0]), "upper right x value of target")
         ("geometry.target.yMin",     po::value<double>(&lowerLeftTarget[1]), "lower left y value of target")
         ("geometry.target.yMax",     po::value<double>(&upperRightTarget[1]), "upper right x value of target")
         ("geometry.target.z",        po::value<double>(&z_3),    "z value of the target")
-        ("geometry.target.gridfile",  po::value<string>(&gridTargetFile), "path to grid of the target (.msh format)")
+        ("geometry.target.gridfile",  po::value<std::string>(&gridTargetFile), "path to grid of the target (.msh format)")
         ("geometry.target.boundaryN",  po::value<int>(&GeometryOTSetting::boundaryNTarget), "number of direction in approximation of target boundary")
   ;
 
 
   // open config file for the image
-  ifstream ifs(configFile.c_str());
+  std::ifstream ifs(configFile.c_str());
   if (!ifs)
   {
     if (configFile=="")
@@ -230,6 +237,7 @@ void OpticalSetting::read_configfile(std::string &configFile)
         ("geometry.optic.plotgridfile",  po::value<string>(&plotGridinputFile), "path to an additional plotgrid file (.msh format)")
         ("geometry.optic.boundaryN",  po::value<int>(&GeometryOTSetting::boundaryN), "number of direction in approximation of source boundary")
         ("geometry.optic.initialOpticDistance",  po::value<double>(&initialOpticDistance), "distance between source and opt. surface for the initial guess ")
+        ("geometry.optic.smoothingInitialOptic",  po::value<double>(&smoothingInitialOptic)->default_value(100), "parameter for the flatness of the initial lens")
         ("geometry.target.xMin",     po::value<double>(&lowerLeftTarget[0]), "lower left x value of target")
         ("geometry.target.xMax",     po::value<double>(&upperRightTarget[0]), "upper right x value of target")
         ("geometry.target.yMin",     po::value<double>(&lowerLeftTarget[1]), "lower left y value of target")
@@ -249,7 +257,7 @@ void OpticalSetting::read_configfile(std::string &configFile)
         ("povray.lightSourceRadius",    po::value<double>(&(povRayOpts.lightSourceRadius)), "light source radius for ray tracer config file")
         ("povray.lightSourceFalloff",   po::value<double>(&(povRayOpts.lightSourceFalloff)), "fall of of light ray for ray tracer config file")
         ("povray.lightSourceTightness", po::value<double>(&(povRayOpts.lightSourceTightness)), "light source tightness for ray tracer config file")
-        ("povray.lightSourceIntensity", po::value<double>(&OpticalSetting::lightSourceIntensity), "light source intensity for ray tracer config file")
+        ("povray.lightSourceIntensity", po::value<double>(&OpticalSetting::lightSourceIntensity)->default_value(0.00007), "light source intensity for ray tracer config file")
         ("povray.writeAperture", po::value<bool>(&povRayOpts.writeAperture), "indicate whether light source is additionally cropped in ray tracer config file")
   ;
 

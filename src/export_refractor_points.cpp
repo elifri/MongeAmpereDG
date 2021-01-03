@@ -125,16 +125,16 @@ void init_options(const std::string& optionsFile,
     notify(vm);
   }
 
-  std::cout << " input strings ";
-  for (const auto e: translationStr1) std::cout<< e << "; ";
-  std::cout << std::endl;
-  std::cout << " input strings ";
-  for (const auto e: translationStr2) std::cout<< e << "; ";
-  std::cout << std::endl;
 
   translationV1 = IO::vec_from_stream(translationStr1);
   translationV2 = IO::vec_from_stream(translationStr2);
 
+  std::cout << " input translations ";
+  for (int i = 0; i < translationV1.size(); i++) std::cout<< translationV1[i] << "; ";
+  std::cout << std::endl;
+  std::cout << " input translation2 ";
+  for (int i = 0; i < translationV2.size(); i++) std::cout<< translationV2[i] << "; ";
+  std::cout << std::endl;
 
 }
 
@@ -173,13 +173,21 @@ void determine_plot_size_by_pointfile(const std::string& filename1, const std::s
   plotSetting.upperRight[0] = (*(minMaxElementsX.second))[0];
   plotSetting.upperRight[1] = (*(minMaxElementsY.second))[1];
 
+  std::cout << " plot on (" << plotSetting.lowerLeft[0] << "," << plotSetting.upperRight[0] << ") x ("
+      << plotSetting.lowerLeft[1] << "," << plotSetting.upperRight[1] << ")" << std::endl;
+
   //if a second point file is given determine a common export grid
   if (v2.size() > 0)
   {
+
     minMaxElementsX = std::minmax_element(v2.begin(), v2.end(), CompareFirstComponent());
     minMaxElementsY = std::minmax_element(v2.begin(), v2.end(), CompareSecondComponent());
 
-    Eigen::Vector3d translateOtherLensToThisCoordinateSystem = translationV2-translationV1;
+    Eigen::Vector3d translateOtherLensToThisCoordinateSystem = -translationV2+translationV1;
+
+    std::cout << " plot second would be on (" << (*(minMaxElementsX.first))[0]+translateOtherLensToThisCoordinateSystem[0] << "," << (*(minMaxElementsX.second))[0]+translateOtherLensToThisCoordinateSystem[0] << ") x ("
+        << (*(minMaxElementsY.first))[1]+translateOtherLensToThisCoordinateSystem[1] << "," << (*(minMaxElementsY.second))[1]+translateOtherLensToThisCoordinateSystem[1] << std::endl;
+
     plotSetting.lowerLeft[0] = std::min(plotSetting.lowerLeft[0], (*(minMaxElementsX.first))[0]+translateOtherLensToThisCoordinateSystem[0]);
     plotSetting.lowerLeft[1] = std::min(plotSetting.lowerLeft[1],(*(minMaxElementsY.first))[1]+translateOtherLensToThisCoordinateSystem[1]);
     plotSetting.upperRight[0] = std::max(plotSetting.upperRight[0],(*(minMaxElementsX.second))[0]+translateOtherLensToThisCoordinateSystem[0]);
@@ -211,6 +219,7 @@ int main(int argc, char *argv[])
   auto coeffs = IO::read_coefficients(coefficientFile);
 
 
+
   std::cout << " read input from " << configFileOpticalSetting << "..." << std::endl;
   OpticalSetting opticalSetting;
   opticalSetting.read_configfile(configFileOpticalSetting);
@@ -240,7 +249,7 @@ int main(int argc, char *argv[])
     std::cout << " determine plot axis by file " << pointFile1 << " " << pointFile2 << std::endl;
     determine_plot_size_by_pointfile(pointFile1, pointFile2, translationV1, translationV2, plotSetting);
     std::cout << " plot on (" << plotSetting.lowerLeft[0] << "," << plotSetting.upperRight[0] << ") x ("
-        << plotSetting.lowerLeft[1] << "," << plotSetting.upperRight[0] << std::endl;
+        << plotSetting.lowerLeft[1] << "," << plotSetting.upperRight[1] << std::endl;
   }
 
   //set up the plotter

@@ -9,7 +9,7 @@
 #define REFL_OPERATOR_HH_
 
 #include <dune/common/function.hh>
-#include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
+#include <localfunctions/macroquadraturerules.hh>
 
 #include "config.h"
 #include "Operator/operator_utils.h"
@@ -29,8 +29,7 @@ public:
     opticalSetting(OpticalSetting()),
     bc(bc),
     f(f), g(g),
-    int_f(0),
-    last_step_on_a_different_grid(false)
+    int_f(0)
   {
   }
 
@@ -40,8 +39,7 @@ public:
     opticalSetting(opticalSetting),
     bc(bc),
     f(f), g(g),
-    int_f(0),
-    last_step_on_a_different_grid(false)
+    int_f(0)
   {
   }
 
@@ -518,12 +516,6 @@ public:
   {
   }
 
-  ///use given global function (probably living on a coarser grid) to evaluate last step
-  void set_evaluation_of_u_old_to_different_grid() const{  last_step_on_a_different_grid = true;}
-  ///use coefficients of old function living on the same grid to evaluate last step
-  void set_evaluation_of_u_old_to_same_grid() const{  last_step_on_a_different_grid = false;}
-  bool is_evaluation_of_u_old_on_different_grid() const {return last_step_on_a_different_grid;}
-
   const DensityFunction& get_input_distribution() const {return f;}
   const DensityFunction& get_target_distribution() const {return g;}
 
@@ -543,7 +535,6 @@ public:
   mutable double int_f;
 
   mutable bool found_negative;
-  mutable bool last_step_on_a_different_grid;
 };
 
 #endif /* SRC_OPERATOR_HH_ */

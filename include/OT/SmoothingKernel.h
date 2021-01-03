@@ -116,7 +116,7 @@ struct SmoothingKernel
   }
 
 //  double operator[](int i){ return smoothingKernelValues[i];}
-  double operator()(int i, int j){ return smoothingKernelValues(i,j);}
+  double operator()(int i, int j) const{ return smoothingKernelValues(i,j);}
 
   static const int n_ = 2;
   Config::DenseMatrixType smoothingKernelValues;

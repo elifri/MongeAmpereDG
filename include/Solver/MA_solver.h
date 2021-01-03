@@ -35,6 +35,7 @@
 
 #ifdef USE_DOGLEG
 #include "../Dogleg/doglegMethod.hpp"
+#else
 #include "../Dogleg/newtonMethod.hpp"
 #endif
 
@@ -154,10 +155,11 @@ public:
     epsDivide_(config.epsDivide),
     epsEnd_(config.epsEnd),
     maxSteps_(config.maxSteps),
-  #ifdef USE_DOGLEG
+#ifdef USE_DOGLEG
     doglegOpts_(config.doglegOpts),
-  #endif
+#else
     newtonOpts_(config.newtonOpts),
+#endif
     iterations(0),
     initValueFromFile_(config.initValueFromFile),
     initValue_(config.initValue),
@@ -173,10 +175,11 @@ public:
     gradient_u_old()
   {
     std::cout << "constructor n dofs " << get_n_dofs() << std::endl;
-    #ifdef USE_DOGLEG
+#ifdef USE_DOGLEG
     doglegOpts_.maxsteps = maxSteps_;
-    #endif
+#else
     newtonOpts_.maxIter = maxSteps_;
+#endif
 
     plotter.set_refinement(plotterRefinement_);
     plotter.set_geometrySetting(get_setting());
@@ -402,8 +405,9 @@ protected:
   int maxSteps_;
 #ifdef USE_DOGLEG
   DogLeg_optionstype doglegOpts_;
-#endif
+#else
   NewtonOptionsType newtonOpts_;
+#endif
 
   int count_refined; ///counts how often the original grid was refined
 public:

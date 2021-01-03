@@ -17,10 +17,17 @@
 #include "Solver/FETraits.hpp"
 
 
-#define HAVE_ADOLC 1
 #define USE_AUTOMATIC_DIFFERENTIATION 1
+//for definition of ADOLC see MAconfig #define HAVE_ADOLC
 
-//#define RECTANGULAR_GRID
+
+#define USE_LAGRANGIAN 1
+#define USE_DOGLEG 1
+//#undef USE_DOGLEG
+
+#define RECTANGULAR_GRID
+
+#undef TARGET_IS_XZ_PLANE
 
 #ifndef C1Element
   #ifndef HAVE_ADOLC
@@ -133,8 +140,11 @@ struct SolverConfig{
   static double epsEnd;
 
   int maxSteps;
+#ifdef USE_DOGLEG
   DogLeg_optionstype doglegOpts;
+#else
   NewtonOptionsType newtonOpts;
+#endif
 
   bool writeVTK;
 
@@ -165,6 +175,8 @@ struct SolverConfig{
 	//-------select PS12 S-Splines
 #ifdef USE_PS12
   using FETraitsSolver = PS12SplitTraits<Config::GridView>;
+  template<typename GridView>
+  using FETraitsSolverWithGridView = PS12SplitTraits<GridView>;
 #endif
 
 	//-------select BSplines------------------
@@ -259,6 +271,7 @@ struct OpticalSetting : GeometryOTSetting{
   double minPixelValue;
 
   double initialOpticDistance;
+  double smoothingInitialOptic;
 
   ///pov ray options for output
   PovRayOpts povRayOpts;

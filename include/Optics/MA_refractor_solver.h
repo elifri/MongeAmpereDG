@@ -30,6 +30,7 @@ public:
 #endif
 
   using ProblemTraits = OpticOperatorTraits<MA_OT_solver, Local_Refractor_OperatorType, Local_Refractor_Boundary_Operator_Type>;
+//  using ProblemTraits = OpticLambertianOperatorTraits<MA_OT_solver, Local_Refractor_OperatorType, Local_Refractor_Boundary_Operator_Type>;
 
 #ifndef USE_ANALYTIC_DERIVATION
   using OperatorType = MA_OT_Operator<ProblemTraits>;
@@ -49,7 +50,7 @@ private:
   ///creates the initial guess
   void create_initial_guess();
   void update_Operator();
-//  void adapt_solution(const int level);
+  void adapt_solution(const int level);
 
 public:
   ///write the current numerical solution to pov (and ggf. vtk) file with prefix name

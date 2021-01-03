@@ -247,6 +247,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
       stringstream filename2; filename2 << outputDirectory_ << "/"<< outputPrefix_ << iterations << ".fec";
       ofstream file(filename2.str(),std::ios::out);
+      file << std::setprecision(16) << std::scientific;
       file << solution;
 //      plotter.save_rectangular_mesh(*solution_u_old, file);
       file.close();
@@ -269,6 +270,7 @@ const typename MA_solver::VectorType& MA_solver::solve()
 
       stringstream filename2; filename2 << outputDirectory_ << "/" << outputPrefix_ << iterations << "Coarse.fec";
       ofstream file(filename2.str(),std::ios::out);
+      file << std::setprecision(12) << std::scientific;
       file << v;
       file.close();
       std::cout << " written coarse FE coefficients to " << filename2.str() << std::endl;
@@ -363,6 +365,8 @@ void MA_solver::solve_nonlinear_system()
   }  while (!converged && steps < maxSteps_);
 */
   doglegMethod(get_operator(), doglegOpts_, solution, evaluateJacobianSimultaneously_);
+#else
+  newtonMethod(get_operator(), newtonOpts_, solution, evaluateJacobianSimultaneously_);
 #endif
 #ifdef USE_PETSC
   igpm::processtimer timer;

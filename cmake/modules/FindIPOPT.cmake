@@ -5,7 +5,7 @@
 #  IPOPT_LIBRARY_DIRS - The library directories needed to use IpOpt
 #  IPOPT_LIBRARIES    - The libraries needed to use IpOpt
 
-SET(IPOPT_HOME $ENV{HOME}/lib/ipopt/build)
+
 
 if (IPOPT_INCLUDE_DIR)
   # in cache already

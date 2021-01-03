@@ -23,9 +23,7 @@
 
 #include "problem_data.h"
 
-#ifdef USE_DOGLEG
 #include "Dogleg/doglegMethod.hpp"
-#endif
 
 
 class MA_solver;
@@ -164,9 +162,9 @@ public:
   template <class Function, typename GridView>
   static void write_points_OT_global(std::ofstream &file, Function &fg, const GridView& gridView, const int refinement);
   template <class Function>
-  void write_points_OT_global(std::ofstream &file, Function &fg)
+  void write_points_OT_global(std::ofstream &file, Function &fg) const
   {
-    write_element_points_OT_global(file, fg, gridView(), refinement_);
+    write_points_OT_global(file, fg, gridView(), refinement_);
   }
 
   ///writes the transported point array to file (transport is given by local gradient fg)
@@ -179,6 +177,11 @@ public:
   ///writes the point data given by the local function f to file
   template <class LocalFunction>
   void write_pointData(std::ofstream &file, LocalFunction &f) const;
+
+  ///writes the point data given by the global function f to file
+  template <class GlobalFunction>
+  void write_pointData_global(std::ofstream &file, const GlobalFunction &f) const;
+
 
   ///writes the error [point data] to file (error is the difference of the given local function and the global exact function)
   template <class LocalFunction, class Function>
@@ -193,8 +196,15 @@ public:
   template <class LocalFunction>
   void write_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &f, const DensityFunction& omegaF) const;
 
+  template <class LocalFunction, typename GridView>
+  static void write_refined_simple_estimate_integral_OT(std::ofstream &file, const GridView& gridView, LocalFunction &fg, const DensityFunction& omegaF, int refinement);
+  template <class GlobalFunction, typename GridView>
+  static void write_refined_simple_estimate_integral_OT_global(std::ofstream &file, const GridView& gridView, GlobalFunction &fg, const DensityFunction& omegaF, int refinement);
   template <class LocalFunction>
-  void write_refined_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &fg, const DensityFunction& omegaF) const;
+  void write_refined_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &fg, const DensityFunction& omegaF) const
+  {
+    write_refined_simple_estimate_integral_OT(file, gridView(), fg, omegaF, refinement_);
+  }
 
   void write_refined_simple_estimate_integral_OT_Omega(std::ofstream &file, const DensityFunction& omegaF) const;
 
@@ -247,6 +257,11 @@ public:
 
 public:
 
+  //----------------------------//
+  //---  write optic files    --//
+  //----------------------------//
+
+
   template <class Function>
   void writeReflectorPOV(std::string filename, Function &f) const;
 
@@ -272,6 +287,14 @@ public:
    * @param omegaF      the density function f on the starting domain Omega
    */  template <class LocalFunction>
   void writeVTK(std::string filename, LocalFunction &f, const DensityFunction& omegaF) const;
+
+   /**
+    * evaluates and saves the solution's transported grid
+    * @param filename    the path to the file where the grid is written in ASCII format
+    * @param fg          the numerical solution (gradient of the MA solution)
+    * @param omegaF      the density function f on the starting domain Omega
+    */  template <class GlobalFunction>
+   void writeVTK_global(std::string filename, const GlobalFunction &f) const;
 
 
   /**
@@ -333,6 +356,11 @@ public:
   template<typename BSplineNodeFactoryType>
   void save_BSplineCoeffs(const BSplineNodeFactoryType &bSplineNodeFactory, const Config::VectorType& coeffs, std::ofstream &of) const;
 
+
+
+  //----------------------------//
+  //---  getter and setter    --//
+  //----------------------------//
 
   void set_refinement(const int refinement){	this->refinement_ = refinement;}
   void set_output_directory(std::string outputdir) {this->output_directory = outputdir;}
@@ -627,6 +655,29 @@ void Plotter::writeVTK(std::string filename, LocalFunction &f, const DensityFunc
 
 }
 
+template <class GlobalFunction>
+void Plotter::writeVTK_global(std::string filename, const GlobalFunction &f) const{
+  //--------------------------------------
+  // open file
+    check_file_extension(filename, ".vtu");
+    std::ofstream file(filename.c_str(), std::ios::out);
+    if (file.rdstate()) {
+      std::cerr << "Error: Couldn't open '" << filename << "'!\n";
+      return;
+    }
+
+    //write file
+
+    write_vtk_header(file);
+    write_pointData_global(file, f);
+    write_points(file);
+    write_cells(file);
+
+    write_vtk_end(file);
+
+}
+
+
 
 template <class LocalFunction>
 void Plotter::writeOTVTK(std::string filename, LocalFunction &f, const DensityFunction& omegaF) const {
@@ -789,9 +840,15 @@ void Plotter::write_points_OT_global(std::ofstream &file, Function &fg, const Gr
 
     int vertex_no = 0;
 
+//    int numberOfElement = gridView.size(0);
+//    int numberProcessedElements = 0;
+//    ProgressBar progressbar;
+//    progressbar.start();
+
     {   // save points in file after refinement
       for (auto&& element: elements(gridView))
       {
+//        progressbar.status(numberProcessedElements,numberOfElement);
         using ElementType = std::decay_t<decltype(element)>;
         const bool isCube = element.geometry().type().isCube();
 
@@ -804,9 +861,11 @@ void Plotter::write_points_OT_global(std::ofstream &file, Function &fg, const Gr
         {
           write_element_points_OT_global<Function, ElementType, SimplexRefinementType>(element, file, fg, vertex_no, refinement);
         }
+//        numberProcessedElements++;
       }
     }
   file << "\t\t\t\t</DataArray>\n" << "\t\t\t</Points>\n";
+//  std::cout << " needed " << progressbar.stop()<< " to set up estimate integral data" << std::endl;
 }
 
 
@@ -898,16 +957,24 @@ void Plotter::write_simple_estimate_integral_OT(std::ofstream &file, LocalFuncti
     file << "\t\t\t\t</DataArray>\n" << "\t\t\t</CellData>\n";
 }
 
-template <class LocalFunction>
-void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, LocalFunction &fg, const DensityFunction& omegaF) const{
+template <class LocalFunction, typename GridView>
+void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, const GridView& gridView, LocalFunction &fg, const DensityFunction& omegaF, int refinement){
   // write points
     file << "\t\t\t<CellData Scalars=\"est. integral\">\n"
         << "\t\t\t\t<DataArray type=\"Float32\" Name=\"est. integral\" NumberOfComponents=\"1\" format=\""
         << "ascii" << "\">\n";
 
+//    int numberOfElement = gridView.size(0);
+//    int numberProcessedElements = 0;
+
+//    ProgressBar progressbar;
+//    progressbar.start();
+
     {   // save points in file after refinement
-      for (auto&& element: elements(gridView()))
+      for (auto&& element: elements(gridView))
       {
+//        progressbar.status(numberProcessedElements,numberOfElement);
+
         const auto geometry = element.geometry();
 
         fg.bind(element);
@@ -927,15 +994,15 @@ void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, Loc
           coords.resize(3);
         }
 
-        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> points(PlotRefinementType::nVertices(refinement_));
-        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> transported_points(PlotRefinementType::nVertices(refinement_));
-        for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++) //loop over vertices
+        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> points(PlotRefinementType::nVertices(refinement));
+        std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> transported_points(PlotRefinementType::nVertices(refinement));
+        for (auto it = PlotRefinementType::vBegin(refinement); it != PlotRefinementType::vEnd(refinement); it++) //loop over vertices
         {
             points[it.index()] = geometry.global(it.coords());
             transported_points[it.index()] = fg(it.coords()); //put vertices and transported refined vertices, respectively., in vector
         }
         //loop over subentitites
-        for (auto it = PlotRefinementType::eBegin(refinement_); it != PlotRefinementType::eEnd(refinement_); it++){
+        for (auto it = PlotRefinementType::eBegin(refinement); it != PlotRefinementType::eEnd(refinement); it++){
 
           //estimate integral by averaging the corner values and dividing through the cell size
           Config::ValueType estInt = 0;
@@ -956,9 +1023,91 @@ void Plotter::write_refined_simple_estimate_integral_OT(std::ofstream &file, Loc
           file << "\t\t\t\t\t" << estInt << " ";
           file << std::endl;
         }
+//        numberProcessedElements++;
       }
     }
     file << "\t\t\t\t</DataArray>\n" << "\t\t\t</CellData>\n";
+//    std::cout << " needed " << progressbar.stop()<< " to set up estimate integral data" << std::endl;
+}
+
+///helper to calc and write locally the estimated integrals in a virtually refined element
+template<class GlobalFunction, typename Geometry, typename RefinementType>
+void write_refined_simple_estimate_integral_OT_global_in_element(const Geometry& geometry, const Dune::GeometryType& gt, std::vector<Dune::FieldVector<Config::ValueType, Config::dim> > coords,
+    std::ofstream &file, GlobalFunction &fg, const DensityFunction& omegaF, int refinement)
+{
+  std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> points(RefinementType::nVertices(refinement));
+  std::vector<Dune::FieldVector<Config::ValueType, Config::dim>> transported_points(RefinementType::nVertices(refinement));
+  for (auto it = RefinementType::vBegin(refinement); it != RefinementType::vEnd(refinement); it++) //loop over vertices
+  {
+      points[it.index()] = geometry.global(it.coords());
+      transported_points[it.index()] = fg(points[it.index()]); //put vertices and transported refined vertices, respectively., in vector
+  }
+  //loop over subentitites
+  for (auto it = RefinementType::eBegin(refinement); it != RefinementType::eEnd(refinement); it++){
+
+    //estimate integral by averaging the corner values and dividing through the cell size
+    Config::ValueType estInt = 0;
+
+    int coords_i = 0;
+    for (const auto& corner : it.vertexIndices()){
+      estInt += omegaF(points[corner]);
+
+      coords[coords_i++] = transported_points[corner];
+    }
+    auto targetGeometry = Dune::MultiLinearGeometry<Config::ValueType, Config::dim, Config::dim>(gt, coords);
+
+
+    estInt /= geometry.corners(); //averaging
+    estInt *= geometry.volume()/targetGeometry.volume(); //geometry scaling
+
+    //write to file
+    file << "\t\t\t\t\t" << estInt << " ";
+    file << std::endl;
+  }
+}
+
+template <class GlobalFunction, typename GridView>
+void Plotter::write_refined_simple_estimate_integral_OT_global(std::ofstream &file, const GridView& gridView, GlobalFunction &fg, const DensityFunction& omegaF, int refinement){
+  // write points
+    file << "\t\t\t<CellData Scalars=\"est. integral\">\n"
+        << "\t\t\t\t<DataArray type=\"Float32\" Name=\"est. integral\" NumberOfComponents=\"1\" format=\""
+        << "ascii" << "\">\n";
+
+    int numberOfElement = gridView.size(0);
+    int numberProcessedElements = 0;
+
+    ProgressBar progressbar;
+    progressbar.start();
+
+    {   // save points in file after refinement
+      for (auto&& element: elements(gridView))
+      {
+        progressbar.status(numberProcessedElements,numberOfElement);
+
+        const auto geometry = element.geometry();
+
+        //create geometry for target triangle
+        Dune::GeometryType gt;
+        std::vector<Dune::FieldVector<Config::ValueType, Config::dim> > coords;
+
+        if(geometry.type().isCube())
+        {
+          gt.makeQuadrilateral();
+          coords.resize(4);
+          write_refined_simple_estimate_integral_OT_global_in_element<GlobalFunction, decltype(geometry), QuadRefinementType>(geometry, gt, coords, file, fg, omegaF, refinement);
+        }
+        else
+        {
+          gt.makeTriangle();
+          coords.resize(3);
+          write_refined_simple_estimate_integral_OT_global_in_element<GlobalFunction, decltype(geometry), SimplexRefinementType>(geometry, gt, coords, file, fg, omegaF, refinement);
+        }
+
+        numberProcessedElements++;
+      }
+    }
+    file << "\t\t\t\t</DataArray>\n" << "\t\t\t</CellData>\n";
+    std::cout << " needed " << progressbar.stop()<< " to set up estimate integral data" << std::endl;
 }
 
 
@@ -992,6 +1141,37 @@ void Plotter::write_pointData(std::ofstream &file, LocalFunction &f) const
   file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
 }
 
+
+template <class GlobalFunction>
+void Plotter::write_pointData_global(std::ofstream &file, const GlobalFunction &f) const
+{
+  // write points
+    file << "\t\t\t<PointData Scalars=\"error\">\n"
+      << "\t\t\t\t<DataArray type=\"Float32\" Name=\"data\" NumberOfComponents=\"1\" format=\""
+      << "ascii" << "\">\n";
+
+    //the reflector is given by X*rho, where rho is the PDE solution. X is calculated from the 2d mesh by adding the third coordiante omega(x)
+
+    if (refinement_ == 0)
+    {
+      // collect points
+      assert(false);
+    }else {   // save points in file after refinement
+      for (auto&& element: elements(gridView()))
+      {
+        const auto geometry = element.geometry();
+        file << "\t\t\t\t\t";
+        for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++){
+          file << std::setprecision(12) << std::scientific;
+          double value;
+          f.evaluate(geometry.global(it.coords()), value);
+          file << value << " ";
+        }
+        file << std::endl;
+      }
+    }
+  file << "\t\t\t\t</DataArray>\n" << "\t\t\t</PointData>\n";
+}
 
 template <class LocalFunction, class Function>
 void Plotter::write_error(std::ofstream &file, LocalFunction &f, Function &exact_solution) const{
@@ -1208,7 +1388,11 @@ void Plotter::write_lens(std::ofstream &file, Function &f) const{
   file << "// Glass interior" <<std::endl <<
       "#declare myI_Glass =" <<std::endl <<
       "interior { "<< std::endl <<
+#ifdef PARALLEL_LIGHT
       "\t ior " << OpticalSetting::kappa <<
+#else
+      "\t ior " << 1./OpticalSetting::kappa <<
+#endif
       "}" <<std::endl <<std::endl;
 
   file << "// Glass Finishes" <<std::endl <<
@@ -1275,7 +1459,8 @@ void Plotter::writeReflectorPOV(std::string filename, Function &f) const {
   }
 
   //include header
-  file << "//Simulation of a mirror" << std::endl
+  file << "#version 3.6;" << std::endl
+      << "//Simulation of a mirror" << std::endl
      << "#include \"colors.inc\" " << std::endl << std::endl;
 
   write_pov_setting(file);
@@ -1296,7 +1481,8 @@ void Plotter::writeRefractorPOV(std::string filename, Function &f) const {
   }
 
   //include header
-  file << "//Simulation of a lens" << std::endl
+  file << "#version 3.6;" <<
+      "//Simulation of a lens" << std::endl
      << "#include \"colors.inc\" " << std::endl
      << "#include \"textures.inc\" " << std::endl
      << "#include \"glass.inc\" " << std::endl << std::endl;

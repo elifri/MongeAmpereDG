@@ -18,7 +18,7 @@ public:
   using TaylorFunction = TaylorBoundaryFunction<SolverConfig::FETraitsSolver::DiscreteGridFunction>;
 
   Local_Operator_LagrangianBoundary(const OTBoundary& bc)
-    : bc(bc), last_step_on_a_different_grid(false), oldSolutionCaller_(){}
+    : bc(bc){}
 
   template<class Intersection, class LocalViewV, class LocalViewQ, class DenseMatrixType, class VectorType>
   void assemble_boundary_face_term(const Intersection& intersection,
@@ -69,8 +69,6 @@ public:
       const FieldVector<double, dim> &quadPos =
           intersection.geometryInInside().global(quad[pt].position());
 
-      auto x_value = geometry.global(quadPos);
-
       //the shape function values
       std::vector<JacobianType> gradientsV(size_u);
       std::vector<FEHessianType> HessiansV(size_u);
@@ -78,11 +76,7 @@ public:
       FieldVector<double, Config::dim> gradu;
       FieldMatrix<double, Config::dim, Config::dim> Hessu;
 
-      if (last_step_on_a_different_grid)
-        assemble_cellTermFEData_only_derivatives(geometry, localFiniteElementV, quadPos, oldSolutionCaller_(), x_value,
-        	gradientsV, HessiansV, gradu, Hessu);
-      else
-        assemble_cellTermFEData_only_derivatives(geometry, localFiniteElementV, quadPos, x,
+      assemble_cellTermFEData_only_derivatives(geometry, localFiniteElementV, quadPos, x,
           gradientsV, HessiansV, gradu, Hessu);
 
       std::vector<RangeType> referenceFunctionValuesQ(size_q);
@@ -99,8 +93,8 @@ public:
 //      std::cerr << " normal old " << normalOld << std::endl;
 
       //-------calculate integral--------
-      auto signedDistance = bc.H(gradu);
       auto signedDistanceDerivative = bc.derivativeH(gradu);
+      auto signedDistance = bc.H(gradu);
 //      std::cerr << " signedDistance " << signedDistance << " at " << gradu[0] << " "<< gradu[1]<< " from X "  << x_value << std::endl;
 
       const auto integrationElement =
@@ -118,37 +112,14 @@ public:
 //              << " to m(" << j << "," << i <<")" << std::endl;
         }
 
-        if (!last_step_on_a_different_grid)
-        {
-          v(j) += signedDistance * (referenceFunctionValuesQ[j]) * factor;
-        }
-        else
-        {
-          v(j) += (signedDistanceDerivative*gradu)*referenceFunctionValuesQ[j]*factor;
-        }
-
-
+        v(j) += signedDistance * (referenceFunctionValuesQ[j]) * factor;
       }
 
     }
   }
 
-  void set_evaluation_of_u_old_to_different_grid(){  last_step_on_a_different_grid = true;}
-  void set_evaluation_of_u_old_to_same_grid(){  last_step_on_a_different_grid = false;}
-  bool is_evaluation_of_u_old_on_different_grid(){  return last_step_on_a_different_grid;}
-
-  template<typename F>
-  void change_oldFunction(F&& uOld)
-  {
-    oldSolutionCaller_ = std::forward<F>(uOld);
-  }
-
 private:
   const OTBoundary& bc;
-
-  mutable bool last_step_on_a_different_grid;
-  std::function<const TaylorFunction&()> oldSolutionCaller_;
-
 };
 
 

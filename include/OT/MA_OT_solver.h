@@ -73,7 +73,12 @@ private:
   virtual void create_initial_guess();
 //  void update_Operator();
   virtual void solve_nonlinear_system();
+protected:
   virtual void adapt_operator();
+
+public:
+  using MA_solver::adapt;
+  using MA_solver::adapt_solution;
 
   void init_lagrangian_values(VectorType& v) const;
 
@@ -119,9 +124,6 @@ public:
 
 public:
 
-  using MA_solver::adapt;
-  using MA_solver::adapt_solution;
-
 //  GeometryOTSetting& get_setting() {return setting_;}
   const GeometryOTSetting& get_setting() const {return setting_;}
 
@@ -134,6 +136,8 @@ public:
 //  const AssemblerLagrangianMultiplierCoarse& get_assembler_lagrangian_boundary() const { return assemblerLMCoarse_;}
   AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() { return assemblerLMBoundary_;}
   const AssemblerLagrangianMultiplierBoundaryType& get_assembler_lagrangian_boundary() const { return assemblerLMBoundary_;}
+
+  const TransportPlotter& get_transportPlotter() const{ return transportPlotter_;}
 
 
   /**
@@ -188,7 +192,9 @@ template<class F>
 void MA_OT_solver::project(const F f, VectorType& v) const
 {
   this->FEBasisHandler_.project(f, v);
+#ifdef USE_LAGRANGIAN
   init_lagrangian_values(v);
+#endif
 
 #ifdef DEBUG
   test_projection(f,v.head(get_n_dofs_V()));
@@ -199,7 +205,9 @@ template<class F, class GradF>
 void MA_OT_solver::project(const F f, GradF gradf, VectorType& v) const
 {
   this->FEBasisHandler_.project(f, gradf, v);
+#ifdef USE_LAGRANGIAN
   init_lagrangian_values(v);
+#endif
 
 #ifdef DEBUG
   test_projection(f,v.head(get_n_dofs_V()));

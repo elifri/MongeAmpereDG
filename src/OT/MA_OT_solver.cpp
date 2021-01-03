@@ -20,6 +20,8 @@ namespace po = boost::program_options;
 
 #include "utils.hpp"
 
+#include "Solver/Elliptic_Projector.hpp"
+
 #include "Operator/linear_system_operator_poisson_NeumannBC.h"
 
 #include "IO/imageOT.hpp"
@@ -28,7 +30,7 @@ MA_OT_solver::MA_OT_solver(GridHandlerType& gridHandler,
     const shared_ptr<GridType>& gridTarget,
     const SolverConfig& config, const GeometryOTSetting& setting, bool create_operator)
 :MA_solver(gridHandler, config, false),
- setting_(setting), gridTarget_(gridTarget, SolverConfig::startlevel),
+ setting_(setting), gridTarget_(gridTarget, 0),
 #ifdef USE_COARSE_Q_H
  FEBasisHandlerQ_(*this, gridHandler.grid().levelGridView(gridHandler.grid().maxLevel()-1)),
 #else
@@ -512,13 +514,13 @@ void MA_OT_solver::plot(const std::string& name, int no) const
      std::cerr << fname  << std::endl;
   }
 
-  {
+/*  {
     std::string fname(plotter.get_output_directory());
     fname += "/"+ plotter.get_output_prefix()+ name +"estInt"+ NumberToString(no) + ".vtu";
     plotter.writeVTK(fname, *solution_u_old, this->get_OT_operator().get_f());
     std::cout << " write initial grid to " << fname << std::endl;
 
-  }
+  }*/
 
   //write to file
 
@@ -547,15 +549,16 @@ void MA_OT_solver::plot(const std::string& name, int no) const
 
 void MA_OT_solver::one_Poisson_Step()
 {
+  solution.resize(get_n_dofs());
 
   Config::SpaceType x0 = {0.0,0.0};
 //  Config::SpaceType x0 = {-0.5,-0.5};
 //  Config::SpaceType x0 = {0.5,-0.9};
 //  Config::SpaceType x0 = {-0.25,-0.25};
 //  Config::SpaceType x0 = {-0.25,0.25};
-//  FieldMatrix<Config::ValueType, 2, 2> A = {{1.5,0},{0,1.5}};
-  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,2.5}};
-//  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,1}};
+//  FieldMatrix<Config::ValueType, 2, 2> A = {{2,0},{0,2}};
+  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,2.5}}; //initial guess for ellipse problem
+//    FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,1}};
 //  FieldMatrix<Config::ValueType, 2, 2> A = {{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}};
 
   Integrator<Config::GridType> integrator(get_grid_ptr());
@@ -798,8 +801,12 @@ void MA_OT_solver::create_initial_guess()
   }
   else
   {
-    solution.resize(get_n_dofs());
+    project([](Config::SpaceType x){return x.two_norm2()/2.0;},solution);
+    update_solution(solution);
+
 /*
+    solution.resize(get_n_dofs());
+
     Config::SpaceType x0 = {0.0,0.0};
 //    FieldMatrix<Config::ValueType, 2, 2> A = {{.848269204654016,.383089318230846},{.383089318230846,2.13435477300043}}; //exactsolution *1.1
 //    FieldMatrix<Config::ValueType, 2, 2> B = {{0.424134602327008,0.191544659115423},{0.191544659115423,1.067177386500215}}; //exactsolution *1.1/2
@@ -824,6 +831,7 @@ void MA_OT_solver::create_initial_guess()
 
 //      this->test_projection(u0, y0, solution);
 */
+
   }
 
   {
@@ -841,11 +849,14 @@ void MA_OT_solver::create_initial_guess()
 
 //  assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), solution, res);
 //  assert(std::dynamic_pointer_cast<OperatorType>(this->op));
+#ifdef U_MID_EXACT
   assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), exactsol_u, res);
+#else
+  assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), solution, res);
+#endif
   //take care that the adapted exact solution also updates the
   assembler_.set_u0AtX0(res);
   std::cerr << " set u_0^mid to " << res << std::endl;
-
 
   one_Poisson_Step();
 
@@ -861,10 +872,12 @@ void MA_OT_solver::create_initial_guess()
 
 void MA_OT_solver::solve_nonlinear_system()
 {
+#ifdef USE_LAGRANGIAN
   assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
+#else
+  assert(solution.size() == get_n_dofs_V_h() && "Error: start solution is not initialised");
+#endif
 
-
-  assert(!this->get_OT_operator().is_evaluation_of_u_old_on_different_grid());
   std::cout << "n dofs" << get_n_dofs() << " V_h_dofs " << get_n_dofs_V_h() << " Q_h_dofs " << get_n_dofs_Q_h() << std::endl;
 
   //if the exact solution is known it can be accessed via exactdata
@@ -880,12 +893,14 @@ void MA_OT_solver::solve_nonlinear_system()
   // /////////////////////////
 
 #ifdef USE_DOGLEG
-
+  #ifdef USE_LAGRANGIAN
+    doglegMethod<Operator>(get_operator(), doglegOpts_, solution, evaluateJacobianSimultaneously_);
+  #else
+    doglegMethod<Operator, false>(get_operator(), doglegOpts_, solution, evaluateJacobianSimultaneously_);
+  #endif
+#else
   newtonOpts_.omega = 1.0;
-
-  //  doglegMethod(op, doglegOpts_, solution, evaluateJacobianSimultaneously_);
   newtonMethod(get_operator(), newtonOpts_, solution, evaluateJacobianSimultaneously_);
-
 #endif
 #ifdef USE_PETSC
   igpm::processtimer timer;
@@ -902,7 +917,7 @@ void MA_OT_solver::solve_nonlinear_system()
   timer.stop();
   std::cout << "needed " << timer << " seconds for nonlinear step, ended with error code " << error << std::endl;
 #endif
-  std::cout << " Lagrangian Parameter for fixing grid Point " << solution(get_n_dofs_V_h()) << std::endl;
+//  std::cout << " Lagrangian Parameter for fixing grid Point " << solution(get_n_dofs_V_h()) << std::endl;
 
   if (compare_with_exact_solution_)
     std::cout << " L2 error is " << calculate_L2_error_gradient(exactData.exact_gradient()) << std::endl;
@@ -962,7 +977,7 @@ void MA_OT_solver::adapt_solution(const int level)
 
 
   //add better projection of exact solution
-/*  {
+  {
     Config::SpaceType x0 = {0.0,0.0};
 
     FieldMatrix<Config::ValueType, 2, 2> A = {{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}}; //exactsolution
@@ -976,18 +991,18 @@ void MA_OT_solver::adapt_solution(const int level)
       return y;};
 
     project(u0, y0, exactsol_u);
-  }*/
+  }
+
+  //project old solution to new grid
+  auto newSolution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), solution);
+  //auto newSolution = FEBasisHandler_.adapt_function_elliptic_after_grid_change(old_grid.gridViewOld, gridView(), this->get_OT_operator(), solution);
+  solution = newSolution;
 
   //adapt operator
   std::cerr << " going to adapt operator " << std::endl;
   adapt_operator();
 
-
-  //project old solution to new grid
-  auto newSolution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), solution);
-//  auto newSolution = FEBasisHandler_.adapt_function_elliptic_after_grid_change(old_grid.gridViewOld, gridView(), *this, solution);
-  solution = newSolution;
-
+#ifdef USE_LAGRANGIAN
   //adapt boundary febasis and bind to assembler
   std::cerr << " going to adapt lagrangian multiplier " << std::endl;
 
@@ -1003,6 +1018,7 @@ void MA_OT_solver::adapt_solution(const int level)
   solution.conservativeResize(get_n_dofs());
   solution(get_n_dofs_V_h()) = 0;
   solution.tail(get_n_dofs_Q_h()) = p_adapted;
+#endif
 
 /*  {
     update_solution(solution);

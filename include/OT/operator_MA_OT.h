@@ -9,7 +9,7 @@
 #define OPERATOR_MA_OT_HH_
 
 #include <dune/common/function.hh>
-#include <dune/localfunctions/c1/deVeubeke/macroquadraturerules.hh>
+#include <localfunctions/macroquadraturerules.hh>
 #include "utils.hpp"
 #include "MAconfig.h"
 
@@ -48,7 +48,7 @@ public:
   using Function = DensityFunction;
 
   Local_Operator_MA_OT(const OTBoundary& bc, const Function& rhoX, const Function& rhoY):
-  rhoX(rhoX), rhoY(rhoY),bc(bc), int_f(0), found_negative(false), last_step_on_a_different_grid(false)
+  rhoX(rhoX), rhoY(rhoY),bc(bc), int_f(0), found_negative(false)
   {
     std::cout << " created Local Operator" << std::endl;
   }
@@ -403,13 +403,6 @@ public:
       const LocalView &localView,
       const VectorType &x, VectorType& v, int tag = 0) const {}
 
-
-  ///use given global function (probably living on a coarser grid) to evaluate last step
-  void set_evaluation_of_u_old_to_different_grid() const{  last_step_on_a_different_grid = true;}
-  ///use coefficients of old function living on the same grid to evaluate last step
-  void set_evaluation_of_u_old_to_same_grid() const{  last_step_on_a_different_grid = false;}
-  bool is_evaluation_of_u_old_on_different_grid() const {return last_step_on_a_different_grid;}
-
   const Function& get_input_distribution() const {return rhoX;}
   const Function& get_target_distribution() const {return rhoY;}
 
@@ -425,8 +418,6 @@ public:
 public:
   mutable double int_f;
   mutable bool found_negative;
-
-  mutable bool last_step_on_a_different_grid;
 };
 
 #endif /* OPERATOR_MA_OT_HH_ */

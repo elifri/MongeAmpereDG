@@ -32,8 +32,8 @@ namespace po = boost::program_options;
 using namespace std;
 
 //#define MIRROR
-#define LENS
-//#define OT
+//#define LENS
+#define OT
 
 #ifdef MIRROR
 using SolverType = MA_reflector_solver;
@@ -130,7 +130,7 @@ void replot_on_PS_12_grid(SolverConfig::GridHandlerType& gridHandler, std::share
   shared_ptr<LocalFuncType> local_u = std::shared_ptr<LocalFuncType> (new LocalFuncType(global_u));
   shared_ptr<LocalGradType> gradient_u = std::shared_ptr<LocalGradType> (new LocalGradType(global_u));
 
-  //add solution data
+/*  //add solution data
   vtkWriter.addVertexData(*local_u, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
   //extract hessian
   Dune::array<int,2> direction = {0,0};
@@ -145,9 +145,8 @@ void replot_on_PS_12_grid(SolverConfig::GridHandlerType& gridHandler, std::share
   vtkWriter.addVertexData(HessianEntry01 , VTK::FieldInfo("Hessian01", VTK::FieldInfo::Type::scalar, 1));
   direction[0] = 1;
   auto HessianEntry11 = localSecondDerivative(global_u, direction);
-  vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));
+  vtkWriter.addVertexData(HessianEntry11 , VTK::FieldInfo("Hessian11", VTK::FieldInfo::Type::scalar, 1));*/
 
-//to be continued ..
 
 #ifdef MIRROR
   std::string optic_string = "reflector";
@@ -167,6 +166,7 @@ void replot_on_PS_12_grid(SolverConfig::GridHandlerType& gridHandler, std::share
    plotterPS12.set_target_xz_plane();
 #endif
 
+#ifndef OT
    std::string opticPOVname(config.plotOutputDirectory);
    opticPOVname += "/"+ config.outputPrefix+ optic_string + "PS12export.pov";
  #ifdef MIRROR
@@ -199,9 +199,7 @@ void replot_on_PS_12_grid(SolverConfig::GridHandlerType& gridHandler, std::share
    opticPointCloudname += "/"+ config.outputPrefix+ optic_string +"PointsPS12export.txt";
    plotterPS12.save_refractor_points(opticPointCloudname, *local_u);
    std::cout << " written to " << opticPointCloudname  << std::endl;
-
-
-//continue ..
+#endif
 
    //init operator for residual
    SolverType ma_solver(gridHandler, gridTarget_ptr, config, setting);
@@ -212,6 +210,7 @@ void replot_on_PS_12_grid(SolverConfig::GridHandlerType& gridHandler, std::share
    vtkWriter.addVertexData(residual, VTK::FieldInfo("Residual", VTK::FieldInfo::Type::scalar, 1));
 #endif
 
+/*
    IO::GaussCurvatureFunction curvature(gradient_u,
        HessianEntry00,HessianEntry01,HessianEntry10,HessianEntry11);
    vtkWriter.addVertexData(curvature, VTK::FieldInfo("Curvature", VTK::FieldInfo::Type::scalar, 1));
@@ -222,6 +221,23 @@ void replot_on_PS_12_grid(SolverConfig::GridHandlerType& gridHandler, std::share
    vtkWriter.write(fname);
 
    std::cout << " written to file " << fname << std::endl;
+*/
+
+#ifdef OT
+   std::string gridName(config.plotOutputDirectory);
+   gridName += "/"+ config.outputPrefix+ "PS12exportOutputgrid.vtu";
+   plotterPS12.writeOTVTK(gridName, *gradient_u, ma_solver.get_OT_operator().get_f());
+   std::cout << " written to file " << gridName << std::endl;
+
+   std::string fnameCartesian(config.plotOutputDirectory);
+   fnameCartesian += "/"+ config.outputPrefix+ "PS12exportCartesianGrid.vtu";
+
+   SolverConfig::FETraitsSolver::DiscreteGridFunction::GlobalFirstDerivative globalGradU(global_u);
+
+   ma_solver.get_transportPlotter().writeOTVTKGlobal(fnameCartesian, globalGradU, ma_solver.get_OT_operator().get_f());
+   std::cout << " written cartesian grid to file " << fnameCartesian << std::endl;
+
+#endif
 
 }
 

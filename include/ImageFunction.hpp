@@ -12,6 +12,7 @@
 #include <dune/common/function.hh>
 
 #include <cmath>
+
 #include "CImg.h"
 #undef Success
 #undef Status
@@ -22,6 +23,10 @@
 #include "MAconfig.h"
 #include "utils.hpp"
 #include "Solver/solver_config.h"
+
+#include "CImg.h" //CImg has to be included after MAconfig for Adolc support for image functions
+#undef Success
+
 
 #include "OT/problem_data_OT.h"
 
