@@ -260,7 +260,7 @@ public:
   std::shared_ptr<Local_operator_Lagrangian_Dual> lopLMDual;
   std::shared_ptr<LocalOperatorLagrangianBoundaryType> lopLMBoundary;
 
-  Config::VectorType lagrangianMidvalueDiscreteOperator;
+//  Config::VectorType lagrangianMidvalueDiscreteOperator;
 
   mutable int intermediateSolCounter;
 
@@ -363,6 +363,13 @@ void MA_OT_Operator<OperatorTraits>::init()
 template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>::prepare_fixing_point_term(const Config::VectorType& x) const
 {
+  //build FE function
+  typename SolverType::DiscreteGridFunction u(solver_ptr->get_FEBasis_u(),x);
+  //determine the value of x_0
+  auto firstElement = solver_ptr->gridView().template begin<0>();
+  auto firstNode = firstElement->geometry().corner(0);
+  //store function value at x_0 in assembler
+  solver_ptr->get_assembler().set_uAtX0(u(firstNode));
 }
 
 template<typename OperatorTraits>
@@ -505,6 +512,41 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
   assert(! (v.norm()!=v.norm()));
 
   std::cerr << " l with norm " << std::scientific << std::setprecision(3)<< v.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
+
+  //fix first degree of freedom
+  const auto x0 = solver_ptr->get_assembler().u0AtX0();
+  assert(!m.IsRowMajor);
+  for (Config::MatrixType::InnerIterator it(m,0); it; ++it) //iterate over first column and eliminate all occurances of x[0]
+  {
+    v(it.row()) -= it.value()*x0; //subtract of rhs
+    it.valueRef() = 0;
+  }
+
+  //todo simple hack to erase first row
+  //replace first row with identity
+//  m.row(0)*=0.;
+  m.conservativeResize(2*V_h_size+Q_h_size+1,2*V_h_size+Q_h_size);
+  m.coeffRef(2*V_h_size+Q_h_size, 0) = 1.;
+  v(0) = x0-solver_ptr->get_assembler().uAtX0();
+  m.prune(0,0);
+  //maybe iterate over all entries?
+//  for (int i = 0; i < m.cols(); i++)
+//  {
+//    m.
+//  }
+
+
+#ifdef DEBUG
+  {
+    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "BF" << intermediateSolCounter << ".m";      \
+    std::ofstream file(filename.str(),std::ios::out);
+    MATLAB_export(file, m, "m");
+    Eigen::MatrixXd dMat;
+    dMat= Eigen::MatrixXd(m);
+//    file << dMat << std::endl;
+
+  }
+#endif
 }
 
 
@@ -512,7 +554,6 @@ template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& xBoundary, const bool new_solution) const
 {
   assert(solver_ptr != NULL);
-  assert(lagrangianMidvalueDiscreteOperator.size()==this->solver_ptr->get_n_dofs_V_h() && " the initialisiation of the MA operator does not fit to the solver's grid!");
 
 
   if (new_solution && true)
@@ -547,7 +588,7 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
 #endif
 
 //  for (int i = 0; i < v.size(); i++)  assert ( ! (v(i) != v(i)));
-//#ifdef DEBUG
+#ifdef DEBUG
   {
     std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "BF" << intermediateSolCounter << ".m";      \
     std::ofstream file(filename.str(),std::ios::out);
@@ -557,7 +598,9 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
     std::ofstream file2(filename2.str(),std::ios::out);
     MATLAB_export(file2, v, "v");
   }
-//#endif
+#endif
+  std::cerr << " current test value " << x(0) << std::endl;
+
   //output
   auto end = std::chrono::steady_clock::now();
   std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
@@ -591,13 +634,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians(const Config::Vec
   const auto& assembler = solver_ptr->get_assembler();
 
   v.head(tempV.size()) = tempV;
-  assert(lagrangianMidvalueDiscreteOperator.size() == V_h_size);
-
-  int indexFixingGridEquation = V_h_size;
-//    auto lambda = x(indexFixingGridEquation);
-
-  assert(false);
-  v(indexFixingGridEquation) = assembler.u0AtX0();
+  assert(false && "this function is not updated yet!");
 
   //assemble part of second lagrangian multiplier for fixing boundary
   Config::MatrixType tempM(Q_h_size, V_h_size);

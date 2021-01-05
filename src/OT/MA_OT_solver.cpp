@@ -373,7 +373,7 @@ void MA_OT_solver::init_from_file(const std::string& filename)
         }
         else
         {
-          std::cerr << "The inserted coefficient file (including lagrangianparameters) is too short";
+          std::cerr << "The inserted coefficient file (including lagrangian parameters) is too short";
           assert(false);
           exit(-1);
         }
@@ -383,7 +383,8 @@ void MA_OT_solver::init_from_file(const std::string& filename)
   }
   else //no further coefficients -> init lagrangian parameters with 0
   {
-    solution.tail(get_n_dofs_Q_h()+1) = VectorType::Zero(get_n_dofs_Q_h()+1);
+    solution.tail(get_n_dofs_V_h()+get_n_dofs_Q_h()) = VectorType::Zero(get_n_dofs_V_h()+get_n_dofs_Q_h());
+    solution.tail(1)[0] = solution(1);
   }
   fileInitial >> std::ws;
 
@@ -811,32 +812,27 @@ void MA_OT_solver::create_initial_guess()
 
 //      this->test_projection(u0, y0, solution);
 */
+    //determine value which later fixes the first dof
 
+    auto firstElement = gridHandler_.gridView().begin<0>();
+    auto firstNode = firstElement->geometry().corner(0);
+    std::cout << " calculated first node " << firstNode[0] << " " << firstNode[1] << std::endl;
+    assembler_.set_u0AtX0(firstNode.two_norm2()/2.0);
   }
 
-  {
-    ExactData exactData;
-
-    project(exactData.exact_solution(), exactData.exact_gradient(),
-       exactsol_u);
-
-//      this->test_projection(u0, y0, solution);
-  }
-
-  Config::ValueType res = 0;
+  ExactData exactData;
+  project(exactData.exact_solution(), exactData.exact_gradient(), exactsol_u);
 
 //#define U_MID_EXACT
 
-//  assemblerLM1D_.assembleRhs(*(op.lopLMMidvalue), solution, res);
-////  assert(std::dynamic_pointer_cast<OperatorType>(this->op));
-//#ifdef U_MID_EXACT
-//  assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), exactsol_u, res);
-//#else
-//  assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), solution, res);
-//#endif
-  assert(false && "init u0");
+#ifdef U_MID_EXACT
+  //determine value which later fixes the first dof
+  auto firstElement = gridHandler_.gridView().begin<0>();
+  auto firstNode = firstElement->geometry().corner(0);
+  assembler_.setu0atX0(exactData.exact_solution(node));
+#endif
 
-  one_Poisson_Step();
+//  one_Poisson_Step();
 
   update_solution(solution);
 
@@ -916,11 +912,11 @@ void MA_OT_solver::adapt_operator()
 
   //update u mean value
 #ifdef U_MID_EXACT
-  Config::ValueType res = 0;
+//  Config::ValueType res = 0;
 
-  assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), exactsol_u, res);
-  assembler_.set_u0AtX0(res);
-  std::cerr << " set u_0^mid to " << res << std::endl;
+//  assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), exactsol_u, res);
+//  assembler_.set_u0AtX0(res);
+//  std::cerr << " set u_0^mid to " << res << std::endl;
 #endif
 }
 

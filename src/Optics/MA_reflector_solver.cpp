@@ -115,12 +115,7 @@ void MA_reflector_solver::create_initial_guess()
   }
     update_solution(solution);
 
-    Config::ValueType res = 0;
-    assemblerLM1D_.assembleRhs((get_OT_operator().get_lopLMMidvalue()), solution, res);
-//      assemblerLM1D_.assembleRhs(*(this->get_OT_operator().lopLMMidvalue), exactsol_u, res);
-    //take care that the adapted exact solution also updates the
-    assembler_.set_u0AtX0(res);
-    std::cerr << " set u_0^mid to " << res << std::endl;
+    assembler_.set_u0AtX0(distance);
 }
 
 

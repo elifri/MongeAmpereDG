@@ -71,9 +71,8 @@ void MA_refractor_solver::create_initial_guess()
 //  project(refLens.exact_solution(), refLens.exact_gradient(), solution);
 
   //set fixing size for refractor (fix distance to light source)
-  Config::ValueType res = 0;
-  assemblerLM1D_.assembleRhs((get_OT_operator().get_lopLMMidvalue()), solution, res);
-  assembler_.set_u0AtX0(res);
+  assembler_.set_u0AtX0(distance);
+
   std::cerr << " set u_0^mid to " << res << std::endl;
 }
 
