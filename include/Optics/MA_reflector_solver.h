@@ -41,6 +41,9 @@ public:
       const SolverConfig& config, OpticalSetting& opticalSetting,
       const std::string& configFileEllipsoid="");
 
+  ///encapsles the initialisation by the ellipsoid method
+  void init_by_ellipsoid_method();
+
   ///creates the initial guess
   void create_initial_guess();
   void update_Operator();
