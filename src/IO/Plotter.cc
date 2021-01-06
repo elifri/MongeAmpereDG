@@ -216,8 +216,8 @@ void Plotter::write_pov_setting(std::ofstream &file) const{
 			"light_source {" <<std::endl <<
 			"\t <-0,0,0>" <<std::endl <<
 //      "\t color rgb <1,1,1>" <<std::endl <<
-      "\t color rgb <0.141496033, 0.141496033, 0.141496033>" <<std::endl <<
-//			"\t color rgb < " << povRayOpts_.lightSourceColor[0] << ", " << povRayOpts_.lightSourceColor[1] << ", " << povRayOpts_.lightSourceColor[2] << "> " << std::endl <<
+//      "\t color rgb <0.141496033, 0.141496033, 0.141496033>" <<std::endl <<
+			"\t color rgb < " << povRayOpts_.lightSourceColor[0] << ", " << povRayOpts_.lightSourceColor[1] << ", " << povRayOpts_.lightSourceColor[2] << "> " << std::endl <<
 #ifndef PARALLEL_LIGHT
       "\t spotlight" <<std::endl <<
 #else
@@ -268,7 +268,9 @@ void Plotter::write_pov_setting_refractor(std::ofstream &file) const{
       "light_source {" <<std::endl <<
       "\t <-0,0,0>" <<std::endl <<
 //      "\t color rgb <1,1,1>" <<std::endl <<
-      "\t color rgb <0.141496033, 0.141496033, 0.141496033>" <<std::endl <<
+      "\t color rgb <" << povRayOpts_.lightSourceColor[0]<<", "
+	  << povRayOpts_.lightSourceColor[1]<<", "
+	  << povRayOpts_.lightSourceColor[2]<<">" <<std::endl <<
 #ifndef PARALLEL_LIGHT
       "\t spotlight" <<std::endl <<
 #else
@@ -423,10 +425,10 @@ void Plotter::write_face_indices_pov(std::ofstream &file) const
 
 void Plotter::write_faces(ON_Mesh &mesh) const
 {
-  assert(false);
-  std::cerr << " error linking with open nurbs has a problem";
-  exit(-1);
-  /*
+	assert(false);
+	std::cerr << " error linking with open nurbs has a problem";
+	exit(-1);
+/*
   bool successful = false;  _unused(successful);
   int elementNo = 0;
   if (refinement_ == 0){
@@ -468,8 +470,6 @@ void Plotter::write_faces(ON_Mesh &mesh) const
   }
 */
 }
-
-
 
 
 ///////////////////////////////////////////////////////////
