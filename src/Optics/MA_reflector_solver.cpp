@@ -10,6 +10,9 @@
 #include "Optics/init_with_ellipsoid_method.hpp"
 #include "Optics/plot_functions_optics.hpp"
 
+#include "Solver/GridPS12Converter.hpp"
+#include "Solver/Convexifier.h"
+
 #include "utils.hpp"
 
 
@@ -276,10 +279,14 @@ void MA_reflector_solver::plot(const std::string& name, int no) const
     auto localnumericalSolution = localFunction(numericalSolution);
 
      //build writer
-     SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
+     SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter_.get_refinement());
 
      //add solution data
      vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
+
+     //add gradient data
+     auto gradu= localFirstDerivative(numericalSolution);
+     vtkWriter.addVertexData(gradu , VTK::FieldInfo("grad", VTK::FieldInfo::Type::scalar, 2));
 
      //extract hessian
      Dune::array<int,2> direction = {0,0};
@@ -307,23 +314,23 @@ void MA_reflector_solver::plot(const std::string& name, int no) const
 
 
      //write to file
-     std::string fname(plotter.get_output_directory());
-     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + ".vtu";
+     std::string fname(plotter_.get_output_directory());
+     fname += "/"+ plotter_.get_output_prefix()+ name + NumberToString(no) + ".vtu";
      vtkWriter.write(fname);
 
 
-     std::string reflname(plotter.get_output_directory());
-     reflname += "/"+ plotter.get_output_prefix()+ name + "reflector"+NumberToString(no) + ".vtu";
+     std::string reflname(plotter_.get_output_directory());
+     reflname += "/"+ plotter_.get_output_prefix()+ name + "reflector"+NumberToString(no) + ".vtu";
 //     plotter.writeReflectorVTK(reflname, localnumericalSolution, *exact_solution);
-     plotter.writeReflectorVTK(reflname, localnumericalSolution);
+     plotter_.writeReflectorVTK(reflname, localnumericalSolution);
      std::cerr << fname  << ", " << reflname << " and ";
   }
 
 
   //write povray output
-   std::string reflPovname(plotter.get_output_directory());
-   reflPovname += "/"+ plotter.get_output_prefix() + name + "reflector" + NumberToString(no) + ".pov";
-   plotter.writeReflectorPOV(reflPovname, *solution_u_old);
+   std::string reflPovname(plotter_.get_output_directory());
+   reflPovname += "/"+ plotter_.get_output_prefix() + name + "reflector" + NumberToString(no) + ".pov";
+   plotter_.writeReflectorPOV(reflPovname, *solution_u_old);
    std::cerr << reflPovname << std::endl;
 
 //   //write rhino mesh
@@ -372,7 +379,7 @@ void MA_reflector_solver::update_Operator()
 
   //print blurred target distribution
   if (true) {
-      std::ostringstream filename2; filename2 << plotOutputDirectory_+"/"+plotter.get_output_prefix()+"lightOut" << iterations << ".bmp";
+      std::ostringstream filename2; filename2 << plotOutputDirectory_+"/"+plotter_.get_output_prefix()+"lightOut" << iterations << ".bmp";
       std::cout << "saved image to " << filename2.str() << std::endl;
       get_refl_operator().get_actual_g().saveImage (filename2.str());
       assert(std::abs(get_refl_operator().get_actual_g().integrate2()) - 1 < 1e-10);

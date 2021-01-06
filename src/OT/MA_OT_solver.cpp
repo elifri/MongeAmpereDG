@@ -50,7 +50,7 @@ MA_OT_solver::MA_OT_solver(GridHandlerType& gridHandler,
 #endif
 //  gridTarget_ptr->globalRefine(SolverConfig::startlevel);
 
-  plotter.set_geometrySetting(get_setting());
+  plotter_.set_geometrySetting(get_setting());
 
   if (create_operator)
   {
@@ -422,7 +422,7 @@ void MA_OT_solver::plot(const std::string& name, int no) const
 //    decltype(numericalSolution)::LocalFunction localnumericalSolutionError(numericalSolutionError);
 
     //build writer
-     SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
+     SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter_.get_refinement());
 
      //add solution data
      vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
@@ -507,36 +507,35 @@ void MA_OT_solver::plot(const std::string& name, int no) const
      vtkWriter.addVertexData(ev2, VTK::FieldInfo("EV2", VTK::FieldInfo::Type::scalar, 1));
 
      //write to file
-     std::string fname(plotter.get_output_directory());
-     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + ".vtu";
+     std::string fname(plotter_.get_output_directory());
+     fname += "/"+ plotter_.get_output_prefix()+ name + NumberToString(no) + ".vtu";
      vtkWriter.write(fname);
 
      std::cerr << fname  << std::endl;
   }
 
-/*  {
-    std::string fname(plotter.get_output_directory());
-    fname += "/"+ plotter.get_output_prefix()+ name +"estInt"+ NumberToString(no) + ".vtu";
-    plotter.writeVTK(fname, *solution_u_old, this->get_OT_operator().get_f());
-    std::cout << " write initial grid to " << fname << std::endl;
-
-  }*/
 
   //write to file
 
-  std::string fname(plotter.get_output_directory());
-  fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + "outputGrid.vtu";
+
+  std::string fname(plotter_.get_output_directory());
+  fname += "/"+ plotter_.get_output_prefix()+ name + NumberToString(no) + "outputGrid.vtu";
 
   assert(gradient_u_old);
 
 #ifndef EXACT_DATA
-  plotter.writeOTVTK(fname, *gradient_u_old, this->get_OT_operator().get_f());
+  plotter_.writeOTVTK(fname, *gradient_u_old, this->get_OT_operator().get_f());
 #else
   ExactData exactData;
-  plotter.writeOTVTK_with_error(fname, *gradient_u_old,exactData.exact_gradient());
+  plotter_.writeOTVTK_with_error(fname, *gradient_u_old,exactData.exact_gradient());
 #endif
 
-      //  plotter.writeOTVTK(fname, *gradient_u_old);
+
+//  std::string fnametxt(plotter.get_output_directory());
+//  fnametxt += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + "gridPoints.txt";
+//  plotter.writeOTtxt(fnametxt, *gradient_u_old);
+
+//  plotter.writeOTVTK(fname, *gradient_u_old);
 
 /*
   std::string fnameCartesian(plotter.get_output_directory());
@@ -577,9 +576,9 @@ void MA_OT_solver::one_Poisson_Step()
 #ifdef DEBUG
   //write to file
   {
-    std::string fname(plotter.get_output_directory());
-    fname += "/"+ plotter.get_output_prefix()+ "y0.vtu";
-    plotter.writeOTVTKGlobal(fname, y0);
+    std::string fname(plotter_.get_output_directory());
+    fname += "/"+ plotter_.get_output_prefix()+ "y0.vtu";
+    plotter_.writeOTVTKGlobal(fname, y0);
 
     auto projection = [&](Config::SpaceType x){
       auto y=y0(x), res = y; res.axpy(-OTbc.H(y), OTbc.derivativeH(y));
@@ -591,12 +590,12 @@ void MA_OT_solver::one_Poisson_Step()
     // Obtain a local view of f
     auto localF = localFunction(gf);
 
-    SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
+    SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter_.get_refinement());
    //add solution data
     vtkWriter.addVertexData(localF, VTK::FieldInfo("projection", VTK::FieldInfo::Type::scalar, 2));
 
-    std::string fnameProj(plotter.get_output_directory());
-    fnameProj += "/"+ plotter.get_output_prefix()+ "y0Projection.vtu";
+    std::string fnameProj(plotter_.get_output_directory());
+    fnameProj += "/"+ plotter_.get_output_prefix()+ "y0Projection.vtu";
     vtkWriter.write(fnameProj);
   }
 #endif
@@ -695,20 +694,20 @@ void MA_OT_solver::one_Poisson_Step()
 
   //write to file
   {
-    SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
+    SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter_.get_refinement());
    //add solution data
     vtkWriter.addVertexData(localFunction(globalSolution), VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
     vtkWriter.addVertexData(localGradient , VTK::FieldInfo("grad", VTK::FieldInfo::Type::scalar, 2));
     vtkWriter.addVertexData(localProjectedGradientX, VTK::FieldInfo("PgradX", VTK::FieldInfo::Type::scalar, 1));
     vtkWriter.addVertexData(localProjectedGradientY, VTK::FieldInfo("PgradY", VTK::FieldInfo::Type::scalar, 1));
 
-    std::string fnameC0(plotter.get_output_directory());
-    fnameC0 += "/"+ plotter.get_output_prefix()+ "C0initialguess.vtu";
+    std::string fnameC0(plotter_.get_output_directory());
+    fnameC0 += "/"+ plotter_.get_output_prefix()+ "C0initialguess.vtu";
     vtkWriter.write(fnameC0);
 
-    std::string fname(plotter.get_output_directory());
-    fname += "/"+ plotter.get_output_prefix()+ "C0outputGrid.vtu";
-    plotter.writeOTVTK(fname, localGradient, this->get_OT_operator().get_f());
+    std::string fname(plotter_.get_output_directory());
+    fname += "/"+ plotter_.get_output_prefix()+ "C0outputGrid.vtu";
+    plotter_.writeOTVTK(fname, localGradient, this->get_OT_operator().get_f());
   }
 
 #ifdef DEBUG
@@ -801,7 +800,10 @@ void MA_OT_solver::create_initial_guess()
   }
   else
   {
-    project([](Config::SpaceType x){return x.two_norm2()/2.0;},solution);
+	ExactData exactData;
+
+	project(exactData.exact_solution(), exactData.exact_gradient(), solution);
+//    project([](Config::SpaceType x){return x.two_norm2()/2.0;},solution);
     update_solution(solution);
 
 /*
