@@ -109,6 +109,7 @@ public:
   }
 
   const GridType& grid() const {  return *gridPS12_;}
+  const std::shared_ptr<GridType>& grid_ptr() {	  return gridPS12_;}
   const GridView& gridView() const {  return gridView_;}
   GridView& gridView() {  return gridView_;}
 
