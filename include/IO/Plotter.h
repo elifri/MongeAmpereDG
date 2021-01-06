@@ -305,6 +305,14 @@ public:
    */  template <class LocalFunction>
   void writeOTVTK(std::string filename, LocalFunction &f, const DensityFunction& omegaF) const;
 
+   /**
+    * evaluates and saves the solution's transported grid
+    * @param filename    the path to the file where the grid is written in ASCII format
+    * @param fg          the numerical solution (gradient of the MA solution)
+    */  template <class LocalFunction>
+   void writeOTtxt(std::string filename, LocalFunction &f) const;
+
+
   /**
    * evaluates and saves the solution's transported grid and an error given by the exact data
    * @param filename    the path to the file where the grid is written in ASCII format
@@ -355,6 +363,15 @@ public:
   ///saves the BpSpline coefficients in a simple ASCII format
   template<typename BSplineNodeFactoryType>
   void save_BSplineCoeffs(const BSplineNodeFactoryType &bSplineNodeFactory, const Config::VectorType& coeffs, std::ofstream &of) const;
+
+  /**
+   * evaluates every point and its transport and write them into a file
+   * @param n_y         number of points in y -direction
+   * @param f           the OT map
+   * @param filename    the path to the file where the values are written in ASCII format
+   */
+  template<typename LocalFunctiontype>
+  void save_OT_map_verbose(std::string filename, LocalFunctiontype &f) const;
 
 
 
@@ -701,6 +718,34 @@ void Plotter::writeOTVTK(std::string filename, LocalFunction &f, const DensityFu
 
     write_vtk_end(file);
 
+}
+
+template <class LocalFunction>
+void Plotter::writeOTtxt(std::string filename, LocalFunction &fg) const
+{
+    std::ofstream file(filename.c_str(), std::ios::out);
+    if (file.rdstate()) {
+      std::cerr << "Error: Couldn't open '" << filename << "'!\n";
+      return;
+    }
+    file << std::setprecision(12) << std::scientific;
+
+//    if (refinement_ == 0){
+
+      for (auto&& e : elements(gridView())) {
+    	  fg.bind(e);
+        for (unsigned int i = 0; i < e.subEntities(Config::dim); i++) //loop over corners
+          {file << "\t\t\t\t\t";
+  //        for (const auto& vertex : geometry.corners()) {
+          FieldVector<double, 2> cornerGlobal = e.geometry().corner(i);
+          auto cornerLocal = e.geometry().local(cornerGlobal);//overkill ...
+          auto transportedX = fg(cornerLocal);
+          file << transportedX << " ";
+  //        }
+        }
+        file << std::endl;
+      }
+//    }
 }
 
 template <class LocalFunction, class Function>
@@ -1388,10 +1433,10 @@ void Plotter::write_lens(std::ofstream &file, Function &f) const{
   file << "// Glass interior" <<std::endl <<
       "#declare myI_Glass =" <<std::endl <<
       "interior { "<< std::endl <<
-#ifdef PARALLEL_LIGHT
+#ifdef PARALLEL_LIGHT || RECTANGULAR_GRID
       "\t ior " << OpticalSetting::kappa <<
 #else
-      "\t ior " << 1./OpticalSetting::kappa <<
+      "\t ior " << OpticalSetting::kappa <<
 #endif
       "}" <<std::endl <<std::endl;
 
@@ -1739,5 +1784,37 @@ void Plotter::save_BSplineCoeffs(const BSplineNodeFactoryType &bSplineNodeFactor
 
 
 #endif
+
+template<typename LocalFunctiontype>
+void Plotter::save_OT_map_verbose(std::string filename, LocalFunctiontype &f) const
+{
+  std::ofstream of(filename.c_str(), std::ios::out);
+
+  //get information
+  for (auto&& element: elements(gridView()))
+  {
+    f.bind(element);
+    const auto geometry = element.geometry();
+    int vertex_no =0;
+    std::vector<FieldVector<double,2>> vertices;
+    std::vector<FieldVector<double,2>> verticesOT;
+    for (auto it = PlotRefinementType::vBegin(refinement_); it != PlotRefinementType::vEnd(refinement_); it++){
+      vertices.push_back(geometry.global(it.coords()));
+      verticesOT.push_back(f(it.coords()));
+    }
+    for (auto it = PlotRefinementType::eBegin(refinement_); it != PlotRefinementType::eEnd(refinement_); it++){
+    	auto vertexIndices = it.vertexIndices();
+
+    	for (int i=0; i < vertexIndices.size(); i++)
+    	{
+    		of << std::setprecision(12) << std::scientific;
+    		of << vertices[vertexIndices[i]][0] << " " << vertices[vertexIndices[i]][1]
+               << "       " << verticesOT[vertexIndices[i]][0] << " " << verticesOT[vertexIndices[i]][1] << std::endl;
+    	}
+    }
+
+  }
+}
+
 
 #endif /* SRC_PLOTTER_HH_ */
