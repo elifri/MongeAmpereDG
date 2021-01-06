@@ -229,13 +229,19 @@ auto Elliptic_Projector::local_operations(Element& element, DiscreteFunction& ol
     Config::ValueType  f_value;
     rhoX.evaluate(x_value, f_value);
 
-    //calculate value at transported point
+    //calculate value of transported point and derivative
+    Config::ValueType g_value = 0;
+    rhoY.evaluate(gradu, g_value);
+    FieldVector<Config::ValueType, Config::dim> gradg;
+    rhoY.evaluateDerivative(gradu, gradg);
     //calculate illumination at target plane
-    double avg_g_value = 0;
-    auto b = Local_Operator_MA_OT_Linearisation::smooth_convection_term(rhoY, gradu, f_value, avg_g_value, integrationElement);
+    //ATTENTION: ASUMMING F is constant!!!!!!!!!!!!!!
+    FieldVector<Config::ValueType, Config::dim> convectionTerm = gradg;
+    convectionTerm *= -f_value/g_value/g_value;
+//    auto b = Local_Operator_MA_OT_Linearisation::smooth_convection_term(rhoY, gradu, f_value, avg_g_value, integrationElement);
 
 
-    Config::ValueType PDE_rhs = f_value / avg_g_value ;
+    Config::ValueType PDE_rhs = f_value / g_value ;
 
     Config::ValueType uDH_det = determinant(Hessu);
 
@@ -260,7 +266,7 @@ auto Elliptic_Projector::local_operations(Element& element, DiscreteFunction& ol
       FieldVector<double,Config::dim> cofTimesGrad;
       cofHessu.mv(gradu,cofTimesGrad);
       localVector(j) += cofTimesGrad*gradients[j]* quad[pt].weight() * integrationElement;
-      localVector(j) += (b*gradu)*referenceFunctionValues[j]*quad[pt].weight() * integrationElement;
+      localVector(j) += (convectionTerm*gradu)*referenceFunctionValues[j]*quad[pt].weight() * integrationElement;
 
       for (int i = 0; i < size; i++)
       {
@@ -273,7 +279,7 @@ auto Elliptic_Projector::local_operations(Element& element, DiscreteFunction& ol
 
 
           //convection term
-          localMatrix(j,i) += (b*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+          localMatrix(j,i) += (convectionTerm*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
       }
 
     }
