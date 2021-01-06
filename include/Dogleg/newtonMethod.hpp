@@ -137,7 +137,9 @@ void newtonMethod(
                     << "  would have been     boundary-step     "
                     << std::scientific << std::setprecision(3) << omega*s.norm()<< std::endl;
               }
-              continue;
+              i--;
+              std::cerr << " i " << i << std::endl;
+              break;
             }
           }
           //increase omega
