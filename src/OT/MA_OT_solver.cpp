@@ -381,10 +381,10 @@ void MA_OT_solver::init_from_file(const std::string& filename)
       fileInitial >> solution(get_n_dofs_V_h()+i);
     }
   }
-  else //no further coefficients -> init lagrangian parameters with 0
+  else //no further coefficients -> init lagrangian parameters with 0 and scaling with 1
   {
     solution.tail(get_n_dofs_V_h()+get_n_dofs_Q_h()) = VectorType::Zero(get_n_dofs_V_h()+get_n_dofs_Q_h());
-    solution.tail(1)[0] = solution(1);
+    solution.tail(1)[0] = 1.0;
   }
   fileInitial >> std::ws;
 
@@ -637,9 +637,30 @@ void MA_OT_solver::one_Poisson_Step()
   Config::VectorType v;
   lagrangeAssembler.assemble_DG_Jacobian(Poisson_op, Poisson_op, solution.head(lagrangeHandler.FEBasis().indexSet().size()), v, m);
 
+  //add lagrange multiplier for mean value
+  Config::VectorType lagrangianFixingPointDiscreteOperator;
+  AssemblerLagrangianMultiplier1D<C0Traits> lagrangeAssemblerMidvalue(gridView());
+//  lagrangeAssemblerMidvalue.assemble_u_independent_matrix(*this->get_OT_operator().lopLMMidvalue, lagrangianFixingPointDiscreteOperator);
+  lagrangeAssemblerMidvalue.assemble_u_independent_matrix((this->get_OT_operator().get_lopLMMidvalue()), lagrangianFixingPointDiscreteOperator);
+
   m.makeCompressed();
 
-  assert(false && "do something about condition u0");
+  const int V_h_size = lagrangeHandler.FEBasis().indexSet().size();//get_n_dofs_V_h();
+  m.conservativeResize(V_h_size+1, V_h_size+1);
+  v.conservativeResize(V_h_size+1);
+
+  int indexFixingGridEquation = V_h_size;
+
+  assert(lagrangianFixingPointDiscreteOperator.size() == V_h_size);
+
+  v(indexFixingGridEquation) = assembler_.u0AtX0();
+  //copy in system matrix
+  for (unsigned int i = 0; i < lagrangianFixingPointDiscreteOperator.size(); i++)
+  {
+    //indexLagrangianParameter = indexFixingGridEquation
+    m.insert(indexFixingGridEquation,i)=lagrangianFixingPointDiscreteOperator(i);
+    m.insert(i,indexFixingGridEquation)=lagrangianFixingPointDiscreteOperator(i);
+  }
   //... done assembling system
 
 
@@ -812,27 +833,40 @@ void MA_OT_solver::create_initial_guess()
 
 //      this->test_projection(u0, y0, solution);
 */
+//----fix additive constant by fixing first dof, so here choose this value u_0(x_0), where u_0 projection
     //determine value which later fixes the first dof
-
-    auto firstElement = gridHandler_.gridView().begin<0>();
-    auto firstNode = firstElement->geometry().corner(0);
-    std::cout << " calculated first node " << firstNode[0] << " " << firstNode[1] << std::endl;
-    assembler_.set_u0AtX0(firstNode.two_norm2()/2.0);
+//    auto firstElement = gridHandler_.gridView().begin<0>();
+//    auto firstNode = firstElement->geometry().corner(0);
+//    std::cout << " calculated first node " << firstNode[0] << " " << firstNode[1] << std::endl;
+//    assembler_.set_u0AtX0(firstNode.two_norm2()/2.0);
+    Config::ValueType res = 0;
+    assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), solution, res);
+    assembler_.set_u0AtX0(res);
   }
 
   ExactData exactData;
   project(exactData.exact_solution(), exactData.exact_gradient(), exactsol_u);
 
-//#define U_MID_EXACT
+#define U_MID_EXACT
 
 #ifdef U_MID_EXACT
+//----fix additive constant by fixing first dof, so here choose this value u_0(x_0)
   //determine value which later fixes the first dof
-  auto firstElement = gridHandler_.gridView().begin<0>();
-  auto firstNode = firstElement->geometry().corner(0);
-  assembler_.setu0atX0(exactData.exact_solution(node));
+//  auto firstElement = gridHandler_.gridView().begin<0>();
+//  auto firstNode = firstElement->geometry().corner(0);
+//  assembler_.setu0atX0(exactData.exact_solution(node));
+  
+//----fix additive constant by fixing mean value, here choose \int u_0
+	Config::ValueType  res = 0;
+  assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), exactsol_u, res);
+  assembler_.set_u0AtX0(res);
+  std::cerr << " set u_0^mid to " << res << std::endl;
 #endif
 
 //  one_Poisson_Step();
+
+  //set scaling_factor to one
+  solution.tail(1)[0]=1.0;
 
   update_solution(solution);
 
@@ -912,11 +946,11 @@ void MA_OT_solver::adapt_operator()
 
   //update u mean value
 #ifdef U_MID_EXACT
-//  Config::ValueType res = 0;
+  Config::ValueType res = 0;
 
-//  assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), exactsol_u, res);
-//  assembler_.set_u0AtX0(res);
-//  std::cerr << " set u_0^mid to " << res << std::endl;
+  assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), exactsol_u, res);
+  assembler_.set_u0AtX0(res);
+  std::cerr << " set u_0^mid to " << res << std::endl;
 #endif
 }
 
@@ -935,6 +969,7 @@ void MA_OT_solver::adapt_solution(const int level)
   FEBasisHandler_.adapt_after_grid_change(gridView());
   assembler_.bind(FEBasisHandler_.uBasis());
   assemblerLM1D_.bind(FEBasisHandler_.uBasis());
+  assemblerLMDual_.bind(FEBasisHandler_.uBasis());
 
 //combination of binding handler and assembler as well as adapting p
 
@@ -980,18 +1015,20 @@ void MA_OT_solver::adapt_solution(const int level)
   //adapt boundary febasis and bind to assembler
   std::cerr << " going to adapt lagrangian multiplier " << std::endl;
 
-  Config::VectorType p_adapted;
+  Config::VectorType p_adapted, z_adapted;
 
   {
 //    p_adapted = FEBasisHandlerQ_.adapt_after_grid_change();
     p_adapted.setZero(get_n_dofs_Q_h());
 //    get_assembler_lagrangian_boundary().boundaryHandler().shrink_to_boundary_vector(p_adapted);
+    z_adapted.setZero(get_n_dofs_V_h());
   }
 
   //init lagrangian multiplier variables
   solution.conservativeResize(get_n_dofs());
-  solution(get_n_dofs_V_h()) = 0;
-  solution.tail(get_n_dofs_Q_h()) = p_adapted;
+  solution.segment(get_n_dofs_V_h(), get_n_dofs_Q_h()) = p_adapted;
+  solution.segment(get_n_dofs_V_h()+get_n_dofs_Q_h(), get_n_dofs_V_h()) = z_adapted;
+  solution(get_n_dofs()-1) = 1.0; //scaling factor to 1.0
 #endif
 
 /*  {

@@ -33,8 +33,8 @@ public:
   ///get the boundary condition
   virtual const OTBoundary& get_bc() const=0;
 
-//  virtual const Local_operator_LangrangianMidValue& get_lopLMMidvalue() const=0;
-//  virtual Local_operator_LangrangianMidValue& get_lopLMMidvalue()=0;
+  virtual const Local_operator_LangrangianMidValue& get_lopLMMidvalue() const=0;
+  virtual Local_operator_LangrangianMidValue& get_lopLMMidvalue()=0;
 
 //  virtual T get_lopLMMidvalue() const=0;
 

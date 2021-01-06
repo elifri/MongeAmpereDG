@@ -10,6 +10,71 @@
 
 #include "Assembler.h"
 
+class Local_operator_RhsValue_OT{
+public:
+  using Function = DensityFunction;
+
+  Local_operator_RhsValue_OT( const Function& rhoX, const Function& rhoY): rhoX(rhoX), rhoY(rhoY){}
+
+  template<class LocalView, class VectorType>
+  void assemble_cell_term_matrix(const LocalView& localView, VectorType& x, VectorType& v) const
+  {
+    assert((unsigned int) v.size() == localView.size());
+
+    // Get the grid element from the local FE basis view
+    using Element = typename LocalView::Element;
+    const Element& element = localView.element();
+
+    // Get set of shape functions for this element
+    const auto& localFiniteElement = localView.tree().finiteElement();
+
+    //extract type
+    using ElementType = typename std::decay_t<decltype(localFiniteElement)>;
+    using RangeType = typename ElementType::Traits::LocalBasisType::Traits::RangeType;
+    using JacobianType = typename Dune::FieldVector<Config::ValueType, Config::dim>;
+
+    // Get a quadrature rule
+    int order = std::max(0,
+        3 * ((int) localFiniteElement.localBasis().order()));
+    const QuadratureRule<double, Config::dim>& quadRule = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(element, order);
+
+    for (const auto& quad : quadRule)
+    {
+      //collect element data
+      auto quadPos = quad.position();
+      //the shape function values
+      std::vector<RangeType> referenceFunctionValues(localView.size());
+      assemble_functionValues(localFiniteElement, quadPos, referenceFunctionValues);
+      // The transposed inverse Jacobian of the map from the reference element to the element
+      const auto& jacobian = element.geometry().jacobianInverseTransposed(quadPos);
+      std::vector<JacobianType> gradients(localView.size());
+      FieldVector<Config::ValueType, Config::dim> gradu;
+      assemble_gradients_gradu(localFiniteElement, jacobian, quadPos,
+          gradients, x, gradu);
+
+      const auto integrationElement = element.geometry().integrationElement(quad.position());
+
+      //determine f/g
+      Config::DomainType x_value = element.geometry().global(quadPos);
+      Config::ValueType f_value;
+      rhoX.evaluate(x_value, f_value);
+
+      Config::ValueType g_value;
+      rhoY.evaluate(gradu, g_value);
+
+      //add to quadrature
+      for (unsigned int i = 0; i < localFiniteElement.localBasis().size(); i++)
+      {
+        v[i] += f_value/g_value*referenceFunctionValues[i][0]*quad.weight()*integrationElement;
+      }
+    }
+  }
+private:
+  const Function& rhoX;
+  const Function& rhoY;
+
+};
+
 class Local_operator_LangrangianMidValue{
 public:
   template<class LocalView, class VectorType>
@@ -104,6 +169,15 @@ public:
   template<typename LocalOperatorType>
   void assemble_u_independent_matrix(const LocalOperatorType &lop, Config::VectorType& v) const;
 
+  /**
+   * assembles the matrix (col dimension =1)
+   * @param lop     the local operator
+   * @param x   the current coefficient vector
+   * @param v    the resulting matrix
+   */
+  template<typename LocalOperatorType>
+  void assemble_matrix(const LocalOperatorType &lop, const Config::VectorType& x, Config::VectorType& v) const;
+
   template<typename LocalOperatorType>
   void assembleRhs(const LocalOperatorType &lop, const Config::VectorType& x, Config::ValueType& v) const;
 };
@@ -130,6 +204,30 @@ void AssemblerLagrangianMultiplier1D<FETraits>::assemble_u_independent_matrix(co
     this->add_local_coefficients(localIndexSet,local_vector, v);
   }
   v/=volume;
+}
+
+template<typename FETraits>
+template<typename LocalOperatorType>
+void AssemblerLagrangianMultiplier1D<FETraits>::assemble_matrix(const LocalOperatorType &lop, const Config::VectorType& x, Config::VectorType& v) const{
+  const auto& basis_ = *(this->basis_);
+  v = Config::VectorType::Zero(basis_.size());
+
+  auto localView = basis_.localView();
+  auto localIndexSet = basis_.indexSet().localIndexSet();
+
+  for (auto&& e : elements(basis_.gridView())) {
+    // Bind the local FE basis view to the current element
+    localView.bind(e);
+    localIndexSet.bind(localView);
+    //get zero matrix to store local matrix
+    Config::VectorType local_vector = Config::VectorType::Zero(localView.size());
+
+    Config::VectorType xLocal = this->calculate_local_coefficients(localIndexSet, x);
+
+    lop.assemble_cell_term_matrix(localView, xLocal, local_vector);
+
+    this->add_local_coefficients(localIndexSet,local_vector, v);
+  }
 }
 
 template<typename FETraits>

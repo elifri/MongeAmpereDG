@@ -13,6 +13,7 @@
 #include <fstream>
 #include <tuple>
 
+#include <Eigen/SVD>
 
 #include "Solver/AssemblerLagrangian1d.h"
 #include "Solver/AssemblerLagrangianVh.h"
@@ -66,6 +67,8 @@ public:
       lop_ptr(new LocalOperatorType(
 //          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
           *boundary_, f_, g_)),
+      lopLMMidvalue(new Local_operator_LangrangianMidValue()),
+      lopRhsScalingPart(new Local_operator_RhsValue_OT(f_,g_)),
       lopLMDual(new Local_operator_Lagrangian_Dual()),
       lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
       intermediateSolCounter()
@@ -82,7 +85,9 @@ public:
         f_(OperatorTraits::construct_f(solver, setting)),
         g_(OperatorTraits::construct_g(solver, setting)),
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
-        lopLMDual(new Local_operator_Lagrangian_Dual()),
+        lopLMDual(new Local_operator_Lagrangian_Dual()),      
+        lopLMMidvalue(new Local_operator_LangrangianMidValue()),
+        lopRhsScalingPart(new Local_operator_RhsValue_OT(f_,g_)),
         lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),
         intermediateSolCounter()
     {
@@ -99,6 +104,8 @@ public:
         g_(OperatorTraits::construct_g(solver, setting)),
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
         lopLMDual(new Local_operator_Lagrangian_Dual()),
+        lopLMMidvalue(new Local_operator_LangrangianMidValue()),
+        lopRhsScalingPart(new Local_operator_RhsValue_OT(f_,g_)),
         lopLMBoundary(OperatorTraits::construct_lop_LBoundary(setting,get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
         intermediateSolCounter()
     {
@@ -109,6 +116,8 @@ public:
 
 
   MA_OT_Operator(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
+      lopLMMidvalue(new Local_operator_LangrangianMidValue()),
+      lopRhsScalingPart(new Local_operator_RhsValue_OT(lop_ptr->get_input_distribution(),lop_ptr->get_output_distribution())),
       lopLMDual(new Local_operator_Lagrangian_Dual()),
       lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),//, solver.get_u_old())),
       intermediateSolCounter()
@@ -117,6 +126,8 @@ public:
       }
 
   MA_OT_Operator(SolverType& solver, LocalOperatorType* lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
+      lopLMMidvalue(new Local_operator_LangrangianMidValue()),
+      lopRhsScalingPart(new Local_operator_RhsValue_OT(lop_ptr->get_input_distribution(),lop_ptr->get_output_distribution())),
       lopLMDual(new Local_operator_Lagrangian_Dual()),
       lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),
       intermediateSolCounter()
@@ -140,6 +151,17 @@ public:
     return *lop_ptr;
   }
 
+  const Local_operator_LangrangianMidValue& get_lopLMMidvalue() const
+  {
+    assert(lopLMMidvalue);
+    return *lopLMMidvalue;
+  }
+  Local_operator_LangrangianMidValue& get_lopLMMidvalue()
+  {
+    assert(lopLMMidvalue);
+    return *lopLMMidvalue;
+  }
+  
   const Local_operator_Lagrangian_Dual& get_lopLMDual() const
   {
     assert(lopLMDual);
@@ -257,10 +279,14 @@ public:
 
   std::shared_ptr<LocalOperatorType> lop_ptr;
 
+  std::shared_ptr<Local_operator_LangrangianMidValue> lopLMMidvalue;
+  std::shared_ptr<Local_operator_RhsValue_OT> lopRhsScalingPart;
   std::shared_ptr<Local_operator_Lagrangian_Dual> lopLMDual;
   std::shared_ptr<LocalOperatorLagrangianBoundaryType> lopLMBoundary;
 
-//  Config::VectorType lagrangianMidvalueDiscreteOperator;
+  Config::VectorType FEpartsOnMidvalue;
+  mutable Config::VectorType derivatives_scaling_factor;
+  
 
   mutable int intermediateSolCounter;
 
@@ -355,6 +381,9 @@ private:
 template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>::init()
 {
+  solver_ptr->get_assembler_lagrangian_midvalue().assemble_u_independent_matrix(*lopLMMidvalue, FEpartsOnMidvalue);
+  std::cerr << " adapted operator and now mid value parts " << FEpartsOnMidvalue.size() << " and ndofsV_H " << this->solver_ptr->get_n_dofs_V_h() << std::endl;
+
   assert_integrability_condition();
   assert(check_integrability_condition());
 }
@@ -363,13 +392,19 @@ void MA_OT_Operator<OperatorTraits>::init()
 template<typename OperatorTraits>
 void MA_OT_Operator<OperatorTraits>::prepare_fixing_point_term(const Config::VectorType& x) const
 {
-  //build FE function
-  typename SolverType::DiscreteGridFunction u(solver_ptr->get_FEBasis_u(),x);
-  //determine the value of x_0
-  auto firstElement = solver_ptr->gridView().template begin<0>();
-  auto firstNode = firstElement->geometry().corner(0);
-  //store function value at x_0 in assembler
-  solver_ptr->get_assembler().set_uAtX0(u(firstNode));
+  Config::ValueType res = 0;
+  //calculates the mean value for the given coefficient vector x
+  solver_ptr->get_assembler_lagrangian_midvalue().assembleRhs(*lopLMMidvalue, x, res);
+  solver_ptr->get_assembler().set_uAtX0(res);
+  std::cerr << "current mid value " << res << std::endl;
+  
+  //pass scaling info to ensure integrability condition to local level
+  lop_ptr->set_rhs_scaling(x.tail(1)[0]);
+  std::cerr << "current scaling factor " << x.tail(1)[0] << std::endl;
+
+  //init rhs values
+  solver_ptr->get_assembler_lagrangian_midvalue().assemble_matrix(*lopRhsScalingPart, x, derivatives_scaling_factor);
+
 }
 
 template<typename OperatorTraits>
@@ -417,10 +452,13 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
   int V_h_size = this->solver_ptr->get_n_dofs_V_h();
   int Q_h_size = this->solver_ptr->get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();
 
-  assert(x.size() == 2*V_h_size+Q_h_size);
+  assert(x.size() == this->solver_ptr->get_n_dofs());
   v.setZero(this->solver_ptr->get_n_dofs());
   m.resize(this->solver_ptr->get_n_dofs(),this->solver_ptr->get_n_dofs());
 
+  assert(m.rows()== this->solver_ptr->get_n_dofs());
+  assert(m.cols() == this->solver_ptr->get_n_dofs());
+  assert(v.size() == this->solver_ptr->get_n_dofs());
 
   //assemble MA PDE in temporary variables
   //todo jede Menge copy paste
@@ -454,11 +492,39 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
 #endif
   std::cerr << "  l(v) with norm " << std::scientific << std::setprecision(3) << tempV.norm() << std::endl;//<< "  : " << tempV.transpose() << std::endl;
 
+  //---------if selected to fix u(x_0)=u_0----
+  	  //  fix first degree of freedom
+  		//	m.coeffRef(2*V_h_size+Q_h_size, 0) = 1.;
+  		// v(0) = x0-solver_ptr->get_assembler().uAtX0();
+  
+  //-------------------select  mid value for fixing additive constant-------------------------
+
+	//fixing midvalue on rhs
+  int indexFixingGridEquation = this->solver_ptr->get_n_dofs()-1;
+  const auto& assembler = this->solver_ptr->get_assembler();
+  v(indexFixingGridEquation) = assembler.uAtX0() - assembler.u0AtX0();
+  std::cerr << " u - u_0 = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation)
+      << " = " << assembler.u0AtX0() << '-'  << assembler.uAtX0() << std::endl;
+
+  //derivatives for fixing midvalue
+
+  assert(FEpartsOnMidvalue.size() == V_h_size);
+  assert(derivatives_scaling_factor.size() == V_h_size);
+  
+  //copy in system matrix
+  for (unsigned int i = 0; i < FEpartsOnMidvalue.size(); i++)
+  {
+    //add FE part to calcute mean value
+    m.insert(indexFixingGridEquation,i)=FEpartsOnMidvalue(i);
+    //add FE part to calculate rhs
+    m.insert(i,indexFixingGridEquation) = derivatives_scaling_factor(i);
+  }
+
 #ifdef DEBUG
   {
     std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "Bm" << intermediateSolCounter << ".m";
     std::ofstream file(filename.str(),std::ios::out);
-    MATLAB_export(file, lagrangianMidvalueDiscreteOperator, "Bm");
+    MATLAB_export(file, FEpartsOnMidvalue, "Bm");
   }
 #endif
 
@@ -475,23 +541,15 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
   assemble_Jacobian_boundary(x.head(V_h_size), tempV, tempM);
 
   Q_h_size = tempM.rows();
-
-  m.conservativeResize(this->solver_ptr->get_n_dofs(), this->solver_ptr->get_n_dofs());
-  v.conservativeResize(this->solver_ptr->get_n_dofs());
-
-  //crop terms "far from boundary"
-
   assert(Q_h_size == tempV.size());
   assert(Q_h_size == tempM.rows());
 
 //    MATLAB_export(tempM, "B_H");
-
   //copy to system
   copy_to_sparse_matrix(tempM, m, 2*V_h_size, 0);
   copy_sparse_to_sparse_matrix(tempM.transpose(), m, V_h_size, V_h_size);
 
 
-  assert(2*V_h_size+Q_h_size==m.rows());
   v.tail(Q_h_size) = tempV;
 #ifdef DEBUG
   {
@@ -513,29 +571,6 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
 
   std::cerr << " l with norm " << std::scientific << std::setprecision(3)<< v.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
 
-  //fix first degree of freedom
-  const auto x0 = solver_ptr->get_assembler().u0AtX0();
-  assert(!m.IsRowMajor);
-  for (Config::MatrixType::InnerIterator it(m,0); it; ++it) //iterate over first column and eliminate all occurances of x[0]
-  {
-    v(it.row()) -= it.value()*x0; //subtract of rhs
-    it.valueRef() = 0;
-  }
-
-  //todo simple hack to erase first row
-  //replace first row with identity
-//  m.row(0)*=0.;
-  m.conservativeResize(2*V_h_size+Q_h_size+1,2*V_h_size+Q_h_size);
-  m.coeffRef(2*V_h_size+Q_h_size, 0) = 1.;
-  v(0) = x0-solver_ptr->get_assembler().uAtX0();
-  m.prune(0,0);
-  //maybe iterate over all entries?
-//  for (int i = 0; i < m.cols(); i++)
-//  {
-//    m.
-//  }
-
-
 #ifdef DEBUG
   {
     std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "BF" << intermediateSolCounter << ".m";      \
@@ -545,6 +580,10 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
     dMat= Eigen::MatrixXd(m);
 //    file << dMat << std::endl;
 
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(m);
+    double cond = svd.singularValues()(0)
+        / svd.singularValues()(svd.singularValues().size()-1);
+    std::cerr << " Condition number of matrix is " << cond << std::endl;
   }
 #endif
 }

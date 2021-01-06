@@ -90,7 +90,7 @@ public:
 #endif
   virtual int get_n_dofs_V_h() const{return FEBasisHandler_.FEBasis().indexSet().size();}
   virtual int get_n_dofs_Q_h() const{return get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();}
-  virtual int get_n_dofs() const{return 2*get_n_dofs_V_h() + get_n_dofs_Q_h();}
+  virtual int get_n_dofs() const{return 2*get_n_dofs_V_h() + get_n_dofs_Q_h()+1;}
 
   using MA_solver::get_operator;
   virtual Operator_OT& get_OT_operator(){return *(std::dynamic_pointer_cast<Operator_OT>(this->op));}

@@ -177,7 +177,7 @@ public:
 
 //      std::cerr << "hessian [[" << Hessu[0][0].value() << ", " << Hessu[1][0].value() << "], [" << Hessu[0][1].value() << ", " << Hessu[1][1].value() << "]]" <<  std::endl;
 
-      ValueType PDE_rhs = f_value / g_value ;
+      ValueType PDE_rhs = rhs_scaling_*f_value / g_value ;
 
       //calculate system for first test functions
       if (uDH_det.value() < 0 && !found_negative)
@@ -406,6 +406,8 @@ public:
   const Function& get_input_distribution() const {return rhoX;}
   const Function& get_target_distribution() const {return rhoY;}
 
+  void set_rhs_scaling(double h){ rhs_scaling_=h;}
+
   const OTBoundary& get_bc() {return bc;}
 
   const Function& rhoX;
@@ -413,6 +415,7 @@ public:
 
   const OTBoundary& bc;
 
+  mutable double rhs_scaling_;
   static bool use_adouble_determinant;
 
 public:
