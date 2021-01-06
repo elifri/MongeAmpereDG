@@ -111,8 +111,8 @@ void MA_solver::plot(const std::string& name, int no) const
    auto localnumericalSolutionHessian = localFunction(numericalSolutionHessian);
 
 */
-   std::string fname(plotter.get_output_directory());
-   fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + ".vtu";
+   std::string fname(plotter_.get_output_directory());
+   fname += "/"+ plotter_.get_output_prefix()+ name + NumberToString(no) + ".vtu";
 
    SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),2);
    vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
@@ -125,8 +125,8 @@ void MA_solver::plot(const VectorType& u, const std::string& filename) const
   FETraits::DiscreteGridFunction numericalSolution(FEBasisHandler_.uBasis(), u);
   auto localnumericalSolution = localFunction(numericalSolution);
 
-  std::string fname(plotter.get_output_directory());
-  fname += "/"+ plotter.get_output_prefix()+ filename + NumberToString(iterations) + ".vtu";
+  std::string fname(plotter_.get_output_directory());
+  fname += "/"+ plotter_.get_output_prefix()+ filename + NumberToString(iterations) + ".vtu";
 
   SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),2);
   vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("u", VTK::FieldInfo::Type::scalar, 1));
@@ -315,7 +315,7 @@ void MA_solver::adapt_solution(const int level)
   else
     solution = FEBasisHandler_.adapt_function_after_grid_change(old_grid.gridViewOld, gridView(), u_solution);
   get_assembler().bind(FEBasisHandler_.FEBasis());
-  plotter.update_gridView(gridView());
+  plotter_.update_gridView(gridView());
 }
 
 
