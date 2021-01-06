@@ -1,4 +1,6 @@
-
+message("IPOPT_LIBRARIES ${IPOPT_LIBRARIES}")
+add_executable(test_linking test_linking.cpp)
+target_link_libraries(test_linking ${IPOPT_LIBRARIES})
 
 add_executable(test_nurbs_fit test_nurbs_fit.cpp)
 target_link_libraries(test_nurbs_fit Dogleg ${LIBNURBS_LIBRARIES} ${ZLIB_LIBRARIES})
@@ -22,8 +24,9 @@ Set(SolverLibs MA_solver FEBasisHandler Assembler operator_MA_Neilan_DG Boundary
 #target_link_libraries(testPoisson ${SolverLibs} ${SNES_LIBRARY} Solver_Config utils ${ZLIB_LIBRARIES} ${BoostPO_LIBRARIES} -lX11 ${UMFPACK_LIBRARIES})
 #target_link_dune_default_libraries("testPoisson")
 
-
+message ("ZLIB_LIBRARIES ${ZLIB_LIBRARIES}")
 add_executable("testlocalBezier" testlocalBezier.cpp)
+target_link_libraries(testlocalBezier ${ZLIB_LIBRARIES})
 target_link_dune_default_libraries("testlocalBezier")
 
 

@@ -201,7 +201,7 @@ void MA_OT_solver::project(const F f, VectorType& v) const
 #endif
 
 #ifdef DEBUG
-  test_projection(f,v.head(get_n_dofs_V()));
+  test_projection(f,v.head(get_n_dofs_V_h()));
 #endif
 }
 
@@ -214,7 +214,7 @@ void MA_OT_solver::project(const F f, GradF gradf, VectorType& v) const
 #endif
 
 #ifdef DEBUG
-  test_projection(f,v.head(get_n_dofs_V()));
+  test_projection(f,v.head(get_n_dofs_V_h()));
 #endif
 }
 

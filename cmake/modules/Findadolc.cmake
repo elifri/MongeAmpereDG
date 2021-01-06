@@ -30,7 +30,7 @@ ELSE( ADOLC_FOUND )
                 adolc
                 HINTS "$ENV{ADOLC_HOME}/lib"
                       "/usr/lib" "${ADOLC_PATH}/lib64"
-		      "$ENV{HOME}/workspace/ADOL-C-2.6.3/build/lib64")
+		      "/home/disk/workspace/ADOL-C-2.6.3/build/lib64")
   #CHECK_SYMBOL_EXISTS(function ADOLC_LIBRARY FUNCTION_FOUND)
    
   SET(ADOLC_INCLUDE_DIRS ${ADOLC_INCLUDE_DIR})

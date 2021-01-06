@@ -37,7 +37,7 @@ MA_refractor_solver::MA_refractor_solver(GridHandlerType& gridHandler, const sha
 
    assembler_.set_X0(opticalSetting.lowerLeft);
 
-   plotter.set_PovRayOptions(setting_.povRayOpts);
+   plotter_.set_PovRayOptions(setting_.povRayOpts);
 
    epsMollifier_ = pow((double) epsDivide_, (int) SolverConfig::nonlinear_steps) * epsEnd_;
 }
@@ -53,12 +53,14 @@ void MA_refractor_solver::create_initial_guess()
   {
     const double p = setting_.smoothingInitialOptic;
     const double distance = setting_.initialOpticDistance;
+    std::cout << " init optical inactive refractive surface " << std::endl;
     std::cout << " distance is " << distance << std::endl;
 
     //  solution = VectorType::Zero(dof_handler.get_n_dofs());
     //in case of a point source the lens has to be flattened
 #ifndef PARALLEL_LIGHT
-    project([p, distance](Config::SpaceType x){return distance*std::exp(x.two_norm2()/p);}, solution);
+//    project([p, distance](Config::SpaceType x){return distance*std::exp(x.two_norm2()/p);}, solution);
+    project([p, distance](Config::SpaceType x){return distance;}, solution);
 #else
     project([distance](Config::SpaceType x){return distance;}, solution);
 #endif
@@ -96,7 +98,7 @@ void MA_refractor_solver::plot(const std::string& name, int no) const
     decltype(numericalSolution)::LocalFunction localnumericalSolution(numericalSolution);
 
     //build writer
-     SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter.get_refinement());
+     SubsamplingVTKWriter<GridViewType> vtkWriter(gridView(),plotter_.get_refinement());
 
      //add solution data
      vtkWriter.addVertexData(localnumericalSolution, VTK::FieldInfo("solution", VTK::FieldInfo::Type::scalar, 1));
@@ -127,24 +129,24 @@ void MA_refractor_solver::plot(const std::string& name, int no) const
 //     vtkWriter.addVertexData(ev2, VTK::FieldInfo("EV2", VTK::FieldInfo::Type::scalar, 1));
 
      //write to file
-     std::string fname(plotter.get_output_directory());
-     fname += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + ".vtu";
+     std::string fname(plotter_.get_output_directory());
+     fname += "/"+ plotter_.get_output_prefix()+ name + NumberToString(no) + ".vtu";
      vtkWriter.write(fname);
 
      //write refractor
-     std::string refrName(plotter.get_output_directory());
-     refrName += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(no) + ".vtu";
-     plotter.writeRefractorVTK(refrName, *solution_u_old);
+     std::string refrName(plotter_.get_output_directory());
+     refrName += "/"+ plotter_.get_output_prefix() + name + "refractor" + NumberToString(no) + ".vtu";
+     plotter_.writeRefractorVTK(refrName, *solution_u_old);
      std::cerr << " wrote refractor in file " << refrName << std::endl;
   }
 
 
 
   //write povray output
-   std::string refrPovname(plotter.get_output_directory());
-   refrPovname += "/"+ plotter.get_output_prefix() + name + "refractor" + NumberToString(no) + ".pov";
+   std::string refrPovname(plotter_.get_output_directory());
+   refrPovname += "/"+ plotter_.get_output_prefix() + name + "refractor" + NumberToString(no) + ".pov";
 
-   plotter.writeRefractorPOV(refrPovname, *solution_u_old);
+   plotter_.writeRefractorPOV(refrPovname, *solution_u_old);
    std::cerr << refrPovname << std::endl;
 
 //   std::string refrNurbsname(plotter.get_output_directory());
@@ -171,7 +173,7 @@ void MA_refractor_solver::update_Operator()
 
   //print blurred target distribution
   if (true) {
-      std::ostringstream filename2; filename2 << plotOutputDirectory_+"/"+plotter.get_output_prefix()+"lightOut" << iterations << ".bmp";
+      std::ostringstream filename2; filename2 << plotOutputDirectory_+"/"+plotter_.get_output_prefix()+"lightOut" << iterations << ".bmp";
       std::cout << "saved image to " << filename2.str() << std::endl;
       get_refr_operator().get_actual_g().saveImage (filename2.str());
       assert(std::abs(get_refr_operator().get_actual_g().integrate2()) - 1 < 1e-10);

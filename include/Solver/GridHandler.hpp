@@ -62,6 +62,10 @@ public:
   const GridView& gridView() const {return gridView_;}
   GridView& gridView() {return gridView_;}
 
+  void refine(int ref){
+	  grid_->globalRefine(ref);
+  }
+
   OldGridInformation adapt(){
     assert(gridPrefix_!="");//TODO string comparison
 

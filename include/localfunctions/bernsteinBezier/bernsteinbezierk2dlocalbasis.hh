@@ -3,6 +3,8 @@
 #ifndef DUNE_BERNSTEINBEZIERK2DLOCALBASIS_HH
 #define DUNE_BERNSTEINBEZIERK2DLOCALBASIS_HH
 
+#include <numeric>
+
 #include <dune/common/fmatrix.hh>
 
 #include <dune/localfunctions/common/localbasis.hh>
@@ -133,6 +135,7 @@ public:
 			std::vector<typename Traits::JacobianType>& out) const// return value
 	{
     out.resize(N);
+    std::fill(out.begin(), out.end(), 0.0);
     // specialization for k==0, not clear whether that is needed
     if (k==0) {
       out[0] = 1;
@@ -148,7 +151,7 @@ public:
         R factor = factorial[k]/factorial[lambda1]/factorial[lambda2]/factorial[lambda3];
 
         out[n][0][0] = 0;
-        out[n][0][0] = 0;
+        out[n][0][1] = 0;
 
         //use product rule, determine the factors' derivatives
         if (lambda1 > 0)
@@ -167,6 +170,7 @@ public:
         //multiply constant factor
         out[n][0][0] *= factor*std::pow(x[1],lambda3);
         out[n][0][1] *= factor*std::pow(x[0],lambda2);
+
         n++;
       }
 	}
