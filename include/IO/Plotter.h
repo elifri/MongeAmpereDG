@@ -1433,7 +1433,7 @@ void Plotter::write_lens(std::ofstream &file, Function &f) const{
   file << "// Glass interior" <<std::endl <<
       "#declare myI_Glass =" <<std::endl <<
       "interior { "<< std::endl <<
-#ifdef PARALLEL_LIGHT || RECTANGULAR_GRID
+#if defined(PARALLEL_LIGHT) || defined(RECTANGULAR_GRID)
       "\t ior " << OpticalSetting::kappa <<
 #else
       "\t ior " << OpticalSetting::kappa <<
