@@ -8,6 +8,8 @@
 #ifndef SRC_FEC0C1DISTINGUISHER_HPP_
 #define SRC_FEC0C1DISTINGUISHER_HPP_
 
+#include <Eigen/SparseLU>
+
 #include "MAconfig.h"
 #include "Assembler.h"
 #include "solver_config.h"
@@ -485,6 +487,87 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F f, 
 
   const double h = 1e-5;
 
+  //todo transfer element information to fe cache or something similar
+  std::vector<Config::DomainType> domainPositions(12);
+  domainPositions[0] = {0,0};
+  domainPositions[1] = {1./4.,0};
+  domainPositions[2] = {5./12.,1./6.};
+  domainPositions[3] = {3./4.,0};
+  domainPositions[4] = {1,0};
+  domainPositions[5] = {0.75,0.25};
+  domainPositions[6] = {5./12.,5./12.};
+  domainPositions[7] = {0.25,0.75};
+  domainPositions[8] = {0,1};
+  domainPositions[9] = {0,0.75};
+  domainPositions[10] = {1./6.,5./12.};
+  domainPositions[11] = {0,0.25};
+
+  Config::SparseMatrixType Gamma2Inv(12,12);
+  Gamma2Inv.insert(0,0) = 1.000000000000000;
+  Gamma2Inv.insert(1,2) = -0.416666666666667;
+  Gamma2Inv.insert(2,0) = 0.064814814814815;
+  Gamma2Inv.insert(3,0) = 0.083333333333333;
+  Gamma2Inv.insert(6,0) = -0.018518518518519;
+  Gamma2Inv.insert(9,0) = 0.083333333333333;
+  Gamma2Inv.insert(10,0) = 0.064814814814815;
+  Gamma2Inv.insert(11,0) = -0.416666666666667;
+  Gamma2Inv.insert(1,1) = 1.666666666666667;
+  Gamma2Inv.insert(2,1) = -0.296296296296296;
+  Gamma2Inv.insert(3,1) = -0.333333333333333;
+  Gamma2Inv.insert(6,1) = 0.037037037037037;
+  Gamma2Inv.insert(10,1) = 0.037037037037037;
+  Gamma2Inv.insert(2,2) = 1.777777777777777;
+  Gamma2Inv.insert(6,2) = -0.222222222222222;
+  Gamma2Inv.insert(10,2) = -0.222222222222222;
+  Gamma2Inv.insert(1,3) = -0.333333333333333;
+  Gamma2Inv.insert(2,3) = -0.296296296296296;
+  Gamma2Inv.insert(3,3) = 1.666666666666667;
+  Gamma2Inv.insert(6,3) = 0.037037037037037;
+  Gamma2Inv.insert(10,3) = 0.037037037037037;
+  Gamma2Inv.insert(1,4) = 0.083333333333333;
+  Gamma2Inv.insert(2,4) = 0.064814814814815;
+  Gamma2Inv.insert(3,4) = -0.416666666666667;
+  Gamma2Inv.insert(4,4) = 1.000000000000000;
+  Gamma2Inv.insert(5,6) = -0.416666666666667;
+  Gamma2Inv.insert(6,4) = 0.064814814814815;
+  Gamma2Inv.insert(7,4) = 0.083333333333333;
+  Gamma2Inv.insert(10,4) = -0.018518518518519;
+  Gamma2Inv.insert(2,5) = 0.037037037037037;
+  Gamma2Inv.insert(5,5) = 1.666666666666667;
+  Gamma2Inv.insert(6,5) = -0.296296296296296;
+  Gamma2Inv.insert(7,5) = -0.333333333333333;
+  Gamma2Inv.insert(10,5) = 0.037037037037037;
+  Gamma2Inv.insert(2,6) = -0.222222222222222;
+  Gamma2Inv.insert(6,6) = 1.777777777777778;
+  Gamma2Inv.insert(10,6) = -0.222222222222222;
+  Gamma2Inv.insert(2,7) = 0.037037037037037;
+  Gamma2Inv.insert(5,7) = -0.333333333333333;
+  Gamma2Inv.insert(6,7) = -0.296296296296296;
+  Gamma2Inv.insert(7,7) = 1.666666666666667;
+  Gamma2Inv.insert(10,7) = 0.037037037037037;
+  Gamma2Inv.insert(2,8) = -0.018518518518519;
+  Gamma2Inv.insert(5,8) = 0.083333333333333;
+  Gamma2Inv.insert(6,8) = 0.064814814814815;
+  Gamma2Inv.insert(7,8) = -0.416666666666667;
+  Gamma2Inv.insert(8,8) = 1.000000000000000;
+  Gamma2Inv.insert(9,8) = -0.416666666666667;
+  Gamma2Inv.insert(10,8) = 0.064814814814815;
+  Gamma2Inv.insert(11,8) = 0.083333333333333;
+  Gamma2Inv.insert(2,9) = 0.037037037037037;
+  Gamma2Inv.insert(6,9) = 0.037037037037037;
+  Gamma2Inv.insert(9,9) = 1.666666666666667;
+  Gamma2Inv.insert(10,9) = -0.296296296296296;
+  Gamma2Inv.insert(11,9) = -0.333333333333333;
+  Gamma2Inv.insert(2,10) = -0.222222222222222;
+  Gamma2Inv.insert(6,10) = -0.222222222222222;
+  Gamma2Inv.insert(10,10) = 1.777777777777778;
+  Gamma2Inv.insert(2,11) = 0.037037037037037;
+  Gamma2Inv.insert(6,11) = 0.037037037037037;
+  Gamma2Inv.insert(9,11) = -0.333333333333333;
+  Gamma2Inv.insert(10,11) = -0.296296296296296;
+  Gamma2Inv.insert(11,11) = 1.666666666666667;
+
+
   for (auto&& element : elements(FEBasis_->gridView()))
   {
     localView.bind(element);
@@ -494,111 +577,22 @@ void FEBasisHandler<PS12Split, PS12SplitTraits<Config::GridView>>::project(F f, 
     const auto& geometry = element.geometry();
 
     Config::VectorType localDofs = Config::VectorType::Zero (lFE.size());
+    Config::VectorType lagrangeValues = Config::VectorType::Zero (lFE.size());
 
     int k = 0;
-    for (int i = 0; i < geometry.corners(); i++)
+    for (auto& pos : domainPositions)
     {
-      auto value = f(geometry.corner(i));
-
-      //set dofs associated with values at vertices
-      localDofs(k++) = value;
-
-#ifndef NDEBUG
-
-      //test if this was the right basis function
-      {
-        assert(lFE.localCoefficients().localKey(k-1).subEntity() == (unsigned int) i);
-
-        std::vector<FieldVector<double, 1> > functionValues(lFE.size());
-        lFE.localBasis().evaluateFunction(geometry.local(geometry.corner(i)), functionValues);
-        assert(std::abs(functionValues[k-1][0]-1) < 1e-10);
-      }
-#endif
-
-      //set dofs associated with gradient values at vertices
-      auto xValuePlus = geometry.corner(i);
-      xValuePlus[0] += i % 2 == 0 ? h : - h;
-
-      localDofs(k++) = i % 2 == 0 ? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
-
-      xValuePlus = geometry.corner(i);
-      xValuePlus[1] += i < 2 ? h : - h;
-
-      localDofs(k++) = i < 2 ? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
-
-
-#ifndef NDEBUG
-      //test if this were the right basis function
-      {
-        assert(lFE.localCoefficients().localKey(k-2).subEntity() == (unsigned int) i);
-        assert(lFE.localCoefficients().localKey(k-1).subEntity() == (unsigned int) i);
-
-        std::vector<FieldMatrix<double, 1, 2> > jacobianValues(lFE.size());
-        lFE.localBasis().evaluateJacobian(geometry.local(geometry.corner(i)), jacobianValues);
-        assert(std::abs(jacobianValues[k-2][0][0]-1) < 1e-10);
-        assert(std::abs(jacobianValues[k-1][0][1]-1) < 1e-10);
-      }
-#endif
-
-
-      k++;
+      lagrangeValues(k++)= f(geometry.global(pos));
     }
 
     assert(k == 12);
 
-    for (auto&& is : intersections(FEBasis_->gridView(), element)) //loop over edges
-    {
-      const int i = is.indexInInside();
+    auto coeffsSplines= Gamma2Inv*lagrangeValues;
+    const auto& A = lFE.localBasis().getHermiteInterpolationMatrix();
+    Eigen::SparseLU <Config::SparseMatrixType> solver(A);
+    auto nodalCoeffs = solver.solve(coeffsSplines);
 
-      // normal of center in face's reference element
-      const Config::SpaceType normal = is.centerUnitOuterNormal();
-
-      bool unit_pointUpwards;
-      if (std::abs(normal[0]+normal[1])< 1e-12)
-        unit_pointUpwards = (normal[1] > 0);
-      else
-        unit_pointUpwards = (normal[0]+normal[1] > 0);
-
-      const auto face_center = is.geometry().center();
-
-      FieldVector<double, 2> approxGradientF;
-
-      auto value = f(face_center);
-
-      //calculate finite difference in x0-direction
-      auto xValuePlus = face_center;
-      xValuePlus[0] += !(normal[0] > 0) ? h : - h;
-      approxGradientF[0] = !(normal[0] > 0)? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
-
-      //calculate finite difference in x1-direction
-      xValuePlus = face_center;
-      xValuePlus[1] += !(normal[1] > 0) ? h : - h;
-      approxGradientF[1] = !(normal[1] > 0) ? (f(xValuePlus)-value) / h : -(f(xValuePlus)-value) / h;
-
-      if (i == 0)
-        k = 3;
-      else
-        if (i == 1)
-          k = 11;
-        else
-          k = 7;
-
-      localDofs(k++) = unit_pointUpwards ? (approxGradientF*normal) : -(approxGradientF*normal);
-//      std::cout << " aprox normal derivative " << approxGradientF*normal << " = " << approxGradientF << " * " << normal << std::endl ;
-
-      //test if this were the right basis function
-#ifndef NDEBUG
-      {
-        assert(lFE.localCoefficients().localKey(k-1).subEntity() == (unsigned int) i);
-
-        std::vector<FieldMatrix<double, 1, 2> > jacobianValues(lFE.size());
-        lFE.localBasis().evaluateJacobian(geometry.local(face_center), jacobianValues);
-        assert(std::abs( std::abs(jacobianValues[k-1][0]*normal)-1) < 1e-10);
-      }
-#endif
-    }
-
-    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localDofs, v);
+    Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,nodalCoeffs, v);
 //    assembler.add_local_coefficients(localIndexSet,VectorType::Ones(localDofs.size()), countMultipleDof);
     Config::VectorType localmultiples = Config::VectorType::Ones(localDofs.size());
     Assembler<FiniteElementTraits>::add_local_coefficients(localIndexSet,localmultiples, countMultipleDof);
