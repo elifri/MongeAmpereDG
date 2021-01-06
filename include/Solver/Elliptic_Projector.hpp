@@ -67,7 +67,7 @@ private:
   auto find_element_in_fine_grid(Config::DomainType& x) const
   {
     HierarchicSearch<GridView::Grid, GridView::IndexSet> hs(newGridView_.grid(), newGridView_.indexSet());
-    return std::move(hs.findEntity(x));
+    return hs.findEntity(x);
   }
 
   template<typename ValueType>
