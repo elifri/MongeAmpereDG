@@ -7,7 +7,7 @@ IF(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
    SET(CMAKE_BUILD_TYPE DEBUG)
 ENDIF(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
 
-SET(CMAKE_BUILD_TYPE DEBUG)
+SET(CMAKE_BUILD_TYPE RELEASE)
 
 #  Selectflags.
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -fmax-errors=3  -ftemplate-backtrace-limit=0 -fopenmp -Wno-error=strict-overflow -Wno-deprecated")
@@ -48,13 +48,13 @@ ELSE()
    unset(Boost_FOUND CACHE)
    SET(Boost_LIBRARIES /usr/local/gcc-7.2.0/lib/libboost_program_options.so)
    SET(ADOLC_PATH /home/terra/friebel/workspace/ADOL-C-2.6.3/build)
-   #SET(Boost_LIBRARIES boost_program_options)
+#   SET(Boost_LIBRARIES boost_program_options)
    SET(BoostPO_LIBRARIES ${Boost_LIBRARIES})
    SET(ARPACK_LIBRARY "-lcholmod -lsuitesparseconfig -lcolamd -lmetis -lccolamd -lcamd")
-   SET(LIBNURBS_DIR /home/terra/friebel/workspace/opennurbs_20130711)
-   SET(CIMG_PATH /home/terra/friebel/workspace/CImg-1.6.0)
-   SET(IPOPT_HOME /home/terra/friebel/workspace/ipopt/Ipopt-3.12.10/build)
-   SET(METHOD_OF_ELLIPSOIDS_PATH /home/terra/friebel/workspace/Method\ of\ Ellipsoids)
+   SET(LIBNURBS_DIR /home/disk/friebel/workspace/opennurbs_20130711)
+   SET(CIMG_PATH /home/disk/friebel/workspace/CImg-1.6.0)
+   SET(IPOPT_HOME /home/disk/friebel/workspace/ipopt/Ipopt-3.12.10/build)
+   SET(METHOD_OF_ELLIPSOIDS_PATH /home/disk/friebel/workspace/Method\ of\ Ellipsoids)
 ENDIF()
 
 
@@ -89,7 +89,6 @@ find_package(libnurbs REQUIRED)
 find_package(IPOPT)
 
 message("include: ${IPOPT_INCLUDE_DIR} and using Boost ${BoostPO_LIBRARIES}")
-message("libnurbs includes ${LIBNURBS_INCLUDES}")
 
 include_directories(SYSTEM ${LIBFFO_CORE_INCLUDES} ${LIBNURBS_INCLUDES} ${IPOPT_INCLUDE_DIR} ${METHOD_OF_ELLIPSOIDS_INCLUDES} ${CIMG_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${UMFPACK_INCLUDES} ${Boost_INCLUDE_DIRS})
 
@@ -101,6 +100,8 @@ include_directories(${ADOLC_INCLUDE_DIRS})
 endif (ADOLC_FOUND)
 include_directories("include")
 
+message("adolc includes ${ADOLC_INCLUDE_DIRS} and ${METHOD_OF_ELLIPSOIDS_INCLUDES}")
+
 
 # start a dune project with information from dune.module
 dune_project()
@@ -108,9 +109,7 @@ dune_project()
 add_subdirectory("include")
 add_subdirectory("src")
 add_subdirectory("Testing")
-add_subdirectory("dune")
-add_subdirectory("doc")
-add_subdirectory("cmake/modules")
+#add_subdirectory("cmake/modules")
 
 # finalize the dune project, e.g. generating config.h etc.
 finalize_dune_project(GENERATE_CONFIG_H_CMAKE)

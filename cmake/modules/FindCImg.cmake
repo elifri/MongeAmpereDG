@@ -10,7 +10,7 @@ ELSE (CIMG_FOUND)
     CImg.h
     PATHS
     ${INCLUDE_INSTALL_DIR}
-    $ENV{HOME}/workspace/CImg-1.6.0/
+    /home/disk/friebel/workspace/CImg-1.6.0/
     ${CIMG_PATH}
   )
   
