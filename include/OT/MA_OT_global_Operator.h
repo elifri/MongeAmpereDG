@@ -550,7 +550,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
   copy_sparse_to_sparse_matrix(tempM.transpose(), m, V_h_size, V_h_size);
 
 
-  v.tail(Q_h_size) = tempV;
+  v.segment(2*V_h_size, Q_h_size) = tempV;
 #ifdef DEBUG
   {
     std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "Bboundary" << intermediateSolCounter << ".m";

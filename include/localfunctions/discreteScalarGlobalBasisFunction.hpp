@@ -827,7 +827,7 @@ private:
     try{
       auto element = hs.findEntity(x);
       localCoordinate = element.geometry().local(x);
-      return std::move( element );
+      return element;
     }
     catch(Dune::GridError e)
     {
