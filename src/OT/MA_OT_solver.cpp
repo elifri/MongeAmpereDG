@@ -381,10 +381,9 @@ void MA_OT_solver::init_from_file(const std::string& filename)
       fileInitial >> solution(get_n_dofs_V_h()+i);
     }
   }
-  else //no further coefficients -> init lagrangian parameters with 0 and scaling with 1
+  else //no further coefficients -> init riesz-variable and lagrangian parameters with 0
   {
-    solution.tail(get_n_dofs_V_h()+get_n_dofs_Q_h()) = VectorType::Zero(get_n_dofs_V_h()+get_n_dofs_Q_h());
-    solution.tail(1)[0] = 1.0;
+    solution.tail(get_n_dofs_V_h()+get_n_dofs_Q_h()+1) = VectorType::Zero(get_n_dofs_V_h()+get_n_dofs_Q_h()+1);
   }
   fileInitial >> std::ws;
 
@@ -867,8 +866,6 @@ void MA_OT_solver::create_initial_guess()
 
 //  one_Poisson_Step();
 
-  //set scaling_factor to one
-  solution.tail(1)[0]=1.0;
 
   update_solution(solution);
 
@@ -960,7 +957,7 @@ void MA_OT_solver::adapt_solution(const int level)
 {
   //store Lagrangian Parameter
   //  Config::VectorType p = get_assembler_lagrangian_boundary().boundaryHandler().blow_up_boundary_vector(solution.tail(get_n_dofs_Q_h()));
-
+	auto lambda = solution.tail(1)[0];
 
   //adapt input grid
 
@@ -1019,7 +1016,7 @@ void MA_OT_solver::adapt_solution(const int level)
   solution.conservativeResize(get_n_dofs());
   solution.segment(get_n_dofs_V_h(), get_n_dofs_Q_h()) = p_adapted;
   solution.segment(get_n_dofs_V_h()+get_n_dofs_Q_h(), get_n_dofs_V_h()) = z_adapted;
-  solution(get_n_dofs()-1) = 1.0; //scaling factor to 1.0
+  solution(get_n_dofs()-1) = lambda; //
 #endif
 
 /*  {

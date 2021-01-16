@@ -68,7 +68,6 @@ public:
 //          new BoundarySquare(solver.get_gradient_u_old_ptr(), solver.get_setting()),
           *boundary_, f_, g_)),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopRhsScalingPart(new Local_operator_RhsValue_OT(f_,g_)),
       lopLMDual(new Local_operator_Lagrangian_Dual()),
       lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
       intermediateSolCounter()
@@ -87,7 +86,6 @@ public:
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
         lopLMDual(new Local_operator_Lagrangian_Dual()),      
         lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-        lopRhsScalingPart(new Local_operator_RhsValue_OT(f_,g_)),
         lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),
         intermediateSolCounter()
     {
@@ -105,7 +103,6 @@ public:
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
         lopLMDual(new Local_operator_Lagrangian_Dual()),
         lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-        lopRhsScalingPart(new Local_operator_RhsValue_OT(f_,g_)),
         lopLMBoundary(OperatorTraits::construct_lop_LBoundary(setting,get_bc())),//, [&solver]()-> const auto&{return solver.get_u_old();})),
         intermediateSolCounter()
     {
@@ -117,7 +114,6 @@ public:
 
   MA_OT_Operator(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopRhsScalingPart(new Local_operator_RhsValue_OT(lop_ptr->get_input_distribution(),lop_ptr->get_output_distribution())),
       lopLMDual(new Local_operator_Lagrangian_Dual()),
       lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),//, solver.get_u_old())),
       intermediateSolCounter()
@@ -127,7 +123,6 @@ public:
 
   MA_OT_Operator(SolverType& solver, LocalOperatorType* lop_ptr): solver_ptr(&solver), lop_ptr(lop_ptr),
       lopLMMidvalue(new Local_operator_LangrangianMidValue()),
-      lopRhsScalingPart(new Local_operator_RhsValue_OT(lop_ptr->get_input_distribution(),lop_ptr->get_output_distribution())),
       lopLMDual(new Local_operator_Lagrangian_Dual()),
       lopLMBoundary(new LocalOperatorLagrangianBoundaryType(get_bc())),
       intermediateSolCounter()
@@ -280,12 +275,10 @@ public:
   std::shared_ptr<LocalOperatorType> lop_ptr;
 
   std::shared_ptr<Local_operator_LangrangianMidValue> lopLMMidvalue;
-  std::shared_ptr<Local_operator_RhsValue_OT> lopRhsScalingPart;
   std::shared_ptr<Local_operator_Lagrangian_Dual> lopLMDual;
   std::shared_ptr<LocalOperatorLagrangianBoundaryType> lopLMBoundary;
 
   Config::VectorType FEpartsOnMidvalue;
-  mutable Config::VectorType derivatives_scaling_factor;
   
 
   mutable int intermediateSolCounter;
@@ -396,14 +389,7 @@ void MA_OT_Operator<OperatorTraits>::prepare_fixing_point_term(const Config::Vec
   //calculates the mean value for the given coefficient vector x
   solver_ptr->get_assembler_lagrangian_midvalue().assembleRhs(*lopLMMidvalue, x, res);
   solver_ptr->get_assembler().set_uAtX0(res);
-  std::cerr << "current mid value " << res << std::endl;
-  
-  //pass scaling info to ensure integrability condition to local level
-  lop_ptr->set_rhs_scaling(x.tail(1)[0]);
-  std::cerr << "current scaling factor " << x.tail(1)[0] << std::endl;
-
-  //init rhs values
-  solver_ptr->get_assembler_lagrangian_midvalue().assemble_matrix(*lopRhsScalingPart, x, derivatives_scaling_factor);
+  std::cerr << std::setprecision(10) << "current mid value " << res << std::endl;
 
 }
 
@@ -502,10 +488,13 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
 	//fixing midvalue on rhs
   int indexFixingGridEquation = this->solver_ptr->get_n_dofs()-1;
   const auto& assembler = this->solver_ptr->get_assembler();
-  v(indexFixingGridEquation) = assembler.uAtX0() - assembler.u0AtX0();
+  v(indexFixingGridEquation) = 1000.*assembler.uAtX0() - 1000.*assembler.u0AtX0();
   std::cerr << " u - u_0 = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation)
-      << " = " << assembler.u0AtX0() << '-'  << assembler.uAtX0() << std::endl;
+      << " = " << assembler.uAtX0() << '-'  << assembler.u0AtX0() << std::endl;
 
+//add lagrangian part mid value
+  auto lambda = x(indexFixingGridEquation);
+  std::cerr << "  lambda " << lambda << std::endl;
   //derivatives for fixing midvalue
 
   assert(FEpartsOnMidvalue.size() == V_h_size);
@@ -515,9 +504,11 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
   for (unsigned int i = 0; i < FEpartsOnMidvalue.size(); i++)
   {
     //add FE part to calcute mean value
-    m.insert(indexFixingGridEquation,i)=FEpartsOnMidvalue(i);
-    //add FE part to calculate rhs
-    m.insert(i,indexFixingGridEquation) = derivatives_scaling_factor(i);
+    m.insert(indexFixingGridEquation,i)=1000.*FEpartsOnMidvalue(i);
+    //add transposed FE part to form lagrangian
+    m.insert(i,indexFixingGridEquation) = 1000.*FEpartsOnMidvalue(i);
+    
+//    v(i)+= lambda*FEpartsOnMidvalue(i); //why did I ever do this???
   }
 
 #ifdef DEBUG
@@ -527,7 +518,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
     MATLAB_export(file, FEpartsOnMidvalue, "Bm");
   }
 #endif
-
+//---------assemble R to resemble evaluation of riesz variable part---------------
   tempM.setZero();
   solver_ptr->get_assembler_lagrangian_Vh().assemble(*lopLMDual, tempM);
   copy_to_sparse_matrix(tempM, m, 0, V_h_size+Q_h_size);
