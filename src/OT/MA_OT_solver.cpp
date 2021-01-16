@@ -804,8 +804,8 @@ void MA_OT_solver::create_initial_guess()
   {
 	ExactData exactData;
 
-	project(exactData.exact_solution(), exactData.exact_gradient(), solution);
-//    project([](Config::SpaceType x){return x.two_norm2()/2.0;},solution);
+//	project(exactData.exact_solution(), exactData.exact_gradient(), solution);
+    project([](Config::SpaceType x){return x.two_norm2()/2.0;},solution);
     update_solution(solution);
 
 /*
@@ -989,19 +989,8 @@ void MA_OT_solver::adapt_solution(const int level)
 
   //add better projection of exact solution
   {
-    Config::SpaceType x0 = {0.0,0.0};
-
-    FieldMatrix<Config::ValueType, 2, 2> A = {{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}}; //exactsolution
-    FieldMatrix<Config::ValueType, 2, 2> B = {{.385576911206371,.174131508286748},{0.174131508286748,.970161260454739}}; //exactsolution
-
-    auto u0 = [&](Config::SpaceType x){
-      auto y=x0;B.umv(x,y);
-      return (x*y);};
-    auto y0 = [&](Config::SpaceType x){
-      auto y=x0;A.umv(x,y);
-      return y;};
-
-    project(u0, y0, exactsol_u);
+    ExactData exactData;
+    project(exactData.exact_solution(), exactData.exact_gradient(), exactsol_u);
   }
 
   //project old solution to new grid
