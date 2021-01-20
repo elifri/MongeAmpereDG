@@ -167,7 +167,7 @@ void copy_to_new_sparse_matrix(const SparseMatrixType &m_local, SparseMatrixType
   for (int k=0; k<m_local.outerSize(); ++k)
     for (typename SparseMatrixType::InnerIterator it(m_local,k); it; ++it)
     {
-      tripletList.push_back(Eigen::Triplet<double>(it.row(), it.col(), it.value()));
+      tripletList.push_back(Eigen::Triplet<double>(offset_row+it.row(), offset_col+it.col(), it.value()));
     }
   m.setFromTriplets(tripletList.begin(), tripletList.end());
 }

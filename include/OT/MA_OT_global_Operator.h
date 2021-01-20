@@ -488,9 +488,9 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
 	//fixing midvalue on rhs
   int indexFixingGridEquation = this->solver_ptr->get_n_dofs()-1;
   const auto& assembler = this->solver_ptr->get_assembler();
-  v(indexFixingGridEquation) = 1000.*assembler.uAtX0() - 1000.*assembler.u0AtX0();
-  std::cerr << " u - u_0 = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation)
-      << " = " << assembler.uAtX0() << '-'  << assembler.u0AtX0() << std::endl;
+  v(indexFixingGridEquation) = 1000.*assembler.u0AtX0() - 1000.*assembler.uAtX0();
+  std::cerr << " u_0 - u = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation)
+      << " = " << assembler.u0AtX0() << '-'  << assembler.uAtX0() << std::endl;
 
 //add lagrangian part mid value
   auto lambda = x(indexFixingGridEquation);
@@ -506,7 +506,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
     //add FE part to calcute mean value
     m.insert(indexFixingGridEquation,i)=1000.*FEpartsOnMidvalue(i);
     //add transposed FE part to form lagrangian
-    m.insert(i,indexFixingGridEquation) = 1000.*FEpartsOnMidvalue(i);
+    m.insert(V_h_size+i,indexFixingGridEquation) = 1000.*FEpartsOnMidvalue(i);
     
 //    v(i)+= lambda*FEpartsOnMidvalue(i); //why did I ever do this???
   }
