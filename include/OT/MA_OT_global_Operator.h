@@ -454,11 +454,11 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
   this->assemble_without_lagrangian_Jacobian(tempX,tempV, tempM);
 
   //copy system
-  v.head(tempV.size()) = tempV;
+  v.segment(V_h_size, tempV.size()) = tempV;
   //copy SparseMatrix todo move to EigenUtility
   std::vector< Eigen::Triplet<double> > tripletList;
-  copy_to_new_sparse_matrix(tempM, m);
-  copy_sparse_to_sparse_matrix(tempM.transpose(), m, V_h_size, V_h_size+Q_h_size);
+  copy_to_new_sparse_matrix(tempM, m, V_h_size, 0);
+  copy_sparse_to_sparse_matrix(tempM.transpose(), m, 0, V_h_size);
 #ifdef DEBUG
   {
     std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "BF" << intermediateSolCounter << ".m";      \
@@ -488,25 +488,20 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
 	//fixing midvalue on rhs
   int indexFixingGridEquation = this->solver_ptr->get_n_dofs()-1;
   const auto& assembler = this->solver_ptr->get_assembler();
-  v(indexFixingGridEquation) = 1000.*assembler.u0AtX0() - 1000.*assembler.uAtX0();
+  v(indexFixingGridEquation) = assembler.u0AtX0() - assembler.uAtX0();
   std::cerr << " u_0 - u = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation)
       << " = " << assembler.u0AtX0() << '-'  << assembler.uAtX0() << std::endl;
 
 //add lagrangian part mid value
-  auto lambda = x(indexFixingGridEquation);
-  std::cerr << "  lambda " << lambda << std::endl;
-  //derivatives for fixing midvalue
-
   assert(FEpartsOnMidvalue.size() == V_h_size);
-  assert(derivatives_scaling_factor.size() == V_h_size);
   
   //copy in system matrix
   for (unsigned int i = 0; i < FEpartsOnMidvalue.size(); i++)
   {
     //add FE part to calcute mean value
-    m.insert(indexFixingGridEquation,i)=1000.*FEpartsOnMidvalue(i);
+    m.insert(indexFixingGridEquation,i)=FEpartsOnMidvalue(i);
     //add transposed FE part to form lagrangian
-    m.insert(V_h_size+i,indexFixingGridEquation) = 1000.*FEpartsOnMidvalue(i);
+    m.insert(i,indexFixingGridEquation) = FEpartsOnMidvalue(i);
     
 //    v(i)+= lambda*FEpartsOnMidvalue(i); //why did I ever do this???
   }
@@ -521,7 +516,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
 //---------assemble R to resemble evaluation of riesz variable part---------------
   tempM.setZero();
   solver_ptr->get_assembler_lagrangian_Vh().assemble(*lopLMDual, tempM);
-  copy_to_sparse_matrix(tempM, m, 0, V_h_size+Q_h_size);
+  copy_to_sparse_matrix(tempM, m, V_h_size, V_h_size);
 
   //assemble part of second lagrangian multiplier for fixing boundary
   tempM.resize(Q_h_size, V_h_size);
@@ -538,7 +533,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
 //    MATLAB_export(tempM, "B_H");
   //copy to system
   copy_to_sparse_matrix(tempM, m, 2*V_h_size, 0);
-  copy_sparse_to_sparse_matrix(tempM.transpose(), m, V_h_size, V_h_size);
+  copy_sparse_to_sparse_matrix(tempM.transpose(), m, 0, 2*V_h_size);
 
 
   v.segment(2*V_h_size, Q_h_size) = tempV;
