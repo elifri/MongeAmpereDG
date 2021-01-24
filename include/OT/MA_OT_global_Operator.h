@@ -488,7 +488,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
 	//fixing midvalue on rhs
   int indexFixingGridEquation = this->solver_ptr->get_n_dofs()-1;
   const auto& assembler = this->solver_ptr->get_assembler();
-  v(indexFixingGridEquation) = assembler.u0AtX0() - assembler.uAtX0();
+  v(indexFixingGridEquation) = -assembler.u0AtX0() + assembler.uAtX0();
   std::cerr << " u_0 - u = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation)
       << " = " << assembler.u0AtX0() << '-'  << assembler.uAtX0() << std::endl;
 
