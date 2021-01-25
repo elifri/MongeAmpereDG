@@ -488,7 +488,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
 	//fixing midvalue on rhs
   int indexFixingGridEquation = this->solver_ptr->get_n_dofs()-1;
   const auto& assembler = this->solver_ptr->get_assembler();
-  v(indexFixingGridEquation) = -assembler.u0AtX0() + assembler.uAtX0();
+  v(indexFixingGridEquation) = -assembler.u0AtX0() + assembler.uAtX0(); //note in paper we updated Newton w=u_k+1-u_k, in code w= -(u_k+1-u_k)
   std::cerr << " u_0 - u = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation)
       << " = " << assembler.u0AtX0() << '-'  << assembler.uAtX0() << std::endl;
 
@@ -517,6 +517,8 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
   tempM.setZero();
   solver_ptr->get_assembler_lagrangian_Vh().assemble(*lopLMDual, tempM);
   copy_to_sparse_matrix(tempM, m, V_h_size, V_h_size);
+
+  std::cerr << "l_z norm " << (v.segment(V_h_size, V_h_size)).norm() << std::endl;
 
   //assemble part of second lagrangian multiplier for fixing boundary
   tempM.resize(Q_h_size, V_h_size);

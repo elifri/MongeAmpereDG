@@ -47,8 +47,8 @@ void MA_OT_image_solver::plot(const std::string& name, const int no) const
     MA_OT_solver::plot(name, no);
   }
 
-  std::string fnameTransportedPlot(plotter.get_output_directory());
-  fnameTransportedPlot += "/"+ plotter.get_output_prefix()+ name + NumberToString(no) + "transport.bmp";
+  std::string fnameTransportedPlot(plotter_.get_output_directory());
+  fnameTransportedPlot += "/"+ plotter_.get_output_prefix()+ name + NumberToString(no) + "transport.bmp";
 
   const auto& g = this->get_image_operator().get_actual_g();
   FETraits::DiscreteGridFunction::LocalSecondDerivative localHess(get_u_old());
@@ -56,7 +56,7 @@ void MA_OT_image_solver::plot(const std::string& name, const int no) const
   print_image_OT(gridView(), get_gradient_u_old(), localHess,
                  this->get_image_operator().get_actual_f(), g,
                  fnameTransportedPlot, g.getOriginalImage().height(),g.getOriginalImage().width(),
-                 plotter.get_refinement());
+                 plotter_.get_refinement());
 }
 
 void MA_OT_image_solver::update_Operator()
