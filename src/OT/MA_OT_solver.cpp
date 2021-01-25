@@ -880,7 +880,7 @@ void MA_OT_solver::solve_nonlinear_system()
   #endif
 #else
   newtonOpts_.omega = 1.0;
-  newtonMethod(get_operator(), newtonOpts_, solution, evaluateJacobianSimultaneously_);
+  newtonMethod(get_operator(), newtonOpts_, solution, get_n_dofs_V_h(), evaluateJacobianSimultaneously_);
 #endif
 #ifdef USE_PETSC
   igpm::processtimer timer;

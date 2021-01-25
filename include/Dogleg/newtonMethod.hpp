@@ -49,6 +49,7 @@ void newtonMethod(
           FunctorType &functor, ///the function whose root has to be found
           NewtonOptionsType options,
           Eigen::VectorXd &x, ///Initial guess and returns approximate solution
+          int V_h_size, ///quick but dirty to exclude Lagrangian from newton update
           bool useCombinedFunctor = false ///evaluate function and Jacobian at the same time
 ){
     double omega = options.omega;
@@ -209,7 +210,9 @@ void newtonMethod(
           oldX = xBoundary;
 
           //perform newton step
-          xBoundary-=omega*s;
+          xBoundary.head(V_h_size)-=omega*s.head(V_h_size);
+          xBoundary.segment(V_h_size,x.size()-V_h_size) = s.segment(V_h_size,x.size()-V_h_size);
+          std::cerr << "new z norm " << (s.segment(V_h_size, V_h_size)).norm() << std::endl;
 
           std::cerr << std::endl << std::endl;
 
