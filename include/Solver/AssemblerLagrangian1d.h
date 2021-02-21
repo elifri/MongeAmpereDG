@@ -147,7 +147,7 @@ public:
 
       v += u_value*quad.weight()*integrationElement;
     }
-    //divide by element volume
+    //for later division by volume
     volume += element.geometry().volume();
   }
 };

@@ -76,6 +76,25 @@ public:
 */
 
     template<int dim>
+    static FieldVector<double,dim> convection_term(const Function& rhoY, const FieldVector<double, dim>& gradu,
+        const double& f_value, double& g_value)
+    {
+      FieldVector<double, dim> gradg;
+
+      //velocity vector for convection
+      FieldVector<double,dim> convectionTerm;
+
+      rhoY.evaluate(gradu, g_value);
+      rhoY.evaluateDerivative(gradu, gradg);
+
+      //ATTENTION: ASUMMING F is constant!!!!!!!!!!!!!!
+      convectionTerm = gradg;
+      convectionTerm *= -f_value/g_value/g_value;
+
+      return convectionTerm;
+    }
+
+    template<int dim>
     static FieldVector<double,dim> smooth_convection_term(const Function& rhoY, const FieldVector<double, dim>& gradu,
         const double& f_value, double& avg_g_value, const double& integrationElement, const SmoothingKernel& smoothingKernel= smoothingKernel_)
     {
@@ -141,18 +160,16 @@ public:
         avg_g_value += smoothingKernel(i+n,j+n)*g_value;
       }
 
-      /*
-      auto P_T = b.two_norm() * h_T/2./minEVcofHessu;
-        if (std::abs(dP_T) > 1.)
-        {
-          for (int i = -n_ ; i <= n_; i++)
-            for (int j = -n_ ; j <= n_; j++)
-              std::cerr << " at " << transportedXs(i+n_,j+n_) << " grad g " << i << " " << j << ": " << gradGs(i+n_,j+n_) << " convectionTerm " << i << " " << j << ": "<< " " << convectionTerm(i+n_,j+n_) << std::endl;
-          std::cerr << std::setprecision(16);
-          std::cerr << " difference averaged and not, avg: " << b << " not avg: " << convectionTerm(0,0) << " -> difference " << (b-convectionTerm(0,0))<< std::endl;
-          std::cerr << "gradg " << gradg << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
-        }
-*/
+//      auto P_T = b.two_norm() * h_T/2./minEVcofHessu;
+//        if (std::abs(dP_T) > 1.)
+//        {
+//          for (int i = -n_ ; i <= n_; i++)
+//            for (int j = -n_ ; j <= n_; j++)
+//              std::cerr << " at " << transportedXs(i+n_,j+n_) << " grad g " << i << " " << j << ": " << gradGs(i+n_,j+n_) << " convectionTerm " << i << " " << j << ": "<< " " << convectionTerm(i+n_,j+n_) << std::endl;
+//          std::cerr << std::setprecision(16);
+//          std::cerr << " difference averaged and not, avg: " << b << " not avg: " << convectionTerm(0,0) << " -> difference " << (b-convectionTerm(0,0))<< std::endl;
+//          std::cerr << "gradg " << gradg << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
+//        }
       return b;
     }
 
@@ -196,6 +213,10 @@ public:
     int order = std::max(0,
         3 * ((int) localFiniteElement.localBasis().order()));
     const QuadratureRule<double, dim>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(element, order);
+
+    //provide (element global) SUPG terms
+    double delta_T;
+    bool activate_SUPG_terms = false;
 
     // Loop over all quadrature points
     for (size_t pt = 0; pt < quad.size(); pt++) {
@@ -242,23 +263,51 @@ public:
       int_f += f_value* quad[pt].weight() * integrationElement;
 
       //calculate illumination at target plane
-      double avg_g_value = 0;
-      FieldVector<double,dim> b = smooth_convection_term(rhoY, gradu, f_value, avg_g_value, integrationElement);
+//      double avg_g_value = 0;
+//      FieldVector<double,dim> b = smooth_convection_term(rhoY, gradu, f_value, avg_g_value, integrationElement);
+      double g_value;
+      FieldVector<double,dim> b = convection_term(rhoY, gradu, f_value, g_value);
 
-      auto detHessu = determinant(Hessu); //note that determinant of Hessu and cofHessu is the same
-//      double g_value;
-//      rhoY.evaluate(gradu, g_value);
+      auto detHessu = determinant(cofHessu); //note that determinant of Hessu and cofHessu is the same
 
       //check if determinant is negative, i.e. u is not convex
       if (detHessu < 0 && !found_negative)
       {
         std::cerr << "found negative determinant " << detHessu << " at " << x_value << std::endl;
-        std::cerr << " rhs was  " << f_value/avg_g_value << std::endl;
-        std::cerr << "-detHessu+f_value/g_value" << -detHessu+f_value/avg_g_value << std::endl;
+        std::cerr << " rhs was  " << f_value/g_value << std::endl;
+        std::cerr << "-detHessu+f_value/g_value" << -detHessu+f_value/g_value << std::endl;
 
         //        std::cerr << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
         found_negative = true;
       }
+
+      if(pt == 0)
+      {
+        auto h_T = std::sqrt(integrationElement);
+        auto P_T = b.infinity_norm() * h_T/2./Hessu.frobenius_norm();
+//        std::cerr << " P_T " << P_T << std::endl;
+        if (P_T > 1.)
+        {
+          FieldVector<double, dim> gradg;
+          rhoY.evaluateDerivative(gradu, gradg);
+          std::cerr << " at " << gradu << " grad g " << gradg << " convectionTerm " << ": " << b << "  -> activate SUPG " <<  std::endl;
+          std::cerr << std::setprecision(16);
+          std::cerr << "gradg " << gradg << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu << " h " << h_T << " P_T " << P_T << " delta_T " << delta_K  <<std::endl;
+
+          activate_SUPG_terms = true;
+
+//old choice          delta_T = h_T/2./b.two_norm()*(1.-2./P_T);
+          delta_T = h_T;
+        }
+        else{
+          activate_SUPG_terms = true;
+//
+          delta_T = h_T*h_T/2./Hessu.frobenius_norm();
+//
+       }
+
+      }
+
 
       //write into system matrix
       for (int j = 0; j < size; j++) // loop over test fcts
@@ -272,10 +321,18 @@ public:
 //          m(j,i) += (-FrobeniusProduct(cofHessu,Hessians[i]))*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
           //convection term
           m(j,i) += (b*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+          //additional SUPG stabilisation?
+          if (activate_SUPG_terms)
+          {
+              m(j,i) += delta_T*(-FrobeniusProduct(cofHessu,Hessians[i])+b*gradients[i])*
+                  (b*gradients[i]) *quad[pt].weight()*integrationElement;
+          }
+
         }
 
         //-f(u_k) [rhs of Newton]
-        v(j) += (-detHessu+f_value/avg_g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+//        v(j) += (-detHessu+f_value/avg_g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+        v(j) += (-detHessu+f_value/g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 //        v(j) += (-detHessu)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         assert(! (v(j)!=v(j)));
       }
@@ -469,7 +526,7 @@ public:
       const FieldVector<double, dim> &quadPos =
           intersection.geometryInInside().global(quad[pt].position());
 
-      auto x_value = geometry.global(quadPos);
+//      auto x_value = geometry.global(quadPos);
 
       //the shape function values
       std::vector<JacobianType> gradients(size_u);

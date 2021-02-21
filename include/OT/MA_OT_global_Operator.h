@@ -302,25 +302,44 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
 //    MA_OT_Operator(MA_OT_solver& solver):solver_ptr(&solver), lop_ptr(new Local_Operator_MA_OT(new BoundarySquare(solver.gradient_u_old, solver.get_setting()), new rhoXSquareToSquare(), new rhoYSquareToSquare())){}
     // lop(new BoundarySquare(solver.gradient_u_old), new rhoXGaussians(), new rhoYGaussians()){}
 
-  MA_OT_Operator_with_Linearisation(SolverType& solver, const FunctionTypeX& f, const FunctionTypeY& g):MA_OT_Operator<OperatorTraits>(solver),
-        lopLinear_ptr(new LOPLinear(*(this->boundary_), f, g))
+  MA_OT_Operator_with_Linearisation(SolverType& solver, const FunctionTypeX& f, const FunctionTypeY& g):
+    MA_OT_Operator<OperatorTraits>(solver),
+    lopLinear_ptr(new LOPLinear(*(this->boundary_), f, g))
 //            [&solver]() -> const auto&{ //assert that the return value is a reference!
 //              return solver.get_u_old();}))
-    {}
+    {
+    std::cout << "init MA OT operator with linearisation " << std::endl;
+    }
 
 
-  MA_OT_Operator_with_Linearisation(SolverType& solver):MA_OT_Operator_with_Linearisation(solver, this->f_, this->g_)
-    {}
+  MA_OT_Operator_with_Linearisation(SolverType& solver):
+    MA_OT_Operator_with_Linearisation(solver, this->f_, this->g_)
+    {
+    std::cout << "init MA OT operator with linearisation " << std::endl;
+    }
 
 
-  MA_OT_Operator_with_Linearisation(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lopLinear):MA_OT_Operator<OperatorTraits>(solver),
+  MA_OT_Operator_with_Linearisation(SolverType& solver, const std::shared_ptr<LocalOperatorType>& lopLinear):
+    MA_OT_Operator<OperatorTraits>(solver),
         lopLinear_ptr(lopLinear)
-    {}
+    {
+    std::cout << "init MA OT operator with linearisation " << std::endl;
+    }
 
   MA_OT_Operator_with_Linearisation(SolverType& solver, const std::shared_ptr<LocalOperatorTypeNotLinear> lop, const std::shared_ptr<LocalOperatorType>& lopLinear):
     MA_OT_Operator<OperatorTraits>(solver, lop),
         lopLinear_ptr(lopLinear)
-    {}
+    {
+    std::cout << "init MA OT operator with linearisation " << std::endl;
+    }
+
+  template<typename GeometryOTSetting>
+  MA_OT_Operator_with_Linearisation(SolverType& solver, GeometryOTSetting& setting):
+    MA_OT_Operator<OperatorTraits>(solver, setting),
+    lopLinear_ptr(new LOPLinear(*(this->boundary_), this->f_, this->g_))
+    {
+    std::cout << "init MA OT operator with linearisation " << std::endl;
+    }
 
 
   const LocalOperatorType& get_lopLinear() const
@@ -346,7 +365,7 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
 */
 
     Config::MatrixType m(v.size(), x.size());
-    (this->solver_ptr)->assembler_.assemble_DG_Jacobian(*(this->lop_ptr), *lopLinear_ptr, x,v, m);
+    (this->solver_ptr)->get_assembler().assemble_DG_Jacobian(*(this->lop_ptr), *lopLinear_ptr, x,v, m);
 
 //    (this->solver_ptr)->assembler_.assemble_DG_Only(this->get_lop(), x,v);
   }
@@ -357,7 +376,8 @@ struct MA_OT_Operator_with_Linearisation:MA_OT_Operator<OperatorTraits>{
     assert(m.rows()==this->solver_ptr->get_n_dofs_V_h());
     assert(m.cols()==this->solver_ptr->get_n_dofs_V_h());
 
-    (this->solver_ptr)->assembler_.assemble_DG_Jacobian(*(this->lop_ptr), *lopLinear_ptr, x,v, m);
+    std::cerr << "assemble now with linear operator " << std::endl;
+    (this->solver_ptr)->get_assembler().assemble_DG_Jacobian(*(this->lop_ptr), *lopLinear_ptr, x,v, m);
   }
   void assemble_without_lagrangian_Jacobian(const Config::VectorType& x, Config::MatrixType& m) const
   {
@@ -459,11 +479,12 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
   std::vector< Eigen::Triplet<double> > tripletList;
   copy_to_new_sparse_matrix(tempM, m, V_h_size, 0);
   copy_sparse_to_sparse_matrix(tempM.transpose(), m, 0, V_h_size);
-#ifdef DEBUG
+
+#ifndef DEBUG
   {
-    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "BF" << intermediateSolCounter << ".m";      \
+    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "AF" << intermediateSolCounter << ".m";      \
     std::ofstream file(filename.str(),std::ios::out);
-    MATLAB_export(file, tempM, "BF");
+    MATLAB_export(file, tempM, "AF");
   }
   {
     std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "x" << intermediateSolCounter << ".m";
@@ -508,9 +529,9 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
 
 #ifdef DEBUG
   {
-    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "Bm" << intermediateSolCounter << ".m";
+    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "AM" << intermediateSolCounter << ".m";
     std::ofstream file(filename.str(),std::ios::out);
-    MATLAB_export(file, FEpartsOnMidvalue, "Bm");
+    MATLAB_export(file, FEpartsOnMidvalue, "AM");
   }
 #endif
 //---------assemble R to resemble evaluation of riesz variable part---------------
@@ -541,15 +562,15 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
   v.segment(2*V_h_size, Q_h_size) = tempV;
 #ifdef DEBUG
   {
-    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "Bboundary" << intermediateSolCounter << ".m";
+    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "AG" << intermediateSolCounter << ".m";
     std::ofstream file(filename.str(),std::ios::out);
-    MATLAB_export(file, tempM, "Bboundary");
+    MATLAB_export(file, tempM, "AG");
     std::cerr << " matlab file written to " << filename.str() << std::endl;
   }
   {
-    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "Lboundary" << intermediateSolCounter << ".m";
+    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "lG" << intermediateSolCounter << ".m";
     std::ofstream file(filename.str(),std::ios::out);
-    MATLAB_export(file, tempV, "Lboundary");
+    MATLAB_export(file, tempV, "lG");
     std::cerr << " matlab file written to " << filename.str() << std::endl;
   }
 #endif
@@ -559,19 +580,19 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
 
   std::cerr << " l with norm " << std::scientific << std::setprecision(3)<< v.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
 
-#ifdef DEBUG
+#ifndef DEBUG
   {
-    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "BF" << intermediateSolCounter << ".m";      \
+    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "M" << intermediateSolCounter << ".m";      \
     std::ofstream file(filename.str(),std::ios::out);
     MATLAB_export(file, m, "m");
     Eigen::MatrixXd dMat;
     dMat= Eigen::MatrixXd(m);
 //    file << dMat << std::endl;
 
-    Eigen::JacobiSVD<Eigen::MatrixXd> svd(m);
-    double cond = svd.singularValues()(0)
-        / svd.singularValues()(svd.singularValues().size()-1);
-    std::cerr << " Condition number of matrix is " << cond << std::endl;
+//    Eigen::JacobiSVD<Eigen::MatrixXd> svd(m);
+//    double cond = svd.singularValues()(0)
+//        / svd.singularValues()(svd.singularValues().size()-1);
+//    std::cerr << " Condition number of matrix is " << cond << std::endl;
   }
 #endif
 }
@@ -583,7 +604,7 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
   assert(solver_ptr != NULL);
 
 
-  if (new_solution && true)
+  if (new_solution && false)
   {
     intermediateSolCounter++;
     solver_ptr->update_solution(x);

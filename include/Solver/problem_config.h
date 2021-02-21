@@ -33,7 +33,10 @@ class MA_OT_solver;
 class MA_OT_image_solver;
 
 template<typename OperatorTraits>
-class MA_OT_Operator;
+class MA_OT_Operator; //defined in include/OT/MA_OT_global_Operator.h
+
+template<typename OperatorTraits, typename LOPLinear>
+class MA_OT_Operator_with_Linearisation; //defined in include/OT/MA_OT_global_Operator.h
 
 ///interface for general OT operator, whose distributions constructors need not input
 template<typename Solver, typename LOP, typename FX, typename FY>
