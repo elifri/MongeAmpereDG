@@ -89,7 +89,7 @@ public:
 
       //ATTENTION: ASUMMING F is constant!!!!!!!!!!!!!!
       convectionTerm = gradg;
-      convectionTerm *= -f_value/g_value/g_value;
+      convectionTerm *= f_value/g_value/g_value;
 
       return convectionTerm;
     }
@@ -154,7 +154,7 @@ public:
 
         //ATTENTION: ASUMMING F is constant!!!!!!!!!!!!!!
         convectionTerm(i+n,j+n) = gradg;
-        convectionTerm(i+n,j+n) *= -f_value/g_value/g_value;
+        convectionTerm(i+n,j+n) *= f_value/g_value/g_value;
 
         b.axpy(smoothingKernel(i+n,j+n),convectionTerm(i+n,j+n));
         avg_g_value += smoothingKernel(i+n,j+n)*g_value;
@@ -300,7 +300,7 @@ public:
           delta_T = h_T;
         }
         else{
-          activate_SUPG_terms = true;
+          activate_SUPG_terms = false;
 //
           delta_T = h_T*h_T/2./Hessu.frobenius_norm();
 //
@@ -335,6 +335,10 @@ public:
         v(j) += (-detHessu+f_value/g_value)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
 //        v(j) += (-detHessu)*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
         assert(! (v(j)!=v(j)));
+        if (activate_SUPG_terms)
+        {
+          v(j)+=  delta_T*(-detHessu+f_value/g_value)*(b*gradients[j])*quad[pt].weight()*integrationElement;
+        }
       }
     }
   }
@@ -556,7 +560,7 @@ public:
         cofHessu.mv(gradients[i], cofHessuTimesgradw);
         for (size_t j = 0; j < size_u; j++)
         {
-          m(j,i) += (cofHessuTimesgradw*normal)*referenceFunctionValues[j]*factor;
+          m(j,i) += -(cofHessuTimesgradw*normal)*referenceFunctionValues[j]*factor;
         }
       }
     }
