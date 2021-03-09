@@ -124,9 +124,11 @@ FieldMatrix<value_type, 2, 2> convexified_penalty_cofactor(const FieldMatrix<val
   }
   else
   {
-    if (A[1][1] < 0)
-      cofA[0][0] = 0;
-    else
+//    if (A[1][1] < 0)
+//    {
+//      cofA[0][0] = 0;
+//    }
+//    else
       cofA[0][0] = A[1][1];
   }
 
@@ -134,20 +136,19 @@ FieldMatrix<value_type, 2, 2> convexified_penalty_cofactor(const FieldMatrix<val
   {
     cofA[1][1] = -2*SolverConfig::lambda*A[1][1];
     std::cerr << " derived entry under zero in a11" << std::endl;
-
   }
   else
   {
-    if (A[0][0] < 0)
-      cofA[1][1] = 0;
-    else
+//    if (A[0][0] < 0)
+//      cofA[1][1] = 0;
+//    else
       cofA[1][1] = A[0][0];
   }
 
   cofA[0][1] = -A[0][1];
   cofA[1][0] = -A[1][0];
 
-
+/*
   value_type EW0_quadr, EW1_quadr;
   calculate_eigenvalues(cofA, EW0_quadr, EW1_quadr);
 
@@ -189,7 +190,7 @@ FieldMatrix<value_type, 2, 2> convexified_penalty_cofactor(const FieldMatrix<val
 
   assert(EW0_quadr> epsilon-10e-12);
   assert(EW1_quadr> epsilon-10e-12);
-
+*/
   return cofA;
 }
 
