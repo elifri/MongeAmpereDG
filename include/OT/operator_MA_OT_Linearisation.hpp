@@ -325,7 +325,7 @@ public:
           if (activate_SUPG_terms)
           {
               m(j,i) += delta_T*(-FrobeniusProduct(cofHessu,Hessians[i])+b*gradients[i])*
-                  (b*gradients[i]) *quad[pt].weight()*integrationElement;
+                  (b*gradients[j]) *quad[pt].weight()*integrationElement;
           }
 
         }
