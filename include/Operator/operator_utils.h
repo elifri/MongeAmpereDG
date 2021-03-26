@@ -120,7 +120,7 @@ FieldMatrix<value_type, 2, 2> convexified_penalty_cofactor(const FieldMatrix<val
   if (A[0][0] < 0)
   {
     cofA[0][0] = -2*SolverConfig::lambda*A[0][0];
-    std::cerr << " derived entry under zero in a00" << std::endl;
+ //   std::cerr << " derived entry under zero in a00" << std::endl;
   }
   else
   {
@@ -135,7 +135,7 @@ FieldMatrix<value_type, 2, 2> convexified_penalty_cofactor(const FieldMatrix<val
   if (A[1][1] < 0)
   {
     cofA[1][1] = -2*SolverConfig::lambda*A[1][1];
-    std::cerr << " derived entry under zero in a11" << std::endl;
+//    std::cerr << " derived entry under zero in a11" << std::endl;
   }
   else
   {

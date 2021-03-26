@@ -233,8 +233,21 @@ const typename MA_solver::VectorType& MA_solver::solve()
     update_solution(solution);
     plot("numericalSolution");
 
-    update_Operator();
+    {
+      //write current solution to file
+      update_solution(solution);
 
+      stringstream filename2; filename2 << outputDirectory_ << "/"<< outputPrefix_ << iterations << ".fec";
+      ofstream file(filename2.str(),std::ios::out);
+      file << std::setprecision(16) << std::scientific;
+      file << solution;
+//      plotter.save_rectangular_mesh(*solution_u_old, file);
+      file.close();
+    }
+
+
+    update_Operator();
+//
     solve_nonlinear_system();
     iterations++;
     end = std::chrono::steady_clock::now();
@@ -284,10 +297,10 @@ void MA_solver::update_solution(const Config::VectorType& newSolution) const
 {
   std::cerr << " updated solution to a vector with norm " << newSolution.norm() << std::endl;
   assert(newSolution.size() >= get_n_dofs_u());
-  if(newSolution.size() > solution.size())
-    solution = newSolution;
+//  if(newSolution.size() > solution.size())
+//    solution = newSolution;
   solution_u = solution.segment(0, get_n_dofs_u());
-//  std::cout << "solution " << solution_u.transpose() << std::endl;
+//  std::cerr << "solution " << newSolution.transpose() << std::endl;
 
   //build gridviewfunction
   solution_u_old_global = std::shared_ptr<DiscreteGridFunction> (new DiscreteGridFunction(FEBasisHandler_.uBasis(),solution_u));

@@ -88,7 +88,11 @@ public:
       std::cerr << "created MA_operator ... " << std::endl;
     }
 
-    void evaluate(const Config::VectorType& x, Config::VectorType& v,  Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
+    void evaluate(const Config::VectorType& x, Config::VectorType& v,
+#ifdef SUPG
+      Config::VectorType& v_withouth_SUPG,
+#endif
+      Config::MatrixType& m, const Config::VectorType& x_old, const bool new_solution=true) const
     {
       if (new_solution)
       {
@@ -261,10 +265,36 @@ public:
 
   ///assembles the (global) Jacobian of the FE function as specified in LOP
   template<typename LocalOperatorType>
-  void assemble_DG_Jacobian(const LocalOperatorType &LOP, const VectorType& x, VectorType& v, MatrixType& m) const {
+  void assemble_DG_Jacobian(const LocalOperatorType &LOP, const VectorType& x, VectorType& v, MatrixType& m) const
+  {
     assert (initialised);
+#ifndef SUPG
     assembler_.assemble_DG_Jacobian(LOP, x, v, m);
+#else
+    assert(false && "Code not updated to SUPG");
+#endif
   }
+
+  ///assembles the (global) Jacobian of the FE function as specified in LOP which also evaluates SUPG terms
+  template<typename LocalOperatorType>
+  void assemble_DG_Jacobian(const LocalOperatorType &LOP, const VectorType& x,
+      VectorType& v,
+#ifdef SUPG
+      Config::VectorType& v_without_SUPG,
+#endif
+      MatrixType& m) const
+  {
+    assert (initialised);
+#ifndef SUPG
+    assembler_.assemble_DG_Jacobian(LOP, x, v, m);
+#else
+    //the LOP assembles the linear functional with SUPG terms and the SUPG terms only
+    assembler_.assemble_DG_Jacobian(LOP, x, v, v_without_SUPG, m);
+    //we want to have the linear functional with SUPG terms and the functional without terms
+    v_without_SUPG = v - v_without_SUPG;
+#endif
+  }
+
 
   /**
    * projects a function into the grid space, for the initialisation of the hessian dofs the piecewise hessian is interpolated

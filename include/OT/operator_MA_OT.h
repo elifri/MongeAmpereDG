@@ -32,6 +32,8 @@ using namespace Dune;
 #define USE_AUTOMATIC_DIFFERENTIATION 0
 #endif
 
+
+
 class Local_Operator_MA_OT {
 
 
@@ -40,7 +42,6 @@ class Local_Operator_MA_OT {
 #else
   using ValueType = Config::ValueType;
 #endif
-
 
 
 
@@ -59,6 +60,31 @@ public:
 //    delete &rhoY;
 //    delete &bc;
 //  }
+private:
+  template<int dim>
+  static FieldVector<double,dim> convection_term(const Function& rhoY, const FieldVector<adouble, dim>& gradu,
+      const double& f_value, const adouble& g_value)
+  {
+    FieldVector<double, dim> gradg;
+
+    //velocity vector for convection
+    FieldVector<double,dim> convectionTerm;
+
+//    rhoY.evaluate(gradu, g_value);
+    FieldVector<double, dim> gradu_value;
+    gradu_value[0]=gradu[0].value();
+    gradu_value[1]=gradu[1].value();
+    rhoY.evaluateDerivative(gradu_value, gradg);
+
+    convectionTerm = gradg;
+    convectionTerm *= f_value/g_value.value()/g_value.value();
+
+    return convectionTerm;
+  }
+
+
+
+public:
 
 
   /**
@@ -70,7 +96,10 @@ public:
    */
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag=0) const  {
+      VectorType& v, VectorType* v_SUPG_ptr=0, const int tag=0) const  {
+
+    VectorType& v_SUPG = *v_SUPG_ptr;
+
     // Get the grid element from the local FE basis view
     using Element = typename LocalView::Element;
     const Element& element = localView.element();
@@ -99,6 +128,13 @@ public:
     int order = std::max(0,
         3 * ((int) localFiniteElement.localBasis().order()));
     const QuadratureRule<double, dim>& quad = SolverConfig::FETraitsSolver::get_Quadrature<Config::dim>(element, order);
+
+#define SUPG
+#ifdef SUPG
+    //provide (element global) SUPG terms
+    double delta_T;
+    bool activate_SUPG_terms = false;
+#endif
 
 #ifdef USE_AUTOMATIC_DIFFERENTIATION
     //init variables for automatic differentiation
@@ -191,11 +227,68 @@ public:
 
       assert(PDE_rhs.value() > 0);
 
+//      std::cerr << "-detHessu+f_value/g_value" << -uDH_det.value()+f_value/g_value.value() << " detHessu " << uDH_det.value();
+//      std::cerr << " rhs was  " << f_value/g_value << "=" << f_value << "/" << g_value.value() << std::endl;
+
+#ifdef SUPG
+      if(pt == 0)
+      {
+        FieldVector<double,dim> b = convection_term(rhoY, gradu, f_value, g_value);
+//        FieldVector<double,dim> b_value;
+//        b_value[0]=b[0].value();
+//        b_value[1]=b[1].value();
+
+        auto h_T = std::sqrt(integrationElement);
+        auto P_T = b.infinity_norm() * h_T/2./Hessu.frobenius_norm().value();
+//        std::cerr << " P_T " << P_T << std::endl;
+        if (P_T > 1.)
+        {
+          FieldVector<double, dim> gradu_value;
+          gradu_value[0]=gradu[0].value();
+          gradu_value[1]=gradu[1].value();
+
+          FieldVector<double, dim> gradg;
+          rhoY.evaluateDerivative(gradu_value, gradg);
+          std::cerr << " at " << gradu << " grad g " << gradg << " convectionTerm " << ": " << b << "  -> activate SUPG " <<  std::endl;
+          std::cerr << std::setprecision(16);
+//          std::cerr << "gradg " << gradg << " |b|_2 " << b.two_norm() << " |b| " << b.infinity_norm() << " eps " << Hessu.frobenius_norm() << " minEV " << minEVcofHessu
+          std::cerr << " |b|_2 " << b.two_norm() << " h " << h_T << " P_T " << P_T;
+
+          activate_SUPG_terms = true;
+
+//old choice
+          delta_T = h_T/2./b.two_norm()*(1.-2./P_T);
+//          delta_T = h_T;
+          std::cerr << " delta_T " << delta_T  <<std::endl;
+        }
+        else{
+          activate_SUPG_terms = false;
+//
+//          delta_T = h_T*h_T/2./Hessu.frobenius_norm().value();
+//          std::cerr << "delta_t " << delta_T << std::endl;
+//          delta_T = 0.001;
+       }
+
+      }
+#endif
+
+
       for (int j = 0; j < size; j++) // loop over test fcts
       {
 
         v_adolc(j) += (PDE_rhs-uDH_det)*referenceFunctionValues[j]
 	          	* quad[pt].weight() * integrationElement;
+#ifdef SUPG
+        if (activate_SUPG_terms)
+        {
+          FieldVector<double,dim> b = convection_term(rhoY, gradu, f_value, g_value);
+
+          v_adolc(j) += delta_T*(PDE_rhs-uDH_det)*(gradients[j]*b)
+              * quad[pt].weight() * integrationElement;
+          v_SUPG(j) += delta_T*(PDE_rhs.value()-uDH_det.value())*(gradients[j]*b)
+                  * quad[pt].weight() * integrationElement;
+        }
+#endif
       }
     }
 #ifdef USE_AUTOMATIC_DIFFERENTIATION

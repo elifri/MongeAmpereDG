@@ -557,8 +557,8 @@ void MA_OT_solver::one_Poisson_Step()
 //  Config::SpaceType x0 = {-0.25,-0.25};
 //  Config::SpaceType x0 = {-0.25,0.25};
 //  FieldMatrix<Config::ValueType, 2, 2> A = {{2,0},{0,2}};
-  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,2.5}}; //initial guess for ellipse problem
-//    FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,1}};
+//  FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,2.5}}; //initial guess for ellipse problem
+    FieldMatrix<Config::ValueType, 2, 2> A = {{1,0},{0,1}};
 //  FieldMatrix<Config::ValueType, 2, 2> A = {{.771153822412742,.348263016573496},{.348263016573496,1.94032252090948}};
 
   Integrator<Config::GridType> integrator(get_grid_ptr());
@@ -803,9 +803,11 @@ void MA_OT_solver::create_initial_guess()
   {
 	ExactData exactData;
 
-//	project(exactData.exact_solution(), exactData.exact_gradient(), solution);
-    project([](Config::SpaceType x){return x.two_norm2()/2.0;},solution);
-    update_solution(solution);
+	project(exactData.exact_solution(), exactData.exact_gradient(), solution);
+//    project([](Config::SpaceType x){return x.two_norm2()/2.0;},solution); //projection fragwürdig!!!
+//    project([](Config::SpaceType x){return x.two_norm2()/2.0;},
+//        [](Config::SpaceType x){return x;},solution);
+//    update_solution(solution);
 
 //----fix additive constant by fixing first dof, so here choose this value u_0(x_0), where u_0 projection
     //determine value which later fixes the first dof
@@ -816,12 +818,13 @@ void MA_OT_solver::create_initial_guess()
     Config::ValueType res = 0;
     assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), solution, res);
     assembler_.set_u0AtX0(res);
+  std::cerr << " set u_0^mid to " << res << std::endl;
   }
 
   ExactData exactData;
   project(exactData.exact_solution(), exactData.exact_gradient(), exactsol_u);
 
-#define U_MID_EXACT
+#undef U_MID_EXACT
 
 #ifdef U_MID_EXACT
 //----fix additive constant by fixing first dof, so here choose this value u_0(x_0)
@@ -837,10 +840,12 @@ void MA_OT_solver::create_initial_guess()
   std::cerr << " set u_0^mid to " << res << std::endl;
 #endif
 
-//  one_Poisson_Step();
+  if (!initValueFromFile_)
+  {
+    one_Poisson_Step();
 
-
-  update_solution(solution);
+    update_solution(solution);
+  }
 
 #ifdef MANUFACTOR_SOLUTION
   std::cerr << " init bar u ... " << std::endl;
@@ -852,11 +857,11 @@ void MA_OT_solver::create_initial_guess()
 
 void MA_OT_solver::solve_nonlinear_system()
 {
-#ifdef USE_LAGRANGIAN
-  assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
-#else
-  assert(solution.size() == get_n_dofs_V_h() && "Error: start solution is not initialised");
-#endif
+//#ifdef USE_LAGRANGIAN
+//  assert(solution.size() == get_n_dofs() && "Error: start solution is not initialised");
+//#else
+//  assert(solution.size() == get_n_dofs_V_h() && "Error: start solution is not initialised");
+//#endif
 
   std::cout << "n dofs" << get_n_dofs() << " V_h_dofs " << get_n_dofs_V_h() << " Q_h_dofs " << get_n_dofs_Q_h() << std::endl;
 
@@ -880,7 +885,12 @@ void MA_OT_solver::solve_nonlinear_system()
   #endif
 #else
   newtonOpts_.omega = 1.0;
+//  Config::VectorType solutionWithoutDual = solution.head(get_n_dofs()-get_n_dofs_V_h());
+//  newtonMethod(get_operator(), newtonOpts_, solutionWithoutDual, get_n_dofs_V_h(), evaluateJacobianSimultaneously_);
+//  solution.head(get_n_dofs()-get_n_dofs_V_h())= solutionWithoutDual;
+
   newtonMethod(get_operator(), newtonOpts_, solution, get_n_dofs_V_h(), evaluateJacobianSimultaneously_);
+
 #endif
 #ifdef USE_PETSC
   igpm::processtimer timer;

@@ -213,9 +213,22 @@ private:
   void prepare_fixing_point_term(const Config::VectorType& x) const;
 
   ///assembles the system of the MA PDE
-  virtual void assemble_without_lagrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
+  virtual void assemble_without_lagrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v,
+#ifdef SUPG
+      Config::VectorType& v_without_SUPG,
+#endif
+      Config::MatrixType& m) const;
 
-  void assemble_with_lagrangians_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
+  void assemble_with_lagrangians_Jacobian(const Config::VectorType& x, Config::VectorType& v,
+#ifdef SUPG
+      Config::VectorType& v_without_SUPG,
+#endif
+      Config::MatrixType& m) const;
+  void assemble_with_lagrangians_Jacobian_withoutDual(const Config::VectorType& x, Config::VectorType& v,
+#ifdef SUPG
+      Config::VectorType& v_without_SUPG,
+#endif
+      Config::MatrixType& m) const;
   //void assemble_everything(const Config::VectorType& xBoundary, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const;
 
   virtual void assemble_without_lagrangian(const Config::VectorType& x, Config::VectorType& v) const;
@@ -243,7 +256,12 @@ private:
 
 public:
   ///assembles the system of combination of the MA PDE and the lagrangian multiplier for fixing the mean value and boundary condition
-  void evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& xBoundary, const bool new_solution=true) const;
+  void evaluate(const Config::VectorType& x, Config::VectorType& v,
+#ifdef SUPG
+      //in case of SUPG we need to evaluate the residual and the functional of the rhs with SUPG terms and return both separately
+      Config::VectorType& v_without_SUPG,
+#endif
+      Config::MatrixType& m, const Config::VectorType& xBoundary, const bool new_solution=true) const;
   ///assembles the rhs of the system of combination of the MA PDE and the lagrangian multiplier for fixing the mean value and boundary condition
   void evaluate(const Config::VectorType& x, Config::VectorType& v, const Config::VectorType& xNew, const bool new_solution=true) const;
 
@@ -414,15 +432,22 @@ void MA_OT_Operator<OperatorTraits>::prepare_fixing_point_term(const Config::Vec
 }
 
 template<typename OperatorTraits>
-void MA_OT_Operator<OperatorTraits>::assemble_without_lagrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+void MA_OT_Operator<OperatorTraits>::assemble_without_lagrangian_Jacobian(const Config::VectorType& x, Config::VectorType& v,
+#ifdef SUPG
+    Config::VectorType& v_without_SUPG,
+#endif
+    Config::MatrixType& m) const
 {
   assert(x.size()==this->solver_ptr->get_n_dofs_V_h());
   assert(v.size()==this->solver_ptr->get_n_dofs_V_h());
   assert(m.rows()==this->solver_ptr->get_n_dofs_V_h());
   assert(m.cols()==this->solver_ptr->get_n_dofs_V_h());
 
+#ifndef SUPG
   solver_ptr->assemble_DG_Jacobian(this->get_lop(), x, v, m);
-
+#else
+  solver_ptr->assemble_DG_Jacobian(this->get_lop(), x, v, v_without_SUPG, m);
+#endif
 }
 
 template<typename OperatorTraits>
@@ -451,7 +476,11 @@ void MA_OT_Operator<OperatorTraits>
 
 
 template<typename OperatorTraits>
-void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Config::VectorType& x, Config::VectorType& v,
+#ifdef SUPG
+    Config::VectorType& v_without_SUPG,
+#endif
+    Config::MatrixType& m) const
 {
   assert(lop_ptr);
 
@@ -460,6 +489,9 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
 
   assert(x.size() == this->solver_ptr->get_n_dofs());
   v.setZero(this->solver_ptr->get_n_dofs());
+#ifdef SUPG
+  v_without_SUPG.setZero(this->solver_ptr->get_n_dofs());
+#endif
   m.resize(this->solver_ptr->get_n_dofs(),this->solver_ptr->get_n_dofs());
 
   assert(m.rows()== this->solver_ptr->get_n_dofs());
@@ -471,7 +503,14 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
   Config::MatrixType tempM(V_h_size, V_h_size);
   Config::VectorType tempX = x.head(V_h_size);
   Config::VectorType tempV(V_h_size);
+#ifndef SUPG
   this->assemble_without_lagrangian_Jacobian(tempX,tempV, tempM);
+#else
+  Config::VectorType tempVSUPG(V_h_size);
+  this->assemble_without_lagrangian_Jacobian(tempX,tempV, tempVSUPG, tempM);
+
+  v_without_SUPG.segment(V_h_size, tempV.size()) = tempVSUPG;
+#endif
 
   //copy system
   v.segment(V_h_size, tempV.size()) = tempV;
@@ -599,7 +638,102 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
 
 
 template<typename OperatorTraits>
-void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m, const Config::VectorType& xBoundary, const bool new_solution) const
+void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian_withoutDual(const Config::VectorType& x, Config::VectorType& v,
+#ifdef SUPG
+    Config::VectorType& v_SUPG,
+#endif
+    Config::MatrixType& m) const
+{
+  assert(lop_ptr);
+
+  int V_h_size = this->solver_ptr->get_n_dofs_V_h();
+  int Q_h_size = this->solver_ptr->get_assembler_lagrangian_boundary().get_number_of_Boundary_dofs();
+
+  int n_dofs_old = this->solver_ptr->get_n_dofs()-V_h_size;
+  v.setZero(n_dofs_old);
+  m.resize(n_dofs_old,n_dofs_old);
+
+  //assemble MA PDE in temporary variables
+  //todo jede Menge copy paste
+  Config::MatrixType tempM(V_h_size, V_h_size);
+  Config::VectorType tempX = x.head(V_h_size);
+  Config::VectorType tempV(V_h_size);
+#ifndef SUPG
+  this->assemble_without_lagrangian_Jacobian(tempX,tempV, tempM);
+#else
+  Config::VectorType tempVSUPG(V_h_size);
+  this->assemble_without_lagrangian_Jacobian(tempX,tempV, tempVSUPG, tempM);
+#endif
+
+  //copy system
+  v.segment(0, tempV.size()) = tempV;
+  //copy SparseMatrix todo move to EigenUtility
+  std::vector< Eigen::Triplet<double> > tripletList;
+  copy_to_new_sparse_matrix(tempM, m, 0, 0);
+
+  std::cerr << "  l(v) with norm " << std::scientific << std::setprecision(3) << tempV.norm() << std::endl;//<< "  : " << tempV.transpose() << std::endl;
+
+  //---------if selected to fix u(x_0)=u_0----
+      //  fix first degree of freedom
+      //  m.coeffRef(2*V_h_size+Q_h_size, 0) = 1.;
+      // v(0) = x0-solver_ptr->get_assembler().uAtX0();
+
+  //-------------------select  mid value for fixing additive constant-------------------------
+
+  //fixing midvalue on rhs
+  int indexFixingGridEquation = n_dofs_old-1;
+  const auto& assembler = this->solver_ptr->get_assembler();
+  v(indexFixingGridEquation) = -assembler.u0AtX0() + assembler.uAtX0(); //note in paper we updated Newton w=u_k+1-u_k, in code w= -(u_k+1-u_k)
+  std::cerr << " u_0 - u = "  << std::scientific << std::setprecision(3)<< v(indexFixingGridEquation)
+      << " = " << assembler.u0AtX0() << '-'  << assembler.uAtX0() << std::endl;
+
+//add lagrangian part mid value
+  assert(FEpartsOnMidvalue.size() == V_h_size);
+
+  //copy in system matrix
+  for (unsigned int i = 0; i < FEpartsOnMidvalue.size(); i++)
+  {
+    //add FE part to calcute mean value
+    m.insert(indexFixingGridEquation,i)=FEpartsOnMidvalue(i);
+    //add transposed FE part to form lagrangian
+    m.insert(i,indexFixingGridEquation) = FEpartsOnMidvalue(i);
+
+//    v(i)+= lambda*FEpartsOnMidvalue(i); //why did I ever do this???
+  }
+
+  //assemble part of second lagrangian multiplier for fixing boundary
+  tempM.resize(Q_h_size, V_h_size);
+  tempM.setZero();
+  tempV.setZero(Q_h_size);
+
+  //assemble boundary terms
+  assemble_Jacobian_boundary(x.head(V_h_size), tempV, tempM);
+
+  Q_h_size = tempM.rows();
+  assert(Q_h_size == tempV.size());
+  assert(Q_h_size == tempM.rows());
+
+//    MATLAB_export(tempM, "B_H");
+  //copy to system
+  copy_to_sparse_matrix(tempM, m, V_h_size, 0);
+  copy_sparse_to_sparse_matrix(tempM.transpose(), m, 0, V_h_size);
+
+
+  v.segment(V_h_size, Q_h_size) = tempV;
+  std::cerr << " l_H(q) with norm " << std::scientific << std::setprecision(3)<< tempV.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
+
+  assert(! (v.norm()!=v.norm()));
+
+  std::cerr << " l with norm " << std::scientific << std::setprecision(3)<< v.norm() << std::endl;// << " : " << tempV.transpose() << std::endl;
+}
+
+
+template<typename OperatorTraits>
+void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Config::VectorType& v,
+#ifdef SUPG
+    Config::VectorType& v_without_SUPG,
+#endif
+    Config::MatrixType& m, const Config::VectorType& xBoundary, const bool new_solution) const
 {
   assert(solver_ptr != NULL);
 
@@ -609,9 +743,10 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
     intermediateSolCounter++;
     solver_ptr->update_solution(x);
     solver_ptr->plot("intermediate", intermediateSolCounter);
-
+  }
+  if (false)
+  {
     typename SolverType::ExactData exactData;
-
     std::cerr << std::scientific << std::setprecision(5)
         << "   current L2 error is " << solver_ptr->calculate_L2_error(exactData.exact_solution()) << std::endl;
 
@@ -630,7 +765,11 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
 
 #ifdef USE_LAGRANGIAN
   prepare_fixing_point_term(x);
-  assemble_with_lagrangians_Jacobian(x,v, m);
+  #ifndef SUPG
+    assemble_with_lagrangians_Jacobian(x,v, m);
+  #else
+    assemble_with_lagrangians_Jacobian(x,v, v_without_SUPG, m);
+  #endif
 #else
   asssert(false && "unmaintained code")
 #endif
@@ -652,7 +791,6 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
   //output
   auto end = std::chrono::steady_clock::now();
   std::cerr << "total time for evaluation= " << std::chrono::duration_cast<std::chrono::duration<double>>(end - start ).count() << " seconds" << std::endl;
-
 }
 
 
@@ -719,7 +857,11 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
     //TODO inefficient
     Config::MatrixType m(v.size(), x.size());
 #ifdef USE_LAGRANGIAN
+#ifndef SUPG
     assemble_with_lagrangians_Jacobian(x,v, m);
+#else
+    assert(false && "not updated to SUPG ");
+#endif
 #else
     assemble_everything(xNew, x,v, m);
 #endif

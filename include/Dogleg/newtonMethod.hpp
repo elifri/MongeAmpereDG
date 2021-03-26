@@ -70,6 +70,9 @@ void newtonMethod(
     const unsigned int n=x.size();
 
     Eigen::VectorXd f(n);
+#ifdef SUPG
+    Eigen::VectorXd EQS_rhs(n);  //for SUPG we need to differentiate between the residual and the equation systems right-hand side
+#endif
     Eigen::SparseMatrix<double> Df(n,n);
 
     if (!options.silentmode)
@@ -88,7 +91,11 @@ void newtonMethod(
     // solve Df*s = +f using UmfPack:
       if (useCombinedFunctor)
       {
+#ifndef SUPG
         functor.evaluate(x,f,Df, x, true);
+#else
+        functor.evaluate(x,f,EQS_rhs, Df, x, true);
+#endif
       }
       else
       {
@@ -153,7 +160,12 @@ void newtonMethod(
             Config::VectorType tempf(n);
             Eigen::SparseMatrix<double> tempDf(n,n);
 
+#ifndef SUPG
             functor.evaluate(xNew,tempf,tempDf, xBoundary, true);
+#else
+            Config::VectorType tempEQS_rhs(n);
+            functor.evaluate(xNew,tempf, tempEQS_rhs, tempDf, xBoundary, true);
+#endif
 
             std::cout << " increase Newton-step ?";
             std::cout << std::scientific << std::setprecision(3) << "   ||F||2 was "  << f.norm() << std::endl;
@@ -191,7 +203,11 @@ void newtonMethod(
           }
 
 
+#ifndef USE_ITERATIVE_SOLVER
           lu_of_Df.factorize(Df);
+#else
+          lu_of_Df.compute(Df);
+#endif
           if (lu_of_Df.info()!=0) {
               // decomposition failed
               std::cerr << "\nError: Could not compute LU decomposition of Df(x)!\n";
@@ -199,7 +215,12 @@ void newtonMethod(
               exit(1);
           }
 
+#ifndef SUPG
           s = lu_of_Df.solve(f);
+#else
+          s = lu_of_Df.solve(EQS_rhs);
+#endif
+
           if(lu_of_Df.info()!=0) {
               // solving failed
               std::cerr << "\nError: Could solve the equation Df(x)*s=-f(x)!\n";
@@ -244,8 +265,12 @@ void newtonMethod(
       // solve Df*s = +f using UmfPack:
       if (useCombinedFunctor)
       {
+#ifndef SUPG
         functor.evaluate(x,f,Df, xBoundary, true);
-      }
+#else
+        functor.evaluate(x,f,EQS_rhs, Df, xBoundary, true);
+#endif
+        }
       else
       {
         functor.evaluate(x,f,xBoundary, true);

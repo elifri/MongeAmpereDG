@@ -509,10 +509,18 @@ public:
    */
   template<typename LocalOperatorType>
   void assemble_DG_Jacobian(const LocalOperatorType &LOP, const Config::VectorType& x,
-      Config::VectorType& v, Config::MatrixType& m) const
+      Config::VectorType& v,
+#ifdef SUPG
+      Config::VectorType& v_SUPG,
+#endif
+      Config::MatrixType& m) const
   {
     assembleType_ = ALL;
+#ifndef SUPG
     assemble_DG_Jacobian_(LOP, x, v, m);
+#else
+    assemble_DG_Jacobian_(LOP, x, v, m, &v_SUPG);
+#endif
   }
 
   template<typename LocalOperatorType, typename LocalOperatorJacobianType>
@@ -621,7 +629,9 @@ private:
   void assemble_cell_termHelper(const LocalOperatorType &lop,
       const LocalView& localView,
       const Config::VectorType& xLocal,
-      Config::VectorType& vLocal, Config::DenseMatrixType& mLocal) const;
+      Config::VectorType& vLocal,
+      Config::DenseMatrixType& mLocal,
+      Config::VectorType* vLocalSUPG=0) const;
 
   template<typename LocalOperatorType, typename IntersectionType, typename LocalView>
   void assemble_inner_face_termHelper(const LocalOperatorType &lop, const IntersectionType& is,
@@ -639,7 +649,8 @@ private:
 
   template<typename LocalOperatorType>
   void assemble_DG_Jacobian_(const LocalOperatorType &LOP, const Config::VectorType& x,
-      Config::VectorType& v, Config::MatrixType& m) const;
+      Config::VectorType& v,
+      Config::MatrixType& m, Config::VectorType* v_SUPG=0) const;
 
   template<typename LocalOperatorType>
   void assemble_DG_Only_(const LocalOperatorType &lop, const Config::VectorType& x, Config::VectorType& v) const;
@@ -1567,12 +1578,13 @@ template<typename FETraits>
 template<typename LocalOperatorType, typename LocalView>
 inline
 void Assembler<FETraits>::assemble_cell_termHelper(const LocalOperatorType &lop, const LocalView& localView,
-    const Config::VectorType& xLocal, Config::VectorType& vLocal, Config::DenseMatrixType& mLocal) const
+    const Config::VectorType& xLocal,
+    Config::VectorType& vLocal,      Config::DenseMatrixType& mLocal,       Config::VectorType* vLocalSUPG_ptr) const
 {
 
   if (!tape0initialised || !reuseAdolCTape) //check if tape has record
   {
-    lop.assemble_cell_term(localView, xLocal, vLocal, 0);
+    lop.assemble_cell_term(localView, xLocal, vLocal, vLocalSUPG_ptr, 0);
     tape0initialised = true;
   }
   else
@@ -1582,7 +1594,7 @@ void Assembler<FETraits>::assemble_cell_termHelper(const LocalOperatorType &lop,
 //          std::cerr << "Cell Reconstruction was successfull ? " << tapeReconstrutionSuccessfull << std::endl;
     if (!tapeReconstrutionSuccessfull)
     {
-      lop.assemble_cell_term(localView, xLocal, vLocal, 0);
+      lop.assemble_cell_term(localView, xLocal, vLocal, vLocalSUPG_ptr, 0);
     }
   }
 
@@ -1596,7 +1608,7 @@ void Assembler<FETraits>::assemble_cell_termHelper(const LocalOperatorType &lop,
     vLocal.setZero(); //prevent double addition of local terms
 
     //make sure unification term is not added twice
-    lop.assemble_cell_term(localView, xLocal, vLocal, 0);
+    lop.assemble_cell_term(localView, xLocal, vLocal, vLocalSUPG_ptr, 0);
     derivationSuccessful = assemble_jacobian_integral(localView, localView, xLocal, mLocal, 0);
     ImageFunction::use_adouble_image_evaluation = true;
 //    std::cerr << "Cell Derivation was successfull ? " << derivationSuccessful << std::endl;
@@ -1638,7 +1650,8 @@ void Assembler<FETraits>::assemble_cell_termHelper(const LocalOperatorType &lop,
 //template<class Config>
 template<typename FETraits>
 template<typename LocalOperatorType>
-void Assembler<FETraits>::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config::VectorType& x, Config::VectorType& v, Config::MatrixType& m) const
+void Assembler<FETraits>::assemble_DG_Jacobian_(const LocalOperatorType &lop, const Config::VectorType& x,
+    Config::VectorType& v,    Config::MatrixType& m,     Config::VectorType* v_SUPG_ptr) const
 {
     assert((unsigned int) x.size() == basis_->indexSet().size());
 
@@ -1646,6 +1659,10 @@ void Assembler<FETraits>::assemble_DG_Jacobian_(const LocalOperatorType &lop, co
 
     //assuming Galerkin
     v = Config::VectorType::Zero(x.size());
+#ifdef SUPG
+    Config::VectorType& v_SUPG = *v_SUPG_ptr;
+    v_SUPG = Config::VectorType::Zero(x.size());
+#endif
     m.resize(x.size(), x.size());
 
     //reserve space for jacobian entries
@@ -1674,7 +1691,10 @@ void Assembler<FETraits>::assemble_DG_Jacobian_(const LocalOperatorType &lop, co
         //get zero vector to store local function values
         Config::VectorType local_vector;
         local_vector.setZero(localView.size());    // Set all entries to zero
-
+#ifdef SUPG
+        Config::VectorType local_vector_SUPG;
+        local_vector_SUPG.setZero(localView.size());    // Set all entries to zero
+#endif
         //get zero matrix to store local jacobian
         Config::DenseMatrixType m_m;
         m_m.setZero(localView.size(), localView.size());
@@ -1688,7 +1708,11 @@ void Assembler<FETraits>::assemble_DG_Jacobian_(const LocalOperatorType &lop, co
         switch(assembleType_)
         {
         case ONLY_OBJECTIVE:
+#ifndef SUPG
           lop.assemble_cell_term(localView, xLocal, local_vector, tag_count);
+#else
+          lop.assemble_cell_term(localView, xLocal, local_vector, &local_vector_SUPG, tag_count);
+#endif
 //          std::cerr << " localVector " << local_vector << std::endl;
 
           tag_count++;
@@ -1698,7 +1722,11 @@ void Assembler<FETraits>::assemble_DG_Jacobian_(const LocalOperatorType &lop, co
           tag_count++;
           break;
         case ALL:
+#ifndef SUPG
           assemble_cell_termHelper(lop, localView, xLocal, local_vector, m_m);
+#else
+          assemble_cell_termHelper(lop, localView, xLocal, local_vector, m_m, &local_vector_SUPG);
+#endif
           break;
         default: assert(false); std::cerr << " Error: do not know AssembleType" << std::endl; exit(-1);
         }
@@ -1795,6 +1823,9 @@ void Assembler<FETraits>::assemble_DG_Jacobian_(const LocalOperatorType &lop, co
 
         //add to objective function and jacobian
         add_local_coefficients(localIndexSet, local_vector, v);
+#ifdef SUPG
+        add_local_coefficients(localIndexSet, local_vector_SUPG, v_SUPG);
+#endif
         add_local_coefficients_Jacobian(localIndexSet, localIndexSet, m_m, JacobianEntries);
      }
      m.setFromTriplets(JacobianEntries.begin(), JacobianEntries.end());

@@ -22,6 +22,7 @@
 //for definition of ADOLC
 #define HAVE_ADOLC 1
 
+#define SUPG
 
 //use analytic derivation (if implemented)
 //#define USE_ANALYTIC_JACOBIAN

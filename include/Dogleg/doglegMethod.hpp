@@ -74,7 +74,11 @@ bool checkJacobian(
   int n = x.size();
   Eigen::SparseMatrix<double> J(n,n);
   Eigen::VectorXd temp(n);
+#ifndef SUPG
   f.evaluate(x,temp, J, x, false);
+#else
+  assert(false && "not updated to SUPG");
+#endif
   J.prune(1,1e-10);
 
   double tol = 1e-5;

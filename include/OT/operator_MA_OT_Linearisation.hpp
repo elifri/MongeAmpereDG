@@ -87,6 +87,40 @@ public:
       rhoY.evaluate(gradu, g_value);
       rhoY.evaluateDerivative(gradu, gradg);
 
+#ifdef DEBUG
+      std::cerr << "    adolc check ";
+      FieldVector<adouble, Config::dim> gradu_adolc;
+      gradu_adolc[0] <<= gradu[0];
+      gradu_adolc[1] <<= gradu[1];
+      adouble g_adolc;
+      rhoY.evaluate(gradu_adolc, g_adolc);
+
+      //calculate derivatives of g
+      const double delta = std::sqrt(1e-15);
+
+      //calculate derivative of F in x by finite difference
+      auto temp = gradu;
+      temp[0]+=delta;
+      std::cerr << " gradu " << gradu <<  " temp x Plus " << temp << std::endl;
+      double Dx1PlusF_value;
+      rhoY.evaluate(temp, Dx1PlusF_value);
+      temp = gradu;
+      temp[1]+=delta;
+      double Dx2PlusF_value;
+      rhoY.evaluate(temp, Dx2PlusF_value);
+
+      FieldVector<double, dim> DxFEx =
+        {
+          (Dx1PlusF_value-g_value)/delta,
+          (Dx2PlusF_value-g_value)/delta
+        };
+
+      std::cerr << std::setprecision(15);
+      std::cerr << " dg " << gradg << " finite diff g " << DxFEx << " -> difference "<< (gradg-DxFEx)<< std::endl;
+      std::cerr << " g1 " << Dx1PlusF_value << " g2 " << Dx2PlusF_value << std::endl;
+#endif
+
+
       //ATTENTION: ASUMMING F is constant!!!!!!!!!!!!!!
       convectionTerm = gradg;
       convectionTerm *= f_value/g_value/g_value;
@@ -248,6 +282,7 @@ public:
       assert(Config::dim == 2);
 
       auto cofHessu = convexified_penalty_cofactor(Hessu);
+//      auto cofHessu = convexified_cofactor(Hessu);
 //      auto cofHessu = cofactor(Hessu);
       double ev0, ev1;
       calculate_eigenvalues(cofHessu, ev0, ev1);
@@ -268,7 +303,8 @@ public:
       double g_value;
       FieldVector<double,dim> b = convection_term(rhoY, gradu, f_value, g_value);
 
-      auto detHessu = determinant(cofHessu); //note that determinant of Hessu and cofHessu is the same
+      auto detHessu = determinant(Hessu); //note that determinant of Hessu and cofHessu is the same
+//      auto detHessu = naive_determinant(cofHessu); //note that determinant of Hessu and cofHessu is the same
 
       //check if determinant is negative, i.e. u is not convex
       if (detHessu < 0 && !found_negative)
@@ -303,8 +339,9 @@ public:
           activate_SUPG_terms = false;
 //
           delta_T = h_T*h_T/2./Hessu.frobenius_norm();
-//
-       }
+//          std::cerr << "delta_t " << delta_T << std::endl;
+          delta_T = 0.001;
+        }
 
       }
 
@@ -317,8 +354,8 @@ public:
           //diffusion term
           FieldVector<double,dim> cofTimesW;
           cofHessu.mv(gradients[i],cofTimesW);
-          m(j,i) += (cofTimesW*gradients[j]) *quad[pt].weight()*integrationElement;
-//          m(j,i) += (-FrobeniusProduct(cofHessu,Hessians[i]))*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
+//          m(j,i) += (cofTimesW*gradients[j]) *quad[pt].weight()*integrationElement;
+          m(j,i) += (-FrobeniusProduct(cofHessu,Hessians[i]))*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
           //convection term
           m(j,i) += (b*gradients[i])*referenceFunctionValues[j] *quad[pt].weight()*integrationElement;
           //additional SUPG stabilisation?
@@ -548,6 +585,8 @@ public:
 
       //calculate \nabla H(\nabla u) = n_y
       const auto cofHessu = convexified_penalty_cofactor(Hessu);
+//      const auto cofHessu = convexified_cofactor(Hessu);
+//      const auto cofHessu = cofactor(Hessu);
       //assume n_y of last step
       FieldVector<double, dimw> cofHessuTimesgradw;
       //-------calculate integral--------

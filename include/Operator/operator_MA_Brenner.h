@@ -46,7 +46,7 @@ public:
    */
   template<class LocalView, class VectorType>
   void assemble_cell_term(const LocalView& localView, const VectorType &x,
-      VectorType& v, const int tag) const {
+      VectorType& v, VectorType* v_SUPG =0, const int tag=0) const {
   }
 
   /*
