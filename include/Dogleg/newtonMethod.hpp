@@ -19,9 +19,11 @@
 #include <Eigen/Sparse>
 #include<Eigen/SparseLU>
 #include <Eigen/UmfPackSupport>
+#include<Eigen/SparseCholesky>
 
 #include "doglegMethod.hpp"
 
+#undef USE_ITERATIVE_SOLVER
 
 struct NewtonOptionsType{
 
@@ -83,8 +85,14 @@ void newtonMethod(
         std::cout << "--------------------------------------------------------------------------------\n";
     }
 
-//    Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_Df;
-    Eigen::SparseLU<Eigen::SparseMatrix<double> > lu_of_Df;
+#ifndef USE_ITERATIVE_SOLVER
+    Eigen::UmfPackLU<Eigen::SparseMatrix<double> > lu_of_Df;
+//    Eigen::SparseLU<Eigen::SparseMatrix<double> > lu_of_Df;
+//    Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > lu_of_Df;
+#else
+//    Eigen::BiCGSTAB<Eigen::SparseMatrix<double> > lu_of_Df; //here preconditioner of diagonal is default
+    Eigen::BiCGSTAB<Eigen::SparseMatrix<double>, Eigen::IncompleteLUT<double> > lu_of_Df;
+#endif
 
     Eigen::VectorXd s;
 
@@ -108,7 +116,9 @@ void newtonMethod(
                 << std::scientific << std::setprecision(3) << "   omega   " << omega
                 << std::endl;
       //init data
+#ifndef USE_ITERATIVE_SOLVER
       lu_of_Df.analyzePattern(Df);
+#endif
       initialResidual = f.norm();
       lastResidual = initialResidual;
       oldX = x;
@@ -224,6 +234,8 @@ void newtonMethod(
           if(lu_of_Df.info()!=0) {
               // solving failed
               std::cerr << "\nError: Could solve the equation Df(x)*s=-f(x)!\n";
+              if (lu_of_Df.info() == Eigen::NoConvergence)
+                std::cerr << "\nError: the iterative solver did not converge!\n";
               exit(1);
           }
 
