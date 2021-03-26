@@ -25,6 +25,7 @@
 
 #undef USE_ITERATIVE_SOLVER
 
+
 struct NewtonOptionsType{
 
  /* NewtonOptionsType(const unsigned int maxIter, ///maximum amount of stoptions.eps
@@ -123,7 +124,7 @@ void newtonMethod(
       lastResidual = initialResidual;
       oldX = x;
 
-    for (unsigned int i=0; i<options.maxIter; i++) {
+    for (unsigned int i=0; i<options.maxIter+1; i++) {
       Eigen::VectorXd xBoundary(x);
       for (unsigned int j = 0; j < options.maxIterBoundaryConditions; j++)
       {
@@ -180,10 +181,10 @@ void newtonMethod(
             std::cout << " increase Newton-step ?";
             std::cout << std::scientific << std::setprecision(3) << "   ||F||2 was "  << f.norm() << std::endl;
             std::cerr << " tried to increase omega "
-                   << "  newton residual was " << tempf.norm()
-                   << "  would have been     boundary-step     "
-                   << std::scientific << std::setprecision(3) << 2*omega*lastUpdate.norm()
-                    << std::scientific << std::setprecision(3) << "   NewOmeg a  " << 2*omega << std::endl;
+                   << "  newton residual would be " << tempf.norm() << " and was " << f.norm() << std::endl;
+//                   << "  would have been     boundary-step     "
+//                   << std::scientific << std::setprecision(3) << 2*omega*lastUpdate.norm()
+//                    << std::scientific << std::setprecision(3) << "   NewOmega  " << 2*omega << std::endl;
             if (tempf.norm() < f.norm())
             {
               omega*= 2;
@@ -211,7 +212,13 @@ void newtonMethod(
               }
             }
           }
-
+          if (i == options.maxIter)
+          {
+            //TODO should also work with inner iteration ...
+//            if (!options.silentmode)
+//                std::cout << "Performed maximum number of steps. Finished." << std::endl;
+            break;
+          }
 
 #ifndef USE_ITERATIVE_SOLVER
           lu_of_Df.factorize(Df);
@@ -245,14 +252,14 @@ void newtonMethod(
           //perform newton step
           xBoundary.head(V_h_size)-=omega*s.head(V_h_size);
           xBoundary.segment(V_h_size,x.size()-V_h_size) = s.segment(V_h_size,x.size()-V_h_size);
-          std::cerr << "new z norm " << (s.segment(V_h_size, V_h_size)).norm() << std::endl;
+//          std::cerr << "new z norm " << (s.segment(V_h_size, V_h_size)).norm() << std::endl;
 
           std::cerr << std::endl << std::endl;
 
           if (!options.silentmode)
           {
             std::cerr << "     boundary-step     "
-                << std::scientific << std::setprecision(3) << omega*s.norm()
+                << std::scientific << std::setprecision(3) << omega*s.head(V_h_size).norm()
                 << std::endl << "       ";
             std::cout << "   " << std::setw(6) << j;
             std::cout << "     boundary-step     ";
@@ -262,7 +269,7 @@ void newtonMethod(
 //            std::cout << "   " << std::scientific << std::setprecision(10) << f.norm();
             std::cout << std::endl;
           }
-          if (   s.norm() <= options.eps[1]
+          if (   s.head(V_h_size).norm() <= options.eps[1]
               || (std::abs(diffLastResidual) <= options.eps[0] && i > 0 && i <options.maxIter-1)
               || f.norm() <= options.eps[2])
               break;
@@ -270,6 +277,13 @@ void newtonMethod(
           lastResidual = f.norm();
           lastUpdate = s;
       }
+      if (i == options.maxIter)
+      {
+        if (!options.silentmode)
+            std::cout << "Performed maximum number of steps. Finished." << std::endl;
+        break;
+      }
+
       // compute damped Newton step
 
       x = xBoundary;
@@ -316,7 +330,7 @@ void newtonMethod(
 
 //         if (i > 0)
          {
-           if (s.norm() <= options.eps[1])
+           if (s.head(V_h_size).norm() <= options.eps[1])
            {
              if (!options.silentmode)
                  std::cout << "||s||2 too small. Finished." << std::endl;
