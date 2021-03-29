@@ -167,6 +167,13 @@ public:
   template<typename F>
   Config::ValueType calculate_L2_error(const F &f) const;
 
+  /**
+ * calculates the H1 of z on Omega
+ * @return      the value of sqrt(\int_{\partial Omega} (z)^2+\nabla z*\nabla zdx)
+ */
+  Config::ValueType calculate_H1_norm_of_z(const VectorType& z) const;
+
+
 protected:
   const GeometryOTSetting& setting_;
 

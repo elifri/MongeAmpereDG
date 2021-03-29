@@ -252,7 +252,10 @@ void newtonMethod(
           //perform newton step
           xBoundary.head(V_h_size)-=omega*s.head(V_h_size);
           xBoundary.segment(V_h_size,x.size()-V_h_size) = s.segment(V_h_size,x.size()-V_h_size);
-//          std::cerr << "new z norm " << (s.segment(V_h_size, V_h_size)).norm() << std::endl;
+
+          //          std::cerr << "new z norm " << (s.segment(V_h_size, V_h_size)).norm() << std::endl;
+          const Config::VectorType z_temp = s.segment(V_h_size,V_h_size);
+          std::cerr << "new z H1norm " << functor.get_z_H1_norm(z_temp) << std::endl;
 
           std::cerr << std::endl << std::endl;
 

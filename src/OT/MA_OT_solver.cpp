@@ -1022,3 +1022,43 @@ void MA_OT_solver::adapt_solution(const int level)
    }*/
 
 }
+
+
+double MA_OT_solver::calculate_H1_norm_of_z(const VectorType& z) const
+{
+  FETraits::DiscreteGridFunction z_function(FEBasisHandler_.uBasis(),z);
+  decltype(z_function)::LocalFunction local_z_function(z_function);
+
+  auto local_grad_z_function = localFirstDerivative(z_function);
+
+  Config::ValueType res = 0;
+
+  for(auto&& e: elements(gridView()))
+  {
+      auto geometry = e.geometry();
+
+      local_z_function.bind(e);
+      local_grad_z_function.bind(e);
+
+      // Get a quadrature rule
+      int order = std::max(1, 3);
+      const QuadratureRule<Config::ValueType, Config::dim>& quad = FETraits::get_Quadrature<Config::dim>(e, order);
+
+      // Loop over all quadrature points
+      for (const auto& pt : quad) {
+
+        // Position of the current quadrature point in the reference element
+        const Config::DomainType &quadPos = pt.position();
+
+        auto z_value = local_z_function(quadPos);
+        auto grad_z_value = local_grad_z_function(quadPos);
+
+        auto factor = pt.weight()*geometry.integrationElement(pt.position());
+
+        res += (z_value*z_value)*(grad_z_value*grad_z_value)*factor;
+      }
+    }
+    std::cerr << " H1 norm of z is " << std::sqrt(res) << std::endl;
+
+    return std::sqrt(res);
+}

@@ -168,6 +168,8 @@ public:
     return *lopLMDual;
   }
 
+  Config::ValueType get_z_H1_norm(const Config::VectorType&z) const{ return get_solver().calculate_H1_norm_of_z(z);}
+  const SolverType& get_solver() const{ return *solver_ptr;}
   const DensityFunction& get_f() const{ return f_;}
   const DensityFunction& get_g() const{ return g_;}
 

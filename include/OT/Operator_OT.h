@@ -36,6 +36,8 @@ public:
   virtual const Local_operator_LangrangianMidValue& get_lopLMMidvalue() const=0;
   virtual Local_operator_LangrangianMidValue& get_lopLMMidvalue()=0;
 
+  virtual Config::ValueType get_z_H1_norm(const Config::VectorType&z) const{ assert(false); return 0;}
+
 //  virtual T get_lopLMMidvalue() const=0;
 
 //  template<typename F>
