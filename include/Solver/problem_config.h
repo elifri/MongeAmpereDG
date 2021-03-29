@@ -89,7 +89,7 @@ struct ImageOperatorTraits: public GeneralOperatorTraits<Solver, LOP, ImageFunct
   static FunctionTypeY construct_g(const Solver& solver, const OpticalSetting& setting)
   {
     return FunctionTypeY(
-        setting.TargetImageName, solver.get_gridHandlerTarget(),
+        setting.TargetImageName, solver.get_gridHandlerTargetQuad(),
         setting.lowerLeftTarget, setting.upperRightTarget,
         setting.minPixelValue);
   }

@@ -245,6 +245,8 @@ public:
   const GridViewType& gridView() const {return gridHandler_.gridView();}
   GridViewType& gridView() {return gridHandler_.gridView();}
 
+  int get_iterations() const { return iterations;}
+
 public:
 
   ///assembles the (global) integrals (for every test function) specified by lop
@@ -390,6 +392,8 @@ public:
 
   template <typename FunctionType>
   double calculate_L2_error(const FunctionType &f) const;
+
+
 
   /**
    * returns a vector containing the function with coefficients x evaluated at the vertices

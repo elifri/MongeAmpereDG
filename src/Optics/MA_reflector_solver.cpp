@@ -27,9 +27,9 @@
 #include "IO/CartesianOpticExporter.hpp"
 
 
-MA_reflector_solver::MA_reflector_solver(GridHandlerType& gridHandler, const shared_ptr<GridType>& gridTarget,
+MA_reflector_solver::MA_reflector_solver(GridHandlerType& gridHandler, const shared_ptr<GridType>& gridTargetBoundary,  const shared_ptr<GridType>& gridTargetQuad,
     const SolverConfig& config, OpticalSetting& opticalSetting, const std::string& configFileEllipsoid)
- :MA_OT_solver(gridHandler, gridTarget, config, opticalSetting, false),
+ :MA_OT_solver(gridHandler, gridTargetBoundary, gridTargetQuad, config, opticalSetting, false),
   setting_(opticalSetting),configFileEllipsoid(configFileEllipsoid)
 {
   //create operator

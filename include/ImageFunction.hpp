@@ -108,10 +108,18 @@ class ImageFunction : public DensityFunction
      */
     void omega_normalize(const unsigned int n = SolverConfig::startlevel+SolverConfig::nonlinear_steps+1);
 
-    void normalize ()
+    void normalize(int iteration=-1)
     {
+        std::cout << "normalize iteration " << iteration << std::endl;
         factor_ = 1.0;
-        factor_ = 1.0/integrate2(SolverConfig::startlevel+SolverConfig::nonlinear_steps+1);
+        int n;
+        if (iteration == -1)
+          n = SolverConfig::startlevel+SolverConfig::nonlinear_steps+1;
+        else
+          n = iteration;
+
+        factor_ = 1.0/integrate2(n);
+        std::cerr << " updated image factor to " << factor_<< std::endl;
     }
 
     void convolveOriginal (double width);

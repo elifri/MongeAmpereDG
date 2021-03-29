@@ -27,10 +27,10 @@ namespace po = boost::program_options;
 #include "IO/imageOT.hpp"
 
 MA_OT_solver::MA_OT_solver(GridHandlerType& gridHandler,
-    const shared_ptr<GridType>& gridTarget,
+    const shared_ptr<GridType>& gridTargetBoundary, const shared_ptr<GridType>& gridTargetQuad,
     const SolverConfig& config, const GeometryOTSetting& setting, bool create_operator)
 :MA_solver(gridHandler, config, false),
- setting_(setting), gridTarget_(gridTarget, 0),
+ setting_(setting), gridTargetBoundary_(gridTargetBoundary, 0), gridTargetQuad_(gridTargetQuad, 0),
 #ifdef USE_COARSE_Q_H
  FEBasisHandlerQ_(*this, gridHandler.grid().levelGridView(gridHandler.grid().maxLevel()-1)),
 #else

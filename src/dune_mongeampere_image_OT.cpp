@@ -105,18 +105,25 @@ try {
 
   //-----target area grid--------
   #ifndef BSPLINES
-    std::cout << " read target grid vom file " << setting.gridTargetFile << std::endl;
-    std::shared_ptr<Config::GridType> gridTarget_ptr(GmshReader<Config::GridType>::read(setting.gridTargetFile));
+    std::cout << " read target boundary grid vom file " << setting.gridTargetBoundaryFile << std::endl;
+    std::shared_ptr<Config::GridType> gridTargetBoundary_ptr(GmshReader<Config::GridType>::read(setting.gridTargetBoundaryFile));
     {
-      VTKWriter<Config::GridView> vtkWriterTarget(gridTarget_ptr->leafGridView());
+      VTKWriter<Config::GridView> vtkWriterTarget(gridTargetBoundary_ptr->leafGridView());
       vtkWriterTarget.write("gridTarget");
     }
-  #endif
+    std::cout << " read target quadrature grid vom file " << setting.gridTargetQuadFile << std::endl;
+    std::shared_ptr<Config::GridType> gridTargetQuad_ptr(GmshReader<Config::GridType>::read(setting.gridTargetQuadFile));
+    {
+      VTKWriter<Config::GridView> vtkWriterTarget(gridTargetQuad_ptr->leafGridView());
+      vtkWriterTarget.write("gridTargetQuad");
+    }
+
+   #endif
 
   // ///////////////////////////////////////////////
   // Solve PDE
   // ///////////////////////////////////////////////
-  MA_OT_image_solver ma_solver(gridHandler, gridTarget_ptr, config, setting);
+  MA_OT_image_solver ma_solver(gridHandler, gridTargetBoundary_ptr, gridTargetQuad_ptr, config, setting);
   ma_solver.solve();
 
   std::cout << "done" << std::endl;

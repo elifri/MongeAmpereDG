@@ -61,7 +61,7 @@ public:
   MA_OT_Operator():solver_ptr(NULL), lop_ptr(), intermediateSolCounter(){}
 
   MA_OT_Operator(SolverType& solver):solver_ptr(&solver),
-      boundary_(new GenerealOTBoundary(solver.get_gridTarget(), GeometryOTSetting::boundaryNTarget)),
+      boundary_(new GenerealOTBoundary(solver.get_gridTargetBoundary(), GeometryOTSetting::boundaryNTarget)),
       f_(OperatorTraits::construct_f(solver)),
       g_(OperatorTraits::construct_g(solver)),
       lop_ptr(new LocalOperatorType(
@@ -80,7 +80,7 @@ public:
     template<typename GeometryOTSetting,
       typename std::enable_if<sizeof(GeometryOTSetting) && std::is_same<LocalOperatorLagrangianBoundaryType,Local_Operator_LagrangianBoundary>::value, int>::type = 0>
     MA_OT_Operator(SolverType& solver, GeometryOTSetting& setting):solver_ptr(&solver),
-        boundary_(new GenerealOTBoundary((solver.get_gridTarget()), setting.boundaryNTarget)),
+        boundary_(new GenerealOTBoundary((solver.get_gridTargetBoundary()), setting.boundaryNTarget)),
         f_(OperatorTraits::construct_f(solver, setting)),
         g_(OperatorTraits::construct_g(solver, setting)),
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
@@ -97,7 +97,7 @@ public:
     template<typename GeometryOTSetting,
       typename std::enable_if<sizeof(GeometryOTSetting) && !std::is_same<LocalOperatorLagrangianBoundaryType,Local_Operator_LagrangianBoundary>::value, int>::type = 0>
     MA_OT_Operator(SolverType& solver, GeometryOTSetting& setting):solver_ptr(&solver),
-        boundary_(new GenerealOTBoundary(solver.get_gridTarget(), setting.boundaryNTarget)),
+        boundary_(new GenerealOTBoundary(solver.get_gridTargetBoundary(), setting.boundaryNTarget)),
         f_(OperatorTraits::construct_f(solver, setting)),
         g_(OperatorTraits::construct_g(solver, setting)),
         lop_ptr(OperatorTraits::construct_lop(setting, *boundary_, f_, g_)),
@@ -170,6 +170,7 @@ public:
 
   Config::ValueType get_z_H1_norm(const Config::VectorType&z) const{ return get_solver().calculate_H1_norm_of_z(z);}
   const SolverType& get_solver() const{ return *solver_ptr;}
+
   const DensityFunction& get_f() const{ return f_;}
   const DensityFunction& get_g() const{ return g_;}
 
@@ -484,6 +485,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
 #endif
     Config::MatrixType& m) const
 {
+  //assuming dofs are in this order (w,z,p,lambda)
   assert(lop_ptr);
 
   int V_h_size = this->solver_ptr->get_n_dofs_V_h();
@@ -521,7 +523,7 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
   copy_to_new_sparse_matrix(tempM, m, V_h_size, 0);
   copy_sparse_to_sparse_matrix(tempM.transpose(), m, 0, V_h_size);
 
-#ifndef DEBUG
+#ifdef DEBUG
   {
     std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "AF" << intermediateSolCounter << ".m";      \
     std::ofstream file(filename.str(),std::ios::out);
@@ -579,8 +581,6 @@ void MA_OT_Operator<OperatorTraits>::assemble_with_lagrangians_Jacobian(const Co
   tempM.setZero();
   solver_ptr->get_assembler_lagrangian_Vh().assemble(*lopLMDual, tempM);
   copy_to_sparse_matrix(tempM, m, V_h_size, V_h_size);
-
-  std::cerr << "l_z norm " << (v.segment(V_h_size, V_h_size)).norm() << std::endl;
 
   //assemble part of second lagrangian multiplier for fixing boundary
   tempM.resize(Q_h_size, V_h_size);
@@ -779,13 +779,13 @@ void MA_OT_Operator<OperatorTraits>::evaluate(const Config::VectorType& x, Confi
 //  for (int i = 0; i < v.size(); i++)  assert ( ! (v(i) != v(i)));
 #ifdef DEBUG
   {
-    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "BF" << intermediateSolCounter << ".m";      \
+    std::stringstream filename; filename << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "A" << intermediateSolCounter << ".m";      \
     std::ofstream file(filename.str(),std::ios::out);
-    MATLAB_export(file, m, "m");
+    MATLAB_export(file, m, "A");
 
-    std::stringstream filename2; filename2 << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "lF" << intermediateSolCounter << ".m";
+    std::stringstream filename2; filename2 << solver_ptr->get_output_directory() << "/"<< solver_ptr->get_output_prefix() << "l" << intermediateSolCounter << ".m";
     std::ofstream file2(filename2.str(),std::ios::out);
-    MATLAB_export(file2, v, "v");
+    MATLAB_export(file2, v, "l");
   }
 #endif
   std::cerr << " current test value " << x(0) << std::endl;
@@ -893,7 +893,7 @@ void MA_OT_Operator<OperatorTraits>
 
   f_.divide_by_constant(integralF);
 
-  Integrator<Config::DuneGridType> integratorG(solver_ptr->get_gridTarget_ptr());
+  Integrator<Config::DuneGridType> integratorG(solver_ptr->get_gridTargetQuad_ptr());
   const double integralG = integratorG.assemble_integral(g_);
 
   g_.divide_by_constant(integralG);
@@ -906,7 +906,9 @@ void MA_OT_Operator<OperatorTraits>
    ::assert_integrability_condition(ImageOperatorOTTraits<SolverType, LocalOperatorType>* dummy)
 {
   std::cout << " normalise image densities to match integrable condition" << std::endl;
-  f_.normalize();
+  std::cout << "assert integrab cond: startlevel" << SolverConfig::startlevel << "solver_iterations " << get_solver().get_iterations() << std::endl;
+
+  f_.normalize(SolverConfig::startlevel+get_solver().get_iterations());
   g_.normalize();
 }
 
@@ -947,7 +949,7 @@ bool MA_OT_Operator<OperatorTraits>
   Integrator<Config::DuneGridType> integratorF(solver_ptr->get_grid_ptr());
   const double integralF = integratorF.assemble_integral(f_);
 
-  Integrator<Config::DuneGridType> integratorG(solver_ptr->get_gridTarget_ptr());
+  Integrator<Config::DuneGridType> integratorG(solver_ptr->get_gridTargetQuad_ptr());
   const double integralG = integratorG.assemble_integral(g_);
 
   std::cout << " calculated the the integrals: int_Omega f dx = " << integralF << " and int_Sigma g dy = " << integralG << std::endl;

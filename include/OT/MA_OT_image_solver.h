@@ -39,7 +39,7 @@ public:
 
   using OperatorType = Operator_OT_Type<ProblemTraits>;
 
-  MA_OT_image_solver(GridHandlerType& gridHandler, const shared_ptr<GridType>& gridTarget,
+  MA_OT_image_solver(GridHandlerType& gridHandler, const shared_ptr<GridType>& gridTargetBoundary, const shared_ptr<GridType>& gridTargetQuad,
        const SolverConfig& config, OpticalSetting& opticalSetting);
 
   OpticalSetting& get_setting() {return setting_;}

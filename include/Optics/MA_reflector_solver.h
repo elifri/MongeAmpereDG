@@ -37,7 +37,7 @@ public:
 
 
   MA_reflector_solver(GridHandlerType& gridHandler,
-      const shared_ptr<GridType>& gridTarget,
+      const shared_ptr<GridType>& gridTargetBoundary, const shared_ptr<GridType>& gridTargetQuad,
       const SolverConfig& config, OpticalSetting& opticalSetting,
       const std::string& configFileEllipsoid="");
 

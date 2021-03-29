@@ -104,11 +104,17 @@ try {
 
   //-----target area grid--------
 #ifndef BSPLINES
-  std::cout << " read target grid vom file " << opticalSetting.gridTargetFile << std::endl;
-  std::shared_ptr<Config::GridType> gridTarget_ptr(GmshReader<Config::GridType>::read(opticalSetting.gridTargetFile));
+  std::cout << " read target boundary grid vom file " << setting.gridTargetBoundaryFile << std::endl;
+  std::shared_ptr<Config::GridType> gridTargetBoundary_ptr(GmshReader<Config::GridType>::read(setting.gridTargetBoundaryFile));
   {
-    VTKWriter<Config::GridView> vtkWriterTarget(gridTarget_ptr->leafGridView());
+    VTKWriter<Config::GridView> vtkWriterTarget(gridTargetBoundary_ptr->leafGridView());
     vtkWriterTarget.write("gridTarget");
+  }
+  std::cout << " read target quadrature grid vom file " << setting.gridTargetQuadFile << std::endl;
+  std::shared_ptr<Config::GridType> gridTargetQuad_ptr(GmshReader<Config::GridType>::read(setting.gridTargetQuadFile));
+  {
+    VTKWriter<Config::GridView> vtkWriterTarget(gridTargetQuad_ptr->leafGridView());
+    vtkWriterTarget.write("gridTargetQuad");
   }
 #endif
 
@@ -116,7 +122,7 @@ try {
   // ///////////////////////////////////////////////
   // Solve PDE
   // ///////////////////////////////////////////////
-  MA_reflector_solver ma_solver(gridHandler, gridTarget_ptr, config, opticalSetting,configFileEllipsoid);
+  MA_reflector_solver ma_solver(gridHandler, gridTargetBoundary_ptr, gridTargetQuad_ptr, config, opticalSetting,configFileEllipsoid);
 
 	ma_solver.solve();
 

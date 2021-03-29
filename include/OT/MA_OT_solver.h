@@ -64,7 +64,7 @@ public:
   using AssemblerLagrangianVhType = AssemblerLagrangianVh;
 
   MA_OT_solver(GridHandlerType& gridHandler,
-      const shared_ptr<GridType>& gridTarget,
+      const shared_ptr<GridType>& gridTargetBoundary, const shared_ptr<GridType>& gridTargetQuad,
       const SolverConfig& config, const GeometryOTSetting& setting, bool create_operator = true);
 
 private:
@@ -128,10 +128,14 @@ public:
 //  GeometryOTSetting& get_setting() {return setting_;}
   const GeometryOTSetting& get_setting() const {return setting_;}
 
-  const auto& get_gridHandlerTarget() const{return gridTarget_;}
+  const auto& get_gridHandlerTargetBoundary() const{return gridTargetBoundary_;}
+  const auto& get_gridHandlerTargetQuad() const{return gridTargetQuad_;}
 
-  const auto& get_gridTarget() const {return gridTarget_.grid();}
-  const auto& get_gridTarget_ptr() const {return gridTarget_.get_grid_ptr();}
+  const auto& get_gridTargetBoundary() const {return gridTargetBoundary_.grid();}
+  const auto& get_gridTargetBoundary_ptr() const {return gridTargetBoundary_.get_grid_ptr();}
+  const auto& get_gridTargetQuad() const {return gridTargetQuad_.grid();}
+  const auto& get_gridTargetQuad_ptr() const {return gridTargetQuad_.get_grid_ptr();}
+
 
   const AssemblerLagrangianMultiplier1D<>& get_assembler_lagrangian_midvalue() const { return assemblerLM1D_;}
 //  const AssemblerLagrangianMultiplierCoarse& get_assembler_lagrangian_boundary() const { return assemblerLMCoarse_;}
@@ -179,7 +183,9 @@ protected:
 
   const bool compare_with_exact_solution_ = false;
 
-  GridHandler<GridType> gridTarget_;
+  GridHandler<GridType> gridTargetBoundary_; //used for Boundary
+  GridHandler<GridType> gridTargetQuad_; //used for quadrature of g
+
 //  const shared_ptr<GridType> gridTarget_ptr;
 
   ///FEBasis for Lagrangian Multiplier for Boundary

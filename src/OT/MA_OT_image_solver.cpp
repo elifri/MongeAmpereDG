@@ -24,9 +24,9 @@
 
 using namespace std;
 
-MA_OT_image_solver::MA_OT_image_solver(GridHandlerType& gridHandler, const shared_ptr<GridType>& gridTarget,
+MA_OT_image_solver::MA_OT_image_solver(GridHandlerType& gridHandler, const shared_ptr<GridType>& gridTargetBoundary, const shared_ptr<GridType>& gridTargetQuad,
     const SolverConfig& config, OpticalSetting& opticalSetting)
- :MA_OT_solver(gridHandler, gridTarget, config, opticalSetting, false), setting_(opticalSetting)
+ :MA_OT_solver(gridHandler, gridTargetBoundary, gridTargetQuad, config, opticalSetting, false), setting_(opticalSetting)
 {
   assembler_.set_X0(opticalSetting.lowerLeft);
 

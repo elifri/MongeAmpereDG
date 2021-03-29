@@ -252,7 +252,8 @@ struct GeometryOTSetting:GeometrySetting {
 
   std::string plotGridinputFile; ///location of the grid file specifying a grid which is translated under the solution
 
-  std::string gridTargetFile; ///location of the grid file specifying the grid for the target area $\Sigma$
+  std::string gridTargetBoundaryFile; ///location of the grid file specifying the grid for the target area $\Sigma$
+  std::string gridTargetQuadFile;
   static int boundaryNTarget; ///number of directions to simulate boundary of the target domain $\Sigma$
 
 };

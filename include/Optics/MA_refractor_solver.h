@@ -43,7 +43,7 @@ public:
 //  using MA_solver::MA_solver;
 public:
   MA_refractor_solver(GridHandlerType& gridHandler,
-      const shared_ptr<GridType>& gridTarget,
+      const shared_ptr<GridType>& gridTargetBoundary, const shared_ptr<GridType>& gridTargetQuad,
       const SolverConfig& config, OpticalSetting& opticalSetting);
 
 private:

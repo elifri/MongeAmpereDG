@@ -33,7 +33,7 @@ double SolverConfig::sigmaBoundary = 20;
 
 bool SolverConfig::Dirichlet = false;
 
-double SolverConfig::lambda = 100;
+double SolverConfig::lambda = 1000;
 
 std::ostream& operator <<(std::ostream &output, const ProblemType &p)
 {
@@ -193,7 +193,8 @@ void GeometryOTSetting::read_configfile(std::string &configFile)
         ("geometry.target.yMin",     po::value<double>(&lowerLeftTarget[1]), "lower left y value of target")
         ("geometry.target.yMax",     po::value<double>(&upperRightTarget[1]), "upper right x value of target")
         ("geometry.target.z",        po::value<double>(&z_3),    "z value of the target")
-        ("geometry.target.gridfile",  po::value<std::string>(&gridTargetFile), "path to grid of the target (.msh format)")
+        ("geometry.target.gridBoundaryfile",  po::value<std::string>(&gridTargetBoundaryFile), "path to grid of the target (.msh format)")
+        ("geometry.target.gridQuadfile",  po::value<std::string>(&gridTargetQuadFile), "path to grid of the target (.msh format)")
         ("geometry.target.boundaryN",  po::value<int>(&GeometryOTSetting::boundaryNTarget), "number of direction in approximation of target boundary")
   ;
 
@@ -242,7 +243,8 @@ void OpticalSetting::read_configfile(std::string &configFile)
         ("geometry.target.xMax",     po::value<double>(&upperRightTarget[0]), "upper right x value of target")
         ("geometry.target.yMin",     po::value<double>(&lowerLeftTarget[1]), "lower left y value of target")
         ("geometry.target.yMax",     po::value<double>(&upperRightTarget[1]), "upper right x value of target")
-        ("geometry.target.gridfile",  po::value<string>(&gridTargetFile), "path to grid of the target (.msh format)")
+        ("geometry.target.gridBoundaryfile",  po::value<string>(&gridTargetBoundaryFile), "path to boundary grid of the target (.msh format)")
+        ("geometry.target.gridQuadfile",  po::value<string>(&gridTargetQuadFile), "path to quadrature grid of the target (.msh format)")
         ("geometry.target.target_is_xy_plane", po::value<bool>(&target_is_xy_plane)->default_value(true),"indicates if target is parallel to xy plane (otherwise parallel to xz is assumed)")
         ("geometry.target.z",        po::value<double>(&z_3),    "z value of the target")
         ("geometry.target.boundaryN",  po::value<int>(&GeometryOTSetting::boundaryNTarget), "number of direction in approximation of target boundary")

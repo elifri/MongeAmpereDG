@@ -23,9 +23,9 @@ struct MA_refr_Operator:public MA_OT_Operator<Solver,LOP> {
           ))
 */
 
-MA_refractor_solver::MA_refractor_solver(GridHandlerType& gridHandler, const shared_ptr<GridType>& gridTarget,
+MA_refractor_solver::MA_refractor_solver(GridHandlerType& gridHandler, const shared_ptr<GridType>& gridTargetBoundary,  const shared_ptr<GridType>& gridTargetQuad,
     const SolverConfig& config, OpticalSetting& opticalSetting)
- :MA_OT_solver(gridHandler, gridTarget, config, opticalSetting, false), setting_(opticalSetting)
+ :MA_OT_solver(gridHandler, gridTargetBoundary, gridTargetQuad, config, opticalSetting, false), setting_(opticalSetting)
 {
    this->op = std::make_shared<OperatorType>(*this, setting_);
 
