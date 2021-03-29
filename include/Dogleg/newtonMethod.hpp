@@ -294,7 +294,7 @@ void newtonMethod(
 #ifndef SUPG
         functor.evaluate(x,f,Df, xBoundary, true);
 #else
-        functor.evaluate(x,f,EQS_rhs, Df, xBoundary, true);
+        functor.evaluate(x, EQS_rhs, f,Df, xBoundary, true);
 #endif
         }
       else
