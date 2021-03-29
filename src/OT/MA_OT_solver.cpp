@@ -801,7 +801,7 @@ void MA_OT_solver::create_initial_guess()
   }
   else
   {
-	ExactData exactData;
+    ExactData exactData;
 
 	project(exactData.exact_solution(), exactData.exact_gradient(), solution);
 //    project([](Config::SpaceType x){return x.two_norm2()/2.0;},solution); //projection fragwürdig!!!
@@ -818,7 +818,10 @@ void MA_OT_solver::create_initial_guess()
     Config::ValueType res = 0;
     assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), solution, res);
     assembler_.set_u0AtX0(res);
-  std::cerr << " set u_0^mid to " << res << std::endl;
+    std::cerr << " set u_0^mid to " << res << std::endl;
+
+    one_Poisson_Step();
+    update_solution(solution);
   }
 
   ExactData exactData;
@@ -838,14 +841,13 @@ void MA_OT_solver::create_initial_guess()
   assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), exactsol_u, res);
   assembler_.set_u0AtX0(res);
   std::cerr << " set u_0^mid to " << res << std::endl;
+#else
+  Config::ValueType  res = 0;
+  assemblerLM1D_.assembleRhs((this->get_OT_operator().get_lopLMMidvalue()), solution.head(get_n_dofs_V_h()), res);
+  assembler_.set_u0AtX0(res);
+  std::cerr << " set u_0^mid to " << res << std::endl;
 #endif
 
-  if (!initValueFromFile_)
-  {
-    one_Poisson_Step();
-
-    update_solution(solution);
-  }
 
 #ifdef MANUFACTOR_SOLUTION
   std::cerr << " init bar u ... " << std::endl;
